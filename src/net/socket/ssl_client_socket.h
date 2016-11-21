@@ -83,10 +83,6 @@ class NET_EXPORT SSLClientSocket : public SSLSocket {
   virtual void GetSSLCertRequestInfo(
       SSLCertRequestInfo* cert_request_info) = 0;
 
-  static NextProto NextProtoFromString(base::StringPiece proto_string);
-
-  static const char* NextProtoToString(NextProto next_proto);
-
   // Log SSL key material to |path| on |task_runner|. Must be called before any
   // SSLClientSockets are created.
   //

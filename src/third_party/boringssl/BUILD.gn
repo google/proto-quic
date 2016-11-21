@@ -41,11 +41,6 @@ config("no_asm_config") {
   defines = [ "OPENSSL_NO_ASM" ]
 }
 
-config("fuzzer_config") {
-  visibility = [ ":*" ]  # Only targets in this file can depend on this.
-  defines = [ "BORINGSSL_UNSAFE_FUZZER_MODE" ]
-}
-
 all_sources = crypto_sources + ssl_sources
 
 # Windows' assembly is built with Yasm. The other platforms use the platform
@@ -156,6 +151,14 @@ if (build_with_chromium) {
     }
   }
 
+  config("fuzzer_config") {
+    visibility = [ ":*" ]  # Only targets in this file can depend on this.
+    defines = [
+      "BORINGSSL_UNSAFE_FUZZER_MODE",
+      "BORINGSSL_UNSAFE_DETERMINISTIC_MODE",
+    ]
+  }
+
   # The same as boringssl, but builds with BORINGSSL_UNSAFE_FUZZER_MODE.
   component("boringssl_fuzzer") {
     visibility = [ ":*" ]  # Only targets in this file can depend on this.
@@ -207,5 +210,53 @@ if (build_with_chromium) {
         libfuzzer_options = [ "max_len=256" ]
       }
     }
+  }
+
+  config("fuzzer_no_fuzzer_mode_config") {
+    visibility = [ ":*" ]  # Only targets in this file can depend on this.
+    defines = [ "BORINGSSL_UNSAFE_DETERMINISTIC_MODE" ]
+  }
+
+  # The same as boringssl, but builds with BORINGSSL_UNSAFE_DETERMINISTIC_MODE.
+  component("boringssl_fuzzer_no_fuzzer_mode") {
+    visibility = [ ":*" ]  # Only targets in this file can depend on this.
+
+    sources = all_sources
+    deps = [
+      ":boringssl_asm",
+    ]
+
+    public_configs = [
+      ":external_config",
+      ":fuzzer_no_fuzzer_mode_config",
+    ]
+    configs += [ ":internal_config" ]
+
+    configs -= [ "//build/config/compiler:chromium_code" ]
+    configs += [ "//build/config/compiler:no_chromium_code" ]
+
+    if (is_nacl) {
+      deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
+    }
+  }
+
+  fuzzer_test("boringssl_client_no_fuzzer_mode_fuzzer") {
+    sources = [
+      "src/fuzz/client.cc",
+    ]
+    deps = [
+      ":boringssl_fuzzer_no_fuzzer_mode",
+    ]
+    seed_corpus = "src/fuzz/client_corpus_no_fuzzer_mode"
+  }
+
+  fuzzer_test("boringssl_server_no_fuzzer_mode_fuzzer") {
+    sources = [
+      "src/fuzz/server.cc",
+    ]
+    deps = [
+      ":boringssl_fuzzer_no_fuzzer_mode",
+    ]
+    seed_corpus = "src/fuzz/server_corpus_no_fuzzer_mode"
   }
 }

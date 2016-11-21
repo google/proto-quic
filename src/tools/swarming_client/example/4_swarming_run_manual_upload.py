@@ -81,6 +81,8 @@ def main():
       cmd.append('--idempotent')
     if options.priority is not None:
       cmd.extend(('--priority', str(options.priority)))
+    if options.service_account:
+      cmd.extend(('--service-account', options.service_account))
     common.run(cmd, options.verbose)
     return 0
   except subprocess.CalledProcessError as e:

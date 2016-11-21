@@ -191,9 +191,9 @@ bool XcodeWriter::RunAndWriteFiles(const std::string& workspace_name,
                                   root_target_name, ninja_extra_args,
                                   build_settings, target_os);
 
-  workspace.CreateSourcesProject(all_targets, build_settings->build_dir(),
-                                 attributes, source_path, config_name,
-                                 target_os);
+  workspace.CreateSourcesProject(
+      all_targets, build_settings->build_dir(), attributes, source_path,
+      build_settings->root_path_utf8(), config_name, target_os);
 
   return workspace.WriteFiles(build_settings, err);
 }
@@ -321,14 +321,12 @@ void XcodeWriter::CreateSourcesProject(
     const SourceDir& root_build_dir,
     const PBXAttributes& attributes,
     const std::string& source_path,
+    const std::string& absolute_source_path,
     const std::string& config_name,
     TargetOsType target_os) {
   std::vector<SourceFile> sources;
   for (const Target* target : targets) {
     for (const SourceFile& source : target->sources()) {
-      if (source.is_system_absolute())
-        continue;
-
       if (IsStringInOutputDir(root_build_dir, source.value()))
         continue;
 
@@ -347,7 +345,8 @@ void XcodeWriter::CreateSourcesProject(
 
   SourceDir source_dir("//");
   for (const SourceFile& source : sources) {
-    std::string source_file = RebasePath(source.value(), source_dir);
+    std::string source_file =
+        RebasePath(source.value(), source_dir, absolute_source_path);
     sources_for_indexing->AddSourceFile(source_file);
   }
 

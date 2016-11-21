@@ -44,8 +44,10 @@ class TestActivityTracker : public ThreadActivityTracker {
 
 class ActivityTrackerTest : public testing::Test {
  public:
-  const int kMemorySize = 1 << 10;  // 1MiB
+  const int kMemorySize = 1 << 20;  // 1MiB
   const int kStackSize  = 1 << 10;  // 1KiB
+
+  using ActivityId = ThreadActivityTracker::ActivityId;
 
   ActivityTrackerTest() {}
 
@@ -78,8 +80,43 @@ class ActivityTrackerTest : public testing::Test {
     return global_tracker->thread_tracker_allocator_.cache_used();
   }
 
+  size_t GetGlobalUserDataMemoryCacheUsed() {
+    return GlobalActivityTracker::Get()->user_data_allocator_.cache_used();
+  }
+
   static void DoNothing() {}
 };
+
+TEST_F(ActivityTrackerTest, UserDataTest) {
+  char buffer[256];
+  memset(buffer, 0, sizeof(buffer));
+  ActivityUserData data(buffer, sizeof(buffer));
+  ASSERT_EQ(sizeof(buffer), data.available_);
+
+  data.SetInt("foo", 1);
+  ASSERT_EQ(sizeof(buffer) - 24, data.available_);
+
+  data.SetUint("b", 1U);  // Small names fit beside header in a word.
+  ASSERT_EQ(sizeof(buffer) - 24 - 16, data.available_);
+
+  data.Set("c", buffer, 10);
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24, data.available_);
+
+  data.SetString("dear john", "it's been fun");
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24 - 32, data.available_);
+
+  data.Set("c", buffer, 20);
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24 - 32, data.available_);
+
+  data.SetString("dear john", "but we're done together");
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24 - 32, data.available_);
+
+  data.SetString("dear john", "bye");
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24 - 32, data.available_);
+
+  data.SetChar("d", 'x');
+  ASSERT_EQ(sizeof(buffer) - 24 - 16 - 24 - 32 - 16, data.available_);
+}
 
 TEST_F(ActivityTrackerTest, PushPopTest) {
   std::unique_ptr<ThreadActivityTracker> tracker = CreateActivityTracker();
@@ -90,8 +127,8 @@ TEST_F(ActivityTrackerTest, PushPopTest) {
   ASSERT_EQ(0U, snapshot.activity_stack.size());
 
   char origin1;
-  tracker->PushActivity(&origin1, Activity::ACT_TASK,
-                        ActivityData::ForTask(11));
+  ActivityId id1 = tracker->PushActivity(&origin1, Activity::ACT_TASK,
+                                         ActivityData::ForTask(11));
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(1U, snapshot.activity_stack_depth);
   ASSERT_EQ(1U, snapshot.activity_stack.size());
@@ -103,8 +140,8 @@ TEST_F(ActivityTrackerTest, PushPopTest) {
 
   char origin2;
   char lock2;
-  tracker->PushActivity(&origin2, Activity::ACT_LOCK,
-                        ActivityData::ForLock(&lock2));
+  ActivityId id2 = tracker->PushActivity(&origin2, Activity::ACT_LOCK,
+                                         ActivityData::ForLock(&lock2));
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(2U, snapshot.activity_stack_depth);
   ASSERT_EQ(2U, snapshot.activity_stack.size());
@@ -116,7 +153,7 @@ TEST_F(ActivityTrackerTest, PushPopTest) {
   EXPECT_EQ(reinterpret_cast<uintptr_t>(&lock2),
             snapshot.activity_stack[1].data.lock.lock_address);
 
-  tracker->PopActivity();
+  tracker->PopActivity(id2);
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(1U, snapshot.activity_stack_depth);
   ASSERT_EQ(1U, snapshot.activity_stack.size());
@@ -125,7 +162,7 @@ TEST_F(ActivityTrackerTest, PushPopTest) {
             snapshot.activity_stack[0].origin_address);
   EXPECT_EQ(11U, snapshot.activity_stack[0].data.task.sequence_id);
 
-  tracker->PopActivity();
+  tracker->PopActivity(id1);
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(0U, snapshot.activity_stack_depth);
   ASSERT_EQ(0U, snapshot.activity_stack.size());
@@ -137,6 +174,7 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
   ThreadActivityTracker* tracker =
       GlobalActivityTracker::Get()->GetOrCreateTrackerForCurrentThread();
   ActivitySnapshot snapshot;
+  ASSERT_EQ(0U, GetGlobalUserDataMemoryCacheUsed());
 
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(0U, snapshot.activity_stack_depth);
@@ -145,6 +183,8 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
   {
     PendingTask task1(FROM_HERE, base::Bind(&DoNothing));
     ScopedTaskRunActivity activity1(task1);
+    ActivityUserData& user_data1 = activity1.user_data();
+    (void)user_data1;  // Tell compiler it's been used.
 
     ASSERT_TRUE(tracker->Snapshot(&snapshot));
     ASSERT_EQ(1U, snapshot.activity_stack_depth);
@@ -154,6 +194,8 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
     {
       PendingTask task2(FROM_HERE, base::Bind(&DoNothing));
       ScopedTaskRunActivity activity2(task2);
+      ActivityUserData& user_data2 = activity2.user_data();
+      (void)user_data2;  // Tell compiler it's been used.
 
       ASSERT_TRUE(tracker->Snapshot(&snapshot));
       ASSERT_EQ(2U, snapshot.activity_stack_depth);
@@ -170,6 +212,7 @@ TEST_F(ActivityTrackerTest, ScopedTaskTest) {
   ASSERT_TRUE(tracker->Snapshot(&snapshot));
   ASSERT_EQ(0U, snapshot.activity_stack_depth);
   ASSERT_EQ(0U, snapshot.activity_stack.size());
+  ASSERT_EQ(2U, GetGlobalUserDataMemoryCacheUsed());
 }
 
 TEST_F(ActivityTrackerTest, CreateWithFileTest) {
@@ -215,9 +258,10 @@ class SimpleActivityThread : public SimpleThread {
   ~SimpleActivityThread() override {}
 
   void Run() override {
-    GlobalActivityTracker::Get()
-        ->GetOrCreateTrackerForCurrentThread()
-        ->PushActivity(origin_, activity_, data_);
+    ThreadActivityTracker::ActivityId id =
+        GlobalActivityTracker::Get()
+            ->GetOrCreateTrackerForCurrentThread()
+            ->PushActivity(origin_, activity_, data_);
 
     {
       AutoLock auto_lock(lock_);
@@ -226,9 +270,7 @@ class SimpleActivityThread : public SimpleThread {
         exit_condition_.Wait();
     }
 
-    GlobalActivityTracker::Get()
-        ->GetOrCreateTrackerForCurrentThread()
-        ->PopActivity();
+    GlobalActivityTracker::Get()->GetTrackerForCurrentThread()->PopActivity(id);
   }
 
   void Exit() {

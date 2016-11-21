@@ -43,18 +43,11 @@ OSStatus NET_EXPORT CreateBasicX509Policy(SecPolicyRef* policy);
 // Creates security policies to control revocation checking (OCSP and CRL).
 // If |enable_revocation_checking| is true, revocation checking will be
 // explicitly enabled.
-// If |enable_revocation_checking| is false, but |enable_ev_checking| is
-// true, then the system policies for EV checking (which include checking
-// for an online OCSP response) will be permitted. However, if the OS
-// does not believe the certificate is EV, no revocation checking will be
-// performed.
-// If both are false, then the policies returned will be explicitly
-// prohibited from accessing the network or the local cache, regardless of
-// system settings.
+// Otherwise, the policies returned will be explicitly prohibited from accessing
+// the network or the local cache, if possible.
 // If the policies are successfully created, they will be appended to
 // |policies|.
 OSStatus NET_EXPORT CreateRevocationPolicies(bool enable_revocation_checking,
-                                             bool enable_ev_checking,
                                              CFMutableArrayRef policies);
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.

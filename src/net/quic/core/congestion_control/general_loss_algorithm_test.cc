@@ -38,7 +38,7 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
     frame->stream_id = kHeadersStreamId;
     SerializedPacket packet(kDefaultPathId, packet_number,
                             PACKET_1BYTE_PACKET_NUMBER, nullptr, kDefaultLength,
-                            0, false, false);
+                            false, false);
     packet.retransmittable_frames.push_back(QuicFrame(frame));
     unacked_packets_.AddSentPacket(&packet, 0, NOT_RETRANSMISSION, clock_.Now(),
                                    true);
@@ -47,7 +47,7 @@ class GeneralLossAlgorithmTest : public ::testing::Test {
   void SendAckPacket(QuicPacketNumber packet_number) {
     SerializedPacket packet(kDefaultPathId, packet_number,
                             PACKET_1BYTE_PACKET_NUMBER, nullptr, kDefaultLength,
-                            0, true, false);
+                            true, false);
     unacked_packets_.AddSentPacket(&packet, 0, NOT_RETRANSMISSION, clock_.Now(),
                                    false);
   }

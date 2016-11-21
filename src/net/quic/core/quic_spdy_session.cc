@@ -118,7 +118,8 @@ void QuicSpdySession::OnConfigNegotiated() {
     headers_stream_->DisableHpackDynamicTable();
   }
   const QuicVersion version = connection()->version();
-  if (version > QUIC_VERSION_35 && config()->ForceHolBlocking(perspective())) {
+  if (FLAGS_quic_enable_force_hol_blocking && version > QUIC_VERSION_35 &&
+      config()->ForceHolBlocking(perspective())) {
     force_hol_blocking_ = true;
     // Autotuning makes sure that the headers stream flow control does
     // not get in the way, and normal stream and connection level flow

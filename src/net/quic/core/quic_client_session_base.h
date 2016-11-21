@@ -65,8 +65,9 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
   // Called by |QuicSpdyClientStream| on receipt of PUSH_PROMISE, does
   // some session level validation and creates the
   // |QuicClientPromisedInfo| inserting into maps by (promised) id and
-  // url.
-  virtual void HandlePromised(QuicStreamId associated_id,
+  // url. Returns true if a new push promise is accepted. Reset the promised
+  // stream and returns false otherwiese.
+  virtual bool HandlePromised(QuicStreamId associated_id,
                               QuicStreamId promised_id,
                               const SpdyHeaderBlock& headers);
 
@@ -121,7 +122,7 @@ class NET_EXPORT_PRIVATE QuicClientSessionBase
       std::unordered_map<QuicStreamId, std::unique_ptr<QuicClientPromisedInfo>>;
 
   // As per rfc7540, section 10.5: track promise streams in "reserved
-  // (remote)".  The primary key is URL from he promise request
+  // (remote)".  The primary key is URL from the promise request
   // headers.  The promised stream id is a secondary key used to get
   // promise info when the response headers of the promised stream
   // arrive.

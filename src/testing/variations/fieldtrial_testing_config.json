@@ -212,14 +212,7 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
-                    "params": {
-                        "Background": "3;8;0.1;0;30000",
-                        "BackgroundFileIO": "3;8;0.1;0;30000",
-                        "Foreground": "8;32;0.3;0;30000",
-                        "ForegroundFileIO": "8;32;0.3;0;30000",
-                        "RedirectSequencedWorkerPools": "true"
-                    }
+                    "name": "Default"
                 },
                 {
                     "name": "EnableViaFlag",
@@ -526,6 +519,7 @@
                 {
                     "name": "DocumentWriteScriptBlockGroup",
                     "params": {
+                        "disallowFetchForDocWrittenScriptsInMainFrame": "false",
                         "disallowFetchForDocWrittenScriptsInMainFrameOnSlowConnections": "true"
                     },
                     "disable_features": [
@@ -872,6 +866,23 @@
             ]
         }
     ],
+    "MarkNonSecureAs": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "show-non-secure-passwords-cc-ui"
+                }
+            ]
+        }
+    ],
     "MaterialDesignDownloads": [
         {
             "platforms": [
@@ -955,6 +966,24 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "NTPRecentForeignTabs": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled-ThreeHour",
+                    "params": {
+                        "max_foreign_tabs_age_in_minutes": "180"
+                    },
+                    "enable_features": [
+                        "NTPForeignSessionsSuggestions"
+                    ]
                 }
             ]
         }

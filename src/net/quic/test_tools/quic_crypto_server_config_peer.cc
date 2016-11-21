@@ -92,16 +92,6 @@ string QuicCryptoServerConfigPeer::NewServerNonce(QuicRandom* rand,
   return server_config_->NewServerNonce(rand, now);
 }
 
-HandshakeFailureReason QuicCryptoServerConfigPeer::ValidateServerNonce(
-    StringPiece token,
-    QuicWallTime now) {
-  return server_config_->ValidateServerNonce(token, now);
-}
-
-base::Lock* QuicCryptoServerConfigPeer::GetStrikeRegisterClientLock() {
-  return &server_config_->strike_register_client_lock_;
-}
-
 void QuicCryptoServerConfigPeer::CheckConfigs(const char* server_config_id1,
                                               ...) {
   va_list ap;
@@ -198,16 +188,6 @@ uint32_t QuicCryptoServerConfigPeer::source_address_token_future_secs() {
 
 uint32_t QuicCryptoServerConfigPeer::source_address_token_lifetime_secs() {
   return server_config_->source_address_token_lifetime_secs_;
-}
-
-uint32_t
-QuicCryptoServerConfigPeer::server_nonce_strike_register_max_entries() {
-  return server_config_->server_nonce_strike_register_max_entries_;
-}
-
-uint32_t
-QuicCryptoServerConfigPeer::server_nonce_strike_register_window_secs() {
-  return server_config_->server_nonce_strike_register_window_secs_;
 }
 
 }  // namespace test

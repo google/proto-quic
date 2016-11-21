@@ -122,7 +122,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   // Returns a newly created QuicSpdyClientStream, owned by the
   // QuicSimpleClient.
-  virtual QuicSpdyClientStream* CreateReliableClientStream();
+  virtual QuicSpdyClientStream* CreateClientStream();
 
   // Wait for events until the stream with the given ID is closed.
   void WaitForStreamToClose(QuicStreamId id);

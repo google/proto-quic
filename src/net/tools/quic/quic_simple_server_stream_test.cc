@@ -17,8 +17,8 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/test/gtest_util.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_in_memory_cache.h"
@@ -32,7 +32,7 @@ using base::StringPiece;
 using net::test::MockQuicConnection;
 using net::test::MockQuicConnectionHelper;
 using net::test::MockQuicSpdySession;
-using net::test::ReliableQuicStreamPeer;
+using net::test::QuicStreamPeer;
 using net::test::SupportedVersions;
 using net::test::kInitialSessionFlowControlWindowForTest;
 using net::test::kInitialStreamFlowControlWindowForTest;
@@ -114,7 +114,7 @@ class MockQuicSimpleServerSession : public QuicSimpleServerSession {
                     ConnectionCloseSource source));
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicSpdyStream*(QuicStreamId id));
   MOCK_METHOD6(WritevData,
-               QuicConsumedData(ReliableQuicStream* stream,
+               QuicConsumedData(QuicStream* stream,
                                 QuicStreamId id,
                                 QuicIOVector data,
                                 QuicStreamOffset offset,
@@ -337,7 +337,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithIllegalResponseStatus) {
           strlen(QuicSimpleServerStream::kErrorResponseBody), true)));
 
   QuicSimpleServerStreamPeer::SendResponse(stream_);
-  EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_FALSE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -368,7 +368,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithIllegalResponseStatus2) {
           strlen(QuicSimpleServerStream::kErrorResponseBody), true)));
 
   QuicSimpleServerStreamPeer::SendResponse(stream_);
-  EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_FALSE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -424,7 +424,7 @@ TEST_P(QuicSimpleServerStreamTest, SendResponseWithValidHeaders) {
       .WillOnce(Return(QuicConsumedData(body.length(), true)));
 
   QuicSimpleServerStreamPeer::SendResponse(stream_);
-  EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_FALSE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -527,7 +527,7 @@ TEST_P(QuicSimpleServerStreamTest, TestSendErrorResponse) {
       .WillOnce(Return(QuicConsumedData(3, true)));
 
   QuicSimpleServerStreamPeer::SendErrorResponse(stream_);
-  EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_FALSE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -547,7 +547,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidMultipleContentLength) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   stream_->OnStreamHeaderList(true, kFakeFrameLen, header_list_);
 
-  EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_TRUE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -567,7 +567,7 @@ TEST_P(QuicSimpleServerStreamTest, InvalidLeadingNullContentLength) {
       .WillRepeatedly(Invoke(MockQuicSession::ConsumeAllData));
   stream_->OnStreamHeaderList(true, kFakeFrameLen, header_list_);
 
-  EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_TRUE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_TRUE(stream_->reading_stopped());
   EXPECT_TRUE(stream_->write_side_closed());
 }
@@ -582,7 +582,7 @@ TEST_P(QuicSimpleServerStreamTest, ValidMultipleContentLength) {
   stream_->OnStreamHeaderList(false, kFakeFrameLen, header_list_);
 
   EXPECT_EQ(11, QuicSimpleServerStreamPeer::content_length(stream_));
-  EXPECT_FALSE(ReliableQuicStreamPeer::read_side_closed(stream_));
+  EXPECT_FALSE(QuicStreamPeer::read_side_closed(stream_));
   EXPECT_FALSE(stream_->reading_stopped());
   EXPECT_FALSE(stream_->write_side_closed());
 }

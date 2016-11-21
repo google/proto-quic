@@ -12,7 +12,7 @@
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/socket/tcp_client_socket.h"
-#include "net/udp/udp_client_socket.h"
+#include "net/socket/udp_client_socket.h"
 
 namespace net {
 

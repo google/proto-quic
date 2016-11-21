@@ -5,8 +5,6 @@
 """Classes and functions for generic network communication over HTTP."""
 
 import cookielib
-import cStringIO as StringIO
-import datetime
 import httplib
 import itertools
 import json
@@ -26,6 +24,7 @@ from third_party import requests
 from third_party.requests import adapters
 from third_party.requests import structures
 
+from utils import authenticators
 from utils import oauth
 from utils import tools
 
@@ -240,7 +239,10 @@ def get_http_service(urlhost, allow_cached=True):
     is_gs = GS_STORAGE_HOST_URL_RE.match(urlhost)
     conf = get_oauth_config()
     if not engine_cls.provides_auth and not is_gs and not conf.disabled:
-      authenticator = OAuthAuthenticator(urlhost, conf)
+      authenticator = (
+          authenticators.LuciContextAuthenticator()
+          if conf.use_luci_context_auth else
+          authenticators.OAuthAuthenticator(urlhost, conf))
     return HttpService(
         urlhost,
         engine=engine_cls(),
@@ -348,13 +350,13 @@ class HttpService(object):
     """
     # Use global lock to ensure two authentication flows never run in parallel.
     with _auth_lock:
-      if self.authenticator:
+      if self.authenticator and self.authenticator.supports_login:
         return self.authenticator.login(allow_user_interaction)
       return False
 
   def logout(self):
     """Purges access credentials from local cache."""
-    if self.authenticator:
+    if self.authenticator and self.authenticator.supports_login:
       self.authenticator.logout()
 
   def request(
@@ -486,7 +488,7 @@ class HttpService(object):
           logging.error(
               'Unable to authenticate to %s (%s).',
               self.urlhost, self._format_error(e))
-          if self.authenticator:
+          if self.authenticator and self.authenticator.supports_login:
             logging.error(
                 'Use auth.py to login: python auth.py login --service=%s',
                 self.urlhost)
@@ -659,20 +661,6 @@ class HttpResponse(object):
     return self._headers.get(header)
 
 
-class Authenticator(object):
-  """Base class for objects that know how to authenticate into http services."""
-
-  def authorize(self, request):
-    """Add authentication information to the request."""
-
-  def login(self, allow_user_interaction):
-    """Run interactive authentication flow refreshing the token."""
-    raise NotImplementedError()
-
-  def logout(self):
-    """Purges access credentials from local cache."""
-
-
 class RequestsLibEngine(object):
   """Class that knows how to execute HttpRequests via requests library."""
 
@@ -745,52 +733,6 @@ class RequestsLibEngine(object):
           e.response.status_code, e.response.headers.get('Content-Type'), e)
     except (requests.ConnectionError, socket.timeout, ssl.SSLError) as e:
       raise ConnectionError(e)
-
-
-class OAuthAuthenticator(Authenticator):
-  """Uses OAuth Authorization header to authenticate requests."""
-
-  def __init__(self, urlhost, config):
-    super(OAuthAuthenticator, self).__init__()
-    assert isinstance(config, oauth.OAuthConfig)
-    self.urlhost = urlhost
-    self.config = config
-    self._lock = threading.Lock()
-    self._access_token = None
-
-  def authorize(self, request):
-    with self._lock:
-      # Load from cache on a first access.
-      if not self._access_token:
-        self._access_token = oauth.load_access_token(self.urlhost, self.config)
-      # Refresh if expired.
-      need_refresh = True
-      if self._access_token:
-        if self._access_token.expires_at is not None:
-          # Allow 5 min of clock skew.
-          now = datetime.datetime.utcnow() + datetime.timedelta(seconds=300)
-          need_refresh = now >= self._access_token.expires_at
-        else:
-          # Token without expiration time never expired.
-          need_refresh = False
-      if need_refresh:
-        self._access_token = oauth.create_access_token(
-            self.urlhost, self.config, False)
-      if self._access_token:
-        request.headers['Authorization'] = (
-            'Bearer %s' % self._access_token.token)
-
-  def login(self, allow_user_interaction):
-    with self._lock:
-      # Forcefully refresh the token.
-      self._access_token = oauth.create_access_token(
-          self.urlhost, self.config, allow_user_interaction)
-      return self._access_token is not None
-
-  def logout(self):
-    with self._lock:
-      self._access_token = None
-      oauth.purge_access_token(self.urlhost, self.config)
 
 
 class RetryAttempt(object):

@@ -63,66 +63,23 @@ void HistogramBrokenAlternateProtocolLocation(
                             BROKEN_ALTERNATE_PROTOCOL_LOCATION_MAX);
 }
 
-bool IsAlternateProtocolValid(AlternateProtocol protocol) {
+bool IsAlternateProtocolValid(NextProto protocol) {
   switch (protocol) {
-    case NPN_HTTP_2:
-      return true;
-    case QUIC:
-      return true;
-    case UNINITIALIZED_ALTERNATE_PROTOCOL:
+    case kProtoUnknown:
       return false;
+    case kProtoHTTP11:
+      return false;
+    case kProtoHTTP2:
+      return true;
+    case kProtoQUIC:
+      return true;
   }
   NOTREACHED();
   return false;
 }
 
-const char* AlternateProtocolToString(AlternateProtocol protocol) {
-  switch (protocol) {
-    case QUIC:
-      return "quic";
-    case NPN_HTTP_2:
-      return "h2";
-    case UNINITIALIZED_ALTERNATE_PROTOCOL:
-      return "Uninitialized";
-  }
-  NOTREACHED();
-  return "";
-}
-
-AlternateProtocol AlternateProtocolFromString(const std::string& str) {
-  if (str == "quic")
-    return QUIC;
-  if (str == "h2")
-    return NPN_HTTP_2;
-  // "npn-h2" and "npn-spdy/3.1" are accepted here so that persisted settings
-  // with the old string can be loaded from disk.  TODO(bnc):  Remove around
-  // 2016 December.
-  if (str == "npn-h2")
-    return NPN_HTTP_2;
-  if (str == "npn-spdy/3.1")
-    return NPN_HTTP_2;
-
-  return UNINITIALIZED_ALTERNATE_PROTOCOL;
-}
-
-AlternateProtocol AlternateProtocolFromNextProto(NextProto next_proto) {
-  switch (next_proto) {
-    case kProtoHTTP2:
-      return NPN_HTTP_2;
-    case kProtoQUIC:
-      return QUIC;
-
-    case kProtoUnknown:
-    case kProtoHTTP11:
-      break;
-  }
-
-  NOTREACHED() << "Invalid NextProto: " << next_proto;
-  return UNINITIALIZED_ALTERNATE_PROTOCOL;
-}
-
 std::string AlternativeService::ToString() const {
-  return base::StringPrintf("%s %s:%d", AlternateProtocolToString(protocol),
+  return base::StringPrintf("%s %s:%d", NextProtoToString(protocol),
                             host.c_str(), port);
 }
 

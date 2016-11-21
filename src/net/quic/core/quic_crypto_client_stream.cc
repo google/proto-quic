@@ -337,7 +337,6 @@ void QuicCryptoClientStream::DoSendCHLO(
   string error_details;
   QuicErrorCode error = crypto_config_->FillClientHello(
       server_id_, session()->connection()->connection_id(),
-      session()->connection()->version(),
       session()->connection()->supported_versions().front(), cached,
       session()->connection()->clock()->WallNow(),
       session()->connection()->random_generator(), channel_id_key_.get(),

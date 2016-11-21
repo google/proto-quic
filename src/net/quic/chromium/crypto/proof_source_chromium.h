@@ -40,8 +40,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 base::StringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 scoped_refptr<ProofSource::Chain>* out_chain,
-                std::string* out_signature,
-                std::string* out_leaf_cert_sct) override;
+                QuicCryptoProof* proof) override;
 
   void GetProof(const IPAddress& server_ip,
                 const std::string& hostname,

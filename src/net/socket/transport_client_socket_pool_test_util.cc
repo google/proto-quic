@@ -23,8 +23,8 @@
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
+#include "net/socket/datagram_client_socket.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/udp/datagram_client_socket.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

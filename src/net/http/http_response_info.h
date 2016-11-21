@@ -37,11 +37,16 @@ class NET_EXPORT HttpResponseInfo {
     CONNECTION_INFO_DEPRECATED_SPDY2 = 2,
     CONNECTION_INFO_DEPRECATED_SPDY3 = 3,
     CONNECTION_INFO_HTTP2 = 4,  // HTTP/2.
-    CONNECTION_INFO_QUIC = 5,
+    CONNECTION_INFO_QUIC_UNKNOWN_VERSION = 5,
     CONNECTION_INFO_DEPRECATED_HTTP2_14 = 6,  // HTTP/2 draft-14.
     CONNECTION_INFO_DEPRECATED_HTTP2_15 = 7,  // HTTP/2 draft-15.
     CONNECTION_INFO_HTTP0_9 = 8,
     CONNECTION_INFO_HTTP1_0 = 9,
+    CONNECTION_INFO_QUIC_32 = 10,
+    CONNECTION_INFO_QUIC_33 = 11,
+    CONNECTION_INFO_QUIC_34 = 12,
+    CONNECTION_INFO_QUIC_35 = 13,
+    CONNECTION_INFO_QUIC_36 = 14,
     NUM_OF_CONNECTION_INFOS,
   };
 
@@ -89,7 +94,7 @@ class NET_EXPORT HttpResponseInfo {
                bool response_truncated) const;
 
   // Whether QUIC is used or not.
-  bool DidUseQuic() const { return connection_info == CONNECTION_INFO_QUIC; }
+  bool DidUseQuic() const;
 
   // The following is only defined if the request_time member is set.
   // If this resource was found in the cache, then this bool is set, and

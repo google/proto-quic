@@ -996,6 +996,38 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Accessibility.ChromeVox.Jump">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    A Chrome OS user with spoken feedback enabled has executed any jump action,
+    like jumping to the next heading on a web page.
+  </description>
+</action>
+
+<action name="Accessibility.ChromeVox.Navigate">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    A Chrome OS user with spoken feedback enabled has executed any navigation
+    action, like navigating to the next object on the screen.
+  </description>
+</action>
+
+<action name="Accessibility.ChromeVox.ToggleNextOff">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    A Chrome OS user with spoken feedback enabled manually toggles ChromeVox
+    Next off.
+  </description>
+</action>
+
+<action name="Accessibility.ChromeVox.ToggleNextOn">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    A Chrome OS user with spoken feedback enabled manually toggles ChromeVox
+    Next on.
+  </description>
+</action>
+
 <action name="ActionBox.ClickButton">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -10283,6 +10315,15 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="NewTabPage_ContentSuggestions_ArticlesUsage">
+  <owner>markusheintz@chromium.org</owner>
+  <description>
+    Counts the usage of the &quot;Articles for you&quot; section on the New Tab
+    Page. Examples for &quot;Articles for You&quot; usage are: A user opening an
+    article suggestion or a user viewing the articles suggestions section.
+  </description>
+</action>
+
 <action name="NewTabPage_ReopenTab">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -11124,11 +11165,9 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Options_DefaultFullScreenSettingChanged">
-  <owner>lshang@chromium.org</owner>
-  <description>
-    Recorded when the default value for the Full Screen content setting is
-    changed by the user.
-  </description>
+  <owner>mgiuca@chromium.org</owner>
+  <description>Was used for changing fullscreen settings.</description>
+  <obsolete>Deprecated as of 2016-10. These settings no longer exist.</obsolete>
 </action>
 
 <action name="Options_DefaultGeolocationSettingChanged">
@@ -11196,8 +11235,9 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="Options_DefaultMouseLockSettingChanged">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>mgiuca@chromium.org</owner>
+  <description>Was used for changing mouse lock settings.</description>
+  <obsolete>Deprecated as of 2016-10. These settings no longer exist.</obsolete>
 </action>
 
 <action name="Options_DefaultMultipleAutomaticDLSettingChange">

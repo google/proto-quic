@@ -13,7 +13,7 @@
 #include "net/log/net_log_with_source.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_time.h"
-#include "net/udp/datagram_client_socket.h"
+#include "net/socket/datagram_client_socket.h"
 
 namespace net {
 

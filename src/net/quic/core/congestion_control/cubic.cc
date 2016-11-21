@@ -150,13 +150,11 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
   QuicPacketCount target_congestion_window =
       origin_point_congestion_window_ - delta_congestion_window;
 
-  if (FLAGS_quic_limit_cubic_cwnd_increase) {
-    // Limit the CWND increase to half the acked packets rounded up to the
-    // nearest packet.
-    target_congestion_window =
-        min(target_congestion_window,
-            current_congestion_window + (epoch_packets_count_ + 1) / 2);
-  }
+  // Limit the CWND increase to half the acked packets rounded up to the
+  // nearest packet.
+  target_congestion_window =
+      min(target_congestion_window,
+          current_congestion_window + (epoch_packets_count_ + 1) / 2);
 
   DCHECK_LT(0u, estimated_tcp_congestion_window_);
   // With dynamic beta/alpha based on number of active streams, it is possible

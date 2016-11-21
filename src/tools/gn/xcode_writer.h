@@ -82,6 +82,7 @@ class XcodeWriter {
                             const SourceDir& root_build_dir,
                             const PBXAttributes& attributes,
                             const std::string& source_path,
+                            const std::string& absolute_source_path,
                             const std::string& config_name,
                             TargetOsType target_os);
 

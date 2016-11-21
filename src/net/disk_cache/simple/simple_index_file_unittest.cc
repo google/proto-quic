@@ -15,7 +15,6 @@
 #include "base/pickle.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
-#include "base/strings/stringprintf.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -328,7 +327,8 @@ TEST_F(SimpleIndexFileTest, SimpleCacheUpgrade) {
                             index_file_contents.size()));
 
   // Upgrade the cache.
-  ASSERT_TRUE(disk_cache::UpgradeSimpleCacheOnDisk(cache_path));
+  ASSERT_TRUE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_path, SimpleExperiment()));
 
   // Create the backend and initiate index flush by destroying the backend.
   base::Thread cache_thread("CacheThread");

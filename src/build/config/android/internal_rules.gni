@@ -31,28 +31,8 @@ _java_target_whitelist = [
 
   # TODO(agrieve): Rename targets below to match above patterns.
   "*android_webview/glue:glue",
-  "//build/android/pylib/device/commands:chromium_commands",
   "//build/android/rezip:rezip",
   "//chrome/test/android/cast_emulator:cast_emulator",
-  "//components/cronet/android:cronet_api",
-  "//components/cronet/android:cronet_javadoc_classpath",
-  "//mojo/public/java:bindings",
-  "//third_party/android_tools:emma_device",
-  "//third_party/cardboard-java:cardboard-java",
-  "//third_party/custom_tabs_client:custom_tabs_client_shared_lib",
-  "//third_party/custom_tabs_client:custom_tabs_support_lib",
-  "//third_party/errorprone:chromium_errorprone",
-  "//third_party/haha:haha",
-  "//third_party/junit:hamcrest",
-  "//third_party/netty4:netty_all",
-  "//third_party/netty-tcnative:netty-tcnative",
-  "//third_party/robolectric:android-all-4.3_r2-robolectric-0",
-  "//third_party/robolectric:android-all-5.0.0_r2-robolectric-1",
-  "//third_party/robolectric:json-20080701",
-  "//third_party/robolectric:tagsoup-1.2",
-  "//third_party/robolectric:shadows-core-3.0-18",
-  "//third_party/robolectric:shadows-core-3.0-21",
-  "//third_party/robolectric:shadows-multidex-3.0",
 ]
 
 # Targets that match the whitelist but are not actually java targets.
@@ -73,10 +53,12 @@ _java_target_blacklist = [
 # build/android/gyp/util/build_utils.py:ExpandFileArgs
 template("write_build_config") {
   type = invoker.type
+  _is_prebuilt_binary =
+      defined(invoker.is_prebuilt_binary) && invoker.is_prebuilt_binary
 
   # Don't need to enforce naming scheme for these targets since we never
   # consider them in dependency chains.
-  if (type != "android_apk" && type != "java_binary" &&
+  if (!_is_prebuilt_binary && type != "android_apk" && type != "java_binary" &&
       type != "resource_rewriter") {
     set_sources_assignment_filter(_java_target_whitelist)
     _parent_invoker = invoker.invoker
@@ -348,6 +330,16 @@ template("write_build_config") {
           rebase_path(invoker.proguard_configs, root_build_dir)
       args += [ "--proguard-configs=$_rebased_proguard_configs" ]
     }
+    if (defined(invoker.gradle_treat_as_prebuilt) &&
+        invoker.gradle_treat_as_prebuilt) {
+      args += [ "--gradle-treat-as-prebuilt" ]
+    }
+    if (defined(invoker.main_class)) {
+      args += [
+        "--main-class",
+        invoker.main_class,
+      ]
+    }
     if (current_toolchain != default_toolchain) {
       # This has to be a built-time error rather than a GN assert because many
       # packages have a mix of java and non-java targets. For example, the
@@ -425,55 +417,6 @@ template("copy_ex") {
   }
 }
 
-template("device_isolate") {
-  testonly = true
-  _runtime_deps_file = "$target_gen_dir/$target_name.runtime_deps"
-  group("${target_name}__write_deps") {
-    forward_variables_from(invoker,
-                           [
-                             "data",
-                             "data_deps",
-                             "deps",
-                             "public_deps",
-                           ])
-    write_runtime_deps = _runtime_deps_file
-  }
-
-  action(target_name) {
-    script = "//build/android/gn/generate_isolate.py"
-    inputs = [
-      _runtime_deps_file,
-    ]
-    outputs = [
-      invoker.output,
-    ]
-    args = [
-      "--output-directory=.",
-      "--out-file",
-      rebase_path(invoker.output, root_build_dir),
-      "--runtime-deps-file",
-      rebase_path(_runtime_deps_file, root_build_dir),
-      "--apply-android-filters",
-      "--apply-device-filters",
-    ]
-    _assert_no_odd_data =
-        defined(invoker.assert_no_odd_data) && invoker.assert_no_odd_data
-    if (_assert_no_odd_data) {
-      args += [ "--assert-no-odd-data" ]
-    }
-    if (defined(invoker.command)) {
-      _isolate_dir = get_path_info(invoker.output, "dir")
-      args += [
-        "--command",
-        rebase_path(invoker.command, _isolate_dir),
-      ]
-    }
-    deps = [
-      ":${invoker.target_name}__write_deps",
-    ]
-  }
-}
-
 # Generates a script in the output bin directory which runs the test
 # target using the test runner script in build/android/test_runner.py.
 template("test_runner_script") {
@@ -482,6 +425,28 @@ template("test_runner_script") {
   _test_type = invoker.test_type
   _incremental_install =
       defined(invoker.incremental_install) && invoker.incremental_install
+
+  _runtime_deps =
+      !defined(invoker.ignore_all_data_deps) || !invoker.ignore_all_data_deps
+
+  if (_runtime_deps) {
+    # This runtime_deps file is used at runtime and thus cannot go in
+    # target_gen_dir.
+    _target_dir_name = get_label_info(":$target_name", "dir")
+    _runtime_deps_file =
+        "$root_out_dir/gen.runtime/$_target_dir_name/$target_name.runtime_deps"
+    _runtime_deps_target = "${target_name}__write_deps"
+    group(_runtime_deps_target) {
+      forward_variables_from(invoker,
+                             [
+                               "data",
+                               "data_deps",
+                               "deps",
+                               "public_deps",
+                             ])
+      write_runtime_deps = _runtime_deps_file
+    }
+  }
 
   action(target_name) {
     forward_variables_from(invoker,
@@ -507,6 +472,15 @@ template("test_runner_script") {
       "--output-directory",
       rebase_path(root_build_dir, root_build_dir),
     ]
+
+    if (_runtime_deps) {
+      deps += [ ":$_runtime_deps_target" ]
+      data += [ _runtime_deps_file ]
+      test_runner_args += [
+        "--runtime-deps-path",
+        rebase_path(_runtime_deps_file, root_build_dir),
+      ]
+    }
 
     # apk_target is not used for native executable tests
     # (e.g. breakpad_unittests).
@@ -583,13 +557,6 @@ template("test_runner_script") {
           "@FileArg($_rebased_build_config:deps_info:apk_path)",
         ]
       }
-    }
-    if (defined(invoker.isolate_file)) {
-      data += [ invoker.isolate_file ]
-      test_runner_args += [
-        "--isolate-file-path",
-        rebase_path(invoker.isolate_file, root_build_dir),
-      ]
     }
     if (defined(invoker.shard_timeout)) {
       test_runner_args += [ "--shard-timeout=${invoker.shard_timeout}" ]
@@ -927,6 +894,11 @@ if (enable_java_templates) {
         depfile = "$target_gen_dir/$target_name.d"
 
         main_dex_rules = "//build/android/main_dex_classes.flags"
+
+        if (!defined(inputs)) {
+          inputs = []
+        }
+        inputs += [ main_dex_rules ]
 
         outputs = [
           _main_dex_list_path,
@@ -1738,14 +1710,19 @@ if (enable_java_templates) {
         defined(invoker.supports_android) && invoker.supports_android
 
     assert(defined(invoker.jar_path))
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    } else {
+      _output_name = get_path_info(invoker.jar_path, "name")
+    }
     _base_path = "${target_gen_dir}/$target_name"
 
     # Jar files can be needed at runtime (by Robolectric tests or java binaries),
     # so do not put them under gen/.
     _target_dir_name = get_label_info(":$target_name", "dir")
-    _jar_path = "$root_out_dir/lib.java$_target_dir_name/$target_name.jar"
+    _jar_path = "$root_out_dir/lib.java$_target_dir_name/$_output_name.jar"
     _ijar_path =
-        "$root_out_dir/lib.java$_target_dir_name/$target_name.interface.jar"
+        "$root_out_dir/lib.java$_target_dir_name/$_output_name.interface.jar"
     _build_config = _base_path + ".build_config"
 
     if (_supports_android) {
@@ -1771,6 +1748,7 @@ if (enable_java_templates) {
 
     write_build_config(_build_config_target_name) {
       type = "java_prebuilt"
+      is_prebuilt_binary = defined(invoker.main_class)
       forward_variables_from(invoker,
                              [
                                "input_jars_paths",
@@ -2173,14 +2151,16 @@ if (enable_java_templates) {
            defined(invoker.srcjar_deps))
     _base_path = "$target_gen_dir/$target_name"
 
+    if (defined(invoker.output_name)) {
+      _output_name = invoker.output_name
+    } else {
+      _output_name = target_name
+    }
+
     # Jar files can be needed at runtime (by Robolectric tests or java binaries),
     # so do not put them under gen/.
-    _jar_name = target_name
-    if (defined(invoker.jar_name)) {
-      _jar_name = invoker.jar_name
-    }
     target_dir_name = get_label_info(":$target_name", "dir")
-    _jar_path = "$root_out_dir/lib.java$target_dir_name/$_jar_name.jar"
+    _jar_path = "$root_out_dir/lib.java$target_dir_name/$_output_name.jar"
     if (defined(invoker.jar_path)) {
       _jar_path = invoker.jar_path
     }
@@ -2263,7 +2243,9 @@ if (enable_java_templates) {
       write_build_config(build_config_target_name) {
         forward_variables_from(invoker,
                                [
+                                 "gradle_treat_as_prebuilt",
                                  "input_jars_paths",
+                                 "main_class",
                                  "proguard_configs",
                                ])
         if (defined(invoker.is_java_binary) && invoker.is_java_binary) {

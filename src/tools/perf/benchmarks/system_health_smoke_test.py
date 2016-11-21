@@ -41,19 +41,8 @@ _DISABLED_TESTS = frozenset({
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:nytimes',  # pylint: disable=line-too-long
   # crbug.com/637230
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:news:cnn',  # pylint: disable=line-too-long
-
-  # crbug.com/641934
-  # These tests are taking too long (more than 100s each).
-  # TODO(nedn): reenable these test once we have more capacity to run them on
-  # CQ.
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:flipboard',  # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:media:imgur',  # pylint: disable=line-too-long
+  # crbug.com/666293
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:media:youtube',  # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:media:facebook_photos',  # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:news:reddit',  # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.browse:social:facebook',  # pylint: disable=line-too-long
-  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.load:news:cnn',  # pylint: disable=line-too-long
-
   # Permenently disabled from smoke test for being long-running.
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.long_running:tools:gmail-foreground',  # pylint: disable=line-too-long
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_mobile.long_running:tools:gmail-background',  # pylint: disable=line-too-long

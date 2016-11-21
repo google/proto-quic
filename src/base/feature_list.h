@@ -163,6 +163,8 @@ class BASE_EXPORT FeatureList {
 
   // Registers the given |instance| to be the singleton feature list for this
   // process. This should only be called once and |instance| must not be null.
+  // Note: If you are considering using this for the purposes of testing, take
+  // a look at using base/test/scoped_feature_list.h instead.
   static void SetInstance(std::unique_ptr<FeatureList> instance);
 
   // Clears the previously-registered singleton instance for tests and returns

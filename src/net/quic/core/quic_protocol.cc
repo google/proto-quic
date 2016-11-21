@@ -8,6 +8,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/core/quic_versions.h"
 
 using base::StringPiece;
 using std::map;
@@ -16,8 +17,6 @@ using std::ostream;
 using std::string;
 
 namespace net {
-
-const char* const kFinalOffsetHeaderKey = ":final-offset";
 
 size_t GetPacketHeaderSize(QuicVersion version,
                            const QuicPacketHeader& header) {
@@ -37,14 +36,12 @@ size_t GetPacketHeaderSize(QuicVersion version,
   return kPublicFlagsSize + connection_id_length +
          (include_version ? kQuicVersionSize : 0) +
          (include_path_id ? kQuicPathIdSize : 0) + packet_number_length +
-         (include_diversification_nonce ? kDiversificationNonceSize : 0) +
-         (version <= QUIC_VERSION_33 ? kPrivateFlagsSize : 0);
+         (include_diversification_nonce ? kDiversificationNonceSize : 0);
 }
 
 size_t GetStartOfEncryptedData(QuicVersion version,
                                const QuicPacketHeader& header) {
-  return GetPacketHeaderSize(version, header) -
-         (version <= QUIC_VERSION_33 ? kPrivateFlagsSize : 0);
+  return GetPacketHeaderSize(version, header);
 }
 
 size_t GetStartOfEncryptedData(QuicVersion version,
@@ -56,8 +53,7 @@ size_t GetStartOfEncryptedData(QuicVersion version,
   // Encryption starts before private flags.
   return GetPacketHeaderSize(version, connection_id_length, include_version,
                              include_path_id, include_diversification_nonce,
-                             packet_number_length) -
-         (version <= QUIC_VERSION_33 ? kPrivateFlagsSize : 0);
+                             packet_number_length);
 }
 
 QuicPacketPublicHeader::QuicPacketPublicHeader()
@@ -75,17 +71,10 @@ QuicPacketPublicHeader::QuicPacketPublicHeader(
 QuicPacketPublicHeader::~QuicPacketPublicHeader() {}
 
 QuicPacketHeader::QuicPacketHeader()
-    : packet_number(0),
-      path_id(kDefaultPathId),
-      entropy_flag(false),
-      entropy_hash(0) {}
+    : packet_number(0), path_id(kDefaultPathId) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketPublicHeader& header)
-    : public_header(header),
-      packet_number(0),
-      path_id(kDefaultPathId),
-      entropy_flag(false),
-      entropy_hash(0) {}
+    : public_header(header), packet_number(0), path_id(kDefaultPathId) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketHeader& other) = default;
 
@@ -95,8 +84,6 @@ QuicPublicResetPacket::QuicPublicResetPacket()
 QuicPublicResetPacket::QuicPublicResetPacket(
     const QuicPacketPublicHeader& header)
     : public_header(header), nonce_proof(0), rejected_packet_number(0) {}
-
-QuicBufferAllocator::~QuicBufferAllocator() = default;
 
 void StreamBufferDeleter::operator()(char* buffer) const {
   if (allocator_ != nullptr && buffer != nullptr) {
@@ -159,130 +146,6 @@ QuicStreamFrame::QuicStreamFrame(QuicStreamId stream_id,
 
 QuicStreamFrame::~QuicStreamFrame() {}
 
-uint32_t MakeQuicTag(char a, char b, char c, char d) {
-  return static_cast<uint32_t>(a) | static_cast<uint32_t>(b) << 8 |
-         static_cast<uint32_t>(c) << 16 | static_cast<uint32_t>(d) << 24;
-}
-
-bool ContainsQuicTag(const QuicTagVector& tag_vector, QuicTag tag) {
-  return std::find(tag_vector.begin(), tag_vector.end(), tag) !=
-         tag_vector.end();
-}
-
-QuicVersionVector AllSupportedVersions() {
-  QuicVersionVector supported_versions;
-  for (size_t i = 0; i < arraysize(kSupportedQuicVersions); ++i) {
-    supported_versions.push_back(kSupportedQuicVersions[i]);
-  }
-  return supported_versions;
-}
-
-QuicVersionVector CurrentSupportedVersions() {
-  return FilterSupportedVersions(AllSupportedVersions());
-}
-
-QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
-  QuicVersionVector filtered_versions(versions.size());
-  filtered_versions.clear();  // Guaranteed by spec not to change capacity.
-  for (QuicVersion version : versions) {
-    if (version < QUIC_VERSION_34) {
-      if (!FLAGS_quic_disable_pre_34) {
-        filtered_versions.push_back(version);
-      }
-    } else if (version == QUIC_VERSION_35) {
-      if (FLAGS_quic_enable_version_35) {
-        filtered_versions.push_back(version);
-      }
-    } else if (version == QUIC_VERSION_36) {
-      if (FLAGS_quic_enable_version_35 && FLAGS_quic_enable_version_36_v2) {
-        filtered_versions.push_back(version);
-      }
-    } else {
-      filtered_versions.push_back(version);
-    }
-  }
-  return filtered_versions;
-}
-
-QuicVersionVector VersionOfIndex(const QuicVersionVector& versions, int index) {
-  QuicVersionVector version;
-  int version_count = versions.size();
-  if (index >= 0 && index < version_count) {
-    version.push_back(versions[index]);
-  } else {
-    version.push_back(QUIC_VERSION_UNSUPPORTED);
-  }
-  return version;
-}
-
-QuicTag QuicVersionToQuicTag(const QuicVersion version) {
-  switch (version) {
-    case QUIC_VERSION_32:
-      return MakeQuicTag('Q', '0', '3', '2');
-    case QUIC_VERSION_33:
-      return MakeQuicTag('Q', '0', '3', '3');
-    case QUIC_VERSION_34:
-      return MakeQuicTag('Q', '0', '3', '4');
-    case QUIC_VERSION_35:
-      return MakeQuicTag('Q', '0', '3', '5');
-    case QUIC_VERSION_36:
-      return MakeQuicTag('Q', '0', '3', '6');
-    default:
-      // This shold be an ERROR because we should never attempt to convert an
-      // invalid QuicVersion to be written to the wire.
-      LOG(ERROR) << "Unsupported QuicVersion: " << version;
-      return 0;
-  }
-}
-
-QuicVersion QuicTagToQuicVersion(const QuicTag version_tag) {
-  for (size_t i = 0; i < arraysize(kSupportedQuicVersions); ++i) {
-    if (version_tag == QuicVersionToQuicTag(kSupportedQuicVersions[i])) {
-      return kSupportedQuicVersions[i];
-    }
-  }
-  // Reading from the client so this should not be considered an ERROR.
-  DVLOG(1) << "Unsupported QuicTag version: "
-           << QuicUtils::TagToString(version_tag);
-  return QUIC_VERSION_UNSUPPORTED;
-}
-
-#define RETURN_STRING_LITERAL(x) \
-  case x:                        \
-    return #x
-
-string QuicVersionToString(const QuicVersion version) {
-  switch (version) {
-    RETURN_STRING_LITERAL(QUIC_VERSION_32);
-    RETURN_STRING_LITERAL(QUIC_VERSION_33);
-    RETURN_STRING_LITERAL(QUIC_VERSION_34);
-    RETURN_STRING_LITERAL(QUIC_VERSION_35);
-    RETURN_STRING_LITERAL(QUIC_VERSION_36);
-    default:
-      return "QUIC_VERSION_UNSUPPORTED";
-  }
-}
-
-string QuicVersionVectorToString(const QuicVersionVector& versions) {
-  string result = "";
-  for (size_t i = 0; i < versions.size(); ++i) {
-    if (i != 0) {
-      result.append(",");
-    }
-    result.append(QuicVersionToString(versions[i]));
-  }
-  return result;
-}
-
-ostream& operator<<(ostream& os, const Perspective& s) {
-  if (s == Perspective::IS_SERVER) {
-    os << "IS_SERVER";
-  } else {
-    os << "IS_CLIENT";
-  }
-  return os;
-}
-
 ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
   os << "{ connection_id: " << header.public_header.connection_id
      << ", connection_id_length: " << header.public_header.connection_id_length
@@ -302,9 +165,7 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
        << QuicUtils::HexEncode(StringPiece(header.public_header.nonce->data(),
                                            header.public_header.nonce->size()));
   }
-  os << ", entropy_flag: " << header.entropy_flag
-     << ", entropy hash: " << static_cast<int>(header.entropy_hash)
-     << ", path_id: " << static_cast<int>(header.path_id)
+  os << ", path_id: " << static_cast<int>(header.path_id)
      << ", packet_number: " << header.packet_number << " }\n";
   return os;
 }
@@ -312,26 +173,19 @@ ostream& operator<<(ostream& os, const QuicPacketHeader& header) {
 bool IsAwaitingPacket(const QuicAckFrame& ack_frame,
                       QuicPacketNumber packet_number,
                       QuicPacketNumber peer_least_packet_awaiting_ack) {
-  if (ack_frame.missing) {
-    return packet_number > ack_frame.largest_observed ||
-           ack_frame.packets.Contains(packet_number);
-  }
   return packet_number >= peer_least_packet_awaiting_ack &&
          !ack_frame.packets.Contains(packet_number);
 }
 
 QuicStopWaitingFrame::QuicStopWaitingFrame()
-    : path_id(kDefaultPathId), entropy_hash(0), least_unacked(0) {}
+    : path_id(kDefaultPathId), least_unacked(0) {}
 
 QuicStopWaitingFrame::~QuicStopWaitingFrame() {}
 
 QuicAckFrame::QuicAckFrame()
     : largest_observed(0),
       ack_delay_time(QuicTime::Delta::Infinite()),
-      path_id(kDefaultPathId),
-      entropy_hash(0),
-      is_truncated(false),
-      missing(true) {}
+      path_id(kDefaultPathId) {}
 
 QuicAckFrame::QuicAckFrame(const QuicAckFrame& other) = default;
 
@@ -388,8 +242,7 @@ QuicFrame::QuicFrame(QuicPathCloseFrame* frame)
     : type(PATH_CLOSE_FRAME), path_close_frame(frame) {}
 
 ostream& operator<<(ostream& os, const QuicStopWaitingFrame& sent_info) {
-  os << "{ entropy_hash: " << static_cast<int>(sent_info.entropy_hash)
-     << ", least_unacked: " << sent_info.least_unacked << " }\n";
+  os << "{ least_unacked: " << sent_info.least_unacked << " }\n";
   return os;
 }
 
@@ -517,11 +370,9 @@ ostream& operator<<(ostream& os, const PacketNumberQueue& q) {
 }
 
 ostream& operator<<(ostream& os, const QuicAckFrame& ack_frame) {
-  os << "{ entropy_hash: " << static_cast<int>(ack_frame.entropy_hash)
-     << ", largest_observed: " << ack_frame.largest_observed
+  os << "{ largest_observed: " << ack_frame.largest_observed
      << ", ack_delay_time: " << ack_frame.ack_delay_time.ToMicroseconds()
      << ", packets: [ " << ack_frame.packets << " ]"
-     << ", is_truncated: " << ack_frame.is_truncated
      << ", received_packets: [ ";
   for (const std::pair<QuicPacketNumber, QuicTime>& p :
        ack_frame.received_packet_times) {
@@ -759,9 +610,7 @@ StringPiece QuicPacket::Plaintext(QuicVersion version) const {
 }
 
 QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
-    : disable_pre_34_(FLAGS_quic_disable_pre_34),
-      enable_version_35_(FLAGS_quic_enable_version_35),
-      enable_version_36_(FLAGS_quic_enable_version_36_v2),
+    : enable_version_36_(FLAGS_quic_enable_version_36_v3),
       allowed_supported_versions_(supported_versions),
       filtered_supported_versions_(
           FilterSupportedVersions(supported_versions)) {}
@@ -769,16 +618,20 @@ QuicVersionManager::QuicVersionManager(QuicVersionVector supported_versions)
 QuicVersionManager::~QuicVersionManager() {}
 
 const QuicVersionVector& QuicVersionManager::GetSupportedVersions() {
-  if (disable_pre_34_ != FLAGS_quic_disable_pre_34 ||
-      enable_version_35_ != FLAGS_quic_enable_version_35 ||
-      enable_version_36_ != FLAGS_quic_enable_version_36_v2) {
-    disable_pre_34_ = FLAGS_quic_disable_pre_34;
-    enable_version_35_ = FLAGS_quic_enable_version_35;
-    enable_version_36_ = FLAGS_quic_enable_version_36_v2;
-    filtered_supported_versions_ =
-        FilterSupportedVersions(allowed_supported_versions_);
-  }
+  MaybeRefilterSupportedVersions();
   return filtered_supported_versions_;
+}
+
+void QuicVersionManager::MaybeRefilterSupportedVersions() {
+  if (enable_version_36_ != FLAGS_quic_enable_version_36_v3) {
+    enable_version_36_ = FLAGS_quic_enable_version_36_v3;
+    RefilterSupportedVersions();
+  }
+}
+
+void QuicVersionManager::RefilterSupportedVersions() {
+  filtered_supported_versions_ =
+      FilterSupportedVersions(allowed_supported_versions_);
 }
 
 AckListenerWrapper::AckListenerWrapper(QuicAckListenerInterface* listener,
@@ -797,7 +650,6 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
                                    QuicPacketNumberLength packet_number_length,
                                    const char* encrypted_buffer,
                                    QuicPacketLength encrypted_length,
-                                   QuicPacketEntropyHash entropy_hash,
                                    bool has_ack,
                                    bool has_stop_waiting)
     : encrypted_buffer(encrypted_buffer),
@@ -808,7 +660,6 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
       packet_number(packet_number),
       packet_number_length(packet_number_length),
       encryption_level(ENCRYPTION_NONE),
-      entropy_hash(entropy_hash),
       has_ack(has_ack),
       has_stop_waiting(has_stop_waiting),
       transmission_type(NOT_RETRANSMISSION),

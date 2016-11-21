@@ -15,6 +15,15 @@
 #include "base/strings/stringprintf.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+TEST(PythonUtils, Clear) {
+  std::unique_ptr<base::Environment> env(base::Environment::Create());
+  env->SetVar(kPythonPathEnv, "foo");
+  EXPECT_TRUE(env->HasVar(kPythonPathEnv));
+
+  ClearPythonPath();
+  EXPECT_FALSE(env->HasVar(kPythonPathEnv));
+}
+
 TEST(PythonUtils, Append) {
   const base::FilePath::CharType kAppendDir1[] =
       FILE_PATH_LITERAL("test/path_append1");

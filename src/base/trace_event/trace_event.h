@@ -19,6 +19,7 @@
 #include "base/time/time.h"
 #include "base/trace_event/common/trace_event_common.h"
 #include "base/trace_event/heap_profiler.h"
+#include "base/trace_event/trace_category.h"
 #include "base/trace_event/trace_event_system_stats_monitor.h"
 #include "base/trace_event/trace_log.h"
 #include "build/build_config.h"
@@ -54,14 +55,14 @@
 
 #define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE() \
   UNLIKELY(*INTERNAL_TRACE_EVENT_UID(category_group_enabled) &           \
-           (base::trace_event::TraceLog::ENABLED_FOR_RECORDING |         \
-            base::trace_event::TraceLog::ENABLED_FOR_ETW_EXPORT |        \
-            base::trace_event::TraceLog::ENABLED_FOR_FILTERING))
+           (base::trace_event::TraceCategory::ENABLED_FOR_RECORDING |         \
+            base::trace_event::TraceCategory::ENABLED_FOR_ETW_EXPORT |        \
+            base::trace_event::TraceCategory::ENABLED_FOR_FILTERING))
 
 #define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_FILTERING_MODE( \
     category_group_enabled)                                             \
   UNLIKELY(category_group_enabled&                                      \
-               base::trace_event::TraceLog::ENABLED_FOR_FILTERING)
+               base::trace_event::TraceCategory::ENABLED_FOR_FILTERING)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation specific tracing API definitions.

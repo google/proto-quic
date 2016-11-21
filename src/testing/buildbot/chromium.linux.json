@@ -2704,7 +2704,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "cast_shell_browser_test"
+        "test": "cast_shell_browsertests"
       },
       {
         "swarming": {

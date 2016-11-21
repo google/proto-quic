@@ -14,7 +14,7 @@ class NotBootstrappedError(RuntimeError):
 
 
 _ButlerBootstrapBase = collections.namedtuple('_ButlerBootstrapBase',
-    ('project', 'prefix', 'streamserver_uri'))
+    ('project', 'prefix', 'streamserver_uri', 'coordinator_host'))
 
 
 class ButlerBootstrap(_ButlerBootstrapBase):
@@ -28,6 +28,7 @@ class ButlerBootstrap(_ButlerBootstrapBase):
   _ENV_PROJECT = 'LOGDOG_STREAM_PROJECT'
   _ENV_PREFIX = 'LOGDOG_STREAM_PREFIX'
   _ENV_STREAM_SERVER_PATH = 'LOGDOG_STREAM_SERVER_PATH'
+  _ENV_COORDINATOR_HOST = 'LOGDOG_COORDINATOR_HOST'
 
   @classmethod
   def probe(cls, env=None):
@@ -41,12 +42,12 @@ class ButlerBootstrap(_ButlerBootstrapBase):
     """
     if env is None:
       env = os.environ
-    project = env.get(cls._ENV_PROJECT)
-    prefix = env.get(cls._ENV_PREFIX)
 
+    project = env.get(cls._ENV_PROJECT)
     if not project:
       raise NotBootstrappedError('Missing project [%s]' % (cls._ENV_PROJECT,))
 
+    prefix = env.get(cls._ENV_PREFIX)
     if not prefix:
       raise NotBootstrappedError('Missing prefix [%s]' % (cls._ENV_PREFIX,))
     try:
@@ -54,19 +55,32 @@ class ButlerBootstrap(_ButlerBootstrapBase):
     except ValueError as e:
       raise NotBootstrappedError('Prefix (%s) is invalid: %s' % (prefix, e))
 
-    return cls(project=project, prefix=prefix,
-               streamserver_uri=env.get(cls._ENV_STREAM_SERVER_PATH))
+    return cls(
+        project=project,
+        prefix=prefix,
+        streamserver_uri=env.get(cls._ENV_STREAM_SERVER_PATH),
+        coordinator_host=env.get(cls._ENV_COORDINATOR_HOST))
 
-  def stream_client(self):
+  def stream_client(self, reg=None):
     """Returns: (StreamClient) stream client for the bootstrap streamserver URI.
 
     If the Butler accepts external stream connections, it will export a
     streamserver URI in the environment. This will create a StreamClient
     instance to operate on the streamserver if one is defined.
 
+    Args:
+      reg (stream.StreamProtocolRegistry or None): The stream protocol registry
+          to use to create the stream. If None, the default global registry will
+          be used (recommended).
+
     Raises:
       ValueError: If no streamserver URI is present in the environment.
     """
     if not self.streamserver_uri:
       raise ValueError('No streamserver in bootstrap environment.')
-    return stream.create(self.streamserver_uri)
+    reg = reg or stream._default_registry
+    return reg.create(
+        self.streamserver_uri,
+        project=self.project,
+        prefix=self.prefix,
+        coordinator_host=self.coordinator_host)

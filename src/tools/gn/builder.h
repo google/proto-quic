@@ -5,8 +5,9 @@
 #ifndef TOOLS_GN_BUILDER_H_
 #define TOOLS_GN_BUILDER_H_
 
+#include <map>
+
 #include "base/callback.h"
-#include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "tools/gn/builder_record.h"
 #include "tools/gn/label.h"
@@ -130,7 +131,7 @@ class Builder {
   Loader* loader_;
 
   // Owning pointers.
-  typedef base::hash_map<Label, BuilderRecord*> RecordMap;
+  typedef std::map<Label, BuilderRecord*> RecordMap;
   RecordMap records_;
 
   ResolvedGeneratedCallback resolved_and_generated_callback_;

@@ -13,25 +13,25 @@
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/reliable_quic_stream.h"
+#include "net/quic/core/quic_stream.h"
 
 namespace net {
 
 class CryptoHandshakeMessage;
 class QuicSession;
 
-// Crypto handshake messages in QUIC take place over a reserved
-// reliable stream with the id 1.  Each endpoint (client and server)
-// will allocate an instance of a subclass of QuicCryptoStream
-// to send and receive handshake messages.  (In the normal 1-RTT
-// handshake, the client will send a client hello, CHLO, message.
-// The server will receive this message and respond with a server
-// hello message, SHLO.  At this point both sides will have established
-// a crypto context they can use to send encrypted messages.
+// Crypto handshake messages in QUIC take place over a reserved stream with the
+// id 1.  Each endpoint (client and server) will allocate an instance of a
+// subclass of QuicCryptoStream to send and receive handshake messages.  (In the
+// normal 1-RTT handshake, the client will send a client hello, CHLO, message.
+// The server will receive this message and respond with a server hello message,
+// SHLO.  At this point both sides will have established a crypto context they
+// can use to send encrypted messages.
 //
-// For more details: http://goto.google.com/quic-crypto
+// For more details:
+// https://docs.google.com/document/d/1g5nIXAIkN_Y-7XJW5K45IblHd_L2f5LTaDUDwvZ5L6g/edit?usp=sharing
 class NET_EXPORT_PRIVATE QuicCryptoStream
-    : public ReliableQuicStream,
+    : public QuicStream,
       public CryptoFramerVisitorInterface {
  public:
   explicit QuicCryptoStream(QuicSession* session);
@@ -46,7 +46,7 @@ class NET_EXPORT_PRIVATE QuicCryptoStream
   void OnError(CryptoFramer* framer) override;
   void OnHandshakeMessage(const CryptoHandshakeMessage& message) override;
 
-  // ReliableQuicStream implementation
+  // QuicStream implementation
   void OnDataAvailable() override;
 
   // Sends |message| to the peer.

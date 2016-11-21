@@ -135,7 +135,7 @@ class TestNetworkStreamThrottler : public NetworkThrottleManager {
   void UnthrottleAllRequests() {
     std::set<TestThrottle*> outstanding_throttles_copy(outstanding_throttles_);
     for (auto& throttle : outstanding_throttles_copy) {
-      if (throttle->IsThrottled())
+      if (throttle->IsBlocked())
         throttle->Unthrottle();
     }
   }
@@ -162,7 +162,11 @@ class TestNetworkStreamThrottler : public NetworkThrottleManager {
     ~TestThrottle() override { throttler_->OnThrottleDestroyed(this); }
 
     // Throttle
-    bool IsThrottled() const override { return throttled_; }
+    bool IsBlocked() const override { return throttled_; }
+    RequestPriority Priority() const override {
+      NOTREACHED();
+      return IDLE;
+    }
     void SetPriority(RequestPriority priority) override {
       throttler_->SetPriorityCalled(priority);
     }
@@ -176,7 +180,7 @@ class TestNetworkStreamThrottler : public NetworkThrottleManager {
       EXPECT_TRUE(throttled_);
 
       throttled_ = false;
-      delegate_->OnThrottleStateChanged();
+      delegate_->OnThrottleUnblocked(this);
     }
 
     bool throttled_;
@@ -4371,7 +4375,7 @@ TEST_F(HttpNetworkTransactionTest, HttpProxyLoadTimingNoPacTwoRequests) {
   request2.url = GURL("https://www.example.org/2");
 
   // Configure against proxy server "myproxy:70".
-  session_deps_.proxy_service = ProxyService::CreateFixed("PROXY myproxy:70");
+  session_deps_.proxy_service = ProxyService::CreateFixed("myproxy:70");
   BoundTestNetLog log;
   session_deps_.net_log = log.bound().net_log();
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
@@ -9214,8 +9218,7 @@ std::unique_ptr<HttpNetworkSession> SetupSessionForGroupNameTests(
 
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "", 444);
+  AlternativeService alternative_service(kProtoHTTP2, "", 444);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort("https", "host.with.alternate", 443),
@@ -10093,8 +10096,7 @@ TEST_F(HttpNetworkTransactionTest, HonorAlternativeServiceHeader) {
   alternative_service_vector =
       http_server_properties->GetAlternativeServices(test_server);
   ASSERT_EQ(1u, alternative_service_vector.size());
-  EXPECT_EQ(AlternateProtocolFromNextProto(kProtoHTTP2),
-            alternative_service_vector[0].protocol);
+  EXPECT_EQ(kProtoHTTP2, alternative_service_vector[0].protocol);
   EXPECT_EQ("mail.example.org", alternative_service_vector[0].host);
   EXPECT_EQ(443, alternative_service_vector[0].port);
 }
@@ -10182,9 +10184,8 @@ TEST_F(HttpNetworkTransactionTest,
 
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "different.example.org",
-      444);
+  AlternativeService alternative_service(kProtoHTTP2, "different.example.org",
+                                         444);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(request.url), alternative_service, expiration);
@@ -10223,8 +10224,7 @@ TEST_F(HttpNetworkTransactionTest,
 
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "", 444);
+  AlternativeService alternative_service(kProtoHTTP2, "", 444);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(request.url), alternative_service, expiration);
@@ -10243,7 +10243,7 @@ TEST_F(HttpNetworkTransactionTest, ClearAlternativeServices) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   url::SchemeHostPort test_server("https", "www.example.org", 443);
-  AlternativeService alternative_service(QUIC, "", 80);
+  AlternativeService alternative_service(kProtoQUIC, "", 80);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       test_server, alternative_service, expiration);
@@ -10342,12 +10342,10 @@ TEST_F(HttpNetworkTransactionTest, HonorMultipleAlternativeServiceHeaders) {
   alternative_service_vector =
       http_server_properties->GetAlternativeServices(test_server);
   ASSERT_EQ(2u, alternative_service_vector.size());
-  EXPECT_EQ(AlternateProtocolFromNextProto(kProtoHTTP2),
-            alternative_service_vector[0].protocol);
+  EXPECT_EQ(kProtoHTTP2, alternative_service_vector[0].protocol);
   EXPECT_EQ("www.example.com", alternative_service_vector[0].host);
   EXPECT_EQ(443, alternative_service_vector[0].port);
-  EXPECT_EQ(AlternateProtocolFromNextProto(kProtoHTTP2),
-            alternative_service_vector[1].protocol);
+  EXPECT_EQ(kProtoHTTP2, alternative_service_vector[1].protocol);
   EXPECT_EQ("www.example.org", alternative_service_vector[1].host);
   EXPECT_EQ(1234, alternative_service_vector[1].port);
 }
@@ -10388,7 +10386,7 @@ TEST_F(HttpNetworkTransactionTest, IdentifyQuicBroken) {
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(QUIC, alternative);
+  AlternativeService alternative_service(kProtoQUIC, alternative);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);
@@ -10450,11 +10448,11 @@ TEST_F(HttpNetworkTransactionTest, IdentifyQuicNotBroken) {
   AlternativeServiceInfoVector alternative_service_info_vector;
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
 
-  AlternativeService alternative_service1(QUIC, alternative1);
+  AlternativeService alternative_service1(kProtoQUIC, alternative1);
   AlternativeServiceInfo alternative_service_info1(alternative_service1,
                                                    expiration);
   alternative_service_info_vector.push_back(alternative_service_info1);
-  AlternativeService alternative_service2(QUIC, alternative2);
+  AlternativeService alternative_service2(kProtoQUIC, alternative2);
   AlternativeServiceInfo alternative_service_info2(alternative_service2,
                                                    expiration);
   alternative_service_info_vector.push_back(alternative_service_info2);
@@ -10511,7 +10509,7 @@ TEST_F(HttpNetworkTransactionTest, MarkBrokenAlternateProtocolAndFallback) {
   // Port must be < 1024, or the header will be ignored (since initial port was
   // port 80 (another restricted port).
   const AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
+      kProtoHTTP2, "www.example.org",
       666);  // Port is ignored by MockConnect anyway.
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
@@ -10573,9 +10571,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolPortRestrictedBlocked) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kUnrestrictedAlternatePort = 1024;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kUnrestrictedAlternatePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kUnrestrictedAlternatePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(restricted_port_request.url), alternative_service,
@@ -10624,9 +10621,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolPortRestrictedPermitted) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kUnrestrictedAlternatePort = 1024;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kUnrestrictedAlternatePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kUnrestrictedAlternatePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(restricted_port_request.url), alternative_service,
@@ -10674,9 +10670,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolPortRestrictedAllowed) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kRestrictedAlternatePort = 80;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kRestrictedAlternatePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kRestrictedAlternatePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(restricted_port_request.url), alternative_service,
@@ -10724,9 +10719,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolPortUnrestrictedAllowed1) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kRestrictedAlternatePort = 80;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kRestrictedAlternatePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kRestrictedAlternatePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(unrestricted_port_request.url), alternative_service,
@@ -10774,9 +10768,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolPortUnrestrictedAllowed2) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kUnrestrictedAlternatePort = 1025;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kUnrestrictedAlternatePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kUnrestrictedAlternatePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(unrestricted_port_request.url), alternative_service,
@@ -10816,9 +10809,8 @@ TEST_F(HttpNetworkTransactionTest, AlternateProtocolUnsafeBlocked) {
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
   const int kUnsafePort = 7;
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), "www.example.org",
-      kUnsafePort);
+  AlternativeService alternative_service(kProtoHTTP2, "www.example.org",
+                                         kUnsafePort);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(
       url::SchemeHostPort(request.url), alternative_service, expiration);
@@ -11176,8 +11168,7 @@ TEST_F(HttpNetworkTransactionTest, UseOriginNotAlternativeForProxy) {
       session->http_server_properties();
   url::SchemeHostPort server("https", "www.example.org", 443);
   HostPortPair alternative("www.example.com", 443);
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), alternative);
+  AlternativeService alternative_service(kProtoHTTP2, alternative);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);
@@ -11556,18 +11547,20 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
   static const int kNoSSL = 500;
 
   struct TestConfig {
+    int line_number;
     const char* const proxy_url;
     AuthTiming proxy_auth_timing;
-    int proxy_auth_rv;
+    int first_generate_proxy_token_rv;
     const char* const server_url;
     AuthTiming server_auth_timing;
-    int server_auth_rv;
+    int first_generate_server_token_rv;
     int num_auth_rounds;
     int first_ssl_round;
     TestRound rounds[4];
   } test_configs[] = {
       // Non-authenticating HTTP server with a direct connection.
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11577,7 +11570,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGet, kSuccess, OK)}},
       // Authenticating HTTP server with a direct connection.
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11587,7 +11581,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11598,7 +11593,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11607,7 +11603,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        2,
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK), TestRound(kGet, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11616,7 +11613,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        2,
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK), TestRound(kGet, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        ERR_FAILED,
        kServer,
@@ -11626,7 +11624,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxy, kFailure, ERR_FAILED)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        ERR_FAILED,
        kServer,
@@ -11636,7 +11635,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxy, kFailure, ERR_FAILED)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11646,7 +11646,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGet, kFailure, ERR_FAILED)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11656,7 +11657,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGet, kFailure, ERR_FAILED)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11666,7 +11668,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kServer,
@@ -11679,7 +11682,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
       // Non-authenticating HTTP server through a non-authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kServer,
@@ -11689,7 +11693,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kSuccess, OK)}},
       // Authenticating HTTP server through a non-authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kServer,
@@ -11699,7 +11704,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kServerChallenge, OK),
         TestRound(kGetAuthThroughProxy, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kServer,
@@ -11710,7 +11716,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kServerChallenge, OK),
         TestRound(kGetProxy, kServerChallenge, OK),
         TestRound(kGetAuthThroughProxy, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kServer,
@@ -11720,7 +11727,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kServerChallenge, OK),
         TestRound(kGetAuthThroughProxy, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kServer,
@@ -11731,7 +11739,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kServerChallenge, OK),
         TestRound(kGetProxy, kSuccess, OK)}},
       // Non-authenticating HTTP server through an authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kServer,
@@ -11741,7 +11750,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        ERR_INVALID_AUTH_CREDENTIALS,
        kServer,
@@ -11751,7 +11761,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxy, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kServer,
@@ -11761,7 +11772,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        ERR_INVALID_AUTH_CREDENTIALS,
        kServer,
@@ -11771,8 +11783,21 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxy, kSuccess, OK)}},
+      {__LINE__,
+       kProxy,
+       AUTH_ASYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       kServer,
+       AUTH_NONE,
+       OK,
+       3,
+       kNoSSL,
+       {TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxyAuth, kSuccess, OK)}},
       // Authenticating HTTP server through an authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kServer,
@@ -11783,7 +11808,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetAuthWithProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kServer,
@@ -11794,7 +11820,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kServer,
@@ -11805,7 +11832,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetAuthWithProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kServer,
@@ -11816,7 +11844,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kServer,
@@ -11827,7 +11856,21 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetAuthWithProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
+       AUTH_SYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       kServer,
+       AUTH_ASYNC,
+       OK,
+       4,
+       kNoSSL,
+       {TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxyAuth, kServerChallenge, OK),
+        TestRound(kGetAuthWithProxyAuth, kSuccess, OK)}},
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kServer,
@@ -11838,7 +11881,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kServer,
@@ -11849,7 +11893,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetAuthWithProxyAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kServer,
@@ -11858,10 +11903,24 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        3,
        kNoSSL,
        {TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxyAuth, kServerChallenge, OK),
+        TestRound(kGetProxyAuth, kSuccess, OK)}},
+      {__LINE__,
+       kProxy,
+       AUTH_ASYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       kServer,
+       AUTH_ASYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       4,
+       kNoSSL,
+       {TestRound(kGetProxy, kProxyChallenge, OK),
+        TestRound(kGetProxy, kProxyChallenge, OK),
         TestRound(kGetProxyAuth, kServerChallenge, OK),
         TestRound(kGetProxyAuth, kSuccess, OK)}},
       // Non-authenticating HTTPS server with a direct connection.
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11871,7 +11930,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kGet, kSuccess, OK)}},
       // Authenticating HTTPS server with a direct connection.
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11881,7 +11941,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11890,7 +11951,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        2,
        0,
        {TestRound(kGet, kServerChallenge, OK), TestRound(kGet, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11900,7 +11962,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kGet, kServerChallenge, OK),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {NULL,
+      {__LINE__,
+       nullptr,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11910,7 +11973,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kGet, kServerChallenge, OK), TestRound(kGet, kSuccess, OK)}},
       // Non-authenticating HTTPS server with a non-authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11920,7 +11984,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kConnect, kProxyConnected, OK, &kGet, &kSuccess)}},
       // Authenticating HTTPS server through a non-authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11930,7 +11995,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kConnect, kProxyConnected, OK, &kGet, &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11940,7 +12006,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kConnect, kProxyConnected, OK, &kGet, &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11950,7 +12017,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        0,
        {TestRound(kConnect, kProxyConnected, OK, &kGet, &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_NONE,
        OK,
        kSecureServer,
@@ -11961,7 +12029,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kConnect, kProxyConnected, OK, &kGet, &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
       // Non-Authenticating HTTPS server through an authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kSecureServer,
@@ -11971,7 +12040,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        1,
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet, &kSuccess)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        ERR_INVALID_AUTH_CREDENTIALS,
        kSecureServer,
@@ -11981,7 +12051,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnect, kProxyConnected, OK, &kGet, &kSuccess)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        ERR_UNSUPPORTED_AUTH_SCHEME,
        kSecureServer,
@@ -11991,7 +12062,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnect, kProxyConnected, OK, &kGet, &kSuccess)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        ERR_UNEXPECTED,
        kSecureServer,
@@ -12001,7 +12073,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        kNoSSL,
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnect, kProxyConnected, ERR_UNEXPECTED)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kSecureServer,
@@ -12011,7 +12084,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        1,
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet, &kSuccess)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        ERR_INVALID_AUTH_CREDENTIALS,
        kSecureServer,
@@ -12022,7 +12096,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        {TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnect, kProxyConnected, OK, &kGet, &kSuccess)}},
       // Authenticating HTTPS server through an authenticating proxy.
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kSecureServer,
@@ -12034,7 +12109,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kSecureServer,
@@ -12046,7 +12122,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kSecureServer,
@@ -12058,7 +12135,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kSecureServer,
@@ -12070,7 +12148,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kSecureServer,
@@ -12082,7 +12161,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_SYNC,
        OK,
        kSecureServer,
@@ -12094,7 +12174,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kSecureServer,
@@ -12106,7 +12187,8 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGetAuth, kSuccess, OK)}},
-      {kProxy,
+      {__LINE__,
+       kProxy,
        AUTH_ASYNC,
        OK,
        kSecureServer,
@@ -12115,22 +12197,36 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
        3,
        1,
        {TestRound(kConnect, kProxyChallenge, OK),
+        TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
+                  &kServerChallenge),
+        TestRound(kGet, kSuccess, OK)}},
+      {__LINE__,
+       kProxy,
+       AUTH_ASYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       kSecureServer,
+       AUTH_ASYNC,
+       ERR_INVALID_AUTH_CREDENTIALS,
+       4,
+       2,
+       {TestRound(kConnect, kProxyChallenge, OK),
+        TestRound(kConnect, kProxyChallenge, OK),
         TestRound(kConnectProxyAuth, kProxyConnected, OK, &kGet,
                   &kServerChallenge),
         TestRound(kGet, kSuccess, OK)}},
   };
 
-  for (size_t i = 0; i < arraysize(test_configs); ++i) {
-    SCOPED_TRACE(::testing::Message() << "Test config " << i);
+  for (const auto& test_config : test_configs) {
+    SCOPED_TRACE(::testing::Message() << "Test config at "
+                                      << test_config.line_number);
     HttpAuthHandlerMock::Factory* auth_factory(
         new HttpAuthHandlerMock::Factory());
     session_deps_.http_auth_handler_factory.reset(auth_factory);
     SSLInfo empty_ssl_info;
-    const TestConfig& test_config = test_configs[i];
 
     // Set up authentication handlers as necessary.
     if (test_config.proxy_auth_timing != AUTH_NONE) {
-      for (int n = 0; n < 2; n++) {
+      for (int n = 0; n < 3; n++) {
         HttpAuthHandlerMock* auth_handler(new HttpAuthHandlerMock());
         std::string auth_challenge = "Mock realm=proxy";
         GURL origin(test_config.proxy_url);
@@ -12141,7 +12237,7 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
                                         NetLogWithSource());
         auth_handler->SetGenerateExpectation(
             test_config.proxy_auth_timing == AUTH_ASYNC,
-            test_config.proxy_auth_rv);
+            n == 0 ? test_config.first_generate_proxy_token_rv : OK);
         auth_factory->AddMockHandler(auth_handler, HttpAuth::AUTH_PROXY);
       }
     }
@@ -12156,7 +12252,7 @@ TEST_F(HttpNetworkTransactionTest, GenerateAuthToken) {
                                       NetLogWithSource());
       auth_handler->SetGenerateExpectation(
           test_config.server_auth_timing == AUTH_ASYNC,
-          test_config.server_auth_rv);
+          test_config.first_generate_server_token_rv);
       auth_factory->AddMockHandler(auth_handler, HttpAuth::AUTH_SERVER);
 
       // The second handler always succeeds. It should only be used where there
@@ -12366,6 +12462,8 @@ TEST_F(HttpNetworkTransactionTest, MultiRoundAuth) {
   ASSERT_TRUE(response);
   EXPECT_TRUE(response->auth_challenge);
   EXPECT_EQ(0, transport_pool->IdleSocketCountInGroup(kSocketGroup));
+  EXPECT_EQ(HttpAuthHandlerMock::State::WAIT_FOR_GENERATE_AUTH_TOKEN,
+            auth_handler->state());
 
   // In between rounds, another request comes in for the same domain.
   // It should not be able to grab the TCP socket that trans has already
@@ -12389,6 +12487,8 @@ TEST_F(HttpNetworkTransactionTest, MultiRoundAuth) {
   ASSERT_TRUE(response);
   EXPECT_FALSE(response->auth_challenge);
   EXPECT_EQ(0, transport_pool->IdleSocketCountInGroup(kSocketGroup));
+  EXPECT_EQ(HttpAuthHandlerMock::State::WAIT_FOR_GENERATE_AUTH_TOKEN,
+            auth_handler->state());
 
   // Third round of authentication.
   auth_handler->SetGenerateExpectation(false, OK);
@@ -12400,6 +12500,8 @@ TEST_F(HttpNetworkTransactionTest, MultiRoundAuth) {
   ASSERT_TRUE(response);
   EXPECT_FALSE(response->auth_challenge);
   EXPECT_EQ(0, transport_pool->IdleSocketCountInGroup(kSocketGroup));
+  EXPECT_EQ(HttpAuthHandlerMock::State::WAIT_FOR_GENERATE_AUTH_TOKEN,
+            auth_handler->state());
 
   // Fourth round of authentication, which completes successfully.
   auth_handler->SetGenerateExpectation(false, OK);
@@ -12411,6 +12513,12 @@ TEST_F(HttpNetworkTransactionTest, MultiRoundAuth) {
   ASSERT_TRUE(response);
   EXPECT_FALSE(response->auth_challenge);
   EXPECT_EQ(0, transport_pool->IdleSocketCountInGroup(kSocketGroup));
+
+  // In WAIT_FOR_CHALLENGE, although in reality the auth handler is done. A real
+  // auth handler should transition to a DONE state in concert with the remote
+  // server. But that's not something we can test here with a mock handler.
+  EXPECT_EQ(HttpAuthHandlerMock::State::WAIT_FOR_CHALLENGE,
+            auth_handler->state());
 
   // Read the body since the fourth round was successful. This will also
   // release the socket back to the pool.
@@ -13705,8 +13813,7 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceNotOnHttp11) {
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), alternative);
+  AlternativeService alternative_service(kProtoHTTP2, alternative);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);
@@ -13773,8 +13880,7 @@ TEST_F(HttpNetworkTransactionTest, FailedAlternativeServiceIsNotUserVisible) {
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), alternative);
+  AlternativeService alternative_service(kProtoHTTP2, alternative);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);
@@ -13881,8 +13987,7 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceShouldNotPoolToHttp11) {
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
   HttpServerProperties* http_server_properties =
       session->http_server_properties();
-  AlternativeService alternative_service(
-      AlternateProtocolFromNextProto(kProtoHTTP2), alternative);
+  AlternativeService alternative_service(kProtoHTTP2, alternative);
   base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);

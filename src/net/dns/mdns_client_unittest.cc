@@ -23,7 +23,7 @@
 #include "net/dns/mdns_client_impl.h"
 #include "net/dns/mock_mdns_socket_factory.h"
 #include "net/dns/record_rdata.h"
-#include "net/udp/udp_client_socket.h"
+#include "net/socket/udp_client_socket.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

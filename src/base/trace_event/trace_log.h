@@ -31,6 +31,7 @@ class RefCountedString;
 
 namespace trace_event {
 
+struct TraceCategory;
 class TraceBuffer;
 class TraceBufferChunk;
 class TraceEvent;
@@ -53,21 +54,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
     // Trace events are enabled just for filtering but not for recording. Only
     // event filters config of |trace_config| argument is used.
     FILTERING_MODE = 1 << 1
-  };
-
-  // The pointer returned from GetCategoryGroupEnabledInternal() points to a
-  // value with zero or more of the following bits. Used in this class only.
-  // The TRACE_EVENT macros should only use the value as a bool.
-  // These values must be in sync with macro values in TraceEvent.h in Blink.
-  enum CategoryGroupEnabledFlags {
-    // Category group enabled for the recording mode.
-    ENABLED_FOR_RECORDING = 1 << 0,
-    // 1 << 2 was used for ENABLED_FOR_EVENT_CALLBACK.
-
-    // Category group enabled to export events to ETW.
-    ENABLED_FOR_ETW_EXPORT = 1 << 3,
-    // Category group being filtered before logged.
-    ENABLED_FOR_FILTERING = 1 << 4
   };
 
   static TraceLog* GetInstance();
@@ -383,8 +369,8 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   // Enable the category group in the recording mode if category_filter_ matches
   // the category group, is not null. Enable category for filtering if any
   // filter in event_filters_enabled_ enables it.
-  void UpdateCategoryGroupEnabledFlags();
-  void UpdateCategoryGroupEnabledFlag(size_t category_index);
+  void UpdateCategoryRegistry();
+  void UpdateCategoryState(TraceCategory* category);
 
   void CreateFiltersForTraceConfig();
 
@@ -401,7 +387,6 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   TraceLog();
   ~TraceLog() override;
-  const unsigned char* GetCategoryGroupEnabledInternal(const char* name);
   void AddMetadataEventsWhileLocked();
 
   InternalTraceOptions trace_options() const {

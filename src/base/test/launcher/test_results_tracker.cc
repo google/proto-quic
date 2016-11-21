@@ -382,6 +382,18 @@ bool TestResultsTracker::SaveSummaryAsJSON(
   }
   summary_root->Set("per_iteration_data", std::move(per_iteration_data));
 
+  std::unique_ptr<DictionaryValue> test_locations(new DictionaryValue);
+  for (const auto& item : test_locations_) {
+    std::string test_name = item.first;
+    CodeLocation location = item.second;
+    std::unique_ptr<DictionaryValue> location_value(new DictionaryValue);
+    location_value->SetString("file", location.file);
+    location_value->SetInteger("line", location.line);
+    test_locations->SetWithoutPathExpansion(test_name,
+                                            std::move(location_value));
+  }
+  summary_root->Set("test_locations", std::move(test_locations));
+
   JSONFileValueSerializer serializer(path);
   return serializer.Serialize(*summary_root);
 }

@@ -137,8 +137,15 @@ class CTPolicyEnforcerTest : public ::testing::Test {
   std::string non_google_log_id_;
 };
 
+#if defined(OS_ANDROID)
+#define MAYBE_DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle \
+  DISABLED_DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle
+#else
+#define MAYBE_DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle \
+  DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle
+#endif
 TEST_F(CTPolicyEnforcerTest,
-       DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle) {
+       MAYBE_DoesNotConformToCTEVPolicyNotEnoughDiverseSCTsAllGoogle) {
   ct::SCTList scts;
   std::vector<std::string> desired_log_ids(2, google_log_id_);
 

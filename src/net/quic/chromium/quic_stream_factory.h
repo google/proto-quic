@@ -32,6 +32,7 @@
 #include "net/proxy/proxy_server.h"
 #include "net/quic/chromium/network_connection.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
+#include "net/quic/chromium/quic_clock_skew_detector.h"
 #include "net/quic/chromium/quic_http_stream.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_config.h"
@@ -509,6 +510,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   QuicRandom* random_generator_;
   std::unique_ptr<QuicClock> clock_;
   const size_t max_packet_length_;
+  QuicClockSkewDetector clock_skew_detector_;
 
   // Factory which is used to create socket performance watcher. A new watcher
   // is created for every QUIC connection.

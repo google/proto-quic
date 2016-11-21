@@ -4,17 +4,11 @@
 
 import("//tools/generate_library_loader/generate_library_loader.gni")
 
-config("brlapi_config") {
-  defines = [ "USE_BRLAPI" ]
-}
-
-# TODO(GYP) linux_link_brlapi support. Is this needed?
 generate_library_loader("libbrlapi") {
   name = "LibBrlapiLoader"
   output_h = "libbrlapi.h"
   output_cc = "libbrlapi_loader.cc"
   header = "<brlapi.h>"
-  config = ":brlapi_config"
 
   functions = [
     "brlapi_getHandleSize",

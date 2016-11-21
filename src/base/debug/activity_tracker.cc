@@ -4,6 +4,8 @@
 
 #include "base/debug/activity_tracker.h"
 
+#include <algorithm>
+
 #include "base/debug/stack_trace.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
@@ -33,6 +35,13 @@ const uint32_t kHeaderCookie = 0xC0029B24UL + 2;  // v2
 // The minimum depth a stack should support.
 const int kMinStackDepth = 2;
 
+// The amount of memory set aside for holding arbitrary user data (key/value
+// pairs) globally or associated with ActivityData entries.
+const size_t kUserDataSize = 1024;    // bytes
+const size_t kGlobalDataSize = 1024;  // bytes
+const size_t kMaxUserDataNameLength =
+    static_cast<size_t>(std::numeric_limits<uint8_t>::max());
+
 union ThreadRef {
   int64_t as_id;
 #if defined(OS_WIN)
@@ -47,6 +56,11 @@ union ThreadRef {
   PlatformThreadHandle::Handle as_handle;
 #endif
 };
+
+// Determines the next aligned index.
+size_t RoundUpToAlignment(size_t index, size_t alignment) {
+  return (index + (alignment - 1)) & (0 - alignment);
+}
 
 }  // namespace
 
@@ -71,12 +85,14 @@ ActivityTrackerMemoryAllocator::ActivityTrackerMemoryAllocator(
     uint32_t object_type,
     uint32_t object_free_type,
     size_t object_size,
-    size_t cache_size)
+    size_t cache_size,
+    bool make_iterable)
     : allocator_(allocator),
       object_type_(object_type),
       object_free_type_(object_free_type),
       object_size_(object_size),
       cache_size_(cache_size),
+      make_iterable_(make_iterable),
       iterator_(allocator),
       cache_values_(new Reference[cache_size]),
       cache_used_(0) {
@@ -127,7 +143,7 @@ ActivityTrackerMemoryAllocator::GetObjectReference() {
 
   // No free block was found so instead allocate a new one.
   Reference allocated = allocator_->Allocate(object_size_, object_type_);
-  if (allocated)
+  if (allocated && make_iterable_)
     allocator_->MakeIterable(allocated);
   return allocated;
 }
@@ -151,10 +167,12 @@ void ActivityTrackerMemoryAllocator::ReleaseObjectReference(Reference ref) {
 
 // static
 void Activity::FillFrom(Activity* activity,
+                        const void* program_counter,
                         const void* origin,
                         Type type,
                         const ActivityData& data) {
   activity->time_internal = base::TimeTicks::Now().ToInternalValue();
+  activity->calling_address = reinterpret_cast<uintptr_t>(program_counter);
   activity->origin_address = reinterpret_cast<uintptr_t>(origin);
   activity->activity_type = type;
   activity->data = data;
@@ -178,6 +196,111 @@ void Activity::FillFrom(Activity* activity,
 ActivitySnapshot::ActivitySnapshot() {}
 ActivitySnapshot::~ActivitySnapshot() {}
 
+ActivityUserData::ValueInfo::ValueInfo() {}
+ActivityUserData::ValueInfo::ValueInfo(ValueInfo&&) = default;
+ActivityUserData::ValueInfo::~ValueInfo() {}
+
+ActivityUserData::ActivityUserData(void* memory, size_t size)
+    : memory_(static_cast<char*>(memory)), available_(size) {}
+
+ActivityUserData::~ActivityUserData() {}
+
+void ActivityUserData::Set(StringPiece name,
+                           ValueType type,
+                           const void* memory,
+                           size_t size) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_GE(std::numeric_limits<uint8_t>::max(), name.length());
+  size = std::min(std::numeric_limits<uint16_t>::max() - (kMemoryAlignment - 1),
+                  size);
+
+  // It's possible that no user data is being stored.
+  if (!memory_)
+    return;
+
+  // The storage of a name is limited so use that limit during lookup.
+  if (name.length() > kMaxUserDataNameLength)
+    name.set(name.data(), kMaxUserDataNameLength);
+
+  ValueInfo* info;
+  auto existing = values_.find(name);
+  if (existing != values_.end()) {
+    info = &existing->second;
+  } else {
+    // The name size is limited to what can be held in a single byte but
+    // because there are not alignment constraints on strings, it's set tight
+    // against the header. Its extent (the reserved space, even if it's not
+    // all used) is calculated so that, when pressed against the header, the
+    // following field will be aligned properly.
+    size_t name_size = name.length();
+    size_t name_extent =
+        RoundUpToAlignment(sizeof(Header) + name_size, kMemoryAlignment) -
+        sizeof(Header);
+    size_t value_extent = RoundUpToAlignment(size, kMemoryAlignment);
+
+    // The "basic size" is the minimum size of the record. It's possible that
+    // lengthy values will get truncated but there must be at least some bytes
+    // available.
+    size_t basic_size = sizeof(Header) + name_extent + kMemoryAlignment;
+    if (basic_size > available_)
+      return;  // No space to store even the smallest value.
+
+    // The "full size" is the size for storing the entire value, truncated
+    // to the amount of available memory.
+    size_t full_size =
+        std::min(sizeof(Header) + name_extent + value_extent, available_);
+    size = std::min(full_size - sizeof(Header) - name_extent, size);
+
+    // Allocate a chunk of memory.
+    Header* header = reinterpret_cast<Header*>(memory_);
+    memory_ += full_size;
+    available_ -= full_size;
+
+    // Datafill the header and name records. Memory must be zeroed. The |type|
+    // is written last, atomically, to release all the other values.
+    DCHECK_EQ(END_OF_VALUES, header->type.load(std::memory_order_relaxed));
+    DCHECK_EQ(0, header->value_size.load(std::memory_order_relaxed));
+    header->name_size = static_cast<uint8_t>(name_size);
+    header->record_size = full_size;
+    char* name_memory = reinterpret_cast<char*>(header) + sizeof(Header);
+    void* value_memory =
+        reinterpret_cast<char*>(header) + sizeof(Header) + name_extent;
+    memcpy(name_memory, name.data(), name_size);
+    header->type.store(type, std::memory_order_release);
+
+    // Create an entry in |values_| so that this field can be found and changed
+    // later on without having to allocate new entries.
+    StringPiece persistent_name(name_memory, name_size);
+    auto inserted =
+        values_.insert(std::make_pair(persistent_name, ValueInfo()));
+    DCHECK(inserted.second);  // True if inserted, false if existed.
+    info = &inserted.first->second;
+    info->name = persistent_name;
+    info->memory = value_memory;
+    info->size_ptr = &header->value_size;
+    info->extent = full_size - sizeof(Header) - name_extent;
+    info->type = type;
+  }
+
+  // Copy the value data to storage. The |size| is written last, atomically, to
+  // release the copied data. Until then, a parallel reader will just ignore
+  // records with a zero size.
+  DCHECK_EQ(type, info->type);
+  size = std::min(size, info->extent);
+  info->size_ptr->store(0, std::memory_order_seq_cst);
+  memcpy(info->memory, memory, size);
+  info->size_ptr->store(size, std::memory_order_release);
+}
+
+void ActivityUserData::SetReference(StringPiece name,
+                                    ValueType type,
+                                    const void* memory,
+                                    size_t size) {
+  ReferenceRecord rec;
+  rec.address = reinterpret_cast<uintptr_t>(memory);
+  rec.size = size;
+  Set(name, type, &rec, sizeof(rec));
+}
 
 // This information is kept for every thread that is tracked. It is filled
 // the very first time the thread is seen. All fields must be of exact sizes
@@ -231,6 +354,39 @@ struct ThreadActivityTracker::Header {
   // reference.
   char thread_name[32];
 };
+
+ThreadActivityTracker::ScopedActivity::ScopedActivity(
+    ThreadActivityTracker* tracker,
+    const void* program_counter,
+    const void* origin,
+    Activity::Type type,
+    const ActivityData& data)
+    : tracker_(tracker) {
+  if (tracker_)
+    activity_id_ = tracker_->PushActivity(program_counter, origin, type, data);
+}
+
+ThreadActivityTracker::ScopedActivity::~ScopedActivity() {
+  if (tracker_)
+    tracker_->PopActivity(activity_id_);
+}
+
+void ThreadActivityTracker::ScopedActivity::ChangeTypeAndData(
+    Activity::Type type,
+    const ActivityData& data) {
+  if (tracker_)
+    tracker_->ChangeActivity(activity_id_, type, data);
+}
+
+ActivityUserData& ThreadActivityTracker::ScopedActivity::user_data() {
+  if (!user_data_) {
+    if (tracker_)
+      user_data_ = tracker_->GetUserData(activity_id_);
+    else
+      user_data_ = MakeUnique<ActivityUserData>(nullptr, 0);
+  }
+  return *user_data_;
+}
 
 ThreadActivityTracker::ThreadActivityTracker(void* base, size_t size)
     : header_(static_cast<Header*>(base)),
@@ -309,9 +465,11 @@ ThreadActivityTracker::ThreadActivityTracker(void* base, size_t size)
 
 ThreadActivityTracker::~ThreadActivityTracker() {}
 
-void ThreadActivityTracker::PushActivity(const void* origin,
-                                         Activity::Type type,
-                                         const ActivityData& data) {
+ThreadActivityTracker::ActivityId ThreadActivityTracker::PushActivity(
+    const void* program_counter,
+    const void* origin,
+    Activity::Type type,
+    const ActivityData& data) {
   // A thread-checker creates a lock to check the thread-id which means
   // re-entry into this code if lock acquisitions are being tracked.
   DCHECK(type == Activity::ACT_LOCK_ACQUIRE ||
@@ -327,32 +485,34 @@ void ThreadActivityTracker::PushActivity(const void* origin,
     // Since no other threads modify the data, no compare/exchange is needed.
     // Since no other memory is being modified, a "relaxed" store is acceptable.
     header_->current_depth.store(depth + 1, std::memory_order_relaxed);
-    return;
+    return depth;
   }
 
   // Get a pointer to the next activity and load it. No atomicity is required
   // here because the memory is known only to this thread. It will be made
   // known to other threads once the depth is incremented.
-  Activity::FillFrom(&stack_[depth], origin, type, data);
+  Activity::FillFrom(&stack_[depth], program_counter, origin, type, data);
 
   // Save the incremented depth. Because this guards |activity| memory filled
   // above that may be read by another thread once the recorded depth changes,
   // a "release" store is required.
   header_->current_depth.store(depth + 1, std::memory_order_release);
+
+  // The current depth is used as the activity ID because it simply identifies
+  // an entry. Once an entry is pop'd, it's okay to reuse the ID.
+  return depth;
 }
 
-void ThreadActivityTracker::ChangeActivity(Activity::Type type,
+void ThreadActivityTracker::ChangeActivity(ActivityId id,
+                                           Activity::Type type,
                                            const ActivityData& data) {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK(type != Activity::ACT_NULL || &data != &kNullActivityData);
-
-  // Get the current depth of the stack and acquire the data held there.
-  uint32_t depth = header_->current_depth.load(std::memory_order_acquire);
-  DCHECK_LT(0U, depth);
+  DCHECK_LT(id, header_->current_depth.load(std::memory_order_acquire));
 
   // Update the information if it is being recorded (i.e. within slot limit).
-  if (depth <= stack_slots_) {
-    Activity* activity = &stack_[depth - 1];
+  if (id < stack_slots_) {
+    Activity* activity = &stack_[id];
 
     if (type != Activity::ACT_NULL) {
       DCHECK_EQ(activity->activity_type & Activity::ACT_CATEGORY_MASK,
@@ -365,20 +525,28 @@ void ThreadActivityTracker::ChangeActivity(Activity::Type type,
   }
 }
 
-void ThreadActivityTracker::PopActivity() {
+void ThreadActivityTracker::PopActivity(ActivityId id) {
   // Do an atomic decrement of the depth. No changes to stack entries guarded
   // by this variable are done here so a "relaxed" operation is acceptable.
-  // |depth| will receive the value BEFORE it was modified.
+  // |depth| will receive the value BEFORE it was modified which means the
+  // return value must also be decremented. The slot will be "free" after
+  // this call but since only a single thread can access this object, the
+  // data will remain valid until this method returns or calls outside.
   uint32_t depth =
-      header_->current_depth.fetch_sub(1, std::memory_order_relaxed);
+      header_->current_depth.fetch_sub(1, std::memory_order_relaxed) - 1;
 
   // Validate that everything is running correctly.
-  DCHECK_LT(0U, depth);
+  DCHECK_EQ(id, depth);
 
   // A thread-checker creates a lock to check the thread-id which means
   // re-entry into this code if lock acquisitions are being tracked.
-  DCHECK(stack_[depth - 1].activity_type == Activity::ACT_LOCK_ACQUIRE ||
+  DCHECK(stack_[depth].activity_type == Activity::ACT_LOCK_ACQUIRE ||
          thread_checker_.CalledOnValidThread());
+
+  // Check if there was any user-data memory. It isn't free'd until later
+  // because the call to release it can push something on the stack.
+  PersistentMemoryAllocator::Reference user_data = stack_[depth].user_data;
+  stack_[depth].user_data = 0;
 
   // The stack has shrunk meaning that some other thread trying to copy the
   // contents for reporting purposes could get bad data. That thread would
@@ -387,6 +555,25 @@ void ThreadActivityTracker::PopActivity() {
   // happen after the atomic |depth| operation above so a "release" store
   // is required.
   header_->stack_unchanged.store(0, std::memory_order_release);
+
+  // Release resources located above. All stack processing is done so it's
+  // safe if some outside code does another push.
+  if (user_data)
+    GlobalActivityTracker::Get()->ReleaseUserDataMemory(&user_data);
+}
+
+std::unique_ptr<ActivityUserData> ThreadActivityTracker::GetUserData(
+    ActivityId id) {
+  // User-data is only stored for activities actually held in the stack.
+  if (id < stack_slots_) {
+    void* memory =
+        GlobalActivityTracker::Get()->GetUserDataMemory(&stack_[id].user_data);
+    if (memory)
+      return MakeUnique<ActivityUserData>(memory, kUserDataSize);
+  }
+
+  // Return a dummy object that will still accept (but ignore) Set() calls.
+  return MakeUnique<ActivityUserData>(nullptr, 0);
 }
 
 bool ThreadActivityTracker::IsValid() const {
@@ -630,6 +817,29 @@ void GlobalActivityTracker::ReleaseTrackerForCurrentThreadForTesting() {
     delete tracker;
 }
 
+void* GlobalActivityTracker::GetUserDataMemory(
+    PersistentMemoryAllocator::Reference* reference) {
+  if (!*reference) {
+    base::AutoLock autolock(user_data_allocator_lock_);
+    *reference = user_data_allocator_.GetObjectReference();
+    if (!*reference)
+      return nullptr;
+  }
+
+  void* memory =
+      allocator_->GetAsObject<char>(*reference, kTypeIdUserDataRecord);
+  DCHECK(memory);
+  return memory;
+}
+
+void GlobalActivityTracker::ReleaseUserDataMemory(
+    PersistentMemoryAllocator::Reference* reference) {
+  DCHECK(*reference);
+  base::AutoLock autolock(user_data_allocator_lock_);
+  user_data_allocator_.ReleaseObjectReference(*reference);
+  *reference = PersistentMemoryAllocator::kReferenceNull;
+}
+
 GlobalActivityTracker::GlobalActivityTracker(
     std::unique_ptr<PersistentMemoryAllocator> allocator,
     int stack_depth)
@@ -641,7 +851,19 @@ GlobalActivityTracker::GlobalActivityTracker(
                                 kTypeIdActivityTracker,
                                 kTypeIdActivityTrackerFree,
                                 stack_memory_size_,
-                                kCachedThreadMemories) {
+                                kCachedThreadMemories,
+                                /*make_iterable=*/true),
+      user_data_allocator_(allocator_.get(),
+                           kTypeIdUserDataRecord,
+                           kTypeIdUserDataRecordFree,
+                           kUserDataSize,
+                           kCachedUserDataMemories,
+                           /*make_iterable=*/false),
+      user_data_(
+          allocator_->GetAsObject<char>(
+              allocator_->Allocate(kGlobalDataSize, kTypeIdGlobalDataRecord),
+              kTypeIdGlobalDataRecord),
+          kGlobalDataSize) {
   // Ensure the passed memory is valid and empty (iterator finds nothing).
   uint32_t type;
   DCHECK(!PersistentMemoryAllocator::Iterator(allocator_.get()).GetNext(&type));
@@ -678,12 +900,13 @@ void GlobalActivityTracker::OnTLSDestroy(void* value) {
   delete reinterpret_cast<ManagedActivityTracker*>(value);
 }
 
-ScopedActivity::ScopedActivity(const tracked_objects::Location& location,
+ScopedActivity::ScopedActivity(const void* program_counter,
                                uint8_t action,
                                uint32_t id,
                                int32_t info)
     : GlobalActivityTracker::ScopedThreadActivity(
-          location.program_counter(),
+          program_counter,
+          nullptr,
           static_cast<Activity::Type>(Activity::ACT_GENERIC | action),
           ActivityData::ForGeneric(id, info),
           /*lock_allowed=*/true),
@@ -708,32 +931,41 @@ void ScopedActivity::ChangeActionAndInfo(uint8_t action, int32_t info) {
                     ActivityData::ForGeneric(id_, info));
 }
 
-ScopedTaskRunActivity::ScopedTaskRunActivity(const base::PendingTask& task)
+ScopedTaskRunActivity::ScopedTaskRunActivity(
+    const void* program_counter,
+    const base::PendingTask& task)
     : GlobalActivityTracker::ScopedThreadActivity(
+          program_counter,
           task.posted_from.program_counter(),
           Activity::ACT_TASK_RUN,
           ActivityData::ForTask(task.sequence_num),
           /*lock_allowed=*/true) {}
 
 ScopedLockAcquireActivity::ScopedLockAcquireActivity(
+    const void* program_counter,
     const base::internal::LockImpl* lock)
     : GlobalActivityTracker::ScopedThreadActivity(
+          program_counter,
           nullptr,
           Activity::ACT_LOCK_ACQUIRE,
           ActivityData::ForLock(lock),
           /*lock_allowed=*/false) {}
 
 ScopedEventWaitActivity::ScopedEventWaitActivity(
+    const void* program_counter,
     const base::WaitableEvent* event)
     : GlobalActivityTracker::ScopedThreadActivity(
+          program_counter,
           nullptr,
           Activity::ACT_EVENT_WAIT,
           ActivityData::ForEvent(event),
           /*lock_allowed=*/true) {}
 
 ScopedThreadJoinActivity::ScopedThreadJoinActivity(
+    const void* program_counter,
     const base::PlatformThreadHandle* thread)
     : GlobalActivityTracker::ScopedThreadActivity(
+          program_counter,
           nullptr,
           Activity::ACT_THREAD_JOIN,
           ActivityData::ForThread(*thread),
@@ -741,8 +973,10 @@ ScopedThreadJoinActivity::ScopedThreadJoinActivity(
 
 #if !defined(OS_NACL) && !defined(OS_IOS)
 ScopedProcessWaitActivity::ScopedProcessWaitActivity(
+    const void* program_counter,
     const base::Process* process)
     : GlobalActivityTracker::ScopedThreadActivity(
+          program_counter,
           nullptr,
           Activity::ACT_PROCESS_WAIT,
           ActivityData::ForProcess(process->Pid()),

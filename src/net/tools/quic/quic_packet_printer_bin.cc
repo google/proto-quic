@@ -21,11 +21,10 @@
 // OnUnauthenticatedPublicHeader
 // OnUnauthenticatedHeader: { connection_id: 13845207862000976235,
 // connection_id_length:8, packet_number_length:1, multipath_flag: 0,
-// reset_flag: 0, version_flag: 0, entropy_flag: 0, entropy hash: 0, path_id: ,
-// packet_number: 4}
+// reset_flag: 0, version_flag: 0, path_id: , packet_number: 4}
 // OnDecryptedPacket
 // OnPacketHeader
-// OnAckFrame:  entropy_hash: 2 largest_observed: 1 ack_delay_time: 3000
+// OnAckFrame:  largest_observed: 1 ack_delay_time: 3000
 // missing_packets: [  ] is_truncated: 0 received_packets: [ 1 at 466016  ]
 // OnStopWaitingFrame
 // OnConnectionCloseFrame: error_code { 61 } error_details { Unencrypted stream
@@ -66,7 +65,7 @@ class QuicPacketPrinter : public QuicFramerVisitorInterface {
   explicit QuicPacketPrinter(QuicFramer* framer) : framer_(framer) {}
 
   void OnError(QuicFramer* framer) override {
-    cerr << "OnError: " << QuicUtils::ErrorToString(framer->error())
+    cerr << "OnError: " << QuicErrorCodeToString(framer->error())
          << " detail: " << framer->detailed_error() << "\n";
   }
   bool OnProtocolVersionMismatch(QuicVersion received_version) override {

@@ -26,14 +26,14 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_write_blocked_list.h"
-#include "net/quic/core/reliable_quic_stream.h"
 
 namespace net {
 
 class QuicCryptoStream;
 class QuicFlowController;
-class ReliableQuicStream;
+class QuicStream;
 
 namespace test {
 class QuicSessionPeer;
@@ -118,7 +118,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // If provided, |ack_notifier_delegate| will be registered to be notified when
   // we have seen ACKs for all packets resulting from this call.
   virtual QuicConsumedData WritevData(
-      ReliableQuicStream* stream,
+      QuicStream* stream,
       QuicStreamId id,
       QuicIOVector iov,
       QuicStreamOffset offset,
@@ -238,7 +238,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // such stream exists, and |stream_id| is a peer-created dynamic stream id,
   // then a new stream is created and returned. In all other cases, nullptr is
   // returned.
-  ReliableQuicStream* GetOrCreateStream(const QuicStreamId stream_id);
+  QuicStream* GetOrCreateStream(const QuicStreamId stream_id);
 
   // Mark a stream as draining.
   virtual void StreamDraining(QuicStreamId id);
@@ -248,30 +248,29 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
  protected:
   using StaticStreamMap =
-      base::SmallMap<std::unordered_map<QuicStreamId, ReliableQuicStream*>, 2>;
+      base::SmallMap<std::unordered_map<QuicStreamId, QuicStream*>, 2>;
 
   using DynamicStreamMap = base::SmallMap<
-      std::unordered_map<QuicStreamId, std::unique_ptr<ReliableQuicStream>>,
+      std::unordered_map<QuicStreamId, std::unique_ptr<QuicStream>>,
       10>;
 
-  using ClosedStreams = std::vector<std::unique_ptr<ReliableQuicStream>>;
+  using ClosedStreams = std::vector<std::unique_ptr<QuicStream>>;
 
   // Creates a new stream to handle a peer-initiated stream.
   // Caller does not own the returned stream.
   // Returns nullptr and does error handling if the stream can not be created.
-  virtual ReliableQuicStream* CreateIncomingDynamicStream(QuicStreamId id) = 0;
+  virtual QuicStream* CreateIncomingDynamicStream(QuicStreamId id) = 0;
 
   // Create a new stream to handle a locally-initiated stream.
   // Caller does not own the returned stream.
   // Returns nullptr if max streams have already been opened.
-  virtual ReliableQuicStream* CreateOutgoingDynamicStream(
-      SpdyPriority priority) = 0;
+  virtual QuicStream* CreateOutgoingDynamicStream(SpdyPriority priority) = 0;
 
   // Return the reserved crypto stream.
   virtual QuicCryptoStream* GetCryptoStream() = 0;
 
   // Adds |stream| to the dynamic stream map.
-  virtual void ActivateStream(std::unique_ptr<ReliableQuicStream> stream);
+  virtual void ActivateStream(std::unique_ptr<QuicStream> stream);
 
   // Returns the stream ID for a new outgoing stream, and increments the
   // underlying counter.
@@ -282,7 +281,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // returned. However if |stream_id| is a locally-created id and no such stream
   // exists, the connection is closed.
   // Caller does not own the returned stream.
-  ReliableQuicStream* GetOrCreateDynamicStream(QuicStreamId stream_id);
+  QuicStream* GetOrCreateDynamicStream(QuicStreamId stream_id);
 
   // Performs the work required to close |stream_id|.  If |locally_reset|
   // then the stream has been reset by this endpoint, not by the peer.
@@ -372,7 +371,7 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   // Debug helper for |OnCanWrite()|, check that OnStreamWrite() makes
   // forward progress.  Returns false if busy loop detected.
-  bool CheckStreamNotBusyLooping(ReliableQuicStream* stream,
+  bool CheckStreamNotBusyLooping(QuicStream* stream,
                                  uint64_t previous_bytes_written,
                                  bool previous_fin_sent);
 

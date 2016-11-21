@@ -372,35 +372,28 @@ packages="$(
 )"
 
 if [ 1 -eq "${do_quick_check-0}" ] ; then
-  failed_check="$(dpkg-query -W -f '${PackageSpec}:${Status}\n' \
-    ${packages} 2>&1 | grep -v "ok installed" || :)"
-  if [ -n "${failed_check}" ]; then
-    echo
-    nomatch="$(echo "${failed_check}" | \
-      sed -e "s/^No packages found matching \(.*\).$/\1/;t;d")"
-    missing="$(echo "${failed_check}" | \
-      sed -e "/^No packages found matching/d;s/^\(.*\):.*$/\1/")"
-    if [ "$nomatch" ]; then
-      # Distinguish between packages that actually aren't available to the
-      # system (i.e. not in any repo) and packages that just aren't known to
-      # dpkg (i.e. managed by apt).
-      unknown=""
-      for p in ${nomatch}; do
-        if apt-cache show ${p} > /dev/null 2>&1; then
-          missing="${p}\n${missing}"
-        else
-          unknown="${p}\n${unknown}"
-        fi
-      done
-      if [ -n "${unknown}" ]; then
-        echo "WARNING: The following packages are unknown to your system"
-        echo "(maybe missing a repo or need to 'sudo apt-get update'):"
-        echo -e "${unknown}" | sed -e "s/^/  /"
+  if ! missing_packages="$(dpkg-query -W -f ' ' ${packages} 2>&1)"; then
+    # Distinguish between packages that actually aren't available to the
+    # system (i.e. not in any repo) and packages that just aren't known to
+    # dpkg (i.e. managed by apt).
+    missing_packages="$(echo "${missing_packages}" | awk '{print $NF}')"
+    not_installed=""
+    unknown=""
+    for p in ${missing_packages}; do
+      if apt-cache show ${p} > /dev/null 2>&1; then
+        not_installed="${p}\n${not_installed}"
+      else
+        unknown="${p}\n${unknown}"
       fi
-    fi
-    if [ -n "${missing}" ]; then
+    done
+    if [ -n "${not_installed}" ]; then
       echo "WARNING: The following packages are not installed:"
-      echo -e "${missing}" | sed -e "s/^/  /"
+      echo -e "${not_installed}" | sed -e "s/^/  /"
+    fi
+    if [ -n "${unknown}" ]; then
+      echo "WARNING: The following packages are unknown to your system"
+      echo "(maybe missing a repo or need to 'sudo apt-get update'):"
+      echo -e "${unknown}" | sed -e "s/^/  /"
     fi
     exit 1
   fi

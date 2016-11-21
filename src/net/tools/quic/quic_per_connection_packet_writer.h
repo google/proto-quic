@@ -20,8 +20,6 @@ class QuicPerConnectionPacketWriter : public QuicPacketWriter {
   explicit QuicPerConnectionPacketWriter(QuicPacketWriter* shared_writer);
   ~QuicPerConnectionPacketWriter() override;
 
-  QuicPacketWriter* shared_writer() const { return shared_writer_; }
-
   // Default implementation of the QuicPacketWriter interface: Passes everything
   // to |shared_writer_|.
   WriteResult WritePacket(const char* buffer,

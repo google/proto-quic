@@ -10,11 +10,13 @@
 #include <string>
 #include <vector>
 
+#include "base/macros.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/time/time.h"
 #include "crypto/secure_hash.h"
 #include "net/base/hash_value.h"
 #include "net/cert/ct_log_verifier_util.h"
+#include "net/cert/merkle_audit_proof.h"
 #include "net/cert/merkle_consistency_proof.h"
 #include "net/cert/signed_certificate_timestamp.h"
 #include "net/cert/signed_tree_head.h"
@@ -27,37 +29,45 @@ namespace {
 
 // Calculate the power of two nearest to, but less than, |n|.
 // |n| must be at least 2.
-uint64_t CalculateNearestPowerOfTwo(uint64_t n) {
+size_t CalculateNearestPowerOfTwo(size_t n) {
   DCHECK_GT(n, 1u);
 
-  uint64_t ret = UINT64_C(1) << 63;
+  size_t ret = size_t(1) << (sizeof(size_t) * 8 - 1);
   while (ret >= n)
     ret >>= 1;
 
   return ret;
 }
 
-// A single consistency proof. Contains the old and new tree sizes
-// (snapshot1 and snapshot2), the length of the proof (proof_length) and
-// at most 3 proof nodes (all test proofs will be for a tree of size 8).
-struct ProofTestVector {
-  uint64_t snapshot1;
-  uint64_t snapshot2;
-  size_t proof_length;
-  const char* const proof[3];
-};
-
 // All test data replicated from
 // https://github.com/google/certificate-transparency/blob/c41b090ecc14ddd6b3531dc7e5ce36b21e253fdd/cpp/merkletree/merkle_tree_test.cc
-// A hash of the empty string.
-const uint8_t kSHA256EmptyTreeHash[32] = {
+
+// The SHA-256 hash of an empty Merkle tree.
+const uint8_t kEmptyTreeHash[32] = {
     0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4,
     0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
     0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
 
-// Root hashes from building the sample tree of size 8 leaf-by-leaf.
-// The first entry is the root at size 0, the last is the root at size 8.
-const char* const kSHA256Roots[8] = {
+std::string GetEmptyTreeHash() {
+  return std::string(std::begin(kEmptyTreeHash), std::end(kEmptyTreeHash));
+}
+
+// SHA-256 Merkle leaf hashes for the sample tree that all of the other test
+// data relates to (8 leaves).
+const char* const kLeafHashes[8] = {
+    "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+    "96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
+    "0298d122906dcfc10892cb53a73992fc5b9f493ea4c9badb27b791b4127a7fe7",
+    "07506a85fd9dd2f120eb694f86011e5bb4662e5c415a62917033d4a9624487e7",
+    "bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b",
+    "4271a26be0d8a84f0bd54c8c302e7cb3a3b5d1fa6780a40bcce2873477dab658",
+    "b08693ec2e721597130641e8211e7eedccb4c26413963eee6c1e2ed16ffb1a5f",
+    "46f6ffadd3d06a09ff3c5860d2755c8b9819db7df44251788c7d8e3180de8eb1"};
+
+// SHA-256 Merkle root hashes from building the sample tree leaf-by-leaf.
+// The first entry is the root when the tree contains 1 leaf, and the last is
+// the root when the tree contains all 8 leaves.
+const char* const kRootHashes[8] = {
     "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
     "fac54203e7cc696cf0dfcb42c92a1d9dbaf70ad9e621f4bd8d98662f00e3c125",
     "aeb6bcfe274b70a14fb067a5e5578264db0fa9b51af5e0ba159158f329e06e77",
@@ -67,9 +77,18 @@ const char* const kSHA256Roots[8] = {
     "ddb89be403809e325750d3d263cd78929c2942b7942a34b77e122c9594a74c8c",
     "5dc9da79a70659a9ad559cb701ded9a2ab9d823aad2f4960cfe370eff4604328"};
 
-// A collection of consistency proofs between various sub-trees of the tree
-// defined by |kSHA256Roots|.
-const ProofTestVector kSHA256Proofs[4] = {
+// A single consistency proof. Contains at most 3 proof nodes (all test proofs
+// will be for a tree of size 8).
+struct ConsistencyProofTestVector {
+  size_t old_tree_size;
+  size_t new_tree_size;
+  size_t proof_length;
+  const char* const proof[3];
+};
+
+// A collection of consistency proofs between various sub-trees of the sample
+// tree.
+const ConsistencyProofTestVector kConsistencyProofs[] = {
     // Empty consistency proof between trees of the same size (1).
     {1, 1, 0, {"", "", ""}},
     // Consistency proof between tree of size 1 and tree of size 8, with 3
@@ -96,6 +115,43 @@ const ProofTestVector kSHA256Proofs[4] = {
      {"5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
       "bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b", ""}}};
 
+// A single audit proof. Contains at most 3 proof nodes (all test proofs will be
+// for a tree of size 8).
+struct AuditProofTestVector {
+  size_t leaf;
+  size_t tree_size;
+  size_t proof_length;
+  const char* const proof[3];
+};
+
+// A collection of audit proofs for various leaves and sub-trees of the tree
+// defined by |kRootHashes|.
+const AuditProofTestVector kAuditProofs[] = {
+    {0, 1, 0, {"", "", ""}},
+    {0,
+     8,
+     3,
+     {"96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7",
+      "5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
+      "6b47aaf29ee3c2af9af889bc1fb9254dabd31177f16232dd6aab035ca39bf6e4"}},
+    {5,
+     8,
+     3,
+     {"bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b",
+      "ca854ea128ed050b41b35ffc1b87b8eb2bde461e9e3b5596ece6b9d5975a0ae0",
+      "d37ee418976dd95753c1c73862b9398fa2a2cf9b4ff0fdfe8b30cd95209614b7"}},
+    {2,
+     3,
+     1,
+     {"fac54203e7cc696cf0dfcb42c92a1d9dbaf70ad9e621f4bd8d98662f00e3c125", "",
+      ""}},
+    {1,
+     5,
+     3,
+     {"6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "5f083f0a1a33ca076a95279832580db3e0ef4584bdff1f54c8a360f50de3031e",
+      "bc1a0643b12e4d2d7c77918f44e0f4f79a838b6cf9ec5b5c283e1f4d88599e6b"}}};
+
 // Decodes a hexadecimal string into the binary data it represents.
 std::string HexToBytes(const std::string& hex_data) {
   std::vector<uint8_t> output;
@@ -105,131 +161,232 @@ std::string HexToBytes(const std::string& hex_data) {
   return result;
 }
 
-std::string GetEmptyTreeHash() {
-  return std::string(std::begin(kSHA256EmptyTreeHash),
-                     std::end(kSHA256EmptyTreeHash));
+// Constructs a consistency/audit proof from a test vector.
+// This is templated so that it can be used with both ConsistencyProofTestVector
+// and AuditProofTestVector.
+template <typename TestVectorType>
+std::vector<std::string> GetProof(const TestVectorType& test_vector) {
+  std::vector<std::string> proof(test_vector.proof_length);
+  std::transform(test_vector.proof,
+                 test_vector.proof + test_vector.proof_length, proof.begin(),
+                 &HexToBytes);
+
+  return proof;
 }
 
-// Creates a ct::MerkleConsistencyProof and returns the result of
-// calling log->VerifyConsistencyProof with that proof and snapshots.
-bool VerifyConsistencyProof(scoped_refptr<const CTLogVerifier> log,
-                            uint64_t old_tree_size,
+// Creates a ct::MerkleConsistencyProof from its arguments and returns the
+// result of passing this to log.VerifyConsistencyProof().
+bool VerifyConsistencyProof(const CTLogVerifier& log,
+                            size_t old_tree_size,
                             const std::string& old_tree_root,
-                            uint64_t new_tree_size,
+                            size_t new_tree_size,
                             const std::string& new_tree_root,
                             const std::vector<std::string>& proof) {
-  return log->VerifyConsistencyProof(
-      ct::MerkleConsistencyProof(log->key_id(), proof, old_tree_size,
+  return log.VerifyConsistencyProof(
+      ct::MerkleConsistencyProof(log.key_id(), proof, old_tree_size,
                                  new_tree_size),
       old_tree_root, new_tree_root);
 }
 
+// Creates a ct::MerkleAuditProof from its arguments and returns the result of
+// passing this to log.VerifyAuditProof().
+bool VerifyAuditProof(const CTLogVerifier& log,
+                      size_t leaf,
+                      size_t tree_size,
+                      const std::vector<std::string>& proof,
+                      const std::string& tree_root,
+                      const std::string& leaf_hash) {
+  return log.VerifyAuditProof(ct::MerkleAuditProof(leaf, tree_size, proof),
+                              tree_root, leaf_hash);
+}
+
 class CTLogVerifierTest : public ::testing::Test {
  public:
-  CTLogVerifierTest() {}
-
   void SetUp() override {
     log_ = CTLogVerifier::Create(ct::GetTestPublicKey(), "testlog",
                                  "https://ct.example.com", "ct.example.com");
 
     ASSERT_TRUE(log_);
-    ASSERT_EQ(ct::GetTestPublicKeyId(), log_->key_id());
-    ASSERT_EQ("ct.example.com", log_->dns_domain());
-  }
-
-  // Given a consistency proof between two snapshots of the tree, asserts that
-  // it verifies and no other combination of snapshots and proof nodes verifies.
-  void VerifierConsistencyCheck(int snapshot1,
-                                int snapshot2,
-                                const std::string& root1,
-                                const std::string& root2,
-                                const std::vector<std::string>& proof) {
-    // Verify the original consistency proof.
-    EXPECT_TRUE(
-        VerifyConsistencyProof(log_, snapshot1, root1, snapshot2, root2, proof))
-        << " " << snapshot1 << " " << snapshot2;
-
-    if (proof.empty()) {
-      // For simplicity test only non-trivial proofs that have root1 != root2
-      // snapshot1 != 0 and snapshot1 != snapshot2.
-      return;
-    }
-
-    // Wrong snapshot index: The proof checking code should not accept
-    // as a valid proof a proof for a tree size different than the original
-    // size it was produced for.
-    // Test that this is not the case for off-by-one changes.
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1 - 1, root1, snapshot2,
-                                        root2, proof));
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1 + 1, root1, snapshot2,
-                                        root2, proof));
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1 ^ 2, root1, snapshot2,
-                                        root2, proof));
-
-    // Test that the proof is not accepted for trees with wrong tree height.
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2 * 2,
-                                        root2, proof));
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2 / 2,
-                                        root2, proof));
-
-    // Test that providing the wrong input root fails checking an
-    // otherwise-valid proof.
-    const std::string wrong_root("WrongRoot");
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        wrong_root, proof));
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, wrong_root, snapshot2,
-                                        root2, proof));
-    // Test that swapping roots fails checking an otherwise-valid proof (that
-    // the right root is used for each calculation).
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root2, snapshot2,
-                                        root1, proof));
-
-    // Variations of wrong proofs, all of which should be rejected.
-    std::vector<std::string> wrong_proof;
-    // Empty proof.
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
-
-    // Modify a single element in the proof.
-    for (size_t j = 0; j < proof.size(); ++j) {
-      wrong_proof = proof;
-      wrong_proof[j] = GetEmptyTreeHash();
-      EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                          root2, wrong_proof));
-    }
-
-    // Add garbage at the end of the proof.
-    wrong_proof = proof;
-    wrong_proof.push_back(std::string());
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
-    wrong_proof.pop_back();
-
-    wrong_proof.push_back(proof.back());
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
-    wrong_proof.pop_back();
-
-    // Remove a node from the end.
-    wrong_proof.pop_back();
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
-
-    // Add garbage in the beginning of the proof.
-    wrong_proof.clear();
-    wrong_proof.push_back(std::string());
-    wrong_proof.insert(wrong_proof.end(), proof.begin(), proof.end());
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
-
-    wrong_proof[0] = proof[0];
-    EXPECT_FALSE(VerifyConsistencyProof(log_, snapshot1, root1, snapshot2,
-                                        root2, wrong_proof));
+    EXPECT_EQ(ct::GetTestPublicKeyId(), log_->key_id());
+    EXPECT_EQ("ct.example.com", log_->dns_domain());
   }
 
  protected:
   scoped_refptr<const CTLogVerifier> log_;
 };
+
+// Given an audit proof for a leaf in a Merkle tree, asserts that it verifies
+// and no other combination of leaves, tree sizes and proof nodes verifies.
+void CheckVerifyAuditProof(const CTLogVerifier& log,
+                           size_t leaf,
+                           size_t tree_size,
+                           const std::vector<std::string>& proof,
+                           const std::string& root_hash,
+                           const std::string& leaf_hash) {
+  EXPECT_TRUE(
+      VerifyAuditProof(log, leaf, tree_size, proof, root_hash, leaf_hash))
+      << "proof for leaf " << leaf << " did not pass verification";
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf - 1, tree_size, proof, root_hash, leaf_hash))
+      << "proof passed verification with wrong leaf index";
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf + 1, tree_size, proof, root_hash, leaf_hash))
+      << "proof passed verification with wrong leaf index";
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf ^ 2, tree_size, proof, root_hash, leaf_hash))
+      << "proof passed verification with wrong leaf index";
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size * 2, proof, root_hash, leaf_hash))
+      << "proof passed verification with wrong tree height";
+  EXPECT_FALSE(VerifyAuditProof(log, leaf / 2, tree_size / 2, proof, root_hash,
+                                leaf_hash))
+      << "proof passed verification with wrong leaf index and tree height";
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size / 2, proof, root_hash, leaf_hash))
+      << "proof passed verification with wrong tree height";
+  EXPECT_FALSE(VerifyAuditProof(log, leaf, tree_size, proof, GetEmptyTreeHash(),
+                                leaf_hash))
+      << "proof passed verification with wrong root hash";
+
+  std::vector<std::string> wrong_proof;
+
+  // Modify a single element on the proof.
+  for (size_t j = 0; j < proof.size(); ++j) {
+    wrong_proof = proof;
+    wrong_proof[j] = GetEmptyTreeHash();
+    EXPECT_FALSE(VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash,
+                                  leaf_hash))
+        << "proof passed verification with one wrong node (node " << j << ")";
+  }
+
+  wrong_proof = proof;
+  wrong_proof.push_back(std::string());
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash, leaf_hash))
+      << "proof passed verification with an empty node appended";
+
+  wrong_proof.back() = root_hash;
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash, leaf_hash))
+      << "proof passed verification with an incorrect node appended";
+  wrong_proof.pop_back();
+
+  if (!wrong_proof.empty()) {
+    wrong_proof.pop_back();
+    EXPECT_FALSE(VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash,
+                                  leaf_hash))
+        << "proof passed verification with the last node missing";
+  }
+
+  wrong_proof.clear();
+  wrong_proof.push_back(std::string());
+  wrong_proof.insert(wrong_proof.end(), proof.begin(), proof.end());
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash, leaf_hash))
+      << "proof passed verification with an empty node prepended";
+
+  wrong_proof[0] = root_hash;
+  EXPECT_FALSE(
+      VerifyAuditProof(log, leaf, tree_size, wrong_proof, root_hash, leaf_hash))
+      << "proof passed verification with an incorrect node prepended";
+}
+
+// Given a consistency proof between two snapshots of the tree, asserts that it
+// verifies and no other combination of tree sizes and proof nodes verifies.
+void CheckVerifyConsistencyProof(const CTLogVerifier& log,
+                                 int old_tree_size,
+                                 int new_tree_size,
+                                 const std::string& old_root,
+                                 const std::string& new_root,
+                                 const std::vector<std::string>& proof) {
+  // Verify the original consistency proof.
+  EXPECT_TRUE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                     new_tree_size, new_root, proof))
+      << "proof between trees of size " << old_tree_size << " and "
+      << new_tree_size << " did not pass verification";
+
+  if (proof.empty()) {
+    // For simplicity test only non-trivial proofs that have old_root !=
+    // new_root
+    // old_tree_size != 0 and old_tree_size != new_tree_size.
+    return;
+  }
+
+  // Wrong tree size: The proof checking code should not accept as a valid proof
+  // a proof for a tree size different than the original size it was produced
+  // for. Test that this is not the case for off-by-one changes.
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size - 1, old_root,
+                                      new_tree_size, new_root, proof))
+      << "proof passed verification with old tree size - 1";
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size + 1, old_root,
+                                      new_tree_size, new_root, proof))
+      << "proof passed verification with old tree size + 1";
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size ^ 2, old_root,
+                                      new_tree_size, new_root, proof))
+      << "proof passed verification with old tree size ^ 2";
+
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size * 2, new_root, proof))
+      << "proof passed verification with new tree height + 1";
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size / 2, new_root, proof))
+      << "proof passed verification with new tree height - 1";
+
+  const std::string wrong_root("WrongRoot");
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, wrong_root, proof))
+      << "proof passed verification with wrong old root";
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, wrong_root,
+                                      new_tree_size, new_root, proof))
+      << "proof passed verification with wrong new root";
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, new_root,
+                                      new_tree_size, old_root, proof))
+      << "proof passed verification with old and new root swapped";
+
+  // Variations of wrong proofs, all of which should be rejected.
+  std::vector<std::string> wrong_proof;
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "empty proof passed verification";
+
+  // Modify a single element in the proof.
+  for (size_t j = 0; j < proof.size(); ++j) {
+    wrong_proof = proof;
+    wrong_proof[j] = GetEmptyTreeHash();
+    EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                        new_tree_size, new_root, wrong_proof))
+        << "proof passed verification with incorrect node (node " << j << ")";
+  }
+
+  wrong_proof = proof;
+  wrong_proof.push_back(std::string());
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "proof passed verification with empty node appended";
+
+  wrong_proof.back() = proof.back();
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "proof passed verification with last node duplicated";
+  wrong_proof.pop_back();
+
+  wrong_proof.pop_back();
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "proof passed verification with last node missing";
+
+  wrong_proof.clear();
+  wrong_proof.push_back(std::string());
+  wrong_proof.insert(wrong_proof.end(), proof.begin(), proof.end());
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "proof passed verification with empty node prepended";
+
+  wrong_proof[0] = proof[0];
+  EXPECT_FALSE(VerifyConsistencyProof(log, old_tree_size, old_root,
+                                      new_tree_size, new_root, wrong_proof))
+      << "proof passed verification with first node duplicated";
+}
 
 TEST_F(CTLogVerifierTest, VerifiesCertSCT) {
   ct::LogEntry cert_entry;
@@ -315,33 +472,38 @@ TEST_F(CTLogVerifierTest, ExcessDataInPublicKey) {
 
 TEST_F(CTLogVerifierTest, VerifiesConsistencyProofEdgeCases_EmptyProof) {
   std::vector<std::string> empty_proof;
-  std::string root1(GetEmptyTreeHash()), root2(GetEmptyTreeHash());
+  std::string old_root(GetEmptyTreeHash()), new_root(GetEmptyTreeHash());
 
-  // Snapshots that are always consistent, because they are either
-  // from an empty tree to a non-empty one or for trees of the same
-  // size.
-  EXPECT_TRUE(VerifyConsistencyProof(log_, 0, root1, 0, root2, empty_proof));
-  EXPECT_TRUE(VerifyConsistencyProof(log_, 0, root1, 1, root2, empty_proof));
-  EXPECT_TRUE(VerifyConsistencyProof(log_, 1, root1, 1, root2, empty_proof));
+  // Tree snapshots that are always consistent, because the proofs are either
+  // from an empty tree to a non-empty one or for trees of the same size.
+  EXPECT_TRUE(
+      VerifyConsistencyProof(*log_, 0, old_root, 0, new_root, empty_proof));
+  EXPECT_TRUE(
+      VerifyConsistencyProof(*log_, 0, old_root, 1, new_root, empty_proof));
+  EXPECT_TRUE(
+      VerifyConsistencyProof(*log_, 1, old_root, 1, new_root, empty_proof));
 
   // Invalid consistency proofs.
   // Time travel to the past.
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 1, root1, 0, root2, empty_proof));
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 2, root1, 1, root2, empty_proof));
+  EXPECT_FALSE(
+      VerifyConsistencyProof(*log_, 1, old_root, 0, new_root, empty_proof));
+  EXPECT_FALSE(
+      VerifyConsistencyProof(*log_, 2, old_root, 1, new_root, empty_proof));
   // Proof between two trees of different size can never be empty.
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 1, root1, 2, root2, empty_proof));
+  EXPECT_FALSE(
+      VerifyConsistencyProof(*log_, 1, old_root, 2, new_root, empty_proof));
 }
 
 TEST_F(CTLogVerifierTest, VerifiesConsistencyProofEdgeCases_MismatchingRoots) {
+  const std::string old_root(GetEmptyTreeHash());
+  std::string new_root;
   std::vector<std::string> empty_proof;
-  std::string root2;
-  const std::string empty_tree_hash(GetEmptyTreeHash());
 
   // Roots don't match.
   EXPECT_FALSE(
-      VerifyConsistencyProof(log_, 0, empty_tree_hash, 0, root2, empty_proof));
+      VerifyConsistencyProof(*log_, 0, old_root, 0, new_root, empty_proof));
   EXPECT_FALSE(
-      VerifyConsistencyProof(log_, 1, empty_tree_hash, 1, root2, empty_proof));
+      VerifyConsistencyProof(*log_, 1, old_root, 1, new_root, empty_proof));
 }
 
 TEST_F(CTLogVerifierTest,
@@ -355,155 +517,244 @@ TEST_F(CTLogVerifierTest,
   // but the proof is not empty (the verification code should not accept
   // proofs with redundant nodes in this case).
   proof.push_back(empty_tree_hash);
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 0, empty_tree_hash, 0,
+  EXPECT_FALSE(VerifyConsistencyProof(*log_, 0, empty_tree_hash, 0,
                                       empty_tree_hash, proof));
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 0, empty_tree_hash, 1,
+  EXPECT_FALSE(VerifyConsistencyProof(*log_, 0, empty_tree_hash, 1,
                                       empty_tree_hash, proof));
-  EXPECT_FALSE(VerifyConsistencyProof(log_, 1, empty_tree_hash, 1,
+  EXPECT_FALSE(VerifyConsistencyProof(*log_, 1, empty_tree_hash, 1,
                                       empty_tree_hash, proof));
 }
 
-TEST_F(CTLogVerifierTest, VerifiesValidConsistencyProofs) {
+class CTLogVerifierConsistencyProofTest
+    : public CTLogVerifierTest,
+      public ::testing::WithParamInterface<size_t /* proof index */> {};
+
+// Checks that a sample set of valid consistency proofs verify successfully.
+TEST_P(CTLogVerifierConsistencyProofTest, VerifiesValidConsistencyProof) {
+  const ConsistencyProofTestVector& test_vector =
+      kConsistencyProofs[GetParam()];
+  const std::vector<std::string> proof = GetProof(test_vector);
+
+  const char* const old_root = kRootHashes[test_vector.old_tree_size - 1];
+  const char* const new_root = kRootHashes[test_vector.new_tree_size - 1];
+  CheckVerifyConsistencyProof(*log_, test_vector.old_tree_size,
+                              test_vector.new_tree_size, HexToBytes(old_root),
+                              HexToBytes(new_root), proof);
+}
+
+INSTANTIATE_TEST_CASE_P(KnownGoodProofs,
+                        CTLogVerifierConsistencyProofTest,
+                        ::testing::Range(size_t(0),
+                                         arraysize(kConsistencyProofs)));
+
+class CTLogVerifierAuditProofTest
+    : public CTLogVerifierTest,
+      public ::testing::WithParamInterface<size_t /* proof index */> {};
+
+// Checks that a sample set of valid audit proofs verify successfully.
+TEST_P(CTLogVerifierAuditProofTest, VerifiesValidAuditProofs) {
+  const AuditProofTestVector& test_vector = kAuditProofs[GetParam()];
+  const std::vector<std::string> proof = GetProof(test_vector);
+
+  const char* const root_hash = kRootHashes[test_vector.tree_size - 1];
+  CheckVerifyAuditProof(*log_, test_vector.leaf, test_vector.tree_size, proof,
+                        HexToBytes(root_hash),
+                        HexToBytes(kLeafHashes[test_vector.leaf]));
+}
+
+INSTANTIATE_TEST_CASE_P(KnownGoodProofs,
+                        CTLogVerifierAuditProofTest,
+                        ::testing::Range(size_t(0), arraysize(kAuditProofs)));
+
+TEST_F(CTLogVerifierTest, VerifiesAuditProofEdgeCases_InvalidLeafIndex) {
   std::vector<std::string> proof;
-  std::string root1, root2;
+  EXPECT_FALSE(
+      VerifyAuditProof(*log_, 1, 0, proof, std::string(), std::string()));
+  EXPECT_FALSE(
+      VerifyAuditProof(*log_, 2, 1, proof, std::string(), std::string()));
 
-  // Known good proofs.
-  for (size_t i = 0; i < arraysize(kSHA256Proofs); ++i) {
-    SCOPED_TRACE(i);
-    proof.clear();
-    for (size_t j = 0; j < kSHA256Proofs[i].proof_length; ++j) {
-      const char* const v = kSHA256Proofs[i].proof[j];
-      proof.push_back(HexToBytes(v));
-    }
-    const uint64_t snapshot1 = kSHA256Proofs[i].snapshot1;
-    const uint64_t snapshot2 = kSHA256Proofs[i].snapshot2;
-    const char* const old_root = kSHA256Roots[snapshot1 - 1];
-    const char* const new_root = kSHA256Roots[snapshot2 - 1];
-    VerifierConsistencyCheck(snapshot1, snapshot2, HexToBytes(old_root),
-                             HexToBytes(new_root), proof);
-  }
+  const std::string empty_hash = GetEmptyTreeHash();
+  EXPECT_FALSE(VerifyAuditProof(*log_, 1, 0, proof, empty_hash, std::string()));
+  EXPECT_FALSE(VerifyAuditProof(*log_, 2, 1, proof, empty_hash, std::string()));
 }
 
-const char kLeafPrefix[] = {'\x00'};
+// Functions that implement algorithms from RFC6962 necessary for constructing
+// Merkle trees and proofs. This allows tests to generate a variety of trees
+// for exhaustive testing.
+namespace rfc6962 {
 
-// Reference implementation of RFC6962.
-// This allows generation of arbitrary-sized Merkle trees and consistency
-// proofs between them for testing the consistency proof validation
-// code.
-class TreeHasher {
- public:
-  static std::string HashLeaf(const std::string& leaf) {
-    SHA256HashValue sha256;
-    memset(sha256.data, 0, sizeof(sha256.data));
+// Calculates the hash of a leaf in a Merkle tree, given its content.
+// See RFC6962, section 2.1.
+std::string HashLeaf(const std::string& leaf) {
+  const char kLeafPrefix[] = {'\x00'};
 
-    std::unique_ptr<crypto::SecureHash> hash(
-        crypto::SecureHash::Create(crypto::SecureHash::SHA256));
-    hash->Update(kLeafPrefix, 1);
-    hash->Update(leaf.data(), leaf.size());
-    hash->Finish(sha256.data, sizeof(sha256.data));
+  SHA256HashValue sha256;
+  memset(sha256.data, 0, sizeof(sha256.data));
 
-    return std::string(reinterpret_cast<const char*>(sha256.data),
-                       sizeof(sha256.data));
-  }
-};
+  std::unique_ptr<crypto::SecureHash> hash(
+      crypto::SecureHash::Create(crypto::SecureHash::SHA256));
+  hash->Update(kLeafPrefix, 1);
+  hash->Update(leaf.data(), leaf.size());
+  hash->Finish(sha256.data, sizeof(sha256.data));
 
-// Reference implementation of Merkle hash, for cross-checking.
-// Recursively calculates the hash of the root given the leaf data
-// specified in |inputs|.
-std::string ReferenceMerkleTreeHash(std::string* inputs, uint64_t input_size) {
-  if (!input_size)
+  return std::string(reinterpret_cast<const char*>(sha256.data),
+                     sizeof(sha256.data));
+}
+
+// Calculates the root hash of a Merkle tree, given its leaf data and size.
+// See RFC6962, section 2.1.
+std::string HashTree(std::string leaves[], size_t tree_size) {
+  if (tree_size == 0)
     return GetEmptyTreeHash();
-  if (input_size == 1)
-    return TreeHasher::HashLeaf(inputs[0]);
+  if (tree_size == 1)
+    return HashLeaf(leaves[0]);
 
-  const uint64_t split = CalculateNearestPowerOfTwo(input_size);
+  // Find the index of the last leaf in the left sub-tree.
+  const size_t split = CalculateNearestPowerOfTwo(tree_size);
 
-  return ct::internal::HashNodes(
-      ReferenceMerkleTreeHash(&inputs[0], split),
-      ReferenceMerkleTreeHash(&inputs[split], input_size - split));
+  // Hash the left and right sub-trees, then hash the results.
+  return ct::internal::HashNodes(HashTree(leaves, split),
+                                 HashTree(&leaves[split], tree_size - split));
 }
 
-// Reference implementation of snapshot consistency. Returns a
-// consistency proof between two snapshots of the tree designated
-// by |inputs|.
-// Call with have_root1 = true.
-std::vector<std::string> ReferenceSnapshotConsistency(std::string* inputs,
-                                                      uint64_t snapshot2,
-                                                      uint64_t snapshot1,
-                                                      bool have_root1) {
+// Returns a Merkle audit proof for the leaf with index |leaf_index|.
+// The tree consists of |leaves[0]| to |leaves[tree_size-1]|.
+// If |leaf_index| is >= |tree_size|, an empty proof will be returned.
+// See RFC6962, section 2.1.1, for more details.
+std::vector<std::string> CreateAuditProof(std::string leaves[],
+                                          size_t tree_size,
+                                          size_t leaf_index) {
   std::vector<std::string> proof;
-  if (snapshot1 == 0 || snapshot1 > snapshot2)
+  if (leaf_index >= tree_size)
     return proof;
-  if (snapshot1 == snapshot2) {
+  if (tree_size == 1)
+    return proof;
+
+  // Find the index of the first leaf in the right sub-tree.
+  const size_t split = CalculateNearestPowerOfTwo(tree_size);
+
+  // Recurse down the correct branch of the tree (left or right) to reach the
+  // leaf with |leaf_index|. Add the hash of the branch not taken at each step
+  // on the way up to build the proof.
+  if (leaf_index < split) {
+    proof = CreateAuditProof(leaves, split, leaf_index);
+    proof.push_back(HashTree(&leaves[split], tree_size - split));
+  } else {
+    proof =
+        CreateAuditProof(&leaves[split], tree_size - split, leaf_index - split);
+    proof.push_back(HashTree(leaves, split));
+  }
+
+  return proof;
+}
+
+// Returns a Merkle consistency proof between two Merkle trees.
+// The old tree contains |leaves[0]| to |leaves[old_tree_size-1]|.
+// The new tree contains |leaves[0]| to |leaves[new_tree_size-1]|.
+// Call with |contains_old_tree| = true.
+// See RFC6962, section 2.1.2, for more details.
+std::vector<std::string> CreateConsistencyProof(std::string leaves[],
+                                                size_t new_tree_size,
+                                                size_t old_tree_size,
+                                                bool contains_old_tree = true) {
+  std::vector<std::string> proof;
+  if (old_tree_size == 0 || old_tree_size > new_tree_size)
+    return proof;
+  if (old_tree_size == new_tree_size) {
     // Consistency proof for two equal subtrees is empty.
-    if (!have_root1) {
+    if (!contains_old_tree) {
       // Record the hash of this subtree unless it's the root for which
-      // the proof was originally requested. (This happens when the snapshot1
-      // tree is balanced.)
-      proof.push_back(ReferenceMerkleTreeHash(inputs, snapshot1));
+      // the proof was originally requested. (This happens when the old tree is
+      // balanced).
+      proof.push_back(HashTree(leaves, old_tree_size));
     }
     return proof;
   }
 
-  // 0 < snapshot1 < snapshot2
-  const uint64_t split = CalculateNearestPowerOfTwo(snapshot2);
+  // Find the index of the last leaf in the left sub-tree.
+  const size_t split = CalculateNearestPowerOfTwo(new_tree_size);
 
-  std::vector<std::string> subproof;
-  if (snapshot1 <= split) {
-    // Root of snapshot1 is in the left subtree of snapshot2.
+  if (old_tree_size <= split) {
+    // Root of the old tree is in the left subtree of the new tree.
     // Prove that the left subtrees are consistent.
-    subproof =
-        ReferenceSnapshotConsistency(inputs, split, snapshot1, have_root1);
-    proof.insert(proof.end(), subproof.begin(), subproof.end());
-    // Record the hash of the right subtree (only present in snapshot2).
-    proof.push_back(ReferenceMerkleTreeHash(&inputs[split], snapshot2 - split));
+    proof =
+        CreateConsistencyProof(leaves, split, old_tree_size, contains_old_tree);
+    // Record the hash of the right subtree (only present in the new tree).
+    proof.push_back(HashTree(&leaves[split], new_tree_size - split));
   } else {
-    // Snapshot1 root is at the same level as snapshot2 root.
+    // The old tree root is at the same level as the new tree root.
     // Prove that the right subtrees are consistent. The right subtree
-    // doesn't contain the root of snapshot1, so set have_root1 = false.
-    subproof = ReferenceSnapshotConsistency(&inputs[split], snapshot2 - split,
-                                            snapshot1 - split, false);
-    proof.insert(proof.end(), subproof.begin(), subproof.end());
+    // doesn't contain the root of the old tree, so set contains_old_tree =
+    // false.
+    proof = CreateConsistencyProof(&leaves[split], new_tree_size - split,
+                                   old_tree_size - split,
+                                   /* contains_old_tree = */ false);
     // Record the hash of the left subtree (equal in both trees).
-    proof.push_back(ReferenceMerkleTreeHash(&inputs[0], split));
+    proof.push_back(HashTree(leaves, split));
   }
   return proof;
 }
 
-class CTLogVerifierTestUsingReferenceGenerator
+}  // namespace rfc6962
+
+class CTLogVerifierTestUsingGenerator
     : public CTLogVerifierTest,
-      public ::testing::WithParamInterface<uint64_t> {};
+      public ::testing::WithParamInterface<size_t /* tree_size */> {};
 
-const uint64_t kReferenceTreeSize = 256;
+// Checks that valid consistency proofs for a range of generated Merkle trees
+// verify successfully.
+TEST_P(CTLogVerifierTestUsingGenerator, VerifiesValidConsistencyProof) {
+  const size_t tree_size = GetParam();
 
-// Tests that every possible valid consistency proof for a tree of a given size
-// verifies correctly. Also checks that invalid variations of each proof fail to
-// verify (see VerifierConsistencyCheck).
-TEST_P(CTLogVerifierTestUsingReferenceGenerator,
-       VerifiesValidConsistencyProof) {
-  std::vector<std::string> data;
-  for (uint64_t i = 0; i < kReferenceTreeSize; ++i)
-    data.push_back(std::string(1, static_cast<char>(i)));
+  std::vector<std::string> tree_leaves(tree_size);
+  for (size_t i = 0; i < tree_size; ++i)
+    tree_leaves[i].push_back(static_cast<char>(i));
 
-  const uint64_t tree_size = GetParam();
-  const std::string tree_root = ReferenceMerkleTreeHash(data.data(), tree_size);
+  const std::string tree_root =
+      rfc6962::HashTree(tree_leaves.data(), tree_size);
 
-  for (uint64_t snapshot = 1; snapshot <= tree_size; ++snapshot) {
-    SCOPED_TRACE(snapshot);
-    const std::string snapshot_root =
-        ReferenceMerkleTreeHash(data.data(), snapshot);
-    const std::vector<std::string> proof =
-        ReferenceSnapshotConsistency(data.data(), tree_size, snapshot, true);
-    VerifierConsistencyCheck(snapshot, tree_size, snapshot_root, tree_root,
-                             proof);
+  // Check consistency proofs for every sub-tree.
+  for (size_t old_tree_size = 0; old_tree_size <= tree_size; ++old_tree_size) {
+    SCOPED_TRACE(old_tree_size);
+    const std::string old_tree_root =
+        rfc6962::HashTree(tree_leaves.data(), old_tree_size);
+    const std::vector<std::string> proof = rfc6962::CreateConsistencyProof(
+        tree_leaves.data(), tree_size, old_tree_size);
+    // Checks that the consistency proof verifies only with the correct tree
+    // sizes and root hashes.
+    CheckVerifyConsistencyProof(*log_, old_tree_size, tree_size, old_tree_root,
+                                tree_root, proof);
   }
 }
 
-// Test verification of consistency proofs between all tree sizes from 1 to 128.
-INSTANTIATE_TEST_CASE_P(RangeOfTreeSizesAndSnapshots,
-                        CTLogVerifierTestUsingReferenceGenerator,
-                        testing::Range(UINT64_C(1),
-                                       (kReferenceTreeSize / 2) + 1));
+// Checks that valid audit proofs for a range of generated Merkle trees verify
+// successfully.
+TEST_P(CTLogVerifierTestUsingGenerator, VerifiesValidAuditProofs) {
+  const size_t tree_size = GetParam();
+
+  std::vector<std::string> tree_leaves(tree_size);
+  for (size_t i = 0; i < tree_size; ++i)
+    tree_leaves[i].push_back(static_cast<char>(i));
+
+  const std::string root = rfc6962::HashTree(tree_leaves.data(), tree_size);
+
+  // Check audit proofs for every leaf in the tree.
+  for (size_t leaf = 0; leaf < tree_size; ++leaf) {
+    SCOPED_TRACE(leaf);
+    std::vector<std::string> proof =
+        rfc6962::CreateAuditProof(tree_leaves.data(), tree_size, leaf);
+    // Checks that the audit proof verifies only for this leaf data, index,
+    // hash, tree size and root hash.
+    CheckVerifyAuditProof(*log_, leaf, tree_size, proof, root,
+                          rfc6962::HashLeaf(tree_leaves[leaf]));
+  }
+}
+
+// Test verification of consistency proofs and audit proofs for all tree sizes
+// from 0 to 128.
+INSTANTIATE_TEST_CASE_P(RangeOfTreeSizes,
+                        CTLogVerifierTestUsingGenerator,
+                        testing::Range(size_t(0), size_t(129)));
 
 }  // namespace
 

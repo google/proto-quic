@@ -87,7 +87,6 @@ int main(int argc, char* argv[]) {
                         line->GetSwitchValuePath("key_file")),
       config, net::QuicCryptoServerConfig::ConfigOptions(),
       net::AllSupportedVersions());
-  server.SetStrikeRegisterNoStartupPeriod();
 
   int rc = server.CreateUDPSocketAndListen(net::IPEndPoint(ip, FLAGS_port));
   if (rc < 0) {

@@ -429,14 +429,33 @@ TEST(SpdyAltSvcWireFormatTest, ParseAltAuthorityValid) {
       input.begin(), input.end(), &host, &port));
   EXPECT_EQ("foo", host);
   EXPECT_EQ(137, port);
+
+  input = StringPiece("[2003:8:0:16::509d:9615]:443");
+  ASSERT_TRUE(test::SpdyAltSvcWireFormatPeer::ParseAltAuthority(
+      input.begin(), input.end(), &host, &port));
+  EXPECT_EQ("[2003:8:0:16::509d:9615]", host);
+  EXPECT_EQ(443, port);
 }
 
 // Test ParseAltAuthority() on invalid input: empty string, no port, zero port,
 // non-digit characters following port.
 TEST(SpdyAltSvcWireFormatTest, ParseAltAuthorityInvalid) {
-  const char* invalid_input_array[] = {"",   ":",     "foo:",   ":bar",
-                                       ":0", "foo:0", ":12bar", "foo:23bar",
-                                       " ",  ":12 ",  "foo:12 "};
+  const char* invalid_input_array[] = {"",
+                                       ":",
+                                       "foo:",
+                                       ":bar",
+                                       ":0",
+                                       "foo:0",
+                                       ":12bar",
+                                       "foo:23bar",
+                                       " ",
+                                       ":12 ",
+                                       "foo:12 ",
+                                       "[2003:8:0:16::509d:9615]",
+                                       "[2003:8:0:16::509d:9615]:",
+                                       "[2003:8:0:16::509d:9615]foo:443",
+                                       "[2003:8:0:16::509d:9615:443",
+                                       "2003:8:0:16::509d:9615]:443"};
   for (const char* invalid_input : invalid_input_array) {
     StringPiece input(invalid_input);
     std::string host;
@@ -512,6 +531,22 @@ TEST(SpdyAltSvcWireFormatTest, ParseIntegerOverflow) {
   input = StringPiece("4294967297");
   ASSERT_FALSE(test::SpdyAltSvcWireFormatPeer::ParsePositiveInteger32(
       input.begin(), input.end(), &value32));
+}
+
+// Test parsing an Alt-Svc entry with IP literal hostname.
+// Regression test for https://crbug.com/664173.
+TEST(SpdyAltSvcWireFormatTest, ParseIPLiteral) {
+  const char* input =
+      "quic=\"[2003:8:0:16::509d:9615]:443\"; v=\"36,35\"; ma=60";
+  SpdyAltSvcWireFormat::AlternativeServiceVector altsvc_vector;
+  ASSERT_TRUE(
+      SpdyAltSvcWireFormat::ParseHeaderFieldValue(input, &altsvc_vector));
+  EXPECT_EQ(1u, altsvc_vector.size());
+  EXPECT_EQ("quic", altsvc_vector[0].protocol_id);
+  EXPECT_EQ("[2003:8:0:16::509d:9615]", altsvc_vector[0].host);
+  EXPECT_EQ(443u, altsvc_vector[0].port);
+  EXPECT_EQ(60u, altsvc_vector[0].max_age);
+  EXPECT_THAT(altsvc_vector[0].version, ::testing::ElementsAre(36, 35));
 }
 
 }  // namespace

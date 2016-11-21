@@ -13,6 +13,7 @@ from devil.android import flag_changer
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
 from pylib.base import base_test_result
+from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 import tombstones
@@ -59,18 +60,12 @@ class LocalDeviceInstrumentationTestRun(
     super(LocalDeviceInstrumentationTestRun, self).__init__(env, test_instance)
     self._flag_changers = {}
 
+  #override
   def TestPackage(self):
     return self._test_instance.suite
 
+  #override
   def SetUp(self):
-    def substitute_device_root(d, device_root):
-      if not d:
-        return device_root
-      elif isinstance(d, list):
-        return posixpath.join(*(p if p else device_root for p in d))
-      else:
-        return d
-
     @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
     def individual_device_set_up(dev, host_device_tuples):
@@ -114,7 +109,7 @@ class LocalDeviceInstrumentationTestRun(
         device_root = posixpath.join(dev.GetExternalStoragePath(),
                                      'chromium_tests_root')
         host_device_tuples_substituted = [
-            (h, substitute_device_root(d, device_root))
+            (h, local_device_test_run.SubstituteDeviceRoot(d, device_root))
             for h, d in host_device_tuples]
         logging.info('instrumentation data deps:')
         for h, d in host_device_tuples_substituted:
@@ -153,6 +148,7 @@ class LocalDeviceInstrumentationTestRun(
         individual_device_set_up,
         self._test_instance.GetDataDependencies())
 
+  #override
   def TearDown(self):
     @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
@@ -180,21 +176,9 @@ class LocalDeviceInstrumentationTestRun(
   def _GetTests(self):
     return self._test_instance.GetTests()
 
-  def _GetTestName(self, test):
-    # pylint: disable=no-self-use
-    return '%s#%s' % (test['class'], test['method'])
-
   #override
   def _GetUniqueTestName(self, test):
-    display_name = self._GetTestName(test)
-    if 'flags' in test:
-      flags = test['flags']
-      if flags.add:
-        display_name = '%s with {%s}' % (display_name, ' '.join(flags.add))
-      if flags.remove:
-        display_name = '%s without {%s}' % (
-            display_name, ' '.join(flags.remove))
-    return display_name
+    return instrumentation_test_instance.GetUniqueTestName(test)
 
   #override
   def _RunTest(self, device, test):
@@ -218,7 +202,7 @@ class LocalDeviceInstrumentationTestRun(
                         'Please build it and try again.')
 
       def name_and_timeout(t):
-        n = self._GetTestName(t)
+        n = instrumentation_test_instance.GetTestName(t)
         i = self._GetTimeoutFromAnnotations(t['annotations'], n)
         return (n, i)
 
@@ -234,7 +218,7 @@ class LocalDeviceInstrumentationTestRun(
               test_list=test_names))
       timeout = sum(timeouts)
     else:
-      test_name = self._GetTestName(test)
+      test_name = instrumentation_test_instance.GetTestName(test)
       test_display_name = self._GetUniqueTestName(test)
       target = '%s/%s' % (
           self._test_instance.test_package, self._test_instance.test_runner)
@@ -341,14 +325,16 @@ class LocalDeviceInstrumentationTestRun(
       device.RunShellCommand('rm -f %s' % os.path.join(coverage_directory,
           '*'))
     if self._test_instance.store_tombstones:
+      resolved_tombstones = None
       for result in results:
         if result.GetType() == base_test_result.ResultType.CRASH:
-          resolved_tombstones = tombstones.ResolveTombstones(
-              device,
-              resolve_all_tombstones=True,
-              include_stack_symbols=False,
-              wipe_tombstones=True)
-          result.SetTombstones('\n'.join(resolved_tombstones))
+          if not resolved_tombstones:
+            resolved_tombstones = '\n'.join(tombstones.ResolveTombstones(
+                device,
+                resolve_all_tombstones=True,
+                include_stack_symbols=False,
+                wipe_tombstones=True))
+          result.SetTombstones(resolved_tombstones)
     return results
 
   #override

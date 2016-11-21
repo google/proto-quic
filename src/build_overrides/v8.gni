@@ -14,10 +14,11 @@ enable_correct_v8_arch = false
 # Be sure to synchronize with build/common.gypi
 
 v8_extra_library_files = [
-  "../third_party/WebKit/Source/core/streams/ByteLengthQueuingStrategy.js",
-  "../third_party/WebKit/Source/core/streams/CountQueuingStrategy.js",
-  "../third_party/WebKit/Source/core/streams/ReadableStream.js",
+  "//third_party/WebKit/Source/core/streams/ByteLengthQueuingStrategy.js",
+  "//third_party/WebKit/Source/core/streams/CountQueuingStrategy.js",
+  "//third_party/WebKit/Source/core/streams/ReadableStream.js",
 ]
-v8_experimental_extra_library_files = []
+v8_experimental_extra_library_files =
+    [ "//third_party/WebKit/Source/core/streams/WritableStream.js" ]
 
 v8_enable_inspector_override = true

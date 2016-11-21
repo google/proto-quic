@@ -15,11 +15,9 @@
 #include "base/compiler_specific.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/core/quic_types.h"
 
 namespace net {
-
-typedef uint64_t QuicByteCount;
-typedef uint64_t QuicPacketCount;
 
 class NET_EXPORT_PRIVATE QuicBandwidth {
  public:

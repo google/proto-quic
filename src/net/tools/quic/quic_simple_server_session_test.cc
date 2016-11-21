@@ -22,6 +22,7 @@
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_stream_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_sustained_bandwidth_recorder_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"

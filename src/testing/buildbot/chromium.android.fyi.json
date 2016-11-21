@@ -1,0 +1,349 @@
+{
+  "Jelly Bean Tester": {
+    "gtest_tests": [
+      {
+        "test": "android_webview_unittests"
+      },
+      {
+        "test": "base_unittests"
+      },
+      {
+        "test": "blimp_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "breakpad_unittests_deps"
+        ],
+        "test": "breakpad_unittests"
+      },
+      {
+        "test": "capture_unittests"
+      },
+      {
+        "test": "cc_unittests"
+      },
+      {
+        "test": "components_browsertests"
+      },
+      {
+        "test": "components_unittests"
+      },
+      {
+        "test": "content_browsertests"
+      },
+      {
+        "test": "content_unittests"
+      },
+      {
+        "test": "device_unittests"
+      },
+      {
+        "test": "events_unittests"
+      },
+      {
+        "test": "gfx_unittests"
+      },
+      {
+        "test": "gl_tests"
+      },
+      {
+        "test": "gl_unittests"
+      },
+      {
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "test": "gpu_unittests"
+      },
+      {
+        "test": "ipc_tests"
+      },
+      {
+        "test": "media_unittests"
+      },
+      {
+        "test": "net_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "sandbox_linux_unittests_deps"
+        ],
+        "test": "sandbox_linux_unittests"
+      },
+      {
+        "test": "sql_unittests"
+      },
+      {
+        "test": "storage_unittests"
+      },
+      {
+        "test": "ui_android_unittests"
+      },
+      {
+        "test": "ui_base_unittests"
+      },
+      {
+        "test": "ui_touch_selection_unittests"
+      },
+      {
+        "test": "unit_tests"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "apk_under_test": "Blimp.apk",
+        "override_compile_targets": [
+          "blimp_test_apk"
+        ],
+        "test": "blimp_test_apk",
+        "test_apk": "BlimpTest.apk"
+      },
+      {
+        "test": "chrome_public_test_apk"
+      },
+      {
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "test": "content_shell_test_apk"
+      }
+    ]
+  },
+  "Lollipop Consumer Tester": {
+    "gtest_tests": [
+      {
+        "test": "android_webview_unittests"
+      },
+      {
+        "test": "base_unittests"
+      },
+      {
+        "test": "blimp_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "breakpad_unittests_deps"
+        ],
+        "test": "breakpad_unittests"
+      },
+      {
+        "test": "capture_unittests"
+      },
+      {
+        "test": "cc_unittests"
+      },
+      {
+        "test": "components_browsertests"
+      },
+      {
+        "test": "components_unittests"
+      },
+      {
+        "test": "content_browsertests"
+      },
+      {
+        "test": "content_unittests"
+      },
+      {
+        "test": "device_unittests"
+      },
+      {
+        "test": "events_unittests"
+      },
+      {
+        "test": "gfx_unittests"
+      },
+      {
+        "test": "gl_tests"
+      },
+      {
+        "test": "gl_unittests"
+      },
+      {
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "test": "gpu_unittests"
+      },
+      {
+        "test": "ipc_tests"
+      },
+      {
+        "test": "media_unittests"
+      },
+      {
+        "test": "net_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "sandbox_linux_unittests_deps"
+        ],
+        "test": "sandbox_linux_unittests"
+      },
+      {
+        "test": "sql_unittests"
+      },
+      {
+        "test": "storage_unittests"
+      },
+      {
+        "test": "ui_android_unittests"
+      },
+      {
+        "test": "ui_base_unittests"
+      },
+      {
+        "test": "ui_touch_selection_unittests"
+      },
+      {
+        "test": "unit_tests"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "android_webview_test_apk"
+      },
+      {
+        "apk_under_test": "Blimp.apk",
+        "override_compile_targets": [
+          "blimp_test_apk"
+        ],
+        "test": "blimp_test_apk",
+        "test_apk": "BlimpTest.apk"
+      },
+      {
+        "test": "chrome_public_test_apk"
+      },
+      {
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "test": "content_shell_test_apk"
+      }
+    ]
+  },
+  "Lollipop Low-end Tester": {
+    "gtest_tests": [
+      {
+        "test": "android_webview_unittests"
+      },
+      {
+        "test": "base_unittests"
+      },
+      {
+        "test": "blimp_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "breakpad_unittests_deps"
+        ],
+        "test": "breakpad_unittests"
+      },
+      {
+        "test": "capture_unittests"
+      },
+      {
+        "test": "cc_unittests"
+      },
+      {
+        "test": "components_browsertests"
+      },
+      {
+        "test": "components_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "test": "content_browsertests"
+      },
+      {
+        "test": "content_unittests"
+      },
+      {
+        "test": "device_unittests"
+      },
+      {
+        "test": "events_unittests"
+      },
+      {
+        "test": "gfx_unittests"
+      },
+      {
+        "test": "gl_tests"
+      },
+      {
+        "test": "gl_unittests"
+      },
+      {
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "test": "gpu_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "test": "ipc_tests"
+      },
+      {
+        "test": "media_unittests"
+      },
+      {
+        "test": "net_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "sandbox_linux_unittests_deps"
+        ],
+        "test": "sandbox_linux_unittests"
+      },
+      {
+        "test": "sql_unittests"
+      },
+      {
+        "test": "storage_unittests"
+      },
+      {
+        "test": "ui_android_unittests"
+      },
+      {
+        "test": "ui_base_unittests"
+      },
+      {
+        "test": "ui_touch_selection_unittests"
+      },
+      {
+        "test": "unit_tests"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "android_webview_test_apk",
+        "timeout_scale": 4
+      },
+      {
+        "override_compile_targets": [
+          "blimp_test_apk"
+        ],
+        "test": "blimp_test_apk",
+        "timeout_scale": 4
+      },
+      {
+        "test": "chrome_public_test_apk",
+        "timeout_scale": 4
+      },
+      {
+        "test": "chrome_sync_shell_test_apk",
+        "timeout_scale": 4
+      },
+      {
+        "test": "content_shell_test_apk",
+        "timeout_scale": 4
+      }
+    ]
+  }
+}

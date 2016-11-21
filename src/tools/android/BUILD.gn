@@ -7,6 +7,7 @@
 group("android_tools") {
   deps = [
     "//build/android:wrapper_scripts",
+    "//build/android/pylib/device/commands",
     "//third_party/android_platform:stack_wrapper",
     "//third_party/catapult/telemetry:bitmaptools($host_toolchain)",
     "//tools/android/adb_reboot",

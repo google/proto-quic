@@ -23,9 +23,9 @@
 #include "net/base/net_export.h"
 #include "net/dns/mdns_cache.h"
 #include "net/dns/mdns_client.h"
-#include "net/udp/datagram_server_socket.h"
-#include "net/udp/udp_server_socket.h"
-#include "net/udp/udp_socket.h"
+#include "net/socket/datagram_server_socket.h"
+#include "net/socket/udp_server_socket.h"
+#include "net/socket/udp_socket.h"
 
 namespace base {
 class Clock;

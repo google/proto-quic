@@ -81,9 +81,11 @@ class PerfTestInstance(test_instance.TestInstance):
     self._test_filter = args.test_filter
     self._write_buildbot_json = args.write_buildbot_json
 
+  #override
   def SetUp(self):
     pass
 
+  #override
   def TearDown(self):
     pass
 

@@ -103,7 +103,7 @@ class StatelessRejectorTest : public ::testing::TestWithParam<TestParams> {
     scid_hex_ = "#" + QuicUtils::HexEncode(config_peer_.GetPrimaryConfig()->id);
 
     // Encode the QUIC version.
-    ver_hex_ = QuicUtils::TagToString(QuicVersionToQuicTag(GetParam().version));
+    ver_hex_ = QuicTagToString(QuicVersionToQuicTag(GetParam().version));
 
     // Generate a public value.
     char public_value[32];
@@ -176,7 +176,7 @@ TEST_P(StatelessRejectorTest, InvalidChlo) {
   rejector_->OnChlo(GetParam().version, kConnectionId,
                     kServerDesignateConnectionId, client_hello);
 
-  if (GetParam().flags != ENABLED || GetParam().version <= QUIC_VERSION_32) {
+  if (GetParam().flags != ENABLED) {
     EXPECT_EQ(StatelessRejector::UNSUPPORTED, rejector_->state());
     return;
   }
@@ -228,7 +228,7 @@ TEST_P(StatelessRejectorTest, RejectChlo) {
 
   rejector_->OnChlo(GetParam().version, kConnectionId,
                     kServerDesignateConnectionId, client_hello);
-  if (GetParam().flags != ENABLED || GetParam().version <= QUIC_VERSION_32) {
+  if (GetParam().flags != ENABLED) {
     EXPECT_EQ(StatelessRejector::UNSUPPORTED, rejector_->state());
     return;
   }
@@ -274,7 +274,7 @@ TEST_P(StatelessRejectorTest, AcceptChlo) {
 
   rejector_->OnChlo(GetParam().version, kConnectionId,
                     kServerDesignateConnectionId, client_hello);
-  if (GetParam().flags != ENABLED || GetParam().version <= QUIC_VERSION_32) {
+  if (GetParam().flags != ENABLED) {
     EXPECT_EQ(StatelessRejector::UNSUPPORTED, rejector_->state());
     return;
   }

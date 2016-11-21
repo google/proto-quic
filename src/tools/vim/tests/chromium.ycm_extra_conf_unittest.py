@@ -60,6 +60,14 @@ def GetLastLangFlag(flags):
         lastLang = flags[i+1]
   return lastLang
 
+def TestLanguage(test_file, language):
+  def test(self):
+    result = self.ycm_extra_conf.FlagsForFile(
+        os.path.join(self.chrome_root, test_file))
+    self.assertTrue(result)
+    self.assertEqual(GetLastLangFlag(result['flags']), language)
+  return test
+
 class Chromium_ycmExtraConfTest(unittest.TestCase):
 
   def SetUpFakeChromeTreeBelowPath(self):
@@ -232,17 +240,18 @@ class Chromium_ycmExtraConfTest(unittest.TestCase):
         '-I[OUT]/tag-default'
         ])
 
-  def testGetFlagsForFileForUnknownObjcFile(self):
-    result = self.ycm_extra_conf.FlagsForFile(
-        os.path.join(self.chrome_root, 'nonexistent.m'))
-    self.assertTrue(result)
-    self.assertEqual(GetLastLangFlag(result['flags']), 'objective-c')
-
-  def testGetFlagsForFileForUnknownObjcppFile(self):
-    result = self.ycm_extra_conf.FlagsForFile(
-        os.path.join(self.chrome_root, 'nonexistent.mm'))
-    self.assertTrue(result)
-    self.assertEqual(GetLastLangFlag(result['flags']), 'objective-c++')
+  testGetFlagsForFileForKnownObjcFile = TestLanguage(
+      'eight.m', 'objective-c')
+  testGetFlagsForFileForKnownObjcHeaderFile = TestLanguage(
+      'eight.h', 'objective-c')
+  testGetFlagsForFileForUnknownObjcFile = TestLanguage(
+      'nonexistent.m', 'objective-c')
+  testGetFlagsForFileForKnownObjcppFile = TestLanguage(
+      'nine.mm', 'objective-c++')
+  testGetFlagsForFileForKnownObjcppHeaderFile = TestLanguage(
+      'nine.h', 'objective-c++')
+  testGetFlagsForFileForUnknownObjcppFile = TestLanguage(
+      'nonexistent.mm', 'objective-c++')
 
   def testGetFlagsForFileForUnknownHeaderFile(self):
     result = self.ycm_extra_conf.FlagsForFile(

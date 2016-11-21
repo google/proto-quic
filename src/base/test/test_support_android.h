@@ -20,9 +20,6 @@ BASE_EXPORT void InitAndroidTestPaths(const FilePath& test_data_dir);
 // Init the message loop for tests on Android.
 BASE_EXPORT void InitAndroidTestMessageLoop();
 
-// Do all of the initializations above.
-BASE_EXPORT void InitAndroidTest();
-
 }  // namespace base
 
 #endif  // BASE_TEST_TEST_SUPPORT_ANDROID_H_

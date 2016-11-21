@@ -30,6 +30,7 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
     item_selector = 'document.querySelectorAll("%s")[%d]' % (
         self.ITEM_SELECTOR, index)
     # Only scrolls if element is not currently in viewport.
+    action_runner.WaitForElement(element_function=item_selector)
     action_runner.ScrollPageToElement(element_function=item_selector)
     self._ClickLink(action_runner, item_selector)
 
@@ -75,9 +76,10 @@ class _NewsBrowsingStory(_BrowsingStory):
 
   def _ReadNewsItem(self, action_runner):
     action_runner.tab.WaitForDocumentReadyStateToBeComplete()
-    action_runner.Wait(self.ITEM_READ_TIME_IN_SECONDS)
+    action_runner.Wait(self.ITEM_READ_TIME_IN_SECONDS/2.0)
     action_runner.RepeatableBrowserDrivenScroll(
         repeat_count=self.ITEM_SCROLL_REPEAT)
+    action_runner.Wait(self.ITEM_READ_TIME_IN_SECONDS/2.0)
 
   def _ScrollMainPage(self, action_runner):
     action_runner.tab.WaitForDocumentReadyStateToBeComplete()
@@ -87,7 +89,8 @@ class _NewsBrowsingStory(_BrowsingStory):
 
 # TODO(ulan): Enable this story on mobile once it uses less memory and does not
 # crash with OOM.
-@decorators.Disabled('android')
+@decorators.Disabled('android',
+                     'win') # crbug.com/665465
 class CnnStory(_NewsBrowsingStory):
   """The second top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:cnn'
@@ -125,6 +128,7 @@ class FlipboardMobileStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('mac') # crbug.com/663025
 class FlipboardDesktopStory(_NewsBrowsingStory):
   NAME = 'browse:news:flipboard'
   URL = 'https://flipboard.com/explore'
@@ -133,6 +137,7 @@ class FlipboardDesktopStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
+@decorators.Disabled('win') # crbug.com/657665
 class HackerNewsStory(_NewsBrowsingStory):
   NAME = 'browse:news:hackernews'
   URL = 'https://news.ycombinator.com'
@@ -166,6 +171,7 @@ class QqMobileStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('mac')  # crbug.com/662959
 class RedditDesktopStory(_NewsBrowsingStory):
   """The top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:reddit'
@@ -183,6 +189,7 @@ class RedditMobileStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('android')  # crbug.com/664515
 class TwitterMobileStory(_NewsBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'
@@ -190,6 +197,8 @@ class TwitterMobileStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('win',  # crbug.com/662971
+                     'mac')  # crbug.com/664661, crbug.com/663025
 class TwitterDesktopStory(_NewsBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'

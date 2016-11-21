@@ -6,9 +6,12 @@ package org.chromium.base;
 
 import android.annotation.TargetApi;
 import android.os.Build;
+import android.os.LocaleList;
+import android.text.TextUtils;
 
 import org.chromium.base.annotations.CalledByNative;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
@@ -60,7 +63,8 @@ public class LocaleUtils {
      *         codes used by Chromium.
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private static Locale getUpdatedLocaleForChromium(Locale locale) {
+    @VisibleForTesting
+    public static Locale getUpdatedLocaleForChromium(Locale locale) {
         String languageForChrome = LANGUAGE_MAP_FOR_CHROMIUM.get(locale.getLanguage());
         if (languageForChrome == null) {
             return locale;
@@ -84,7 +88,8 @@ public class LocaleUtils {
      *         codes used by Chromium.
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private static Locale getUpdatedLocaleForAndroid(Locale locale) {
+    @VisibleForTesting
+    public static Locale getUpdatedLocaleForAndroid(Locale locale) {
         String languageForAndroid = LANGUAGE_MAP_FOR_ANDROID.get(locale.getLanguage());
         if (languageForAndroid == null) {
             return locale;
@@ -93,7 +98,7 @@ public class LocaleUtils {
     }
 
     /**
-     * This function creates Locale object from xx-XX style string where xx is language code
+     * This function creates a Locale object from xx-XX style string where xx is language code
      * and XX is a country code. This works for API level lower than 21.
      * @return the locale that best represents the language tag.
      */
@@ -117,7 +122,7 @@ public class LocaleUtils {
     }
 
     /**
-     * This function creates Locale object from xx-XX style string where xx is language code
+     * This function creates a Locale object from xx-XX style string where xx is language code
      * and XX is a country code.
      * @return the locale that best represents the language tag.
      */
@@ -132,20 +137,6 @@ public class LocaleUtils {
     /**
      * Converts Locale object to the BCP 47 compliant string format.
      * This works for API level lower than 24.
-     * @return a well-formed IETF BCP 47 language tag with language and country code that
-     *         represents this locale.
-     */
-    public static String toLanguageTagCompat(Locale locale) {
-        String language = getUpdatedLanguageForChromium(locale.getLanguage());
-        String country = locale.getCountry();
-        if (language.equals("no") && country.equals("NO") && locale.getVariant().equals("NY")) {
-            return "nn-NO";
-        }
-        return country.isEmpty() ? language : language + "-" + country;
-    }
-
-    /**
-     * Converts Locale object to the BCP 47 compliant string format.
      *
      * Note that for Android M or before, we cannot use Locale.getLanguage() and
      * Locale.toLanguageTag() for this purpose. Since Locale.getLanguage() returns deprecated
@@ -156,22 +147,50 @@ public class LocaleUtils {
      *         represents this locale.
      */
     public static String toLanguageTag(Locale locale) {
-        // TODO(yirui): use '>= N' once SDK is updated to include the version code
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
-            locale = getUpdatedLocaleForChromium(locale);
-            return locale.toLanguageTag();
+        String language = getUpdatedLanguageForChromium(locale.getLanguage());
+        String country = locale.getCountry();
+        if (language.equals("no") && country.equals("NO") && locale.getVariant().equals("NY")) {
+            return "nn-NO";
         }
-        return toLanguageTagCompat(locale);
+        return country.isEmpty() ? language : language + "-" + country;
     }
 
     /**
+     * Converts LocaleList object to the comma separated BCP 47 compliant string format.
+     *
      * @return a well-formed IETF BCP 47 language tag with language and country code that
-     *         represents a default locale.
+     *         represents this locale list.
+     */
+    @TargetApi(Build.VERSION_CODES.N)
+    public static String toLanguageTags(LocaleList localeList) {
+        ArrayList<String> newLocaleList = new ArrayList<>();
+        for (int i = 0; i < localeList.size(); i++) {
+            Locale locale = getUpdatedLocaleForChromium(localeList.get(i));
+            newLocaleList.add(toLanguageTag(locale));
+        }
+        return TextUtils.join(",", newLocaleList);
+    }
+
+    /**
+     * @return a comma separated language tags string that represents a default locale.
+     *         Each language tag is well-formed IETF BCP 47 language tag with language and country
+     *         code.
      */
     @CalledByNative
     public static String getDefaultLocaleString() {
-        Locale locale = Locale.getDefault();
-        return toLanguageTag(locale);
+        return toLanguageTag(Locale.getDefault());
+    }
+
+    /**
+     * @return a comma separated language tags string that represents a default locale or locales.
+     *         Each language tag is well-formed IETF BCP 47 language tag with language and country
+     *         code.
+     */
+    public static String getDefaultLocaleListString() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return toLanguageTags(LocaleList.getDefault());
+        }
+        return getDefaultLocaleString();
     }
 
     /**

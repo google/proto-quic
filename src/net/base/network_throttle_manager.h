@@ -24,12 +24,13 @@ namespace net {
 // Methods are virtual to allow for test mocks.
 class NET_EXPORT_PRIVATE NetworkThrottleManager {
  public:
+  class Throttle;
+
   // Abstract base class other classes can inherit from to get
   // notifications from throttle state changes.
   class NET_EXPORT_PRIVATE ThrottleDelegate {
    public:
-    // Called whenever the throttle state of this stream has changed.
-    // The new state can be determined through Throttle::IsThrottled().
+    // Called when a throttle is unblocked.
     //
     // Note that this call may occur as the result of either a call to
     // Throttle::SetPriority (on the throttle related to this delegate
@@ -37,7 +38,7 @@ class NET_EXPORT_PRIVATE NetworkThrottleManager {
     // so will occur synchronously during those events.  It will not
     // be called from the destructor of the Throttle associated with
     // the ThrottleDelegate.
-    virtual void OnThrottleStateChanged() = 0;
+    virtual void OnThrottleUnblocked(Throttle* throttle) = 0;
 
    protected:
     virtual ~ThrottleDelegate() {}
@@ -45,24 +46,28 @@ class NET_EXPORT_PRIVATE NetworkThrottleManager {
 
   // Class owned by external stream representations that
   // routes notifications.  It may be constructed in either the
-  // throttled or unthrottled state according to the state of the
-  // NetworkThrottleManager; if it's constructed in the throttled
-  // state, it will only make a single transition to unthrottled,
-  // which will be signaled by delegate->OnThrottleStateChanged().
-  // If it's constructed in the unthrottled state, it will remain
+  // blocked or unblocked state according to the state of the
+  // NetworkThrottleManager; if it's constructed in the unblocked
+  // state, it will only make a single transition to unblocked,
+  // which will be signaled by delegate->OnThrottleUnblocked(this).
+  // If it's constructed in the unblocked state, it will remain
   // there.
   class NET_EXPORT_PRIVATE Throttle {
    public:
     virtual ~Throttle() {}
 
-    virtual bool IsThrottled() const = 0;
+    virtual bool IsBlocked() const = 0;
+
+    virtual RequestPriority Priority() const = 0;
 
     // Note that this may result in a possibly reentrant call to
-    // |ThrottleDelegate::OnThrottleStateChanged|, as well as the resumption
+    // |ThrottleDelegate::OnThrottleUnblocked|, as well as the resumption
     // of this or other requests, which may result in request completion
     // and destruction before return.  Any caller of this function
     // should not rely on this object or containing objects surviving
     // this call.
+    //
+    // This call is a no-op if the priority is set to its current value.
     virtual void SetPriority(RequestPriority priority) = 0;
 
    protected:
@@ -79,8 +84,6 @@ class NET_EXPORT_PRIVATE NetworkThrottleManager {
   virtual std::unique_ptr<Throttle> CreateThrottle(ThrottleDelegate* delegate,
                                                    RequestPriority priority,
                                                    bool ignore_limits) = 0;
-
-  static std::unique_ptr<NetworkThrottleManager> CreateThrottler();
 
  protected:
   NetworkThrottleManager() {}

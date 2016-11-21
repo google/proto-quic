@@ -339,7 +339,7 @@ class RemoteChromeController(ChromeControllerBase):
       assert self._wpr_attributes.chrome_env_override == {}, \
           'Remote controller doesn\'t support chrome environment variables.'
     package_info = OPTIONS.ChromePackage()
-    command_line_path = '/data/local/chrome-command-line'
+    command_line_path = '/data/local/tmp/chrome-command-line'
     self._device.ForceStop(package_info.package)
     chrome_args = self._GetChromeArguments()
     logging.info('Launching %s with flags: %s' % (package_info.package,

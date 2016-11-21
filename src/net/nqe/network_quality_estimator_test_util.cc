@@ -11,6 +11,13 @@
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 
+namespace {
+
+const base::FilePath::CharType kTestFilePath[] =
+    FILE_PATH_LITERAL("net/data/url_request_unittest");
+
+}  // namespace
+
 namespace net {
 
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(
@@ -30,24 +37,11 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
                               variation_params,
                               allow_local_host_requests_for_tests,
                               allow_smaller_responses_for_tests),
-      effective_connection_type_set_(false),
-      effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
-      recent_effective_connection_type_set_(false),
-      recent_effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       current_network_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
       accuracy_recording_intervals_set_(false),
-      http_rtt_set_(false),
-      recent_http_rtt_set_(false),
-      transport_rtt_set_(false),
-      recent_transport_rtt_set_(false),
-      downlink_throughput_kbps_set_(false),
-      recent_downlink_throughput_kbps_set_(false),
-      rand_double_(0.0) {
+      rand_double_(0.0),
+      embedded_test_server_(base::FilePath(kTestFilePath)) {
   // Set up the embedded test server.
-  embedded_test_server_.ServeFilesFromDirectory(
-      base::FilePath(FILE_PATH_LITERAL("net/data/url_request_unittest")));
-  embedded_test_server_.RegisterRequestHandler(base::Bind(
-      &TestNetworkQualityEstimator::HandleRequest, base::Unretained(this)));
   EXPECT_TRUE(embedded_test_server_.Start());
 }
 
@@ -79,33 +73,26 @@ void TestNetworkQualityEstimator::SimulateNetworkChange(
   OnConnectionTypeChanged(new_connection_type);
 }
 
-std::unique_ptr<test_server::HttpResponse>
-TestNetworkQualityEstimator::HandleRequest(
-    const test_server::HttpRequest& request) {
-  std::unique_ptr<test_server::BasicHttpResponse> http_response(
-      new test_server::BasicHttpResponse());
-  http_response->set_code(HTTP_OK);
-  http_response->set_content("hello");
-  http_response->set_content_type("text/plain");
-  return std::move(http_response);
+const GURL TestNetworkQualityEstimator::GetEchoURL() const {
+  return embedded_test_server_.GetURL("/simple.html");
 }
 
-const GURL TestNetworkQualityEstimator::GetEchoURL() const {
-  return embedded_test_server_.GetURL("/echo.html");
+const GURL TestNetworkQualityEstimator::GetRedirectURL() const {
+  return embedded_test_server_.GetURL("/redirect302-to-https");
 }
 
 EffectiveConnectionType
 TestNetworkQualityEstimator::GetEffectiveConnectionType() const {
-  if (effective_connection_type_set_)
-    return effective_connection_type_;
+  if (effective_connection_type_)
+    return effective_connection_type_.value();
   return NetworkQualityEstimator::GetEffectiveConnectionType();
 }
 
 EffectiveConnectionType
 TestNetworkQualityEstimator::GetRecentEffectiveConnectionType(
     const base::TimeTicks& start_time) const {
-  if (recent_effective_connection_type_set_)
-    return recent_effective_connection_type_;
+  if (recent_effective_connection_type_)
+    return recent_effective_connection_type_.value();
   return NetworkQualityEstimator::GetRecentEffectiveConnectionType(start_time);
 }
 
@@ -115,67 +102,66 @@ TestNetworkQualityEstimator::GetRecentEffectiveConnectionTypeAndNetworkQuality(
     base::TimeDelta* http_rtt,
     base::TimeDelta* transport_rtt,
     int32_t* downstream_throughput_kbps) const {
-  if (recent_effective_connection_type_set_) {
-    *http_rtt = recent_http_rtt_;
-    *transport_rtt = recent_transport_rtt_;
-    *downstream_throughput_kbps = recent_downlink_throughput_kbps_;
-    return recent_effective_connection_type_;
+  if (recent_effective_connection_type_) {
+    GetRecentHttpRTT(start_time, http_rtt);
+    GetRecentTransportRTT(start_time, transport_rtt);
+    GetRecentDownlinkThroughputKbps(start_time, downstream_throughput_kbps);
+    return recent_effective_connection_type_.value();
   }
   return NetworkQualityEstimator::
       GetRecentEffectiveConnectionTypeAndNetworkQuality(
           start_time, http_rtt, transport_rtt, downstream_throughput_kbps);
 }
 
-bool TestNetworkQualityEstimator::GetHttpRTT(base::TimeDelta* rtt) const {
-  if (http_rtt_set_) {
-    *rtt = http_rtt_;
-    return true;
-  }
-  return NetworkQualityEstimator::GetHttpRTT(rtt);
-}
-
 bool TestNetworkQualityEstimator::GetRecentHttpRTT(
     const base::TimeTicks& start_time,
     base::TimeDelta* rtt) const {
-  if (recent_http_rtt_set_) {
-    *rtt = recent_http_rtt_;
+  if (start_time.is_null()) {
+    if (start_time_null_http_rtt_) {
+      *rtt = start_time_null_http_rtt_.value();
+      return true;
+    }
+    return NetworkQualityEstimator::GetRecentHttpRTT(start_time, rtt);
+  }
+  if (recent_http_rtt_) {
+    *rtt = recent_http_rtt_.value();
     return true;
   }
   return NetworkQualityEstimator::GetRecentHttpRTT(start_time, rtt);
 }
 
-bool TestNetworkQualityEstimator::GetTransportRTT(base::TimeDelta* rtt) const {
-  if (transport_rtt_set_) {
-    *rtt = transport_rtt_;
-    return true;
-  }
-  return NetworkQualityEstimator::GetTransportRTT(rtt);
-}
-
 bool TestNetworkQualityEstimator::GetRecentTransportRTT(
     const base::TimeTicks& start_time,
     base::TimeDelta* rtt) const {
-  if (recent_transport_rtt_set_) {
-    *rtt = recent_transport_rtt_;
+  if (start_time.is_null()) {
+    if (start_time_null_transport_rtt_) {
+      *rtt = start_time_null_transport_rtt_.value();
+      return true;
+    }
+    return NetworkQualityEstimator::GetRecentTransportRTT(start_time, rtt);
+  }
+
+  if (recent_transport_rtt_) {
+    *rtt = recent_transport_rtt_.value();
     return true;
   }
   return NetworkQualityEstimator::GetRecentTransportRTT(start_time, rtt);
 }
 
-bool TestNetworkQualityEstimator::GetDownlinkThroughputKbps(
-    int32_t* kbps) const {
-  if (downlink_throughput_kbps_set_) {
-    *kbps = downlink_throughput_kbps_;
-    return true;
-  }
-  return NetworkQualityEstimator::GetDownlinkThroughputKbps(kbps);
-}
-
 bool TestNetworkQualityEstimator::GetRecentDownlinkThroughputKbps(
     const base::TimeTicks& start_time,
     int32_t* kbps) const {
-  if (recent_downlink_throughput_kbps_set_) {
-    *kbps = recent_downlink_throughput_kbps_;
+  if (start_time.is_null()) {
+    if (start_time_null_downlink_throughput_kbps_) {
+      *kbps = start_time_null_downlink_throughput_kbps_.value();
+      return true;
+    }
+    return NetworkQualityEstimator::GetRecentDownlinkThroughputKbps(start_time,
+                                                                    kbps);
+  }
+
+  if (recent_downlink_throughput_kbps_) {
+    *kbps = recent_downlink_throughput_kbps_.value();
     return true;
   }
   return NetworkQualityEstimator::GetRecentDownlinkThroughputKbps(start_time,
@@ -203,6 +189,11 @@ double TestNetworkQualityEstimator::RandDouble() const {
 nqe::internal::NetworkID TestNetworkQualityEstimator::GetCurrentNetworkID()
     const {
   return nqe::internal::NetworkID(current_network_type_, current_network_id_);
+}
+
+TestNetworkQualityEstimator::LocalHttpTestServer::LocalHttpTestServer(
+    const base::FilePath& document_root) {
+  AddDefaultHandlers(document_root);
 }
 
 }  // namespace net

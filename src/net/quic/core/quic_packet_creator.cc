@@ -9,7 +9,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_flags.h"
@@ -30,13 +29,11 @@ namespace net {
 
 QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
                                      QuicFramer* framer,
-                                     QuicRandom* random_generator,
                                      QuicBufferAllocator* buffer_allocator,
                                      DelegateInterface* delegate)
     : delegate_(delegate),
       debug_delegate_(nullptr),
       framer_(framer),
-      random_bool_source_(random_generator),
       buffer_allocator_(buffer_allocator),
       send_version_in_packet_(framer->perspective() == Perspective::IS_CLIENT),
       send_path_id_in_packet_(false),
@@ -50,7 +47,6 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
               0,
               PACKET_1BYTE_PACKET_NUMBER,
               nullptr,
-              0,
               0,
               false,
               false) {
@@ -423,7 +419,6 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   // unioned with a QuicStreamFrame and a UniqueStreamBuffer.
   *num_bytes_consumed = bytes_consumed;
   packet_size_ = 0;
-  packet_.entropy_hash = QuicFramer::GetPacketEntropyHash(header);
   packet_.encrypted_buffer = encrypted_buffer;
   packet_.encrypted_length = encrypted_length;
   if (listener != nullptr) {
@@ -527,7 +522,6 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
 
   packet_size_ = 0;
   queued_frames_.clear();
-  packet_.entropy_hash = QuicFramer::GetPacketEntropyHash(header);
   packet_.encrypted_buffer = encrypted_buffer;
   packet_.encrypted_length = encrypted_length;
 }
@@ -547,7 +541,7 @@ QuicPacketCreator::SerializeVersionNegotiationPacket(
 // TODO(jri): Make this a public method of framer?
 SerializedPacket QuicPacketCreator::NoPacket() {
   return SerializedPacket(kInvalidPathId, 0, PACKET_1BYTE_PACKET_NUMBER,
-                          nullptr, 0, 0, false, false);
+                          nullptr, 0, false, false);
 }
 
 void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
@@ -565,7 +559,6 @@ void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
   header->path_id = packet_.path_id;
   header->packet_number = ++packet_.packet_number;
   header->public_header.packet_number_length = packet_.packet_number_length;
-  header->entropy_flag = random_bool_source_.RandBool();
 }
 
 bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
@@ -675,22 +668,6 @@ void QuicPacketCreator::SetCurrentPath(
 bool QuicPacketCreator::IncludeNonceInPublicHeader() {
   return have_diversification_nonce_ &&
          packet_.encryption_level == ENCRYPTION_INITIAL;
-}
-
-QuicPacketCreator::QuicRandomBoolSource::QuicRandomBoolSource(
-    QuicRandom* random)
-    : random_(random), bit_bucket_(0), bit_mask_(0) {}
-
-QuicPacketCreator::QuicRandomBoolSource::~QuicRandomBoolSource() {}
-
-bool QuicPacketCreator::QuicRandomBoolSource::RandBool() {
-  if (bit_mask_ == 0) {
-    bit_bucket_ = random_->RandUint64();
-    bit_mask_ = 1;
-  }
-  bool result = ((bit_bucket_ & bit_mask_) != 0);
-  bit_mask_ <<= 1;
-  return result;
 }
 
 }  // namespace net

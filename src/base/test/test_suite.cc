@@ -108,6 +108,24 @@ std::string GetProfileName() {
   return profile_name;
 }
 
+void InitializeLogging() {
+#if defined(OS_ANDROID)
+  InitAndroidTestLogging();
+#else
+  FilePath exe;
+  PathService::Get(FILE_EXE, &exe);
+  FilePath log_filename = exe.ReplaceExtension(FILE_PATH_LITERAL("log"));
+  logging::LoggingSettings settings;
+  settings.logging_dest = logging::LOG_TO_ALL;
+  settings.log_file = log_filename.value().c_str();
+  settings.delete_old = logging::DELETE_OLD_LOG_FILE;
+  logging::InitLogging(settings);
+  // We want process and thread IDs because we may have multiple processes.
+  // Note: temporarily enabled timestamps in an effort to catch bug 6361.
+  logging::SetLogItems(true, true, true, true);
+#endif  // !defined(OS_ANDROID)
+}
+
 }  // namespace
 
 int RunUnitTestsUsingBaseTestSuite(int argc, char **argv) {
@@ -120,6 +138,9 @@ TestSuite::TestSuite(int argc, char** argv)
     : initialized_command_line_(false), created_feature_list_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
+  // Logging must be initialized before any thread has a chance to call logging
+  // functions.
+  InitializeLogging();
 }
 
 #if defined(OS_WIN)
@@ -127,6 +148,9 @@ TestSuite::TestSuite(int argc, wchar_t** argv)
     : initialized_command_line_(false), created_feature_list_(false) {
   PreInitialize();
   InitializeFromCommandLine(argc, argv);
+  // Logging must be initialized before any thread has a chance to call logging
+  // functions.
+  InitializeLogging();
 }
 #endif  // defined(OS_WIN)
 
@@ -318,20 +342,7 @@ void TestSuite::Initialize() {
 #endif  // OS_IOS
 
 #if defined(OS_ANDROID)
-  InitAndroidTest();
-#else
-  // Initialize logging.
-  FilePath exe;
-  PathService::Get(FILE_EXE, &exe);
-  FilePath log_filename = exe.ReplaceExtension(FILE_PATH_LITERAL("log"));
-  logging::LoggingSettings settings;
-  settings.logging_dest = logging::LOG_TO_ALL;
-  settings.log_file = log_filename.value().c_str();
-  settings.delete_old = logging::DELETE_OLD_LOG_FILE;
-  logging::InitLogging(settings);
-  // We want process and thread IDs because we may have multiple processes.
-  // Note: temporarily enabled timestamps in an effort to catch bug 6361.
-  logging::SetLogItems(true, true, true, true);
+  InitAndroidTestMessageLoop();
 #endif  // else defined(OS_ANDROID)
 
   CHECK(debug::EnableInProcessStackDumping());

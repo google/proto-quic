@@ -18,6 +18,7 @@ from pylib.gtest import gtest_test_instance
 from pylib.local import local_test_server_spawner
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+import tombstones
 
 _MAX_INLINE_FLAGS_LENGTH = 50  # Arbitrarily chosen.
 _EXTRA_COMMAND_LINE_FILE = (
@@ -106,6 +107,11 @@ class _ApkDelegate(object):
     self._component = '%s/%s' % (self._package, self._runner)
     self._extras = test_instance.extras
 
+  def GetTestDataRoot(self, device):
+    # pylint: disable=no-self-use
+    return posixpath.join(device.GetExternalStoragePath(),
+                          'chromium_tests_root')
+
   def Install(self, device):
     if self._test_apk_incremental_install_script:
       local_device_test_run.IncrementalInstall(device, self._apk_helper,
@@ -169,6 +175,11 @@ class _ExeDelegate(object):
     self._device_dist_dir = posixpath.join(
         constants.TEST_EXECUTABLE_DIR, os.path.basename(dist_dir))
     self._test_run = tr
+
+  def GetTestDataRoot(self, device):
+    # pylint: disable=no-self-use
+    # pylint: disable=unused-argument
+    return posixpath.join(constants.TEST_EXECUTABLE_DIR, 'chromium_tests_root')
 
   def Install(self, device):
     # TODO(jbudorick): Look into merging this with normal data deps pushing if
@@ -240,20 +251,20 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
   def SetUp(self):
     @local_device_environment.handle_shard_failures_with(
         on_failure=self._env.BlacklistDevice)
-    def individual_device_set_up(dev):
+    def individual_device_set_up(dev, host_device_tuples):
       def install_apk():
         # Install test APK.
         self._delegate.Install(dev)
 
       def push_test_data():
         # Push data dependencies.
-        device_root = posixpath.join(dev.GetExternalStoragePath(),
-                                     'chromium_tests_root')
-        data_deps = self._test_instance.GetDataDependencies()
-        host_device_tuples = [
-            (h, d if d is not None else device_root)
-            for h, d in data_deps]
-        dev.PushChangedFiles(host_device_tuples, delete_device_stale=True)
+        device_root = self._delegate.GetTestDataRoot(dev)
+        host_device_tuples_substituted = [
+            (h, local_device_test_run.SubstituteDeviceRoot(d, device_root))
+            for h, d in host_device_tuples]
+        dev.PushChangedFiles(
+            host_device_tuples_substituted,
+            delete_device_stale=True)
         if not host_device_tuples:
           dev.RunShellCommand(['rm', '-rf', device_root], check_return=True)
           dev.RunShellCommand(['mkdir', '-p', device_root], check_return=True)
@@ -279,7 +290,9 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
         for step in steps:
           step()
 
-    self._env.parallel_devices.pMap(individual_device_set_up)
+    self._env.parallel_devices.pMap(
+        individual_device_set_up,
+        self._test_instance.GetDataDependencies())
 
   #override
   def _ShouldShard(self):
@@ -347,6 +360,8 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
     # Run the test.
     timeout = (self._test_instance.shard_timeout
                * self.GetTool(device).GetTimeoutScale())
+    if self._test_instance.store_tombstones:
+      tombstones.ClearAllTombstones(device)
     with device_temp_file.DeviceTempFile(
         adb=device.adb,
         dir=self._delegate.ResultsDirectory(device),
@@ -383,6 +398,18 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
     # Check whether there are any crashed testcases.
     self._crashes.update(r.GetName() for r in results
                          if r.GetType() == base_test_result.ResultType.CRASH)
+
+    if self._test_instance.store_tombstones:
+      resolved_tombstones = None
+      for result in results:
+        if result.GetType() == base_test_result.ResultType.CRASH:
+          if not resolved_tombstones:
+            resolved_tombstones = '\n'.join(tombstones.ResolveTombstones(
+                device,
+                resolve_all_tombstones=True,
+                include_stack_symbols=False,
+                wipe_tombstones=True))
+          result.SetTombstones(resolved_tombstones)
     return results
 
   #override

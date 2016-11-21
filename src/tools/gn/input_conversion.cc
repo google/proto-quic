@@ -147,57 +147,57 @@ Value DoConvertInputToValue(const Settings* settings,
 }  // namespace
 
 extern const char kInputConversion_Help[] =
-    "input_conversion: Specifies how to transform input to a variable.\n"
-    "\n"
-    "  input_conversion is an argument to read_file and exec_script that\n"
-    "  specifies how the result of the read operation should be converted\n"
-    "  into a variable.\n"
-    "\n"
-    "  \"\" (the default)\n"
-    "      Discard the result and return None.\n"
-    "\n"
-    "  \"list lines\"\n"
-    "      Return the file contents as a list, with a string for each line.\n"
-    "      The newlines will not be present in the result. The last line may\n"
-    "      or may not end in a newline.\n"
-    "\n"
-    "      After splitting, each individual line will be trimmed of\n"
-    "      whitespace on both ends.\n"
-    "\n"
-    "  \"scope\"\n"
-    "      Execute the block as GN code and return a scope with the\n"
-    "      resulting values in it. If the input was:\n"
-    "        a = [ \"hello.cc\", \"world.cc\" ]\n"
-    "        b = 26\n"
-    "      and you read the result into a variable named \"val\", then you\n"
-    "      could access contents the \".\" operator on \"val\":\n"
-    "        sources = val.a\n"
-    "        some_count = val.b\n"
-    "\n"
-    "  \"string\"\n"
-    "      Return the file contents into a single string.\n"
-    "\n"
-    "  \"value\"\n"
-    "      Parse the input as if it was a literal rvalue in a buildfile.\n"
-    "      Examples of typical program output using this mode:\n"
-    "        [ \"foo\", \"bar\" ]     (result will be a list)\n"
-    "      or\n"
-    "        \"foo bar\"            (result will be a string)\n"
-    "      or\n"
-    "        5                    (result will be an integer)\n"
-    "\n"
-    "      Note that if the input is empty, the result will be a null value\n"
-    "      which will produce an error if assigned to a variable.\n"
-    "\n"
-    "  \"trim ...\"\n"
-    "      Prefixing any of the other transformations with the word \"trim\"\n"
-    "      will result in whitespace being trimmed from the beginning and end\n"
-    "      of the result before processing.\n"
-    "\n"
-    "      Examples: \"trim string\" or \"trim list lines\"\n"
-    "\n"
-    "      Note that \"trim value\" is useless because the value parser skips\n"
-    "      whitespace anyway.\n";
+    R"(input_conversion: Specifies how to transform input to a variable.
+
+  input_conversion is an argument to read_file and exec_script that specifies
+  how the result of the read operation should be converted into a variable.
+
+  "" (the default)
+      Discard the result and return None.
+
+  "list lines"
+      Return the file contents as a list, with a string for each line. The
+      newlines will not be present in the result. The last line may or may not
+      end in a newline.
+
+      After splitting, each individual line will be trimmed of whitespace on
+      both ends.
+
+  "scope"
+      Execute the block as GN code and return a scope with the resulting values
+      in it. If the input was:
+        a = [ "hello.cc", "world.cc" ]
+        b = 26
+      and you read the result into a variable named "val", then you could
+      access contents the "." operator on "val":
+        sources = val.a
+        some_count = val.b
+
+  "string"
+      Return the file contents into a single string.
+
+  "value"
+      Parse the input as if it was a literal rvalue in a buildfile. Examples of
+      typical program output using this mode:
+        [ "foo", "bar" ]     (result will be a list)
+      or
+        "foo bar"            (result will be a string)
+      or
+        5                    (result will be an integer)
+
+      Note that if the input is empty, the result will be a null value which
+      will produce an error if assigned to a variable.
+
+  "trim ..."
+      Prefixing any of the other transformations with the word "trim" will
+      result in whitespace being trimmed from the beginning and end of the
+      result before processing.
+
+      Examples: "trim string" or "trim list lines"
+
+      Note that "trim value" is useless because the value parser skips
+      whitespace anyway.
+)";
 
 Value ConvertInputToValue(const Settings* settings,
                           const std::string& input,

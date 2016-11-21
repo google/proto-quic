@@ -6,7 +6,6 @@
 
 #include <windows.h>
 
-#include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
@@ -17,32 +16,6 @@ namespace win {
 namespace {
 
 static const DWORDLONG kMBBytes = 1024 * 1024;
-
-// Enumeration of UMA memory pressure levels. This needs to be kept in sync with
-// histograms.xml and the memory pressure levels defined in
-// MemoryPressureListener.
-enum MemoryPressureLevelUMA {
-  UMA_MEMORY_PRESSURE_LEVEL_NONE = 0,
-  UMA_MEMORY_PRESSURE_LEVEL_MODERATE = 1,
-  UMA_MEMORY_PRESSURE_LEVEL_CRITICAL = 2,
-  // This must be the last value in the enum.
-  UMA_MEMORY_PRESSURE_LEVEL_COUNT,
-};
-
-// Converts a memory pressure level to an UMA enumeration value.
-MemoryPressureLevelUMA MemoryPressureLevelToUmaEnumValue(
-    MemoryPressureListener::MemoryPressureLevel level) {
-  switch (level) {
-    case MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE:
-      return UMA_MEMORY_PRESSURE_LEVEL_NONE;
-    case MemoryPressureListener::MEMORY_PRESSURE_LEVEL_MODERATE:
-      return UMA_MEMORY_PRESSURE_LEVEL_MODERATE;
-    case MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL:
-      return UMA_MEMORY_PRESSURE_LEVEL_CRITICAL;
-  }
-  NOTREACHED();
-  return UMA_MEMORY_PRESSURE_LEVEL_NONE;
-}
 
 }  // namespace
 
@@ -210,10 +183,7 @@ void MemoryPressureMonitor::CheckMemoryPressureAndRecordStatistics() {
 
   CheckMemoryPressure();
 
-  UMA_HISTOGRAM_ENUMERATION(
-      "Memory.PressureLevel",
-      MemoryPressureLevelToUmaEnumValue(current_memory_pressure_level_),
-      UMA_MEMORY_PRESSURE_LEVEL_COUNT);
+  RecordMemoryPressure(current_memory_pressure_level_, 1);
 }
 
 MemoryPressureListener::MemoryPressureLevel

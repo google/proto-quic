@@ -26,7 +26,7 @@ namespace net {
                                                                      " ")
 
 QuicSpdyStream::QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session)
-    : ReliableQuicStream(id, spdy_session),
+    : QuicStream(id, spdy_session),
       spdy_session_(spdy_session),
       visitor_(nullptr),
       allow_bidirectional_data_(false),
@@ -56,7 +56,7 @@ void QuicSpdyStream::CloseWriteSide() {
     Reset(QUIC_STREAM_NO_ERROR);
   }
 
-  ReliableQuicStream::CloseWriteSide();
+  QuicStream::CloseWriteSide();
 }
 
 void QuicSpdyStream::StopReading() {
@@ -67,7 +67,7 @@ void QuicSpdyStream::StopReading() {
     DVLOG(1) << ENDPOINT << "Send QUIC_STREAM_NO_ERROR on stream " << id();
     Reset(QUIC_STREAM_NO_ERROR);
   }
-  ReliableQuicStream::StopReading();
+  QuicStream::StopReading();
 }
 
 size_t QuicSpdyStream::WriteHeaders(
@@ -258,7 +258,7 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
 
 void QuicSpdyStream::OnStreamReset(const QuicRstStreamFrame& frame) {
   if (frame.error_code != QUIC_STREAM_NO_ERROR) {
-    ReliableQuicStream::OnStreamReset(frame);
+    QuicStream::OnStreamReset(frame);
     return;
   }
   DVLOG(1) << "Received QUIC_STREAM_NO_ERROR, not discarding response";
@@ -269,7 +269,7 @@ void QuicSpdyStream::OnStreamReset(const QuicRstStreamFrame& frame) {
 }
 
 void QuicSpdyStream::OnClose() {
-  ReliableQuicStream::OnClose();
+  QuicStream::OnClose();
 
   if (visitor_) {
     Visitor* visitor = visitor_;
@@ -281,7 +281,7 @@ void QuicSpdyStream::OnClose() {
 }
 
 void QuicSpdyStream::OnCanWrite() {
-  ReliableQuicStream::OnCanWrite();
+  QuicStream::OnCanWrite();
 
   // Trailers (and hence a FIN) may have been sent ahead of queued body bytes.
   if (!HasBufferedData() && fin_sent()) {
@@ -344,8 +344,7 @@ QuicConsumedData QuicSpdyStream::WritevDataInner(
     return spdy_session_->headers_stream()->WritevStreamData(
         id(), iov, offset, fin, ack_notifier_delegate);
   }
-  return ReliableQuicStream::WritevDataInner(iov, offset, fin,
-                                             ack_notifier_delegate);
+  return QuicStream::WritevDataInner(iov, offset, fin, ack_notifier_delegate);
 }
 
 }  // namespace net

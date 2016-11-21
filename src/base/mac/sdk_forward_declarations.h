@@ -25,21 +25,6 @@
 // OSX SDK being compiled against.
 // ----------------------------------------------------------------------------
 
-#if !defined(MAC_OS_X_VERSION_10_12) || \
-    MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12
-
-// The protocol was formalized by the 10.12 SDK, but it was informally used
-// before.
-@protocol CAAnimationDelegate
-- (void)animationDidStart:(CAAnimation*)animation;
-- (void)animationDidStop:(CAAnimation*)animation finished:(BOOL)finished;
-@end
-
-@protocol CALayerDelegate
-@end
-
-#endif  // MAC_OS_X_VERSION_10_12
-
 #if !defined(MAC_OS_X_VERSION_10_11) || \
     MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_11
 
@@ -67,19 +52,27 @@ typedef NSUInteger NSSpringLoadingHighlight;
 
 #endif  // MAC_OS_X_VERSION_10_11
 
+#if !defined(MAC_OS_X_VERSION_10_12) || \
+    MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12
+
+// The protocol was formalized by the 10.12 SDK, but it was informally used
+// before.
+@protocol CAAnimationDelegate
+- (void)animationDidStart:(CAAnimation*)animation;
+- (void)animationDidStop:(CAAnimation*)animation finished:(BOOL)finished;
+@end
+
+@protocol CALayerDelegate
+@end
+
+#endif  // MAC_OS_X_VERSION_10_12
+
 // ----------------------------------------------------------------------------
 // Define NSStrings only available in newer versions of the OSX SDK to force
 // them to be statically linked.
 // ----------------------------------------------------------------------------
 
 extern "C" {
-#if !defined(MAC_OS_X_VERSION_10_9) || \
-    MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_9
-BASE_EXPORT extern NSString* const NSWindowDidChangeOcclusionStateNotification;
-BASE_EXPORT extern NSString* const CBAdvertisementDataOverflowServiceUUIDsKey;
-BASE_EXPORT extern NSString* const CBAdvertisementDataIsConnectable;
-#endif  // MAC_OS_X_VERSION_10_9
-
 #if !defined(MAC_OS_X_VERSION_10_10) || \
     MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10
 BASE_EXPORT extern NSString* const NSUserActivityTypeBrowsingWeb;
@@ -95,128 +88,18 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 // functions to suppress -Wpartial-availability warnings.
 // ----------------------------------------------------------------------------
 
-// Once Chrome no longer supports OSX 10.7, everything within this preprocessor
-// block can be removed.
-#if !defined(MAC_OS_X_VERSION_10_8) || \
-    MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_8
-
-@interface NSColor (MountainLionSDK)
-- (CGColorRef)CGColor;
-@end
-
-@interface NSUUID (MountainLionSDK)
-- (NSString*)UUIDString;
-@end
-
-@interface NSControl (MountainLionSDK)
-@property BOOL allowsExpansionToolTips;
-@end
-
-@interface NSNib (MountainLionSDK)
-- (BOOL)instantiateWithOwner:(id)owner
-             topLevelObjects:(NSArray**)topLevelObjects;
-@end
-
-@interface NSArray (MountainLionSDK)
-- (id)objectAtIndexedSubscript:(NSUInteger)idx;
-@end
-
-@interface NSDictionary (MountainLionSDK)
-- (id)objectForKeyedSubscript:(id)key;
-@end
-
-@interface NSMutableDictionary (MountainLionSDK)
-- (void)setObject:(id)obj forKeyedSubscript:(id<NSCopying>)key;
-@end
-
-@interface NSFileManager (MountainLionSDK)
-- (BOOL)trashItemAtURL:(NSURL*)url
-      resultingItemURL:(NSURL**)outResultingURL
-                 error:(NSError**)error;
-@end
-
-#endif  // MAC_OS_X_VERSION_10_8
-
-// Once Chrome no longer supports OSX 10.8, everything within this preprocessor
-// block can be removed.
-#if !defined(MAC_OS_X_VERSION_10_9) || \
-    MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_9
-
-// NSProgress is public API in 10.9, but a version of it exists and is usable
-// in 10.8.
-@class NSProgress;
-@class NSAppearance;
-
-@interface NSProgress (MavericksSDK)
-
-- (instancetype)initWithParent:(NSProgress*)parentProgressOrNil
-                      userInfo:(NSDictionary*)userInfoOrNil;
-@property(copy) NSString* kind;
-
-@property int64_t totalUnitCount;
-@property int64_t completedUnitCount;
-
-@property(getter=isCancellable) BOOL cancellable;
-@property(getter=isPausable) BOOL pausable;
-@property(readonly, getter=isCancelled) BOOL cancelled;
-@property(readonly, getter=isPaused) BOOL paused;
-@property(copy) void (^cancellationHandler)(void);
-@property(copy) void (^pausingHandler)(void);
-- (void)cancel;
-- (void)pause;
-
-- (void)setUserInfoObject:(id)objectOrNil forKey:(NSString*)key;
-- (NSDictionary*)userInfo;
-
-@property(readonly, getter=isIndeterminate) BOOL indeterminate;
-@property(readonly) double fractionCompleted;
-
-- (void)publish;
-- (void)unpublish;
-
-@end
-
-@interface NSScreen (MavericksSDK)
-+ (BOOL)screensHaveSeparateSpaces;
-@end
-
-@interface NSView (MavericksSDK)
-- (void)setCanDrawSubviewsIntoLayer:(BOOL)flag;
-- (void)setAppearance:(NSAppearance*)appearance;
-- (NSAppearance*)effectiveAppearance;
-@end
-
-@interface NSWindow (MavericksSDK)
-- (NSWindowOcclusionState)occlusionState;
-@end
-
-@interface NSAppearance (MavericksSDK)
-+ (id<NSObject>)appearanceNamed:(NSString*)name;
-@end
-
-@interface CBPeripheral (MavericksSDK)
-@property(readonly, nonatomic) NSUUID* identifier;
-@end
-
-@class NSUserActivity;
-
-#endif  // MAC_OS_X_VERSION_10_9
-
 // Once Chrome no longer supports OSX 10.9, everything within this preprocessor
 // block can be removed.
 #if !defined(MAC_OS_X_VERSION_10_10) || \
     MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10
 
 @interface NSUserActivity (YosemiteSDK)
-
 @property(readonly, copy) NSString* activityType;
 @property(copy) NSDictionary* userInfo;
 @property(copy) NSURL* webpageURL;
-
 - (instancetype)initWithActivityType:(NSString*)activityType;
 - (void)becomeCurrent;
 - (void)invalidate;
-
 @end
 
 @interface CBUUID (YosemiteSDK)
@@ -274,6 +157,10 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @property(readonly, strong) NSLayoutXAxisAnchor* leftAnchor;
 @property(readonly, strong) NSLayoutXAxisAnchor* rightAnchor;
 @property(readonly, strong) NSLayoutYAxisAnchor* bottomAnchor;
+@end
+
+@interface NSWindow (ElCapitanSDK)
+- (void)performWindowDragWithEvent:(NSEvent*)event;
 @end
 
 #endif  // MAC_OS_X_VERSION_10_11

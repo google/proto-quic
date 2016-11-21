@@ -37,9 +37,9 @@
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/test/gtest_util.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
@@ -86,8 +86,7 @@ struct TestParams {
              QuicTag congestion_control_tag,
              bool disable_hpack_dynamic_table,
              bool force_hol_blocking,
-             bool use_cheap_stateless_reject,
-             bool buffer_packet_till_chlo)
+             bool use_cheap_stateless_reject)
       : client_supported_versions(client_supported_versions),
         server_supported_versions(server_supported_versions),
         negotiated_version(negotiated_version),
@@ -97,8 +96,7 @@ struct TestParams {
         congestion_control_tag(congestion_control_tag),
         disable_hpack_dynamic_table(disable_hpack_dynamic_table),
         force_hol_blocking(force_hol_blocking),
-        use_cheap_stateless_reject(use_cheap_stateless_reject),
-        buffer_packet_till_chlo(buffer_packet_till_chlo) {}
+        use_cheap_stateless_reject(use_cheap_stateless_reject) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     os << "{ server_supported_versions: "
@@ -111,11 +109,11 @@ struct TestParams {
     os << " server_uses_stateless_rejects_if_peer_supported: "
        << p.server_uses_stateless_rejects_if_peer_supported;
     os << " congestion_control_tag: "
-       << QuicUtils::TagToString(p.congestion_control_tag);
+       << QuicTagToString(p.congestion_control_tag);
     os << " disable_hpack_dynamic_table: " << p.disable_hpack_dynamic_table;
     os << " force_hol_blocking: " << p.force_hol_blocking;
-    os << " use_cheap_stateless_reject: " << p.use_cheap_stateless_reject;
-    os << " buffer_packet_till_chlo: " << p.buffer_packet_till_chlo << " }";
+    os << " use_cheap_stateless_reject: " << p.use_cheap_stateless_reject
+       << " }";
     return os;
   }
 
@@ -128,7 +126,6 @@ struct TestParams {
   bool disable_hpack_dynamic_table;
   bool force_hol_blocking;
   bool use_cheap_stateless_reject;
-  bool buffer_packet_till_chlo;
 };
 
 // Constructs various test permutations.
@@ -142,28 +139,20 @@ std::vector<TestParams> GetTestParams() {
   // to do 0-RTT across incompatible versions. Chromium only supports
   // a single version at a time anyway. :)
   QuicVersionVector all_supported_versions = AllSupportedVersions();
-  QuicVersionVector version_buckets[3];
+  // Even though this currently has one element, it may well get another
+  // with future versions of QUIC, so don't remove it.
+  QuicVersionVector version_buckets[1];
 
   for (const QuicVersion version : all_supported_versions) {
-    if (version <= QUIC_VERSION_32) {
-      // Versions: 31-32
-      // v31 adds a hash of the CHLO into the proof signature.
-      version_buckets[0].push_back(version);
-    } else if (version <= QUIC_VERSION_33) {
-      // Versions: 33
-      // v33 adds a diversification nonce into the hkdf.
-      version_buckets[1].push_back(version);
-    } else {
-      // Versions: 34+
-      // QUIC_VERSION_34 deprecates entropy and uses new ack and stop waiting
-      // wire formats.
-      version_buckets[2].push_back(version);
-    }
+    // Versions: 34+
+    // QUIC_VERSION_34 deprecates entropy and uses new ack and stop waiting
+    // wire formats.
+    version_buckets[0].push_back(version);
   }
 
   // This must be kept in sync with the number of nested for-loops below as it
   // is used to prune the number of tests that are run.
-  const int kMaxEnabledOptions = 6;
+  const int kMaxEnabledOptions = 5;
   int max_enabled_options = 0;
   std::vector<TestParams> params;
   for (bool server_uses_stateless_rejects_if_peer_supported : {true, false}) {
@@ -172,94 +161,79 @@ std::vector<TestParams> GetTestParams() {
         for (bool disable_hpack_dynamic_table : {false}) {
           for (bool force_hol_blocking : {true, false}) {
             for (bool use_cheap_stateless_reject : {true, false}) {
-              for (bool buffer_packet_till_chlo : {true, false}) {
-                if (!buffer_packet_till_chlo && use_cheap_stateless_reject) {
-                  // Doing stateless reject while not buffering packet
-                  // before CHLO is not allowed.
-                  break;
-                }
-                int enabled_options = 0;
-                if (force_hol_blocking) {
-                  ++enabled_options;
-                }
-                if (congestion_control_tag != kQBIC) {
-                  ++enabled_options;
-                }
-                if (disable_hpack_dynamic_table) {
-                  ++enabled_options;
-                }
-                if (client_supports_stateless_rejects) {
-                  ++enabled_options;
-                }
-                if (server_uses_stateless_rejects_if_peer_supported) {
-                  ++enabled_options;
-                }
-                if (buffer_packet_till_chlo) {
-                  ++enabled_options;
-                }
-                if (use_cheap_stateless_reject) {
-                  ++enabled_options;
-                }
-                CHECK_GE(kMaxEnabledOptions, enabled_options);
-                if (enabled_options > max_enabled_options) {
-                  max_enabled_options = enabled_options;
-                }
+              int enabled_options = 0;
+              if (force_hol_blocking) {
+                ++enabled_options;
+              }
+              if (congestion_control_tag != kQBIC) {
+                ++enabled_options;
+              }
+              if (disable_hpack_dynamic_table) {
+                ++enabled_options;
+              }
+              if (client_supports_stateless_rejects) {
+                ++enabled_options;
+              }
+              if (server_uses_stateless_rejects_if_peer_supported) {
+                ++enabled_options;
+              }
+              if (use_cheap_stateless_reject) {
+                ++enabled_options;
+              }
+              CHECK_GE(kMaxEnabledOptions, enabled_options);
+              if (enabled_options > max_enabled_options) {
+                max_enabled_options = enabled_options;
+              }
 
-                // Run tests with no options, a single option, or all the
-                // options enabled to avoid a combinatorial explosion.
+              // Run tests with no options, a single option, or all the
+              // options enabled to avoid a combinatorial explosion.
+              if (enabled_options > 1 && enabled_options < kMaxEnabledOptions) {
+                continue;
+              }
+
+              for (const QuicVersionVector& client_versions : version_buckets) {
+                CHECK(!client_versions.empty());
+                if (FilterSupportedVersions(client_versions).empty()) {
+                  continue;
+                }
+                // Add an entry for server and client supporting all
+                // versions.
+                params.push_back(TestParams(
+                    client_versions, all_supported_versions,
+                    client_versions.front(), client_supports_stateless_rejects,
+                    server_uses_stateless_rejects_if_peer_supported,
+                    congestion_control_tag, disable_hpack_dynamic_table,
+                    force_hol_blocking, use_cheap_stateless_reject));
+
+                // Run version negotiation tests tests with no options, or
+                // all the options enabled to avoid a combinatorial
+                // explosion.
                 if (enabled_options > 1 &&
                     enabled_options < kMaxEnabledOptions) {
                   continue;
                 }
 
-                for (const QuicVersionVector& client_versions :
-                     version_buckets) {
-                  CHECK(!client_versions.empty());
-                  if (FilterSupportedVersions(client_versions).empty()) {
+                // Test client supporting all versions and server supporting
+                // 1 version. Simulate an old server and exercise version
+                // downgrade in the client. Protocol negotiation should
+                // occur.  Skip the i = 0 case because it is essentially the
+                // same as the default case.
+                for (size_t i = 1; i < client_versions.size(); ++i) {
+                  QuicVersionVector server_supported_versions;
+                  server_supported_versions.push_back(client_versions[i]);
+                  if (FilterSupportedVersions(server_supported_versions)
+                          .empty()) {
                     continue;
                   }
-                  // Add an entry for server and client supporting all
-                  // versions.
                   params.push_back(TestParams(
-                      client_versions, all_supported_versions,
-                      client_versions.front(),
+                      client_versions, server_supported_versions,
+                      server_supported_versions.front(),
                       client_supports_stateless_rejects,
                       server_uses_stateless_rejects_if_peer_supported,
                       congestion_control_tag, disable_hpack_dynamic_table,
-                      force_hol_blocking, use_cheap_stateless_reject,
-                      buffer_packet_till_chlo));
-
-                  // Run version negotiation tests tests with no options, or
-                  // all the options enabled to avoid a combinatorial
-                  // explosion.
-                  if (enabled_options > 1 &&
-                      enabled_options < kMaxEnabledOptions) {
-                    continue;
-                  }
-
-                  // Test client supporting all versions and server supporting
-                  // 1 version. Simulate an old server and exercise version
-                  // downgrade in the client. Protocol negotiation should
-                  // occur.  Skip the i = 0 case because it is essentially the
-                  // same as the default case.
-                  for (size_t i = 1; i < client_versions.size(); ++i) {
-                    QuicVersionVector server_supported_versions;
-                    server_supported_versions.push_back(client_versions[i]);
-                    if (FilterSupportedVersions(server_supported_versions)
-                            .empty()) {
-                      continue;
-                    }
-                    params.push_back(TestParams(
-                        client_versions, server_supported_versions,
-                        server_supported_versions.front(),
-                        client_supports_stateless_rejects,
-                        server_uses_stateless_rejects_if_peer_supported,
-                        congestion_control_tag, disable_hpack_dynamic_table,
-                        force_hol_blocking, use_cheap_stateless_reject,
-                        buffer_packet_till_chlo));
+                      force_hol_blocking, use_cheap_stateless_reject));
                   }    // End of version for loop.
                 }      // End of 2nd version for loop.
-              }        // End of buffer_packet_till_chlo loop.
             }          // End of use_cheap_stateless_reject for loop.
           }            // End of force_hol_blocking loop.
         }              // End of disable_hpack_dynamic_table for loop.
@@ -303,7 +277,6 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         client_writer_(nullptr),
         server_writer_(nullptr),
         server_started_(false),
-        strike_register_no_startup_period_(false),
         chlo_multiplier_(0),
         stream_factory_(nullptr),
         support_server_push_(false) {
@@ -453,17 +426,13 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   }
 
   void StartServer() {
-    FLAGS_quic_buffer_packet_till_chlo = GetParam().buffer_packet_till_chlo;
     FLAGS_quic_use_cheap_stateless_rejects =
         GetParam().use_cheap_stateless_reject;
-    if (!FLAGS_quic_buffer_packet_till_chlo) {
-      FLAGS_quic_limit_num_new_sessions_per_epoll_loop = false;
-    }
+
     auto test_server =
         new QuicTestServer(CryptoTestUtils::ProofSourceForTesting(),
                            server_config_, server_supported_versions_);
-    server_thread_.reset(new ServerThread(test_server, server_address_,
-                                          strike_register_no_startup_period_));
+    server_thread_.reset(new ServerThread(test_server, server_address_));
     if (chlo_multiplier_ != 0) {
       server_thread_->server()->SetChloMultiplier(chlo_multiplier_);
     }
@@ -600,7 +569,6 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   QuicVersionVector client_supported_versions_;
   QuicVersionVector server_supported_versions_;
   QuicVersion negotiated_version_;
-  bool strike_register_no_startup_period_;
   size_t chlo_multiplier_;
   QuicTestServer::StreamFactory* stream_factory_;
   bool support_server_push_;
@@ -617,19 +585,16 @@ TEST_P(EndToEndTest, HandshakeSuccessful) {
   client_->client()->WaitForCryptoHandshakeConfirmed();
   QuicCryptoStream* crypto_stream =
       QuicSessionPeer::GetCryptoStream(client_->client()->session());
-  QuicStreamSequencer* sequencer =
-      ReliableQuicStreamPeer::sequencer(crypto_stream);
-  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
-                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+  QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(crypto_stream);
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer,
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
   QuicSession* server_session = dispatcher->session_map().begin()->second.get();
   crypto_stream = QuicSessionPeer::GetCryptoStream(server_session);
-  sequencer = ReliableQuicStreamPeer::sequencer(crypto_stream);
-  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
-                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+  sequencer = QuicStreamPeer::sequencer(crypto_stream);
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer,
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
@@ -882,9 +847,6 @@ TEST_P(EndToEndTest, LargePostNoPacketLossWithDelayAndReordering) {
 }
 
 TEST_P(EndToEndTest, LargePostZeroRTTFailure) {
-  // Have the server accept 0-RTT without waiting a startup period.
-  strike_register_no_startup_period_ = true;
-
   // Send a request and then disconnect. This prepares the client to attempt
   // a 0-RTT handshake for the next request.
   ASSERT_TRUE(Initialize());
@@ -919,14 +881,8 @@ TEST_P(EndToEndTest, LargePostZeroRTTFailure) {
   EXPECT_EQ(kFooResponseBody,
             client_->SendCustomSynchronousRequest(headers, body));
 
-  if (negotiated_version_ <= QUIC_VERSION_32) {
-    EXPECT_EQ(expected_num_hellos_latest_session,
-              client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
-  } else {
-    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
-  }
+  EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+  EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
 
   client_->Disconnect();
 
@@ -952,9 +908,6 @@ TEST_P(EndToEndTest, LargePostZeroRTTFailure) {
 }
 
 TEST_P(EndToEndTest, SynchronousRequestZeroRTTFailure) {
-  // Have the server accept 0-RTT without waiting a startup period.
-  strike_register_no_startup_period_ = true;
-
   // Send a request and then disconnect. This prepares the client to attempt
   // a 0-RTT handshake for the next request.
   ASSERT_TRUE(Initialize());
@@ -979,14 +932,8 @@ TEST_P(EndToEndTest, SynchronousRequestZeroRTTFailure) {
   ASSERT_TRUE(client_->client()->connected());
   EXPECT_EQ(kFooResponseBody, client_->SendSynchronousRequest("/foo"));
 
-  if (negotiated_version_ <= QUIC_VERSION_32) {
-    EXPECT_EQ(expected_num_hellos_latest_session,
-              client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
-  } else {
-    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
-  }
+  EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+  EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
 
   client_->Disconnect();
 
@@ -1011,9 +958,6 @@ TEST_P(EndToEndTest, SynchronousRequestZeroRTTFailure) {
 }
 
 TEST_P(EndToEndTest, LargePostSynchronousRequest) {
-  // Have the server accept 0-RTT without waiting a startup period.
-  strike_register_no_startup_period_ = true;
-
   // Send a request and then disconnect. This prepares the client to attempt
   // a 0-RTT handshake for the next request.
   ASSERT_TRUE(Initialize());
@@ -1048,14 +992,8 @@ TEST_P(EndToEndTest, LargePostSynchronousRequest) {
   EXPECT_EQ(kFooResponseBody,
             client_->SendCustomSynchronousRequest(headers, body));
 
-  if (negotiated_version_ <= QUIC_VERSION_32) {
-    EXPECT_EQ(expected_num_hellos_latest_session,
-              client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(2, client_->client()->GetNumSentClientHellos());
-  } else {
-    EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
-    EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
-  }
+  EXPECT_EQ(1, client_->client()->session()->GetNumSentClientHellos());
+  EXPECT_EQ(1, client_->client()->GetNumSentClientHellos());
 
   client_->Disconnect();
 
@@ -1260,15 +1198,14 @@ TEST_P(EndToEndTest, DISABLED_MultipleTermination) {
   // and the second write is picked up as writing on a closed stream.
   QuicSpdyClientStream* stream = client_->GetOrCreateStream();
   ASSERT_TRUE(stream != nullptr);
-  ReliableQuicStreamPeer::SetStreamBytesWritten(3, stream);
+  QuicStreamPeer::SetStreamBytesWritten(3, stream);
 
   client_->SendData("bar", true);
   client_->WaitForWriteToFlush();
 
   // By default the stream protects itself from writes after terminte is set.
   // Override this to test the server handling buggy clients.
-  ReliableQuicStreamPeer::SetWriteSideClosed(false,
-                                             client_->GetOrCreateStream());
+  QuicStreamPeer::SetWriteSideClosed(false, client_->GetOrCreateStream());
 
   EXPECT_QUIC_BUG(client_->SendData("eep", true), "Fin already buffered");
 }
@@ -2226,7 +2163,7 @@ class ServerStreamWithErrorResponseBody : public QuicSimpleServerStream {
     headers["content-length"] = base::UintToString(response_body_.size());
     // This method must call CloseReadSide to cause the test case, StopReading
     // is not sufficient.
-    ReliableQuicStreamPeer::CloseReadSide(this);
+    QuicStreamPeer::CloseReadSide(this);
     SendHeadersAndBody(std::move(headers), response_body_);
   }
 
@@ -2526,7 +2463,7 @@ TEST_P(EndToEndTest, LargePostEarlyResponse) {
   EXPECT_EQ("500", client_->response_headers()->find(":status")->second);
 
   // Receive the reset stream from server on early response.
-  ReliableQuicStream* stream =
+  QuicStream* stream =
       client_->client()->session()->GetOrCreateStream(kClientDataStreamId1);
   // The stream is reset by server's reset stream.
   EXPECT_EQ(stream, nullptr);
@@ -2643,8 +2580,7 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
                        "https://example.com/push_example"));
   QuicHeadersStream* headers_stream =
       QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
-  QuicStreamSequencer* sequencer =
-      ReliableQuicStreamPeer::sequencer(headers_stream);
+  QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(headers_stream);
   // Headers stream's sequencer buffer shouldn't be released because server push
   // hasn't finished yet.
   EXPECT_TRUE(QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
@@ -2656,8 +2592,7 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
     DVLOG(1) << "response body " << response_body;
     EXPECT_EQ(expected_body, response_body);
   }
-  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
-                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer,
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
@@ -2960,19 +2895,13 @@ TEST_P(EndToEndTest, ReleaseHeadersStreamBufferWhenIdle) {
   client_->SendSynchronousRequest("/foo");
   QuicHeadersStream* headers_stream =
       QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
-  QuicStreamSequencer* sequencer =
-      ReliableQuicStreamPeer::sequencer(headers_stream);
-  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
-                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,
+  QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(headers_stream);
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer,
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 class EndToEndBufferedPacketsTest : public EndToEndTest {
  public:
-  EndToEndBufferedPacketsTest() : EndToEndTest() {
-    FLAGS_quic_buffer_packet_till_chlo = true;
-  }
-
   void CreateClientWithWriter() override {
     LOG(ERROR) << "create client with reorder_writer_ ";
     reorder_writer_ = new PacketReorderingWriter();
@@ -2994,11 +2923,6 @@ INSTANTIATE_TEST_CASE_P(EndToEndBufferedPacketsTests,
 
 TEST_P(EndToEndBufferedPacketsTest, Buffer0RttRequest) {
   ASSERT_TRUE(Initialize());
-  if (negotiated_version_ <= QUIC_VERSION_32) {
-    // Since no 0-rtt for v32 and under, and this test relies on 0-rtt, skip
-    // this test if QUIC doesn't do 0-rtt.
-    return;
-  }
   // Finish one request to make sure handshake established.
   client_->SendSynchronousRequest("/foo");
   // Disconnect for next 0-rtt request.

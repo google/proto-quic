@@ -222,8 +222,13 @@ elif [[ -f "$HERE/$ASAN_RT" ]]; then
     ASAN_RT_PATH="$HERE"
 elif [[ $(basename "$HERE") == "bin" ]]; then
     # We could be in the toolchain's base directory.
-    # Consider ../lib, ../lib/asan, ../lib/linux and ../lib/clang/$VERSION/lib/linux.
-    P=$(ls "$HERE"/../lib/"$ASAN_RT" "$HERE"/../lib/asan/"$ASAN_RT" "$HERE"/../lib/linux/"$ASAN_RT" "$HERE"/../lib/clang/*/lib/linux/"$ASAN_RT" 2>/dev/null | sort | tail -1)
+    # Consider ../lib, ../lib/asan, ../lib/linux,
+    # ../lib/clang/$VERSION/lib/linux, and ../lib64/clang/$VERSION/lib/linux.
+    P=$(ls "$HERE"/../lib/"$ASAN_RT" \
+           "$HERE"/../lib/asan/"$ASAN_RT" \
+           "$HERE"/../lib/linux/"$ASAN_RT" \
+           "$HERE"/../lib/clang/*/lib/linux/"$ASAN_RT" \
+           "$HERE"/../lib64/clang/*/lib/linux/"$ASAN_RT" 2>/dev/null | sort | tail -1)
     if [[ -n "$P" ]]; then
         ASAN_RT_PATH="$(dirname "$P")"
     fi
@@ -295,19 +300,24 @@ if [[ -n "$ASAN_RT64" ]]; then
   cp "$ASAN_RT_PATH/$ASAN_RT64" "$TMPDIR/"
 fi
 
-# FIXME: alloc_dealloc_mismatch=0 prevents a failure in libdvm startup,
-# which may or may not be a real bug (probably not).
-ASAN_OPTIONS=start_deactivated=1,alloc_dealloc_mismatch=0,malloc_context_size=0
+ASAN_OPTIONS=start_deactivated=1,malloc_context_size=0
 
 function generate_zygote_wrapper { # from, to, asan_rt
   local _from=$1
   local _to=$2
   local _asan_rt=$3
+  if [[ PRE_L -eq 0 ]]; then
+    # LD_PRELOAD parsing is broken in N if it starts with ":". Luckily, it is
+    # unset in the system environment since L.
+    local _ld_preload=$_asan_rt
+  else
+    local _ld_preload=\$LD_PRELOAD:$_asan_rt
+  fi
   cat <<EOF >"$TMPDIR/$_from"
 #!/system/bin/sh-from-zygote
 ASAN_OPTIONS=$ASAN_OPTIONS \\
 ASAN_ACTIVATION_OPTIONS=include_if_exists=/data/local/tmp/asan.options.%b \\
-LD_PRELOAD=\$LD_PRELOAD:$_asan_rt \\
+LD_PRELOAD=$_ld_preload \\
 exec $_to \$@
 
 EOF

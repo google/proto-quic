@@ -11,6 +11,7 @@
 #include "base/files/file_path.h"
 #include "base/hash.h"
 #include "base/process/process_metrics.h"
+#include "base/rand_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
 #include "base/test/perf_time_logger.h"
@@ -114,7 +115,7 @@ bool DiskCachePerfTest::TimeWrite() {
   for (int i = 0; i < kNumEntries; i++) {
     TestEntry entry;
     entry.key = GenerateKey(true);
-    entry.data_len = rand() % kBodySize;
+    entry.data_len = base::RandInt(0, kBodySize);
     entries_.push_back(entry);
 
     disk_cache::Entry* cache_entry;
@@ -196,9 +197,6 @@ bool DiskCachePerfTest::TimeRead(WhatToRead what_to_read,
 }
 
 TEST_F(DiskCachePerfTest, BlockfileHashes) {
-  int seed = static_cast<int>(Time::Now().ToInternalValue());
-  srand(seed);
-
   base::PerfTimeLogger timer("Hash disk cache keys");
   for (int i = 0; i < 300000; i++) {
     std::string key = GenerateKey(true);
@@ -268,11 +266,6 @@ TEST_F(DiskCachePerfTest, SimpleCacheBackendPerformance) {
   CacheBackendPerformance();
 }
 
-int BlockSize() {
-  // We can use form 1 to 4 blocks.
-  return (rand() & 0x3) + 1;
-}
-
 // Creating and deleting "entries" on a block-file is something quite frequent
 // (after all, almost everything is stored on block files). The operation is
 // almost free when the file is empty, but can be expensive if the file gets
@@ -284,9 +277,6 @@ TEST_F(DiskCachePerfTest, BlockFilesPerformance) {
   disk_cache::BlockFiles files(cache_path_);
   ASSERT_TRUE(files.Init(true));
 
-  int seed = static_cast<int>(Time::Now().ToInternalValue());
-  srand(seed);
-
   const int kNumBlocks = 60000;
   disk_cache::Addr address[kNumBlocks];
 
@@ -294,21 +284,21 @@ TEST_F(DiskCachePerfTest, BlockFilesPerformance) {
 
   // Fill up the 32-byte block file (use three files).
   for (int i = 0; i < kNumBlocks; i++) {
+    int block_size = base::RandInt(1, 4);
     EXPECT_TRUE(
-        files.CreateBlock(disk_cache::RANKINGS, BlockSize(), &address[i]));
+        files.CreateBlock(disk_cache::RANKINGS, block_size, &address[i]));
   }
 
   timer1.Done();
   base::PerfTimeLogger timer2("Create and delete blocks");
 
   for (int i = 0; i < 200000; i++) {
-    int entry = rand() * (kNumBlocks / RAND_MAX + 1);
-    if (entry >= kNumBlocks)
-      entry = 0;
+    int block_size = base::RandInt(1, 4);
+    int entry = base::RandInt(0, kNumBlocks - 1);
 
     files.DeleteBlock(address[entry], false);
     EXPECT_TRUE(
-        files.CreateBlock(disk_cache::RANKINGS, BlockSize(), &address[entry]));
+        files.CreateBlock(disk_cache::RANKINGS, block_size, &address[entry]));
   }
 
   timer2.Done();

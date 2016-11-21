@@ -13,8 +13,8 @@
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_headers_stream_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_protocol.h"
@@ -843,7 +843,7 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdyWindowUpdateFrame) {
 }
 
 TEST_P(QuicHeadersStreamTest, NoConnectionLevelFlowControl) {
-  EXPECT_FALSE(ReliableQuicStreamPeer::StreamContributesToConnectionFlowControl(
+  EXPECT_FALSE(QuicStreamPeer::StreamContributesToConnectionFlowControl(
       headers_stream_));
 }
 

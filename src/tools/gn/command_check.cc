@@ -17,157 +17,153 @@
 namespace commands {
 
 const char kNoGnCheck_Help[] =
-    "nogncheck: Skip an include line from checking.\n"
-    "\n"
-    "  GN's header checker helps validate that the includes match the build\n"
-    "  dependency graph. Sometimes an include might be conditional or\n"
-    "  otherwise problematic, but you want to specifically allow it. In this\n"
-    "  case, it can be whitelisted.\n"
-    "\n"
-    "  Include lines containing the substring \"nogncheck\" will be excluded\n"
-    "  from header checking. The most common case is a conditional include:\n"
-    "\n"
-    "    #if defined(ENABLE_DOOM_MELON)\n"
-    "    #include \"tools/doom_melon/doom_melon.h\"  // nogncheck\n"
-    "    #endif\n"
-    "\n"
-    "  If the build file has a conditional dependency on the corresponding\n"
-    "  target that matches the conditional include, everything will always\n"
-    "  link correctly:\n"
-    "\n"
-    "    source_set(\"mytarget\") {\n"
-    "      ...\n"
-    "      if (enable_doom_melon) {\n"
-    "        defines = [ \"ENABLE_DOOM_MELON\" ]\n"
-    "        deps += [ \"//tools/doom_melon\" ]\n"
-    "      }\n"
-    "\n"
-    "  But GN's header checker does not understand preprocessor directives,\n"
-    "  won't know it matches the build dependencies, and will flag this\n"
-    "  include as incorrect when the condition is false.\n"
-    "\n"
-    "More information\n"
-    "\n"
-    "  The topic \"gn help check\" has general information on how checking\n"
-    "  works and advice on fixing problems. Targets can also opt-out of\n"
-    "  checking, see \"gn help check_includes\".\n";
+    R"(nogncheck: Skip an include line from checking.
+
+  GN's header checker helps validate that the includes match the build
+  dependency graph. Sometimes an include might be conditional or otherwise
+  problematic, but you want to specifically allow it. In this case, it can be
+  whitelisted.
+
+  Include lines containing the substring "nogncheck" will be excluded from
+  header checking. The most common case is a conditional include:
+
+    #if defined(ENABLE_DOOM_MELON)
+    #include "tools/doom_melon/doom_melon.h"  // nogncheck
+    #endif
+
+  If the build file has a conditional dependency on the corresponding target
+  that matches the conditional include, everything will always link correctly:
+
+    source_set("mytarget") {
+      ...
+      if (enable_doom_melon) {
+        defines = [ "ENABLE_DOOM_MELON" ]
+        deps += [ "//tools/doom_melon" ]
+      }
+
+  But GN's header checker does not understand preprocessor directives, won't
+  know it matches the build dependencies, and will flag this include as
+  incorrect when the condition is false.
+
+More information
+
+  The topic "gn help check" has general information on how checking works and
+  advice on fixing problems. Targets can also opt-out of checking, see
+  "gn help check_includes".
+)";
 
 const char kCheck[] = "check";
 const char kCheck_HelpShort[] =
     "check: Check header dependencies.";
 const char kCheck_Help[] =
-    "gn check <out_dir> [<label_pattern>] [--force]\n"
-    "\n"
-    "  GN's include header checker validates that the includes for C-like\n"
-    "  source files match the build dependency graph.\n"
-    "\n"
-    "  \"gn check\" is the same thing as \"gn gen\" with the \"--check\" flag\n"
-    "  except that this command does not write out any build files. It's\n"
-    "  intended to be an easy way to manually trigger include file checking.\n"
-    "\n"
-    "  The <label_pattern> can take exact labels or patterns that match more\n"
-    "  than one (although not general regular expressions). If specified,\n"
-    "  only those matching targets will be checked. See\n"
-    "  \"gn help label_pattern\" for details.\n"
-    "\n"
-    "Command-specific switches\n"
-    "\n"
-    "  --force\n"
-    "      Ignores specifications of \"check_includes = false\" and checks\n"
-    "      all target's files that match the target label.\n"
-    "\n"
-    "What gets checked\n"
-    "\n"
-    "  The .gn file may specify a list of targets to be checked. Only these\n"
-    "  targets will be checked if no label_pattern is specified on the\n"
-    "  command line. Otherwise, the command-line list is used instead. See\n"
-    "  \"gn help dotfile\".\n"
-    "\n"
-    "  Targets can opt-out from checking with \"check_includes = false\"\n"
-    "  (see \"gn help check_includes\").\n"
-    "\n"
-    "  For targets being checked:\n"
-    "\n"
-    "    - GN opens all C-like source files in the targets to be checked and\n"
-    "      scans the top for includes.\n"
-    "\n"
-    "    - Includes with a \"nogncheck\" annotation are skipped (see\n"
-    "      \"gn help nogncheck\").\n"
-    "\n"
-    "    - Only includes using \"quotes\" are checked. <brackets> are assumed\n"
-    "      to be system includes.\n"
-    "\n"
-    "    - Include paths are assumed to be relative to either the source root\n"
-    "      or the \"root_gen_dir\" and must include all the path components.\n"
-    "      (It might be nice in the future to incorporate GN's knowledge of\n"
-    "      the include path to handle other include styles.)\n"
-    "\n"
-    "    - GN does not run the preprocessor so will not understand\n"
-    "      conditional includes.\n"
-    "\n"
-    "    - Only includes matching known files in the build are checked:\n"
-    "      includes matching unknown paths are ignored.\n"
-    "\n"
-    "  For an include to be valid:\n"
-    "\n"
-    "    - The included file must be in the current target, or there must\n"
-    "      be a path following only public dependencies to a target with the\n"
-    "      file in it (\"gn path\" is a good way to diagnose problems).\n"
-    "\n"
-    "    - There can be multiple targets with an included file: only one\n"
-    "      needs to be valid for the include to be allowed.\n"
-    "\n"
-    "    - If there are only \"sources\" in a target, all are considered to\n"
-    "      be public and can be included by other targets with a valid public\n"
-    "      dependency path.\n"
-    "\n"
-    "    - If a target lists files as \"public\", only those files are\n"
-    "      able to be included by other targets. Anything in the sources\n"
-    "      will be considered private and will not be includable regardless\n"
-    "      of dependency paths.\n"
-    "\n"
-    "    - Ouptuts from actions are treated like public sources on that\n"
-    "      target.\n"
-    "\n"
-    "    - A target can include headers from a target that depends on it\n"
-    "      if the other target is annotated accordingly. See\n"
-    "      \"gn help allow_circular_includes_from\".\n"
-    "\n"
-    "Advice on fixing problems\n"
-    "\n"
-    "  If you have a third party project that uses relative includes,\n"
-    "  it's generally best to exclude that target from checking altogether\n"
-    "  via \"check_includes = false\".\n"
-    "\n"
-    "  If you have conditional includes, make sure the build conditions\n"
-    "  and the preprocessor conditions match, and annotate the line with\n"
-    "  \"nogncheck\" (see \"gn help nogncheck\" for an example).\n"
-    "\n"
-    "  If two targets are hopelessly intertwined, use the\n"
-    "  \"allow_circular_includes_from\" annotation. Ideally each should have\n"
-    "  identical dependencies so configs inherited from those dependencies\n"
-    "  are consistent (see \"gn help allow_circular_includes_from\").\n"
-    "\n"
-    "  If you have a standalone header file or files that need to be shared\n"
-    "  between a few targets, you can consider making a source_set listing\n"
-    "  only those headers as public sources. With only header files, the\n"
-    "  source set will be a no-op from a build perspective, but will give a\n"
-    "  central place to refer to those headers. That source set's files\n"
-    "  will still need to pass \"gn check\" in isolation.\n"
-    "\n"
-    "  In rare cases it makes sense to list a header in more than one\n"
-    "  target if it could be considered conceptually a member of both.\n"
-    "\n"
-    "Examples\n"
-    "\n"
-    "  gn check out/Debug\n"
-    "      Check everything.\n"
-    "\n"
-    "  gn check out/Default //foo:bar\n"
-    "      Check only the files in the //foo:bar target.\n"
-    "\n"
-    "  gn check out/Default \"//foo/*\n"
-    "      Check only the files in targets in the //foo directory tree.\n";
+    R"(gn check <out_dir> [<label_pattern>] [--force]
+
+  GN's include header checker validates that the includes for C-like source
+  files match the build dependency graph.
+
+  "gn check" is the same thing as "gn gen" with the "--check" flag except that
+  this command does not write out any build files. It's intended to be an easy
+  way to manually trigger include file checking.
+
+  The <label_pattern> can take exact labels or patterns that match more than
+  one (although not general regular expressions). If specified, only those
+  matching targets will be checked. See "gn help label_pattern" for details.
+
+Command-specific switches
+
+  --force
+      Ignores specifications of "check_includes = false" and checks all
+      target's files that match the target label.
+
+What gets checked
+
+  The .gn file may specify a list of targets to be checked. Only these targets
+  will be checked if no label_pattern is specified on the command line.
+  Otherwise, the command-line list is used instead. See "gn help dotfile".
+
+  Targets can opt-out from checking with "check_includes = false" (see
+  "gn help check_includes").
+
+  For targets being checked:
+
+    - GN opens all C-like source files in the targets to be checked and scans
+      the top for includes.
+
+    - Includes with a "nogncheck" annotation are skipped (see
+      "gn help nogncheck").
+
+    - Only includes using "quotes" are checked. <brackets> are assumed to be
+      system includes.
+
+    - Include paths are assumed to be relative to either the source root or the
+      "root_gen_dir" and must include all the path components. (It might be
+      nice in the future to incorporate GN's knowledge of the include path to
+      handle other include styles.)
+
+    - GN does not run the preprocessor so will not understand conditional
+      includes.
+
+    - Only includes matching known files in the build are checked: includes
+      matching unknown paths are ignored.
+
+  For an include to be valid:
+
+    - The included file must be in the current target, or there must be a path
+      following only public dependencies to a target with the file in it
+      ("gn path" is a good way to diagnose problems).
+
+    - There can be multiple targets with an included file: only one needs to be
+      valid for the include to be allowed.
+
+    - If there are only "sources" in a target, all are considered to be public
+      and can be included by other targets with a valid public dependency path.
+
+    - If a target lists files as "public", only those files are able to be
+      included by other targets. Anything in the sources will be considered
+      private and will not be includable regardless of dependency paths.
+
+    - Ouptuts from actions are treated like public sources on that target.
+
+    - A target can include headers from a target that depends on it if the
+      other target is annotated accordingly. See "gn help
+      allow_circular_includes_from".
+
+Advice on fixing problems
+
+  If you have a third party project that uses relative includes, it's generally
+  best to exclude that target from checking altogether via
+  "check_includes = false".
+
+  If you have conditional includes, make sure the build conditions and the
+  preprocessor conditions match, and annotate the line with "nogncheck" (see
+  "gn help nogncheck" for an example).
+
+  If two targets are hopelessly intertwined, use the
+  "allow_circular_includes_from" annotation. Ideally each should have identical
+  dependencies so configs inherited from those dependencies are consistent (see
+  "gn help allow_circular_includes_from").
+
+  If you have a standalone header file or files that need to be shared between
+  a few targets, you can consider making a source_set listing only those
+  headers as public sources. With only header files, the source set will be a
+  no-op from a build perspective, but will give a central place to refer to
+  those headers. That source set's files will still need to pass "gn check" in
+  isolation.
+
+  In rare cases it makes sense to list a header in more than one target if it
+  could be considered conceptually a member of both.
+
+Examples
+
+  gn check out/Debug
+      Check everything.
+
+  gn check out/Default //foo:bar
+      Check only the files in the //foo:bar target.
+
+  gn check out/Default "//foo/*
+      Check only the files in targets in the //foo directory tree.
+)";
 
 int RunCheck(const std::vector<std::string>& args) {
   if (args.size() != 1 && args.size() != 2) {

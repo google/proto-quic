@@ -51,6 +51,17 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
     PROBE_RTT,
   };
 
+  // Indicates how the congestion control limits the amount of bytes in flight.
+  enum RecoveryState {
+    // Do not limit.
+    NOT_IN_RECOVERY,
+    // Allow an extra outstanding byte for each byte acknowledged.
+    CONSERVATION,
+    // Allow two extra outstanding bytes for each byte acknowledged (slow
+    // start).
+    GROWTH
+  };
+
   // Debug state can be exported in order to troubleshoot potential congestion
   // control issues.
   struct DebugState {
@@ -69,6 +80,9 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
 
     QuicTime::Delta min_rtt;
     QuicTime min_rtt_timestamp;
+
+    RecoveryState recovery_state;
+    QuicByteCount recovery_window;
 
     bool last_sample_is_app_limited;
   };
@@ -160,11 +174,19 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   void MaybeEnterOrExitProbeRtt(QuicTime now,
                                 bool is_round_start,
                                 bool min_rtt_expired);
+  // Determines whether BBR needs to enter, exit or advance state of the
+  // recovery.
+  void UpdateRecoveryState(QuicPacketNumber last_acked_packet,
+                           bool has_losses,
+                           bool is_round_start);
 
   // Determines the appropriate pacing rate for the connection.
   void CalculatePacingRate();
   // Determines the appropriate congestion window for the connection.
   void CalculateCongestionWindow(QuicByteCount bytes_acked);
+  // Determines the approriate window that constrains the in-flight during
+  // recovery.
+  void CalculateRecoveryWindow(QuicByteCount bytes_acked);
 
   const QuicClock* clock_;
   const RttStats* rtt_stats_;
@@ -239,6 +261,14 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // Indicates whether the most recent bandwidth sample was marked as
   // app-limited.
   bool last_sample_is_app_limited_;
+
+  // Current state of recovery.
+  RecoveryState recovery_state_;
+  // Receiving acknowledgement of a packet after |end_recovery_at_| will cause
+  // BBR to exit the recovery mode.
+  QuicPacketNumber end_recovery_at_;
+  // A window used to limit the number of bytes in flight during loss recovery.
+  QuicByteCount recovery_window_;
 
   DISALLOW_COPY_AND_ASSIGN(BbrSender);
 };

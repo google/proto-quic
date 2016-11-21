@@ -197,6 +197,84 @@ bool RecursiveCheckAssertNoDeps(const Target* target,
 
 }  // namespace
 
+const char kExecution_Help[] =
+    R"(Build graph and execution overview
+
+Overall build flow
+
+  1. Look for ".gn" file (see "gn help dotfile") in the current directory and
+     walk up the directory tree until one is found. Set this directory to be
+     the "source root" and interpret this file to find the name of the build
+     config file.
+
+  2. Execute the build config file identified by .gn to set up the global
+     variables and default toolchain name. Any arguments, variables, defaults,
+     etc. set up in this file will be visible to all files in the build.
+
+  3. Load the //BUILD.gn (in the source root directory).
+
+  4. Recursively evaluate rules and load BUILD.gn in other directories as
+     necessary to resolve dependencies. If a BUILD file isn't found in the
+     specified location, GN will look in the corresponding location inside
+     the secondary_source defined in the dotfile (see "gn help dotfile").
+
+  5. When a target's dependencies are resolved, write out the `.ninja`
+     file to disk.
+
+  6. When all targets are resolved, write out the root build.ninja file.
+
+Executing target definitions and templates
+
+  Build files are loaded in parallel. This means it is impossible to
+  interrogate a target from GN code for any information not derivable from its
+  label (see "gn help label"). The exception is the get_target_outputs()
+  function which requires the target being interrogated to have been defined
+  previously in the same file.
+
+  Targets are declared by their type and given a name:
+
+    static_library("my_static_library") {
+      ... target parameter definitions ...
+    }
+
+  There is also a generic "target" function for programatically defined types
+  (see "gn help target"). You can define new types using templates (see "gn
+  help template"). A template defines some custom code that expands to one or
+  more other targets.
+
+  Before executing the code inside the target's { }, the target defaults are
+  applied (see "gn help set_defaults"). It will inject implicit variable
+  definitions that can be overridden by the target code as necessary. Typically
+  this mechanism is used to inject a default set of configs that define the
+  global compiler and linker flags.
+
+Which targets are built
+
+  All targets encountered in the default toolchain (see "gn help toolchain")
+  will have build rules generated for them, even if no other targets reference
+  them. Their dependencies must resolve and they will be added to the implicit
+  "all" rule (see "gn help ninja_rules").
+
+  Targets in non-default toolchains will only be generated when they are
+  required (directly or transitively) to build a target in the default
+  toolchain.
+
+  See also "gn help ninja_rules".
+
+Dependencies
+
+  The only difference between "public_deps" and "deps" except for pushing
+  configs around the build tree and allowing includes for the purposes of "gn
+  check".
+
+  A target's "data_deps" are guaranteed to be built whenever the target is
+  built, but the ordering is not defined. The meaning of this is dependencies
+  required at runtime. Currently data deps will be complete before the target
+  is linked, but this is not semantically guaranteed and this is undesirable
+  from a build performance perspective. Since we hope to change this in the
+  future, do not rely on this behavior.
+)";
+
 Target::Target(const Settings* settings, const Label& label)
     : Item(settings, label),
       output_type_(UNKNOWN),
@@ -300,15 +378,13 @@ bool Target::OnResolved(Err* err) {
 
   FillOutputFiles();
 
-  if (settings()->build_settings()->check_for_bad_items()) {
-    if (!CheckVisibility(err))
-      return false;
-    if (!CheckTestonly(err))
-      return false;
-    if (!CheckAssertNoDeps(err))
-      return false;
-    CheckSourcesGenerated();
-  }
+  if (!CheckVisibility(err))
+    return false;
+  if (!CheckTestonly(err))
+    return false;
+  if (!CheckAssertNoDeps(err))
+    return false;
+  CheckSourcesGenerated();
 
   if (!write_runtime_deps_output_.value().empty())
     g_scheduler->AddWriteRuntimeDepsTarget(this);

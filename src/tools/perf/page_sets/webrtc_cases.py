@@ -168,8 +168,10 @@ class Page9(WebrtcPage):
                                          repeatable=False):
       # Set the number of peer connections to create to 15.
       action_runner.ExecuteJavaScript(
-          'document.getElementById("peer-connections-input").value=15')
-      action_runner.ClickElement('button[id="start-test-button"]')
+          'document.getElementById("num-peerconnections").value=15')
+      action_runner.ExecuteJavaScript(
+          'document.getElementById("cpuoveruse-detection").checked=false')
+      action_runner.ClickElement('button[id="start-test"]')
       action_runner.Wait(45)
 
 

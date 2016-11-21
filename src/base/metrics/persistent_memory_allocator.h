@@ -224,6 +224,19 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // TIME before accessing it or risk crashing! Once dereferenced, the pointer
   // is safe to reuse forever.
   //
+  // IMPORTANT: If there is any possibility that this allocator will be shared
+  // across different CPU architectures (perhaps because it is being persisted
+  // to disk), then it is essential that the object be of a fixed size. All
+  // fields must be of a defined type that does not change across CPU architec-
+  // tures or natural word sizes (i.e. 32/64 bit). Acceptable are char and
+  // (u)intXX_t. Unacceptable are int, bool, or wchar_t which are implemen-
+  // tation defined with regards to their size.
+  //
+  // ALSO: Alignment must be consistent. A uint64_t after a uint32_t will pad
+  // differently between 32 and 64 bit architectures. Either put the bigger
+  // elements first, group smaller elements into blocks the size of larger
+  // elements, or manually insert padding fields as appropriate.
+  //
   // NOTE: Though this method will guarantee that an object of the specified
   // type can be accessed without going outside the bounds of the memory
   // segment, it makes no guarantees of the validity of the data within the

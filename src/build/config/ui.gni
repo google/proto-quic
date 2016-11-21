@@ -43,9 +43,6 @@ declare_args() {
   # Whether we should use GTKv3 instead of GTKv2.
   use_gtk3 = false
 
-  # Optional system libraries.
-  use_xkbcommon = false
-
   # Whether we should use glib, a low level C utility library.
   use_glib = is_linux
 
@@ -54,9 +51,6 @@ declare_args() {
 
   # Enable experimental vulkan backend.
   enable_vulkan = false
-
-  # Allow aura to access x11 clipboard.
-  enable_clipboard_aurax11 = false
 }
 
 # Additional dependent variables -----------------------------------------------
@@ -66,8 +60,6 @@ declare_args() {
 # Use GPU accelerated cross process image transport by default on linux builds
 # with the Aura window manager.
 ui_compositor_image_transport = use_aura && is_linux
-
-use_default_render_theme = use_aura && !is_android
 
 # Indicates if the UI toolkit depends on X11.
 use_x11 = is_linux && !use_ozone
@@ -87,9 +79,6 @@ if (is_linux && !use_ozone) {
 
 # Whether to use atk, the Accessibility ToolKit library
 use_atk = is_desktop_linux && use_x11
-
-use_clipboard_aurax11 =
-    (is_desktop_linux && use_aura && use_x11) || enable_clipboard_aurax11
 # =============================================
 #   PLEASE DO NOT ADD MORE FLAGS TO THIS FILE
 # =============================================

@@ -21,7 +21,6 @@
 #include "base/stl_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "base/values.h"
 #include "build/build_config.h"
@@ -55,9 +54,8 @@
 #include "net/log/net_log_event_type.h"
 #include "net/proxy/proxy_server.h"
 #include "net/socket/client_socket_factory.h"
+#include "net/socket/next_proto.h"
 #include "net/socket/socks_client_socket_pool.h"
-#include "net/socket/ssl_client_socket.h"
-#include "net/socket/ssl_client_socket_pool.h"
 #include "net/socket/transport_client_socket_pool.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_session.h"
@@ -472,8 +470,8 @@ void HttpNetworkTransaction::OnStreamReady(const SSLConfig& used_ssl_config,
   server_ssl_config_ = used_ssl_config;
   proxy_info_ = used_proxy_info;
   response_.was_alpn_negotiated = stream_request_->was_alpn_negotiated();
-  response_.alpn_negotiated_protocol = SSLClientSocket::NextProtoToString(
-      stream_request_->negotiated_protocol());
+  response_.alpn_negotiated_protocol =
+      NextProtoToString(stream_request_->negotiated_protocol());
   response_.was_fetched_via_spdy = stream_request_->using_spdy();
   response_.was_fetched_via_proxy = !proxy_info_.is_direct();
   if (response_.was_fetched_via_proxy && !proxy_info_.is_empty())
@@ -593,9 +591,10 @@ void HttpNetworkTransaction::GetConnectionAttempts(
   *out = connection_attempts_;
 }
 
-void HttpNetworkTransaction::OnThrottleStateChanged() {
+void HttpNetworkTransaction::OnThrottleUnblocked(
+    NetworkThrottleManager::Throttle* throttle) {
   // TODO(rdsmith): This DCHECK is dependent on the only transition
-  // being from throttled->unthrottled.  That is true right now, but may not
+  // being from blocked->unblocked.  That is true right now, but may not
   // be so in the future.
   DCHECK_EQ(STATE_THROTTLE_COMPLETE, next_state_);
 
@@ -798,11 +797,12 @@ int HttpNetworkTransaction::DoLoop(int result) {
 }
 
 int HttpNetworkTransaction::DoThrottle() {
+  DCHECK(!throttle_);
   throttle_ = session_->throttler()->CreateThrottle(
       this, priority_, (request_->load_flags & LOAD_IGNORE_LIMITS) != 0);
   next_state_ = STATE_THROTTLE_COMPLETE;
 
-  if (throttle_->IsThrottled()) {
+  if (throttle_->IsBlocked()) {
     net_log_.BeginEvent(NetLogEventType::HTTP_TRANSACTION_THROTTLED);
     return ERR_IO_PENDING;
   }
@@ -812,7 +812,7 @@ int HttpNetworkTransaction::DoThrottle() {
 
 int HttpNetworkTransaction::DoThrottleComplete() {
   DCHECK(throttle_);
-  DCHECK(!throttle_->IsThrottled());
+  DCHECK(!throttle_->IsBlocked());
 
   next_state_ = STATE_NOTIFY_BEFORE_CREATE_STREAM;
 

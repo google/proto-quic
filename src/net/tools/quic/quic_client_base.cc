@@ -215,7 +215,7 @@ void QuicClientBase::SendRequest(const SpdyHeaderBlock& headers,
     return;
   }
 
-  QuicSpdyClientStream* stream = CreateReliableClientStream();
+  QuicSpdyClientStream* stream = CreateClientStream();
   if (stream == nullptr) {
     QUIC_BUG << "stream creation failed!";
     return;
@@ -248,7 +248,7 @@ void QuicClientBase::SendRequestsAndWaitForResponse(
   }
 }
 
-QuicSpdyClientStream* QuicClientBase::CreateReliableClientStream() {
+QuicSpdyClientStream* QuicClientBase::CreateClientStream() {
   if (!connected()) {
     return nullptr;
   }

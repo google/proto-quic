@@ -25,6 +25,11 @@ class TestRun(object):
     raise NotImplementedError
 
   def RunTests(self):
+    """Runs Tests and returns test results.
+
+    Returns:
+      Should return list of |base_test_result.TestRunResults| objects.
+    """
     raise NotImplementedError
 
   def TearDown(self):

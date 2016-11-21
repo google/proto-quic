@@ -110,10 +110,13 @@ static const int kMaxUDPSize = 512;
 static const int kMaxMulticastSize = 9000;
 
 // DNS class types.
+//
+// https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-2
 static const uint16_t kClassIN = 1;
 
-// DNS resource record types. See
-// http://www.iana.org/assignments/dns-parameters
+// DNS resource record types.
+//
+// https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
 static const uint16_t kTypeA = 1;
 static const uint16_t kTypeCNAME = 5;
 static const uint16_t kTypePTR = 12;
@@ -122,7 +125,9 @@ static const uint16_t kTypeAAAA = 28;
 static const uint16_t kTypeSRV = 33;
 static const uint16_t kTypeNSEC = 47;
 
-// DNS rcode values.
+// DNS reply codes (RCODEs).
+//
+// https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-6
 static const uint8_t kRcodeMask = 0xf;
 static const uint8_t kRcodeNOERROR = 0;
 static const uint8_t kRcodeFORMERR = 1;

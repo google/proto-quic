@@ -69,18 +69,18 @@ def print_results(results, columns, buckets):
 def generate_version(source):
   """Generates the sha-1 based on the content of this zip.
 
-  Copied from:
-  https://code.google.com/p/swarming/source/browse/services/swarming/swarm_bot/zipped_archive.py
+  Copied from ../utils/zip_package.py.
   """
-  result = hashlib.sha1()
+  h = hashlib.sha1()
   with zipfile.ZipFile(source, 'r') as z:
-    for item in sorted(z.namelist()):
-      with z.open(item) as f:
-        result.update(item)
-        result.update('\x00')
-        result.update(f.read())
-        result.update('\x00')
-  return result.hexdigest()
+    for name in sorted(z.namelist()):
+      with z.open(name) as f:
+        h.update(str(len(name)))
+        h.update(name)
+        content = f.read()
+        h.update(str(len(content)))
+        h.update(content)
+  return h.hexdigest()
 
 
 def calculate_version(url):

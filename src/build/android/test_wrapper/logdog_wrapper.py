@@ -72,7 +72,16 @@ def main():
                 '-service-account-json', args.service_account_json,
                 'stream', '-source', args.source,
                 '-stream', '-name=%s' % args.name]
-  if os.path.exists(args.logdog_bin_cmd):
+
+  if not os.path.exists(args.logdog_bin_cmd):
+    logging.error(
+        'Logfog binary %s unavailable. Unable to upload logcats.',
+        args.logdog_bin_cmd)
+  elif not os.path.exists(args.source):
+    logging.error(
+        'Logcat sources not found at %s. Unable to upload logcats.',
+        args.source)
+  else:
     subprocess.call(logdog_cmd)
     logging.info('Logcats are located at: %s', url)
   return result

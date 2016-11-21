@@ -8,6 +8,7 @@
 
 #include "base/stl_util.h"
 #include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/core/quic_flags.h"
 
 namespace net {
 
@@ -82,6 +83,8 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     IPEndPoint server_address,
     IPEndPoint client_address,
     bool is_chlo) {
+  QUIC_BUG_IF(!FLAGS_quic_allow_chlo_buffering)
+      << "Shouldn't buffer packets if disabled via flag.";
   QUIC_BUG_IF(is_chlo &&
               base::ContainsKey(connections_with_chlo_, connection_id))
       << "Shouldn't buffer duplicated CHLO on connection " << connection_id;

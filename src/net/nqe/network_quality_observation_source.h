@@ -15,24 +15,37 @@ enum NetworkQualityObservationSource {
   // The observation was taken at the request layer, e.g., a round trip time
   // is recorded as the time between the request being sent and the first byte
   // being received.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_URL_REQUEST = 0,
+  NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP = 0,
 
   // The observation is taken from TCP statistics maintained by the kernel.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_TCP,
+  NETWORK_QUALITY_OBSERVATION_SOURCE_TCP = 1,
 
   // The observation is taken at the QUIC layer.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC,
+  NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC = 2,
 
-  // The observation is a previously cached estimate of the metric.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_CACHED_ESTIMATE,
+  // The observation is a previously cached estimate of the metric.  The metric
+  // was computed at the HTTP layer.
+  NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP_CACHED_ESTIMATE = 3,
 
   // The observation is derived from network connection information provided
   // by the platform. For example, typical RTT and throughput values are used
-  // for a given type of network connection.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_FROM_PLATFORM,
+  // for a given type of network connection.  The metric was provided for use
+  // at the HTTP layer.
+  NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_HTTP_FROM_PLATFORM = 4,
 
-  // The observation came from a Chromium-external source.
-  NETWORK_QUALITY_OBSERVATION_SOURCE_EXTERNAL_ESTIMATE,
+  // The observation came from a Chromium-external source. The metric was
+  // computed by the external source at the HTTP layer.
+  NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP_EXTERNAL_ESTIMATE = 5,
+
+  // The observation is a previously cached estimate of the metric. The metric
+  // was computed at the transport layer.
+  NETWORK_QUALITY_OBSERVATION_SOURCE_TRANSPORT_CACHED_ESTIMATE = 6,
+
+  // The observation is derived from the network connection information provided
+  // by the platform. For example, typical RTT and throughput values are used
+  // for a given type of network connection.  The metric was provided for use
+  // at the transport layer.
+  NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_TRANSPORT_FROM_PLATFORM = 7,
 
   NETWORK_QUALITY_OBSERVATION_SOURCE_MAX,
 };

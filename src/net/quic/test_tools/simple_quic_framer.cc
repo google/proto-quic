@@ -116,23 +116,23 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   void OnPacketComplete() override {}
 
   const QuicPacketHeader& header() const { return header_; }
-  const vector<QuicAckFrame>& ack_frames() const { return ack_frames_; }
-  const vector<QuicConnectionCloseFrame>& connection_close_frames() const {
+  const std::vector<QuicAckFrame>& ack_frames() const { return ack_frames_; }
+  const std::vector<QuicConnectionCloseFrame>& connection_close_frames() const {
     return connection_close_frames_;
   }
-  const vector<QuicGoAwayFrame>& goaway_frames() const {
+  const std::vector<QuicGoAwayFrame>& goaway_frames() const {
     return goaway_frames_;
   }
-  const vector<QuicRstStreamFrame>& rst_stream_frames() const {
+  const std::vector<QuicRstStreamFrame>& rst_stream_frames() const {
     return rst_stream_frames_;
   }
-  const vector<std::unique_ptr<QuicStreamFrame>>& stream_frames() const {
+  const std::vector<std::unique_ptr<QuicStreamFrame>>& stream_frames() const {
     return stream_frames_;
   }
-  const vector<QuicStopWaitingFrame>& stop_waiting_frames() const {
+  const std::vector<QuicStopWaitingFrame>& stop_waiting_frames() const {
     return stop_waiting_frames_;
   }
-  const vector<QuicPingFrame>& ping_frames() const { return ping_frames_; }
+  const std::vector<QuicPingFrame>& ping_frames() const { return ping_frames_; }
   const QuicVersionNegotiationPacket* version_negotiation_packet() const {
     return version_negotiation_packet_.get();
   }
@@ -143,18 +143,18 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   QuicPacketHeader header_;
   std::unique_ptr<QuicVersionNegotiationPacket> version_negotiation_packet_;
   std::unique_ptr<QuicPublicResetPacket> public_reset_packet_;
-  vector<QuicAckFrame> ack_frames_;
-  vector<QuicStopWaitingFrame> stop_waiting_frames_;
-  vector<QuicPaddingFrame> padding_frames_;
-  vector<QuicPingFrame> ping_frames_;
-  vector<std::unique_ptr<QuicStreamFrame>> stream_frames_;
-  vector<QuicRstStreamFrame> rst_stream_frames_;
-  vector<QuicGoAwayFrame> goaway_frames_;
-  vector<QuicConnectionCloseFrame> connection_close_frames_;
-  vector<QuicWindowUpdateFrame> window_update_frames_;
-  vector<QuicBlockedFrame> blocked_frames_;
-  vector<QuicPathCloseFrame> path_close_frames_;
-  vector<std::unique_ptr<string>> stream_data_;
+  std::vector<QuicAckFrame> ack_frames_;
+  std::vector<QuicStopWaitingFrame> stop_waiting_frames_;
+  std::vector<QuicPaddingFrame> padding_frames_;
+  std::vector<QuicPingFrame> ping_frames_;
+  std::vector<std::unique_ptr<QuicStreamFrame>> stream_frames_;
+  std::vector<QuicRstStreamFrame> rst_stream_frames_;
+  std::vector<QuicGoAwayFrame> goaway_frames_;
+  std::vector<QuicConnectionCloseFrame> connection_close_frames_;
+  std::vector<QuicWindowUpdateFrame> window_update_frames_;
+  std::vector<QuicBlockedFrame> blocked_frames_;
+  std::vector<QuicPathCloseFrame> path_close_frames_;
+  std::vector<std::unique_ptr<string>> stream_data_;
 
   DISALLOW_COPY_AND_ASSIGN(SimpleFramerVisitor);
 };
@@ -203,33 +203,34 @@ size_t SimpleQuicFramer::num_frames() const {
          connection_close_frames().size();
 }
 
-const vector<QuicAckFrame>& SimpleQuicFramer::ack_frames() const {
+const std::vector<QuicAckFrame>& SimpleQuicFramer::ack_frames() const {
   return visitor_->ack_frames();
 }
 
-const vector<QuicStopWaitingFrame>& SimpleQuicFramer::stop_waiting_frames()
+const std::vector<QuicStopWaitingFrame>& SimpleQuicFramer::stop_waiting_frames()
     const {
   return visitor_->stop_waiting_frames();
 }
 
-const vector<QuicPingFrame>& SimpleQuicFramer::ping_frames() const {
+const std::vector<QuicPingFrame>& SimpleQuicFramer::ping_frames() const {
   return visitor_->ping_frames();
 }
 
-const vector<std::unique_ptr<QuicStreamFrame>>&
+const std::vector<std::unique_ptr<QuicStreamFrame>>&
 SimpleQuicFramer::stream_frames() const {
   return visitor_->stream_frames();
 }
 
-const vector<QuicRstStreamFrame>& SimpleQuicFramer::rst_stream_frames() const {
+const std::vector<QuicRstStreamFrame>& SimpleQuicFramer::rst_stream_frames()
+    const {
   return visitor_->rst_stream_frames();
 }
 
-const vector<QuicGoAwayFrame>& SimpleQuicFramer::goaway_frames() const {
+const std::vector<QuicGoAwayFrame>& SimpleQuicFramer::goaway_frames() const {
   return visitor_->goaway_frames();
 }
 
-const vector<QuicConnectionCloseFrame>&
+const std::vector<QuicConnectionCloseFrame>&
 SimpleQuicFramer::connection_close_frames() const {
   return visitor_->connection_close_frames();
 }

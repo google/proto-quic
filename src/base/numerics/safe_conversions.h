@@ -41,28 +41,33 @@ constexpr typename std::enable_if<!std::numeric_limits<T>::is_signed,
   return false;
 }
 
-// checked_cast<> is analogous to static_cast<> for numeric types,
-// except that it CHECKs that the specified numeric conversion will not
-// overflow or underflow. NaN source will always trigger a CHECK.
-template <typename Dst, typename Src>
-inline Dst checked_cast(Src value) {
-  CHECK(IsValueInRangeForNumericType<Dst>(value));
-  return static_cast<Dst>(value);
-}
-
-// HandleNaN will cause this class to CHECK(false).
-struct SaturatedCastNaNBehaviorCheck {
+// Just fires a CHECK(false). Used for numeric boundary errors.
+struct CheckOnFailure {
   template <typename T>
-  static T HandleNaN() {
+  static T HandleFailure() {
     CHECK(false);
     return T();
   }
 };
 
+// checked_cast<> is analogous to static_cast<> for numeric types,
+// except that it CHECKs that the specified numeric conversion will not
+// overflow or underflow. NaN source will always trigger a CHECK.
+template <typename Dst,
+          class CheckHandler = CheckOnFailure,
+          typename Src>
+constexpr Dst checked_cast(Src value) {
+  // This throws a compile-time error on evaluating the constexpr if it can be
+  // determined at compile-time as failing, otherwise it will CHECK at runtime.
+  return IsValueInRangeForNumericType<Dst>(value)
+             ? static_cast<Dst>(value)
+             : CheckHandler::template HandleFailure<Dst>();
+}
+
 // HandleNaN will return 0 in this case.
 struct SaturatedCastNaNBehaviorReturnZero {
   template <typename T>
-  static constexpr T HandleNaN() {
+  static constexpr T HandleFailure() {
     return T();
   }
 };
@@ -80,7 +85,7 @@ constexpr Dst saturated_cast_impl(const Src value,
                     : (constraint == RANGE_OVERFLOW
                            ? std::numeric_limits<Dst>::max()
                            : (constraint == RANGE_INVALID
-                                  ? NaNHandler::template HandleNaN<Dst>()
+                                  ? NaNHandler::template HandleFailure<Dst>()
                                   : (NOTREACHED(), static_cast<Dst>(value)))));
 }
 }  // namespace internal

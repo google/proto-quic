@@ -189,5 +189,22 @@ void TestHeadersHandler::OnHeaderBlockEnd(
   header_bytes_parsed_ = header_bytes_parsed;
 }
 
+TestServerPushDelegate::TestServerPushDelegate() {}
+
+TestServerPushDelegate::~TestServerPushDelegate() {}
+
+void TestServerPushDelegate::OnPush(
+    std::unique_ptr<ServerPushHelper> push_helper) {
+  push_helpers[push_helper->GetURL()] = std::move(push_helper);
+}
+
+bool TestServerPushDelegate::CancelPush(GURL url) {
+  auto itr = push_helpers.find(url);
+  DCHECK(itr != push_helpers.end());
+  itr->second->Cancel();
+  push_helpers.erase(itr);
+  return true;
+}
+
 }  // namespace test
 }  // namespace net

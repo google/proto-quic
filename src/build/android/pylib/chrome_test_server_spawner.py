@@ -321,7 +321,14 @@ class SpawningServerRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     logging.info(content_length)
     test_server_argument_json = self.rfile.read(content_length)
     logging.info(test_server_argument_json)
-    assert not self.server.test_server_instance
+    # There should only be one test server instance at a time. However it may
+    # be possible that a previous instance was not cleaned up properly
+    # (crbug.com/665686)
+    if self.server.test_server_instance:
+      port = self.server.test_server_instance.host_port
+      logging.info('Killing lingering test server instance on port: %d', port)
+      self.server.test_server_instance.Stop()
+      self.server.test_server_instance = None
     ready_event = threading.Event()
     self.server.test_server_instance = TestServerThread(
         ready_event,

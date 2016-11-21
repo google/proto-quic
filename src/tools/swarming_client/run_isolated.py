@@ -27,10 +27,12 @@ state of the host to tasks. It is written to by the swarming bot's
 on_before_task() hook in the swarming server's custom bot_config.py.
 """
 
-__version__ = '0.8.5'
+__version__ = '0.9'
 
+import argparse
 import base64
 import collections
+import json
 import logging
 import optparse
 import os
@@ -52,6 +54,7 @@ from utils import zip_package
 import auth
 import cipd
 import isolateserver
+import named_cache
 
 
 # Absolute path to this file (can be None if running from zip on Mac).
@@ -118,6 +121,7 @@ def get_as_zip_package(executable=True):
   package.add_python_file(os.path.join(BASE_DIR, 'isolateserver.py'))
   package.add_python_file(os.path.join(BASE_DIR, 'auth.py'))
   package.add_python_file(os.path.join(BASE_DIR, 'cipd.py'))
+  package.add_python_file(os.path.join(BASE_DIR, 'named_cache.py'))
   package.add_directory(os.path.join(BASE_DIR, 'libs'))
   package.add_directory(os.path.join(BASE_DIR, 'third_party'))
   package.add_directory(os.path.join(BASE_DIR, 'utils'))
@@ -287,6 +291,25 @@ def fetch_and_map(isolated_hash, storage, cache, outdir, use_symlinks):
   }
 
 
+def link_outputs_to_outdir(run_dir, out_dir, outputs):
+  """Links any named outputs to out_dir so they can be uploaded.
+
+  Raises an error if the file already exists in that directory.
+  """
+  if not outputs:
+    return
+  isolateserver.create_directories(out_dir, outputs)
+  for o in outputs:
+    try:
+      file_path.link_file(
+          os.path.join(out_dir, o),
+          os.path.join(run_dir, o),
+          file_path.HARDLINK_WITH_FALLBACK)
+    except OSError as e:
+      # TODO(aludwin): surface this error
+      sys.stderr.write('<Could not return file %s: %s>' % (o, e))
+
+
 def delete_and_upload(storage, out_dir, leak_temp_dir):
   """Deletes the temporary run directory and uploads results back.
 
@@ -299,7 +322,6 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
           behind.
     - stats: uploading stats.
   """
-
   # Upload out_dir and generate a .isolated file out of this directory. It is
   # only done if files were written in the directory.
   outputs_ref = None
@@ -349,15 +371,16 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
 
 
 def map_and_run(
-    command, isolated_hash, storage, cache, leak_temp_dir, root_dir,
-    hard_timeout, grace_period, bot_file, extra_args, install_packages_fn,
-    use_symlinks):
+    command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
+    leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file, extra_args,
+    install_packages_fn, use_symlinks):
   """Runs a command with optional isolated input/output.
 
   See run_tha_test for argument documentation.
 
   Returns metadata about the result.
   """
+  assert root_dir or root_dir is None
   assert bool(command) ^ bool(isolated_hash)
   result = {
     'duration': None,
@@ -397,8 +420,8 @@ def map_and_run(
 
   if root_dir:
     file_path.ensure_tree(root_dir, 0700)
-  else:
-    root_dir = os.path.dirname(cache.cache_dir) if cache.cache_dir else None
+  elif isolate_cache.cache_dir:
+    root_dir = os.path.dirname(isolate_cache.cache_dir)
   # See comment for these constants.
   run_dir = make_temp_dir(ISOLATED_RUN_DIR, root_dir)
   # storage should be normally set but don't crash if it is not. This can happen
@@ -418,7 +441,7 @@ def map_and_run(
       bundle, isolated_stats['download'] = fetch_and_map(
           isolated_hash=isolated_hash,
           storage=storage,
-          cache=cache,
+          cache=isolate_cache,
           outdir=run_dir,
           use_symlinks=use_symlinks)
       if not bundle.command:
@@ -436,9 +459,16 @@ def map_and_run(
       cwd = os.path.normpath(os.path.join(cwd, bundle.relative_cwd))
       command = bundle.command + extra_args
 
+    # If we have an explicit list of files to return, make sure their
+    # directories exist now.
+    if storage and outputs:
+      isolateserver.create_directories(run_dir, outputs)
+
     command = tools.fix_python_path(command)
     command = process_command(command, out_dir, bot_file)
     file_path.ensure_command_has_abs_path(command, cwd)
+
+    init_name_caches(run_dir)
 
     sys.stdout.flush()
     start = time.time()
@@ -453,9 +483,17 @@ def map_and_run(
     logging.exception('internal failure: %s', e)
     result['internal_failure'] = str(e)
     on_error.report(None)
+
+  # Clean up
   finally:
     try:
+      # Try to link files to the output directory, if specified.
+      if out_dir:
+        link_outputs_to_outdir(run_dir, out_dir, outputs)
+
+      success = False
       if leak_temp_dir:
+        success = True
         logging.warning(
             'Deliberately leaking %s for later examination', run_dir)
       else:
@@ -509,9 +547,9 @@ def map_and_run(
 
 
 def run_tha_test(
-    command, isolated_hash, storage, cache, leak_temp_dir, result_json,
-    root_dir, hard_timeout, grace_period, bot_file, extra_args,
-    install_packages_fn, use_symlinks):
+    command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
+    leak_temp_dir, result_json, root_dir, hard_timeout, grace_period, bot_file,
+    extra_args, install_packages_fn, use_symlinks):
   """Runs an executable and records execution metadata.
 
   Either command or isolated_hash must be specified.
@@ -534,9 +572,11 @@ def run_tha_test(
     storage: an isolateserver.Storage object to retrieve remote objects. This
              object has a reference to an isolateserver.StorageApi, which does
              the actual I/O.
-    cache: an isolateserver.LocalCache to keep from retrieving the same objects
-           constantly by caching the objects retrieved. Can be on-disk or
-           in-memory.
+    isolate_cache: an isolateserver.LocalCache to keep from retrieving the
+                   same objects constantly by caching the objects retrieved.
+                   Can be on-disk or in-memory.
+    init_name_caches: a function (run_dir) => void that creates symlinks for
+                      named caches in |run_dir|.
     leak_temp_dir: if true, the temporary directory will be deliberately leaked
                    for later examination.
     result_json: file path to dump result metadata into. If set, the process
@@ -574,9 +614,9 @@ def run_tha_test(
 
   # run_isolated exit code. Depends on if result_json is used or not.
   result = map_and_run(
-      command, isolated_hash, storage, cache, leak_temp_dir, root_dir,
-      hard_timeout, grace_period, bot_file, extra_args, install_packages_fn,
-      use_symlinks)
+      command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
+      leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file, extra_args,
+      install_packages_fn, use_symlinks)
   logging.info('Result:\n%s', tools.format_json(result, dense=True))
 
   if result_json:
@@ -699,6 +739,28 @@ def install_packages(
   }
 
 
+def clean_caches(options, isolate_cache, named_cache_manager):
+  """Trims isolated and named caches."""
+  # Which cache to trim first? Which of caches was used least recently?
+  with named_cache_manager.open():
+    oldest_isolated = isolate_cache.get_oldest()
+    oldest_named = named_cache_manager.get_oldest()
+    trimmers = [
+      (
+        isolate_cache.trim,
+        isolate_cache.get_timestamp(oldest_isolated) if oldest_isolated else 0,
+      ),
+      (
+        lambda: named_cache_manager.trim(options.min_free_space),
+        named_cache_manager.get_timestamp(oldest_named) if oldest_named else 0,
+      ),
+    ]
+    trimmers.sort(key=lambda (_, ts): ts)
+    for trim, _ in trimmers:
+      trim()
+  isolate_cache.cleanup()
+
+
 def create_option_parser():
   parser = logging_utils.OptionParserWithLogging(
       usage='%prog <options> [command to run or extra args]',
@@ -730,6 +792,21 @@ def create_option_parser():
       '--bot-file',
       help='Path to a file describing the state of the host. The content is '
            'defined by on_before_task() in bot_config.')
+  parser.add_option(
+      '--output', action='append',
+      help='Specifies an output to return. If no outputs are specified, all '
+           'files located in $(ISOLATED_OUTDIR) will be returned; '
+           'otherwise, outputs in both $(ISOLATED_OUTDIR) and those '
+           'specified by --output option (there can be multiple) will be '
+           'returned. Note that if a file in OUT_DIR has the same path '
+           'as an --output option, the --output version will be returned.')
+  parser.add_option(
+      '-a', '--argsfile',
+      # This is actually handled in parse_args; it's included here purely so it
+      # can make it into the help text.
+      help='Specify a file containing a JSON array of arguments to this '
+           'script. If --argsfile is provided, no other argument may be '
+           'provided on the command line.')
   data_group = optparse.OptionGroup(parser, 'Data source')
   data_group.add_option(
       '-s', '--isolated',
@@ -740,6 +817,7 @@ def create_option_parser():
   isolateserver.add_cache_options(parser)
 
   cipd.add_cipd_options(parser)
+  named_cache.add_named_cache_options(parser)
 
   debug_group = optparse.OptionGroup(parser, 'Debugging')
   debug_group.add_option(
@@ -753,15 +831,46 @@ def create_option_parser():
 
   auth.add_auth_options(parser)
 
-  parser.set_defaults(cache='cache', cipd_cache='cipd_cache')
+  parser.set_defaults(
+      cache='cache',
+      cipd_cache='cipd_cache',
+      named_cache_root='named_caches')
   return parser
 
 
-def main(args):
+def parse_args(args):
+  # Create a fake mini-parser just to get out the "-a" command. Note that
+  # it's not documented here; instead, it's documented in create_option_parser
+  # even though that parser will never actually get to parse it. This is
+  # because --argsfile is exclusive with all other options and arguments.
+  file_argparse = argparse.ArgumentParser(add_help=False)
+  file_argparse.add_argument('-a', '--argsfile')
+  (file_args, nonfile_args) = file_argparse.parse_known_args(args)
+  if file_args.argsfile:
+    if nonfile_args:
+      file_argparse.error('Can\'t specify --argsfile with'
+                          'any other arguments (%s)' % nonfile_args)
+    try:
+      with open(file_args.argsfile, 'r') as f:
+        args = json.load(f)
+    except (IOError, OSError, ValueError) as e:
+      # We don't need to error out here - "args" is now empty,
+      # so the call below to parser.parse_args(args) will fail
+      # and print the full help text.
+      print >> sys.stderr, 'Couldn\'t read arguments: %s' % e
+
+  # Even if we failed to read the args, just call the normal parser now since it
+  # will print the correct help message.
   parser = create_option_parser()
   options, args = parser.parse_args(args)
+  return (parser, options, args)
 
-  cache = isolateserver.process_cache_options(options)
+
+def main(args):
+  (parser, options, args) = parse_args(args)
+
+  isolate_cache = isolateserver.process_cache_options(options, trim=False)
+  named_cache_manager = named_cache.process_named_cache_options(parser, options)
   if options.clean:
     if options.isolated:
       parser.error('Can\'t use --isolated with --clean.')
@@ -769,10 +878,13 @@ def main(args):
       parser.error('Can\'t use --isolate-server with --clean.')
     if options.json:
       parser.error('Can\'t use --json with --clean.')
-    cache.cleanup()
+    if options.named_caches:
+      parser.error('Can\t use --named-cache with --clean.')
+    clean_caches(options, isolate_cache, named_cache_manager)
     return 0
+
   if not options.no_clean:
-    cache.cleanup()
+    clean_caches(options, isolate_cache, named_cache_manager)
 
   if not options.isolated and not args:
     parser.error('--isolated or command to run is required.')
@@ -800,25 +912,48 @@ def main(args):
       options.cipd_server, options.cipd_client_package,
       options.cipd_client_version, cache_dir=options.cipd_cache)
 
+  def init_named_caches(run_dir):
+    with named_cache_manager.open():
+      named_cache_manager.create_symlinks(run_dir, options.named_caches)
+
   try:
     command = [] if options.isolated else args
     if options.isolate_server:
       storage = isolateserver.get_storage(
           options.isolate_server, options.namespace)
       with storage:
-        # Hashing schemes used by |storage| and |cache| MUST match.
-        assert storage.hash_algo == cache.hash_algo
+        # Hashing schemes used by |storage| and |isolate_cache| MUST match.
+        assert storage.hash_algo == isolate_cache.hash_algo
         return run_tha_test(
-            command, options.isolated, storage, cache, options.leak_temp_dir,
-            options.json, options.root_dir, options.hard_timeout,
-            options.grace_period, options.bot_file, args, install_packages_fn,
+            command,
+            options.isolated,
+            storage,
+            isolate_cache,
+            options.output,
+            init_named_caches,
+            options.leak_temp_dir,
+            options.json, options.root_dir,
+            options.hard_timeout,
+            options.grace_period,
+            options.bot_file, args,
+            install_packages_fn,
             options.use_symlinks)
     return run_tha_test(
-        command, options.isolated, None, cache, options.leak_temp_dir,
-        options.json, options.root_dir, options.hard_timeout,
-        options.grace_period, options.bot_file, args, install_packages_fn,
+        command,
+        options.isolated,
+        None,
+        isolate_cache,
+        options.output,
+        init_named_caches,
+        options.leak_temp_dir,
+        options.json,
+        options.root_dir,
+        options.hard_timeout,
+        options.grace_period,
+        options.bot_file, args,
+        install_packages_fn,
         options.use_symlinks)
-  except cipd.Error as ex:
+  except (cipd.Error, named_cache.Error) as ex:
     print >> sys.stderr, ex.message
     return 1
 
@@ -828,4 +963,5 @@ if __name__ == '__main__':
   # Ensure that we are always running with the correct encoding.
   fix_encoding.fix_encoding()
   file_path.enable_symlink()
+
   sys.exit(main(sys.argv[1:]))

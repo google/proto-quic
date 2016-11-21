@@ -19,6 +19,7 @@ import sys
 import time
 import traceback
 
+from . import authenticators
 from . import net
 from . import tools
 from . import zip_package

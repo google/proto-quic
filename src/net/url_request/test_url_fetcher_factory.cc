@@ -125,7 +125,8 @@ void TestURLFetcher::SetRequestContext(
     URLRequestContextGetter* request_context_getter) {
 }
 
-void TestURLFetcher::SetInitiatorURL(const GURL& initiator) {}
+void TestURLFetcher::SetInitiator(
+    const base::Optional<url::Origin>& initiator) {}
 
 void TestURLFetcher::SetURLRequestUserData(
     const void* key,

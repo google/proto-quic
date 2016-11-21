@@ -112,8 +112,6 @@ content/renderer/history_entry.h
 content/renderer/history_entry.cc
 # Copyright Google Inc, no license. Not used on Android.
 google_update/google_update_idl.idl
-# Copyright 2016 The LUCI Authors. Apache 2.0 license.
-infra/recipes.py
 # Copyright WebM Project authors; BSD license. Copied and modified from
 # third_party/libvpx. Not used on Android.
 media/filters/vp8_bool_decoder.h

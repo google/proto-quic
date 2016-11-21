@@ -17,8 +17,9 @@ namespace internal {
 
 class JSONParserTest : public testing::Test {
  public:
-  JSONParser* NewTestParser(const std::string& input) {
-    JSONParser* parser = new JSONParser(JSON_PARSE_RFC);
+  JSONParser* NewTestParser(const std::string& input,
+                            int options = JSON_PARSE_RFC) {
+    JSONParser* parser = new JSONParser(options);
     parser->start_pos_ = input.data();
     parser->pos_ = parser->start_pos_;
     parser->end_pos_ = parser->start_pos_ + input.length();
@@ -326,6 +327,19 @@ TEST_F(JSONParserTest, DecodeUnicodeNonCharacter) {
 TEST_F(JSONParserTest, DecodeNegativeEscapeSequence) {
   EXPECT_FALSE(JSONReader::Read("[\"\\x-A\"]"));
   EXPECT_FALSE(JSONReader::Read("[\"\\u-00A\"]"));
+}
+
+// Verifies invalid utf-8 characters are replaced.
+TEST_F(JSONParserTest, ReplaceInvalidCharacters) {
+  const std::string bogus_char = "󿿿";
+  const std::string quoted_bogus_char = "\"" + bogus_char + "\"";
+  std::unique_ptr<JSONParser> parser(
+      NewTestParser(quoted_bogus_char, JSON_REPLACE_INVALID_CHARACTERS));
+  std::unique_ptr<Value> value(parser->ConsumeString());
+  ASSERT_TRUE(value.get());
+  std::string str;
+  EXPECT_TRUE(value->GetAsString(&str));
+  EXPECT_EQ(kUnicodeReplacementString, str);
 }
 
 }  // namespace internal

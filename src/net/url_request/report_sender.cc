@@ -13,28 +13,50 @@
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_status.h"
 
+namespace {
+const void* const kUserDataKey = &kUserDataKey;
+
+class CallbackInfo : public base::SupportsUserData::Data {
+ public:
+  CallbackInfo(const net::ReportSender::SuccessCallback& success_callback,
+               const net::ReportSender::ErrorCallback& error_callback)
+      : success_callback_(success_callback), error_callback_(error_callback) {}
+
+  ~CallbackInfo() override {}
+
+  const net::ReportSender::SuccessCallback& success_callback() const {
+    return success_callback_;
+  }
+  const net::ReportSender::ErrorCallback& error_callback() const {
+    return error_callback_;
+  }
+
+ private:
+  net::ReportSender::SuccessCallback success_callback_;
+  net::ReportSender::ErrorCallback error_callback_;
+};
+}  // namespace
+
 namespace net {
 
 ReportSender::ReportSender(URLRequestContext* request_context,
                            CookiesPreference cookies_preference)
-    : ReportSender(request_context, cookies_preference, ErrorCallback()) {}
-
-ReportSender::ReportSender(URLRequestContext* request_context,
-                           CookiesPreference cookies_preference,
-                           const ErrorCallback& error_callback)
     : request_context_(request_context),
-      cookies_preference_(cookies_preference),
-      error_callback_(error_callback) {}
+      cookies_preference_(cookies_preference) {}
 
 ReportSender::~ReportSender() {
 }
 
 void ReportSender::Send(const GURL& report_uri,
                         base::StringPiece content_type,
-                        base::StringPiece report) {
+                        base::StringPiece report,
+                        const SuccessCallback& success_callback,
+                        const ErrorCallback& error_callback) {
   DCHECK(!content_type.empty());
   std::unique_ptr<URLRequest> url_request =
       request_context_->CreateRequest(report_uri, DEFAULT_PRIORITY, this);
+  url_request->SetUserData(&kUserDataKey,
+                           new CallbackInfo(success_callback, error_callback));
 
   int load_flags =
       LOAD_BYPASS_CACHE | LOAD_DISABLE_CACHE | LOAD_DO_NOT_SEND_AUTH_DATA;
@@ -60,17 +82,18 @@ void ReportSender::Send(const GURL& report_uri,
   raw_url_request->Start();
 }
 
-void ReportSender::SetErrorCallback(const ErrorCallback& error_callback) {
-  error_callback_ = error_callback;
-}
-
 void ReportSender::OnResponseStarted(URLRequest* request, int net_error) {
   DCHECK_NE(ERR_IO_PENDING, net_error);
 
+  CallbackInfo* callback_info =
+      static_cast<CallbackInfo*>(request->GetUserData(&kUserDataKey));
+  DCHECK(callback_info);
   if (net_error != OK) {
     DVLOG(1) << "Failed to send report for " << request->url().host();
-    if (!error_callback_.is_null())
-      error_callback_.Run(request->url(), net_error);
+    if (!callback_info->error_callback().is_null())
+      callback_info->error_callback().Run(request->url(), net_error);
+  } else if (!callback_info->success_callback().is_null()) {
+    callback_info->success_callback().Run();
   }
 
   CHECK_GT(inflight_requests_.erase(request), 0u);

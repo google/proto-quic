@@ -35,11 +35,11 @@ using base::internal::RANGE_OVERFLOW;
 using base::internal::RANGE_UNDERFLOW;
 using base::internal::SignedIntegerForSize;
 
-// These tests deliberately cause arithmetic overflows. If the compiler is
-// aggressive enough, it can const fold these overflows. Disable warnings about
-// overflows for const expressions.
+// These tests deliberately cause arithmetic boundary errors. If the compiler is
+// aggressive enough, it can const detect these errors, so we disable warnings.
 #if defined(OS_WIN)
-#pragma warning(disable:4756)
+#pragma warning(disable : 4756)  // Arithmetic overflow.
+#pragma warning(disable : 4293)  // Invalid shift.
 #endif
 
 // This is a helper function for finding the maximum value in Src that can be
@@ -66,16 +66,16 @@ Dst GetMaxConvertibleToFloat() {
 #define TEST_EXPECTED_VALIDITY(expected, actual)                           \
   EXPECT_EQ(expected, CheckedNumeric<Dst>(actual).IsValid())               \
       << "Result test: Value " << +(actual).ValueUnsafe() << " as " << dst \
-      << " on line " << line;
+      << " on line " << line
 
 #define TEST_EXPECTED_SUCCESS(actual) TEST_EXPECTED_VALIDITY(true, actual)
 #define TEST_EXPECTED_FAILURE(actual) TEST_EXPECTED_VALIDITY(false, actual)
 
 #define TEST_EXPECTED_VALUE(expected, actual)                                \
   EXPECT_EQ(static_cast<Dst>(expected),                                      \
-            CheckedNumeric<Dst>(actual).ValueUnsafe())                       \
+            CheckedNumeric<Dst>(actual).ValueOrDie())                        \
       << "Result test: Value " << +((actual).ValueUnsafe()) << " as " << dst \
-      << " on line " << line;
+      << " on line " << line
 
 // Signed integer arithmetic.
 template <typename Dst>
@@ -106,6 +106,7 @@ static void TestSpecializedArithmetic(
 
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::min()) / -1);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(-1) / 2);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::min()) * -1);
 
   // Modulus is legal only for integers.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() % 1);
@@ -122,6 +123,22 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_VALUE(0, checked_dst %= 1);
   // Test that div by 0 is avoided but returns invalid result.
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) % 0);
+  // Test bit shifts.
+  volatile Dst negative_one = -1;
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) << negative_one);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) << (sizeof(Dst) * CHAR_BIT - 1));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(0) << (sizeof(Dst) * CHAR_BIT));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) << 1);
+  TEST_EXPECTED_VALUE(static_cast<Dst>(1) << (sizeof(Dst) * CHAR_BIT - 2),
+                      CheckedNumeric<Dst>(1) << (sizeof(Dst) * CHAR_BIT - 2));
+  TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(0)
+                             << (sizeof(Dst) * CHAR_BIT - 1));
+  TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1) << 0);
+  TEST_EXPECTED_VALUE(2, CheckedNumeric<Dst>(1) << 1);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) >> (sizeof(Dst) * CHAR_BIT));
+  TEST_EXPECTED_VALUE(0,
+                      CheckedNumeric<Dst>(1) >> (sizeof(Dst) * CHAR_BIT - 1));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) >> negative_one);
 }
 
 // Unsigned integer arithmetic.
@@ -159,6 +176,21 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_VALUE(0, checked_dst %= 1);
   // Test that div by 0 is avoided but returns invalid result.
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) % 0);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) << (sizeof(Dst) * CHAR_BIT));
+  // Test bit shifts.
+  volatile int negative_one = -1;
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) << negative_one);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) << (sizeof(Dst) * CHAR_BIT));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(0) << (sizeof(Dst) * CHAR_BIT));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) << 1);
+  TEST_EXPECTED_VALUE(static_cast<Dst>(1) << (sizeof(Dst) * CHAR_BIT - 1),
+                      CheckedNumeric<Dst>(1) << (sizeof(Dst) * CHAR_BIT - 1));
+  TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1) << 0);
+  TEST_EXPECTED_VALUE(2, CheckedNumeric<Dst>(1) << 1);
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) >> (sizeof(Dst) * CHAR_BIT));
+  TEST_EXPECTED_VALUE(0,
+                      CheckedNumeric<Dst>(1) >> (sizeof(Dst) * CHAR_BIT - 1));
+  TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(1) >> negative_one);
 }
 
 // Floating point arithmetic.
@@ -244,28 +276,37 @@ static void TestArithmetic(const char* dst, int line) {
   // Generic addition.
   TEST_EXPECTED_VALUE(1, (CheckedNumeric<Dst>() + 1));
   TEST_EXPECTED_VALUE(2, (CheckedNumeric<Dst>(1) + 1));
-  TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(-1) + 1));
+  if (numeric_limits<Dst>::is_signed)
+    TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(-1) + 1));
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::min()) + 1);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) +
                         DstLimits::max());
 
   // Generic subtraction.
-  TEST_EXPECTED_VALUE(-1, (CheckedNumeric<Dst>() - 1));
   TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(1) - 1));
-  TEST_EXPECTED_VALUE(-2, (CheckedNumeric<Dst>(-1) - 1));
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::max()) - 1);
+  if (numeric_limits<Dst>::is_signed) {
+    TEST_EXPECTED_VALUE(-1, (CheckedNumeric<Dst>() - 1));
+    TEST_EXPECTED_VALUE(-2, (CheckedNumeric<Dst>(-1) - 1));
+  } else {
+    TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) - -1);
+  }
 
   // Generic multiplication.
   TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>() * 1));
   TEST_EXPECTED_VALUE(1, (CheckedNumeric<Dst>(1) * 1));
   TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(0) * 0));
-  TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(-1) * 0));
-  TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(0) * -1));
+  if (numeric_limits<Dst>::is_signed) {
+    TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(-1) * 0));
+    TEST_EXPECTED_VALUE(0, (CheckedNumeric<Dst>(0) * -1));
+    TEST_EXPECTED_VALUE(-2, (CheckedNumeric<Dst>(-1) * 2));
+  } else {
+    TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) * -2);
+    TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) *
+                          CheckedNumeric<uintmax_t>(-2));
+  }
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::max()) *
                         DstLimits::max());
-  if (DstLimits::is_signed) {
-    TEST_EXPECTED_VALUE(-2, (CheckedNumeric<Dst>(-1) * 2));
-  }
 
   // Generic division.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() / 1);
@@ -317,7 +358,7 @@ struct TestNumericConversion {};
 #define TEST_EXPECTED_RANGE(expected, actual)                                  \
   EXPECT_EQ(expected, base::internal::DstRangeRelationToSrcRange<Dst>(actual)) \
       << "Conversion test: " << src << " value " << actual << " to " << dst    \
-      << " on line " << line;
+      << " on line " << line
 
 template <typename Dst, typename Src>
 struct TestNumericConversion<Dst, Src, SIGN_PRESERVING_VALUE_PRESERVING> {
@@ -664,7 +705,7 @@ TEST(SafeNumerics, SaturatedCastChecks) {
                        std::numeric_limits<float>::infinity();
   EXPECT_TRUE(std::isnan(not_a_number));
   EXPECT_DEATH_IF_SUPPORTED(
-      (saturated_cast<int, base::SaturatedCastNaNBehaviorCheck>(not_a_number)),
+      (saturated_cast<int, base::CheckOnFailure>(not_a_number)),
       "");
 }
 

@@ -23,8 +23,8 @@
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
@@ -35,7 +35,7 @@ using base::StringPiece;
 using net::QuicServerId;
 using net::test::QuicConnectionPeer;
 using net::test::QuicSpdySessionPeer;
-using net::test::ReliableQuicStreamPeer;
+using net::test::QuicStreamPeer;
 using std::string;
 using testing::_;
 using testing::Invoke;
@@ -441,7 +441,7 @@ QuicSpdyClientStream* QuicTestClient::GetOrCreateStream() {
     }
   }
   if (!stream_) {
-    SetStream(client_->CreateReliableClientStream());
+    SetStream(client_->CreateClientStream());
     if (stream_) {
       stream_->SetPriority(priority_);
       stream_->set_allow_bidirectional_data(allow_bidirectional_data_);

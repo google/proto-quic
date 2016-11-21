@@ -121,9 +121,6 @@ group("test_runner_py") {
            "//third_party/catapult/devil/devil/devil_dependencies.json",
            "//third_party/proguard/lib/proguard.jar",
          ]
-  data_deps = [
-    "//tools/swarming_client:isolate_py",
-  ]
 }
 
 # Create wrapper scripts in out/bin that takes care of setting the

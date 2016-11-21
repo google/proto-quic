@@ -126,99 +126,95 @@ const char kRebasePath[] = "rebase_path";
 const char kRebasePath_HelpShort[] =
     "rebase_path: Rebase a file or directory to another location.";
 const char kRebasePath_Help[] =
-    "rebase_path: Rebase a file or directory to another location.\n"
-    "\n"
-    "  converted = rebase_path(input,\n"
-    "                          new_base = \"\",\n"
-    "                          current_base = \".\")\n"
-    "\n"
-    "  Takes a string argument representing a file name, or a list of such\n"
-    "  strings and converts it/them to be relative to a different base\n"
-    "  directory.\n"
-    "\n"
-    "  When invoking the compiler or scripts, GN will automatically convert\n"
-    "  sources and include directories to be relative to the build directory.\n"
-    "  However, if you're passing files directly in the \"args\" array or\n"
-    "  doing other manual manipulations where GN doesn't know something is\n"
-    "  a file name, you will need to convert paths to be relative to what\n"
-    "  your tool is expecting.\n"
-    "\n"
-    "  The common case is to use this to convert paths relative to the\n"
-    "  current directory to be relative to the build directory (which will\n"
-    "  be the current directory when executing scripts).\n"
-    "\n"
-    "  If you want to convert a file path to be source-absolute (that is,\n"
-    "  beginning with a double slash like \"//foo/bar\"), you should use\n"
-    "  the get_path_info() function. This function won't work because it will\n"
-    "  always make relative paths, and it needs to support making paths\n"
-    "  relative to the source root, so can't also generate source-absolute\n"
-    "  paths without more special-cases.\n"
-    "\n"
-    "Arguments\n"
-    "\n"
-    "  input\n"
-    "      A string or list of strings representing file or directory names\n"
-    "      These can be relative paths (\"foo/bar.txt\"), system absolute\n"
-    "      paths (\"/foo/bar.txt\"), or source absolute paths\n"
-    "      (\"//foo/bar.txt\").\n"
-    "\n"
-    "  new_base\n"
-    "      The directory to convert the paths to be relative to. This can be\n"
-    "      an absolute path or a relative path (which will be treated\n"
-    "      as being relative to the current BUILD-file's directory).\n"
-    "\n"
-    "      As a special case, if new_base is the empty string (the default),\n"
-    "      all paths will be converted to system-absolute native style paths\n"
-    "      with system path separators. This is useful for invoking external\n"
-    "      programs.\n"
-    "\n"
-    "  current_base\n"
-    "      Directory representing the base for relative paths in the input.\n"
-    "      If this is not an absolute path, it will be treated as being\n"
-    "      relative to the current build file. Use \".\" (the default) to\n"
-    "      convert paths from the current BUILD-file's directory.\n"
-    "\n"
-    "Return value\n"
-    "\n"
-    "  The return value will be the same type as the input value (either a\n"
-    "  string or a list of strings). All relative and source-absolute file\n"
-    "  names will be converted to be relative to the requested output\n"
-    "  System-absolute paths will be unchanged.\n"
-    "\n"
-    "  Whether an output path will end in a slash will match whether the\n"
-    "  corresponding input path ends in a slash. It will return \".\" or\n"
-    "  \"./\" (depending on whether the input ends in a slash) to avoid\n"
-    "  returning empty strings. This means if you want a root path\n"
-    "  (\"//\" or \"/\") not ending in a slash, you can add a dot (\"//.\").\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  # Convert a file in the current directory to be relative to the build\n"
-    "  # directory (the current dir when executing compilers and scripts).\n"
-    "  foo = rebase_path(\"myfile.txt\", root_build_dir)\n"
-    "  # might produce \"../../project/myfile.txt\".\n"
-    "\n"
-    "  # Convert a file to be system absolute:\n"
-    "  foo = rebase_path(\"myfile.txt\")\n"
-    "  # Might produce \"D:\\source\\project\\myfile.txt\" on Windows or\n"
-    "  # \"/home/you/source/project/myfile.txt\" on Linux.\n"
-    "\n"
-    "  # Typical usage for converting to the build directory for a script.\n"
-    "  action(\"myscript\") {\n"
-    "    # Don't convert sources, GN will automatically convert these to be\n"
-    "    # relative to the build directory when it constructs the command\n"
-    "    # line for your script.\n"
-    "    sources = [ \"foo.txt\", \"bar.txt\" ]\n"
-    "\n"
-    "    # Extra file args passed manually need to be explicitly converted\n"
-    "    # to be relative to the build directory:\n"
-    "    args = [\n"
-    "      \"--data\",\n"
-    "      rebase_path(\"//mything/data/input.dat\", root_build_dir),\n"
-    "      \"--rel\",\n"
-    "      rebase_path(\"relative_path.txt\", root_build_dir)\n"
-    "    ] + rebase_path(sources, root_build_dir)\n"
-    "  }\n";
+    R"(rebase_path: Rebase a file or directory to another location.
+
+  converted = rebase_path(input,
+                          new_base = "",
+                          current_base = ".")
+
+  Takes a string argument representing a file name, or a list of such strings
+  and converts it/them to be relative to a different base directory.
+
+  When invoking the compiler or scripts, GN will automatically convert sources
+  and include directories to be relative to the build directory. However, if
+  you're passing files directly in the "args" array or doing other manual
+  manipulations where GN doesn't know something is a file name, you will need
+  to convert paths to be relative to what your tool is expecting.
+
+  The common case is to use this to convert paths relative to the current
+  directory to be relative to the build directory (which will be the current
+  directory when executing scripts).
+
+  If you want to convert a file path to be source-absolute (that is, beginning
+  with a double slash like "//foo/bar"), you should use the get_path_info()
+  function. This function won't work because it will always make relative
+  paths, and it needs to support making paths relative to the source root, so
+  can't also generate source-absolute paths without more special-cases.
+
+Arguments
+
+  input
+      A string or list of strings representing file or directory names These
+      can be relative paths ("foo/bar.txt"), system absolute paths
+      ("/foo/bar.txt"), or source absolute paths ("//foo/bar.txt").
+
+  new_base
+      The directory to convert the paths to be relative to. This can be an
+      absolute path or a relative path (which will be treated as being relative
+      to the current BUILD-file's directory).
+
+      As a special case, if new_base is the empty string (the default), all
+      paths will be converted to system-absolute native style paths with system
+      path separators. This is useful for invoking external programs.
+
+  current_base
+      Directory representing the base for relative paths in the input. If this
+      is not an absolute path, it will be treated as being relative to the
+      current build file. Use "." (the default) to convert paths from the
+      current BUILD-file's directory.
+
+Return value
+
+  The return value will be the same type as the input value (either a string or
+  a list of strings). All relative and source-absolute file names will be
+  converted to be relative to the requested output System-absolute paths will
+  be unchanged.
+
+  Whether an output path will end in a slash will match whether the
+  corresponding input path ends in a slash. It will return "." or "./"
+  (depending on whether the input ends in a slash) to avoid returning empty
+  strings. This means if you want a root path ("//" or "/") not ending in a
+  slash, you can add a dot ("//.").
+
+Example
+
+  # Convert a file in the current directory to be relative to the build
+  # directory (the current dir when executing compilers and scripts).
+  foo = rebase_path("myfile.txt", root_build_dir)
+  # might produce "../../project/myfile.txt".
+
+  # Convert a file to be system absolute:
+  foo = rebase_path("myfile.txt")
+  # Might produce "D:\\source\\project\\myfile.txt" on Windows or
+  # "/home/you/source/project/myfile.txt" on Linux.
+
+  # Typical usage for converting to the build directory for a script.
+  action("myscript") {
+    # Don't convert sources, GN will automatically convert these to be relative
+    # to the build directory when it constructs the command line for your
+    # script.
+    sources = [ "foo.txt", "bar.txt" ]
+
+    # Extra file args passed manually need to be explicitly converted
+    # to be relative to the build directory:
+    args = [
+      "--data",
+      rebase_path("//mything/data/input.dat", root_build_dir),
+      "--rel",
+      rebase_path("relative_path.txt", root_build_dir)
+    ] + rebase_path(sources, root_build_dir)
+  }
+)";
 
 Value RunRebasePath(Scope* scope,
                     const FunctionCallNode* function,

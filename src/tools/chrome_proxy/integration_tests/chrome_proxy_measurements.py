@@ -454,10 +454,12 @@ class ChromeProxyExpDirective(ChromeProxyValidation):
     self._metrics.AddResultsForBypass(tab, results, url_pattern='/exp/')
 
 class ChromeProxyPassThrough(ChromeProxyValidation):
-  """Correctness measurement for Chrome-Proxy pass-through directives.
+  """Correctness measurement for Chrome-Proxy-Accept-Transform identity
+  directives.
 
-  This test verifies that "pass-through" in the Chrome-Proxy request header
-  causes a resource to be loaded without Data Reduction Proxy transformations.
+  This test verifies that "identity" in the Chrome-Proxy-Accept-Transform
+  request header causes a resource to be loaded without Data Reduction Proxy
+  transformations.
   """
 
   def __init__(self):

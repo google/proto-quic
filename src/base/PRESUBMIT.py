@@ -35,6 +35,8 @@ def _CommonChecks(input_api, output_api):
   """Checks common to both upload and commit."""
   results = []
   results.extend(_CheckNoInterfacesInBase(input_api, output_api))
+  results.extend(
+      input_api.canned_checks.CheckPatchFormatted(input_api, output_api))
   return results
 
 def CheckChangeOnUpload(input_api, output_api):

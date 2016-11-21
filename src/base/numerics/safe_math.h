@@ -112,31 +112,34 @@ class CheckedNumeric {
   T ValueUnsafe() const { return state_.value(); }
 
   // Prototypes for the supported arithmetic operator overloads.
-  template <typename Src> CheckedNumeric& operator+=(Src rhs);
-  template <typename Src> CheckedNumeric& operator-=(Src rhs);
-  template <typename Src> CheckedNumeric& operator*=(Src rhs);
-  template <typename Src> CheckedNumeric& operator/=(Src rhs);
-  template <typename Src> CheckedNumeric& operator%=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator+=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator-=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator*=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator/=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator%=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator<<=(Src rhs);
+  template <typename Src>
+  CheckedNumeric& operator>>=(Src rhs);
 
   CheckedNumeric operator-() const {
-    bool is_valid;
-    T value = CheckedNeg(state_.value(), &is_valid);
     // Negation is always valid for floating point.
-    if (std::numeric_limits<T>::is_iec559)
-      return CheckedNumeric<T>(value);
-
-    is_valid &= state_.is_valid();
+    T value = 0;
+    bool is_valid = (std::numeric_limits<T>::is_iec559 || IsValid()) &&
+                    CheckedNeg(state_.value(), &value);
     return CheckedNumeric<T>(value, is_valid);
   }
 
   CheckedNumeric Abs() const {
-    bool is_valid;
-    T value = CheckedAbs(state_.value(), &is_valid);
     // Absolute value is always valid for floating point.
-    if (std::numeric_limits<T>::is_iec559)
-      return CheckedNumeric<T>(value);
-
-    is_valid &= state_.is_valid();
+    T value = 0;
+    bool is_valid = (std::numeric_limits<T>::is_iec559 || IsValid()) &&
+                    CheckedAbs(state_.value(), &value);
     return CheckedNumeric<T>(value, is_valid);
   }
 
@@ -145,7 +148,7 @@ class CheckedNumeric {
   // of the source, and properly handling signed min.
   CheckedNumeric<typename UnsignedOrFloatForSize<T>::type> UnsignedAbs() const {
     return CheckedNumeric<typename UnsignedOrFloatForSize<T>::type>(
-        CheckedUnsignedAbs(state_.value()), state_.is_valid());
+        SafeUnsignedAbs(state_.value()), state_.is_valid());
   }
 
   CheckedNumeric& operator++() {
@@ -191,16 +194,6 @@ class CheckedNumeric {
   static const CheckedNumeric<T>& cast(const CheckedNumeric<T>& u) { return u; }
 
  private:
-  template <typename NumericType>
-  struct UnderlyingType {
-    using type = NumericType;
-  };
-
-  template <typename NumericType>
-  struct UnderlyingType<CheckedNumeric<NumericType>> {
-    using type = NumericType;
-  };
-
   CheckedNumericState<T> state_;
 };
 
@@ -211,76 +204,53 @@ class CheckedNumeric {
 //  * We skip range checks for floating points.
 //  * We skip range checks for destination integers with sufficient range.
 // TODO(jschuh): extract these out into templates.
-#define BASE_NUMERIC_ARITHMETIC_OPERATORS(NAME, OP, COMPOUND_OP)               \
-  /* Binary arithmetic operator for CheckedNumerics of the same type. */       \
-  template <typename T>                                                        \
-  CheckedNumeric<typename ArithmeticPromotion<T>::type> operator OP(           \
-      const CheckedNumeric<T>& lhs, const CheckedNumeric<T>& rhs) {            \
-    typedef typename ArithmeticPromotion<T>::type Promotion;                   \
-    /* Floating point always takes the fast path */                            \
-    if (std::numeric_limits<T>::is_iec559)                                     \
-      return CheckedNumeric<T>(lhs.ValueUnsafe() OP rhs.ValueUnsafe());        \
-    if (IsIntegerArithmeticSafe<Promotion, T, T>::value)                       \
-      return CheckedNumeric<Promotion>(lhs.ValueUnsafe() OP rhs.ValueUnsafe(), \
-                                       rhs.IsValid() && lhs.IsValid());        \
-    bool is_valid = true;                                                      \
-    T result = static_cast<T>(                                                 \
-        Checked##NAME(static_cast<Promotion>(lhs.ValueUnsafe()),               \
-                      static_cast<Promotion>(rhs.ValueUnsafe()), &is_valid));  \
-    return CheckedNumeric<Promotion>(                                          \
-        result, is_valid && lhs.IsValid() && rhs.IsValid());                   \
-  }                                                                            \
-  /* Assignment arithmetic operator implementation from CheckedNumeric. */     \
-  template <typename T>                                                        \
-  template <typename Src>                                                      \
-  CheckedNumeric<T>& CheckedNumeric<T>::operator COMPOUND_OP(Src rhs) {        \
-    *this = CheckedNumeric<T>::cast(*this)                                     \
-        OP CheckedNumeric<typename UnderlyingType<Src>::type>::cast(rhs);      \
-    return *this;                                                              \
-  }                                                                            \
-  /* Binary arithmetic operator for CheckedNumeric of different type. */       \
-  template <typename T, typename Src>                                          \
-  CheckedNumeric<typename ArithmeticPromotion<T, Src>::type> operator OP(      \
-      const CheckedNumeric<Src>& lhs, const CheckedNumeric<T>& rhs) {          \
-    typedef typename ArithmeticPromotion<T, Src>::type Promotion;              \
-    if (IsIntegerArithmeticSafe<Promotion, T, Src>::value)                     \
-      return CheckedNumeric<Promotion>(lhs.ValueUnsafe() OP rhs.ValueUnsafe(), \
-                                       rhs.IsValid() && lhs.IsValid());        \
-    return CheckedNumeric<Promotion>::cast(lhs)                                \
-        OP CheckedNumeric<Promotion>::cast(rhs);                               \
-  }                                                                            \
-  /* Binary arithmetic operator for left CheckedNumeric and right numeric. */  \
-  template <typename T, typename Src,                                          \
-            typename std::enable_if<std::is_arithmetic<Src>::value>::type* =   \
-                nullptr>                                                       \
-  CheckedNumeric<typename ArithmeticPromotion<T, Src>::type> operator OP(      \
-      const CheckedNumeric<T>& lhs, Src rhs) {                                 \
-    typedef typename ArithmeticPromotion<T, Src>::type Promotion;              \
-    if (IsIntegerArithmeticSafe<Promotion, T, Src>::value)                     \
-      return CheckedNumeric<Promotion>(lhs.ValueUnsafe() OP rhs,               \
-                                       lhs.IsValid());                         \
-    return CheckedNumeric<Promotion>::cast(lhs)                                \
-        OP CheckedNumeric<Promotion>::cast(rhs);                               \
-  }                                                                            \
-  /* Binary arithmetic operator for left numeric and right CheckedNumeric. */  \
-  template <typename T, typename Src,                                          \
-            typename std::enable_if<std::is_arithmetic<Src>::value>::type* =   \
-                nullptr>                                                       \
-  CheckedNumeric<typename ArithmeticPromotion<T, Src>::type> operator OP(      \
-      Src lhs, const CheckedNumeric<T>& rhs) {                                 \
-    typedef typename ArithmeticPromotion<T, Src>::type Promotion;              \
-    if (IsIntegerArithmeticSafe<Promotion, T, Src>::value)                     \
-      return CheckedNumeric<Promotion>(lhs OP rhs.ValueUnsafe(),               \
-                                       rhs.IsValid());                         \
-    return CheckedNumeric<Promotion>::cast(lhs)                                \
-        OP CheckedNumeric<Promotion>::cast(rhs);                               \
+#define BASE_NUMERIC_ARITHMETIC_OPERATORS(NAME, OP, COMPOUND_OP, PROMOTION)   \
+  /* Binary arithmetic operator for CheckedNumerics of the same type. */      \
+  template <typename L, typename R>                                           \
+  CheckedNumeric<typename ArithmeticPromotion<PROMOTION, L, R>::type>         \
+  operator OP(const CheckedNumeric<L>& lhs, const CheckedNumeric<R>& rhs) {   \
+    using P = typename ArithmeticPromotion<PROMOTION, L, R>::type;            \
+    if (!rhs.IsValid() || !lhs.IsValid())                                     \
+      return CheckedNumeric<P>(0, false);                                     \
+    /* Floating point always takes the fast path */                           \
+    if (std::is_floating_point<L>::value || std::is_floating_point<R>::value) \
+      return CheckedNumeric<P>(lhs.ValueUnsafe() OP rhs.ValueUnsafe());       \
+    P result = 0;                                                             \
+    bool is_valid =                                                           \
+        Checked##NAME(lhs.ValueUnsafe(), rhs.ValueUnsafe(), &result);         \
+    return CheckedNumeric<P>(result, is_valid);                               \
+  }                                                                           \
+  /* Assignment arithmetic operator implementation from CheckedNumeric. */    \
+  template <typename L>                                                       \
+  template <typename R>                                                       \
+  CheckedNumeric<L>& CheckedNumeric<L>::operator COMPOUND_OP(R rhs) {         \
+    *this = *this OP rhs;                                                     \
+    return *this;                                                             \
+  }                                                                           \
+  /* Binary arithmetic operator for left CheckedNumeric and right numeric. */ \
+  template <typename L, typename R,                                           \
+            typename std::enable_if<std::is_arithmetic<R>::value>::type* =    \
+                nullptr>                                                      \
+  CheckedNumeric<typename ArithmeticPromotion<PROMOTION, L, R>::type>         \
+  operator OP(const CheckedNumeric<L>& lhs, R rhs) {                          \
+    return lhs OP CheckedNumeric<R>(rhs);                                     \
+  }                                                                           \
+  /* Binary arithmetic operator for left numeric and right CheckedNumeric. */ \
+  template <typename L, typename R,                                           \
+            typename std::enable_if<std::is_arithmetic<L>::value>::type* =    \
+                nullptr>                                                      \
+  CheckedNumeric<typename ArithmeticPromotion<PROMOTION, L, R>::type>         \
+  operator OP(L lhs, const CheckedNumeric<R>& rhs) {                          \
+    return CheckedNumeric<L>(lhs) OP rhs;                                     \
   }
 
-BASE_NUMERIC_ARITHMETIC_OPERATORS(Add, +, += )
-BASE_NUMERIC_ARITHMETIC_OPERATORS(Sub, -, -= )
-BASE_NUMERIC_ARITHMETIC_OPERATORS(Mul, *, *= )
-BASE_NUMERIC_ARITHMETIC_OPERATORS(Div, /, /= )
-BASE_NUMERIC_ARITHMETIC_OPERATORS(Mod, %, %= )
+BASE_NUMERIC_ARITHMETIC_OPERATORS(Add, +, +=, MAX_EXPONENT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(Sub, -, -=, MAX_EXPONENT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(Mul, *, *=, MAX_EXPONENT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(Div, /, /=, MAX_EXPONENT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(Mod, %, %=, MAX_EXPONENT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(LeftShift, <<, <<=, LEFT_PROMOTION)
+BASE_NUMERIC_ARITHMETIC_OPERATORS(RightShift, >>, >>=, LEFT_PROMOTION)
 
 #undef BASE_NUMERIC_ARITHMETIC_OPERATORS
 

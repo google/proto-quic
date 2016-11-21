@@ -143,6 +143,11 @@ template("mac_xib_bundle_data") {
 #         structure will not be created, and build output will go directly
 #         into the framework subdirectory.
 #
+#     framework_contents:
+#         (optional) list of string, top-level items in the framework. For
+#         frameworks with a framework_version, this is the list of symlinks to
+#         create in the .framework directory that link into Versions/Current/.
+#
 #     extra_substitutions:
 #         (optional) string array, 'key=value' pairs for extra fields which are
 #         specified in a source Info.plist template.
@@ -216,6 +221,9 @@ template("mac_xib_bundle_data") {
 template("mac_framework_bundle") {
   assert(defined(invoker.deps),
          "Dependencies must be specified for $target_name")
+  assert(!defined(invoker.framework_contents) ||
+             defined(invoker.framework_version),
+         "framework_contents requres a versioned framework")
 
   _info_plist_target = target_name + "_info_plist"
 
@@ -252,19 +260,83 @@ template("mac_framework_bundle") {
     _output_name = invoker.output_name
   }
 
-  # If the framework is unversioned, the final _target_name will be the
-  # create_bundle(_framework_target), otherwise an action with the name
-  # _target_name will depends on the the create_bundle() in order to prepare
-  # the versioned directory structure.
+  # Create a file to track the build dependency on the framework_version and
+  # framework_contents variables.
+  _framework_toc = []
+  if (defined(invoker.framework_version)) {
+    _framework_toc += [
+      "Version=" + invoker.framework_version,
+      _output_name,
+    ]
+    _framework_contents = [ _output_name ]
+  }
+  if (defined(invoker.framework_contents)) {
+    _framework_toc += invoker.framework_contents
+    _framework_contents += invoker.framework_contents
+  }
+  _framework_toc_file = "$target_out_dir/${target_name}.toc"
+  write_file(_framework_toc_file, _framework_toc)
+
+  # Create local variables for referencing different parts of the bundle.
   _framework_target = _target_name
   _framework_name = _output_name + ".framework"
   _framework_base_dir = "$root_out_dir/$_framework_name"
   if (defined(invoker.framework_version) && invoker.framework_version != "") {
     _framework_version = invoker.framework_version
     _framework_root_dir = _framework_base_dir + "/Versions/$_framework_version"
-    _framework_target = _target_name + "_create_bundle"
   } else {
     _framework_root_dir = _framework_base_dir
+  }
+
+  # Clean the entire framework if the framework_version changes.
+  _version_arg = "''"
+  if (defined(invoker.framework_version)) {
+    _version_arg = _framework_version
+  }
+  _version_file = "$target_out_dir/${target_name}_version"
+  exec_script("//build/config/mac/prepare_framework_version.py",
+              [
+                rebase_path(_version_file),
+                rebase_path(_framework_base_dir),
+                _version_arg,
+              ])
+
+  # Create the symlinks.
+  _framework_package_target = target_name + "_package"
+  action(_framework_package_target) {
+    script = "//build/config/mac/package_framework.py"
+
+    # The TOC file never needs to be read, since its contents are the values
+    # of GN variables. It is only used to trigger this rule when the values
+    # change.
+    inputs = [
+      _framework_toc_file,
+    ]
+
+    _stamp_file = "$target_out_dir/run_${_framework_package_target}.stamp"
+    outputs = [
+      _stamp_file,
+    ]
+
+    visibility = [ ":$_framework_target" ]
+
+    args = [
+      "--framework",
+      rebase_path(_framework_base_dir, root_build_dir),
+      "--stamp",
+      rebase_path(_stamp_file, root_build_dir),
+    ]
+
+    if (defined(invoker.framework_version)) {
+      args += [
+                "--version",
+                invoker.framework_version,
+                "--contents",
+              ] + _framework_contents
+      # It is not possible to list _framework_contents as outputs, since
+      # ninja does not properly stat symbolic links.
+      # https://github.com/ninja-build/ninja/issues/1186
+    }
   }
 
   _link_shared_library_target = target_name + "_shared_library"
@@ -304,19 +376,6 @@ template("mac_framework_bundle") {
     ]
   }
 
-  # Clean the entire framework if the framework_version changes.
-  _version_arg = ""
-  if (defined(_framework_version)) {
-    _version_arg = _framework_version
-  }
-  _version_file = "$target_out_dir/${target_name}_version"
-  exec_script("//build/config/mac/prepare_framework_version.py",
-              [
-                rebase_path(_version_file),
-                rebase_path(_framework_base_dir),
-                "'$_version_arg'",
-              ])
-
   _framework_public_config = _target_name + "_public_config"
   config(_framework_public_config) {
     # TODO(sdefresne): should we have a framework_dirs similar to lib_dirs
@@ -339,13 +398,9 @@ template("mac_framework_bundle") {
                              "testonly",
                            ])
 
-    if (defined(_framework_version)) {
-      visibility = [ ":$_target_name" ]
-    } else {
-      if (defined(invoker.visibility)) {
-        visibility = invoker.visibility
-        visibility += [ ":$_target_name+link" ]
-      }
+    if (defined(invoker.visibility)) {
+      visibility = invoker.visibility
+      visibility += [ ":$_target_name+link" ]
     }
 
     if (!defined(deps)) {
@@ -360,34 +415,14 @@ template("mac_framework_bundle") {
     if (!defined(public_deps)) {
       public_deps = []
     }
-    public_deps += [ ":$_shared_library_bundle_data" ]
+    public_deps += [
+      ":$_framework_package_target",
+      ":$_shared_library_bundle_data",
+    ]
 
     bundle_root_dir = _framework_root_dir
     bundle_resources_dir = "$bundle_root_dir/Resources"
     bundle_executable_dir = "$bundle_root_dir"
-  }
-
-  if (defined(_framework_version)) {
-    action(_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-
-      if (defined(invoker.visibility)) {
-        visibility = invoker.visibility
-        visibility += [ ":$_target_name+link" ]
-      }
-
-      script = "//build/config/mac/package_framework.py"
-      outputs = [
-        "$root_out_dir/$_framework_name/Versions/Current",
-      ]
-      args = [
-        "$_framework_name",
-        "$_framework_version",
-      ]
-      public_deps = [
-        ":$_framework_target",
-      ]
-    }
   }
 
   group(_target_name + "+link") {

@@ -842,6 +842,8 @@ bool TestLauncher::Init() {
       return false;
     }
 
+    // Parse the file contents (see //testing/buildbot/filters/README.md
+    // for file syntax and other info).
     std::vector<std::string> filter_lines = SplitString(
         filter, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     for (const std::string& filter_line : filter_lines) {

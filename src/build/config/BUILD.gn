@@ -65,17 +65,8 @@ config("feature_flags") {
   if (enable_notifications) {
     defines += [ "ENABLE_NOTIFICATIONS" ]
   }
-  if (enable_plugins) {
-    defines += [ "ENABLE_PLUGINS=1" ]
-  }
   if (enable_pdf) {
     defines += [ "ENABLE_PDF=1" ]
-  }
-  if (enable_spellcheck) {
-    defines += [ "ENABLE_SPELLCHECK=1" ]
-  }
-  if (use_browser_spellchecker) {
-    defines += [ "USE_BROWSER_SPELLCHECKER=1" ]
   }
   if (dcheck_always_on) {
     defines += [ "DCHECK_ALWAYS_ON=1" ]
@@ -99,12 +90,6 @@ config("feature_flags") {
   }
   if (use_cairo) {
     defines += [ "USE_CAIRO=1" ]
-  }
-  if (use_clipboard_aurax11) {
-    defines += [ "USE_CLIPBOARD_AURAX11=1" ]
-  }
-  if (use_default_render_theme) {
-    defines += [ "USE_DEFAULT_RENDER_THEME=1" ]
   }
   if (use_glib) {
     defines += [ "USE_GLIB=1" ]
@@ -161,9 +146,6 @@ config("feature_flags") {
   if (!enable_nacl) {
     defines += [ "DISABLE_NACL" ]
   }
-  if (enable_extensions) {
-    defines += [ "ENABLE_EXTENSIONS=1" ]
-  }
   if (enable_task_manager) {
     defines += [ "ENABLE_TASK_MANAGER=1" ]
   }
@@ -173,14 +155,8 @@ config("feature_flags") {
   if (enable_rlz) {
     defines += [ "ENABLE_RLZ" ]
   }
-  if (enable_image_loader_extension) {
-    defines += [ "IMAGE_LOADER_EXTENSION=1" ]
-  }
   if (enable_wayland_server) {
     defines += [ "ENABLE_WAYLAND_SERVER=1" ]
-  }
-  if (enable_wifi_display) {
-    defines += [ "ENABLE_WIFI_DISPLAY=1" ]
   }
   if (proprietary_codecs) {
     defines += [ "USE_PROPRIETARY_CODECS" ]

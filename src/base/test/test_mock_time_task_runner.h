@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 
+#include <deque>
 #include <memory>
 #include <queue>
 #include <vector>
@@ -15,7 +16,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/synchronization/lock.h"
 #include "base/test/test_pending_task.h"
-#include "base/threading/thread_checker.h"
+#include "base/threading/thread_checker_impl.h"
 #include "base/time/time.h"
 
 namespace base {
@@ -83,6 +84,7 @@ class TestMockTimeTaskRunner : public SingleThreadTaskRunner {
   // source. The returned TickClock will hold a reference to |this|.
   std::unique_ptr<TickClock> GetMockTickClock() const;
 
+  std::deque<TestPendingTask> TakePendingTasks();
   bool HasPendingTask() const;
   size_t GetPendingTaskCount() const;
   TimeDelta NextPendingTaskDelay() const;
@@ -148,7 +150,10 @@ class TestMockTimeTaskRunner : public SingleThreadTaskRunner {
                        const TimeDelta& max_delta,
                        TestPendingTask* next_task);
 
-  ThreadChecker thread_checker_;
+  // Also used for non-dcheck logic (RunsTasksOnCurrentThread()) and as such
+  // needs to be a ThreadCheckerImpl.
+  ThreadCheckerImpl thread_checker_;
+
   Time now_;
   TimeTicks now_ticks_;
 

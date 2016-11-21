@@ -24,6 +24,11 @@
 
 const char kPythonPathEnv[] = "PYTHONPATH";
 
+void ClearPythonPath() {
+  std::unique_ptr<base::Environment> env(base::Environment::Create());
+  env->UnSetVar(kPythonPathEnv);
+}
+
 void AppendToPythonPath(const base::FilePath& dir) {
   std::unique_ptr<base::Environment> env(base::Environment::Create());
   std::string old_path;
@@ -115,6 +120,9 @@ bool GetPythonCommand(base::CommandLine* python_cmd) {
   // Launch python in unbuffered mode, so that python output doesn't mix with
   // gtest output in buildbot log files. See http://crbug.com/147368.
   python_cmd->AppendArg("-u");
+
+  // Prevent using system-installed libraries. Use hermetic versioned copies.
+  python_cmd->AppendArg("-S");
 
   return true;
 }

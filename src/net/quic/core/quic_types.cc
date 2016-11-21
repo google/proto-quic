@@ -17,6 +17,15 @@ ostream& operator<<(ostream& os, const QuicConsumedData& s) {
   return os;
 }
 
+ostream& operator<<(ostream& os, const Perspective& s) {
+  if (s == Perspective::IS_SERVER) {
+    os << "IS_SERVER";
+  } else {
+    os << "IS_CLIENT";
+  }
+  return os;
+}
+
 WriteResult::WriteResult() : status(WRITE_STATUS_ERROR), bytes_written(0) {}
 
 WriteResult::WriteResult(WriteStatus status, int bytes_written_or_error_code)

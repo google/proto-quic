@@ -5,6 +5,7 @@
 # Toolchain-related configuration that may be needed outside the context of the
 # toolchain() rules themselves.
 
+import("//build_overrides/build.gni")
 import("//build/config/chrome_build.gni")
 
 declare_args() {
@@ -40,18 +41,6 @@ declare_args() {
   # with the build. Used on iOS to ship official builds (as they are built
   # with the version of clang shipped with Xcode).
   use_xcode_clang = is_ios && is_official_build
-
-  # Use the system install of Xcode for tools like ibtool, libtool, etc.
-  # This does not affect the compiler. When this variable is false, targets will
-  # instead use a hermetic install of Xcode. [The hermetic install can be
-  # obtained with gclient sync after setting the environment variable
-  # FORCE_MAC_TOOLCHAIN].
-  use_system_xcode = ""
-}
-
-if ((is_mac || is_ios) && use_system_xcode == "") {
-  _result = getenv("FORCE_MAC_TOOLCHAIN")
-  use_system_xcode = _result == ""
 }
 
 # The path to the hermetic install of Xcode. Only relevant when

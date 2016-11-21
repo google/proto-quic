@@ -381,8 +381,8 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
 
     if pass_through_count != 1:
       raise ChromeProxyMetricException, (
-          'Expected exactly one Chrome-Proxy pass-through request, but %d '
-          'such requests were sent.' % (pass_through_count))
+          'Expected exactly one Chrome-Proxy-Accept-Transform identity request,'
+          ' but %d such requests were sent.' % (pass_through_count))
 
     if compressed_count != 1:
       raise ChromeProxyMetricException, (
@@ -391,8 +391,8 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
 
     if compressed_size >= pass_through_size:
       raise ChromeProxyMetricException, (
-          'Compressed image is %d bytes and pass-through image is %d. '
-          'Expecting compressed image size to be less than pass-through '
+          'Compressed image is %d bytes and identity image is %d. '
+          'Expecting compressed image size to be less than identity '
           'image.' % (compressed_size, pass_through_size))
 
     results.AddValue(scalar.ScalarValue(

@@ -58,14 +58,13 @@ class FakeProofSource : public net::ProofSource {
                 base::StringPiece chlo_hash,
                 const net::QuicTagVector& connection_options,
                 scoped_refptr<net::ProofSource::Chain>* out_certs,
-                std::string* out_signature,
-                std::string* out_leaf_cert_sct) override {
+                net::QuicCryptoProof* proof) override {
     if (success_) {
       std::vector<std::string> certs;
       certs.push_back("Required to establish handshake");
       *out_certs = new ProofSource::Chain(certs);
-      *out_signature = "Signature";
-      *out_leaf_cert_sct = "Time";
+      proof->signature = "Signature";
+      proof->leaf_cert_scts = "Time";
     }
     return success_;
   }

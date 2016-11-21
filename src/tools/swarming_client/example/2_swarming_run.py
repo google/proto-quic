@@ -12,7 +12,6 @@ via swarming.py to archives, run and collect results for this task.
 It generates example_result.json as a task summary.
 """
 
-import os
 import shutil
 import subprocess
 import sys
@@ -50,6 +49,8 @@ def main():
       cmd.append('--idempotent')
     if options.priority is not None:
       cmd.extend(('--priority', str(options.priority)))
+    if options.service_account:
+      cmd.extend(('--service-account', options.service_account))
     common.run(cmd, options.verbose)
     with open('example_result.json', 'rb') as f:
       print('example_result.json content:')

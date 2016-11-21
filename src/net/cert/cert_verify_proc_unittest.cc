@@ -14,6 +14,7 @@
 #include "base/sha1.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/test/histogram_tester.h"
+#include "base/test/scoped_feature_list.h"
 #include "build/build_config.h"
 #include "crypto/sha2.h"
 #include "net/base/net_errors.h"
@@ -38,6 +39,10 @@
 
 #if defined(OS_MACOSX) && !defined(OS_IOS)
 #include "net/cert/test_keychain_search_list_mac.h"
+#endif
+
+#if defined(OS_WIN)
+#include "base/win/windows_version.h"
 #endif
 
 using net::test::IsError;
@@ -871,10 +876,18 @@ TEST_F(CertVerifyProcTest, IntranetHostsRejected) {
   EXPECT_FALSE(verify_result.cert_status & CERT_STATUS_NON_UNIQUE_NAME);
 }
 
-// Test that a SHA-1 certificate from a publicly trusted CA issued after
-// 1 January 2016 is rejected, but those issued before that date, or with
-// SHA-1 in the intermediate, is not rejected.
-TEST_F(CertVerifyProcTest, VerifyRejectsSHA1AfterDeprecation) {
+// While all SHA-1 certificates should be rejected, in the event that there
+// emerges some unexpected bug, test that the 'legacy' behaviour works
+// correctly - rejecting all SHA-1 certificates from publicly trusted CAs
+// that were issued after 1 January 2016, while still allowing those from
+// before that date, with SHA-1 in the intermediate, or from an enterprise
+// CA.
+//
+// TODO(rsleevi): This code should be removed in M57.
+TEST_F(CertVerifyProcTest, VerifyRejectsSHA1AfterDeprecationLegacyMode) {
+  base::test::ScopedFeatureList scoped_feature_list;
+  scoped_feature_list.InitAndEnableFeature(CertVerifyProc::kSHA1LegacyMode);
+
   CertVerifyResult dummy_result;
   CertVerifyResult verify_result;
   int error = 0;
@@ -1512,6 +1525,131 @@ TEST_F(CertVerifyProcTest, MacSystemRootCertificateKeychainLocation) {
 }
 #endif
 
+bool AreSHA1IntermediatesAllowed() {
+#if defined(OS_WIN)
+  // TODO(rsleevi): Remove this once https://crbug.com/588789 is resolved
+  // for Windows 7/2008 users.
+  // Note: This must be kept in sync with cert_verify_proc.cc
+  return base::win::GetVersion() < base::win::VERSION_WIN8;
+#else
+  return false;
+#endif
+}
+
+TEST_F(CertVerifyProcTest, RejectsMD2) {
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_md2 = true;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
+}
+
+TEST_F(CertVerifyProcTest, RejectsMD4) {
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_md4 = true;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
+}
+
+TEST_F(CertVerifyProcTest, RejectsMD5) {
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_md5 = true;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_WEAK_SIGNATURE_ALGORITHM);
+}
+
+TEST_F(CertVerifyProcTest, RejectsPublicSHA1Leaves) {
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_sha1 = true;
+  result.has_sha1_leaf = true;
+  result.is_issued_by_known_root = true;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_WEAK_SIGNATURE_ALGORITHM);
+}
+
+TEST_F(CertVerifyProcTest, RejectsPublicSHA1IntermediatesUnlessAllowed) {
+  scoped_refptr<X509Certificate> cert(ImportCertFromFile(
+      GetTestCertsDirectory(), "39_months_after_2015_04.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_sha1 = true;
+  result.has_sha1_leaf = false;
+  result.is_issued_by_known_root = true;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  if (AreSHA1IntermediatesAllowed()) {
+    EXPECT_THAT(error, IsOk());
+    EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_SHA1_SIGNATURE_PRESENT);
+  } else {
+    EXPECT_THAT(error, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
+    EXPECT_TRUE(verify_result.cert_status &
+                CERT_STATUS_WEAK_SIGNATURE_ALGORITHM);
+  }
+}
+
+TEST_F(CertVerifyProcTest, AcceptsPrivateSHA1) {
+  scoped_refptr<X509Certificate> cert(
+      ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
+
+  CertVerifyResult result;
+  result.has_sha1 = true;
+  result.has_sha1_leaf = true;
+  result.is_issued_by_known_root = false;
+  verify_proc_ = new MockCertVerifyProc(result);
+
+  int flags = 0;
+  CertVerifyResult verify_result;
+  int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                     empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsOk());
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_SHA1_SIGNATURE_PRESENT);
+}
+
 enum ExpectedAlgorithms {
   EXPECT_MD2 = 1 << 0,
   EXPECT_MD4 = 1 << 1,
@@ -1546,7 +1684,10 @@ class CertVerifyProcWeakDigestTest
   virtual ~CertVerifyProcWeakDigestTest() {}
 };
 
-TEST_P(CertVerifyProcWeakDigestTest, Verify) {
+// Test that the underlying cryptographic library properly surfaces the
+// algorithms used in the chain. Some libraries, like NSS, don't return
+// the failing chain on error, and thus not all tests can be run.
+TEST_P(CertVerifyProcWeakDigestTest, VerifyDetectsAlgorithm) {
   WeakDigestTestData data = GetParam();
   base::FilePath certs_dir = GetTestCertsDirectory();
 
@@ -1554,16 +1695,16 @@ TEST_P(CertVerifyProcWeakDigestTest, Verify) {
   if (data.root_cert_filename) {
      scoped_refptr<X509Certificate> root_cert =
          ImportCertFromFile(certs_dir, data.root_cert_filename);
-     ASSERT_NE(static_cast<X509Certificate*>(NULL), root_cert.get());
+     ASSERT_TRUE(root_cert);
      test_root.Reset(root_cert.get());
   }
 
   scoped_refptr<X509Certificate> intermediate_cert =
       ImportCertFromFile(certs_dir, data.intermediate_cert_filename);
-  ASSERT_NE(static_cast<X509Certificate*>(NULL), intermediate_cert.get());
+  ASSERT_TRUE(intermediate_cert);
   scoped_refptr<X509Certificate> ee_cert =
       ImportCertFromFile(certs_dir, data.ee_cert_filename);
-  ASSERT_NE(static_cast<X509Certificate*>(NULL), ee_cert.get());
+  ASSERT_TRUE(ee_cert);
 
   X509Certificate::OSCertHandles intermediates;
   intermediates.push_back(intermediate_cert->os_cert_handle());
@@ -1571,53 +1712,18 @@ TEST_P(CertVerifyProcWeakDigestTest, Verify) {
   scoped_refptr<X509Certificate> ee_chain =
       X509Certificate::CreateFromHandle(ee_cert->os_cert_handle(),
                                         intermediates);
-  ASSERT_NE(static_cast<X509Certificate*>(NULL), ee_chain.get());
+  ASSERT_TRUE(ee_chain);
 
   int flags = 0;
   CertVerifyResult verify_result;
-  int rv = Verify(ee_chain.get(),
-                  "127.0.0.1",
-                  flags,
-                  NULL,
-                  empty_cert_list_,
-                  &verify_result);
+  Verify(ee_chain.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
+         &verify_result);
   EXPECT_EQ(!!(data.expected_algorithms & EXPECT_MD2), verify_result.has_md2);
   EXPECT_EQ(!!(data.expected_algorithms & EXPECT_MD4), verify_result.has_md4);
   EXPECT_EQ(!!(data.expected_algorithms & EXPECT_MD5), verify_result.has_md5);
   EXPECT_EQ(!!(data.expected_algorithms & EXPECT_SHA1), verify_result.has_sha1);
   EXPECT_EQ(!!(data.expected_algorithms & EXPECT_SHA1_LEAF),
             verify_result.has_sha1_leaf);
-
-  EXPECT_FALSE(verify_result.is_issued_by_additional_trust_anchor);
-
-  // Ensure that MD4 and MD2 are tagged as invalid.
-  if (data.expected_algorithms & (EXPECT_MD2 | EXPECT_MD4)) {
-    EXPECT_EQ(CERT_STATUS_INVALID,
-              verify_result.cert_status & CERT_STATUS_INVALID);
-  }
-
-  // Ensure that MD5 is flagged as weak.
-  if (data.expected_algorithms & EXPECT_MD5) {
-    EXPECT_EQ(
-        CERT_STATUS_WEAK_SIGNATURE_ALGORITHM,
-        verify_result.cert_status & CERT_STATUS_WEAK_SIGNATURE_ALGORITHM);
-  }
-
-  // If a root cert is present, then check that the chain was rejected if any
-  // weak algorithms are present. This is only checked when a root cert is
-  // present because the error reported for incomplete chains with weak
-  // algorithms depends on which implementation was used to validate (NSS,
-  // OpenSSL, CryptoAPI, Security.framework) and upon which weak algorithm
-  // present (MD2, MD4, MD5).
-  if (data.root_cert_filename) {
-    if (data.expected_algorithms & (EXPECT_MD2 | EXPECT_MD4)) {
-      EXPECT_THAT(rv, IsError(ERR_CERT_INVALID));
-    } else if (data.expected_algorithms & EXPECT_MD5) {
-      EXPECT_THAT(rv, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
-    } else {
-      EXPECT_THAT(rv, IsOk());
-    }
-  }
 }
 
 // Unlike TEST/TEST_F, which are macros that expand to further macros,
@@ -1868,9 +1974,9 @@ TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionUMA) {
   base::HistogramTester histograms;
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  ASSERT_TRUE(cert);
   CertVerifyResult result;
   result.is_issued_by_known_root = false;
-  result.verified_cert = cert;
   verify_proc_ = new MockCertVerifyProc(result);
 
   histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
@@ -1894,9 +2000,9 @@ TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionWithStapleUMA) {
   base::HistogramTester histograms;
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  ASSERT_TRUE(cert);
   CertVerifyResult result;
   result.is_issued_by_known_root = false;
-  result.verified_cert = cert;
   verify_proc_ = new MockCertVerifyProc(result);
 
   histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
@@ -1921,9 +2027,9 @@ TEST_F(CertVerifyProcTest, DoesNotHaveTLSFeatureExtensionUMA) {
   base::HistogramTester histograms;
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
+  ASSERT_TRUE(cert);
   CertVerifyResult result;
   result.is_issued_by_known_root = false;
-  result.verified_cert = cert;
   verify_proc_ = new MockCertVerifyProc(result);
 
   histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);
@@ -1946,9 +2052,9 @@ TEST_F(CertVerifyProcTest, HasTLSFeatureExtensionWithPublicRootUMA) {
   base::HistogramTester histograms;
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "tls_feature_extension.pem"));
+  ASSERT_TRUE(cert);
   CertVerifyResult result;
   result.is_issued_by_known_root = true;
-  result.verified_cert = cert;
   verify_proc_ = new MockCertVerifyProc(result);
 
   histograms.ExpectTotalCount(kTLSFeatureExtensionHistogram, 0);

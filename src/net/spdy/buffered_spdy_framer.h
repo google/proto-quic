@@ -65,8 +65,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   virtual void OnStreamPadding(SpdyStreamId stream_id, size_t len) = 0;
 
   // Called when a SETTINGS frame is received.
-  // |clear_persisted| True if the respective flag is set on the SETTINGS frame.
-  virtual void OnSettings(bool clear_persisted) = 0;
+  virtual void OnSettings() = 0;
 
   // Called when an individual setting within a SETTINGS frame has been parsed
   // and validated.

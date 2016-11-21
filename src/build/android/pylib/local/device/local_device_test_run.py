@@ -5,6 +5,7 @@
 import fnmatch
 import imp
 import logging
+import posixpath
 import signal
 import thread
 import threading
@@ -42,6 +43,15 @@ def IncrementalInstall(device, apk_helper, installer_script):
                     native_libs=params['native_libs'],
                     dex_files=params['dex_files'],
                     permissions=None)  # Auto-grant permissions from manifest.
+
+
+def SubstituteDeviceRoot(device_path, device_root):
+  if not device_path:
+    return device_root
+  elif isinstance(device_path, list):
+    return posixpath.join(*(p if p else device_root for p in device_path))
+  else:
+    return device_path
 
 
 class LocalDeviceTestRun(test_run.TestRun):
@@ -92,7 +102,7 @@ class LocalDeviceTestRun(test_run.TestRun):
       raise TestsTerminated()
 
     try:
-      with signal_handler.AddSignalHandler(signal.SIGTERM, stop_tests):
+      with signal_handler.SignalHandler(signal.SIGTERM, stop_tests):
         tries = 0
         results = []
         while tries < self._env.max_tries and tests:

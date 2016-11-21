@@ -46,7 +46,6 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakePingPacket(
   header.public_header.version_flag = include_version;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicPingFrame ping;
   return std::unique_ptr<QuicReceivedPacket>(
@@ -73,7 +72,6 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeRstPacket(
   header.public_header.version_flag = include_version;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicRstStreamFrame rst(stream_id, error_code, bytes_written);
   DVLOG(1) << "Adding frame: " << QuicFrame(&rst);
@@ -96,15 +94,13 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   header.public_header.version_flag = include_version;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
-  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
-    ack.missing = false;
+  if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
   }
   QuicFrames frames;
@@ -147,15 +143,13 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
   header.public_header.version_flag = include_version;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = ack_delay_time;
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
-  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
-    ack.missing = false;
+  if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
   }
   QuicFrames frames;
@@ -194,7 +188,6 @@ QuicTestPacketMaker::MakeConnectionClosePacket(QuicPacketNumber num) {
   header.public_header.version_flag = false;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicConnectionCloseFrame close;
   close.error_code = QUIC_CRYPTO_VERSION_NOT_SUPPORTED;
@@ -213,7 +206,6 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeGoAwayPacket(
   header.public_header.version_flag = false;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = num;
-  header.entropy_flag = false;
 
   QuicGoAwayFrame goaway;
   goaway.error_code = error_code;
@@ -246,15 +238,13 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   header.public_header.version_flag = false;
   header.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header.packet_number = packet_number;
-  header.entropy_flag = false;
 
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
-  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
-    ack.missing = false;
+  if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
   }
 
@@ -336,8 +326,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
     ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
   }
-  if (largest_received > 0 && version_ > QUIC_VERSION_33) {
-    ack.missing = false;
+  if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
   }
   QuicFrames frames;
@@ -657,7 +646,6 @@ void QuicTestPacketMaker::InitializeHeader(QuicPacketNumber packet_number,
   header_.public_header.version_flag = should_include_version;
   header_.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header_.packet_number = packet_number;
-  header_.entropy_flag = false;
 }
 
 }  // namespace test

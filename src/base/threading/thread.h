@@ -244,6 +244,10 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // Bind this Thread to an existing MessageLoop instead of starting a new one.
   void SetMessageLoop(MessageLoop* message_loop);
 
+  bool using_external_message_loop() const {
+    return using_external_message_loop_;
+  }
+
  private:
 #if defined(OS_WIN)
   enum ComStatus {
@@ -293,7 +297,9 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
 
   // True only if |message_loop_| was externally provided by |SetMessageLoop()|
   // in which case this Thread has no underlying |thread_| and should merely
-  // drop |message_loop_| on Stop().
+  // drop |message_loop_| on Stop(). In that event, this remains true after
+  // Stop() was invoked so that subclasses can use this state to build their own
+  // cleanup logic as required.
   bool using_external_message_loop_ = false;
 
   // Stores Options::timer_slack_ until the message loop has been bound to

@@ -10,7 +10,6 @@
 #include "base/callback_helpers.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_split.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
 #include "net/http/http_response_headers.h"
@@ -46,6 +45,7 @@ QuicHttpStream::QuicHttpStream(
     const base::WeakPtr<QuicChromiumClientSession>& session)
     : next_state_(STATE_NONE),
       session_(session),
+      quic_version_(session->GetQuicVersion()),
       session_error_(OK),
       was_handshake_confirmed_(session->IsCryptoHandshakeConfirmed()),
       stream_(nullptr),
@@ -125,6 +125,22 @@ void QuicHttpStream::OnRendezvousResult(QuicSpdyStream* stream) {
   }
 
   OnIOComplete(OK);
+}
+
+HttpResponseInfo::ConnectionInfo QuicHttpStream::ConnectionInfoFromQuicVersion(
+    QuicVersion quic_version) {
+  switch (quic_version) {
+    case QUIC_VERSION_UNSUPPORTED:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_UNKNOWN_VERSION;
+    case QUIC_VERSION_34:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_34;
+    case QUIC_VERSION_35:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_35;
+    case QUIC_VERSION_36:
+      return HttpResponseInfo::CONNECTION_INFO_QUIC_36;
+  }
+  NOTREACHED();
+  return HttpResponseInfo::CONNECTION_INFO_QUIC_UNKNOWN_VERSION;
 }
 
 int QuicHttpStream::InitializeStream(const HttpRequestInfo* request_info,
@@ -430,7 +446,7 @@ void QuicHttpStream::Drain(HttpNetworkSession* session) {
 }
 
 void QuicHttpStream::PopulateNetErrorDetails(NetErrorDetails* details) {
-  details->connection_info = HttpResponseInfo::CONNECTION_INFO_QUIC;
+  details->connection_info = ConnectionInfoFromQuicVersion(quic_version_);
   if (was_handshake_confirmed_)
     details->quic_connection_error = quic_connection_error_;
   if (session_) {
@@ -529,6 +545,11 @@ void QuicHttpStream::OnCryptoHandshakeConfirmed() {
       DoCallback(rv);
     }
   }
+}
+
+void QuicHttpStream::OnSuccessfulVersionNegotiation(
+    const QuicVersion& version) {
+  quic_version_ = version;
 }
 
 void QuicHttpStream::OnSessionClosed(int error, bool port_migration_detected) {
@@ -788,11 +809,13 @@ int QuicHttpStream::ProcessResponseHeaders(const SpdyHeaderBlock& headers) {
   // Put the peer's IP address and port into the response.
   IPEndPoint address = session_->peer_address();
   response_info_->socket_address = HostPortPair::FromIPEndPoint(address);
-  response_info_->connection_info = HttpResponseInfo::CONNECTION_INFO_QUIC;
+  response_info_->connection_info =
+      ConnectionInfoFromQuicVersion(quic_version_);
   response_info_->vary_data.Init(*request_info_,
                                  *response_info_->headers.get());
   response_info_->was_alpn_negotiated = true;
-  response_info_->alpn_negotiated_protocol = "quic/1+spdy/3";
+  response_info_->alpn_negotiated_protocol =
+      HttpResponseInfo::ConnectionInfoToString(response_info_->connection_info);
   response_info_->response_time = base::Time::Now();
   response_info_->request_time = request_time_;
   response_headers_received_ = true;

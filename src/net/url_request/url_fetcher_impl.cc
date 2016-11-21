@@ -92,8 +92,9 @@ void URLFetcherImpl::SetRequestContext(
   core_->SetRequestContext(request_context_getter);
 }
 
-void URLFetcherImpl::SetInitiatorURL(const GURL& initiator) {
-  core_->SetInitiatorURL(initiator);
+void URLFetcherImpl::SetInitiator(
+    const base::Optional<url::Origin>& initiator) {
+  core_->SetInitiator(initiator);
 }
 
 void URLFetcherImpl::SetURLRequestUserData(

@@ -44,7 +44,7 @@ class PListWriterUnittest(writer_unittest_common.WriterUnittestCommon):
     <key>pfm_title</key>
     <string/>
     <key>pfm_version</key>
-    <string>1</string>
+    <real>1</real>
     <key>pfm_domain</key>
     <string>%s</string>
     <key>pfm_subkeys</key>
@@ -78,7 +78,7 @@ class PListWriterUnittest(writer_unittest_common.WriterUnittestCommon):
     <key>pfm_title</key>
     <string/>
     <key>pfm_version</key>
-    <string>1</string>
+    <real>1</real>
     <key>pfm_domain</key>
     <string>%s</string>
     <key>pfm_subkeys</key>

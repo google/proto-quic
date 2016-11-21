@@ -303,20 +303,39 @@ bool SpdyAltSvcWireFormat::ParseAltAuthority(StringPiece::const_iterator c,
                                              std::string* host,
                                              uint16_t* port) {
   host->clear();
-  for (; c != end && *c != ':'; ++c) {
-    if (*c == '"') {
-      // Port is mandatory.
-      return false;
-    }
-    if (*c == '\\') {
-      ++c;
-      if (c == end) {
+  if (c == end) {
+    return false;
+  }
+  if (*c == '[') {
+    for (; c != end && *c != ']'; ++c) {
+      if (*c == '"') {
+        // Port is mandatory.
         return false;
       }
+      host->push_back(*c);
     }
+    if (c == end) {
+      return false;
+    }
+    DCHECK_EQ(']', *c);
     host->push_back(*c);
+    ++c;
+  } else {
+    for (; c != end && *c != ':'; ++c) {
+      if (*c == '"') {
+        // Port is mandatory.
+        return false;
+      }
+      if (*c == '\\') {
+        ++c;
+        if (c == end) {
+          return false;
+        }
+      }
+      host->push_back(*c);
+    }
   }
-  if (c == end) {
+  if (c == end || *c != ':') {
     return false;
   }
   DCHECK_EQ(':', *c);

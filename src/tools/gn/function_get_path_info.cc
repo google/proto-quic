@@ -121,82 +121,81 @@ const char kGetPathInfo[] = "get_path_info";
 const char kGetPathInfo_HelpShort[] =
     "get_path_info: Extract parts of a file or directory name.";
 const char kGetPathInfo_Help[] =
-    "get_path_info: Extract parts of a file or directory name.\n"
-    "\n"
-    "  get_path_info(input, what)\n"
-    "\n"
-    "  The first argument is either a string representing a file or\n"
-    "  directory name, or a list of such strings. If the input is a list\n"
-    "  the return value will be a list containing the result of applying the\n"
-    "  rule to each item in the input.\n"
-    "\n"
-    "Possible values for the \"what\" parameter\n"
-    "\n"
-    "  \"file\"\n"
-    "      The substring after the last slash in the path, including the name\n"
-    "      and extension. If the input ends in a slash, the empty string will\n"
-    "      be returned.\n"
-    "        \"foo/bar.txt\" => \"bar.txt\"\n"
-    "        \"bar.txt\" => \"bar.txt\"\n"
-    "        \"foo/\" => \"\"\n"
-    "        \"\" => \"\"\n"
-    "\n"
-    "  \"name\"\n"
-    "     The substring of the file name not including the extension.\n"
-    "        \"foo/bar.txt\" => \"bar\"\n"
-    "        \"foo/bar\" => \"bar\"\n"
-    "        \"foo/\" => \"\"\n"
-    "\n"
-    "  \"extension\"\n"
-    "      The substring following the last period following the last slash,\n"
-    "      or the empty string if not found. The period is not included.\n"
-    "        \"foo/bar.txt\" => \"txt\"\n"
-    "        \"foo/bar\" => \"\"\n"
-    "\n"
-    "  \"dir\"\n"
-    "      The directory portion of the name, not including the slash.\n"
-    "        \"foo/bar.txt\" => \"foo\"\n"
-    "        \"//foo/bar\" => \"//foo\"\n"
-    "        \"foo\" => \".\"\n"
-    "\n"
-    "      The result will never end in a slash, so if the resulting\n"
-    "      is empty, the system (\"/\") or source (\"//\") roots, a \".\"\n"
-    "      will be appended such that it is always legal to append a slash\n"
-    "      and a filename and get a valid path.\n"
-    "\n"
-    "  \"out_dir\"\n"
-    "      The output file directory corresponding to the path of the\n"
-    "      given file, not including a trailing slash.\n"
-    "        \"//foo/bar/baz.txt\" => \"//out/Default/obj/foo/bar\"\n"
-    "\n"
-    "  \"gen_dir\"\n"
-    "      The generated file directory corresponding to the path of the\n"
-    "      given file, not including a trailing slash.\n"
-    "        \"//foo/bar/baz.txt\" => \"//out/Default/gen/foo/bar\"\n"
-    "\n"
-    "  \"abspath\"\n"
-    "      The full absolute path name to the file or directory. It will be\n"
-    "      resolved relative to the current directory, and then the source-\n"
-    "      absolute version will be returned. If the input is system-\n"
-    "      absolute, the same input will be returned.\n"
-    "        \"foo/bar.txt\" => \"//mydir/foo/bar.txt\"\n"
-    "        \"foo/\" => \"//mydir/foo/\"\n"
-    "        \"//foo/bar\" => \"//foo/bar\"  (already absolute)\n"
-    "        \"/usr/include\" => \"/usr/include\"  (already absolute)\n"
-    "\n"
-    "      If you want to make the path relative to another directory, or to\n"
-    "      be system-absolute, see rebase_path().\n"
-    "\n"
-    "Examples\n"
-    "  sources = [ \"foo.cc\", \"foo.h\" ]\n"
-    "  result = get_path_info(source, \"abspath\")\n"
-    "  # result will be [ \"//mydir/foo.cc\", \"//mydir/foo.h\" ]\n"
-    "\n"
-    "  result = get_path_info(\"//foo/bar/baz.cc\", \"dir\")\n"
-    "  # result will be \"//foo/bar\"\n"
-    "\n"
-    "  # Extract the source-absolute directory name,\n"
-    "  result = get_path_info(get_path_info(path, \"dir\"), \"abspath\")\n";
+    R"(get_path_info: Extract parts of a file or directory name.
+
+  get_path_info(input, what)
+
+  The first argument is either a string representing a file or directory name,
+  or a list of such strings. If the input is a list the return value will be a
+  list containing the result of applying the rule to each item in the input.
+
+Possible values for the "what" parameter
+
+  "file"
+      The substring after the last slash in the path, including the name and
+      extension. If the input ends in a slash, the empty string will be
+      returned.
+        "foo/bar.txt" => "bar.txt"
+        "bar.txt" => "bar.txt"
+        "foo/" => ""
+        "" => ""
+
+  "name"
+     The substring of the file name not including the extension.
+        "foo/bar.txt" => "bar"
+        "foo/bar" => "bar"
+        "foo/" => ""
+
+  "extension"
+      The substring following the last period following the last slash, or the
+      empty string if not found. The period is not included.
+        "foo/bar.txt" => "txt"
+        "foo/bar" => ""
+
+  "dir"
+      The directory portion of the name, not including the slash.
+        "foo/bar.txt" => "foo"
+        "//foo/bar" => "//foo"
+        "foo" => "."
+
+      The result will never end in a slash, so if the resulting is empty, the
+      system ("/") or source ("//") roots, a "." will be appended such that it
+      is always legal to append a slash and a filename and get a valid path.
+
+  "out_dir"
+      The output file directory corresponding to the path of the given file,
+      not including a trailing slash.
+        "//foo/bar/baz.txt" => "//out/Default/obj/foo/bar"
+
+  "gen_dir"
+      The generated file directory corresponding to the path of the given file,
+      not including a trailing slash.
+        "//foo/bar/baz.txt" => "//out/Default/gen/foo/bar"
+
+  "abspath"
+      The full absolute path name to the file or directory. It will be resolved
+      relative to the current directory, and then the source- absolute version
+      will be returned. If the input is system- absolute, the same input will
+      be returned.
+        "foo/bar.txt" => "//mydir/foo/bar.txt"
+        "foo/" => "//mydir/foo/"
+        "//foo/bar" => "//foo/bar"  (already absolute)
+        "/usr/include" => "/usr/include"  (already absolute)
+
+      If you want to make the path relative to another directory, or to be
+      system-absolute, see rebase_path().
+
+Examples
+  sources = [ "foo.cc", "foo.h" ]
+  result = get_path_info(source, "abspath")
+  # result will be [ "//mydir/foo.cc", "//mydir/foo.h" ]
+
+  result = get_path_info("//foo/bar/baz.cc", "dir")
+  # result will be "//foo/bar"
+
+  # Extract the source-absolute directory name,
+  result = get_path_info(get_path_info(path, "dir"), "abspath"
+)";
 
 Value RunGetPathInfo(Scope* scope,
                      const FunctionCallNode* function,

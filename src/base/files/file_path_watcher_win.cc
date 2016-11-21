@@ -296,6 +296,7 @@ void FilePathWatcherImpl::DestroyWatch() {
 }  // namespace
 
 FilePathWatcher::FilePathWatcher() {
+  sequence_checker_.DetachFromSequence();
   impl_ = new FilePathWatcherImpl();
 }
 

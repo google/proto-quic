@@ -261,7 +261,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, CancelJobsBeforeBinding) {
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -295,7 +295,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, OnStreamFailedForBothJobs) {
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -339,7 +339,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -390,7 +390,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -435,7 +435,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -482,7 +482,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, GetLoadStateAfterMainJobFailed) {
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -531,7 +531,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DoNotResumeMainJobBeforeWait) {
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -556,7 +556,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, InvalidPortForQuic) {
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 101);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 101);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(
@@ -598,7 +598,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   // Set a SPDY alternative service for the server.
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
   // Hack to use different URL for the main job to help differentiate the proxy
   // requests.
@@ -660,7 +660,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   request_info.url = GURL("https://www.google.com");
 
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
   // Hack to use different URL for the main job to help differentiate the proxy
   // requests.
@@ -722,7 +722,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
 
   // Set a SPDY alternative service for the server.
   url::SchemeHostPort server(request_info.url);
-  AlternativeService alternative_service(QUIC, server.host(), 443);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
   SetAlternativeService(request_info, alternative_service);
 
   request_.reset(

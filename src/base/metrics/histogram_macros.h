@@ -67,8 +67,8 @@
 
 // Sample usage:
 //   UMA_HISTOGRAM_EXACT_LINEAR("Histogram.Linear", count, 10);
-#define UMA_HISTOGRAM_EXACT_LINEAR(name, sample, value_max)                    \
-    UMA_HISTOGRAM_ENUMERATION(name, sample, value_max+1)
+#define UMA_HISTOGRAM_EXACT_LINEAR(name, sample, value_max) \
+  UMA_HISTOGRAM_ENUMERATION(name, sample, value_max)
 
 // Used for capturing basic percentages. This will be 100 buckets of size 1.
 

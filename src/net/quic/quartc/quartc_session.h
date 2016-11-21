@@ -89,7 +89,7 @@ class NET_EXPORT_PRIVATE QuartcSession
 
  protected:
   // QuicSession override.
-  ReliableQuicStream* CreateIncomingDynamicStream(QuicStreamId id) override;
+  QuicStream* CreateIncomingDynamicStream(QuicStreamId id) override;
 
   QuartcStream* CreateDataStream(QuicStreamId id, SpdyPriority priority);
 

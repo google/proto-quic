@@ -18,7 +18,7 @@ WriteResult QuicDefaultPacketWriter::WritePacket(const char* buffer,
                                                  const IPAddress& self_address,
                                                  const IPEndPoint& peer_address,
                                                  PerPacketOptions* options) {
-  DCHECK(!IsWriteBlocked());
+  DCHECK(!write_blocked_);
   DCHECK(nullptr == options)
       << "QuicDefaultPacketWriter does not accept any options.";
   WriteResult result = QuicSocketUtils::WritePacket(fd_, buffer, buf_len,
@@ -44,6 +44,10 @@ void QuicDefaultPacketWriter::SetWritable() {
 QuicByteCount QuicDefaultPacketWriter::GetMaxPacketSize(
     const IPEndPoint& peer_address) const {
   return kMaxPacketSize;
+}
+
+void QuicDefaultPacketWriter::set_write_blocked(bool is_blocked) {
+  write_blocked_ = is_blocked;
 }
 
 }  // namespace net

@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import tempfile
+import threading
 import xml.etree.ElementTree
 
 from devil.android import apk_helper
@@ -14,7 +15,6 @@ from pylib import constants
 from pylib.constants import host_paths
 from pylib.base import base_test_result
 from pylib.base import test_instance
-from pylib.utils import isolator
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import unittest_util # pylint: disable=import-error
@@ -198,17 +198,49 @@ def ParseGTestXML(xml_content):
   return results
 
 
+def ConvertTestFilterFileIntoGTestFilterArgument(input_lines):
+  """Converts test filter file contents into --gtest_filter argument.
+
+  See //testing/buildbot/filters/README.md for description of the
+  syntax that |input_lines| are expected to follow.
+
+  See
+  https://github.com/google/googletest/blob/master/googletest/docs/AdvancedGuide.md#running-a-subset-of-the-tests
+  for description of the syntax that --gtest_filter argument should follow.
+
+  Args:
+    input_lines: An iterable (e.g. a list or a file) containing input lines.
+  Returns:
+    a string suitable for feeding as an argument of --gtest_filter parameter.
+  """
+  # Strip whitespace + skip empty lines and lines beginning with '#'.
+  stripped_lines = (l.strip() for l in input_lines)
+  filter_lines = list(l for l in stripped_lines if l and l[0] != '#')
+
+  # Split the tests into positive and negative patterns (gtest treats
+  # every pattern after the first '-' sign as an exclusion).
+  positive_patterns = ':'.join(l for l in filter_lines if l[0] != '-')
+  negative_patterns = ':'.join(l[1:] for l in filter_lines if l[0] == '-')
+  if negative_patterns:
+    negative_patterns = '-' + negative_patterns
+
+  # Join the filter lines into one, big --gtest_filter argument.
+  return positive_patterns + negative_patterns
+
+
 class GtestTestInstance(test_instance.TestInstance):
 
-  def __init__(self, args, isolate_delegate, error_func):
+  def __init__(self, args, data_deps_delegate, error_func):
     super(GtestTestInstance, self).__init__()
     # TODO(jbudorick): Support multiple test suites.
     if len(args.suite_name) > 1:
       raise ValueError('Platform mode currently supports only 1 gtest suite')
+    self._exe_dist_dir = None
     self._extract_test_list_from_filter = args.extract_test_list_from_filter
     self._shard_timeout = args.shard_timeout
+    self._store_tombstones = args.store_tombstones
     self._suite = args.suite_name[0]
-    self._exe_dist_dir = None
+    self._filter_tests_lock = threading.Lock()
 
     # GYP:
     if args.executable_dist_dir:
@@ -252,26 +284,14 @@ class GtestTestInstance(test_instance.TestInstance):
       self._gtest_filter = args.test_filter
     elif args.test_filter_file:
       with open(args.test_filter_file, 'r') as f:
-        # Strip whitespace + skip empty lines and lines beginning with '#'.
-        # This should be consistent with processing of
-        # --test-launcher-filter-file in base/test/launcher/test_launcher.cc.
-        stripped_lines = (l.strip() for l in f)
-        filter_lines = (l for l in stripped_lines if l and l[0] != '#')
-        # Join the filter lines into one, big --gtest_filter argument.
-        self._gtest_filter = ':'.join(filter_lines)
+        self._gtest_filter = ConvertTestFilterFileIntoGTestFilterArgument(f)
     else:
       self._gtest_filter = None
 
-    if (args.isolate_file_path and
-        not isolator.IsIsolateEmpty(args.isolate_file_path)):
-      self._isolate_abs_path = os.path.abspath(args.isolate_file_path)
-      self._isolate_delegate = isolate_delegate
-      self._isolated_abs_path = os.path.join(
-          constants.GetOutDirectory(), '%s.isolated' % self._suite)
-    else:
-      logging.warning('%s isolate file provided. No data deps will be pushed.',
-                      'Empty' if args.isolate_file_path else 'No')
-      self._isolate_delegate = None
+    self._data_deps_delegate = data_deps_delegate
+    self._runtime_deps_path = args.runtime_deps_path
+    if not self._runtime_deps_path:
+      logging.warning('No data dependencies will be pushed.')
 
     if args.app_data_files:
       self._app_data_files = args.app_data_files
@@ -342,6 +362,10 @@ class GtestTestInstance(test_instance.TestInstance):
     return self._shard_timeout
 
   @property
+  def store_tombstones(self):
+    return self._store_tombstones
+
+  @property
   def suite(self):
     return self._suite
 
@@ -364,15 +388,8 @@ class GtestTestInstance(test_instance.TestInstance):
   #override
   def SetUp(self):
     """Map data dependencies via isolate."""
-    if self._isolate_delegate:
-      self._isolate_delegate.Remap(
-          self._isolate_abs_path, self._isolated_abs_path)
-      self._isolate_delegate.PurgeExcluded(_DEPS_EXCLUSION_LIST)
-      self._isolate_delegate.MoveOutputDeps()
-      dest_dir = None
-      self._data_deps.extend([
-          (self._isolate_delegate.isolate_deps_dir, dest_dir)])
-
+    self._data_deps.extend(
+        self._data_deps_delegate(self._runtime_deps_path))
 
   def GetDataDependencies(self):
     """Returns the test suite's data dependencies.
@@ -399,10 +416,13 @@ class GtestTestInstance(test_instance.TestInstance):
       gtest_filter_strings.append(self._gtest_filter)
 
     filtered_test_list = test_list
-    for gtest_filter_string in gtest_filter_strings:
-      logging.debug('Filtering tests using: %s', gtest_filter_string)
-      filtered_test_list = unittest_util.FilterTestNames(
-          filtered_test_list, gtest_filter_string)
+    # This lock is required because on older versions of Python
+    # |unittest_util.FilterTestNames| use of |fnmatch| is not threadsafe.
+    with self._filter_tests_lock:
+      for gtest_filter_string in gtest_filter_strings:
+        logging.debug('Filtering tests using: %s', gtest_filter_string)
+        filtered_test_list = unittest_util.FilterTestNames(
+            filtered_test_list, gtest_filter_string)
     return filtered_test_list
 
   def _GenerateDisabledFilterString(self, disabled_prefixes):
@@ -426,7 +446,6 @@ class GtestTestInstance(test_instance.TestInstance):
 
   #override
   def TearDown(self):
-    """Clear the mappings created by SetUp."""
-    if self._isolate_delegate:
-      self._isolate_delegate.Clear()
+    """Do nothing."""
+    pass
 

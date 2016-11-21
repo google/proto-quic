@@ -52,3 +52,7 @@ build obj/five.o: link ../../five.cc
 build obj/six.o: cxx_sysroot_abs ../../six.cc
 
 build obj/seven.o: cxx_sysroot_rel ../../seven.cc
+
+build obj/eight.o: cxx ../../eight.m
+
+build obj/nine.o: cxx ../../nine.mm

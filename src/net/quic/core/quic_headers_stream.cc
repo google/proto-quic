@@ -328,7 +328,7 @@ class QuicHeadersStream::SpdyFramerVisitor
 };
 
 QuicHeadersStream::QuicHeadersStream(QuicSpdySession* session)
-    : ReliableQuicStream(kHeadersStreamId, session),
+    : QuicStream(kHeadersStreamId, session),
       spdy_session_(session),
       stream_id_(kInvalidStreamId),
       promised_stream_id_(kInvalidStreamId),

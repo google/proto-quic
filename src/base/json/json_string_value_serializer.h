@@ -47,8 +47,10 @@ class BASE_EXPORT JSONStringValueSerializer : public base::ValueSerializer {
 class BASE_EXPORT JSONStringValueDeserializer : public base::ValueDeserializer {
  public:
   // This retains a reference to the contents of |json_string|, so the data
-  // must outlive the JSONStringValueDeserializer.
-  explicit JSONStringValueDeserializer(const base::StringPiece& json_string);
+  // must outlive the JSONStringValueDeserializer. |options| is a bitmask of
+  // JSONParserOptions.
+  explicit JSONStringValueDeserializer(const base::StringPiece& json_string,
+                                       int options = 0);
 
   ~JSONStringValueDeserializer() override;
 
@@ -62,15 +64,10 @@ class BASE_EXPORT JSONStringValueDeserializer : public base::ValueDeserializer {
   std::unique_ptr<base::Value> Deserialize(int* error_code,
                                            std::string* error_message) override;
 
-  void set_allow_trailing_comma(bool new_value) {
-    allow_trailing_comma_ = new_value;
-  }
-
  private:
   // Data is owned by the caller of the constructor.
   base::StringPiece json_string_;
-  // If true, deserialization will allow trailing commas.
-  bool allow_trailing_comma_;
+  const int options_;
 
   DISALLOW_COPY_AND_ASSIGN(JSONStringValueDeserializer);
 };

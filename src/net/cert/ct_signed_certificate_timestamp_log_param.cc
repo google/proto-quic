@@ -10,7 +10,6 @@
 
 #include "base/base64.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/stringprintf.h"
 #include "base/values.h"
 #include "net/cert/ct_sct_to_string.h"
 #include "net/cert/signed_certificate_timestamp.h"

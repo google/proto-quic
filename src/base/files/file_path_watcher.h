@@ -12,6 +12,7 @@
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequence_checker.h"
 #include "base/single_thread_task_runner.h"
 
 namespace base {
@@ -25,6 +26,8 @@ namespace base {
 // detect the creation and deletion of files in a watched directory, but will
 // not detect modifications to those files. See file_path_watcher_kqueue.cc for
 // details.
+//
+// Must be destroyed on the sequence that invokes Watch().
 class BASE_EXPORT FilePathWatcher {
  public:
   // Callback type for Watch(). |path| points to the file that was updated,
@@ -76,7 +79,7 @@ class BASE_EXPORT FilePathWatcher {
   };
 
   FilePathWatcher();
-  virtual ~FilePathWatcher();
+  ~FilePathWatcher();
 
   // A callback that always cleans up the PlatformDelegate, either when executed
   // or when deleted without having been executed at all, as can happen during
@@ -97,6 +100,8 @@ class BASE_EXPORT FilePathWatcher {
 
  private:
   scoped_refptr<PlatformDelegate> impl_;
+
+  SequenceChecker sequence_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(FilePathWatcher);
 };

@@ -14,9 +14,9 @@
 #include "net/log/net_log_with_source.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/connection_attempts.h"
+#include "net/socket/fuzzed_datagram_client_socket.h"
 #include "net/socket/fuzzed_socket.h"
 #include "net/socket/ssl_client_socket.h"
-#include "net/udp/fuzzed_datagram_client_socket.h"
 
 namespace net {
 

@@ -11,7 +11,6 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/io_buffer.h"
 #include "net/websockets/websocket_deflate_parameters.h"
 #include "net/websockets/websocket_extension.h"
@@ -97,9 +96,9 @@ WebSocket::ParseResult DecodeFrameHybi17(const base::StringPiece& frame,
   uint64_t payload_length64 = second_byte & kPayloadLengthMask;
   if (payload_length64 > kMaxSingleBytePayloadLength) {
     int extended_payload_length_size;
-    if (payload_length64 == kTwoBytePayloadLengthField)
+    if (payload_length64 == kTwoBytePayloadLengthField) {
       extended_payload_length_size = 2;
-    else {
+    } else {
       DCHECK(payload_length64 == kEightBytePayloadLengthField);
       extended_payload_length_size = 8;
     }

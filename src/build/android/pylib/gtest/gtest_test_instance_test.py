@@ -165,6 +165,51 @@ class GtestTestInstanceTests(unittest.TestCase):
     self.assertEquals(1, actual[0].GetDuration())
     self.assertEquals(base_test_result.ResultType.PASS, actual[0].GetType())
 
+  def testConvertTestFilterFile_commentsAndBlankLines(self):
+    input_lines = [
+      'positive1',
+      '# comment',
+      'positive2',
+      ''
+      'positive3'
+    ]
+    actual = gtest_test_instance \
+        .ConvertTestFilterFileIntoGTestFilterArgument(input_lines)
+    expected = 'positive1:positive2:positive3'
+    self.assertEquals(expected, actual)
+
+  def testConvertTestFilterFile_onlyPositive(self):
+    input_lines = [
+      'positive1',
+      'positive2'
+    ]
+    actual = gtest_test_instance \
+        .ConvertTestFilterFileIntoGTestFilterArgument(input_lines)
+    expected = 'positive1:positive2'
+    self.assertEquals(expected, actual)
+
+  def testConvertTestFilterFile_onlyNegative(self):
+    input_lines = [
+      '-negative1',
+      '-negative2'
+    ]
+    actual = gtest_test_instance \
+        .ConvertTestFilterFileIntoGTestFilterArgument(input_lines)
+    expected = '-negative1:negative2'
+    self.assertEquals(expected, actual)
+
+  def testConvertTestFilterFile_positiveAndNegative(self):
+    input_lines = [
+      'positive1',
+      'positive2',
+      '-negative1',
+      '-negative2'
+    ]
+    actual = gtest_test_instance \
+        .ConvertTestFilterFileIntoGTestFilterArgument(input_lines)
+    expected = 'positive1:positive2-negative1:negative2'
+    self.assertEquals(expected, actual)
+
 
 if __name__ == '__main__':
   unittest.main(verbosity=2)

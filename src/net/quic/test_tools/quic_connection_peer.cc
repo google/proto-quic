@@ -90,38 +90,6 @@ QuicTime::Delta QuicConnectionPeer::GetNetworkTimeout(
 }
 
 // static
-QuicSentEntropyManager* QuicConnectionPeer::GetSentEntropyManager(
-    QuicConnection* connection) {
-  return &connection->sent_entropy_manager_;
-}
-
-// static
-// TODO(ianswett): Create a GetSentEntropyHash which accepts an AckFrame.
-QuicPacketEntropyHash QuicConnectionPeer::GetSentEntropyHash(
-    QuicConnection* connection,
-    QuicPacketNumber packet_number) {
-  QuicSentEntropyManager::CumulativeEntropy last_entropy_copy =
-      connection->sent_entropy_manager_.last_cumulative_entropy_;
-  connection->sent_entropy_manager_.UpdateCumulativeEntropy(packet_number,
-                                                            &last_entropy_copy);
-  return last_entropy_copy.entropy;
-}
-
-// static
-QuicPacketEntropyHash QuicConnectionPeer::PacketEntropy(
-    QuicConnection* connection,
-    QuicPacketNumber packet_number) {
-  return connection->sent_entropy_manager_.GetPacketEntropy(packet_number);
-}
-
-// static
-QuicPacketEntropyHash QuicConnectionPeer::ReceivedEntropyHash(
-    QuicConnection* connection,
-    QuicPacketNumber packet_number) {
-  return connection->received_packet_manager_.EntropyHash(packet_number);
-}
-
-// static
 void QuicConnectionPeer::SetPerspective(QuicConnection* connection,
                                         Perspective perspective) {
   connection->perspective_ = perspective;

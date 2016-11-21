@@ -10,7 +10,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
@@ -88,7 +87,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   void AddExtraHeaders();
   void AddCookieHeaderAndStart();
   void SaveCookiesAndNotifyHeadersComplete(int result);
-  void FetchResponseCookies(std::vector<std::string>* cookies);
 
   // Processes the Strict-Transport-Security header, if one exists.
   void ProcessStrictTransportSecurityHeader();
@@ -160,7 +158,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
 
   // Callback functions for Cookie Monster
   void SetCookieHeaderAndStart(const CookieList& cookie_list);
-  void DoStartTransaction();
 
   // Some servers send the body compressed, but specify the content length as
   // the uncompressed size. If this is the case, we return true in order
@@ -182,9 +179,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
   AuthState proxy_auth_state_;
   AuthState server_auth_state_;
   AuthCredentials auth_credentials_;
-
-  CompletionCallback start_callback_;
-  CompletionCallback notify_before_headers_sent_callback_;
 
   bool read_in_progress_;
 
@@ -239,8 +233,6 @@ class NET_EXPORT_PRIVATE URLRequestHttpJob : public URLRequestJob {
 
   // When the transaction finished reading the request headers.
   base::TimeTicks receive_headers_end_;
-
-  CompletionCallback on_headers_received_callback_;
 
   // We allow the network delegate to modify a copy of the response headers.
   // This prevents modifications of headers that are shared with the underlying

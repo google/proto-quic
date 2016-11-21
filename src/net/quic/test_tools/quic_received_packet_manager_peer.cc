@@ -11,15 +11,6 @@ namespace net {
 namespace test {
 
 // static
-void QuicReceivedPacketManagerPeer::SetCumulativeEntropyUpTo(
-    QuicReceivedPacketManager* received_packet_manager,
-    QuicPacketNumber peer_least_unacked,
-    QuicPacketEntropyHash entropy_hash) {
-  received_packet_manager->entropy_tracker_.SetCumulativeEntropyUpTo(
-      peer_least_unacked, entropy_hash);
-}
-
-// static
 bool QuicReceivedPacketManagerPeer::DontWaitForPacketsBefore(
     QuicReceivedPacketManager* received_packet_manager,
     QuicPacketNumber least_unacked) {

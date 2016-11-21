@@ -43,6 +43,7 @@
 
 using net::test::IsError;
 using net::test::IsOk;
+using net::test::TestServerPushDelegate;
 
 namespace net {
 
@@ -208,6 +209,7 @@ class SpdySessionTest : public PlatformTest {
   SpdySessionDependencies session_deps_;
   std::unique_ptr<HttpNetworkSession> http_session_;
   base::WeakPtr<SpdySession> session_;
+  TestServerPushDelegate test_push_delegate_;
   SpdySessionPool* spdy_session_pool_;
   const GURL test_url_;
   const url::SchemeHostPort test_server_;
@@ -1277,6 +1279,92 @@ TEST_F(SpdySessionTest, UnstallRacesWithStreamCreation) {
   EXPECT_THAT(callback2.WaitForResult(), IsOk());
 }
 
+TEST_F(SpdySessionTest, CancelPushAfterSessionGoesAway) {
+  base::HistogramTester histogram_tester;
+  session_deps_.host_resolver->set_synchronous_mode(true);
+  session_deps_.time_func = TheNearFuture;
+
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+
+  SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
+  SpdySerializedFrame push_a_body(spdy_util_.ConstructSpdyDataFrame(2, false));
+  // In ascii "0" < "a". We use it to verify that we properly handle std::map
+  // iterators inside. See http://crbug.com/443490
+  SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
+      nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
+  MockRead reads[] = {
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
+      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
+      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+  };
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  AddSSLSocketData();
+
+  CreateNetworkSession();
+  CreateSecureSpdySession();
+  session_->set_push_delegate(&test_push_delegate_);
+
+  // Process the principal request, and the first push stream request & body.
+  base::WeakPtr<SpdyStream> spdy_stream =
+      CreateStreamSynchronously(SPDY_REQUEST_RESPONSE_STREAM, session_,
+                                test_url_, MEDIUM, NetLogWithSource());
+  test::StreamDelegateDoNothing delegate(spdy_stream);
+  spdy_stream->SetDelegate(&delegate);
+
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  spdy_stream->SendRequestHeaders(std::move(headers), NO_MORE_DATA_TO_SEND);
+
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that there is one unclaimed push stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/a.dat")));
+
+  // Unclaimed push body consumed bytes from the session window.
+  EXPECT_EQ(kDefaultInitialWindowSize - kUploadDataSize,
+            session_->session_recv_window_size_);
+  EXPECT_EQ(0, session_->session_unacked_recv_window_bytes_);
+
+  // Shift time to expire the push stream. Read the second HEADERS,
+  // and verify a RST_STREAM was written.
+  g_time_delta = base::TimeDelta::FromSeconds(301);
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Verify that the second pushed stream evicted the first pushed stream.
+  EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
+  EXPECT_EQ(1u, session_->count_unclaimed_pushed_streams_for_url(
+                    GURL("https://www.example.org/0.dat")));
+
+  // Verify that the session window reclaimed the evicted stream body.
+  EXPECT_EQ(kDefaultInitialWindowSize, session_->session_recv_window_size_);
+  EXPECT_EQ(kUploadDataSize, session_->session_unacked_recv_window_bytes_);
+  EXPECT_TRUE(session_);
+
+  // Read and process EOF.
+  data.Resume();
+  base::RunLoop().RunUntilIdle();
+
+  // Cancel the first push after session goes away. Verify the test doesn't
+  // crash.
+  EXPECT_FALSE(session_);
+  EXPECT_TRUE(
+      test_push_delegate_.CancelPush(GURL("https://www.example.org/a.dat")));
+
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
+                                     6, 1);
+}
+
 TEST_F(SpdySessionTest, CancelPushAfterExpired) {
   base::HistogramTester histogram_tester;
   session_deps_.host_resolver->set_synchronous_mode(true);
@@ -1308,6 +1396,7 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
 
   CreateNetworkSession();
   CreateSecureSpdySession();
+  session_->set_push_delegate(&test_push_delegate_);
 
   // Process the principal request, and the first push stream request & body.
   base::WeakPtr<SpdyStream> spdy_stream =
@@ -1343,7 +1432,8 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
                     GURL("https://www.example.org/0.dat")));
 
   // Cancel the first push after its expiration.
-  session_->CancelPush(GURL("https://www.example.org/a.dat"));
+  EXPECT_TRUE(
+      test_push_delegate_.CancelPush(GURL("https://www.example.org/a.dat")));
   EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
   EXPECT_TRUE(session_);
 
@@ -1356,6 +1446,7 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
   data.Resume();
   base::RunLoop().RunUntilIdle();
   EXPECT_FALSE(session_);
+
   histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
   histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
                                      6, 1);
@@ -1392,6 +1483,7 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
 
   CreateNetworkSession();
   CreateSecureSpdySession();
+  session_->set_push_delegate(&test_push_delegate_);
 
   // Process the principal request, and the first push stream request & body.
   base::WeakPtr<SpdyStream> spdy_stream =
@@ -1432,7 +1524,7 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
 
   EXPECT_TRUE(session_);
   // Cancel the push before it's claimed.
-  session_->CancelPush(pushed_url);
+  EXPECT_TRUE(test_push_delegate_.CancelPush(pushed_url));
   EXPECT_EQ(0u, session_->num_unclaimed_pushed_streams());
   EXPECT_EQ(0u, session_->count_unclaimed_pushed_streams_for_url(pushed_url));
 
@@ -1734,11 +1826,11 @@ TEST_F(SpdySessionTest, OnSettings) {
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
 
-// Start with max concurrent streams set to 1.  Request two streams.
-// When the first completes, have the callback close its stream, which
-// should trigger the second stream creation.  Then cancel that one
-// immediately.  Don't crash.  This is a regression test for
-// http://crbug.com/63532 .
+// Create one more stream than maximum number of concurrent streams,
+// so that one of them is pending.  Cancel one stream, which should trigger the
+// creation of the pending stream.  Then cancel that one immediately as well,
+// and make sure this does not lead to a crash.
+// This is a regression test for https://crbug.com/63532.
 TEST_F(SpdySessionTest, CancelPendingCreateStream) {
   session_deps_.host_resolver->set_synchronous_mode(true);
 
@@ -1752,12 +1844,6 @@ TEST_F(SpdySessionTest, CancelPendingCreateStream) {
   AddSSLSocketData();
 
   CreateNetworkSession();
-
-  // Initialize the SpdySetting with 1 max concurrent streams.
-  spdy_session_pool_->http_server_properties()->SetSpdySetting(
-      test_server_, SETTINGS_MAX_CONCURRENT_STREAMS,
-      SETTINGS_FLAG_PLEASE_PERSIST, 1);
-
   CreateSecureSpdySession();
 
   // Leave room for only one more stream to be created.
@@ -1774,15 +1860,15 @@ TEST_F(SpdySessionTest, CancelPendingCreateStream) {
                                 MEDIUM, NetLogWithSource());
   ASSERT_TRUE(spdy_stream1);
 
-  // Use scoped_ptr to let us invalidate the memory when we want to, to trigger
+  // Use unique_ptr to let us invalidate the memory when we want to, to trigger
   // a valgrind error if the callback is invoked when it's not supposed to be.
   std::unique_ptr<TestCompletionCallback> callback(new TestCompletionCallback);
 
   SpdyStreamRequest request;
-  ASSERT_EQ(
-      ERR_IO_PENDING,
+  ASSERT_THAT(
       request.StartRequest(SPDY_BIDIRECTIONAL_STREAM, session_, test_url_,
-                           MEDIUM, NetLogWithSource(), callback->callback()));
+                           MEDIUM, NetLogWithSource(), callback->callback()),
+      IsError(ERR_IO_PENDING));
 
   // Release the first one, this will allow the second to be created.
   spdy_stream1->Cancel();
@@ -1821,11 +1907,6 @@ TEST_F(SpdySessionTest, SendInitialDataOnNewSession) {
 
   CreateNetworkSession();
 
-  const uint32_t initial_max_concurrent_streams = 1;
-  spdy_session_pool_->http_server_properties()->SetSpdySetting(
-      test_server_, SETTINGS_MAX_CONCURRENT_STREAMS,
-      SETTINGS_FLAG_PLEASE_PERSIST, initial_max_concurrent_streams);
-
   SpdySessionPoolPeer pool_peer(spdy_session_pool_);
   pool_peer.SetEnableSendingInitialData(true);
 
@@ -1833,22 +1914,6 @@ TEST_F(SpdySessionTest, SendInitialDataOnNewSession) {
 
   base::RunLoop().RunUntilIdle();
   EXPECT_TRUE(data.AllWriteDataConsumed());
-}
-
-TEST_F(SpdySessionTest, ClearSettingsStorageOnIPAddressChanged) {
-  CreateNetworkSession();
-
-  HttpServerProperties* test_http_server_properties =
-      spdy_session_pool_->http_server_properties();
-  SettingsFlagsAndValue flags_and_value1(SETTINGS_FLAG_PLEASE_PERSIST, 2);
-  test_http_server_properties->SetSpdySetting(test_server_,
-                                              SETTINGS_MAX_CONCURRENT_STREAMS,
-                                              SETTINGS_FLAG_PLEASE_PERSIST, 2);
-  EXPECT_NE(0u,
-            test_http_server_properties->GetSpdySettings(test_server_).size());
-  spdy_session_pool_->OnIPAddressChanged();
-  EXPECT_EQ(0u,
-            test_http_server_properties->GetSpdySettings(test_server_).size());
 }
 
 TEST_F(SpdySessionTest, Initialize) {
@@ -5389,7 +5454,7 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrame) {
       spdy_session_pool_->http_server_properties()->GetAlternativeServices(
           url::SchemeHostPort(GURL(origin)));
   ASSERT_EQ(1u, altsvc_vector.size());
-  EXPECT_EQ(QUIC, altsvc_vector[0].protocol);
+  EXPECT_EQ(kProtoQUIC, altsvc_vector[0].protocol);
   EXPECT_EQ("alternative.example.org", altsvc_vector[0].host);
   EXPECT_EQ(443u, altsvc_vector[0].port);
 }
@@ -5514,7 +5579,7 @@ TEST_F(AltSvcFrameTest, ProcessAltSvcFrameOnActiveStream) {
       spdy_session_pool_->http_server_properties()->GetAlternativeServices(
           url::SchemeHostPort(GURL(request_origin)));
   ASSERT_EQ(1u, altsvc_vector.size());
-  EXPECT_EQ(QUIC, altsvc_vector[0].protocol);
+  EXPECT_EQ(kProtoQUIC, altsvc_vector[0].protocol);
   EXPECT_EQ("alternative.example.org", altsvc_vector[0].host);
   EXPECT_EQ(443u, altsvc_vector[0].port);
 }

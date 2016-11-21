@@ -144,7 +144,13 @@ class CryptoTestUtils {
   // Returns a new |ProofSource| that serves up test certificates.
   static std::unique_ptr<ProofSource> ProofSourceForTesting();
 
-  // Returns a |ProofVerifier| that uses the QUIC testing root CA.
+  // Identical to |ProofSourceForTesting|, with the addition of setting
+  // the |emit_expect_ct_header| field on the test certificates
+  // to be the value of |send_expect_ct_header|.
+  static std::unique_ptr<ProofSource> ProofSourceForTesting(
+      bool send_expect_ct_header);
+
+  // Returns a new |ProofVerifier| that uses the QUIC testing root CA.
   static std::unique_ptr<ProofVerifier> ProofVerifierForTesting();
 
   // Returns a real ProofVerifier (not a fake proof verifier) for testing.
@@ -212,15 +218,16 @@ class CryptoTestUtils {
 
   // Takes a inchoate CHLO, returns a full CHLO in |out| which can pass
   // |crypto_config|'s validation.
-  static void GenerateFullCHLO(const CryptoHandshakeMessage& inchoate_chlo,
-                               QuicCryptoServerConfig* crypto_config,
-                               IPAddress server_ip,
-                               IPEndPoint client_addr,
-                               QuicVersion version,
-                               const QuicClock* clock,
-                               scoped_refptr<QuicCryptoProof> proof,
-                               QuicCompressedCertsCache* compressed_certs_cache,
-                               CryptoHandshakeMessage* out);
+  static void GenerateFullCHLO(
+      const CryptoHandshakeMessage& inchoate_chlo,
+      QuicCryptoServerConfig* crypto_config,
+      IPAddress server_ip,
+      IPEndPoint client_addr,
+      QuicVersion version,
+      const QuicClock* clock,
+      scoped_refptr<QuicSignedServerConfig> signed_config,
+      QuicCompressedCertsCache* compressed_certs_cache,
+      CryptoHandshakeMessage* out);
 
  private:
   static void CompareClientAndServerKeys(QuicCryptoClientStream* client,

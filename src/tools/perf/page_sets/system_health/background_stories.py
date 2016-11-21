@@ -6,6 +6,9 @@ from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 from page_sets.system_health.loading_stories import LoadGmailMobileStory
 
+from telemetry import decorators
+
+
 _WAIT_FOR_VIDEO_SECONDS = 5
 
 class _BackgroundStory(system_health_story.SystemHealthStory):
@@ -39,6 +42,7 @@ class BackgroundFacebookMobileStory(_BackgroundStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('android')  # crbug.com/664521
 class BackgroundNytimesMobileStory(_BackgroundStory):
   """The third top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'background:news:nytimes'
@@ -77,4 +81,3 @@ class BackgroundGmailMobileStory(LoadGmailMobileStory):
   def _Measure(self, action_runner):
     action_runner.tab.browser.Background()
     super(BackgroundGmailMobileStory, self)._Measure(action_runner)
-

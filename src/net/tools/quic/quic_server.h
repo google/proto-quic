@@ -60,10 +60,6 @@ class QuicServer : public EpollCallbackInterface {
 
   void OnShutdown(EpollServer* eps, int fd) override {}
 
-  void SetStrikeRegisterNoStartupPeriod() {
-    crypto_config_.set_strike_register_no_startup_period();
-  }
-
   void SetChloMultiplier(size_t multiplier) {
     crypto_config_.set_chlo_multiplier(multiplier);
   }

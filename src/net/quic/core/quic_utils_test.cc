@@ -15,26 +15,6 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(QuicUtilsTest, StreamErrorToString) {
-  EXPECT_STREQ("QUIC_BAD_APPLICATION_PAYLOAD",
-               QuicUtils::StreamErrorToString(QUIC_BAD_APPLICATION_PAYLOAD));
-}
-
-TEST(QuicUtilsTest, ErrorToString) {
-  EXPECT_STREQ("QUIC_NO_ERROR", QuicUtils::ErrorToString(QUIC_NO_ERROR));
-}
-
-TEST(QuicUtilsTest, TagToString) {
-  EXPECT_EQ("SCFG", QuicUtils::TagToString(kSCFG));
-  EXPECT_EQ("SNO ", QuicUtils::TagToString(kServerNonceTag));
-  EXPECT_EQ("CRT ", QuicUtils::TagToString(kCertificateTag));
-  EXPECT_EQ("CHLO", QuicUtils::TagToString(MakeQuicTag('C', 'H', 'L', 'O')));
-  // A tag that contains a non-printing character will be printed as a decimal
-  // number.
-  EXPECT_EQ("525092931",
-            QuicUtils::TagToString(MakeQuicTag('C', 'H', 'L', '\x1f')));
-}
-
 TEST(QuicUtilsTest, ParseQuicConnectionOptions) {
   QuicTagVector empty_options = QuicUtils::ParseQuicConnectionOptions("");
   EXPECT_EQ(0ul, empty_options.size());

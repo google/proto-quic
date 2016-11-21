@@ -92,6 +92,19 @@ void RewritePointerIfInOriginalStack(uintptr_t top, uintptr_t bottom,
 }
 #endif
 
+void CopyMemoryFromStack(void* to, const void* from, size_t length)
+    NO_SANITIZE("address") {
+#if defined(ADDRESS_SANITIZER)
+  // The following loop is an inlined version of memcpy. The code must be
+  // inlined to avoid instrumentation when using ASAN (memory sanitizer). The
+  // stack profiler is generating false positive when walking the stack.
+  for (size_t pos = 0; pos < length; ++pos)
+    reinterpret_cast<char*>(to)[pos] = reinterpret_cast<const char*>(from)[pos];
+#else
+  std::memcpy(to, from, length);
+#endif
+}
+
 // Rewrites possible pointers to locations within the stack to point to the
 // corresponding locations in the copy, and rewrites the non-volatile registers
 // in |context| likewise. This is necessary to handle stack frames with dynamic
@@ -353,8 +366,8 @@ void SuspendThreadAndRecordStack(
     if (PointsToGuardPage(bottom))
       return;
 
-    std::memcpy(stack_copy_buffer, reinterpret_cast<const void*>(bottom),
-                top - bottom);
+    CopyMemoryFromStack(stack_copy_buffer,
+                        reinterpret_cast<const void*>(bottom), top - bottom);
   }
 
   if (test_delegate)
@@ -385,7 +398,7 @@ class NativeStackSamplerWin : public NativeStackSampler {
     // reserved stack size is 1 MB and Chrome Windows threads currently always
     // use the default, but this allows for expansion if it occurs. The size
     // beyond the actual stack size consists of unallocated virtual memory pages
-    // so carries little cost (just a bit of wated address space).
+    // so carries little cost (just a bit of wasted address space).
     kStackCopyBufferSize = 2 * 1024 * 1024
   };
 

@@ -44,15 +44,15 @@ void HttpStreamFactory::ProcessAlternativeServices(
   AlternativeServiceInfoVector alternative_service_info_vector;
   for (const SpdyAltSvcWireFormat::AlternativeService&
            alternative_service_entry : alternative_service_vector) {
-    AlternateProtocol protocol =
-        AlternateProtocolFromString(alternative_service_entry.protocol_id);
+    NextProto protocol =
+        NextProtoFromString(alternative_service_entry.protocol_id);
     if (!IsAlternateProtocolValid(protocol) ||
         !session->IsProtocolEnabled(protocol) ||
         !IsPortValid(alternative_service_entry.port)) {
       continue;
     }
     // Check if QUIC version is supported.
-    if (protocol == QUIC && !alternative_service_entry.version.empty()) {
+    if (protocol == kProtoQUIC && !alternative_service_entry.version.empty()) {
       bool match_found = false;
       for (QuicVersion supported : session->params().quic_supported_versions) {
         for (uint16_t advertised : alternative_service_entry.version) {

@@ -67,6 +67,18 @@ class PListWriter(xml_formatted_writer.XMLFormattedWriter):
     self.AddElement(parent, 'key', {}, key_string)
     self.AddElement(parent, 'string', {}, value_string)
 
+  def _AddRealKeyValuePair(self, parent, key_string, value_string):
+    '''Adds a plist key-value pair to a parent XML element, where the
+    value element contains a real number. The name of the value element will be
+    <real>.
+
+    Args:
+      key_string: The content of the key tag.
+      value_string: The content of the value tag.
+    '''
+    self.AddElement(parent, 'key', {}, key_string)
+    self.AddElement(parent, 'real', {}, value_string)
+
   def _AddTargets(self, parent, policy):
     '''Adds the following XML snippet to an XML element:
       <key>pfm_targets</key>
@@ -127,7 +139,7 @@ class PListWriter(xml_formatted_writer.XMLFormattedWriter):
     self._AddStringKeyValuePair(dict, 'pfm_name', app_name)
     self._AddStringKeyValuePair(dict, 'pfm_description', '')
     self._AddStringKeyValuePair(dict, 'pfm_title', '')
-    self._AddStringKeyValuePair(dict, 'pfm_version', '1')
+    self._AddRealKeyValuePair(dict, 'pfm_version', '1')
     self._AddStringKeyValuePair(dict, 'pfm_domain',
                                 self.config['mac_bundle_id'])
 

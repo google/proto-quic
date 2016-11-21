@@ -1,0 +1,112 @@
+#!/usr/bin/python
+#
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+"""Loads a set of web pages several times on a device, and extracts the
+predictor database.
+"""
+
+import argparse
+import logging
+import os
+import sys
+
+
+_SRC_PATH = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir))
+sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
+
+from devil.android import device_utils
+
+sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
+import devil_chromium
+
+sys.path.append(os.path.join(_SRC_PATH, 'tools', 'android', 'loading'))
+import controller
+from options import OPTIONS
+import page_track
+
+
+_PAGE_LOAD_TIMEOUT = 20
+
+
+def _CreateArgumentParser():
+  """Creates and returns the argument parser."""
+  parser = argparse.ArgumentParser(
+      description=('Loads a set of web pages several times on a device, and '
+                   'extracts the predictor database.'),
+      parents=[OPTIONS.GetParentParser()])
+  parser.add_argument('--device', help='Device ID')
+  parser.add_argument('--urls_filename', help='File containing a list of URLs '
+                      '(one per line). URLs can be repeated.')
+  parser.add_argument('--output_filename',
+                      help='File to store the database in.')
+  parser.add_argument('--url_repeat',
+                      help=('Number of times each URL in the input '
+                            'file is loaded.'),
+                      default=3)
+  return parser
+
+
+def _FindDevice(device_id):
+  """Returns a device matching |device_id| or the first one if None, or None."""
+  devices = device_utils.DeviceUtils.HealthyDevices()
+  if device_id is None:
+    return devices[0]
+  matching_devices = [d for d in devices if str(d) == device_id]
+  if not matching_devices:
+    return None
+  return matching_devices[0]
+
+
+def _Setup(device):
+  """Sets up a device and returns an instance of RemoteChromeController."""
+  chrome_controller = controller.RemoteChromeController(device)
+  device.ForceStop(OPTIONS.ChromePackage().package)
+  chrome_controller.AddChromeArguments(
+      ['--speculative-resource-prefetching=learning'])
+  chrome_controller.ResetBrowserState()
+  return chrome_controller
+
+
+def _Go(chrome_controller, urls_filename, output_filename, repeats):
+  urls = []
+  with open(urls_filename) as f:
+    urls = [line.strip() for line in f.readlines()]
+
+  with chrome_controller.Open() as connection:
+    for repeat in range(repeats):
+      logging.info('Repeat #%d', repeat)
+      for url in urls:
+        logging.info('\tLoading %s', url)
+        page_track.PageTrack(connection)  # Registers the listeners.
+        connection.MonitorUrl(url, timeout_seconds=_PAGE_LOAD_TIMEOUT,
+                              stop_delay_multiplier=1.5)
+
+  device = chrome_controller.GetDevice()
+  device.ForceStop(OPTIONS.ChromePackage().package)
+  database_filename = (
+      '/data/user/0/%s/app_chrome/Default/Network Action Predictor' %
+      OPTIONS.ChromePackage().package)
+  device.PullFile(database_filename, output_filename)
+
+
+def main():
+  logging.basicConfig(level=logging.INFO)
+  parser = _CreateArgumentParser()
+  args = parser.parse_args()
+  OPTIONS.SetParsedArgs(args)
+  devil_chromium.Initialize()
+  device = _FindDevice(args.device)
+  if device is None:
+    logging.error('Could not find device: %s.', args.device)
+    sys.exit(1)
+  chrome_controller = _Setup(device)
+  _Go(chrome_controller, args.urls_filename, args.output_filename,
+      int(args.url_repeat))
+
+
+if __name__ == '__main__':
+  main()

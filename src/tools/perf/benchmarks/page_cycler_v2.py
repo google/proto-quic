@@ -136,6 +136,7 @@ class PageCyclerV2IntlHiRu(_PageCyclerV2):
           cache_temperature.PCV1_COLD, cache_temperature.PCV1_WARM])
 
 
+@benchmark.Disabled('android')  # crbug.com/666898
 class PageCyclerV2IntlJaZh(_PageCyclerV2):
   """Page load time benchmark for a variety of pages in Japanese and Chinese.
 

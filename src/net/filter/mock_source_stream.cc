@@ -58,6 +58,10 @@ void MockSourceStream::AddReadResult(const char* data,
                                      int len,
                                      Error error,
                                      Mode mode) {
+  // The read result must be between 0 and 32k (inclusive) because the read
+  // buffer used in FilterSourceStream is 32k.
+  DCHECK_GE(32 * 1024, len);
+  DCHECK_LE(0, len);
   QueuedResult result(data, len, error, mode);
   results_.push(result);
 }

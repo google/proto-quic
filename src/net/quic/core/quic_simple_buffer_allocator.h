@@ -6,7 +6,7 @@
 #define NET_QUIC_SIMPLE_BUFFER_ALLOCATOR_H_
 
 #include "net/base/net_export.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_buffer_allocator.h"
 
 namespace net {
 

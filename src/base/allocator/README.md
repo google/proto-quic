@@ -189,8 +189,8 @@ Related links
 - [Unified allocator shim doc - Feb 2016][url-allocator-shim]
 - [Allocator cleanup doc - Jan 2016][url-allocator-cleanup]
 - [Proposal to use PartitionAlloc as default allocator](https://crbug.com/339604)
-- [Memory-Infra: Tools to profile memory usage in Chrome](components/tracing/docs/memory_infra.md)
+- [Memory-Infra: Tools to profile memory usage in Chrome](/docs/memory-infra/README.md)
 
 [url-allocator-cleanup]: https://docs.google.com/document/d/1V77Kgp_4tfaaWPEZVxNevoD02wXiatnAv7Ssgr0hmjg/edit?usp=sharing
-[url-memory-infra-heap-profiler]: components/tracing/docs/heap_profiler.md
+[url-memory-infra-heap-profiler]: /docs/memory-infra/heap_profiler.md
 [url-allocator-shim]: https://docs.google.com/document/d/1yKlO1AO4XjpDad9rjcBOI15EKdAGsuGO_IeZy0g0kxo/edit?usp=sharing

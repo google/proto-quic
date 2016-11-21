@@ -282,12 +282,12 @@ CRLSetResult CheckRevocationWithCRLSet(const CERTCertList* cert_list,
   if (root)
     certs.push_back(root);
 
-  // error is set to true if any errors are found. It causes such chains to be
-  // considered as not covered.
+  // Set to true if any errors are found, which will cause such chains to not be
+  // treated as covered by the CRLSet.
   bool error = false;
-  // last_covered is set to the coverage state of the previous certificate. The
-  // certificates are iterated over backwards thus, after the iteration,
-  // |last_covered| contains the coverage state of the leaf certificate.
+  // Set to the coverage state of the previous certificate.  As the certificates
+  // are iterated over from root to leaf, at the end of the iteration, this
+  // indicates the coverage state of the leaf certificate.
   bool last_covered = false;
 
   // We iterate from the root certificate down to the leaf, keeping track of

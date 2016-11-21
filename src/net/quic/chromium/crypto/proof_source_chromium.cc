@@ -85,8 +85,8 @@ bool ProofSourceChromium::GetProof(
     base::StringPiece chlo_hash,
     const QuicTagVector& /* connection_options */,
     scoped_refptr<ProofSource::Chain>* out_chain,
-    string* out_signature,
-    string* out_leaf_cert_sct) {
+    QuicCryptoProof* proof) {
+  DCHECK(proof != nullptr);
   DCHECK(private_key_.get()) << " this: " << this;
 
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
@@ -125,12 +125,12 @@ bool ProofSourceChromium::GetProof(
     return false;
   }
   signature.resize(len);
-  out_signature->assign(reinterpret_cast<const char*>(signature.data()),
-                        signature.size());
+  proof->signature.assign(reinterpret_cast<const char*>(signature.data()),
+                          signature.size());
   *out_chain = chain_;
   VLOG(1) << "signature: "
-          << base::HexEncode(out_signature->data(), out_signature->size());
-  *out_leaf_cert_sct = signed_certificate_timestamp_;
+          << base::HexEncode(proof->signature.data(), proof->signature.size());
+  proof->leaf_cert_scts = signed_certificate_timestamp_;
   return true;
 }
 
@@ -146,10 +146,10 @@ void ProofSourceChromium::GetProof(const IPAddress& server_ip,
   scoped_refptr<ProofSource::Chain> chain;
   string signature;
   string leaf_cert_sct;
-  const bool ok =
-      GetProof(server_ip, hostname, server_config, quic_version, chlo_hash,
-               connection_options, &chain, &signature, &leaf_cert_sct);
-  callback->Run(ok, chain, signature, leaf_cert_sct, nullptr /* details */);
+  QuicCryptoProof out_proof;
+  const bool ok = GetProof(server_ip, hostname, server_config, quic_version,
+                           chlo_hash, connection_options, &chain, &out_proof);
+  callback->Run(ok, chain, out_proof, nullptr /* details */);
 }
 
 }  // namespace net

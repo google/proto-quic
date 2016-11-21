@@ -52,8 +52,6 @@ class NET_EXPORT HttpServerPropertiesImpl
   void InitializeAlternativeServiceServers(
       AlternativeServiceMap* alternate_protocol_servers);
 
-  void InitializeSpdySettingsServers(SpdySettingsMap* spdy_settings_map);
-
   void InitializeSupportsQuic(IPAddress* last_address);
 
   void InitializeServerNetworkStats(
@@ -108,15 +106,6 @@ class NET_EXPORT HttpServerPropertiesImpl
   const AlternativeServiceMap& alternative_service_map() const override;
   std::unique_ptr<base::Value> GetAlternativeServiceInfoAsValue()
       const override;
-  const SettingsMap& GetSpdySettings(
-      const url::SchemeHostPort& server) override;
-  bool SetSpdySetting(const url::SchemeHostPort& server,
-                      SpdySettingsIds id,
-                      SpdySettingsFlags flags,
-                      uint32_t value) override;
-  void ClearSpdySettings(const url::SchemeHostPort& server) override;
-  void ClearAllSpdySettings() override;
-  const SpdySettingsMap& spdy_settings_map() const override;
   bool GetSupportsQuic(IPAddress* last_address) const override;
   void SetSupportsQuic(bool used_quic, const IPAddress& address) override;
   void SetServerNetworkStats(const url::SchemeHostPort& server,
@@ -175,7 +164,6 @@ class NET_EXPORT HttpServerPropertiesImpl
   RecentlyBrokenAlternativeServices recently_broken_alternative_services_;
 
   IPAddress last_quic_address_;
-  SpdySettingsMap spdy_settings_map_;
   ServerNetworkStatsMap server_network_stats_map_;
   // Contains a map of servers which could share the same alternate protocol.
   // Map from a Canonical scheme/host/port (host is some postfix of host names)

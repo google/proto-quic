@@ -49,6 +49,7 @@ def main(argv):
     sys.exit(1)
 
   tool_to_test = argv[0]
+  print '\nTesting %s\n' % tool_to_test
   tools_clang_scripts_directory = os.path.dirname(os.path.realpath(__file__))
   tools_clang_directory = os.path.dirname(tools_clang_scripts_directory)
   test_directory_for_tool = os.path.join(
@@ -70,6 +71,10 @@ def main(argv):
       os.path.realpath(os.path.join(tools_clang_directory,
                                     '../..',
                                     'testing/gtest/include')))
+
+  if len(actual_files) == 0:
+    print 'Tool "%s" does not have compatible test files.' % tool_to_test
+    return 1
 
   try:
     # Set up the test environment.
@@ -93,7 +98,7 @@ def main(argv):
     stdout, _ = run_tool.communicate()
     if run_tool.returncode != 0:
       print 'run_tool failed:\n%s' % stdout
-      sys.exit(1)
+      return 1
 
     args = ['cl', 'format']
     args.extend(actual_files)
@@ -130,6 +135,7 @@ def main(argv):
       print '[  PASSED  ] %s.' % _NumberOfTestsToString(passed)
     if failed > 0:
       print '[  FAILED  ] %s.' % _NumberOfTestsToString(failed)
+      return 1
   finally:
     # No matter what, unstage the git changes we made earlier to avoid polluting
     # the index.

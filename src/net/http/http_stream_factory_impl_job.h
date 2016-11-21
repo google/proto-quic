@@ -26,6 +26,7 @@
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/client_socket_pool_manager.h"
+#include "net/socket/next_proto.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config_service.h"

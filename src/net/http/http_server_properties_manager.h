@@ -137,15 +137,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   const AlternativeServiceMap& alternative_service_map() const override;
   std::unique_ptr<base::Value> GetAlternativeServiceInfoAsValue()
       const override;
-  const SettingsMap& GetSpdySettings(
-      const url::SchemeHostPort& server) override;
-  bool SetSpdySetting(const url::SchemeHostPort& server,
-                      SpdySettingsIds id,
-                      SpdySettingsFlags flags,
-                      uint32_t value) override;
-  void ClearSpdySettings(const url::SchemeHostPort& server) override;
-  void ClearAllSpdySettings() override;
-  const SpdySettingsMap& spdy_settings_map() const override;
   bool GetSupportsQuic(IPAddress* last_address) const override;
   void SetSupportsQuic(bool used_quic, const IPAddress& last_address) override;
   void SetServerNetworkStats(const url::SchemeHostPort& server,
@@ -171,9 +162,9 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
     MARK_ALTERNATIVE_SERVICE_RECENTLY_BROKEN = 4,
     CONFIRM_ALTERNATIVE_SERVICE = 5,
     CLEAR_ALTERNATIVE_SERVICE = 6,
-    SET_SPDY_SETTING = 7,
-    CLEAR_SPDY_SETTINGS = 8,
-    CLEAR_ALL_SPDY_SETTINGS = 9,
+    // deprecated: SET_SPDY_SETTING = 7,
+    // deprecated: CLEAR_SPDY_SETTINGS = 8,
+    // deprecated: CLEAR_ALL_SPDY_SETTINGS = 9,
     SET_SUPPORTS_QUIC = 10,
     SET_SERVER_NETWORK_STATS = 11,
     DETECTED_CORRUPTED_PREFS = 12,
@@ -203,7 +194,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // network thread. Protected for testing.
   void UpdateCacheFromPrefsOnNetworkThread(
       std::vector<std::string>* spdy_servers,
-      SpdySettingsMap* spdy_settings_map,
       AlternativeServiceMap* alternative_service_map,
       IPAddress* last_quic_address,
       ServerNetworkStatsMap* server_network_stats_map,
@@ -234,7 +224,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // Update prefs::kHttpServerProperties preferences on pref thread. Executes an
   // optional |completion| callback when finished. Protected for testing.
   void UpdatePrefsOnPrefThread(base::ListValue* spdy_server_list,
-                               SpdySettingsMap* spdy_settings_map,
                                AlternativeServiceMap* alternative_service_map,
                                IPAddress* last_quic_address,
                                ServerNetworkStatsMap* server_network_stats_map,
@@ -254,13 +243,9 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
 
   bool AddServersData(const base::DictionaryValue& server_dict,
                       ServerList* spdy_servers,
-                      SpdySettingsMap* spdy_settings_map,
                       AlternativeServiceMap* alternative_service_map,
                       ServerNetworkStatsMap* network_stats_map,
                       int version);
-  void AddToSpdySettingsMap(const url::SchemeHostPort& server,
-                            const base::DictionaryValue& server_dict,
-                            SpdySettingsMap* spdy_settings_map);
   bool ParseAlternativeServiceDict(
       const base::DictionaryValue& alternative_service_dict,
       const std::string& server_str,
@@ -277,8 +262,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   bool AddToQuicServerInfoMap(const base::DictionaryValue& server_dict,
                               QuicServerInfoMap* quic_server_info_map);
 
-  void SaveSpdySettingsToServerPrefs(const SettingsMap* spdy_settings_map,
-                                     base::DictionaryValue* server_pref_dict);
   void SaveAlternativeServiceToServerPrefs(
       const AlternativeServiceInfoVector* alternative_service_info_vector,
       base::DictionaryValue* server_pref_dict);

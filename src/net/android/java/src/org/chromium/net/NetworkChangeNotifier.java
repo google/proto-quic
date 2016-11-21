@@ -17,7 +17,7 @@ import java.util.ArrayList;
 /**
  * Triggers updates to the underlying network state in Chrome.
  *
- * By default, connectivity is assumed and changes must pushed from the embedder via the
+ * By default, connectivity is assumed and changes must be pushed from the embedder via the
  * forceConnectivityState function.
  * Embedders may choose to have this class auto-detect changes in network connectivity by invoking
  * the setAutoDetectConnectivityState function.

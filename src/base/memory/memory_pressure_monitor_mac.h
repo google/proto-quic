@@ -5,6 +5,7 @@
 #ifndef BASE_MEMORY_MEMORY_PRESSURE_MONITOR_MAC_H_
 #define BASE_MEMORY_MEMORY_PRESSURE_MONITOR_MAC_H_
 
+#include <CoreFoundation/CFDate.h>
 #include <dispatch/dispatch.h>
 
 #include "base/base_export.h"
@@ -35,13 +36,21 @@ class BASE_EXPORT MemoryPressureMonitor : public base::MemoryPressureMonitor {
 
   static MemoryPressureLevel
       MemoryPressureLevelForMacMemoryPressure(int mac_memory_pressure);
-  static void NotifyMemoryPressureChanged(
-      dispatch_source_s* event_source,
-      const DispatchCallback& dispatch_callback);
+  void OnMemoryPressureChanged(dispatch_source_s* event_source,
+                               const DispatchCallback& dispatch_callback);
 
   ScopedDispatchObject<dispatch_source_t> memory_level_event_source_;
 
   DispatchCallback dispatch_callback_;
+
+  CFTimeInterval last_pressure_change_;
+
+  MemoryPressureLevel last_pressure_level_;
+
+  // The UMA statistic is recorded in 5 second increments. This
+  // accumulates the remaining time to be rolled into the next
+  // call.
+  CFTimeInterval reporting_error_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryPressureMonitor);
 };

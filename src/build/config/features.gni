@@ -21,8 +21,6 @@ if (is_android) {
 }
 
 declare_args() {
-  enable_extensions = !is_android && !is_ios
-  enable_plugins = (!is_android && !is_ios) || is_chromecast
   enable_pdf = !is_android && !is_ios && !is_chromecast
 
   # Enables Native Client support.
@@ -61,10 +59,6 @@ declare_args() {
   # Note: this setting is ignored if is_chrome_branded.
   fieldtrial_testing_like_official_build = is_chrome_branded
 
-  # Enables Wi-Fi Display functionality
-  # WARNING: This enables MPEG Transport Stream (MPEG-TS) encoding!
-  enable_wifi_display = false
-
   # libudev usage. This currently only affects the content layer.
   use_udev = is_linux && !is_chromecast
 
@@ -81,21 +75,12 @@ declare_args() {
 
   # Enable WebVR support by default on Android
   # Still requires command line flag to access API
-  enable_webvr = is_android && is_component_build && is_debug &&
-                 (current_cpu == "x86" || current_cpu == "x64" ||
-                  current_cpu == "arm" || current_cpu == "arm64")
+  # TODO(bshe): Enable for other architecture too. Currently we only support arm
+  # and arm64.
+  enable_webvr = is_android && (current_cpu == "arm" || current_cpu == "arm64")
 }
 
 # Additional dependent variables -----------------------------------------------
-
-# Enable the spell checker.
-enable_spellcheck = !is_ios
-
-# Use the operating system's spellchecker rather than hunspell.
-use_browser_spellchecker = is_android || is_mac
-
-# Use Minikin hyphenation engine.
-use_minikin_hyphenation = is_android
 
 # The seccomp-bpf sandbox is only supported on five architectures
 # currently.
@@ -120,15 +105,9 @@ enable_themes = !is_android && !is_ios
 enable_rlz_support = is_win || is_mac || is_ios || is_chromeos
 enable_rlz = is_chrome_branded && enable_rlz_support
 
-# Image loader extension is enabled on ChromeOS only.
-enable_image_loader_extension = is_chromeos
-
 # Chrome OS: whether to also build the upcoming version of
 # ChromeVox, which can then be enabled via a command-line switch.
 enable_chromevox_next = false
-
-# Use brlapi from brltty for braille display support.
-use_brlapi = is_chromeos
 
 enable_configuration_policy = !is_ios
 

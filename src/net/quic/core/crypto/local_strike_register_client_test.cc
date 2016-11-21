@@ -81,7 +81,7 @@ TEST_F(LocalStrikeRegisterClientTest, CheckOrbit) {
 
 TEST_F(LocalStrikeRegisterClientTest, IncorrectNonceLength) {
   string valid_nonce;
-  uint32_t norder = htonl(kCurrentTimeExternalSecs);
+  uint32_t norder = base::HostToNet32(kCurrentTimeExternalSecs);
   valid_nonce.assign(reinterpret_cast<const char*>(&norder), sizeof(norder));
   valid_nonce.append(string(reinterpret_cast<const char*>(kOrbit), kOrbitSize));
   valid_nonce.append(string(20, '\x17'));  // 20 'random' bytes.

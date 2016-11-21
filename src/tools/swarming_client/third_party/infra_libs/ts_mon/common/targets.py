@@ -26,6 +26,10 @@ class Target(object):
     """Populate the 'target' embedded message field of a metric protobuf."""
     raise NotImplementedError()
 
+  def _populate_target_pb_new(self, collection_pb):
+    """Populate the 'target' into a MetricsCollection."""
+    raise NotImplementedError()
+
   def to_dict(self):
     """Return target field values as a dictionary."""
     return {field: getattr(self, field) for field in self._fields}
@@ -39,6 +43,18 @@ class Target(object):
       getattr(self, field)
       setattr(self, field, value)
 
+  def __eq__(self, other):
+    if type(self) != type(other):
+      return False
+
+    for field in self._fields:
+      if getattr(self, field) != getattr(other,field):
+        return False
+
+    return True
+
+  def __hash__(self):
+    return hash(tuple(sorted(self.to_dict())))
 
 class DeviceTarget(Target):
   """Monitoring interface class for monitoring specific hosts or devices."""
@@ -67,13 +83,26 @@ class DeviceTarget(Target):
     Args:
       metric (metrics_pb2.MetricsData): the metric proto to be populated.
     """
-    # Note that this disregards the pop, asn, role, and vendor fields.
     metric.network_device.metro = self.region
     metric.network_device.role = self.role
     metric.network_device.hostgroup = self.network
     metric.network_device.hostname = self.hostname
     metric.network_device.realm = self.realm
     metric.network_device.alertable = self.alertable
+
+  def _populate_target_pb_new(self, collection):
+    """Populate the 'network_device' target into
+       new_metrics_pb2.MetricsCollection.
+    Args:
+      collection (metrics_pb2.MetricsCollection): the collection proto to be
+          populated.
+    """
+    collection.network_device.metro = self.region
+    collection.network_device.role = self.role
+    collection.network_device.hostgroup = self.network
+    collection.network_device.hostname = self.hostname
+    collection.network_device.realm = self.realm
+    collection.network_device.alertable = self.alertable
 
 
 class TaskTarget(Target):
@@ -109,3 +138,17 @@ class TaskTarget(Target):
     metric.task.data_center = self.region
     metric.task.host_name = self.hostname
     metric.task.task_num = self.task_num
+
+  def _populate_target_pb_new(self, collection):
+    """Populate the 'task' target into new_metrics_pb2.MetricsCollection.
+
+    Args:
+      collection (metrics_pb2.MetricsCollection): the collection proto to be
+          populated.
+    """
+    collection.task.service_name = self.service_name
+    collection.task.job_name = self.job_name
+    collection.task.data_center = self.region
+    collection.task.host_name = self.hostname
+    collection.task.task_num = self.task_num
+

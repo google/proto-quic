@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_tag.h"
 
 // Version and Crypto tags are written to the wire with a big-endian
 // representation of the name of the tag.  For example
@@ -133,7 +133,7 @@ const QuicTag kMTUL = TAG('M', 'T', 'U', 'L');  // Low-target MTU discovery.
 const QuicTag kASYN = TAG('A', 'S', 'Y', 'N');  // Perform asynchronous signing
 const QuicTag kSYNC = TAG('S', 'Y', 'N', 'C');  // Perform synchronous signing
 
-const QuicTag kFHOL = TAG('F', 'H', 'O', 'L');   // Force head of line blocking.
+const QuicTag kFHL2 = TAG('F', 'H', 'L', '2');   // Force head of line blocking.
 
 // Proof types (i.e. certificate types)
 // NOTE: although it would be silly to do so, specifying both kX509 and kX59R

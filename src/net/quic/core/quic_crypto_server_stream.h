@@ -124,6 +124,15 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   void SetPreviousCachedNetworkParams(
       CachedNetworkParameters cached_network_params) override;
 
+  // NOTE: Indicating that the Expect-CT header should be sent here presents
+  // a layering violation to some extent. The Expect-CT header only applies to
+  // HTTP connections, while this class can be used for non-HTTP applications.
+  // However, it is exposed here because that is the only place where the
+  // configuration for the certificate used in the connection is accessible.
+  bool ShouldSendExpectCTHeader() const {
+    return signed_config_->send_expect_ct_header;
+  }
+
  protected:
   virtual void ProcessClientHello(
       scoped_refptr<ValidateClientHelloResultCallback::Result> result,
@@ -212,7 +221,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
 
   // Server's certificate chain and signature of the server config, as provided
   // by ProofSource::GetProof.
-  scoped_refptr<QuicCryptoProof> crypto_proof_;
+  scoped_refptr<QuicSignedServerConfig> signed_config_;
 
   // Hash of the last received CHLO message which can be used for generating
   // server config update messages.

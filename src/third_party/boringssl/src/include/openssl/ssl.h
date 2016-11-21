@@ -562,7 +562,7 @@ OPENSSL_EXPORT int DTLSv1_handle_timeout(SSL *ssl);
 #define DTLS1_VERSION 0xfeff
 #define DTLS1_2_VERSION 0xfefd
 
-#define TLS1_3_DRAFT_VERSION 0x7f10
+#define TLS1_3_DRAFT_VERSION 0x7f12
 
 /* SSL_CTX_set_min_proto_version sets the minimum protocol version for |ctx| to
  * |version|. If |version| is zero, the default minimum version is used. It
@@ -670,8 +670,9 @@ OPENSSL_EXPORT uint32_t SSL_get_options(const SSL *ssl);
 #define SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER 0x00000002L
 
 /* SSL_MODE_NO_AUTO_CHAIN disables automatically building a certificate chain
- * before sending certificates to the peer.
- * TODO(davidben): Remove this behavior. https://crbug.com/486295. */
+ * before sending certificates to the peer. This flag is set (and the feature
+ * disabled) by default.
+ * TODO(davidben): Remove this behavior. https://crbug.com/boringssl/42. */
 #define SSL_MODE_NO_AUTO_CHAIN 0x00000008L
 
 /* SSL_MODE_ENABLE_FALSE_START allows clients to send application data before
@@ -3127,6 +3128,10 @@ OPENSSL_EXPORT void SSL_CTX_set_retain_only_sha256_of_client_certs(SSL_CTX *ctx,
  * GREASE. See draft-davidben-tls-grease-01. */
 OPENSSL_EXPORT void SSL_CTX_set_grease_enabled(SSL_CTX *ctx, int enabled);
 
+/* SSL_max_seal_overhead returns the maximum overhead, in bytes, of sealing a
+ * record with |ssl|. */
+OPENSSL_EXPORT size_t SSL_max_seal_overhead(const SSL *ssl);
+
 
 /* Deprecated functions. */
 
@@ -3670,19 +3675,23 @@ struct ssl_session_st {
   uint8_t sid_ctx[SSL_MAX_SID_CTX_LENGTH];
 
   char *psk_identity;
-  /* peer is the peer's certificate. */
-  X509 *peer;
+  /* x509_peer is the peer's certificate. */
+  X509 *x509_peer;
 
-  /* cert_chain is the certificate chain sent by the peer. NOTE: for historical
+  /* x509_chain is the certificate chain sent by the peer. NOTE: for historical
    * reasons, when a client (so the peer is a server), the chain includes
    * |peer|, but when a server it does not. */
-  STACK_OF(X509) *cert_chain;
+  STACK_OF(X509) *x509_chain;
 
   /* verify_result is the result of certificate verification in the case of
    * non-fatal certificate errors. */
   long verify_result;
 
+  /* timeout is the lifetime of the session in seconds, measured from |time|. */
   long timeout;
+
+  /* time is the time the session was issued, measured in seconds from the UNIX
+   * epoch. */
   long time;
 
   const SSL_CIPHER *cipher;
@@ -4191,9 +4200,6 @@ struct ssl_st {
    * we'll advertise support. */
   unsigned tlsext_channel_id_enabled:1;
 
-  /* RFC4507 session ticket expected to be received or sent */
-  unsigned tlsext_ticket_expected:1;
-
   /* TODO(agl): remove once node.js not longer references this. */
   int tlsext_status_type;
 };
@@ -4530,6 +4536,8 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_DUPLICATE_KEY_SHARE 264
 #define SSL_R_NO_GROUPS_SPECIFIED 265
 #define SSL_R_NO_SHARED_GROUP 266
+#define SSL_R_PRE_SHARED_KEY_MUST_BE_LAST 267
+#define SSL_R_OLD_SESSION_PRF_HASH_MISMATCH 268
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

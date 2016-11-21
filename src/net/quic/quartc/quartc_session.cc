@@ -35,13 +35,12 @@ class DummyProofSource : public net::ProofSource {
                 base::StringPiece chlo_hash,
                 const net::QuicTagVector& connection_options,
                 scoped_refptr<net::ProofSource::Chain>* out_chain,
-                std::string* out_signature,
-                std::string* out_leaf_cert_sct) override {
+                net::QuicCryptoProof* proof) override {
     std::vector<std::string> certs;
     certs.push_back("Dummy cert");
     *out_chain = new ProofSource::Chain(certs);
-    *out_signature = "Dummy signature";
-    *out_leaf_cert_sct = "Dummy timestamp";
+    proof->signature = "Dummy signature";
+    proof->leaf_cert_scts = "Dummy timestamp";
     return true;
   }
 
@@ -162,7 +161,7 @@ void QuartcSession::OnCryptoHandshakeEvent(CryptoHandshakeEvent event) {
 void QuartcSession::CloseStream(QuicStreamId stream_id) {
   if (IsClosedStream(stream_id)) {
     // When CloseStream has been called recursively (via
-    // ReliableQuicStream::OnClose), the stream is already closed so return.
+    // QuicStream::OnClose), the stream is already closed so return.
     return;
   }
   write_blocked_streams()->UnregisterStream(stream_id);
@@ -262,8 +261,7 @@ void QuartcSession::SetServerCryptoConfig(
   quic_crypto_server_config_.reset(server_config);
 }
 
-ReliableQuicStream* QuartcSession::CreateIncomingDynamicStream(
-    QuicStreamId id) {
+QuicStream* QuartcSession::CreateIncomingDynamicStream(QuicStreamId id) {
   QuartcStream* stream = CreateDataStream(id, kDefaultPriority);
   if (stream) {
     DCHECK(session_delegate_);
@@ -281,7 +279,7 @@ QuartcStream* QuartcSession::CreateDataStream(QuicStreamId id,
   QuartcStream* stream = new QuartcStream(id, this);
   if (stream) {
     // Make QuicSession take ownership of the stream.
-    ActivateStream(std::unique_ptr<ReliableQuicStream>(stream));
+    ActivateStream(std::unique_ptr<QuicStream>(stream));
     // Register the stream to the QuicWriteBlockedList. |priority| is clamped
     // between 0 and 7, with 0 being the highest priority and 7 the lowest
     // priority.

@@ -11,9 +11,7 @@
 namespace net {
 namespace test {
 
-ServerThread::ServerThread(QuicServer* server,
-                           const IPEndPoint& address,
-                           bool strike_register_no_startup_period)
+ServerThread::ServerThread(QuicServer* server, const IPEndPoint& address)
     : SimpleThread("server_thread"),
       confirmed_(base::WaitableEvent::ResetPolicy::MANUAL,
                  base::WaitableEvent::InitialState::NOT_SIGNALED),
@@ -28,11 +26,7 @@ ServerThread::ServerThread(QuicServer* server,
       server_(server),
       address_(address),
       port_(0),
-      initialized_(false) {
-  if (strike_register_no_startup_period) {
-    server_->SetStrikeRegisterNoStartupPeriod();
-  }
-}
+      initialized_(false) {}
 
 ServerThread::~ServerThread() {}
 

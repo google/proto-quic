@@ -80,7 +80,7 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
   MOCK_METHOD1(CreateOutgoingDynamicStream,
                QuicChromiumClientStream*(SpdyPriority priority));
   MOCK_METHOD6(WritevData,
-               QuicConsumedData(ReliableQuicStream* stream,
+               QuicConsumedData(QuicStream* stream,
                                 QuicStreamId id,
                                 QuicIOVector data,
                                 QuicStreamOffset offset,

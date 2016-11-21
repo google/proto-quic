@@ -16,7 +16,7 @@
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/quic_server_session_base.h"
+#include "net/quic/core/quic_session.h"
 
 using base::StringPiece;
 using std::string;
@@ -92,7 +92,7 @@ QuicCryptoServerStream::QuicCryptoServerStream(
     : QuicCryptoServerStreamBase(session),
       crypto_config_(crypto_config),
       compressed_certs_cache_(compressed_certs_cache),
-      crypto_proof_(new QuicCryptoProof),
+      signed_config_(new QuicSignedServerConfig),
       validate_client_hello_cb_(nullptr),
       helper_(helper),
       num_handshake_messages_(0),
@@ -163,7 +163,7 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   crypto_config_->ValidateClientHello(
       message, session()->connection()->peer_address().address(),
       session()->connection()->self_address().address(), version(),
-      session()->connection()->clock(), crypto_proof_, std::move(cb));
+      session()->connection()->clock(), signed_config_, std::move(cb));
 }
 
 void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
@@ -255,9 +255,7 @@ void QuicCryptoServerStream::
   session()->connection()->SetDecrypter(
       ENCRYPTION_INITIAL,
       crypto_negotiated_params_->initial_crypters.decrypter.release());
-  if (version() > QUIC_VERSION_32) {
-    session()->connection()->SetDiversificationNonce(*diversification_nonce);
-  }
+  session()->connection()->SetDiversificationNonce(*diversification_nonce);
 
   SendHandshakeMessage(*reply);
 
@@ -475,7 +473,7 @@ void QuicCryptoServerStream::ProcessClientHello(
       version(), connection->supported_versions(),
       use_stateless_rejects_in_crypto_config, server_designated_connection_id,
       connection->clock(), connection->random_generator(),
-      compressed_certs_cache_, crypto_negotiated_params_, crypto_proof_,
+      compressed_certs_cache_, crypto_negotiated_params_, signed_config_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version()),
       chlo_packet_size_, std::move(done_cb));
 }

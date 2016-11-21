@@ -235,9 +235,9 @@ class DevToolsConnection(object):
     Args:
       url: (str) a URL to navigate to before starting monitoring loop.
       timeout_seconds: timeout in seconds for monitoring loop.
-      stop_delay_multiplier: How long to wait after page load completed before
-        tearing down, relative to the time it took to reach the page load to
-        complete.
+      stop_delay_multiplier: (float) How long to wait after page load completed
+        before tearing down, relative to the time it took to reach the page load
+        to complete.
     """
     for domain in self._domains_to_enable:
       self._ws.RegisterDomain(domain, self._OnDataReceived)
@@ -271,11 +271,13 @@ class DevToolsConnection(object):
     elif self._monitoring_stop_timestamp is None:
       assert self._monitoring_start_timestamp is not None
       current_time = datetime.datetime.now()
-      stop_delay_duration = self._stop_delay_multiplier * (
-          current_time - self._monitoring_start_timestamp)
-      logging.info('Delaying monitoring stop for %ds',
-                   stop_delay_duration.total_seconds())
-      self._monitoring_stop_timestamp = current_time + stop_delay_duration
+      stop_delay_duration_seconds = self._stop_delay_multiplier * (
+          current_time - self._monitoring_start_timestamp).seconds
+      logging.info('Delaying monitoring stop for %.1fs',
+                   stop_delay_duration_seconds)
+      self._monitoring_stop_timestamp = (
+          current_time + datetime.timedelta(
+              seconds=stop_delay_duration_seconds))
 
   def ExecuteJavaScript(self, expression):
     """Run JavaScript expression.

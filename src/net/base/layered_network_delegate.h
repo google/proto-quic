@@ -30,7 +30,7 @@ class HttpResponseHeaders;
 class ProxyInfo;
 class URLRequest;
 
-// WrappingNetworkDelegate takes a |network_delegate| and extends it. When
+// LayeredNetworkDelegate takes a |network_delegate| and extends it. When
 // On*() is called, the On*Internal() method of this is first called and then
 // the On*() of |network_delegate| is called. On*Internal() methods have no
 // return values, and cannot prevent calling into the nested network delegate.

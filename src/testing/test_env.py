@@ -211,6 +211,7 @@ def run_executable(cmd, env):
         '\n'.join('    %s=%s' %
             (k, v) for k, v in sorted(extra_env.iteritems())),
         ' '.join(cmd)))
+  sys.stdout.flush()
   env.update(extra_env or {})
   try:
     # See above comment regarding offline symbolization.

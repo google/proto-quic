@@ -13,40 +13,40 @@
 #include "tools/gn/value.h"
 
 const char kLabelPattern_Help[] =
-    "Label patterns\n"
-    "\n"
-    "  A label pattern is a way of expressing one or more labels in a portion\n"
-    "  of the source tree. They are not general regular expressions.\n"
-    "\n"
-    "  They can take the following forms only:\n"
-    "\n"
-    "   - Explicit (no wildcard):\n"
-    "       \"//foo/bar:baz\"\n"
-    "       \":baz\"\n"
-    "\n"
-    "   - Wildcard target names:\n"
-    "       \"//foo/bar:*\" (all targets in the //foo/bar/BUILD.gn file)\n"
-    "       \":*\"  (all targets in the current build file)\n"
-    "\n"
-    "   - Wildcard directory names (\"*\" is only supported at the end)\n"
-    "       \"*\"  (all targets)\n"
-    "       \"//foo/bar/*\"  (all targets in any subdir of //foo/bar)\n"
-    "       \"./*\"  (all targets in the current build file or sub dirs)\n"
-    "\n"
-    "  Any of the above forms can additionally take an explicit toolchain.\n"
-    "  In this case, the toolchain must be fully qualified (no wildcards\n"
-    "  are supported in the toolchain name).\n"
-    "\n"
-    "    \"//foo:bar(//build/toochain:mac)\"\n"
-    "        An explicit target in an explicit toolchain.\n"
-    "\n"
-    "    \":*(//build/toolchain/linux:32bit)\"\n"
-    "        All targets in the current build file using the 32-bit Linux\n"
-    "        toolchain.\n"
-    "\n"
-    "    \"//foo/*(//build/toolchain:win)\"\n"
-    "        All targets in //foo and any subdirectory using the Windows\n"
-    "        toolchain.\n";
+    R"*(Label patterns
+
+  A label pattern is a way of expressing one or more labels in a portion of the
+  source tree. They are not general regular expressions.
+
+  They can take the following forms only:
+
+   - Explicit (no wildcard):
+       "//foo/bar:baz"
+       ":baz"
+
+   - Wildcard target names:
+       "//foo/bar:*" (all targets in the //foo/bar/BUILD.gn file)
+       ":*"  (all targets in the current build file)
+
+   - Wildcard directory names ("*" is only supported at the end)
+       "*"  (all targets)
+       "//foo/bar/*"  (all targets in any subdir of //foo/bar)
+       "./*"  (all targets in the current build file or sub dirs)
+
+  Any of the above forms can additionally take an explicit toolchain. In this
+  case, the toolchain must be fully qualified (no wildcards are supported in
+  the toolchain name).
+
+    "//foo:bar(//build/toochain:mac)"
+        An explicit target in an explicit toolchain.
+
+    ":*(//build/toolchain/linux:32bit)"
+        All targets in the current build file using the 32-bit Linux toolchain.
+
+    "//foo/*(//build/toolchain:win)"
+        All targets in //foo and any subdirectory using the Windows
+        toolchain.
+)*";
 
 LabelPattern::LabelPattern() : type_(MATCH) {
 }

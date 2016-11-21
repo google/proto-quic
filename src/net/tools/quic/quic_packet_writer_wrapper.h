@@ -20,7 +20,6 @@ namespace net {
 class QuicPacketWriterWrapper : public QuicPacketWriter {
  public:
   QuicPacketWriterWrapper();
-  explicit QuicPacketWriterWrapper(QuicPacketWriter* writer);
   ~QuicPacketWriterWrapper() override;
 
   // Default implementation of the QuicPacketWriter interface. Passes everything

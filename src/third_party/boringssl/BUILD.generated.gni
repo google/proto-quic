@@ -134,6 +134,7 @@ crypto_sources = [
   "src/crypto/ec/p256-64.c",
   "src/crypto/ec/p256-x86_64-table.h",
   "src/crypto/ec/p256-x86_64.c",
+  "src/crypto/ec/p256-x86_64.h",
   "src/crypto/ec/simple.c",
   "src/crypto/ec/util-64.c",
   "src/crypto/ec/wnaf.c",

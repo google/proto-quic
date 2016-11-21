@@ -75,6 +75,8 @@ static_library("test_support") {
     "scoped_feature_list.h",
     "scoped_locale.cc",
     "scoped_locale.h",
+    "scoped_mock_time_message_loop_task_runner.cc",
+    "scoped_mock_time_message_loop_task_runner.h",
     "scoped_path_override.cc",
     "scoped_path_override.h",
     "sequenced_task_runner_test_template.cc",

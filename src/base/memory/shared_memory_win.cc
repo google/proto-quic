@@ -32,10 +32,14 @@ enum CreateError {
   CREATE_ERROR_LAST = ALREADY_EXISTS
 };
 
-// Emits an UMA metric.
-void LogError(CreateError error) {
+// Emits UMA metrics about encountered errors. Pass zero (0) for |winerror|
+// if there is no associated Windows error.
+void LogError(CreateError error, DWORD winerror) {
   UMA_HISTOGRAM_ENUMERATION("SharedMemory.CreateError", error,
                             CREATE_ERROR_LAST + 1);
+  static_assert(ERROR_SUCCESS == 0, "Windows error code changed!");
+  if (winerror != ERROR_SUCCESS)
+    UMA_HISTOGRAM_SPARSE_SLOWLY("SharedMemory.CreateWinError", winerror);
 }
 
 typedef enum _SECTION_INFORMATION_CLASS {
@@ -108,7 +112,7 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
   HANDLE h = CreateFileMapping(INVALID_HANDLE_VALUE, sa, PAGE_READWRITE, 0,
                                static_cast<DWORD>(rounded_size), name);
   if (!h) {
-    LogError(CREATE_FILE_MAPPING_FAILURE);
+    LogError(CREATE_FILE_MAPPING_FAILURE, GetLastError());
     return nullptr;
   }
 
@@ -120,7 +124,7 @@ HANDLE CreateFileMappingWithReducedPermissions(SECURITY_ATTRIBUTES* sa,
   DCHECK(rv);
 
   if (!success) {
-    LogError(REDUCE_PERMISSIONS_FAILURE);
+    LogError(REDUCE_PERMISSIONS_FAILURE, GetLastError());
     return nullptr;
   }
 
@@ -211,14 +215,14 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
   DCHECK(!options.executable);
   DCHECK(!mapped_file_.Get());
   if (options.size == 0) {
-    LogError(SIZE_ZERO);
+    LogError(SIZE_ZERO, 0);
     return false;
   }
 
   // Check maximum accounting for overflow.
   if (options.size >
       static_cast<size_t>(std::numeric_limits<int>::max()) - kSectionMask) {
-    LogError(SIZE_TOO_LARGE);
+    LogError(SIZE_TOO_LARGE, 0);
     return false;
   }
 
@@ -233,15 +237,15 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
     // Add an empty DACL to enforce anonymous read-only sections.
     sa.lpSecurityDescriptor = &sd;
     if (!InitializeAcl(&dacl, sizeof(dacl), ACL_REVISION)) {
-      LogError(INITIALIZE_ACL_FAILURE);
+      LogError(INITIALIZE_ACL_FAILURE, GetLastError());
       return false;
     }
     if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION)) {
-      LogError(INITIALIZE_SECURITY_DESC_FAILURE);
+      LogError(INITIALIZE_SECURITY_DESC_FAILURE, GetLastError());
       return false;
     }
     if (!SetSecurityDescriptorDacl(&sd, TRUE, &dacl, FALSE)) {
-      LogError(SET_SECURITY_DESC_FAILURE);
+      LogError(SET_SECURITY_DESC_FAILURE, GetLastError());
       return false;
     }
 
@@ -270,12 +274,13 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
     external_section_ = true;
     if (!options.open_existing_deprecated) {
       Close();
-      LogError(ALREADY_EXISTS);
+      // From "if" above: GetLastError() == ERROR_ALREADY_EXISTS.
+      LogError(ALREADY_EXISTS, ERROR_ALREADY_EXISTS);
       return false;
     }
   }
 
-  LogError(SUCCESS);
+  LogError(SUCCESS, ERROR_SUCCESS);
   return true;
 }
 
@@ -377,6 +382,14 @@ void SharedMemory::Close() {
 
 SharedMemoryHandle SharedMemory::handle() const {
   return SharedMemoryHandle(mapped_file_.Get(), base::GetCurrentProcId());
+}
+
+SharedMemoryHandle SharedMemory::TakeHandle() {
+  SharedMemoryHandle handle(mapped_file_.Take(), base::GetCurrentProcId());
+  handle.SetOwnershipPassesToIPC(true);
+  memory_ = nullptr;
+  mapped_size_ = 0;
+  return handle;
 }
 
 }  // namespace base

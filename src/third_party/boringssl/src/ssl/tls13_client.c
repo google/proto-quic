@@ -24,6 +24,7 @@
 #include <openssl/stack.h>
 #include <openssl/x509.h>
 
+#include "../crypto/internal.h"
 #include "internal.h"
 
 
@@ -67,95 +68,71 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL *ssl,
     return ssl_hs_error;
   }
 
-  while (CBS_len(&extensions) != 0) {
-    uint16_t type;
-    CBS extension;
-    if (!CBS_get_u16(&extensions, &type) ||
-        !CBS_get_u16_length_prefixed(&extensions, &extension)) {
+  int have_cookie, have_key_share;
+  CBS cookie, key_share;
+  const SSL_EXTENSION_TYPE ext_types[] = {
+      {TLSEXT_TYPE_key_share, &have_key_share, &key_share},
+      {TLSEXT_TYPE_cookie, &have_cookie, &cookie},
+  };
+
+  uint8_t alert;
+  if (!ssl_parse_extensions(&extensions, &alert, ext_types,
+                            OPENSSL_ARRAY_SIZE(ext_types))) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
+    return ssl_hs_error;
+  }
+
+  if (have_cookie) {
+    CBS cookie_value;
+    if (!CBS_get_u16_length_prefixed(&cookie, &cookie_value) ||
+        CBS_len(&cookie_value) == 0 ||
+        CBS_len(&cookie) != 0) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
       return ssl_hs_error;
     }
 
-    switch (type) {
-      case TLSEXT_TYPE_cookie: {
-        if (hs->cookie != NULL) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          return ssl_hs_error;
-        }
-
-        /* Cookies may be requested whether or not advertised, so no need to
-         * check. */
-
-        CBS cookie;
-        if (!CBS_get_u16_length_prefixed(&extension, &cookie) ||
-            CBS_len(&cookie) == 0 ||
-            CBS_len(&extension) != 0) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-          return ssl_hs_error;
-        }
-
-        if (!CBS_stow(&cookie, &hs->cookie, &hs->cookie_len)) {
-          return ssl_hs_error;
-        }
-        break;
-      }
-
-      case TLSEXT_TYPE_key_share: {
-        if (hs->retry_group != 0) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          return ssl_hs_error;
-        }
-
-        /* key_share is always advertised, so no need to check. */
-
-        uint16_t group_id;
-        if (!CBS_get_u16(&extension, &group_id) ||
-            CBS_len(&extension) != 0) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-          return ssl_hs_error;
-        }
-
-        /* The group must be supported. */
-        const uint16_t *groups;
-        size_t groups_len;
-        tls1_get_grouplist(ssl, &groups, &groups_len);
-        int found = 0;
-        for (size_t i = 0; i < groups_len; i++) {
-          if (groups[i] == group_id) {
-            found = 1;
-            break;
-          }
-        }
-
-        if (!found) {
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
-          return ssl_hs_error;
-        }
-
-        /* Check that the HelloRetryRequest does not request the key share that
-         * was provided in the initial ClientHello. */
-        if (SSL_ECDH_CTX_get_id(&hs->ecdh_ctx) == group_id) {
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
-          return ssl_hs_error;
-        }
-
-        SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
-        hs->retry_group = group_id;
-        break;
-      }
-
-      default:
-        OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNSUPPORTED_EXTENSION);
-        return ssl_hs_error;
+    if (!CBS_stow(&cookie_value, &hs->cookie, &hs->cookie_len)) {
+      return ssl_hs_error;
     }
+  }
+
+  if (have_key_share) {
+    uint16_t group_id;
+    if (!CBS_get_u16(&key_share, &group_id) || CBS_len(&key_share) != 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
+      return ssl_hs_error;
+    }
+
+    /* The group must be supported. */
+    const uint16_t *groups;
+    size_t groups_len;
+    tls1_get_grouplist(ssl, &groups, &groups_len);
+    int found = 0;
+    for (size_t i = 0; i < groups_len; i++) {
+      if (groups[i] == group_id) {
+        found = 1;
+        break;
+      }
+    }
+
+    if (!found) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
+      OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
+      return ssl_hs_error;
+    }
+
+    /* Check that the HelloRetryRequest does not request the key share that
+     * was provided in the initial ClientHello. */
+    if (SSL_ECDH_CTX_get_id(&hs->ecdh_ctx) == group_id) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
+      OPENSSL_PUT_ERROR(SSL, SSL_R_WRONG_CURVE);
+      return ssl_hs_error;
+    }
+
+    SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
+    hs->retry_group = group_id;
   }
 
   hs->received_hello_retry_request = 1;
@@ -165,11 +142,7 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL *ssl,
 
 static enum ssl_hs_wait_t do_send_second_client_hello(SSL *ssl,
                                                       SSL_HANDSHAKE *hs) {
-  CBB cbb, body;
-  if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CLIENT_HELLO) ||
-      !ssl_add_client_hello_body(ssl, &body) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
-    CBB_cleanup(&cbb);
+  if (!ssl_write_client_hello(ssl)) {
     return ssl_hs_error;
   }
 
@@ -227,61 +200,28 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
   }
 
   /* Parse out the extensions. */
-  int have_key_share = 0, have_pre_shared_key = 0, have_sigalgs = 0;
-  CBS key_share, pre_shared_key, sigalgs;
-  while (CBS_len(&extensions) != 0) {
-    uint16_t type;
-    CBS extension;
-    if (!CBS_get_u16(&extensions, &type) ||
-        !CBS_get_u16_length_prefixed(&extensions, &extension)) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-      return ssl_hs_error;
-    }
+  int have_key_share = 0, have_pre_shared_key = 0;
+  CBS key_share, pre_shared_key;
+  const SSL_EXTENSION_TYPE ext_types[] = {
+      {TLSEXT_TYPE_key_share, &have_key_share, &key_share},
+      {TLSEXT_TYPE_pre_shared_key, &have_pre_shared_key, &pre_shared_key},
+  };
 
-    switch (type) {
-      case TLSEXT_TYPE_key_share:
-        if (have_key_share) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          return ssl_hs_error;
-        }
-        key_share = extension;
-        have_key_share = 1;
-        break;
-      case TLSEXT_TYPE_pre_shared_key:
-        if (have_pre_shared_key) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          return ssl_hs_error;
-        }
-        pre_shared_key = extension;
-        have_pre_shared_key = 1;
-        break;
-      case TLSEXT_TYPE_signature_algorithms:
-        if (have_sigalgs) {
-          OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
-          ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-          return ssl_hs_error;
-        }
-        sigalgs = extension;
-        have_sigalgs = 1;
-        break;
-      default:
-        OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNSUPPORTED_EXTENSION);
-        return ssl_hs_error;
-    }
+  uint8_t alert;
+  if (!ssl_parse_extensions(&extensions, &alert, ext_types,
+                            OPENSSL_ARRAY_SIZE(ext_types))) {
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
+    return ssl_hs_error;
   }
 
-  /* We only support PSK_AUTH and PSK_DHE_KE. */
-  if (!have_key_share || have_sigalgs == have_pre_shared_key) {
+  /* We only support PSK_DHE_KE. */
+  if (!have_key_share) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
     return ssl_hs_error;
   }
 
-  uint8_t alert = SSL_AD_DECODE_ERROR;
+  alert = SSL_AD_DECODE_ERROR;
   if (have_pre_shared_key) {
     if (ssl->session == NULL) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
@@ -301,8 +241,8 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
       return ssl_hs_error;
     }
 
-    if (ssl->session->cipher != cipher) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_CIPHER_NOT_RETURNED);
+    if (ssl->session->cipher->algorithm_prf != cipher->algorithm_prf) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_OLD_SESSION_PRF_HASH_MISMATCH);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
       return ssl_hs_error;
     }
@@ -337,20 +277,17 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
       EVP_MD_size(ssl_get_handshake_digest(ssl_get_algorithm_prf(ssl)));
 
   /* Derive resumption material. */
-  uint8_t resumption_ctx[EVP_MAX_MD_SIZE] = {0};
   uint8_t psk_secret[EVP_MAX_MD_SIZE] = {0};
   if (ssl->s3->session_reused) {
-    if (!tls13_resumption_context(ssl, resumption_ctx, hash_len,
-                                  ssl->s3->new_session) ||
-        !tls13_resumption_psk(ssl, psk_secret, hash_len,
-                              ssl->s3->new_session)) {
+    if (hash_len != (size_t) ssl->s3->new_session->master_key_length) {
       return ssl_hs_error;
     }
+    memcpy(psk_secret, ssl->s3->new_session->master_key, hash_len);
   }
 
   /* Set up the key schedule, hash in the ClientHello, and incorporate the PSK
    * into the running secret. */
-  if (!tls13_init_key_schedule(ssl, resumption_ctx, hash_len) ||
+  if (!tls13_init_key_schedule(ssl) ||
       !tls13_advance_key_schedule(ssl, psk_secret, hash_len)) {
     return ssl_hs_error;
   }
@@ -370,16 +307,10 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
   }
   OPENSSL_free(dhe_secret);
 
-  if (have_sigalgs &&
-      CBS_len(&sigalgs) != 0) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    return ssl_hs_error;
-  }
-
   /* If there was no HelloRetryRequest, the version negotiation logic has
    * already hashed the message. */
   if (hs->received_hello_retry_request &&
-      !ssl->method->hash_current_message(ssl)) {
+      !ssl_hash_current_message(ssl)) {
     return ssl_hs_error;
   }
 
@@ -409,7 +340,7 @@ static enum ssl_hs_wait_t do_process_encrypted_extensions(SSL *ssl,
     return ssl_hs_error;
   }
 
-  if (!ssl->method->hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(ssl)) {
     return ssl_hs_error;
   }
 
@@ -465,7 +396,7 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL *ssl,
   sk_X509_NAME_pop_free(ssl->s3->hs->ca_names, X509_NAME_free);
   ssl->s3->hs->ca_names = ca_sk;
 
-  if (!ssl->method->hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(ssl)) {
     return ssl_hs_error;
   }
 
@@ -477,7 +408,7 @@ static enum ssl_hs_wait_t do_process_server_certificate(SSL *ssl,
                                                         SSL_HANDSHAKE *hs) {
   if (!tls13_check_message_type(ssl, SSL3_MT_CERTIFICATE) ||
       !tls13_process_certificate(ssl, 0 /* certificate required */) ||
-      !ssl->method->hash_current_message(ssl)) {
+      !ssl_hash_current_message(ssl)) {
     return ssl_hs_error;
   }
 
@@ -489,8 +420,8 @@ static enum ssl_hs_wait_t do_process_server_certificate_verify(
     SSL *ssl, SSL_HANDSHAKE *hs) {
   if (!tls13_check_message_type(ssl, SSL3_MT_CERTIFICATE_VERIFY) ||
       !tls13_process_certificate_verify(ssl) ||
-      !ssl->method->hash_current_message(ssl)) {
-    return 0;
+      !ssl_hash_current_message(ssl)) {
+    return ssl_hs_error;
   }
 
   hs->state = state_process_server_finished;
@@ -502,10 +433,10 @@ static enum ssl_hs_wait_t do_process_server_finished(SSL *ssl,
   static const uint8_t kZeroes[EVP_MAX_MD_SIZE] = {0};
   if (!tls13_check_message_type(ssl, SSL3_MT_FINISHED) ||
       !tls13_process_finished(ssl) ||
-      !ssl->method->hash_current_message(ssl) ||
+      !ssl_hash_current_message(ssl) ||
       /* Update the secret to the master secret and derive traffic keys. */
       !tls13_advance_key_schedule(ssl, kZeroes, hs->hash_len) ||
-      !tls13_derive_traffic_secret_0(ssl)) {
+      !tls13_derive_application_secrets(ssl)) {
     return ssl_hs_error;
   }
 
@@ -602,7 +533,7 @@ static enum ssl_hs_wait_t do_send_channel_id(SSL *ssl, SSL_HANDSHAKE *hs) {
   CBB cbb, body;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CHANNEL_ID) ||
       !tls1_write_channel_id(ssl, &body) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
+      !ssl_complete_message(ssl, &cbb)) {
     CBB_cleanup(&cbb);
     return ssl_hs_error;
   }
@@ -621,11 +552,11 @@ static enum ssl_hs_wait_t do_send_client_finished(SSL *ssl, SSL_HANDSHAKE *hs) {
 }
 
 static enum ssl_hs_wait_t do_flush(SSL *ssl, SSL_HANDSHAKE *hs) {
-  if (!tls13_set_traffic_key(ssl, type_data, evp_aead_open,
-                             hs->server_traffic_secret_0, hs->hash_len) ||
-      !tls13_set_traffic_key(ssl, type_data, evp_aead_seal,
-                             hs->client_traffic_secret_0, hs->hash_len) ||
-      !tls13_finalize_keys(ssl)) {
+  if (!tls13_set_traffic_key(ssl, evp_aead_open, hs->server_traffic_secret_0,
+                             hs->hash_len) ||
+      !tls13_set_traffic_key(ssl, evp_aead_seal, hs->client_traffic_secret_0,
+                             hs->hash_len) ||
+      !tls13_derive_resumption_secret(ssl)) {
     return ssl_hs_error;
   }
 
@@ -709,13 +640,12 @@ int tls13_process_new_session_ticket(SSL *ssl) {
     return 0;
   }
 
-  CBS cbs, ke_modes, auth_modes, ticket, extensions;
+  ssl_session_refresh_time(ssl, session);
+
+  CBS cbs, ticket, extensions;
   CBS_init(&cbs, ssl->init_msg, ssl->init_num);
   if (!CBS_get_u32(&cbs, &session->tlsext_tick_lifetime_hint) ||
-      !CBS_get_u8_length_prefixed(&cbs, &ke_modes) ||
-      CBS_len(&ke_modes) == 0 ||
-      !CBS_get_u8_length_prefixed(&cbs, &auth_modes) ||
-      CBS_len(&auth_modes) == 0 ||
+      !CBS_get_u32(&cbs, &session->ticket_age_add) ||
       !CBS_get_u16_length_prefixed(&cbs, &ticket) ||
       !CBS_stow(&ticket, &session->tlsext_tick, &session->tlsext_ticklen) ||
       !CBS_get_u16_length_prefixed(&cbs, &extensions) ||
@@ -726,13 +656,10 @@ int tls13_process_new_session_ticket(SSL *ssl) {
     return 0;
   }
 
+  session->ticket_age_add_valid = 1;
   session->not_resumable = 0;
 
-  /* Ignore the ticket unless the server preferences are compatible with us. */
-  if (memchr(CBS_data(&ke_modes), SSL_PSK_DHE_KE, CBS_len(&ke_modes)) != NULL &&
-      memchr(CBS_data(&auth_modes), SSL_PSK_AUTH, CBS_len(&auth_modes)) !=
-          NULL &&
-      ssl->ctx->new_session_cb != NULL &&
+  if (ssl->ctx->new_session_cb != NULL &&
       ssl->ctx->new_session_cb(ssl, session)) {
     /* |new_session_cb|'s return value signals that it took ownership. */
     return 1;

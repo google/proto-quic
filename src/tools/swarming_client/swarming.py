@@ -5,7 +5,7 @@
 
 """Client tool to trigger tasks or retrieve results from a Swarming server."""
 
-__version__ = '0.8.6'
+__version__ = '0.8.8'
 
 import collections
 import datetime
@@ -15,7 +15,6 @@ import optparse
 import os
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import urllib
@@ -176,6 +175,8 @@ TaskProperties = collections.namedtuple(
       'idempotent',
       'inputs_ref',
       'io_timeout_secs',
+      'outputs',
+      'secret_bytes',
     ])
 
 
@@ -188,6 +189,7 @@ NewTaskRequest = collections.namedtuple(
       'parent_task_id',
       'priority',
       'properties',
+      'service_account_token',
       'tags',
       'user',
     ])
@@ -210,12 +212,19 @@ def namedtuple_to_dict(value):
   return out
 
 
-def task_request_to_raw_request(task_request):
+def task_request_to_raw_request(task_request, hide_token):
   """Returns the json-compatible dict expected by the server for new request.
 
   This is for the v1 client Swarming API.
   """
   out = namedtuple_to_dict(task_request)
+  if hide_token:
+    if out['service_account_token'] not in (None, 'bot', 'none'):
+      out['service_account_token'] = '<hidden>'
+  # Don't send 'service_account_token' if it is None to avoid confusing older
+  # version of the server that doesn't know about 'service_account_token'.
+  if out['service_account_token'] in (None, 'none'):
+    out.pop('service_account_token')
   # Maps are not supported until protobuf v3.
   out['properties']['dimensions'] = [
     {'key': k, 'value': v}
@@ -287,7 +296,7 @@ def trigger_task_shards(swarming, task_request, shards):
     None in case of failure.
   """
   def convert(index):
-    req = task_request_to_raw_request(task_request)
+    req = task_request_to_raw_request(task_request, False)
     if shards > 1:
       req['properties']['env'] = setup_googletest(
           req['properties']['env'], shards, index)
@@ -323,6 +332,17 @@ def trigger_task_shards(swarming, task_request, shards):
     return None
 
   return tasks
+
+
+def mint_service_account_token(service_account):
+  """Given a service account name returns a delegation token for this account.
+
+  The token is generated based on triggering user's credentials. It is passed
+  to Swarming, that uses it when running tasks.
+  """
+  logging.info(
+      'Generating delegation token for service account "%s"', service_account)
+  raise NotImplementedError('Custom service accounts are not implemented yet')
 
 
 ### Collection.
@@ -791,7 +811,9 @@ def collect(
       total_duration += metadata.get('duration', 0)
 
       if decorate:
-        print(decorate_shard_output(swarming, index, metadata))
+        s = decorate_shard_output(swarming, index, metadata).encode(
+            'utf-8', 'replace')
+        print(s)
         if len(seen_shards) < len(task_ids):
           print('')
       else:
@@ -914,6 +936,10 @@ def add_trigger_options(parser):
       help='When set, the server will actively try to find a previous task '
            'with the same parameter and return this result instead if possible')
   parser.task_group.add_option(
+      '--secret-bytes-path',
+      help='The optional path to a file containing the secret_bytes to use with'
+           'this task.')
+  parser.task_group.add_option(
       '--expiration', type='int', default=6*60*60,
       help='Seconds to allow the task to be pending for a bot to run before '
            'this task request expires.')
@@ -934,11 +960,25 @@ def add_trigger_options(parser):
       '--cipd-package', action='append', default=[],
       help='CIPD packages to install on the Swarming bot.  Uses the format: '
            'path:package_name:version')
+  parser.task_group.add_option(
+      '--service-account',
+      help='Name of a service account to run the task as. Only literal "bot" '
+           'string can be specified currently (to run the task under bot\'s '
+           'account). Don\'t use task service accounts if not given '
+           '(default).')
+  parser.task_group.add_option(
+      '-o', '--output', action='append', default=[],
+      help='A list of files to return in addition to those written to'
+           '$(ISOLATED_OUTDIR). An error will occur if a file specified by'
+           'this option is also written directly to $(ISOLATED_OUTDIR).')
   parser.add_option_group(parser.task_group)
 
 
 def process_trigger_options(parser, options, args):
-  """Processes trigger options and uploads files to isolate server if necessary.
+  """Processes trigger options and does preparatory steps.
+
+  Uploads files to isolate server and generates service account tokens if
+  necessary.
   """
   options.dimensions = dict(options.dimensions)
   options.env = dict(options.env)
@@ -984,6 +1024,11 @@ def process_trigger_options(parser, options, args):
         packages=cipd_packages,
         server=None)
 
+  secret_bytes = None
+  if options.secret_bytes_path:
+    with open(options.secret_bytes_path, 'r') as f:
+      secret_bytes = f.read().encode('base64')
+
   # If inputs_ref.isolated is used, command is actually extra_args.
   # Otherwise it's an actual command to run.
   isolated_input = inputs_ref and inputs_ref.isolated
@@ -997,15 +1042,28 @@ def process_trigger_options(parser, options, args):
       grace_period_secs=30,
       idempotent=options.idempotent,
       inputs_ref=inputs_ref,
-      io_timeout_secs=options.io_timeout)
+      io_timeout_secs=options.io_timeout,
+      outputs=options.output,
+      secret_bytes=secret_bytes)
   if not all(len(t.split(':', 1)) == 2 for t in options.tags):
     parser.error('--tags must be in the format key:value')
+
+  # Convert a service account email to a signed service account token to pass
+  # to Swarming.
+  service_account_token = None
+  if options.service_account in ('bot', 'none'):
+    service_account_token = options.service_account
+  elif options.service_account:
+    # pylint: disable=assignment-from-no-return
+    service_account_token = mint_service_account_token(options.service_account)
+
   return NewTaskRequest(
       expiration_secs=options.expiration,
       name=options.task_name,
       parent_task_id=os.environ.get('SWARMING_TASK_ID', ''),
       priority=options.priority,
       properties=properties,
+      service_account_token=service_account_token,
       tags=options.tags,
       user=options.user)
 
@@ -1112,7 +1170,7 @@ def CMDbots(parser, args):
 
     # If the user requested to filter on dimensions, ensure the bot has all the
     # dimensions requested.
-    dimensions = {i['key']: i.get('value') for i in bot['dimensions']}
+    dimensions = {i['key']: i.get('value') for i in bot.get('dimensions', {})}
     for key, value in options.dimensions:
       if key not in dimensions:
         break
@@ -1534,7 +1592,7 @@ def CMDtrigger(parser, args):
         data = {
           'base_task_name': options.task_name,
           'tasks': tasks,
-          'request': task_request_to_raw_request(task_request),
+          'request': task_request_to_raw_request(task_request, True),
         }
         tools.write_json(unicode(options.dump_json), data, True)
         print('To collect results, use:')

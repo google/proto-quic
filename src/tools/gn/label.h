@@ -123,4 +123,6 @@ inline void swap(Label& lhs, Label& rhs) {
   lhs.swap(rhs);
 }
 
+extern const char kLabels_Help[];
+
 #endif  // TOOLS_GN_LABEL_H_

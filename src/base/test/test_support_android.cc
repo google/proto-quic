@@ -160,6 +160,9 @@ void InitPathProvider(int key) {
 namespace base {
 
 void InitAndroidTestLogging() {
+  if (base::AndroidIsChildProcess())
+    return;
+
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   logging::InitLogging(settings);
@@ -185,10 +188,4 @@ void InitAndroidTestMessageLoop() {
     LOG(INFO) << "MessagePumpForUIFactory already set, unable to override.";
 }
 
-void InitAndroidTest() {
-  if (!base::AndroidIsChildProcess()) {
-    InitAndroidTestLogging();
-  }
-  InitAndroidTestMessageLoop();
-}
 }  // namespace base

@@ -12,7 +12,7 @@
     - [... run a gtest?](/testing/android/docs/todo.md)
     - [... run an instrumentation test?](/testing/android/docs/todo.md)
     - [... run a Robolectric test?](/testing/android/docs/todo.md)
-    - [... run the blink layout tests?](https://sites.google.com/a/chromium.org/dev/developers/testing/webkit-layout-tests)
+    - [... run the blink layout tests?](/testing/layout_tests.md)
     - [... run a telemetry test?](/testing/android/docs/todo.md)
   - **miscellaneous**
     - [... use code coverage for Java tests?](/build/android/docs/coverage.md)

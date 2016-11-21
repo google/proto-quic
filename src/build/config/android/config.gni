@@ -43,7 +43,7 @@ if (is_android) {
     # Purposefully repeated so that downstream can change
     # default_android_sdk_root without changing lint version.
     default_lint_android_sdk_root = "//third_party/android_tools/sdk"
-    default_lint_android_sdk_version = "23"
+    default_lint_android_sdk_version = "24"
   }
 
   if (!defined(default_extras_android_sdk_root)) {

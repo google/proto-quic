@@ -224,6 +224,58 @@ TEST_F(BbrSenderTest, SimpleTransferSmallBuffer) {
   EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
 }
 
+// Test the number of losses incurred by the startup phase in a situation when
+// the buffer is less than BDP.
+TEST_F(BbrSenderTest, PacketLossOnSmallBufferStartup) {
+  CreateSmallBufferSetup();
+
+  DriveOutOfStartup();
+  float loss_rate =
+      static_cast<float>(bbr_sender_.connection()->GetStats().packets_lost) /
+      bbr_sender_.connection()->GetStats().packets_sent;
+  EXPECT_LE(loss_rate, 0.20);
+}
+
+// Ensures the code transitions loss recovery states correctly (NOT_IN_RECOVERY
+// -> CONSERVATION -> GROWTH -> NOT_IN_RECOVERY).
+TEST_F(BbrSenderTest, RecoveryStates) {
+  const QuicTime::Delta timeout = QuicTime::Delta::FromSeconds(10);
+  bool simulator_result;
+  CreateSmallBufferSetup();
+
+  bbr_sender_.AddBytesToTransfer(100 * 1024 * 1024);
+  ASSERT_EQ(BbrSender::NOT_IN_RECOVERY,
+            sender_->ExportDebugState().recovery_state);
+
+  simulator_result = simulator_.RunUntilOrTimeout(
+      [this]() {
+        return sender_->ExportDebugState().recovery_state !=
+               BbrSender::NOT_IN_RECOVERY;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+  ASSERT_EQ(BbrSender::CONSERVATION,
+            sender_->ExportDebugState().recovery_state);
+
+  simulator_result = simulator_.RunUntilOrTimeout(
+      [this]() {
+        return sender_->ExportDebugState().recovery_state !=
+               BbrSender::CONSERVATION;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+  ASSERT_EQ(BbrSender::GROWTH, sender_->ExportDebugState().recovery_state);
+
+  simulator_result = simulator_.RunUntilOrTimeout(
+      [this]() {
+        return sender_->ExportDebugState().recovery_state != BbrSender::GROWTH;
+      },
+      timeout);
+  ASSERT_TRUE(simulator_result);
+  ASSERT_EQ(BbrSender::NOT_IN_RECOVERY,
+            sender_->ExportDebugState().recovery_state);
+}
+
 // Verify the behavior of the algorithm in the case when the connection sends
 // small bursts of data after sending continuously for a while.
 TEST_F(BbrSenderTest, ApplicationLimitedBursts) {

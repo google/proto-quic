@@ -140,9 +140,9 @@ PYTHON_UNIT_TEST_SUITES = {
 }
 
 LOCAL_MACHINE_TESTS = ['junit', 'python']
-VALID_ENVIRONMENTS = ['local', 'remote_device']
+VALID_ENVIRONMENTS = ['local']
 VALID_TEST_TYPES = ['gtest', 'instrumentation', 'junit', 'linker', 'monkey',
-                    'perf', 'python', 'uirobot']
+                    'perf', 'python']
 VALID_DEVICE_TYPES = ['Android', 'iOS']
 
 

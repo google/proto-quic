@@ -256,12 +256,13 @@ class NET_EXPORT TransportSecurityState
     // Sends the given serialized |report| to |report_uri| with
     // Content-Type header as specified in
     // |content_type|. |content_type| should be non-empty.
-    virtual void Send(const GURL& report_uri,
-                      base::StringPiece content_type,
-                      base::StringPiece report) = 0;
-
-    // Sets a callback to be called when report sending fails.
-    virtual void SetErrorCallback(
+    // |report_id| could be any non-negative integer. It's passed back to the
+    // error or success callbacks.
+    virtual void Send(
+        const GURL& report_uri,
+        base::StringPiece content_type,
+        base::StringPiece report,
+        const base::Callback<void()>& success_callback,
         const base::Callback<void(const GURL&, int)>& error_callback) = 0;
 
    protected:

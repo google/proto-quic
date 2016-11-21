@@ -15,8 +15,8 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -55,8 +55,8 @@ class TestStream : public QuicSpdyStream {
     data_ += string(buffer, bytes_read);
   }
 
-  using ReliableQuicStream::WriteOrBufferData;
-  using ReliableQuicStream::CloseWriteSide;
+  using QuicStream::WriteOrBufferData;
+  using QuicStream::CloseWriteSide;
 
   const string& data() const { return data_; }
 
@@ -402,7 +402,7 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlBlocked) {
             QuicFlowControllerPeer::SendWindowSize(stream_->flow_controller()));
 
   // And we should have queued the overflowed data.
-  EXPECT_EQ(kOverflow, ReliableQuicStreamPeer::SizeOfQueuedData(stream_));
+  EXPECT_EQ(kOverflow, QuicStreamPeer::SizeOfQueuedData(stream_));
 }
 
 TEST_P(QuicSpdyStreamTest, StreamFlowControlNoWindowUpdateIfNotConsumed) {

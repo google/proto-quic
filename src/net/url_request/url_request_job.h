@@ -232,7 +232,7 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // Given |policy|, |referrer|, and |redirect_destination|, returns the
   // referrer URL mandated by |request|'s referrer policy.
   static GURL ComputeReferrerForRedirect(URLRequest::ReferrerPolicy policy,
-                                         const std::string& referrer,
+                                         const GURL& original_referrer,
                                          const GURL& redirect_destination);
 
  protected:
@@ -330,7 +330,7 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   void ReadRawDataComplete(int bytes_read);
 
   // The request that initiated this job. This value will never be nullptr.
-  URLRequest* request_;
+  URLRequest* const request_;
 
  private:
   class URLRequestJobSourceStream;

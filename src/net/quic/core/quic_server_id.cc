@@ -46,7 +46,7 @@ QuicServerId QuicServerId::FromString(const std::string& str) {
   GURL url(str);
   if (!url.is_valid())
     return QuicServerId();
-  return QuicServerId(HostPortPair::FromURL(url), url.path() == "/private"
+  return QuicServerId(HostPortPair::FromURL(url), url.path_piece() == "/private"
                                                       ? PRIVACY_MODE_ENABLED
                                                       : PRIVACY_MODE_DISABLED);
 }

@@ -24,9 +24,6 @@ class Value;
 
 namespace net {
 
-// Allows arg-dependent lookup to work for logging's operator<<.
-using ::operator<<;
-
 class NetLogCaptureMode;
 
 namespace test {
@@ -143,7 +140,6 @@ class NET_EXPORT SpdyHeaderBlock {
   };
 
  private:
-  void Write(const base::StringPiece s);
   void AppendHeader(const base::StringPiece key, const base::StringPiece value);
   Storage* GetStorage();
 

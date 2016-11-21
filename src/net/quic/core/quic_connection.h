@@ -46,7 +46,6 @@
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_received_packet_manager.h"
-#include "net/quic/core/quic_sent_entropy_manager.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
@@ -784,10 +783,6 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Deletes and clears any queued packets.
   void ClearQueuedPackets();
 
-  // Closes the connection if the sent or received packet manager are tracking
-  // too many outstanding packets.
-  void MaybeCloseIfTooManyOutstandingPackets();
-
   // Writes as many queued packets as possible.  The connection must not be
   // blocked when this is called.
   void WriteQueuedPackets();
@@ -832,11 +827,6 @@ class NET_EXPORT_PRIVATE QuicConnection
 
   // Sets the MTU discovery alarm if necessary.
   void MaybeSetMtuAlarm();
-
-  // On arrival of a new packet, checks to see if the socket addresses have
-  // changed since the last packet we saw on this connection.
-  void CheckForAddressMigration(const IPEndPoint& self_address,
-                                const IPEndPoint& peer_address);
 
   HasRetransmittableData IsRetransmittable(const SerializedPacket& packet);
   bool IsTerminationPacket(const SerializedPacket& packet);
@@ -958,7 +948,6 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool close_connection_after_five_rtos_;
 
   QuicReceivedPacketManager received_packet_manager_;
-  QuicSentEntropyManager sent_entropy_manager_;
 
   // Indicates whether an ack should be sent the next time we try to write.
   bool ack_queued_;
@@ -1047,6 +1036,19 @@ class NET_EXPORT_PRIVATE QuicConnection
   std::unique_ptr<QuicSentPacketManagerInterface> sent_packet_manager_;
 
   // The state of connection in version negotiation finite state machine.
+  enum QuicVersionNegotiationState {
+    START_NEGOTIATION = 0,
+    // Server-side this implies we've sent a version negotiation packet and are
+    // waiting on the client to select a compatible version.  Client-side this
+    // implies we've gotten a version negotiation packet, are retransmitting the
+    // initial packets with a supported version and are waiting for our first
+    // packet from the server.
+    NEGOTIATION_IN_PROGRESS,
+    // This indicates this endpoint has received a packet from the peer with a
+    // version this endpoint supports.  Version negotiation is complete, and the
+    // version number will no longer be sent with future packets.
+    NEGOTIATED_VERSION
+  };
   QuicVersionNegotiationState version_negotiation_state_;
 
   // Tracks if the connection was created by the server or the client.

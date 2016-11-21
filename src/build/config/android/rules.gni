@@ -1060,7 +1060,7 @@ if (enable_java_templates) {
 
     java_binary(_java_binary_target_name) {
       deps = []
-      jar_name = invoker.target_name
+      output_name = invoker.target_name
       forward_variables_from(invoker, "*")
       testonly = true
       bypass_platform_checks = true
@@ -1104,6 +1104,9 @@ if (enable_java_templates) {
   #
   #   jar_excluded_patterns: List of patterns of .class files to exclude from the
   #     final jar.
+  #
+  #   output_name: File name for the output .jar (not including extension).
+  #     Defaults to the input .jar file name.
   #
   #   proguard_preprocess: If true, proguard preprocessing will be run. This can
   #     be used to remove unwanted parts of the library.
@@ -1156,6 +1159,8 @@ if (enable_java_templates) {
   #     will be added to the javac classpath.
   #   jar_path: Path to the prebuilt jar.
   #   jar_dep: Target that builds jar_path (optional).
+  #   output_name: File name for the output .jar (not including extension).
+  #     Defaults to the input .jar file name.
   #   proguard_preprocess: If true, proguard preprocessing will be run. This can
   #     be used to remove unwanted parts of the library.
   #   proguard_preprocess_config: Path to the proguard config for preprocessing.
@@ -1214,6 +1219,8 @@ if (enable_java_templates) {
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
   #
+  #   output_name: File name for the output .jar (not including extension).
+  #     Defaults to the input .jar file name.
   #   dex_path: If set, the resulting .dex.jar file will be placed under this
   #     path.
   #
@@ -1299,6 +1306,8 @@ if (enable_java_templates) {
   #     will be added to the javac classpath. Android resources in dependencies
   #     will be used when building this library.
   #   jar_path: Path to the prebuilt jar.
+  #   output_name: File name for the output .jar (not including extension).
+  #     Defaults to the input .jar file name.
   #   proguard_preprocess: If true, proguard preprocessing will be run. This can
   #     be used to remove unwanted parts of the library.
   #   proguard_preprocess_config: Path to the proguard config for preprocessing.
@@ -1611,7 +1620,8 @@ if (enable_java_templates) {
 
       # Added emma to the target's classpath via its .build_config.
       if (emma_coverage && !_emma_never_instrument) {
-        possible_config_deps += [ "//third_party/android_tools:emma_device" ]
+        possible_config_deps +=
+            [ "//third_party/android_tools:emma_device_java" ]
       }
 
       proguard_enabled = _proguard_enabled
@@ -1776,7 +1786,7 @@ if (enable_java_templates) {
         deps += [ "${invoker.apk_under_test}__java" ]
       }
       if (emma_coverage && !_emma_never_instrument) {
-        deps += [ "//third_party/android_tools:emma_device" ]
+        deps += [ "//third_party/android_tools:emma_device_java" ]
       }
     }
 
@@ -2250,36 +2260,23 @@ if (enable_java_templates) {
   template("instrumentation_test_apk") {
     testonly = true
     _apk_target_name = "${target_name}__apk"
-    _gen_isolate_target_name = "${target_name}__isolate"
     _test_runner_target_name = "${target_name}__test_runner_script"
     _install_script_name = "install_$target_name"
-
-    _target_dir_name = get_label_info(":$target_name", "dir")
-    _device_isolate_path = "$root_out_dir/gen.runtime/$_target_dir_name/$target_name.device.isolate"
-    device_isolate(_gen_isolate_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "data",
-                               "data_deps",
-                               "deps",
-                               "public_deps",
-                             ])
-      output = _device_isolate_path
-    }
 
     test_runner_script(_test_runner_target_name) {
       forward_variables_from(invoker,
                              [
                                "additional_apks",
                                "apk_under_test",
+                               "data",
+                               "data_deps",
+                               "deps",
+                               "ignore_all_data_deps",
+                               "public_deps",
                              ])
       test_name = invoker.target_name
       test_type = "instrumentation"
       apk_target = ":$_apk_target_name"
-      isolate_file = _device_isolate_path
-      deps = [
-        ":$_gen_isolate_target_name",
-      ]
     }
 
     test_runner_script("${_test_runner_target_name}_incremental") {
@@ -2287,15 +2284,16 @@ if (enable_java_templates) {
                              [
                                "additional_apks",
                                "apk_under_test",
+                               "data",
+                               "data_deps",
+                               "deps",
+                               "ignore_all_data_deps",
+                               "public_deps",
                              ])
       test_name = "${invoker.target_name}_incremental"
       test_type = "instrumentation"
       apk_target = ":$_apk_target_name"
       incremental_install = true
-      isolate_file = _device_isolate_path
-      deps = [
-        ":$_gen_isolate_target_name",
-      ]
     }
 
     android_apk(_apk_target_name) {
@@ -2305,7 +2303,7 @@ if (enable_java_templates) {
       install_script_name = _install_script_name
       deps += [ "//testing/android/broker:broker_java" ]
       data_deps += [
-        "//testing/android/driver:driver_apk",
+        "//build/android/pylib/device/commands",
         "//tools/android/forwarder2",
         "//tools/android/md5sum",
       ]
@@ -2438,7 +2436,7 @@ if (enable_java_templates) {
         "//testing/android/reporter:reporter_java",
       ]
       data_deps += [
-        "//build/android/pylib/remote/device/dummy:remote_device_dummy_apk",
+        "//build/android/pylib/device/commands",
         "//tools/android/md5sum",
       ]
       if (host_os == "linux") {
@@ -2713,6 +2711,8 @@ if (enable_java_templates) {
         }
         supports_android = true
         jar_path = "$_output_path/${_tuple[1]}"
+        _base_output_name = get_path_info(jar_path, "name")
+        output_name = "${invoker.target_name}-$_base_output_name"
       }
     }
 
@@ -2740,6 +2740,7 @@ if (enable_java_templates) {
         }
         supports_android = true
         jar_path = "$_output_path/classes.jar"
+        output_name = invoker.target_name
 
         if (_scanned_files.has_proguard_flags) {
           if (!defined(proguard_configs)) {

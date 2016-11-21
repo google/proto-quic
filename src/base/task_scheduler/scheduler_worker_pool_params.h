@@ -21,6 +21,14 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
     DISALLOWED,
   };
 
+  enum class StandbyThreadPolicy {
+    // Create threads as needed on demand, reclaimed as necessary.
+    LAZY,
+    // When possible, keep one idle thread alive on standby, reclaimed as
+    // necessary.
+    ONE,
+  };
+
   // Construct a scheduler worker pool parameter object. |name| will be used to
   // label the pool's threads ("TaskScheduler" + |name| + index) and histograms
   // ("TaskScheduler." + histogram name + "." + |name| + extra suffixes). The
@@ -33,6 +41,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   SchedulerWorkerPoolParams(const std::string& name,
                             ThreadPriority priority_hint,
                             IORestriction io_restriction,
+                            StandbyThreadPolicy standby_thread_policy,
                             int max_threads,
                             const TimeDelta& suggested_reclaim_time);
   SchedulerWorkerPoolParams(SchedulerWorkerPoolParams&& other);
@@ -41,6 +50,9 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   const std::string& name() const { return name_; }
   ThreadPriority priority_hint() const { return priority_hint_; }
   IORestriction io_restriction() const { return io_restriction_; }
+  StandbyThreadPolicy standby_thread_policy() const {
+    return standby_thread_policy_;
+  }
   size_t max_threads() const { return max_threads_; }
   const TimeDelta& suggested_reclaim_time() const {
     return suggested_reclaim_time_;
@@ -50,6 +62,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   std::string name_;
   ThreadPriority priority_hint_;
   IORestriction io_restriction_;
+  StandbyThreadPolicy standby_thread_policy_;
   size_t max_threads_;
   TimeDelta suggested_reclaim_time_;
 

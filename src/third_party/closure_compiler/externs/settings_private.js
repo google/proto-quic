@@ -31,9 +31,9 @@ chrome.settingsPrivate.PrefType = {
 
 /**
  * @enum {string}
- * @see https://developer.chrome.com/extensions/settingsPrivate#type-PolicySource
+ * @see https://developer.chrome.com/extensions/settingsPrivate#type-ControlledBy
  */
-chrome.settingsPrivate.PolicySource = {
+chrome.settingsPrivate.ControlledBy = {
   DEVICE_POLICY: 'DEVICE_POLICY',
   USER_POLICY: 'USER_POLICY',
   OWNER: 'OWNER',
@@ -43,9 +43,9 @@ chrome.settingsPrivate.PolicySource = {
 
 /**
  * @enum {string}
- * @see https://developer.chrome.com/extensions/settingsPrivate#type-PolicyEnforcement
+ * @see https://developer.chrome.com/extensions/settingsPrivate#type-Enforcement
  */
-chrome.settingsPrivate.PolicyEnforcement = {
+chrome.settingsPrivate.Enforcement = {
   ENFORCED: 'ENFORCED',
   RECOMMENDED: 'RECOMMENDED',
 };
@@ -55,12 +55,12 @@ chrome.settingsPrivate.PolicyEnforcement = {
  *   key: string,
  *   type: !chrome.settingsPrivate.PrefType,
  *   value: *,
- *   policySource: (!chrome.settingsPrivate.PolicySource|undefined),
- *   policySourceName: (string|undefined),
- *   policyEnforcement: (!chrome.settingsPrivate.PolicyEnforcement|undefined),
+ *   controlledBy: (!chrome.settingsPrivate.ControlledBy|undefined),
+ *   controlledByName: (string|undefined),
+ *   enforcement: (!chrome.settingsPrivate.Enforcement|undefined),
  *   recommendedValue: (*|undefined),
  *   extensionId: (string|undefined),
- *   readOnly: (boolean|undefined)
+ *   extensionCanBeDisabled: (boolean|undefined)
  * }}
  * @see https://developer.chrome.com/extensions/settingsPrivate#type-PrefObject
  */
@@ -93,14 +93,16 @@ chrome.settingsPrivate.getAllPrefs = function(callback) {};
 chrome.settingsPrivate.getPref = function(name, callback) {};
 
 /**
- * Gets the page zoom factor.
+ * Gets the default page zoom factor. Possible values are currently between 0.25
+ * and 5. For a full list, see zoom::kPresetZoomFactors.
  * @param {function(number):void} callback
  * @see https://developer.chrome.com/extensions/settingsPrivate#method-getDefaultZoom
  */
 chrome.settingsPrivate.getDefaultZoom = function(callback) {};
 
 /**
- * Sets the page zoom factor.
+ * Sets the page zoom factor. Must be less than 0.001 different than a value in
+ * zoom::kPresetZoomFactors.
  * @param {number} zoom
  * @param {function(boolean):void=} callback
  * @see https://developer.chrome.com/extensions/settingsPrivate#method-setDefaultZoom

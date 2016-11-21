@@ -304,6 +304,10 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
     ret->options |= SSL_OP_NO_TICKET;
   }
 
+  /* Disable the auto-chaining feature by default. Once this has stuck without
+   * problems, the feature will be removed entirely. */
+  ret->mode = SSL_MODE_NO_AUTO_CHAIN;
+
   /* Lock the SSL_CTX to the specified version, for compatibility with legacy
    * uses of SSL_METHOD. */
   if (!SSL_CTX_set_max_proto_version(ret, method->version) ||
@@ -1044,11 +1048,11 @@ X509 *SSL_get_peer_certificate(const SSL *ssl) {
     return NULL;
   }
   SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL || session->peer == NULL) {
+  if (session == NULL || session->x509_peer == NULL) {
     return NULL;
   }
-  X509_up_ref(session->peer);
-  return session->peer;
+  X509_up_ref(session->x509_peer);
+  return session->x509_peer;
 }
 
 STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
@@ -1059,7 +1063,7 @@ STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
   if (session == NULL) {
     return NULL;
   }
-  return session->cert_chain;
+  return session->x509_chain;
 }
 
 int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
@@ -1332,32 +1336,34 @@ int SSL_pending(const SSL *ssl) {
 
 /* Fix this so it checks all the valid key/cert options */
 int SSL_CTX_check_private_key(const SSL_CTX *ctx) {
-  if (ctx->cert->x509 == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_ASSIGNED);
-    return 0;
-  }
-
   if (ctx->cert->privatekey == NULL) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_NO_PRIVATE_KEY_ASSIGNED);
     return 0;
   }
 
-  return X509_check_private_key(ctx->cert->x509, ctx->cert->privatekey);
-}
-
-/* Fix this function so that it takes an optional type parameter */
-int SSL_check_private_key(const SSL *ssl) {
-  if (ssl->cert->x509 == NULL) {
+  X509 *x509 = ctx->cert->x509_leaf;
+  if (x509 == NULL) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_ASSIGNED);
     return 0;
   }
 
+  return X509_check_private_key(x509, ctx->cert->privatekey);
+}
+
+/* Fix this function so that it takes an optional type parameter */
+int SSL_check_private_key(const SSL *ssl) {
   if (ssl->cert->privatekey == NULL) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_NO_PRIVATE_KEY_ASSIGNED);
     return 0;
   }
 
-  return X509_check_private_key(ssl->cert->x509, ssl->cert->privatekey);
+  X509 *x509 = ssl->cert->x509_leaf;
+  if (x509 == NULL) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_ASSIGNED);
+    return 0;
+  }
+
+  return X509_check_private_key(x509, ssl->cert->privatekey);
 }
 
 long SSL_get_default_timeout(const SSL *ssl) {
@@ -2026,7 +2032,7 @@ void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
   uint32_t mask_k = 0;
   uint32_t mask_a = 0;
 
-  if (ssl->cert->x509 != NULL && ssl_has_private_key(ssl)) {
+  if (ssl->cert->x509_leaf != NULL && ssl_has_private_key(ssl)) {
     int type = ssl_private_key_type(ssl);
     if (type == NID_rsaEncryption) {
       mask_k |= SSL_kRSA;
@@ -2075,7 +2081,7 @@ void ssl_update_cache(SSL *ssl, int mode) {
    * decides to renew the ticket. Once the handshake is completed, it should be
    * inserted into the cache. */
   if (ssl->s3->established_session != ssl->session ||
-      (!ssl->server && ssl->tlsext_ticket_expected)) {
+      (!ssl->server && ssl->s3->hs->ticket_expected)) {
     if (use_internal_cache) {
       SSL_CTX_add_session(ctx, ssl->s3->established_session);
     }
@@ -2147,7 +2153,7 @@ const char *SSL_SESSION_get_version(const SSL_SESSION *session) {
 
 X509 *SSL_get_certificate(const SSL *ssl) {
   if (ssl->cert != NULL) {
-    return ssl->cert->x509;
+    return ssl->cert->x509_leaf;
   }
 
   return NULL;
@@ -2163,7 +2169,7 @@ EVP_PKEY *SSL_get_privatekey(const SSL *ssl) {
 
 X509 *SSL_CTX_get0_certificate(const SSL_CTX *ctx) {
   if (ctx->cert != NULL) {
-    return ctx->cert->x509;
+    return ctx->cert->x509_leaf;
   }
 
   return NULL;
@@ -3030,7 +3036,7 @@ void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock) {
     return;
   }
 
-#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+#if defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE)
   out_clock->tv_sec = 1234;
   out_clock->tv_usec = 1234;
 #elif defined(OPENSSL_WINDOWS)

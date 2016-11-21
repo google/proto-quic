@@ -50,6 +50,7 @@ class WebrtcDataChannel(_Webrtc):
     return 'webrtc.datachannel'
 
 
+@benchmark.Disabled('android')  # http://crbug.com/663802
 class WebrtcStressTest(perf_benchmark.PerfBenchmark):
   """Measures WebRtc CPU and GPU usage with multiple peer connections."""
   page_set = page_sets.WebrtcStresstestPageSet

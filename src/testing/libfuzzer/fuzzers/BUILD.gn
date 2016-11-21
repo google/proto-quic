@@ -184,16 +184,6 @@ fuzzer_test("zlib_uncompress_fuzzer") {
   ]
 }
 
-fuzzer_test("sqlite3_prepare_v2_fuzzer") {
-  sources = [
-    "sqlite3_prepare_v2_fuzzer.cc",
-  ]
-  deps = [
-    "//third_party/sqlite",
-  ]
-  dict = "dicts/generated/sqlite3_prepare_v2_fuzzer.dict"
-}
-
 fuzzer_test("libxml_xml_read_memory_fuzzer") {
   sources = [
     "libxml_xml_read_memory_fuzzer.cc",
@@ -238,7 +228,8 @@ fuzzer_test("v8_regexp_parser_fuzzer") {
     "//v8:regexp_fuzzer",
   ]
   dict = "dicts/regexp.dict"
-  libfuzzer_options = [ "max_len=1024" ]
+  seed_corpus = "//v8/test/fuzzer/regexp/"
+  libfuzzer_options = [ "max_len=64" ]
 }
 
 fuzzer_test("v8_wasm_code_fuzzer") {

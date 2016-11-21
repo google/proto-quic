@@ -11,7 +11,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/sparse_histogram.h"
-#include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "net/base/load_flags.h"

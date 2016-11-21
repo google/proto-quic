@@ -52,8 +52,6 @@ class ChloExtractorTest : public ::testing::Test {
     header_.public_header.reset_flag = false;
     header_.public_header.packet_number_length = PACKET_6BYTE_PACKET_NUMBER;
     header_.packet_number = 1;
-    header_.entropy_flag = false;
-    header_.entropy_hash = 0;
   }
 
   void MakePacket(QuicStreamFrame* stream_frame) {

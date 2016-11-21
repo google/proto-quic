@@ -399,4 +399,6 @@ class Target : public Item {
   DISALLOW_COPY_AND_ASSIGN(Target);
 };
 
+extern const char kExecution_Help[];
+
 #endif  // TOOLS_GN_TARGET_H_

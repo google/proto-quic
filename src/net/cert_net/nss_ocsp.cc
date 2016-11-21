@@ -62,6 +62,10 @@ class OCSPRequestSession;
 
 class OCSPIOLoop {
  public:
+  // This class is only instantiated as a leaky LazyInstance, so its destructor
+  // is never called.
+  ~OCSPIOLoop() = delete;
+
   void StartUsing() {
     base::AutoLock autolock(lock_);
     used_ = true;
@@ -80,8 +84,6 @@ class OCSPIOLoop {
   // Called from worker thread.
   void PostTaskToIOLoop(const tracked_objects::Location& from_here,
                         const base::Closure& task);
-
-  void EnsureIOLoop();
 
   void AddRequest(OCSPRequestSession* request);
   void RemoveRequest(OCSPRequestSession* request);
@@ -107,7 +109,6 @@ class OCSPIOLoop {
   friend struct base::DefaultLazyInstanceTraits<OCSPIOLoop>;
 
   OCSPIOLoop();
-  ~OCSPIOLoop();
 
   void CancelAllRequests();
 
@@ -166,7 +167,9 @@ class OCSPNSSInitialization {
   friend struct base::DefaultLazyInstanceTraits<OCSPNSSInitialization>;
 
   OCSPNSSInitialization();
-  ~OCSPNSSInitialization();
+  // This class is only instantiated as a leaky LazyInstance, so its destructor
+  // is never called.
+  ~OCSPNSSInitialization() = delete;
 
   SEC_HttpClientFcn client_fcn_;
 
@@ -496,21 +499,6 @@ OCSPIOLoop::OCSPIOLoop()
       io_loop_(NULL) {
 }
 
-OCSPIOLoop::~OCSPIOLoop() {
-  // IO thread was already deleted before the singleton is deleted
-  // in AtExitManager.
-  {
-    base::AutoLock autolock(lock_);
-    DCHECK(!io_loop_);
-    DCHECK(!used_);
-    DCHECK(shutdown_);
-  }
-
-  pthread_mutex_lock(&g_request_context_lock);
-  DCHECK(!g_request_context);
-  pthread_mutex_unlock(&g_request_context_lock);
-}
-
 void OCSPIOLoop::Shutdown() {
   // Safe to read outside lock since we only write on IO thread anyway.
   DCHECK(thread_checker_.CalledOnValidThread());
@@ -535,11 +523,6 @@ void OCSPIOLoop::PostTaskToIOLoop(
   base::AutoLock autolock(lock_);
   if (io_loop_)
     io_loop_->task_runner()->PostTask(from_here, task);
-}
-
-void OCSPIOLoop::EnsureIOLoop() {
-  base::AutoLock autolock(lock_);
-  DCHECK_EQ(base::MessageLoopForIO::current(), io_loop_);
 }
 
 void OCSPIOLoop::AddRequest(OCSPRequestSession* request) {
@@ -593,9 +576,6 @@ OCSPNSSInitialization::OCSPNSSInitialization() {
   } else {
     NOTREACHED() << "Error initializing OCSP: " << PR_GetError();
   }
-}
-
-OCSPNSSInitialization::~OCSPNSSInitialization() {
 }
 
 

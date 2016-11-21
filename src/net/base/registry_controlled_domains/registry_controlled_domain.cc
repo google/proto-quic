@@ -329,29 +329,34 @@ bool SameDomainOrHost(
     const GURL& gurl1,
     const GURL& gurl2,
     PrivateRegistryFilter filter) {
-  // See if both URLs have a known domain + registry, and those values are the
-  // same.
-  const base::StringPiece domain1 =
-      GetDomainAndRegistryAsStringPiece(gurl1, filter);
-  const base::StringPiece domain2 =
-      GetDomainAndRegistryAsStringPiece(gurl2, filter);
-  if (!domain1.empty() || !domain2.empty())
-    return domain1 == domain2;
-
-  // No domains.  See if the hosts are identical.
-  const url::Component host1 = gurl1.parsed_for_possibly_invalid_spec().host;
-  const url::Component host2 = gurl2.parsed_for_possibly_invalid_spec().host;
-  if ((host1.len <= 0) || (host1.len != host2.len))
+  // Quickly reject cases where either host is empty.
+  if (!gurl1.has_host() || !gurl2.has_host())
     return false;
-  return !strncmp(gurl1.possibly_invalid_spec().data() + host1.begin,
-                  gurl2.possibly_invalid_spec().data() + host2.begin,
-                  host1.len);
+
+  // Check for exact host matches, which is faster than looking up the domain
+  // and registry.
+  if (gurl1.host_piece() == gurl2.host_piece())
+    return true;
+
+  // Check for a domain and registry match.
+  const base::StringPiece& domain1 =
+      GetDomainAndRegistryAsStringPiece(gurl1, filter);
+  return !domain1.empty() &&
+         (domain1 == GetDomainAndRegistryAsStringPiece(gurl2, filter));
 }
 
 bool SameDomainOrHost(const url::Origin& origin1,
                       const url::Origin& origin2,
                       PrivateRegistryFilter filter) {
   return SameDomainOrHost(origin1.GetURL(), origin2.GetURL(), filter);
+}
+
+bool SameDomainOrHost(const url::Origin& origin1,
+                      const base::Optional<url::Origin>& origin2,
+                      PrivateRegistryFilter filter) {
+  if (!origin2.has_value())
+    return false;
+  return SameDomainOrHost(origin1, origin2.value(), filter);
 }
 
 size_t GetRegistryLength(

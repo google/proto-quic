@@ -289,6 +289,9 @@ void BidirectionalStreamQuicImpl::OnCryptoHandshakeConfirmed() {
     NotifyStreamReady();
 }
 
+void BidirectionalStreamQuicImpl::OnSuccessfulVersionNegotiation(
+    const QuicVersion& version) {}
+
 void BidirectionalStreamQuicImpl::OnSessionClosed(
     int error,
     bool /*port_migration_detected*/) {

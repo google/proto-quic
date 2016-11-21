@@ -5,7 +5,7 @@
 #include "base/debug/crash_logging.h"
 
 #include <cmath>
-#include <map>
+#include <unordered_map>
 
 #include "base/debug/stack_trace.h"
 #include "base/format_macros.h"
@@ -22,7 +22,8 @@ namespace debug {
 namespace {
 
 // Global map of crash key names to registration entries.
-typedef std::map<base::StringPiece, CrashKey> CrashKeyMap;
+typedef std::unordered_map<base::StringPiece, CrashKey, base::StringPieceHash>
+    CrashKeyMap;
 CrashKeyMap* g_crash_keys_ = NULL;
 
 // The maximum length of a single chunk.

@@ -33,6 +33,7 @@
 #include "net/socket/stream_socket.h"
 #include "net/spdy/buffered_spdy_framer.h"
 #include "net/spdy/http2_priority_dependencies.h"
+#include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_buffer.h"
 #include "net/spdy/spdy_framer.h"
@@ -326,6 +327,14 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                     base::WeakPtr<SpdyStream>* spdy_stream,
                     const NetLogWithSource& stream_net_log);
 
+  void set_push_delegate(ServerPushDelegate* push_delegate) {
+    push_delegate_ = push_delegate;
+  }
+
+  // Called when the pushed stream should be cancelled. If the pushed stream is
+  // not claimed and active, sends RST to the server to cancel the stream.
+  void CancelPush(const GURL& url);
+
   // Initialize the session with the given connection. |is_secure|
   // must indicate whether |connection| uses an SSL socket or not; it
   // is usually true, but it can be false for testing or when SPDY is
@@ -574,6 +583,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, DeleteExpiredPushStreams);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, MetricsCollectionOnPushStreams);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, CancelPushBeforeClaimed);
+  FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, CancelPushAfterSessionGoesAway);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, CancelPushAfterExpired);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, ProtocolNegotiation);
   FRIEND_TEST_ALL_PREFIXES(SpdySessionTest, ClearSettings);
@@ -676,10 +686,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                            SpdyStreamId associated_stream_id,
                            SpdyPriority priority,
                            SpdyHeaderBlock headers);
-
-  // Called when the pushed stream should be cancelled. If the pushed stream is
-  // not claimed and active, sends RST to the server to cancel the stream.
-  void CancelPush(const GURL& url);
 
   // Close the stream pointed to by the given iterator. Note that that
   // stream may hold the last reference to the session.
@@ -879,7 +885,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                          size_t len) override;
   void OnStreamEnd(SpdyStreamId stream_id) override;
   void OnStreamPadding(SpdyStreamId stream_id, size_t len) override;
-  void OnSettings(bool clear_persisted) override;
+  void OnSettings() override;
   void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   void OnPushPromise(SpdyStreamId stream_id,
@@ -1043,6 +1049,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   UnclaimedPushedStreamContainer unclaimed_pushed_streams_;
 
+  // Not owned. |push_delegate_| outlives the session and handles server pushes
+  // received by session.
+  ServerPushDelegate* push_delegate_;
+
   // Set of all created streams but that have not yet sent any frames.
   //
   // |created_streams_| owns all its SpdyStream objects.
@@ -1105,15 +1115,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   int streams_pushed_count_;
   int streams_pushed_and_claimed_count_;
   int streams_abandoned_count_;
-
-  // |total_bytes_received_| keeps track of all the bytes read by the
-  // SpdySession. It is used by the |Net.SpdySettingsCwnd...| histograms.
-  int total_bytes_received_;
-
-  bool sent_settings_;      // Did this session send settings when it started.
-  bool received_settings_;  // Did this session receive at least one settings
-                            // frame.
-  int stalled_streams_;     // Count of streams that were ever stalled.
 
   // Count of all pings on the wire, for which we have not gotten a response.
   int64_t pings_in_flight_;

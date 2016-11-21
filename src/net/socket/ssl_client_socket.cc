@@ -29,34 +29,6 @@ SSLClientSocket::SSLClientSocket()
       stapled_ocsp_response_received_(false) {}
 
 // static
-NextProto SSLClientSocket::NextProtoFromString(base::StringPiece proto_string) {
-  if (proto_string == "http1.1" || proto_string == "http/1.1") {
-    return kProtoHTTP11;
-  } else if (proto_string == "h2") {
-    return kProtoHTTP2;
-  } else if (proto_string == "quic/1+spdy/3") {
-    return kProtoQUIC;
-  } else {
-    return kProtoUnknown;
-  }
-}
-
-// static
-const char* SSLClientSocket::NextProtoToString(NextProto next_proto) {
-  switch (next_proto) {
-    case kProtoHTTP11:
-      return "http/1.1";
-    case kProtoHTTP2:
-      return "h2";
-    case kProtoQUIC:
-      return "quic/1+spdy/3";
-    case kProtoUnknown:
-      break;
-  }
-  return "unknown";
-}
-
-// static
 void SSLClientSocket::SetSSLKeyLogFile(
     const base::FilePath& path,
     const scoped_refptr<base::SequencedTaskRunner>& task_runner) {

@@ -32,11 +32,6 @@ namespace net {
 
 class NET_EXPORT_PRIVATE QuicUtils {
  public:
-  enum Priority {
-    LOCAL_PRIORITY,
-    PEER_PRIORITY,
-  };
-
   // Returns the 64 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
   static uint64_t FNV1a_64_Hash(const char* data, int len);
@@ -52,42 +47,15 @@ class NET_EXPORT_PRIVATE QuicUtils {
                                     const char* data2,
                                     int len2);
 
-  // FindMutualTag sets |out_result| to the first tag in the priority list that
-  // is also in the other list and returns true. If there is no intersection it
-  // returns false.
-  //
-  // Which list has priority is determined by |priority|.
-  //
-  // If |out_index| is non-nullptr and a match is found then the index of that
-  // match in |their_tags| is written to |out_index|.
-  static bool FindMutualTag(const QuicTagVector& our_tags,
-                            const QuicTag* their_tags,
-                            size_t num_their_tags,
-                            Priority priority,
-                            QuicTag* out_result,
-                            size_t* out_index);
-
   // SerializeUint128 writes the first 96 bits of |v| in little-endian form
   // to |out|.
   static void SerializeUint128Short(uint128 v, uint8_t* out);
-
-  // Returns the name of the QuicRstStreamErrorCode as a char*
-  static const char* StreamErrorToString(QuicRstStreamErrorCode error);
-
-  // Returns the name of the QuicErrorCode as a char*
-  static const char* ErrorToString(QuicErrorCode error);
 
   // Returns the level of encryption as a char*
   static const char* EncryptionLevelToString(EncryptionLevel level);
 
   // Returns TransmissionType as a char*
   static const char* TransmissionTypeToString(TransmissionType type);
-
-  // TagToString is a utility function for pretty-printing handshake messages
-  // that converts a tag to a string. It will try to maintain the human friendly
-  // name if possible (i.e. kABCD -> "ABCD"), or will just treat it as a number
-  // if not.
-  static std::string TagToString(QuicTag tag);
 
   // Returns the list of QUIC tags represented by the comma separated
   // string in |connection_options|.
@@ -96,10 +64,6 @@ class NET_EXPORT_PRIVATE QuicUtils {
 
   // Returns PeerAddressChangeType as a std::string.
   static std::string PeerAddressChangeTypeToString(PeerAddressChangeType type);
-
-  static char* AsChars(unsigned char* data) {
-    return reinterpret_cast<char*>(data);
-  }
 
   // Deletes all the sub-frames contained in |frames|.
   static void DeleteFrames(QuicFrames* frames);
@@ -126,14 +90,13 @@ class NET_EXPORT_PRIVATE QuicUtils {
       const IPEndPoint& old_address,
       const IPEndPoint& new_address);
 
-  // This converts 'num' bytes of binary to a 2*'num'-character hexadecimal
-  // representation. Return value: 2*'num' characters of ascii std::string.
+  // This converts |length| bytes of binary to a 2*|length|-character
+  // hexadecimal representation.
+  // Return value: 2*|length| characters of ASCII std::string.
   static std::string HexEncode(const char* data, size_t length);
   static std::string HexEncode(base::StringPiece data);
 
-  // This converts 2*'num' hexadecimal characters to 'num' binary data.
-  // Return value: 'num' bytes of binary data (via the 'to' argument).
-  static std::string HexDecode(const char* data, size_t length);
+  // Converts |data| from a hexadecimal ASCII std::string to binary.
   static std::string HexDecode(base::StringPiece data);
 
   // Returns a std::string containing hex and ASCII representations of |binary|,
@@ -145,15 +108,6 @@ class NET_EXPORT_PRIVATE QuicUtils {
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicUtils);
 };
-
-// Utility function that returns an QuicIOVector object wrapped around |str|.
-// |str|'s data is stored in |iov|.
-inline QuicIOVector MakeIOVector(base::StringPiece str, struct iovec* iov) {
-  iov->iov_base = const_cast<char*>(str.data());
-  iov->iov_len = static_cast<size_t>(str.size());
-  QuicIOVector quic_iov(iov, 1, str.size());
-  return quic_iov;
-}
 
 }  // namespace net
 

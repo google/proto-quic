@@ -214,7 +214,8 @@ class NET_EXPORT NetworkQualityEstimator
       const base::TimeTicks& start_time) const;
 
   // Adds |observer| to the list of effective connection type observers. Must be
-  // called on the IO thread.
+  // called on the IO thread. |observer| would be notified of the current
+  // effective connection type in the next message pump.
   void AddEffectiveConnectionTypeObserver(
       EffectiveConnectionTypeObserver* observer);
 
@@ -224,7 +225,8 @@ class NET_EXPORT NetworkQualityEstimator
       EffectiveConnectionTypeObserver* observer);
 
   // Adds |observer| to the list of RTT and throughput estimate observers. Must
-  // be called on the IO thread.
+  // be called on the IO thread. |observer| would be notified of the current RTT
+  // and throughput estimates in the next message pump.
   void AddRTTAndThroughputEstimatesObserver(
       RTTAndThroughputEstimatesObserver* observer);
 
@@ -305,25 +307,6 @@ class NET_EXPORT NetworkQualityEstimator
                                   int32_t downstream_throughput_kbps,
                                   int32_t upstream_throughput_kbps) override;
 
-  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
-  // the HTTP layer. Virtualized for testing. |rtt| should not be null. The RTT
-  // at the HTTP layer measures the time from when the request was sent (this
-  // happens after the connection is established) to the time when the response
-  // headers were received.
-  // TODO(tbansal): Change it to return HTTP RTT as base::TimeDelta.
-  virtual bool GetHttpRTT(base::TimeDelta* rtt) const WARN_UNUSED_RESULT;
-
-  // Returns true if the RTT is available and sets |rtt| to the RTT estimated at
-  // the transport layer. |rtt| should not be null. Virtualized for testing.
-  // TODO(tbansal): Change it to return transport RTT as base::TimeDelta.
-  virtual bool GetTransportRTT(base::TimeDelta* rtt) const WARN_UNUSED_RESULT;
-
-  // Returns true if downlink throughput is available and sets |kbps| to
-  // estimated downlink throughput (in kilobits per second).
-  // Virtualized for testing. |kbps| should not be null.
-  // TODO(tbansal): Change it to return throughput as int32.
-  virtual bool GetDownlinkThroughputKbps(int32_t* kbps) const;
-
   // Returns true if median RTT at the HTTP layer is available and sets |rtt|
   // to the median of RTT observations since |start_time|.
   // Virtualized for testing. |rtt| should not be null. The RTT at the HTTP
@@ -390,6 +373,8 @@ class NET_EXPORT NetworkQualityEstimator
                            TestExternalEstimateProviderMergeEstimates);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            UnknownEffectiveConnectionType);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           TypicalNetworkQualities);
 
   // Value of round trip time observations is in base::TimeDelta.
   typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
@@ -510,6 +495,16 @@ class NET_EXPORT NetworkQualityEstimator
 
   // Notifies the observers of RTT or throughput estimates computation.
   void NotifyObserversOfRTTOrThroughputComputed() const;
+
+  // Notifies |observer| of the current effective connection type if |observer|
+  // is still registered as an observer.
+  void NotifyEffectiveConnectionTypeObserverIfPresent(
+      EffectiveConnectionTypeObserver* observer) const;
+
+  // Notifies |observer| of the current RTT and throughput if |observer| is
+  // still registered as an observer.
+  void NotifyRTTAndThroughputEstimatesObserverIfPresent(
+      RTTAndThroughputEstimatesObserver* observer) const;
 
   // Records NQE accuracy metrics. |measuring_duration| should belong to the
   // vector returned by AccuracyRecordingIntervals().
@@ -633,6 +628,10 @@ class NET_EXPORT NetworkQualityEstimator
   nqe::internal::NetworkQuality connection_thresholds_
       [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
 
+  // Typical network quality for different effective connection types.
+  nqe::internal::NetworkQuality typical_network_quality_
+      [EffectiveConnectionType::EFFECTIVE_CONNECTION_TYPE_LAST];
+
   // Latest time when the headers for a main frame request were received.
   base::TimeTicks last_main_frame_request_;
 
@@ -681,11 +680,8 @@ class NET_EXPORT NetworkQualityEstimator
   size_t rtt_observations_size_at_last_ect_computation_;
   size_t throughput_observations_size_at_last_ect_computation_;
 
-  // Current estimates of the HTTP RTT, transport RTT and downstream throughput
-  // (in kilobits per second).
-  base::TimeDelta http_rtt_;
-  base::TimeDelta transport_rtt_;
-  int32_t downstream_throughput_kbps_;
+  // Current estimate of the network quality.
+  nqe::internal::NetworkQuality network_quality_;
 
   // Current effective connection type. It is updated on connection change
   // events. It is also updated every time there is network traffic (provided

@@ -177,6 +177,12 @@ SharedMemoryHandle SharedMemory::handle() const {
   return shm_;
 }
 
+SharedMemoryHandle SharedMemory::TakeHandle() {
+  SharedMemoryHandle dup = DuplicateHandle(handle());
+  Close();
+  return dup;
+}
+
 void SharedMemory::Close() {
   shm_.Close();
   shm_ = SharedMemoryHandle();

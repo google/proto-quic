@@ -27,6 +27,10 @@ struct DefaultLazyInstanceTraits;
 
 namespace net {
 
+namespace der {
+class Input;
+}  // namespace der
+
 // A singleton.  This class stores the meta data of the root CAs that issue
 // extended-validation (EV) certificates.
 class NET_EXPORT_PRIVATE EVRootCAMetadata {
@@ -35,11 +39,14 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   typedef SECOidTag PolicyOID;
 #elif defined(OS_WIN)
   typedef const char* PolicyOID;
+#elif defined(OS_MACOSX)
+  // DER-encoded OID value (no tag or length).
+  typedef der::Input PolicyOID;
 #endif
 
   static EVRootCAMetadata* GetInstance();
 
-#if defined(USE_NSS_CERTS) || defined(OS_WIN)
+#if defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
   // Returns true if policy_oid is an EV policy OID of some root CA.
   bool IsEVPolicyOID(PolicyOID policy_oid) const;
 
@@ -80,6 +87,13 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
 
   // extra_cas_ contains any EV CA metadata that was added at runtime.
   ExtraEVCAMap extra_cas_;
+#elif defined(OS_MACOSX)
+  typedef std::
+      map<SHA1HashValue, std::vector<std::string>, SHA1HashValueLessThan>
+          PolicyOIDMap;
+
+  PolicyOIDMap ev_policy_;
+  std::set<std::string> policy_oids_;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(EVRootCAMetadata);

@@ -363,14 +363,14 @@ void URLRequestJob::GetConnectionAttempts(ConnectionAttempts* out) const {
 // static
 GURL URLRequestJob::ComputeReferrerForRedirect(
     URLRequest::ReferrerPolicy policy,
-    const std::string& referrer,
+    const GURL& original_referrer,
     const GURL& redirect_destination) {
-  GURL original_referrer(referrer);
   bool secure_referrer_but_insecure_destination =
       original_referrer.SchemeIsCryptographic() &&
       !redirect_destination.SchemeIsCryptographic();
+  url::Origin referrer_origin(original_referrer);
   bool same_origin =
-      original_referrer.GetOrigin() == redirect_destination.GetOrigin();
+      referrer_origin.IsSameOriginWith(url::Origin(redirect_destination));
   switch (policy) {
     case URLRequest::CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE:
       return secure_referrer_but_insecure_destination ? GURL()
@@ -382,16 +382,16 @@ GURL URLRequestJob::ComputeReferrerForRedirect(
       } else if (secure_referrer_but_insecure_destination) {
         return GURL();
       } else {
-        return original_referrer.GetOrigin();
+        return referrer_origin.GetURL();
       }
 
     case URLRequest::ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN:
-      return same_origin ? original_referrer : original_referrer.GetOrigin();
+      return same_origin ? original_referrer : referrer_origin.GetURL();
 
     case URLRequest::NEVER_CLEAR_REFERRER:
       return original_referrer;
     case URLRequest::ORIGIN:
-      return original_referrer.GetOrigin();
+      return referrer_origin.GetURL();
     case URLRequest::NO_REFERRER:
       return GURL();
     case URLRequest::MAX_REFERRER_POLICY:
@@ -556,6 +556,8 @@ void URLRequestJob::NotifyStartError(const URLRequestStatus &status) {
   // There may be relevant information in the response info even in the
   // error case.
   GetResponseInfo(&request_->response_info_);
+
+  MaybeNotifyNetworkBytes();
 
   request_->NotifyResponseStarted(status);
   // |this| may have been deleted here.
@@ -807,7 +809,8 @@ RedirectInfo URLRequestJob::ComputeRedirectInfo(const GURL& location,
   // Alter the referrer if redirecting cross-origin (especially HTTP->HTTPS).
   redirect_info.new_referrer =
       ComputeReferrerForRedirect(redirect_info.new_referrer_policy,
-                                 request_->referrer(), redirect_info.new_url)
+                                 GURL(request_->referrer()),
+                                 redirect_info.new_url)
           .spec();
 
   std::string include_referer;

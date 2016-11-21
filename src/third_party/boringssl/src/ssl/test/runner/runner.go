@@ -62,6 +62,7 @@ var (
 	looseErrors        = flag.Bool("loose-errors", false, "If true, allow shims to report an untranslated error code.")
 	shimConfigFile     = flag.String("shim-config", "", "A config file to use to configure the tests for this shim.")
 	includeDisabled    = flag.Bool("include-disabled", false, "If true, also runs disabled tests.")
+	repeatUntilFailure = flag.Bool("repeat-until-failure", false, "If true, the first selected test will be run repeatedly until failure.")
 )
 
 // ShimConfigurations is used with the “json” package and represents a shim
@@ -87,6 +88,7 @@ type testCert int
 const (
 	testCertRSA testCert = iota
 	testCertRSA1024
+	testCertRSAChain
 	testCertECDSAP256
 	testCertECDSAP384
 	testCertECDSAP521
@@ -95,6 +97,7 @@ const (
 const (
 	rsaCertificateFile       = "cert.pem"
 	rsa1024CertificateFile   = "rsa_1024_cert.pem"
+	rsaChainCertificateFile  = "rsa_chain_cert.pem"
 	ecdsaP256CertificateFile = "ecdsa_p256_cert.pem"
 	ecdsaP384CertificateFile = "ecdsa_p384_cert.pem"
 	ecdsaP521CertificateFile = "ecdsa_p521_cert.pem"
@@ -103,6 +106,7 @@ const (
 const (
 	rsaKeyFile       = "key.pem"
 	rsa1024KeyFile   = "rsa_1024_key.pem"
+	rsaChainKeyFile  = "rsa_chain_key.pem"
 	ecdsaP256KeyFile = "ecdsa_p256_key.pem"
 	ecdsaP384KeyFile = "ecdsa_p384_key.pem"
 	ecdsaP521KeyFile = "ecdsa_p521_key.pem"
@@ -112,6 +116,7 @@ const (
 var (
 	rsaCertificate       Certificate
 	rsa1024Certificate   Certificate
+	rsaChainCertificate  Certificate
 	ecdsaP256Certificate Certificate
 	ecdsaP384Certificate Certificate
 	ecdsaP521Certificate Certificate
@@ -133,6 +138,12 @@ var testCerts = []struct {
 		certFile: rsa1024CertificateFile,
 		keyFile:  rsa1024KeyFile,
 		cert:     &rsa1024Certificate,
+	},
+	{
+		id:       testCertRSAChain,
+		certFile: rsaChainCertificateFile,
+		keyFile:  rsaChainKeyFile,
+		cert:     &rsaChainCertificate,
 	},
 	{
 		id:       testCertECDSAP256,
@@ -159,6 +170,9 @@ var channelIDBytes []byte
 
 var testOCSPResponse = []byte{1, 2, 3, 4}
 var testSCTList = []byte{5, 6, 7, 8}
+
+var testOCSPExtension = append([]byte{byte(extensionStatusRequest) >> 8, byte(extensionStatusRequest), 0, 8, statusTypeOCSP, 0, 0, 4}, testOCSPResponse...)
+var testSCTExtension = append([]byte{byte(extensionSignedCertificateTimestamp) >> 8, byte(extensionSignedCertificateTimestamp), 0, 4}, testSCTList...)
 
 func initCertificates() {
 	for i := range testCerts {
@@ -364,6 +378,9 @@ type testCase struct {
 	// expectMessageDropped, if true, means the test message is expected to
 	// be dropped by the client rather than echoed back.
 	expectMessageDropped bool
+	// expectPeerCertificate, if not nil, is the certificate chain the peer
+	// is expected to send.
+	expectPeerCertificate *Certificate
 }
 
 var testCases []testCase
@@ -579,6 +596,17 @@ func doExchange(test *testCase, config *Config, conn net.Conn, isResume bool, nu
 
 	if expected := test.expectedCurveID; expected != 0 && expected != connState.CurveID {
 		return fmt.Errorf("expected peer to use curve %04x, but got %04x", expected, connState.CurveID)
+	}
+
+	if test.expectPeerCertificate != nil {
+		if len(connState.PeerCertificates) != len(test.expectPeerCertificate.Certificate) {
+			return fmt.Errorf("expected peer to send %d certificates, but got %d", len(connState.PeerCertificates), len(test.expectPeerCertificate.Certificate))
+		}
+		for i, cert := range connState.PeerCertificates {
+			if !bytes.Equal(cert.Raw, test.expectPeerCertificate.Certificate[i]) {
+				return fmt.Errorf("peer certificate %d did not match", i+1)
+			}
+		}
 	}
 
 	if test.exportKeyingMaterial > 0 {
@@ -1682,6 +1710,50 @@ func addBasicTests() {
 			expectedLocalError: "remote error: handshake failure",
 		},
 		{
+			name: "FailCertCallback-Client-TLS12",
+			config: Config{
+				MaxVersion: VersionTLS12,
+				ClientAuth: RequestClientCert,
+			},
+			flags:              []string{"-fail-cert-callback"},
+			shouldFail:         true,
+			expectedError:      ":CERT_CB_ERROR:",
+			expectedLocalError: "remote error: internal error",
+		},
+		{
+			testType: serverTest,
+			name:     "FailCertCallback-Server-TLS12",
+			config: Config{
+				MaxVersion: VersionTLS12,
+			},
+			flags:              []string{"-fail-cert-callback"},
+			shouldFail:         true,
+			expectedError:      ":CERT_CB_ERROR:",
+			expectedLocalError: "remote error: internal error",
+		},
+		{
+			name: "FailCertCallback-Client-TLS13",
+			config: Config{
+				MaxVersion: VersionTLS13,
+				ClientAuth: RequestClientCert,
+			},
+			flags:              []string{"-fail-cert-callback"},
+			shouldFail:         true,
+			expectedError:      ":CERT_CB_ERROR:",
+			expectedLocalError: "remote error: internal error",
+		},
+		{
+			testType: serverTest,
+			name:     "FailCertCallback-Server-TLS13",
+			config: Config{
+				MaxVersion: VersionTLS13,
+			},
+			flags:              []string{"-fail-cert-callback"},
+			shouldFail:         true,
+			expectedError:      ":CERT_CB_ERROR:",
+			expectedLocalError: "remote error: internal error",
+		},
+		{
 			protocol: dtls,
 			name:     "FragmentMessageTypeMismatch-DTLS",
 			config: Config{
@@ -2488,7 +2560,8 @@ func addCipherSuiteTests() {
 				if !shouldClientFail {
 					// Ensure the maximum record size is accepted.
 					testCases = append(testCases, testCase{
-						name: prefix + ver.name + "-" + suite.name + "-LargeRecord",
+						protocol: protocol,
+						name:     prefix + ver.name + "-" + suite.name + "-LargeRecord",
 						config: Config{
 							MinVersion:           ver.version,
 							MaxVersion:           ver.version,
@@ -2499,6 +2572,33 @@ func addCipherSuiteTests() {
 						},
 						flags:      flags,
 						messageLen: maxPlaintext,
+					})
+
+					// Test bad records for all ciphers. Bad records are fatal in TLS
+					// and ignored in DTLS.
+					var shouldFail bool
+					var expectedError string
+					if protocol == tls {
+						shouldFail = true
+						expectedError = ":DECRYPTION_FAILED_OR_BAD_RECORD_MAC:"
+					}
+
+					testCases = append(testCases, testCase{
+						protocol: protocol,
+						name:     prefix + ver.name + "-" + suite.name + "-BadRecord",
+						config: Config{
+							MinVersion:           ver.version,
+							MaxVersion:           ver.version,
+							CipherSuites:         []uint16{suite.id},
+							Certificates:         []Certificate{cert},
+							PreSharedKey:         []byte(psk),
+							PreSharedKeyIdentity: pskIdentity,
+						},
+						flags:            flags,
+						damageFirstWrite: true,
+						messageLen:       maxPlaintext,
+						shouldFail:       shouldFail,
+						expectedError:    expectedError,
 					})
 				}
 			}
@@ -5098,6 +5198,25 @@ func addExtensionTests() {
 			expectedSCTList: testSCTList,
 			resumeSession:   true,
 		})
+
+		// Test that certificate-related extensions are not sent unsolicited.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "UnsolicitedCertificateExtensions-" + ver.name,
+			config: Config{
+				MaxVersion: ver.version,
+				Bugs: ProtocolBugs{
+					NoOCSPStapling:                true,
+					NoSignedCertificateTimestamps: true,
+				},
+			},
+			flags: []string{
+				"-ocsp-response",
+				base64.StdEncoding.EncodeToString(testOCSPResponse),
+				"-signed-cert-timestamps",
+				base64.StdEncoding.EncodeToString(testSCTList),
+			},
+		})
 	}
 
 	testCases = append(testCases, testCase{
@@ -5261,23 +5380,139 @@ func addExtensionTests() {
 		resumeSession: true,
 	})
 
-	// Beginning TLS 1.3, enforce this does not happen.
 	testCases = append(testCases, testCase{
-		name: "SendOCSPResponseOnResume-TLS13",
+		name: "SendUnsolicitedOCSPOnCertificate-TLS13",
 		config: Config{
 			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
-				SendOCSPResponseOnResume: []byte("bogus"),
+				SendExtensionOnCertificate: testOCSPExtension,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_EXTENSION:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "SendUnsolicitedSCTOnCertificate-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendExtensionOnCertificate: testSCTExtension,
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_EXTENSION:",
+	})
+
+	// Test that extensions on client certificates are never accepted.
+	testCases = append(testCases, testCase{
+		name:     "SendExtensionOnClientCertificate-TLS13",
+		testType: serverTest,
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			Certificates: []Certificate{rsaCertificate},
+			Bugs: ProtocolBugs{
+				SendExtensionOnCertificate: testOCSPExtension,
+			},
+		},
+		flags: []string{
+			"-enable-ocsp-stapling",
+			"-require-any-client-certificate",
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_EXTENSION:",
+	})
+
+	testCases = append(testCases, testCase{
+		name: "SendUnknownExtensionOnCertificate-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendExtensionOnCertificate: []byte{0x00, 0x7f, 0, 0},
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":UNEXPECTED_EXTENSION:",
+	})
+
+	// Test that extensions on intermediates are allowed but ignored.
+	testCases = append(testCases, testCase{
+		name: "IgnoreExtensionsOnIntermediates-TLS13",
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			Certificates: []Certificate{rsaChainCertificate},
+			Bugs: ProtocolBugs{
+				// Send different values on the intermediate. This tests
+				// the intermediate's extensions do not override the
+				// leaf's.
+				SendOCSPOnIntermediates: []byte{1, 3, 3, 7},
+				SendSCTOnIntermediates:  []byte{1, 3, 3, 7},
 			},
 		},
 		flags: []string{
 			"-enable-ocsp-stapling",
 			"-expect-ocsp-response",
 			base64.StdEncoding.EncodeToString(testOCSPResponse),
+			"-enable-signed-cert-timestamps",
+			"-expect-signed-cert-timestamps",
+			base64.StdEncoding.EncodeToString(testSCTList),
+		},
+		resumeSession: true,
+	})
+
+	// Test that extensions are not sent on intermediates when configured
+	// only for a leaf.
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "SendNoExtensionsOnIntermediate-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				ExpectNoExtensionsOnIntermediate: true,
+			},
+		},
+		flags: []string{
+			"-cert-file", path.Join(*resourceDir, rsaChainCertificateFile),
+			"-key-file", path.Join(*resourceDir, rsaChainKeyFile),
+			"-ocsp-response",
+			base64.StdEncoding.EncodeToString(testOCSPResponse),
+			"-signed-cert-timestamps",
+			base64.StdEncoding.EncodeToString(testSCTList),
+		},
+	})
+
+	// Test that extensions are not sent on client certificates.
+	testCases = append(testCases, testCase{
+		name: "SendNoClientCertificateExtensions-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			ClientAuth: RequireAnyClientCert,
+		},
+		flags: []string{
+			"-cert-file", path.Join(*resourceDir, rsaCertificateFile),
+			"-key-file", path.Join(*resourceDir, rsaKeyFile),
+			"-ocsp-response",
+			base64.StdEncoding.EncodeToString(testOCSPResponse),
+			"-signed-cert-timestamps",
+			base64.StdEncoding.EncodeToString(testSCTList),
+		},
+	})
+
+	testCases = append(testCases, testCase{
+		name: "SendDuplicateExtensionsOnCerts-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendDuplicateCertExtensions: true,
+			},
+		},
+		flags: []string{
+			"-enable-ocsp-stapling",
+			"-enable-signed-cert-timestamps",
 		},
 		resumeSession: true,
 		shouldFail:    true,
-		expectedError: ":ERROR_PARSING_EXTENSION:",
+		expectedError: ":DUPLICATE_EXTENSION:",
 	})
 }
 
@@ -5418,6 +5653,7 @@ func addResumptionVersionTests() {
 		config: Config{
 			MaxVersion: VersionTLS12,
 			Bugs: ProtocolBugs{
+				ExpectNewTicket: true,
 				FilterTicket: func(in []byte) ([]byte, error) {
 					return SetShimTicketVersion(in, VersionTLS13)
 				},
@@ -5457,6 +5693,7 @@ func addResumptionVersionTests() {
 		config: Config{
 			MaxVersion: VersionTLS12,
 			Bugs: ProtocolBugs{
+				ExpectNewTicket: true,
 				FilterTicket: func(in []byte) ([]byte, error) {
 					return SetShimTicketCipherSuite(in, TLS_AES_128_GCM_SHA256)
 				},
@@ -5476,6 +5713,7 @@ func addResumptionVersionTests() {
 		config: Config{
 			MaxVersion: VersionTLS12,
 			Bugs: ProtocolBugs{
+				ExpectNewTicket: true,
 				FilterTicket: func(in []byte) ([]byte, error) {
 					return SetShimTicketCipherSuite(in, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384)
 				},
@@ -5508,6 +5746,46 @@ func addResumptionVersionTests() {
 		expectResumeRejected: true,
 	})
 
+	// Clients must not advertise a session without also advertising the
+	// cipher.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-UnofferedCipher",
+		resumeSession: true,
+		config: Config{
+			MaxVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256},
+		},
+		resumeConfig: &Config{
+			MaxVersion:   VersionTLS12,
+			CipherSuites: []uint16{TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256},
+			Bugs: ProtocolBugs{
+				SendCipherSuites: []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":REQUIRED_CIPHER_MISSING:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-UnofferedCipher-TLS13",
+		resumeSession: true,
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_CHACHA20_POLY1305_SHA256},
+		},
+		resumeConfig: &Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_CHACHA20_POLY1305_SHA256},
+			Bugs: ProtocolBugs{
+				SendCipherSuites: []uint16{TLS_AES_128_GCM_SHA256},
+			},
+		},
+		shouldFail:    true,
+		expectedError: ":REQUIRED_CIPHER_MISSING:",
+	})
+
 	// Sessions may not be resumed at a different cipher.
 	testCases = append(testCases, testCase{
 		name:          "Resume-Client-CipherMismatch",
@@ -5527,8 +5805,24 @@ func addResumptionVersionTests() {
 		expectedError: ":OLD_SESSION_CIPHER_NOT_RETURNED:",
 	})
 
+	// Session resumption in TLS 1.3 may change the cipher suite if the PRF
+	// matches.
 	testCases = append(testCases, testCase{
 		name:          "Resume-Client-CipherMismatch-TLS13",
+		resumeSession: true,
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_AES_128_GCM_SHA256},
+		},
+		resumeConfig: &Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_CHACHA20_POLY1305_SHA256},
+		},
+	})
+
+	// Session resumption in TLS 1.3 is forbidden if the PRF does not match.
+	testCases = append(testCases, testCase{
+		name:          "Resume-Client-PRFMismatch-TLS13",
 		resumeSession: true,
 		config: Config{
 			MaxVersion:   VersionTLS13,
@@ -5542,7 +5836,67 @@ func addResumptionVersionTests() {
 			},
 		},
 		shouldFail:    true,
-		expectedError: ":OLD_SESSION_CIPHER_NOT_RETURNED:",
+		expectedError: ":OLD_SESSION_PRF_HASH_MISMATCH:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-BinderWrongLength",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendShortPSKBinder: true,
+			},
+		},
+		shouldFail:         true,
+		expectedLocalError: "remote error: error decrypting message",
+		expectedError:      ":DIGEST_CHECK_FAILED:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-NoPSKBinder",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendNoPSKBinder: true,
+			},
+		},
+		shouldFail:         true,
+		expectedLocalError: "remote error: error decoding message",
+		expectedError:      ":DECODE_ERROR:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-InvalidPSKBinder",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendInvalidPSKBinder: true,
+			},
+		},
+		shouldFail:         true,
+		expectedLocalError: "remote error: error decrypting message",
+		expectedError:      ":DIGEST_CHECK_FAILED:",
+	})
+
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-PSKBinderFirstExtension",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				PSKBinderFirst: true,
+			},
+		},
+		shouldFail:         true,
+		expectedLocalError: "remote error: illegal parameter",
+		expectedError:      ":PRE_SHARED_KEY_MUST_BE_LAST:",
 	})
 }
 
@@ -5707,6 +6061,8 @@ func addRenegotiationTests() {
 			CipherSuites: []uint16{TLS_RSA_WITH_AES_128_CBC_SHA},
 			Bugs: ProtocolBugs{
 				NegotiateVersionOnRenego: VersionTLS11,
+				// Avoid failing early at the record layer.
+				SendRecordVersion: VersionTLS12,
 			},
 		},
 		renegotiate: 1,
@@ -7806,19 +8162,34 @@ func addSessionTicketTests() {
 			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
 				SendPSKKeyExchangeModes: []byte{0x1a, pskDHEKEMode, 0x2a},
-				SendPSKAuthModes:        []byte{0x1a, pskAuthMode, 0x2a},
 			},
 		},
 		resumeSession:         true,
 		expectedResumeVersion: VersionTLS13,
 	})
 
-	// Test that the server declines sessions with no matching key exchange mode.
+	// Test that the server does not send session tickets with no matching key exchange mode.
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "TLS13-ExpectNoSessionTicketOnBadKEMode-Server",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendPSKKeyExchangeModes:  []byte{0x1a},
+				ExpectNoNewSessionTicket: true,
+			},
+		},
+	})
+
+	// Test that the server does not accept a session with no matching key exchange mode.
 	testCases = append(testCases, testCase{
 		testType: serverTest,
 		name:     "TLS13-SendBadKEModeSessionTicket-Server",
 		config: Config{
 			MaxVersion: VersionTLS13,
+		},
+		resumeConfig: &Config{
+			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
 				SendPSKKeyExchangeModes: []byte{0x1a},
 			},
@@ -7827,60 +8198,37 @@ func addSessionTicketTests() {
 		expectResumeRejected: true,
 	})
 
-	// Test that the server declines sessions with no matching auth mode.
-	testCases = append(testCases, testCase{
-		testType: serverTest,
-		name:     "TLS13-SendBadAuthModeSessionTicket-Server",
-		config: Config{
-			MaxVersion: VersionTLS13,
-			Bugs: ProtocolBugs{
-				SendPSKAuthModes: []byte{0x1a},
-			},
-		},
-		resumeSession:        true,
-		expectResumeRejected: true,
-	})
-
-	// Test that the client ignores unknown PSK modes.
+	// Test that the client ticket age is sent correctly.
 	testCases = append(testCases, testCase{
 		testType: clientTest,
-		name:     "TLS13-SendUnknownModeSessionTicket-Client",
+		name:     "TLS13-TestValidTicketAge-Client",
 		config: Config{
 			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
-				SendPSKKeyExchangeModes: []byte{0x1a, pskDHEKEMode, 0x2a},
-				SendPSKAuthModes:        []byte{0x1a, pskAuthMode, 0x2a},
+				ExpectTicketAge: 10 * time.Second,
 			},
 		},
-		resumeSession:         true,
-		expectedResumeVersion: VersionTLS13,
+		resumeSession: true,
+		flags: []string{
+			"-resumption-delay", "10",
+		},
 	})
 
-	// Test that the client ignores tickets with no matching key exchange mode.
+	// Test that the client ticket age is enforced.
 	testCases = append(testCases, testCase{
 		testType: clientTest,
-		name:     "TLS13-SendBadKEModeSessionTicket-Client",
+		name:     "TLS13-TestBadTicketAge-Client",
 		config: Config{
 			MaxVersion: VersionTLS13,
 			Bugs: ProtocolBugs{
-				SendPSKKeyExchangeModes: []byte{0x1a},
+				ExpectTicketAge: 1000 * time.Second,
 			},
 		},
-		flags: []string{"-expect-no-session"},
+		resumeSession:      true,
+		shouldFail:         true,
+		expectedLocalError: "tls: invalid ticket age",
 	})
 
-	// Test that the client ignores tickets with no matching auth mode.
-	testCases = append(testCases, testCase{
-		testType: clientTest,
-		name:     "TLS13-SendBadAuthModeSessionTicket-Client",
-		config: Config{
-			MaxVersion: VersionTLS13,
-			Bugs: ProtocolBugs{
-				SendPSKAuthModes: []byte{0x1a},
-			},
-		},
-		flags: []string{"-expect-no-session"},
-	})
 }
 
 func addChangeCipherSpecTests() {
@@ -8539,33 +8887,6 @@ func addTLS13HandshakeTests() {
 
 	testCases = append(testCases, testCase{
 		testType: clientTest,
-		name:     "OmitServerHelloSignatureAlgorithms",
-		config: Config{
-			MaxVersion: VersionTLS13,
-			Bugs: ProtocolBugs{
-				OmitServerHelloSignatureAlgorithms: true,
-			},
-		},
-		shouldFail:    true,
-		expectedError: ":UNEXPECTED_EXTENSION:",
-	})
-
-	testCases = append(testCases, testCase{
-		testType: clientTest,
-		name:     "IncludeServerHelloSignatureAlgorithms",
-		config: Config{
-			MaxVersion: VersionTLS13,
-			Bugs: ProtocolBugs{
-				IncludeServerHelloSignatureAlgorithms: true,
-			},
-		},
-		resumeSession: true,
-		shouldFail:    true,
-		expectedError: ":UNEXPECTED_EXTENSION:",
-	})
-
-	testCases = append(testCases, testCase{
-		testType: clientTest,
 		name:     "MissingKeyShare-Client",
 		config: Config{
 			MaxVersion: VersionTLS13,
@@ -9075,16 +9396,96 @@ func addPeekTests() {
 	})
 }
 
+func addRecordVersionTests() {
+	for _, ver := range tlsVersions {
+		// Test that the record version is enforced.
+		testCases = append(testCases, testCase{
+			name: "CheckRecordVersion-" + ver.name,
+			config: Config{
+				MinVersion: ver.version,
+				MaxVersion: ver.version,
+				Bugs: ProtocolBugs{
+					SendRecordVersion: 0x03ff,
+				},
+			},
+			shouldFail:    true,
+			expectedError: ":WRONG_VERSION_NUMBER:",
+		})
+
+		// Test that the ClientHello may use any record version, for
+		// compatibility reasons.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "LooseInitialRecordVersion-" + ver.name,
+			config: Config{
+				MinVersion: ver.version,
+				MaxVersion: ver.version,
+				Bugs: ProtocolBugs{
+					SendInitialRecordVersion: 0x03ff,
+				},
+			},
+		})
+
+		// Test that garbage ClientHello record versions are rejected.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "GarbageInitialRecordVersion-" + ver.name,
+			config: Config{
+				MinVersion: ver.version,
+				MaxVersion: ver.version,
+				Bugs: ProtocolBugs{
+					SendInitialRecordVersion: 0xffff,
+				},
+			},
+			shouldFail:    true,
+			expectedError: ":WRONG_VERSION_NUMBER:",
+		})
+	}
+}
+
+func addCertificateTests() {
+	// Test that a certificate chain with intermediate may be sent and
+	// received as both client and server.
+	for _, ver := range tlsVersions {
+		testCases = append(testCases, testCase{
+			testType: clientTest,
+			name:     "SendReceiveIntermediate-Client-" + ver.name,
+			config: Config{
+				Certificates: []Certificate{rsaChainCertificate},
+				ClientAuth:   RequireAnyClientCert,
+			},
+			expectPeerCertificate: &rsaChainCertificate,
+			flags: []string{
+				"-cert-file", path.Join(*resourceDir, rsaChainCertificateFile),
+				"-key-file", path.Join(*resourceDir, rsaChainKeyFile),
+				"-expect-peer-cert-file", path.Join(*resourceDir, rsaChainCertificateFile),
+			},
+		})
+
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "SendReceiveIntermediate-Server-" + ver.name,
+			config: Config{
+				Certificates: []Certificate{rsaChainCertificate},
+			},
+			expectPeerCertificate: &rsaChainCertificate,
+			flags: []string{
+				"-cert-file", path.Join(*resourceDir, rsaChainCertificateFile),
+				"-key-file", path.Join(*resourceDir, rsaChainKeyFile),
+				"-require-any-client-certificate",
+				"-expect-peer-cert-file", path.Join(*resourceDir, rsaChainCertificateFile),
+			},
+		})
+	}
+}
+
 func worker(statusChan chan statusMsg, c chan *testCase, shimPath string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for test := range c {
 		var err error
 
-		if *mallocTest < 0 {
-			statusChan <- statusMsg{test: test, started: true}
-			err = runTest(test, shimPath, -1)
-		} else {
+		if *mallocTest >= 0 {
 			for mallocNumToFail := int64(*mallocTest); ; mallocNumToFail++ {
 				statusChan <- statusMsg{test: test, started: true}
 				if err = runTest(test, shimPath, mallocNumToFail); err != errMoreMallocs {
@@ -9094,6 +9495,14 @@ func worker(statusChan chan statusMsg, c chan *testCase, shimPath string, wg *sy
 					break
 				}
 			}
+		} else if *repeatUntilFailure {
+			for err == nil {
+				statusChan <- statusMsg{test: test, started: true}
+				err = runTest(test, shimPath, -1)
+			}
+		} else {
+			statusChan <- statusMsg{test: test, started: true}
+			err = runTest(test, shimPath, -1)
 		}
 		statusChan <- statusMsg{test: test, err: err}
 	}
@@ -9194,6 +9603,8 @@ func main() {
 	addTLS13HandshakeTests()
 	addTLS13CipherPreferenceTests()
 	addPeekTests()
+	addRecordVersionTests()
+	addCertificateTests()
 
 	var wg sync.WaitGroup
 
@@ -9251,6 +9662,11 @@ func main() {
 		if matched {
 			foundTest = true
 			testChan <- &testCases[i]
+
+			// Only run one test if repeating until failure.
+			if *repeatUntilFailure {
+				break
+			}
 		}
 	}
 

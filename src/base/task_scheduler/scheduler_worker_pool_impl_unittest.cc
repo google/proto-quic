@@ -59,6 +59,7 @@ constexpr TimeDelta kExtraTimeToWaitForDetach =
     TimeDelta::FromSeconds(1);
 
 using IORestriction = SchedulerWorkerPoolParams::IORestriction;
+using StandbyThreadPolicy = SchedulerWorkerPoolParams::StandbyThreadPolicy;
 
 class TaskSchedulerWorkerPoolImplTest
     : public testing::TestWithParam<test::ExecutionMode> {
@@ -84,9 +85,9 @@ class TaskSchedulerWorkerPoolImplTest
     delayed_task_manager_ =
         base::MakeUnique<DelayedTaskManager>(service_thread_.task_runner());
     worker_pool_ = SchedulerWorkerPoolImpl::Create(
-        SchedulerWorkerPoolParams("TestWorkerPool", ThreadPriority::NORMAL,
-                                  IORestriction::ALLOWED, num_workers,
-                                  suggested_reclaim_time),
+        SchedulerWorkerPoolParams(
+            "TestWorkerPool", ThreadPriority::NORMAL, IORestriction::ALLOWED,
+            StandbyThreadPolicy::LAZY, num_workers, suggested_reclaim_time),
         Bind(&TaskSchedulerWorkerPoolImplTest::ReEnqueueSequenceCallback,
              Unretained(this)),
         &task_tracker_, delayed_task_manager_.get());
@@ -341,7 +342,10 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostDelayedTask) {
 }
 
 // Verify that the RunsTasksOnCurrentThread() method of a SEQUENCED TaskRunner
-// returns false when called from a task that isn't part of the sequence.
+// returns false when called from a task that isn't part of the sequence. Note:
+// Tests that use TestTaskFactory already verify that RunsTasksOnCurrentThread()
+// returns true when appropriate so this method complements it to get full
+// coverage of that method.
 TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
   scoped_refptr<TaskRunner> task_runner(
       CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()));
@@ -356,8 +360,6 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
           [](scoped_refptr<TaskRunner> sequenced_task_runner,
              WaitableEvent* task_ran) {
             EXPECT_FALSE(sequenced_task_runner->RunsTasksOnCurrentThread());
-            // Tests that use TestTaskFactory already verify that
-            // RunsTasksOnCurrentThread() returns true when appropriate.
             task_ran->Signal();
           },
           sequenced_task_runner, Unretained(&task_ran)));
@@ -373,6 +375,65 @@ INSTANTIATE_TEST_CASE_P(Sequenced,
 INSTANTIATE_TEST_CASE_P(
     SingleThreaded,
     TaskSchedulerWorkerPoolImplTest,
+    ::testing::Values(test::ExecutionMode::SINGLE_THREADED));
+
+namespace {
+
+// Same as TaskSchedulerWorkerPoolImplTest but its SchedulerWorkerPoolImpl
+// instance uses |max_threads == 1|.
+class TaskSchedulerWorkerPoolImplSingleWorkerTest
+    : public TaskSchedulerWorkerPoolImplTest {
+ public:
+  TaskSchedulerWorkerPoolImplSingleWorkerTest() = default;
+
+ protected:
+  void SetUp() override {
+    InitializeWorkerPool(TimeDelta::Max(), 1);
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(TaskSchedulerWorkerPoolImplSingleWorkerTest);
+};
+
+}  // namespace
+
+// Verify that the RunsTasksOnCurrentThread() method of a
+// SchedulerSingleThreadTaskRunner returns false when called from a task that
+// isn't part of its sequence even though it's running on that
+// SchedulerSingleThreadTaskRunner's assigned worker. Note: Tests that use
+// TestTaskFactory already verify that RunsTasksOnCurrentThread() returns true
+// when appropriate so this method complements it to get full coverage of that
+// method.
+TEST_P(TaskSchedulerWorkerPoolImplSingleWorkerTest,
+       SingleThreadRunsTasksOnCurrentThread) {
+  scoped_refptr<TaskRunner> task_runner(
+      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()));
+  scoped_refptr<SingleThreadTaskRunner> single_thread_task_runner(
+      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits()));
+
+  WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
+                         WaitableEvent::InitialState::NOT_SIGNALED);
+  task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](scoped_refptr<TaskRunner> single_thread_task_runner,
+             WaitableEvent* task_ran) {
+            EXPECT_FALSE(single_thread_task_runner->RunsTasksOnCurrentThread());
+            task_ran->Signal();
+          },
+          single_thread_task_runner, Unretained(&task_ran)));
+  task_ran.Wait();
+}
+
+INSTANTIATE_TEST_CASE_P(Parallel,
+                        TaskSchedulerWorkerPoolImplSingleWorkerTest,
+                        ::testing::Values(test::ExecutionMode::PARALLEL));
+INSTANTIATE_TEST_CASE_P(Sequenced,
+                        TaskSchedulerWorkerPoolImplSingleWorkerTest,
+                        ::testing::Values(test::ExecutionMode::SEQUENCED));
+INSTANTIATE_TEST_CASE_P(
+    SingleThreaded,
+    TaskSchedulerWorkerPoolImplSingleWorkerTest,
     ::testing::Values(test::ExecutionMode::SINGLE_THREADED));
 
 namespace {
@@ -413,9 +474,9 @@ TEST_P(TaskSchedulerWorkerPoolImplIORestrictionTest, IORestriction) {
       make_scoped_refptr(new TestSimpleTaskRunner));
 
   auto worker_pool = SchedulerWorkerPoolImpl::Create(
-      SchedulerWorkerPoolParams("TestWorkerPoolWithParam",
-                                ThreadPriority::NORMAL, GetParam(), 1U,
-                                TimeDelta::Max()),
+      SchedulerWorkerPoolParams(
+          "TestWorkerPoolWithParam", ThreadPriority::NORMAL, GetParam(),
+          StandbyThreadPolicy::LAZY, 1U, TimeDelta::Max()),
       Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
       &delayed_task_manager);
   ASSERT_TRUE(worker_pool);
@@ -763,6 +824,37 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(0));
   EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(3));
   EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
+}
+
+TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitLazy) {
+  TaskTracker task_tracker;
+  DelayedTaskManager delayed_task_manager(
+      make_scoped_refptr(new TestSimpleTaskRunner));
+  auto worker_pool = SchedulerWorkerPoolImpl::Create(
+      SchedulerWorkerPoolParams("LazyPolicyWorkerPool", ThreadPriority::NORMAL,
+                                IORestriction::DISALLOWED,
+                                StandbyThreadPolicy::LAZY, 8U,
+                                TimeDelta::Max()),
+      Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
+      &delayed_task_manager);
+  ASSERT_TRUE(worker_pool);
+  EXPECT_EQ(0U, worker_pool->NumberOfAliveWorkersForTesting());
+  worker_pool->JoinForTesting();
+}
+
+TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitOne) {
+  TaskTracker task_tracker;
+  DelayedTaskManager delayed_task_manager(
+      make_scoped_refptr(new TestSimpleTaskRunner));
+  auto worker_pool = SchedulerWorkerPoolImpl::Create(
+      SchedulerWorkerPoolParams("LazyPolicyWorkerPool", ThreadPriority::NORMAL,
+                                IORestriction::DISALLOWED,
+                                StandbyThreadPolicy::ONE, 8U, TimeDelta::Max()),
+      Bind(&NotReachedReEnqueueSequenceCallback), &task_tracker,
+      &delayed_task_manager);
+  ASSERT_TRUE(worker_pool);
+  EXPECT_EQ(1U, worker_pool->NumberOfAliveWorkersForTesting());
+  worker_pool->JoinForTesting();
 }
 
 }  // namespace internal

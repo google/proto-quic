@@ -89,16 +89,16 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(const GURL& report_uri,
-            base::StringPiece content_type,
-            base::StringPiece report) override {
+  void Send(
+      const GURL& report_uri,
+      base::StringPiece content_type,
+      base::StringPiece report,
+      const base::Callback<void()>& success_callback,
+      const base::Callback<void(const GURL&, int)>& error_callback) override {
     latest_report_uri_ = report_uri;
     report.CopyToString(&latest_report_);
     content_type.CopyToString(&latest_content_type_);
   }
-
-  void SetErrorCallback(
-      const base::Callback<void(const GURL&, int)>& error_callback) override {}
 
   void Clear() {
     latest_report_uri_ = GURL();
@@ -126,21 +126,18 @@ class MockFailingCertificateReportSender
   int net_error() { return net_error_; }
 
   // TransportSecurityState::ReportSenderInterface:
-  void Send(const GURL& report_uri,
-            base::StringPiece content_type,
-            base::StringPiece report) override {
-    ASSERT_FALSE(error_callback_.is_null());
-    error_callback_.Run(report_uri, net_error_);
-  }
-
-  void SetErrorCallback(
+  void Send(
+      const GURL& report_uri,
+      base::StringPiece content_type,
+      base::StringPiece report,
+      const base::Callback<void()>& success_callback,
       const base::Callback<void(const GURL&, int)>& error_callback) override {
-    error_callback_ = error_callback;
+    ASSERT_FALSE(error_callback.is_null());
+    error_callback.Run(report_uri, net_error_);
   }
 
  private:
   const int net_error_;
-  base::Callback<void(const GURL&, int)> error_callback_;
 };
 
 // A mock ExpectCTReporter that remembers the latest violation that was

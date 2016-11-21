@@ -88,8 +88,6 @@ bool ReplayProcess::Initialize(int argc, const char** argv) {
 
 #if defined(OS_POSIX)
   base::GlobalDescriptors* g_fds = base::GlobalDescriptors::GetInstance();
-  g_fds->Set(kPrimaryIPCChannel,
-             kPrimaryIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
   g_fds->Set(kMojoIPCChannel,
              kMojoIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
 #endif

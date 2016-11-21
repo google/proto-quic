@@ -252,7 +252,6 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
   QuicErrorCode FillClientHello(
       const QuicServerId& server_id,
       QuicConnectionId connection_id,
-      const QuicVersion actual_version,
       const QuicVersion preferred_version,
       const CachedState* cached,
       QuicWallTime now,

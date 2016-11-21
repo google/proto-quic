@@ -10,9 +10,6 @@ namespace net {
 
 QuicPacketWriterWrapper::QuicPacketWriterWrapper() {}
 
-QuicPacketWriterWrapper::QuicPacketWriterWrapper(QuicPacketWriter* writer)
-    : writer_(writer) {}
-
 QuicPacketWriterWrapper::~QuicPacketWriterWrapper() {}
 
 WriteResult QuicPacketWriterWrapper::WritePacket(const char* buffer,

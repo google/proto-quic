@@ -29,8 +29,9 @@ void LogMessageFailedUpgradeFromVersion(int version) {
   LOG(ERROR) << "Failed to upgrade Simple Cache from version: " << version;
 }
 
-bool WriteFakeIndexFile(const base::FilePath& file_name) {
-  base::File file(file_name,  base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+bool WriteFakeIndexFile(const base::FilePath& file_name,
+                        const disk_cache::SimpleExperiment& experiment) {
+  base::File file(file_name, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
   if (!file.IsValid())
     return false;
 
@@ -38,6 +39,9 @@ bool WriteFakeIndexFile(const base::FilePath& file_name) {
   file_contents.initial_magic_number =
       disk_cache::simplecache_v5::kSimpleInitialMagicNumber;
   file_contents.version = disk_cache::kSimpleVersion;
+  file_contents.experiment_type = experiment.type;
+  file_contents.experiment_param = experiment.param;
+
   int bytes_written = file.Write(0, reinterpret_cast<char*>(&file_contents),
                                  sizeof(file_contents));
   if (bytes_written != sizeof(file_contents)) {
@@ -46,6 +50,12 @@ bool WriteFakeIndexFile(const base::FilePath& file_name) {
     return false;
   }
   return true;
+}
+
+bool SimpleExperimentMatches(const disk_cache::FakeIndexData& index_data,
+                             const disk_cache::SimpleExperiment& experiment) {
+  return index_data.experiment_type == experiment.type &&
+         index_data.experiment_param == experiment.param;
 }
 
 }  // namespace
@@ -122,7 +132,8 @@ bool UpgradeIndexV5V6(const base::FilePath& cache_directory) {
 //    upgrade steps. Atomicity of this is an interesting research topic. The
 //    intermediate fake index flushing must be added as soon as we add more
 //    upgrade steps.
-bool UpgradeSimpleCacheOnDisk(const base::FilePath& path) {
+bool UpgradeSimpleCacheOnDisk(const base::FilePath& path,
+                              const SimpleExperiment& experiment) {
   // There is a convention among disk cache backends: looking at the magic in
   // the file "index" it should be sufficient to determine if the cache belongs
   // to the currently running backend. The Simple Backend stores its index in
@@ -138,7 +149,7 @@ bool UpgradeSimpleCacheOnDisk(const base::FilePath& path) {
 
   if (!fake_index_file.IsValid()) {
     if (fake_index_file.error_details() == base::File::FILE_ERROR_NOT_FOUND) {
-      return WriteFakeIndexFile(fake_index);
+      return WriteFakeIndexFile(fake_index, experiment);
     }
     return false;
   }
@@ -161,6 +172,12 @@ bool UpgradeSimpleCacheOnDisk(const base::FilePath& path) {
     LOG(ERROR) << "Inconsistent cache version.";
     return false;
   }
+
+  if (!SimpleExperimentMatches(file_header, experiment)) {
+    LOG(WARNING) << "Rebuilding cache due to experiment change";
+    return false;
+  }
+
   bool new_fake_index_needed = (version_from != kSimpleVersion);
 
   // There should be one upgrade routine here for each incremental upgrade
@@ -187,7 +204,7 @@ bool UpgradeSimpleCacheOnDisk(const base::FilePath& path) {
     return true;
 
   const base::FilePath temp_fake_index = path.AppendASCII("upgrade-index");
-  if (!WriteFakeIndexFile(temp_fake_index)) {
+  if (!WriteFakeIndexFile(temp_fake_index, experiment)) {
     base::DeleteFile(temp_fake_index, /* recursive = */ false);
     LOG(ERROR) << "Failed to write a new fake index.";
     LogMessageFailedUpgradeFromVersion(file_header.version);

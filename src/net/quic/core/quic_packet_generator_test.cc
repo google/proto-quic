@@ -106,7 +106,7 @@ class QuicPacketGeneratorTest : public ::testing::Test {
       : framer_(AllSupportedVersions(),
                 QuicTime::Zero(),
                 Perspective::IS_CLIENT),
-        generator_(42, &framer_, &random_, &buffer_allocator_, &delegate_),
+        generator_(42, &framer_, &buffer_allocator_, &delegate_),
         creator_(QuicPacketGeneratorPeer::GetPacketCreator(&generator_)) {
     creator_->SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
     creator_->set_encryption_level(ENCRYPTION_FORWARD_SECURE);
@@ -203,11 +203,10 @@ class QuicPacketGeneratorTest : public ::testing::Test {
   }
 
   QuicIOVector MakeIOVector(StringPiece s) {
-    return ::net::MakeIOVector(s, &iov_);
+    return ::net::test::MakeIOVector(s, &iov_);
   }
 
   QuicFramer framer_;
-  MockRandom random_;
   SimpleBufferAllocator buffer_allocator_;
   StrictMock<MockDelegate> delegate_;
   QuicPacketGenerator generator_;

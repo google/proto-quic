@@ -215,15 +215,6 @@ class BlinkPerfDOM(perf_benchmark.PerfBenchmark):
     path = os.path.join(BLINK_PERF_BASE_DIR, 'DOM')
     return CreateStorySetFromPath(path, SKIPPED_FILE)
 
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/652724
-    if (possible_browser.browser_type == 'reference' and
-        possible_browser.platform.GetOSName() in ['win', 'linux']):
-      return True
-
-    return False
-
 
 @benchmark.Disabled('win')  # http://crbug.com/588819
 class BlinkPerfEvents(perf_benchmark.PerfBenchmark):

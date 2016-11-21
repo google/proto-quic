@@ -8,7 +8,6 @@
 #include "base/macros.h"
 #include "base/metrics/field_trial.h"
 #include "base/single_thread_task_runner.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/cache_type.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/blockfile/backend_impl.h"

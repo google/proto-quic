@@ -18,7 +18,8 @@ def main_run(args):
   _AddToPathIfNeeded(typ_path)
   import typ
 
-  top_level_dir = os.path.join(common.SRC_DIR, 'headless', 'lib', 'browser')
+  top_level_dir = os.path.join(
+      common.SRC_DIR, 'headless', 'lib', 'browser', 'devtools_api')
   with common.temporary_file() as tempfile_path:
     rc = typ.main(
         argv=[],
