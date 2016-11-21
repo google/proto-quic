@@ -43,15 +43,16 @@ bssl::UniquePtr<SSL_SESSION> SSLClientSessionCache::Lookup(
     FlushExpiredSessions();
   }
 
-  CacheEntryMap::iterator iter = cache_.Get(cache_key);
+  auto iter = cache_.Get(cache_key);
   if (iter == cache_.end())
     return nullptr;
-  if (IsExpired(iter->second.get(), clock_->Now())) {
+
+  SSL_SESSION* session = iter->second.get();
+  if (IsExpired(session, clock_->Now().ToTimeT())) {
     cache_.Erase(iter);
     return nullptr;
   }
 
-  SSL_SESSION* session = iter->second->session.get();
   SSL_SESSION_up_ref(session);
   return bssl::UniquePtr<SSL_SESSION>(session);
 }
@@ -60,14 +61,8 @@ void SSLClientSessionCache::Insert(const std::string& cache_key,
                                    SSL_SESSION* session) {
   base::AutoLock lock(lock_);
 
-  // Make a new entry.
-  std::unique_ptr<CacheEntry> entry(new CacheEntry);
   SSL_SESSION_up_ref(session);
-  entry->session.reset(session);
-  entry->creation_time = clock_->Now();
-
-  // Takes ownership.
-  cache_.Put(cache_key, std::move(entry));
+  cache_.Put(cache_key, bssl::UniquePtr<SSL_SESSION>(session));
 }
 
 void SSLClientSessionCache::Flush() {
@@ -81,19 +76,15 @@ void SSLClientSessionCache::SetClockForTesting(
   clock_ = std::move(clock);
 }
 
-SSLClientSessionCache::CacheEntry::CacheEntry() {}
-
-SSLClientSessionCache::CacheEntry::~CacheEntry() {}
-
-bool SSLClientSessionCache::IsExpired(SSLClientSessionCache::CacheEntry* entry,
-                                      const base::Time& now) {
-  return now < entry->creation_time ||
-         entry->creation_time + config_.timeout < now;
+bool SSLClientSessionCache::IsExpired(SSL_SESSION* session, time_t now) {
+  return now < SSL_SESSION_get_time(session) ||
+         now >=
+             SSL_SESSION_get_time(session) + SSL_SESSION_get_timeout(session);
 }
 
 void SSLClientSessionCache::FlushExpiredSessions() {
-  base::Time now = clock_->Now();
-  CacheEntryMap::iterator iter = cache_.begin();
+  time_t now = clock_->Now().ToTimeT();
+  auto iter = cache_.begin();
   while (iter != cache_.end()) {
     if (IsExpired(iter->second.get(), now)) {
       iter = cache_.Erase(iter);

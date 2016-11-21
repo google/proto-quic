@@ -69,7 +69,7 @@ check_targets = [
   #"//media/*",  # Lots of errors.
   #"//media/base/*",
   #"//media/capture/*",
-  #"//media/cast/*",
+  "//media/cast/*",
   "//media:media",
   "//media:shared_memory_support",
   "//media:media_unittests",
@@ -82,6 +82,7 @@ check_targets = [
   "//media/gpu/*",
   "//media/midi/*",
   "//media/mojo/*",
+  "//media/remoting/*",
   "//media/test/*",
 
   "mojo/*",
@@ -216,6 +217,7 @@ check_targets = [
 #      files and passes them to a script, it will always be correct.
 exec_script_whitelist = [
   "//android_webview/BUILD.gn",
+  "//build_overrides/build.gni",
   "//build/config/BUILD.gn",
   "//build/config/android/config.gni",
   "//build/config/android/internal_rules.gni",
@@ -235,6 +237,7 @@ exec_script_whitelist = [
   "//build/toolchain/concurrent_links.gni",
   "//build/toolchain/mac/BUILD.gn",
   "//build/toolchain/nacl/BUILD.gn",
+  "//build/toolchain/toolchain.gni",
   "//build/toolchain/win/BUILD.gn",
   "//build/util/branding.gni",
   "//build/util/version.gni",

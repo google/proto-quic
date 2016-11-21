@@ -163,6 +163,12 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs) {
   OPENSSL_free(hs->peer_psk_identity_hint);
   sk_X509_NAME_pop_free(hs->ca_names, X509_NAME_free);
   OPENSSL_free(hs->certificate_types);
+
+  if (hs->key_block != NULL) {
+    OPENSSL_cleanse(hs->key_block, hs->key_block_len);
+    OPENSSL_free(hs->key_block);
+  }
+
   OPENSSL_free(hs);
 }
 
@@ -199,18 +205,21 @@ int ssl3_init_message(SSL *ssl, CBB *cbb, CBB *body, uint8_t type) {
   return 1;
 }
 
-int ssl3_finish_message(SSL *ssl, CBB *cbb) {
-  if (ssl->s3->pending_message != NULL) {
+int ssl3_finish_message(SSL *ssl, CBB *cbb, uint8_t **out_msg,
+                        size_t *out_len) {
+  if (!CBB_finish(cbb, out_msg, out_len)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     return 0;
   }
 
-  uint8_t *msg = NULL;
-  size_t len;
-  if (!CBB_finish(cbb, &msg, &len) ||
+  return 1;
+}
+
+int ssl3_queue_message(SSL *ssl, uint8_t *msg, size_t len) {
+  if (ssl->s3->pending_message != NULL ||
       len > 0xffffffffu) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     OPENSSL_free(msg);
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     return 0;
   }
 
@@ -218,6 +227,17 @@ int ssl3_finish_message(SSL *ssl, CBB *cbb) {
 
   ssl->s3->pending_message = msg;
   ssl->s3->pending_message_len = (uint32_t)len;
+  return 1;
+}
+
+int ssl_complete_message(SSL *ssl, CBB *cbb) {
+  uint8_t *msg;
+  size_t len;
+  if (!ssl->method->finish_message(ssl, cbb, &msg, &len) ||
+      !ssl->method->queue_message(ssl, msg, len)) {
+    return 0;
+  }
+
   return 1;
 }
 
@@ -278,7 +298,7 @@ int ssl3_send_finished(SSL *ssl, int a, int b) {
   CBB cbb, body;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_FINISHED) ||
       !CBB_add_bytes(&body, finished, finished_len) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
+      !ssl_complete_message(ssl, &cbb)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     CBB_cleanup(&cbb);
     return -1;
@@ -300,7 +320,7 @@ int ssl3_get_finished(SSL *ssl) {
   size_t finished_len =
       ssl->s3->enc_method->final_finish_mac(ssl, !ssl->server, finished);
   if (finished_len == 0 ||
-      !ssl->method->hash_current_message(ssl)) {
+      !ssl_hash_current_message(ssl)) {
     return -1;
   }
 
@@ -346,7 +366,7 @@ int ssl3_output_cert_chain(SSL *ssl) {
   CBB cbb, body;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CERTIFICATE) ||
       !ssl_add_cert_chain(ssl, &body) ||
-      !ssl->method->finish_message(ssl, &cbb)) {
+      !ssl_complete_message(ssl, &cbb)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     CBB_cleanup(&cbb);
     return 0;
@@ -640,16 +660,21 @@ again:
   }
 
   /* Feed this message into MAC computation. */
-  if (hash_message == ssl_hash_message && !ssl3_hash_current_message(ssl)) {
+  if (hash_message == ssl_hash_message && !ssl_hash_current_message(ssl)) {
     return -1;
   }
 
   return 1;
 }
 
-int ssl3_hash_current_message(SSL *ssl) {
-  return ssl3_update_handshake_hash(ssl, (uint8_t *)ssl->init_buf->data,
-                                    ssl->init_buf->length);
+void ssl3_get_current_message(const SSL *ssl, CBS *out) {
+  CBS_init(out, (uint8_t *)ssl->init_buf->data, ssl->init_buf->length);
+}
+
+int ssl_hash_current_message(SSL *ssl) {
+  CBS cbs;
+  ssl->method->get_current_message(ssl, &cbs);
+  return ssl3_update_handshake_hash(ssl, CBS_data(&cbs), CBS_len(&cbs));
 }
 
 void ssl3_release_current_message(SSL *ssl, int free_buffer) {
@@ -741,4 +766,52 @@ int ssl_verify_alarm_type(long type) {
   }
 
   return al;
+}
+
+int ssl_parse_extensions(const CBS *cbs, uint8_t *out_alert,
+                         const SSL_EXTENSION_TYPE *ext_types,
+                         size_t num_ext_types) {
+  /* Reset everything. */
+  for (size_t i = 0; i < num_ext_types; i++) {
+    *ext_types[i].out_present = 0;
+    CBS_init(ext_types[i].out_data, NULL, 0);
+  }
+
+  CBS copy = *cbs;
+  while (CBS_len(&copy) != 0) {
+    uint16_t type;
+    CBS data;
+    if (!CBS_get_u16(&copy, &type) ||
+        !CBS_get_u16_length_prefixed(&copy, &data)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PARSE_TLSEXT);
+      *out_alert = SSL_AD_DECODE_ERROR;
+      return 0;
+    }
+
+    const SSL_EXTENSION_TYPE *ext_type = NULL;
+    for (size_t i = 0; i < num_ext_types; i++) {
+      if (type == ext_types[i].type) {
+        ext_type = &ext_types[i];
+        break;
+      }
+    }
+
+    if (ext_type == NULL) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
+      *out_alert = SSL_AD_UNSUPPORTED_EXTENSION;
+      return 0;
+    }
+
+    /* Duplicate ext_types are forbidden. */
+    if (*ext_type->out_present) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_DUPLICATE_EXTENSION);
+      *out_alert = SSL_AD_ILLEGAL_PARAMETER;
+      return 0;
+    }
+
+    *ext_type->out_present = 1;
+    *ext_type->out_data = data;
+  }
+
+  return 1;
 }

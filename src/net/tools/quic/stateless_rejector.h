@@ -107,7 +107,7 @@ class StatelessRejector {
   CryptoHandshakeMessage chlo_;
   std::unique_ptr<CryptoHandshakeMessage> reply_;
   CryptoFramer crypto_framer_;
-  scoped_refptr<QuicCryptoProof> proof_;
+  scoped_refptr<QuicSignedServerConfig> signed_config_;
   scoped_refptr<QuicCryptoNegotiatedParameters> params_;
 
   DISALLOW_COPY_AND_ASSIGN(StatelessRejector);

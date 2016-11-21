@@ -183,11 +183,6 @@ def _get_service_event(event_type,
       version = event.service_event.code_version.add()
       version.source_url = version_d['source_url']
       if 'revision' in version_d:
-        # Rely on the url to switch between svn and git because an
-        # abbreviated sha1 can sometimes be confused with an int.
-        if version.source_url.startswith('svn://'):
-          version.svn_revision = int(version_d['revision'])
-        else:
           version.git_hash = version_d['revision']
 
       if 'version' in version_d:
@@ -233,7 +228,7 @@ def send_service_event(event_type,
 
     code_version (list/tuple of dict or None): required keys are
         'source_url' -> full url to the repository
-        'revision' -> (string) git sha1 or svn revision number.
+        'revision' -> (string) git sha1
       optional keys are
         'dirty' -> boolean. True if the local source tree has local
             modification.
@@ -356,7 +351,6 @@ def get_build_event(event_type,
 
   if head_revision_git_hash:
     event.build_event.head_revision.git_hash = head_revision_git_hash
-    
 
   if event.build_event.step_name:
     if event_type != 'STEP':

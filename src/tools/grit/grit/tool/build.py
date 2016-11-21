@@ -44,7 +44,7 @@ _format_modules = {
 _format_modules.update(
     (type, 'policy_templates.template_formatter') for type in
         [ 'adm', 'admx', 'adml', 'reg', 'doc', 'json',
-          'plist', 'plist_strings', 'ios_plist', 'android_policy' ])
+          'plist', 'plist_strings', 'android_policy' ])
 
 
 def GetFormatter(type):

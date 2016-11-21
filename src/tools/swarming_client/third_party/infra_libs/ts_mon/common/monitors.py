@@ -15,10 +15,14 @@ import traceback
 from googleapiclient import discovery
 from googleapiclient import errors
 from infra_libs import httplib2_utils
+from infra_libs.ts_mon.common import interface
 from infra_libs.ts_mon.common import http_metrics
 from infra_libs.ts_mon.common import pb_to_popo
-from infra_libs.ts_mon.protos import metrics_pb2
-from oauth2client import gce
+from infra_libs.ts_mon.protos.current import metrics_pb2
+try: # pragma: no cover
+  from oauth2client import gce
+except ImportError: # pragma: no cover
+  from oauth2client.contrib import gce
 from oauth2client.client import GoogleCredentials
 from oauth2client.file import Storage
 
@@ -95,10 +99,16 @@ class HttpsMonitor(Monitor):
     self._http = credentials.authorize(http)
 
   def encodeToJson(self, metric_pb):
-    return json.dumps({ 'resource': pb_to_popo.convert(metric_pb) })
+    if interface.state.use_new_proto:
+      return json.dumps({'payload': pb_to_popo.convert(metric_pb)})
+    else:
+      return json.dumps({'resource': pb_to_popo.convert(metric_pb)})
 
   def send(self, metric_pb):
-    body = self.encodeToJson(self._wrap_proto(metric_pb))
+    if interface.state.use_new_proto:
+      body = self.encodeToJson(metric_pb)
+    else:
+      body = self.encodeToJson(self._wrap_proto(metric_pb))
 
     try:
       resp, content = self._http.request(self._endpoint, method='POST',
@@ -153,7 +163,8 @@ class PubSubMonitor(Monitor):
     self._update_init_metrics(http_metrics.STATUS_OK)
     return True
 
-  def __init__(self, credsfile, project, topic, use_instrumented_http=True):
+  def __init__(self, credsfile, project, topic, use_instrumented_http=True,
+               ca_certs=None):
     """Process monitoring related command line flags and initialize api.
 
     Args:
@@ -162,6 +173,9 @@ class PubSubMonitor(Monitor):
       topic (str): the name of the Pub/Sub topic to publish to.
       use_instrumented_http (bool): whether to record monitoring metrics for
           HTTP requests made to the pubsub API.
+      ca_certs (str): path to file containing root CA certificates for SSL
+                      server certificate validation. If not set, a CA cert
+                      file bundled with httplib2 is used.
     """
     # Do not call self._check_initialize() in the constructor. This
     # class is constructed during app initialization on AppEngine, and
@@ -170,9 +184,9 @@ class PubSubMonitor(Monitor):
     self._use_instrumented_http = use_instrumented_http
     if use_instrumented_http:
       self._http = httplib2_utils.InstrumentedHttp(
-          'acq-mon-api-pubsub', timeout=self.TIMEOUT)
+          'acq-mon-api-pubsub', timeout=self.TIMEOUT, ca_certs=ca_certs)
     else:
-      self._http = httplib2.Http(timeout=self.TIMEOUT)
+      self._http = httplib2.Http(timeout=self.TIMEOUT, ca_certs=ca_certs)
     self._credsfile = credsfile
     self._topic = 'projects/%s/topics/%s' % (project, topic)
 

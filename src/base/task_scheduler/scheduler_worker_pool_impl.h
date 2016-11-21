@@ -65,21 +65,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
       TaskTracker* task_tracker,
       DelayedTaskManager* delayed_task_manager);
 
-  // Waits until all workers are idle.
-  void WaitForAllWorkersIdleForTesting();
-
-  // Joins all workers of this worker pool. Tasks that are already running are
-  // allowed to complete their execution. This can only be called once.
-  void JoinForTesting();
-
-  // Disallows worker thread detachment. If the suggested reclaim time is not
-  // TimeDelta::Max(), then the test should call this before the detach code can
-  // run. The safest place to do this is before the a set of work is dispatched
-  // (the worker pool is idle and steady state) or before the last
-  // synchronization point for all workers (all threads are busy and can't be
-  // reclaimed).
-  void DisallowWorkerDetachmentForTesting();
-
   // SchedulerWorkerPool:
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
       const TaskTraits& traits) override;
@@ -106,6 +91,25 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   void GetHistograms(std::vector<const HistogramBase*>* histograms) const;
 
+  // Waits until all workers are idle.
+  void WaitForAllWorkersIdleForTesting();
+
+  // Joins all workers of this worker pool. Tasks that are already running are
+  // allowed to complete their execution. This can only be called once.
+  void JoinForTesting();
+
+  // Disallows worker thread detachment. If the suggested reclaim time is not
+  // TimeDelta::Max(), then the test should call this before the detach code can
+  // run. The safest place to do this is before the a set of work is dispatched
+  // (the worker pool is idle and steady state) or before the last
+  // synchronization point for all workers (all threads are busy and can't be
+  // reclaimed).
+  void DisallowWorkerDetachmentForTesting();
+
+  // Returns the number of workers alive in this worker pool. The value may
+  // change if workers are woken up or detached during this call.
+  size_t NumberOfAliveWorkersForTesting();
+
  private:
   class SchedulerSingleThreadTaskRunner;
   class SchedulerWorkerDelegateImpl;
@@ -119,6 +123,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   bool Initialize(
       ThreadPriority priority_hint,
+      SchedulerWorkerPoolParams::StandbyThreadPolicy standby_thread_policy,
       size_t max_threads,
       const ReEnqueueSequenceCallback& re_enqueue_sequence_callback);
 

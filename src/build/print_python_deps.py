@@ -82,7 +82,9 @@ def main():
                       help='Recursively include all non-test python files '
                       'within this directory. May be specified multiple times.')
   options = parser.parse_args()
-  sys.path.append(os.path.dirname(options.module))
+  # Replace the path entry for print_python_deps.py with the one for the given
+  # module.
+  sys.path[0] = os.path.dirname(options.module)
   imp.load_source('NAME', options.module)
 
   paths_set = _ComputePythonDependencies()

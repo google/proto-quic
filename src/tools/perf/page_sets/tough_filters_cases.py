@@ -7,6 +7,12 @@ from telemetry import story
 
 class ToughFiltersCasesPage(page_module.Page):
 
+  def __init__(self, url, page_set):
+    # Truncate the url to be the name, see crbug.com/662941
+    name = url[:100]
+    super(ToughFiltersCasesPage, self).__init__(
+        url=url, page_set=page_set, name=name)
+
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Filter'):
       action_runner.Wait(10)

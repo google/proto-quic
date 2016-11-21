@@ -6,11 +6,14 @@
 
 #include <string.h>
 
+#include <vector>
+
 #include "base/logging.h"
 #include "crypto/openssl_util.h"
 #include "crypto/sha2.h"
 #include "net/cert/ct_log_verifier_util.h"
 #include "net/cert/ct_serialization.h"
+#include "net/cert/merkle_audit_proof.h"
 #include "net/cert/merkle_consistency_proof.h"
 #include "net/cert/signed_tree_head.h"
 #include "third_party/boringssl/src/include/openssl/bytestring.h"
@@ -240,6 +243,61 @@ bool CTLogVerifier::VerifyConsistencyProof(
   // "first_hash" supplied, that the "sr" calculated is equal to the
   // "second_hash" supplied and that "sn" is 0.
   return fr == old_tree_hash && sr == new_tree_hash && sn == 0;
+}
+
+bool CTLogVerifier::VerifyAuditProof(const ct::MerkleAuditProof& proof,
+                                     const std::string& root_hash,
+                                     const std::string& leaf_hash) const {
+  // Implements the algorithm described in
+  // https://tools.ietf.org/html/draft-ietf-trans-rfc6962-bis-19#section-10.4.1
+  //
+  // It maintains a hash |r|, initialized to |leaf_hash|, and hashes nodes from
+  // |proof| into it. The proof is then valid if |r| is |root_hash|, proving
+  // that |root_hash| includes |leaf_hash|.
+
+  // 1.  Compare "leaf_index" against "tree_size".  If "leaf_index" is
+  //     greater than or equal to "tree_size" fail the proof verification.
+  if (proof.leaf_index >= proof.tree_size)
+    return false;
+
+  // 2.  Set "fn" to "leaf_index" and "sn" to "tree_size - 1".
+  uint64_t fn = proof.leaf_index;
+  uint64_t sn = proof.tree_size - 1;
+  // 3.  Set "r" to "hash".
+  std::string r = leaf_hash;
+
+  // 4.  For each value "p" in the "inclusion_path" array:
+  for (const std::string& p : proof.nodes) {
+    // If "sn" is 0, stop the iteration and fail the proof verification.
+    if (sn == 0)
+      return false;
+
+    // If "LSB(fn)" is set, or if "fn" is equal to "sn", then:
+    if ((fn & 1) || fn == sn) {
+      // 1.  Set "r" to "HASH(0x01 || p || r)"
+      r = ct::internal::HashNodes(p, r);
+
+      // 2.  If "LSB(fn)" is not set, then right-shift both "fn" and "sn"
+      //     equally until either "LSB(fn)" is set or "fn" is "0".
+      while (!(fn & 1) && fn != 0) {
+        fn >>= 1;
+        sn >>= 1;
+      }
+    } else {  // Otherwise:
+      // Set "r" to "HASH(0x01 || r || p)"
+      r = ct::internal::HashNodes(r, p);
+    }
+
+    // Finally, right-shift both "fn" and "sn" one time.
+    fn >>= 1;
+    sn >>= 1;
+  }
+
+  // 5.  Compare "sn" to 0.  Compare "r" against the "root_hash".  If "sn"
+  //     is equal to 0, and "r" and the "root_hash" are equal, then the
+  //     log has proven the inclusion of "hash".  Otherwise, fail the
+  //     proof verification.
+  return sn == 0 && r == root_hash;
 }
 
 CTLogVerifier::~CTLogVerifier() {

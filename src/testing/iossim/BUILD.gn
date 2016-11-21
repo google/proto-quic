@@ -5,24 +5,11 @@
 import("//build/config/mac/mac_sdk.gni")
 
 if (current_toolchain == host_toolchain) {
-  config("config") {
-    visibility = [ ":iossim" ]
-
-    include_dirs = [ "$root_gen_dir/iossim" ]
-
-    # -objectForKeyedSubscript requires 10.8 or newer. Remove this override once
-    # the global version of the SDK is raised.
-    common_flags = [ "-mmacosx-version-min=10.8" ]
-    ldflags = common_flags
-    cflags_objcc = common_flags
-  }
-
   executable("iossim") {
     sources = [
       "iossim.mm",
     ]
     libs = [ "Foundation.framework" ]
-    configs += [ ":config" ]
   }
 } else if (current_toolchain == default_toolchain) {
   copy("iossim") {

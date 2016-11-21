@@ -28,7 +28,6 @@
 #include "base/synchronization/waitable_event.h"
 #include "base/test/test_file_util.h"
 #include "base/test/test_timeouts.h"
-#include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -36,6 +35,10 @@
 #if defined(OS_ANDROID)
 #include "base/android/path_utils.h"
 #endif  // defined(OS_ANDROID)
+
+#if defined(OS_POSIX)
+#include "base/files/file_descriptor_watcher_posix.h"
+#endif  // defined(OS_POSIX)
 
 namespace base {
 
@@ -131,30 +134,19 @@ class TestDelegate : public TestDelegateBase {
   DISALLOW_COPY_AND_ASSIGN(TestDelegate);
 };
 
-void SetupWatchCallback(const FilePath& target,
-                        FilePathWatcher* watcher,
-                        TestDelegateBase* delegate,
-                        bool recursive_watch,
-                        bool* result,
-                        base::WaitableEvent* completion) {
-  *result = watcher->Watch(target, recursive_watch,
-                           base::Bind(&TestDelegateBase::OnFileChanged,
-                                      delegate->AsWeakPtr()));
-  completion->Signal();
-}
-
 class FilePathWatcherTest : public testing::Test {
  public:
   FilePathWatcherTest()
-      : file_thread_("FilePathWatcherTest") {}
+#if defined(OS_POSIX)
+      : file_descriptor_watcher_(&loop_)
+#endif
+  {
+  }
 
   ~FilePathWatcherTest() override {}
 
  protected:
   void SetUp() override {
-    // Create a separate file thread in order to test proper thread usage.
-    base::Thread::Options options(MessageLoop::TYPE_IO, 0);
-    ASSERT_TRUE(file_thread_.StartWithOptions(options));
 #if defined(OS_ANDROID)
     // Watching files is only permitted when all parent directories are
     // accessible, which is not the case for the default temp directory
@@ -170,10 +162,6 @@ class FilePathWatcherTest : public testing::Test {
   }
 
   void TearDown() override { RunLoop().RunUntilIdle(); }
-
-  void DeleteDelegateOnFileThread(TestDelegate* delegate) {
-    file_thread_.task_runner()->DeleteSoon(FROM_HERE, delegate);
-  }
 
   FilePath test_file() {
     return temp_dir_.GetPath().AppendASCII("FilePathWatcherTest");
@@ -196,18 +184,23 @@ class FilePathWatcherTest : public testing::Test {
 
   bool WaitForEvents() WARN_UNUSED_RESULT {
     collector_->Reset();
+
+    RunLoop run_loop;
     // Make sure we timeout if we don't get notified.
-    loop_.task_runner()->PostDelayedTask(FROM_HERE,
-                                         MessageLoop::QuitWhenIdleClosure(),
-                                         TestTimeouts::action_timeout());
-    RunLoop().Run();
+    ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE, run_loop.QuitWhenIdleClosure(),
+        TestTimeouts::action_timeout());
+    run_loop.Run();
     return collector_->Success();
   }
 
   NotificationCollector* collector() { return collector_.get(); }
 
-  MessageLoop loop_;
-  base::Thread file_thread_;
+  MessageLoopForIO loop_;
+#if defined(OS_POSIX)
+  FileDescriptorWatcher file_descriptor_watcher_;
+#endif
+
   ScopedTempDir temp_dir_;
   scoped_refptr<NotificationCollector> collector_;
 
@@ -219,14 +212,9 @@ bool FilePathWatcherTest::SetupWatch(const FilePath& target,
                                      FilePathWatcher* watcher,
                                      TestDelegateBase* delegate,
                                      bool recursive_watch) {
-  base::WaitableEvent completion(WaitableEvent::ResetPolicy::AUTOMATIC,
-                                 WaitableEvent::InitialState::NOT_SIGNALED);
-  bool result;
-  file_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(SetupWatchCallback, target, watcher, delegate,
-                            recursive_watch, &result, &completion));
-  completion.Wait();
-  return result;
+  return watcher->Watch(
+      target, recursive_watch,
+      base::Bind(&TestDelegateBase::OnFileChanged, delegate->AsWeakPtr()));
 }
 
 // Basic test: Create the file and verify that we notice.
@@ -237,7 +225,6 @@ TEST_F(FilePathWatcherTest, NewFile) {
 
   ASSERT_TRUE(WriteFile(test_file(), "content"));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that modifying the file is caught.
@@ -251,7 +238,6 @@ TEST_F(FilePathWatcherTest, ModifiedFile) {
   // Now make sure we get notified if the file is modified.
   ASSERT_TRUE(WriteFile(test_file(), "new content"));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that moving the file into place is caught.
@@ -266,7 +252,6 @@ TEST_F(FilePathWatcherTest, MovedFile) {
   // Now make sure we get notified if the file is modified.
   ASSERT_TRUE(base::Move(source_file, test_file()));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 TEST_F(FilePathWatcherTest, DeletedFile) {
@@ -279,7 +264,6 @@ TEST_F(FilePathWatcherTest, DeletedFile) {
   // Now make sure we get notified if the file is deleted.
   base::DeleteFile(test_file(), false);
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Used by the DeleteDuringNotify test below.
@@ -327,11 +311,9 @@ TEST_F(FilePathWatcherTest, DeleteDuringNotify) {
 // Flaky on MacOS (and ARM linux): http://crbug.com/85930
 TEST_F(FilePathWatcherTest, DISABLED_DestroyWithPendingNotification) {
   std::unique_ptr<TestDelegate> delegate(new TestDelegate(collector()));
-  FilePathWatcher* watcher = new FilePathWatcher;
-  ASSERT_TRUE(SetupWatch(test_file(), watcher, delegate.get(), false));
+  FilePathWatcher watcher;
+  ASSERT_TRUE(SetupWatch(test_file(), &watcher, delegate.get(), false));
   ASSERT_TRUE(WriteFile(test_file(), "content"));
-  file_thread_.task_runner()->DeleteSoon(FROM_HERE, watcher);
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 TEST_F(FilePathWatcherTest, MultipleWatchersSingleFile) {
@@ -343,8 +325,6 @@ TEST_F(FilePathWatcherTest, MultipleWatchersSingleFile) {
 
   ASSERT_TRUE(WriteFile(test_file(), "content"));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate1.release());
-  DeleteDelegateOnFileThread(delegate2.release());
 }
 
 // Verify that watching a file whose parent directory doesn't exist yet works if
@@ -370,7 +350,6 @@ TEST_F(FilePathWatcherTest, NonExistentDirectory) {
   ASSERT_TRUE(base::DeleteFile(file, false));
   VLOG(1) << "Waiting for file deletion";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Exercises watch reconfiguration for the case that directories on the path
@@ -403,7 +382,6 @@ TEST_F(FilePathWatcherTest, DirectoryChain) {
   ASSERT_TRUE(WriteFile(file, "content v2"));
   VLOG(1) << "Waiting for file modification";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 #if defined(OS_MACOSX)
@@ -421,7 +399,6 @@ TEST_F(FilePathWatcherTest, DisappearingDirectory) {
 
   ASSERT_TRUE(base::DeleteFile(dir, true));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Tests that a file that is deleted and reappears is tracked correctly.
@@ -438,7 +415,6 @@ TEST_F(FilePathWatcherTest, DeleteAndRecreate) {
   ASSERT_TRUE(WriteFile(test_file(), "content"));
   VLOG(1) << "Waiting for file creation";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 TEST_F(FilePathWatcherTest, WatchDirectory) {
@@ -471,7 +447,6 @@ TEST_F(FilePathWatcherTest, WatchDirectory) {
   ASSERT_TRUE(WriteFile(file2, "content"));
   VLOG(1) << "Waiting for file2 creation";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 TEST_F(FilePathWatcherTest, MoveParent) {
@@ -497,8 +472,6 @@ TEST_F(FilePathWatcherTest, MoveParent) {
   base::Move(dir, dest);
   VLOG(1) << "Waiting for directory move";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(file_delegate.release());
-  DeleteDelegateOnFileThread(subdir_delegate.release());
 }
 
 TEST_F(FilePathWatcherTest, RecursiveWatch) {
@@ -508,7 +481,6 @@ TEST_F(FilePathWatcherTest, RecursiveWatch) {
   bool setup_result = SetupWatch(dir, &watcher, delegate.get(), true);
   if (!FilePathWatcher::RecursiveWatchAvailable()) {
     ASSERT_FALSE(setup_result);
-    DeleteDelegateOnFileThread(delegate.release());
     return;
   }
   ASSERT_TRUE(setup_result);
@@ -564,7 +536,6 @@ TEST_F(FilePathWatcherTest, RecursiveWatch) {
   // Delete "$dir/subdir/subdir_child_dir/child_dir_file1".
   ASSERT_TRUE(base::DeleteFile(child_dir_file1, false));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 #if defined(OS_POSIX)
@@ -612,8 +583,6 @@ TEST_F(FilePathWatcherTest, RecursiveWithSymLink) {
   FilePath target2_file(target2.AppendASCII("file"));
   ASSERT_TRUE(WriteFile(target2_file, "content"));
   ASSERT_TRUE(WaitForEvents());
-
-  DeleteDelegateOnFileThread(delegate.release());
 }
 #endif  // OS_POSIX
 
@@ -640,8 +609,6 @@ TEST_F(FilePathWatcherTest, MoveChild) {
   // Move the directory into place, s.t. the watched file appears.
   ASSERT_TRUE(base::Move(source_dir, dest_dir));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(file_delegate.release());
-  DeleteDelegateOnFileThread(subdir_delegate.release());
 }
 
 // Verify that changing attributes on a file is caught
@@ -662,7 +629,6 @@ TEST_F(FilePathWatcherTest, FileAttributesChanged) {
   // Now make sure we get notified if the file is modified.
   ASSERT_TRUE(base::MakeFileUnreadable(test_file()));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 #if defined(OS_LINUX)
@@ -678,7 +644,6 @@ TEST_F(FilePathWatcherTest, CreateLink) {
   // Note that test_file() doesn't have to exist.
   ASSERT_TRUE(CreateSymbolicLink(test_file(), test_link()));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that deleting a symlink is caught.
@@ -694,7 +659,6 @@ TEST_F(FilePathWatcherTest, DeleteLink) {
   // Now make sure we get notified if the link is deleted.
   ASSERT_TRUE(base::DeleteFile(test_link(), false));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that modifying a target file that a link is pointing to
@@ -710,7 +674,6 @@ TEST_F(FilePathWatcherTest, ModifiedLinkedFile) {
   // Now make sure we get notified if the file is modified.
   ASSERT_TRUE(WriteFile(test_file(), "new content"));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that creating a target file that a link is pointing to
@@ -725,7 +688,6 @@ TEST_F(FilePathWatcherTest, CreateTargetLinkedFile) {
   // Now make sure we get notified if the target file is created.
   ASSERT_TRUE(WriteFile(test_file(), "content"));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that deleting a target file that a link is pointing to
@@ -741,7 +703,6 @@ TEST_F(FilePathWatcherTest, DeleteTargetLinkedFile) {
   // Now make sure we get notified if the target file is deleted.
   ASSERT_TRUE(base::DeleteFile(test_file(), false));
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that watching a file whose parent directory is a link that
@@ -770,7 +731,6 @@ TEST_F(FilePathWatcherTest, LinkedDirectoryPart1) {
   ASSERT_TRUE(base::DeleteFile(file, false));
   VLOG(1) << "Waiting for file deletion";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that watching a file whose parent directory is a
@@ -800,7 +760,6 @@ TEST_F(FilePathWatcherTest, LinkedDirectoryPart2) {
   ASSERT_TRUE(base::DeleteFile(file, false));
   VLOG(1) << "Waiting for file deletion";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 // Verify that watching a file with a symlink on the path
@@ -828,7 +787,6 @@ TEST_F(FilePathWatcherTest, LinkedDirectoryPart3) {
   ASSERT_TRUE(base::DeleteFile(file, false));
   VLOG(1) << "Waiting for file deletion";
   ASSERT_TRUE(WaitForEvents());
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 #endif  // OS_LINUX
@@ -906,7 +864,6 @@ TEST_F(FilePathWatcherTest, DirAttributesChanged) {
   ASSERT_TRUE(ChangeFilePermissions(test_dir1, Execute, false));
   ASSERT_TRUE(WaitForEvents());
   ASSERT_TRUE(ChangeFilePermissions(test_dir1, Execute, true));
-  DeleteDelegateOnFileThread(delegate.release());
 }
 
 #endif  // OS_MACOSX

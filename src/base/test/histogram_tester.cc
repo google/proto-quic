@@ -78,6 +78,13 @@ void HistogramTester::ExpectTotalCount(const std::string& name,
   }
 }
 
+void HistogramTester::ExpectTimeBucketCount(
+    const std::string& name,
+    base::TimeDelta sample,
+    base::HistogramBase::Count count) const {
+  ExpectBucketCount(name, sample.InMilliseconds(), count);
+}
+
 std::vector<Bucket> HistogramTester::GetAllSamples(
     const std::string& name) const {
   std::vector<Bucket> samples;

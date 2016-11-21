@@ -181,17 +181,19 @@ const char kAssert[] = "assert";
 const char kAssert_HelpShort[] =
     "assert: Assert an expression is true at generation time.";
 const char kAssert_Help[] =
-    "assert: Assert an expression is true at generation time.\n"
-    "\n"
-    "  assert(<condition> [, <error string>])\n"
-    "\n"
-    "  If the condition is false, the build will fail with an error. If the\n"
-    "  optional second argument is provided, that string will be printed\n"
-    "  with the error message.\n"
-    "\n"
-    "Examples:\n"
-    "  assert(is_win)\n"
-    "  assert(defined(sources), \"Sources must be defined\")\n";
+    R"(assert: Assert an expression is true at generation time.
+
+  assert(<condition> [, <error string>])
+
+  If the condition is false, the build will fail with an error. If the
+  optional second argument is provided, that string will be printed
+  with the error message.
+
+Examples
+
+  assert(is_win)
+  assert(defined(sources), "Sources must be defined");
+)";
 
 Value RunAssert(Scope* scope,
                 const FunctionCallNode* function,
@@ -245,45 +247,47 @@ const char kConfig[] = "config";
 const char kConfig_HelpShort[] =
     "config: Defines a configuration object.";
 const char kConfig_Help[] =
-    "config: Defines a configuration object.\n"
-    "\n"
-    "  Configuration objects can be applied to targets and specify sets of\n"
-    "  compiler flags, includes, defines, etc. They provide a way to\n"
-    "  conveniently group sets of this configuration information.\n"
-    "\n"
-    "  A config is referenced by its label just like a target.\n"
-    "\n"
-    "  The values in a config are additive only. If you want to remove a flag\n"
-    "  you need to remove the corresponding config that sets it. The final\n"
-    "  set of flags, defines, etc. for a target is generated in this order:\n"
-    "\n"
-    "   1. The values specified directly on the target (rather than using a\n"
-    "      config.\n"
-    "   2. The configs specified in the target's \"configs\" list, in order.\n"
-    "   3. Public_configs from a breadth-first traversal of the dependency\n"
-    "      tree in the order that the targets appear in \"deps\".\n"
-    "   4. All dependent configs from a breadth-first traversal of the\n"
-    "      dependency tree in the order that the targets appear in \"deps\".\n"
-    "\n"
-    "Variables valid in a config definition\n"
-    "\n"
+    R"(config: Defines a configuration object.
+
+  Configuration objects can be applied to targets and specify sets of compiler
+  flags, includes, defines, etc. They provide a way to conveniently group sets
+  of this configuration information.
+
+  A config is referenced by its label just like a target.
+
+  The values in a config are additive only. If you want to remove a flag you
+  need to remove the corresponding config that sets it. The final set of flags,
+  defines, etc. for a target is generated in this order:
+
+   1. The values specified directly on the target (rather than using a config.
+   2. The configs specified in the target's "configs" list, in order.
+   3. Public_configs from a breadth-first traversal of the dependency tree in
+      the order that the targets appear in "deps".
+   4. All dependent configs from a breadth-first traversal of the dependency
+      tree in the order that the targets appear in "deps".
+
+Variables valid in a config definition
+)"
+
     CONFIG_VALUES_VARS_HELP
-    "  Nested configs: configs\n"
-    "\n"
-    "Variables on a target used to apply configs\n"
-    "\n"
-    "  all_dependent_configs, configs, public_configs\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  config(\"myconfig\") {\n"
-    "    includes = [ \"include/common\" ]\n"
-    "    defines = [ \"ENABLE_DOOM_MELON\" ]\n"
-    "  }\n"
-    "\n"
-    "  executable(\"mything\") {\n"
-    "    configs = [ \":myconfig\" ]\n"
-    "  }\n";
+
+R"(  Nested configs: configs
+
+Variables on a target used to apply configs
+
+  all_dependent_configs, configs, public_configs
+
+Example
+
+  config("myconfig") {
+    includes = [ "include/common" ]
+    defines = [ "ENABLE_DOOM_MELON" ]
+  }
+
+  executable("mything") {
+    configs = [ ":myconfig" ]
+  }
+)";
 
 Value RunConfig(const FunctionCallNode* function,
                 const std::vector<Value>& args,
@@ -342,64 +346,64 @@ const char kDeclareArgs[] = "declare_args";
 const char kDeclareArgs_HelpShort[] =
     "declare_args: Declare build arguments.";
 const char kDeclareArgs_Help[] =
-    "declare_args: Declare build arguments.\n"
-    "\n"
-    "  Introduces the given arguments into the current scope. If they are\n"
-    "  not specified on the command line or in a toolchain's arguments,\n"
-    "  the default values given in the declare_args block will be used.\n"
-    "  However, these defaults will not override command-line values.\n"
-    "\n"
-    "  See also \"gn help buildargs\" for an overview.\n"
-    "\n"
-    "  The precise behavior of declare args is:\n"
-    "\n"
-    "   1. The declare_arg block executes. Any variables in the enclosing\n"
-    "      scope are available for reading.\n"
-    "\n"
-    "   2. At the end of executing the block, any variables set within that\n"
-    "      scope are saved globally as build arguments, with their current\n"
-    "      values being saved as the \"default value\" for that argument.\n"
-    "\n"
-    "   3. User-defined overrides are applied. Anything set in \"gn args\"\n"
-    "      now overrides any default values. The resulting set of variables\n"
-    "      is promoted to be readable from the following code in the file.\n"
-    "\n"
-    "  This has some ramifications that may not be obvious:\n"
-    "\n"
-    "    - You should not perform difficult work inside a declare_args block\n"
-    "      since this only sets a default value that may be discarded. In\n"
-    "      particular, don't use the result of exec_script() to set the\n"
-    "      default value. If you want to have a script-defined default, set\n"
-    "      some default \"undefined\" value like [], \"\", or -1, and after\n"
-    "      the declare_args block, call exec_script if the value is unset by\n"
-    "      the user.\n"
-    "\n"
-    "    - Any code inside of the declare_args block will see the default\n"
-    "      values of previous variables defined in the block rather than\n"
-    "      the user-overridden value. This can be surprising because you will\n"
-    "      be used to seeing the overridden value. If you need to make the\n"
-    "      default value of one arg dependent on the possibly-overridden\n"
-    "      value of another, write two separate declare_args blocks:\n"
-    "\n"
-    "        declare_args() {\n"
-    "          enable_foo = true\n"
-    "        }\n"
-    "        declare_args() {\n"
-    "          # Bar defaults to same user-overridden state as foo.\n"
-    "          enable_bar = enable_foo\n"
-    "        }\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  declare_args() {\n"
-    "    enable_teleporter = true\n"
-    "    enable_doom_melon = false\n"
-    "  }\n"
-    "\n"
-    "  If you want to override the (default disabled) Doom Melon:\n"
-    "    gn --args=\"enable_doom_melon=true enable_teleporter=false\"\n"
-    "  This also sets the teleporter, but it's already defaulted to on so\n"
-    "  it will have no effect.\n";
+    R"(declare_args: Declare build arguments.
+
+  Introduces the given arguments into the current scope. If they are not
+  specified on the command line or in a toolchain's arguments, the default
+  values given in the declare_args block will be used. However, these defaults
+  will not override command-line values.
+
+  See also "gn help buildargs" for an overview.
+
+  The precise behavior of declare args is:
+
+   1. The declare_arg block executes. Any variables in the enclosing scope are
+      available for reading.
+
+   2. At the end of executing the block, any variables set within that scope
+      are saved globally as build arguments, with their current values being
+      saved as the "default value" for that argument.
+
+   3. User-defined overrides are applied. Anything set in "gn args" now
+      overrides any default values. The resulting set of variables is promoted
+      to be readable from the following code in the file.
+
+  This has some ramifications that may not be obvious:
+
+    - You should not perform difficult work inside a declare_args block since
+      this only sets a default value that may be discarded. In particular,
+      don't use the result of exec_script() to set the default value. If you
+      want to have a script-defined default, set some default "undefined" value
+      like [], "", or -1, and after the declare_args block, call exec_script if
+      the value is unset by the user.
+
+    - Any code inside of the declare_args block will see the default values of
+      previous variables defined in the block rather than the user-overridden
+      value. This can be surprising because you will be used to seeing the
+      overridden value. If you need to make the default value of one arg
+      dependent on the possibly-overridden value of another, write two separate
+      declare_args blocks:
+
+        declare_args() {
+          enable_foo = true
+        }
+        declare_args() {
+          # Bar defaults to same user-overridden state as foo.
+          enable_bar = enable_foo
+        }
+
+Example
+
+  declare_args() {
+    enable_teleporter = true
+    enable_doom_melon = false
+  }
+
+  If you want to override the (default disabled) Doom Melon:
+    gn --args="enable_doom_melon=true enable_teleporter=false"
+  This also sets the teleporter, but it's already defaulted to on so it will
+  have no effect.
+)";
 
 Value RunDeclareArgs(Scope* scope,
                      const FunctionCallNode* function,
@@ -431,36 +435,37 @@ const char kDefined[] = "defined";
 const char kDefined_HelpShort[] =
     "defined: Returns whether an identifier is defined.";
 const char kDefined_Help[] =
-    "defined: Returns whether an identifier is defined.\n"
-    "\n"
-    "  Returns true if the given argument is defined. This is most useful in\n"
-    "  templates to assert that the caller set things up properly.\n"
-    "\n"
-    "  You can pass an identifier:\n"
-    "    defined(foo)\n"
-    "  which will return true or false depending on whether foo is defined in\n"
-    "  the current scope.\n"
-    "\n"
-    "  You can also check a named scope:\n"
-    "    defined(foo.bar)\n"
-    "  which will return true or false depending on whether bar is defined in\n"
-    "  the named scope foo. It will throw an error if foo is not defined or\n"
-    "  is not a scope.\n"
-    "\n"
-    "Example:\n"
-    "\n"
-    "  template(\"mytemplate\") {\n"
-    "    # To help users call this template properly...\n"
-    "    assert(defined(invoker.sources), \"Sources must be defined\")\n"
-    "\n"
-    "    # If we want to accept an optional \"values\" argument, we don't\n"
-    "    # want to dereference something that may not be defined.\n"
-    "    if (defined(invoker.values)) {\n"
-    "      values = invoker.values\n"
-    "    } else {\n"
-    "      values = \"some default value\"\n"
-    "    }\n"
-    "  }\n";
+    R"(defined: Returns whether an identifier is defined.
+
+  Returns true if the given argument is defined. This is most useful in
+  templates to assert that the caller set things up properly.
+
+  You can pass an identifier:
+    defined(foo)
+  which will return true or false depending on whether foo is defined in the
+  current scope.
+
+  You can also check a named scope:
+    defined(foo.bar)
+  which will return true or false depending on whether bar is defined in the
+  named scope foo. It will throw an error if foo is not defined or is not a
+  scope.
+
+Example
+
+  template("mytemplate") {
+    # To help users call this template properly...
+    assert(defined(invoker.sources), "Sources must be defined")
+
+    # If we want to accept an optional "values" argument, we don't
+    # want to dereference something that may not be defined.
+    if (defined(invoker.values)) {
+      values = invoker.values
+    } else {
+      values = "some default value"
+    }
+  }
+)";
 
 Value RunDefined(Scope* scope,
                  const FunctionCallNode* function,
@@ -513,22 +518,23 @@ const char kGetEnv[] = "getenv";
 const char kGetEnv_HelpShort[] =
     "getenv: Get an environment variable.";
 const char kGetEnv_Help[] =
-    "getenv: Get an environment variable.\n"
-    "\n"
-    "  value = getenv(env_var_name)\n"
-    "\n"
-    "  Returns the value of the given enironment variable. If the value is\n"
-    "  not found, it will try to look up the variable with the \"opposite\"\n"
-    "  case (based on the case of the first letter of the variable), but\n"
-    "  is otherwise case-sensitive.\n"
-    "\n"
-    "  If the environment variable is not found, the empty string will be\n"
-    "  returned. Note: it might be nice to extend this if we had the concept\n"
-    "  of \"none\" in the language to indicate lookup failure.\n"
-    "\n"
-    "Example:\n"
-    "\n"
-    "  home_dir = getenv(\"HOME\")\n";
+    R"(getenv: Get an environment variable.
+
+  value = getenv(env_var_name)
+
+  Returns the value of the given enironment variable. If the value is not
+  found, it will try to look up the variable with the "opposite" case (based on
+  the case of the first letter of the variable), but is otherwise
+  case-sensitive.
+
+  If the environment variable is not found, the empty string will be returned.
+  Note: it might be nice to extend this if we had the concept of "none" in the
+  language to indicate lookup failure.
+
+Example
+
+  home_dir = getenv("HOME")
+)";
 
 Value RunGetEnv(Scope* scope,
                 const FunctionCallNode* function,
@@ -551,38 +557,38 @@ const char kImport[] = "import";
 const char kImport_HelpShort[] =
     "import: Import a file into the current scope.";
 const char kImport_Help[] =
-    "import: Import a file into the current scope.\n"
-    "\n"
-    "  The import command loads the rules and variables resulting from\n"
-    "  executing the given file into the current scope.\n"
-    "\n"
-    "  By convention, imported files are named with a .gni extension.\n"
-    "\n"
-    "  An import is different than a C++ \"include\". The imported file is\n"
-    "  executed in a standalone environment from the caller of the import\n"
-    "  command. The results of this execution are cached for other files that\n"
-    "  import the same .gni file.\n"
-    "\n"
-    "  Note that you can not import a BUILD.gn file that's otherwise used\n"
-    "  in the build. Files must either be imported or implicitly loaded as\n"
-    "  a result of deps rules, but not both.\n"
-    "\n"
-    "  The imported file's scope will be merged with the scope at the point\n"
-    "  import was called. If there is a conflict (both the current scope and\n"
-    "  the imported file define some variable or rule with the same name but\n"
-    "  different value), a runtime error will be thrown. Therefore, it's good\n"
-    "  practice to minimize the stuff that an imported file defines.\n"
-    "\n"
-    "  Variables and templates beginning with an underscore '_' are\n"
-    "  considered private and will not be imported. Imported files can use\n"
-    "  such variables for internal computation without affecting other files.\n"
-    "\n"
-    "Examples:\n"
-    "\n"
-    "  import(\"//build/rules/idl_compilation_rule.gni\")\n"
-    "\n"
-    "  # Looks in the current directory.\n"
-    "  import(\"my_vars.gni\")\n";
+    R"(import: Import a file into the current scope.
+
+  The import command loads the rules and variables resulting from executing the
+  given file into the current scope.
+
+  By convention, imported files are named with a .gni extension.
+
+  An import is different than a C++ "include". The imported file is executed in
+  a standalone environment from the caller of the import command. The results
+  of this execution are cached for other files that import the same .gni file.
+
+  Note that you can not import a BUILD.gn file that's otherwise used in the
+  build. Files must either be imported or implicitly loaded as a result of deps
+  rules, but not both.
+
+  The imported file's scope will be merged with the scope at the point import
+  was called. If there is a conflict (both the current scope and the imported
+  file define some variable or rule with the same name but different value), a
+  runtime error will be thrown. Therefore, it's good practice to minimize the
+  stuff that an imported file defines.
+
+  Variables and templates beginning with an underscore '_' are considered
+  private and will not be imported. Imported files can use such variables for
+  internal computation without affecting other files.
+
+Examples
+
+  import("//build/rules/idl_compilation_rule.gni")
+
+  # Looks in the current directory.
+  import("my_vars.gni")
+)";
 
 Value RunImport(Scope* scope,
                 const FunctionCallNode* function,
@@ -608,64 +614,63 @@ const char kSetSourcesAssignmentFilter[] = "set_sources_assignment_filter";
 const char kSetSourcesAssignmentFilter_HelpShort[] =
     "set_sources_assignment_filter: Set a pattern to filter source files.";
 const char kSetSourcesAssignmentFilter_Help[] =
-    "set_sources_assignment_filter: Set a pattern to filter source files.\n"
-    "\n"
-    "  The sources assignment filter is a list of patterns that remove files\n"
-    "  from the list implicitly whenever the \"sources\" variable is\n"
-    "  assigned to. This will do nothing for non-lists.\n"
-    "\n"
-    "  This is intended to be used to globally filter out files with\n"
-    "  platform-specific naming schemes when they don't apply, for example\n"
-    "  you may want to filter out all \"*_win.cc\" files on non-Windows\n"
-    "  platforms.\n"
-    "\n"
-    "  Typically this will be called once in the master build config script\n"
-    "  to set up the filter for the current platform. Subsequent calls will\n"
-    "  overwrite the previous values.\n"
-    "\n"
-    "  If you want to bypass the filter and add a file even if it might\n"
-    "  be filtered out, call set_sources_assignment_filter([]) to clear the\n"
-    "  list of filters. This will apply until the current scope exits\n"
-    "\n"
-    "How to use patterns\n"
-    "\n"
-    "  File patterns are VERY limited regular expressions. They must match\n"
-    "  the entire input string to be counted as a match. In regular\n"
-    "  expression parlance, there is an implicit \"^...$\" surrounding your\n"
-    "  input. If you want to match a substring, you need to use wildcards at\n"
-    "  the beginning and end.\n"
-    "\n"
-    "  There are only two special tokens understood by the pattern matcher.\n"
-    "  Everything else is a literal.\n"
-    "\n"
-    "   * Matches zero or more of any character. It does not depend on the\n"
-    "     preceding character (in regular expression parlance it is\n"
-    "     equivalent to \".*\").\n"
-    "\n"
-    "  \\b Matches a path boundary. This will match the beginning or end of\n"
-    "     a string, or a slash.\n"
-    "\n"
-    "Pattern examples\n"
-    "\n"
-    "  \"*asdf*\"\n"
-    "      Matches a string containing \"asdf\" anywhere.\n"
-    "\n"
-    "  \"asdf\"\n"
-    "      Matches only the exact string \"asdf\".\n"
-    "\n"
-    "  \"*.cc\"\n"
-    "      Matches strings ending in the literal \".cc\".\n"
-    "\n"
-    "  \"\\bwin/*\"\n"
-    "      Matches \"win/foo\" and \"foo/win/bar.cc\" but not \"iwin/foo\".\n"
-    "\n"
-    "Sources assignment example\n"
-    "\n"
-    "  # Filter out all _win files.\n"
-    "  set_sources_assignment_filter([ \"*_win.cc\", \"*_win.h\" ])\n"
-    "  sources = [ \"a.cc\", \"b_win.cc\" ]\n"
-    "  print(sources)\n"
-    "  # Will print [ \"a.cc\" ]. b_win one was filtered out.\n";
+    R"(set_sources_assignment_filter: Set a pattern to filter source files.
+
+  The sources assignment filter is a list of patterns that remove files from
+  the list implicitly whenever the "sources" variable is assigned to. This will
+  do nothing for non-lists.
+
+  This is intended to be used to globally filter out files with
+  platform-specific naming schemes when they don't apply, for example you may
+  want to filter out all "*_win.cc" files on non-Windows platforms.
+
+  Typically this will be called once in the master build config script to set
+  up the filter for the current platform. Subsequent calls will overwrite the
+  previous values.
+
+  If you want to bypass the filter and add a file even if it might be filtered
+  out, call set_sources_assignment_filter([]) to clear the list of filters.
+  This will apply until the current scope exits
+
+How to use patterns
+
+  File patterns are VERY limited regular expressions. They must match the
+  entire input string to be counted as a match. In regular expression parlance,
+  there is an implicit "^...$" surrounding your input. If you want to match a
+  substring, you need to use wildcards at the beginning and end.
+
+  There are only two special tokens understood by the pattern matcher.
+  Everything else is a literal.
+
+   - "*" Matches zero or more of any character. It does not depend on the
+     preceding character (in regular expression parlance it is equivalent to
+     ".*").
+
+   - "\b" Matches a path boundary. This will match the beginning or end of a
+     string, or a slash.
+
+Pattern examples
+
+  "*asdf*"
+      Matches a string containing "asdf" anywhere.
+
+  "asdf"
+      Matches only the exact string "asdf".
+
+  "*.cc"
+      Matches strings ending in the literal ".cc".
+
+  "\bwin/*"
+      Matches "win/foo" and "foo/win/bar.cc" but not "iwin/foo".
+
+Sources assignment example
+
+  # Filter out all _win files.
+  set_sources_assignment_filter([ "*_win.cc", "*_win.h" ])
+  sources = [ "a.cc", "b_win.cc" ]
+  print(sources)
+  # Will print [ "a.cc" ]. b_win one was filtered out.
+)";
 
 Value RunSetSourcesAssignmentFilter(Scope* scope,
                                     const FunctionCallNode* function,
@@ -688,37 +693,38 @@ const char kPool[] = "pool";
 const char kPool_HelpShort[] =
     "pool: Defines a pool object.";
 const char kPool_Help[] =
-    "pool: Defines a pool object.\n"
-    "\n"
-    "  Pool objects can be applied to a tool to limit the parallelism of the\n"
-    "  build. This object has a single property \"depth\" corresponding to\n"
-    "  the number of tasks that may run simultaneously.\n"
-    "\n"
-    "  As the file containing the pool definition may be executed in the\n"
-    "  context of more than one toolchain it is recommended to specify an\n"
-    "  explicit toolchain when defining and referencing a pool.\n"
-    "\n"
-    "  A pool is referenced by its label just like a target.\n"
-    "\n"
-    "Variables\n"
-    "\n"
-    "  depth*\n"
-    "  * = required\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  if (current_toolchain == default_toolchain) {\n"
-    "    pool(\"link_pool\") {\n"
-    "      depth = 1\n"
-    "    }\n"
-    "  }\n"
-    "\n"
-    "  toolchain(\"toolchain\") {\n"
-    "    tool(\"link\") {\n"
-    "      command = \"...\"\n"
-    "      pool = \":link_pool($default_toolchain)\")\n"
-    "    }\n"
-    "  }\n";
+    R"*(pool: Defines a pool object.
+
+  Pool objects can be applied to a tool to limit the parallelism of the
+  build. This object has a single property "depth" corresponding to
+  the number of tasks that may run simultaneously.
+
+  As the file containing the pool definition may be executed in the
+  context of more than one toolchain it is recommended to specify an
+  explicit toolchain when defining and referencing a pool.
+
+  A pool is referenced by its label just like a target.
+
+Variables
+
+  depth*
+  * = required
+
+Example
+
+  if (current_toolchain == default_toolchain) {
+    pool("link_pool") {
+      depth = 1
+    }
+  }
+
+  toolchain("toolchain") {
+    tool("link") {
+      command = "..."
+      pool = ":link_pool($default_toolchain)")
+    }
+  }
+)*";
 
 const char kDepth[] = "depth";
 
@@ -776,21 +782,23 @@ const char kPrint[] = "print";
 const char kPrint_HelpShort[] =
     "print: Prints to the console.";
 const char kPrint_Help[] =
-    "print: Prints to the console.\n"
-    "\n"
-    "  Prints all arguments to the console separated by spaces. A newline is\n"
-    "  automatically appended to the end.\n"
-    "\n"
-    "  This function is intended for debugging. Note that build files are run\n"
-    "  in parallel so you may get interleaved prints. A buildfile may also\n"
-    "  be executed more than once in parallel in the context of different\n"
-    "  toolchains so the prints from one file may be duplicated or\n"
-    "  interleaved with itself.\n"
-    "\n"
-    "Examples:\n"
-    "  print(\"Hello world\")\n"
-    "\n"
-    "  print(sources, deps)\n";
+    R"(print: Prints to the console.
+
+  Prints all arguments to the console separated by spaces. A newline is
+  automatically appended to the end.
+
+  This function is intended for debugging. Note that build files are run in
+  parallel so you may get interleaved prints. A buildfile may also be executed
+  more than once in parallel in the context of different toolchains so the
+  prints from one file may be duplicated or
+  interleaved with itself.
+
+Examples
+
+  print("Hello world")
+
+  print(sources, deps)
+)";
 
 Value RunPrint(Scope* scope,
                const FunctionCallNode* function,
@@ -820,26 +828,26 @@ const char kSplitList[] = "split_list";
 const char kSplitList_HelpShort[] =
     "split_list: Splits a list into N different sub-lists.";
 const char kSplitList_Help[] =
-    "split_list: Splits a list into N different sub-lists.\n"
-    "\n"
-    "  result = split_list(input, n)\n"
-    "\n"
-    "  Given a list and a number N, splits the list into N sub-lists of\n"
-    "  approximately equal size. The return value is a list of the sub-lists.\n"
-    "  The result will always be a list of size N. If N is greater than the\n"
-    "  number of elements in the input, it will be padded with empty lists.\n"
-    "\n"
-    "  The expected use is to divide source files into smaller uniform\n"
-    "  chunks.\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  The code:\n"
-    "    mylist = [1, 2, 3, 4, 5, 6]\n"
-    "    print(split_list(mylist, 3))\n"
-    "\n"
-    "  Will print:\n"
-    "    [[1, 2], [3, 4], [5, 6]\n";
+    R"(split_list: Splits a list into N different sub-lists.
+
+  result = split_list(input, n)
+
+  Given a list and a number N, splits the list into N sub-lists of
+  approximately equal size. The return value is a list of the sub-lists. The
+  result will always be a list of size N. If N is greater than the number of
+  elements in the input, it will be padded with empty lists.
+
+  The expected use is to divide source files into smaller uniform chunks.
+
+Example
+
+  The code:
+    mylist = [1, 2, 3, 4, 5, 6]
+    print(split_list(mylist, 3))
+
+  Will print:
+    [[1, 2], [3, 4], [5, 6]
+)";
 Value RunSplitList(Scope* scope,
                    const FunctionCallNode* function,
                    const ListNode* args_list,

@@ -63,57 +63,57 @@ const char kExecScript[] = "exec_script";
 const char kExecScript_HelpShort[] =
     "exec_script: Synchronously run a script and return the output.";
 const char kExecScript_Help[] =
-    "exec_script: Synchronously run a script and return the output.\n"
-    "\n"
-    "  exec_script(filename,\n"
-    "              arguments = [],\n"
-    "              input_conversion = \"\",\n"
-    "              file_dependencies = [])\n"
-    "\n"
-    "  Runs the given script, returning the stdout of the script. The build\n"
-    "  generation will fail if the script does not exist or returns a nonzero\n"
-    "  exit code.\n"
-    "\n"
-    "  The current directory when executing the script will be the root\n"
-    "  build directory. If you are passing file names, you will want to use\n"
-    "  the rebase_path() function to make file names relative to this\n"
-    "  path (see \"gn help rebase_path\").\n"
-    "\n"
-    "Arguments:\n"
-    "\n"
-    "  filename:\n"
-    "      File name of python script to execute. Non-absolute names will\n"
-    "      be treated as relative to the current build file.\n"
-    "\n"
-    "  arguments:\n"
-    "      A list of strings to be passed to the script as arguments.\n"
-    "      May be unspecified or the empty list which means no arguments.\n"
-    "\n"
-    "  input_conversion:\n"
-    "      Controls how the file is read and parsed.\n"
-    "      See \"gn help input_conversion\".\n"
-    "\n"
-    "      If unspecified, defaults to the empty string which causes the\n"
-    "      script result to be discarded. exec script will return None.\n"
-    "\n"
-    "  dependencies:\n"
-    "      (Optional) A list of files that this script reads or otherwise\n"
-    "      depends on. These dependencies will be added to the build result\n"
-    "      such that if any of them change, the build will be regenerated and\n"
-    "      the script will be re-run.\n"
-    "\n"
-    "      The script itself will be an implicit dependency so you do not\n"
-    "      need to list it.\n"
-    "\n"
-    "Example:\n"
-    "\n"
-    "  all_lines = exec_script(\n"
-    "      \"myscript.py\", [some_input], \"list lines\",\n"
-    "      [ rebase_path(\"data_file.txt\", root_build_dir) ])\n"
-    "\n"
-    "  # This example just calls the script with no arguments and discards\n"
-    "  # the result.\n"
-    "  exec_script(\"//foo/bar/myscript.py\")\n";
+    R"(exec_script: Synchronously run a script and return the output.
+
+  exec_script(filename,
+              arguments = [],
+              input_conversion = "",
+              file_dependencies = [])
+
+  Runs the given script, returning the stdout of the script. The build
+  generation will fail if the script does not exist or returns a nonzero exit
+  code.
+
+  The current directory when executing the script will be the root build
+  directory. If you are passing file names, you will want to use the
+  rebase_path() function to make file names relative to this path (see "gn help
+  rebase_path").
+
+Arguments:
+
+  filename:
+      File name of python script to execute. Non-absolute names will be treated
+      as relative to the current build file.
+
+  arguments:
+      A list of strings to be passed to the script as arguments. May be
+      unspecified or the empty list which means no arguments.
+
+  input_conversion:
+      Controls how the file is read and parsed. See "gn help input_conversion".
+
+      If unspecified, defaults to the empty string which causes the script
+      result to be discarded. exec script will return None.
+
+  dependencies:
+      (Optional) A list of files that this script reads or otherwise depends
+      on. These dependencies will be added to the build result such that if any
+      of them change, the build will be regenerated and the script will be
+      re-run.
+
+      The script itself will be an implicit dependency so you do not need to
+      list it.
+
+Example
+
+  all_lines = exec_script(
+      "myscript.py", [some_input], "list lines",
+      [ rebase_path("data_file.txt", root_build_dir) ])
+
+  # This example just calls the script with no arguments and discards the
+  # result.
+  exec_script("//foo/bar/myscript.py")
+)";
 
 Value RunExecScript(Scope* scope,
                     const FunctionCallNode* function,

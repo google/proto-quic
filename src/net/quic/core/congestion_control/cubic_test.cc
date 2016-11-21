@@ -106,7 +106,7 @@ TEST_F(CubicTest, BelowOrigin) {
     clock_.AdvanceTime(hundred_ms_);
     current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min);
   }
-  expected_cwnd = FLAGS_quic_limit_cubic_cwnd_increase ? 399 : 422;
+  expected_cwnd = 399;
   EXPECT_EQ(expected_cwnd, current_cwnd);
 }
 

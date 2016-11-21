@@ -6,6 +6,7 @@
 #define NET_FILTER_GZIP_SOURCE_STREAM_H_
 
 #include <memory>
+#include <string>
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"

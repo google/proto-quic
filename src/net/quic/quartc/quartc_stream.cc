@@ -7,7 +7,7 @@
 namespace net {
 
 QuartcStream::QuartcStream(QuicStreamId id, QuicSession* session)
-    : ReliableQuicStream(id, session) {}
+    : QuicStream(id, session) {}
 QuartcStream::~QuartcStream() {}
 
 void QuartcStream::OnDataAvailable() {
@@ -27,13 +27,13 @@ void QuartcStream::OnDataAvailable() {
 }
 
 void QuartcStream::OnClose() {
-  ReliableQuicStream::OnClose();
+  QuicStream::OnClose();
   DCHECK(delegate_);
   delegate_->OnClose(this, connection_error());
 }
 
 void QuartcStream::OnCanWrite() {
-  ReliableQuicStream::OnCanWrite();
+  QuicStream::OnCanWrite();
   DCHECK(delegate_);
   delegate_->OnBufferedAmountDecrease(this);
 }
@@ -47,7 +47,7 @@ uint64_t QuartcStream::buffered_amount() {
 }
 
 bool QuartcStream::fin_sent() {
-  return ReliableQuicStream::fin_sent();
+  return QuicStream::fin_sent();
 }
 
 void QuartcStream::Write(const char* data,
@@ -57,7 +57,7 @@ void QuartcStream::Write(const char* data,
 }
 
 void QuartcStream::Close() {
-  ReliableQuicStream::session()->CloseStream(id());
+  QuicStream::session()->CloseStream(id());
 }
 
 void QuartcStream::SetDelegate(QuartcStreamInterface::Delegate* delegate) {

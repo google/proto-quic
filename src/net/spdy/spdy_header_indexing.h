@@ -1,0 +1,63 @@
+// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef NET_SPDY_SPDY_HEADER_INDEXING_H_
+#define NET_SPDY_SPDY_HEADER_INDEXING_H_
+
+#include <memory>
+#include <string>
+#include <unordered_set>
+#include <utility>
+
+#include "base/strings/string_piece.h"
+#include "net/base/net_export.h"
+
+namespace net {
+
+namespace test {
+class HeaderIndexingPeer;
+}
+
+NET_EXPORT_PRIVATE extern int32_t FLAGS_gfe_spdy_indexing_set_bound;
+NET_EXPORT_PRIVATE extern int32_t FLAGS_gfe_spdy_tracking_set_bound;
+
+// Maintain two headers sets: Indexing set and tracking
+// set. Call ShouldIndex() for each header to decide if to index it. If for some
+// connections, we decide to index all headers, we may still want to call
+// UpdateSets to log the headers into both sets.
+class NET_EXPORT HeaderIndexing {
+ public:
+  using HeaderSet = std::unordered_set<std::string>;
+
+  HeaderIndexing();
+  ~HeaderIndexing();
+
+  void CreateInitIndexingHeaders();
+
+  // Decide if a header should be indexed. We only use |header|. Add |value| to
+  // be consistent with HPACK indexing policy interface.
+  bool ShouldIndex(base::StringPiece header, base::StringPiece value);
+
+  // Not to make the indexing decision but to update sets.
+  void UpdateSets(base::StringPiece header, base::StringPiece value) {
+    ShouldIndex(header, value);
+  }
+
+  // TODO(yasong): Add function to log statistic info. For example, cache hit
+  // and miss rate.
+
+ private:
+  friend class test::HeaderIndexingPeer;
+  void TryInsertHeader(std::string&& header, HeaderSet* set, size_t bound);
+  // Headers to index.
+  HeaderSet indexing_set_;
+  // Headers seen so far.
+  HeaderSet tracking_set_;
+  const size_t indexing_set_bound_;
+  const size_t tracking_set_bound_;
+};
+
+}  // namespace net
+
+#endif  // NET_SPDY_SPDY_HEADER_INDEXING_H_

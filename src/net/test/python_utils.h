@@ -15,6 +15,9 @@ class FilePath;
 // This is the python path variable name.
 extern const char kPythonPathEnv[];
 
+// Clears the python path, this is useful for test hermeticity.
+void ClearPythonPath();
+
 // Appends the dir to python path environment variable.
 void AppendToPythonPath(const base::FilePath& dir);
 

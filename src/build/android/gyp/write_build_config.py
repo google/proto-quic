@@ -120,12 +120,31 @@ class Deps(object):
     self.all_deps_config_paths.remove(path)
     self.all_deps_configs.remove(GetDepConfig(path))
 
-  def PrebuiltJarPaths(self):
+  def GradlePrebuiltJarPaths(self):
     ret = []
-    for config in self.Direct('java_library'):
-      if config['is_prebuilt']:
-        ret.append(config['jar_path'])
-        ret.extend(Deps(config['deps_configs']).PrebuiltJarPaths())
+
+    def helper(cur):
+      for config in cur.Direct('java_library'):
+        if config['is_prebuilt'] or config['gradle_treat_as_prebuilt']:
+          if config['jar_path'] not in ret:
+            ret.append(config['jar_path'])
+
+    helper(self)
+    return ret
+
+  def GradleLibraryProjectDeps(self):
+    ret = []
+
+    def helper(cur):
+      for config in cur.Direct('java_library'):
+        if config['is_prebuilt']:
+          pass
+        elif config['gradle_treat_as_prebuilt']:
+          helper(Deps(config['deps_configs']))
+        elif config not in ret:
+          ret.append(config)
+
+    helper(self)
     return ret
 
 
@@ -268,6 +287,10 @@ def main(argv):
   parser.add_option('--extra-classpath-jars',
       help='GYP-list of .jar files to include on the classpath when compiling, '
            'but not to include in the final binary.')
+  parser.add_option('--gradle-treat-as-prebuilt', action='store_true',
+      help='Whether this library should be treated as a prebuilt library by '
+           'generate_gradle.py.')
+  parser.add_option('--main-class', help='Java class for java_binary targets.')
 
   # android library options
   parser.add_option('--dex-path', help='Path to target\'s dex output.')
@@ -376,6 +399,7 @@ def main(argv):
   # Required for generating gradle files.
   if options.type == 'java_library':
     deps_info['is_prebuilt'] = is_java_prebuilt
+    deps_info['gradle_treat_as_prebuilt'] = options.gradle_treat_as_prebuilt
 
   if options.android_manifest:
     gradle['android_manifest'] = options.android_manifest
@@ -386,16 +410,18 @@ def main(argv):
       gradle['bundled_srcjars'] = (
           build_utils.ParseGnList(options.bundled_srcjars))
 
-    gradle['dependent_prebuilt_jars'] = deps.PrebuiltJarPaths()
-
     gradle['dependent_android_projects'] = []
     gradle['dependent_java_projects'] = []
-    for c in direct_library_deps:
-      if not c['is_prebuilt']:
-        if c['requires_android']:
-          gradle['dependent_android_projects'].append(c['path'])
-        else:
-          gradle['dependent_java_projects'].append(c['path'])
+    gradle['dependent_prebuilt_jars'] = deps.GradlePrebuiltJarPaths()
+
+    if options.main_class:
+      gradle['main_class'] = options.main_class
+
+    for c in deps.GradleLibraryProjectDeps():
+      if c['requires_android']:
+        gradle['dependent_android_projects'].append(c['path'])
+      else:
+        gradle['dependent_java_projects'].append(c['path'])
 
 
   if (options.type in ('java_binary', 'java_library') and

@@ -11,6 +11,7 @@
 
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
+#include "net/quic/core/crypto/quic_crypto_proof.h"
 #include "net/quic/core/quic_protocol.h"
 
 namespace net {
@@ -66,8 +67,7 @@ class NET_EXPORT_PRIVATE ProofSource {
     // available, this will be nullptr.
     virtual void Run(bool ok,
                      const scoped_refptr<Chain>& chain,
-                     const std::string& signature,
-                     const std::string& leaf_cert_sct,
+                     const QuicCryptoProof& proof,
                      std::unique_ptr<Details> details) = 0;
 
    private:
@@ -111,8 +111,7 @@ class NET_EXPORT_PRIVATE ProofSource {
                         base::StringPiece chlo_hash,
                         const QuicTagVector& connection_options,
                         scoped_refptr<Chain>* out_chain,
-                        std::string* out_signature,
-                        std::string* out_leaf_cert_sct) = 0;
+                        QuicCryptoProof* out_proof) = 0;
 
   // Async version of GetProof with identical semantics, except that the results
   // are delivered to |callback|.  Callers should expect that |callback| might

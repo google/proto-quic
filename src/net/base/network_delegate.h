@@ -120,6 +120,10 @@ class NET_EXPORT NetworkDelegate : public base::NonThreadSafe {
   // This is the interface for subclasses of NetworkDelegate to implement. These
   // member functions will be called by the respective public notification
   // member function, which will perform basic sanity checking.
+  //
+  // (NetworkDelegateImpl has default implementations of these member functions.
+  // NetworkDelegate implementations should consider subclassing
+  // NetworkDelegateImpl.)
 
   // Called before a request is sent. Allows the delegate to rewrite the URL
   // being fetched by modifying |new_url|. If set, the URL must be valid. The

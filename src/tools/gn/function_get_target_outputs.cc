@@ -16,57 +16,58 @@ const char kGetTargetOutputs[] = "get_target_outputs";
 const char kGetTargetOutputs_HelpShort[] =
     "get_target_outputs: [file list] Get the list of outputs from a target.";
 const char kGetTargetOutputs_Help[] =
-    "get_target_outputs: [file list] Get the list of outputs from a target.\n"
-    "\n"
-    "  get_target_outputs(target_label)\n"
-    "\n"
-    "  Returns a list of output files for the named target. The named target\n"
-    "  must have been previously defined in the current file before this\n"
-    "  function is called (it can't reference targets in other files because\n"
-    "  there isn't a defined execution order, and it obviously can't\n"
-    "  reference targets that are defined after the function call).\n"
-    "\n"
-    "  Only copy and action targets are supported. The outputs from binary\n"
-    "  targets will depend on the toolchain definition which won't\n"
-    "  necessarily have been loaded by the time a given line of code has run,\n"
-    "  and source sets and groups have no useful output file.\n"
-    "\n"
-    "Return value\n"
-    "\n"
-    "  The names in the resulting list will be absolute file paths (normally\n"
-    "  like \"//out/Debug/bar.exe\", depending on the build directory).\n"
-    "\n"
-    "  action targets: this will just return the files specified in the\n"
-    "  \"outputs\" variable of the target.\n"
-    "\n"
-    "  action_foreach targets: this will return the result of applying\n"
-    "  the output template to the sources (see \"gn help source_expansion\").\n"
-    "  This will be the same result (though with guaranteed absolute file\n"
-    "  paths), as process_file_template will return for those inputs\n"
-    "  (see \"gn help process_file_template\").\n"
-    "\n"
-    "  binary targets (executables, libraries): this will return a list\n"
-    "  of the resulting binary file(s). The \"main output\" (the actual\n"
-    "  binary or library) will always be the 0th element in the result.\n"
-    "  Depending on the platform and output type, there may be other output\n"
-    "  files as well (like import libraries) which will follow.\n"
-    "\n"
-    "  source sets and groups: this will return a list containing the path of\n"
-    "  the \"stamp\" file that Ninja will produce once all outputs are\n"
-    "  generated. This probably isn't very useful.\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  # Say this action generates a bunch of C source files.\n"
-    "  action_foreach(\"my_action\") {\n"
-    "    sources = [ ... ]\n"
-    "    outputs = [ ... ]\n"
-    "  }\n"
-    "\n"
-    "  # Compile the resulting source files into a source set.\n"
-    "  source_set(\"my_lib\") {\n"
-    "    sources = get_target_outputs(\":my_action\")\n"
-    "  }\n";
+    R"(get_target_outputs: [file list] Get the list of outputs from a target.
+
+  get_target_outputs(target_label)
+
+  Returns a list of output files for the named target. The named target must
+  have been previously defined in the current file before this function is
+  called (it can't reference targets in other files because there isn't a
+  defined execution order, and it obviously can't reference targets that are
+  defined after the function call).
+
+  Only copy and action targets are supported. The outputs from binary targets
+  will depend on the toolchain definition which won't necessarily have been
+  loaded by the time a given line of code has run, and source sets and groups
+  have no useful output file.
+
+Return value
+
+  The names in the resulting list will be absolute file paths (normally like
+  "//out/Debug/bar.exe", depending on the build directory).
+
+  action targets: this will just return the files specified in the "outputs"
+  variable of the target.
+
+  action_foreach targets: this will return the result of applying the output
+  template to the sources (see "gn help source_expansion"). This will be the
+  same result (though with guaranteed absolute file paths), as
+  process_file_template will return for those inputs (see "gn help
+  process_file_template").
+
+  binary targets (executables, libraries): this will return a list of the
+  resulting binary file(s). The "main output" (the actual binary or library)
+  will always be the 0th element in the result. Depending on the platform and
+  output type, there may be other output files as well (like import libraries)
+  which will follow.
+
+  source sets and groups: this will return a list containing the path of the
+  "stamp" file that Ninja will produce once all outputs are generated. This
+  probably isn't very useful.
+
+Example
+
+  # Say this action generates a bunch of C source files.
+  action_foreach("my_action") {
+    sources = [ ... ]
+    outputs = [ ... ]
+  }
+
+  # Compile the resulting source files into a source set.
+  source_set("my_lib") {
+    sources = get_target_outputs(":my_action")
+  }
+)";
 
 Value RunGetTargetOutputs(Scope* scope,
                           const FunctionCallNode* function,

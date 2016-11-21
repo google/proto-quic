@@ -28,35 +28,10 @@ template("test") {
     }
 
     _test_runner_target = "${_output_name}__test_runner_script"
-    _wrapper_script_vars = [ "shard_timeout" ]
-    _gen_isolate_vars = [
-      "allow_odd_runtime_deps",
+    _wrapper_script_vars = [
       "ignore_all_data_deps",
+      "shard_timeout",
     ]
-    _generate_device_isolate =
-        !defined(invoker.ignore_all_data_deps) || !invoker.ignore_all_data_deps
-
-    if (_generate_device_isolate) {
-      _allow_odd_runtime_deps = defined(invoker.allow_odd_runtime_deps) &&
-                                invoker.allow_odd_runtime_deps
-
-      # The device isolate is needed at runtime, so it cannot go in
-      # target_gen_dir, as builder/tester configurations do not include it.
-      _target_dir_name = get_label_info(":$target_name", "dir")
-      _device_isolate_path = "$root_out_dir/gen.runtime/$_target_dir_name/$target_name.device.isolate"
-      _gen_isolate_target_name = "${target_name}__isolate"
-      device_isolate(_gen_isolate_target_name) {
-        forward_variables_from(invoker,
-                               [
-                                 "data",
-                                 "data_deps",
-                                 "deps",
-                                 "public_deps",
-                               ])
-        assert_no_odd_data = !_allow_odd_runtime_deps
-        output = _device_isolate_path
-      }
-    }
 
     assert(_use_raw_android_executable || enable_java_templates)
 
@@ -70,10 +45,9 @@ template("test") {
         # Configs will always be defined since we set_defaults in BUILDCONFIG.gn.
         configs = []
         data_deps = []
-        forward_variables_from(
-            invoker,
-            "*",
-            _wrapper_script_vars + _gen_isolate_vars + [ "extra_dist_files" ])
+        forward_variables_from(invoker,
+                               "*",
+                               _wrapper_script_vars + [ "extra_dist_files" ])
         testonly = true
 
         # Thanks to the set_defaults() for test(), configs are initialized with
@@ -122,10 +96,10 @@ template("test") {
         testonly = true
 
         deps = []
-        forward_variables_from(invoker,
-                               "*",
-                               _apk_specific_vars + _wrapper_script_vars +
-                                   _gen_isolate_vars + [ "visibility" ])
+        forward_variables_from(
+            invoker,
+            "*",
+            _apk_specific_vars + _wrapper_script_vars + [ "visibility" ])
 
         if (!defined(invoker.use_default_launcher) ||
             invoker.use_default_launcher) {
@@ -156,13 +130,13 @@ template("test") {
       _incremental_test_runner_target =
           "${_output_name}_incremental__test_runner_script"
       test_runner_script(_incremental_test_runner_target) {
-        forward_variables_from(invoker, _wrapper_script_vars)
-        if (_generate_device_isolate) {
-          isolate_file = _device_isolate_path
-          deps = [
-            ":$_gen_isolate_target_name",
-          ]
-        }
+        forward_variables_from(invoker,
+                               _wrapper_script_vars + [
+                                     "data",
+                                     "data_deps",
+                                     "deps",
+                                     "public_deps",
+                                   ])
         apk_target = ":$_apk_target"
         test_name = "${_output_name}_incremental"
         test_type = "gtest"
@@ -182,13 +156,13 @@ template("test") {
 
     _test_runner_target = "${_output_name}__test_runner_script"
     test_runner_script(_test_runner_target) {
-      forward_variables_from(invoker, _wrapper_script_vars)
-      if (_generate_device_isolate) {
-        isolate_file = _device_isolate_path
-        deps = [
-          ":$_gen_isolate_target_name",
-        ]
-      }
+      forward_variables_from(invoker,
+                             _wrapper_script_vars + [
+                                   "data",
+                                   "data_deps",
+                                   "deps",
+                                   "public_deps",
+                                 ])
 
       if (_use_raw_android_executable) {
         executable_dist_dir = "$root_out_dir/$_dist_target"

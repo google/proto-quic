@@ -73,7 +73,6 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
 
   QuicPacketGenerator(QuicConnectionId connection_id,
                       QuicFramer* framer,
-                      QuicRandom* random_generator,
                       QuicBufferAllocator* buffer_allocator,
                       DelegateInterface* delegate);
 
@@ -136,8 +135,6 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
   void SetDiversificationNonce(const DiversificationNonce& nonce);
 
   // Creates a version negotiation packet which supports |supported_versions|.
-  // Also, sets the entropy hash of the serialized packet to a random bool and
-  // returns that value as a member of SerializedPacket.
   std::unique_ptr<QuicEncryptedPacket> SerializeVersionNegotiationPacket(
       const QuicVersionVector& supported_versions);
 

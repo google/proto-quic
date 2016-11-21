@@ -40,12 +40,21 @@
       ['(OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" \
          or OS=="netbsd" or OS=="mac" or OS=="android" or OS=="qnx") and \
         (target_arch=="arm" or target_arch=="ia32" or \
-         target_arch=="mipsel" or target_arch=="mips")', {
+         target_arch=="mipsel" or target_arch=="mips" or \
+         target_arch=="ppc" or target_arch=="s390")', {
         'target_conditions': [
           ['_toolset=="host"', {
-            'cflags': [ '-m32' ],
-            'ldflags': [ '-m32' ],
-            'asflags': [ '-32' ],
+            'conditions': [
+              ['host_arch=="s390" or host_arch=="s390x"', {
+                'cflags': [ '-m31' ],
+                'ldflags': [ '-m31' ],
+                'asflags': [ '-31' ],
+              },{
+               'cflags': [ '-m32' ],
+               'ldflags': [ '-m32' ],
+               'asflags': [ '-32' ],
+              }],
+            ],
             'xcode_settings': {
               'ARCHS': [ 'i386' ],
             },
@@ -55,7 +64,8 @@
       ['(OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris" \
          or OS=="netbsd" or OS=="mac" or OS=="android" or OS=="qnx") and \
         (target_arch=="arm64" or target_arch=="x64" or \
-         target_arch=="mips64el" or target_arch=="mips64")', {
+         target_arch=="mips64el" or target_arch=="mips64" or \
+         target_arch=="ppc64" or target_arch=="s390x")', {
         'target_conditions': [
           ['_toolset=="host"', {
             'cflags': [ '-m64' ],
@@ -95,7 +105,7 @@
               } , { # else: OS != android
                 'conditions': [
                   # Big Endian
-                  [ 'target_arch=="mips" or target_arch=="mips64"', {
+                  [ 'v8_host_byteorder=="big"', {
                     'files': [
                       'common/icudtb.dat',
                     ],
@@ -113,7 +123,7 @@
           'target_name': 'data_assembly',
           'type': 'none',
           'conditions': [
-            [ 'target_arch=="mips" or target_arch=="mips64"', { # Big Endian
+            [ 'v8_host_byteorder=="big"', { # Big Endian
               'data_assembly_inputs': [
                 'common/icudtb.dat',
               ],
@@ -176,7 +186,7 @@
              '<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtb_dat.S',
           ],
           'conditions': [
-            [ 'target_arch=="mips" or target_arch=="mips64"', {
+            [ 'v8_host_byteorder=="big"', {
               'sources!': ['<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtl_dat.S'],
             }, {
               'sources!': ['<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtb_dat.S'],

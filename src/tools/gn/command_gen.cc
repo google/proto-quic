@@ -271,106 +271,102 @@ bool RunIdeWriter(const std::string& ide,
 const char kGen[] = "gen";
 const char kGen_HelpShort[] = "gen: Generate ninja files.";
 const char kGen_Help[] =
-    "gn gen: Generate ninja files.\n"
-    "\n"
-    "  gn gen [<ide options>] <out_dir>\n"
-    "\n"
-    "  Generates ninja files from the current tree and puts them in the given\n"
-    "  output directory.\n"
-    "\n"
-    "  The output directory can be a source-repo-absolute path name such as:\n"
-    "      //out/foo\n"
-    "  Or it can be a directory relative to the current directory such as:\n"
-    "      out/foo\n"
-    "\n"
-    "  See \"gn help switches\" for the common command-line switches.\n"
-    "\n"
-    "IDE options\n"
-    "\n"
-    "  GN optionally generates files for IDE. Possibilities for <ide options>\n"
-    "\n"
-    "  --ide=<ide_name>\n"
-    "      Generate files for an IDE. Currently supported values:\n"
-    "      \"eclipse\" - Eclipse CDT settings file.\n"
-    "      \"vs\" - Visual Studio project/solution files.\n"
-    "             (default Visual Studio version: 2015)\n"
-    "      \"vs2013\" - Visual Studio 2013 project/solution files.\n"
-    "      \"vs2015\" - Visual Studio 2015 project/solution files.\n"
-    "      \"xcode\" - Xcode workspace/solution files.\n"
-    "      \"qtcreator\" - QtCreator project files.\n"
-    "      \"json\" - JSON file containing target information\n"
-    "\n"
-    "  --filters=<path_prefixes>\n"
-    "      Semicolon-separated list of label patterns used to limit the set\n"
-    "      of generated projects (see \"gn help label_pattern\"). Only\n"
-    "      matching targets and their dependencies will be included in the\n"
-    "      solution. Only used for Visual Studio, Xcode and JSON.\n"
-    "\n"
-    "Visual Studio Flags\n"
-    "\n"
-    "  --sln=<file_name>\n"
-    "      Override default sln file name (\"all\"). Solution file is written\n"
-    "      to the root build directory.\n"
-    "\n"
-    "  --no-deps\n"
-    "      Don't include targets dependencies to the solution. Changes the\n"
-    "      way how --filters option works. Only directly matching targets are\n"
-    "      included.\n"
-    "\n"
-    "Xcode Flags\n"
-    "\n"
-    "  --workspace=<file_name>\n"
-    "      Override defaut workspace file name (\"all\"). The workspace file\n"
-    "      is written to the root build directory.\n"
-    "\n"
-    "  --ninja-extra-args=<string>\n"
-    "      This string is passed without any quoting to the ninja invocation\n"
-    "      command-line. Can be used to configure ninja flags, like \"-j\" if\n"
-    "      using goma for example.\n"
-    "\n"
-    "  --root-target=<target_name>\n"
-    "      Name of the target corresponding to \"All\" target in Xcode.\n"
-    "      If unset, \"All\" invokes ninja without any target\n"
-    "      and builds everything.\n"
-    "\n"
-    "QtCreator Flags\n"
-    "\n"
-    "  --root-target=<target_name>\n"
-    "      Name of the root target for which the QtCreator project will be\n"
-    "      generated to contain files of it and its dependencies. If unset, \n"
-    "      the whole build graph will be emitted.\n"
-    "\n"
-    "\n"
-    "Eclipse IDE Support\n"
-    "\n"
-    "  GN DOES NOT generate Eclipse CDT projects. Instead, it generates a\n"
-    "  settings file which can be imported into an Eclipse CDT project. The\n"
-    "  XML file contains a list of include paths and defines. Because GN does\n"
-    "  not generate a full .cproject definition, it is not possible to\n"
-    "  properly define includes/defines for each file individually.\n"
-    "  Instead, one set of includes/defines is generated for the entire\n"
-    "  project. This works fairly well but may still result in a few indexer\n"
-    "  issues here and there.\n"
-    "\n"
-    "Generic JSON Output\n"
-    "\n"
-    "  Dumps target information to JSON file and optionally invokes python\n"
-    "  script on generated file.\n"
-    "  See comments at the beginning of json_project_writer.cc and\n"
-    "  desc_builder.cc for overview of JSON file format.\n"
-    "\n"
-    "  --json-file-name=<json_file_name>\n"
-    "      Overrides default file name (project.json) of generated JSON file.\n"
-    "\n"
-    "  --json-ide-script=<path_to_python_script>\n"
-    "      Executes python script after the JSON file is generated.\n"
-    "      Path can be project absolute (//), system absolute (/) or\n"
-    "      relative, in which case the output directory will be base.\n"
-    "      Path to generated JSON file will be first argument when invoking\n"
-    "      script.\n"
-    "\n"
-    "  --json-ide-script-args=<argument>\n"
-    "      Optional second argument that will passed to executed script.\n";
+    R"(gn gen: Generate ninja files.
+
+  gn gen [<ide options>] <out_dir>
+
+  Generates ninja files from the current tree and puts them in the given output
+  directory.
+
+  The output directory can be a source-repo-absolute path name such as:
+      //out/foo
+  Or it can be a directory relative to the current directory such as:
+      out/foo
+
+  See "gn help switches" for the common command-line switches.
+
+IDE options
+
+  GN optionally generates files for IDE. Possibilities for <ide options>
+
+  --ide=<ide_name>
+      Generate files for an IDE. Currently supported values:
+      "eclipse" - Eclipse CDT settings file.
+      "vs" - Visual Studio project/solution files.
+             (default Visual Studio version: 2015)
+      "vs2013" - Visual Studio 2013 project/solution files.
+      "vs2015" - Visual Studio 2015 project/solution files.
+      "xcode" - Xcode workspace/solution files.
+      "qtcreator" - QtCreator project files.
+      "json" - JSON file containing target information
+
+  --filters=<path_prefixes>
+      Semicolon-separated list of label patterns used to limit the set of
+      generated projects (see "gn help label_pattern"). Only matching targets
+      and their dependencies will be included in the solution. Only used for
+      Visual Studio, Xcode and JSON.
+
+Visual Studio Flags
+
+  --sln=<file_name>
+      Override default sln file name ("all"). Solution file is written to the
+      root build directory.
+
+  --no-deps
+      Don't include targets dependencies to the solution. Changes the way how
+      --filters option works. Only directly matching targets are included.
+
+Xcode Flags
+
+  --workspace=<file_name>
+      Override defaut workspace file name ("all"). The workspace file is
+      written to the root build directory.
+
+  --ninja-extra-args=<string>
+      This string is passed without any quoting to the ninja invocation
+      command-line. Can be used to configure ninja flags, like "-j" if using
+      goma for example.
+
+  --root-target=<target_name>
+      Name of the target corresponding to "All" target in Xcode. If unset,
+      "All" invokes ninja without any target and builds everything.
+
+QtCreator Flags
+
+  --root-target=<target_name>
+      Name of the root target for which the QtCreator project will be generated
+      to contain files of it and its dependencies. If unset, the whole build
+      graph will be emitted.
+
+
+Eclipse IDE Support
+
+  GN DOES NOT generate Eclipse CDT projects. Instead, it generates a settings
+  file which can be imported into an Eclipse CDT project. The XML file contains
+  a list of include paths and defines. Because GN does not generate a full
+  .cproject definition, it is not possible to properly define includes/defines
+  for each file individually. Instead, one set of includes/defines is generated
+  for the entire project. This works fairly well but may still result in a few
+  indexer issues here and there.
+
+Generic JSON Output
+
+  Dumps target information to JSON file and optionally invokes python script on
+  generated file. See comments at the beginning of json_project_writer.cc and
+  desc_builder.cc for overview of JSON file format.
+
+  --json-file-name=<json_file_name>
+      Overrides default file name (project.json) of generated JSON file.
+
+  --json-ide-script=<path_to_python_script>
+      Executes python script after the JSON file is generated. Path can be
+      project absolute (//), system absolute (/) or relative, in which case the
+      output directory will be base. Path to generated JSON file will be first
+      argument when invoking script.
+
+  --json-ide-script-args=<argument>
+      Optional second argument that will passed to executed script.
+)";
 
 int RunGen(const std::vector<std::string>& args) {
   base::ElapsedTimer timer;

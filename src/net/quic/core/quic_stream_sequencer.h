@@ -22,13 +22,13 @@ class QuicStreamSequencerPeer;
 
 class QuicClock;
 class QuicSession;
-class ReliableQuicStream;
+class QuicStream;
 
 // Buffers frames until we have something which can be passed
 // up to the next layer.
 class NET_EXPORT_PRIVATE QuicStreamSequencer {
  public:
-  QuicStreamSequencer(ReliableQuicStream* quic_stream, const QuicClock* clock);
+  QuicStreamSequencer(QuicStream* quic_stream, const QuicClock* clock);
   virtual ~QuicStreamSequencer();
 
   // If the frame is the next one we need in order to process in-order data,
@@ -118,7 +118,7 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
   bool MaybeCloseStream();
 
   // The stream which owns this sequencer.
-  ReliableQuicStream* stream_;
+  QuicStream* stream_;
 
   // Stores received data in offset order.
   QuicStreamSequencerBuffer buffered_frames_;

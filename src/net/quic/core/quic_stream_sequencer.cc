@@ -17,9 +17,9 @@
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
 #include "net/quic/core/quic_utils.h"
-#include "net/quic/core/reliable_quic_stream.h"
 
 using base::IntToString;
 using base::StringPiece;
@@ -29,7 +29,7 @@ using std::string;
 
 namespace net {
 
-QuicStreamSequencer::QuicStreamSequencer(ReliableQuicStream* quic_stream,
+QuicStreamSequencer::QuicStreamSequencer(QuicStream* quic_stream,
                                          const QuicClock* clock)
     : stream_(quic_stream),
       buffered_frames_(kStreamReceiveWindowLimit),
@@ -60,10 +60,10 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
       clock_->ApproximateNow(), &bytes_written, &error_details);
   if (result != QUIC_NO_ERROR) {
     string details = "Stream" + base::Uint64ToString(stream_->id()) + ": " +
-                     QuicUtils::ErrorToString(result) + ": " + error_details +
+                     QuicErrorCodeToString(result) + ": " + error_details +
                      "\nPeer Address: " +
                      stream_->PeerAddressOfLatestPacket().ToString();
-    DLOG(WARNING) << QuicUtils::ErrorToString(result);
+    DLOG(WARNING) << QuicErrorCodeToString(result);
     DLOG(WARNING) << details;
     stream_->CloseConnectionWithDetails(result, details);
     return;

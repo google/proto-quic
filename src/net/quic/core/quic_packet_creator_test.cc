@@ -16,7 +16,6 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
-#include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -126,7 +125,6 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
         data_("foo"),
         creator_(connection_id_,
                  &client_framer_,
-                 &mock_random_,
                  &buffer_allocator_,
                  &delegate_),
         serialized_packet_(creator_.NoPacket()) {
@@ -135,7 +133,6 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
     creator_.SetEncrypter(ENCRYPTION_INITIAL, new NullEncrypter());
     creator_.SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
     client_framer_.set_visitor(&framer_visitor_);
-    client_framer_.set_received_entropy_calculator(&entropy_calculator_);
     server_framer_.set_visitor(&framer_visitor_);
   }
 
@@ -196,7 +193,7 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   }
 
   QuicIOVector MakeIOVector(StringPiece s) {
-    return ::net::MakeIOVector(s, &iov_);
+    return ::net::test::MakeIOVector(s, &iov_);
   }
 
   PendingRetransmission CreateRetransmission(
@@ -223,10 +220,8 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   QuicConnectionId connection_id_;
   string data_;
   struct iovec iov_;
-  MockRandom mock_random_;
   SimpleBufferAllocator buffer_allocator_;
   QuicPacketCreator creator_;
-  MockEntropyCalculator entropy_calculator_;
   SerializedPacket serialized_packet_;
 };
 
@@ -827,117 +822,6 @@ TEST_P(QuicPacketCreatorTest, SerializeAndSendStreamFrame) {
   EXPECT_FALSE(creator_.HasPendingFrames());
 }
 
-TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithLargePacketSize) {
-  creator_.set_encryption_level(ENCRYPTION_FORWARD_SECURE);
-  if (!GetParam().version_serialization) {
-    creator_.StopSendingVersion();
-  }
-  creator_.SetMaxPacketLength(kMaxPacketSize);
-
-  // Serialized length of ack frame with 2000 nack ranges should be limited by
-  // the number of nack ranges that can be fit in an ack frame.
-  QuicAckFrame ack_frame = MakeAckFrameWithNackRanges(2000u, 0u);
-  size_t frame_len = client_framer_.GetSerializedFrameLength(
-      QuicFrame(&ack_frame), creator_.BytesFree(), true, true,
-      PACKET_1BYTE_PACKET_NUMBER);
-  EXPECT_GT(creator_.BytesFree(), frame_len);
-  EXPECT_GT(creator_.max_packet_length(), creator_.PacketSize());
-
-  // Add ack frame to creator.
-  EXPECT_TRUE(creator_.AddSavedFrame(QuicFrame(&ack_frame)));
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  EXPECT_GT(creator_.max_packet_length(), creator_.PacketSize());
-  EXPECT_LT(0u, creator_.BytesFree());
-
-  // Make sure that an additional stream frame can be added to the packet.
-  QuicFrame frame;
-  QuicIOVector io_vector(MakeIOVector("test"));
-  ASSERT_TRUE(
-      creator_.ConsumeData(2u, io_vector, 0u, 0u, false, false, &frame));
-  ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->data_length;
-  EXPECT_EQ(4u, consumed);
-  EXPECT_TRUE(creator_.HasPendingFrames());
-
-  // Ensure the packet is successfully created, and the packet size estimate
-  // matches the serialized packet length.
-  if (GetParam().version <= QUIC_VERSION_33) {
-    EXPECT_CALL(entropy_calculator_, EntropyHash(_))
-        .WillOnce(testing::Return(0));
-  }
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-  size_t est_packet_size = creator_.PacketSize();
-  creator_.Flush();
-  ASSERT_TRUE(serialized_packet_.encrypted_buffer);
-  EXPECT_EQ(est_packet_size, client_framer_.GetMaxPlaintextSize(
-                                 serialized_packet_.encrypted_length));
-  DeleteSerializedPacket();
-}
-
-TEST_P(QuicPacketCreatorTest, SerializeTruncatedAckFrameWithSmallPacketSize) {
-  if (!GetParam().version_serialization) {
-    creator_.StopSendingVersion();
-  }
-  creator_.SetMaxPacketLength(500u);
-
-  const size_t max_plaintext_size =
-      client_framer_.GetMaxPlaintextSize(creator_.max_packet_length());
-  EXPECT_EQ(max_plaintext_size - creator_.PacketSize(), creator_.BytesFree());
-
-  // Serialized length of ack frame with 2000 nack ranges should be limited by
-  // the packet size.
-  QuicAckFrame ack_frame = MakeAckFrameWithNackRanges(2000u, 0u);
-  size_t frame_len = client_framer_.GetSerializedFrameLength(
-      QuicFrame(&ack_frame), creator_.BytesFree(), true, true,
-      PACKET_1BYTE_PACKET_NUMBER);
-  EXPECT_EQ(creator_.BytesFree(), frame_len);
-
-  // Add ack frame to creator.
-  EXPECT_TRUE(creator_.AddSavedFrame(QuicFrame(&ack_frame)));
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  EXPECT_EQ(client_framer_.GetMaxPlaintextSize(creator_.max_packet_length()),
-            creator_.PacketSize());
-  EXPECT_EQ(0u, creator_.BytesFree());
-
-  // Ensure the packet is successfully created, and the packet size estimate
-  // may not match the serialized packet length.
-  if (GetParam().version <= QUIC_VERSION_33) {
-    EXPECT_CALL(entropy_calculator_, EntropyHash(_)).WillOnce(Return(0));
-  }
-  size_t est_packet_size = creator_.PacketSize();
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .WillOnce(Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-  creator_.Flush();
-  ASSERT_TRUE(serialized_packet_.encrypted_buffer);
-  EXPECT_GE(est_packet_size, client_framer_.GetMaxPlaintextSize(
-                                 serialized_packet_.encrypted_length));
-  DeleteSerializedPacket();
-}
-
-TEST_P(QuicPacketCreatorTest, EntropyFlag) {
-  frames_.push_back(QuicFrame(
-      new QuicStreamFrame(kCryptoStreamId, false, 0u, StringPiece())));
-
-  for (int i = 0; i < 2; ++i) {
-    for (int j = 0; j < 64; ++j) {
-      SerializedPacket serialized = SerializeAllFrames(frames_);
-      // Verify both BoolSource and hash algorithm.
-      bool expected_rand_bool =
-          (mock_random_.RandUint64() & (UINT64_C(1) << j)) != 0;
-      bool observed_rand_bool =
-          (serialized.entropy_hash & (1 << ((j + 1) % 8))) != 0;
-      uint8_t rest_of_hash = serialized.entropy_hash & ~(1 << ((j + 1) % 8));
-      EXPECT_EQ(expected_rand_bool, observed_rand_bool);
-      EXPECT_EQ(0, rest_of_hash);
-    }
-    // After 64 calls, BoolSource will refresh the bucket - make sure it does.
-    mock_random_.ChangeValue();
-  }
-
-  delete frames_[0].stream_frame;
-}
-
 TEST_P(QuicPacketCreatorTest, SetCurrentPath) {
   // Current path is the default path.
   EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
@@ -1059,7 +943,7 @@ TEST_P(QuicPacketCreatorTest, ChloTooLarge) {
   message_data.reset(framer.ConstructHandshakeMessage(message));
 
   struct iovec iov;
-  QuicIOVector data_iovec(::net::MakeIOVector(
+  QuicIOVector data_iovec(::net::test::MakeIOVector(
       StringPiece(message_data->data(), message_data->length()), &iov));
   QuicFrame frame;
   EXPECT_CALL(delegate_,

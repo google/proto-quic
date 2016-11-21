@@ -6,11 +6,15 @@
 
 #include <stddef.h>
 
+#include <utility>
+
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/tick_clock.h"
 
 namespace base {
 
@@ -60,26 +64,36 @@ class BaseTimerTaskInternal {
 };
 
 Timer::Timer(bool retain_user_task, bool is_repeating)
-    : scheduled_task_(NULL),
+    : Timer(retain_user_task, is_repeating, nullptr) {}
+
+Timer::Timer(bool retain_user_task, bool is_repeating, TickClock* tick_clock)
+    : scheduled_task_(nullptr),
       thread_id_(0),
       is_repeating_(is_repeating),
       retain_user_task_(retain_user_task),
-      is_running_(false) {
-}
+      tick_clock_(tick_clock),
+      is_running_(false) {}
 
 Timer::Timer(const tracked_objects::Location& posted_from,
              TimeDelta delay,
              const base::Closure& user_task,
              bool is_repeating)
-    : scheduled_task_(NULL),
+    : Timer(posted_from, delay, user_task, is_repeating, nullptr) {}
+
+Timer::Timer(const tracked_objects::Location& posted_from,
+             TimeDelta delay,
+             const base::Closure& user_task,
+             bool is_repeating,
+             TickClock* tick_clock)
+    : scheduled_task_(nullptr),
       posted_from_(posted_from),
       delay_(delay),
       user_task_(user_task),
       thread_id_(0),
       is_repeating_(is_repeating),
       retain_user_task_(true),
-      is_running_(false) {
-}
+      tick_clock_(tick_clock),
+      is_running_(false) {}
 
 Timer::~Timer() {
   StopAndAbandon();
@@ -123,7 +137,7 @@ void Timer::Reset() {
 
   // Set the new desired_run_time_.
   if (delay_ > TimeDelta::FromMicroseconds(0))
-    desired_run_time_ = TimeTicks::Now() + delay_;
+    desired_run_time_ = Now() + delay_;
   else
     desired_run_time_ = TimeTicks();
 
@@ -137,6 +151,10 @@ void Timer::Reset() {
   // We can't reuse the scheduled_task_, so abandon it and post a new one.
   AbandonScheduledTask();
   PostNewScheduledTask(delay_);
+}
+
+TimeTicks Timer::Now() const {
+  return tick_clock_ ? tick_clock_->NowTicks() : TimeTicks::Now();
 }
 
 void Timer::SetTaskInfo(const tracked_objects::Location& posted_from,
@@ -155,7 +173,7 @@ void Timer::PostNewScheduledTask(TimeDelta delay) {
     GetTaskRunner()->PostDelayedTask(posted_from_,
         base::Bind(&BaseTimerTaskInternal::Run, base::Owned(scheduled_task_)),
         delay);
-    scheduled_run_time_ = desired_run_time_ = TimeTicks::Now() + delay;
+    scheduled_run_time_ = desired_run_time_ = Now() + delay;
   } else {
     GetTaskRunner()->PostTask(posted_from_,
         base::Bind(&BaseTimerTaskInternal::Run, base::Owned(scheduled_task_)));
@@ -189,9 +207,9 @@ void Timer::RunScheduledTask() {
 
   // First check if we need to delay the task because of a new target time.
   if (desired_run_time_ > scheduled_run_time_) {
-    // TimeTicks::Now() can be expensive, so only call it if we know the user
-    // has changed the desired_run_time_.
-    TimeTicks now = TimeTicks::Now();
+    // Now() can be expensive, so only call it if we know the user has changed
+    // the desired_run_time_.
+    TimeTicks now = Now();
     // Task runner may have called us late anyway, so only post a continuation
     // task if the desired_run_time_ is in the future.
     if (desired_run_time_ > now) {

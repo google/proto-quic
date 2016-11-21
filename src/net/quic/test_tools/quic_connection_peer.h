@@ -24,7 +24,6 @@ class QuicPacketCreator;
 class QuicPacketGenerator;
 class QuicPacketWriter;
 class QuicReceivedPacketManager;
-class QuicSentEntropyManager;
 class QuicSentPacketManager;
 class SendAlgorithmInterface;
 
@@ -61,20 +60,6 @@ class QuicConnectionPeer {
                                                      QuicPathId path_id);
 
   static QuicTime::Delta GetNetworkTimeout(QuicConnection* connection);
-
-  static QuicSentEntropyManager* GetSentEntropyManager(
-      QuicConnection* connection);
-
-  static QuicPacketEntropyHash GetSentEntropyHash(
-      QuicConnection* connection,
-      QuicPacketNumber packet_number);
-
-  static QuicPacketEntropyHash PacketEntropy(QuicConnection* connection,
-                                             QuicPacketNumber packet_number);
-
-  static QuicPacketEntropyHash ReceivedEntropyHash(
-      QuicConnection* connection,
-      QuicPacketNumber packet_number);
 
   static void SetPerspective(QuicConnection* connection,
                              Perspective perspective);

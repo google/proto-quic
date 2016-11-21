@@ -14,6 +14,7 @@ namespace {
 
 static const net::MimeInfo mimetype_extension_mapping[] = {
     {"application/epub+zip", "epub"},
+    {"application/vnd.android.package-archive", "apk"},
     {"application/zip", "zip"},
     {"text/calendar", "ics"},
 };

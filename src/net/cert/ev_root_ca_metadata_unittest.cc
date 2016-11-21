@@ -5,6 +5,7 @@
 #include "net/cert/ev_root_ca_metadata.h"
 
 #include "net/cert/x509_cert_types.h"
+#include "net/der/input.h"
 #include "net/test/cert_test_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -21,6 +22,17 @@ namespace {
 const char kVerisignPolicy[] = "2.16.840.1.113733.1.7.23.6";
 const char kThawtePolicy[] = "2.16.840.1.113733.1.7.48.1";
 const char kFakePolicy[] = "2.16.840.1.42";
+#elif defined(OS_MACOSX)
+// DER OID values (no tag or length).
+const uint8_t kVerisignPolicy[] = {0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
+                                   0x45, 0x01, 0x07, 0x17, 0x06};
+const uint8_t kThawtePolicy[] = {0x60, 0x86, 0x48, 0x01, 0x86, 0xf8,
+                                 0x45, 0x01, 0x07, 0x30, 0x01};
+const uint8_t kFakePolicy[] = {0x60, 0x86, 0x48, 0x01, 0x2a};
+#endif
+
+#if defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
+const char kFakePolicyStr[] = "2.16.840.1.42";
 const SHA1HashValue kVerisignFingerprint =
     { { 0x74, 0x2c, 0x31, 0x92, 0xe6, 0x07, 0xe4, 0x24, 0xeb, 0x45,
         0x49, 0x54, 0x2b, 0xe1, 0xbb, 0xc5, 0x3e, 0x61, 0x74, 0xe2 } };
@@ -38,7 +50,7 @@ class EVOidData {
   EVRootCAMetadata::PolicyOID fake_policy;
 };
 
-#endif  // defined(USE_NSS_CERTS) || defined(OS_WIN)
+#endif  // defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
 
 #if defined(USE_NSS_CERTS)
 
@@ -78,13 +90,12 @@ bool EVOidData::Init() {
          fake_policy != SEC_OID_UNKNOWN;
 }
 
-#elif defined(OS_WIN)
+#elif defined(OS_WIN) || defined(OS_MACOSX)
 
 EVOidData::EVOidData()
     : verisign_policy(kVerisignPolicy),
       thawte_policy(kThawtePolicy),
-      fake_policy(kFakePolicy) {
-}
+      fake_policy(kFakePolicy) {}
 
 bool EVOidData::Init() {
   return true;
@@ -92,7 +103,7 @@ bool EVOidData::Init() {
 
 #endif
 
-#if defined(USE_NSS_CERTS) || defined(OS_WIN)
+#if defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
 
 class EVRootCAMetadataTest : public testing::Test {
  protected:
@@ -125,7 +136,7 @@ TEST_F(EVRootCAMetadataTest, AddRemove) {
 
   {
     ScopedTestEVPolicy test_ev_policy(ev_metadata, kFakeFingerprint,
-                                      kFakePolicy);
+                                      kFakePolicyStr);
 
     EXPECT_TRUE(ev_metadata->IsEVPolicyOID(ev_oid_data.fake_policy));
     EXPECT_TRUE(ev_metadata->HasEVPolicyOID(kFakeFingerprint,
@@ -137,7 +148,7 @@ TEST_F(EVRootCAMetadataTest, AddRemove) {
                                            ev_oid_data.fake_policy));
 }
 
-#endif  // defined(USE_NSS_CERTS) || defined(OS_WIN)
+#endif  // defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
 
 }  // namespace
 

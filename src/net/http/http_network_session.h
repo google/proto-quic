@@ -268,7 +268,7 @@ class NET_EXPORT HttpNetworkSession
   // Returns the original Params used to construct this session.
   const Params& params() const { return params_; }
 
-  bool IsProtocolEnabled(AlternateProtocol protocol) const;
+  bool IsProtocolEnabled(NextProto protocol) const;
 
   // Populates |*alpn_protos| with protocols to be used with ALPN.
   void GetAlpnProtos(NextProtoVector* alpn_protos) const;

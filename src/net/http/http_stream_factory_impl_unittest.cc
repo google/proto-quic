@@ -1109,7 +1109,7 @@ TEST_F(HttpStreamFactoryTest, UsePreConnectIfNoZeroRTT) {
 
     // Set up QUIC as alternative_service.
     HttpServerPropertiesImpl http_server_properties;
-    const AlternativeService alternative_service(QUIC, url.host().c_str(),
+    const AlternativeService alternative_service(kProtoQUIC, url.host().c_str(),
                                                  url.IntPort());
     AlternativeServiceInfoVector alternative_service_info_vector;
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
@@ -1164,7 +1164,8 @@ TEST_F(HttpStreamFactoryTest, QuicDisablePreConnectIfZeroRtt) {
 
     // Set up QUIC as alternative_service.
     HttpServerPropertiesImpl http_server_properties;
-    const AlternativeService alternative_service(QUIC, "www.google.com", 443);
+    const AlternativeService alternative_service(kProtoQUIC, "www.google.com",
+                                                 443);
     AlternativeServiceInfoVector alternative_service_info_vector;
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     alternative_service_info_vector.push_back(
@@ -1794,7 +1795,8 @@ class HttpStreamFactoryBidirectionalQuicTest
   }
 
   void AddQuicAlternativeService() {
-    const AlternativeService alternative_service(QUIC, "www.example.org", 443);
+    const AlternativeService alternative_service(kProtoQUIC, "www.example.org",
+                                                 443);
     AlternativeServiceInfoVector alternative_service_info_vector;
     base::Time expiration = base::Time::Now() + base::TimeDelta::FromDays(1);
     alternative_service_info_vector.push_back(
@@ -2238,7 +2240,7 @@ TEST_F(HttpStreamFactoryTest, DISABLED_OrphanedWebSocketStream) {
   session->http_server_properties()->SetAlternativeService(
       url::SchemeHostPort(request_info.url.scheme(), host_port_pair.host(),
                           host_port_pair.port()),
-      AlternativeService(NPN_HTTP_2, "www.google.com", 9999), expiration);
+      AlternativeService(kProtoHTTP2, "www.google.com", 9999), expiration);
 
   SSLConfig ssl_config;
   StreamRequestWaiter waiter;

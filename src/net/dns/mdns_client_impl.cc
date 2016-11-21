@@ -23,7 +23,7 @@
 #include "net/dns/dns_protocol.h"
 #include "net/dns/dns_util.h"
 #include "net/dns/record_rdata.h"
-#include "net/udp/datagram_socket.h"
+#include "net/socket/datagram_socket.h"
 
 // TODO(gene): Remove this temporary method of disabling NSEC support once it
 // becomes clear whether this feature should be

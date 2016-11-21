@@ -29,7 +29,11 @@ class BASE_EXPORT JavaObjectWeakGlobalRef {
 
   base::android::ScopedJavaLocalRef<jobject> get(JNIEnv* env) const;
 
-  bool is_empty() const { return obj_ == nullptr; }
+  // Returns true if the weak reference has not been initialized to point at
+  // an object (or ḣas had reset() called).
+  // Do not call this to test if the object referred to still exists! The weak
+  // reference remains initialized even if the target object has been collected.
+  bool is_uninitialized() const { return obj_ == nullptr; }
 
   void reset();
 

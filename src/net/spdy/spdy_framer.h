@@ -510,6 +510,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // using zlib anyway.
 
   // For ease of testing and experimentation we can tweak compression on/off.
+  bool enable_compression() const { return enable_compression_; }
   void set_enable_compression(bool value) {
     enable_compression_ = value;
   }

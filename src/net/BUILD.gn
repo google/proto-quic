@@ -386,11 +386,9 @@ public_deps += [ ":features", "//url" ]
 
     # Brotli support.
     if (!disable_brotli_filter) {
-      sources += [ "filter/brotli_filter.cc" ]
       sources += [ "filter/brotli_source_stream.cc" ]
       deps += [ "//third_party/brotli" ]
     } else {
-      sources += [ "filter/brotli_filter_disabled.cc" ]
       sources += [ "filter/brotli_source_stream_disabled.cc" ]
     }
   }
@@ -518,6 +516,8 @@ static_library("test_support") {
     "dns/mock_host_resolver.h",
     "dns/mock_mdns_socket_factory.cc",
     "dns/mock_mdns_socket_factory.h",
+    "filter/mock_source_stream.cc",
+    "filter/mock_source_stream.h",
     "http/http_stream_factory_test_util.cc",
     "http/http_stream_factory_test_util.h",
     "http/http_transaction_test_util.cc",
@@ -1050,6 +1050,7 @@ if (is_linux) {
       "tools/quic/quic_socket_utils.h",
     ]
     deps = [
+#      ":balsa",
       ":epoll_server",
       ":net",
       ":simple_quic_tools",
@@ -1066,6 +1067,7 @@ if (is_linux) {
       "tools/quic/quic_client_bin.cc",
     ]
     deps = [
+#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1081,6 +1083,7 @@ if (is_linux) {
       "tools/quic/quic_server_bin.cc",
     ]
     deps = [
+#      ":balsa",
       ":epoll_quic_tools",
       ":epoll_server",
       ":net",
@@ -1176,6 +1179,7 @@ source_set("simple_quic_tools") {
     "tools/quic/synchronous_host_resolver.h",
   ]
   deps = [
+#    ":balsa",
     ":net",
     "//base",
     "//base/third_party/dynamic_annotations",
@@ -1301,6 +1305,7 @@ test("net_unittests") {
   defines = []
 
   deps = [
+#    ":balsa",
     ":extras",
     ":net",
     ":simple_quic_tools",
@@ -1490,7 +1495,6 @@ test("net_unittests") {
       "disk_cache/blockfile/block_files_unittest.cc",
 
       # Need to read input data files.
-      "filter/gzip_filter_unittest.cc",
       "socket/ssl_server_socket_unittest.cc",
       "spdy/fuzzing/hpack_fuzz_util_test.cc",
 
@@ -1544,12 +1548,6 @@ test("net_unittests") {
       "url_request/url_request_job_unittest.cc",
       "url_request/url_request_unittest.cc",
     ]
-  }
-
-  # Exclude brotli test if the support for brotli is disabled.
-  # Also, exclude the test from iOS for now (needs to read input data files).
-  if (disable_brotli_filter || is_ios) {
-    sources -= [ "filter/brotli_filter_unittest.cc" ]
   }
 
   if (is_android) {

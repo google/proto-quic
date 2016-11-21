@@ -26,13 +26,21 @@ NET_EXPORT uint64_t CalculateAuditPathLength(uint64_t leaf_index,
 struct NET_EXPORT MerkleAuditProof {
   MerkleAuditProof();
   MerkleAuditProof(uint64_t leaf_index,
+                   uint64_t tree_size,
                    const std::vector<std::string>& audit_path);
   ~MerkleAuditProof();
 
   // Index of the tree leaf in the log.
+  // Must be provided when fetching the proof from the log.
   uint64_t leaf_index = 0;
 
+  // The proof works only in conjunction with an STH for this tree size.
+  // Must be provided when fetching the proof from the log.
+  uint64_t tree_size = 0;
+
   // Audit path nodes.
+  // Using the leaf hash and these nodes, the STH hash can be reconstructed to
+  // prove that leaf was included in the log's tree.
   std::vector<std::string> nodes;
 };
 

@@ -5,6 +5,7 @@
 #include "net/disk_cache/simple/simple_version_upgrade.h"
 
 #include <stdint.h>
+#include <string>
 
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
@@ -14,6 +15,7 @@
 #include "net/base/net_errors.h"
 #include "net/disk_cache/simple/simple_backend_version.h"
 #include "net/disk_cache/simple/simple_entry_format_history.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 // The migration process relies on ability to rename newly created files, which
@@ -36,8 +38,8 @@ bool WriteFakeIndexFileV5(const base::FilePath& cache_path) {
   disk_cache::FakeIndexData data;
   data.version = 5;
   data.initial_magic_number = kSimpleInitialMagicNumber;
-  data.unused_must_be_zero1 = 0;
-  data.unused_must_be_zero2 = 0;
+  data.experiment_type = disk_cache::SimpleExperimentType::NONE;
+  data.experiment_param = 0;
   const base::FilePath file_name = cache_path.AppendASCII("index");
   return sizeof(data) ==
          base::WriteFile(
@@ -52,13 +54,101 @@ TEST(SimpleVersionUpgradeTest, FailsToMigrateBackwards) {
   disk_cache::FakeIndexData data;
   data.version = 100500;
   data.initial_magic_number = kSimpleInitialMagicNumber;
-  data.unused_must_be_zero1 = 0;
-  data.unused_must_be_zero2 = 0;
+  data.experiment_type = disk_cache::SimpleExperimentType::NONE;
+  data.experiment_param = 0;
   const base::FilePath file_name = cache_path.AppendASCII(kFakeIndexFileName);
   ASSERT_EQ(static_cast<int>(sizeof(data)),
             base::WriteFile(file_name, reinterpret_cast<const char*>(&data),
                             sizeof(data)));
-  EXPECT_FALSE(disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath()));
+  EXPECT_FALSE(disk_cache::UpgradeSimpleCacheOnDisk(
+      cache_dir.GetPath(), disk_cache::SimpleExperiment()));
+}
+
+TEST(SimpleVersionUpgradeTest, ExperimentFromDefault) {
+  base::ScopedTempDir cache_dir;
+  ASSERT_TRUE(cache_dir.CreateUniqueTempDir());
+  const base::FilePath cache_path = cache_dir.GetPath();
+
+  disk_cache::FakeIndexData data;
+  data.version = disk_cache::kSimpleVersion;
+  data.initial_magic_number = kSimpleInitialMagicNumber;
+  data.experiment_type = disk_cache::SimpleExperimentType::NONE;
+  data.experiment_param = 0;
+  const base::FilePath file_name = cache_path.AppendASCII(kFakeIndexFileName);
+  ASSERT_EQ(static_cast<int>(sizeof(data)),
+            base::WriteFile(file_name, reinterpret_cast<const char*>(&data),
+                            sizeof(data)));
+
+  disk_cache::SimpleExperiment experiment;
+
+  // No change in experiment, so no cache rewrite necessary.
+  EXPECT_TRUE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath(), experiment));
+
+  // Changing the experiment type causes a cache rewrite.
+  experiment.type = disk_cache::SimpleExperimentType::SIZE;
+  EXPECT_FALSE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath(), experiment));
+
+  // Changing the experiment parameter causes a cache rewrite.
+  experiment = disk_cache::SimpleExperiment();
+  experiment.param = 1;
+  EXPECT_FALSE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath(), experiment));
+
+  // Changing the experiment type and parameter causes a cache rewrite.
+  experiment = disk_cache::SimpleExperiment();
+  experiment.type = disk_cache::SimpleExperimentType::SIZE;
+  experiment.param = 2;
+  EXPECT_FALSE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath(), experiment));
+}
+
+TEST(SimpleVersionUpgradeTest, ExperimentBacktoDefault) {
+  base::ScopedTempDir cache_dir;
+  ASSERT_TRUE(cache_dir.CreateUniqueTempDir());
+  const base::FilePath cache_path = cache_dir.GetPath();
+
+  disk_cache::FakeIndexData data;
+  data.version = disk_cache::kSimpleVersion;
+  data.initial_magic_number = kSimpleInitialMagicNumber;
+  data.experiment_type = disk_cache::SimpleExperimentType::SIZE;
+  data.experiment_param = 4;
+  const base::FilePath file_name = cache_path.AppendASCII(kFakeIndexFileName);
+  ASSERT_EQ(static_cast<int>(sizeof(data)),
+            base::WriteFile(file_name, reinterpret_cast<const char*>(&data),
+                            sizeof(data)));
+
+  // The cache needs to transition from SIZE experiment back to NONE.
+  EXPECT_FALSE(disk_cache::UpgradeSimpleCacheOnDisk(
+      cache_dir.GetPath(), disk_cache::SimpleExperiment()));
+}
+
+TEST(SimpleVersionUpgradeTest, ExperimentStoredInNewFakeIndex) {
+  base::ScopedTempDir cache_dir;
+  ASSERT_TRUE(cache_dir.CreateUniqueTempDir());
+  const base::FilePath cache_path = cache_dir.GetPath();
+  const base::FilePath file_name = cache_path.AppendASCII(kFakeIndexFileName);
+
+  disk_cache::SimpleExperiment experiment;
+  experiment.type = disk_cache::SimpleExperimentType::SIZE;
+  experiment.param = 100u;
+
+  // There is no index on disk, so the upgrade should write a new one and return
+  // true.
+  EXPECT_TRUE(
+      disk_cache::UpgradeSimpleCacheOnDisk(cache_dir.GetPath(), experiment));
+
+  std::string new_fake_index_contents;
+  ASSERT_TRUE(base::ReadFileToString(cache_path.AppendASCII(kFakeIndexFileName),
+                                     &new_fake_index_contents));
+  const disk_cache::FakeIndexData* fake_index_header;
+  fake_index_header = reinterpret_cast<const disk_cache::FakeIndexData*>(
+      new_fake_index_contents.data());
+
+  EXPECT_EQ(disk_cache::SimpleExperimentType::SIZE,
+            fake_index_header->experiment_type);
+  EXPECT_EQ(100u, fake_index_header->experiment_param);
 }
 
 TEST(SimpleVersionUpgradeTest, FakeIndexVersionGetsUpdated) {
@@ -74,7 +164,8 @@ TEST(SimpleVersionUpgradeTest, FakeIndexVersionGetsUpdated) {
       base::WriteFile(index_file, file_contents.data(), file_contents.size()));
 
   // Upgrade.
-  ASSERT_TRUE(disk_cache::UpgradeSimpleCacheOnDisk(cache_path));
+  ASSERT_TRUE(disk_cache::UpgradeSimpleCacheOnDisk(
+      cache_path, disk_cache::SimpleExperiment()));
 
   // Check that the version in the fake index file is updated.
   std::string new_fake_index_contents;

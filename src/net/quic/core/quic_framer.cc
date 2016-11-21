@@ -91,12 +91,6 @@ const uint8_t kQuicStreamFinMask = 0x01;
 // packet number size shift used in AckFrames.
 const uint8_t kQuicSequenceNumberLengthShift = 2;
 
-// Acks may be truncated.
-const uint8_t kQuicAckTruncatedShift = 1;
-const uint8_t kQuicAckTruncatedMask = 0x01;
-
-// Acks may not have any nacks.
-const uint8_t kQuicHasNacksMask = 0x01;
 // Acks may have only one ack block.
 const uint8_t kQuicHasMultipleAckBlocksMask = 0x01;
 const uint8_t kQuicHasMultipleAckBlocksShift = 1;
@@ -138,7 +132,6 @@ QuicFramer::QuicFramer(const QuicVersionVector& supported_versions,
                        QuicTime creation_time,
                        Perspective perspective)
     : visitor_(nullptr),
-      entropy_calculator_(nullptr),
       error_(QUIC_NO_ERROR),
       last_packet_number_(0),
       largest_packet_number_(0),
@@ -175,9 +168,6 @@ size_t QuicFramer::GetMinAckFrameSize(
     QuicPacketNumberLength largest_observed_length) {
   size_t min_size = kQuicFrameTypeSize + largest_observed_length +
                     kQuicDeltaTimeLargestObservedSize;
-  if (version <= QUIC_VERSION_33) {
-    return min_size + kQuicEntropyHashSize;
-  }
   return min_size + kQuicNumTimestampsSize;
 }
 
@@ -186,9 +176,6 @@ size_t QuicFramer::GetStopWaitingFrameSize(
     QuicVersion version,
     QuicPacketNumberLength packet_number_length) {
   size_t min_size = kQuicFrameTypeSize + packet_number_length;
-  if (version <= QUIC_VERSION_33) {
-    return min_size + kQuicEntropyHashSize;
-  }
   return min_size;
 }
 
@@ -324,19 +311,6 @@ size_t QuicFramer::GetSerializedFrameLength(
   return 0;
 }
 
-QuicFramer::AckFrameInfo::AckFrameInfo() : max_delta(0) {}
-
-QuicFramer::AckFrameInfo::AckFrameInfo(const AckFrameInfo& other) = default;
-
-QuicFramer::AckFrameInfo::~AckFrameInfo() {}
-
-QuicFramer::AckBlock::AckBlock(uint8_t gap, QuicPacketNumber length)
-    : gap(gap), length(length) {}
-
-QuicFramer::AckBlock::AckBlock(const AckBlock& other) = default;
-
-QuicFramer::AckBlock::~AckBlock() {}
-
 QuicFramer::NewAckFrameInfo::NewAckFrameInfo()
     : max_block_length(0), first_block_length(0), num_ack_blocks(0) {}
 
@@ -344,12 +318,6 @@ QuicFramer::NewAckFrameInfo::NewAckFrameInfo(const NewAckFrameInfo& other) =
     default;
 
 QuicFramer::NewAckFrameInfo::~NewAckFrameInfo() {}
-
-// static
-QuicPacketEntropyHash QuicFramer::GetPacketEntropyHash(
-    const QuicPacketHeader& header) {
-  return header.entropy_flag << (header.packet_number % 8);
-}
 
 size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
                                    const QuicFrames& frames,
@@ -382,18 +350,9 @@ size_t QuicFramer::BuildDataPacket(const QuicPacketHeader& header,
         }
         break;
       case ACK_FRAME:
-        if (quic_version_ <= QUIC_VERSION_33) {
-          if (!AppendAckFrameAndTypeByte(header, *frame.ack_frame, &writer)) {
-            QUIC_BUG << "AppendAckFrameAndTypeByte failed"
-                     << " header: " << header
-                     << " ack_fame: " << *frame.ack_frame;
-            return 0;
-          }
-        } else {
-          if (!AppendNewAckFrameAndTypeByte(*frame.ack_frame, &writer)) {
-            QUIC_BUG << "AppendNewAckFrameAndTypeByte failed";
-            return 0;
-          }
+        if (!AppendNewAckFrameAndTypeByte(*frame.ack_frame, &writer)) {
+          QUIC_BUG << "AppendNewAckFrameAndTypeByte failed";
+          return 0;
         }
         break;
       case STOP_WAITING_FRAME:
@@ -621,12 +580,6 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
   }
 
   QuicDataReader reader(decrypted_buffer, decrypted_length);
-  if (quic_version_ <= QUIC_VERSION_33) {
-    if (!ProcessAuthenticatedHeader(&reader, &header)) {
-      DVLOG(1) << "Unable to process packet header.  Stopping parsing.";
-      return false;
-    }
-  }
 
   // Set the last packet number after we have decrypted the packet
   // so we are confident is not attacker controlled.
@@ -720,14 +673,9 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
       }
       break;
     case PACKET_8BYTE_CONNECTION_ID:
-      if (quic_version_ > QUIC_VERSION_32) {
-        public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID;
-        if (!FLAGS_quic_remove_v33_hacks2 &&
-            perspective_ == Perspective::IS_CLIENT) {
-          public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
-        }
-
-      } else {
+      public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID;
+      if (!FLAGS_quic_remove_v33_hacks2 &&
+          perspective_ == Perspective::IS_CLIENT) {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
       }
       if (!writer->WriteUInt8(public_flags) ||
@@ -743,7 +691,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
     QuicTag tag = QuicVersionToQuicTag(quic_version_);
     writer->WriteUInt32(tag);
     DVLOG(1) << "version = " << quic_version_ << ", tag = '"
-             << QuicUtils::TagToString(tag) << "'";
+             << QuicTagToString(tag) << "'";
   }
 
   if (header.public_header.multipath_flag &&
@@ -759,17 +707,6 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
 
   if (!AppendPacketSequenceNumber(header.public_header.packet_number_length,
                                   header.packet_number, writer)) {
-    return false;
-  }
-  if (quic_version_ > QUIC_VERSION_33) {
-    return true;
-  }
-
-  uint8_t private_flags = 0;
-  if (header.entropy_flag) {
-    private_flags |= PACKET_PRIVATE_FLAGS_ENTROPY;
-  }
-  if (!writer->WriteUInt8(private_flags)) {
     return false;
   }
 
@@ -926,12 +863,8 @@ bool QuicFramer::ProcessPublicHeader(QuicDataReader* reader,
   }
 
   // A nonce should only be present in packets from the server to the client,
-  // which are neither version negotiation nor public reset packets
-  // and only for versions after QUIC_VERSION_32. Earlier versions will
-  // set this bit when indicating an 8-byte connection ID, which should
-  // not be interpreted as indicating a nonce is present.
-  if (quic_version_ > QUIC_VERSION_32 &&
-      public_flags & PACKET_PUBLIC_FLAGS_NONCE &&
+  // which are neither version negotiation nor public reset packets.
+  if (public_flags & PACKET_PUBLIC_FLAGS_NONCE &&
       !(public_flags & PACKET_PUBLIC_FLAGS_VERSION) &&
       !(public_flags & PACKET_PUBLIC_FLAGS_RST) &&
       // The nonce flag from a client is ignored and is assumed to be an older
@@ -980,37 +913,6 @@ uint8_t QuicFramer::GetSequenceNumberFlags(
       QUIC_BUG << "Unreachable case statement.";
       return PACKET_FLAGS_6BYTE_PACKET;
   }
-}
-
-// static
-QuicFramer::AckFrameInfo QuicFramer::GetAckFrameInfo(
-    const QuicAckFrame& frame) {
-  AckFrameInfo ack_info;
-  if (frame.packets.Empty()) {
-    return ack_info;
-  }
-  DCHECK_GE(frame.largest_observed, frame.packets.Max());
-  QuicPacketNumber last_largest_missing = 0;
-  for (const Interval<QuicPacketNumber>& interval : frame.packets) {
-    for (QuicPacketNumber interval_start = interval.min();
-         interval_start < interval.max();
-         interval_start += (1ull + std::numeric_limits<uint8_t>::max())) {
-      uint8_t cur_range_length =
-          interval.max() - interval_start > std::numeric_limits<uint8_t>::max()
-              ? std::numeric_limits<uint8_t>::max()
-              : (interval.max() - interval_start) - 1;
-      ack_info.nack_ranges[interval_start] = cur_range_length;
-    }
-    ack_info.max_delta =
-        max(ack_info.max_delta, last_largest_missing == 0
-                                    ? QuicPacketNumber{0}
-                                    : (interval.min() - last_largest_missing));
-    last_largest_missing = interval.max() - 1;
-  }
-  // Include the range to the largest observed.
-  ack_info.max_delta =
-      max(ack_info.max_delta, frame.largest_observed - last_largest_missing);
-  return ack_info;
 }
 
 // static
@@ -1078,24 +980,6 @@ bool QuicFramer::ProcessUnauthenticatedHeader(QuicDataReader* encrypted_reader,
   return true;
 }
 
-bool QuicFramer::ProcessAuthenticatedHeader(QuicDataReader* reader,
-                                            QuicPacketHeader* header) {
-  uint8_t private_flags;
-  if (!reader->ReadBytes(&private_flags, 1)) {
-    set_detailed_error("Unable to read private flags.");
-    return RaiseError(QUIC_INVALID_PACKET_HEADER);
-  }
-
-  if (private_flags > PACKET_PRIVATE_FLAGS_MAX) {
-    set_detailed_error("Illegal private flags value.");
-    return RaiseError(QUIC_INVALID_PACKET_HEADER);
-  }
-
-  header->entropy_flag = (private_flags & PACKET_PRIVATE_FLAGS_ENTROPY) != 0;
-  header->entropy_hash = GetPacketEntropyHash(*header);
-  return true;
-}
-
 bool QuicFramer::ProcessPathId(QuicDataReader* reader, QuicPathId* path_id) {
   if (!reader->ReadBytes(path_id, 1)) {
     return false;
@@ -1152,14 +1036,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
       // Ack Frame
       if (frame_type & kQuicFrameTypeAckMask) {
         QuicAckFrame frame;
-        if (quic_version_ <= QUIC_VERSION_33) {
-          if (!ProcessAckFrame(reader, frame_type, &frame)) {
-            return RaiseError(QUIC_INVALID_ACK_DATA);
-          }
-        } else {
-          if (!ProcessNewAckFrame(reader, frame_type, &frame)) {
-            return RaiseError(QUIC_INVALID_ACK_DATA);
-          }
+        if (!ProcessNewAckFrame(reader, frame_type, &frame)) {
+          return RaiseError(QUIC_INVALID_ACK_DATA);
         }
         if (!visitor_->OnAckFrame(frame)) {
           DVLOG(1) << "Visitor asked to stop further processing.";
@@ -1352,83 +1230,6 @@ bool QuicFramer::ProcessStreamFrame(QuicDataReader* reader,
   return true;
 }
 
-bool QuicFramer::ProcessAckFrame(QuicDataReader* reader,
-                                 uint8_t frame_type,
-                                 QuicAckFrame* ack_frame) {
-  // Determine the three lengths from the frame type: largest observed length,
-  // missing packet number length, and missing range length.
-  const QuicPacketNumberLength missing_packet_number_length =
-      ReadSequenceNumberLength(frame_type);
-  frame_type >>= kQuicSequenceNumberLengthShift;
-  const QuicPacketNumberLength largest_observed_packet_number_length =
-      ReadSequenceNumberLength(frame_type);
-  frame_type >>= kQuicSequenceNumberLengthShift;
-  ack_frame->is_truncated = frame_type & kQuicAckTruncatedMask;
-  frame_type >>= kQuicAckTruncatedShift;
-  bool has_nacks = frame_type & kQuicHasNacksMask;
-
-  if (!reader->ReadBytes(&ack_frame->entropy_hash, 1)) {
-    set_detailed_error("Unable to read entropy hash for received packets.");
-    return false;
-  }
-
-  if (!reader->ReadBytes(&ack_frame->largest_observed,
-                         largest_observed_packet_number_length)) {
-    set_detailed_error("Unable to read largest observed.");
-    return false;
-  }
-
-  uint64_t ack_delay_time_us;
-  if (!reader->ReadUFloat16(&ack_delay_time_us)) {
-    set_detailed_error("Unable to read ack delay time.");
-    return false;
-  }
-
-  if (ack_delay_time_us == kUFloat16MaxValue) {
-    ack_frame->ack_delay_time = QuicTime::Delta::Infinite();
-  } else {
-    ack_frame->ack_delay_time =
-        QuicTime::Delta::FromMicroseconds(ack_delay_time_us);
-  }
-
-  if (!ProcessTimestampsInAckFrame(reader, ack_frame)) {
-    return false;
-  }
-
-  if (!has_nacks) {
-    return true;
-  }
-
-  uint8_t num_missing_ranges;
-  if (!reader->ReadBytes(&num_missing_ranges, 1)) {
-    set_detailed_error("Unable to read num missing packet ranges.");
-    return false;
-  }
-
-  QuicPacketNumber last_packet_number = ack_frame->largest_observed;
-  for (size_t i = 0; i < num_missing_ranges; ++i) {
-    QuicPacketNumber missing_delta = 0;
-    if (!reader->ReadBytes(&missing_delta, missing_packet_number_length)) {
-      set_detailed_error("Unable to read missing packet number delta.");
-      return false;
-    }
-    last_packet_number -= missing_delta;
-    QuicPacketNumber range_length = 0;
-    if (!reader->ReadBytes(&range_length, PACKET_1BYTE_PACKET_NUMBER)) {
-      set_detailed_error("Unable to read missing packet number range.");
-      return false;
-    }
-    ack_frame->packets.Add(last_packet_number - range_length,
-                           last_packet_number + 1);
-    // Subtract an extra 1 to ensure ranges are represented efficiently and
-    // can't overlap by 1 packet number.  This allows a missing_delta of 0
-    // to represent an adjacent nack range.
-    last_packet_number -= (range_length + 1);
-  }
-
-  return true;
-}
-
 bool QuicFramer::ProcessNewAckFrame(QuicDataReader* reader,
                                     uint8_t frame_type,
                                     QuicAckFrame* ack_frame) {
@@ -1442,7 +1243,6 @@ bool QuicFramer::ProcessNewAckFrame(QuicDataReader* reader,
   frame_type >>= kQuicSequenceNumberLengthShift;
   frame_type >>= kQuicHasMultipleAckBlocksShift;
   bool has_ack_blocks = frame_type & kQuicHasMultipleAckBlocksMask;
-  ack_frame->missing = false;
 
   if (!reader->ReadBytes(&ack_frame->largest_observed, largest_acked_length)) {
     set_detailed_error("Unable to read largest acked.");
@@ -1508,9 +1308,6 @@ bool QuicFramer::ProcessNewAckFrame(QuicDataReader* reader,
 
 bool QuicFramer::ProcessTimestampsInAckFrame(QuicDataReader* reader,
                                              QuicAckFrame* ack_frame) {
-  if (ack_frame->is_truncated) {
-    return true;
-  }
   uint8_t num_received_packets;
   if (!reader->ReadBytes(&num_received_packets, 1)) {
     set_detailed_error("Unable to read num received packets.");
@@ -1569,13 +1366,6 @@ bool QuicFramer::ProcessTimestampsInAckFrame(QuicDataReader* reader,
 bool QuicFramer::ProcessStopWaitingFrame(QuicDataReader* reader,
                                          const QuicPacketHeader& header,
                                          QuicStopWaitingFrame* stop_waiting) {
-  if (quic_version_ <= QUIC_VERSION_33) {
-    if (!reader->ReadBytes(&stop_waiting->entropy_hash, 1)) {
-      set_detailed_error("Unable to read entropy hash for sent packets.");
-      return false;
-    }
-  }
-
   QuicPacketNumber least_unacked_delta = 0;
   if (!reader->ReadBytes(&least_unacked_delta,
                          header.public_header.packet_number_length)) {
@@ -1843,8 +1633,7 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
     }
     bool try_alternative_decryption = true;
     if (alternative_decrypter_level_ == ENCRYPTION_INITIAL) {
-      if (perspective_ == Perspective::IS_CLIENT &&
-          quic_version_ > QUIC_VERSION_32) {
+      if (perspective_ == Perspective::IS_CLIENT) {
         if (header.public_header.nonce == nullptr) {
           // Can not use INITIAL decryption without a diversification nonce.
           try_alternative_decryption = false;
@@ -1898,30 +1687,6 @@ size_t QuicFramer::GetAckFrameSize(
     const QuicAckFrame& ack,
     QuicPacketNumberLength packet_number_length) {
   size_t ack_size = 0;
-  if (quic_version_ <= QUIC_VERSION_33) {
-    AckFrameInfo ack_info = GetAckFrameInfo(ack);
-    QuicPacketNumberLength largest_observed_length =
-        GetMinSequenceNumberLength(ack.largest_observed);
-    QuicPacketNumberLength missing_packet_number_length =
-        GetMinSequenceNumberLength(ack_info.max_delta);
-
-    ack_size = GetMinAckFrameSize(quic_version_, largest_observed_length);
-    if (!ack_info.nack_ranges.empty()) {
-      ack_size += kNumberOfNackRangesSize;
-      ack_size += min(ack_info.nack_ranges.size(), kMaxNackRanges) *
-                  (missing_packet_number_length + PACKET_1BYTE_PACKET_NUMBER);
-    }
-
-    // In version 23, if the ack will be truncated due to too many nack ranges,
-    // then do not include the number of timestamps (1 byte).
-    if (ack_info.nack_ranges.size() <= kMaxNackRanges) {
-      // 1 byte for the number of timestamps.
-      ack_size += 1;
-      ack_size += GetAckFrameTimeStampSize(ack);
-    }
-
-    return ack_size;
-  }
 
   NewAckFrameInfo ack_info = GetNewAckFrameInfo(ack);
   QuicPacketNumberLength largest_acked_length =
@@ -2099,141 +1864,6 @@ bool QuicFramer::AppendStreamFrame(const QuicStreamFrame& frame,
 void QuicFramer::set_version(const QuicVersion version) {
   DCHECK(IsSupportedVersion(version)) << QuicVersionToString(version);
   quic_version_ = version;
-}
-
-bool QuicFramer::AppendAckFrameAndTypeByte(const QuicPacketHeader& header,
-                                           const QuicAckFrame& frame,
-                                           QuicDataWriter* writer) {
-  AckFrameInfo ack_info = GetAckFrameInfo(frame);
-  QuicPacketNumber ack_largest_observed = frame.largest_observed;
-  QuicPacketNumberLength largest_observed_length =
-      GetMinSequenceNumberLength(ack_largest_observed);
-  QuicPacketNumberLength missing_packet_number_length =
-      GetMinSequenceNumberLength(ack_info.max_delta);
-  // Determine whether we need to truncate ranges.
-  size_t available_range_bytes =
-      writer->capacity() - writer->length() - kNumberOfNackRangesSize -
-      GetMinAckFrameSize(quic_version_, largest_observed_length);
-  size_t max_num_ranges =
-      available_range_bytes /
-      (missing_packet_number_length + PACKET_1BYTE_PACKET_NUMBER);
-  max_num_ranges = min(kMaxNackRanges, max_num_ranges);
-  bool truncated = ack_info.nack_ranges.size() > max_num_ranges;
-  DVLOG_IF(1, truncated) << "Truncating ack from "
-                         << ack_info.nack_ranges.size() << " ranges to "
-                         << max_num_ranges;
-  // Write out the type byte by setting the low order bits and doing shifts
-  // to make room for the next bit flags to be set.
-  // Whether there are any nacks.
-  uint8_t type_byte = ack_info.nack_ranges.empty() ? 0 : kQuicHasNacksMask;
-
-  // truncating bit.
-  type_byte <<= kQuicAckTruncatedShift;
-  type_byte |= truncated ? kQuicAckTruncatedMask : 0;
-
-  // Largest observed packet number length.
-  type_byte <<= kQuicSequenceNumberLengthShift;
-  type_byte |= GetSequenceNumberFlags(largest_observed_length);
-
-  // Missing packet number length.
-  type_byte <<= kQuicSequenceNumberLengthShift;
-  type_byte |= GetSequenceNumberFlags(missing_packet_number_length);
-
-  type_byte |= kQuicFrameTypeAckMask;
-
-  if (!writer->WriteUInt8(type_byte)) {
-    QUIC_BUG << "type byte failed";
-    return false;
-  }
-
-  QuicPacketEntropyHash ack_entropy_hash = frame.entropy_hash;
-  NackRangeMap::reverse_iterator ack_iter = ack_info.nack_ranges.rbegin();
-  if (truncated) {
-    // Skip the nack ranges which the truncated ack won't include and set
-    // a correct largest observed for the truncated ack.
-    for (size_t i = 1; i < (ack_info.nack_ranges.size() - max_num_ranges);
-         ++i) {
-      ++ack_iter;
-    }
-    // If the last range is followed by acks, include them.
-    // If the last range is followed by another range, specify the end of the
-    // range as the largest_observed.
-    ack_largest_observed = ack_iter->first - 1;
-    // Also update the entropy so it matches the largest observed.
-    ack_entropy_hash = entropy_calculator_->EntropyHash(ack_largest_observed);
-    ++ack_iter;
-  }
-
-  if (!writer->WriteUInt8(ack_entropy_hash)) {
-    QUIC_BUG << "hash failed.";
-    return false;
-  }
-
-  if (!AppendPacketSequenceNumber(largest_observed_length, ack_largest_observed,
-                                  writer)) {
-    QUIC_BUG << "AppendPacketSequenceNumber failed. "
-             << "largest_observed_length: " << largest_observed_length
-             << " ack_largest_observed: " << ack_largest_observed;
-    return false;
-  }
-
-  uint64_t ack_delay_time_us = kUFloat16MaxValue;
-  if (!frame.ack_delay_time.IsInfinite()) {
-    DCHECK_LE(0u, frame.ack_delay_time.ToMicroseconds());
-    ack_delay_time_us = frame.ack_delay_time.ToMicroseconds();
-  }
-
-  if (!writer->WriteUFloat16(ack_delay_time_us)) {
-    QUIC_BUG << "ack delay time failed.";
-    return false;
-  }
-
-  // Timestamp goes at the end of the required fields.
-  if (!truncated) {
-    if (!AppendTimestampToAckFrame(frame, writer)) {
-      QUIC_BUG << "AppendTimestampToAckFrame failed";
-      return false;
-    }
-  }
-
-  if (ack_info.nack_ranges.empty()) {
-    return true;
-  }
-
-  const uint8_t num_missing_ranges =
-      static_cast<uint8_t>(min(ack_info.nack_ranges.size(), max_num_ranges));
-  if (!writer->WriteBytes(&num_missing_ranges, 1)) {
-    QUIC_BUG << "num_missing_ranges failed: "
-             << static_cast<uint32_t>(num_missing_ranges);
-    return false;
-  }
-
-  int num_ranges_written = 0;
-  QuicPacketNumber last_sequence_written = ack_largest_observed;
-  for (; ack_iter != ack_info.nack_ranges.rend(); ++ack_iter) {
-    // Calculate the delta to the last number in the range.
-    QuicPacketNumber missing_delta =
-        last_sequence_written - (ack_iter->first + ack_iter->second);
-    if (!AppendPacketSequenceNumber(missing_packet_number_length, missing_delta,
-                                    writer)) {
-      QUIC_BUG << "AppendPacketSequenceNumber failed: "
-               << "missing_packet_number_length: "
-               << missing_packet_number_length << " missing_delta "
-               << missing_delta;
-      return false;
-    }
-    if (!AppendPacketSequenceNumber(PACKET_1BYTE_PACKET_NUMBER,
-                                    ack_iter->second, writer)) {
-      QUIC_BUG << "AppendPacketSequenceNumber failed";
-      return false;
-    }
-    // Subtract 1 so a missing_delta of 0 means an adjacent range.
-    last_sequence_written = ack_iter->first - 1;
-    ++num_ranges_written;
-  }
-  DCHECK_EQ(num_missing_ranges, num_ranges_written);
-
-  return true;
 }
 
 bool QuicFramer::AppendNewAckFrameAndTypeByte(const QuicAckFrame& frame,
@@ -2457,12 +2087,6 @@ bool QuicFramer::AppendStopWaitingFrame(const QuicPacketHeader& header,
       header.packet_number - frame.least_unacked;
   const QuicPacketNumber length_shift =
       header.public_header.packet_number_length * 8;
-  if (quic_version_ <= QUIC_VERSION_33) {
-    if (!writer->WriteUInt8(frame.entropy_hash)) {
-      QUIC_BUG << " hash failed";
-      return false;
-    }
-  }
 
   if (least_unacked_delta >> length_shift > 0) {
     QUIC_BUG << "packet_number_length "
@@ -2560,7 +2184,7 @@ bool QuicFramer::AppendPathCloseFrame(const QuicPathCloseFrame& frame,
 }
 
 bool QuicFramer::RaiseError(QuicErrorCode error) {
-  DVLOG(1) << "Error: " << QuicUtils::ErrorToString(error)
+  DVLOG(1) << "Error: " << QuicErrorCodeToString(error)
            << " detail: " << detailed_error_;
   set_error(error);
   visitor_->OnError(this);

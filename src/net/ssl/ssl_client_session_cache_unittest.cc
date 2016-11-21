@@ -8,10 +8,32 @@
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/test/simple_test_clock.h"
+#include "base/time/time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
 
 namespace net {
+
+namespace {
+
+std::unique_ptr<base::SimpleTestClock> MakeTestClock() {
+  std::unique_ptr<base::SimpleTestClock> clock =
+      base::MakeUnique<base::SimpleTestClock>();
+  // SimpleTestClock starts at the null base::Time which converts to and from
+  // time_t confusingly.
+  clock->SetNow(base::Time::FromTimeT(1000000000));
+  return clock;
+}
+
+bssl::UniquePtr<SSL_SESSION> MakeTestSession(base::Time now,
+                                             base::TimeDelta timeout) {
+  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
+  SSL_SESSION_set_time(session.get(), now.ToTimeT());
+  SSL_SESSION_set_timeout(session.get(), timeout.InSeconds());
+  return session;
+}
+
+}  // namespace
 
 // Test basic insertion and lookup operations.
 TEST(SSLClientSessionCacheTest, Basic) {
@@ -143,21 +165,22 @@ TEST(SSLClientSessionCacheTest, Expiration) {
 
   SSLClientSessionCache::Config config;
   config.expiration_check_count = kExpirationCheckCount;
-  config.timeout = kTimeout;
   SSLClientSessionCache cache(config);
-  base::SimpleTestClock* clock = new base::SimpleTestClock;
+  base::SimpleTestClock* clock = MakeTestClock().release();
   cache.SetClockForTesting(base::WrapUnique(clock));
 
   // Add |kNumEntries - 1| entries.
   for (size_t i = 0; i < kNumEntries - 1; i++) {
-    bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
+    bssl::UniquePtr<SSL_SESSION> session =
+        MakeTestSession(clock->Now(), kTimeout);
     cache.Insert(base::SizeTToString(i), session.get());
   }
   EXPECT_EQ(kNumEntries - 1, cache.size());
 
   // Expire all the previous entries and insert one more entry.
   clock->Advance(kTimeout * 2);
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session =
+      MakeTestSession(clock->Now(), kTimeout);
   cache.Insert("key", session.get());
 
   // All entries are still in the cache.
@@ -191,13 +214,13 @@ TEST(SSLClientSessionCacheTest, LookupExpirationCheck) {
 
   SSLClientSessionCache::Config config;
   config.expiration_check_count = kExpirationCheckCount;
-  config.timeout = kTimeout;
   SSLClientSessionCache cache(config);
-  base::SimpleTestClock* clock = new base::SimpleTestClock;
+  base::SimpleTestClock* clock = MakeTestClock().release();
   cache.SetClockForTesting(base::WrapUnique(clock));
 
   // Insert an entry into the session cache.
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session =
+      MakeTestSession(clock->Now(), kTimeout);
   cache.Insert("key", session.get());
   EXPECT_EQ(session.get(), cache.Lookup("key").get());
   EXPECT_EQ(1u, cache.size());
@@ -212,13 +235,20 @@ TEST(SSLClientSessionCacheTest, LookupExpirationCheck) {
   EXPECT_EQ(nullptr, cache.Lookup("key").get());
   EXPECT_EQ(0u, cache.size());
 
-  // Sessions also are treated as expired if the clock rewinds.
+  // Re-inserting a session does not refresh the lifetime. The expiration
+  // information in the session is used.
+  cache.Insert("key", session.get());
+  EXPECT_EQ(nullptr, cache.Lookup("key").get());
+  EXPECT_EQ(0u, cache.size());
+
+  // Re-insert a fresh copy of the session.
+  session = MakeTestSession(clock->Now(), kTimeout);
   cache.Insert("key", session.get());
   EXPECT_EQ(session.get(), cache.Lookup("key").get());
   EXPECT_EQ(1u, cache.size());
 
-  clock->Advance(-kTimeout * 2);
-
+  // Sessions also are treated as expired if the clock rewinds.
+  clock->Advance(base::TimeDelta::FromSeconds(-1));
   EXPECT_EQ(nullptr, cache.Lookup("key").get());
   EXPECT_EQ(0u, cache.size());
 }
@@ -232,13 +262,13 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
 
   SSLClientSessionCache::Config config;
   config.expiration_check_count = kExpirationCheckCount;
-  config.timeout = kTimeout;
   SSLClientSessionCache cache(config);
-  base::SimpleTestClock* clock = new base::SimpleTestClock;
+  base::SimpleTestClock* clock = MakeTestClock().release();
   cache.SetClockForTesting(base::WrapUnique(clock));
 
   // Insert an entry into the session cache.
-  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1 =
+      MakeTestSession(clock->Now(), kTimeout);
   cache.Insert("key1", session1.get());
   EXPECT_EQ(session1.get(), cache.Lookup("key1").get());
   EXPECT_EQ(1u, cache.size());
@@ -246,7 +276,8 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
   // Expire the session.
   clock->Advance(kTimeout * 2);
   // Add one more session.
-  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session2 =
+      MakeTestSession(clock->Now(), kTimeout);
   cache.Insert("key2", session2.get());
   EXPECT_EQ(2u, cache.size());
 

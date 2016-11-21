@@ -37,8 +37,8 @@
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_service.h"
+#include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/quic_utils.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"
@@ -213,8 +213,7 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
 
     for (QuicErrorCode error = QUIC_NO_ERROR; error < QUIC_LAST_ERROR;
          error = static_cast<QuicErrorCode>(error + 1)) {
-      dict->SetInteger(QuicUtils::ErrorToString(error),
-                       static_cast<int>(error));
+      dict->SetInteger(QuicErrorCodeToString(error), static_cast<int>(error));
     }
 
     constants_dict->Set("quicError", std::move(dict));
@@ -228,7 +227,7 @@ std::unique_ptr<base::DictionaryValue> GetNetConstants() {
     for (QuicRstStreamErrorCode error = QUIC_STREAM_NO_ERROR;
          error < QUIC_STREAM_LAST_ERROR;
          error = static_cast<QuicRstStreamErrorCode>(error + 1)) {
-      dict->SetInteger(QuicUtils::StreamErrorToString(error),
+      dict->SetInteger(QuicRstStreamErrorCodeToString(error),
                        static_cast<int>(error));
     }
 
@@ -446,7 +445,7 @@ NET_EXPORT std::unique_ptr<base::DictionaryValue> GetNetInfo(
       for (NextProto proto : alpn_protos) {
         if (!next_protos_string.empty())
           next_protos_string.append(",");
-        next_protos_string.append(SSLClientSocket::NextProtoToString(proto));
+        next_protos_string.append(NextProtoToString(proto));
       }
       status_dict->SetString("alpn_protos", next_protos_string);
     }

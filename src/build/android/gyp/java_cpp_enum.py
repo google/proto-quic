@@ -90,16 +90,20 @@ class EnumDefinition(object):
       if not all([w.startswith(prefix_to_strip) for w in self.entries.keys()]):
         prefix_to_strip = ''
 
-    entries = collections.OrderedDict()
-    for (k, v) in self.entries.iteritems():
-      stripped_key = k.replace(prefix_to_strip, '', 1)
-      if isinstance(v, basestring):
-        stripped_value = v.replace(prefix_to_strip, '', 1)
-      else:
-        stripped_value = v
-      entries[stripped_key] = stripped_value
+    def StripEntries(entries):
+      ret = collections.OrderedDict()
+      for (k, v) in entries.iteritems():
+        stripped_key = k.replace(prefix_to_strip, '', 1)
+        if isinstance(v, basestring):
+          stripped_value = v.replace(prefix_to_strip, '', 1)
+        else:
+          stripped_value = v
+        ret[stripped_key] = stripped_value
 
-    self.entries = entries
+      return ret
+
+    self.entries = StripEntries(self.entries)
+    self.comments = StripEntries(self.comments)
 
 class DirectiveSet(object):
   class_name_override_key = 'CLASS_NAME_OVERRIDE'
@@ -134,23 +138,24 @@ class HeaderParser(object):
   multi_line_comment_start_re = re.compile(r'\s*/\*')
   enum_line_re = re.compile(r'^\s*(\w+)(\s*\=\s*([^,\n]+))?,?')
   enum_end_re = re.compile(r'^\s*}\s*;\.*$')
+  generator_error_re = re.compile(r'^\s*//\s+GENERATED_JAVA_(\w+)\s*:\s*$')
   generator_directive_re = re.compile(
       r'^\s*//\s+GENERATED_JAVA_(\w+)\s*:\s*([\.\w]+)$')
   multi_line_generator_directive_start_re = re.compile(
       r'^\s*//\s+GENERATED_JAVA_(\w+)\s*:\s*\(([\.\w]*)$')
-  multi_line_directive_continuation_re = re.compile(
-      r'^\s*//\s+([\.\w]+)$')
-  multi_line_directive_end_re = re.compile(
-      r'^\s*//\s+([\.\w]*)\)$')
+  multi_line_directive_continuation_re = re.compile(r'^\s*//\s+([\.\w]+)$')
+  multi_line_directive_end_re = re.compile(r'^\s*//\s+([\.\w]*)\)$')
 
   optional_class_or_struct_re = r'(class|struct)?'
   enum_name_re = r'(\w+)'
   optional_fixed_type_re = r'(\:\s*(\w+\s*\w+?))?'
   enum_start_re = re.compile(r'^\s*(?:\[cpp.*\])?\s*enum\s+' +
       optional_class_or_struct_re + '\s*' + enum_name_re + '\s*' +
-      optional_fixed_type_re + '\s*{\s*$')
+      optional_fixed_type_re + '\s*{\s*')
+  enum_single_line_re = re.compile(
+      r'^\s*(?:\[cpp.*\])?\s*enum.*{(?P<enum_entries>.*)}.*$')
 
-  def __init__(self, lines, path=None):
+  def __init__(self, lines, path=''):
     self._lines = lines
     self._path = path
     self._enum_definitions = []
@@ -189,11 +194,18 @@ class HeaderParser(object):
       if comment:
         self._current_comments.append(comment)
     elif HeaderParser.enum_end_re.match(line):
-      self._FinalizeCurrentEnumEntry()
+      self._FinalizeCurrentEnumDefinition()
     else:
       self._AddToCurrentEnumEntry(line)
       if ',' in line:
         self._ParseCurrentEnumEntry()
+
+  def _ParseSingleLineEnum(self, line):
+    for entry in line.split(','):
+      self._AddToCurrentEnumEntry(entry)
+      self._ParseCurrentEnumEntry()
+
+    self._FinalizeCurrentEnumDefinition()
 
   def _ParseCurrentEnumEntry(self):
     if not self._current_enum_entry:
@@ -208,20 +220,21 @@ class HeaderParser(object):
     enum_value = enum_entry.groups()[2]
     self._current_definition.AppendEntry(enum_key, enum_value)
     if self._current_comments:
-       self._current_definition.AppendEntryComment(
-               enum_key, ' '.join(self._current_comments))
-       self._current_comments = []
+      self._current_definition.AppendEntryComment(
+          enum_key, ' '.join(self._current_comments))
+      self._current_comments = []
     self._current_enum_entry = ''
 
   def _AddToCurrentEnumEntry(self, line):
     self._current_enum_entry += ' ' + line.strip()
 
-  def _FinalizeCurrentEnumEntry(self):
+  def _FinalizeCurrentEnumDefinition(self):
     if self._current_enum_entry:
       self._ParseCurrentEnumEntry()
     self._ApplyGeneratorDirectives()
     self._current_definition.Finalize()
     self._enum_definitions.append(self._current_definition)
+    self._current_definition = None
     self._in_enum = False
 
   def _ParseMultiLineDirectiveLine(self, line):
@@ -245,11 +258,18 @@ class HeaderParser(object):
 
   def _ParseRegularLine(self, line):
     enum_start = HeaderParser.enum_start_re.match(line)
+    generator_directive_error = HeaderParser.generator_error_re.match(line)
     generator_directive = HeaderParser.generator_directive_re.match(line)
     multi_line_generator_directive_start = (
         HeaderParser.multi_line_generator_directive_start_re.match(line))
+    single_line_enum = HeaderParser.enum_single_line_re.match(line)
 
-    if generator_directive:
+    if generator_directive_error:
+      raise Exception('Malformed directive declaration in ' + self._path +
+                      '. Use () for multi-line directives. E.g.\n' +
+                      '// GENERATED_JAVA_ENUM_PACKAGE: (\n' +
+                      '//   foo.package)')
+    elif generator_directive:
       directive_name = generator_directive.groups()[0]
       directive_value = generator_directive.groups()[1]
       self._generator_directives.Update(directive_name, directive_value)
@@ -257,13 +277,15 @@ class HeaderParser(object):
       directive_name = multi_line_generator_directive_start.groups()[0]
       directive_value = multi_line_generator_directive_start.groups()[1]
       self._multi_line_generator_directive = (directive_name, [directive_value])
-    elif enum_start:
+    elif enum_start or single_line_enum:
       if self._generator_directives.empty:
         return
       self._current_definition = EnumDefinition(
           original_enum_name=enum_start.groups()[1],
           fixed_type=enum_start.groups()[3])
       self._in_enum = True
+      if single_line_enum:
+        self._ParseSingleLineEnum(single_line_enum.group('enum_entries'))
 
 def GetScriptName():
   return os.path.basename(os.path.abspath(sys.argv[0]))

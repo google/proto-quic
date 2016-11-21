@@ -275,6 +275,12 @@ BASE_EXPORT bool GetAppOutputWithExitCode(const CommandLine& cl,
 BASE_EXPORT void RaiseProcessToHighPriority();
 
 #if defined(OS_MACOSX)
+// An implementation of LaunchProcess() that uses posix_spawn() instead of
+// fork()+exec(). This does not support the |pre_exec_delegate| and
+// |current_directory| options.
+Process LaunchProcessPosixSpawn(const std::vector<std::string>& argv,
+                                const LaunchOptions& options);
+
 // Restore the default exception handler, setting it to Apple Crash Reporter
 // (ReportCrash).  When forking and execing a new process, the child will
 // inherit the parent's exception ports, which may be set to the Breakpad

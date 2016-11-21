@@ -17,7 +17,7 @@ class JavaTestRunner(object):
     self._coverage_dir = args.coverage_dir
     self._package_filter = args.package_filter
     self._runner_filter = args.runner_filter
-    self._sdk_version = args.sdk_version
+
     self._test_filter = args.test_filter
     self._test_suite = args.test_suite
 
@@ -40,8 +40,6 @@ class JavaTestRunner(object):
         jar_args.extend(['-package-filter', self._package_filter])
       if self._runner_filter:
         jar_args.extend(['-runner-filter', self._runner_filter])
-      if self._sdk_version:
-        jar_args.extend(['-sdk-version', self._sdk_version])
       command.extend(['--jar-args', '"%s"' % ' '.join(jar_args)])
 
       # Add JVM arguments.

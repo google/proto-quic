@@ -13,7 +13,7 @@
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_protocol.h"
-#include "net/quic/core/reliable_quic_stream.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
@@ -28,7 +28,7 @@ class QuicHeadersStreamPeer;
 // over a reserved reliable stream with the id 3.  Each endpoint
 // (client and server) will allocate an instance of QuicHeadersStream
 // to send and receive headers.
-class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
+class NET_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
  public:
   class NET_EXPORT_PRIVATE HpackDebugVisitor {
    public:
@@ -73,7 +73,7 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public ReliableQuicStream {
       bool fin,
       QuicAckListenerInterface* ack_notifier_delegate);
 
-  // ReliableQuicStream implementation
+  // QuicStream implementation
   void OnDataAvailable() override;
 
   bool supports_push_promise() { return supports_push_promise_; }

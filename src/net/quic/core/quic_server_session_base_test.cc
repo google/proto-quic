@@ -24,9 +24,11 @@
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_stream_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_sustained_bandwidth_recorder_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
+#include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 #include "net/tools/quic/test_tools/mock_quic_server_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -57,8 +59,8 @@ namespace test {
 
 class QuicServerSessionBasePeer {
  public:
-  static ReliableQuicStream* GetOrCreateDynamicStream(QuicServerSessionBase* s,
-                                                      QuicStreamId id) {
+  static QuicStream* GetOrCreateDynamicStream(QuicServerSessionBase* s,
+                                              QuicStreamId id) {
     return s->GetOrCreateDynamicStream(id);
   }
   static void SetCryptoStream(QuicServerSessionBase* s,
@@ -605,7 +607,6 @@ INSTANTIATE_TEST_CASE_P(StreamMemberLifetimeTests,
 // stream has been destroyed, and verify that there are no memory bugs.
 TEST_P(StreamMemberLifetimeTest, Basic) {
   FLAGS_enable_async_get_proof = true;
-  FLAGS_quic_buffer_packet_till_chlo = true;
   FLAGS_enable_quic_stateless_reject_support = true;
   FLAGS_quic_use_cheap_stateless_rejects = true;
   FLAGS_quic_create_session_after_insertion = true;

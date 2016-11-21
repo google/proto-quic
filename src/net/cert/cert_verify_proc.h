@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "base/feature_list.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
@@ -83,6 +84,8 @@ class NET_EXPORT CertVerifyProc
   friend class base::RefCountedThreadSafe<CertVerifyProc>;
   FRIEND_TEST_ALL_PREFIXES(CertVerifyProcTest, DigiNotarCerts);
   FRIEND_TEST_ALL_PREFIXES(CertVerifyProcTest, TestHasTooLongValidity);
+  FRIEND_TEST_ALL_PREFIXES(CertVerifyProcTest,
+                           VerifyRejectsSHA1AfterDeprecationLegacyMode);
 
   // Performs the actual verification using the desired underlying
   // cryptographic library. On entry, |verify_result->verified_cert|
@@ -123,6 +126,10 @@ class NET_EXPORT CertVerifyProc
   // requirement they expire within 7 years after the effective date of the BRs
   // (i.e. by 1 July 2019).
   static bool HasTooLongValidity(const X509Certificate& cert);
+
+  // Emergency kill-switch for SHA-1 deprecation. Disabled by default.
+  static const base::Feature kSHA1LegacyMode;
+  const bool sha1_legacy_mode_enabled;
 
   DISALLOW_COPY_AND_ASSIGN(CertVerifyProc);
 };

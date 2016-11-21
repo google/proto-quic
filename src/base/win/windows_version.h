@@ -56,6 +56,7 @@ class BASE_EXPORT OSInfo {
     int major;
     int minor;
     int build;
+    int patch;
   };
 
   struct ServicePack {

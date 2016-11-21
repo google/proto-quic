@@ -23,15 +23,15 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer.h"
-#include "net/quic/core/reliable_quic_stream.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
 
 namespace test {
 class QuicSpdyStreamPeer;
-class ReliableQuicStreamPeer;
+class QuicStreamPeer;
 }  // namespace test
 
 class QuicSpdySession;
@@ -43,7 +43,7 @@ class QuicSpdySession;
 const SpdyPriority kDefaultPriority = 3;
 
 // A QUIC stream that can send and receive HTTP2 (SPDY) headers.
-class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
+class NET_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
  public:
   // Visitor receives callbacks from the stream.
   class NET_EXPORT_PRIVATE Visitor {
@@ -72,7 +72,7 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
   void CloseWriteSide() override;
   void StopReading() override;
 
-  // ReliableQuicStream implementation
+  // QuicStream implementation
   void OnClose() override;
 
   // Override to maybe close the write side after writing.
@@ -203,7 +203,7 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public ReliableQuicStream {
 
  private:
   friend class test::QuicSpdyStreamPeer;
-  friend class test::ReliableQuicStreamPeer;
+  friend class test::QuicStreamPeer;
   friend class QuicStreamUtils;
 
   QuicSpdySession* spdy_session_;

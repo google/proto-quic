@@ -653,7 +653,7 @@ void FindBadConstructsConsumer::CountType(const Type* type,
 
       // HACK: I'm at a loss about how to get the syntax checker to get
       // whether a template is externed or not. For the first pass here,
-      // just do retarded string comparisons.
+      // just do simple string comparisons.
       if (TemplateDecl* decl = name.getAsTemplateDecl()) {
         std::string base_name = decl->getNameAsString();
         if (base_name == "basic_string")
@@ -675,7 +675,15 @@ void FindBadConstructsConsumer::CountType(const Type* type,
     }
     case Type::Typedef: {
       while (const TypedefType* TT = dyn_cast<TypedefType>(type)) {
-        type = TT->getDecl()->getUnderlyingType().getTypePtr();
+        if (auto* decl = TT->getDecl()) {
+          const std::string name = decl->getNameAsString();
+          auto* context = decl->getDeclContext();
+          if (name == "atomic_int" && context->isStdNamespace()) {
+            (*trivial_member)++;
+            return;
+          }
+          type = decl->getUnderlyingType().getTypePtr();
+        }
       }
       CountType(type,
                 trivial_member,

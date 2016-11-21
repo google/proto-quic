@@ -68,6 +68,7 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
 
   // QuicChromiumClientSession::Observer implementation:
   void OnCryptoHandshakeConfirmed() override;
+  void OnSuccessfulVersionNegotiation(const QuicVersion& version) override;
   void OnSessionClosed(int error, bool port_migration_detected) override;
 
   void OnStreamReady(int rv);

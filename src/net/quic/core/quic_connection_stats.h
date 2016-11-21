@@ -86,6 +86,9 @@ struct NET_EXPORT_PRIVATE QuicConnectionStats {
 
   // Creation time, as reported by the QuicClock.
   QuicTime connection_creation_time;
+
+  uint64_t blocked_frames_received;
+  uint64_t blocked_frames_sent;
 };
 
 }  // namespace net

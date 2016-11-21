@@ -9,6 +9,7 @@
 #define NET_TEST_URL_REQUEST_URL_REQUEST_SLOW_DOWNLOAD_JOB_H_
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include <set>
 #include <string>
@@ -37,6 +38,7 @@ class URLRequestSlowDownloadJob : public URLRequestJob {
 
   // URLRequestJob methods
   void Start() override;
+  int64_t GetTotalReceivedBytes() const override;
   bool GetMimeType(std::string* mime_type) const override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;

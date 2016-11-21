@@ -13,11 +13,11 @@ from devil.android import apk_helper
 from devil.android import md5sum
 from pylib import constants
 from pylib.base import base_test_result
+from pylib.base import test_exception
 from pylib.base import test_instance
 from pylib.constants import host_paths
 from pylib.instrumentation import test_result
 from pylib.instrumentation import instrumentation_parser
-from pylib.utils import isolator
 from pylib.utils import proguard
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
@@ -49,17 +49,19 @@ _EXTRA_TIMEOUT_SCALE = (
 _PARAMETERIZED_TEST_ANNOTATION = 'ParameterizedTest'
 _PARAMETERIZED_TEST_SET_ANNOTATION = 'ParameterizedTest$Set'
 _NATIVE_CRASH_RE = re.compile('(process|native) crash', re.IGNORECASE)
+_CMDLINE_NAME_SEGMENT_RE = re.compile(
+    r' with(?:out)? \{[^\}]*\}')
 _PICKLE_FORMAT_VERSION = 10
 
 
-class MissingSizeAnnotationError(Exception):
+class MissingSizeAnnotationError(test_exception.TestException):
   def __init__(self, class_name):
     super(MissingSizeAnnotationError, self).__init__(class_name +
         ': Test method is missing required size annotation. Add one of: ' +
         ', '.join('@' + a for a in _VALID_ANNOTATIONS))
 
 
-class ProguardPickleException(Exception):
+class ProguardPickleException(test_exception.TestException):
   pass
 
 
@@ -219,12 +221,19 @@ def FilterTests(tests, test_filter=None, annotations=None,
   Return:
     A list of filtered tests
   """
-  def gtest_filter(c, m):
+  def gtest_filter(t):
     if not test_filter:
       return True
     # Allow fully-qualified name as well as an omitted package.
-    names = ['%s.%s' % (c['class'], m['method']),
-             '%s.%s' % (c['class'].split('.')[-1], m['method'])]
+    unqualified_class_test = {
+      'class': t['class'].split('.')[-1],
+      'method': t['method']
+    }
+    names = [
+      GetTestName(t, sep='.'),
+      GetTestName(unqualified_class_test, sep='.'),
+      GetUniqueTestName(t, sep='.')
+    ]
     return unittest_util.FilterTestNames(names, test_filter)
 
   def annotation_filter(all_annotations):
@@ -253,33 +262,24 @@ def FilterTests(tests, test_filter=None, annotations=None,
       return filter_av in av
     return filter_av == av
 
-  filtered_classes = []
-  for c in tests:
-    filtered_methods = []
-    for m in c['methods']:
-      # Gtest filtering
-      if not gtest_filter(c, m):
-        continue
+  filtered_tests = []
+  for t in tests:
+    # Gtest filtering
+    if not gtest_filter(t):
+      continue
 
-      all_annotations = dict(c['annotations'])
-      all_annotations.update(m['annotations'])
+    # Enforce that all tests declare their size.
+    if not any(a in _VALID_ANNOTATIONS for a in t['annotations']):
+      raise MissingSizeAnnotationError(GetTestName(t))
 
-      # Enforce that all tests declare their size.
-      if not any(a in _VALID_ANNOTATIONS for a in all_annotations):
-        raise MissingSizeAnnotationError('%s.%s' % (c['class'], m['method']))
+    if (not annotation_filter(t['annotations'])
+        or not excluded_annotation_filter(t['annotations'])):
+      continue
 
-      if (not annotation_filter(all_annotations)
-          or not excluded_annotation_filter(all_annotations)):
-        continue
+    filtered_tests.append(t)
 
-      filtered_methods.append(m)
+  return filtered_tests
 
-    if filtered_methods:
-      filtered_class = dict(c)
-      filtered_class['methods'] = filtered_methods
-      filtered_classes.append(filtered_class)
-
-  return filtered_classes
 
 def GetAllTests(test_jar):
   pickle_path = '%s-proguard.pickle' % test_jar
@@ -352,9 +352,54 @@ def _SaveTestsToPickle(pickle_path, jar_path, tests):
     pickle.dump(pickle_data, pickle_file)
 
 
+class UnmatchedFilterException(test_exception.TestException):
+  """Raised when a user specifies a filter that doesn't match any tests."""
+
+  def __init__(self, test_filter):
+    super(UnmatchedFilterException, self).__init__(
+        'Test filter "%s" matched no tests.' % test_filter)
+
+
+def GetTestName(test, sep='#'):
+  """Gets the name of the given test.
+
+  Note that this may return the same name for more than one test, e.g. if a
+  test is being run multiple times with different parameters.
+
+  Args:
+    test: the instrumentation test dict.
+    sep: the character(s) that should join the class name and the method name.
+  Returns:
+    The test name as a string.
+  """
+  return '%s%s%s' % (test['class'], sep, test['method'])
+
+
+def GetUniqueTestName(test, sep='#'):
+  """Gets the unique name of the given test.
+
+  This will include text to disambiguate between tests for which GetTestName
+  would return the same name.
+
+  Args:
+    test: the instrumentation test dict.
+    sep: the character(s) that should join the class name and the method name.
+  Returns:
+    The unique test name as a string.
+  """
+  display_name = GetTestName(test, sep=sep)
+  if 'flags' in test:
+    flags = test['flags']
+    if flags.add:
+      display_name = '%s with {%s}' % (display_name, ' '.join(flags.add))
+    if flags.remove:
+      display_name = '%s without {%s}' % (display_name, ' '.join(flags.remove))
+  return display_name
+
+
 class InstrumentationTestInstance(test_instance.TestInstance):
 
-  def __init__(self, args, isolate_delegate, error_func):
+  def __init__(self, args, data_deps_delegate, error_func):
     super(InstrumentationTestInstance, self).__init__()
 
     self._additional_apks = []
@@ -371,10 +416,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._initializeApkAttributes(args, error_func)
 
     self._data_deps = None
-    self._isolate_abs_path = None
-    self._isolate_delegate = None
-    self._isolated_abs_path = None
-    self._initializeDataDependencyAttributes(args, isolate_delegate)
+    self._data_deps_delegate = None
+    self._runtime_deps_path = None
+    self._initializeDataDependencyAttributes(args, data_deps_delegate)
 
     self._annotations = None
     self._excluded_annotations = None
@@ -474,27 +518,18 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._additional_apks = (
         [apk_helper.ToHelper(x) for x in args.additional_apks])
 
-  def _initializeDataDependencyAttributes(self, args, isolate_delegate):
+  def _initializeDataDependencyAttributes(self, args, data_deps_delegate):
     self._data_deps = []
-    if (args.isolate_file_path and
-        not isolator.IsIsolateEmpty(args.isolate_file_path)):
-      if os.path.isabs(args.isolate_file_path):
-        self._isolate_abs_path = args.isolate_file_path
-      else:
-        self._isolate_abs_path = os.path.join(
-            constants.DIR_SOURCE_ROOT, args.isolate_file_path)
-      self._isolate_delegate = isolate_delegate
-      self._isolated_abs_path = os.path.join(
-          constants.GetOutDirectory(), '%s.isolated' % self._test_package)
-    else:
-      self._isolate_delegate = None
+    self._data_deps_delegate = data_deps_delegate
+    self._runtime_deps_path = args.runtime_deps_path
 
-    if not self._isolate_delegate:
+    if not self._runtime_deps_path:
       logging.warning('No data dependencies will be pushed.')
 
   def _initializeTestFilterAttributes(self, args):
     if args.test_filter:
-      self._test_filter = args.test_filter.replace('#', '.')
+      self._test_filter = _CMDLINE_NAME_SEGMENT_RE.sub(
+          '', args.test_filter.replace('#', '.'))
 
     def annotation_element(a):
       a = a.split('=', 1)
@@ -641,20 +676,23 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   #override
   def SetUp(self):
-    if self._isolate_delegate:
-      self._isolate_delegate.Remap(
-          self._isolate_abs_path, self._isolated_abs_path)
-      self._isolate_delegate.MoveOutputDeps()
-      self._data_deps.extend([(self._isolate_delegate.isolate_deps_dir, None)])
+    self._data_deps.extend(
+        self._data_deps_delegate(self._runtime_deps_path))
 
   def GetDataDependencies(self):
     return self._data_deps
 
   def GetTests(self):
     tests = GetAllTests(self.test_jar)
+    inflated_tests = self._ParametrizeTestsWithFlags(self._InflateTests(tests))
     filtered_tests = FilterTests(
-        tests, self._test_filter, self._annotations, self._excluded_annotations)
-    return self._ParametrizeTestsWithFlags(self._InflateTests(filtered_tests))
+        inflated_tests, self._test_filter, self._annotations,
+        self._excluded_annotations)
+    if self._test_filter and not filtered_tests:
+      for t in inflated_tests:
+        logging.debug('  %s', GetUniqueTestName(t))
+      raise UnmatchedFilterException(self._test_filter)
+    return filtered_tests
 
   # pylint: disable=no-self-use
   def _InflateTests(self, tests):
@@ -711,5 +749,4 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   #override
   def TearDown(self):
-    if self._isolate_delegate:
-      self._isolate_delegate.Clear()
+    pass

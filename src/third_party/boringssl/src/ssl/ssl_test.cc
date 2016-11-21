@@ -865,17 +865,21 @@ static bool TestCipherGetRFCName(void) {
   return true;
 }
 
-// CreateSessionWithTicket returns a sample |SSL_SESSION| with the ticket
-// replaced for one of length |ticket_len| or nullptr on failure.
-static bssl::UniquePtr<SSL_SESSION> CreateSessionWithTicket(size_t ticket_len) {
+// CreateSessionWithTicket returns a sample |SSL_SESSION| with the specified
+// version and ticket length or nullptr on failure.
+static bssl::UniquePtr<SSL_SESSION> CreateSessionWithTicket(uint16_t version,
+                                                            size_t ticket_len) {
   std::vector<uint8_t> der;
   if (!DecodeBase64(&der, kOpenSSLSession)) {
     return nullptr;
   }
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_from_bytes(der.data(), der.size()));
+  bssl::UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(der.data(), der.size()));
   if (!session) {
     return nullptr;
   }
+
+  session->ssl_version = version;
 
   // Swap out the ticket for a garbage one.
   OPENSSL_free(session->tlsext_tick);
@@ -887,7 +891,11 @@ static bssl::UniquePtr<SSL_SESSION> CreateSessionWithTicket(size_t ticket_len) {
   session->tlsext_ticklen = ticket_len;
 
   // Fix up the timeout.
+#if defined(BORINGSSL_UNSAFE_DETERMINISTIC_MODE)
+  session->time = 1234;
+#else
   session->time = time(NULL);
+#endif
   return session;
 }
 
@@ -915,27 +923,32 @@ static bool GetClientHello(SSL *ssl, std::vector<uint8_t> *out) {
   return true;
 }
 
-// GetClientHelloLen creates a client SSL connection with a ticket of length
-// |ticket_len| and records the ClientHello. It returns the length of the
-// ClientHello, not including the record header, on success and zero on error.
-static size_t GetClientHelloLen(size_t ticket_len) {
+// GetClientHelloLen creates a client SSL connection with the specified version
+// and ticket length. It returns the length of the ClientHello, not including
+// the record header, on success and zero on error.
+static size_t GetClientHelloLen(uint16_t max_version, uint16_t session_version,
+                                size_t ticket_len) {
   bssl::UniquePtr<SSL_CTX> ctx(SSL_CTX_new(TLS_method()));
-  bssl::UniquePtr<SSL_SESSION> session = CreateSessionWithTicket(ticket_len);
+  bssl::UniquePtr<SSL_SESSION> session =
+      CreateSessionWithTicket(session_version, ticket_len);
   if (!ctx || !session) {
     return 0;
   }
+
+  // Set a one-element cipher list so the baseline ClientHello is unpadded.
   bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
-  // Test at TLS 1.2. TLS 1.3 adds enough extensions that the ClientHello is
-  // longer than our test vectors.
   if (!ssl || !SSL_set_session(ssl.get(), session.get()) ||
-      !SSL_set_max_proto_version(ssl.get(), TLS1_2_VERSION)) {
+      !SSL_set_cipher_list(ssl.get(), "ECDHE-RSA-AES128-GCM-SHA256") ||
+      !SSL_set_max_proto_version(ssl.get(), max_version)) {
     return 0;
   }
+
   std::vector<uint8_t> client_hello;
   if (!GetClientHello(ssl.get(), &client_hello) ||
       client_hello.size() <= SSL3_RT_HEADER_LENGTH) {
     return 0;
   }
+
   return client_hello.size() - SSL3_RT_HEADER_LENGTH;
 }
 
@@ -964,28 +977,37 @@ static const PaddingTest kPaddingTests[] = {
     {0x201, 0x201},
 };
 
-static bool TestPaddingExtension() {
+static bool TestPaddingExtension(uint16_t max_version,
+                                 uint16_t session_version) {
   // Sample a baseline length.
-  size_t base_len = GetClientHelloLen(1);
+  size_t base_len = GetClientHelloLen(max_version, session_version, 1);
   if (base_len == 0) {
     return false;
   }
 
   for (const PaddingTest &test : kPaddingTests) {
     if (base_len > test.input_len) {
-      fprintf(stderr, "Baseline ClientHello too long.\n");
+      fprintf(stderr,
+              "Baseline ClientHello too long (max_version = %04x, "
+              "session_version = %04x).\n",
+              max_version, session_version);
       return false;
     }
 
-    size_t padded_len = GetClientHelloLen(1 + test.input_len - base_len);
+    size_t padded_len = GetClientHelloLen(max_version, session_version,
+                                          1 + test.input_len - base_len);
     if (padded_len != test.padded_len) {
-      fprintf(stderr, "%u-byte ClientHello padded to %u bytes, not %u.\n",
+      fprintf(stderr,
+              "%u-byte ClientHello padded to %u bytes, not %u (max_version = "
+              "%04x, session_version = %04x).\n",
               static_cast<unsigned>(test.input_len),
               static_cast<unsigned>(padded_len),
-              static_cast<unsigned>(test.padded_len));
+              static_cast<unsigned>(test.padded_len), max_version,
+              session_version);
       return false;
     }
   }
+
   return true;
 }
 
@@ -2097,6 +2119,42 @@ static int RenewTicketCallback(SSL *ssl, uint8_t *key_name, uint8_t *iv,
   return encrypt ? 1 : 2;
 }
 
+static bool GetServerTicketTime(long *out, const SSL_SESSION *session) {
+  if (session->tlsext_ticklen < 16 + 16 + SHA256_DIGEST_LENGTH) {
+    return false;
+  }
+
+  const uint8_t *ciphertext = session->tlsext_tick + 16 + 16;
+  size_t len = session->tlsext_ticklen - 16 - 16 - SHA256_DIGEST_LENGTH;
+  std::unique_ptr<uint8_t[]> plaintext(new uint8_t[len]);
+
+#if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
+  // Fuzzer-mode tickets are unencrypted.
+  memcpy(plaintext.get(), ciphertext, len);
+#else
+  static const uint8_t kZeros[16] = {0};
+  const uint8_t *iv = session->tlsext_tick + 16;
+  bssl::ScopedEVP_CIPHER_CTX ctx;
+  int len1, len2;
+  if (!EVP_DecryptInit_ex(ctx.get(), EVP_aes_128_cbc(), nullptr, kZeros, iv) ||
+      !EVP_DecryptUpdate(ctx.get(), plaintext.get(), &len1, ciphertext, len) ||
+      !EVP_DecryptFinal_ex(ctx.get(), plaintext.get() + len1, &len2)) {
+    return false;
+  }
+
+  len = static_cast<size_t>(len1 + len2);
+#endif
+
+  bssl::UniquePtr<SSL_SESSION> server_session(
+      SSL_SESSION_from_bytes(plaintext.get(), len));
+  if (!server_session) {
+    return false;
+  }
+
+  *out = server_session->time;
+  return true;
+}
+
 static bool TestSessionTimeout() {
   bssl::UniquePtr<X509> cert = GetTestCertificate();
   bssl::UniquePtr<EVP_PKEY> key = GetTestKey();
@@ -2142,7 +2200,7 @@ static bool TestSessionTimeout() {
       }
 
       // Advance the clock just behind the timeout.
-      g_current_time.tv_sec += SSL_DEFAULT_SESSION_TIMEOUT;
+      g_current_time.tv_sec += SSL_DEFAULT_SESSION_TIMEOUT - 1;
 
       if (!ExpectSessionReused(client_ctx.get(), server_ctx.get(),
                                session.get(),
@@ -2188,6 +2246,25 @@ static bool TestSessionTimeout() {
       // This new session is not the same object as before.
       if (session.get() == new_session.get()) {
         fprintf(stderr, "New and old sessions alias (version = %04x).\n",
+                version);
+        return false;
+      }
+
+      // Check the sessions have timestamps measured from issuance.
+      long session_time = 0;
+      if (server_test) {
+        if (!GetServerTicketTime(&session_time, new_session.get())) {
+          fprintf(stderr, "Failed to decode session ticket (version = %04x).\n",
+                  version);
+          return false;
+        }
+      } else {
+        session_time = new_session->time;
+      }
+
+      if (session_time != g_current_time.tv_sec) {
+        fprintf(stderr,
+                "New session is not measured from issuance (version = %04x).\n",
                 version);
         return false;
       }
@@ -2533,7 +2610,14 @@ int main() {
       !TestDefaultVersion(TLS1_1_VERSION, TLS1_1_VERSION, &DTLSv1_method) ||
       !TestDefaultVersion(TLS1_2_VERSION, TLS1_2_VERSION, &DTLSv1_2_method) ||
       !TestCipherGetRFCName() ||
-      !TestPaddingExtension() ||
+      // Test the padding extension at TLS 1.2.
+      !TestPaddingExtension(TLS1_2_VERSION, TLS1_2_VERSION) ||
+      // Test the padding extension at TLS 1.3 with a TLS 1.2 session, so there
+      // will be no PSK binder after the padding extension.
+      !TestPaddingExtension(TLS1_3_VERSION, TLS1_2_VERSION) ||
+      // Test the padding extension at TLS 1.3 with a TLS 1.3 session, so there
+      // will be a PSK binder after the padding extension.
+      !TestPaddingExtension(TLS1_3_VERSION, TLS1_3_DRAFT_VERSION) ||
       !TestClientCAList() ||
       !TestInternalSessionCache() ||
       !TestSequenceNumber() ||

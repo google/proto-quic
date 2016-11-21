@@ -257,9 +257,13 @@ class BASE_EXPORT JSONParser {
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ConsumeLiterals);
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ConsumeNumbers);
   FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ErrorMessages);
+  FRIEND_TEST_ALL_PREFIXES(JSONParserTest, ReplaceInvalidCharacters);
 
   DISALLOW_COPY_AND_ASSIGN(JSONParser);
 };
+
+// Used when decoding and an invalid utf-8 sequence is encountered.
+BASE_EXPORT extern const char kUnicodeReplacementString[];
 
 }  // namespace internal
 }  // namespace base

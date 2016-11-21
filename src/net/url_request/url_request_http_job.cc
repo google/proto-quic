@@ -4,6 +4,8 @@
 
 #include "net/url_request/url_request_http_job.h"
 
+#include <vector>
+
 #include "base/base_switches.h"
 #include "base/bind.h"
 #include "base/bind_helpers.h"
@@ -224,25 +226,14 @@ URLRequestHttpJob::URLRequestHttpJob(
       response_info_(nullptr),
       proxy_auth_state_(AUTH_STATE_DONT_NEED_AUTH),
       server_auth_state_(AUTH_STATE_DONT_NEED_AUTH),
-      start_callback_(base::Bind(&URLRequestHttpJob::OnStartCompleted,
-                                 base::Unretained(this))),
-      notify_before_headers_sent_callback_(
-          base::Bind(&URLRequestHttpJob::NotifyBeforeStartTransactionCallback,
-                     base::Unretained(this))),
       read_in_progress_(false),
       throttling_entry_(nullptr),
       sdch_test_activated_(false),
       sdch_test_control_(false),
       is_cached_content_(false),
-      request_creation_time_(),
       packet_timing_enabled_(false),
       done_(false),
       bytes_observed_in_packets_(0),
-      request_time_snapshot_(),
-      final_packet_time_(),
-      on_headers_received_callback_(
-          base::Bind(&URLRequestHttpJob::OnHeadersReceivedCallback,
-                     base::Unretained(this))),
       awaiting_callback_(false),
       http_user_agent_settings_(http_user_agent_settings),
       total_received_bytes_from_previous_transactions_(0),
@@ -459,8 +450,14 @@ void URLRequestHttpJob::StartTransaction() {
 
   if (network_delegate()) {
     OnCallToDelegate();
+    // The NetworkDelegate must watch for OnRequestDestroyed and not modify
+    // |extra_headers| or invoke the callback after it's called. Not using a
+    // WeakPtr here because it's not enough, the consumer has to watch for
+    // destruction regardless, due to the headers parameter.
     int rv = network_delegate()->NotifyBeforeStartTransaction(
-        request_, notify_before_headers_sent_callback_,
+        request_,
+        base::Bind(&URLRequestHttpJob::NotifyBeforeStartTransactionCallback,
+                   base::Unretained(this)),
         &request_info_.extra_headers);
     // If an extension blocks the request, we rely on the callback to
     // MaybeStartTransactionInternal().
@@ -524,7 +521,9 @@ void URLRequestHttpJob::StartTransactionInternal() {
   }
 
   if (transaction_.get()) {
-    rv = transaction_->RestartWithAuth(auth_credentials_, start_callback_);
+    rv = transaction_->RestartWithAuth(
+        auth_credentials_, base::Bind(&URLRequestHttpJob::OnStartCompleted,
+                                      base::Unretained(this)));
     auth_credentials_ = AuthCredentials();
   } else {
     DCHECK(request_->context()->http_transaction_factory());
@@ -551,7 +550,9 @@ void URLRequestHttpJob::StartTransactionInternal() {
       if (!throttling_entry_.get() ||
           !throttling_entry_->ShouldRejectRequest(*request_)) {
         rv = transaction_->Start(
-            &request_info_, start_callback_, request_->net_log());
+            &request_info_, base::Bind(&URLRequestHttpJob::OnStartCompleted,
+                                       base::Unretained(this)),
+            request_->net_log());
         start_time_ = base::TimeTicks::Now();
       } else {
         // Special error code for the exponential back-off module.
@@ -668,10 +669,6 @@ void URLRequestHttpJob::AddExtraHeaders() {
 }
 
 void URLRequestHttpJob::AddCookieHeaderAndStart() {
-  // If the request was destroyed, then there is no more work to do.
-  if (!request_)
-    return;
-
   CookieStore* cookie_store = request_->context()->cookie_store();
   if (cookie_store && !(request_info_.load_flags & LOAD_DO_NOT_SEND_COOKIES)) {
     CookieOptions options;
@@ -714,27 +711,18 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
         base::Bind(&URLRequestHttpJob::SetCookieHeaderAndStart,
                    weak_factory_.GetWeakPtr()));
   } else {
-    DoStartTransaction();
+    StartTransaction();
   }
 }
 
 void URLRequestHttpJob::SetCookieHeaderAndStart(const CookieList& cookie_list) {
-  if (cookie_list.size() && CanGetCookies(cookie_list)) {
+  if (!cookie_list.empty() && CanGetCookies(cookie_list)) {
     request_info_.extra_headers.SetHeader(
         HttpRequestHeaders::kCookie, CookieStore::BuildCookieLine(cookie_list));
     // Disable privacy mode as we are sending cookies anyway.
     request_info_.privacy_mode = PRIVACY_MODE_DISABLED;
   }
-  DoStartTransaction();
-}
-
-void URLRequestHttpJob::DoStartTransaction() {
-  // We may have been canceled while retrieving cookies.
-  if (GetStatus().is_success()) {
-    StartTransaction();
-  } else {
-    NotifyCanceled();
-  }
+  StartTransaction();
 }
 
 void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
@@ -748,9 +736,6 @@ void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
     NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, result));
     return;
   }
-
-  std::vector<std::string> response_cookies;
-  FetchResponseCookies(&response_cookies);
 
   base::Time response_date;
   if (!GetResponseHeaders()->GetDateValue(&response_date))
@@ -769,8 +754,12 @@ void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
 
     // Set all cookies, without waiting for them to be set. Any subsequent read
     // will see the combined result of all cookie operation.
-    for (const std::string& cookie : response_cookies) {
-      if (!CanSetCookie(cookie, &options))
+    const base::StringPiece name("Set-Cookie");
+    std::string cookie;
+    size_t iter = 0;
+    HttpResponseHeaders* headers = GetResponseHeaders();
+    while (headers->EnumerateHeader(&iter, name, &cookie)) {
+      if (cookie.empty() || !CanSetCookie(cookie, &options))
         continue;
       request_->context()->cookie_store()->SetCookieWithOptionsAsync(
           request_->url(), cookie, options, CookieStore::SetCookiesCallback());
@@ -778,19 +767,6 @@ void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
   }
 
   NotifyHeadersComplete();
-}
-
-void URLRequestHttpJob::FetchResponseCookies(
-    std::vector<std::string>* cookies) {
-  const std::string name = "Set-Cookie";
-  std::string value;
-
-  size_t iter = 0;
-  HttpResponseHeaders* headers = GetResponseHeaders();
-  while (headers->EnumerateHeader(&iter, name, &value)) {
-    if (!value.empty())
-      cookies->push_back(value);
-  }
 }
 
 // NOTE: |ProcessStrictTransportSecurityHeader| and
@@ -804,8 +780,9 @@ void URLRequestHttpJob::ProcessStrictTransportSecurityHeader() {
   // Only accept HSTS headers on HTTPS connections that have no
   // certificate errors.
   if (!ssl_info.is_valid() || IsCertStatusError(ssl_info.cert_status) ||
-      !security_state)
+      !security_state) {
     return;
+  }
 
   // Don't accept HSTS headers when the hostname is an IP address.
   if (request_info_.url.HostIsIPAddress())
@@ -831,8 +808,9 @@ void URLRequestHttpJob::ProcessPublicKeyPinsHeader() {
   // Only accept HPKP headers on HTTPS connections that have no
   // certificate errors.
   if (!ssl_info.is_valid() || IsCertStatusError(ssl_info.cert_status) ||
-      !security_state)
+      !security_state) {
     return;
+  }
 
   // Don't accept HSTS headers when the hostname is an IP address.
   if (request_info_.url.HostIsIPAddress())
@@ -881,10 +859,6 @@ void URLRequestHttpJob::OnStartCompleted(int result) {
                "URLRequestHttpJob::OnStartCompleted");
   RecordTimer();
 
-  // If the request was destroyed, then there is no more work to do.
-  if (!request_)
-    return;
-
   // If the job is done (due to cancellation), can just ignore this
   // notification.
   if (done_)
@@ -902,15 +876,18 @@ void URLRequestHttpJob::OnStartCompleted(int result) {
 
     if (network_delegate()) {
       // Note that |this| may not be deleted until
-      // |on_headers_received_callback_| or
+      // |URLRequestHttpJob::OnHeadersReceivedCallback()| or
       // |NetworkDelegate::URLRequestDestroyed()| has been called.
       OnCallToDelegate();
       allowed_unsafe_redirect_url_ = GURL();
+      // The NetworkDelegate must watch for OnRequestDestroyed and not modify
+      // any of the arguments or invoke the callback after it's called. Not
+      // using a WeakPtr here because it's not enough, the consumer has to watch
+      // for destruction regardless, due to the pointer parameters.
       int error = network_delegate()->NotifyHeadersReceived(
-          request_,
-          on_headers_received_callback_,
-          headers.get(),
-          &override_response_headers_,
+          request_, base::Bind(&URLRequestHttpJob::OnHeadersReceivedCallback,
+                               base::Unretained(this)),
+          headers.get(), &override_response_headers_,
           &allowed_unsafe_redirect_url_);
       if (error != OK) {
         if (error == ERR_IO_PENDING) {
@@ -1033,8 +1010,6 @@ bool URLRequestHttpJob::GetCharset(std::string* charset) {
 }
 
 void URLRequestHttpJob::GetResponseInfo(HttpResponseInfo* info) {
-  DCHECK(request_);
-
   if (response_info_) {
     DCHECK(transaction_.get());
 
@@ -1107,7 +1082,6 @@ std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
   std::string mime_type;
   bool success = GetMimeType(&mime_type);
   DCHECK(success || mime_type.empty());
-  DCHECK(request());
   SdchPolicyDelegate::FixUpSdchContentEncodings(
       request()->net_log(), mime_type, dictionaries_advertised_.get(), &types);
 
@@ -1270,8 +1244,9 @@ void URLRequestHttpJob::ContinueWithCertificate(
 
   ResetTimer();
 
-  int rv = transaction_->RestartWithCertificate(client_cert, client_private_key,
-                                                start_callback_);
+  int rv = transaction_->RestartWithCertificate(
+      client_cert, client_private_key,
+      base::Bind(&URLRequestHttpJob::OnStartCompleted, base::Unretained(this)));
   if (rv == ERR_IO_PENDING)
     return;
 
@@ -1292,7 +1267,8 @@ void URLRequestHttpJob::ContinueDespiteLastError() {
 
   ResetTimer();
 
-  int rv = transaction_->RestartIgnoringLastError(start_callback_);
+  int rv = transaction_->RestartIgnoringLastError(
+      base::Bind(&URLRequestHttpJob::OnStartCompleted, base::Unretained(this)));
   if (rv == ERR_IO_PENDING)
     return;
 
@@ -1310,7 +1286,7 @@ bool URLRequestHttpJob::ShouldFixMismatchedContentLength(int rv) const {
   // See http://crbug.com/79694.
   if (rv == ERR_CONTENT_LENGTH_MISMATCH ||
       rv == ERR_INCOMPLETE_CHUNKED_ENCODING) {
-    if (request_ && request_->response_headers()) {
+    if (request_->response_headers()) {
       int64_t expected_length =
           request_->response_headers()->GetContentLength();
       VLOG(1) << __func__ << "() \"" << request_->url().spec() << "\""
@@ -1539,17 +1515,15 @@ void URLRequestHttpJob::DoneWithRequest(CompletionCause reason) {
   done_ = true;
 
   // Notify NetworkQualityEstimator.
-  if (request()) {
-    NetworkQualityEstimator* network_quality_estimator =
-        request()->context()->network_quality_estimator();
-    if (network_quality_estimator)
-      network_quality_estimator->NotifyRequestCompleted(
-          *request(), request_->status().error());
+  NetworkQualityEstimator* network_quality_estimator =
+      request()->context()->network_quality_estimator();
+  if (network_quality_estimator) {
+    network_quality_estimator->NotifyRequestCompleted(
+        *request(), request_->status().error());
   }
 
   RecordPerfHistograms(reason);
-  if (request_)
-    request_->set_received_response_content_length(prefilter_bytes_read());
+  request()->set_received_response_content_length(prefilter_bytes_read());
 }
 
 HttpResponseHeaders* URLRequestHttpJob::GetResponseHeaders() const {
@@ -1564,12 +1538,10 @@ void URLRequestHttpJob::NotifyURLRequestDestroyed() {
   awaiting_callback_ = false;
 
   // Notify NetworkQualityEstimator.
-  if (request()) {
-    NetworkQualityEstimator* network_quality_estimator =
-        request()->context()->network_quality_estimator();
-    if (network_quality_estimator)
-      network_quality_estimator->NotifyURLRequestDestroyed(*request());
-  }
+  NetworkQualityEstimator* network_quality_estimator =
+      request()->context()->network_quality_estimator();
+  if (network_quality_estimator)
+    network_quality_estimator->NotifyURLRequestDestroyed(*request());
 }
 
 }  // namespace net

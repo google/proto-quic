@@ -47,7 +47,6 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
@@ -289,7 +288,7 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     cerr << "Failed to connect to " << host_port
-         << ". Error: " << net::QuicUtils::ErrorToString(error) << endl;
+         << ". Error: " << net::QuicErrorCodeToString(error) << endl;
     return 1;
   }
   cout << "Connected to " << host_port << endl;

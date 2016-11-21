@@ -25,7 +25,7 @@
 #include "net/base/net_errors.h"
 #include "net/log/net_log_source.h"
 #include "net/socket/client_socket_factory.h"
-#include "net/udp/datagram_client_socket.h"
+#include "net/socket/datagram_client_socket.h"
 
 #if defined(OS_LINUX)
 #include "net/base/address_tracker_linux.h"

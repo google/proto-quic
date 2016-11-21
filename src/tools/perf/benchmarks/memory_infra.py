@@ -8,6 +8,7 @@ from core import perf_benchmark
 
 from telemetry import benchmark
 from telemetry.timeline import chrome_trace_category_filter
+from telemetry.timeline import chrome_trace_config
 from telemetry.web_perf import timeline_based_measurement
 
 import page_sets
@@ -26,13 +27,6 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
   is part of chrome tracing, and extracts it using timeline-based measurements.
   """
 
-  def SetExtraBrowserOptions(self, options):
-    options.AppendExtraBrowserArgs([
-        # TODO(perezju): Temporary workaround to disable periodic memory dumps.
-        # See: http://crbug.com/513692
-        '--enable-memory-benchmarking',
-    ])
-
   def CreateTimelineBasedMeasurementOptions(self):
     # Enable only memory-infra, to get memory dumps, and blink.console, to get
     # the timeline markers used for mapping threads to tabs.
@@ -42,6 +36,9 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
         overhead_level=trace_memory)
     tbm_options.config.enable_android_graphics_memtrack = True
     tbm_options.SetTimelineBasedMetrics(['memoryMetric'])
+    # Setting an empty memory dump config disables periodic dumps.
+    tbm_options.config.chrome_trace_config.SetMemoryDumpConfig(
+        chrome_trace_config.MemoryDumpConfig())
     return tbm_options
 
 
@@ -202,6 +199,9 @@ class _MemoryV8Benchmark(_MemoryInfra):
         ','.join(['-*'] + v8_categories + memory_categories))
     options = timeline_based_measurement.Options(category_filter)
     options.SetTimelineBasedMetrics(['v8AndMemoryMetrics'])
+    # Setting an empty memory dump config disables periodic dumps.
+    options.config.chrome_trace_config.SetMemoryDumpConfig(
+        chrome_trace_config.MemoryDumpConfig())
     return options
 
   @classmethod

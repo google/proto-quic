@@ -485,7 +485,6 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
 QuicErrorCode QuicCryptoClientConfig::FillClientHello(
     const QuicServerId& server_id,
     QuicConnectionId connection_id,
-    const QuicVersion actual_version,
     const QuicVersion preferred_version,
     const CachedState* cached,
     QuicWallTime now,
@@ -533,13 +532,10 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
   // Key exchange: the client does more work than the server, so favor the
   // client's preference.
   size_t key_exchange_index;
-  if (!QuicUtils::FindMutualTag(aead, their_aeads, num_their_aeads,
-                                QuicUtils::LOCAL_PRIORITY, &out_params->aead,
-                                nullptr) ||
-      !QuicUtils::FindMutualTag(
-          kexs, their_key_exchanges, num_their_key_exchanges,
-          QuicUtils::LOCAL_PRIORITY, &out_params->key_exchange,
-          &key_exchange_index)) {
+  if (!FindMutualQuicTag(aead, their_aeads, num_their_aeads, &out_params->aead,
+                         nullptr) ||
+      !FindMutualQuicTag(kexs, their_key_exchanges, num_their_key_exchanges,
+                         &out_params->key_exchange, &key_exchange_index)) {
     *error_details = "Unsupported AEAD or KEXS";
     return QUIC_CRYPTO_NO_SUPPORT;
   }
@@ -554,10 +550,8 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
       case QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND:
         break;
       case QUIC_NO_ERROR:
-        if (QuicUtils::FindMutualTag(tb_key_params, their_tbkps,
-                                     num_their_tbkps, QuicUtils::LOCAL_PRIORITY,
-                                     &out_params->token_binding_key_param,
-                                     nullptr)) {
+        if (FindMutualQuicTag(tb_key_params, their_tbkps, num_their_tbkps,
+                              &out_params->token_binding_key_param, nullptr)) {
           out->SetVector(kTBKP,
                          QuicTagVector{out_params->token_binding_key_param});
         }
@@ -700,17 +694,11 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
 
   string* subkey_secret = &out_params->initial_subkey_secret;
 
-  // Only perform key diversification for QUIC versions 33 and later.
-  // TODO(rch): remove the |actual_version| argument to this method when
-  // QUIC_VERSION_32 is removed.
-  CryptoUtils::Diversification diversification =
-      actual_version > QUIC_VERSION_32 ? CryptoUtils::Diversification::Pending()
-                                       : CryptoUtils::Diversification::Never();
-  if (!CryptoUtils::DeriveKeys(out_params->initial_premaster_secret,
-                               out_params->aead, out_params->client_nonce,
-                               out_params->server_nonce, hkdf_input,
-                               Perspective::IS_CLIENT, diversification,
-                               &out_params->initial_crypters, subkey_secret)) {
+  if (!CryptoUtils::DeriveKeys(
+          out_params->initial_premaster_secret, out_params->aead,
+          out_params->client_nonce, out_params->server_nonce, hkdf_input,
+          Perspective::IS_CLIENT, CryptoUtils::Diversification::Pending(),
+          &out_params->initial_crypters, subkey_secret)) {
     *error_details = "Symmetric key setup failed";
     return QUIC_CRYPTO_SYMMETRIC_KEY_SETUP_FAILED;
   }

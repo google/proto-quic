@@ -54,6 +54,10 @@ void ErrorCallback(bool* called, const GURL& report_uri, int net_error) {
   *called = true;
 }
 
+void SuccessCallback(bool* called) {
+  *called = true;
+}
+
 // A network delegate that lets tests check that a report
 // was sent. It counts the number of requests and lets tests register a
 // callback to run when the request is destroyed. It also checks that
@@ -155,10 +159,13 @@ class ReportSenderTest : public ::testing::Test {
   TestURLRequestContext* context() { return &context_; }
 
  protected:
-  void SendReport(ReportSender* reporter,
-                  const std::string& report,
-                  const GURL& url,
-                  size_t request_sequence_number) {
+  void SendReport(
+      ReportSender* reporter,
+      const std::string& report,
+      const GURL& url,
+      size_t request_sequence_number,
+      const base::Callback<void()>& success_callback,
+      const base::Callback<void(const GURL&, int)>& error_callback) {
     base::RunLoop run_loop;
     network_delegate_.set_url_request_destroyed_callback(
         run_loop.QuitClosure());
@@ -169,7 +176,8 @@ class ReportSenderTest : public ::testing::Test {
 
     EXPECT_EQ(request_sequence_number, network_delegate_.num_requests());
 
-    reporter->Send(url, "application/foobar", report);
+    reporter->Send(url, "application/foobar", report, success_callback,
+                   error_callback);
 
     // The report is sent asynchronously, so wait for the report's
     // URLRequest to be destroyed before checking that the report was
@@ -177,6 +185,14 @@ class ReportSenderTest : public ::testing::Test {
     run_loop.Run();
 
     EXPECT_EQ(request_sequence_number + 1, network_delegate_.num_requests());
+  }
+
+  void SendReport(ReportSender* reporter,
+                  const std::string& report,
+                  const GURL& url,
+                  size_t request_sequence_number) {
+    SendReport(reporter, report, url, request_sequence_number, base::Closure(),
+               base::Callback<void(const GURL&, int)>());
   }
 
   TestReportSenderNetworkDelegate network_delegate_;
@@ -215,8 +231,10 @@ TEST_F(ReportSenderTest, SendMultipleReportsSimultaneously) {
 
   EXPECT_EQ(0u, network_delegate_.num_requests());
 
-  reporter.Send(url, "application/foobar", kDummyReport);
-  reporter.Send(url, "application/foobar", kSecondDummyReport);
+  reporter.Send(url, "application/foobar", kDummyReport, base::Closure(),
+                base::Callback<void(const GURL&, int)>());
+  reporter.Send(url, "application/foobar", kSecondDummyReport, base::Closure(),
+                base::Callback<void(const GURL&, int)>());
 
   run_loop.Run();
 
@@ -240,7 +258,8 @@ TEST_F(ReportSenderTest, PendingRequestGetsDeleted) {
 
   std::unique_ptr<ReportSender> reporter(
       new ReportSender(context(), ReportSender::DO_NOT_SEND_COOKIES));
-  reporter->Send(url, "application/foobar", kDummyReport);
+  reporter->Send(url, "application/foobar", kDummyReport, base::Closure(),
+                 base::Callback<void(const GURL&, int)>());
   reporter.reset();
 
   EXPECT_EQ(1u, network_delegate_.num_requests());
@@ -256,26 +275,32 @@ TEST_F(ReportSenderTest, ErroredRequestGetsDeleted) {
 }
 
 // Test that the error callback, if provided, gets called when a request
-// returns an error.
-TEST_F(ReportSenderTest, ErroredRequestCallsCallback) {
+// returns an error and the success callback doesn't get called.
+TEST_F(ReportSenderTest, ErroredRequestCallsErrorCallback) {
   bool error_callback_called = false;
+  bool success_callback_called = false;
   GURL url = URLRequestFailedJob::GetMockHttpsUrl(ERR_FAILED);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES,
-                        base::Bind(ErrorCallback, &error_callback_called));
+  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
   // SendReport will block until the URLRequest is destroyed.
-  SendReport(&reporter, kDummyReport, url, 0);
+  SendReport(&reporter, kDummyReport, url, 0,
+             base::Bind(SuccessCallback, &success_callback_called),
+             base::Bind(ErrorCallback, &error_callback_called));
   EXPECT_TRUE(error_callback_called);
+  EXPECT_FALSE(success_callback_called);
 }
 
-// Test that the error callback does not get called when a request
-// does not return an error.
-TEST_F(ReportSenderTest, SuccessfulRequestDoesNotCallErrorCallback) {
+// Test that the error callback does not get called and the success callback
+/// gets called when a request does not return an error.
+TEST_F(ReportSenderTest, SuccessfulRequestCallsSuccessCallback) {
   bool error_callback_called = false;
+  bool success_callback_called = false;
   GURL url = URLRequestMockDataJob::GetMockHttpsUrl("dummy data", 1);
-  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES,
-                        base::Bind(ErrorCallback, &error_callback_called));
-  SendReport(&reporter, kDummyReport, url, 0);
+  ReportSender reporter(context(), ReportSender::DO_NOT_SEND_COOKIES);
+  SendReport(&reporter, kDummyReport, url, 0,
+             base::Bind(SuccessCallback, &success_callback_called),
+             base::Bind(ErrorCallback, &error_callback_called));
   EXPECT_FALSE(error_callback_called);
+  EXPECT_TRUE(success_callback_called);
 }
 
 // Test that cookies are sent or not sent according to the error

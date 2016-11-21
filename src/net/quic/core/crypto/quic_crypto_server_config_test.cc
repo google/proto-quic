@@ -15,7 +15,6 @@
 #include "net/quic/core/crypto/crypto_secret_boxer.h"
 #include "net/quic/core/crypto/crypto_server_config_protobuf.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/crypto/strike_register_client.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
@@ -34,37 +33,6 @@ using std::vector;
 namespace net {
 namespace test {
 
-class TestStrikeRegisterClient : public StrikeRegisterClient {
- public:
-  explicit TestStrikeRegisterClient(QuicCryptoServerConfig* config)
-      : config_(config), is_known_orbit_called_(false) {}
-
-  bool IsKnownOrbit(StringPiece orbit) const override {
-    // Ensure that the strike register client lock is not held.
-    QuicCryptoServerConfigPeer peer(config_);
-    base::Lock* m = peer.GetStrikeRegisterClientLock();
-    // In Chromium, we will dead lock if the lock is held by the current thread.
-    // Chromium doesn't have AssertNotHeld API call.
-    // m->AssertNotHeld();
-    base::AutoLock lock(*m);
-
-    is_known_orbit_called_ = true;
-    return true;
-  }
-
-  void VerifyNonceIsValidAndUnique(StringPiece nonce,
-                                   QuicWallTime now,
-                                   ResultCallback* cb) override {
-    LOG(FATAL) << "Not implemented";
-  }
-
-  bool is_known_orbit_called() { return is_known_orbit_called_; }
-
- private:
-  QuicCryptoServerConfig* config_;
-  mutable bool is_known_orbit_called_;
-};
-
 TEST(QuicCryptoServerConfigTest, ServerConfig) {
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
@@ -79,25 +47,9 @@ TEST(QuicCryptoServerConfigTest, ServerConfig) {
   const QuicTag* aead_tags;
   size_t aead_len;
   ASSERT_EQ(QUIC_NO_ERROR, message->GetTaglist(kAEAD, &aead_tags, &aead_len));
-  vector<QuicTag> aead(aead_tags, aead_tags + aead_len);
+  std::vector<QuicTag> aead(aead_tags, aead_tags + aead_len);
   EXPECT_THAT(aead, ::testing::Contains(kAESG));
   EXPECT_LE(1u, aead.size());
-}
-
-TEST(QuicCryptoServerConfigTest, GetOrbitIsCalledWithoutTheStrikeRegisterLock) {
-  QuicRandom* rand = QuicRandom::GetInstance();
-  QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
-  MockClock clock;
-
-  TestStrikeRegisterClient* strike_register =
-      new TestStrikeRegisterClient(&server);
-  server.SetStrikeRegisterClient(strike_register);
-
-  QuicCryptoServerConfig::ConfigOptions options;
-  std::unique_ptr<CryptoHandshakeMessage> message(
-      server.AddDefaultConfig(rand, &clock, options));
-  EXPECT_TRUE(strike_register->is_known_orbit_called());
 }
 
 TEST(QuicCryptoServerConfigTest, CompressCerts) {
@@ -109,7 +61,7 @@ TEST(QuicCryptoServerConfigTest, CompressCerts) {
                                 CryptoTestUtils::ProofSourceForTesting());
   QuicCryptoServerConfigPeer peer(&server);
 
-  vector<string> certs = {"testcert"};
+  std::vector<string> certs = {"testcert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
 
   string compressed = QuicCryptoServerConfigPeer::CompressChain(
@@ -128,7 +80,7 @@ TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
   QuicCryptoServerConfigPeer peer(&server);
 
   // Compress the certs for the first time.
-  vector<string> certs = {"testcert"};
+  std::vector<string> certs = {"testcert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
   string common_certs = "";
   string cached_certs = "";
@@ -155,7 +107,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
                                 CryptoTestUtils::ProofSourceForTesting());
   QuicCryptoServerConfigPeer peer(&server);
 
-  vector<string> certs = {"testcert"};
+  std::vector<string> certs = {"testcert"};
   scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
   string common_certs = "";
   string cached_certs = "";
@@ -329,36 +281,6 @@ TEST_F(SourceAddressTokenTest, SourceAddressTokenMultipleAddresses) {
             ValidateSourceAddressTokens(kPrimary, token4or6, ip6_));
 }
 
-TEST(QuicCryptoServerConfigTest, ValidateServerNonce) {
-  QuicRandom* rand = QuicRandom::GetInstance();
-  QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
-  QuicCryptoServerConfigPeer peer(&server);
-
-  StringPiece message("hello world");
-  const size_t key_size = CryptoSecretBoxer::GetKeySize();
-  std::unique_ptr<uint8_t[]> key(new uint8_t[key_size]);
-  memset(key.get(), 0x11, key_size);
-
-  CryptoSecretBoxer boxer;
-  boxer.SetKeys({string(reinterpret_cast<char*>(key.get()), key_size)});
-  const string box = boxer.Box(rand, message);
-  MockClock clock;
-  QuicWallTime now = clock.WallNow();
-  const QuicWallTime original_time = now;
-  EXPECT_EQ(SERVER_NONCE_DECRYPTION_FAILURE,
-            peer.ValidateServerNonce(box, now));
-
-  string server_nonce = peer.NewServerNonce(rand, now);
-  EXPECT_EQ(HANDSHAKE_OK, peer.ValidateServerNonce(server_nonce, now));
-  EXPECT_EQ(SERVER_NONCE_NOT_UNIQUE_FAILURE,
-            peer.ValidateServerNonce(server_nonce, now));
-
-  now = original_time.Add(QuicTime::Delta::FromSeconds(1000 * 7));
-  server_nonce = peer.NewServerNonce(rand, now);
-  EXPECT_EQ(HANDSHAKE_OK, peer.ValidateServerNonce(server_nonce, now));
-}
-
 class CryptoServerConfigsTest : public ::testing::Test {
  public:
   CryptoServerConfigsTest()
@@ -398,7 +320,7 @@ class CryptoServerConfigsTest : public ::testing::Test {
     bool has_invalid = false;
     bool is_empty = true;
 
-    vector<std::unique_ptr<QuicServerConfigProtobuf>> protobufs;
+    std::vector<std::unique_ptr<QuicServerConfigProtobuf>> protobufs;
     bool first = true;
     for (;;) {
       const char* server_config_id;

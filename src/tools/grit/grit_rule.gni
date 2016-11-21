@@ -186,13 +186,6 @@ if (use_ozone) {
   ]
 }
 
-if (enable_image_loader_extension) {
-  grit_defines += [
-    "-D",
-    "image_loader_extension",
-  ]
-}
-
 if (is_android) {
   grit_defines += [
     "-E",
@@ -241,22 +234,10 @@ if (current_toolchain != host_toolchain) {
   }
 }
 
-if (enable_extensions) {
-  grit_defines += [
-    "-D",
-    "enable_extensions",
-  ]
-}
 if (enable_media_router) {
   grit_defines += [
     "-D",
     "enable_media_router",
-  ]
-}
-if (enable_plugins) {
-  grit_defines += [
-    "-D",
-    "enable_plugins",
   ]
 }
 if (enable_themes) {

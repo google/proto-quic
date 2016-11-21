@@ -197,7 +197,6 @@ class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
 
   SSLInfo ssl_info_;
   bool was_alpn_negotiated_;
-  NextProto negotiated_protocol_;
 
   base::WeakPtrFactory<SpdyHttpStream> weak_factory_;
 

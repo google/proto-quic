@@ -55,6 +55,11 @@ enum JSONParserOptions {
   // if the child is Remove()d from root, it would result in use-after-free
   // unless it is DeepCopy()ed or this option is used.
   JSON_DETACHABLE_CHILDREN = 1 << 1,
+
+  // If set the parser replaces invalid characters with the Unicode replacement
+  // character (U+FFFD). If not set, invalid characters trigger a hard error and
+  // parsing fails.
+  JSON_REPLACE_INVALID_CHARACTERS = 1 << 2,
 };
 
 class BASE_EXPORT JSONReader {

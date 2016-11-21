@@ -14,8 +14,8 @@
 #include "base/rand_util.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
-#include "net/quic/core/reliable_quic_stream.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -37,10 +37,9 @@ using testing::StrEq;
 namespace net {
 namespace test {
 
-class MockStream : public ReliableQuicStream {
+class MockStream : public QuicStream {
  public:
-  MockStream(QuicSession* session, QuicStreamId id)
-      : ReliableQuicStream(id, session) {}
+  MockStream(QuicSession* session, QuicStreamId id) : QuicStream(id, session) {}
 
   MOCK_METHOD0(OnFinRead, void());
   MOCK_METHOD0(OnDataAvailable, void());

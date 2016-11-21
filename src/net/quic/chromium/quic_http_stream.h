@@ -17,11 +17,13 @@
 #include "net/base/io_buffer.h"
 #include "net/base/load_timing_info.h"
 #include "net/base/net_export.h"
+#include "net/http/http_response_info.h"
 #include "net/http/http_stream.h"
 #include "net/log/net_log_with_source.h"
 #include "net/quic/chromium/quic_chromium_client_session.h"
 #include "net/quic/chromium/quic_chromium_client_stream.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
+#include "net/quic/core/quic_protocol.h"
 
 namespace net {
 
@@ -84,6 +86,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   // QuicChromiumClientSession::Observer implementation
   void OnCryptoHandshakeConfirmed() override;
+  void OnSuccessfulVersionNegotiation(const QuicVersion& version) override;
   void OnSessionClosed(int error, bool port_migration_detected) override;
 
   // QuicClientPushPromiseIndex::Delegate implementation
@@ -91,6 +94,9 @@ class NET_EXPORT_PRIVATE QuicHttpStream
                  const SpdyHeaderBlock& promise_request,
                  const SpdyHeaderBlock& promise_response) override;
   void OnRendezvousResult(QuicSpdyStream* stream) override;
+
+  static HttpResponseInfo::ConnectionInfo ConnectionInfoFromQuicVersion(
+      QuicVersion quic_version);
 
  private:
   friend class test::QuicHttpStreamPeer;
@@ -141,6 +147,7 @@ class NET_EXPORT_PRIVATE QuicHttpStream
   State next_state_;
 
   base::WeakPtr<QuicChromiumClientSession> session_;
+  QuicVersion quic_version_;
   int session_error_;             // Error code from the connection shutdown.
   bool was_handshake_confirmed_;  // True if the crypto handshake succeeded.
   QuicChromiumClientSession::StreamRequest stream_request_;

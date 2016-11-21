@@ -20,6 +20,7 @@ sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, 'third_party'))
 
 from depot_tools import auto_stub
+from utils import authenticators
 from utils import net
 import net_utils
 
@@ -85,7 +86,8 @@ class HttpServiceTest(RetryLoopMockedTest):
       authorize=None,
       login=None):
 
-    class MockedAuthenticator(net.Authenticator):
+    class MockedAuthenticator(authenticators.Authenticator):
+      supports_login = True
       def authorize(self, request):
         return authorize(request) if authorize else None
       def login(self, allow_user_interaction):

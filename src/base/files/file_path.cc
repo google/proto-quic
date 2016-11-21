@@ -560,6 +560,12 @@ FilePath FilePath::StripTrailingSeparators() const {
 }
 
 bool FilePath::ReferencesParent() const {
+  if (path_.find(kParentDirectory) == StringType::npos) {
+    // GetComponents is quite expensive, so avoid calling it in the majority
+    // of cases where there isn't a kParentDirectory anywhere in the path.
+    return false;
+  }
+
   std::vector<StringType> components;
   GetComponents(&components);
 

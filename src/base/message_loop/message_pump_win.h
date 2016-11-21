@@ -13,6 +13,7 @@
 #include "base/base_export.h"
 #include "base/message_loop/message_pump.h"
 #include "base/time/time.h"
+#include "base/win/message_window.h"
 #include "base/win/scoped_handle.h"
 
 namespace base {
@@ -124,12 +125,9 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
   void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
 
  private:
-  static LRESULT CALLBACK WndProcThunk(HWND window_handle,
-                                       UINT message,
-                                       WPARAM wparam,
-                                       LPARAM lparam);
+  bool MessageCallback(
+      UINT message, WPARAM wparam, LPARAM lparam, LRESULT* result);
   void DoRunLoop() override;
-  void InitMessageWnd();
   void WaitForWork();
   void HandleWorkMessage();
   void HandleTimerMessage();
@@ -138,11 +136,7 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
   bool ProcessMessageHelper(const MSG& msg);
   bool ProcessPumpReplacementMessage();
 
-  // Atom representing the registered window class.
-  ATOM atom_;
-
-  // A hidden message-only window.
-  HWND message_hwnd_;
+  base::win::MessageWindow message_window_;
 };
 
 //-----------------------------------------------------------------------------

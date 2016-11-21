@@ -38,24 +38,12 @@ namespace test {
 QuicAckFrame MakeAckFrame(QuicPacketNumber largest_observed) {
   QuicAckFrame ack;
   ack.largest_observed = largest_observed;
-  ack.entropy_hash = 0;
-  return ack;
-}
-
-QuicAckFrame MakeAckFrameWithNackRanges(size_t num_nack_ranges,
-                                        QuicPacketNumber least_unacked) {
-  QuicAckFrame ack = MakeAckFrame(2 * num_nack_ranges + least_unacked);
-  // Add enough missing packets to get num_nack_ranges nack ranges.
-  for (QuicPacketNumber i = 1; i < 2 * num_nack_ranges; i += 2) {
-    ack.packets.Add(least_unacked + i);
-  }
   return ack;
 }
 
 QuicAckFrame MakeAckFrameWithAckBlocks(size_t num_ack_blocks,
                                        QuicPacketNumber least_unacked) {
   QuicAckFrame ack = MakeAckFrame(2 * num_ack_blocks + least_unacked);
-  ack.missing = false;
   // Add enough received packets to get num_ack_blocks ack blocks.
   for (QuicPacketNumber i = 2; i < 2 * num_ack_blocks + 1; i += 2) {
     ack.packets.Add(least_unacked + i);
@@ -385,7 +373,7 @@ MockQuicSession::~MockQuicSession() {
 
 // static
 QuicConsumedData MockQuicSession::ConsumeAllData(
-    ReliableQuicStream* /*stream*/,
+    QuicStream* /*stream*/,
     QuicStreamId /*id*/,
     const QuicIOVector& data,
     QuicStreamOffset /*offset*/,
@@ -441,6 +429,22 @@ TestQuicSpdyServerSession::CreateQuicCryptoServerStream(
 QuicCryptoServerStream* TestQuicSpdyServerSession::GetCryptoStream() {
   return static_cast<QuicCryptoServerStream*>(
       QuicServerSessionBase::GetCryptoStream());
+}
+
+TestPushPromiseDelegate::TestPushPromiseDelegate(bool match)
+    : match_(match), rendezvous_fired_(false), rendezvous_stream_(nullptr) {}
+
+bool TestPushPromiseDelegate::CheckVary(
+    const SpdyHeaderBlock& client_request,
+    const SpdyHeaderBlock& promise_request,
+    const SpdyHeaderBlock& promise_response) {
+  DVLOG(1) << "match " << match_;
+  return match_;
+}
+
+void TestPushPromiseDelegate::OnRendezvousResult(QuicSpdyStream* stream) {
+  rendezvous_fired_ = true;
+  rendezvous_stream_ = stream;
 }
 
 TestQuicSpdyClientSession::TestQuicSpdyClientSession(
@@ -629,8 +633,6 @@ QuicEncryptedPacket* ConstructEncryptedPacket(
   header.public_header.packet_number_length = packet_number_length;
   header.path_id = path_id;
   header.packet_number = packet_number;
-  header.entropy_flag = false;
-  header.entropy_hash = 0;
   QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
@@ -679,8 +681,6 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
   header.public_header.packet_number_length = packet_number_length;
   header.path_id = path_id;
   header.packet_number = packet_number;
-  header.entropy_flag = false;
-  header.entropy_hash = 0;
   QuicStreamFrame stream_frame(1, false, 0, StringPiece(data));
   QuicFrame frame(&stream_frame);
   QuicFrames frames;
@@ -692,20 +692,11 @@ QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
       BuildUnsizedDataPacket(&framer, header, frames));
   EXPECT_TRUE(packet != nullptr);
 
-  if (framer.version() <= QUIC_VERSION_33) {
-    // Now set the packet's private flags byte to 0xFF, which is an invalid
-    // value.
-    reinterpret_cast<unsigned char*>(
-        packet->mutable_data())[GetStartOfEncryptedData(
-        framer.version(), connection_id_length, version_flag, multipath_flag,
-        false /* no diversification nonce */, packet_number_length)] = 0xFF;
-  } else {
-    // Now set the frame type to 0x1F, which is an invalid frame type.
-    reinterpret_cast<unsigned char*>(
-        packet->mutable_data())[GetStartOfEncryptedData(
-        framer.version(), connection_id_length, version_flag, multipath_flag,
-        false /* no diversification nonce */, packet_number_length)] = 0x1F;
-  }
+  // Now set the frame type to 0x1F, which is an invalid frame type.
+  reinterpret_cast<unsigned char*>(
+      packet->mutable_data())[GetStartOfEncryptedData(
+      framer.version(), connection_id_length, version_flag, multipath_flag,
+      false /* no diversification nonce */, packet_number_length)] = 0x1F;
 
   char* buffer = new char[kMaxPacketSize];
   size_t encrypted_length = framer.EncryptPayload(
@@ -772,8 +763,6 @@ static QuicPacket* ConstructPacketFromHandshakeMessage(
   header.public_header.reset_flag = false;
   header.public_header.version_flag = should_include_version;
   header.packet_number = 1;
-  header.entropy_flag = false;
-  header.entropy_hash = 0;
 
   QuicStreamFrame stream_frame(kCryptoStreamId, false, 0,
                                data->AsStringPiece());
@@ -819,19 +808,6 @@ size_t GetPacketLengthForOneStream(QuicVersion version,
              version, connection_id_length, include_version, include_path_id,
              include_diversification_nonce, packet_number_length, 0u);
 }
-
-TestEntropyCalculator::TestEntropyCalculator() {}
-
-TestEntropyCalculator::~TestEntropyCalculator() {}
-
-QuicPacketEntropyHash TestEntropyCalculator::EntropyHash(
-    QuicPacketNumber packet_number) const {
-  return 1u;
-}
-
-MockEntropyCalculator::MockEntropyCalculator() {}
-
-MockEntropyCalculator::~MockEntropyCalculator() {}
 
 QuicConfig DefaultQuicConfig() {
   QuicConfig config;

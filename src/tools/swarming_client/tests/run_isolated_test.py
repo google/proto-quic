@@ -161,6 +161,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--no-log',
         '--isolated', isolated_hash,
         '--cache', self.tempdir,
+        '--named-cache-root', os.path.join(self.tempdir, 'c'),
         '--isolate-server', 'https://localhost',
     ]
     ret = run_isolated.main(cmd)
@@ -183,6 +184,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--isolated', isolated_hash,
         '--cache', self.tempdir,
         '--isolate-server', 'https://localhost',
+        '--named-cache-root', os.path.join(self.tempdir, 'c'),
         '--',
         '--extraargs',
         'bar',
@@ -210,6 +212,8 @@ class RunIsolatedTest(RunIsolatedTestBase):
         isolated_hash,
         StorageFake(files),
         isolateserver.MemoryCache(),
+        None,
+        lambda run_dir: None,
         False,
         None,
         None,
@@ -320,6 +324,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
         '--isolated', isolated_hash,
         '--cache', self.tempdir,
         '--isolate-server', 'https://localhost',
+        '--named-cache-root', os.path.join(self.tempdir, 'c'),
     ]
     ret = run_isolated.main(cmd)
     self.assertEqual(1, ret)
@@ -333,6 +338,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
     cmd = [
       '--no-log',
       '--cache', self.tempdir,
+      '--named-cache-root', os.path.join(self.tempdir, 'c'),
       '/bin/echo',
       'hello',
       'world',
@@ -343,6 +349,24 @@ class RunIsolatedTest(RunIsolatedTestBase):
     self.assertEqual(
         [([u'/bin/echo', u'hello', u'world'], {'detached': True})],
         self.popen_calls)
+
+  def test_main_naked_leaking(self):
+    workdir = tempfile.mkdtemp()
+    try:
+      cmd = [
+        '--no-log',
+        '--cache', self.tempdir,
+        '--root-dir', workdir,
+        '--leak-temp-dir',
+        '--named-cache-root', os.path.join(self.tempdir, 'c'),
+        '/bin/echo',
+        'hello',
+        'world',
+      ]
+      ret = run_isolated.main(cmd)
+      self.assertEqual(0, ret)
+    finally:
+      fs.rmtree(unicode(workdir))
 
   def test_main_naked_with_packages(self):
     pin_idx_ref = [0]
@@ -382,6 +406,7 @@ class RunIsolatedTest(RunIsolatedTestBase):
       '--cipd-package', '.:infra/data/y:canary',
       '--cipd-server', self.cipd_server.url,
       '--cipd-cache', cipd_cache,
+      '--named-cache-root', os.path.join(self.tempdir, 'c'),
       'bin/echo${EXECUTABLE_SUFFIX}',
       'hello',
       'world',
@@ -420,6 +445,29 @@ class RunIsolatedTest(RunIsolatedTestBase):
         os.path.sep + 'bin' + os.path.sep + 'echo' + cipd.EXECUTABLE_SUFFIX),
         echo_cmd[0])
     self.assertEqual(echo_cmd[1:], ['hello', 'world'])
+
+  def test_main_naked_with_caches(self):
+    cmd = [
+      '--no-log',
+      '--leak-temp-dir',
+      '--cache', os.path.join(self.tempdir, 'cache'),
+      '--named-cache-root', os.path.join(self.tempdir, 'c'),
+      '--named-cache', 'cache_foo', 'foo',
+      '--named-cache', 'cache_bar', 'bar',
+      'bin/echo${EXECUTABLE_SUFFIX}',
+      'hello',
+      'world',
+    ]
+    ret = run_isolated.main(cmd)
+    self.assertEqual(0, ret)
+
+    for path, cache_name in [('foo', 'cache_foo'), ('bar', 'cache_bar')]:
+      self.assertEqual(
+          os.path.abspath(os.readlink(
+              os.path.join(self.tempdir, 'ir', path))),
+          os.path.abspath(os.readlink(
+              os.path.join(self.tempdir, 'c', 'named', cache_name))),
+      )
 
   def test_modified_cwd(self):
     isolated = json_dumps({
@@ -494,6 +542,8 @@ class RunIsolatedTestRun(RunIsolatedTestBase):
           isolated_hash,
           store,
           isolateserver.MemoryCache(),
+          None,
+          lambda run_dir: None,
           False,
           None,
           None,
@@ -523,6 +573,101 @@ class RunIsolatedTestRun(RunIsolatedTestBase):
       }
       if sys.platform == 'win32':
         isolated['files']['foo'].pop('m')
+      uploaded = json_dumps(isolated)
+      uploaded_hash = isolateserver_mock.hash_content(uploaded)
+      hashes.add(uploaded_hash)
+      self.assertEqual(hashes, set(server.contents['default-store']))
+
+      expected = ''.join([
+        '[run_isolated_out_hack]',
+        '{"hash":"%s","namespace":"default-store","storage":%s}' % (
+            uploaded_hash, json.dumps(server.url)),
+        '[/run_isolated_out_hack]'
+      ]) + '\n'
+      self.assertEqual(expected, sys.stdout.getvalue())
+    finally:
+      server.close()
+
+
+# Like RunIsolatedTestRun, but ensures that specific output files
+# (as opposed to anything in $(ISOLATED_OUTDIR)) are returned.
+class RunIsolatedTestOutputFiles(RunIsolatedTestBase):
+  def test_output(self):
+    # Starts a full isolate server mock and have run_tha_test() uploads results
+    # back after the task completed.
+    server = isolateserver_mock.MockIsolateServer()
+    try:
+      script = (
+        'import sys\n'
+        'open(sys.argv[1], "w").write("bar")\n'
+        'open(sys.argv[2], "w").write("baz")\n')
+      script_hash = isolateserver_mock.hash_content(script)
+      isolated = {
+        'algo': 'sha-1',
+        'command': ['cmd.py', 'foo', 'foodir/foo2'],
+        'files': {
+          'cmd.py': {
+            'h': script_hash,
+            'm': 0700,
+            's': len(script),
+          },
+        },
+        'version': isolated_format.ISOLATED_FILE_VERSION,
+      }
+      if sys.platform == 'win32':
+        isolated['files']['cmd.py'].pop('m')
+      isolated_data = json_dumps(isolated)
+      isolated_hash = isolateserver_mock.hash_content(isolated_data)
+      server.add_content('default-store', script)
+      server.add_content('default-store', isolated_data)
+      store = isolateserver.get_storage(server.url, 'default-store')
+
+      self.mock(sys, 'stdout', StringIO.StringIO())
+      ret = run_isolated.run_tha_test(
+          None,
+          isolated_hash,
+          store,
+          isolateserver.MemoryCache(),
+          ['foo', 'foodir/foo2'],
+          lambda run_dir: None,
+          False,
+          None,
+          None,
+          None,
+          None,
+          None,
+          None,
+          lambda run_dir: None,
+          False)
+      self.assertEqual(0, ret)
+
+      # It uploaded back. Assert the store has a new item containing foo.
+      hashes = {isolated_hash, script_hash}
+      foo_output_hash = isolateserver_mock.hash_content('bar')
+      foo2_output_hash = isolateserver_mock.hash_content('baz')
+      hashes.add(foo_output_hash)
+      hashes.add(foo2_output_hash)
+      isolated =  {
+        'algo': 'sha-1',
+        'files': {
+          'foo': {
+            'h': foo_output_hash,
+            # TODO(maruel): Handle umask.
+            'm': 0640,
+            's': 3,
+          },
+          'foodir/foo2': {
+            'h': foo2_output_hash,
+            # TODO(maruel): Handle umask.
+            'm': 0640,
+            's': 3,
+          },
+        },
+        'version': isolated_format.ISOLATED_FILE_VERSION,
+      }
+      if sys.platform == 'win32':
+        isolated['files']['foo'].pop('m')
+        isolated['files']['foodir/foo2'].pop('m')
       uploaded = json_dumps(isolated)
       uploaded_hash = isolateserver_mock.hash_content(uploaded)
       hashes.add(uploaded_hash)
@@ -587,6 +732,7 @@ class RunIsolatedJsonTest(RunIsolatedTestBase):
         '--isolated', isolated_in_hash,
         '--cache', self.tempdir,
         '--isolate-server', 'https://localhost:1',
+        '--named-cache-root', os.path.join(self.tempdir, 'c'),
         '--json', out,
     ]
     ret = run_isolated.main(cmd)

@@ -25,7 +25,7 @@ namespace net {
                                                                      " ")
 
 QuicCryptoStream::QuicCryptoStream(QuicSession* session)
-    : ReliableQuicStream(kCryptoStreamId, session),
+    : QuicStream(kCryptoStreamId, session),
       encryption_established_(false),
       handshake_confirmed_(false),
       crypto_negotiated_params_(new QuicCryptoNegotiatedParameters) {
@@ -49,7 +49,7 @@ QuicByteCount QuicCryptoStream::CryptoMessageFramingOverhead(
 
 void QuicCryptoStream::OnError(CryptoFramer* framer) {
   DLOG(WARNING) << "Error processing crypto data: "
-                << QuicUtils::ErrorToString(framer->error());
+                << QuicErrorCodeToString(framer->error());
 }
 
 void QuicCryptoStream::OnHandshakeMessage(

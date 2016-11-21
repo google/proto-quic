@@ -108,6 +108,7 @@ MemoryPressureMonitor::MemoryPressureMonitor(
     : current_memory_pressure_level_(
           MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE),
       moderate_pressure_repeat_count_(0),
+      seconds_since_reporting_(0),
       moderate_pressure_threshold_percent_(
           GetModerateMemoryThresholdInPercent(thresholds)),
       critical_pressure_threshold_percent_(
@@ -158,8 +159,13 @@ void MemoryPressureMonitor::StopObserving() {
 
 void MemoryPressureMonitor::CheckMemoryPressureAndRecordStatistics() {
   CheckMemoryPressure();
-
+  if (seconds_since_reporting_++ == 5) {
+    seconds_since_reporting_ = 0;
+    RecordMemoryPressure(current_memory_pressure_level_, 1);
+  }
   // Record UMA histogram statistics for the current memory pressure level.
+  // TODO(lgrey): Remove this once there's a usable history for the
+  // "Memory.PressureLevel" statistic
   MemoryPressureLevelUMA memory_pressure_level_uma(MEMORY_PRESSURE_LEVEL_NONE);
   switch (current_memory_pressure_level_) {
     case MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE:

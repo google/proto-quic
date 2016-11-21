@@ -47,7 +47,6 @@ class TestSuiteAll(unittest.TestSuite):
     import grit.format.policy_templates.writers.admx_writer_unittest
     import grit.format.policy_templates.writers.android_policy_writer_unittest
     import grit.format.policy_templates.writers.doc_writer_unittest
-    import grit.format.policy_templates.writers.ios_plist_writer_unittest
     import grit.format.policy_templates.writers.json_writer_unittest
     import grit.format.policy_templates.writers.plist_strings_writer_unittest
     import grit.format.policy_templates.writers.plist_writer_unittest
@@ -111,8 +110,6 @@ class TestSuiteAll(unittest.TestSuite):
             AndroidPolicyWriterUnittest,
         grit.format.policy_templates.writers.doc_writer_unittest.
             DocWriterUnittest,
-        grit.format.policy_templates.writers.ios_plist_writer_unittest.
-            IOSPListWriterUnittest,
         grit.format.policy_templates.writers.json_writer_unittest.
             JsonWriterUnittest,
         grit.format.policy_templates.writers.plist_strings_writer_unittest.

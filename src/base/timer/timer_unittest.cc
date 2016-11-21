@@ -8,11 +8,15 @@
 
 #include <memory>
 
+#include "base/bind.h"
+#include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "base/test/test_mock_time_task_runner.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/tick_clock.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -31,6 +35,17 @@ const base::MessageLoop::Type testing_message_loops[] = {
 };
 
 const int kNumTestingMessageLoops = arraysize(testing_message_loops);
+
+class Receiver {
+ public:
+  Receiver() : count_(0) {}
+  void OnCalled() { count_++; }
+  bool WasCalled() { return count_ > 0; }
+  int TimesCalled() { return count_; }
+
+ private:
+  int count_;
+};
 
 class OneShotTimerTester {
  public:
@@ -341,6 +356,21 @@ TEST(TimerTest, OneShotTimer_CustomTaskRunner) {
   EXPECT_TRUE(did_run);
 }
 
+TEST(TimerTest, OneShotTimerWithTickClock) {
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner(
+      new base::TestMockTimeTaskRunner(base::Time::Now(),
+                                       base::TimeTicks::Now()));
+  std::unique_ptr<base::TickClock> tick_clock(task_runner->GetMockTickClock());
+  base::MessageLoop message_loop;
+  message_loop.SetTaskRunner(task_runner);
+  Receiver receiver;
+  base::OneShotTimer timer(tick_clock.get());
+  timer.Start(FROM_HERE, base::TimeDelta::FromSeconds(1),
+              base::Bind(&Receiver::OnCalled, base::Unretained(&receiver)));
+  task_runner->FastForwardBy(base::TimeDelta::FromSeconds(1));
+  EXPECT_TRUE(receiver.WasCalled());
+}
+
 TEST(TimerTest, RepeatingTimer) {
   for (int i = 0; i < kNumTestingMessageLoops; i++) {
     RunTest_RepeatingTimer(testing_message_loops[i],
@@ -369,6 +399,24 @@ TEST(TimerTest, RepeatingTimerZeroDelay_Cancel) {
   }
 }
 
+TEST(TimerTest, RepeatingTimerWithTickClock) {
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner(
+      new base::TestMockTimeTaskRunner(base::Time::Now(),
+                                       base::TimeTicks::Now()));
+  std::unique_ptr<base::TickClock> tick_clock(task_runner->GetMockTickClock());
+  base::MessageLoop message_loop;
+  message_loop.SetTaskRunner(task_runner);
+  Receiver receiver;
+  const int expected_times_called = 10;
+  base::RepeatingTimer timer(tick_clock.get());
+  timer.Start(FROM_HERE, base::TimeDelta::FromSeconds(1),
+              base::Bind(&Receiver::OnCalled, base::Unretained(&receiver)));
+  task_runner->FastForwardBy(
+      base::TimeDelta::FromSeconds(expected_times_called));
+  timer.Stop();
+  EXPECT_EQ(expected_times_called, receiver.TimesCalled());
+}
+
 TEST(TimerTest, DelayTimer_NoCall) {
   for (int i = 0; i < kNumTestingMessageLoops; i++) {
     RunTest_DelayTimer_NoCall(testing_message_loops[i]);
@@ -392,6 +440,26 @@ TEST(TimerTest, DelayTimer_Deleted) {
   for (int i = 0; i < kNumTestingMessageLoops; i++) {
     RunTest_DelayTimer_Deleted(testing_message_loops[i]);
   }
+}
+
+TEST(TimerTest, DelayTimerWithTickClock) {
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner(
+      new base::TestMockTimeTaskRunner(base::Time::Now(),
+                                       base::TimeTicks::Now()));
+  std::unique_ptr<base::TickClock> tick_clock(task_runner->GetMockTickClock());
+  base::MessageLoop message_loop;
+  message_loop.SetTaskRunner(task_runner);
+  Receiver receiver;
+  base::DelayTimer timer(FROM_HERE, base::TimeDelta::FromSeconds(1), &receiver,
+                         &Receiver::OnCalled, tick_clock.get());
+  task_runner->FastForwardBy(base::TimeDelta::FromMilliseconds(999));
+  EXPECT_FALSE(receiver.WasCalled());
+  timer.Reset();
+  task_runner->FastForwardBy(base::TimeDelta::FromMilliseconds(999));
+  EXPECT_FALSE(receiver.WasCalled());
+  timer.Reset();
+  task_runner->FastForwardBy(base::TimeDelta::FromSeconds(1));
+  EXPECT_TRUE(receiver.WasCalled());
 }
 
 TEST(TimerTest, MessageLoopShutdown) {

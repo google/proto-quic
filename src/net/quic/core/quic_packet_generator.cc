@@ -15,13 +15,11 @@ namespace net {
 
 QuicPacketGenerator::QuicPacketGenerator(QuicConnectionId connection_id,
                                          QuicFramer* framer,
-                                         QuicRandom* random_generator,
                                          QuicBufferAllocator* buffer_allocator,
                                          DelegateInterface* delegate)
     : delegate_(delegate),
       packet_creator_(connection_id,
                       framer,
-                      random_generator,
                       buffer_allocator,
                       delegate),
       batch_mode_(false),

@@ -32,7 +32,7 @@ QuicErrorCode ReadUint32(const CryptoHandshakeMessage& msg,
   switch (error) {
     case QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND:
       if (presence == PRESENCE_REQUIRED) {
-        *error_details = "Missing " + QuicUtils::TagToString(tag);
+        *error_details = "Missing " + QuicTagToString(tag);
         break;
       }
       error = QUIC_NO_ERROR;
@@ -41,7 +41,7 @@ QuicErrorCode ReadUint32(const CryptoHandshakeMessage& msg,
     case QUIC_NO_ERROR:
       break;
     default:
-      *error_details = "Bad " + QuicUtils::TagToString(tag);
+      *error_details = "Bad " + QuicTagToString(tag);
       break;
   }
   return error;
@@ -104,98 +104,12 @@ QuicErrorCode QuicNegotiableUint32::ProcessPeerHello(
     return error;
   }
   if (hello_type == SERVER && value > max_value_) {
-    *error_details =
-        "Invalid value received for " + QuicUtils::TagToString(tag_);
+    *error_details = "Invalid value received for " + QuicTagToString(tag_);
     return QUIC_INVALID_NEGOTIATED_VALUE;
   }
 
   set_negotiated(true);
   negotiated_value_ = min(value, max_value_);
-  return QUIC_NO_ERROR;
-}
-
-QuicNegotiableTag::QuicNegotiableTag(QuicTag tag, QuicConfigPresence presence)
-    : QuicNegotiableValue(tag, presence),
-      negotiated_tag_(0),
-      default_value_(0) {}
-
-QuicNegotiableTag::~QuicNegotiableTag() {}
-
-void QuicNegotiableTag::set(const QuicTagVector& possible,
-                            QuicTag default_value) {
-  DCHECK(ContainsQuicTag(possible, default_value));
-  possible_values_ = possible;
-  default_value_ = default_value;
-}
-
-void QuicNegotiableTag::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
-  if (negotiated()) {
-    // Because of the way we serialize and parse handshake messages we can
-    // serialize this as value and still parse it as a vector.
-    out->SetValue(tag_, negotiated_tag_);
-  } else {
-    out->SetVector(tag_, possible_values_);
-  }
-}
-
-QuicErrorCode QuicNegotiableTag::ReadVector(const CryptoHandshakeMessage& msg,
-                                            const QuicTag** out,
-                                            size_t* out_length,
-                                            string* error_details) const {
-  DCHECK(error_details != nullptr);
-  QuicErrorCode error = msg.GetTaglist(tag_, out, out_length);
-  switch (error) {
-    case QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND:
-      if (presence_ == PRESENCE_REQUIRED) {
-        *error_details = "Missing " + QuicUtils::TagToString(tag_);
-        break;
-      }
-      error = QUIC_NO_ERROR;
-      *out_length = 1;
-      *out = &default_value_;
-
-    case QUIC_NO_ERROR:
-      break;
-    default:
-      *error_details = "Bad " + QuicUtils::TagToString(tag_);
-      break;
-  }
-  return error;
-}
-
-QuicErrorCode QuicNegotiableTag::ProcessPeerHello(
-    const CryptoHandshakeMessage& peer_hello,
-    HelloType hello_type,
-    string* error_details) {
-  DCHECK(!negotiated());
-  DCHECK(error_details != nullptr);
-  const QuicTag* received_tags;
-  size_t received_tags_length;
-  QuicErrorCode error = ReadVector(peer_hello, &received_tags,
-                                   &received_tags_length, error_details);
-  if (error != QUIC_NO_ERROR) {
-    return error;
-  }
-
-  if (hello_type == SERVER) {
-    if (received_tags_length != 1 ||
-        !ContainsQuicTag(possible_values_, *received_tags)) {
-      *error_details = "Invalid " + QuicUtils::TagToString(tag_);
-      return QUIC_INVALID_NEGOTIATED_VALUE;
-    }
-    negotiated_tag_ = *received_tags;
-  } else {
-    QuicTag negotiated_tag;
-    if (!QuicUtils::FindMutualTag(
-            possible_values_, received_tags, received_tags_length,
-            QuicUtils::LOCAL_PRIORITY, &negotiated_tag, nullptr)) {
-      *error_details = "Unsupported " + QuicUtils::TagToString(tag_);
-      return QUIC_CRYPTO_MESSAGE_PARAMETER_NO_OVERLAP;
-    }
-    negotiated_tag_ = negotiated_tag;
-  }
-
-  set_negotiated(true);
   return QUIC_NO_ERROR;
 }
 
@@ -211,7 +125,7 @@ bool QuicFixedUint32::HasSendValue() const {
 
 uint32_t QuicFixedUint32::GetSendValue() const {
   QUIC_BUG_IF(!has_send_value_) << "No send value to get for tag:"
-                                << QuicUtils::TagToString(tag_);
+                                << QuicTagToString(tag_);
   return send_value_;
 }
 
@@ -226,7 +140,7 @@ bool QuicFixedUint32::HasReceivedValue() const {
 
 uint32_t QuicFixedUint32::GetReceivedValue() const {
   QUIC_BUG_IF(!has_receive_value_) << "No receive value to get for tag:"
-                                   << QuicUtils::TagToString(tag_);
+                                   << QuicTagToString(tag_);
   return receive_value_;
 }
 
@@ -252,13 +166,13 @@ QuicErrorCode QuicFixedUint32::ProcessPeerHello(
       if (presence_ == PRESENCE_OPTIONAL) {
         return QUIC_NO_ERROR;
       }
-      *error_details = "Missing " + QuicUtils::TagToString(tag_);
+      *error_details = "Missing " + QuicTagToString(tag_);
       break;
     case QUIC_NO_ERROR:
       has_receive_value_ = true;
       break;
     default:
-      *error_details = "Bad " + QuicUtils::TagToString(tag_);
+      *error_details = "Bad " + QuicTagToString(tag_);
       break;
   }
   return error;
@@ -281,7 +195,7 @@ bool QuicFixedTagVector::HasSendValues() const {
 
 QuicTagVector QuicFixedTagVector::GetSendValues() const {
   QUIC_BUG_IF(!has_send_values_) << "No send values to get for tag:"
-                                 << QuicUtils::TagToString(tag_);
+                                 << QuicTagToString(tag_);
   return send_values_;
 }
 
@@ -296,7 +210,7 @@ bool QuicFixedTagVector::HasReceivedValues() const {
 
 QuicTagVector QuicFixedTagVector::GetReceivedValues() const {
   QUIC_BUG_IF(!has_receive_values_) << "No receive value to get for tag:"
-                                    << QuicUtils::TagToString(tag_);
+                                    << QuicTagToString(tag_);
   return receive_values_;
 }
 
@@ -325,7 +239,7 @@ QuicErrorCode QuicFixedTagVector::ProcessPeerHello(
       if (presence_ == PRESENCE_OPTIONAL) {
         return QUIC_NO_ERROR;
       }
-      *error_details = "Missing " + QuicUtils::TagToString(tag_);
+      *error_details = "Missing " + QuicTagToString(tag_);
       break;
     case QUIC_NO_ERROR:
       DVLOG(1) << "Received Connection Option tags from receiver.";
@@ -335,7 +249,7 @@ QuicErrorCode QuicFixedTagVector::ProcessPeerHello(
       }
       break;
     default:
-      *error_details = "Bad " + QuicUtils::TagToString(tag_);
+      *error_details = "Bad " + QuicTagToString(tag_);
       break;
   }
   return error;
@@ -355,7 +269,7 @@ bool QuicFixedIPEndPoint::HasSendValue() const {
 
 const IPEndPoint& QuicFixedIPEndPoint::GetSendValue() const {
   QUIC_BUG_IF(!has_send_value_) << "No send value to get for tag:"
-                                << QuicUtils::TagToString(tag_);
+                                << QuicTagToString(tag_);
   return send_value_;
 }
 
@@ -370,7 +284,7 @@ bool QuicFixedIPEndPoint::HasReceivedValue() const {
 
 const IPEndPoint& QuicFixedIPEndPoint::GetReceivedValue() const {
   QUIC_BUG_IF(!has_receive_value_) << "No receive value to get for tag:"
-                                   << QuicUtils::TagToString(tag_);
+                                   << QuicTagToString(tag_);
   return receive_value_;
 }
 
@@ -394,7 +308,7 @@ QuicErrorCode QuicFixedIPEndPoint::ProcessPeerHello(
   base::StringPiece address;
   if (!peer_hello.GetStringPiece(tag_, &address)) {
     if (presence_ == PRESENCE_REQUIRED) {
-      *error_details = "Missing " + QuicUtils::TagToString(tag_);
+      *error_details = "Missing " + QuicTagToString(tag_);
       return QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND;
     }
   } else {
@@ -423,7 +337,7 @@ QuicConfig::QuicConfig()
       multipath_enabled_(kMPTH, PRESENCE_OPTIONAL),
       connection_migration_disabled_(kNCMR, PRESENCE_OPTIONAL),
       alternate_server_address_(kASAD, PRESENCE_OPTIONAL),
-      force_hol_blocking_(kFHOL, PRESENCE_OPTIONAL) {
+      force_hol_blocking_(kFHL2, PRESENCE_OPTIONAL) {
   SetDefaults();
 }
 
@@ -434,8 +348,8 @@ QuicConfig::~QuicConfig() {}
 bool QuicConfig::SetInitialReceivedConnectionOptions(
     const QuicTagVector& tags) {
   if (HasReceivedConnectionOptions()) {
-    // If we have already received connection options (via handshake or due to a
-    // previous call), don't re-initialize.
+    // If we have already received connection options (via handshake or due to
+    // a previous call), don't re-initialize.
     return false;
   }
   connection_options_.SetReceivedValues(tags);

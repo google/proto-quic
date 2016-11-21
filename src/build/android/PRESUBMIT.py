@@ -62,6 +62,7 @@ def CommonChecks(input_api, output_api):
           J('pylib', 'local', 'device', 'local_device_test_run_test.py'),
           J('pylib', 'results', 'json_results_test.py'),
           J('pylib', 'symbols', 'elf_symbolizer_unittest.py'),
+          J('pylib', 'utils', 'device_dependencies_test.py'),
       ],
       env=pylib_test_env))
 

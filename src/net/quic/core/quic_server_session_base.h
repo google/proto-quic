@@ -28,7 +28,7 @@ class QuicBlockedWriterInterface;
 class QuicConfig;
 class QuicConnection;
 class QuicCryptoServerConfig;
-class ReliableQuicStream;
+class QuicStream;
 
 namespace test {
 class QuicServerSessionBasePeer;

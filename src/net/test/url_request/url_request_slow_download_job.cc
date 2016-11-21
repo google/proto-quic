@@ -67,6 +67,10 @@ void URLRequestSlowDownloadJob::Start() {
                             weak_factory_.GetWeakPtr()));
 }
 
+int64_t URLRequestSlowDownloadJob::GetTotalReceivedBytes() const {
+  return bytes_already_sent_;
+}
+
 // static
 void URLRequestSlowDownloadJob::AddUrlHandler() {
   URLRequestFilter* filter = URLRequestFilter::GetInstance();

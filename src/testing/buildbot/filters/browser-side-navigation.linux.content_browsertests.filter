@@ -1,3 +1,4 @@
+-NavigationControllerBrowserTest.EnsureSamePageNavigationUpdatesFrameNavigationEntry
 -NavigationControllerBrowserTest.FrameNavigationEntry_RecreatedInjectedSrcdocSubframe
 -RenderFrameHostManagerTest.RestoreSubframeFileAccessForHistoryNavigation
 -RequestDataResourceDispatcherHostBrowserTest.*
@@ -5,7 +6,8 @@
 # NavigationPreload dosn't work well with PlzNavigate yet. https://crbug.com/649558
 -ServiceWorkerBrowserTest/ServiceWorkerNavigationPreloadTest.*
 
+# Browser-initiated fragment navigations are handled improperly. https://crbug.com/663777
+-NavigationControllerBrowserTest.SamePageBrowserInitiated
+
 # Fail in Debug
--DevToolsProtocolTest.ControlNavigationsMainFrame
--IsolatedDevToolsProtocolTest.ControlNavigationsChildFrames
 -NavigationControllerBrowserTest.RaceCrossOriginNavigationAndSamePageHistoryNavigation

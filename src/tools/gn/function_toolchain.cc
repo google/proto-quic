@@ -302,87 +302,133 @@ const char kToolchain[] = "toolchain";
 const char kToolchain_HelpShort[] =
     "toolchain: Defines a toolchain.";
 const char kToolchain_Help[] =
-    "toolchain: Defines a toolchain.\n"
-    "\n"
-    "  A toolchain is a set of commands and build flags used to compile the\n"
-    "  source code. You can have more than one toolchain in use at once in\n"
-    "  a build.\n"
-    "\n"
-    "Functions and variables\n"
-    "\n"
-    "  tool()\n"
-    "    The tool() function call specifies the commands commands to run for\n"
-    "    a given step. See \"gn help tool\".\n"
-    "\n"
-    "  toolchain_args\n"
-    "    Overrides for build arguments to pass to the toolchain when invoking\n"
-    "    it. This is a variable of type \"scope\" where the variable names\n"
-    "    correspond to variables in declare_args() blocks.\n"
-    "\n"
-    "    When you specify a target using an alternate toolchain, the master\n"
-    "    build configuration file is re-interpreted in the context of that\n"
-    "    toolchain. toolchain_args allows you to control the arguments\n"
-    "    passed into this alternate invocation of the build.\n"
-    "\n"
-    "    Any default system arguments or arguments passed in via \"gn args\"\n"
-    "    will also be passed to the alternate invocation unless explicitly\n"
-    "    overridden by toolchain_args.\n"
-    "\n"
-    "    The toolchain_args will be ignored when the toolchain being defined\n"
-    "    is the default. In this case, it's expected you want the default\n"
-    "    argument values.\n"
-    "\n"
-    "    See also \"gn help buildargs\" for an overview of these arguments.\n"
-    "\n"
-    "  deps\n"
-    "    Dependencies of this toolchain. These dependencies will be resolved\n"
-    "    before any target in the toolchain is compiled. To avoid circular\n"
-    "    dependencies these must be targets defined in another toolchain.\n"
-    "\n"
-    "    This is expressed as a list of targets, and generally these targets\n"
-    "    will always specify a toolchain:\n"
-    "      deps = [ \"//foo/bar:baz(//build/toolchain:bootstrap)\" ]\n"
-    "\n"
-    "    This concept is somewhat inefficient to express in Ninja (it\n"
-    "    requires a lot of duplicate of rules) so should only be used when\n"
-    "    absolutely necessary.\n"
-    "\n"
-    "Invoking targets in toolchains:\n"
-    "\n"
-    "  By default, when a target depends on another, there is an implicit\n"
-    "  toolchain label that is inherited, so the dependee has the same one\n"
-    "  as the dependent.\n"
-    "\n"
-    "  You can override this and refer to any other toolchain by explicitly\n"
-    "  labeling the toolchain to use. For example:\n"
-    "    data_deps = [ \"//plugins:mine(//toolchains:plugin_toolchain)\" ]\n"
-    "  The string \"//build/toolchains:plugin_toolchain\" is a label that\n"
-    "  identifies the toolchain declaration for compiling the sources.\n"
-    "\n"
-    "  To load a file in an alternate toolchain, GN does the following:\n"
-    "\n"
-    "   1. Loads the file with the toolchain definition in it (as determined\n"
-    "      by the toolchain label).\n"
-    "   2. Re-runs the master build configuration file, applying the\n"
-    "      arguments specified by the toolchain_args section of the toolchain\n"
-    "      definition.\n"
-    "   3. Loads the destination build file in the context of the\n"
-    "      configuration file in the previous step.\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  toolchain(\"plugin_toolchain\") {\n"
-    "    tool(\"cc\") {\n"
-    "      command = \"gcc {{source}}\"\n"
-    "      ...\n"
-    "    }\n"
-    "\n"
-    "    toolchain_args = {\n"
-    "      is_plugin = true\n"
-    "      is_32bit = true\n"
-    "      is_64bit = false\n"
-    "    }\n"
-    "  }\n";
+    R"*(toolchain: Defines a toolchain.
+
+  A toolchain is a set of commands and build flags used to compile the source
+  code. The toolchain() function defines these commands.
+
+Toolchain overview
+
+  You can have more than one toolchain in use at once in a build and a target
+  can exist simultaneously in multiple toolchains. A build file is executed
+  once for each toolchain it is referenced in so the GN code can vary all
+  parameters of each target (or which targets exist) on a per-toolchain basis.
+
+  When you have a simple build with only one toolchain, the build config file
+  is loaded only once at the beginning of the build. It must call
+  set_default_toolchain() (see "gn help set_default_toolchain") to tell GN the
+  label of the toolchain definition to use. The "toolchain_args" section of the
+  toolchain definition is ignored.
+
+  When a target has a dependency on a target using different toolchain (see "gn
+  help labels" for how to specify this), GN will start a build using that
+  secondary toolchain to resolve the target. GN will load the build config file
+  with the build arguements overridden as specified in the toolchain_args.
+  Because the default toolchain is already known, calls to
+  set_default_toolchain() are ignored.
+
+  To load a file in an alternate toolchain, GN does the following:
+
+    1. Loads the file with the toolchain definition in it (as determined by the
+       toolchain label).
+    2. Re-runs the master build configuration file, applying the arguments
+       specified by the toolchain_args section of the toolchain definition.
+    3. Loads the destination build file in the context of the configuration file
+       in the previous step.
+
+  The toolchain configuration is two-way. In the default toolchain (i.e. the
+  main build target) the configuration flows from the build config file to the
+  toolchain. The build config file looks at the state of the build (OS type,
+  CPU architecture, etc.) and decides which toolchain to use (via
+  set_default_toolchain()). In secondary toolchains, the configuration flows
+  from the toolchain to the build config file: the "toolchain_args" in the
+  toolchain definition specifies the arguments to re-invoke the build.
+
+Functions and variables
+
+  tool()
+    The tool() function call specifies the commands commands to run for a given
+    step. See "gn help tool".
+
+  toolchain_args
+    Overrides for build arguments to pass to the toolchain when invoking it.
+    This is a variable of type "scope" where the variable names correspond to
+    variables in declare_args() blocks.
+
+    When you specify a target using an alternate toolchain, the master build
+    configuration file is re-interpreted in the context of that toolchain.
+    toolchain_args allows you to control the arguments passed into this
+    alternate invocation of the build.
+
+    Any default system arguments or arguments passed in via "gn args" will also
+    be passed to the alternate invocation unless explicitly overridden by
+    toolchain_args.
+
+    The toolchain_args will be ignored when the toolchain being defined is the
+    default. In this case, it's expected you want the default argument values.
+
+    See also "gn help buildargs" for an overview of these arguments.
+
+  deps
+    Dependencies of this toolchain. These dependencies will be resolved before
+    any target in the toolchain is compiled. To avoid circular dependencies
+    these must be targets defined in another toolchain.
+
+    This is expressed as a list of targets, and generally these targets will
+    always specify a toolchain:
+      deps = [ "//foo/bar:baz(//build/toolchain:bootstrap)" ]
+
+    This concept is somewhat inefficient to express in Ninja (it requires a lot
+    of duplicate of rules) so should only be used when absolutely necessary.
+
+Example of defining a toolchain
+
+  toolchain("32") {
+    tool("cc") {
+      command = "gcc {{source}}"
+      ...
+    }
+
+    toolchain_args = {
+      use_doom_melon = true  # Doom melon always required for 32-bit builds.
+      current_cpu = "x86"
+    }
+  }
+
+  toolchain("64") {
+    tool("cc") {
+      command = "gcc {{source}}"
+      ...
+    }
+
+    toolchain_args = {
+      # use_doom_melon is not overridden here, it will take the default.
+      current_cpu = "x64"
+    }
+  }
+
+Example of cross-toolchain dependencies
+
+  If a 64-bit target wants to depend on a 32-bit binary, it would specify a
+  dependency using data_deps (data deps are like deps that are only needed at
+  runtime and aren't linked, since you can't link a 32-bit and a 64-bit
+  library).
+
+    executable("my_program") {
+      ...
+      if (target_cpu == "x64") {
+        # The 64-bit build needs this 32-bit helper.
+        data_deps = [ ":helper(//toolchains:32)" ]
+      }
+    }
+
+    if (target_cpu == "x86") {
+      # Our helper library is only compiled in 32-bits.
+      shared_library("helper") {
+        ...
+      }
+    }
+)*";
 
 Value RunToolchain(Scope* scope,
                    const FunctionCallNode* function,
@@ -459,468 +505,457 @@ const char kTool[] = "tool";
 const char kTool_HelpShort[] =
     "tool: Specify arguments to a toolchain tool.";
 const char kTool_Help[] =
-    "tool: Specify arguments to a toolchain tool.\n"
-    "\n"
-    "Usage:\n"
-    "\n"
-    "  tool(<tool type>) {\n"
-    "    <tool variables...>\n"
-    "  }\n"
-    "\n"
-    "Tool types\n"
-    "\n"
-    "    Compiler tools:\n"
-    "      \"cc\": C compiler\n"
-    "      \"cxx\": C++ compiler\n"
-    "      \"objc\": Objective C compiler\n"
-    "      \"objcxx\": Objective C++ compiler\n"
-    "      \"rc\": Resource compiler (Windows .rc files)\n"
-    "      \"asm\": Assembler\n"
-    "\n"
-    "    Linker tools:\n"
-    "      \"alink\": Linker for static libraries (archives)\n"
-    "      \"solink\": Linker for shared libraries\n"
-    "      \"link\": Linker for executables\n"
-    "\n"
-    "    Other tools:\n"
-    "      \"stamp\": Tool for creating stamp files\n"
-    "      \"copy\": Tool to copy files.\n"
-    "\n"
-    "    Platform specific tools:\n"
-    "      \"copy_bundle_data\": [iOS, OS X] Tool to copy files in a bundle.\n"
-    "      \"compile_xcassets\": [iOS, OS X] Tool to compile asset catalogs.\n"
-    "\n"
-    "Tool variables\n"
-    "\n"
-    "    command  [string with substitutions]\n"
-    "        Valid for: all tools (required)\n"
-    "\n"
-    "        The command to run.\n"
-    "\n"
-    "    default_output_dir  [string with substitutions]\n"
-    "        Valid for: linker tools\n"
-    "\n"
-    "        Default directory name for the output file relative to the\n"
-    "        root_build_dir. It can contain other substitution patterns.\n"
-    "        This will be the default value for the {{output_dir}} expansion\n"
-    "        (discussed below) but will be overridden by the \"output_dir\"\n"
-    "        variable in a target, if one is specified.\n"
-    "\n"
-    "        GN doesn't do anything with this string other than pass it\n"
-    "        along, potentially with target-specific overrides. It is the\n"
-    "        tool's job to use the expansion so that the files will be in\n"
-    "        the right place.\n"
-    "\n"
-    "    default_output_extension  [string]\n"
-    "        Valid for: linker tools\n"
-    "\n"
-    "        Extension for the main output of a linkable tool. It includes\n"
-    "        the leading dot. This will be the default value for the\n"
-    "        {{output_extension}} expansion (discussed below) but will be\n"
-    "        overridden by by the \"output extension\" variable in a target,\n"
-    "        if one is specified. Empty string means no extension.\n"
-    "\n"
-    "        GN doesn't actually do anything with this extension other than\n"
-    "        pass it along, potentially with target-specific overrides. One\n"
-    "        would typically use the {{output_extension}} value in the\n"
-    "        \"outputs\" to read this value.\n"
-    "\n"
-    "        Example: default_output_extension = \".exe\"\n"
-    "\n"
-    "    depfile  [string with substitutions]\n"
-    "        Valid for: compiler tools (optional)\n"
-    "\n"
-    "        If the tool can write \".d\" files, this specifies the name of\n"
-    "        the resulting file. These files are used to list header file\n"
-    "        dependencies (or other implicit input dependencies) that are\n"
-    "        discovered at build time. See also \"depsformat\".\n"
-    "\n"
-    "        Example: depfile = \"{{output}}.d\"\n"
-    "\n"
-    "    depsformat  [string]\n"
-    "        Valid for: compiler tools (when depfile is specified)\n"
-    "\n"
-    "        Format for the deps outputs. This is either \"gcc\" or \"msvc\".\n"
-    "        See the ninja documentation for \"deps\" for more information.\n"
-    "\n"
-    "        Example: depsformat = \"gcc\"\n"
-    "\n"
-    "    description  [string with substitutions, optional]\n"
-    "        Valid for: all tools\n"
-    "\n"
-    "        What to print when the command is run.\n"
-    "\n"
-    "        Example: description = \"Compiling {{source}}\"\n"
-    "\n"
-    "    lib_switch  [string, optional, link tools only]\n"
-    "    lib_dir_switch  [string, optional, link tools only]\n"
-    "        Valid for: Linker tools except \"alink\"\n"
-    "\n"
-    "        These strings will be prepended to the libraries and library\n"
-    "        search directories, respectively, because linkers differ on how\n"
-    "        specify them. If you specified:\n"
-    "          lib_switch = \"-l\"\n"
-    "          lib_dir_switch = \"-L\"\n"
-    "        then the \"{{libs}}\" expansion for [ \"freetype\", \"expat\"]\n"
-    "        would be \"-lfreetype -lexpat\".\n"
-    "\n"
-    "    outputs  [list of strings with substitutions]\n"
-    "        Valid for: Linker and compiler tools (required)\n"
-    "\n"
-    "        An array of names for the output files the tool produces. These\n"
-    "        are relative to the build output directory. There must always be\n"
-    "        at least one output file. There can be more than one output (a\n"
-    "        linker might produce a library and an import library, for\n"
-    "        example).\n"
-    "\n"
-    "        This array just declares to GN what files the tool will\n"
-    "        produce. It is your responsibility to specify the tool command\n"
-    "        that actually produces these files.\n"
-    "\n"
-    "        If you specify more than one output for shared library links,\n"
-    "        you should consider setting link_output, depend_output, and\n"
-    "        runtime_outputs.\n"
-    "\n"
-    "        Example for a compiler tool that produces .obj files:\n"
-    "          outputs = [\n"
-    "            \"{{source_out_dir}}/{{source_name_part}}.obj\"\n"
-    "          ]\n"
-    "\n"
-    "        Example for a linker tool that produces a .dll and a .lib. The\n"
-    "        use of {{target_output_name}}, {{output_extension}} and\n"
-    "        {{output_dir}} allows the target to override these values.\n"
-    "          outputs = [\n"
-    "            \"{{output_dir}}/{{target_output_name}}"
-                     "{{output_extension}}\",\n"
-    "            \"{{output_dir}}/{{target_output_name}}.lib\",\n"
-    "          ]\n"
-    "\n"
-    "    pool [label, optional]\n"
-    "\n"
-    "        Label of the pool to use for the tool. Pools are used to limit\n"
-    "        the number of tasks that can execute concurrently during the\n"
-    "        build.\n"
-    "\n"
-    "        See also \"gn help pool\".\n"
-    "\n"
-    "    link_output  [string with substitutions]\n"
-    "    depend_output  [string with substitutions]\n"
-    "        Valid for: \"solink\" only (optional)\n"
-    "\n"
-    "        These two files specify which of the outputs from the solink\n"
-    "        tool should be used for linking and dependency tracking. These\n"
-    "        should match entries in the \"outputs\". If unspecified, the\n"
-    "        first item in the \"outputs\" array will be used for all. See\n"
-    "        \"Separate linking and dependencies for shared libraries\"\n"
-    "        below for more.\n"
-    "\n"
-    "        On Windows, where the tools produce a .dll shared library and\n"
-    "        a .lib import library, you will want the first two to be the\n"
-    "        import library and the third one to be the .dll file.\n"
-    "        On Linux, if you're not doing the separate linking/dependency\n"
-    "        optimization, all of these should be the .so output.\n"
-    "\n"
-    "    output_prefix  [string]\n"
-    "        Valid for: Linker tools (optional)\n"
-    "\n"
-    "        Prefix to use for the output name. Defaults to empty. This\n"
-    "        prefix will be prepended to the name of the target (or the\n"
-    "        output_name if one is manually specified for it) if the prefix\n"
-    "        is not already there. The result will show up in the\n"
-    "        {{output_name}} substitution pattern.\n"
-    "\n"
-    "        Individual targets can opt-out of the output prefix by setting:\n"
-    "          output_prefix_override = true\n"
-    "        (see \"gn help output_prefix_override\").\n"
-    "\n"
-    "        This is typically used to prepend \"lib\" to libraries on\n"
-    "        Posix systems:\n"
-    "          output_prefix = \"lib\"\n"
-    "\n"
-    "    precompiled_header_type  [string]\n"
-    "        Valid for: \"cc\", \"cxx\", \"objc\", \"objcxx\"\n"
-    "\n"
-    "        Type of precompiled headers. If undefined or the empty string,\n"
-    "        precompiled headers will not be used for this tool. Otherwise\n"
-    "        use \"gcc\" or \"msvc\".\n"
-    "\n"
-    "        For precompiled headers to be used for a given target, the\n"
-    "        target (or a config applied to it) must also specify a\n"
-    "        \"precompiled_header\" and, for \"msvc\"-style headers, a\n"
-    "        \"precompiled_source\" value. If the type is \"gcc\", then both\n"
-    "        \"precompiled_header\" and \"precompiled_source\" must resolve\n"
-    "        to the same file, despite the different formats required for each."
-    "\n"
-    "        See \"gn help precompiled_header\" for more.\n"
-    "\n"
-    "    restat  [boolean]\n"
-    "        Valid for: all tools (optional, defaults to false)\n"
-    "\n"
-    "        Requests that Ninja check the file timestamp after this tool has\n"
-    "        run to determine if anything changed. Set this if your tool has\n"
-    "        the ability to skip writing output if the output file has not\n"
-    "        changed.\n"
-    "\n"
-    "        Normally, Ninja will assume that when a tool runs the output\n"
-    "        be new and downstream dependents must be rebuild. When this is\n"
-    "        set to trye, Ninja can skip rebuilding downstream dependents for\n"
-    "        input changes that don't actually affect the output.\n"
-    "\n"
-    "        Example:\n"
-    "          restat = true\n"
-    "\n"
-    "    rspfile  [string with substitutions]\n"
-    "        Valid for: all tools (optional)\n"
-    "\n"
-    "        Name of the response file. If empty, no response file will be\n"
-    "        used. See \"rspfile_content\".\n"
-    "\n"
-    "    rspfile_content  [string with substitutions]\n"
-    "        Valid for: all tools (required when \"rspfile\" is specified)\n"
-    "\n"
-    "        The contents to be written to the response file. This may\n"
-    "        include all or part of the command to send to the tool which\n"
-    "        allows you to get around OS command-line length limits.\n"
-    "\n"
-    "        This example adds the inputs and libraries to a response file,\n"
-    "        but passes the linker flags directly on the command line:\n"
-    "          tool(\"link\") {\n"
-    "            command = \"link -o {{output}} {{ldflags}} @{{output}}.rsp\"\n"
-    "            rspfile = \"{{output}}.rsp\"\n"
-    "            rspfile_content = \"{{inputs}} {{solibs}} {{libs}}\"\n"
-    "          }\n"
-    "\n"
-    "    runtime_outputs  [string list with substitutions]\n"
-    "        Valid for: linker tools\n"
-    "\n"
-    "        If specified, this list is the subset of the outputs that should\n"
-    "        be added to runtime deps (see \"gn help runtime_deps\"). By\n"
-    "        default (if runtime_outputs is empty or unspecified), it will be\n"
-    "        the link_output.\n"
-    "\n"
-    "Expansions for tool variables\n"
-    "\n"
-    "  All paths are relative to the root build directory, which is the\n"
-    "  current directory for running all tools. These expansions are\n"
-    "  available to all tools:\n"
-    "\n"
-    "    {{label}}\n"
-    "        The label of the current target. This is typically used in the\n"
-    "        \"description\" field for link tools. The toolchain will be\n"
-    "        omitted from the label for targets in the default toolchain, and\n"
-    "        will be included for targets in other toolchains.\n"
-    "\n"
-    "    {{label_name}}\n"
-    "        The short name of the label of the target. This is the part\n"
-    "        after the colon. For \"//foo/bar:baz\" this will be \"baz\".\n"
-    "        Unlike {{target_output_name}}, this is not affected by the\n"
-    "        \"output_prefix\" in the tool or the \"output_name\" set\n"
-    "        on the target.\n"
-    "\n"
-    "    {{output}}\n"
-    "        The relative path and name of the output(s) of the current\n"
-    "        build step. If there is more than one output, this will expand\n"
-    "        to a list of all of them.\n"
-    "        Example: \"out/base/my_file.o\"\n"
-    "\n"
-    "    {{target_gen_dir}}\n"
-    "    {{target_out_dir}}\n"
-    "        The directory of the generated file and output directories,\n"
-    "        respectively, for the current target. There is no trailing\n"
-    "        slash. See also {{output_dir}} for linker tools.\n"
-    "        Example: \"out/base/test\"\n"
-    "\n"
-    "    {{target_output_name}}\n"
-    "        The short name of the current target with no path information,\n"
-    "        or the value of the \"output_name\" variable if one is specified\n"
-    "        in the target. This will include the \"output_prefix\" if any.\n"
-    "        See also {{label_name}}.\n"
-    "        Example: \"libfoo\" for the target named \"foo\" and an\n"
-    "        output prefix for the linker tool of \"lib\".\n"
-    "\n"
-    "  Compiler tools have the notion of a single input and a single output,\n"
-    "  along with a set of compiler-specific flags. The following expansions\n"
-    "  are available:\n"
-    "\n"
-    "    {{asmflags}}\n"
-    "    {{cflags}}\n"
-    "    {{cflags_c}}\n"
-    "    {{cflags_cc}}\n"
-    "    {{cflags_objc}}\n"
-    "    {{cflags_objcc}}\n"
-    "    {{defines}}\n"
-    "    {{include_dirs}}\n"
-    "        Strings correspond that to the processed flags/defines/include\n"
-    "        directories specified for the target.\n"
-    "        Example: \"--enable-foo --enable-bar\"\n"
-    "\n"
-    "        Defines will be prefixed by \"-D\" and include directories will\n"
-    "        be prefixed by \"-I\" (these work with Posix tools as well as\n"
-    "        Microsoft ones).\n"
-    "\n"
-    "    {{source}}\n"
-    "        The relative path and name of the current input file.\n"
-    "        Example: \"../../base/my_file.cc\"\n"
-    "\n"
-    "    {{source_file_part}}\n"
-    "        The file part of the source including the extension (with no\n"
-    "        directory information).\n"
-    "        Example: \"foo.cc\"\n"
-    "\n"
-    "    {{source_name_part}}\n"
-    "        The filename part of the source file with no directory or\n"
-    "        extension.\n"
-    "        Example: \"foo\"\n"
-    "\n"
-    "    {{source_gen_dir}}\n"
-    "    {{source_out_dir}}\n"
-    "        The directory in the generated file and output directories,\n"
-    "        respectively, for the current input file. If the source file\n"
-    "        is in the same directory as the target is declared in, they will\n"
-    "        will be the same as the \"target\" versions above.\n"
-    "        Example: \"gen/base/test\"\n"
-    "\n"
-    "  Linker tools have multiple inputs and (potentially) multiple outputs\n"
-    "  The static library tool (\"alink\") is not considered a linker tool.\n"
-    "  The following expansions are available:\n"
-    "\n"
-    "    {{inputs}}\n"
-    "    {{inputs_newline}}\n"
-    "        Expands to the inputs to the link step. This will be a list of\n"
-    "        object files and static libraries.\n"
-    "        Example: \"obj/foo.o obj/bar.o obj/somelibrary.a\"\n"
-    "\n"
-    "        The \"_newline\" version will separate the input files with\n"
-    "        newlines instead of spaces. This is useful in response files:\n"
-    "        some linkers can take a \"-filelist\" flag which expects newline\n"
-    "        separated files, and some Microsoft tools have a fixed-sized\n"
-    "        buffer for parsing each line of a response file.\n"
-    "\n"
-    "    {{ldflags}}\n"
-    "        Expands to the processed set of ldflags and library search paths\n"
-    "        specified for the target.\n"
-    "        Example: \"-m64 -fPIC -pthread -L/usr/local/mylib\"\n"
-    "\n"
-    "    {{libs}}\n"
-    "        Expands to the list of system libraries to link to. Each will\n"
-    "        be prefixed by the \"lib_prefix\".\n"
-    "\n"
-    "        As a special case to support Mac, libraries with names ending in\n"
-    "        \".framework\" will be added to the {{libs}} with \"-framework\"\n"
-    "        preceeding it, and the lib prefix will be ignored.\n"
-    "\n"
-    "        Example: \"-lfoo -lbar\"\n"
-    "\n"
-    "    {{output_dir}}\n"
-    "        The value of the \"output_dir\" variable in the target, or the\n"
-    "        the value of the \"default_output_dir\" value in the tool if the\n"
-    "        target does not override the output directory. This will be\n"
-    "        relative to the root_build_dir and will not end in a slash.\n"
-    "        Will be \".\" for output to the root_build_dir.\n"
-    "\n"
-    "        This is subtly different than {{target_out_dir}} which is\n"
-    "        defined by GN based on the target's path and not overridable.\n"
-    "        {{output_dir}} is for the final output, {{target_out_dir}} is\n"
-    "        generally for object files and other outputs.\n"
-    "\n"
-    "        Usually {{output_dir}} would be defined in terms of either\n"
-    "        {{target_out_dir}} or {{root_out_dir}}\n"
-    "\n"
-    "    {{output_extension}}\n"
-    "        The value of the \"output_extension\" variable in the target,\n"
-    "        or the value of the \"default_output_extension\" value in the\n"
-    "        tool if the target does not specify an output extension.\n"
-    "        Example: \".so\"\n"
-    "\n"
-    "    {{solibs}}\n"
-    "        Extra libraries from shared library dependencide not specified\n"
-    "        in the {{inputs}}. This is the list of link_output files from\n"
-    "        shared libraries (if the solink tool specifies a \"link_output\"\n"
-    "        variable separate from the \"depend_output\").\n"
-    "\n"
-    "        These should generally be treated the same as libs by your tool.\n"
-    "        Example: \"libfoo.so libbar.so\"\n"
-    "\n"
-    "  The static library (\"alink\") tool allows {{arflags}} plus the common\n"
-    "  tool substitutions.\n"
-    "\n"
-    "  The copy tool allows the common compiler/linker substitutions, plus\n"
-    "  {{source}} which is the source of the copy. The stamp tool allows\n"
-    "  only the common tool substitutions.\n"
-    "\n"
-    "  The copy_bundle_data and compile_xcassets tools only allows the common\n"
-    "  tool substitutions. Both tools are required to create iOS/OS X bundles\n"
-    "  and need only be defined on those platforms.\n"
-    "\n"
-    "  The copy_bundle_data tool will be called with one source and needs to\n"
-    "  copy (optionally optimizing the data representation) to its output. It\n"
-    "  may be called with a directory as input and it needs to be recursively\n"
-    "  copied.\n"
-    "\n"
-    "  The compile_xcassets tool will be called with one or more source (each\n"
-    "  an asset catalog) that needs to be compiled to a single output. The\n"
-    "  following substitutions are avaiable:\n"
-    "\n"
-    "    {{inputs}}\n"
-    "        Expands to the list of .xcassets to use as input to compile the\n"
-    "        asset catalog.\n"
-    "\n"
-    "    {{bundle_product_type}}\n"
-    "        Expands to the product_type of the bundle that will contain the\n"
-    "        compiled asset catalog. Usually corresponds to the product_type\n"
-    "        property of the corresponding create_bundle target.\n"
-    "\n"
-    "Separate linking and dependencies for shared libraries\n"
-    "\n"
-    "  Shared libraries are special in that not all changes to them require\n"
-    "  that dependent targets be re-linked. If the shared library is changed\n"
-    "  but no imports or exports are different, dependent code needn't be\n"
-    "  relinked, which can speed up the build.\n"
-    "\n"
-    "  If your link step can output a list of exports from a shared library\n"
-    "  and writes the file only if the new one is different, the timestamp of\n"
-    "  this file can be used for triggering re-links, while the actual shared\n"
-    "  library would be used for linking.\n"
-    "\n"
-    "  You will need to specify\n"
-    "    restat = true\n"
-    "  in the linker tool to make this work, so Ninja will detect if the\n"
-    "  timestamp of the dependency file has changed after linking (otherwise\n"
-    "  it will always assume that running a command updates the output):\n"
-    "\n"
-    "    tool(\"solink\") {\n"
-    "      command = \"...\"\n"
-    "      outputs = [\n"
-    "        \"{{output_dir}}/{{target_output_name}}{{output_extension}}\",\n"
-    "        \"{{output_dir}}/{{target_output_name}}"
-                 "{{output_extension}}.TOC\",\n"
-    "      ]\n"
-    "      link_output =\n"
-    "        \"{{output_dir}}/{{target_output_name}}{{output_extension}}\"\n"
-    "      depend_output =\n"
-    "        \"{{output_dir}}/{{target_output_name}}"
-                 "{{output_extension}}.TOC\"\n"
-    "      restat = true\n"
-    "    }\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  toolchain(\"my_toolchain\") {\n"
-    "    # Put these at the top to apply to all tools below.\n"
-    "    lib_prefix = \"-l\"\n"
-    "    lib_dir_prefix = \"-L\"\n"
-    "\n"
-    "    tool(\"cc\") {\n"
-    "      command = \"gcc {{source}} -o {{output}}\"\n"
-    "      outputs = [ \"{{source_out_dir}}/{{source_name_part}}.o\" ]\n"
-    "      description = \"GCC {{source}}\"\n"
-    "    }\n"
-    "    tool(\"cxx\") {\n"
-    "      command = \"g++ {{source}} -o {{output}}\"\n"
-    "      outputs = [ \"{{source_out_dir}}/{{source_name_part}}.o\" ]\n"
-    "      description = \"G++ {{source}}\"\n"
-    "    }\n"
-    "  }\n";
+    R"(tool: Specify arguments to a toolchain tool.
+
+Usage
+
+  tool(<tool type>) {
+    <tool variables...>
+  }
+
+Tool types
+
+    Compiler tools:
+      "cc": C compiler
+      "cxx": C++ compiler
+      "objc": Objective C compiler
+      "objcxx": Objective C++ compiler
+      "rc": Resource compiler (Windows .rc files)
+      "asm": Assembler
+
+    Linker tools:
+      "alink": Linker for static libraries (archives)
+      "solink": Linker for shared libraries
+      "link": Linker for executables
+
+    Other tools:
+      "stamp": Tool for creating stamp files
+      "copy": Tool to copy files.
+
+    Platform specific tools:
+      "copy_bundle_data": [iOS, OS X] Tool to copy files in a bundle.
+      "compile_xcassets": [iOS, OS X] Tool to compile asset catalogs.
+
+Tool variables
+
+    command  [string with substitutions]
+        Valid for: all tools (required)
+
+        The command to run.
+
+    default_output_dir  [string with substitutions]
+        Valid for: linker tools
+
+        Default directory name for the output file relative to the
+        root_build_dir. It can contain other substitution patterns. This will
+        be the default value for the {{output_dir}} expansion (discussed below)
+        but will be overridden by the "output_dir" variable in a target, if one
+        is specified.
+
+        GN doesn't do anything with this string other than pass it along,
+        potentially with target-specific overrides. It is the tool's job to use
+        the expansion so that the files will be in the right place.
+
+    default_output_extension  [string]
+        Valid for: linker tools
+
+        Extension for the main output of a linkable tool. It includes the
+        leading dot. This will be the default value for the
+        {{output_extension}} expansion (discussed below) but will be overridden
+        by by the "output extension" variable in a target, if one is specified.
+        Empty string means no extension.
+
+        GN doesn't actually do anything with this extension other than pass it
+        along, potentially with target-specific overrides. One would typically
+        use the {{output_extension}} value in the "outputs" to read this value.
+
+        Example: default_output_extension = ".exe"
+
+    depfile  [string with substitutions]
+        Valid for: compiler tools (optional)
+
+        If the tool can write ".d" files, this specifies the name of the
+        resulting file. These files are used to list header file dependencies
+        (or other implicit input dependencies) that are discovered at build
+        time. See also "depsformat".
+
+        Example: depfile = "{{output}}.d"
+
+    depsformat  [string]
+        Valid for: compiler tools (when depfile is specified)
+
+        Format for the deps outputs. This is either "gcc" or "msvc". See the
+        ninja documentation for "deps" for more information.
+
+        Example: depsformat = "gcc"
+
+    description  [string with substitutions, optional]
+        Valid for: all tools
+
+        What to print when the command is run.
+
+        Example: description = "Compiling {{source}}"
+
+    lib_switch  [string, optional, link tools only]
+    lib_dir_switch  [string, optional, link tools only]
+        Valid for: Linker tools except "alink"
+
+        These strings will be prepended to the libraries and library search
+        directories, respectively, because linkers differ on how specify them.
+        If you specified:
+          lib_switch = "-l"
+          lib_dir_switch = "-L"
+        then the "{{libs}}" expansion for [ "freetype", "expat"] would be
+        "-lfreetype -lexpat".
+
+    outputs  [list of strings with substitutions]
+        Valid for: Linker and compiler tools (required)
+
+        An array of names for the output files the tool produces. These are
+        relative to the build output directory. There must always be at least
+        one output file. There can be more than one output (a linker might
+        produce a library and an import library, for example).
+
+        This array just declares to GN what files the tool will produce. It is
+        your responsibility to specify the tool command that actually produces
+        these files.
+
+        If you specify more than one output for shared library links, you
+        should consider setting link_output, depend_output, and
+        runtime_outputs.
+
+        Example for a compiler tool that produces .obj files:
+          outputs = [
+            "{{source_out_dir}}/{{source_name_part}}.obj"
+          ]
+
+        Example for a linker tool that produces a .dll and a .lib. The use of
+        {{target_output_name}}, {{output_extension}} and {{output_dir}} allows
+        the target to override these values.
+          outputs = [
+            "{{output_dir}}/{{target_output_name}}"
+                "{{output_extension}}",
+            "{{output_dir}}/{{target_output_name}}.lib",
+          ]
+
+    pool [label, optional]
+
+        Label of the pool to use for the tool. Pools are used to limit the
+        number of tasks that can execute concurrently during the build.
+
+        See also "gn help pool".
+
+    link_output  [string with substitutions]
+    depend_output  [string with substitutions]
+        Valid for: "solink" only (optional)
+
+        These two files specify which of the outputs from the solink tool
+        should be used for linking and dependency tracking. These should match
+        entries in the "outputs". If unspecified, the first item in the
+        "outputs" array will be used for all. See "Separate linking and
+        dependencies for shared libraries" below for more.
+
+        On Windows, where the tools produce a .dll shared library and a .lib
+        import library, you will want the first two to be the import library
+        and the third one to be the .dll file. On Linux, if you're not doing
+        the separate linking/dependency optimization, all of these should be
+        the .so output.
+
+    output_prefix  [string]
+        Valid for: Linker tools (optional)
+
+        Prefix to use for the output name. Defaults to empty. This prefix will
+        be prepended to the name of the target (or the output_name if one is
+        manually specified for it) if the prefix is not already there. The
+        result will show up in the {{output_name}} substitution pattern.
+
+        Individual targets can opt-out of the output prefix by setting:
+          output_prefix_override = true
+        (see "gn help output_prefix_override").
+
+        This is typically used to prepend "lib" to libraries on
+        Posix systems:
+          output_prefix = "lib"
+
+    precompiled_header_type  [string]
+        Valid for: "cc", "cxx", "objc", "objcxx"
+
+        Type of precompiled headers. If undefined or the empty string,
+        precompiled headers will not be used for this tool. Otherwise use "gcc"
+        or "msvc".
+
+        For precompiled headers to be used for a given target, the target (or a
+        config applied to it) must also specify a "precompiled_header" and, for
+        "msvc"-style headers, a "precompiled_source" value. If the type is
+        "gcc", then both "precompiled_header" and "precompiled_source" must
+        resolve to the same file, despite the different formats required for
+        each."
+
+        See "gn help precompiled_header" for more.
+
+    restat  [boolean]
+        Valid for: all tools (optional, defaults to false)
+
+        Requests that Ninja check the file timestamp after this tool has run to
+        determine if anything changed. Set this if your tool has the ability to
+        skip writing output if the output file has not changed.
+
+        Normally, Ninja will assume that when a tool runs the output be new and
+        downstream dependents must be rebuild. When this is set to trye, Ninja
+        can skip rebuilding downstream dependents for input changes that don't
+        actually affect the output.
+
+        Example:
+          restat = true
+
+    rspfile  [string with substitutions]
+        Valid for: all tools (optional)
+
+        Name of the response file. If empty, no response file will be
+        used. See "rspfile_content".
+
+    rspfile_content  [string with substitutions]
+        Valid for: all tools (required when "rspfile" is specified)
+
+        The contents to be written to the response file. This may include all
+        or part of the command to send to the tool which allows you to get
+        around OS command-line length limits.
+
+        This example adds the inputs and libraries to a response file, but
+        passes the linker flags directly on the command line:
+          tool("link") {
+            command = "link -o {{output}} {{ldflags}} @{{output}}.rsp"
+            rspfile = "{{output}}.rsp"
+            rspfile_content = "{{inputs}} {{solibs}} {{libs}}"
+          }
+
+    runtime_outputs  [string list with substitutions]
+        Valid for: linker tools
+
+        If specified, this list is the subset of the outputs that should be
+        added to runtime deps (see "gn help runtime_deps"). By default (if
+        runtime_outputs is empty or unspecified), it will be the link_output.
+
+Expansions for tool variables
+
+  All paths are relative to the root build directory, which is the current
+  directory for running all tools. These expansions are available to all tools:
+
+    {{label}}
+        The label of the current target. This is typically used in the
+        "description" field for link tools. The toolchain will be omitted from
+        the label for targets in the default toolchain, and will be included
+        for targets in other toolchains.
+
+    {{label_name}}
+        The short name of the label of the target. This is the part after the
+        colon. For "//foo/bar:baz" this will be "baz". Unlike
+        {{target_output_name}}, this is not affected by the "output_prefix" in
+        the tool or the "output_name" set on the target.
+
+    {{output}}
+        The relative path and name of the output(s) of the current build step.
+        If there is more than one output, this will expand to a list of all of
+        them. Example: "out/base/my_file.o"
+
+    {{target_gen_dir}}
+    {{target_out_dir}}
+        The directory of the generated file and output directories,
+        respectively, for the current target. There is no trailing slash. See
+        also {{output_dir}} for linker tools. Example: "out/base/test"
+
+    {{target_output_name}}
+        The short name of the current target with no path information, or the
+        value of the "output_name" variable if one is specified in the target.
+        This will include the "output_prefix" if any. See also {{label_name}}.
+
+        Example: "libfoo" for the target named "foo" and an output prefix for
+        the linker tool of "lib".
+
+)"  // String break to prevent overflowing the 16K max VC string length.
+R"(  Compiler tools have the notion of a single input and a single output, along
+  with a set of compiler-specific flags. The following expansions are
+  available:
+
+    {{asmflags}}
+    {{cflags}}
+    {{cflags_c}}
+    {{cflags_cc}}
+    {{cflags_objc}}
+    {{cflags_objcc}}
+    {{defines}}
+    {{include_dirs}}
+        Strings correspond that to the processed flags/defines/include
+        directories specified for the target.
+        Example: "--enable-foo --enable-bar"
+
+        Defines will be prefixed by "-D" and include directories will be
+        prefixed by "-I" (these work with Posix tools as well as Microsoft
+        ones).
+
+    {{source}}
+        The relative path and name of the current input file.
+        Example: "../../base/my_file.cc"
+
+    {{source_file_part}}
+        The file part of the source including the extension (with no directory
+        information).
+        Example: "foo.cc"
+
+    {{source_name_part}}
+        The filename part of the source file with no directory or extension.
+        Example: "foo"
+
+    {{source_gen_dir}}
+    {{source_out_dir}}
+        The directory in the generated file and output directories,
+        respectively, for the current input file. If the source file is in the
+        same directory as the target is declared in, they will will be the same
+        as the "target" versions above. Example: "gen/base/test"
+
+  Linker tools have multiple inputs and (potentially) multiple outputs The
+  static library tool ("alink") is not considered a linker tool. The following
+  expansions are available:
+
+    {{inputs}}
+    {{inputs_newline}}
+        Expands to the inputs to the link step. This will be a list of object
+        files and static libraries.
+        Example: "obj/foo.o obj/bar.o obj/somelibrary.a"
+
+        The "_newline" version will separate the input files with newlines
+        instead of spaces. This is useful in response files: some linkers can
+        take a "-filelist" flag which expects newline separated files, and some
+        Microsoft tools have a fixed-sized buffer for parsing each line of a
+        response file.
+
+    {{ldflags}}
+        Expands to the processed set of ldflags and library search paths
+        specified for the target.
+        Example: "-m64 -fPIC -pthread -L/usr/local/mylib"
+
+    {{libs}}
+        Expands to the list of system libraries to link to. Each will be
+        prefixed by the "lib_prefix".
+
+        As a special case to support Mac, libraries with names ending in
+        ".framework" will be added to the {{libs}} with "-framework" preceeding
+        it, and the lib prefix will be ignored.
+
+        Example: "-lfoo -lbar"
+
+    {{output_dir}}
+        The value of the "output_dir" variable in the target, or the the value
+        of the "default_output_dir" value in the tool if the target does not
+        override the output directory. This will be relative to the
+        root_build_dir and will not end in a slash. Will be "." for output to
+        the root_build_dir.
+
+        This is subtly different than {{target_out_dir}} which is defined by GN
+        based on the target's path and not overridable. {{output_dir}} is for
+        the final output, {{target_out_dir}} is generally for object files and
+        other outputs.
+
+        Usually {{output_dir}} would be defined in terms of either
+        {{target_out_dir}} or {{root_out_dir}}
+
+    {{output_extension}}
+        The value of the "output_extension" variable in the target, or the
+        value of the "default_output_extension" value in the tool if the target
+        does not specify an output extension.
+        Example: ".so"
+
+    {{solibs}}
+        Extra libraries from shared library dependencide not specified in the
+        {{inputs}}. This is the list of link_output files from shared libraries
+        (if the solink tool specifies a "link_output" variable separate from
+        the "depend_output").
+
+        These should generally be treated the same as libs by your tool.
+
+        Example: "libfoo.so libbar.so"
+
+)"  // String break to prevent overflowing the 16K max VC string length.
+R"(  The static library ("alink") tool allows {{arflags}} plus the common tool
+  substitutions.
+
+  The copy tool allows the common compiler/linker substitutions, plus
+  {{source}} which is the source of the copy. The stamp tool allows only the
+  common tool substitutions.
+
+  The copy_bundle_data and compile_xcassets tools only allows the common tool
+  substitutions. Both tools are required to create iOS/OS X bundles and need
+  only be defined on those platforms.
+
+  The copy_bundle_data tool will be called with one source and needs to copy
+  (optionally optimizing the data representation) to its output. It may be
+  called with a directory as input and it needs to be recursively copied.
+
+  The compile_xcassets tool will be called with one or more source (each an
+  asset catalog) that needs to be compiled to a single output. The following
+  substitutions are avaiable:
+
+    {{inputs}}
+        Expands to the list of .xcassets to use as input to compile the asset
+        catalog.
+
+    {{bundle_product_type}}
+        Expands to the product_type of the bundle that will contain the
+        compiled asset catalog. Usually corresponds to the product_type
+        property of the corresponding create_bundle target.
+
+Separate linking and dependencies for shared libraries
+
+  Shared libraries are special in that not all changes to them require that
+  dependent targets be re-linked. If the shared library is changed but no
+  imports or exports are different, dependent code needn't be relinked, which
+  can speed up the build.
+
+  If your link step can output a list of exports from a shared library and
+  writes the file only if the new one is different, the timestamp of this file
+  can be used for triggering re-links, while the actual shared library would be
+  used for linking.
+
+  You will need to specify
+    restat = true
+  in the linker tool to make this work, so Ninja will detect if the timestamp
+  of the dependency file has changed after linking (otherwise it will always
+  assume that running a command updates the output):
+
+    tool("solink") {
+      command = "..."
+      outputs = [
+        "{{output_dir}}/{{target_output_name}}{{output_extension}}",
+        "{{output_dir}}/{{target_output_name}}"
+            "{{output_extension}}.TOC",
+      ]
+      link_output =
+        "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      depend_output =
+        "{{output_dir}}/{{target_output_name}}"
+            "{{output_extension}}.TOC"
+      restat = true
+    }
+
+Example
+
+  toolchain("my_toolchain") {
+    # Put these at the top to apply to all tools below.
+    lib_prefix = "-l"
+    lib_dir_prefix = "-L"
+
+    tool("cc") {
+      command = "gcc {{source}} -o {{output}}"
+      outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+      description = "GCC {{source}}"
+    }
+    tool("cxx") {
+      command = "g++ {{source}} -o {{output}}"
+      outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+      description = "G++ {{source}}"
+    }
+  };
+)";
 
 Value RunTool(Scope* scope,
               const FunctionCallNode* function,

@@ -132,23 +132,31 @@ class LRUDictTest(unittest.TestCase):
     lru_dict.pop(3)
     self.assert_order(lru_dict, [1, 2])
 
-    # Add oldest.
-    lru_dict = self.prepare_lru_dict(data)
-    lru_dict.batch_insert_oldest([(4, 4), (5, 5)])
-    self.assert_order(lru_dict, [4, 5] + data)
-
     # Add newest.
     lru_dict = self.prepare_lru_dict(data)
     lru_dict.add(4, 4)
     self.assert_order(lru_dict, data + [4])
 
   def test_load_save(self):
+    def pairs(d):
+      return [(k, d[k]) for k in d]
+
     def save_and_load(lru_dict):
       handle, tmp_name = tempfile.mkstemp(prefix=u'lru_test')
       os.close(handle)
+
       try:
+        # Old format.
+        with open(tmp_name, 'w') as f:
+          json.dump(pairs(lru_dict), f)
+        loaded_old_format = lru_dict.load(tmp_name)
+
+        # Current format.
         lru_dict.save(tmp_name)
-        return lru.LRUDict.load(tmp_name)
+        loaded = lru_dict.load(tmp_name)
+
+        self.assertEqual(pairs(loaded), pairs(loaded_old_format))
+        return loaded
       finally:
         try:
           os.unlink(tmp_name)
@@ -180,9 +188,8 @@ class LRUDictTest(unittest.TestCase):
     # After add.
     lru_dict = self.prepare_lru_dict(data)
     lru_dict.add(4, 4)
-    lru_dict.batch_insert_oldest([(5, 5), (6, 6)])
     lru_dict = save_and_load(lru_dict)
-    self.assert_order(lru_dict, [5, 6] + data + [4])
+    self.assert_order(lru_dict, data + [4])
 
   def test_corrupted_state_file(self):
     def load_from_state(state_text):
@@ -222,6 +229,22 @@ class LRUDictTest(unittest.TestCase):
           ['key', 'another_value'],
       ]))
 
+  def test_timestamp(self):
+    lru_dict = lru.LRUDict()
+
+    now = 0
+    lru_dict.time_fn = lambda: now
+
+    lru_dict.add('ka', 'va')
+    now += 1
+
+    lru_dict.add('kb', 'vb')
+    now += 1
+
+    self.assertEqual(lru_dict.get_oldest(), ('ka', ('va', 0)))
+    self.assertEqual(lru_dict.pop_oldest(), ('ka', ('va', 0)))
+    self.assertEqual(lru_dict.get_oldest(), ('kb', ('vb', 1)))
+    self.assertEqual(lru_dict.pop_oldest(), ('kb', ('vb', 1)))
 
 if __name__ == '__main__':
   VERBOSE = '-v' in sys.argv

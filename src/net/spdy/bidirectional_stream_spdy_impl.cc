@@ -48,7 +48,6 @@ BidirectionalStreamSpdyImpl::BidirectionalStreamSpdyImpl(
 BidirectionalStreamSpdyImpl::~BidirectionalStreamSpdyImpl() {
   // Sends a RST to the remote if the stream is destroyed before it completes.
   ResetStream();
-  DCHECK(!write_pending_);
 }
 
 void BidirectionalStreamSpdyImpl::Start(

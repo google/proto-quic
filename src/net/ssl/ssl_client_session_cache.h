@@ -6,6 +6,7 @@
 #define NET_SSL_SSL_CLIENT_SESSION_CACHE_H
 
 #include <stddef.h>
+#include <time.h>
 
 #include <memory>
 #include <string>
@@ -34,8 +35,6 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
     size_t max_entries = 1024;
     // The number of calls to Lookup before a new check for expired sessions.
     size_t expiration_check_count = 256;
-    // How long each session should last.
-    base::TimeDelta timeout = base::TimeDelta::FromHours(1);
   };
 
   explicit SSLClientSessionCache(const Config& config);
@@ -58,23 +57,11 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
   void SetClockForTesting(std::unique_ptr<base::Clock> clock);
 
  private:
-  struct CacheEntry {
-    CacheEntry();
-    ~CacheEntry();
-
-    bssl::UniquePtr<SSL_SESSION> session;
-    // The time at which this entry was created.
-    base::Time creation_time;
-  };
-
-  using CacheEntryMap =
-      base::HashingMRUCache<std::string, std::unique_ptr<CacheEntry>>;
-
   // base::MemoryCoordinatorClient implementation:
   void OnMemoryStateChange(base::MemoryState state) override;
 
   // Returns true if |entry| is expired as of |now|.
-  bool IsExpired(CacheEntry* entry, const base::Time& now);
+  bool IsExpired(SSL_SESSION* session, time_t now);
 
   // Removes all expired sessions from the cache.
   void FlushExpiredSessions();
@@ -85,7 +72,7 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
 
   std::unique_ptr<base::Clock> clock_;
   Config config_;
-  CacheEntryMap cache_;
+  base::HashingMRUCache<std::string, bssl::UniquePtr<SSL_SESSION>> cache_;
   size_t lookups_since_flush_;
 
   // TODO(davidben): After https://crbug.com/458365 is fixed, replace this with

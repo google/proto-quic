@@ -122,6 +122,14 @@ SharedMemoryHandle SharedMemory::handle() const {
   return FileDescriptor(mapped_file_, false);
 }
 
+SharedMemoryHandle SharedMemory::TakeHandle() {
+  FileDescriptor handle(mapped_file_, true);
+  mapped_file_ = -1;
+  memory_ = nullptr;
+  mapped_size_ = 0;
+  return handle;
+}
+
 void SharedMemory::Close() {
   if (mapped_file_ > 0) {
     if (close(mapped_file_) < 0)

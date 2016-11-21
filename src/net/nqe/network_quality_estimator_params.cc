@@ -164,6 +164,45 @@ void ObtainDefaultObservations(
   }
 }
 
+void ObtainTypicalNetworkQuality(NetworkQuality typical_network_quality[]) {
+  for (size_t i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
+    DCHECK_EQ(InvalidRTT(), typical_network_quality[i].http_rtt());
+    DCHECK_EQ(InvalidRTT(), typical_network_quality[i].transport_rtt());
+    DCHECK_EQ(kInvalidThroughput,
+              typical_network_quality[i].downstream_throughput_kbps());
+  }
+
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = NetworkQuality(
+      // Set to the 83rd percentile of 2G RTT observations on Android. This
+      // corresponds to the median RTT observation when effective connection
+      // type is Slow 2G.
+      base::TimeDelta::FromMilliseconds(3600),
+      base::TimeDelta::FromMilliseconds(3000), kInvalidThroughput);
+
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_2G] = NetworkQuality(
+      // Set to the 58th percentile of 2G RTT observations on Android. This
+      // corresponds to the median RTT observation when effective connection
+      // type is 2G.
+      base::TimeDelta::FromMilliseconds(1800),
+      base::TimeDelta::FromMilliseconds(1500), kInvalidThroughput);
+
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_3G] = NetworkQuality(
+      // Set to the 75th percentile of 3G RTT observations on Android. This
+      // corresponds to the median RTT observation when effective connection
+      // type is 3G.
+      base::TimeDelta::FromMilliseconds(450),
+      base::TimeDelta::FromMilliseconds(400), kInvalidThroughput);
+
+  // Set to the 25th percentile of 3G RTT observations on Android.
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_4G] = NetworkQuality(
+      base::TimeDelta::FromMilliseconds(175),
+      base::TimeDelta::FromMilliseconds(125), kInvalidThroughput);
+
+  static_assert(
+      EFFECTIVE_CONNECTION_TYPE_4G + 1 == EFFECTIVE_CONNECTION_TYPE_LAST,
+      "Missing effective connection type");
+}
+
 void ObtainEffectiveConnectionTypeModelParams(
     const std::map<std::string, std::string>& variation_params,
     NetworkQuality connection_thresholds[]) {
@@ -173,34 +212,31 @@ void ObtainEffectiveConnectionTypeModelParams(
 
   default_effective_connection_type_thresholds
       [EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = NetworkQuality(
-          // Set to 2010 milliseconds, which corresponds to the 33rd percentile
-          // of 2G HTTP RTT observations on Android.
+          // Set to the 66th percentile of 2G RTT observations on Android.
           base::TimeDelta::FromMilliseconds(2010),
-          // Set to 1870 milliseconds, which corresponds to the 33rd percentile
-          // of 2G transport RTT observations on Android.
           base::TimeDelta::FromMilliseconds(1870), kInvalidThroughput);
 
   default_effective_connection_type_thresholds[EFFECTIVE_CONNECTION_TYPE_2G] =
       NetworkQuality(
-          // Set to 1420 milliseconds, which corresponds to 50th percentile of
-          // 2G
-          // HTTP RTT observations on Android.
+          // Set to the 50th percentile of RTT observations on Android.
           base::TimeDelta::FromMilliseconds(1420),
-          // Set to 1280 milliseconds, which corresponds to 50th percentile of
-          // 2G
-          // transport RTT observations on Android.
           base::TimeDelta::FromMilliseconds(1280), kInvalidThroughput);
 
   default_effective_connection_type_thresholds[EFFECTIVE_CONNECTION_TYPE_3G] =
       NetworkQuality(
-          // Set to 273 milliseconds, which corresponds to 50th percentile of
-          // 3G HTTP RTT observations on Android.
+          // Set to the 50th percentile of 3G RTT observations on Android.
           base::TimeDelta::FromMilliseconds(273),
-          // Set to 204 milliseconds, which corresponds to 50th percentile of
-          // 3G transport RTT observations on Android.
           base::TimeDelta::FromMilliseconds(204), kInvalidThroughput);
 
-  for (size_t i = 0; i < EFFECTIVE_CONNECTION_TYPE_LAST; ++i) {
+  // Connection threshold should not be set for 4G effective connection type
+  // since it is the fastest.
+  static_assert(
+      EFFECTIVE_CONNECTION_TYPE_3G + 1 == EFFECTIVE_CONNECTION_TYPE_4G,
+      "Missing effective connection type");
+  static_assert(
+      EFFECTIVE_CONNECTION_TYPE_4G + 1 == EFFECTIVE_CONNECTION_TYPE_LAST,
+      "Missing effective connection type");
+  for (size_t i = 0; i <= EFFECTIVE_CONNECTION_TYPE_3G; ++i) {
     EffectiveConnectionType effective_connection_type =
         static_cast<EffectiveConnectionType>(i);
     DCHECK_EQ(InvalidRTT(), connection_thresholds[i].http_rtt());

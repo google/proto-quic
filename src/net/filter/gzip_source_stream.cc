@@ -4,6 +4,9 @@
 
 #include "net/filter/gzip_source_stream.h"
 
+#include <algorithm>
+#include <utility>
+
 #include "base/bind.h"
 #include "base/bit_cast.h"
 #include "base/logging.h"
@@ -84,7 +87,7 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
   int input_data_size = input_buffer_size;
   int bytes_out = 0;
   bool state_compressed_entered = false;
-  while (input_data_size > 0) {
+  while (input_data_size > 0 && bytes_out < output_buffer_size) {
     InputState state = input_state_;
     switch (state) {
       case STATE_START: {
@@ -159,16 +162,12 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
         bytes_out = output_buffer_size - zlib_stream_.get()->avail_out;
         input_data_size -= bytes_used;
         input_data += bytes_used;
-        if (ret == Z_STREAM_END) {
+        if (ret == Z_STREAM_END)
           input_state_ = STATE_GZIP_FOOTER;
-          break;
-        }
-        // Return early here since zlib has written as much data to
-        // |output_buffer| as it could. There might still be some unconsumed
-        // data in |input_buffer| if there is no space in |output_buffer|.
-        DCHECK_EQ(Z_OK, ret);
-        *consumed_bytes = input_buffer_size - input_data_size;
-        return bytes_out;
+        // zlib has written as much data to |output_buffer| as it could.
+        // There might still be some unconsumed data in |input_buffer| if there
+        // is no space in |output_buffer|.
+        break;
       }
       case STATE_GZIP_FOOTER: {
         size_t to_read = std::min(gzip_footer_bytes_left_,

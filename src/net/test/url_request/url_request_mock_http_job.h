@@ -7,6 +7,8 @@
 #ifndef NET_TEST_URL_REQUEST_URL_REQUEST_MOCK_HTTP_JOB_H_
 #define NET_TEST_URL_REQUEST_URL_REQUEST_MOCK_HTTP_JOB_H_
 
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 
@@ -34,12 +36,17 @@ class URLRequestMockHTTPJob : public URLRequestFileJob {
                         const base::FilePath& file_path,
                         const scoped_refptr<base::TaskRunner>& task_runner);
 
+  // URLRequestJob overrides.
   void Start() override;
+  int64_t GetTotalReceivedBytes() const override;
   bool GetMimeType(std::string* mime_type) const override;
   int GetResponseCode() const override;
   bool GetCharset(std::string* charset) override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   bool IsRedirectResponse(GURL* location, int* http_status_code) override;
+
+  // URLRequestFileJob overridess.
+  void OnReadComplete(net::IOBuffer* buffer, int result) override;
 
   // Adds the testing URLs to the URLRequestFilter, both under HTTP and HTTPS.
   static void AddUrlHandlers(
@@ -74,6 +81,7 @@ class URLRequestMockHTTPJob : public URLRequestFileJob {
   void SetHeadersAndStart(const std::string& raw_headers);
 
   std::string raw_headers_;
+  int64_t total_received_bytes_ = 0;
   const scoped_refptr<base::TaskRunner> task_runner_;
 
   base::WeakPtrFactory<URLRequestMockHTTPJob> weak_ptr_factory_;

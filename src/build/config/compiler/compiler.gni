@@ -81,6 +81,11 @@ if (symbol_level == -1) {
     # With instrumentation enabled, debug info puts libchrome.so over 4gb, which
     # causes the linker to produce an invalid ELF. http://crbug.com/574476
     symbol_level = 0
+  } else if (is_android && !is_component_build && !is_clang &&
+             !(android_64bit_target_cpu && !build_apk_secondary_abi)) {
+    # Reduce symbol level when it will cause invalid elf files to be created
+    # (due to file size). https://crbug.com/648948.
+    symbol_level = 1
   } else if (is_win && use_goma && !is_clang) {
     # goma doesn't support PDB files, so we disable symbols during goma
     # compilation because otherwise the redundant debug information generated
@@ -102,8 +107,10 @@ if (symbol_level == -1) {
 }
 
 # Assert that the configuration isn't going to hit https://crbug.com/648948.
-assert(ignore_elf32_limitations || !is_android || android_64bit_target_cpu ||
+assert(ignore_elf32_limitations || !is_android ||
+           (android_64bit_target_cpu && !build_apk_secondary_abi) ||
            is_component_build || symbol_level < 2 || is_clang,
        "Android 32-bit non-component, non-clang builds cannot have " +
            "symbol_level=2 due to 4GiB file size limit, see " +
-           "https://crbug.com/648948")
+           "https://crbug.com/648948. If you really want to try this out, " +
+           "set ignore_elf32_limitations=true.")

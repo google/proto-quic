@@ -73,15 +73,11 @@ config("icu_code") {
       "/wd4005",  # Macro redefinition.
       "/wd4068",  # Unknown pragmas.
       "/wd4267",  # Conversion from size_t on 64-bits.
-      "/wd4996",  # Deprecated functions.
       # http://bugs.icu-project.org/trac/ticket/12821
       "/wd4333",  # Right shift by too large amount.
     ]
   } else if (is_linux || is_android) {
     cflags += [
-      # Since ICU wants to internally use its own deprecated APIs, don't
-      # complain about it.
-      "-Wno-deprecated-declarations",
       "-Wno-unused-function",
     ]
   }
@@ -89,16 +85,6 @@ config("icu_code") {
     cflags += [
       # ICU uses its own deprecated functions.
       "-Wno-deprecated-declarations",
-      # ICU prefers `a && b || c` over `(a && b) || c`.
-      "-Wno-logical-op-parentheses",
-      # ICU has some `unsigned < 0` checks.
-      "-Wno-tautological-compare",
-      # uresdata.c has switch(RES_GET_TYPE(x)) code. The
-      # RES_GET_TYPE macro returns an UResType enum, but some switch
-      # statement contains case values that aren't part of that
-      # enum (e.g. URES_TABLE32 which is in UResInternalType). This
-      # is on purpose.
-      "-Wno-switch",
       # ICU has some code with the pattern:
       #   if (found = uprv_getWindowsTimeZoneInfo(...))
       "-Wno-parentheses",
@@ -107,15 +93,6 @@ config("icu_code") {
       # unistr.cpp also has an unused function for non-component builds.
       "-Wno-unused-function",
     ]
-    if (is_win) {
-      cflags += [
-        # See http://bugs.icu-project.org/trac/ticket/11122
-        "-Wno-inline-new-delete",
-        "-Wno-implicit-exception-spec-mismatch",
-        # See http://www.icu-project.org/trac/ticket/11759.
-        "-Wno-unused-const-variable",
-      ]
-    }
   }
 }
 
@@ -997,6 +974,7 @@ if (is_android) {
 } else {
   data_dir = "common"
 }
+# TODO(GYP): Support to use host byteorder to select the icu date file
 if (current_cpu == "mips" || current_cpu == "mips64") {
   data_bundle_prefix = "icudtb"
 } else {

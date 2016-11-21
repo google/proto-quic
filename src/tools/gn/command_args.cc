@@ -118,7 +118,6 @@ void PrintArgHelp(const base::StringPiece& name, const Value& value) {
 
 int ListArgs(const std::string& build_dir) {
   Setup* setup = new Setup;
-  setup->build_settings().set_check_for_bad_items(false);
   if (!setup->DoSetup(build_dir, false) || !setup->Run())
     return 1;
 
@@ -231,7 +230,6 @@ int EditArgsFile(const std::string& build_dir) {
     // Scope the setup. We only use it for some basic state. We'll do the
     // "real" build below in the gen command.
     Setup setup;
-    setup.build_settings().set_check_for_bad_items(false);
     // Don't fill build arguments. We're about to edit the file which supplies
     // these in the first place.
     setup.set_fill_arguments(false);
@@ -280,62 +278,63 @@ extern const char kArgs[] = "args";
 extern const char kArgs_HelpShort[] =
     "args: Display or configure arguments declared by the build.";
 extern const char kArgs_Help[] =
-    "gn args <out_dir> [--list] [--short] [--args]\n"
-    "\n"
-    "  See also \"gn help buildargs\" for a more high-level overview of how\n"
-    "  build arguments work.\n"
-    "\n"
-    "Usage\n"
-    "  gn args <out_dir>\n"
-    "      Open the arguments for the given build directory in an editor\n"
-    "      (as specified by the EDITOR environment variable). If the given\n"
-    "      build directory doesn't exist, it will be created and an empty\n"
-    "      args file will be opened in the editor. You would type something\n"
-    "      like this into that file:\n"
-    "          enable_doom_melon=false\n"
-    "          os=\"android\"\n"
-    "\n"
-    "      Note: you can edit the build args manually by editing the file\n"
-    "      \"args.gn\" in the build directory and then running\n"
-    "      \"gn gen <out_dir>\".\n"
-    "\n"
-    "  gn args <out_dir> --list[=<exact_arg>] [--short]\n"
-    "      Lists all build arguments available in the current configuration,\n"
-    "      or, if an exact_arg is specified for the list flag, just that one\n"
-    "      build argument.\n"
-    "\n"
-    "      The output will list the declaration location, default value, and\n"
-    "      comment preceeding the declaration. If --short is specified,\n"
-    "      only the names and values will be printed.\n"
-    "\n"
-    "      If the out_dir is specified, the build configuration will be\n"
-    "      taken from that build directory. The reason this is needed is that\n"
-    "      the definition of some arguments is dependent on the build\n"
-    "      configuration, so setting some values might add, remove, or change\n"
-    "      the default values for other arguments. Specifying your exact\n"
-    "      configuration allows the proper arguments to be displayed.\n"
-    "\n"
-    "      Instead of specifying the out_dir, you can also use the\n"
-    "      command-line flag to specify the build configuration:\n"
-    "        --args=<exact list of args to use>\n"
-    "\n"
-    "Examples\n"
-    "  gn args out/Debug\n"
-    "    Opens an editor with the args for out/Debug.\n"
-    "\n"
-    "  gn args out/Debug --list --short\n"
-    "    Prints all arguments with their default values for the out/Debug\n"
-    "    build.\n"
-    "\n"
-    "  gn args out/Debug --list=target_cpu\n"
-    "    Prints information about the \"target_cpu\" argument for the "
-        "out/Debug\n"
-    "    build.\n"
-    "\n"
-    "  gn args --list --args=\"os=\\\"android\\\" enable_doom_melon=true\"\n"
-    "    Prints all arguments with the default values for a build with the\n"
-    "    given arguments set (which may affect the values of other\n"
-    "    arguments).\n";
+    R"(gn args <out_dir> [--list] [--short] [--args]
+
+  See also "gn help buildargs" for a more high-level overview of how
+  build arguments work.
+
+Usage
+  gn args <out_dir>
+      Open the arguments for the given build directory in an editor (as
+      specified by the EDITOR environment variable). If the given build
+      directory doesn't exist, it will be created and an empty args file will
+      be opened in the editor. You would type something like this into that
+      file:
+          enable_doom_melon=false
+          os="android"
+
+      Note: you can edit the build args manually by editing the file "args.gn"
+      in the build directory and then running "gn gen <out_dir>".
+
+  gn args <out_dir> --list[=<exact_arg>] [--short]
+      Lists all build arguments available in the current configuration, or, if
+      an exact_arg is specified for the list flag, just that one build
+      argument.
+
+      The output will list the declaration location, default value, and comment
+      preceeding the declaration. If --short is specified, only the names and
+      values will be printed.
+
+      If the out_dir is specified, the build configuration will be taken from
+      that build directory. The reason this is needed is that the definition of
+      some arguments is dependent on the build configuration, so setting some
+      values might add, remove, or change the default values for other
+      arguments. Specifying your exact configuration allows the proper
+      arguments to be displayed.
+
+      Instead of specifying the out_dir, you can also use the command-line flag
+      to specify the build configuration:
+        --args=<exact list of args to use>
+
+Examples
+
+  gn args out/Debug
+    Opens an editor with the args for out/Debug.
+
+  gn args out/Debug --list --short
+    Prints all arguments with their default values for the out/Debug
+    build.
+
+  gn args out/Debug --list=target_cpu
+    Prints information about the "target_cpu" argument for the "
+   "out/Debug
+    build.
+
+  gn args --list --args="os=\"android\" enable_doom_melon=true"
+    Prints all arguments with the default values for a build with the
+    given arguments set (which may affect the values of other
+    arguments).
+)";
 
 int RunArgs(const std::vector<std::string>& args) {
   if (args.size() != 1) {

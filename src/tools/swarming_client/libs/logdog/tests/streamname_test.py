@@ -62,5 +62,59 @@ class StreamNameTestCase(unittest.TestCase):
     self.assertRaises(ValueError, streamname.normalize, '_invalid_start_char')
 
 
+class StreamPathTestCase(unittest.TestCase):
+
+  def testParseValidPath(self):
+    for path in (
+        'foo/+/bar',
+        'foo/bar/+/baz',
+    ):
+      prefix, name = path.split('/+/')
+      parsed = streamname.StreamPath.parse(path)
+      self.assertEqual(
+          parsed,
+          streamname.StreamPath(prefix=prefix, name=name))
+      self.assertEqual(str(parsed), path)
+
+  def testParseInvalidValidPathRaisesValueError(self):
+    for path in (
+        '',
+        'foo/+',
+        'foo/+/',
+        '+/bar',
+        '/+/bar',
+        'foo/bar',
+        '!!!invalid!!!/+/bar',
+        'foo/+/!!!invalid!!!',
+    ):
+      with self.assertRaises(ValueError):
+        streamname.StreamPath.parse(path)
+
+  def testLogDogViewerUrl(self):
+    for project, path, url in (
+        ('test', streamname.StreamPath(prefix='foo', name='bar/baz'),
+         'https://example.appspot.com/v/?s=test%2Ffoo%2F%2B%2Fbar%2Fbaz'),
+
+        ('test', streamname.StreamPath(prefix='foo', name='bar/**'),
+         'https://example.appspot.com/v/?s=test%2Ffoo%2F%2B%2Fbar%2F%2A%2A'),
+
+        ('test', streamname.StreamPath(prefix='**', name='**'),
+         'https://example.appspot.com/v/?s=test%2F%2A%2A%2F%2B%2F%2A%2A'),
+    ):
+      self.assertEqual(
+          streamname.get_logdog_viewer_url('example.appspot.com', project,
+                                           path),
+          url)
+
+    # Multiple streams.
+    self.assertEqual(
+        streamname.get_logdog_viewer_url('example.appspot.com', 'test',
+            streamname.StreamPath(prefix='foo', name='bar/baz'),
+            streamname.StreamPath(prefix='qux', name='**'),
+        ),
+        ('https://example.appspot.com/v/?s=test%2Ffoo%2F%2B%2Fbar%2Fbaz&'
+         's=test%2Fqux%2F%2B%2F%2A%2A'))
+
+
 if __name__ == '__main__':
   unittest.main()

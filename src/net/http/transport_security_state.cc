@@ -815,7 +815,9 @@ void TransportSecurityState::CheckExpectStaple(
     return;
   }
   report_sender_->Send(expect_staple_state.report_uri,
-                       "application/json; charset=utf-8", serialized_report);
+                       "application/json; charset=utf-8", serialized_report,
+                       base::Closure(),
+                       base::Bind(RecordUMAForHPKPReportFailure));
 }
 
 bool TransportSecurityState::HasPublicKeyPins(const std::string& host) {
@@ -920,8 +922,6 @@ void TransportSecurityState::SetReportSender(
     TransportSecurityState::ReportSenderInterface* report_sender) {
   DCHECK(CalledOnValidThread());
   report_sender_ = report_sender;
-  if (report_sender_)
-    report_sender_->SetErrorCallback(base::Bind(RecordUMAForHPKPReportFailure));
 }
 
 void TransportSecurityState::SetExpectCTReporter(
@@ -1074,7 +1074,8 @@ TransportSecurityState::CheckPinsAndMaybeSendReport(
           base::TimeDelta::FromMinutes(kTimeToRememberHPKPReportsMins));
 
   report_sender_->Send(pkp_state.report_uri, "application/json; charset=utf-8",
-                       serialized_report);
+                       serialized_report, base::Closure(),
+                       base::Bind(RecordUMAForHPKPReportFailure));
   return PKPStatus::VIOLATED;
 }
 

@@ -6770,6 +6770,22 @@ TEST(HttpCache, ValidLoadOnlyFromCache) {
   RunTransactionTest(cache.http_cache(), transaction);
 }
 
+TEST(HttpCache, InvalidLoadFlagCombination) {
+  MockHttpCache cache;
+
+  // Put the resource in the cache.
+  RunTransactionTest(cache.http_cache(), kSimpleGET_Transaction);
+
+  // Now try to fetch it again, but with a flag combination disallowing both
+  // cache and network access.
+  ScopedMockTransaction transaction(kSimpleGET_Transaction);
+  // DevTools relies on this combination of flags for "disable cache" mode
+  // when a resource is only supposed to be loaded from cache.
+  transaction.load_flags = LOAD_ONLY_FROM_CACHE | LOAD_BYPASS_CACHE;
+  transaction.return_code = ERR_CACHE_MISS;
+  RunTransactionTest(cache.http_cache(), transaction);
+}
+
 // Tests that we can read metadata after validating the entry and with READ mode
 // transactions.
 TEST(HttpCache, ReadMetadata) {

@@ -1030,8 +1030,6 @@ static int ext_ticket_add_clienthello(SSL *ssl, CBB *out) {
 
 static int ext_ticket_parse_serverhello(SSL *ssl, uint8_t *out_alert,
                                         CBS *contents) {
-  ssl->tlsext_ticket_expected = 0;
-
   if (contents == NULL) {
     return 1;
   }
@@ -1049,17 +1047,16 @@ static int ext_ticket_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 0;
   }
 
-  ssl->tlsext_ticket_expected = 1;
+  ssl->s3->hs->ticket_expected = 1;
   return 1;
 }
 
 static int ext_ticket_add_serverhello(SSL *ssl, CBB *out) {
-  if (!ssl->tlsext_ticket_expected) {
+  if (!ssl->s3->hs->ticket_expected) {
     return 1;
   }
 
-  /* If |SSL_OP_NO_TICKET| is set, |tlsext_ticket_expected| should never be
-   * true. */
+  /* If |SSL_OP_NO_TICKET| is set, |ticket_expected| should never be true. */
   assert((SSL_get_options(ssl) & SSL_OP_NO_TICKET) == 0);
 
   if (!CBB_add_u16(out, TLSEXT_TYPE_session_ticket) ||
@@ -1163,42 +1160,22 @@ static int ext_ocsp_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 1;
   }
 
-  if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
-    /* OCSP stapling is forbidden on non-certificate ciphers. */
-    if (CBS_len(contents) != 0 ||
-        !ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
-      return 0;
-    }
-
-    /* Note this does not check for resumption in TLS 1.2. Sending
-     * status_request here does not make sense, but OpenSSL does so and the
-     * specification does not say anything. Tolerate it but ignore it. */
-
-    ssl->s3->hs->certificate_status_expected = 1;
-    return 1;
-  }
-
-  /* In TLS 1.3, OCSP stapling is forbidden on resumption. */
-  if (ssl->s3->session_reused) {
+  /* TLS 1.3 OCSP responses are included in the Certificate extensions. */
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
     return 0;
   }
 
-  uint8_t status_type;
-  CBS ocsp_response;
-  if (!CBS_get_u8(contents, &status_type) ||
-      status_type != TLSEXT_STATUSTYPE_ocsp ||
-      !CBS_get_u24_length_prefixed(contents, &ocsp_response) ||
-      CBS_len(&ocsp_response) == 0 ||
-      CBS_len(contents) != 0) {
+  /* OCSP stapling is forbidden on non-certificate ciphers. */
+  if (CBS_len(contents) != 0 ||
+      !ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
     return 0;
   }
 
-  if (!CBS_stow(&ocsp_response, &ssl->s3->new_session->ocsp_response,
-                &ssl->s3->new_session->ocsp_response_length)) {
-    *out_alert = SSL_AD_INTERNAL_ERROR;
-    return 0;
-  }
+  /* Note this does not check for resumption in TLS 1.2. Sending
+   * status_request here does not make sense, but OpenSSL does so and the
+   * specification does not say anything. Tolerate it but ignore it. */
 
+  ssl->s3->hs->certificate_status_expected = 1;
   return 1;
 }
 
@@ -1221,34 +1198,18 @@ static int ext_ocsp_parse_clienthello(SSL *ssl, uint8_t *out_alert,
 }
 
 static int ext_ocsp_add_serverhello(SSL *ssl, CBB *out) {
-  if (!ssl->s3->hs->ocsp_stapling_requested ||
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
+      !ssl->s3->hs->ocsp_stapling_requested ||
       ssl->ctx->ocsp_response_length == 0 ||
       ssl->s3->session_reused ||
-      (ssl3_protocol_version(ssl) < TLS1_3_VERSION &&
-       !ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher))) {
+      !ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
     return 1;
   }
 
-  if (ssl3_protocol_version(ssl) < TLS1_3_VERSION) {
-    /* The extension shouldn't be sent when resuming sessions. */
-    if (ssl->session != NULL) {
-      return 1;
-    }
+  ssl->s3->hs->certificate_status_expected = 1;
 
-    ssl->s3->hs->certificate_status_expected = 1;
-
-    return CBB_add_u16(out, TLSEXT_TYPE_status_request) &&
-           CBB_add_u16(out, 0 /* length */);
-  }
-
-  CBB body, ocsp_response;
   return CBB_add_u16(out, TLSEXT_TYPE_status_request) &&
-         CBB_add_u16_length_prefixed(out, &body) &&
-         CBB_add_u8(&body, TLSEXT_STATUSTYPE_ocsp) &&
-         CBB_add_u24_length_prefixed(&body, &ocsp_response) &&
-         CBB_add_bytes(&ocsp_response, ssl->ctx->ocsp_response,
-                       ssl->ctx->ocsp_response_length) &&
-         CBB_flush(out);
+         CBB_add_u16(out, 0 /* length */);
 }
 
 
@@ -1403,6 +1364,11 @@ static int ext_sct_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 1;
   }
 
+  /* TLS 1.3 SCTs are included in the Certificate extensions. */
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    return 0;
+  }
+
   /* If this is false then we should never have sent the SCT extension in the
    * ClientHello and thus this function should never have been called. */
   assert(ssl->signed_cert_timestamps_enabled);
@@ -1431,12 +1397,22 @@ static int ext_sct_parse_serverhello(SSL *ssl, uint8_t *out_alert,
 
 static int ext_sct_parse_clienthello(SSL *ssl, uint8_t *out_alert,
                                      CBS *contents) {
-  return contents == NULL || CBS_len(contents) == 0;
+  if (contents == NULL) {
+    return 1;
+  }
+
+  if (CBS_len(contents) != 0) {
+    return 0;
+  }
+
+  ssl->s3->hs->scts_requested = 1;
+  return 1;
 }
 
 static int ext_sct_add_serverhello(SSL *ssl, CBB *out) {
   /* The extension shouldn't be sent when resuming sessions. */
-  if (ssl->s3->session_reused ||
+  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
+      ssl->s3->session_reused ||
       ssl->ctx->signed_cert_timestamp_list_length == 0) {
     return 1;
   }
@@ -1918,11 +1894,32 @@ static int ext_ec_point_add_serverhello(SSL *ssl, CBB *out) {
   return ext_ec_point_add_extension(ssl, out);
 }
 
+
 /* Pre Shared Key
  *
- * https://tools.ietf.org/html/draft-ietf-tls-tls13-16#section-4.2.6 */
+ * https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.6 */
 
-static int ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
+static size_t ext_pre_shared_key_clienthello_length(SSL *ssl) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
+    return 0;
+  }
+
+  uint16_t session_version;
+  if (max_version < TLS1_3_VERSION || ssl->session == NULL ||
+      !ssl->method->version_from_wire(&session_version,
+                                      ssl->session->ssl_version) ||
+      session_version < TLS1_3_VERSION) {
+    return 0;
+  }
+
+  const EVP_MD *digest =
+      ssl_get_handshake_digest(ssl->session->cipher->algorithm_prf);
+  size_t binder_len = EVP_MD_size(digest);
+  return 15 + ssl->session->tlsext_ticklen + binder_len;
+}
+
+int ssl_ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
   uint16_t min_version, max_version;
   if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
     return 0;
@@ -1936,20 +1933,33 @@ static int ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
     return 1;
   }
 
-  CBB contents, identity, ke_modes, auth_modes, ticket;
+  struct timeval now;
+  ssl_get_current_time(ssl, &now);
+  uint32_t ticket_age = 1000 * (now.tv_sec - ssl->session->time);
+  uint32_t obfuscated_ticket_age = ticket_age + ssl->session->ticket_age_add;
+
+  /* Fill in a placeholder zero binder of the appropriate length. It will be
+   * computed and filled in later after length prefixes are computed. */
+  uint8_t zero_binder[EVP_MAX_MD_SIZE] = {0};
+  const EVP_MD *digest =
+      ssl_get_handshake_digest(ssl->session->cipher->algorithm_prf);
+  size_t binder_len = EVP_MD_size(digest);
+
+  CBB contents, identity, ticket, binders, binder;
   if (!CBB_add_u16(out, TLSEXT_TYPE_pre_shared_key) ||
       !CBB_add_u16_length_prefixed(out, &contents) ||
       !CBB_add_u16_length_prefixed(&contents, &identity) ||
-      !CBB_add_u8_length_prefixed(&identity, &ke_modes) ||
-      !CBB_add_u8(&ke_modes, SSL_PSK_DHE_KE) ||
-      !CBB_add_u8_length_prefixed(&identity, &auth_modes) ||
-      !CBB_add_u8(&auth_modes, SSL_PSK_AUTH) ||
       !CBB_add_u16_length_prefixed(&identity, &ticket) ||
       !CBB_add_bytes(&ticket, ssl->session->tlsext_tick,
-                     ssl->session->tlsext_ticklen)) {
+                     ssl->session->tlsext_ticklen) ||
+      !CBB_add_u32(&identity, obfuscated_ticket_age) ||
+      !CBB_add_u16_length_prefixed(&contents, &binders) ||
+      !CBB_add_u8_length_prefixed(&binders, &binder) ||
+      !CBB_add_bytes(&binder, zero_binder, binder_len)) {
     return 0;
   }
 
+  ssl->s3->hs->needs_psk_binder = 1;
   return CBB_flush(out);
 }
 
@@ -1963,6 +1973,7 @@ int ssl_ext_pre_shared_key_parse_serverhello(SSL *ssl, uint8_t *out_alert,
     return 0;
   }
 
+  /* We only advertise one PSK identity, so the only legal index is zero. */
   if (psk_id != 0) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_PSK_IDENTITY_NOT_FOUND);
     *out_alert = SSL_AD_UNKNOWN_PSK_IDENTITY;
@@ -1974,26 +1985,34 @@ int ssl_ext_pre_shared_key_parse_serverhello(SSL *ssl, uint8_t *out_alert,
 
 int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
                                              SSL_SESSION **out_session,
+                                             CBS *out_binders,
                                              uint8_t *out_alert,
                                              CBS *contents) {
   /* We only process the first PSK identity since we don't support pure PSK. */
-  CBS identity, ke_modes, auth_modes, ticket;
+  uint32_t obfuscated_ticket_age;
+  CBS identity, ticket, binders;
   if (!CBS_get_u16_length_prefixed(contents, &identity) ||
-      !CBS_get_u8_length_prefixed(&identity, &ke_modes) ||
-      !CBS_get_u8_length_prefixed(&identity, &auth_modes) ||
       !CBS_get_u16_length_prefixed(&identity, &ticket) ||
+      !CBS_get_u32(&identity, &obfuscated_ticket_age) ||
+      !CBS_get_u16_length_prefixed(contents, &binders) ||
       CBS_len(contents) != 0) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
 
-  /* We only support tickets with PSK_DHE_KE and PSK_AUTH. */
-  if (memchr(CBS_data(&ke_modes), SSL_PSK_DHE_KE, CBS_len(&ke_modes)) == NULL ||
-      memchr(CBS_data(&auth_modes), SSL_PSK_AUTH, CBS_len(&auth_modes)) ==
-          NULL) {
-    *out_session = NULL;
-    return 1;
+  *out_binders = binders;
+
+  /* The PSK identity must have a corresponding binder. */
+  CBS binder;
+  if (!CBS_get_u8_length_prefixed(&binders, &binder)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
+    *out_alert = SSL_AD_DECODE_ERROR;
+    return 0;
   }
+
+  /* TODO(svaldez): Check that the ticket_age is valid when attempting to use
+   * the PSK for 0-RTT. http://crbug.com/boringssl/113 */
 
   /* TLS 1.3 session tickets are renewed separately as part of the
    * NewSessionTicket. */
@@ -2020,6 +2039,49 @@ int ssl_ext_pre_shared_key_add_serverhello(SSL *ssl, CBB *out) {
 }
 
 
+/* Pre-Shared Key Exchange Modes
+ *
+ * https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.7 */
+static int ext_psk_key_exchange_modes_add_clienthello(SSL *ssl, CBB *out) {
+  uint16_t min_version, max_version;
+  if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
+    return 0;
+  }
+
+  if (max_version < TLS1_3_VERSION) {
+    return 1;
+  }
+
+  CBB contents, ke_modes;
+  if (!CBB_add_u16(out, TLSEXT_TYPE_psk_key_exchange_modes) ||
+      !CBB_add_u16_length_prefixed(out, &contents) ||
+      !CBB_add_u8_length_prefixed(&contents, &ke_modes) ||
+      !CBB_add_u8(&ke_modes, SSL_PSK_DHE_KE)) {
+    return 0;
+  }
+
+  return CBB_flush(out);
+}
+
+int ssl_ext_psk_key_exchange_modes_parse_clienthello(SSL *ssl,
+                                                     uint8_t *out_alert,
+                                                     CBS *contents) {
+  CBS ke_modes;
+  if (!CBS_get_u8_length_prefixed(contents, &ke_modes) ||
+      CBS_len(&ke_modes) == 0 ||
+      CBS_len(contents) != 0) {
+    *out_alert = SSL_AD_DECODE_ERROR;
+    return 0;
+  }
+
+  /* We only support tickets with PSK_DHE_KE. */
+  ssl->s3->hs->accept_psk_mode =
+      memchr(CBS_data(&ke_modes), SSL_PSK_DHE_KE, CBS_len(&ke_modes)) != NULL;
+
+  return 1;
+}
+
+
 /* Key Share
  *
  * https://tools.ietf.org/html/draft-ietf-tls-tls13-16#section-4.2.5 */
@@ -2041,21 +2103,18 @@ static int ext_key_share_add_clienthello(SSL *ssl, CBB *out) {
     return 0;
   }
 
-  uint16_t group_id;
+  uint16_t group_id = ssl->s3->hs->retry_group;
   if (ssl->s3->hs->received_hello_retry_request) {
-    /* Replay the old key shares. */
-    if (!CBB_add_bytes(&kse_bytes, ssl->s3->hs->key_share_bytes,
+    /* We received a HelloRetryRequest without a new curve, so there is no new
+     * share to append. Leave |ecdh_ctx| as-is. */
+    if (group_id == 0 &&
+        !CBB_add_bytes(&kse_bytes, ssl->s3->hs->key_share_bytes,
                        ssl->s3->hs->key_share_bytes_len)) {
       return 0;
     }
     OPENSSL_free(ssl->s3->hs->key_share_bytes);
     ssl->s3->hs->key_share_bytes = NULL;
     ssl->s3->hs->key_share_bytes_len = 0;
-
-    group_id = ssl->s3->hs->retry_group;
-
-    /* We received a HelloRetryRequest without a new curve, so there is no new
-     * share to append. Leave |ecdh_ctx| as-is. */
     if (group_id == 0) {
       return CBB_flush(out);
     }
@@ -2498,9 +2557,9 @@ static const struct tls_extension kExtensions[] = {
     dont_add_serverhello,
   },
   {
-    TLSEXT_TYPE_pre_shared_key,
+    TLSEXT_TYPE_psk_key_exchange_modes,
     NULL,
-    ext_pre_shared_key_add_clienthello,
+    ext_psk_key_exchange_modes_add_clienthello,
     forbid_parse_serverhello,
     ignore_parse_clienthello,
     dont_add_serverhello,
@@ -2629,7 +2688,8 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
   }
 
   if (!SSL_is_dtls(ssl)) {
-    header_len += 2 + CBB_len(&extensions);
+    size_t psk_extension_len = ext_pre_shared_key_clienthello_length(ssl);
+    header_len += 2 + CBB_len(&extensions) + psk_extension_len;
     if (header_len > 0xff && header_len < 0x200) {
       /* Add padding to workaround bugs in F5 terminators. See RFC 7685.
        *
@@ -2655,6 +2715,11 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
 
       memset(padding_bytes, 0, padding_len);
     }
+  }
+
+  /* The PSK extension must be last, including after the padding. */
+  if (!ssl_ext_pre_shared_key_add_clienthello(ssl, &extensions)) {
+    goto err;
   }
 
   /* Discard empty extensions blocks. */
@@ -3075,12 +3140,6 @@ int tls_process_ticket(SSL *ssl, SSL_SESSION **out_session,
    * been accepted. */
   memcpy(session->session_id, session_id, session_id_len);
   session->session_id_length = session_id_len;
-
-  if (!ssl_session_is_context_valid(ssl, session) ||
-      !ssl_session_is_time_valid(ssl, session)) {
-    SSL_SESSION_free(session);
-    session = NULL;
-  }
 
   *out_session = session;
 

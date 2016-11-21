@@ -57,6 +57,8 @@ BbrSender::DebugState::DebugState(const BbrSender& sender)
       rounds_without_bandwidth_gain(sender.rounds_without_bandwidth_gain_),
       min_rtt(sender.min_rtt_),
       min_rtt_timestamp(sender.min_rtt_timestamp_),
+      recovery_state(sender.recovery_state_),
+      recovery_window(sender.recovery_window_),
       last_sample_is_app_limited(sender.last_sample_is_app_limited_) {}
 
 BbrSender::DebugState::DebugState(const DebugState& state) = default;
@@ -94,7 +96,9 @@ BbrSender::BbrSender(const QuicClock* clock,
       exiting_quiescence_(false),
       exit_probe_rtt_at_(QuicTime::Zero()),
       probe_rtt_round_passed_(false),
-      last_sample_is_app_limited_(false) {
+      last_sample_is_app_limited_(false),
+      recovery_state_(NOT_IN_RECOVERY),
+      end_recovery_at_(0) {
   EnterStartupMode();
 }
 
@@ -145,6 +149,10 @@ QuicByteCount BbrSender::GetCongestionWindow() const {
     return kMinimumCongestionWindow;
   }
 
+  if (InRecovery()) {
+    return std::min(congestion_window_, recovery_window_);
+  }
+
   return congestion_window_;
 }
 
@@ -153,7 +161,7 @@ QuicByteCount BbrSender::GetSlowStartThreshold() const {
 }
 
 bool BbrSender::InRecovery() const {
-  return false;
+  return recovery_state_ != NOT_IN_RECOVERY;
 }
 
 void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
@@ -173,6 +181,8 @@ void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
     QuicPacketNumber last_acked_packet = acked_packets.rbegin()->first;
     is_round_start = UpdateRoundTripCounter(last_acked_packet);
     min_rtt_expired = UpdateBandwidthAndMinRtt(event_time, acked_packets);
+    UpdateRecoveryState(last_acked_packet, !lost_packets.empty(),
+                        is_round_start);
   }
 
   // Handle logic specific to PROBE_BW mode.
@@ -195,6 +205,7 @@ void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
       sampler_.total_bytes_acked() - total_bytes_acked_before;
   CalculatePacingRate();
   CalculateCongestionWindow(bytes_acked);
+  CalculateRecoveryWindow(bytes_acked);
 
   // Cleanup internal state.
   sampler_.RemoveObsoletePackets(unacked_packets_->GetLeastUnacked());
@@ -404,6 +415,39 @@ void BbrSender::MaybeEnterOrExitProbeRtt(QuicTime now,
   exiting_quiescence_ = false;
 }
 
+void BbrSender::UpdateRecoveryState(QuicPacketNumber last_acked_packet,
+                                    bool has_losses,
+                                    bool is_round_start) {
+  // Exit recovery when there are no losses for a round.
+  if (has_losses) {
+    end_recovery_at_ = last_sent_packet_;
+  }
+
+  switch (recovery_state_) {
+    case NOT_IN_RECOVERY:
+      // Enter conservation on the first loss.
+      if (has_losses) {
+        recovery_state_ = CONSERVATION;
+        // Since the conservation phase is meant to be lasting for a whole
+        // round, extend the current round as if it were started right now.
+        current_round_trip_end_ = last_sent_packet_;
+      }
+      break;
+
+    case CONSERVATION:
+      if (is_round_start) {
+        recovery_state_ = GROWTH;
+      }
+
+    case GROWTH:
+      // Exit recovery if appropriate.
+      if (!has_losses && last_acked_packet > end_recovery_at_) {
+        recovery_state_ = NOT_IN_RECOVERY;
+      }
+      break;
+  }
+}
+
 void BbrSender::CalculatePacingRate() {
   if (BandwidthEstimate().IsZero()) {
     return;
@@ -436,6 +480,20 @@ void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {
   // Enforce the limits on the congestion window.
   congestion_window_ = std::max(congestion_window_, kMinimumCongestionWindow);
   congestion_window_ = std::min(congestion_window_, max_congestion_window_);
+}
+
+void BbrSender::CalculateRecoveryWindow(QuicByteCount bytes_acked) {
+  switch (recovery_state_) {
+    case CONSERVATION:
+      recovery_window_ = unacked_packets_->bytes_in_flight() + bytes_acked;
+      break;
+    case GROWTH:
+      recovery_window_ = unacked_packets_->bytes_in_flight() + 2 * bytes_acked;
+      break;
+    default:
+      break;
+  }
+  recovery_window_ = std::max(kMinimumCongestionWindow, recovery_window_);
 }
 
 std::string BbrSender::GetDebugState() const {

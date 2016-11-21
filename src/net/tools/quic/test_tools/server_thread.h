@@ -20,9 +20,7 @@ namespace test {
 // Simple wrapper class to run QuicServer in a dedicated thread.
 class ServerThread : public base::SimpleThread {
  public:
-  ServerThread(QuicServer* server,
-               const IPEndPoint& address,
-               bool strike_register_no_startup_period);
+  ServerThread(QuicServer* server, const IPEndPoint& address);
 
   ~ServerThread() override;
 

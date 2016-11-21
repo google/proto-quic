@@ -28,11 +28,6 @@ std::string* g_icudtl_path_override = nullptr;
 namespace base {
 namespace ios {
 
-// When dropping iOS7 support, also address issues listed in crbug.com/502968.
-bool IsRunningOnIOS8OrLater() {
-  return IsRunningOnOrLater(8, 0, 0);
-}
-
 bool IsRunningOnIOS9OrLater() {
   return IsRunningOnOrLater(9, 0, 0);
 }

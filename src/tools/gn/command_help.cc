@@ -11,7 +11,9 @@
 #include "tools/gn/err.h"
 #include "tools/gn/functions.h"
 #include "tools/gn/input_conversion.h"
+#include "tools/gn/label.h"
 #include "tools/gn/label_pattern.h"
+#include "tools/gn/ninja_build_writer.h"
 #include "tools/gn/parser.h"
 #include "tools/gn/runtime_deps.h"
 #include "tools/gn/setup.h"
@@ -19,6 +21,7 @@
 #include "tools/gn/string_utils.h"
 #include "tools/gn/substitution_writer.h"
 #include "tools/gn/switches.h"
+#include "tools/gn/target.h"
 #include "tools/gn/variables.h"
 
 namespace commands {
@@ -62,10 +65,13 @@ void PrintToplevelHelp() {
   PrintShortHelp("all: Print all the help at once");
   PrintShortHelp("buildargs: How build arguments work.");
   PrintShortHelp("dotfile: Info about the toplevel .gn file.");
+  PrintShortHelp("execution: Build graph and execution overview.");
   PrintShortHelp("grammar: Language and grammar for GN build files.");
   PrintShortHelp(
       "input_conversion: Processing input from exec_script and read_file.");
   PrintShortHelp("label_pattern: Matching more than one label.");
+  PrintShortHelp("labels: About labels.");
+  PrintShortHelp("ninja_rules: How Ninja build rules and named.");
   PrintShortHelp("nogncheck: Annotating includes for checking.");
   PrintShortHelp("runtime_deps: How runtime dependency computation works.");
   PrintShortHelp("source_expansion: Map sources to outputs for scripts.");
@@ -124,9 +130,12 @@ void PrintAllHelp() {
 
   PrintLongHelp(kBuildArgs_Help);
   PrintLongHelp(kDotfile_Help);
+  PrintLongHelp(kExecution_Help);
   PrintLongHelp(kGrammar_Help);
   PrintLongHelp(kInputConversion_Help);
   PrintLongHelp(kLabelPattern_Help);
+  PrintLongHelp(kLabels_Help);
+  PrintLongHelp(kNinjaRules_Help);
   PrintLongHelp(kNoGnCheck_Help);
   PrintLongHelp(kRuntimeDeps_Help);
   PrintLongHelp(kSourceExpansion_Help);
@@ -152,22 +161,23 @@ const char kHelp[] = "help";
 const char kHelp_HelpShort[] =
     "help: Does what you think.";
 const char kHelp_Help[] =
-    "gn help <anything>\n"
-    "\n"
-    "  Yo dawg, I heard you like help on your help so I put help on the help\n"
-    "  in the help.\n"
-    "\n"
-    "  You can also use \"all\" as the parameter to get all help at once.\n"
-    "\n"
-    "Switches\n"
-    "\n"
-    "  --markdown\n"
-    "      Format output in markdown syntax.\n"
-    "\n"
-    "Example\n"
-    "\n"
-    "  gn help --markdown all\n"
-    "      Dump all help to stdout in markdown format.\n";
+    R"(gn help <anything>
+
+  Yo dawg, I heard you like help on your help so I put help on the help in the
+  help.
+
+  You can also use "all" as the parameter to get all help at once.
+
+Switches
+
+  --markdown
+      Format output in markdown syntax.
+
+Example
+
+  gn help --markdown all
+      Dump all help to stdout in markdown format.
+)";
 
 int RunHelp(const std::vector<std::string>& args) {
   std::string what;
@@ -239,6 +249,7 @@ int RunHelp(const std::vector<std::string>& args) {
   // Random other topics.
   std::map<std::string, void(*)()> random_topics;
   random_topics["all"] = PrintAllHelp;
+  random_topics["execution"] = []() { PrintLongHelp(kExecution_Help); };
   random_topics["buildargs"] = []() { PrintLongHelp(kBuildArgs_Help); };
   random_topics["dotfile"] = []() { PrintLongHelp(kDotfile_Help); };
   random_topics["grammar"] = []() { PrintLongHelp(kGrammar_Help); };
@@ -246,6 +257,8 @@ int RunHelp(const std::vector<std::string>& args) {
     PrintLongHelp(kInputConversion_Help);
   };
   random_topics["label_pattern"] = []() { PrintLongHelp(kLabelPattern_Help); };
+  random_topics["labels"] = []() { PrintLongHelp(kLabels_Help); };
+  random_topics["ninja_rules"] = []() { PrintLongHelp(kNinjaRules_Help); };
   random_topics["nogncheck"] = []() { PrintLongHelp(kNoGnCheck_Help); };
   random_topics["runtime_deps"] = []() { PrintLongHelp(kRuntimeDeps_Help); };
   random_topics["source_expansion"] = []() {

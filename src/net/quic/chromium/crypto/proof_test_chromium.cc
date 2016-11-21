@@ -95,23 +95,16 @@ class TestCallback : public ProofSource::Callback {
   explicit TestCallback(bool* called,
                         bool* ok,
                         scoped_refptr<ProofSource::Chain>* chain,
-                        string* signature,
-                        string* leaf_cert_sct)
-      : called_(called),
-        ok_(ok),
-        chain_(chain),
-        signature_(signature),
-        leaf_cert_sct_(leaf_cert_sct) {}
+                        QuicCryptoProof* proof)
+      : called_(called), ok_(ok), chain_(chain), proof_(proof) {}
 
   void Run(bool ok,
            const scoped_refptr<ProofSource::Chain>& chain,
-           const string& signature,
-           const string& leaf_cert_sct,
+           const QuicCryptoProof& proof,
            std::unique_ptr<ProofSource::Details> /* details */) override {
     *ok_ = ok;
     *chain_ = chain;
-    *signature_ = signature;
-    *leaf_cert_sct_ = leaf_cert_sct;
+    *proof_ = proof;
     *called_ = true;
   }
 
@@ -119,8 +112,7 @@ class TestCallback : public ProofSource::Callback {
   bool* called_;
   bool* ok_;
   scoped_refptr<ProofSource::Chain>* chain_;
-  string* signature_;
-  string* leaf_cert_sct_;
+  QuicCryptoProof* proof_;
 };
 
 class ProofTest : public ::testing::TestWithParam<QuicVersion> {};
@@ -146,32 +138,33 @@ TEST_P(ProofTest, DISABLED_Verify) {
 
   scoped_refptr<ProofSource::Chain> chain;
   scoped_refptr<ProofSource::Chain> first_chain;
-  string error_details, signature, first_signature, first_cert_sct, cert_sct;
+  string error_details;
+  QuicCryptoProof proof, first_proof;
   IPAddress server_ip;
 
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
                                first_chlo_hash, QuicTagVector(), &first_chain,
-                               &first_signature, &first_cert_sct));
+                               &first_proof));
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
                                second_chlo_hash, QuicTagVector(), &chain,
-                               &signature, &cert_sct));
+                               &proof));
 
   // Check that the proof source is caching correctly:
   ASSERT_EQ(first_chain->certs, chain->certs);
-  ASSERT_NE(signature, first_signature);
-  ASSERT_EQ(first_cert_sct, cert_sct);
+  ASSERT_NE(proof.signature, first_proof.signature);
+  ASSERT_EQ(first_proof.leaf_cert_scts, proof.leaf_cert_scts);
 
   RunVerification(verifier.get(), hostname, port, server_config, quic_version,
-                  first_chlo_hash, chain->certs, signature, true);
+                  first_chlo_hash, chain->certs, proof.signature, true);
 
   RunVerification(verifier.get(), "foo.com", port, server_config, quic_version,
-                  first_chlo_hash, chain->certs, signature, false);
+                  first_chlo_hash, chain->certs, proof.signature, false);
 
   RunVerification(verifier.get(), server_config.substr(1, string::npos), port,
                   server_config, quic_version, first_chlo_hash, chain->certs,
-                  signature, false);
+                  proof.signature, false);
 
-  const string corrupt_signature = "1" + signature;
+  const string corrupt_signature = "1" + proof.signature;
   RunVerification(verifier.get(), hostname, port, server_config, quic_version,
                   first_chlo_hash, chain->certs, corrupt_signature, false);
 
@@ -196,21 +189,18 @@ TEST_P(ProofTest, VerifySourceAsync) {
 
   // Call synchronous version
   scoped_refptr<ProofSource::Chain> expected_chain;
-  string expected_signature;
-  string expected_leaf_cert_sct;
+  QuicCryptoProof expected_proof;
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
                                first_chlo_hash, QuicTagVector(),
-                               &expected_chain, &expected_signature,
-                               &expected_leaf_cert_sct));
+                               &expected_chain, &expected_proof));
 
   // Call asynchronous version and compare results
   bool called = false;
   bool ok;
   scoped_refptr<ProofSource::Chain> chain;
-  string signature;
-  string leaf_cert_sct;
+  QuicCryptoProof proof;
   std::unique_ptr<ProofSource::Callback> cb(
-      new TestCallback(&called, &ok, &chain, &signature, &leaf_cert_sct));
+      new TestCallback(&called, &ok, &chain, &proof));
   source->GetProof(server_ip, hostname, server_config, quic_version,
                    first_chlo_hash, QuicTagVector(), std::move(cb));
   // TODO(gredner): whan GetProof really invokes the callback asynchronously,
@@ -218,7 +208,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(ok);
   EXPECT_THAT(chain->certs, ::testing::ContainerEq(expected_chain->certs));
-  EXPECT_EQ(leaf_cert_sct, expected_leaf_cert_sct);
+  EXPECT_EQ(proof.leaf_cert_scts, expected_proof.leaf_cert_scts);
 }
 
 TEST_P(ProofTest, UseAfterFree) {
@@ -228,12 +218,12 @@ TEST_P(ProofTest, UseAfterFree) {
   const string hostname = "test.example.com";
   const string chlo_hash = "proof nonce bytes";
   scoped_refptr<ProofSource::Chain> chain;
-  string error_details, signature, cert_sct;
+  string error_details;
+  QuicCryptoProof proof;
   IPAddress server_ip;
 
   ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, GetParam(),
-                               chlo_hash, QuicTagVector(), &chain, &signature,
-                               &cert_sct));
+                               chlo_hash, QuicTagVector(), &chain, &proof));
 
   // Make sure we can safely access results after deleting where they came from.
   EXPECT_FALSE(chain->HasOneRef());

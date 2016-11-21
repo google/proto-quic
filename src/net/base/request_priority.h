@@ -14,7 +14,6 @@ namespace net {
 // A Java counterpart will be generated for this enum.
 // GENERATED_JAVA_ENUM_PACKAGE: org.chromium.net
 // GENERATED_JAVA_CLASS_NAME_OVERRIDE: RequestPriority
-// GENERATED_JAVA_PREFIX_TO_STRIP:
 enum RequestPriority {
   THROTTLED = 0,  // Used to signal that resources
                   // should be reserved for following

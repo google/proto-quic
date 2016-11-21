@@ -2072,12 +2072,13 @@ EVENT_TYPE(SERVICE_WORKER_ERROR_KILLED_WITH_BLOB)
 EVENT_TYPE(SERVICE_WORKER_ERROR_KILLED_WITH_STREAM)
 
 // This event is emitted when a request to be forwarded to a Service Worker has
-// request body blobs, and it may be necessary to wait for them to finish
-// construction. The END phase event parameter is:
+// request body, and it may be necessary to wait for sizes of files in the body
+// to be resolved. The END phase event parameter is:
 //   {
-//     "success": Whether the request blobs finished construction successfully.
+//     "success": Whether file sizes in the request body have been resolved
+//     successfully
 //   }
-EVENT_TYPE(SERVICE_WORKER_WAITING_FOR_REQUEST_BODY_BLOB)
+EVENT_TYPE(SERVICE_WORKER_WAITING_FOR_REQUEST_BODY_FILES)
 
 // This event is emitted when a request failed to be forwarded to a Service
 // Worker, because it had a request body with a blob that failed to be

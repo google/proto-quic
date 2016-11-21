@@ -16,7 +16,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
-#include "net/base/network_throttle_manager.h"
+#include "net/base/network_throttle_manager_impl.h"
 #include "net/http/http_auth_handler_factory.h"
 #include "net/http/http_response_body_drainer.h"
 #include "net/http/http_stream_factory_impl.h"
@@ -27,6 +27,7 @@
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_crypto_client_stream_factory.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
@@ -199,7 +200,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
                          params.proxy_delegate),
       http_stream_factory_(new HttpStreamFactoryImpl(this, false)),
       http_stream_factory_for_websocket_(new HttpStreamFactoryImpl(this, true)),
-      network_stream_throttler_(NetworkThrottleManager::CreateThrottler()),
+      network_stream_throttler_(new NetworkThrottleManagerImpl()),
       params_(params) {
   DCHECK(proxy_service_);
   DCHECK(ssl_config_service_.get());
@@ -296,7 +297,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   for (QuicTagVector::const_iterator it =
            params_.quic_connection_options.begin();
        it != params_.quic_connection_options.end(); ++it) {
-    connection_options->AppendString("'" + QuicUtils::TagToString(*it) + "'");
+    connection_options->AppendString("'" + QuicTagToString(*it) + "'");
   }
   dict->Set("connection_options", std::move(connection_options));
 
@@ -347,15 +348,17 @@ void HttpNetworkSession::CloseIdleConnections() {
   spdy_session_pool_.CloseCurrentIdleSessions();
 }
 
-bool HttpNetworkSession::IsProtocolEnabled(AlternateProtocol protocol) const {
+bool HttpNetworkSession::IsProtocolEnabled(NextProto protocol) const {
   switch (protocol) {
-    case NPN_HTTP_2:
-      return params_.enable_http2;
-    case QUIC:
-      return params_.enable_quic;
-    case UNINITIALIZED_ALTERNATE_PROTOCOL:
+    case kProtoUnknown:
       NOTREACHED();
       return false;
+    case kProtoHTTP11:
+      return true;
+    case kProtoHTTP2:
+      return params_.enable_http2;
+    case kProtoQUIC:
+      return params_.enable_quic;
   }
   NOTREACHED();
   return false;

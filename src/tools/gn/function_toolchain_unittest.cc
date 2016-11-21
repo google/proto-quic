@@ -14,12 +14,12 @@ TEST(FunctionToolchain, RuntimeOutputs) {
   // These runtime outputs are a subset of the outputs so are OK.
   {
     TestParseInput input(
-        "toolchain(\"good\") {\n"
-        "  tool(\"link\") {\n"
-        "    outputs = [ \"foo\" ]\n"
-        "    runtime_outputs = [ \"foo\" ]\n"
-        "  }\n"
-        "}\n");
+        R"(toolchain("good") {
+          tool("link") {
+            outputs = [ "foo" ]
+            runtime_outputs = [ "foo" ]
+          }
+        })");
     ASSERT_FALSE(input.has_error());
 
     Err err;
@@ -43,12 +43,12 @@ TEST(FunctionToolchain, RuntimeOutputs) {
   // This one is not a subset so should throw an error.
   {
     TestParseInput input(
-        "toolchain(\"bad\") {\n"
-        "  tool(\"link\") {\n"
-        "    outputs = [ \"foo\" ]\n"
-        "    runtime_outputs = [ \"bar\" ]\n"
-        "  }\n"
-        "}\n");
+        R"(toolchain("bad") {
+          tool("link") {
+            outputs = [ "foo" ]
+            runtime_outputs = [ "bar" ]
+          }
+        })");
     ASSERT_FALSE(input.has_error());
 
     Err err;

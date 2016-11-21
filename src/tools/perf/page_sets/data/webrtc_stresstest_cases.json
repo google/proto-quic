@@ -1,6 +1,6 @@
 {
     "archives": {
-        "webrtc_stresstest_cases_000.wpr": [
+        "webrtc_stresstest_cases_001.wpr": [
             "multiple_peerconnections"
         ]
     },

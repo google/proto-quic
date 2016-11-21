@@ -534,13 +534,6 @@ config("compiler_cpu_abi") {
           "-march=$arm_arch",
           "-mfloat-abi=$arm_float_abi",
         ]
-        if (arm_use_thumb) {
-          cflags += [ "-mthumb" ]
-          if (is_android && !is_clang) {
-            # Clang doesn't support this option.
-            cflags += [ "-mthumb-interwork" ]
-          }
-        }
       }
       if (arm_tune != "") {
         cflags += [ "-mtune=$arm_tune" ]
@@ -765,6 +758,17 @@ config("compiler_arm_fpu") {
   }
 }
 
+config("compiler_arm_thumb") {
+  if (current_cpu == "arm" && arm_use_thumb && is_posix &&
+      !(is_mac || is_ios || is_nacl)) {
+    cflags = [ "-mthumb" ]
+    if (is_android && !is_clang) {
+      # Clang doesn't support this option.
+      cflags += [ "-mthumb-interwork" ]
+    }
+  }
+}
+
 # runtime_library -------------------------------------------------------------
 #
 # Sets the runtime library and associated options.
@@ -905,12 +909,6 @@ config("default_warnings") {
       # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
       # TODO(brucedawson): fix warnings, crbug.com/554200
       "/wd4312",
-
-      # TODO(brucedawson): http://crbug.com/593448 - C4595 is an 'illegal
-      # inline operator new' warning that is new in VS 2015 Update 2.
-      # This is equivalent to clang's no-inline-new-delete warning.
-      # See http://bugs.icu-project.org/trac/ticket/11122
-      "/wd4595",
     ]
 
     if (current_cpu == "x86") {
@@ -1569,14 +1567,7 @@ config("minimal_symbols") {
   if (is_win) {
     # Linker symbols for backtraces only.
     cflags = []
-    if (is_win_fastlink) {
-      # Tell VS 2015+ to create a PDB that references debug
-      # information in .obj and .lib files instead of copying
-      # it all. This flag is incompatible with /PROFILE
-      ldflags = [ "/DEBUG:FASTLINK" ]
-    } else {
-      ldflags = [ "/DEBUG" ]
-    }
+    ldflags = [ "/DEBUG" ]
   } else {
     if (is_android) {
       # Breakpad can't handle DWARF 4 symbols properly yet, so use DWARF 3

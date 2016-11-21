@@ -31,6 +31,7 @@
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_getter.h"
 #include "net/url_request/url_request_throttler_manager.h"
+#include "url/origin.h"
 
 namespace {
 
@@ -246,8 +247,9 @@ void URLFetcherCore::SetRequestContext(
   request_context_getter_ = request_context_getter;
 }
 
-void URLFetcherCore::SetInitiatorURL(const GURL& initiator) {
-  DCHECK(initiator_.is_empty());
+void URLFetcherCore::SetInitiator(
+    const base::Optional<url::Origin>& initiator) {
+  DCHECK(!initiator_.has_value());
   initiator_ = initiator;
 }
 
@@ -559,10 +561,11 @@ void URLFetcherCore::StartURLRequest() {
   request_->SetLoadFlags(flags);
   request_->SetReferrer(referrer_);
   request_->set_referrer_policy(referrer_policy_);
-  request_->set_first_party_for_cookies(initiator_.is_empty() ? original_url_
-                                                              : initiator_);
-  request_->set_initiator(initiator_.is_empty() ? url::Origin(original_url_)
-                                                : url::Origin(initiator_));
+  request_->set_first_party_for_cookies(initiator_.has_value() &&
+                                                !initiator_.value().unique()
+                                            ? initiator_.value().GetURL()
+                                            : original_url_);
+  request_->set_initiator(initiator_);
   if (url_request_data_key_ && !url_request_create_data_callback_.is_null()) {
     request_->SetUserData(url_request_data_key_,
                           url_request_create_data_callback_.Run());
@@ -699,7 +702,7 @@ void URLFetcherCore::CancelURLRequest(int error) {
   // delete the object, but we cannot delay the destruction of the request
   // context.
   request_context_getter_ = NULL;
-  initiator_ = GURL();
+  initiator_.reset();
   url_request_data_key_ = NULL;
   url_request_create_data_callback_.Reset();
   was_cancelled_ = true;
@@ -790,7 +793,7 @@ void URLFetcherCore::RetryOrCompleteUrlFetch() {
   }
 
   request_context_getter_ = NULL;
-  initiator_ = GURL();
+  initiator_.reset();
   url_request_data_key_ = NULL;
   url_request_create_data_callback_.Reset();
   bool posted = delegate_task_runner_->PostTask(

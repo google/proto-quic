@@ -162,6 +162,8 @@ bool LocalTestServer::Init(const base::FilePath& document_root) {
 }
 
 bool LocalTestServer::SetPythonPath() const {
+  ClearPythonPath();
+
   base::FilePath third_party_dir;
   if (!PathService::Get(base::DIR_SOURCE_ROOT, &third_party_dir)) {
     LOG(ERROR) << "Failed to get DIR_SOURCE_ROOT";

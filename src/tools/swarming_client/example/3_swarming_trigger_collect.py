@@ -50,6 +50,8 @@ def main():
         cmd.append('--idempotent')
       if options.priority is not None:
         cmd.extend(('--priority', str(options.priority)))
+      if options.service_account:
+        cmd.extend(('--service-account', options.service_account))
       cmd.extend(('--', '${ISOLATED_OUTDIR}'))
       common.run(cmd, options.verbose)
 

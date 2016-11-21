@@ -6,7 +6,7 @@
 
 #include "base/stl_util.h"
 #include "net/quic/core/quic_session.h"
-#include "net/quic/core/reliable_quic_stream.h"
+#include "net/quic/core/quic_stream.h"
 
 namespace net {
 namespace test {
@@ -46,9 +46,8 @@ QuicWriteBlockedList* QuicSessionPeer::GetWriteBlockedStreams(
 }
 
 // static
-ReliableQuicStream* QuicSessionPeer::GetOrCreateDynamicStream(
-    QuicSession* session,
-    QuicStreamId stream_id) {
+QuicStream* QuicSessionPeer::GetOrCreateDynamicStream(QuicSession* session,
+                                                      QuicStreamId stream_id) {
   return session->GetOrCreateDynamicStream(stream_id);
 }
 
@@ -77,9 +76,8 @@ std::unordered_set<QuicStreamId>* QuicSessionPeer::GetDrainingStreams(
 }
 
 // static
-void QuicSessionPeer::ActivateStream(
-    QuicSession* session,
-    std::unique_ptr<ReliableQuicStream> stream) {
+void QuicSessionPeer::ActivateStream(QuicSession* session,
+                                     std::unique_ptr<QuicStream> stream) {
   return session->ActivateStream(std::move(stream));
 }
 

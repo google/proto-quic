@@ -15,6 +15,7 @@ import page_sets
 from telemetry import benchmark
 from telemetry import story
 from telemetry.timeline import chrome_trace_category_filter
+from telemetry.timeline import chrome_trace_config
 from telemetry.web_perf import timeline_based_measurement
 
 
@@ -82,9 +83,6 @@ class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
 
   def SetExtraBrowserOptions(self, options):
     options.AppendExtraBrowserArgs([
-        # TODO(perezju): Temporary workaround to disable periodic memory dumps.
-        # See: http://crbug.com/513692
-        '--enable-memory-benchmarking',
         # Disable push notifications for Facebook.
         '--disable-notifications',
     ])
@@ -104,6 +102,9 @@ class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
     # TODO(ulan): Add frame time discrepancy once it is ported to TBMv2,
     # see crbug.com/606841.
     options.SetTimelineBasedMetrics(['v8AndMemoryMetrics'])
+    # Setting an empty memory dump config disables periodic dumps.
+    options.config.chrome_trace_config.SetMemoryDumpConfig(
+        chrome_trace_config.MemoryDumpConfig())
     return options
 
   @classmethod

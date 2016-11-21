@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 
+#include "build/build_config.h"
+
 #if defined(OS_POSIX) && !defined(OS_NACL)
 #include <sys/uio.h>
 #else

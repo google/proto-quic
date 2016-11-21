@@ -43,6 +43,10 @@ void ObtainDefaultObservations(
     const std::map<std::string, std::string>& variation_params,
     nqe::internal::NetworkQuality default_observations[]);
 
+// Sets |typical_network_quality| to typical network quality for different
+// effective connection types.
+void ObtainTypicalNetworkQuality(NetworkQuality typical_network_quality[]);
+
 // Parses the variation paramaters and sets the thresholds for different
 // effective connection types in |connection_thresholds|.
 void ObtainEffectiveConnectionTypeModelParams(

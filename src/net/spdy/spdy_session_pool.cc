@@ -351,7 +351,6 @@ void SpdySessionPool::OnIPAddressChanged() {
 #endif  // defined(OS_ANDROID) || defined(OS_WIN) || defined(OS_IOS)
     DCHECK(!IsSessionAvailable(*it));
   }
-  http_server_properties_->ClearAllSpdySettings();
 }
 
 void SpdySessionPool::OnSSLConfigChanged() {

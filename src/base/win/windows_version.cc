@@ -14,8 +14,8 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/win/registry.h"
 
-#if !defined(__clang__) && _MSC_FULL_VER < 190023918
-#error VS 2015 Update 2 or higher is required
+#if !defined(__clang__) && _MSC_FULL_VER < 190024213
+#error VS 2015 Update 3 with Cumulative Servicing Release or higher is required
 #endif
 
 namespace {
@@ -83,6 +83,27 @@ Version GetVersionFromKernel32() {
   return VERSION_WIN_LAST;
 }
 
+// Returns the the "UBR" value from the registry. Introduced in Windows 10,
+// this undocumented value appears to be similar to a patch number.
+// Returns 0 if the value does not exist or it could not be read.
+int GetUBR() {
+  // The values under the CurrentVersion registry hive are mirrored under
+  // the corresponding Wow6432 hive.
+  static constexpr wchar_t kRegKeyWindowsNTCurrentVersion[] =
+      L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+
+  base::win::RegKey key;
+  if (key.Open(HKEY_LOCAL_MACHINE, kRegKeyWindowsNTCurrentVersion,
+               KEY_QUERY_VALUE) != ERROR_SUCCESS) {
+    return 0;
+  }
+
+  DWORD ubr = 0;
+  key.ReadValueDW(L"UBR", &ubr);
+
+  return static_cast<int>(ubr);
+}
+
 }  // namespace
 
 // static
@@ -112,6 +133,7 @@ OSInfo::OSInfo()
   version_number_.major = version_info.dwMajorVersion;
   version_number_.minor = version_info.dwMinorVersion;
   version_number_.build = version_info.dwBuildNumber;
+  version_number_.patch = GetUBR();
   version_ = MajorMinorBuildToVersion(
       version_number_.major, version_number_.minor, version_number_.build);
   service_pack_.major = version_info.wServicePackMajor;

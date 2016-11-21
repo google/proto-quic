@@ -55,11 +55,8 @@ QUIC_FLAG(bool, FLAGS_quic_use_cheap_stateless_rejects, true)
 // connection.
 QUIC_FLAG(bool, FLAGS_quic_respect_http2_settings_frame, true)
 
-// If true, enables QUIC_VERSION_35.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_35, true)
-
 // If true, re-enables QUIC_VERSION_36.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v2, true)
+QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v3, false)
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
 QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
@@ -68,35 +65,16 @@ QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
 // versions less than 33.
 QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation_pre33, false)
 
-// If true, defer creation of new connection till its CHLO arrives.
-QUIC_FLAG(bool, FLAGS_quic_buffer_packet_till_chlo, true)
-
 // If true, only open limited number of quic sessions per epoll event. Leave the
-// rest to next event. This flag can be turned on only if
-// --quic_buffer_packet_till_chlo is true.
+// rest to next event.
 QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, true)
-
-// If true, lazy allocate and early release memeory used in
-// QuicStreamSequencerBuffer to buffer incoming data.
-QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
-
-// If true, disables QUIC version less than 34.
-QUIC_FLAG(bool, FLAGS_quic_disable_pre_34, true)
 
 // Only close the connection on the 5th RTO client side when the 5RTO option
 // is enabled.
-QUIC_FLAG(bool, FLAGS_quic_only_5rto_client_side, true)
+QUIC_FLAG(bool, FLAGS_quic_only_5rto_client_side, false)
 
 // If true, QUIC server push will enabled by default.
 QUIC_FLAG(bool, FLAGS_quic_enable_server_push_by_default, true)
-
-// Only inform the QuicSentPacketManager of packets that were sent,
-// not those that we tried to send.
-QUIC_FLAG(bool, FLAGS_quic_only_track_sent_packets, true)
-
-// As the Linux kernel does, limit QUIC's Cubic congestion control to
-// only increase the CWND 1 packet for every two packets acked.
-QUIC_FLAG(bool, FLAGS_quic_limit_cubic_cwnd_increase, true)
 
 // If true, export reject reasons for all rejects, i.e., rejects,
 // stateless rejects and cheap stateless rejects.
@@ -167,3 +145,14 @@ QUIC_FLAG(bool, FLAGS_quic_bugfix_reset_promised, true)
 // Set the retransmission alarm only when there are unacked
 // retransmittable packets.
 QUIC_FLAG(bool, FLAGS_quic_more_conservative_retransmission_alarm, true)
+
+// Enable QUIC force HOL blocking experiment.
+QUIC_FLAG(bool, FLAGS_quic_enable_force_hol_blocking, true)
+
+// If true, allows packets to be buffered in anticipation of a future CHLO, and
+// allow CHLO packets to be buffered until next iteration of the event loop.
+QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
+
+// If true, fix version manager bug, in which version flag does not really
+// help.
+QUIC_FLAG(bool, FLAGS_quic_fix_version_manager, false)

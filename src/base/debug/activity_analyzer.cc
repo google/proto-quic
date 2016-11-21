@@ -82,6 +82,12 @@ ThreadActivityAnalyzer* GlobalActivityAnalyzer::GetAnalyzerForThread(
   return found->second.get();
 }
 
+GlobalActivityAnalyzer::ProgramLocation
+GlobalActivityAnalyzer::GetProgramLocationFromAddress(uint64_t address) {
+  // TODO(bcwhite): Implement this.
+  return { 0, 0 };
+}
+
 void GlobalActivityAnalyzer::PrepareAllAnalyzers() {
   // Fetch all the records. This will retrieve only ones created since the
   // last run since the PMA iterator will continue from where it left off.

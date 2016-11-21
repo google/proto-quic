@@ -77,7 +77,7 @@ void QuicClientSessionBase::OnPromiseHeaderList(
   stream->OnPromiseHeaderList(promised_stream_id, frame_len, header_list);
 }
 
-void QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
+bool QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
                                            QuicStreamId id,
                                            const SpdyHeaderBlock& headers) {
   // Due to pathalogical packet re-ordering, it is possible that
@@ -88,13 +88,13 @@ void QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
     // QUIC_REFUSED_STREAM?
     DVLOG(1) << "Promise ignored for stream " << id
              << " that is already closed";
-    return;
+    return false;
   }
 
   if (push_promise_index_->promised_by_url()->size() >= get_max_promises()) {
     DVLOG(1) << "Too many promises, rejecting promise for stream " << id;
     ResetPromised(id, QUIC_REFUSED_STREAM);
-    return;
+    return false;
   }
 
   const string url = SpdyUtils::GetUrlFromHeaderBlock(headers);
@@ -103,14 +103,14 @@ void QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
     DVLOG(1) << "Promise for stream " << id << " is duplicate URL " << url
              << " of previous promise for stream " << old_promised->id();
     ResetPromised(id, QUIC_DUPLICATE_PROMISE_URL);
-    return;
+    return false;
   }
 
   if (GetPromisedById(id)) {
     // OnPromiseHeadersComplete() would have closed the connection if
     // promised id is a duplicate.
     QUIC_BUG << "Duplicate promise for id " << id;
-    return;
+    return false;
   }
 
   QuicClientPromisedInfo* promised = new QuicClientPromisedInfo(this, id, url);
@@ -120,6 +120,7 @@ void QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
   (*push_promise_index_->promised_by_url())[url] = promised;
   promised_by_id_[id] = std::move(promised_owner);
   promised->OnPromiseHeaders(headers);
+  return true;
 }
 
 QuicClientPromisedInfo* QuicClientSessionBase::GetPromisedByUrl(

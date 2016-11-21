@@ -13,7 +13,7 @@ namespace {
 
 class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
  public:
-  explicit PostTaskAndReplyTaskRunner(TaskTraits traits)
+  explicit PostTaskAndReplyTaskRunner(const TaskTraits& traits)
       : traits_(traits) {}
 
  private:
@@ -40,13 +40,13 @@ void PostTaskAndReply(const tracked_objects::Location& from_here,
 }
 
 void PostTaskWithTraits(const tracked_objects::Location& from_here,
-                        TaskTraits traits,
+                        const TaskTraits& traits,
                         const Closure& task) {
   TaskScheduler::GetInstance()->PostTaskWithTraits(from_here, traits, task);
 }
 
 void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
-                                TaskTraits traits,
+                                const TaskTraits& traits,
                                 const Closure& task,
                                 const Closure& reply) {
   PostTaskAndReplyTaskRunner(traits).PostTaskAndReply(from_here, task, reply);

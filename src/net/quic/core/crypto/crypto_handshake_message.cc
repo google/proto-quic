@@ -212,11 +212,11 @@ QuicErrorCode CryptoHandshakeMessage::GetPOD(QuicTag tag,
 }
 
 string CryptoHandshakeMessage::DebugStringInternal(size_t indent) const {
-  string ret = string(2 * indent, ' ') + QuicUtils::TagToString(tag_) + "<\n";
+  string ret = string(2 * indent, ' ') + QuicTagToString(tag_) + "<\n";
   ++indent;
   for (QuicTagValueMap::const_iterator it = tag_value_map_.begin();
        it != tag_value_map_.end(); ++it) {
-    ret += string(2 * indent, ' ') + QuicUtils::TagToString(it->first) + ": ";
+    ret += string(2 * indent, ' ') + QuicTagToString(it->first) + ": ";
 
     bool done = false;
     switch (it->first) {
@@ -261,7 +261,7 @@ string CryptoHandshakeMessage::DebugStringInternal(size_t indent) const {
             if (j > 0) {
               ret += ",";
             }
-            ret += "'" + QuicUtils::TagToString(tag) + "'";
+            ret += "'" + QuicTagToString(tag) + "'";
           }
           done = true;
         }

@@ -23,3 +23,6 @@ per-file *.isolate=vadimsh@chromium.org
 
 per-file BUILD.gn=bengr@chromium.org
 per-file net.gyp*=bengr@chromium.org
+
+per-file BUILD.gn=file://net/websockets/OWNERS
+per-file net.gyp*=file://net/websockets/OWNERS

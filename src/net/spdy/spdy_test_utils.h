@@ -11,6 +11,7 @@
 #include <string>
 
 #include "base/strings/string_piece.h"
+#include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
@@ -87,6 +88,21 @@ class TestHeadersHandler : public SpdyHeadersHandlerInterface {
   size_t header_bytes_parsed_;
 
   DISALLOW_COPY_AND_ASSIGN(TestHeadersHandler);
+};
+
+// A test implementation of ServerPushDelegate that caches all the pushed
+// request and provides a interface to cancel the push given url.
+class TestServerPushDelegate : public ServerPushDelegate {
+ public:
+  explicit TestServerPushDelegate();
+  ~TestServerPushDelegate() override;
+
+  void OnPush(std::unique_ptr<ServerPushHelper> push_helper) override;
+
+  bool CancelPush(GURL url);
+
+ private:
+  std::map<GURL, std::unique_ptr<ServerPushHelper>> push_helpers;
 };
 
 }  // namespace test

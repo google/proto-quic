@@ -9,6 +9,6 @@ android_apk("customtabs_benchmark_apk") {
   android_manifest = "java/AndroidManifest.xml"
   apk_name = "CustomTabsBenchmark"
   deps = [
-    "//third_party/custom_tabs_client:custom_tabs_support_lib",
+    "//third_party/custom_tabs_client:custom_tabs_support_java",
   ]
 }

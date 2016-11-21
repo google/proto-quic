@@ -57,10 +57,6 @@ specific_include_rules = {
     "+mojo/edk",
   ],
 
-  "brotli_filter\.cc": [
-    "+third_party/brotli",
-  ],
-
   "brotli_source_stream\.cc": [
     "+third_party/brotli",
   ],

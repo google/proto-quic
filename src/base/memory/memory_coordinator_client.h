@@ -22,7 +22,9 @@ namespace base {
 // MemoryState is an indicator that processes can use to guide their memory
 // allocation policies. For example, a process that receives the suspended
 // state can use that as as signal to drop memory caches.
-enum class MemoryState {
+// NOTE: This enum is used to back an UMA histogram, and therefore should be
+// treated as append-only.
+enum class MemoryState : int {
   // The state is unknown.
   UNKNOWN = -1,
   // No memory constraints.
@@ -37,6 +39,8 @@ enum class MemoryState {
   // the suspended state (e.g. parsed resource that can be reloaded from disk).
   SUSPENDED = 2,
 };
+
+const int kMemoryStateMax = static_cast<int>(MemoryState::SUSPENDED) + 1;
 
 // Returns a string representation of MemoryState.
 BASE_EXPORT const char* MemoryStateToString(MemoryState state);

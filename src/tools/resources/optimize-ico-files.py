@@ -32,6 +32,9 @@ def main(args=None):
                       nargs='+', help='.ico files to be crushed')
   parser.add_argument('-o', dest='optimization_level', metavar='OPT', type=int,
                       help='optimization level')
+  parser.add_argument('--lint', dest='lint', action='store_true',
+                      help='test the ICO file without modifying (set status '
+                      'to 1 on error)')
   parser.add_argument('-d', '--debug', dest='debug', action='store_true',
                       help='enable debug logging')
 
@@ -40,11 +43,20 @@ def main(args=None):
   if args.debug:
     logging.getLogger().setLevel(logging.DEBUG)
 
+  failed = False
   for file in args.files:
     buf = StringIO.StringIO()
     file.seek(0, os.SEEK_END)
     old_length = file.tell()
     file.seek(0, os.SEEK_SET)
+
+    if args.lint:
+      for error in ico_tools.LintIcoFile(file):
+        logging.warning('%s: %s', file.name, error)
+        # Any errors should cause this process to exit with a status of 1.
+        failed = True
+      continue
+
     ico_tools.OptimizeIcoFile(file, buf, args.optimization_level)
 
     new_length = len(buf.getvalue())
@@ -62,6 +74,8 @@ def main(args=None):
       saving_percent = float(saving) / old_length
       logging.info('%s : %d => %d (%d bytes : %d %%)', file.name, old_length,
                    new_length, saving, int(saving_percent * 100))
+
+  return failed
 
 if __name__ == '__main__':
   sys.exit(main())

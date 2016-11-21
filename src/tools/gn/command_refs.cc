@@ -285,105 +285,109 @@ const char kRefs[] = "refs";
 const char kRefs_HelpShort[] =
     "refs: Find stuff referencing a target or file.";
 const char kRefs_Help[] =
-    "gn refs <out_dir> (<label_pattern>|<label>|<file>|@<response_file>)* "
-    "[--all]\n"
-    "        [--all-toolchains] [--as=...] [--testonly=...] [--type=...]\n"
-    "\n"
-    "  Finds reverse dependencies (which targets reference something). The\n"
-    "  input is a list containing:\n"
-    "\n"
-    "   - Target label: The result will be which targets depend on it.\n"
-    "\n"
-    "   - Config label: The result will be which targets list the given\n"
-    "     config in its \"configs\" or \"public_configs\" list.\n"
-    "\n"
-    "   - Label pattern: The result will be which targets depend on any\n"
-    "     target matching the given pattern. Patterns will not match\n"
-    "     configs. These are not general regular expressions, see\n"
-    "     \"gn help label_pattern\" for details.\n"
-    "\n"
-    "   - File name: The result will be which targets list the given file in\n"
-    "     its \"inputs\", \"sources\", \"public\", \"data\", or \"outputs\".\n"
-    "     Any input that does not contain wildcards and does not match a\n"
-    "     target or a config will be treated as a file.\n"
-    "\n"
-    "   - Response file: If the input starts with an \"@\", it will be\n"
-    "     interpreted as a path to a file containing a list of labels or\n"
-    "     file names, one per line. This allows us to handle long lists\n"
-    "     of inputs without worrying about command line limits.\n"
-    "\n"
-    "Options\n"
-    "\n"
-    "  --all\n"
-    "      When used without --tree, will recurse and display all unique\n"
-    "      dependencies of the given targets. For example, if the input is\n"
-    "      a target, this will output all targets that depend directly or\n"
-    "      indirectly on the input. If the input is a file, this will output\n"
-    "      all targets that depend directly or indirectly on that file.\n"
-    "\n"
-    "      When used with --tree, turns off eliding to show a complete tree.\n"
-    "\n"
-    ALL_TOOLCHAINS_SWITCH_HELP
-    "\n"
-    TARGET_PRINTING_MODE_COMMAND_LINE_HELP
-    "\n"
-    "  -q\n"
-    "     Quiet. If nothing matches, don't print any output. Without this\n"
-    "     option, if there are no matches there will be an informational\n"
-    "     message printed which might interfere with scripts processing the\n"
-    "     output.\n"
-    "\n"
-    TARGET_TESTONLY_FILTER_COMMAND_LINE_HELP
-    "\n"
-    "  --tree\n"
-    "      Outputs a reverse dependency tree from the given target.\n"
-    "      Duplicates will be elided. Combine with --all to see a full\n"
-    "      dependency tree.\n"
-    "\n"
-    "      Tree output can not be used with the filtering or output flags:\n"
-    "      --as, --type, --testonly.\n"
-    "\n"
-    TARGET_TYPE_FILTER_COMMAND_LINE_HELP
-    "\n"
-    "Examples (target input)\n"
-    "\n"
-    "  gn refs out/Debug //tools/gn:gn\n"
-    "      Find all targets depending on the given exact target name.\n"
-    "\n"
-    "  gn refs out/Debug //base:i18n --as=buildfiles | xargs gvim\n"
-    "      Edit all .gn files containing references to //base:i18n\n"
-    "\n"
-    "  gn refs out/Debug //base --all\n"
-    "      List all targets depending directly or indirectly on //base:base.\n"
-    "\n"
-    "  gn refs out/Debug \"//base/*\"\n"
-    "      List all targets depending directly on any target in //base or\n"
-    "      its subdirectories.\n"
-    "\n"
-    "  gn refs out/Debug \"//base:*\"\n"
-    "      List all targets depending directly on any target in\n"
-    "      //base/BUILD.gn.\n"
-    "\n"
-    "  gn refs out/Debug //base --tree\n"
-    "      Print a reverse dependency tree of //base:base\n"
-    "\n"
-    "Examples (file input)\n"
-    "\n"
-    "  gn refs out/Debug //base/macros.h\n"
-    "      Print target(s) listing //base/macros.h as a source.\n"
-    "\n"
-    "  gn refs out/Debug //base/macros.h --tree\n"
-    "      Display a reverse dependency tree to get to the given file. This\n"
-    "      will show how dependencies will reference that file.\n"
-    "\n"
-    "  gn refs out/Debug //base/macros.h //base/at_exit.h --all\n"
-    "      Display all unique targets with some dependency path to a target\n"
-    "      containing either of the given files as a source.\n"
-    "\n"
-    "  gn refs out/Debug //base/macros.h --testonly=true --type=executable\n"
-    "          --all --as=output\n"
-    "      Display the executable file names of all test executables\n"
-    "      potentially affected by a change to the given file.\n";
+    R"(gn refs <out_dir> (<label_pattern>|<label>|<file>|@<response_file>)*
+        [--all] [--all-toolchains] [--as=...] [--testonly=...] [--type=...]
+
+  Finds reverse dependencies (which targets reference something). The input is
+  a list containing:
+
+   - Target label: The result will be which targets depend on it.
+
+   - Config label: The result will be which targets list the given config in
+     its "configs" or "public_configs" list.
+
+   - Label pattern: The result will be which targets depend on any target
+     matching the given pattern. Patterns will not match configs. These are not
+     general regular expressions, see "gn help label_pattern" for details.
+
+   - File name: The result will be which targets list the given file in its
+     "inputs", "sources", "public", "data", or "outputs". Any input that does
+     not contain wildcards and does not match a target or a config will be
+     treated as a file.
+
+   - Response file: If the input starts with an "@", it will be interpreted as
+     a path to a file containing a list of labels or file names, one per line.
+     This allows us to handle long lists of inputs without worrying about
+     command line limits.
+
+Options
+
+  --all
+      When used without --tree, will recurse and display all unique
+      dependencies of the given targets. For example, if the input is a target,
+      this will output all targets that depend directly or indirectly on the
+      input. If the input is a file, this will output all targets that depend
+      directly or indirectly on that file.
+
+      When used with --tree, turns off eliding to show a complete tree.
+)"
+
+ALL_TOOLCHAINS_SWITCH_HELP
+"\n"
+TARGET_PRINTING_MODE_COMMAND_LINE_HELP
+
+R"(
+  -q
+     Quiet. If nothing matches, don't print any output. Without this option, if
+     there are no matches there will be an informational message printed which
+     might interfere with scripts processing the output.
+)"
+
+TARGET_TESTONLY_FILTER_COMMAND_LINE_HELP
+
+R"(
+  --tree
+      Outputs a reverse dependency tree from the given target. Duplicates will
+      be elided. Combine with --all to see a full dependency tree.
+
+      Tree output can not be used with the filtering or output flags: --as,
+      --type, --testonly.
+)"
+
+TARGET_TYPE_FILTER_COMMAND_LINE_HELP
+
+R"(
+
+Examples (target input)
+
+  gn refs out/Debug //tools/gn:gn
+      Find all targets depending on the given exact target name.
+
+  gn refs out/Debug //base:i18n --as=buildfiles | xargs gvim
+      Edit all .gn files containing references to //base:i18n
+
+  gn refs out/Debug //base --all
+      List all targets depending directly or indirectly on //base:base.
+
+  gn refs out/Debug "//base/*"
+      List all targets depending directly on any target in //base or
+      its subdirectories.
+
+  gn refs out/Debug "//base:*"
+      List all targets depending directly on any target in
+      //base/BUILD.gn.
+
+  gn refs out/Debug //base --tree
+      Print a reverse dependency tree of //base:base
+
+Examples (file input)
+
+  gn refs out/Debug //base/macros.h
+      Print target(s) listing //base/macros.h as a source.
+
+  gn refs out/Debug //base/macros.h --tree
+      Display a reverse dependency tree to get to the given file. This
+      will show how dependencies will reference that file.
+
+  gn refs out/Debug //base/macros.h //base/at_exit.h --all
+      Display all unique targets with some dependency path to a target
+      containing either of the given files as a source.
+
+  gn refs out/Debug //base/macros.h --testonly=true --type=executable
+          --all --as=output
+      Display the executable file names of all test executables
+      potentially affected by a change to the given file.
+)";
 
 int RunRefs(const std::vector<std::string>& args) {
   if (args.size() <= 1) {
@@ -399,7 +403,6 @@ int RunRefs(const std::vector<std::string>& args) {
   bool all_toolchains = cmdline->HasSwitch(switches::kAllToolchains);
 
   Setup* setup = new Setup;
-  setup->build_settings().set_check_for_bad_items(false);
   if (!setup->DoSetup(args[0], false) || !setup->Run())
     return 1;
 

@@ -127,7 +127,7 @@ TEST_F(QuicMultipathSentPacketManagerTest, HasPendingRetransmissions) {
 
 TEST_F(QuicMultipathSentPacketManagerTest, NextPendingRetransmission) {
   SerializedPacket packet(kDefaultPathId, 1, PACKET_6BYTE_PACKET_NUMBER,
-                          nullptr, 1250, 0u, false, false);
+                          nullptr, 1250, false, false);
   PendingRetransmission retransmission(
       packet.path_id, packet.packet_number, LOSS_RETRANSMISSION,
       packet.retransmittable_frames, packet.has_crypto_handshake,
@@ -160,13 +160,13 @@ TEST_F(QuicMultipathSentPacketManagerTest, GetLeastUnacked) {
 
 TEST_F(QuicMultipathSentPacketManagerTest, OnPacketSent) {
   SerializedPacket packet0(kDefaultPathId, 1, PACKET_6BYTE_PACKET_NUMBER,
-                           nullptr, 1250, 0u, false, false);
+                           nullptr, 1250, false, false);
   SerializedPacket packet1(kTestPathId1, 1, PACKET_6BYTE_PACKET_NUMBER, nullptr,
-                           1250, 0u, false, false);
+                           1250, false, false);
   SerializedPacket packet2(kTestPathId2, 1, PACKET_6BYTE_PACKET_NUMBER, nullptr,
-                           1250, 0u, false, false);
+                           1250, false, false);
   SerializedPacket packet3(kTestPathId3, 1, PACKET_6BYTE_PACKET_NUMBER, nullptr,
-                           1250, 0u, false, false);
+                           1250, false, false);
   EXPECT_CALL(*manager_0_,
               OnPacketSent(&packet0, kInvalidPathId, 0, clock_.Now(),
                            NOT_RETRANSMISSION, HAS_RETRANSMITTABLE_DATA));

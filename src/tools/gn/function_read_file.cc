@@ -20,24 +20,25 @@ const char kReadFile[] = "read_file";
 const char kReadFile_HelpShort[] =
     "read_file: Read a file into a variable.";
 const char kReadFile_Help[] =
-    "read_file: Read a file into a variable.\n"
-    "\n"
-    "  read_file(filename, input_conversion)\n"
-    "\n"
-    "  Whitespace will be trimmed from the end of the file. Throws an error\n"
-    "  if the file can not be opened.\n"
-    "\n"
-    "Arguments:\n"
-    "\n"
-    "  filename\n"
-    "      Filename to read, relative to the build file.\n"
-    "\n"
-    "  input_conversion\n"
-    "      Controls how the file is read and parsed.\n"
-    "      See \"gn help input_conversion\".\n"
-    "\n"
-    "Example\n"
-    "  lines = read_file(\"foo.txt\", \"list lines\")\n";
+    R"(read_file: Read a file into a variable.
+
+  read_file(filename, input_conversion)
+
+  Whitespace will be trimmed from the end of the file. Throws an error if the
+  file can not be opened.
+
+Arguments
+
+  filename
+      Filename to read, relative to the build file.
+
+  input_conversion
+      Controls how the file is read and parsed. See "gn help input_conversion".
+
+Example
+
+  lines = read_file("foo.txt", "list lines")
+)";
 
 Value RunReadFile(Scope* scope,
                   const FunctionCallNode* function,

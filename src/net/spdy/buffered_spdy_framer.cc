@@ -146,7 +146,7 @@ void BufferedSpdyFramer::OnHeaderFrameEnd(SpdyStreamId stream_id,
 }
 
 void BufferedSpdyFramer::OnSettings(bool clear_persisted) {
-  visitor_->OnSettings(clear_persisted);
+  visitor_->OnSettings();
 }
 
 void BufferedSpdyFramer::OnSetting(SpdySettingsIds id,

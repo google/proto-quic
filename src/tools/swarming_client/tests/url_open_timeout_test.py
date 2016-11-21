@@ -19,6 +19,7 @@ sys.path.insert(0, ROOT_DIR)
 sys.path.insert(0, os.path.join(ROOT_DIR, 'third_party'))
 
 from depot_tools import auto_stub
+from utils import authenticators
 from utils import net
 
 
@@ -119,7 +120,7 @@ class SleepingHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 class UrlOpenTimeoutTest(auto_stub.TestCase):
   def setUp(self):
     super(UrlOpenTimeoutTest, self).setUp()
-    self.mock(net, 'OAuthAuthenticator', lambda *_: None)
+    self.mock(authenticators, 'OAuthAuthenticator', lambda *_: None)
     self.server = SleepingServer()
     self.server.start()
 

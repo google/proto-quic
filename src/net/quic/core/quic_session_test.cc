@@ -17,8 +17,8 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
-#include "net/quic/core/reliable_quic_stream.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -26,8 +26,8 @@
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_spdy_stream_peer.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -88,7 +88,7 @@ class TestStream : public QuicSpdyStream {
   TestStream(QuicStreamId id, QuicSpdySession* session)
       : QuicSpdyStream(id, session) {}
 
-  using ReliableQuicStream::CloseWriteSide;
+  using QuicStream::CloseWriteSide;
 
   void OnDataAvailable() override {}
 
@@ -156,12 +156,12 @@ class TestSession : public QuicSpdySession {
     return QuicSession::IsClosedStream(id);
   }
 
-  ReliableQuicStream* GetOrCreateDynamicStream(QuicStreamId stream_id) {
+  QuicStream* GetOrCreateDynamicStream(QuicStreamId stream_id) {
     return QuicSpdySession::GetOrCreateDynamicStream(stream_id);
   }
 
   QuicConsumedData WritevData(
-      ReliableQuicStream* stream,
+      QuicStream* stream,
       QuicStreamId id,
       QuicIOVector data,
       QuicStreamOffset offset,
@@ -186,7 +186,7 @@ class TestSession : public QuicSpdySession {
     writev_consumes_all_data_ = val;
   }
 
-  QuicConsumedData SendStreamData(ReliableQuicStream* stream) {
+  QuicConsumedData SendStreamData(QuicStream* stream) {
     struct iovec iov;
     if (stream->id() != kCryptoStreamId) {
       this->connection()->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
@@ -197,7 +197,7 @@ class TestSession : public QuicSpdySession {
     return consumed;
   }
 
-  QuicConsumedData SendLargeFakeData(ReliableQuicStream* stream, int bytes) {
+  QuicConsumedData SendLargeFakeData(QuicStream* stream, int bytes) {
     DCHECK(writev_consumes_all_data_);
     struct iovec iov;
     iov.iov_base = nullptr;  // should not be read.
@@ -344,8 +344,7 @@ TEST_P(QuicSessionTestServer, IsClosedStreamPeerCreated) {
   CheckClosedStreams();
   CloseStream(stream_id2);
   // Create a stream, and make another available.
-  ReliableQuicStream* stream3 =
-      session_.GetOrCreateDynamicStream(stream_id2 + 4);
+  QuicStream* stream3 = session_.GetOrCreateDynamicStream(stream_id2 + 4);
   CheckClosedStreams();
   // Close one, but make sure the other is still not closed
   CloseStream(stream3->id());
@@ -1050,7 +1049,7 @@ TEST_P(QuicSessionTestServer, ConnectionFlowControlAccountingRstAfterRst) {
   TestStream* stream = session_.CreateOutgoingDynamicStream(kDefaultPriority);
   EXPECT_CALL(*connection_, SendRstStream(stream->id(), _, _));
   stream->Reset(QUIC_STREAM_CANCELLED);
-  EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream));
+  EXPECT_TRUE(QuicStreamPeer::read_side_closed(stream));
 
   // Now receive a RST from the peer. We should handle this by adjusting the
   // connection level flow control receive window to take into account the total
@@ -1242,7 +1241,7 @@ TEST_P(QuicSessionTestClient, RecordFinAfterReadSideClosed) {
   QuicStreamId stream_id = stream->id();
 
   // Close the read side manually.
-  ReliableQuicStreamPeer::CloseReadSide(stream);
+  QuicStreamPeer::CloseReadSide(stream);
 
   // Receive a stream data frame with FIN.
   QuicStreamFrame frame(stream_id, true, 0, StringPiece());
@@ -1252,7 +1251,7 @@ TEST_P(QuicSessionTestClient, RecordFinAfterReadSideClosed) {
   // Reset stream locally.
   EXPECT_CALL(*connection_, SendRstStream(stream->id(), _, _));
   stream->Reset(QUIC_STREAM_CANCELLED);
-  EXPECT_TRUE(ReliableQuicStreamPeer::read_side_closed(stream));
+  EXPECT_TRUE(QuicStreamPeer::read_side_closed(stream));
 
   // Allow the session to delete the stream object.
   session_.PostProcessAfterData();

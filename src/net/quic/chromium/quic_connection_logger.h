@@ -112,9 +112,6 @@ class NET_EXPORT_PRIVATE QuicConnectionLogger
   // The largest packet number received.  In the case where a packet is
   // received late (out of order), this value will not be updated.
   QuicPacketNumber largest_received_packet_number_;
-  // The largest packet number which the peer has failed to
-  // receive, according to the missing packet set in their ack frames.
-  QuicPacketNumber largest_received_missing_packet_number_;
   // Number of times that the current received packet number is
   // smaller than the last received packet number.
   size_t num_out_of_order_received_packets_;

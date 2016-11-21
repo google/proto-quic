@@ -1912,6 +1912,50 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="VR.FullScreenMode" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of the URL for pages that enter a fullscreen experience while in
+    VR.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="VR.Video.Browser" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of URL that played video while in the VR browser
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="VR.Video.Fullscreen" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of the URL that played video while in a fullscreen experience in
+    VR.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="VR.Video.WebVR" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of the URL that played video while in WebVR.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="VR.WebVR.GetDisplays" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of the URL that called WebVR APIs to obtain the list of VRDisplays.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="VR.WebVR.PresentSuccess" type="ETLD_PLUS_ONE">
+  <owner>billorr@chromium.org</owner>
+  <summary>
+    The host of the URL that succeeded in presenting WebVR content.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="WebComponents.DocumentRegisterElement"
     type="ETLD_PLUS_ONE">
   <owner>kojii@chromium.org</owner>

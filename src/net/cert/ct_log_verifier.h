@@ -21,10 +21,9 @@ typedef struct evp_pkey_st EVP_PKEY;
 namespace net {
 
 namespace ct {
-
-struct SignedTreeHead;
+struct MerkleAuditProof;
 struct MerkleConsistencyProof;
-
+struct SignedTreeHead;
 }  // namespace ct
 
 // Class for verifying signatures of a single Certificate Transparency
@@ -75,6 +74,14 @@ class NET_EXPORT CTLogVerifier
   bool VerifyConsistencyProof(const ct::MerkleConsistencyProof& proof,
                               const std::string& old_tree_hash,
                               const std::string& new_tree_hash) const;
+
+  // Verifies that |proof| is a valid audit proof (RFC 6962, Section 2.1.1) for
+  // this log, and which proves that the certificate represented by |leaf_hash|
+  // has been incorporated into the Merkle tree represented by |root_hash|.
+  // Returns true if verification succeeds, false otherwise.
+  bool VerifyAuditProof(const ct::MerkleAuditProof& proof,
+                        const std::string& root_hash,
+                        const std::string& leaf_hash) const;
 
  private:
   FRIEND_TEST_ALL_PREFIXES(CTLogVerifierTest, VerifySignature);

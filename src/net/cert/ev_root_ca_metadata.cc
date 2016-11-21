@@ -17,11 +17,15 @@
 #include "base/logging.h"
 #if defined(USE_NSS_CERTS)
 #include "crypto/nss_util.h"
+#elif defined(OS_MACOSX)
+#include "net/der/input.h"
+#include "third_party/boringssl/src/include/openssl/asn1.h"
+#include "third_party/boringssl/src/include/openssl/obj.h"
 #endif
 
 namespace net {
 
-#if defined(USE_NSS_CERTS) || defined(OS_WIN)
+#if defined(USE_NSS_CERTS) || defined(OS_WIN) || defined(OS_MACOSX)
 // Raw metadata.
 struct EVMetadata {
   // kMaxOIDsPerCA is the number of OIDs that we can support per root CA. At
@@ -708,6 +712,61 @@ bool EVRootCAMetadata::RemoveEVCA(const SHA1HashValue& fingerprint) {
   return true;
 }
 
+#elif defined(OS_MACOSX)
+
+namespace {
+
+std::string OIDStringToDER(const char* policy) {
+  bssl::UniquePtr<ASN1_OBJECT> obj(
+      OBJ_txt2obj(policy, 1 /* dont_search_names */));
+  if (!obj)
+    return std::string();
+
+  return std::string(reinterpret_cast<const char*>(obj->data), obj->length);
+}
+
+}  // namespace
+
+bool EVRootCAMetadata::IsEVPolicyOID(PolicyOID policy_oid) const {
+  return policy_oids_.find(policy_oid.AsString()) != policy_oids_.end();
+}
+
+bool EVRootCAMetadata::HasEVPolicyOID(const SHA1HashValue& fingerprint,
+                                      PolicyOID policy_oid) const {
+  PolicyOIDMap::const_iterator iter = ev_policy_.find(fingerprint);
+  if (iter == ev_policy_.end())
+    return false;
+  for (const std::string& ev_oid : iter->second) {
+    if (der::Input(&ev_oid) == policy_oid)
+      return true;
+  }
+  return false;
+}
+
+bool EVRootCAMetadata::AddEVCA(const SHA1HashValue& fingerprint,
+                               const char* policy) {
+  if (ev_policy_.find(fingerprint) != ev_policy_.end())
+    return false;
+
+  std::string der_policy = OIDStringToDER(policy);
+  if (der_policy.empty())
+    return false;
+
+  ev_policy_[fingerprint].push_back(der_policy);
+  policy_oids_.insert(der_policy);
+  return true;
+}
+
+bool EVRootCAMetadata::RemoveEVCA(const SHA1HashValue& fingerprint) {
+  PolicyOIDMap::iterator it = ev_policy_.find(fingerprint);
+  if (it == ev_policy_.end())
+    return false;
+  std::string oid = it->second[0];
+  ev_policy_.erase(it);
+  policy_oids_.erase(oid);
+  return true;
+}
+
 #else
 
 // These are just stub functions for platforms where we don't use this EV
@@ -744,6 +803,25 @@ EVRootCAMetadata::EVRootCAMetadata() {
 
       ev_policy_[metadata.fingerprint].push_back(policy);
       policy_oids_.insert(policy);
+    }
+  }
+#elif defined(OS_MACOSX)
+  for (size_t i = 0; i < arraysize(ev_root_ca_metadata); i++) {
+    const EVMetadata& metadata = ev_root_ca_metadata[i];
+    for (size_t j = 0; j < arraysize(metadata.policy_oids); j++) {
+      if (metadata.policy_oids[j][0] == '\0')
+        break;
+      const char* policy_oid = metadata.policy_oids[j];
+
+      PolicyOID policy;
+      std::string policy_der = OIDStringToDER(policy_oid);
+      if (policy_der.empty()) {
+        LOG(ERROR) << "Failed to register OID: " << policy_oid;
+        continue;
+      }
+
+      ev_policy_[metadata.fingerprint].push_back(policy_der);
+      policy_oids_.insert(policy_der);
     }
   }
 #endif

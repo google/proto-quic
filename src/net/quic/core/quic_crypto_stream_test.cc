@@ -13,8 +13,8 @@
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
+#include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/quic/test_tools/reliable_quic_stream_peer.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -105,8 +105,8 @@ TEST_F(QuicCryptoStreamTest, ProcessBadData) {
 }
 
 TEST_F(QuicCryptoStreamTest, NoConnectionLevelFlowControl) {
-  EXPECT_FALSE(ReliableQuicStreamPeer::StreamContributesToConnectionFlowControl(
-      &stream_));
+  EXPECT_FALSE(
+      QuicStreamPeer::StreamContributesToConnectionFlowControl(&stream_));
 }
 
 }  // namespace

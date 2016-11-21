@@ -233,6 +233,7 @@ bool HpackDecoder::DecodeNextName(HpackInputStream* input_stream,
                                   StringPiece* next_name) {
   uint32_t index_or_zero = 0;
   if (!input_stream->DecodeNextUint32(&index_or_zero)) {
+    DVLOG(1) << "Failed to decode the next uint.";
     return false;
   }
 
@@ -263,11 +264,13 @@ bool HpackDecoder::DecodeNextStringLiteral(HpackInputStream* input_stream,
     bool result = input_stream->DecodeNextHuffmanString(buffer);
     *output = StringPiece(*buffer);
     return result;
-  }
-  if (input_stream->MatchPrefixAndConsume(kStringLiteralIdentityEncoded)) {
+  } else if (input_stream->MatchPrefixAndConsume(
+                 kStringLiteralIdentityEncoded)) {
     return input_stream->DecodeNextIdentityString(output);
+  } else {
+    DVLOG(1) << "String literal is neither Huffman nor identity encoded!";
+    return false;
   }
-  return false;
 }
 
 }  // namespace net

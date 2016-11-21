@@ -25,13 +25,13 @@ class Toolchain;
 // build itself.
 class NinjaBuildWriter {
  public:
-  NinjaBuildWriter(
-      const BuildSettings* settings,
-      const std::map<const Settings*, const Toolchain*>& used_toolchains,
-      const Toolchain* default_toolchain,
-      const std::vector<const Target*>& default_toolchain_targets,
-      std::ostream& out,
-      std::ostream& dep_out);
+  NinjaBuildWriter(const BuildSettings* settings,
+                   const std::unordered_map<const Settings*, const Toolchain*>&
+                       used_toolchains,
+                   const Toolchain* default_toolchain,
+                   const std::vector<const Target*>& default_toolchain_targets,
+                   std::ostream& out,
+                   std::ostream& dep_out);
   ~NinjaBuildWriter();
 
   // The design of this class is that this static factory function takes the
@@ -49,15 +49,14 @@ class NinjaBuildWriter {
  private:
   void WriteNinjaRules();
   void WriteAllPools();
-  void WriteSubninjas();
-  bool WritePhonyAndAllRules(
-      Err* err);
+  bool WriteSubninjas(Err* err);
+  bool WritePhonyAndAllRules(Err* err);
 
   void WritePhonyRule(const Target* target, const std::string& phony_name);
 
   const BuildSettings* build_settings_;
 
-  const std::map<const Settings*, const Toolchain*>& used_toolchains_;
+  const std::unordered_map<const Settings*, const Toolchain*>& used_toolchains_;
   const Toolchain* default_toolchain_;
   const std::vector<const Target*>& default_toolchain_targets_;
 
@@ -67,6 +66,8 @@ class NinjaBuildWriter {
 
   DISALLOW_COPY_AND_ASSIGN(NinjaBuildWriter);
 };
+
+extern const char kNinjaRules_Help[];
 
 #endif  // TOOLS_GN_NINJA_BUILD_WRITER_H_
 

@@ -572,8 +572,8 @@ get_arch_gnu_config () {
 # $1: NDK architecture name (e.g. 'arm')
 # Out: NDK toolchain name prefix (e.g. 'arm-linux-androideabi')
 get_arch_toolchain_prefix () {
-  # Return the configure triplet, except for x86!
-  if [ "$1" = "x86" ]; then
+  # Return the configure triplet, except for x86 and x86_64!
+  if [ "$1" = "x86" -o "$1" = "x86_64" ]; then
     echo "$1"
   else
     get_arch_gnu_config $1
@@ -875,7 +875,7 @@ if [ "$SU_PREFIX" ]; then
   COMMAND_PREFIX="$SU_PREFIX \""
   COMMAND_SUFFIX="\""
 else
-  SHELL_UID=$(adb shell cat /proc/self/status | \
+  SHELL_UID=$("$ADB" shell cat /proc/self/status | \
               awk '$1 == "Uid:" { print $2; }')
   log "Shell UID: $SHELL_UID"
   if [ "$SHELL_UID" != 0 -o -n "$NO_ROOT" ]; then
@@ -911,7 +911,7 @@ if [ "$PULL_LIBS" -a -z "$NO_PULL_LIBS" ]; then
     echo "Pulling from device: $SYSLIB"
     DST_FILE=$PULL_LIBS_DIR$SYSLIB
     DST_DIR=$(dirname "$DST_FILE")
-    mkdir -p "$DST_DIR" && adb pull $SYSLIB "$DST_FILE" 2>/dev/null
+    mkdir -p "$DST_DIR" && "$ADB" pull $SYSLIB "$DST_FILE" 2>/dev/null
     fail_panic "Could not pull $SYSLIB from device !?"
   done
   echo "Writing the device fingerprint"
@@ -930,9 +930,9 @@ SOLIB_DIRS=$(find $PULL_LIBS_DIR -mindepth 1 -maxdepth 4 -type d | \
 
 # Push gdbserver to the device
 log "Pushing gdbserver $GDBSERVER to $TARGET_GDBSERVER"
-adb push $GDBSERVER $TMP_TARGET_GDBSERVER &>/dev/null
-adb shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER $COMMAND_SUFFIX
-adb shell rm $TMP_TARGET_GDBSERVER
+"$ADB" push $GDBSERVER $TMP_TARGET_GDBSERVER &>/dev/null
+"$ADB" shell $COMMAND_PREFIX cp $TMP_TARGET_GDBSERVER $TARGET_GDBSERVER $COMMAND_SUFFIX
+"$ADB" shell rm $TMP_TARGET_GDBSERVER
 fail_panic "Could not copy gdbserver to the device!"
 
 if [ -z "$PORT" ]; then
@@ -964,12 +964,12 @@ fi
 
 # Pull the app_process binary from the device.
 log "Pulling $GDBEXEC from device"
-adb pull /system/bin/$GDBEXEC "$TMPDIR"/$GDBEXEC &>/dev/null
+"$ADB" pull /system/bin/$GDBEXEC "$TMPDIR"/$GDBEXEC &>/dev/null
 fail_panic "Could not retrieve $GDBEXEC from the device!"
 
 # Setup network redirection
 log "Setting network redirection (host:$HOST_PORT -> device:$TARGET_PORT)"
-adb forward tcp:$HOST_PORT tcp:$TARGET_PORT
+"$ADB" forward tcp:$HOST_PORT tcp:$TARGET_PORT
 fail_panic "Could not setup network redirection from \
 host:localhost:$HOST_PORT to device:localhost:$TARGET_PORT!"
 

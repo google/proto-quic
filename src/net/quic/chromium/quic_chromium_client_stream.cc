@@ -109,11 +109,11 @@ void QuicChromiumClientStream::OnClose() {
     delegate_ = nullptr;
     delegate_tasks_.clear();
   }
-  ReliableQuicStream::OnClose();
+  QuicStream::OnClose();
 }
 
 void QuicChromiumClientStream::OnCanWrite() {
-  ReliableQuicStream::OnCanWrite();
+  QuicStream::OnCanWrite();
 
   if (!HasBufferedData() && !callback_.is_null()) {
     base::ResetAndReturn(&callback_).Run(OK);

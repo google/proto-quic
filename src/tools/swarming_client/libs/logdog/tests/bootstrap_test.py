@@ -12,7 +12,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(os.path.join(
     os.pardir, os.pardir, os.pardir)))
 sys.path.insert(0, ROOT_DIR)
 
-from libs.logdog import bootstrap
+from libs.logdog import bootstrap, stream
 
 
 class BootstrapTestCase(unittest.TestCase):
@@ -22,6 +22,7 @@ class BootstrapTestCase(unittest.TestCase):
         bootstrap.ButlerBootstrap._ENV_PROJECT: 'test-project',
         bootstrap.ButlerBootstrap._ENV_PREFIX: 'foo/bar',
         bootstrap.ButlerBootstrap._ENV_STREAM_SERVER_PATH: 'fake:path',
+        bootstrap.ButlerBootstrap._ENV_COORDINATOR_HOST: 'example.appspot.com',
     }
 
   def testProbeSucceeds(self):
@@ -29,7 +30,8 @@ class BootstrapTestCase(unittest.TestCase):
     self.assertEqual(bs, bootstrap.ButlerBootstrap(
       project='test-project',
       prefix='foo/bar',
-      streamserver_uri='fake:path'))
+      streamserver_uri='fake:path',
+      coordinator_host='example.appspot.com'))
 
   def testProbeNoBootstrapRaisesError(self):
     self.assertRaises(bootstrap.NotBootstrappedError,
@@ -49,6 +51,26 @@ class BootstrapTestCase(unittest.TestCase):
     self.env[bootstrap.ButlerBootstrap._ENV_PREFIX] = '!!! not valid !!!'
     self.assertRaises(bootstrap.NotBootstrappedError,
         bootstrap.ButlerBootstrap.probe, env=self.env)
+
+  def testCreateStreamClient(self):
+    class TestStreamClient(stream.StreamClient):
+      @classmethod
+      def _create(cls, _value, **kwargs):
+        return cls(**kwargs)
+
+      def _connect_raw(self):
+        raise NotImplementedError()
+
+    reg = stream.StreamProtocolRegistry()
+    reg.register_protocol('test', TestStreamClient)
+    bs = bootstrap.ButlerBootstrap(
+      project='test-project',
+      prefix='foo/bar',
+      streamserver_uri='test:',
+      coordinator_host='example.appspot.com')
+    sc = bs.stream_client(reg=reg)
+    self.assertEqual(sc.prefix, 'foo/bar')
+    self.assertEqual(sc.coordinator_host, 'example.appspot.com')
 
 
 if __name__ == '__main__':

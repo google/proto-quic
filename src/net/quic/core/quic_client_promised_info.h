@@ -78,6 +78,9 @@ class NET_EXPORT_PRIVATE QuicClientPromisedInfo
 
   const std::string url() const { return url_; }
 
+  // Return true if there's a request pending matching this push promise.
+  bool is_validating() const { return client_request_delegate_ != nullptr; }
+
  private:
   friend class test::QuicClientPromisedInfoPeer;
 

@@ -388,7 +388,17 @@ class BlockingNetworkDelegate : public TestNetworkDelegate {
     USER_CALLBACK,  // User takes care of doing a callback.  |retval_| and
                     // |auth_retval_| are ignored. In every blocking stage the
                     // message loop is quit.
+    USER_NOTIFY,    // User is notified by a provided callback of the
+                    // blocking, and synchronously returns instructions
+                    // for handling it.
   };
+
+  using NotificationCallback =
+      base::Callback<Error(const CompletionCallback&, const URLRequest*)>;
+
+  using NotificationAuthCallback =
+      base::Callback<NetworkDelegate::AuthRequiredResponse(const AuthCallback&,
+                                                           const URLRequest*)>;
 
   // Creates a delegate which does not block at all.
   explicit BlockingNetworkDelegate(BlockMode block_mode);
@@ -424,6 +434,17 @@ class BlockingNetworkDelegate : public TestNetworkDelegate {
 
   void set_block_on(int block_on) {
     block_on_ = block_on;
+  }
+
+  // Only valid if |block_mode_| == USER_NOTIFY
+  void set_notification_callback(
+      const NotificationCallback& notification_callback) {
+    notification_callback_ = notification_callback;
+  }
+
+  void set_notification_auth_callback(
+      const NotificationAuthCallback& notification_auth_callback) {
+    notification_auth_callback_ = notification_auth_callback;
   }
 
   // Allows the user to check in which state did we block.
@@ -464,7 +485,9 @@ class BlockingNetworkDelegate : public TestNetworkDelegate {
 
   // Checks whether we should block in |stage|. If yes, returns an error code
   // and optionally sets up callback based on |block_mode_|. If no, returns OK.
-  int MaybeBlockStage(Stage stage, const CompletionCallback& callback);
+  int MaybeBlockStage(Stage stage,
+                      const URLRequest* request,
+                      const CompletionCallback& callback);
 
   // Configuration parameters, can be adjusted by public methods:
   const BlockMode block_mode_;
@@ -490,6 +513,10 @@ class BlockingNetworkDelegate : public TestNetworkDelegate {
   // Callback objects stored during blocking stages.
   CompletionCallback callback_;
   AuthCallback auth_callback_;
+
+  // Callback to request user instructions for blocking.
+  NotificationCallback notification_callback_;
+  NotificationAuthCallback notification_auth_callback_;
 
   base::WeakPtrFactory<BlockingNetworkDelegate> weak_factory_;
 
@@ -550,7 +577,7 @@ int BlockingNetworkDelegate::OnBeforeURLRequest(
   if (!redirect_url_.is_empty())
     *new_url = redirect_url_;
 
-  return MaybeBlockStage(ON_BEFORE_URL_REQUEST, callback);
+  return MaybeBlockStage(ON_BEFORE_URL_REQUEST, request, callback);
 }
 
 int BlockingNetworkDelegate::OnBeforeStartTransaction(
@@ -559,7 +586,7 @@ int BlockingNetworkDelegate::OnBeforeStartTransaction(
     HttpRequestHeaders* headers) {
   TestNetworkDelegate::OnBeforeStartTransaction(request, callback, headers);
 
-  return MaybeBlockStage(ON_BEFORE_SEND_HEADERS, callback);
+  return MaybeBlockStage(ON_BEFORE_SEND_HEADERS, request, callback);
 }
 
 int BlockingNetworkDelegate::OnHeadersReceived(
@@ -574,7 +601,7 @@ int BlockingNetworkDelegate::OnHeadersReceived(
                                          override_response_headers,
                                          allowed_unsafe_redirect_url);
 
-  return MaybeBlockStage(ON_HEADERS_RECEIVED, callback);
+  return MaybeBlockStage(ON_HEADERS_RECEIVED, request, callback);
 }
 
 NetworkDelegate::AuthRequiredResponse BlockingNetworkDelegate::OnAuthRequired(
@@ -612,6 +639,11 @@ NetworkDelegate::AuthRequiredResponse BlockingNetworkDelegate::OnAuthRequired(
       base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::MessageLoop::QuitWhenIdleClosure());
       return AUTH_REQUIRED_RESPONSE_IO_PENDING;
+
+    case USER_NOTIFY:
+      // If the callback returns ERR_IO_PENDING, the user has accepted
+      // responsibility for running the callback in the future.
+      return notification_auth_callback_.Run(callback, request);
   }
   NOTREACHED();
   return AUTH_REQUIRED_RESPONSE_NO_ACTION;  // Dummy value.
@@ -626,6 +658,7 @@ void BlockingNetworkDelegate::Reset() {
 
 int BlockingNetworkDelegate::MaybeBlockStage(
     BlockingNetworkDelegate::Stage stage,
+    const URLRequest* request,
     const CompletionCallback& callback) {
   // Check that the user has provided callback for the previous blocked stage.
   EXPECT_EQ(NOT_BLOCKED, stage_blocked_for_callback_);
@@ -651,6 +684,11 @@ int BlockingNetworkDelegate::MaybeBlockStage(
       base::ThreadTaskRunnerHandle::Get()->PostTask(
           FROM_HERE, base::MessageLoop::QuitWhenIdleClosure());
       return ERR_IO_PENDING;
+
+    case USER_NOTIFY:
+      // If the callback returns ERR_IO_PENDING, the user has accepted
+      // responsibility for running the callback in the future.
+      return notification_callback_.Run(callback, request);
   }
   NOTREACHED();
   return 0;
@@ -677,17 +715,16 @@ class MockCertificateReportSender
   MockCertificateReportSender() {}
   ~MockCertificateReportSender() override {}
 
-  void Send(const GURL& report_uri,
-            base::StringPiece content_type,
-            base::StringPiece report) override {
+  void Send(
+      const GURL& report_uri,
+      base::StringPiece content_type,
+      base::StringPiece report,
+      const base::Callback<void()>& success_callback,
+      const base::Callback<void(const GURL&, int)>& error_callback) override {
     latest_report_uri_ = report_uri;
     report.CopyToString(&latest_report_);
     content_type.CopyToString(&latest_content_type_);
   }
-
-  void SetErrorCallback(
-      const base::Callback<void(const GURL&, int)>& error_callback) override {}
-
   const GURL& latest_report_uri() { return latest_report_uri_; }
   const std::string& latest_report() { return latest_report_; }
   const std::string& latest_content_type() { return latest_content_type_; }
@@ -7808,7 +7845,7 @@ TEST_F(URLRequestTestHTTP, NetworkAccessedClearOnLoadOnlyFromCache) {
   EXPECT_FALSE(req->response_info().network_accessed);
 }
 
-// Test that a single job with a throttled priority completes
+// Test that a single job with a THROTTLED priority completes
 // correctly in the absence of contention.
 TEST_F(URLRequestTestHTTP, ThrottledPriority) {
   ASSERT_TRUE(http_test_server()->Start());
@@ -7821,6 +7858,281 @@ TEST_F(URLRequestTestHTTP, ThrottledPriority) {
   base::RunLoop().Run();
 
   EXPECT_TRUE(req->status().is_success());
+}
+
+// A class to hold state for responding to USER_NOTIFY callbacks from
+// BlockingNetworkDelegate.  It also accepts a RunLoop that will be
+// signaled via QuitWhenIdle() when any request is blocked.
+//
+class NotificationCallbackHandler {
+ public:
+  // Default constructed object doesn't block anything.
+  NotificationCallbackHandler() : run_loop_(nullptr) {}
+
+  void AddURLRequestToBlockList(const URLRequest* request) {
+    requests_to_block_.insert(request);
+  }
+
+  Error ShouldBlockRequest(const CompletionCallback& callback,
+                           const URLRequest* request) {
+    if (requests_to_block_.find(request) == requests_to_block_.end()) {
+      return OK;
+    }
+
+    DCHECK(blocked_callbacks_.find(request) == blocked_callbacks_.end());
+    blocked_callbacks_[request] = callback;
+    if (run_loop_ && blocked_callbacks_.size() == requests_to_block_.size())
+      run_loop_->QuitWhenIdle();
+    return ERR_IO_PENDING;
+  }
+
+  // Erases object's memory of blocked callbacks as a side effect.
+  void GetBlockedCallbacks(
+      std::map<const URLRequest*, CompletionCallback>* blocked_callbacks) {
+    blocked_callbacks_.swap(*blocked_callbacks);
+  }
+
+  // Set a RunLoop that, if non-null, will be signaled if any request
+  // is blocked.  It is the callers responsibility to make sure the
+  // passed object lives past the destruction of this class or
+  // next call to SetRunLoop().
+  void SetRunLoop(base::RunLoop* run_loop) { run_loop_ = run_loop; }
+
+ private:
+  std::set<const URLRequest*> requests_to_block_;
+  std::map<const URLRequest*, CompletionCallback> blocked_callbacks_;
+
+  base::RunLoop* run_loop_;
+
+  DISALLOW_COPY_AND_ASSIGN(NotificationCallbackHandler);
+};
+
+TEST_F(URLRequestTestHTTP, MultiThrottledPriority) {
+  ASSERT_TRUE(http_test_server()->Start());
+
+  base::RunLoop run_until_request_blocked;
+
+  NotificationCallbackHandler notification_handler;
+  notification_handler.SetRunLoop(&run_until_request_blocked);
+  BlockingNetworkDelegate network_delegate(
+      BlockingNetworkDelegate::USER_NOTIFY);
+  network_delegate.set_block_on(BlockingNetworkDelegate::ON_HEADERS_RECEIVED);
+  network_delegate.set_notification_callback(
+      base::Bind(&NotificationCallbackHandler::ShouldBlockRequest,
+                 // Both objects are owned by this function, and
+                 // |*network_delegate| will be destroyed first, so
+                 // it's safe to pass it an unretained pointer.
+                 base::Unretained(&notification_handler)));
+
+  TestURLRequestContext context(true);
+  context.set_network_delegate(&network_delegate);
+  context.Init();
+
+  // Use different test URLs to make sure all three requests turn into
+  // HttpNetworkTransacations.  Use different URLRequest::Delegates so that
+  // the requests may be waited on separately.
+  TestDelegate d1;
+  std::unique_ptr<URLRequest> req1(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/l"), THROTTLED, &d1));
+  notification_handler.AddURLRequestToBlockList(req1.get());
+
+  TestDelegate d2;
+  std::unique_ptr<URLRequest> req2(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/2"), THROTTLED, &d2));
+  notification_handler.AddURLRequestToBlockList(req2.get());
+
+  TestDelegate d3;
+  std::unique_ptr<URLRequest> req3(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/3"), THROTTLED, &d3));
+  req1->Start();
+  req2->Start();
+  req3->Start();
+  run_until_request_blocked.Run();
+  notification_handler.SetRunLoop(nullptr);
+
+  // The first two requests should be blocked based on the notification
+  // callback, and their status should have blocked the third request
+  // through throttling.
+  EXPECT_TRUE(req1->status().is_io_pending());
+  EXPECT_TRUE(req2->status().is_io_pending());
+  EXPECT_TRUE(req3->status().is_io_pending());
+
+  std::map<const URLRequest*, CompletionCallback> blocked_callbacks;
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  ASSERT_EQ(2u, blocked_callbacks.size());
+  ASSERT_TRUE(blocked_callbacks.find(req1.get()) != blocked_callbacks.end());
+  ASSERT_TRUE(blocked_callbacks.find(req2.get()) != blocked_callbacks.end());
+
+  // Unblocking one of the requests blocked on the notification callback
+  // should let it complete, which should then let the third request
+  // complete.  Unblock the second request, then wait for the third
+  // request to complete.
+  // TODO(rdsmith): Find something to wait on other than the third
+  // requests completion; if there's a bug in throttling, that will
+  // result in this test hanging rather than failing quickly.
+  d1.set_quit_on_complete(false);
+  d2.set_quit_on_complete(false);
+  d3.set_quit_on_complete(true);
+  blocked_callbacks[req2.get()].Run(OK);
+  base::RunLoop().Run();
+
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  EXPECT_EQ(0u, blocked_callbacks.size());
+  EXPECT_TRUE(req1->status().is_io_pending());
+  // req3 is only unblocked after req2 completes, so req2's
+  // success is guaranteed at this point in the function.
+  EXPECT_EQ(URLRequestStatus::SUCCESS, req2->status().status());
+  EXPECT_EQ(URLRequestStatus::SUCCESS, req3->status().status());
+}
+
+// Confirm that failing a request unblocks following requests.
+TEST_F(URLRequestTestHTTP, ThrottledFailure) {
+  ASSERT_TRUE(http_test_server()->Start());
+
+  base::RunLoop run_until_request_blocked;
+
+  NotificationCallbackHandler notification_handler;
+  notification_handler.SetRunLoop(&run_until_request_blocked);
+  BlockingNetworkDelegate network_delegate(
+      BlockingNetworkDelegate::USER_NOTIFY);
+  network_delegate.set_block_on(BlockingNetworkDelegate::ON_HEADERS_RECEIVED);
+  network_delegate.set_notification_callback(
+      base::Bind(&NotificationCallbackHandler::ShouldBlockRequest,
+                 // Both objects are owned by this function, and
+                 // |*network_delegate| will be destroyed first, so
+                 // it's safe to pass it an unretained pointer.
+                 base::Unretained(&notification_handler)));
+
+  TestURLRequestContext context(true);
+  context.set_network_delegate(&network_delegate);
+  context.Init();
+
+  // Use different test URLs to make sure all three requests turn into
+  // HttpNetworkTransacations.  Use different URLRequest::Delegates so that
+  // the requests may be waited on separately.
+  TestDelegate d1;
+  std::unique_ptr<URLRequest> req1(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/l"), THROTTLED, &d1));
+  notification_handler.AddURLRequestToBlockList(req1.get());
+
+  TestDelegate d2;
+  std::unique_ptr<URLRequest> req2(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/2"), THROTTLED, &d2));
+  notification_handler.AddURLRequestToBlockList(req2.get());
+
+  TestDelegate d3;
+  std::unique_ptr<URLRequest> req3(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/3"), THROTTLED, &d3));
+  req1->Start();
+  req2->Start();
+  req3->Start();
+  run_until_request_blocked.Run();
+  notification_handler.SetRunLoop(nullptr);
+
+  // The first two requests should be blocked based on the notification
+  // callback, and their status should have blocked the third request
+  // through throttling.
+  EXPECT_TRUE(req1->status().is_io_pending());
+  EXPECT_TRUE(req2->status().is_io_pending());
+  EXPECT_TRUE(req3->status().is_io_pending());
+
+  std::map<const URLRequest*, CompletionCallback> blocked_callbacks;
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  ASSERT_EQ(2u, blocked_callbacks.size());
+  ASSERT_TRUE(blocked_callbacks.find(req1.get()) != blocked_callbacks.end());
+  ASSERT_TRUE(blocked_callbacks.find(req2.get()) != blocked_callbacks.end());
+
+  // Confirm canceling one of the outstanding requests allows the
+  // blocked request to complete.
+
+  // TODO(rdsmith): Find something to wait on other than the third
+  // requests completion; if there's a bug in throttling, that will
+  // result in this test hanging rather than failing quickly.
+  d1.set_quit_on_complete(false);
+  d2.set_quit_on_complete(false);
+  d3.set_quit_on_complete(true);
+  req2->Cancel();
+  base::RunLoop().Run();
+
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  EXPECT_EQ(0u, blocked_callbacks.size());
+  EXPECT_TRUE(req1->status().is_io_pending());
+  EXPECT_EQ(URLRequestStatus::CANCELED, req2->status().status());
+  EXPECT_EQ(URLRequestStatus::SUCCESS, req3->status().status());
+}
+
+TEST_F(URLRequestTestHTTP, ThrottledRepriUnblock) {
+  ASSERT_TRUE(http_test_server()->Start());
+
+  base::RunLoop run_until_request_blocked;
+
+  NotificationCallbackHandler notification_handler;
+  notification_handler.SetRunLoop(&run_until_request_blocked);
+  BlockingNetworkDelegate network_delegate(
+      BlockingNetworkDelegate::USER_NOTIFY);
+  network_delegate.set_block_on(BlockingNetworkDelegate::ON_HEADERS_RECEIVED);
+  network_delegate.set_notification_callback(
+      base::Bind(&NotificationCallbackHandler::ShouldBlockRequest,
+                 // Both objects are owned by this function, and
+                 // |*network_delegate| will be destroyed first, so
+                 // it's safe to pass it an unretained pointer.
+                 base::Unretained(&notification_handler)));
+
+  TestURLRequestContext context(true);
+  context.set_network_delegate(&network_delegate);
+  context.Init();
+
+  // Use different test URLs to make sure all three requests turn into
+  // HttpNetworkTransacations.  Use different URLRequest::Delegates so that
+  // the requests may be waited on separately.
+  TestDelegate d1;
+  std::unique_ptr<URLRequest> req1(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/l"), THROTTLED, &d1));
+  notification_handler.AddURLRequestToBlockList(req1.get());
+
+  TestDelegate d2;
+  std::unique_ptr<URLRequest> req2(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/2"), THROTTLED, &d2));
+  notification_handler.AddURLRequestToBlockList(req2.get());
+
+  TestDelegate d3;
+  std::unique_ptr<URLRequest> req3(context.CreateRequest(
+      http_test_server()->GetURL("/echoall/3"), THROTTLED, &d3));
+  req1->Start();
+  req2->Start();
+  req3->Start();
+  run_until_request_blocked.Run();
+  notification_handler.SetRunLoop(nullptr);
+
+  // The first two requests should be blocked based on the notification
+  // callback, and their status should have blocked the third request
+  // through throttling.
+  EXPECT_TRUE(req1->status().is_io_pending());
+  EXPECT_TRUE(req2->status().is_io_pending());
+  EXPECT_TRUE(req3->status().is_io_pending());
+
+  std::map<const URLRequest*, CompletionCallback> blocked_callbacks;
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  ASSERT_EQ(2u, blocked_callbacks.size());
+  ASSERT_TRUE(blocked_callbacks.find(req1.get()) != blocked_callbacks.end());
+  ASSERT_TRUE(blocked_callbacks.find(req2.get()) != blocked_callbacks.end());
+
+  // Confirm raising the priority of the third request allows it to complete.
+
+  // TODO(rdsmith): Find something to wait on other than the third
+  // requests completion; if there's a bug in throttling, that will
+  // result in this test hanging rather than failing quickly.
+  d1.set_quit_on_complete(false);
+  d2.set_quit_on_complete(false);
+  d3.set_quit_on_complete(true);
+  req3->SetPriority(IDLE);
+  base::RunLoop().Run();
+
+  notification_handler.GetBlockedCallbacks(&blocked_callbacks);
+  EXPECT_EQ(0u, blocked_callbacks.size());
+  EXPECT_TRUE(req1->status().is_io_pending());
+  EXPECT_TRUE(req2->status().is_io_pending());
+  EXPECT_EQ(URLRequestStatus::SUCCESS, req3->status().status());
 }
 
 TEST_F(URLRequestTestHTTP, RawBodyBytesNoContentEncoding) {
@@ -9085,9 +9397,9 @@ static bool SystemUsesChromiumEVMetadata() {
 #if defined(USE_OPENSSL_CERTS) && !defined(OS_ANDROID)
   // http://crbug.com/117478 - OpenSSL does not support EV validation.
   return false;
-#elif (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID)
-  // On OS X and Android, we use the system to tell us whether a certificate is
-  // EV or not and the system won't recognise our testing root.
+#elif defined(OS_ANDROID)
+  // On Android, we use the system to tell us whether a certificate is EV or not
+  // and the system won't recognise our testing root.
   return false;
 #else
   return true;
@@ -9687,10 +9999,10 @@ TEST_F(HTTPSEVCRLSetTest, MissingCRLSetAndRevokedOCSP) {
   CertStatus cert_status;
   DoConnection(ssl_options, &cert_status);
 
-  // Currently only works for Windows. When using NSS or OS X, it's not
-  // possible to determine whether the check failed because of actual
-  // revocation or because there was an OCSP failure.
-#if defined(OS_WIN)
+// Currently only works for Windows and OS X. When using NSS, it's not
+// possible to determine whether the check failed because of actual
+// revocation or because there was an OCSP failure.
+#if defined(OS_WIN) || defined(OS_MACOSX)
   EXPECT_EQ(CERT_STATUS_REVOKED, cert_status & CERT_STATUS_ALL_ERRORS);
 #else
   EXPECT_EQ(0u, cert_status & CERT_STATUS_ALL_ERRORS);

@@ -520,6 +520,37 @@
         "test": "events_unittests"
       },
       {
+        "override_isolate_target": "gfx_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "android_devices": "4",
+              "device_os": "MMB29Q",
+              "device_type": "bullhead"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gfx_unittests"
+      },
+      {
         "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -1202,7 +1233,7 @@
               "device_type": "bullhead"
             }
           ],
-          "hard_timeout": 960,
+          "hard_timeout": 1200,
           "shards": 1
         }
       }
@@ -1771,6 +1802,37 @@
           ]
         },
         "test": "events_unittests"
+      },
+      {
+        "override_isolate_target": "gfx_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "KTU84P",
+              "device_type": "hammerhead"
+            }
+          ],
+          "hard_timeout": 30,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gfx_unittests"
       },
       {
         "override_isolate_target": "gl_tests",
@@ -2447,113 +2509,6 @@
       }
     ]
   },
-  "Jelly Bean Tester": {
-    "gtest_tests": [
-      {
-        "test": "android_webview_unittests"
-      },
-      {
-        "test": "base_unittests"
-      },
-      {
-        "test": "blimp_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "breakpad_unittests_deps"
-        ],
-        "test": "breakpad_unittests"
-      },
-      {
-        "test": "capture_unittests"
-      },
-      {
-        "test": "cc_unittests"
-      },
-      {
-        "test": "components_browsertests"
-      },
-      {
-        "test": "components_unittests"
-      },
-      {
-        "test": "content_browsertests"
-      },
-      {
-        "test": "content_unittests"
-      },
-      {
-        "test": "device_unittests"
-      },
-      {
-        "test": "events_unittests"
-      },
-      {
-        "test": "gl_tests"
-      },
-      {
-        "test": "gl_unittests"
-      },
-      {
-        "test": "gpu_ipc_service_unittests"
-      },
-      {
-        "test": "gpu_unittests"
-      },
-      {
-        "test": "ipc_tests"
-      },
-      {
-        "test": "media_unittests"
-      },
-      {
-        "test": "net_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "sandbox_linux_unittests_deps"
-        ],
-        "test": "sandbox_linux_unittests"
-      },
-      {
-        "test": "sql_unittests"
-      },
-      {
-        "test": "storage_unittests"
-      },
-      {
-        "test": "ui_android_unittests"
-      },
-      {
-        "test": "ui_base_unittests"
-      },
-      {
-        "test": "ui_touch_selection_unittests"
-      },
-      {
-        "test": "unit_tests"
-      }
-    ],
-    "instrumentation_tests": [
-      {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
-      },
-      {
-        "test": "chrome_public_test_apk"
-      },
-      {
-        "test": "chrome_sync_shell_test_apk"
-      },
-      {
-        "test": "content_shell_test_apk"
-      }
-    ]
-  },
   "KitKat Tablet Tester": {
     "gtest_tests": [
       {
@@ -2596,114 +2551,7 @@
         "test": "events_unittests"
       },
       {
-        "test": "gl_tests"
-      },
-      {
-        "test": "gl_unittests"
-      },
-      {
-        "test": "gpu_ipc_service_unittests"
-      },
-      {
-        "test": "gpu_unittests"
-      },
-      {
-        "test": "ipc_tests"
-      },
-      {
-        "test": "media_unittests"
-      },
-      {
-        "test": "net_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "sandbox_linux_unittests_deps"
-        ],
-        "test": "sandbox_linux_unittests"
-      },
-      {
-        "test": "sql_unittests"
-      },
-      {
-        "test": "storage_unittests"
-      },
-      {
-        "test": "ui_android_unittests"
-      },
-      {
-        "test": "ui_base_unittests"
-      },
-      {
-        "test": "ui_touch_selection_unittests"
-      },
-      {
-        "test": "unit_tests"
-      }
-    ],
-    "instrumentation_tests": [
-      {
-        "test": "android_webview_test_apk"
-      },
-      {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
-      },
-      {
-        "test": "chrome_public_test_apk"
-      },
-      {
-        "test": "chrome_sync_shell_test_apk"
-      },
-      {
-        "test": "content_shell_test_apk"
-      }
-    ]
-  },
-  "Lollipop Consumer Tester": {
-    "gtest_tests": [
-      {
-        "test": "android_webview_unittests"
-      },
-      {
-        "test": "base_unittests"
-      },
-      {
-        "test": "blimp_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "breakpad_unittests_deps"
-        ],
-        "test": "breakpad_unittests"
-      },
-      {
-        "test": "capture_unittests"
-      },
-      {
-        "test": "cc_unittests"
-      },
-      {
-        "test": "components_browsertests"
-      },
-      {
-        "test": "components_unittests"
-      },
-      {
-        "test": "content_browsertests"
-      },
-      {
-        "test": "content_unittests"
-      },
-      {
-        "test": "device_unittests"
-      },
-      {
-        "test": "events_unittests"
+        "test": "gfx_unittests"
       },
       {
         "test": "gl_tests"
@@ -2771,127 +2619,6 @@
       },
       {
         "test": "content_shell_test_apk"
-      }
-    ]
-  },
-  "Lollipop Low-end Tester": {
-    "gtest_tests": [
-      {
-        "test": "android_webview_unittests"
-      },
-      {
-        "test": "base_unittests"
-      },
-      {
-        "test": "blimp_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "breakpad_unittests_deps"
-        ],
-        "test": "breakpad_unittests"
-      },
-      {
-        "test": "capture_unittests"
-      },
-      {
-        "test": "cc_unittests"
-      },
-      {
-        "test": "components_browsertests"
-      },
-      {
-        "test": "components_unittests"
-      },
-      {
-        "args": [
-          "--shard-timeout",
-          "600"
-        ],
-        "test": "content_browsertests"
-      },
-      {
-        "test": "content_unittests"
-      },
-      {
-        "test": "device_unittests"
-      },
-      {
-        "test": "events_unittests"
-      },
-      {
-        "test": "gl_tests"
-      },
-      {
-        "test": "gl_unittests"
-      },
-      {
-        "test": "gpu_ipc_service_unittests"
-      },
-      {
-        "test": "gpu_unittests"
-      },
-      {
-        "args": [
-          "--shard-timeout",
-          "600"
-        ],
-        "test": "ipc_tests"
-      },
-      {
-        "test": "media_unittests"
-      },
-      {
-        "test": "net_unittests"
-      },
-      {
-        "override_compile_targets": [
-          "sandbox_linux_unittests_deps"
-        ],
-        "test": "sandbox_linux_unittests"
-      },
-      {
-        "test": "sql_unittests"
-      },
-      {
-        "test": "storage_unittests"
-      },
-      {
-        "test": "ui_android_unittests"
-      },
-      {
-        "test": "ui_base_unittests"
-      },
-      {
-        "test": "ui_touch_selection_unittests"
-      },
-      {
-        "test": "unit_tests"
-      }
-    ],
-    "instrumentation_tests": [
-      {
-        "test": "android_webview_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "chrome_public_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "chrome_sync_shell_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "test": "content_shell_test_apk",
-        "timeout_scale": 4
       }
     ]
   },
@@ -3295,6 +3022,39 @@
           ]
         },
         "test": "events_unittests"
+      },
+      {
+        "override_isolate_target": "gfx_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "android_devices": "4",
+              "device_os": "LMY48I",
+              "device_type": "hammerhead"
+            }
+          ],
+          "expiration": 10800,
+          "hard_timeout": 960,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gfx_unittests"
       },
       {
         "override_isolate_target": "gl_tests",
@@ -3985,6 +3745,9 @@
         "test": "events_unittests"
       },
       {
+        "test": "gfx_unittests"
+      },
+      {
         "test": "gl_tests"
       },
       {
@@ -4663,6 +4426,37 @@
         "test": "events_unittests"
       },
       {
+        "override_isolate_target": "gfx_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "MMB29Q",
+              "device_type": "bullhead"
+            }
+          ],
+          "hard_timeout": 960,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gfx_unittests"
+      },
+      {
         "override_isolate_target": "gl_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -5141,6 +4935,9 @@
       },
       {
         "test": "events_unittests"
+      },
+      {
+        "test": "gfx_unittests"
       },
       {
         "test": "gl_tests"

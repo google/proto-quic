@@ -512,6 +512,7 @@ bool operator!=(const GURL& x, const GURL& y) {
 }
 
 bool operator==(const GURL& x, const base::StringPiece& spec) {
+  DCHECK_EQ(GURL(spec).possibly_invalid_spec(), spec);
   return x.possibly_invalid_spec() == spec;
 }
 

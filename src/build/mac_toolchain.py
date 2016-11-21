@@ -3,19 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Download necessary mac toolchain files under certain conditions.  If
-xcode-select is already set and points to an external folder
-(e.g. /Application/Xcode.app), this script only runs if the GYP_DEFINE
-|force_mac_toolchain| is set.  To override the values in
-|TOOLCHAIN_REVISION|-|TOOLCHAIN_SUB_REVISION| below, GYP_DEFINE
-mac_toolchain_revision can be used instead.
-
-This script will only run on machines if /usr/bin/xcodebuild and
-/usr/bin/xcode-select has been added to the sudoers list so the license can be
-accepted.
-
-Otherwise, user input would be required to complete the script.  Perhaps future
-versions can be modified to allow for user input on developer machines.
+"""
+If should_use_hermetic_xcode.py emits "1", and the current toolchain is out of
+date:
+  * Downloads the hermetic mac toolchain
+    * Requires gsutil to be configured.
+  * Accepts the license.
+    * If xcode-select and xcodebuild are not passwordless in sudoers, requires
+      user interaction.
 """
 
 import os
@@ -138,23 +133,42 @@ def AcceptLicense():
     subprocess.check_call(['sudo', '/usr/bin/xcode-select', '-s', old_path])
 
 
-def _UseLocalMacSDK():
-  force_pull = os.environ.has_key('FORCE_MAC_TOOLCHAIN')
+def _UseHermeticToolchain():
+  current_dir = os.path.dirname(os.path.realpath(__file__))
+  script_path = os.path.join(current_dir, 'mac/should_use_hermetic_xcode.py')
+  proc = subprocess.Popen([script_path], stdout=subprocess.PIPE)
+  return '1' in proc.stdout.readline()
 
-  # Don't update the toolchain if there's already one installed outside of the
-  # expected location for a Chromium mac toolchain, unless |force_pull| is set.
-  proc = subprocess.Popen(['xcode-select', '-p'], stdout=subprocess.PIPE)
-  xcode_select_dir = proc.communicate()[0]
-  rc = proc.returncode
-  return (not force_pull and rc == 0 and
-          TOOLCHAIN_BUILD_DIR not in xcode_select_dir)
+
+def RequestGsAuthentication():
+  """Requests that the user authenticate to be able to access gs://.
+  """
+  print 'Access to ' + TOOLCHAIN_URL + ' not configured.'
+  print '-----------------------------------------------------------------'
+  print
+  print 'You appear to be a Googler.'
+  print
+  print 'I\'m sorry for the hassle, but you need to do a one-time manual'
+  print 'authentication. Please run:'
+  print
+  print '    download_from_google_storage --config'
+  print
+  print 'and follow the instructions.'
+  print
+  print 'NOTE 1: Use your google.com credentials, not chromium.org.'
+  print 'NOTE 2: Enter 0 when asked for a "project-id".'
+  print
+  print '-----------------------------------------------------------------'
+  print
+  sys.stdout.flush()
+  sys.exit(1)
 
 
 def main():
   if sys.platform != 'darwin':
     return 0
 
-  if _UseLocalMacSDK():
+  if not _UseHermeticToolchain():
     print 'Using local toolchain.'
     return 0
 
@@ -166,8 +180,8 @@ def main():
     return 0
 
   if not CanAccessToolchainBucket():
-    print 'Cannot access toolchain bucket.'
-    return 0
+    RequestGsAuthentication()
+    return 1
 
   # Reset the stamp file in case the build is unsuccessful.
   WriteStampFile('')

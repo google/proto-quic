@@ -115,7 +115,7 @@ class NET_EXPORT_PRIVATE HttpAuthController
   // GenerateAuthToken operation.
   int HandleGenerateTokenResult(int result);
 
-  void OnIOComplete(int result);
+  void OnGenerateAuthTokenDone(int result);
 
   // Indicates if this handler is for Proxy auth or Server auth.
   HttpAuth::Target target_;

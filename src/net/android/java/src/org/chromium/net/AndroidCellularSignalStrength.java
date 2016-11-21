@@ -67,10 +67,17 @@ public class AndroidCellularSignalStrength {
      * for earlier versions of Android.
     */
     private static boolean isAPIAvailable(Context context) {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
-                && context.checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION,
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) return false;
+
+        try {
+            return context.checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION,
                            Process.myPid(), Process.myUid())
-                == PackageManager.PERMISSION_GRANTED;
+                    == PackageManager.PERMISSION_GRANTED;
+        } catch (Exception ignored) {
+            // Work around certain platforms where this method sometimes throws a runtime exception.
+            // See crbug.com/663360.
+        }
+        return false;
     }
 
     /**

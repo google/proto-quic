@@ -309,8 +309,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
       break;
     }
 
-    if ((ack_frame.missing && ack_frame.packets.Contains(packet_number)) ||
-        (!ack_frame.missing && !ack_frame.packets.Contains(packet_number))) {
+    if (!ack_frame.packets.Contains(packet_number)) {
       // Packet is still missing.
       continue;
     }

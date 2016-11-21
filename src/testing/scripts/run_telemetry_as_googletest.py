@@ -35,7 +35,7 @@ import xvfb
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument(
-      '--isolated-script-test-output', type=argparse.FileType('w'),
+      '--isolated-script-test-output', type=str,
       required=True)
   parser.add_argument('--xvfb', help='Start xvfb.', action='store_true')
   args, rest_args = parser.parse_known_args()
@@ -72,23 +72,8 @@ def main():
       '--shard-index=%d' % shard_index
     ]
   try:
-    with common.temporary_file() as tempfile_path:
-      rc = common.run_command([sys.executable] + rest_args + sharding_args + [
-        '--write-full-results-to', tempfile_path,
-      ], env=env)
-      with open(tempfile_path) as f:
-        results = json.load(f)
-      parsed_results = common.parse_common_test_results(results,
-                                                        test_separator='.')
-      failures = parsed_results['unexpected_failures']
-
-      json.dump({
-          'valid': bool(rc <= common.MAX_FAILURES_EXIT_STATUS and
-                        ((rc == 0) or failures)),
-          'failures': failures.keys(),
-      }, args.isolated_script_test_output)
-
-    return rc
+    return common.run_command([sys.executable] + rest_args + sharding_args + [
+      '--write-full-results-to', args.isolated_script_test_output], env=env)
   finally:
     xvfb.kill(xvfb_proc)
     xvfb.kill(openbox_proc)

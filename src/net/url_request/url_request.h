@@ -14,6 +14,7 @@
 #include "base/debug/leak_tracker.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/optional.h"
 #include "base/strings/string16.h"
 #include "base/supports_user_data.h"
 #include "base/threading/non_thread_safe.h"
@@ -303,9 +304,13 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   //
   // This value is used to perform the cross-origin check specified in Section
   // 4.3 of https://tools.ietf.org/html/draft-west-first-party-cookies.
-  const url::Origin& initiator() const { return initiator_; }
+  //
+  // Note: the initiator can be null for browser-initiated top level
+  // navigations. This is different from a unique Origin (e.g. in sandboxed
+  // iframes).
+  const base::Optional<url::Origin>& initiator() const { return initiator_; }
   // This method may only be called before Start().
-  void set_initiator(const url::Origin& initiator);
+  void set_initiator(const base::Optional<url::Origin>& initiator);
 
   // The request method, as an uppercase string.  "GET" is the default value.
   // The request method may only be changed before Start() is called and
@@ -702,11 +707,6 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
   void RestartWithJob(URLRequestJob* job);
   void PrepareToRestart();
 
-  // Detaches the job from this request in preparation for this object going
-  // away or the job being replaced. The job will not call us back when it has
-  // been orphaned.
-  void OrphanJob();
-
   // Cancels the request and set the error and ssl info for this request to the
   // passed values. Returns the error that was set.
   int DoCancel(int error, const SSLInfo& ssl_info);
@@ -761,7 +761,7 @@ class NET_EXPORT URLRequest : NON_EXPORTED_BASE(public base::NonThreadSafe),
 
   std::vector<GURL> url_chain_;
   GURL first_party_for_cookies_;
-  url::Origin initiator_;
+  base::Optional<url::Origin> initiator_;
   GURL delegate_redirect_url_;
   std::string method_;  // "GET", "POST", etc. Should be all uppercase.
   std::string referrer_;

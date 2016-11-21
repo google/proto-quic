@@ -218,6 +218,19 @@ public class RecordHistogram {
                 timeUnit.toMillis(min), timeUnit.toMillis(max), numBuckets);
     }
 
+    /**
+     * Records a sample in a histogram of sizes in KB. This is the Java equivalent of the
+     * UMA_HISTOGRAM_MEMORY_KB C++ macro.
+     *
+     * Good for sizes up to about 500MB.
+     *
+     * @param name name of the histogram.
+     * @param sizeInkB Sample to record in KB.
+     */
+    public static void recordMemoryKBHistogram(String name, int sizeInKB) {
+        recordCustomCountHistogram(name, sizeInKB, 1000, 500000, 50);
+    }
+
     private static int clampToInt(long value) {
         if (value > Integer.MAX_VALUE) return Integer.MAX_VALUE;
         // Note: Clamping to MIN_VALUE rather than 0, to let base/ histograms code

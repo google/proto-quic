@@ -1637,7 +1637,7 @@ TEST_F(BidirectionalStreamTest, TestHonorAlternativeServiceHeader) {
 
   MockWrite writes[] = {CreateMockWrite(req, 0)};
 
-  std::string alt_svc_header_value = AlternateProtocolToString(QUIC);
+  std::string alt_svc_header_value = NextProtoToString(kProtoQUIC);
   alt_svc_header_value.append("=\"www.example.org:443\"");
   const char* const kExtraResponseHeaders[] = {"alt-svc",
                                                alt_svc_header_value.c_str()};
@@ -1685,8 +1685,7 @@ TEST_F(BidirectionalStreamTest, TestHonorAlternativeServiceHeader) {
       http_session_->http_server_properties()->GetAlternativeServices(
           url::SchemeHostPort(default_url_));
   ASSERT_EQ(1u, alternative_service_vector.size());
-  EXPECT_EQ(AlternateProtocolFromNextProto(kProtoQUIC),
-            alternative_service_vector[0].protocol);
+  EXPECT_EQ(kProtoQUIC, alternative_service_vector[0].protocol);
   EXPECT_EQ("www.example.org", alternative_service_vector[0].host);
   EXPECT_EQ(443, alternative_service_vector[0].port);
 }

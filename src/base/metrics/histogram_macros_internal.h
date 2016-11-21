@@ -100,10 +100,17 @@
 // values >= boundary_value so that mistakes in calling the UMA enumeration
 // macros can be detected.
 #define INTERNAL_HISTOGRAM_ENUMERATION_WITH_FLAG(name, sample, boundary, flag) \
+  do {                                                                         \
+    static_assert(                                                             \
+        !std::is_enum<decltype(sample)>::value ||                              \
+            !std::is_enum<decltype(boundary)>::value ||                        \
+            std::is_same<std::remove_const<decltype(sample)>::type,            \
+                         std::remove_const<decltype(boundary)>::type>::value,  \
+        "|sample| and |boundary| shouldn't be of different enums");            \
     STATIC_HISTOGRAM_POINTER_BLOCK(                                            \
-        name, Add(sample),                                                     \
-        base::LinearHistogram::FactoryGet(                                     \
-            name, 1, boundary, boundary + 1, flag))
+        name, Add(sample), base::LinearHistogram::FactoryGet(                  \
+                               name, 1, boundary, boundary + 1, flag));        \
+  } while (0)
 
 // This is a helper macro used by other macros and shouldn't be used directly.
 // This is necessary to expand __COUNTER__ to an actual value.

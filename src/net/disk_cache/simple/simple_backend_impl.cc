@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 
 #include "base/memory/ptr_util.h"
 
@@ -33,6 +34,7 @@
 #include "net/disk_cache/cache_util.h"
 #include "net/disk_cache/simple/simple_entry_format.h"
 #include "net/disk_cache/simple/simple_entry_impl.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
 #include "net/disk_cache/simple/simple_index.h"
 #include "net/disk_cache/simple/simple_index_file.h"
@@ -129,20 +131,19 @@ void MaybeHistogramFdLimit(net::CacheType cache_type) {
 // Detects if the files in the cache directory match the current disk cache
 // backend type and version. If the directory contains no cache, occupies it
 // with the fresh structure.
-bool FileStructureConsistent(const base::FilePath& path) {
+bool FileStructureConsistent(const base::FilePath& path,
+                             const SimpleExperiment& experiment) {
   if (!base::PathExists(path) && !base::CreateDirectory(path)) {
     LOG(ERROR) << "Failed to create directory: " << path.LossyDisplayName();
     return false;
   }
-  return disk_cache::UpgradeSimpleCacheOnDisk(path);
+  return disk_cache::UpgradeSimpleCacheOnDisk(path, experiment);
 }
 
 // A context used by a BarrierCompletionCallback to track state.
 struct BarrierContext {
-  BarrierContext(int expected)
-      : expected(expected),
-        count(0),
-        had_error(false) {}
+  explicit BarrierContext(int expected)
+      : expected(expected), count(0), had_error(false) {}
 
   const int expected;
   int count;
@@ -261,12 +262,10 @@ int SimpleBackendImpl::Init(const CompletionCallback& completion_callback) {
       base::Bind(&RecordIndexLoad, cache_type_, base::TimeTicks::Now()));
 
   PostTaskAndReplyWithResult(
-      cache_thread_.get(),
-      FROM_HERE,
-      base::Bind(
-          &SimpleBackendImpl::InitCacheStructureOnDisk, path_, orig_max_size_),
-      base::Bind(&SimpleBackendImpl::InitializeIndex,
-                 AsWeakPtr(),
+      cache_thread_.get(), FROM_HERE,
+      base::Bind(&SimpleBackendImpl::InitCacheStructureOnDisk, path_,
+                 orig_max_size_, GetSimpleExperiment(cache_type_)),
+      base::Bind(&SimpleBackendImpl::InitializeIndex, AsWeakPtr(),
                  completion_callback));
   return net::ERR_IO_PENDING;
 }
@@ -574,13 +573,15 @@ void SimpleBackendImpl::IndexReadyForSizeCalculation(
   callback.Run(result);
 }
 
+// static
 SimpleBackendImpl::DiskStatResult SimpleBackendImpl::InitCacheStructureOnDisk(
     const base::FilePath& path,
-    uint64_t suggested_max_size) {
+    uint64_t suggested_max_size,
+    const SimpleExperiment& experiment) {
   DiskStatResult result;
   result.max_size = suggested_max_size;
   result.net_error = net::OK;
-  if (!FileStructureConsistent(path)) {
+  if (!FileStructureConsistent(path, experiment)) {
     LOG(ERROR) << "Simple Cache Backend: wrong file structure on disk: "
                << path.LossyDisplayName();
     result.net_error = net::ERR_FAILED;
@@ -591,6 +592,14 @@ SimpleBackendImpl::DiskStatResult SimpleBackendImpl::InitCacheStructureOnDisk(
     if (!result.max_size) {
       int64_t available = base::SysInfo::AmountOfFreeDiskSpace(path);
       result.max_size = disk_cache::PreferredCacheSize(available);
+
+      if (experiment.type == SimpleExperimentType::SIZE) {
+        int64_t adjusted_max_size = (result.max_size * experiment.param) / 100;
+        adjusted_max_size =
+            std::min(static_cast<int64_t>(std::numeric_limits<int32_t>::max()),
+                     adjusted_max_size);
+        result.max_size = adjusted_max_size;
+      }
     }
     DCHECK(result.max_size);
   }
@@ -606,9 +615,8 @@ scoped_refptr<SimpleEntryImpl> SimpleBackendImpl::CreateOrFindActiveEntry(
   EntryMap::iterator& it = insert_result.first;
   const bool did_insert = insert_result.second;
   if (did_insert) {
-    SimpleEntryImpl* entry = it->second =
-        new SimpleEntryImpl(cache_type_, path_, entry_hash,
-                            entry_operations_mode_,this, net_log_);
+    SimpleEntryImpl* entry = it->second = new SimpleEntryImpl(
+        cache_type_, path_, entry_hash, entry_operations_mode_, this, net_log_);
     entry->SetKey(key);
     entry->SetActiveEntryProxy(ActiveEntryProxy::Create(entry_hash, this));
   }

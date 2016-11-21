@@ -82,16 +82,21 @@ class BASE_EXPORT TaskScheduler {
   // other threads during the call. Returns immediately when shutdown completes.
   virtual void FlushForTesting() = 0;
 
-  // CreateAndSetDefaultTaskScheduler() and SetInstance() register a
-  // TaskScheduler to handle tasks posted through the post_task.h API for this
-  // process. The registered TaskScheduler will only be deleted when a new
-  // TaskScheduler is registered and is leaked on shutdown. The methods must
-  // not be called when TaskRunners created by the previous TaskScheduler are
-  // still alive. The methods are not thread-safe; proper synchronization is
-  // required to use the post_task.h API after registering a new TaskScheduler.
+  // CreateAndSetSimpleTaskScheduler(), CreateAndSetDefaultTaskScheduler(), and
+  // SetInstance() register a TaskScheduler to handle tasks posted through the
+  // post_task.h API for this process. The registered TaskScheduler will only be
+  // deleted when a new TaskScheduler is registered and is leaked on shutdown.
+  // The methods must not be called when TaskRunners created by the previous
+  // TaskScheduler are still alive. The methods are not thread-safe; proper
+  // synchronization is required to use the post_task.h API after registering a
+  // new TaskScheduler.
 
-  // Creates and sets a default task scheduler. CHECKs on failure.
-  // |worker_pool_params_vector| describes the worker pools to create.
+  // Creates and sets a task scheduler with one worker pool that can have up to
+  // |max_threads| threads. CHECKs on failure.
+  static void CreateAndSetSimpleTaskScheduler(int max_threads);
+
+  // Creates and sets a task scheduler with custom worker pools. CHECKs on
+  // failure. |worker_pool_params_vector| describes the worker pools to create.
   // |worker_pool_index_for_traits_callback| returns the index in |worker_pools|
   // of the worker pool in which a task with given traits should run.
   static void CreateAndSetDefaultTaskScheduler(

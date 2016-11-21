@@ -11,7 +11,9 @@
 
 #include <stdint.h>
 
+#include "net/base/cache_type.h"
 #include "net/base/net_export.h"
+#include "net/disk_cache/simple/simple_experiment.h"
 
 namespace base {
 class FilePath;
@@ -25,11 +27,10 @@ namespace disk_cache {
 // Returns true iff no errors were found during consistency checks and all
 // necessary transitions succeeded. If this function fails, there is nothing
 // left to do other than dropping the whole cache directory.
-NET_EXPORT_PRIVATE bool UpgradeSimpleCacheOnDisk(const base::FilePath& path);
+NET_EXPORT_PRIVATE bool UpgradeSimpleCacheOnDisk(
+    const base::FilePath& path,
+    const SimpleExperiment& experiment);
 
-// The format for the fake index has mistakenly acquired two extra fields that
-// do not contain any useful data. Since they were equal to zero, they are now
-// mandatated to be zero.
 struct NET_EXPORT_PRIVATE FakeIndexData {
   FakeIndexData();
 
@@ -39,8 +40,11 @@ struct NET_EXPORT_PRIVATE FakeIndexData {
   // Must be equal kSimpleVersion when the cache backend is instantiated.
   uint32_t version;
 
-  uint32_t unused_must_be_zero1;
-  uint32_t unused_must_be_zero2;
+  // The experiment that the cache was created for.
+  SimpleExperimentType experiment_type;
+
+  // The experiment's parameter.
+  uint32_t experiment_param;
 };
 
 // Exposed for testing.

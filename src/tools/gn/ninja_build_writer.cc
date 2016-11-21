@@ -130,11 +130,27 @@ Err GetDuplicateOutputError(const std::vector<const Target*>& all_targets,
   return result;
 }
 
+// Given two toolchains with the same name, generates an error message
+// that describes the problem.
+Err GetDuplicateToolchainError(const SourceFile& source_file,
+                               const Toolchain* previous_toolchain,
+                               const Toolchain* toolchain) {
+  Err result(toolchain->defined_from(), "Duplicate toolchain.",
+      "Two or more toolchains write to the same directory:\n  " +
+      source_file.GetDir().value() + "\n\n"
+      "This can be fixed by making sure that distinct toolchains have\n"
+      "distinct names.\n");
+  result.AppendSubErr(
+      Err(previous_toolchain->defined_from(), "Previous toolchain."));
+  return result;
+}
+
 }  // namespace
 
 NinjaBuildWriter::NinjaBuildWriter(
     const BuildSettings* build_settings,
-    const std::map<const Settings*, const Toolchain*>& used_toolchains,
+    const std::unordered_map<const Settings*, const Toolchain*>&
+        used_toolchains,
     const Toolchain* default_toolchain,
     const std::vector<const Target*>& default_toolchain_targets,
     std::ostream& out,
@@ -155,8 +171,7 @@ NinjaBuildWriter::~NinjaBuildWriter() {
 bool NinjaBuildWriter::Run(Err* err) {
   WriteNinjaRules();
   WriteAllPools();
-  WriteSubninjas();
-  return WritePhonyAndAllRules(err);
+  return WriteSubninjas(err) && WritePhonyAndAllRules(err);
 }
 
 // static
@@ -167,7 +182,7 @@ bool NinjaBuildWriter::RunAndWriteFile(
   ScopedTrace trace(TraceItem::TRACE_FILE_WRITE, "build.ninja");
 
   std::vector<const Target*> all_targets = builder.GetAllResolvedTargets();
-  std::map<const Settings*, const Toolchain*> used_toolchains;
+  std::unordered_map<const Settings*, const Toolchain*> used_toolchains;
 
   // Find the default toolchain info.
   Label default_toolchain_label = builder.loader()->GetDefaultToolchain();
@@ -260,7 +275,7 @@ void NinjaBuildWriter::WriteNinjaRules() {
 
 void NinjaBuildWriter::WriteAllPools() {
   // Compute the pools referenced by all tools of all used toolchains.
-  std::set<const Pool*> used_pools;
+  std::unordered_set<const Pool*> used_pools;
   for (const auto& pair : used_toolchains_) {
     for (int j = Toolchain::TYPE_NONE + 1; j < Toolchain::TYPE_NUMTYPES; j++) {
       Toolchain::ToolType tool_type = static_cast<Toolchain::ToolType>(j);
@@ -270,22 +285,108 @@ void NinjaBuildWriter::WriteAllPools() {
     }
   }
 
-  for (const Pool* pool : used_pools) {
-    std::string pool_name = pool->GetNinjaName(default_toolchain_->label());
-    out_ << "pool " << pool_name << std::endl
+  // Write pools sorted by their name, to make output deterministic.
+  std::vector<const Pool*> sorted_pools(used_pools.begin(), used_pools.end());
+  auto pool_name = [this](const Pool* pool) {
+    return pool->GetNinjaName(default_toolchain_->label());
+  };
+  std::sort(sorted_pools.begin(), sorted_pools.end(),
+            [&pool_name](const Pool* a, const Pool* b) {
+              return pool_name(a) < pool_name(b);
+            });
+  for (const Pool* pool : sorted_pools) {
+    out_ << "pool " << pool_name(pool) << std::endl
          << "  depth = " << pool->depth() << std::endl
          << std::endl;
   }
 }
 
-void NinjaBuildWriter::WriteSubninjas() {
-  for (const auto& pair : used_toolchains_) {
+bool NinjaBuildWriter::WriteSubninjas(Err* err) {
+  // Write toolchains sorted by their name, to make output deterministic.
+  std::vector<std::pair<const Settings*, const Toolchain*>> sorted_settings(
+      used_toolchains_.begin(), used_toolchains_.end());
+  std::sort(sorted_settings.begin(), sorted_settings.end(),
+            [this](const std::pair<const Settings*, const Toolchain*>& a,
+                   const std::pair<const Settings*, const Toolchain*>& b) {
+              // Always put the default toolchain first.
+              if (b.second == default_toolchain_)
+                return false;
+              if (a.second == default_toolchain_)
+                return true;
+              return GetNinjaFileForToolchain(a.first) <
+                     GetNinjaFileForToolchain(b.first);
+            });
+
+  SourceFile previous_subninja;
+  const Toolchain* previous_toolchain = nullptr;
+
+  for (const auto& pair : sorted_settings) {
+    SourceFile subninja = GetNinjaFileForToolchain(pair.first);
+
+    // Since the toolchains are sorted, comparing to the previous subninja is
+    // enough to find duplicates.
+    if (subninja == previous_subninja) {
+      *err =
+          GetDuplicateToolchainError(subninja, previous_toolchain, pair.second);
+      return false;
+    }
+
     out_ << "subninja ";
-    path_output_.WriteFile(out_, GetNinjaFileForToolchain(pair.first));
+    path_output_.WriteFile(out_, subninja);
     out_ << std::endl;
+    previous_subninja = subninja;
+    previous_toolchain = pair.second;
   }
   out_ << std::endl;
+  return true;
 }
+
+const char kNinjaRules_Help[] =
+    R"(Ninja build rules
+
+The "all" and "default" rules
+
+  All generated targets (see "gn help execution") will be added to an implicit
+  build rule called "all" so "ninja all" will always compile everything. The
+  default rule will be used by Ninja if no specific target is specified (just
+  typing "ninja"). If there is a target named "//:default" it will be the
+  default build rule, otherwise the implicit "all" rule will be used.
+
+Phony rules
+
+  GN generates Ninja "phony" rules for targets in the default toolchain.  The
+  phony rules can collide with each other and with the names of generated files
+  so are generated with the following priority:
+
+    1. Actual files generated by the build always take precedence.
+
+    2. Targets in the toplevel //BUILD.gn file.
+
+    3. Targets in toplevel directories matching the names of the directories.
+       So "ninja foo" can be used to compile "//foo:foo". This only applies to
+       the first level of directories since usually these are the most
+       important (so this won't apply to "//foo/bar:bar").
+
+    4. The short names of executables if there is only one executable with that
+       short name. Use "ninja doom_melon" to compile the
+       "//tools/fruit:doom_melon" executable.
+
+    5. The short names of all targets if there is only one target with that
+       short name.
+
+    6. Full label name with no leading slashes. So you can use
+       "ninja tools/fruit:doom_melon" to build "//tools/fruit:doom_melon".
+
+    7. Labels with an implicit name part (when the short names match the
+       directory). So you can use "ninja foo/bar" to compile "//foo/bar:bar".
+
+  These "phony" rules are provided only for running Ninja since this matches
+  people's historical expectations for building. For consistency with the rest
+  of the program, GN introspection commands accept explicit labels.
+
+  To explicitly compile a target in a non-default toolchain, you must give
+  Ninja the exact name of the output file relative to the build directory.
+)";
 
 bool NinjaBuildWriter::WritePhonyAndAllRules(Err* err) {
   // Track rules as we generate them so we don't accidentally write a phony
@@ -308,6 +409,10 @@ bool NinjaBuildWriter::WritePhonyAndAllRules(Err* err) {
   // as the short names of executables (which will be a subset of short_names).
   std::map<std::string, Counts> short_names;
   std::map<std::string, Counts> exes;
+
+  // ----------------------------------------------------
+  // If you change this algorithm, update the help above!
+  // ----------------------------------------------------
 
   for (const Target* target : default_toolchain_targets_) {
     const Label& label = target->label();
@@ -417,12 +522,6 @@ bool NinjaBuildWriter::WritePhonyAndAllRules(Err* err) {
           written_rules.insert(medium_name).second)
         WritePhonyRule(target, medium_name);
     }
-
-    // Write the short name if no other target shares that short name and
-    // non of the higher-priority rules above claimed it.
-    if (short_names[label.name()].count == 1 &&
-        written_rules.insert(label.name()).second)
-      WritePhonyRule(target, label.name());
   }
 
   // Write the autogenerated "all" rule.

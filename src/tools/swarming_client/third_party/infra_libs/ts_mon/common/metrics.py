@@ -6,7 +6,8 @@
 
 import copy
 
-from infra_libs.ts_mon.protos import metrics_pb2
+from infra_libs.ts_mon.protos.current import metrics_pb2
+from infra_libs.ts_mon.protos.new import metrics_pb2 as new_metrics_pb2
 
 from infra_libs.ts_mon.common import distribution
 from infra_libs.ts_mon.common import errors
@@ -93,6 +94,46 @@ class Metric(object):
   def unregister(self):
     interface.unregister(self)
 
+  @staticmethod
+  def _map_units_to_string(units):
+    """Map MetricsDataUnits to the corresponding string according to:
+       http://unitsofmeasure.org/ucum.html because that's what the new proto
+       requires."""
+    if units in _UNITS_TO_STRING:
+      return _UNITS_TO_STRING[units]
+    else:
+      return '{unknown}'
+
+  def _populate_data_set(self, data_set, fields):
+    """Populate MetricsDataSet."""
+    data_set.metric_name = '%s%s' % (interface.state.metric_name_prefix,
+                                     self._name)
+    data_set.description = self._description or ''
+    data_set.annotations.unit = self._map_units_to_string(self._units)
+
+    if self.is_cumulative():
+      data_set.stream_kind = new_metrics_pb2.CUMULATIVE
+    else:
+      data_set.stream_kind = new_metrics_pb2.GAUGE
+
+    self._populate_value_type(data_set)
+    self._populate_field_descriptors(data_set, fields)
+
+  def _populate_data(self, data_set, start_time, end_time, fields, value):
+    """Add a new metrics_pb2.MetricsData to data_set
+
+    Args:
+      data_set (new_metrics_pb2.MetricsDataSet): protocol buffer into
+        which to add the current metric values.
+      start_time (int): timestamp in microseconds since UNIX epoch.
+    """
+    data = data_set.data.add()
+    data.start_timestamp.seconds = int(start_time)
+    data.end_timestamp.seconds = int(end_time)
+
+    self._populate_fields_new(data, fields)
+    self._populate_value_new(data, value)
+
   def serialize_to(self, collection_pb, start_time, fields, value, target):
     """Generate metrics_pb2.MetricsData messages for this metric.
 
@@ -115,6 +156,52 @@ class Metric(object):
     self._populate_fields(metric_pb, fields)
 
     target._populate_target_pb(metric_pb)
+
+  def _populate_field_descriptors(self, data_set, fields):
+    """Populate `field_descriptor` in MetricsDataSet.
+
+    Args:
+      data_set (new_metrics_pb2.MetricsDataSet): a data set protobuf to
+          populate
+      fields (list of (key, value) tuples): normalized metric fields
+
+    Raises:
+      MonitoringInvalidFieldTypeError: if a field has a value of unknown type
+    """
+    field_type = new_metrics_pb2.MetricsDataSet.MetricFieldDescriptor
+    for key, value in fields:
+      descriptor = data_set.field_descriptor.add()
+      descriptor.name = key
+      if isinstance(value, basestring):
+        descriptor.field_type = field_type.STRING
+      elif isinstance(value, bool):
+        descriptor.field_type = field_type.BOOL
+      elif isinstance(value, int):
+        descriptor.field_type = field_type.INT64
+      else:
+        raise errors.MonitoringInvalidFieldTypeError(self._name, key, value)
+
+  def _populate_fields_new(self, data, fields):
+    """Fill in the fields attribute of a metric protocol buffer.
+
+    Args:
+      metric (metrics_pb2.MetricsData): a metrics protobuf to populate
+      fields (list of (key, value) tuples): normalized metric fields
+
+    Raises:
+      MonitoringInvalidFieldTypeError: if a field has a value of unknown type
+    """
+    for key, value in fields:
+      field = data.field.add()
+      field.name = key
+      if isinstance(value, basestring):
+        field.string_value = value
+      elif isinstance(value, bool):
+        field.bool_value = value
+      elif isinstance(value, int):
+        field.int64_value = value
+      else:
+        raise errors.MonitoringInvalidFieldTypeError(self._name, key, value)
 
   def _populate_fields(self, metric, fields):
     """Fill in the fields attribute of a metric protocol buffer.
@@ -175,6 +262,24 @@ class Metric(object):
     """
     raise NotImplementedError()
 
+  def _populate_value_new(self, data, value):
+    """Fill in the the data values of a metric protocol buffer.
+
+    Args:
+      data (metrics_pb2.MetricsData): a metrics protobuf to populate
+      value (see concrete class): the value of the metric to be set
+    """
+    raise NotImplementedError()
+
+  def _populate_value_type(self, data_set):
+    """Fill in the the data values of a metric protocol buffer.
+
+    Args:
+      data_set (metrics_pb2.MetricsDataSet): a MetricsDataSet protobuf to
+          populate
+    """
+    raise NotImplementedError()
+
   def set(self, value, fields=None, target_fields=None):
     """Set a new value for this metric. Results in sending a new value.
 
@@ -224,6 +329,12 @@ class StringMetric(Metric):
   def _populate_value(self, metric, value, start_time):
     metric.string_value = value
 
+  def _populate_value_new(self, data, value):
+    data.string_value = value
+
+  def _populate_value_type(self, data_set):
+    data_set.value_type = new_metrics_pb2.STRING
+
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, basestring):
       raise errors.MonitoringInvalidValueTypeError(self._name, value)
@@ -238,6 +349,12 @@ class BooleanMetric(Metric):
 
   def _populate_value(self, metric, value, start_time):
     metric.boolean_value = value
+
+  def _populate_value_new(self, data, value):
+    data.bool_value = value
+
+  def _populate_value_type(self, data_set):
+    data_set.value_type = new_metrics_pb2.BOOL
 
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, bool):
@@ -272,6 +389,12 @@ class CounterMetric(NumericMetric):
     metric.counter = value
     metric.start_timestamp_us = int(start_time * MICROSECONDS_PER_SECOND)
 
+  def _populate_value_new(self, data, value):
+    data.int64_value = value
+
+  def _populate_value_type(self, data_set):
+    data_set.value_type = new_metrics_pb2.INT64
+
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, (int, long)):
       raise errors.MonitoringInvalidValueTypeError(self._name, value)
@@ -291,6 +414,12 @@ class GaugeMetric(NumericMetric):
 
   def _populate_value(self, metric, value, start_time):
     metric.gauge = value
+
+  def _populate_value_new(self, data, value):
+    data.int64_value = value
+
+  def _populate_value_type(self, data_set):
+    data_set.value_type = new_metrics_pb2.INT64
 
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, (int, long)):
@@ -314,6 +443,12 @@ class CumulativeMetric(NumericMetric):
     metric.cumulative_double_value = value
     metric.start_timestamp_us = int(start_time * MICROSECONDS_PER_SECOND)
 
+  def _populate_value_new(self, data, value):
+    data.double_value = value
+
+  def _populate_value_type(self, data_set):
+    data_set.value_type = new_metrics_pb2.DOUBLE
+
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, (float, int)):
       raise errors.MonitoringInvalidValueTypeError(self._name, value)
@@ -328,6 +463,12 @@ class FloatMetric(NumericMetric):
 
   def _populate_value(self, metric, value, start_time):
     metric.noncumulative_double_value = value
+
+  def _populate_value_new(self, metric, value):
+    metric.double_value = value
+
+  def _populate_value_type(self, data_set_pb):
+    data_set_pb.value_type = new_metrics_pb2.DOUBLE
 
   def set(self, value, fields=None, target_fields=None):
     if not isinstance(value, (float, int)):
@@ -395,6 +536,32 @@ class DistributionMetric(Metric):
 
     if value.count != 0:
       pb.mean = float(value.sum) / value.count
+
+  def _populate_value_new(self, metric, value):
+    pb = metric.distribution_value
+
+    # Copy the bucketer params.
+    if value.bucketer.width == 0:
+      pb.exponential_buckets.growth_factor = value.bucketer.growth_factor
+      pb.exponential_buckets.scale = 1.0
+      pb.exponential_buckets.num_finite_buckets = (
+          value.bucketer.num_finite_buckets)
+    else:
+      pb.linear_buckets.width = value.bucketer.width
+      pb.linear_buckets.offset = 0.0
+      pb.linear_buckets.num_finite_buckets = value.bucketer.num_finite_buckets
+
+    # Copy the distribution bucket values.  Only include the finite buckets, not
+    # the overflow buckets on each end.
+    pb.bucket_count.extend(
+        value.buckets.get(i, 0) for i in
+        xrange(0, value.bucketer.total_buckets))
+
+    pb.count = value.count
+    pb.mean = float(value.sum) / max(value.count, 1)
+
+  def _populate_value_type(self, data_set_pb):
+    data_set_pb.value_type = new_metrics_pb2.DISTRIBUTION
 
   @staticmethod
   def _running_zero_generator(iterable):
@@ -491,3 +658,22 @@ class MetricsDataUnits(object):
   See infra_libs/ts_mon/protos/metrics.proto for a full list of supported units.
   """
   __metaclass__ = MetaMetricsDataUnits
+
+_UNITS_TO_STRING = {
+    MetricsDataUnits.UNKNOWN_UNITS: '{unknown}',
+    MetricsDataUnits.SECONDS: 's',
+    MetricsDataUnits.MILLISECONDS: 'ms',
+    MetricsDataUnits.MICROSECONDS: 'us',
+    MetricsDataUnits.NANOSECONDS: 'ns',
+    MetricsDataUnits.BITS: 'B',
+    MetricsDataUnits.BYTES: 'By',
+    MetricsDataUnits.KILOBYTES: 'kBy',
+    MetricsDataUnits.MEGABYTES: 'MBy',
+    MetricsDataUnits.GIGABYTES: 'GBy',
+    MetricsDataUnits.KIBIBYTES: 'kiBy',
+    MetricsDataUnits.MEBIBYTES: 'MiBy',
+    MetricsDataUnits.GIBIBYTES: 'GiBy',
+    MetricsDataUnits.AMPS: 'A',
+    MetricsDataUnits.MILLIAMPS : 'mA',
+    MetricsDataUnits.DEGREES_CELSIUS: 'Cel'
+}

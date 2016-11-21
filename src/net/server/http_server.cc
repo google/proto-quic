@@ -14,7 +14,6 @@
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "base/sys_byteorder.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "build/build_config.h"
@@ -368,7 +367,7 @@ const int parser_state[MAX_STATES][MAX_INPUTS] = {
 
 // Convert an input character to the parser's input token.
 int charToInput(char ch) {
-  switch(ch) {
+  switch (ch) {
     case ' ':
     case '\t':
       return INPUT_LWS;

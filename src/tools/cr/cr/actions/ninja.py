@@ -27,7 +27,7 @@ class NinjaBuilder(cr.Builder):
       NINJA_JOBS=multiprocessing.cpu_count() + EXTRA_FOR_IO_BOUND_JOBS,
       NINJA_PROCESSORS=multiprocessing.cpu_count(),
       NINJA_BUILD_FILE=os.path.join('{CR_BUILD_DIR}', 'build.ninja'),
-      # Don't rename to GOMA_* or Goma will complain: "unkown GOMA_ parameter".
+      # Don't rename to GOMA_* or Goma will complain: "unknown GOMA_ parameter".
       NINJA_GOMA_LINE='cc = {CR_GOMA_CC} $',
   )
   # A config block only included if goma is detected.

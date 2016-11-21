@@ -98,7 +98,6 @@ class QuicServerEpollInTest : public ::testing::Test {
 // EPOLLIN if there are still CHLOs remaining at the end of epoll event.
 TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
   FLAGS_quic_limit_num_new_sessions_per_epoll_loop = true;
-  FLAGS_quic_buffer_packet_till_chlo = true;
   // Given an EPOLLIN event, try to create session for buffered CHLOs. In first
   // event, dispatcher can't create session for all of CHLOs. So listener should
   // register another EPOLLIN event by itself. Even without new packet arrival,
@@ -188,9 +187,9 @@ TEST_F(QuicServerDispatchPacketTest, DispatchPacket) {
     0x00
   };
   // clang-format on
-  QuicReceivedPacket encrypted_valid_packet(QuicUtils::AsChars(valid_packet),
-                                            arraysize(valid_packet),
-                                            QuicTime::Zero(), false);
+  QuicReceivedPacket encrypted_valid_packet(
+      reinterpret_cast<char*>(valid_packet), arraysize(valid_packet),
+      QuicTime::Zero(), false);
 
   EXPECT_CALL(dispatcher_, ProcessPacket(_, _, _)).Times(1);
   DispatchPacket(encrypted_valid_packet);

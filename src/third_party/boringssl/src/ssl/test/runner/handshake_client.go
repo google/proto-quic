@@ -64,21 +64,23 @@ func (c *Conn) clientHandshake() error {
 		vers:                    versionToWire(maxVersion, c.isDTLS),
 		compressionMethods:      []uint8{compressionNone},
 		random:                  make([]byte, 32),
-		ocspStapling:            true,
-		sctListSupported:        true,
+		ocspStapling:            !c.config.Bugs.NoOCSPStapling,
+		sctListSupported:        !c.config.Bugs.NoSignedCertificateTimestamps,
 		serverName:              c.config.ServerName,
 		supportedCurves:         c.config.curvePreferences(),
+		pskKEModes:              []byte{pskDHEKEMode},
 		supportedPoints:         []uint8{pointFormatUncompressed},
 		nextProtoNeg:            len(c.config.NextProtos) > 0,
 		secureRenegotiation:     []byte{},
 		alpnProtocols:           c.config.NextProtos,
 		duplicateExtension:      c.config.Bugs.DuplicateExtension,
 		channelIDSupported:      c.config.ChannelID != nil,
-		npnLast:                 c.config.Bugs.SwapNPNAndALPN,
+		npnAfterAlpn:            c.config.Bugs.SwapNPNAndALPN,
 		extendedMasterSecret:    maxVersion >= VersionTLS10,
 		srtpProtectionProfiles:  c.config.SRTPProtectionProfiles,
 		srtpMasterKeyIdentifier: c.config.Bugs.SRTPMasterKeyIdentifer,
 		customExtension:         c.config.Bugs.CustomExtension,
+		pskBinderFirst:          c.config.Bugs.PSKBinderFirst,
 	}
 
 	disableEMS := c.config.Bugs.NoExtendedMasterSecret
@@ -92,6 +94,10 @@ func (c *Conn) clientHandshake() error {
 
 	if c.config.Bugs.NoSupportedCurves {
 		hello.supportedCurves = nil
+	}
+
+	if len(c.config.Bugs.SendPSKKeyExchangeModes) != 0 {
+		hello.pskKEModes = c.config.Bugs.SendPSKKeyExchangeModes
 	}
 
 	if c.config.Bugs.SendCompressionMethods != nil {
@@ -217,11 +223,17 @@ NextCipherSuite:
 			// Check that the ciphersuite/version used for the
 			// previous session are still valid.
 			cipherSuiteOk := false
-			for _, id := range hello.cipherSuites {
-				if id == candidateSession.cipherSuite {
-					cipherSuiteOk = true
-					break
+			if candidateSession.vers <= VersionTLS12 {
+				for _, id := range hello.cipherSuites {
+					if id == candidateSession.cipherSuite {
+						cipherSuiteOk = true
+						break
+					}
 				}
+			} else {
+				// TLS 1.3 allows the cipher to change on
+				// resumption.
+				cipherSuiteOk = true
 			}
 
 			versOk := candidateSession.vers >= minVersion &&
@@ -232,6 +244,7 @@ NextCipherSuite:
 		}
 	}
 
+	var pskCipherSuite *cipherSuite
 	if session != nil && c.config.time().Before(session.ticketExpiration) {
 		ticket := session.sessionTicket
 		if c.config.Bugs.FilterTicket != nil && len(ticket) > 0 {
@@ -246,20 +259,17 @@ NextCipherSuite:
 		}
 
 		if session.vers >= VersionTLS13 || c.config.Bugs.SendBothTickets {
+			pskCipherSuite = cipherSuiteFromID(session.cipherSuite)
+			if pskCipherSuite == nil {
+				return errors.New("tls: client session cache has invalid cipher suite")
+			}
 			// TODO(nharper): Support sending more
 			// than one PSK identity.
+			ticketAge := uint32(c.config.time().Sub(session.ticketCreationTime) / time.Millisecond)
 			psk := pskIdentity{
-				keModes:   []byte{pskDHEKEMode},
-				authModes: []byte{pskAuthMode},
-				ticket:    ticket,
+				ticket:              ticket,
+				obfuscatedTicketAge: session.ticketAgeAdd + ticketAge,
 			}
-			if len(c.config.Bugs.SendPSKKeyExchangeModes) != 0 {
-				psk.keModes = c.config.Bugs.SendPSKKeyExchangeModes
-			}
-			if len(c.config.Bugs.SendPSKAuthModes) != 0 {
-				psk.authModes = c.config.Bugs.SendPSKAuthModes
-			}
-
 			hello.pskIdentities = []pskIdentity{psk}
 
 			if c.config.Bugs.ExtraPSKIdentity {
@@ -305,6 +315,10 @@ NextCipherSuite:
 		hello.vers = c.config.Bugs.SendClientVersion
 	}
 
+	if c.config.Bugs.SendCipherSuites != nil {
+		hello.cipherSuites = c.config.Bugs.SendCipherSuites
+	}
+
 	var helloBytes []byte
 	if c.config.Bugs.SendV2ClientHello {
 		// Test that the peer left-pads random.
@@ -319,7 +333,11 @@ NextCipherSuite:
 		helloBytes = v2Hello.marshal()
 		c.writeV2Record(helloBytes)
 	} else {
+		if len(hello.pskIdentities) > 0 {
+			generatePSKBinders(hello, pskCipherSuite, session.masterSecret, []byte{}, c.config)
+		}
 		helloBytes = hello.marshal()
+
 		if c.config.Bugs.PartialClientFinishedWithClientHello {
 			// Include one byte of Finished. We can compute it
 			// without completing the handshake. This assumes we
@@ -346,7 +364,7 @@ NextCipherSuite:
 	if c.isDTLS {
 		helloVerifyRequest, ok := msg.(*helloVerifyRequestMsg)
 		if ok {
-			if helloVerifyRequest.vers != VersionTLS10 {
+			if helloVerifyRequest.vers != versionToWire(VersionTLS10, c.isDTLS) {
 				// Per RFC 6347, the version field in
 				// HelloVerifyRequest SHOULD be always DTLS
 				// 1.0. Enforce this for testing purposes.
@@ -424,10 +442,10 @@ NextCipherSuite:
 				return err
 			}
 			keyShares[group] = curve
-			hello.keyShares = append(hello.keyShares, keyShareEntry{
+			hello.keyShares = []keyShareEntry{{
 				group:       group,
 				keyExchange: publicKey,
-			})
+			}}
 		}
 
 		if c.config.Bugs.SecondClientHelloMissingKeyShare {
@@ -435,9 +453,11 @@ NextCipherSuite:
 		}
 
 		hello.hasEarlyData = false
-		hello.earlyDataContext = nil
 		hello.raw = nil
 
+		if len(hello.pskIdentities) > 0 {
+			generatePSKBinders(hello, pskCipherSuite, session.masterSecret, append(helloBytes, helloRetryRequest.marshal()...), c.config)
+		}
 		secondHelloBytes = hello.marshal()
 		c.writeRecord(recordTypeHandshake, secondHelloBytes)
 		c.flushHandshake()
@@ -604,34 +624,28 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	// 0-RTT is implemented.
 	var psk []byte
 	if hs.serverHello.hasPSKIdentity {
-		if hs.serverHello.useCertAuth || !hs.serverHello.hasKeyShare {
-			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server omitted KeyShare or included SignatureAlgorithms on resumption.")
-		}
-
 		// We send at most one PSK identity.
 		if hs.session == nil || hs.serverHello.pskIdentity != 0 {
 			c.sendAlert(alertUnknownPSKIdentity)
 			return errors.New("tls: server sent unknown PSK identity")
 		}
-		if hs.session.cipherSuite != hs.suite.id {
+		sessionCipher := cipherSuiteFromID(hs.session.cipherSuite)
+		if sessionCipher == nil || sessionCipher.hash() != hs.suite.hash() {
 			c.sendAlert(alertHandshakeFailure)
-			return errors.New("tls: server sent invalid cipher suite")
+			return errors.New("tls: server resumed an invalid session for the cipher suite")
 		}
-		psk = deriveResumptionPSK(hs.suite, hs.session.masterSecret)
-		hs.finishedHash.setResumptionContext(deriveResumptionContext(hs.suite, hs.session.masterSecret))
+		psk = hs.session.masterSecret
 		c.didResume = true
 	} else {
-		if !hs.serverHello.useCertAuth || !hs.serverHello.hasKeyShare {
-			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server omitted KeyShare and SignatureAlgorithms on non-resumption.")
-		}
-
 		psk = zeroSecret
-		hs.finishedHash.setResumptionContext(zeroSecret)
 	}
 
 	earlySecret := hs.finishedHash.extractKey(zeroSecret, psk)
+
+	if !hs.serverHello.hasKeyShare {
+		c.sendAlert(alertUnsupportedExtension)
+		return errors.New("tls: server omitted KeyShare on resumption.")
+	}
 
 	// Resolve ECDHE and compute the handshake secret.
 	var ecdheSecret []byte
@@ -657,9 +671,9 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// Switch to handshake traffic keys.
 	clientHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, clientHandshakeTrafficLabel)
-	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, handshakePhase, clientWrite)
+	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, clientWrite)
 	serverHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, serverHandshakeTrafficLabel)
-	c.in.useTrafficSecret(c.vers, hs.suite, serverHandshakeTrafficSecret, handshakePhase, serverWrite)
+	c.in.useTrafficSecret(c.vers, hs.suite, serverHandshakeTrafficSecret, serverWrite)
 
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -680,24 +694,12 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	var chainToSend *Certificate
 	var certReq *certificateRequestMsg
-	if !hs.serverHello.useCertAuth {
-		if encryptedExtensions.extensions.ocspResponse != nil {
-			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server sent OCSP response without a certificate")
-		}
-		if encryptedExtensions.extensions.sctList != nil {
-			c.sendAlert(alertUnsupportedExtension)
-			return errors.New("tls: server sent SCT list without a certificate")
-		}
-
+	if c.didResume {
 		// Copy over authentication from the session.
 		c.peerCertificates = hs.session.serverCertificates
 		c.sctList = hs.session.sctList
 		c.ocspResponse = hs.session.ocspResponse
 	} else {
-		c.ocspResponse = encryptedExtensions.extensions.ocspResponse
-		c.sctList = encryptedExtensions.extensions.sctList
-
 		msg, err := c.readHandshake()
 		if err != nil {
 			return err
@@ -734,10 +736,28 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		}
 		hs.writeServerHash(certMsg.marshal())
 
+		// Check for unsolicited extensions.
+		for i, cert := range certMsg.certificates {
+			if c.config.Bugs.NoOCSPStapling && cert.ocspResponse != nil {
+				c.sendAlert(alertUnsupportedExtension)
+				return errors.New("tls: unexpected OCSP response in the server certificate")
+			}
+			if c.config.Bugs.NoSignedCertificateTimestamps && cert.sctList != nil {
+				c.sendAlert(alertUnsupportedExtension)
+				return errors.New("tls: unexpected SCT list in the server certificate")
+			}
+			if i > 0 && c.config.Bugs.ExpectNoExtensionsOnIntermediate && (cert.ocspResponse != nil || cert.sctList != nil) {
+				c.sendAlert(alertUnsupportedExtension)
+				return errors.New("tls: unexpected extensions in the server certificate")
+			}
+		}
+
 		if err := hs.verifyCertificates(certMsg); err != nil {
 			return err
 		}
 		leaf := c.peerCertificates[0]
+		c.ocspResponse = certMsg.certificates[0].ocspResponse
+		c.sctList = certMsg.certificates[0].sctList
 
 		msg, err = c.readHandshake()
 		if err != nil {
@@ -790,7 +810,12 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 			requestContext:    certReq.requestContext,
 		}
 		if chainToSend != nil {
-			certMsg.certificates = chainToSend.Certificate
+			for _, certData := range chainToSend.Certificate {
+				certMsg.certificates = append(certMsg.certificates, certificateEntry{
+					data:           certData,
+					extraExtension: c.config.Bugs.SendExtensionOnCertificate,
+				})
+			}
 		}
 		hs.writeClientHash(certMsg.marshal())
 		c.writeRecord(recordTypeHandshake, certMsg.marshal())
@@ -855,8 +880,8 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c.flushHandshake()
 
 	// Switch to application data keys.
-	c.out.useTrafficSecret(c.vers, hs.suite, clientTrafficSecret, applicationPhase, clientWrite)
-	c.in.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, applicationPhase, serverWrite)
+	c.out.useTrafficSecret(c.vers, hs.suite, clientTrafficSecret, clientWrite)
+	c.in.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, serverWrite)
 
 	c.exporterSecret = hs.finishedHash.deriveSecret(masterSecret, exporterLabel)
 	c.resumptionSecret = hs.finishedHash.deriveSecret(masterSecret, resumptionLabel)
@@ -969,7 +994,11 @@ func (hs *clientHandshakeState) doFullHandshake() error {
 		} else if !c.config.Bugs.SkipClientCertificate {
 			certMsg := new(certificateMsg)
 			if chainToSend != nil {
-				certMsg.certificates = chainToSend.Certificate
+				for _, certData := range chainToSend.Certificate {
+					certMsg.certificates = append(certMsg.certificates, certificateEntry{
+						data: certData,
+					})
+				}
 			}
 			hs.writeClientHash(certMsg.marshal())
 			c.writeRecord(recordTypeHandshake, certMsg.marshal())
@@ -1057,8 +1086,8 @@ func (hs *clientHandshakeState) verifyCertificates(certMsg *certificateMsg) erro
 	}
 
 	certs := make([]*x509.Certificate, len(certMsg.certificates))
-	for i, asn1Data := range certMsg.certificates {
-		cert, err := x509.ParseCertificate(asn1Data)
+	for i, certEntry := range certMsg.certificates {
+		cert, err := x509.ParseCertificate(certEntry.data)
 		if err != nil {
 			c.sendAlert(alertBadCertificate)
 			return errors.New("tls: failed to parse certificate from server: " + err.Error())
@@ -1191,6 +1220,22 @@ func (hs *clientHandshakeState) processServerExtensions(serverExtensions *server
 
 	if serverExtensions.ticketSupported && c.vers >= VersionTLS13 {
 		return errors.New("tls: server advertised ticket extension over TLS 1.3")
+	}
+
+	if serverExtensions.ocspStapling && c.vers >= VersionTLS13 {
+		return errors.New("tls: server advertised OCSP in ServerHello over TLS 1.3")
+	}
+
+	if serverExtensions.ocspStapling && c.config.Bugs.NoOCSPStapling {
+		return errors.New("tls: server advertised unrequested OCSP extension")
+	}
+
+	if len(serverExtensions.sctList) > 0 && c.vers >= VersionTLS13 {
+		return errors.New("tls: server advertised SCTs in ServerHello over TLS 1.3")
+	}
+
+	if len(serverExtensions.sctList) > 0 && c.config.Bugs.NoSignedCertificateTimestamps {
+		return errors.New("tls: server advertised unrequested SCTs")
 	}
 
 	if serverExtensions.srtpProtectionProfile != 0 {
@@ -1591,4 +1636,40 @@ func writeIntPadded(b []byte, x *big.Int) {
 	}
 	xb := x.Bytes()
 	copy(b[len(b)-len(xb):], xb)
+}
+
+func generatePSKBinders(hello *clientHelloMsg, pskCipherSuite *cipherSuite, psk, transcript []byte, config *Config) {
+	if config.Bugs.SendNoPSKBinder {
+		return
+	}
+
+	binderLen := pskCipherSuite.hash().Size()
+	if config.Bugs.SendShortPSKBinder {
+		binderLen--
+	}
+
+	// Fill hello.pskBinders with appropriate length arrays of zeros so the
+	// length prefixes are correct when computing the binder over the truncated
+	// ClientHello message.
+	hello.pskBinders = make([][]byte, len(hello.pskIdentities))
+	for i := range hello.pskIdentities {
+		hello.pskBinders[i] = make([]byte, binderLen)
+	}
+
+	helloBytes := hello.marshal()
+	binderSize := len(hello.pskBinders)*(binderLen+1) + 2
+	truncatedHello := helloBytes[:len(helloBytes)-binderSize]
+	binder := computePSKBinder(psk, resumptionPSKBinderLabel, pskCipherSuite, transcript, truncatedHello)
+	if config.Bugs.SendShortPSKBinder {
+		binder = binder[:binderLen]
+	}
+	if config.Bugs.SendInvalidPSKBinder {
+		binder[0] ^= 1
+	}
+
+	for i := range hello.pskBinders {
+		hello.pskBinders[i] = binder
+	}
+
+	hello.raw = nil
 }

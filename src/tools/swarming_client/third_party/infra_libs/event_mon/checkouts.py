@@ -59,8 +59,7 @@ def get_revinfo(cwd=None):  # pragma: no cover
       current working directory.
   Returns:
     revinfo (dict): keys are local paths, values are dicts with keys:
-      'source_url' or 'revision'. The latter can be a git SHA1 or an svn
-      revision.
+      'source_url' or 'revision'.
   """
 
   cmd = [os.path.join(BASE_DIR, 'depot_tools', 'gclient'), 'revinfo', '-a']

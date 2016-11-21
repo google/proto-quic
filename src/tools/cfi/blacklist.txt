@@ -99,44 +99,15 @@ fun:*LayerTreeHost*NotifySwapPromiseMonitorsOfSetNeedsCommit*
 # WebKit
 # The entries below have not been categorized
 
-# blink::BoxClipper::BoxClipper
-fun:*blink*BoxClipper*LayoutBox*PaintInfo*LayoutPoint*ContentsClipBehavior*
-
-# blink::DrawingDisplayItem::DrawingDisplayItem
-fun:*blink*DrawingDisplayItem*DisplayItemClient*
-
 # cc::DisplayItemList::Inputs::~Inputs
 fun:*cc*DisplayItemList*Inputs*
 
-# StyleAttributeMutationScope::StyleAttributeMutationScope
-fun:*StyleAttributeMutationScope*AbstractPropertySetCSSStyleDeclaration*
-
-# StyleAttributeMutationScope::~StyleAttributeMutationScope
-fun:*StyleAttributeMutationScopeD2Ev*
-
 fun:*PaintInvalidationState*computePaintInvalidationRectInBacking*
-fun:*FrameTree*parent*
-fun:*FrameTree*traverseNext*
-fun:*PageAnimator*scheduleVisualUpdate*
-fun:*BlockPainter*paint*
-fun:*BlockPainter*paintObject*
-fun:*BlockPainter*intersectsPaintRect*
-fun:*ObjectPaintInvalidator*computePaintInvalidationReason*
-fun:*ObjectPaintInvalidator*invalidateSelectionIfNeeded*
-fun:*ObjectPaintInvalidator*invalidatePaintIfNeededWithComputedReason*
-fun:*StyleResolver*matchAllRules*
-fun:*ContiguousContainer*clear*
-fun:*GraphicsLayer*setNeedsDisplayInRect*
-fun:*PaintArtifact*appendToWebDisplayItemList*
-fun:*visualRectForDisplayItem*
-fun:*PaintController*commitNewDisplayItems*
 fun:*AdjustAndMarkTrait*mark*
 fun:*TraceTrait*trace*
 fun:*ChromeClientImpl*scheduleAnimation*
 fun:*blink*PODIntervalTree*searchForOverlapsFrom*
-fun:*borderPaddingWidthForBoxSizing*
 fun:*hasAspectRatio*
 fun:*nextBreakablePosition*
-fun:*shouldBeConsideredAsReplaced*
 fun:*supportsCachedOffsets*
 fun:*traceImpl*

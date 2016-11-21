@@ -21,7 +21,7 @@ class PassThroughPage(page_module.Page):
         (function() {
           var request = new XMLHttpRequest();
           request.open("GET", "%s");
-          request.setRequestHeader("Chrome-Proxy", "pass-through");
+          request.setRequestHeader("Chrome-Proxy-Accept-Transform", "identity");
           request.send(null);
         })();''' % (self.url))
     action_runner.Wait(1)

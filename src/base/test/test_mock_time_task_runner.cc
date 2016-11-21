@@ -173,6 +173,15 @@ std::unique_ptr<TickClock> TestMockTimeTaskRunner::GetMockTickClock() const {
   return MakeUnique<MockTickClock>(this);
 }
 
+std::deque<TestPendingTask> TestMockTimeTaskRunner::TakePendingTasks() {
+  std::deque<TestPendingTask> tasks;
+  while (!tasks_.empty()) {
+    tasks.push_back(tasks_.top());
+    tasks_.pop();
+  }
+  return tasks;
+}
+
 bool TestMockTimeTaskRunner::HasPendingTask() const {
   DCHECK(thread_checker_.CalledOnValidThread());
   return !tasks_.empty();

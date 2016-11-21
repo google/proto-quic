@@ -28,8 +28,10 @@ TEST(MimeUtilTest, ExtensionTest) {
     {FILE_PATH_LITERAL("pjp"), "image/jpeg", true},
     {FILE_PATH_LITERAL("pjpeg"), "image/jpeg", true},
 #if defined(OS_CHROMEOS)
-    // These two are test cases for testing platform mime types on Chrome OS.
+    // These are test cases for testing platform mime types on Chrome OS.
     {FILE_PATH_LITERAL("epub"), "application/epub+zip", true},
+    {FILE_PATH_LITERAL("apk"), "application/vnd.android.package-archive", true},
+    {FILE_PATH_LITERAL("zip"), "application/zip", true},
     {FILE_PATH_LITERAL("ics"), "text/calendar", true},
 #endif
 #if defined(OS_ANDROID)

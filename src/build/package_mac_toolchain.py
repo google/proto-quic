@@ -88,8 +88,8 @@ def main():
 
   print "Uploading %s toolchain." % toolchain_file_name
   destination_path = '%s/%s.tgz' % (TOOLCHAIN_URL, toolchain_file_name)
-  subprocess.check_call(['gsutil.py', 'cp', '-n', '-a', 'public-read',
-                         toolchain_name, destination_path])
+  subprocess.check_call(['gsutil.py', 'cp', '-n', toolchain_name,
+                         destination_path])
 
   print "Done with %s upload." % toolchain_file_name
   return 0

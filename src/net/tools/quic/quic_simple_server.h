@@ -55,10 +55,6 @@ class QuicSimpleServer {
   // continues the read loop.
   void OnReadComplete(int result);
 
-  void SetStrikeRegisterNoStartupPeriod() {
-    crypto_config_.set_strike_register_no_startup_period();
-  }
-
   QuicDispatcher* dispatcher() { return dispatcher_.get(); }
 
   IPEndPoint server_address() const { return server_address_; }

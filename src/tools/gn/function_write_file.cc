@@ -23,32 +23,32 @@ const char kWriteFile[] = "write_file";
 const char kWriteFile_HelpShort[] =
     "write_file: Write a file to disk.";
 const char kWriteFile_Help[] =
-    "write_file: Write a file to disk.\n"
-    "\n"
-    "  write_file(filename, data)\n"
-    "\n"
-    "  If data is a list, the list will be written one-item-per-line with no\n"
-    "  quoting or brackets.\n"
-    "\n"
-    "  If the file exists and the contents are identical to that being\n"
-    "  written, the file will not be updated. This will prevent unnecessary\n"
-    "  rebuilds of targets that depend on this file.\n"
-    "\n"
-    "  One use for write_file is to write a list of inputs to an script\n"
-    "  that might be too long for the command line. However, it is\n"
-    "  preferrable to use response files for this purpose. See\n"
-    "  \"gn help response_file_contents\".\n"
-    "\n"
-    "  TODO(brettw) we probably need an optional third argument to control\n"
-    "  list formatting.\n"
-    "\n"
-    "Arguments\n"
-    "\n"
-    "  filename\n"
-    "      Filename to write. This must be within the output directory.\n"
-    "\n"
-    "  data:\n"
-    "      The list or string to write.\n";
+    R"(write_file: Write a file to disk.
+
+  write_file(filename, data)
+
+  If data is a list, the list will be written one-item-per-line with no quoting
+  or brackets.
+
+  If the file exists and the contents are identical to that being written, the
+  file will not be updated. This will prevent unnecessary rebuilds of targets
+  that depend on this file.
+
+  One use for write_file is to write a list of inputs to an script that might
+  be too long for the command line. However, it is preferrable to use response
+  files for this purpose. See "gn help response_file_contents".
+
+  TODO(brettw) we probably need an optional third argument to control list
+  formatting.
+
+Arguments
+
+  filename
+      Filename to write. This must be within the output directory.
+
+  data
+      The list or string to write.
+)";
 
 Value RunWriteFile(Scope* scope,
                    const FunctionCallNode* function,

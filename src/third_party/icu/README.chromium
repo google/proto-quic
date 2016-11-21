@@ -230,9 +230,9 @@ D. Local Modifications
      windowsZones.txt
      zoneinfo64.txt
 
-  As of Oct 21, 2016, the latest version is 2016h and the above files
+  As of Nov 16, 2016, the latest version is 2016i and the above files
   are available at
-  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016h/44/
+  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016i/44/
 
 4. Build-related changes
 
@@ -258,11 +258,15 @@ D. Local Modifications
 
    - patches/utf32.patch
 
-6. Fix two bugs found in 58.1 that will fixed in 58.1 maintenance release
+6. Fix four bugs found in 58.1 that will fixed in 58.1 maintenance release
 
    upstream bugs:
      http://www.icu-project.org/trac/ticket/12825 (scriptset)
+     http://www.icu-project.org/trac/ticket/12815 (uspoof)
      http://www.icu-project.org/trac/ticket/12822 (without std::string on Win)
+     http://www.icu-project.org/trac/ticket/12832 (greek_upper)
 
    - patches/scriptset.patch
+   - patches/uspoof.patch
    - patches/digilist.patch
+   - patches/greek_upper.patch

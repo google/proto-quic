@@ -81,82 +81,80 @@ const char kForwardVariablesFrom[] = "forward_variables_from";
 const char kForwardVariablesFrom_HelpShort[] =
     "forward_variables_from: Copies variables from a different scope.";
 const char kForwardVariablesFrom_Help[] =
-    "forward_variables_from: Copies variables from a different scope.\n"
-    "\n"
-    "  forward_variables_from(from_scope, variable_list_or_star,\n"
-    "                         variable_to_not_forward_list = [])\n"
-    "\n"
-    "  Copies the given variables from the given scope to the local scope\n"
-    "  if they exist. This is normally used in the context of templates to\n"
-    "  use the values of variables defined in the template invocation to\n"
-    "  a template-defined target.\n"
-    "\n"
-    "  The variables in the given variable_list will be copied if they exist\n"
-    "  in the given scope or any enclosing scope. If they do not exist,\n"
-    "  nothing will happen and they be left undefined in the current scope.\n"
-    "\n"
-    "  As a special case, if the variable_list is a string with the value of\n"
-    "  \"*\", all variables from the given scope will be copied. \"*\" only\n"
-    "  copies variables set directly on the from_scope, not enclosing ones.\n"
-    "  Otherwise it would duplicate all global variables.\n"
-    "\n"
-    "  When an explicit list of variables is supplied, if the variable exists\n"
-    "  in the current (destination) scope already, an error will be thrown.\n"
-    "  If \"*\" is specified, variables in the current scope will be\n"
-    "  clobbered (the latter is important because most targets have an\n"
-    "  implicit configs list, which means it wouldn't work at all if it\n"
-    "  didn't clobber).\n"
-    "\n"
-    "  The sources assignment filter (see \"gn help "
-          "set_sources_assignment_filter\")\n"
-    "  is never applied by this function. It's assumed than any desired\n"
-    "  filtering was already done when sources was set on the from_scope.\n"
-    "\n"
-    "  If variables_to_not_forward_list is non-empty, then it must contains\n"
-    "  a list of variable names that will not be forwarded. This is mostly\n"
-    "  useful when variable_list_or_star has a value of \"*\".\n"
-    "\n"
-    "Examples\n"
-    "\n"
-    "  # This is a common action template. It would invoke a script with\n"
-    "  # some given parameters, and wants to use the various types of deps\n"
-    "  # and the visibility from the invoker if it's defined. It also injects\n"
-    "  # an additional dependency to all targets.\n"
-    "  template(\"my_test\") {\n"
-    "    action(target_name) {\n"
-    "      forward_variables_from(invoker, [ \"data_deps\", \"deps\",\n"
-    "                                        \"public_deps\", \"visibility\" "
-                                                                         "])\n"
-    "      # Add our test code to the dependencies.\n"
-    "      # \"deps\" may or may not be defined at this point.\n"
-    "      if (defined(deps)) {\n"
-    "        deps += [ \"//tools/doom_melon\" ]\n"
-    "      } else {\n"
-    "        deps = [ \"//tools/doom_melon\" ]\n"
-    "      }\n"
-    "    }\n"
-    "  }\n"
-    "\n"
-    "  # This is a template around either a target whose type depends on a\n"
-    "  # global variable. It forwards all values from the invoker.\n"
-    "  template(\"my_wrapper\") {\n"
-    "    target(my_wrapper_target_type, target_name) {\n"
-    "      forward_variables_from(invoker, \"*\")\n"
-    "    }\n"
-    "  }\n"
-    "\n"
-    "  # A template that wraps another. It adds behavior based on one \n"
-    "  # variable, and forwards all others to the nested target.\n"
-    "  template(\"my_ios_test_app\") {\n"
-    "    ios_test_app(target_name) {\n"
-    "      forward_variables_from(invoker, \"*\", [\"test_bundle_name\"])\n"
-    "      if (!defined(extra_substitutions)) {\n"
-    "        extra_substitutions = []\n"
-    "      }\n"
-    "      extra_substitutions += [ \"BUNDLE_ID_TEST_NAME=$test_bundle_name\" "
-                                                                          "]\n"
-    "    }\n"
-    "  }\n";
+    R"(forward_variables_from: Copies variables from a different scope.
+
+  forward_variables_from(from_scope, variable_list_or_star,
+                         variable_to_not_forward_list = [])
+
+  Copies the given variables from the given scope to the local scope if they
+  exist. This is normally used in the context of templates to use the values of
+  variables defined in the template invocation to a template-defined target.
+
+  The variables in the given variable_list will be copied if they exist in the
+  given scope or any enclosing scope. If they do not exist, nothing will happen
+  and they be left undefined in the current scope.
+
+  As a special case, if the variable_list is a string with the value of "*",
+  all variables from the given scope will be copied. "*" only copies variables
+  set directly on the from_scope, not enclosing ones. Otherwise it would
+  duplicate all global variables.
+
+  When an explicit list of variables is supplied, if the variable exists in the
+  current (destination) scope already, an error will be thrown. If "*" is
+  specified, variables in the current scope will be clobbered (the latter is
+  important because most targets have an implicit configs list, which means it
+  wouldn't work at all if it didn't clobber).
+
+  The sources assignment filter (see "gn help "
+     "set_sources_assignment_filter")
+  is never applied by this function. It's assumed than any desired filtering
+  was already done when sources was set on the from_scope.
+
+  If variables_to_not_forward_list is non-empty, then it must contains a list
+  of variable names that will not be forwarded. This is mostly useful when
+  variable_list_or_star has a value of "*".
+
+Examples
+
+  # This is a common action template. It would invoke a script with some given
+  # parameters, and wants to use the various types of deps and the visibility
+  # from the invoker if it's defined. It also injects an additional dependency
+  # to all targets.
+  template("my_test") {
+    action(target_name) {
+      forward_variables_from(invoker, [ "data_deps", "deps",
+                                        "public_deps", "visibility" "
+                                                                    "])
+      # Add our test code to the dependencies.
+      # "deps" may or may not be defined at this point.
+      if (defined(deps)) {
+        deps += [ "//tools/doom_melon" ]
+      } else {
+        deps = [ "//tools/doom_melon" ]
+      }
+    }
+  }
+
+  # This is a template around either a target whose type depends on a global
+  # variable. It forwards all values from the invoker.
+  template("my_wrapper") {
+    target(my_wrapper_target_type, target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  }
+
+  # A template that wraps another. It adds behavior based on one
+  # variable, and forwards all others to the nested target.
+  template("my_ios_test_app") {
+    ios_test_app(target_name) {
+      forward_variables_from(invoker, "*", ["test_bundle_name"])
+      if (!defined(extra_substitutions)) {
+        extra_substitutions = []
+      }
+      extra_substitutions += [ "BUNDLE_ID_TEST_NAME=$test_bundle_name" ]
+    }
+  }
+)";
 
 // This function takes a ListNode rather than a resolved vector of values
 // both avoid copying the potentially-large source scope, and so the variables

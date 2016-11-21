@@ -157,6 +157,16 @@ template("lipo_binary") {
 #       (optional) boolean, control whether code signing is enabled or not,
 #       default to ios_enable_code_signing if not defined.
 #
+#   entitlements_path:
+#       (optional) path to the template to use to generate the application
+#       entitlements by performing variable substitutions, defaults to
+#       //build/config/ios/entitlements.plist.
+#
+#   entitlements_target:
+#       (optional) label of the target generating the application
+#       entitlements (must generate a single file as output); cannot be
+#       defined if entitlements_path is set.
+#
 template("create_signed_bundle") {
   assert(defined(invoker.product_type),
          "product_type must be defined for $target_name")
@@ -180,9 +190,19 @@ template("create_signed_bundle") {
   _bundle_extension = invoker.bundle_extension
   _bundle_root_dir = "$root_out_dir/$_output_name$_bundle_extension"
 
-  _entitlements_path = "//build/config/ios/entitlements.plist"
-  if (defined(invoker.entitlements_path)) {
-    _entitlements_path = invoker.entitlements_path
+  if (!defined(invoker.entitlements_target)) {
+    _entitlements_path = "//build/config/ios/entitlements.plist"
+    if (defined(invoker.entitlements_path)) {
+      _entitlements_path = invoker.entitlements_path
+    }
+  } else {
+    assert(!defined(invoker.entitlements_path),
+           "Cannot define both entitlements_path and entitlements_target " +
+               "for $target_name")
+
+    _entitlements_target_outputs =
+        get_target_outputs(invoker.entitlements_target)
+    _entitlements_path = _entitlements_target_outputs[0]
   }
 
   _enable_code_signing = ios_enable_code_signing
@@ -218,6 +238,12 @@ template("create_signed_bundle") {
         deps = []
       }
       deps += invoker.bundle_deps
+    }
+    if (defined(invoker.entitlements_target)) {
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ invoker.entitlements_target ]
     }
 
     code_signing_script = "//build/config/ios/codesign.py"
@@ -369,6 +395,11 @@ template("ios_info_plist") {
 #       entitlements by performing variable substitutions, defaults to
 #       //build/config/ios/entitlements.plist.
 #
+#   entitlements_target:
+#       (optional) label of the target generating the application
+#       entitlements (must generate a single file as output); cannot be
+#       defined if entitlements_path is set.
+#
 #   bundle_extension:
 #       (optional) bundle extension including the dot, default to ".app".
 #
@@ -402,6 +433,7 @@ template("ios_app_bundle") {
                              "bundle_extension",
                              "enable_code_signing",
                              "entitlements_path",
+                             "entitlements_target",
                              "extra_substitutions",
                              "extra_system_frameworks",
                              "info_plist",
@@ -430,6 +462,7 @@ template("ios_app_bundle") {
                              "bundle_extension",
                              "enable_code_signing",
                              "entitlements_path",
+                             "entitlements_target",
                              "extra_substitutions",
                              "extra_system_frameworks",
                              "info_plist",
@@ -539,9 +572,19 @@ template("ios_app_bundle") {
     }
 
     if (current_toolchain == default_toolchain) {
-      _entitlements_path = "//build/config/ios/entitlements.plist"
-      if (defined(invoker.entitlements_path)) {
-        _entitlements_path = invoker.entitlements_path
+      if (!defined(invoker.entitlements_target)) {
+        _entitlements_path = "//build/config/ios/entitlements.plist"
+        if (defined(invoker.entitlements_path)) {
+          _entitlements_path = invoker.entitlements_path
+        }
+      } else {
+        assert(!defined(invoker.entitlements_path),
+               "Cannot define both entitlements_path and entitlements_target" +
+                   "for $_target_name")
+
+        _entitlements_target_outputs =
+            get_target_outputs(invoker.entitlements_target)
+        _entitlements_path = _entitlements_target_outputs[0]
       }
 
       action(_generate_entitlements_target) {
@@ -552,6 +595,9 @@ template("ios_app_bundle") {
         deps = [
           ":$_generate_info_plist",
         ]
+        if (defined(invoker.entitlements_target)) {
+          deps += [ invoker.entitlements_target ]
+        }
         sources = [
           _entitlements_path,
           _info_plist_path,
@@ -598,6 +644,7 @@ template("ios_app_bundle") {
                                "deps",
                                "enable_code_signing",
                                "entitlements_path",
+                               "entitlements_target",
                                "extra_system_frameworks",
                                "product_type",
                                "public_configs",
@@ -1223,11 +1270,11 @@ template("ios_xctest_test") {
     _output_name = invoker.output_name
   }
 
-  _xctest_target = _target_name
-  _xctest_output = _output_name
+  _xctest_target = _target_name + "_module"
+  _xctest_output = _output_name + "_module"
 
-  _host_target = _target_name + "_host"
-  _host_output = _output_name + "_host"
+  _host_target = _target_name
+  _host_output = _output_name
 
   _xctest_arch_loadable_module_target = _xctest_target + "_arch_loadable_module"
   _xctest_lipo_loadable_module_target = _xctest_target + "_loadable_module"
@@ -1235,7 +1282,7 @@ template("ios_xctest_test") {
   loadable_module(_xctest_arch_loadable_module_target) {
     visibility = [ ":$_xctest_lipo_loadable_module_target($default_toolchain)" ]
     if (current_toolchain != default_toolchain) {
-      visibility += [ ":$_target_name" ]
+      visibility += [ ":$_xctest_target" ]
     }
 
     sources = [
@@ -1253,7 +1300,7 @@ template("ios_xctest_test") {
     # For fat builds, only the default toolchain will generate a test bundle.
     # For the other toolchains, the template is only used for building the
     # arch-specific binary, thus the default target is just a group().
-    group(_target_name) {
+    group(_xctest_target) {
       forward_variables_from(invoker,
                              [
                                "visibility",
@@ -1269,7 +1316,8 @@ template("ios_xctest_test") {
     ios_info_plist(_xctest_info_plist_target) {
       visibility = [ ":$_xctest_info_plist_bundle" ]
       info_plist = "//build/config/ios/Module-Info.plist"
-      executable_name = _output_name
+      extra_substitutions = [ "MODULE_NAME=$_xctest_output" ]
+      executable_name = _host_output
     }
 
     bundle_data(_xctest_info_plist_bundle) {

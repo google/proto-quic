@@ -16,7 +16,7 @@
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_types.h"
-#include "net/udp/datagram_client_socket.h"
+#include "net/socket/datagram_client_socket.h"
 
 namespace net {
 

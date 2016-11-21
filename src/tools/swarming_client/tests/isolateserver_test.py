@@ -1306,6 +1306,11 @@ class DiskCacheTest(TestCase):
     h_c = self.to_hash('c')[0]
     h_large, large = self.to_hash('b' * 99)
 
+    def assertItems(expected):
+      actual = [
+        (digest, size) for digest, (size, _) in cache._lru._items.iteritems()]
+      self.assertEqual(expected, actual)
+
     # Max policies is 100 bytes, 2 items, 1000 bytes free space.
     self._free_disk = 1101
     with self.get_cache() as cache:
@@ -1315,8 +1320,7 @@ class DiskCacheTest(TestCase):
       # rationale is that a task may request more data than the size of the
       # cache policies. As long as there is free space, this is fine.
       cache.write(h_b, 'b')
-      expected = sorted(((h_a, 1), (h_large, len(large)), (h_b, 1)))
-      self.assertEqual(expected, sorted(cache._lru._items.iteritems()))
+      assertItems([(h_a, 1), (h_large, len(large)), (h_b, 1)])
       self.assertEqual(h_a, cache._protected)
       self.assertEqual(1000, cache._free_disk)
       self.assertEqual(0, cache.initial_number_items)
@@ -1346,8 +1350,7 @@ class DiskCacheTest(TestCase):
     # Assert that trimming is done in constructor too.
     self._policies = isolateserver.CachePolicies(100, 1000, 2)
     with self.get_cache() as cache:
-      expected = collections.OrderedDict([(h_c, 1), (h_large, len(large))])
-      self.assertEqual(expected, cache._lru._items)
+      assertItems([(h_c, 1), (h_large, len(large))])
       self.assertEqual(None, cache._protected)
       self.assertEqual(1101, cache._free_disk)
       self.assertEqual(2, cache.initial_number_items)

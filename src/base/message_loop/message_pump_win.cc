@@ -31,20 +31,14 @@ enum MessageLoopProblems {
 
 }  // namespace
 
-static const wchar_t kWndClassFormat[] = L"Chrome_MessagePumpWindow_%p";
-
 // Message sent to get an additional time slice for pumping (processing) another
 // task (a series of such messages creates a continuous task pump).
 static const int kMsgHaveWork = WM_USER + 1;
 
-// The application-defined code passed to the hook procedure.
-static const int kMessageFilterCode = 0x5001;
-
 //-----------------------------------------------------------------------------
 // MessagePumpWin public:
 
-MessagePumpWin::MessagePumpWin() {
-}
+MessagePumpWin::MessagePumpWin() = default;
 
 void MessagePumpWin::Run(Delegate* delegate) {
   RunState s;
@@ -94,23 +88,20 @@ int MessagePumpWin::GetCurrentDelay() const {
 //-----------------------------------------------------------------------------
 // MessagePumpForUI public:
 
-MessagePumpForUI::MessagePumpForUI()
-    : atom_(0) {
-  InitMessageWnd();
+MessagePumpForUI::MessagePumpForUI() {
+  bool succeeded = message_window_.Create(
+      Bind(&MessagePumpForUI::MessageCallback, Unretained(this)));
+  DCHECK(succeeded);
 }
 
-MessagePumpForUI::~MessagePumpForUI() {
-  DestroyWindow(message_hwnd_);
-  UnregisterClass(MAKEINTATOM(atom_), CURRENT_MODULE());
-}
+MessagePumpForUI::~MessagePumpForUI() = default;
 
 void MessagePumpForUI::ScheduleWork() {
   if (InterlockedExchange(&work_state_, HAVE_WORK) != READY)
     return;  // Someone else continued the pumping.
 
   // Make sure the MessagePump does some work for us.
-  BOOL ret = PostMessage(message_hwnd_, kMsgHaveWork,
-                         reinterpret_cast<WPARAM>(this), 0);
+  BOOL ret = PostMessage(message_window_.hwnd(), kMsgHaveWork, 0, 0);
   if (ret)
     return;  // There was room in the Window Message queue.
 
@@ -139,18 +130,17 @@ void MessagePumpForUI::ScheduleDelayedWork(const TimeTicks& delayed_work_time) {
 //-----------------------------------------------------------------------------
 // MessagePumpForUI private:
 
-// static
-LRESULT CALLBACK MessagePumpForUI::WndProcThunk(
-    HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
+bool MessagePumpForUI::MessageCallback(
+    UINT message, WPARAM wparam, LPARAM lparam, LRESULT* result) {
   switch (message) {
     case kMsgHaveWork:
-      reinterpret_cast<MessagePumpForUI*>(wparam)->HandleWorkMessage();
+      HandleWorkMessage();
       break;
     case WM_TIMER:
-      reinterpret_cast<MessagePumpForUI*>(wparam)->HandleTimerMessage();
+      HandleTimerMessage();
       break;
   }
-  return DefWindowProc(hwnd, message, wparam, lparam);
+  return false;
 }
 
 void MessagePumpForUI::DoRunLoop() {
@@ -191,7 +181,7 @@ void MessagePumpForUI::DoRunLoop() {
     // don't want to disturb that timer if it is already in flight.  However,
     // if we did do all remaining delayed work, then lets kill the WM_TIMER.
     if (more_work_is_plausible && delayed_work_time_.is_null())
-      KillTimer(message_hwnd_, reinterpret_cast<UINT_PTR>(this));
+      KillTimer(message_window_.hwnd(), reinterpret_cast<UINT_PTR>(this));
     if (state_->should_quit)
       break;
 
@@ -207,24 +197,6 @@ void MessagePumpForUI::DoRunLoop() {
 
     WaitForWork();  // Wait (sleep) until we have work to do again.
   }
-}
-
-void MessagePumpForUI::InitMessageWnd() {
-  // Generate a unique window class name.
-  string16 class_name = StringPrintf(kWndClassFormat, this);
-
-  HINSTANCE instance = CURRENT_MODULE();
-  WNDCLASSEX wc = {0};
-  wc.cbSize = sizeof(wc);
-  wc.lpfnWndProc = base::win::WrappedWindowProc<WndProcThunk>;
-  wc.hInstance = instance;
-  wc.lpszClassName = class_name.c_str();
-  atom_ = RegisterClassEx(&wc);
-  DCHECK(atom_);
-
-  message_hwnd_ = CreateWindowEx(0, MAKEINTATOM(atom_), 0, 0, 0, 0, 0, 0,
-                                 HWND_MESSAGE, 0, instance, 0);
-  DCHECK(message_hwnd_);
 }
 
 void MessagePumpForUI::WaitForWork() {
@@ -296,7 +268,7 @@ void MessagePumpForUI::HandleWorkMessage() {
 }
 
 void MessagePumpForUI::HandleTimerMessage() {
-  KillTimer(message_hwnd_, reinterpret_cast<UINT_PTR>(this));
+  KillTimer(message_window_.hwnd(), reinterpret_cast<UINT_PTR>(this));
 
   // If we are being called outside of the context of Run, then don't do
   // anything.  This could correspond to a MessageBox call or something of
@@ -341,8 +313,7 @@ void MessagePumpForUI::RescheduleTimer() {
 
     // Create a WM_TIMER event that will wake us up to check for any pending
     // timers (in case we are running within a nested, external sub-pump).
-    BOOL ret = SetTimer(message_hwnd_, reinterpret_cast<UINT_PTR>(this),
-                        delay_msec, nullptr);
+    BOOL ret = SetTimer(message_window_.hwnd(), 0, delay_msec, nullptr);
     if (ret)
       return;
     // If we can't set timers, we are in big trouble... but cross our fingers
@@ -385,11 +356,8 @@ bool MessagePumpForUI::ProcessMessageHelper(const MSG& msg) {
   }
 
   // While running our main message pump, we discard kMsgHaveWork messages.
-  if (msg.message == kMsgHaveWork && msg.hwnd == message_hwnd_)
+  if (msg.message == kMsgHaveWork && msg.hwnd == message_window_.hwnd())
     return ProcessPumpReplacementMessage();
-
-  if (CallMsgFilter(const_cast<MSG*>(&msg), kMessageFilterCode))
-    return true;
 
   TranslateMessage(&msg);
   DispatchMessage(&msg);
@@ -413,7 +381,7 @@ bool MessagePumpForUI::ProcessPumpReplacementMessage() {
 
   // Expect no message or a message different than kMsgHaveWork.
   DCHECK(!have_message || kMsgHaveWork != msg.message ||
-         msg.hwnd != message_hwnd_);
+         msg.hwnd != message_window_.hwnd());
 
   // Since we discarded a kMsgHaveWork message, we must update the flag.
   int old_work_state_ = InterlockedExchange(&work_state_, READY);
@@ -438,7 +406,7 @@ MessagePumpForGpu::MessagePumpForGpu() {
   event_.Set(CreateEvent(nullptr, FALSE, FALSE, nullptr));
 }
 
-MessagePumpForGpu::~MessagePumpForGpu() {}
+MessagePumpForGpu::~MessagePumpForGpu() = default;
 
 // static
 void MessagePumpForGpu::InitFactory() {
@@ -562,10 +530,8 @@ bool MessagePumpForGpu::ProcessNextMessage() {
     return true;
   }
 
-  if (!CallMsgFilter(const_cast<MSG*>(&msg), kMessageFilterCode)) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
-  }
+  TranslateMessage(&msg);
+  DispatchMessage(&msg);
 
   return true;
 }

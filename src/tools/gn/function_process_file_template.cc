@@ -17,45 +17,46 @@ const char kProcessFileTemplate[] = "process_file_template";
 const char kProcessFileTemplate_HelpShort[] =
     "process_file_template: Do template expansion over a list of files.";
 const char kProcessFileTemplate_Help[] =
-    "process_file_template: Do template expansion over a list of files.\n"
-    "\n"
-    "  process_file_template(source_list, template)\n"
-    "\n"
-    "  process_file_template applies a template list to a source file list,\n"
-    "  returning the result of applying each template to each source. This is\n"
-    "  typically used for computing output file names from input files.\n"
-    "\n"
-    "  In most cases, get_target_outputs() will give the same result with\n"
-    "  shorter, more maintainable code. This function should only be used\n"
-    "  when that function can't be used (like there's no target or the target\n"
-    "  is defined in another build file).\n"
-    "\n"
-    "Arguments:\n"
-    "\n"
-    "  The source_list is a list of file names.\n"
-    "\n"
-    "  The template can be a string or a list. If it is a list, multiple\n"
-    "  output strings are generated for each input.\n"
-    "\n"
-    "  The template should contain source expansions to which each name in\n"
-    "  the source list is applied. See \"gn help source_expansion\".\n"
-    "\n"
-    "Example:\n"
-    "\n"
-    "  sources = [\n"
-    "    \"foo.idl\",\n"
-    "    \"bar.idl\",\n"
-    "  ]\n"
-    "  myoutputs = process_file_template(\n"
-    "      sources,\n"
-    "      [ \"$target_gen_dir/{{source_name_part}}.cc\",\n"
-    "        \"$target_gen_dir/{{source_name_part}}.h\" ])\n"
-    "\n"
-    " The result in this case will be:\n"
-    "    [ \"//out/Debug/foo.cc\"\n"
-    "      \"//out/Debug/foo.h\"\n"
-    "      \"//out/Debug/bar.cc\"\n"
-    "      \"//out/Debug/bar.h\" ]\n";
+    R"(process_file_template: Do template expansion over a list of files.
+
+  process_file_template(source_list, template)
+
+  process_file_template applies a template list to a source file list,
+  returning the result of applying each template to each source. This is
+  typically used for computing output file names from input files.
+
+  In most cases, get_target_outputs() will give the same result with shorter,
+  more maintainable code. This function should only be used when that function
+  can't be used (like there's no target or the target is defined in another
+  build file).
+
+Arguments
+
+  The source_list is a list of file names.
+
+  The template can be a string or a list. If it is a list, multiple output
+  strings are generated for each input.
+
+  The template should contain source expansions to which each name in the
+  source list is applied. See "gn help source_expansion".
+
+Example
+
+  sources = [
+    "foo.idl",
+    "bar.idl",
+  ]
+  myoutputs = process_file_template(
+      sources,
+      [ "$target_gen_dir/{{source_name_part}}.cc",
+        "$target_gen_dir/{{source_name_part}}.h" ])
+
+ The result in this case will be:
+    [ "//out/Debug/foo.cc"
+      "//out/Debug/foo.h"
+      "//out/Debug/bar.cc"
+      "//out/Debug/bar.h" ]
+)";
 
 Value RunProcessFileTemplate(Scope* scope,
                              const FunctionCallNode* function,

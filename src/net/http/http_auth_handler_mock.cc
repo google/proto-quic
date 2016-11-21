@@ -13,21 +13,42 @@
 #include "net/base/net_errors.h"
 #include "net/http/http_auth_challenge_tokenizer.h"
 #include "net/http/http_request_info.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 
-HttpAuthHandlerMock::HttpAuthHandlerMock()
-  : resolve_(RESOLVE_INIT),
-    generate_async_(false),
-    generate_rv_(OK),
-    auth_token_(NULL),
-    first_round_(true),
-    connection_based_(false),
-    allows_default_credentials_(false),
-    allows_explicit_credentials_(true),
-    weak_factory_(this) {
+void PrintTo(const HttpAuthHandlerMock::State& state, ::std::ostream* os) {
+  switch (state) {
+    case HttpAuthHandlerMock::State::WAIT_FOR_INIT:
+      *os << "WAIT_FOR_INIT";
+      break;
+    case HttpAuthHandlerMock::State::WAIT_FOR_CHALLENGE:
+      *os << "WAIT_FOR_CHALLENGE";
+      break;
+    case HttpAuthHandlerMock::State::WAIT_FOR_GENERATE_AUTH_TOKEN:
+      *os << "WAIT_FOR_GENERATE_AUTH_TOKEN";
+      break;
+    case HttpAuthHandlerMock::State::TOKEN_PENDING:
+      *os << "TOKEN_PENDING";
+      break;
+    case HttpAuthHandlerMock::State::DONE:
+      *os << "DONE";
+      break;
+  }
 }
+
+HttpAuthHandlerMock::HttpAuthHandlerMock()
+    : state_(State::WAIT_FOR_INIT),
+      resolve_(RESOLVE_INIT),
+      generate_async_(false),
+      generate_rv_(OK),
+      auth_token_(NULL),
+      first_round_(true),
+      connection_based_(false),
+      allows_default_credentials_(false),
+      allows_explicit_credentials_(true),
+      weak_factory_(this) {}
 
 HttpAuthHandlerMock::~HttpAuthHandlerMock() {
 }
@@ -81,12 +102,21 @@ void HttpAuthHandlerMock::SetGenerateExpectation(bool async, int rv) {
 
 HttpAuth::AuthorizationResult HttpAuthHandlerMock::HandleAnotherChallenge(
     HttpAuthChallengeTokenizer* challenge) {
+  EXPECT_THAT(state_, ::testing::AnyOf(State::WAIT_FOR_CHALLENGE,
+                                       State::WAIT_FOR_GENERATE_AUTH_TOKEN));
   // If we receive an empty challenge for a connection based scheme, or a second
   // challenge for a non connection based scheme, assume it's a rejection.
-  if (!is_connection_based() || challenge->base64_param().empty())
+  if (!is_connection_based() || challenge->base64_param().empty()) {
+    state_ = State::DONE;
     return HttpAuth::AUTHORIZATION_RESULT_REJECT;
-  if (!base::LowerCaseEqualsASCII(challenge->scheme(), "mock"))
+  }
+
+  if (!base::LowerCaseEqualsASCII(challenge->scheme(), "mock")) {
+    state_ = State::DONE;
     return HttpAuth::AUTHORIZATION_RESULT_INVALID;
+  }
+
+  state_ = State::WAIT_FOR_GENERATE_AUTH_TOKEN;
   return HttpAuth::AUTHORIZATION_RESULT_ACCEPT;
 }
 
@@ -104,6 +134,8 @@ bool HttpAuthHandlerMock::AllowsExplicitCredentials() {
 
 bool HttpAuthHandlerMock::Init(HttpAuthChallengeTokenizer* challenge,
                                const SSLInfo& ssl_info) {
+  EXPECT_EQ(State::WAIT_FOR_INIT, state_);
+  state_ = State::WAIT_FOR_GENERATE_AUTH_TOKEN;
   auth_scheme_ = HttpAuth::AUTH_SCHEME_MOCK;
   score_ = 1;
   properties_ = connection_based_ ? IS_CONNECTION_BASED : 0;
@@ -115,6 +147,7 @@ int HttpAuthHandlerMock::GenerateAuthTokenImpl(
     const HttpRequestInfo* request,
     const CompletionCallback& callback,
     std::string* auth_token) {
+  EXPECT_EQ(State::WAIT_FOR_GENERATE_AUTH_TOKEN, state_);
   first_round_ = false;
   request_url_ = request->url;
   if (generate_async_) {
@@ -125,10 +158,16 @@ int HttpAuthHandlerMock::GenerateAuthTokenImpl(
     base::ThreadTaskRunnerHandle::Get()->PostTask(
         FROM_HERE, base::Bind(&HttpAuthHandlerMock::OnGenerateAuthToken,
                               weak_factory_.GetWeakPtr()));
+    state_ = State::TOKEN_PENDING;
     return ERR_IO_PENDING;
   } else {
-    if (generate_rv_ == OK)
+    if (generate_rv_ == OK) {
       *auth_token = "auth_token";
+      state_ = is_connection_based() ? State::WAIT_FOR_CHALLENGE
+                                     : State::WAIT_FOR_GENERATE_AUTH_TOKEN;
+    } else {
+      state_ = State::DONE;
+    }
     return generate_rv_;
   }
 }
@@ -145,8 +184,14 @@ void HttpAuthHandlerMock::OnResolveCanonicalName() {
 void HttpAuthHandlerMock::OnGenerateAuthToken() {
   EXPECT_TRUE(generate_async_);
   EXPECT_TRUE(!callback_.is_null());
-  if (generate_rv_ == OK)
+  EXPECT_EQ(State::TOKEN_PENDING, state_);
+  if (generate_rv_ == OK) {
     *auth_token_ = "auth_token";
+    state_ = is_connection_based() ? State::WAIT_FOR_CHALLENGE
+                                   : State::WAIT_FOR_GENERATE_AUTH_TOKEN;
+  } else {
+    state_ = State::DONE;
+  }
   auth_token_ = NULL;
   CompletionCallback callback = callback_;
   callback_.Reset();

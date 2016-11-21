@@ -23,7 +23,6 @@
 #include "net/quic/core/quic_protocol.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
-#include "net/quic/test_tools/delayed_verify_strike_register_client.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -31,7 +30,7 @@
 
 namespace net {
 class QuicConnection;
-class ReliableQuicStream;
+class QuicStream;
 }  // namespace net
 
 using std::string;
@@ -68,25 +67,9 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
         server_id_(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED),
         client_crypto_config_(CryptoTestUtils::ProofVerifierForTesting()) {
     FLAGS_enable_quic_stateless_reject_support = false;
-    server_crypto_config_.set_strike_register_no_startup_period();
   }
 
-  void Initialize() {
-    InitializeServer();
-
-    if (AsyncStrikeRegisterVerification()) {
-      QuicCryptoServerConfigPeer peer(&server_crypto_config_);
-      strike_register_client_ = new DelayedVerifyStrikeRegisterClient(
-          10000,  // strike_register_max_entries
-          static_cast<uint32_t>(
-              server_connection_->clock()->WallNow().ToUNIXSeconds()),
-          60,  // strike_register_window_secs
-          peer.GetPrimaryConfig()->orbit,
-          StrikeRegister::NO_STARTUP_PERIOD_NEEDED);
-      strike_register_client_->StartDelayingVerification();
-      server_crypto_config_.SetStrikeRegisterClient(strike_register_client_);
-    }
-  }
+  void Initialize() { InitializeServer(); }
 
   ~QuicCryptoServerStreamTest() override {
     // Ensure that anything that might reference |helpers_| is destroyed before
@@ -140,13 +123,6 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
     client_session_.reset(client_session);
   }
 
-  bool AsyncStrikeRegisterVerification() {
-    if (server_connection_->version() > QUIC_VERSION_32) {
-      return false;
-    }
-    return GetParam();
-  }
-
   void ConstructHandshakeMessage() {
     CryptoFramer framer;
     message_data_.reset(framer.ConstructHandshakeMessage(message_));
@@ -196,7 +172,6 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   CryptoHandshakeMessage message_;
   std::unique_ptr<QuicData> message_data_;
   CryptoTestUtils::FakeClientOptions client_options_;
-  DelayedVerifyStrikeRegisterClient* strike_register_client_;
 
   // Which QUIC versions the client and server support.
   QuicVersionVector supported_versions_ = AllSupportedVersions();
@@ -314,7 +289,6 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
   InitializeServer();
 
   InitializeFakeClient(/* supports_stateless_rejects= */ true);
-
   // In the stateless case, the second handshake contains a server-nonce, so the
   // AsyncStrikeRegisterVerification() case will still succeed (unlike a 0-RTT
   // handshake).
@@ -365,39 +339,8 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
 
   client_stream()->CryptoConnect();
 
-  if (AsyncStrikeRegisterVerification()) {
-    EXPECT_FALSE(client_stream()->handshake_confirmed());
-    EXPECT_FALSE(server_stream()->handshake_confirmed());
-
-    // Advance the handshake.  Expect that the server will be stuck waiting for
-    // client nonce verification to complete.
-    std::pair<size_t, size_t> messages_moved =
-        CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(),
-                                          0, server_connection_,
-                                          server_stream(), 0);
-    EXPECT_EQ(1u, messages_moved.first);
-    EXPECT_EQ(0u, messages_moved.second);
-    EXPECT_EQ(1, strike_register_client_->PendingVerifications());
-    EXPECT_FALSE(client_stream()->handshake_confirmed());
-    EXPECT_FALSE(server_stream()->handshake_confirmed());
-
-    // The server handshake completes once the nonce verification completes.
-    strike_register_client_->RunPendingVerifications();
-    EXPECT_FALSE(client_stream()->handshake_confirmed());
-    EXPECT_TRUE(server_stream()->handshake_confirmed());
-
-    messages_moved = CryptoTestUtils::AdvanceHandshake(
-        client_connection_, client_stream(), messages_moved.first,
-        server_connection_, server_stream(), messages_moved.second);
-    EXPECT_EQ(1u, messages_moved.first);
-    EXPECT_EQ(1u, messages_moved.second);
-    EXPECT_TRUE(client_stream()->handshake_confirmed());
-    EXPECT_TRUE(server_stream()->handshake_confirmed());
-  } else {
-    CryptoTestUtils::CommunicateHandshakeMessages(
-        client_connection_, client_stream(), server_connection_,
-        server_stream());
-  }
+  CryptoTestUtils::CommunicateHandshakeMessages(
+      client_connection_, client_stream(), server_connection_, server_stream());
 
   EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
 }
@@ -533,49 +476,6 @@ TEST_P(QuicCryptoServerStreamTest, NoTokenBindingWithoutClientSupport) {
   EXPECT_TRUE(server_stream()->handshake_confirmed());
 }
 
-TEST_P(QuicCryptoServerStreamTest, CancelRPCBeforeVerificationCompletes) {
-  FLAGS_quic_require_handshake_confirmation_pre33 = false;
-  // Tests that the client can close the connection while the remote strike
-  // register verification RPC is still pending.
-
-  // Set version to QUIC_VERSION_32 as QUIC_VERSION_33 and later don't support
-  // asynchronous strike register RPCs.
-  supported_versions_ = {QUIC_VERSION_32};
-  Initialize();
-  if (!AsyncStrikeRegisterVerification()) {
-    return;
-  }
-  InitializeFakeClient(/* supports_stateless_rejects= */ false);
-
-  // Do a first handshake in order to prime the client config with the server's
-  // information.
-  AdvanceHandshakeWithFakeClient();
-
-  // Now start another handshake, this time the server will attempt to verify
-  // the client's nonce with the strike registers.
-  InitializeFakeClient(/* supports_stateless_rejects= */ false);
-  InitializeServer();
-  client_stream()->CryptoConnect();
-  EXPECT_FALSE(client_stream()->handshake_confirmed());
-  EXPECT_FALSE(server_stream()->handshake_confirmed());
-
-  // Advance the handshake.  Expect that the server will be stuck waiting for
-  // client nonce verification to complete.
-  CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(), 0,
-                                    server_connection_, server_stream(), 0);
-  EXPECT_EQ(1, strike_register_client_->PendingVerifications());
-  EXPECT_FALSE(client_stream()->handshake_confirmed());
-  EXPECT_FALSE(server_stream()->handshake_confirmed());
-
-  // While waiting for the asynchronous verification to complete, the client
-  // decides to close the connection.
-  server_session_->connection()->CloseConnection(
-      QUIC_NO_ERROR, "", ConnectionCloseBehavior::SILENT_CLOSE);
-
-  // The outstanding nonce verification RPC now completes.
-  strike_register_client_->RunPendingVerifications();
-}
-
 class FailingProofSource : public ProofSource {
  public:
   bool GetProof(const IPAddress& server_ip,
@@ -585,8 +485,7 @@ class FailingProofSource : public ProofSource {
                 StringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 scoped_refptr<ProofSource::Chain>* out_chain,
-                string* out_signature,
-                string* out_leaf_cert_sct) override {
+                QuicCryptoProof* out_proof) override {
     return false;
   }
 
@@ -597,7 +496,7 @@ class FailingProofSource : public ProofSource {
                 StringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override {
-    callback->Run(false, nullptr, "", "", nullptr);
+    callback->Run(false, nullptr, QuicCryptoProof(), nullptr);
   }
 };
 

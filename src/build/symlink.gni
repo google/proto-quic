@@ -10,6 +10,7 @@ template("symlink") {
   action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "data_deps",
                              "deps",
                              "testonly",
                              "visibility",
@@ -60,6 +61,12 @@ template("binary_symlink") {
     deps = [
       invoker.binary_label,
     ]
+    data_deps = [
+      invoker.binary_label,
+    ]
+    if (defined(invoker.data_deps)) {
+      data_deps += invoker.data_deps
+    }
 
     _out_dir = get_label_info(invoker.binary_label, "root_out_dir")
     if (defined(invoker.binary_output_name)) {

@@ -193,6 +193,61 @@ bool Resolve(const SourceDir& current_dir,
 
 }  // namespace
 
+const char kLabels_Help[] =
+    R"*(About labels
+
+  Everything that can participate in the dependency graph (targets, configs,
+  and toolchains) are identified by labels. A common label looks like:
+
+    //base/test:test_support
+
+  This consists of a source-root-absolute path, a colon, and a name. This means
+  to look for the thing named "test_support" in "base/test/BUILD.gn".
+
+  You can also specify system absolute paths if necessary. Typically such
+  paths would be specified via a build arg so the developer can specify where
+  the component is on their system.
+
+    /usr/local/foo:bar    (Posix)
+    /C:/Program Files/MyLibs:bar   (Windows)
+
+Toolchains
+
+  A canonical label includes the label of the toolchain being used. Normally,
+  the toolchain label is implicitly inherited from the current execution
+  context, but you can override this to specify cross-toolchain dependencies:
+
+    //base/test:test_support(//build/toolchain/win:msvc)
+
+  Here GN will look for the toolchain definition called "msvc" in the file
+  "//build/toolchain/win" to know how to compile this target.
+
+Relative labels
+
+  If you want to refer to something in the same buildfile, you can omit
+  the path name and just start with a colon. This format is recommended for
+  all same-file references.
+
+    :base
+
+  Labels can be specified as being relative to the current directory.
+  Stylistically, we prefer to use absolute paths for all non-file-local
+  references unless a build file needs to be run in different contexts (like a
+  project needs to be both standalone and pulled into other projects in
+  difference places in the directory hierarchy).
+
+    source/plugin:myplugin
+    ../net:url_request
+
+Implicit names
+
+  If a name is unspecified, it will inherit the directory name. Stylistically,
+  we prefer to omit the colon and name when possible:
+
+    //net  ->  //net:net
+    //tools/gn  ->  //tools/gn:gn
+)*";
+
 Label::Label() {
 }
 

@@ -50,21 +50,21 @@ TEST(FunctionsTarget, TemplateDefaults) {
 
   // Test a good one first.
   TestParseInput good_input(
-      // Make a template with defaults set.
-      "template(\"my_templ\") {\n"
-      "  source_set(target_name) {\n"
-      "    forward_variables_from(invoker, \"*\")\n"
-      "  }\n"
-      "}\n"
-      "set_defaults(\"my_templ\") {\n"
-      "  default_value = 1\n"
-      "}\n"
+      R"(# Make a template with defaults set.
+      template("my_templ") {
+        source_set(target_name) {
+          forward_variables_from(invoker, "*")
+        }
+      }
+      set_defaults("my_templ") {
+        default_value = 1
+      }
 
-      // Invoke the template with target(). This will fail to execute if the
-      // defaults were not set properly, because "default_value" won't exist.
-      "target(\"my_templ\", \"foo\") {\n"
-      "  print(default_value)\n"
-      "}\n");
+      # Invoke the template with target(). This will fail to execute if the
+      # defaults were not set properly, because "default_value" won't exist.
+      target("my_templ", "foo") {
+        print(default_value)
+      })");
   ASSERT_FALSE(good_input.has_error());
   Err err;
   good_input.parsed()->Execute(setup.scope(), &err);

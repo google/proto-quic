@@ -9,6 +9,7 @@
 
 #include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
+#include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_flags.h"
@@ -957,7 +958,6 @@ TEST_F(TcpCubicSenderPacketsTest, DefaultMaxCwnd) {
 }
 
 TEST_F(TcpCubicSenderPacketsTest, LimitCwndIncreaseInCongestionAvoidance) {
-  FLAGS_quic_limit_cubic_cwnd_increase = true;
   // Enable Cubic.
   sender_.reset(new TcpCubicSenderPacketsPeer(
       &clock_, false, kDefaultMaxCongestionWindowPackets));

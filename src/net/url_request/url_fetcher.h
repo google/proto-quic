@@ -26,6 +26,10 @@ class TaskRunner;
 class TimeDelta;
 }
 
+namespace url {
+class Origin;
+}
+
 namespace net {
 class HostPortPair;
 class HttpRequestHeaders;
@@ -207,12 +211,10 @@ class NET_EXPORT URLFetcher {
   virtual void SetRequestContext(
       URLRequestContextGetter* request_context_getter) = 0;
 
-  // Set the URL that should be considered as "initiating" the fetch. This URL
-  // will be considered the "first-party" when applying cookie blocking policy
-  // to requests, and treated as the request's initiator.
-  //
-  // TODO(mkwst): Convert this to take a 'url::Origin': https://crbug.com/577565
-  virtual void SetInitiatorURL(const GURL& initiator) = 0;
+  // Set the origin that should be considered as "initiating" the fetch. This
+  // URL will be considered the "first-party" when applying cookie blocking
+  // policy to requests, and treated as the request's initiator.
+  virtual void SetInitiator(const base::Optional<url::Origin>& initiator) = 0;
 
   // Set the key and data callback that is used when setting the user
   // data on any URLRequest objects this object creates.

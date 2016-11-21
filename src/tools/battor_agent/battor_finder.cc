@@ -38,7 +38,9 @@ std::string BattOrFinder::FindBattOr() {
     // If we have no switch-specified path, look for a device with the right
     // display name.
     for (size_t i = 0; i < devices.size(); i++) {
-      std::string display_name = devices[i]->display_name.get();
+      if (!devices[i]->display_name)
+        continue;
+      const auto& display_name = devices[i]->display_name.value();
       if (display_name.find(kBattOrDisplayNamePrefix) != std::string::npos) {
         LOG(INFO) << "Found BattOr with display name " << display_name
                   << " at path " << devices[i]->path;

@@ -6,10 +6,6 @@ from telemetry import story
 
 # Chrome has high idle CPU usage on these sites, even after they have quiesced.
 SITES = [
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=638365
-  'http://www.labradortraininghq.com/labrador-training/how-to-crate-train'
-  '-a-puppy/#How_Long_DoesIt_Take_To_Crate_Train_A_Puppy',
-
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505990
   # TODO(charliea): Temporarily disable this site, since it causes tracing to
   # explode from too much data. https://crbug.com/647398
@@ -18,17 +14,11 @@ SITES = [
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505601
   'http://www.slideshare.net/patrickmeenan',
 
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=505577
-  'http://tumblr.all-that-is-interesting.com/',
-
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505553
   'https://instagram.com/cnn/',
 
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505544
   'http://www.sina.com.cn',
-
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=505056
-  'http://bbc.com/news/uk/',
 
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505054
   'http://www.uol.com.br',
@@ -36,24 +26,8 @@ SITES = [
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505052
   'http://www.indiatimes.com',
 
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=505044
-  'http://www.w3schools.com/html/default.asp',
-
   # https://bugs.chromium.org/p/chromium/issues/detail?id=505002
   'http://www.microsoft.com',
-
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=489936
-  'http://capitalone.com',
-
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=481225
-  'https://twitter.com/katyperry',
-
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=476158
-  'http://bgr.com',
-
-  # https://bugs.chromium.org/p/chromium/issues/detail?id=425474
-  'http://www.androidpolice.com/2014/10/20/animation-bonanza-android'
-  '-5-0-lollipop-in-gifs/',
 ]
 
 # TODO(rnephew): Move to seperate file and merge with mac_gpu_sites BasePage.

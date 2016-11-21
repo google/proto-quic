@@ -5,29 +5,17 @@
 -PredictorBrowserTest.RendererInitiatedNavigationPreconnect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirect
 -PrerenderBrowserTest.PrerenderCrossProcessServerRedirectNoHang
--RedirectTest.ClientServerServer
 # TabManagerTest.TabManagerBasics crashes sometimes
 -TabManagerTest.TabManagerBasics
--TemplateURLScraperTest.ScrapeWithOnSubmit
 -ThreatDOMDetailsTest.Everything
--WebNavigationApiTest.Crash
--WebNavigationApiTest.CrossProcess
--WebNavigationApiTest.CrossProcessAbort
--WebNavigationApiTest.CrossProcessFragment
--WebNavigationApiTest.CrossProcessHistory
--WebNavigationApiTest.CrossProcessIframe
--WebNavigationApiTest.Failures
--WebNavigationApiTest.IFrame
--WebNavigationApiTest.OpenTab
 -WebNavigationApiTest.RequestOpenTab
--WebNavigationApiTest.SrcDoc
 -WebNavigationApiTest.UserAction
-
-# Errors related to forms submission.
--PhishingDOMFeatureExtractorTest.SubFrames
--PhishingDOMFeatureExtractorTest.SubframeRemoval
 
 # https://crbug.com/652767: NavigationHandle::GetResponseHeaders sometimes
 # returns null for browser-side navigations
 -PageLoadMetricsBrowserTest.Ignore204Pages
 -PageLoadMetricsBrowserTest.IgnoreDownloads
+
+# https://crbug.com/650246: ResourcePrefetchPredictor doesn't work correctly yet
+# with PlzNavigate
+-ResourcePrefetchPredictorBrowserTest.*

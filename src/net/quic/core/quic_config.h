@@ -114,42 +114,6 @@ class NET_EXPORT_PRIVATE QuicNegotiableUint32 : public QuicNegotiableValue {
   uint32_t negotiated_value_;
 };
 
-class NET_EXPORT_PRIVATE QuicNegotiableTag : public QuicNegotiableValue {
- public:
-  QuicNegotiableTag(QuicTag name, QuicConfigPresence presence);
-  ~QuicNegotiableTag() override;
-
-  // Sets the possible values that |negotiated_tag_| can take after negotiation
-  // and the default value that |negotiated_tag_| takes if OPTIONAL and *HLO
-  // msg doesn't contain tag |name_|.
-  void set(const QuicTagVector& possible_values, QuicTag default_value);
-
-  // Serialises |name_| and vector (either possible or negotiated) to |out|. If
-  // |negotiated_| is true then |negotiated_tag_| is serialised, otherwise
-  // |possible_values_| is serialised.
-  void ToHandshakeMessage(CryptoHandshakeMessage* out) const override;
-
-  // Selects the tag common to both tags in |client_hello| for |name_| and
-  // |possible_values_| with preference to tag in |possible_values_|. The
-  // selected tag is set as |negotiated_tag_|.
-  QuicErrorCode ProcessPeerHello(const CryptoHandshakeMessage& peer_hello,
-                                 HelloType hello_type,
-                                 std::string* error_details) override;
-
- private:
-  // Reads the vector corresponding to |name_| from |msg| into |out|. If the
-  // |name_| is absent in |msg| and |presence_| is set to OPTIONAL |out| is set
-  // to |possible_values_|.
-  QuicErrorCode ReadVector(const CryptoHandshakeMessage& msg,
-                           const QuicTag** out,
-                           size_t* out_length,
-                           std::string* error_details) const;
-
-  QuicTag negotiated_tag_;
-  QuicTagVector possible_values_;
-  QuicTag default_value_;
-};
-
 // Stores uint32_t from CHLO or SHLO messages that are not negotiated.
 class NET_EXPORT_PRIVATE QuicFixedUint32 : public QuicConfigValue {
  public:

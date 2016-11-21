@@ -72,7 +72,7 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
     LOG(FATAL) << "Unexpected OnStreamPadding call.";
   }
 
-  void OnSettings(bool clear_persisted) override {}
+  void OnSettings() override {}
 
   void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override {
     setting_count_++;

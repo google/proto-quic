@@ -162,6 +162,11 @@ bool URLRequestMockHTTPJob::IsRedirectResponse(GURL* location,
   return URLRequestJob::IsRedirectResponse(location, http_status_code);
 }
 
+void URLRequestMockHTTPJob::OnReadComplete(net::IOBuffer* buffer, int result) {
+  if (result >= 0)
+    total_received_bytes_ += result;
+}
+
 // Public virtual version.
 void URLRequestMockHTTPJob::Start() {
   base::PostTaskAndReplyWithResult(
@@ -185,6 +190,10 @@ void URLRequestMockHTTPJob::SetHeadersAndStart(const std::string& raw_headers) {
 // Private const version.
 void URLRequestMockHTTPJob::GetResponseInfoConst(HttpResponseInfo* info) const {
   info->headers = new HttpResponseHeaders(raw_headers_);
+}
+
+int64_t URLRequestMockHTTPJob::GetTotalReceivedBytes() const {
+  return total_received_bytes_;
 }
 
 bool URLRequestMockHTTPJob::GetMimeType(std::string* mime_type) const {

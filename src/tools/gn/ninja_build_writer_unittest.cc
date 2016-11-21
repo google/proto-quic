@@ -48,7 +48,7 @@ TEST(NinjaBuildWriter, TwoTargets) {
   Settings other_settings(setup.build_settings(), "toolchain/");
   other_settings.set_toolchain_label(other_toolchain_label);
 
-  std::map<const Settings*, const Toolchain*> used_toolchains;
+  std::unordered_map<const Settings*, const Toolchain*> used_toolchains;
   used_toolchains[setup.settings()] = setup.toolchain();
   used_toolchains[&other_settings] = &other_toolchain;
 
@@ -117,7 +117,7 @@ TEST(NinjaBuildWriter, DuplicateOutputs) {
   target_bar.SetToolchain(setup.toolchain());
   ASSERT_TRUE(target_bar.OnResolved(&err));
 
-  std::map<const Settings*, const Toolchain*> used_toolchains;
+  std::unordered_map<const Settings*, const Toolchain*> used_toolchains;
   used_toolchains[setup.settings()] = setup.toolchain();
   std::vector<const Target*> targets = { &target_foo, &target_bar };
   std::ostringstream ninja_out;

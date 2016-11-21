@@ -21,7 +21,7 @@ class QuicCryptoStream;
 class QuicHeadersStream;
 class QuicSession;
 class QuicSpdyStream;
-class ReliableQuicStream;
+class QuicStream;
 
 namespace test {
 
@@ -35,8 +35,8 @@ class QuicSessionPeer {
                                         uint32_t max_streams);
   static QuicCryptoStream* GetCryptoStream(QuicSession* session);
   static QuicWriteBlockedList* GetWriteBlockedStreams(QuicSession* session);
-  static ReliableQuicStream* GetOrCreateDynamicStream(QuicSession* session,
-                                                      QuicStreamId stream_id);
+  static QuicStream* GetOrCreateDynamicStream(QuicSession* session,
+                                              QuicStreamId stream_id);
   static std::map<QuicStreamId, QuicStreamOffset>&
   GetLocallyClosedStreamsHighestOffset(QuicSession* session);
   static QuicSession::StaticStreamMap& static_streams(QuicSession* session);
@@ -44,7 +44,7 @@ class QuicSessionPeer {
   static std::unordered_set<QuicStreamId>* GetDrainingStreams(
       QuicSession* session);
   static void ActivateStream(QuicSession* session,
-                             std::unique_ptr<ReliableQuicStream> stream);
+                             std::unique_ptr<QuicStream> stream);
 
   // Discern the state of a stream.  Exactly one of these should be true at a
   // time for any stream id > 0 (other than the special streams 1 and 3).

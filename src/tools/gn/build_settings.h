@@ -95,18 +95,6 @@ class BuildSettings {
     exec_script_whitelist_ = std::move(list);
   }
 
-  // When set (the default), code should perform normal validation of inputs
-  // and structures, like undefined or possibly incorrectly used things. For
-  // some interrogation commands, we don't care about this and actually want
-  // to allow the user to check the structure of the build to solve their
-  // problem, and these checks are undesirable.
-  bool check_for_bad_items() const {
-    return check_for_bad_items_;
-  }
-  void set_check_for_bad_items(bool c) {
-    check_for_bad_items_ = c;
-  }
-
  private:
   base::FilePath root_path_;
   std::string root_path_utf8_;
@@ -121,8 +109,6 @@ class BuildSettings {
   PrintCallback print_callback_;
 
   std::unique_ptr<std::set<SourceFile>> exec_script_whitelist_;
-
-  bool check_for_bad_items_;
 
   BuildSettings& operator=(const BuildSettings& other);  // Disallow.
 };
