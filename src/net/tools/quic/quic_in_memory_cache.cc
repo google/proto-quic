@@ -48,8 +48,9 @@ void QuicInMemoryCache::ResourceFile::Read() {
 
   // First read the headers.
   size_t start = 0;
-  while (start < file_contents_.length()) {
-    size_t pos = file_contents_.find("\n", start);
+  string file_header_spoof_ = "HTTP/1.1 200 OK\n Accept-Ranges: bytes\n Cache-Control: max-age=604800\n Content-Type: text/html\n Date: Wed, 23 Nov 2016 19:48:43 GMT\n Etag: '359670651+gzip'\n Expires: Wed, 30 Nov 2020 19:48:43 GMT\n Last-Modified: Wed, 23 Nov 2016 19:48:43 GMT\n Server: ECS (mdw/BBD4)\n Vary: Accept-Encoding\n\n";
+  while (start < file_header_spoof_.length()) {
+    size_t pos = file_header_spoof_.find("\n", start);
     if (pos == string::npos) {
       LOG(DFATAL) << "Headers invalid or empty, ignoring: "
                   << file_name_.value();
@@ -57,10 +58,10 @@ void QuicInMemoryCache::ResourceFile::Read() {
     }
     size_t len = pos - start;
     // Support both dos and unix line endings for convenience.
-    if (file_contents_[pos - 1] == '\r') {
+    if (file_header_spoof_[pos - 1] == '\r') {
       len -= 1;
     }
-    StringPiece line(file_contents_.data() + start, len);
+    StringPiece line(file_header_spoof_.data() + start, len);
     start = pos + 1;
     // Headers end with an empty line.
     if (line.empty()) {
@@ -118,7 +119,7 @@ void QuicInMemoryCache::ResourceFile::Read() {
   }
 
   body_ =
-      StringPiece(file_contents_.data() + start, file_contents_.size() - start);
+      StringPiece(file_contents_.data(), file_contents_.size());
 }
 
 QuicInMemoryCache::ResourceFile::ResourceFile(const base::FilePath& file_name)
@@ -129,7 +130,9 @@ QuicInMemoryCache::ResourceFile::~ResourceFile() {}
 void QuicInMemoryCache::ResourceFile::SetHostPathFromBase(StringPiece base) {
   size_t path_start = base.find_first_of('/');
   DCHECK_LT(0UL, path_start);
-  host_ = base.substr(0, path_start);
+
+  //host_ = base.substr(0, path_start);
+  host_ = "prod-us-actual.initialview.com";
   size_t query_start = base.find_first_of(',');
   if (query_start > 0) {
     path_ = base.substr(path_start, query_start - 1);
@@ -392,3 +395,4 @@ bool QuicInMemoryCache::PushResourceExistsInCache(string original_request_url,
 }
 
 }  // namespace net
+

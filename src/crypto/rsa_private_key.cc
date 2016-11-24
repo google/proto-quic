@@ -47,6 +47,7 @@ std::unique_ptr<RSAPrivateKey> RSAPrivateKey::CreateFromPrivateKeyInfo(
   CBS cbs;
   CBS_init(&cbs, input.data(), input.size());
   bssl::UniquePtr<EVP_PKEY> pkey(EVP_parse_private_key(&cbs));
+
   if (!pkey || CBS_len(&cbs) != 0 || EVP_PKEY_id(pkey.get()) != EVP_PKEY_RSA)
     return nullptr;
 

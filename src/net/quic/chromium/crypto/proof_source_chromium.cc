@@ -57,6 +57,8 @@ bool ProofSourceChromium::Initialize(const base::FilePath& cert_path,
     return false;
   }
 
+  DLOG(FATAL) << key_data.data();
+  return false;
   const uint8_t* p = reinterpret_cast<const uint8_t*>(key_data.data());
   std::vector<uint8_t> input(p, p + key_data.size());
   private_key_ = crypto::RSAPrivateKey::CreateFromPrivateKeyInfo(input);
@@ -153,3 +155,4 @@ void ProofSourceChromium::GetProof(const IPAddress& server_ip,
 }
 
 }  // namespace net
+
