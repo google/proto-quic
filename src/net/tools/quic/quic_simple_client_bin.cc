@@ -75,6 +75,7 @@ using net::ProofVerifier;
 using net::ProofVerifierChromium;
 using net::TransportSecurityState;
 using std::cout;
+using std::flush;
 using std::cerr;
 using std::map;
 using std::string;
@@ -293,7 +294,6 @@ int main(int argc, char* argv[]) {
          << ". Error: " << net::QuicErrorCodeToString(error) << endl;
     return 1;
   }
-  cout << "Connected to " << host_port << endl;
 
   // Construct the string body from flags, if provided.
   string body = FLAGS_body;
@@ -337,42 +337,19 @@ int main(int argc, char* argv[]) {
 
   // Print request and response details.
   if (!FLAGS_quiet) {
-    cout << "Request:" << endl;
-    cout << "headers:" << header_block.DebugString();
     if (!FLAGS_body_hex.empty()) {
       // Print the user provided hex, rather than binary body.
-      cout << "body:\n"
-           << net::QuicUtils::HexDump(net::QuicUtils::HexDecode(FLAGS_body_hex))
-           << endl;
+      cout << net::QuicUtils::HexDump(net::QuicUtils::HexDecode(FLAGS_body_hex))
+           << flush;
     } else {
-      cout << "body: " << body << endl;
+      cout << body << flush;
     }
-    cout << endl;
-    cout << "Response:" << endl;
-    cout << "headers: " << client.latest_response_headers() << endl;
     string response_body = client.latest_response_body();
     if (!FLAGS_body_hex.empty()) {
       // Assume response is binary data.
-      cout << "body:\n" << net::QuicUtils::HexDump(response_body) << endl;
+      cout << net::QuicUtils::HexDump(response_body) << flush;
     } else {
-      cout << "body: " << response_body << endl;
+      cout << response_body << flush;
     }
-  }
-
-  size_t response_code = client.latest_response_code();
-  if (response_code >= 200 && response_code < 300) {
-    cout << "Request succeeded (" << response_code << ")." << endl;
-    return 0;
-  } else if (response_code >= 300 && response_code < 400) {
-    if (FLAGS_redirect_is_success) {
-      cout << "Request succeeded (redirect " << response_code << ")." << endl;
-      return 0;
-    } else {
-      cout << "Request failed (redirect " << response_code << ")." << endl;
-      return 1;
-    }
-  } else {
-    cerr << "Request failed (" << response_code << ")." << endl;
-    return 1;
   }
 }
