@@ -2,6 +2,8 @@
 # tree and to set startup options. For documentation on the values set in this
 # file, run "gn help dotfile" at the command line.
 
+import("//build/dotfile_settings.gni")
+
 # The location of the build configuration file.
 buildconfig = "//build/config/BUILDCONFIG.gn"
 
@@ -215,56 +217,40 @@ check_targets = [
 #      using glob, and it's possible to mess it up without glob, but globs make
 #      this situation much easier to create. if the build always lists the
 #      files and passes them to a script, it will always be correct.
-exec_script_whitelist = [
-  "//android_webview/BUILD.gn",
-  "//build_overrides/build.gni",
-  "//build/config/BUILD.gn",
-  "//build/config/android/config.gni",
-  "//build/config/android/internal_rules.gni",
-  "//build/config/android/rules.gni",
-  "//build/config/compiler/BUILD.gn",
-  "//build/config/gcc/gcc_version.gni",
-  "//build/config/ios/ios_sdk.gni",
-  "//build/config/linux/BUILD.gn",
-  "//build/config/linux/pkg_config.gni",
-  "//build/config/linux/atk/BUILD.gn",
-  "//build/config/mac/mac_sdk.gni",
-  "//build/config/mac/rules.gni",
-  "//build/config/posix/BUILD.gn",
-  "//build/config/sysroot.gni",
-  "//build/config/win/BUILD.gn",
-  "//build/config/win/visual_studio_version.gni",
-  "//build/toolchain/concurrent_links.gni",
-  "//build/toolchain/mac/BUILD.gn",
-  "//build/toolchain/nacl/BUILD.gn",
-  "//build/toolchain/toolchain.gni",
-  "//build/toolchain/win/BUILD.gn",
-  "//build/util/branding.gni",
-  "//build/util/version.gni",
-  "//chromeos/BUILD.gn",
 
-  # TODO(dgn): Layer violation but breaks the build otherwise, see
-  # https://crbug.com/474506
-  "//clank/java/BUILD.gn",
-  "//clank/native/BUILD.gn",
+exec_script_whitelist =
+    build_dotfile_settings.exec_script_whitelist + [
+      # Whitelist entries for //build should go into
+      # //build/dotfile_settings.gni instead, so that they can be shared
+      # with other repos. The entries in this list should be only for files
+      # in the Chromium repo outside of //build.
+      "//android_webview/BUILD.gn",
+      "//build_overrides/build.gni",
+      "//chromeos/BUILD.gn",
 
-  "//jingle/BUILD.gn",
-  "//net/BUILD.gn",
-  "//remoting/host/installer/linux/BUILD.gn",
-  "//remoting/remoting_version.gni",
-  "//remoting/host/installer/win/generate_clsids.gni",
-  "//third_party/angle/BUILD.gn",
-  "//third_party/angle/src/tests/BUILD.gn",
-  "//third_party/angle/src/vulkan_support/BUILD.gn",
-  "//third_party/catapult/tracing/BUILD.gn",
-  "//third_party/google_input_tools/inputview.gni",
-  "//third_party/skia/gn/shared_sources.gni",
+      # TODO(dgn): Layer violation but breaks the build otherwise, see
+      # https://crbug.com/474506.
+      "//clank/java/BUILD.gn",
+      "//clank/native/BUILD.gn",
 
-  # CLD2 should be removed soon, delete this when we do.
-  "//third_party/cld_2/BUILD.gn",
-  "//tools/grit/grit_rule.gni",
+      "//jingle/BUILD.gn",
+      "//net/BUILD.gn",
+      "//remoting/host/installer/linux/BUILD.gn",
+      "//remoting/remoting_version.gni",
+      "//remoting/host/installer/win/generate_clsids.gni",
 
-  # Not gypi-to-gn.
-  "//google_apis/BUILD.gn",
-  "//printing/BUILD.gn",
-]
+      # TODO(dpranke): Get these from the appropriate repos instead.
+      "//third_party/angle/BUILD.gn",
+      "//third_party/angle/src/tests/BUILD.gn",
+      "//third_party/angle/src/vulkan_support/BUILD.gn",
+      "//third_party/catapult/tracing/BUILD.gn",
+      "//third_party/google_input_tools/inputview.gni",
+
+      # CLD2 should be removed soon, delete this when we do.
+      "//third_party/cld_2/BUILD.gn",
+      "//tools/grit/grit_rule.gni",
+
+      # Not gypi-to-gn.
+      "//google_apis/BUILD.gn",
+      "//printing/BUILD.gn",
+    ]

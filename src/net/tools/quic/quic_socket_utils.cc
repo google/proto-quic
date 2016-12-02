@@ -15,34 +15,37 @@
 #include "base/logging.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40
 #endif
+
+using std::string;
 
 namespace net {
 
 // static
 void QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
     struct msghdr* hdr,
-    IPAddress* address,
+    QuicIpAddress* address,
     QuicWallTime* walltimestamp) {
   if (hdr->msg_controllen > 0) {
     for (cmsghdr* cmsg = CMSG_FIRSTHDR(hdr); cmsg != nullptr;
          cmsg = CMSG_NXTHDR(hdr, cmsg)) {
-      const uint8_t* addr_data = nullptr;
+      char* addr_data = nullptr;
       int len = 0;
       if (cmsg->cmsg_type == IPV6_PKTINFO) {
         in6_pktinfo* info = reinterpret_cast<in6_pktinfo*>(CMSG_DATA(cmsg));
-        addr_data = reinterpret_cast<const uint8_t*>(&info->ipi6_addr);
+        addr_data = reinterpret_cast<char*>(&info->ipi6_addr);
         len = sizeof(in6_addr);
-        *address = IPAddress(addr_data, len);
+        address->FromPackedString(addr_data, len);
       } else if (cmsg->cmsg_type == IP_PKTINFO) {
         in_pktinfo* info = reinterpret_cast<in_pktinfo*>(CMSG_DATA(cmsg));
-        addr_data = reinterpret_cast<const uint8_t*>(&info->ipi_addr);
+        addr_data = reinterpret_cast<char*>(&info->ipi_addr);
         len = sizeof(in_addr);
-        *address = IPAddress(addr_data, len);
+        address->FromPackedString(addr_data, len);
       } else if (cmsg->cmsg_level == SOL_SOCKET &&
                  cmsg->cmsg_type == SO_TIMESTAMPING) {
         LinuxTimestamping* lts =
@@ -131,9 +134,9 @@ int QuicSocketUtils::ReadPacket(int fd,
                                 char* buffer,
                                 size_t buf_len,
                                 QuicPacketCount* dropped_packets,
-                                IPAddress* self_address,
+                                QuicIpAddress* self_address,
                                 QuicWallTime* walltimestamp,
-                                IPEndPoint* peer_address) {
+                                QuicSocketAddress* peer_address) {
   DCHECK(peer_address != nullptr);
   char cbuf[kSpaceForCmsg];
   memset(cbuf, 0, arraysize(cbuf));
@@ -174,7 +177,7 @@ int QuicSocketUtils::ReadPacket(int fd,
     GetOverflowFromMsghdr(&hdr, dropped_packets);
   }
 
-  IPAddress stack_address;
+  QuicIpAddress stack_address;
   if (self_address == nullptr) {
     self_address = &stack_address;
   }
@@ -186,21 +189,13 @@ int QuicSocketUtils::ReadPacket(int fd,
 
   GetAddressAndTimestampFromMsghdr(&hdr, self_address, walltimestamp);
 
-  if (raw_address.ss_family == AF_INET) {
-    CHECK(peer_address->FromSockAddr(
-        reinterpret_cast<const sockaddr*>(&raw_address),
-        sizeof(struct sockaddr_in)));
-  } else if (raw_address.ss_family == AF_INET6) {
-    CHECK(peer_address->FromSockAddr(
-        reinterpret_cast<const sockaddr*>(&raw_address),
-        sizeof(struct sockaddr_in6)));
-  }
-
+  *peer_address = QuicSocketAddress(raw_address);
   return bytes_read;
 }
 
-size_t QuicSocketUtils::SetIpInfoInCmsg(const IPAddress& self_address,
+size_t QuicSocketUtils::SetIpInfoInCmsg(const QuicIpAddress& self_address,
                                         cmsghdr* cmsg) {
+  string address_string;
   if (self_address.IsIPv4()) {
     cmsg->cmsg_len = CMSG_LEN(sizeof(in_pktinfo));
     cmsg->cmsg_level = IPPROTO_IP;
@@ -208,8 +203,9 @@ size_t QuicSocketUtils::SetIpInfoInCmsg(const IPAddress& self_address,
     in_pktinfo* pktinfo = reinterpret_cast<in_pktinfo*>(CMSG_DATA(cmsg));
     memset(pktinfo, 0, sizeof(in_pktinfo));
     pktinfo->ipi_ifindex = 0;
-    memcpy(&pktinfo->ipi_spec_dst, self_address.bytes().data(),
-           self_address.size());
+    address_string = self_address.ToPackedString();
+    memcpy(&pktinfo->ipi_spec_dst, address_string.c_str(),
+           address_string.length());
     return sizeof(in_pktinfo);
   } else if (self_address.IsIPv6()) {
     cmsg->cmsg_len = CMSG_LEN(sizeof(in6_pktinfo));
@@ -217,8 +213,9 @@ size_t QuicSocketUtils::SetIpInfoInCmsg(const IPAddress& self_address,
     cmsg->cmsg_type = IPV6_PKTINFO;
     in6_pktinfo* pktinfo = reinterpret_cast<in6_pktinfo*>(CMSG_DATA(cmsg));
     memset(pktinfo, 0, sizeof(in6_pktinfo));
-    memcpy(&pktinfo->ipi6_addr, self_address.bytes().data(),
-           self_address.size());
+    address_string = self_address.ToPackedString();
+    memcpy(&pktinfo->ipi6_addr, address_string.c_str(),
+           address_string.length());
     return sizeof(in6_pktinfo);
   } else {
     NOTREACHED() << "Unrecognized IPAddress";
@@ -227,20 +224,19 @@ size_t QuicSocketUtils::SetIpInfoInCmsg(const IPAddress& self_address,
 }
 
 // static
-WriteResult QuicSocketUtils::WritePacket(int fd,
-                                         const char* buffer,
-                                         size_t buf_len,
-                                         const IPAddress& self_address,
-                                         const IPEndPoint& peer_address) {
-  sockaddr_storage raw_address;
-  socklen_t address_len = sizeof(raw_address);
-  CHECK(peer_address.ToSockAddr(
-      reinterpret_cast<struct sockaddr*>(&raw_address), &address_len));
+WriteResult QuicSocketUtils::WritePacket(
+    int fd,
+    const char* buffer,
+    size_t buf_len,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address) {
+  sockaddr_storage raw_address = peer_address.generic_address();
   iovec iov = {const_cast<char*>(buffer), buf_len};
 
   msghdr hdr;
   hdr.msg_name = &raw_address;
-  hdr.msg_namelen = address_len;
+  hdr.msg_namelen = raw_address.ss_family == AF_INET ? sizeof(sockaddr_in)
+                                                     : sizeof(sockaddr_in6);
   hdr.msg_iov = &iov;
   hdr.msg_iovlen = 1;
   hdr.msg_flags = 0;
@@ -251,7 +247,7 @@ WriteResult QuicSocketUtils::WritePacket(int fd,
   const int kSpaceForIp =
       (kSpaceForIpv4 < kSpaceForIpv6) ? kSpaceForIpv6 : kSpaceForIpv4;
   char cbuf[kSpaceForIp];
-  if (self_address.empty()) {
+  if (!self_address.IsInitialized()) {
     hdr.msg_control = 0;
     hdr.msg_controllen = 0;
   } else {
@@ -276,9 +272,9 @@ WriteResult QuicSocketUtils::WritePacket(int fd,
 }
 
 // static
-int QuicSocketUtils::CreateUDPSocket(const IPEndPoint& address,
+int QuicSocketUtils::CreateUDPSocket(const QuicSocketAddress& address,
                                      bool* overflow_supported) {
-  int address_family = address.GetSockAddrFamily();
+  int address_family = address.host().AddressFamilyToInt();
   int fd = socket(address_family, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   if (fd < 0) {
     LOG(ERROR) << "socket() failed: " << strerror(errno);

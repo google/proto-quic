@@ -59,6 +59,10 @@ template <class T> class DeleteHelper;
 // These will be executed in an unspecified order. The order of execution
 // between tasks with different sequence tokens is also unspecified.
 //
+// You must call EnableForProcess() or
+// EnableWithRedirectionToTaskSchedulerForProcess() before starting to post
+// tasks to a process' SequencedWorkerPools.
+//
 // This class may be leaked on shutdown to facilitate fast shutdown. The
 // expected usage, however, is to call Shutdown(), which correctly accounts
 // for CONTINUE_ON_SHUTDOWN behavior and is required for BLOCK_SHUTDOWN
@@ -178,25 +182,27 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   // PostSequencedWorkerTask(). Valid tokens are always nonzero.
   static SequenceToken GetSequenceToken();
 
-  // Starts redirecting tasks posted to this process' SequencedWorkerPools to
-  // the registered TaskScheduler. This cannot be called after a task has been
-  // posted to a SequencedWorkerPool. This is not thread-safe; proper
-  // synchronization is required to use any SequencedWorkerPool method after
-  // calling this. There must be a registered TaskScheduler when this is called.
-  // Ideally, call this on the main thread of a process, before any other
-  // threads are created and before any tasks are posted to that process'
-  // SequencedWorkerPools.
+  // Enables posting tasks to this process' SequencedWorkerPools. Cannot be
+  // called if already enabled. This is not thread-safe; proper synchronization
+  // is required to use any SequencedWorkerPool method after calling this.
+  static void EnableForProcess();
+
+  // Same as EnableForProcess(), but tasks are redirected to the registered
+  // TaskScheduler. There must be a registered TaskScheduler when this is
+  // called.
   // TODO(gab): Remove this if http://crbug.com/622400 fails
   // (SequencedWorkerPool will be phased out completely otherwise).
-  static void RedirectToTaskSchedulerForProcess();
+  static void EnableWithRedirectionToTaskSchedulerForProcess();
 
-  // Stops redirecting tasks posted to this process' SequencedWorkerPools to the
-  // registered TaskScheduler and allows RedirectToTaskSchedulerForProcess() to
-  // be called even if tasks have already posted to a SequencedWorkerPool in
-  // this process. Calling this while there are active SequencedWorkerPools is
-  // not supported. This is not thread-safe; proper synchronization is required
-  // to use any SequencedWorkerPool method after calling this.
-  static void ResetRedirectToTaskSchedulerForProcessForTesting();
+  // Disables posting tasks to this process' SequencedWorkerPools. Calling this
+  // while there are active SequencedWorkerPools is not supported. This is not
+  // thread-safe; proper synchronization is required to use any
+  // SequencedWorkerPool method after calling this.
+  static void DisableForProcessForTesting();
+
+  // Returns true if posting tasks to this process' SequencedWorkerPool is
+  // enabled (with or without redirection to TaskScheduler).
+  static bool IsEnabled();
 
   // When constructing a SequencedWorkerPool, there must be a
   // ThreadTaskRunnerHandle on the current thread unless you plan to

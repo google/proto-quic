@@ -11,16 +11,17 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "net/base/ip_endpoint.h"
+#include "base/stl_util.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_framer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 using base::StringPiece;
 
@@ -55,20 +56,20 @@ class ConnectionIdCleanUpAlarm : public QuicAlarm::Delegate {
 //          created instance takes the ownership of this packet.
 class QuicTimeWaitListManager::QueuedPacket {
  public:
-  QueuedPacket(const IPEndPoint& server_address,
-               const IPEndPoint& client_address,
+  QueuedPacket(const QuicSocketAddress& server_address,
+               const QuicSocketAddress& client_address,
                std::unique_ptr<QuicEncryptedPacket> packet)
       : server_address_(server_address),
         client_address_(client_address),
         packet_(std::move(packet)) {}
 
-  const IPEndPoint& server_address() const { return server_address_; }
-  const IPEndPoint& client_address() const { return client_address_; }
+  const QuicSocketAddress& server_address() const { return server_address_; }
+  const QuicSocketAddress& client_address() const { return client_address_; }
   QuicEncryptedPacket* packet() { return packet_.get(); }
 
  private:
-  const IPEndPoint server_address_;
-  const IPEndPoint client_address_;
+  const QuicSocketAddress server_address_;
+  const QuicSocketAddress client_address_;
   std::unique_ptr<QuicEncryptedPacket> packet_;
 
   DISALLOW_COPY_AND_ASSIGN(QueuedPacket);
@@ -147,8 +148,8 @@ void QuicTimeWaitListManager::OnCanWrite() {
 }
 
 void QuicTimeWaitListManager::ProcessPacket(
-    const IPEndPoint& server_address,
-    const IPEndPoint& client_address,
+    const QuicSocketAddress& server_address,
+    const QuicSocketAddress& client_address,
     QuicConnectionId connection_id,
     QuicPacketNumber packet_number,
     const QuicEncryptedPacket& /*packet*/) {
@@ -184,8 +185,8 @@ void QuicTimeWaitListManager::ProcessPacket(
 void QuicTimeWaitListManager::SendVersionNegotiationPacket(
     QuicConnectionId connection_id,
     const QuicVersionVector& supported_versions,
-    const IPEndPoint& server_address,
-    const IPEndPoint& client_address) {
+    const QuicSocketAddress& server_address,
+    const QuicSocketAddress& client_address) {
   SendOrQueuePacket(base::MakeUnique<QueuedPacket>(
       server_address, client_address, QuicFramer::BuildVersionNegotiationPacket(
                                           connection_id, supported_versions)));
@@ -199,8 +200,8 @@ bool QuicTimeWaitListManager::ShouldSendResponse(int received_packet_count) {
 }
 
 void QuicTimeWaitListManager::SendPublicReset(
-    const IPEndPoint& server_address,
-    const IPEndPoint& client_address,
+    const QuicSocketAddress& server_address,
+    const QuicSocketAddress& client_address,
     QuicConnectionId connection_id,
     QuicPacketNumber rejected_packet_number) {
   QuicPublicResetPacket packet;
@@ -239,8 +240,8 @@ bool QuicTimeWaitListManager::WriteToWire(QueuedPacket* queued_packet) {
   }
   WriteResult result = writer_->WritePacket(
       queued_packet->packet()->data(), queued_packet->packet()->length(),
-      queued_packet->server_address().address(),
-      queued_packet->client_address(), nullptr);
+      queued_packet->server_address().host(), queued_packet->client_address(),
+      nullptr);
   if (result.status == WRITE_STATUS_BLOCKED) {
     // If blocked and unbuffered, return false to retry sending.
     DCHECK(writer_->IsWriteBlocked());

@@ -11,16 +11,14 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 
 namespace net {
 
 class QuicCryptoStream;
-class QuicHeadersStream;
 class QuicSession;
-class QuicSpdyStream;
 class QuicStream;
 
 namespace test {

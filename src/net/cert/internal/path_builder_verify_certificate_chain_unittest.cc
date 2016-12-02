@@ -37,9 +37,7 @@ class PathBuilderDelegate {
                                  time, &result);
     path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
 
-    CompletionStatus rv = path_builder.Run(base::Closure());
-    EXPECT_EQ(CompletionStatus::SYNC, rv);
-
+    path_builder.Run();
     EXPECT_EQ(expected_result, result.HasValidPath());
   }
 };

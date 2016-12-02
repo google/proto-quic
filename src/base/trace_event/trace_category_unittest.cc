@@ -7,6 +7,8 @@
 #include <memory>
 
 #include "base/bind.h"
+#include "base/lazy_instance.h"
+#include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "base/trace_event/category_registry.h"
@@ -33,7 +35,15 @@ class TraceCategoryTest : public testing::Test {
   void TearDown() override { CategoryRegistry::ResetForTesting(); }
 
   static bool GetOrCreateCategoryByName(const char* name, TraceCategory** cat) {
-    return CategoryRegistry::GetOrCreateCategoryByName(name, cat);
+    static LazyInstance<Lock>::Leaky g_lock = LAZY_INSTANCE_INITIALIZER;
+    bool is_new_cat = false;
+    *cat = CategoryRegistry::GetCategoryByName(name);
+    if (!*cat) {
+      AutoLock lock(g_lock.Get());
+      is_new_cat = CategoryRegistry::GetOrCreateCategoryLocked(
+          name, [](TraceCategory*) {}, cat);
+    }
+    return is_new_cat;
   };
 
   static CategoryRegistry::Range GetAllCategories() {
@@ -60,7 +70,7 @@ TEST_F(TraceCategoryTest, Basic) {
   ASSERT_EQ(CategoryRegistry::kCategoryMetadata, cat_meta);
 
   TraceCategory* cat_1 = nullptr;
-  ASSERT_TRUE(GetOrCreateCategoryByName("__test_ab", &cat_1));
+  ASSERT_TRUE(GetOrCreateCategoryByName("__test_basic_ab", &cat_1));
   ASSERT_FALSE(cat_1->is_enabled());
   ASSERT_EQ(0u, cat_1->enabled_filters());
   cat_1->set_state_flag(TraceCategory::ENABLED_FOR_RECORDING);
@@ -79,16 +89,17 @@ TEST_F(TraceCategoryTest, Basic) {
   ASSERT_TRUE(cat_1->is_enabled());
 
   TraceCategory* cat_2 = nullptr;
-  ASSERT_TRUE(GetOrCreateCategoryByName("__test_a", &cat_2));
+  ASSERT_TRUE(GetOrCreateCategoryByName("__test_basic_a", &cat_2));
   ASSERT_FALSE(cat_2->is_enabled());
   cat_2->set_state_flag(TraceCategory::ENABLED_FOR_RECORDING);
 
   TraceCategory* cat_2_copy = nullptr;
-  ASSERT_FALSE(GetOrCreateCategoryByName("__test_a", &cat_2_copy));
+  ASSERT_FALSE(GetOrCreateCategoryByName("__test_basic_a", &cat_2_copy));
   ASSERT_EQ(cat_2, cat_2_copy);
 
   TraceCategory* cat_3 = nullptr;
-  ASSERT_TRUE(GetOrCreateCategoryByName("__test_ab,__test_a", &cat_3));
+  ASSERT_TRUE(
+      GetOrCreateCategoryByName("__test_basic_ab,__test_basic_a", &cat_3));
   ASSERT_FALSE(cat_3->is_enabled());
   ASSERT_EQ(0u, cat_3->enabled_filters());
 
@@ -97,7 +108,7 @@ TEST_F(TraceCategoryTest, Basic) {
     if (strcmp(cat.name(), kMetadataName) == 0)
       ASSERT_TRUE(CategoryRegistry::IsBuiltinCategory(&cat));
 
-    if (strncmp(cat.name(), "__test", 6) == 0) {
+    if (strncmp(cat.name(), "__test_basic_", 13) == 0) {
       ASSERT_FALSE(CategoryRegistry::IsBuiltinCategory(&cat));
       num_test_categories_seen++;
     }

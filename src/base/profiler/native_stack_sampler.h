@@ -21,12 +21,22 @@ class NativeStackSamplerTestDelegate;
 // given thread.
 class NativeStackSampler {
  public:
+  // The callback type used to add annotations to a sample during collection.
+  // This is passed to the native sampler to be applied at the most appropriate
+  // time. It is a simple function-pointer because the generated code must be
+  // completely predictable and do nothing that could acquire a mutex; a
+  // Callback object is code outside the control of this object and could,
+  // for example, acquire a mutex as part of allocating memory for a LOG
+  // message.
+  using AnnotateCallback = void (*)(StackSamplingProfiler::Sample*);
+
   virtual ~NativeStackSampler();
 
   // Creates a stack sampler that records samples for |thread_handle|. Returns
   // null if this platform does not support stack sampling.
   static std::unique_ptr<NativeStackSampler> Create(
       PlatformThreadId thread_id,
+      AnnotateCallback annotator,
       NativeStackSamplerTestDelegate* test_delegate);
 
   // The following functions are all called on the SamplingThread (not the

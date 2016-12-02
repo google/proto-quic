@@ -27,7 +27,6 @@
 
 namespace net {
 
-struct HttpRequestInfo;
 class QuicChromiumAlarmFactory;
 class QuicChromiumConnectionHelper;
 class UDPClientSocket;
@@ -61,14 +60,14 @@ class QuicSimpleClient : public QuicClientBase,
                 IPEndPoint peer_address) override;
 
   // From QuicClientBase
-  IPEndPoint GetLatestClientAddress() const override;
+  QuicSocketAddress GetLatestClientAddress() const override;
 
  protected:
   // From QuicClientBase
   QuicPacketWriter* CreateQuicPacketWriter() override;
   void RunEventLoop() override;
-  bool CreateUDPSocketAndBind(IPEndPoint server_address,
-                              IPAddress bind_to_address,
+  bool CreateUDPSocketAndBind(QuicSocketAddress server_address,
+                              QuicIpAddress bind_to_address,
                               int bind_to_port) override;
   void CleanUpAllUDPSockets() override;
 

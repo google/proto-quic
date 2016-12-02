@@ -139,7 +139,7 @@ chromium_recommended="Chromium - Recommended"''')
     output = self.GetOutput(grd, 'fr', {'_google_chrome' : '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
@@ -156,7 +156,7 @@ chromium_recommended="Chromium - Recommended"''')
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -176,7 +176,7 @@ chromium_recommended="Chromium - Recommended"''')
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.12"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 MainPolicy_Policy="Caption of main."
@@ -213,14 +213,14 @@ MainPolicy_Explain="Description of main."''')
     output = self.GetOutput(grd, 'fr', {'_google_chrome' : '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -240,7 +240,7 @@ MainPolicy_Explain="Description of main."''')
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.12"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 MainPolicy_Policy="Caption of main."
@@ -431,7 +431,7 @@ IntPolicy_Part="Caption of policy."
     output = self.GetOutput(grd, 'fr', {'_google_chrome': '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
@@ -453,7 +453,7 @@ IntPolicy_Part="Caption of policy."
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -478,7 +478,7 @@ IntPolicy_Part="Caption of policy."
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.14"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 EnumPolicy_Policy="Caption of policy."
@@ -522,7 +522,7 @@ ProxyServerAutoDetect_DropDown="Option2"
     output = self.GetOutput(grd, 'fr', {'_google_chrome': '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
@@ -544,7 +544,7 @@ ProxyServerAutoDetect_DropDown="Option2"
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -569,7 +569,7 @@ ProxyServerAutoDetect_DropDown="Option2"
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.14"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 EnumPolicy_Policy="Caption of policy."
@@ -883,7 +883,7 @@ chromium_recommended="Chromium - Recommended"
     output = self.GetOutput(grd, 'fr', {'_google_chrome' : '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
@@ -900,7 +900,7 @@ chromium_recommended="Chromium - Recommended"
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -910,7 +910,7 @@ chromium_recommended="Chromium - Recommended"
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.12"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 MainPolicy_Policy="Caption of main."
@@ -1065,7 +1065,7 @@ Policy2_Part="Caption of policy2."
     output = self.GetOutput(grd, 'fr', {'_google_chrome': '1'}, 'adm', 'en')
     expected_output = self.ConstructOutput(
         ['MACHINE', 'USER'], '''
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome
       KEYNAME "Software\\Policies\\Google\\Chrome"
 
@@ -1100,7 +1100,7 @@ Policy2_Part="Caption of policy2."
     END CATEGORY
   END CATEGORY
 
-  CATEGORY !!google
+  CATEGORY !!Google:Cat_Google
     CATEGORY !!googlechrome_recommended
       KEYNAME "Software\\Policies\\Google\\Chrome\\Recommended"
 
@@ -1110,7 +1110,7 @@ Policy2_Part="Caption of policy2."
 
 ''', '''[Strings]
 SUPPORTED_WINXPSP2="At least Windows 3.14"
-google="Google"
+Google:Cat_Google="Google"
 googlechrome="Google Chrome"
 googlechrome_recommended="Google Chrome - Recommended"
 EnumPolicy_A_Policy="Caption of policy A."

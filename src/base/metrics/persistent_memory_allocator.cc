@@ -295,6 +295,14 @@ PersistentMemoryAllocator::PersistentMemoryAllocator(Memory memory,
       corrupt_(0),
       allocs_histogram_(nullptr),
       used_histogram_(nullptr) {
+  // These asserts ensure that the structures are 32/64-bit agnostic and meet
+  // all the requirements of use within the allocator. They access private
+  // definitions and so cannot be moved to the global scope.
+  static_assert(sizeof(PersistentMemoryAllocator::BlockHeader) == 16,
+                "struct is not portable across different natural word widths");
+  static_assert(sizeof(PersistentMemoryAllocator::SharedMetadata) == 56,
+                "struct is not portable across different natural word widths");
+
   static_assert(sizeof(BlockHeader) % kAllocAlignment == 0,
                 "BlockHeader is not a multiple of kAllocAlignment");
   static_assert(sizeof(SharedMetadata) % kAllocAlignment == 0,
@@ -360,7 +368,7 @@ PersistentMemoryAllocator::PersistentMemoryAllocator(Memory memory,
     if (!name.empty()) {
       const size_t name_length = name.length() + 1;
       shared_meta()->name = Allocate(name_length, 0);
-      char* name_cstr = GetAsObject<char>(shared_meta()->name, 0);
+      char* name_cstr = GetAsArray<char>(shared_meta()->name, 0, name_length);
       if (name_cstr)
         memcpy(name_cstr, name.data(), name.length());
     }
@@ -408,7 +416,8 @@ uint64_t PersistentMemoryAllocator::Id() const {
 
 const char* PersistentMemoryAllocator::Name() const {
   Reference name_ref = shared_meta()->name;
-  const char* name_cstr = GetAsObject<char>(name_ref, 0);
+  const char* name_cstr =
+      GetAsArray<char>(name_ref, 0, PersistentMemoryAllocator::kSizeAny);
   if (!name_cstr)
     return "";
 
@@ -442,6 +451,24 @@ void PersistentMemoryAllocator::CreateTrackingHistograms(
 size_t PersistentMemoryAllocator::used() const {
   return std::min(shared_meta()->freeptr.load(std::memory_order_relaxed),
                   mem_size_);
+}
+
+PersistentMemoryAllocator::Reference PersistentMemoryAllocator::GetAsReference(
+    const void* memory,
+    uint32_t type_id) const {
+  uintptr_t address = reinterpret_cast<uintptr_t>(memory);
+  if (address < reinterpret_cast<uintptr_t>(mem_base_))
+    return kReferenceNull;
+
+  uintptr_t offset = address - reinterpret_cast<uintptr_t>(mem_base_);
+  if (offset >= mem_size_ || offset < sizeof(BlockHeader))
+    return kReferenceNull;
+
+  Reference ref = static_cast<Reference>(offset) - sizeof(BlockHeader);
+  if (!GetBlockData(ref, type_id, kSizeAny))
+    return kReferenceNull;
+
+  return ref;
 }
 
 size_t PersistentMemoryAllocator::GetAllocSize(Reference ref) const {

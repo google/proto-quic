@@ -69,6 +69,14 @@ class ADMXWriter(xml_formatted_writer.XMLFormattedWriter):
       'namespace': namespace,
     }
     self.AddElement(policy_namespaces_elem, 'target', attributes)
+    if 'admx_using_namespaces' in self.config:
+      prefix_namespace_map = self.config['admx_using_namespaces']
+      for prefix in prefix_namespace_map:
+        attributes = {
+          'prefix': prefix,
+          'namespace': prefix_namespace_map[prefix],
+        }
+        self.AddElement(policy_namespaces_elem, 'using', attributes)
     attributes = {
       'prefix': 'windows',
       'namespace': 'Microsoft.Policies.Windows',
@@ -116,24 +124,26 @@ class ADMXWriter(xml_formatted_writer.XMLFormattedWriter):
     element:
 
     <categories>
-      <category displayName="$(string.google)" name="google"/>
       <category displayName="$(string.googlechrome)" name="googlechrome">
-        <parentCategory ref="google"/>
+        <parentCategory ref="Google:Cat_Google"/>
       </category>
     </categories>
 
     Args:
       categories_path: The categories path e.g. ['google', 'googlechrome']. For
-        each level in the path a "category" element will be generated. Except
-        for the root level, each level refers to its parent. Since the root
-        level category has no parent it does not require a parent reference.
+        each level in the path a "category" element will be generated, unless
+        the level contains a ':', in which case it is treated as external
+        references and no element is generated. Except for the root level, each
+        level refers to its parent. Since the root level category has no parent
+        it does not require a parent reference.
     '''
     category_name = None
     for category in categories:
       parent_category_name = category_name
       category_name = category
-      self._AddCategory(self._categories_elem, category_name,
-                        self._AdmlString(category_name), parent_category_name)
+      if (":" not in category_name):
+        self._AddCategory(self._categories_elem, category_name,
+                          self._AdmlString(category_name), parent_category_name)
 
   def _AddSupportedOn(self, parent, supported_os):
     '''Generates the "supportedOn" ADMX element and adds it to the passed

@@ -73,12 +73,9 @@ class SessionOpeningDelegate : public SpdyStream::Delegate {
 
   ~SessionOpeningDelegate() override {}
 
-  void OnRequestHeadersSent() override {}
+  void OnHeadersSent() override {}
 
-  SpdyResponseHeadersStatus OnResponseHeadersUpdated(
-      const SpdyHeaderBlock& response_headers) override {
-    return RESPONSE_HEADERS_ARE_COMPLETE;
-  }
+  void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override {}
 
   void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) override {}
 

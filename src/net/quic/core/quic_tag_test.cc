@@ -22,6 +22,16 @@ TEST(QuicTagTest, TagToString) {
   EXPECT_EQ("525092931", QuicTagToString(MakeQuicTag('C', 'H', 'L', '\x1f')));
 }
 
+TEST(QuicTagTest, MakeQuicTag) {
+  QuicTag tag = MakeQuicTag('A', 'B', 'C', 'D');
+  char bytes[4];
+  memcpy(bytes, &tag, 4);
+  EXPECT_EQ('A', bytes[0]);
+  EXPECT_EQ('B', bytes[1]);
+  EXPECT_EQ('C', bytes[2]);
+  EXPECT_EQ('D', bytes[3]);
+}
+
 }  // namespace
 }  // namespace test
 }  // namespace net

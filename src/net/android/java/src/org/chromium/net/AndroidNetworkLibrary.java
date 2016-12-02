@@ -4,14 +4,18 @@
 
 package org.chromium.net;
 
+import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.security.KeyChain;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -190,6 +194,31 @@ class AndroidNetworkLibrary {
         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
         if (networkInfo == null) return false; // No active network.
         return networkInfo.isRoaming();
+    }
+
+    /**
+     * Returns true if the system's captive portal probe was blocked for the current default data
+     * network. The method will return false if the captive portal probe was not blocked, the login
+     * process to the captive portal has been successfully completed, or if the captive portal
+     * status can't be determined. Requires ACCESS_NETWORK_STATE permission. Only available on
+     * Android Marshmallow and later versions. Returns false on earlier versions.
+     */
+    @TargetApi(Build.VERSION_CODES.M)
+    @CalledByNative
+    private static boolean getIsCaptivePortal(Context context) {
+        // NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL is only available on Marshmallow and
+        // later versions.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false;
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) return false;
+
+        Network network = connectivityManager.getActiveNetwork();
+        if (network == null) return false;
+
+        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+        return capabilities != null
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL);
     }
 
     /**

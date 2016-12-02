@@ -12,12 +12,12 @@ from devil.android import device_errors
 from devil.android import flag_changer
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
+from pylib.android import logdog_logcat_monitor
 from pylib.base import base_test_result
 from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 import tombstones
-
 
 _TAG = 'test_runner_py'
 
@@ -245,10 +245,22 @@ class LocalDeviceInstrumentationTestRun(
       device.RunShellCommand(
           ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
           check_return=True)
+      logcat_url = None
       time_ms = lambda: int(time.time() * 1e3)
       start_ms = time_ms()
-      output = device.StartInstrumentation(
-          target, raw=True, extras=extras, timeout=timeout, retries=0)
+      if self._test_instance.should_save_logcat:
+        stream_name = 'logcat_%s_%s_%s' % (
+            test_name.replace('#', '.'),
+            time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+            device.serial)
+        with logdog_logcat_monitor.LogdogLogcatMonitor(
+            device.adb, stream_name) as logmon:
+          output = device.StartInstrumentation(
+              target, raw=True, extras=extras, timeout=timeout, retries=0)
+        logcat_url = logmon.GetLogcatURL()
+      else:
+        output = device.StartInstrumentation(
+            target, raw=True, extras=extras, timeout=timeout, retries=0)
     finally:
       device.RunShellCommand(
           ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
@@ -266,6 +278,8 @@ class LocalDeviceInstrumentationTestRun(
         self._test_instance.ParseAmInstrumentRawOutput(output))
     results = self._test_instance.GenerateTestResults(
         result_code, result_bundle, statuses, start_ms, duration_ms)
+    for result in results:
+      result.SetLogcatUrl(logcat_url)
 
     # Update the result name if the test used flags.
     if flags:
@@ -335,7 +349,7 @@ class LocalDeviceInstrumentationTestRun(
                 include_stack_symbols=False,
                 wipe_tombstones=True))
           result.SetTombstones(resolved_tombstones)
-    return results
+    return results, None
 
   #override
   def _ShouldRetry(self, test):

@@ -1237,16 +1237,14 @@ $L$SEH_begin_ecp_nistz256_point_add:
 	mov	rsi,rdx
 	movdqa	XMMWORD[384+rsp],xmm0
 	movdqa	XMMWORD[(384+16)+rsp],xmm1
-	por	xmm1,xmm0
 	movdqa	XMMWORD[416+rsp],xmm2
 	movdqa	XMMWORD[(416+16)+rsp],xmm3
-	por	xmm3,xmm2
 	movdqa	XMMWORD[448+rsp],xmm4
 	movdqa	XMMWORD[(448+16)+rsp],xmm5
-	por	xmm3,xmm1
+	por	xmm5,xmm4
 
 	movdqu	xmm0,XMMWORD[rsi]
-	pshufd	xmm5,xmm3,0xb1
+	pshufd	xmm3,xmm5,0xb1
 	movdqu	xmm1,XMMWORD[16+rsi]
 	movdqu	xmm2,XMMWORD[32+rsi]
 	por	xmm5,xmm3
@@ -1258,14 +1256,14 @@ $L$SEH_begin_ecp_nistz256_point_add:
 	movdqa	XMMWORD[480+rsp],xmm0
 	pshufd	xmm4,xmm5,0x1e
 	movdqa	XMMWORD[(480+16)+rsp],xmm1
-	por	xmm1,xmm0
-DB	102,72,15,110,199
+	movdqu	xmm0,XMMWORD[64+rsi]
+	movdqu	xmm1,XMMWORD[80+rsi]
 	movdqa	XMMWORD[512+rsp],xmm2
 	movdqa	XMMWORD[(512+16)+rsp],xmm3
-	por	xmm3,xmm2
 	por	xmm5,xmm4
 	pxor	xmm4,xmm4
-	por	xmm3,xmm1
+	por	xmm1,xmm0
+DB	102,72,15,110,199
 
 	lea	rsi,[((64-0))+rsi]
 	mov	QWORD[((544+0))+rsp],rax
@@ -1276,8 +1274,8 @@ DB	102,72,15,110,199
 	call	__ecp_nistz256_sqr_montq
 
 	pcmpeqd	xmm5,xmm4
-	pshufd	xmm4,xmm3,0xb1
-	por	xmm4,xmm3
+	pshufd	xmm4,xmm1,0xb1
+	por	xmm4,xmm1
 	pshufd	xmm5,xmm5,0
 	pshufd	xmm3,xmm4,0x1e
 	por	xmm4,xmm3
@@ -1649,16 +1647,14 @@ $L$SEH_begin_ecp_nistz256_point_add_affine:
 	mov	r8,QWORD[((64+24))+rsi]
 	movdqa	XMMWORD[320+rsp],xmm0
 	movdqa	XMMWORD[(320+16)+rsp],xmm1
-	por	xmm1,xmm0
 	movdqa	XMMWORD[352+rsp],xmm2
 	movdqa	XMMWORD[(352+16)+rsp],xmm3
-	por	xmm3,xmm2
 	movdqa	XMMWORD[384+rsp],xmm4
 	movdqa	XMMWORD[(384+16)+rsp],xmm5
-	por	xmm3,xmm1
+	por	xmm5,xmm4
 
 	movdqu	xmm0,XMMWORD[rbx]
-	pshufd	xmm5,xmm3,0xb1
+	pshufd	xmm3,xmm5,0xb1
 	movdqu	xmm1,XMMWORD[16+rbx]
 	movdqu	xmm2,XMMWORD[32+rbx]
 	por	xmm5,xmm3

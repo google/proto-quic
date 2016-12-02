@@ -75,7 +75,6 @@ namespace net {
 
 class CertErrorParams;
 class CertErrorScoper;
-class ParsedCertificate;
 
 // The type of a particular CertErrorNode.
 enum class CertErrorNodeType {

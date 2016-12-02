@@ -84,6 +84,7 @@ URLRequestFailedJob::URLRequestFailedJob(URLRequest* request,
     : URLRequestJob(request, network_delegate),
       phase_(phase),
       net_error_(net_error),
+      total_received_bytes_(0),
       weak_factory_(this) {
   CHECK_GE(phase, URLRequestFailedJob::FailurePhase::START);
   CHECK_LE(phase, URLRequestFailedJob::FailurePhase::READ_ASYNC);
@@ -129,6 +130,10 @@ void URLRequestFailedJob::PopulateNetErrorDetails(
   if (net_error_ == ERR_QUIC_PROTOCOL_ERROR) {
     details->quic_connection_error = QUIC_INTERNAL_ERROR;
   }
+}
+
+int64_t URLRequestFailedJob::GetTotalReceivedBytes() const {
+  return total_received_bytes_;
 }
 
 // static
@@ -190,7 +195,9 @@ void URLRequestFailedJob::StartAsync() {
     }
     return;
   }
-  response_info_.headers = new net::HttpResponseHeaders("HTTP/1.1 200 OK");
+  const std::string headers = "HTTP/1.1 200 OK";
+  response_info_.headers = new net::HttpResponseHeaders(headers);
+  total_received_bytes_ = headers.size();
   NotifyHeadersComplete();
 }
 

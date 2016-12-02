@@ -20,7 +20,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
@@ -33,17 +33,15 @@
 
 // TODO(rtenneti): Add support for MMSG_MORE.
 #define MMSG_MORE 0
-
 using base::StringPiece;
 using base::StringToInt;
 using std::string;
-using std::vector;
 
 namespace net {
 
 const int kEpollFlags = EPOLLIN | EPOLLOUT | EPOLLET;
 
-QuicClient::QuicClient(IPEndPoint server_address,
+QuicClient::QuicClient(QuicSocketAddress server_address,
                        const QuicServerId& server_id,
                        const QuicVersionVector& supported_versions,
                        EpollServer* epoll_server,
@@ -55,7 +53,7 @@ QuicClient::QuicClient(IPEndPoint server_address,
                  epoll_server,
                  std::move(proof_verifier)) {}
 
-QuicClient::QuicClient(IPEndPoint server_address,
+QuicClient::QuicClient(QuicSocketAddress server_address,
                        const QuicServerId& server_id,
                        const QuicVersionVector& supported_versions,
                        const QuicConfig& config,
@@ -85,8 +83,8 @@ QuicClient::~QuicClient() {
   CleanUpAllUDPSockets();
 }
 
-bool QuicClient::CreateUDPSocketAndBind(IPEndPoint server_address,
-                                        IPAddress bind_to_address,
+bool QuicClient::CreateUDPSocketAndBind(QuicSocketAddress server_address,
+                                        QuicIpAddress bind_to_address,
                                         int bind_to_port) {
   epoll_server_->set_timeout_in_us(50 * 1000);
 
@@ -96,29 +94,23 @@ bool QuicClient::CreateUDPSocketAndBind(IPEndPoint server_address,
     return false;
   }
 
-  IPEndPoint client_address;
-  if (bind_to_address.size() != 0) {
-    client_address = IPEndPoint(bind_to_address, bind_to_port);
-  } else if (server_address.GetSockAddrFamily() == AF_INET) {
-    client_address = IPEndPoint(IPAddress::IPv4AllZeros(), bind_to_port);
+  QuicSocketAddress client_address;
+  if (bind_to_address.IsInitialized()) {
+    client_address = QuicSocketAddress(bind_to_address, local_port());
+  } else if (server_address.host().address_family() == IpAddressFamily::IP_V4) {
+    client_address = QuicSocketAddress(QuicIpAddress::Any4(), bind_to_port);
   } else {
-    client_address = IPEndPoint(IPAddress::IPv6AllZeros(), bind_to_port);
+    client_address = QuicSocketAddress(QuicIpAddress::Any6(), bind_to_port);
   }
 
-  sockaddr_storage raw_addr;
-  socklen_t raw_addr_len = sizeof(raw_addr);
-  CHECK(client_address.ToSockAddr(reinterpret_cast<sockaddr*>(&raw_addr),
-                                  &raw_addr_len));
-  int rc =
-      bind(fd, reinterpret_cast<const sockaddr*>(&raw_addr), sizeof(raw_addr));
+  sockaddr_storage addr = client_address.generic_address();
+  int rc = bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
   if (rc < 0) {
     LOG(ERROR) << "Bind failed: " << strerror(errno);
     return false;
   }
 
-  SockaddrStorage storage;
-  if (getsockname(fd, storage.addr, &storage.addr_len) != 0 ||
-      !client_address.FromSockAddr(storage.addr, storage.addr_len)) {
+  if (client_address.FromSocket(fd) != 0) {
     LOG(ERROR) << "Unable to get self address.  Error: " << strerror(errno);
   }
 
@@ -134,7 +126,7 @@ void QuicClient::CleanUpUDPSocket(int fd) {
 }
 
 void QuicClient::CleanUpAllUDPSockets() {
-  for (std::pair<int, IPEndPoint> fd_address : fd_address_map_) {
+  for (std::pair<int, QuicSocketAddress> fd_address : fd_address_map_) {
     CleanUpUDPSocketImpl(fd_address.first);
   }
   fd_address_map_.clear();
@@ -178,9 +170,9 @@ QuicPacketWriter* QuicClient::CreateQuicPacketWriter() {
   return new QuicDefaultPacketWriter(GetLatestFD());
 }
 
-IPEndPoint QuicClient::GetLatestClientAddress() const {
+QuicSocketAddress QuicClient::GetLatestClientAddress() const {
   if (fd_address_map_.empty()) {
-    return IPEndPoint();
+    return QuicSocketAddress();
   }
 
   return fd_address_map_.back().second;
@@ -194,8 +186,8 @@ int QuicClient::GetLatestFD() const {
   return fd_address_map_.back().first;
 }
 
-void QuicClient::ProcessPacket(const IPEndPoint& self_address,
-                               const IPEndPoint& peer_address,
+void QuicClient::ProcessPacket(const QuicSocketAddress& self_address,
+                               const QuicSocketAddress& peer_address,
                                const QuicReceivedPacket& packet) {
   session()->ProcessUdpPacket(self_address, peer_address, packet);
 }

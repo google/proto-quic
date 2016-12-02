@@ -21,7 +21,7 @@
 #include "net/quic/core/congestion_control/pacing_sender.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 
@@ -120,7 +120,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   // Retrieves the next pending retransmission.  You must ensure that
   // there are pending retransmissions prior to calling this function.
-  PendingRetransmission NextPendingRetransmission() override;
+  QuicPendingRetransmission NextPendingRetransmission() override;
 
   bool HasUnackedPackets() const override;
 
@@ -208,6 +208,8 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
   void OnApplicationLimited() override;
 
+  const SendAlgorithmInterface* GetSendAlgorithm() const override;
+
  private:
   friend class test::QuicConnectionPeer;
   friend class test::QuicSentPacketManagerPeer;
@@ -257,7 +259,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Returns the newest transmission associated with a packet.
   QuicPacketNumber GetNewestRetransmission(
       QuicPacketNumber packet_number,
-      const TransmissionInfo& transmission_info) const;
+      const QuicTransmissionInfo& transmission_info) const;
 
   // Update the RTT if the ack is for the largest acked packet number.
   // Returns true if the rtt was updated.
@@ -291,7 +293,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // Removes the retransmittability and in flight properties from the packet at
   // |info| due to receipt by the peer.
   void MarkPacketHandled(QuicPacketNumber packet_number,
-                         TransmissionInfo* info,
+                         QuicTransmissionInfo* info,
                          QuicTime::Delta ack_delay_time);
 
   // Request that |packet_number| be retransmitted after the other pending
@@ -300,20 +302,21 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   void MarkForRetransmission(QuicPacketNumber packet_number,
                              TransmissionType transmission_type);
 
-  // Notify observers that packet with TransmissionInfo |info| is a spurious
+  // Notify observers that packet with QuicTransmissionInfo |info| is a spurious
   // retransmission. It is caller's responsibility to guarantee the packet with
-  // TransmissionInfo |info| is a spurious retransmission before calling this
-  // function.
-  void RecordOneSpuriousRetransmission(const TransmissionInfo& info);
+  // QuicTransmissionInfo |info| is a spurious retransmission before calling
+  // this function.
+  void RecordOneSpuriousRetransmission(const QuicTransmissionInfo& info);
 
-  // Notify observers about spurious retransmits of packet with TransmissionInfo
-  // |info|.
-  void RecordSpuriousRetransmissions(const TransmissionInfo& info,
+  // Notify observers about spurious retransmits of packet with
+  // QuicTransmissionInfo |info|.
+  void RecordSpuriousRetransmissions(const QuicTransmissionInfo& info,
                                      QuicPacketNumber acked_packet_number);
 
-  // Returns mutable TransmissionInfo associated with |packet_number|, which
+  // Returns mutable QuicTransmissionInfo associated with |packet_number|, which
   // must be unacked.
-  TransmissionInfo* GetMutableTransmissionInfo(QuicPacketNumber packet_number);
+  QuicTransmissionInfo* GetMutableTransmissionInfo(
+      QuicPacketNumber packet_number);
 
   // Remove any packets no longer needed for retransmission, congestion, or
   // RTT measurement purposes.

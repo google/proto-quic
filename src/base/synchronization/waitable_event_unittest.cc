@@ -136,13 +136,7 @@ TEST(WaitableEventTest, WaitMany) {
 
 // Tests that using TimeDelta::Max() on TimedWait() is not the same as passing
 // a timeout of 0. (crbug.com/465948)
-#if defined(OS_POSIX)
-// crbug.com/465948 not fixed yet.
-#define MAYBE_TimedWait DISABLED_TimedWait
-#else
-#define MAYBE_TimedWait TimedWait
-#endif
-TEST(WaitableEventTest, MAYBE_TimedWait) {
+TEST(WaitableEventTest, TimedWait) {
   WaitableEvent* ev =
       new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
                         WaitableEvent::InitialState::NOT_SIGNALED);
@@ -153,9 +147,56 @@ TEST(WaitableEventTest, MAYBE_TimedWait) {
   TimeTicks start = TimeTicks::Now();
   PlatformThread::Create(0, &signaler, &thread);
 
-  ev->TimedWait(TimeDelta::Max());
+  EXPECT_TRUE(ev->TimedWait(TimeDelta::Max()));
   EXPECT_GE(TimeTicks::Now() - start, thread_delay);
   delete ev;
+
+  PlatformThread::Join(thread);
+}
+
+// Tests that a sub-ms TimedWait doesn't time out promptly.
+TEST(WaitableEventTest, SubMsTimedWait) {
+  WaitableEvent ev(WaitableEvent::ResetPolicy::AUTOMATIC,
+                   WaitableEvent::InitialState::NOT_SIGNALED);
+
+  TimeDelta delay = TimeDelta::FromMicroseconds(900);
+  TimeTicks start_time = TimeTicks::Now();
+  ev.TimedWait(delay);
+  EXPECT_GE(TimeTicks::Now() - start_time, delay);
+}
+
+// Tests that TimedWaitUntil can be safely used with various end_time deadline
+// values.
+TEST(WaitableEventTest, TimedWaitUntil) {
+  WaitableEvent ev(WaitableEvent::ResetPolicy::AUTOMATIC,
+                   WaitableEvent::InitialState::NOT_SIGNALED);
+
+  TimeTicks start_time(TimeTicks::Now());
+  TimeDelta delay = TimeDelta::FromMilliseconds(10);
+
+  // Should be OK to wait for the current time or time in the past.
+  // That should end promptly and be equivalent to IsSignalled.
+  EXPECT_FALSE(ev.TimedWaitUntil(start_time));
+  EXPECT_FALSE(ev.TimedWaitUntil(start_time - delay));
+
+  // Should be OK to wait for zero TimeTicks().
+  EXPECT_FALSE(ev.TimedWaitUntil(TimeTicks()));
+
+  // Waiting for a time in the future shouldn't end before the deadline
+  // if the event isn't signalled.
+  EXPECT_FALSE(ev.TimedWaitUntil(start_time + delay));
+  EXPECT_GE(TimeTicks::Now() - start_time, delay);
+
+  // Test that passing TimeTicks::Max to TimedWaitUntil is valid and isn't
+  // the same as passing TimeTicks(). Also verifies that signaling event
+  // ends the wait promptly.
+  WaitableEventSignaler signaler(delay, &ev);
+  PlatformThreadHandle thread;
+  start_time = TimeTicks::Now();
+  PlatformThread::Create(0, &signaler, &thread);
+
+  EXPECT_TRUE(ev.TimedWaitUntil(TimeTicks::Max()));
+  EXPECT_GE(TimeTicks::Now() - start_time, delay);
 
   PlatformThread::Join(thread);
 }

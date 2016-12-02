@@ -15,7 +15,7 @@ FakeProofSource::FakeProofSource()
 
 FakeProofSource::~FakeProofSource() {}
 
-FakeProofSource::Params::Params(const IPAddress& server_ip,
+FakeProofSource::Params::Params(const QuicIpAddress& server_ip,
                                 std::string hostname,
                                 std::string server_config,
                                 QuicVersion quic_version,
@@ -41,7 +41,7 @@ void FakeProofSource::Activate() {
   active_ = true;
 }
 
-bool FakeProofSource::GetProof(const IPAddress& server_ip,
+bool FakeProofSource::GetProof(const QuicIpAddress& server_ip,
                                const string& hostname,
                                const string& server_config,
                                QuicVersion quic_version,
@@ -56,7 +56,7 @@ bool FakeProofSource::GetProof(const IPAddress& server_ip,
 }
 
 void FakeProofSource::GetProof(
-    const IPAddress& server_ip,
+    const QuicIpAddress& server_ip,
     const string& hostname,
     const string& server_config,
     QuicVersion quic_version,

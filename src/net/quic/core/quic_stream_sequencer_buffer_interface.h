@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 #include "net/base/net_export.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 

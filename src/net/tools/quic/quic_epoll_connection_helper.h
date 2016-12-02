@@ -14,7 +14,7 @@
 #include "base/macros.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_packet_writer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_time.h"
 #include "net/tools/quic/quic_default_packet_writer.h"

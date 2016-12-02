@@ -27,7 +27,8 @@ class AndroidPolicyWriterUnittest(writer_unittest_common.WriterUnittestCommon):
       'name': '_policy_name',
       'caption': '_policy_caption',
       'desc': 'This is a long policy caption. More than one sentence '
-              'in a single line because it is very important.\nIgnore this.'
+              'in a single line because it is very important.\n'
+              'Second line, also important'
     }
     writer = android_policy_writer.GetWriter({})
     writer.Init()
@@ -38,7 +39,8 @@ class AndroidPolicyWriterUnittest(writer_unittest_common.WriterUnittestCommon):
         '<resources>'
           '<string name="_policy_nameTitle">_policy_caption</string>'
           '<string name="_policy_nameDesc">This is a long policy caption. More '
-              'than one sentence in a single line because it is very important.'
+              'than one sentence in a single line because it is very '
+              'important.\nSecond line, also important'
           '</string>'
         '</resources>')
 
@@ -47,7 +49,7 @@ class AndroidPolicyWriterUnittest(writer_unittest_common.WriterUnittestCommon):
     policy = {
       'name': '_policy_name',
       'caption': '_policy_caption',
-      'desc': '_policy_desc_first.\n_ignored_policy_desc',
+      'desc': '_policy_desc_first.\nadditional line',
       'items': [
         {
           'caption':'_caption1',
@@ -67,7 +69,8 @@ class AndroidPolicyWriterUnittest(writer_unittest_common.WriterUnittestCommon):
         writer._resources.toxml(),
         '<resources>'
           '<string name="_policy_nameTitle">_policy_caption</string>'
-          '<string name="_policy_nameDesc">_policy_desc_first.</string>'
+          '<string name="_policy_nameDesc">_policy_desc_first.\n'
+          'additional line</string>'
           '<string-array name="_policy_nameEntries">'
             '<item>_caption1</item>'
             '<item>_caption2</item>'

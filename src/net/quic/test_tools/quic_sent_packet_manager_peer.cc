@@ -8,7 +8,7 @@
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 
 namespace net {

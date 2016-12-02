@@ -24,7 +24,6 @@ class StreamSocket;
 namespace test_server {
 
 class HttpConnection;
-class HttpResponse;
 
 // Calblack called when a request is parsed. Response should be sent
 // using HttpConnection::SendResponse() on the |connection| argument.

@@ -5,6 +5,7 @@
 from page_sets import page_cycler_story
 from telemetry.page import cache_temperature as cache_temperature_module
 from telemetry.page import shared_page_state
+from telemetry.page import traffic_setting as traffic_setting_module
 from telemetry import story
 
 
@@ -15,13 +16,16 @@ class LoadingMobileStorySet(story.StorySet):
   Design doc: https://docs.google.com/document/d/1QKlZIoURAxZk-brrXsKYZl9O8ieqXht3ogeF9yLNFCI/edit
   """
 
-  def __init__(self, cache_temperatures=None):
+  def __init__(self, cache_temperatures=None, traffic_settings=None):
     super(LoadingMobileStorySet, self).__init__(
         archive_data_file='data/loading_mobile.json',
         cloud_storage_bucket=story.PARTNER_BUCKET)
 
     if cache_temperatures is None:
       cache_temperatures = [cache_temperature_module.ANY]
+
+    if traffic_settings is None:
+      traffic_settings = [traffic_setting_module.NONE]
 
     self.AddStories(['global'], [
       'https://www.google.com/search?q=flower#q=flower+delivery',
@@ -60,7 +64,7 @@ class LoadingMobileStorySet(story.StorySet):
       'http://olx.co.id/iklan/iphone-6s-64-rose-gold-warna-favorite-IDiSdm5.html#5310a118c3;promoted',
       # pylint: disable=line-too-long
       'http://enquiry.indianrail.gov.in/mntes/MntesServlet?action=MainMenu&subAction=excep&excpType=EC',
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
     self.AddStories(['pwa'], [
       # pylint: disable=line-too-long
@@ -81,7 +85,7 @@ class LoadingMobileStorySet(story.StorySet):
       'https://jakearchibald.github.io/trained-to-thrill/',
       'https://townwork.net',
       'https://flipboard.com/topic/yoga',
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
     self.AddStories(['tough_ttfmp'], [
       'http://www.localmoxie.com',
@@ -89,7 +93,7 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.thairath.co.th',
       'http://www.hashocean.com',
       'http://www.163.com',
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
     self.AddStories(['easy_ttfmp'], [
       'http://www.slideshare.net',
@@ -97,7 +101,7 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.gsshop.com',
       'http://www.sbs.co.kr',
       'http://www.futura-sciences.com',
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
     self.AddStories(['tough_tti'], [
       'http://www.thestar.com.my',
@@ -105,7 +109,7 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.hongkiat.com',
       'http://www.ebs.in',
       'http://www.ibicn.com',
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
     self.AddStories(['easy_tti'], [
       'http://www.dramaq.com.tw',
@@ -113,11 +117,12 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.francetvinfo.fr',
       'http://www.gfk.com',
       'http://www.mlsmatrix.com'
-    ], cache_temperatures)
+    ], cache_temperatures, traffic_settings)
 
-  def AddStories(self, labels, urls, cache_temperatures):
+  def AddStories(self, labels, urls, cache_temperatures, traffic_settings):
     for url in urls:
       for temp in cache_temperatures:
-        self.AddStory(page_cycler_story.PageCyclerStory(url, self,
-            shared_page_state_class=shared_page_state.SharedMobilePageState,
-            cache_temperature=temp, labels=labels))
+        for traffic in traffic_settings:
+          self.AddStory(page_cycler_story.PageCyclerStory(url, self,
+              shared_page_state_class=shared_page_state.SharedMobilePageState,
+              cache_temperature=temp, traffic_setting=traffic, labels=labels))

@@ -17,11 +17,6 @@
 #include "net/base/sdch_problem_codes.h"
 #include "url/gurl.h"
 
-namespace base {
-class Clock;
-class Value;
-}
-
 namespace net {
 
 // Contains all information for an SDCH dictionary.  This class is intended

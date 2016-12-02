@@ -34,19 +34,13 @@
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packet_generator.h"
+#include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_utils.h"
 
 using base::StringPiece;
 using base::StringPrintf;
-using std::list;
-using std::make_pair;
-using std::max;
-using std::min;
-using std::numeric_limits;
-using std::set;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -82,11 +76,6 @@ const int kMessageTooBigErrorCode = ERR_MSG_TOO_BIG;
 bool Near(QuicPacketNumber a, QuicPacketNumber b) {
   QuicPacketNumber delta = (a > b) ? a - b : b - a;
   return delta <= kMaxPacketGap;
-}
-
-bool IsInitializedIPEndPoint(const IPEndPoint& address) {
-  return net::GetAddressFamily(address.address()) !=
-         net::ADDRESS_FAMILY_UNSPECIFIED;
 }
 
 // An alarm that is scheduled to send an ack if a timeout occurs.
@@ -183,7 +172,7 @@ class MtuDiscoveryAlarmDelegate : public QuicAlarm::Delegate {
   (perspective_ == Perspective::IS_SERVER ? "Server: " : "Client: ")
 
 QuicConnection::QuicConnection(QuicConnectionId connection_id,
-                               IPEndPoint address,
+                               QuicSocketAddress address,
                                QuicConnectionHelperInterface* helper,
                                QuicAlarmFactory* alarm_factory,
                                QuicPacketWriter* writer,
@@ -319,7 +308,7 @@ void QuicConnection::ClearQueuedPackets() {
     // Delete the buffer before calling ClearSerializedPacket, which sets
     // encrypted_buffer to nullptr.
     delete[] it->encrypted_buffer;
-    QuicUtils::ClearSerializedPacket(&(*it));
+    ClearSerializedPacket(&(*it));
   }
   queued_packets_.clear();
 }
@@ -1105,8 +1094,8 @@ void QuicConnection::SendVersionNegotiationPacket() {
       packet_generator_.SerializeVersionNegotiationPacket(
           framer_.supported_versions()));
   WriteResult result = writer_->WritePacket(
-      version_packet->data(), version_packet->length(),
-      self_address().address(), peer_address(), per_packet_options_);
+      version_packet->data(), version_packet->length(), self_address().host(),
+      peer_address(), per_packet_options_);
 
   if (result.status == WRITE_STATUS_ERROR) {
     OnWriteError(result.error_code);
@@ -1176,13 +1165,13 @@ void QuicConnection::SendRstStream(QuicStreamId id,
       ++packet_iterator;
       continue;
     }
-    QuicUtils::RemoveFramesForStream(retransmittable_frames, id);
+    RemoveFramesForStream(retransmittable_frames, id);
     if (!retransmittable_frames->empty()) {
       ++packet_iterator;
       continue;
     }
     delete[] packet_iterator->encrypted_buffer;
-    QuicUtils::ClearSerializedPacket(&(*packet_iterator));
+    ClearSerializedPacket(&(*packet_iterator));
     packet_iterator = queued_packets_.erase(packet_iterator);
   }
 }
@@ -1233,8 +1222,8 @@ const QuicConnectionStats& QuicConnection::GetStats() {
   return stats_;
 }
 
-void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
-                                      const IPEndPoint& peer_address,
+void QuicConnection::ProcessUdpPacket(const QuicSocketAddress& self_address,
+                                      const QuicSocketAddress& peer_address,
                                       const QuicReceivedPacket& packet) {
   if (!connected_) {
     return;
@@ -1247,10 +1236,10 @@ void QuicConnection::ProcessUdpPacket(const IPEndPoint& self_address,
 
   last_packet_destination_address_ = self_address;
   last_packet_source_address_ = peer_address;
-  if (!IsInitializedIPEndPoint(self_address_)) {
+  if (!self_address_.IsInitialized()) {
     self_address_ = last_packet_destination_address_;
   }
-  if (!IsInitializedIPEndPoint(peer_address_)) {
+  if (!peer_address_.IsInitialized()) {
     peer_address_ = last_packet_source_address_;
   }
 
@@ -1345,23 +1334,13 @@ void QuicConnection::WriteAndBundleAcksIfNotBlocked() {
 }
 
 bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
-  if (perspective_ == Perspective::IS_SERVER &&
-      IsInitializedIPEndPoint(self_address_) &&
-      IsInitializedIPEndPoint(last_packet_destination_address_) &&
-      (!(self_address_ == last_packet_destination_address_))) {
+  if (perspective_ == Perspective::IS_SERVER && self_address_.IsInitialized() &&
+      last_packet_destination_address_.IsInitialized() &&
+      self_address_ != last_packet_destination_address_) {
     // Allow change between pure IPv4 and equivalent mapped IPv4 address.
-    IPAddress self_ip = self_address_.address();
-    if (self_ip.IsIPv4MappedIPv6()) {
-      self_ip = ConvertIPv4MappedIPv6ToIPv4(self_ip);
-    }
-    IPAddress last_packet_destination_ip =
-        last_packet_destination_address_.address();
-    if (last_packet_destination_ip.IsIPv4MappedIPv6()) {
-      last_packet_destination_ip =
-          ConvertIPv4MappedIPv6ToIPv4(last_packet_destination_ip);
-    }
     if (self_address_.port() != last_packet_destination_address_.port() ||
-        self_ip != last_packet_destination_ip) {
+        self_address_.host().Normalized() !=
+            last_packet_destination_address_.host().Normalized()) {
       CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
                       "Self address migration is not supported at the server.",
                       ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -1449,7 +1428,7 @@ void QuicConnection::WriteQueuedPackets() {
   while (packet_iterator != queued_packets_.end() &&
          WritePacket(&(*packet_iterator))) {
     delete[] packet_iterator->encrypted_buffer;
-    QuicUtils::ClearSerializedPacket(&(*packet_iterator));
+    ClearSerializedPacket(&(*packet_iterator));
     packet_iterator = queued_packets_.erase(packet_iterator);
   }
 }
@@ -1458,7 +1437,7 @@ void QuicConnection::WritePendingRetransmissions() {
   // Keep writing as long as there's a pending retransmission which can be
   // written.
   while (sent_packet_manager_->HasPendingRetransmissions()) {
-    const PendingRetransmission pending =
+    const QuicPendingRetransmission pending =
         sent_packet_manager_->NextPendingRetransmission();
     if (!CanWrite(HAS_RETRANSMITTABLE_DATA)) {
       break;
@@ -1577,7 +1556,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
           new std::vector<std::unique_ptr<QuicEncryptedPacket>>);
     }
     // Copy the buffer so it's owned in the future.
-    char* buffer_copy = QuicUtils::CopyBuffer(*packet);
+    char* buffer_copy = CopyBuffer(*packet);
     termination_packets_->push_back(std::unique_ptr<QuicEncryptedPacket>(
         new QuicEncryptedPacket(buffer_copy, encrypted_length, true)));
     // This assures we won't try to write *forced* packets when blocked.
@@ -1606,7 +1585,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   // during the WritePacket below.
   QuicTime packet_send_time = clock_->Now();
   WriteResult result = writer_->WritePacket(
-      packet->encrypted_buffer, encrypted_length, self_address().address(),
+      packet->encrypted_buffer, encrypted_length, self_address().host(),
       peer_address(), per_packet_options_);
   if (result.error_code == ERR_IO_PENDING) {
     DCHECK_EQ(WRITE_STATUS_BLOCKED, result.status);
@@ -1638,9 +1617,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   if (result.status == WRITE_STATUS_ERROR) {
     OnWriteError(result.error_code);
     DLOG(ERROR) << ENDPOINT << "failed writing " << encrypted_length
-                << " from host " << (self_address().address().empty()
-                                         ? " empty address "
-                                         : self_address().ToStringWithoutPort())
+                << " from host " << self_address().host().ToString()
                 << " to address " << peer_address().ToString()
                 << " with error code " << result.error_code;
     return false;
@@ -1805,12 +1782,12 @@ void QuicConnection::SendOrQueuePacket(SerializedPacket* packet) {
   // it's written in sequence number order.
   if (!queued_packets_.empty() || !WritePacket(packet)) {
     // Take ownership of the underlying encrypted packet.
-    packet->encrypted_buffer = QuicUtils::CopyBuffer(*packet);
+    packet->encrypted_buffer = CopyBuffer(*packet);
     queued_packets_.push_back(*packet);
     packet->retransmittable_frames.clear();
   }
 
-  QuicUtils::ClearSerializedPacket(packet);
+  ClearSerializedPacket(packet);
 }
 
 void QuicConnection::OnPingTimeout() {
@@ -2023,6 +2000,8 @@ void QuicConnection::TearDownLocalConnectionState(
 }
 
 void QuicConnection::CancelAllAlarms() {
+  DVLOG(1) << "Cancelling all QuicConnection alarms.";
+
   ack_alarm_->Cancel();
   ping_alarm_->Cancel();
   resume_writes_alarm_->Cancel();
@@ -2104,7 +2083,7 @@ void QuicConnection::SetNetworkTimeouts(QuicTime::Delta handshake_timeout,
 void QuicConnection::CheckForTimeout() {
   QuicTime now = clock_->ApproximateNow();
   QuicTime time_of_last_packet =
-      max(time_of_last_received_packet_, last_send_for_timeout_);
+      std::max(time_of_last_received_packet_, last_send_for_timeout_);
 
   // |delta| can be < 0 as |now| is approximate time but |time_of_last_packet|
   // is accurate time. However, this should not change the behavior of
@@ -2143,14 +2122,14 @@ void QuicConnection::CheckForTimeout() {
 
 void QuicConnection::SetTimeoutAlarm() {
   QuicTime time_of_last_packet =
-      max(time_of_last_received_packet_, time_of_last_sent_new_packet_);
+      std::max(time_of_last_received_packet_, time_of_last_sent_new_packet_);
   time_of_last_packet =
-      max(time_of_last_received_packet_, last_send_for_timeout_);
+      std::max(time_of_last_received_packet_, last_send_for_timeout_);
 
   QuicTime deadline = time_of_last_packet + idle_network_timeout_;
   if (!handshake_timeout_.IsInfinite()) {
-    deadline =
-        min(deadline, stats_.connection_creation_time + handshake_timeout_);
+    deadline = std::min(deadline,
+                        stats_.connection_creation_time + handshake_timeout_);
   }
 
   timeout_alarm_->Update(deadline, QuicTime::Delta::Zero());
@@ -2331,7 +2310,7 @@ void QuicConnection::SetMtuDiscoveryTarget(QuicByteCount target) {
 
 QuicByteCount QuicConnection::GetLimitedMaxPacketSize(
     QuicByteCount suggested_max_packet_size) {
-  if (peer_address_.address().empty()) {
+  if (!peer_address_.IsInitialized()) {
     QUIC_BUG << "Attempted to use a connection without a valid peer address";
     return suggested_max_packet_size;
   }
@@ -2475,7 +2454,7 @@ bool QuicConnection::MaybeConsiderAsMemoryCorruption(
 // of (likely, tail) latency, then consider such a mechanism.
 const QuicTime::Delta QuicConnection::DelayedAckTime() {
   return QuicTime::Delta::FromMilliseconds(
-      min(kMaxDelayedAckTimeMs, kMinRetransmissionTimeMs / 2));
+      std::min(kMaxDelayedAckTimeMs, kMinRetransmissionTimeMs / 2));
 }
 
 void QuicConnection::CheckIfApplicationLimited() {

@@ -22,8 +22,6 @@ class GURL;
 
 namespace net {
 
-class CookieMonster;
-
 // An interface for storing and retrieving cookies. Implementations are not
 // thread safe, as with most other net classes. All methods must be invoked on
 // the network thread, and all callbacks will be calle there.

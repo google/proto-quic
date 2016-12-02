@@ -21,9 +21,11 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
+#include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_iovector.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
+#include "net/quic/core/quic_pending_retransmission.h"
 
 namespace net {
 namespace test {
@@ -105,7 +107,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 
   // Re-serializes frames with the original packet's packet number length.
   // Used for retransmitting packets to ensure they aren't too long.
-  void ReserializeAllFrames(const PendingRetransmission& retransmission,
+  void ReserializeAllFrames(const QuicPendingRetransmission& retransmission,
                             char* buffer,
                             size_t buffer_len);
 

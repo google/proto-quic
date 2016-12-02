@@ -92,8 +92,8 @@ class DummyPacketWriter : public QuicPacketWriter {
   // QuicPacketWriter overrides.
   WriteResult WritePacket(const char* buffer,
                           size_t buf_len,
-                          const IPAddress& self_address,
-                          const IPEndPoint& peer_address,
+                          const QuicIpAddress& self_address,
+                          const QuicSocketAddress& peer_address,
                           PerPacketOptions* options) override {
     return WriteResult(WRITE_STATUS_ERROR, 0);
   }
@@ -105,7 +105,7 @@ class DummyPacketWriter : public QuicPacketWriter {
   void SetWritable() override {}
 
   QuicByteCount GetMaxPacketSize(
-      const IPEndPoint& peer_address) const override {
+      const QuicSocketAddress& peer_address) const override {
     return 0;
   }
 };
@@ -149,13 +149,14 @@ class QuartcStreamTest : public ::testing::Test,
   void CreateReliableQuicStream() {
     // Arbitrary values for QuicConnection.
     Perspective perspective = Perspective::IS_SERVER;
-    IPAddress ip(0, 0, 0, 0);
+    QuicIpAddress ip;
+    ip.FromString("0.0.0.0");
     bool owns_writer = true;
     alarm_factory_.reset(new QuartcAlarmFactory(
         base::ThreadTaskRunnerHandle::Get().get(), GetClock()));
 
     connection_.reset(new QuicConnection(
-        0, IPEndPoint(ip, 0), this /*QuicConnectionHelperInterface*/,
+        0, QuicSocketAddress(ip, 0), this /*QuicConnectionHelperInterface*/,
         alarm_factory_.get(), new DummyPacketWriter(), owns_writer, perspective,
         AllSupportedVersions()));
 

@@ -166,9 +166,6 @@ void QuicClientSessionBase::ResetPromised(QuicStreamId id,
   SendRstStream(id, error_code, 0);
   if (!IsOpenStream(id)) {
     MaybeIncreaseLargestPeerStreamId(id);
-    if (!FLAGS_quic_bugfix_reset_promised) {
-      InsertLocallyClosedStreamsHighestOffset(id, 0);
-    }
   }
 }
 

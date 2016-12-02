@@ -30,8 +30,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
-using std::endl;
-using std::ostream;
 using std::string;
 
 namespace net {
@@ -63,7 +61,7 @@ struct TestParams {
         use_stateless_rejects(use_stateless_rejects),
         supported_versions(std::move(supported_versions)) {}
 
-  friend ostream& operator<<(ostream& os, const TestParams& p) {
+  friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
     os << "  enable_stateless_rejects: " << p.enable_stateless_rejects
        << std::endl;
     os << "  use_stateless_rejects: " << p.use_stateless_rejects << std::endl;
@@ -105,7 +103,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
  public:
   CryptoServerTest()
       : rand_(QuicRandom::GetInstance()),
-        client_address_(Loopback4(), 1234),
+        client_address_(QuicIpAddress::Loopback4(), 1234),
         config_(QuicCryptoServerConfig::TESTING,
                 rand_,
                 CryptoTestUtils::ProofSourceForTesting()),
@@ -121,7 +119,6 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     client_version_string_ =
         QuicTagToString(QuicVersionToQuicTag(client_version_));
 
-    FLAGS_quic_require_handshake_confirmation_pre33 = false;
     FLAGS_enable_quic_stateless_reject_support =
         GetParam().enable_stateless_rejects;
     use_stateless_rejects_ = GetParam().use_stateless_rejects;
@@ -231,16 +228,16 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
     ASSERT_TRUE(server_hello.GetStringPiece(kCADR, &address));
     QuicSocketAddressCoder decoder;
     ASSERT_TRUE(decoder.Decode(address.data(), address.size()));
-    EXPECT_EQ(client_address_.address(), decoder.ip());
+    EXPECT_EQ(client_address_.host(), decoder.ip());
     EXPECT_EQ(client_address_.port(), decoder.port());
   }
 
   void ShouldSucceed(const CryptoHandshakeMessage& message) {
     bool called = false;
-    IPAddress server_ip;
+    QuicIpAddress server_ip;
     config_.ValidateClientHello(
-        message, client_address_.address(), server_ip,
-        supported_versions_.front(), &clock_, signed_config_,
+        message, client_address_.host(), server_ip, supported_versions_.front(),
+        &clock_, signed_config_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, true, "", &called)));
     EXPECT_TRUE(called);
@@ -256,10 +253,10 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   void ShouldFailMentioning(const char* error_substr,
                             const CryptoHandshakeMessage& message,
                             bool* called) {
-    IPAddress server_ip;
+    QuicIpAddress server_ip;
     config_.ValidateClientHello(
-        message, client_address_.address(), server_ip,
-        supported_versions_.front(), &clock_, signed_config_,
+        message, client_address_.host(), server_ip, supported_versions_.front(),
+        &clock_, signed_config_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, false, error_substr, called)));
   }
@@ -313,7 +310,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   void ProcessValidationResult(scoped_refptr<ValidateCallback::Result> result,
                                bool should_succeed,
                                const char* error_substr) {
-    IPAddress server_ip;
+    QuicIpAddress server_ip;
     QuicConnectionId server_designated_connection_id =
         rand_for_id_generation_.RandUint64();
     bool called;
@@ -394,7 +391,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   QuicRandom* const rand_;
   MockRandom rand_for_id_generation_;
   MockClock clock_;
-  IPEndPoint client_address_;
+  QuicSocketAddress client_address_;
   QuicVersionVector supported_versions_;
   QuicVersion client_version_;
   string client_version_string_;
@@ -852,7 +849,7 @@ TEST_P(CryptoServerTest, NoServerNonce) {
 }
 
 TEST_P(CryptoServerTest, ProofForSuppliedServerConfig) {
-  client_address_ = IPEndPoint(Loopback6(), 1234);
+  client_address_ = QuicSocketAddress(QuicIpAddress::Loopback6(), 1234);
   // clang-format off
   CryptoHandshakeMessage msg = CryptoTestUtils::Message(
       "CHLO",

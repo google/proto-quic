@@ -90,8 +90,7 @@ class PathBuilderPkitsTestDelegate {
                                  &signature_policy, time, &result);
     path_builder.AddCertIssuerSource(&cert_issuer_source);
 
-    CompletionStatus rv = path_builder.Run(base::Closure());
-    EXPECT_EQ(CompletionStatus::SYNC, rv);
+    path_builder.Run();
 
     return result.HasValidPath();
   }

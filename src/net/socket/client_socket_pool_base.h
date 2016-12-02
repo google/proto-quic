@@ -368,11 +368,6 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     // SETTINGS frame.
     bool IsUsable() const;
 
-    // An idle socket should be removed if it can't be reused, or has been idle
-    // for too long. |now| is the current time value (TimeTicks::Now()).
-    // |timeout| is the length of time to wait before timing out an idle socket.
-    bool ShouldCleanup(base::TimeTicks now, base::TimeDelta timeout) const;
-
     StreamSocket* socket;
     base::TimeTicks start_time;
   };

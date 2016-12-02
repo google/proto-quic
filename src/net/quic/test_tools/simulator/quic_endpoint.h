@@ -8,7 +8,7 @@
 #include "net/quic/core/crypto/null_decrypter.h"
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/test_tools/simulator/link.h"
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/tools/quic/quic_default_packet_writer.h"
@@ -22,7 +22,7 @@ const QuicByteCount kTxQueueSize = 1000;
 
 // Generate a random local network host-port tuple based on the name of the
 // endpoint.
-IPEndPoint GetAddressFromName(std::string name);
+QuicSocketAddress GetAddressFromName(std::string name);
 
 // A QUIC connection endpoint.  Wraps around QuicConnection.  In order to
 // initiate a transfer, the caller has to call AddBytesToTransfer().  The data
@@ -100,14 +100,14 @@ class QuicEndpoint : public Endpoint,
 
     WriteResult WritePacket(const char* buffer,
                             size_t buf_len,
-                            const IPAddress& self_address,
-                            const IPEndPoint& peer_address,
+                            const QuicIpAddress& self_address,
+                            const QuicSocketAddress& peer_address,
                             PerPacketOptions* options) override;
     bool IsWriteBlockedDataBuffered() const override;
     bool IsWriteBlocked() const override;
     void SetWritable() override;
     QuicByteCount GetMaxPacketSize(
-        const IPEndPoint& peer_address) const override;
+        const QuicSocketAddress& peer_address) const override;
 
    private:
     QuicEndpoint* endpoint_;

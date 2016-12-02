@@ -31,7 +31,7 @@
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/core/quic_iovector.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
 
@@ -177,7 +177,7 @@ class NET_EXPORT_PRIVATE QuicStream {
   virtual void StopReading();
 
   // Get peer IP of the lastest packet which connection is dealing/delt with.
-  virtual const IPEndPoint& PeerAddressOfLatestPacket() const;
+  virtual const QuicSocketAddress& PeerAddressOfLatestPacket() const;
 
  protected:
   // Sends as much of 'data' to the connection as the connection will consume,

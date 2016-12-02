@@ -179,7 +179,7 @@ be investigated. When a test fails:
     *   Link to buildbot status page of failing build.
     *   Copy and paste of relevant failure snippet from the stdio.
     *   CC the test owner from
-        [go/perf-owners](https://docs.google.com/spreadsheets/d/1R_1BAOd3xeVtR0jn6wB5HHJ2K25mIbKp3iIRQKkX38o/edit#gid=0).
+        [go/perf-owners](https://docs.google.com/spreadsheets/d/1xaAo0_SU3iDfGdqDJZX_jRV0QtkufwHUKH3kQKF3YQs/edit#gid=0).
     *   The revision range the test occurred on.
     *   A list of all platforms the test fails on.
 2.  Disable the failing test if it is failing more than one out of five runs.

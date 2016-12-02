@@ -179,6 +179,9 @@ struct BindUnwrapTraits;
 
 namespace internal {
 
+template <typename Functor, typename SFINAE = void>
+struct FunctorTraits;
+
 template <typename T>
 class UnretainedWrapper {
  public:
@@ -518,6 +521,48 @@ template <typename T>
 struct BindUnwrapTraits<internal::PassedWrapper<T>> {
   static T Unwrap(const internal::PassedWrapper<T>& o) {
     return o.Take();
+  }
+};
+
+// CallbackCancellationTraits allows customization of Callback's cancellation
+// semantics. By default, callbacks are not cancellable. A specialization should
+// set is_cancellable = true and implement an IsCancelled() that returns if the
+// callback should be cancelled.
+template <typename Functor, typename BoundArgsTuple, typename SFINAE = void>
+struct CallbackCancellationTraits {
+  static constexpr bool is_cancellable = false;
+};
+
+// Specialization for method bound to weak pointer receiver.
+template <typename Functor, typename... BoundArgs>
+struct CallbackCancellationTraits<
+    Functor,
+    std::tuple<BoundArgs...>,
+    typename std::enable_if<
+        internal::IsWeakMethod<internal::FunctorTraits<Functor>::is_method,
+                               BoundArgs...>::value>::type> {
+  static constexpr bool is_cancellable = true;
+
+  template <typename Receiver, typename... Args>
+  static bool IsCancelled(const Functor&,
+                          const Receiver& receiver,
+                          const Args&...) {
+    return !receiver;
+  }
+};
+
+// Specialization for a nested bind.
+template <typename Signature,
+          typename... BoundArgs,
+          internal::CopyMode copy_mode,
+          internal::RepeatMode repeat_mode>
+struct CallbackCancellationTraits<Callback<Signature, copy_mode, repeat_mode>,
+                                  std::tuple<BoundArgs...>> {
+  static constexpr bool is_cancellable = true;
+
+  template <typename Functor>
+  static bool IsCancelled(const Functor& functor, const BoundArgs&...) {
+    return functor.IsCancelled();
   }
 };
 

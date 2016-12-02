@@ -3239,9 +3239,9 @@ TEST_F(SpdyNetworkTransactionTest, CorruptFrameSessionError) {
   SpdySerializedFrame reply_wrong_length(
       spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
   size_t right_size =
-      reply_wrong_length.size() - SpdyConstants::GetFrameHeaderSize(HTTP2);
+      reply_wrong_length.size() - SpdyConstants::kFrameHeaderSize;
   size_t wrong_size = right_size - 4;
-  test::SetFrameLength(&reply_wrong_length, wrong_size, HTTP2);
+  test::SetFrameLength(&reply_wrong_length, wrong_size);
 
   MockRead reads[] = {
       MockRead(ASYNC, reply_wrong_length.data(), reply_wrong_length.size() - 4,
@@ -3287,7 +3287,7 @@ TEST_F(SpdyNetworkTransactionTest, GoAwayOnFrameSizeError) {
   // Read WINDOW_UPDATE with incorrectly-sized payload.
   SpdySerializedFrame bad_window_update(
       spdy_util_.ConstructSpdyWindowUpdate(1, 1));
-  test::SetFrameLength(&bad_window_update, bad_window_update.size() - 1, HTTP2);
+  test::SetFrameLength(&bad_window_update, bad_window_update.size() - 1);
   MockRead reads[] = {CreateMockRead(bad_window_update, 1)};
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -4570,220 +4570,6 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushClaimBeforeHeaders) {
   EXPECT_EQ("HTTP/1.1 200", response2.headers->GetStatusLine());
 
   // Read the final EOF (which will close the session)
-  data.Resume();
-  base::RunLoop().RunUntilIdle();
-
-  // Verify that we consumed all test data.
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-}
-
-// TODO(baranovich): HTTP 2 does not allow multiple HEADERS frames
-TEST_F(SpdyNetworkTransactionTest, ServerPushWithTwoHeaderFrames) {
-  // We push a stream and attempt to claim it before the headers come down.
-  SpdySerializedFrame stream1_syn(
-      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  MockWrite writes[] = {
-      CreateMockWrite(stream1_syn, 0, SYNCHRONOUS),
-  };
-
-  SpdySerializedFrame stream1_reply(
-      spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-
-  SpdyHeaderBlock initial_headers;
-  spdy_util_.AddUrlToHeaderBlock(GetDefaultUrlWithPath("/foo.dat"),
-                                 &initial_headers);
-  SpdySerializedFrame stream2_syn(spdy_util_.ConstructInitialSpdyPushFrame(
-      std::move(initial_headers), 2, 1));
-
-  SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
-
-  SpdyHeaderBlock middle_headers;
-  middle_headers["hello"] = "bye";
-  SpdySerializedFrame stream2_headers1(spdy_util_.ConstructSpdyResponseHeaders(
-      2, std::move(middle_headers), false));
-
-  SpdyHeaderBlock late_headers;
-  late_headers[spdy_util_.GetStatusKey()] = "200";
-  SpdySerializedFrame stream2_headers2(spdy_util_.ConstructSpdyResponseHeaders(
-      2, std::move(late_headers), false));
-
-  const char kPushedData[] = "pushed";
-  SpdySerializedFrame stream2_body(spdy_util_.ConstructSpdyDataFrame(
-      2, kPushedData, strlen(kPushedData), true));
-
-  MockRead reads[] = {
-      CreateMockRead(stream1_reply, 1), CreateMockRead(stream2_syn, 2),
-      CreateMockRead(stream1_body, 3), MockRead(ASYNC, ERR_IO_PENDING, 4),
-      CreateMockRead(stream2_headers1, 5),
-      // This is needed to work around https://crbug.com/571102.
-      MockRead(ASYNC, ERR_IO_PENDING, 6), CreateMockRead(stream2_headers2, 7),
-      CreateMockRead(stream2_body, 8), MockRead(ASYNC, ERR_IO_PENDING, 9),
-      MockRead(ASYNC, 0, 10),  // EOF
-  };
-
-  HttpResponseInfo response;
-  HttpResponseInfo response2;
-  std::string expected_push_result("pushed");
-  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-
-  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), NULL);
-  helper.AddData(&data);
-  helper.RunPreTestSetup();
-
-  HttpNetworkTransaction* trans = helper.trans();
-
-  // Start the transaction.
-  TestCompletionCallback callback;
-  int rv = trans->Start(&CreateGetRequest(), callback.callback(),
-                        NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  // Run until we've received the primary HEADERS, the pushed HEADERS,
-  // the first HEADERS frame, and the body of the primary stream, but before
-  // we've received the final HEADERS for the pushed stream.
-  data.RunUntilPaused();
-  EXPECT_EQ(0, callback.WaitForResult());
-
-  // Request the pushed path.  At this point, we've received the push, but the
-  // headers are not yet complete.
-  HttpNetworkTransaction trans2(DEFAULT_PRIORITY, helper.session());
-  rv = trans2.Start(&CreateGetPushRequest(), callback.callback(),
-                    NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  data.Resume();
-  data.RunUntilPaused();
-  base::RunLoop().RunUntilIdle();
-  // This is needed to work around https://crbug.com/571102.
-  data.Resume();
-  data.RunUntilPaused();
-  base::RunLoop().RunUntilIdle();
-
-  // Read the server push body.
-  std::string result2;
-  ReadResult(&trans2, &result2);
-  // Read the response body.
-  std::string result;
-  ReadResult(trans, &result);
-
-  // Verify that the received push data is same as the expected push data.
-  EXPECT_EQ(expected_push_result, result2);
-
-  // Verify the response headers.
-  // Copy the response info, because trans goes away.
-  response = *trans->GetResponseInfo();
-  response2 = *trans2.GetResponseInfo();
-
-  VerifyStreamsClosed(helper);
-
-  // Verify the response headers.
-  EXPECT_TRUE(response.headers);
-  EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
-
-  // Verify the pushed stream.
-  EXPECT_TRUE(response2.headers);
-  EXPECT_EQ("HTTP/1.1 200", response2.headers->GetStatusLine());
-
-  // Verify we got all the headers from all header blocks.
-  EXPECT_TRUE(response2.headers->HasHeaderValue("hello", "bye"));
-  EXPECT_TRUE(response2.headers->HasHeaderValue("status", "200"));
-
-  // Read the final EOF (which will close the session)
-  data.Resume();
-  base::RunLoop().RunUntilIdle();
-
-  // Verify that we consumed all test data.
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-}
-
-TEST_F(SpdyNetworkTransactionTest, ServerPushWithNoStatusHeaderFrames) {
-  // We push a stream and attempt to claim it before the headers come down.
-  SpdySerializedFrame stream1_syn(
-      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  MockWrite writes[] = {
-      CreateMockWrite(stream1_syn, 0, SYNCHRONOUS),
-  };
-
-  SpdySerializedFrame stream1_reply(
-      spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-
-  SpdyHeaderBlock initial_headers;
-  spdy_util_.AddUrlToHeaderBlock(GetDefaultUrlWithPath("/foo.dat"),
-                                 &initial_headers);
-  SpdySerializedFrame stream2_syn(spdy_util_.ConstructInitialSpdyPushFrame(
-      std::move(initial_headers), 2, 1));
-
-  SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
-
-  SpdyHeaderBlock middle_headers;
-  middle_headers["hello"] = "bye";
-  SpdySerializedFrame stream2_headers1(spdy_util_.ConstructSpdyResponseHeaders(
-      2, std::move(middle_headers), false));
-
-  const char kPushedData[] = "pushed";
-  SpdySerializedFrame stream2_body(spdy_util_.ConstructSpdyDataFrame(
-      2, kPushedData, strlen(kPushedData), true));
-
-  MockRead reads[] = {
-      CreateMockRead(stream1_reply, 1),    CreateMockRead(stream2_syn, 2),
-      CreateMockRead(stream1_body, 3),     MockRead(ASYNC, ERR_IO_PENDING, 4),
-      CreateMockRead(stream2_headers1, 5), CreateMockRead(stream2_body, 6),
-      MockRead(ASYNC, ERR_IO_PENDING, 7),  MockRead(ASYNC, 0, 8),  // EOF
-  };
-
-  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-
-  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), NULL);
-  helper.AddData(&data);
-  helper.RunPreTestSetup();
-
-  HttpNetworkTransaction* trans = helper.trans();
-
-  // Start the transaction.
-  TestCompletionCallback callback;
-  int rv = trans->Start(&CreateGetRequest(), callback.callback(),
-                        NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  // Run until we've received the primary HEADERS, the pushed HEADERS,
-  // the first HEADERS frame, and the body of the primary stream, but before
-  // we've received the final HEADERS for the pushed stream.
-  data.RunUntilPaused();
-  EXPECT_EQ(0, callback.WaitForResult());
-
-  // Request the pushed path.  At this point, we've received the push, but the
-  // headers are not yet complete.
-  HttpNetworkTransaction trans2(DEFAULT_PRIORITY, helper.session());
-  rv = trans2.Start(&CreateGetPushRequest(), callback.callback(),
-                    NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  data.Resume();
-  data.RunUntilPaused();
-  base::RunLoop().RunUntilIdle();
-
-  // Read the server push body.
-  std::string result2;
-  ReadResult(&trans2, &result2);
-  // Read the response body.
-  std::string result;
-  ReadResult(trans, &result);
-  EXPECT_EQ("hello!", result);
-
-  // Verify that we haven't received any push data.
-  EXPECT_EQ("", result2);
-
-  // Verify the response headers.
-  // Copy the response info, because trans goes away.
-  HttpResponseInfo response = *trans->GetResponseInfo();
-
-  VerifyStreamsClosed(helper);
-
-  // Verify the response headers.
-  EXPECT_TRUE(response.headers);
-  EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
-
-  // Read the final EOF (which will close the session).
   data.Resume();
   base::RunLoop().RunUntilIdle();
 

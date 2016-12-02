@@ -15,10 +15,6 @@
 #include "net/base/net_export.h"
 #include "net/disk_cache/blockfile/addr.h"
 
-namespace base {
-class HistogramSamples;
-}  // namespace base
-
 namespace disk_cache {
 
 using StatsItems = base::StringPairs;

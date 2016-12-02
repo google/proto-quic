@@ -35,7 +35,8 @@ struct IntToStringT {
 
     // The ValueOrDie call below can never fail, because UnsignedAbs is valid
     // for all valid inputs.
-    auto res = CheckedNumeric<INT>(value).UnsignedAbs().ValueOrDie();
+    typename decltype(CheckedNumeric<INT>(value).UnsignedAbs())::type res =
+        CheckedNumeric<INT>(value).UnsignedAbs().ValueOrDie();
 
     CHR* end = outbuf + kOutputBufSize;
     CHR* i = end;

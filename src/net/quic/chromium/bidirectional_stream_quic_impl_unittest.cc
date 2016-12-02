@@ -392,7 +392,9 @@ class BidirectionalStreamQuicImplTest
   }
 
   void ProcessPacket(std::unique_ptr<QuicReceivedPacket> packet) {
-    connection_->ProcessUdpPacket(self_addr_, peer_addr_, *packet);
+    connection_->ProcessUdpPacket(
+        QuicSocketAddress(QuicSocketAddressImpl(self_addr_)),
+        QuicSocketAddress(QuicSocketAddressImpl(peer_addr_)), *packet);
   }
 
   // Configures the test fixture to use the list of expected writes.
@@ -420,7 +422,8 @@ class BidirectionalStreamQuicImplTest
         new QuicChromiumConnectionHelper(&clock_, &random_generator_));
     alarm_factory_.reset(new QuicChromiumAlarmFactory(runner_.get(), &clock_));
     connection_ = new QuicConnection(
-        connection_id_, peer_addr_, helper_.get(), alarm_factory_.get(),
+        connection_id_, QuicSocketAddress(QuicSocketAddressImpl(peer_addr_)),
+        helper_.get(), alarm_factory_.get(),
         new QuicChromiumPacketWriter(socket.get()), true /* owns_writer */,
         Perspective::IS_CLIENT, SupportedVersions(GetParam()));
     base::TimeTicks dns_end = base::TimeTicks::Now();

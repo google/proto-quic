@@ -19,7 +19,6 @@
 namespace net {
 
 class IOBuffer;
-class IPEndPoint;
 struct SockaddrStorage;
 
 // Socket class to provide asynchronous read/write operations on top of the

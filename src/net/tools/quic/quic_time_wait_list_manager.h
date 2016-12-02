@@ -20,7 +20,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_writer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 
 namespace net {
@@ -82,8 +82,8 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   // connection_id. Sending of the public reset packet is throttled by using
   // exponential back off. DCHECKs for the connection_id to be in time wait
   // state. virtual to override in tests.
-  virtual void ProcessPacket(const IPEndPoint& server_address,
-                             const IPEndPoint& client_address,
+  virtual void ProcessPacket(const QuicSocketAddress& server_address,
+                             const QuicSocketAddress& client_address,
                              QuicConnectionId connection_id,
                              QuicPacketNumber packet_number,
                              const QuicEncryptedPacket& packet);
@@ -113,8 +113,8 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   virtual void SendVersionNegotiationPacket(
       QuicConnectionId connection_id,
       const QuicVersionVector& supported_versions,
-      const IPEndPoint& server_address,
-      const IPEndPoint& client_address);
+      const QuicSocketAddress& server_address,
+      const QuicSocketAddress& client_address);
 
  protected:
   virtual std::unique_ptr<QuicEncryptedPacket> BuildPublicReset(
@@ -132,8 +132,8 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
   bool ShouldSendResponse(int received_packet_count);
 
   // Creates a public reset packet and sends it or queues it to be sent later.
-  void SendPublicReset(const IPEndPoint& server_address,
-                       const IPEndPoint& client_address,
+  void SendPublicReset(const QuicSocketAddress& server_address,
+                       const QuicSocketAddress& client_address,
                        QuicConnectionId connection_id,
                        QuicPacketNumber rejected_packet_number);
 

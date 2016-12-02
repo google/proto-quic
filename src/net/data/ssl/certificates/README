@@ -79,6 +79,15 @@ unit tests.
 - client-nokey.p12 : A PKCS #12 file containing a client certificate (the same
      as the one in client.p12) but no private key. The password is "12345".
 
+- client-empty-password.p12 : A PKCS #12 file containing an unencrypted client
+     certificate and a encrypted private key.  The password is the empty string,
+     encoded as two zero bytes.  (PKCS#12 passwords are encoded as
+     NUL-terminated UTF-16.)
+
+- client-null-password.p12 : A PKCS #12 file containing an unencrypted client
+     certificate and a encrypted private key.  The password is the empty string,
+     encoded as the empty byte string.
+
 - unittest.selfsigned.der : A self-signed certificate generated using private
      key in unittest.key.bin. The common name is "unittest".
 

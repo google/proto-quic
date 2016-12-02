@@ -1071,6 +1071,9 @@ std::unique_ptr<SourceStream> URLRequestHttpJob::SetUpSourceStream() {
                base::LowerCaseEqualsASCII(type, kXGZip)) {
       types.push_back(SourceStream::TYPE_GZIP);
     } else if (base::LowerCaseEqualsASCII(type, kSdch)) {
+      // If SDCH support is not configured, pass through raw response.
+      if (!request()->context()->sdch_manager())
+        return upstream;
       types.push_back(SourceStream::TYPE_SDCH);
     } else {
       // Unknown encoding type. Pass through raw response body.

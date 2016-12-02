@@ -32,9 +32,6 @@ declare_args() {
   # Non-SFI is not yet supported on mipsel
   enable_nacl_nonsfi = current_cpu != "mipsel"
 
-  # Enables WebRTC.
-  enable_webrtc = !is_ios
-
   # Enables the Media Router.
   enable_media_router = !is_ios && !is_chromecast
 

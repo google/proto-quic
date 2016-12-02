@@ -22,23 +22,15 @@
 // introduce any link dependency to net/websockets.
 #include "net/websockets/websocket_handshake_stream_base.h"
 
-class GURL;
-
-namespace base {
-class Value;
-}
-
 namespace net {
 
 class AuthCredentials;
 class BidirectionalStreamImpl;
 class HostMappingRules;
-class HostPortPair;
 class HttpAuthController;
 class HttpNetworkSession;
 class HttpResponseHeaders;
 class HttpResponseInfo;
-class HttpServerProperties;
 class HttpStream;
 class NetLogWithSource;
 class ProxyInfo;

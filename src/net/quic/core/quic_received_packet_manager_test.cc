@@ -5,6 +5,7 @@
 #include "net/quic/core/quic_received_packet_manager.h"
 
 #include <algorithm>
+#include <ostream>
 #include <vector>
 
 #include "net/quic/core/quic_connection_stats.h"

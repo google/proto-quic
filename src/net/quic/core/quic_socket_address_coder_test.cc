@@ -13,18 +13,18 @@ namespace net {
 namespace test {
 
 TEST(QuicSocketAddressCoderTest, EncodeIPv4) {
-  IPAddress ip;
-  ASSERT_TRUE(ip.AssignFromIPLiteral("4.31.198.44"));
-  QuicSocketAddressCoder coder(IPEndPoint(ip, 0x1234));
+  QuicIpAddress ip;
+  ip.FromString("4.31.198.44");
+  QuicSocketAddressCoder coder(QuicSocketAddress(ip, 0x1234));
   string serialized = coder.Encode();
   string expected("\x02\x00\x04\x1f\xc6\x2c\x34\x12", 8);
   EXPECT_EQ(expected, serialized);
 }
 
 TEST(QuicSocketAddressCoderTest, EncodeIPv6) {
-  IPAddress ip;
-  ASSERT_TRUE(ip.AssignFromIPLiteral("2001:700:300:1800::f"));
-  QuicSocketAddressCoder coder(IPEndPoint(ip, 0x5678));
+  QuicIpAddress ip;
+  ip.FromString("2001:700:300:1800::f");
+  QuicSocketAddressCoder coder(QuicSocketAddress(ip, 0x5678));
   string serialized = coder.Encode();
   string expected(
       "\x0a\x00"
@@ -39,9 +39,9 @@ TEST(QuicSocketAddressCoderTest, DecodeIPv4) {
   string serialized("\x02\x00\x04\x1f\xc6\x2c\x34\x12", 8);
   QuicSocketAddressCoder coder;
   ASSERT_TRUE(coder.Decode(serialized.data(), serialized.length()));
-  EXPECT_EQ(AF_INET, ConvertAddressFamily(GetAddressFamily(coder.ip())));
+  EXPECT_EQ(IpAddressFamily::IP_V4, coder.ip().address_family());
   string expected_addr("\x04\x1f\xc6\x2c", 4);
-  EXPECT_EQ(expected_addr, IPAddressToPackedString(coder.ip()));
+  EXPECT_EQ(expected_addr, coder.ip().ToPackedString());
   EXPECT_EQ(0x1234, coder.port());
 }
 
@@ -54,12 +54,12 @@ TEST(QuicSocketAddressCoderTest, DecodeIPv6) {
       20);
   QuicSocketAddressCoder coder;
   ASSERT_TRUE(coder.Decode(serialized.data(), serialized.length()));
-  EXPECT_EQ(AF_INET6, ConvertAddressFamily(GetAddressFamily(coder.ip())));
+  EXPECT_EQ(IpAddressFamily::IP_V6, coder.ip().address_family());
   string expected_addr(
       "\x20\x01\x07\x00\x03\x00\x18\x00"
       "\x00\x00\x00\x00\x00\x00\x00\x0f",
       16);
-  EXPECT_EQ(expected_addr, IPAddressToPackedString(coder.ip()));
+  EXPECT_EQ(expected_addr, coder.ip().ToPackedString());
   EXPECT_EQ(0x5678, coder.port());
 }
 
@@ -110,9 +110,9 @@ TEST(QuicSocketAddressCoderTest, EncodeAndDecode) {
   };
 
   for (size_t i = 0; i < arraysize(test_case); i++) {
-    IPAddress ip;
-    ASSERT_TRUE(ip.AssignFromIPLiteral(test_case[i].ip_literal));
-    QuicSocketAddressCoder encoder(IPEndPoint(ip, test_case[i].port));
+    QuicIpAddress ip;
+    ASSERT_TRUE(ip.FromString(test_case[i].ip_literal));
+    QuicSocketAddressCoder encoder(QuicSocketAddress(ip, test_case[i].port));
     string serialized = encoder.Encode();
 
     QuicSocketAddressCoder decoder;

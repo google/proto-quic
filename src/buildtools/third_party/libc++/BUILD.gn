@@ -67,9 +67,10 @@ shared_library("libc++") {
 
   ldflags = [ "-nodefaultlibs" ]
 
-  # TODO(GYP): Remove "-pthread" from ldflags.
+  # Remove "-pthread" from ldflags.
   # -nodefaultlibs turns -pthread into a no-op, causing an unused argument
   # warning. Explicitly link with -lpthread instead.
+  configs -= [ "//build/config/compiler:pthread" ]
 
   libs = [
     "m",

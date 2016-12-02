@@ -8,9 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "base/callback.h"
 #include "net/base/net_export.h"
-#include "net/cert/internal/completion_status.h"
 #include "net/cert/internal/parsed_certificate.h"
 
 namespace net {
@@ -30,26 +28,18 @@ class NET_EXPORT CertIssuerSource {
     // Destruction of the Request cancels it.
     virtual ~Request() = default;
 
-    // Retrieves the next issuer.
+    // Retrieves issuers and appends them to |issuers|.
     //
-    // If one is available it will be stored in |out_cert| and SYNC will be
-    // returned. GetNext should be called again to retrieve any remaining
-    // issuers.
+    // GetNext should be called again to retrieve any remaining issuers.
     //
-    // If no issuers are currently available, |out_cert| will be cleared and the
-    // return value will indicate if the Request is exhausted. If the return
-    // value is ASYNC, the |issuers_callback| that was passed to
-    // AsyncGetIssuersOf will be called again (unless the Request is destroyed
-    // first). If the return value is SYNC, the Request is complete and the
-    // |issuers_callback| will not be called again.
-    virtual CompletionStatus GetNext(
-        scoped_refptr<ParsedCertificate>* out_cert) = 0;
+    // If no issuers are left then |issuers| will not be modified. This
+    // indicates that the issuers have been exhausted and GetNext() should
+    // not be called again.
+    virtual void GetNext(ParsedCertificateList* issuers) = 0;
 
    private:
     DISALLOW_COPY_AND_ASSIGN(Request);
   };
-
-  using IssuerCallback = base::Callback<void(Request*)>;
 
   virtual ~CertIssuerSource() = default;
 
@@ -61,18 +51,13 @@ class NET_EXPORT CertIssuerSource {
                                 ParsedCertificateList* issuers) = 0;
 
   // Finds certificates whose Subject matches |cert|'s Issuer.
-  // If an async callback will be made |*out_req| is filled with a Request
-  // object which may be destroyed to cancel the callback. If the implementation
-  // does not support asynchronous lookups or can determine synchronously that
-  // it would return no results, |*out_req| will be set to nullptr.
+  // If the implementation does not support asynchronous lookups or can
+  // determine synchronously that it would return no results, |*out_req|
+  // will be set to nullptr.
   //
-  // When matches are available or the request is complete, |issuers_callback|
-  // will be called with a pointer to the same Request. The Request::GetNext
-  // method may then be used to iterate through the retrieved issuers. Note that
-  // |issuers_callback| may be called multiple times. See the documentation for
-  // Request::GetNext for more details.
+  // Otherwise a request is started and saved to |out_req|. The results can be
+  // read through the Request interface.
   virtual void AsyncGetIssuersOf(const ParsedCertificate* cert,
-                                 const IssuerCallback& issuers_callback,
                                  std::unique_ptr<Request>* out_req) = 0;
 };
 

@@ -11,7 +11,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 

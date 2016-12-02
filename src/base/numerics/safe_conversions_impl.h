@@ -20,8 +20,6 @@ namespace internal {
 // for accurate range comparisons between floating point and integer types.
 template <typename NumericType>
 struct MaxExponent {
-  static_assert(std::is_arithmetic<NumericType>::value,
-                "Argument must be numeric.");
   static const int value = std::numeric_limits<NumericType>::is_iec559
                                ? std::numeric_limits<NumericType>::max_exponent
                                : (sizeof(NumericType) * CHAR_BIT + 1 -
@@ -259,6 +257,387 @@ constexpr RangeConstraint DstRangeRelationToSrcRange(Src value) {
                 "Result must be numeric.");
   return DstRangeRelationToSrcRangeImpl<Dst, Src>::Check(value);
 }
+
+// Integer promotion templates used by the portable checked integer arithmetic.
+template <size_t Size, bool IsSigned>
+struct IntegerForSizeAndSign;
+template <>
+struct IntegerForSizeAndSign<1, true> {
+  typedef int8_t type;
+};
+template <>
+struct IntegerForSizeAndSign<1, false> {
+  typedef uint8_t type;
+};
+template <>
+struct IntegerForSizeAndSign<2, true> {
+  typedef int16_t type;
+};
+template <>
+struct IntegerForSizeAndSign<2, false> {
+  typedef uint16_t type;
+};
+template <>
+struct IntegerForSizeAndSign<4, true> {
+  typedef int32_t type;
+};
+template <>
+struct IntegerForSizeAndSign<4, false> {
+  typedef uint32_t type;
+};
+template <>
+struct IntegerForSizeAndSign<8, true> {
+  typedef int64_t type;
+};
+template <>
+struct IntegerForSizeAndSign<8, false> {
+  typedef uint64_t type;
+  static_assert(sizeof(uintmax_t) == 8,
+                "Max integer size not supported for this toolchain.");
+};
+
+// WARNING: We have no IntegerForSizeAndSign<16, *>. If we ever add one to
+// support 128-bit math, then the ArithmeticPromotion template below will need
+// to be updated (or more likely replaced with a decltype expression).
+
+template <typename Integer>
+struct UnsignedIntegerForSize {
+  typedef typename std::enable_if<
+      std::numeric_limits<Integer>::is_integer,
+      typename IntegerForSizeAndSign<sizeof(Integer), false>::type>::type type;
+};
+
+template <typename Integer>
+struct SignedIntegerForSize {
+  typedef typename std::enable_if<
+      std::numeric_limits<Integer>::is_integer,
+      typename IntegerForSizeAndSign<sizeof(Integer), true>::type>::type type;
+};
+
+template <typename Integer>
+struct TwiceWiderInteger {
+  typedef typename std::enable_if<
+      std::numeric_limits<Integer>::is_integer,
+      typename IntegerForSizeAndSign<
+          sizeof(Integer) * 2,
+          std::numeric_limits<Integer>::is_signed>::type>::type type;
+};
+
+template <typename Integer>
+struct PositionOfSignBit {
+  static const typename std::enable_if<std::numeric_limits<Integer>::is_integer,
+                                       size_t>::type value =
+      CHAR_BIT * sizeof(Integer) - 1;
+};
+
+enum ArithmeticPromotionCategory {
+  LEFT_PROMOTION,          // Use the type of the left-hand argument.
+  RIGHT_PROMOTION,         // Use the type of the right-hand argument.
+  MAX_EXPONENT_PROMOTION,  // Use the type supporting the largest exponent.
+  BIG_ENOUGH_PROMOTION     // Attempt to find a big enough type.
+};
+
+template <ArithmeticPromotionCategory Promotion,
+          typename Lhs,
+          typename Rhs = Lhs>
+struct ArithmeticPromotion;
+
+template <typename Lhs,
+          typename Rhs,
+          ArithmeticPromotionCategory Promotion =
+              (MaxExponent<Lhs>::value > MaxExponent<Rhs>::value)
+                  ? LEFT_PROMOTION
+                  : RIGHT_PROMOTION>
+struct MaxExponentPromotion;
+
+template <typename Lhs, typename Rhs>
+struct MaxExponentPromotion<Lhs, Rhs, LEFT_PROMOTION> {
+  using type = Lhs;
+};
+
+template <typename Lhs, typename Rhs>
+struct MaxExponentPromotion<Lhs, Rhs, RIGHT_PROMOTION> {
+  using type = Rhs;
+};
+
+template <typename Lhs,
+          typename Rhs = Lhs,
+          bool is_intmax_type =
+              std::is_integral<
+                  typename MaxExponentPromotion<Lhs, Rhs>::type>::value &&
+              sizeof(typename MaxExponentPromotion<Lhs, Rhs>::type) ==
+                  sizeof(intmax_t),
+          bool is_max_exponent =
+              StaticDstRangeRelationToSrcRange<
+                  typename MaxExponentPromotion<Lhs, Rhs>::type,
+                  Lhs>::value ==
+              NUMERIC_RANGE_CONTAINED&& StaticDstRangeRelationToSrcRange<
+                  typename MaxExponentPromotion<Lhs, Rhs>::type,
+                  Rhs>::value == NUMERIC_RANGE_CONTAINED>
+struct BigEnoughPromotion;
+
+// The side with the max exponent is big enough.
+template <typename Lhs, typename Rhs, bool is_intmax_type>
+struct BigEnoughPromotion<Lhs, Rhs, is_intmax_type, true> {
+  using type = typename MaxExponentPromotion<Lhs, Rhs>::type;
+  static const bool is_contained = true;
+};
+
+// We can use a twice wider type to fit.
+template <typename Lhs, typename Rhs>
+struct BigEnoughPromotion<Lhs, Rhs, false, false> {
+  using type = typename IntegerForSizeAndSign<
+      sizeof(typename MaxExponentPromotion<Lhs, Rhs>::type) * 2,
+      std::is_signed<Lhs>::value || std::is_signed<Rhs>::value>::type;
+  static const bool is_contained = true;
+};
+
+// No type is large enough.
+template <typename Lhs, typename Rhs>
+struct BigEnoughPromotion<Lhs, Rhs, true, false> {
+  using type = typename MaxExponentPromotion<Lhs, Rhs>::type;
+  static const bool is_contained = false;
+};
+
+// These are the supported promotion types.
+
+// Use the type supporting the largest exponent.
+template <typename Lhs, typename Rhs>
+struct ArithmeticPromotion<MAX_EXPONENT_PROMOTION, Lhs, Rhs> {
+  using type = typename MaxExponentPromotion<Lhs, Rhs>::type;
+  static const bool is_contained = true;
+};
+
+// Attempt to find a big enough type.
+template <typename Lhs, typename Rhs>
+struct ArithmeticPromotion<BIG_ENOUGH_PROMOTION, Lhs, Rhs> {
+  using type = typename BigEnoughPromotion<Lhs, Rhs>::type;
+  static const bool is_contained = BigEnoughPromotion<Lhs, Rhs>::is_contained;
+};
+
+// We can statically check if operations on the provided types can wrap, so we
+// can skip the checked operations if they're not needed. So, for an integer we
+// care if the destination type preserves the sign and is twice the width of
+// the source.
+template <typename T, typename Lhs, typename Rhs>
+struct IsIntegerArithmeticSafe {
+  static const bool value = !std::numeric_limits<T>::is_iec559 &&
+                            StaticDstRangeRelationToSrcRange<T, Lhs>::value ==
+                                NUMERIC_RANGE_CONTAINED &&
+                            sizeof(T) >= (2 * sizeof(Lhs)) &&
+                            StaticDstRangeRelationToSrcRange<T, Rhs>::value !=
+                                NUMERIC_RANGE_CONTAINED &&
+                            sizeof(T) >= (2 * sizeof(Rhs));
+};
+
+// This hacks around libstdc++ 4.6 missing stuff in type_traits.
+#if defined(__GLIBCXX__)
+#define PRIV_GLIBCXX_4_7_0 20120322
+#define PRIV_GLIBCXX_4_5_4 20120702
+#define PRIV_GLIBCXX_4_6_4 20121127
+#if (__GLIBCXX__ < PRIV_GLIBCXX_4_7_0 || __GLIBCXX__ == PRIV_GLIBCXX_4_5_4 || \
+     __GLIBCXX__ == PRIV_GLIBCXX_4_6_4)
+#define PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX
+#undef PRIV_GLIBCXX_4_7_0
+#undef PRIV_GLIBCXX_4_5_4
+#undef PRIV_GLIBCXX_4_6_4
+#endif
+#endif
+
+// Extracts the underlying type from an enum.
+template <typename T, bool is_enum = std::is_enum<T>::value>
+struct ArithmeticOrUnderlyingEnum;
+
+template <typename T>
+struct ArithmeticOrUnderlyingEnum<T, true> {
+#if defined(PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX)
+  using type = __underlying_type(T);
+#else
+  using type = typename std::underlying_type<T>::type;
+#endif
+  static const bool value = std::is_arithmetic<type>::value;
+};
+
+#if defined(PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX)
+#undef PRIV_USE_FALLBACKS_FOR_OLD_GLIBCXX
+#endif
+
+template <typename T>
+struct ArithmeticOrUnderlyingEnum<T, false> {
+  using type = T;
+  static const bool value = std::is_arithmetic<type>::value;
+};
+
+// The following are helper templates used in the CheckedNumeric class.
+template <typename T>
+class CheckedNumeric;
+
+template <typename T>
+class StrictNumeric;
+
+// Used to treat CheckedNumeric and arithmetic underlying types the same.
+template <typename T>
+struct UnderlyingType {
+  using type = typename ArithmeticOrUnderlyingEnum<T>::type;
+  static const bool is_numeric = std::is_arithmetic<type>::value;
+  static const bool is_checked = false;
+  static const bool is_strict = false;
+};
+
+template <typename T>
+struct UnderlyingType<CheckedNumeric<T>> {
+  using type = T;
+  static const bool is_numeric = true;
+  static const bool is_checked = true;
+  static const bool is_strict = false;
+};
+
+template <typename T>
+struct UnderlyingType<StrictNumeric<T>> {
+  using type = T;
+  static const bool is_numeric = true;
+  static const bool is_checked = false;
+  static const bool is_strict = true;
+};
+
+template <typename L, typename R>
+struct IsCheckedOp {
+  static const bool value =
+      UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
+      (UnderlyingType<L>::is_checked || UnderlyingType<R>::is_checked);
+};
+
+template <typename L, typename R>
+struct IsStrictOp {
+  static const bool value =
+      UnderlyingType<L>::is_numeric && UnderlyingType<R>::is_numeric &&
+      (UnderlyingType<L>::is_strict || UnderlyingType<R>::is_strict);
+};
+
+template <typename L, typename R>
+constexpr bool IsLessImpl(const L lhs,
+                          const R rhs,
+                          const RangeConstraint l_range,
+                          const RangeConstraint r_range) {
+  return l_range == RANGE_UNDERFLOW || r_range == RANGE_OVERFLOW ||
+         (l_range == r_range &&
+          static_cast<decltype(lhs + rhs)>(lhs) <
+              static_cast<decltype(lhs + rhs)>(rhs));
+}
+
+template <typename L, typename R>
+struct IsLess {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return IsLessImpl(lhs, rhs, DstRangeRelationToSrcRange<R>(lhs),
+                      DstRangeRelationToSrcRange<L>(rhs));
+  }
+};
+
+template <typename L, typename R>
+constexpr bool IsLessOrEqualImpl(const L lhs,
+                                 const R rhs,
+                                 const RangeConstraint l_range,
+                                 const RangeConstraint r_range) {
+  return l_range == RANGE_UNDERFLOW || r_range == RANGE_OVERFLOW ||
+         (l_range == r_range &&
+          static_cast<decltype(lhs + rhs)>(lhs) <=
+              static_cast<decltype(lhs + rhs)>(rhs));
+}
+
+template <typename L, typename R>
+struct IsLessOrEqual {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return IsLessOrEqualImpl(lhs, rhs, DstRangeRelationToSrcRange<R>(lhs),
+                             DstRangeRelationToSrcRange<L>(rhs));
+  }
+};
+
+template <typename L, typename R>
+constexpr bool IsGreaterImpl(const L lhs,
+                             const R rhs,
+                             const RangeConstraint l_range,
+                             const RangeConstraint r_range) {
+  return l_range == RANGE_OVERFLOW || r_range == RANGE_UNDERFLOW ||
+         (l_range == r_range &&
+          static_cast<decltype(lhs + rhs)>(lhs) >
+              static_cast<decltype(lhs + rhs)>(rhs));
+}
+
+template <typename L, typename R>
+struct IsGreater {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return IsGreaterImpl(lhs, rhs, DstRangeRelationToSrcRange<R>(lhs),
+                         DstRangeRelationToSrcRange<L>(rhs));
+  }
+};
+
+template <typename L, typename R>
+constexpr bool IsGreaterOrEqualImpl(const L lhs,
+                                    const R rhs,
+                                    const RangeConstraint l_range,
+                                    const RangeConstraint r_range) {
+  return l_range == RANGE_OVERFLOW || r_range == RANGE_UNDERFLOW ||
+         (l_range == r_range &&
+          static_cast<decltype(lhs + rhs)>(lhs) >=
+              static_cast<decltype(lhs + rhs)>(rhs));
+}
+
+template <typename L, typename R>
+struct IsGreaterOrEqual {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return IsGreaterOrEqualImpl(lhs, rhs, DstRangeRelationToSrcRange<R>(lhs),
+                                DstRangeRelationToSrcRange<L>(rhs));
+  }
+};
+
+template <typename L, typename R>
+struct IsEqual {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return DstRangeRelationToSrcRange<R>(lhs) ==
+               DstRangeRelationToSrcRange<L>(rhs) &&
+           static_cast<decltype(lhs + rhs)>(lhs) ==
+               static_cast<decltype(lhs + rhs)>(rhs);
+  }
+};
+
+template <typename L, typename R>
+struct IsNotEqual {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  static constexpr bool Test(const L lhs, const R rhs) {
+    return DstRangeRelationToSrcRange<R>(lhs) !=
+               DstRangeRelationToSrcRange<L>(rhs) ||
+           static_cast<decltype(lhs + rhs)>(lhs) !=
+               static_cast<decltype(lhs + rhs)>(rhs);
+  }
+};
+
+// These perform the actual math operations on the CheckedNumerics.
+// Binary arithmetic operations.
+template <template <typename, typename> class C, typename L, typename R>
+constexpr bool SafeCompare(const L lhs, const R rhs) {
+  static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
+                "Types must be numeric.");
+  using Promotion = ArithmeticPromotion<BIG_ENOUGH_PROMOTION, L, R>;
+  using BigType = typename Promotion::type;
+  return Promotion::is_contained
+             // Force to a larger type for speed if both are contained.
+             ? C<BigType, BigType>::Test(
+                   static_cast<BigType>(static_cast<L>(lhs)),
+                   static_cast<BigType>(static_cast<R>(rhs)))
+             // Let the template functions figure it out for mixed types.
+             : C<L, R>::Test(lhs, rhs);
+};
 
 }  // namespace internal
 }  // namespace base

@@ -59,10 +59,10 @@ class NET_EXPORT URLRequestJobManager {
   URLRequestJobManager();
   ~URLRequestJobManager();
 
-  // The first guy to call this function sets the allowed thread.  This way we
-  // avoid needing to define that thread externally.  Since we expect all
-  // callers to be on the same thread, we don't worry about threads racing to
-  // set the allowed thread.
+  // The first call to this function sets the allowed thread.  This way we avoid
+  // needing to define that thread externally.  Since we expect all callers to
+  // be on the same thread, we don't worry about threads racing to set the
+  // allowed thread.
   bool IsAllowedThread() const {
 #if 0
     return thread_checker_.CalledOnValidThread();

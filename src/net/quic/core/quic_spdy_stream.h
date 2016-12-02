@@ -18,13 +18,13 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/iovec.h"
-#include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_header_list.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
@@ -67,9 +67,6 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
   QuicSpdyStream(QuicStreamId id, QuicSpdySession* spdy_session);
   ~QuicSpdyStream() override;
 
-  // Override the base class to send QUIC_STREAM_NO_ERROR to the peer
-  // when the stream has not received all the data.
-  void CloseWriteSide() override;
   void StopReading() override;
 
   // QuicStream implementation
@@ -182,6 +179,8 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
   }
 
   bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
+
+  using QuicStream::CloseWriteSide;
 
  protected:
   virtual void OnInitialHeadersComplete(bool fin,

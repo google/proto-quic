@@ -38,7 +38,7 @@ class MockQuicCryptoServerStreamHelper : public QuicCryptoServerStream::Helper {
                      QuicConnectionId(QuicConnectionId connection_id));
   MOCK_CONST_METHOD3(CanAcceptClientHello,
                      bool(const CryptoHandshakeMessage& message,
-                          const IPEndPoint& self_address,
+                          const QuicSocketAddress& self_address,
                           std::string* error_details));
 
  private:

@@ -78,8 +78,8 @@ void PacketDroppingTestWriter::Initialize(QuicConnectionHelperInterface* helper,
 WriteResult PacketDroppingTestWriter::WritePacket(
     const char* buffer,
     size_t buf_len,
-    const IPAddress& self_address,
-    const IPEndPoint& peer_address,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
     PerPacketOptions* options) {
   ++num_calls_to_write_;
   ReleaseOldPackets();
@@ -219,8 +219,8 @@ void PacketDroppingTestWriter::OnCanWrite() {
 PacketDroppingTestWriter::DelayedWrite::DelayedWrite(
     const char* buffer,
     size_t buf_len,
-    const IPAddress& self_address,
-    const IPEndPoint& peer_address,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
     std::unique_ptr<PerPacketOptions> options,
     QuicTime send_time)
     : buffer(buffer, buf_len),

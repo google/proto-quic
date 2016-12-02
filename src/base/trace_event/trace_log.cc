@@ -493,11 +493,18 @@ const unsigned char* TraceLog::GetCategoryGroupEnabled(
     DCHECK(!CategoryRegistry::kCategoryAlreadyShutdown->is_enabled());
     return CategoryRegistry::kCategoryAlreadyShutdown->state_ptr();
   }
-  TraceCategory* category = nullptr;
-  bool is_new_category =
-      CategoryRegistry::GetOrCreateCategoryByName(category_group, &category);
-  if (is_new_category)
-    tracelog->UpdateCategoryState(category);
+  TraceCategory* category = CategoryRegistry::GetCategoryByName(category_group);
+  if (!category) {
+    // Slow path: in the case of a new category we have to repeat the check
+    // holding the lock, as multiple threads might have reached this point
+    // at the same time.
+    auto category_initializer = [](TraceCategory* category) {
+      TraceLog::GetInstance()->UpdateCategoryState(category);
+    };
+    AutoLock lock(tracelog->lock_);
+    CategoryRegistry::GetOrCreateCategoryLocked(
+        category_group, category_initializer, &category);
+  }
   DCHECK(category->state_ptr());
   return category->state_ptr();
 }

@@ -16,7 +16,7 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -294,7 +294,8 @@ INSTANTIATE_TEST_CASE_P(Tests,
                         ::testing::ValuesIn(AllSupportedVersions()));
 
 TEST_P(QuicSessionTestServer, PeerAddress) {
-  EXPECT_EQ(IPEndPoint(Loopback4(), kTestPort), session_.peer_address());
+  EXPECT_EQ(QuicSocketAddress(QuicIpAddress::Loopback4(), kTestPort),
+            session_.peer_address());
 }
 
 TEST_P(QuicSessionTestServer, IsCryptoHandshakeConfirmed) {

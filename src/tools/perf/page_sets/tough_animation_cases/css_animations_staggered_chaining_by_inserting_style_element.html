@@ -13,7 +13,7 @@ function startAnimation() {
   var target = document.createElement('target');
   container.appendChild(target);
   updateStyle(target);
-  target.addEventListener('webkitAnimationEnd', function(e) {
+  target.addEventListener('animationend', function(e) {
     updateStyle(target);
   });
 }
@@ -32,9 +32,9 @@ function updateStyle(element) {
   var style = document.createElement('style');
   style.textContent = '\
   #' + id + ' {\
-    -webkit-animation: ' + anim + ' 1s;\
+    animation: ' + anim + ' 1s;\
   }\n\
-  @-webkit-keyframes ' + anim + ' {\
+  @keyframes ' + anim + ' {\
     0% { opacity: 0; }\
     100% { opacity: 1; }\
   }';

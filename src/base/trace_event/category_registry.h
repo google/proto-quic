@@ -18,10 +18,12 @@ struct TraceCategory;
 class TraceCategoryTest;
 class TraceLog;
 
-// Keeps track of the state of all tracing categories. The reason why this
-// is a fully static class with global state is to allow to statically define
-// known categories as global linker-initialized structs, without requiring
-// static initializers.
+// Allows fast and thread-safe acces to the state of all tracing categories.
+// All the methods in this class can be concurrently called on multiple threads,
+// unless otherwise noted (e.g., GetOrCreateCategoryLocked).
+// The reason why this is a fully static class with global state is to allow to
+// statically define known categories as global linker-initialized structs,
+// without requiring static initializers.
 class BASE_EXPORT CategoryRegistry {
  public:
   // Allows for-each iterations over a slice of the categories array.
@@ -52,11 +54,18 @@ class BASE_EXPORT CategoryRegistry {
   static const TraceCategory* GetCategoryByStatePtr(
       const uint8_t* category_state);
 
+  // Returns a category from its name or nullptr if not found.
+  // The output |category| argument is an undefinitely lived pointer to the
+  // TraceCategory owned by the registry. TRACE_EVENTx macros will cache this
+  // pointer and use it for checks in their fast-paths.
+  static TraceCategory* GetCategoryByName(const char* category_name);
+
   static bool IsBuiltinCategory(const TraceCategory*);
 
  private:
   friend class TraceCategoryTest;
   friend class TraceLog;
+  using CategoryInitializerFn = void (*)(TraceCategory*);
 
   // Only for debugging/testing purposes, is a no-op on release builds.
   static void Initialize();
@@ -64,13 +73,14 @@ class BASE_EXPORT CategoryRegistry {
   // Resets the state of all categories, to clear up the state between tests.
   static void ResetForTesting();
 
-  // The output |category| argument is an undefinitely lived pointer to the
-  // TraceCategory owned by the registry. TRACE_EVENTx macros will cache this
-  // pointer and use it for checks in their fast-paths.
-  // Returns false if the category was already present, true if the category
-  // has just been added and hence requires initialization.
-  static bool GetOrCreateCategoryByName(const char* category_name,
-                                        TraceCategory** category);
+  // Used to get/create a category in the slow-path. If the category exists
+  // already, this has the same effect of GetCategoryByName and returns false.
+  // If not, a new category is created and the CategoryInitializerFn is invoked
+  // before retuning true. The caller must guarantee serialization: either call
+  // this method from a single thread or hold a lock when calling this.
+  static bool GetOrCreateCategoryLocked(const char* category_name,
+                                        CategoryInitializerFn,
+                                        TraceCategory**);
 
   // Allows to iterate over the valid categories in a for-each loop.
   // This includes builtin categories such as __metadata.

@@ -13,7 +13,6 @@
 
 namespace base {
 class DictionaryValue;
-class Value;
 }
 
 namespace net {

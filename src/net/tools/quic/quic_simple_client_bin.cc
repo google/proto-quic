@@ -57,7 +57,7 @@
 #include "net/http/transport_security_state.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/quic_error_codes.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/spdy/spdy_header_block.h"
@@ -76,10 +76,8 @@ using net::ProofVerifierChromium;
 using net::TransportSecurityState;
 using std::cout;
 using std::cerr;
-using std::map;
-using std::string;
-using std::vector;
 using std::endl;
+using std::string;
 
 // The IP or hostname the quic client will connect to.
 string FLAGS_host = "";
@@ -114,7 +112,7 @@ class FakeProofVerifier : public ProofVerifier {
       const string& server_config,
       net::QuicVersion quic_version,
       StringPiece chlo_hash,
-      const vector<string>& certs,
+      const std::vector<string>& certs,
       const string& cert_sct,
       const string& signature,
       const net::ProofVerifyContext* context,
@@ -316,7 +314,7 @@ int main(int argc, char* argv[]) {
     if (sp.empty()) {
       continue;
     }
-    vector<string> kv =
+    std::vector<string> kv =
         base::SplitString(sp, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
     CHECK_EQ(2u, kv.size());
     string key;

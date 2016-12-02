@@ -12,7 +12,6 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 
-using std::max;
 
 namespace net {
 
@@ -25,10 +24,8 @@ QuicUnackedPacketMap::QuicUnackedPacketMap()
       pending_crypto_packet_count_(0) {}
 
 QuicUnackedPacketMap::~QuicUnackedPacketMap() {
-  QuicPacketNumber index = least_unacked_;
-  for (UnackedPacketMap::iterator it = unacked_packets_.begin();
-       it != unacked_packets_.end(); ++it, ++index) {
-    QuicUtils::DeleteFrames(&it->retransmittable_frames);
+  for (QuicTransmissionInfo& transmission_info : unacked_packets_) {
+    DeleteFrames(&(transmission_info.retransmittable_frames));
   }
 }
 
@@ -42,15 +39,15 @@ void QuicUnackedPacketMap::AddSentPacket(SerializedPacket* packet,
   QUIC_BUG_IF(largest_sent_packet_ >= packet_number) << packet_number;
   DCHECK_GE(packet_number, least_unacked_ + unacked_packets_.size());
   while (least_unacked_ + unacked_packets_.size() < packet_number) {
-    unacked_packets_.push_back(TransmissionInfo());
+    unacked_packets_.push_back(QuicTransmissionInfo());
     unacked_packets_.back().is_unackable = true;
   }
 
   const bool has_crypto_handshake =
       packet->has_crypto_handshake == IS_HANDSHAKE;
-  TransmissionInfo info(packet->encryption_level, packet->packet_number_length,
-                        transmission_type, sent_time, bytes_sent,
-                        has_crypto_handshake, packet->num_padding_bytes);
+  QuicTransmissionInfo info(
+      packet->encryption_level, packet->packet_number_length, transmission_type,
+      sent_time, bytes_sent, has_crypto_handshake, packet->num_padding_bytes);
   if (old_packet_number > 0) {
     TransferRetransmissionInfo(old_packet_number, packet_number,
                                transmission_type, &info);
@@ -91,7 +88,7 @@ void QuicUnackedPacketMap::TransferRetransmissionInfo(
     QuicPacketNumber old_packet_number,
     QuicPacketNumber new_packet_number,
     TransmissionType transmission_type,
-    TransmissionInfo* info) {
+    QuicTransmissionInfo* info) {
   if (old_packet_number < least_unacked_) {
     // This can happen when a retransmission packet is queued because of write
     // blocked socket, and the original packet gets acked before the
@@ -99,14 +96,14 @@ void QuicUnackedPacketMap::TransferRetransmissionInfo(
     return;
   }
   if (old_packet_number > largest_sent_packet_) {
-    QUIC_BUG << "Old TransmissionInfo never existed for :" << old_packet_number
-             << " largest_sent:" << largest_sent_packet_;
+    QUIC_BUG << "Old QuicTransmissionInfo never existed for :"
+             << old_packet_number << " largest_sent:" << largest_sent_packet_;
     return;
   }
   DCHECK_GE(new_packet_number, least_unacked_ + unacked_packets_.size());
   DCHECK_NE(NOT_RETRANSMISSION, transmission_type);
 
-  TransmissionInfo* transmission_info =
+  QuicTransmissionInfo* transmission_info =
       &unacked_packets_.at(old_packet_number - least_unacked_);
   QuicFrames* frames = &transmission_info->retransmittable_frames;
   for (AckListenerWrapper& wrapper : transmission_info->ack_listeners) {
@@ -145,32 +142,30 @@ bool QuicUnackedPacketMap::HasRetransmittableFrames(
               .retransmittable_frames.empty();
 }
 
-void QuicUnackedPacketMap::RemoveRetransmittability(TransmissionInfo* info) {
+void QuicUnackedPacketMap::RemoveRetransmittability(
+    QuicTransmissionInfo* info) {
   while (info->retransmission != 0) {
     const QuicPacketNumber retransmission = info->retransmission;
     info->retransmission = 0;
     info = &unacked_packets_[retransmission - least_unacked_];
   }
-  MaybeRemoveRetransmittableFrames(info);
+
+  if (info->has_crypto_handshake) {
+    DCHECK(!info->retransmittable_frames.empty());
+    DCHECK_LT(0u, pending_crypto_packet_count_);
+    --pending_crypto_packet_count_;
+    info->has_crypto_handshake = false;
+  }
+  DeleteFrames(&info->retransmittable_frames);
 }
 
 void QuicUnackedPacketMap::RemoveRetransmittability(
     QuicPacketNumber packet_number) {
   DCHECK_GE(packet_number, least_unacked_);
   DCHECK_LT(packet_number, least_unacked_ + unacked_packets_.size());
-  TransmissionInfo* info = &unacked_packets_[packet_number - least_unacked_];
+  QuicTransmissionInfo* info =
+      &unacked_packets_[packet_number - least_unacked_];
   RemoveRetransmittability(info);
-}
-
-void QuicUnackedPacketMap::MaybeRemoveRetransmittableFrames(
-    TransmissionInfo* transmission_info) {
-  if (transmission_info->has_crypto_handshake) {
-    DCHECK(!transmission_info->retransmittable_frames.empty());
-    DCHECK_LT(0u, pending_crypto_packet_count_);
-    --pending_crypto_packet_count_;
-    transmission_info->has_crypto_handshake = false;
-  }
-  QuicUtils::DeleteFrames(&transmission_info->retransmittable_frames);
 }
 
 void QuicUnackedPacketMap::IncreaseLargestObserved(
@@ -181,20 +176,20 @@ void QuicUnackedPacketMap::IncreaseLargestObserved(
 
 bool QuicUnackedPacketMap::IsPacketUsefulForMeasuringRtt(
     QuicPacketNumber packet_number,
-    const TransmissionInfo& info) const {
+    const QuicTransmissionInfo& info) const {
   // Packet can be used for RTT measurement if it may yet be acked as the
   // largest observed packet by the receiver.
   return !info.is_unackable && packet_number > largest_observed_;
 }
 
 bool QuicUnackedPacketMap::IsPacketUsefulForCongestionControl(
-    const TransmissionInfo& info) const {
+    const QuicTransmissionInfo& info) const {
   // Packet contributes to congestion control if it is considered inflight.
   return info.in_flight;
 }
 
 bool QuicUnackedPacketMap::IsPacketUsefulForRetransmittableData(
-    const TransmissionInfo& info) const {
+    const QuicTransmissionInfo& info) const {
   // Packet may have retransmittable frames, or the data may have been
   // retransmitted with a new packet number.
   return !info.retransmittable_frames.empty() ||
@@ -202,8 +197,9 @@ bool QuicUnackedPacketMap::IsPacketUsefulForRetransmittableData(
          info.retransmission > largest_observed_;
 }
 
-bool QuicUnackedPacketMap::IsPacketUseless(QuicPacketNumber packet_number,
-                                           const TransmissionInfo& info) const {
+bool QuicUnackedPacketMap::IsPacketUseless(
+    QuicPacketNumber packet_number,
+    const QuicTransmissionInfo& info) const {
   return !IsPacketUsefulForMeasuringRtt(packet_number, info) &&
          !IsPacketUsefulForCongestionControl(info) &&
          !IsPacketUsefulForRetransmittableData(info);
@@ -232,11 +228,12 @@ void QuicUnackedPacketMap::NotifyAndClearListeners(
     QuicTime::Delta ack_delay_time) {
   DCHECK_GE(packet_number, least_unacked_);
   DCHECK_LT(packet_number, least_unacked_ + unacked_packets_.size());
-  TransmissionInfo* info = &unacked_packets_[packet_number - least_unacked_];
+  QuicTransmissionInfo* info =
+      &unacked_packets_[packet_number - least_unacked_];
   NotifyAndClearListeners(&info->ack_listeners, ack_delay_time);
 }
 
-void QuicUnackedPacketMap::RemoveFromInFlight(TransmissionInfo* info) {
+void QuicUnackedPacketMap::RemoveFromInFlight(QuicTransmissionInfo* info) {
   if (info->in_flight) {
     QUIC_BUG_IF(bytes_in_flight_ < info->bytes_sent);
     bytes_in_flight_ -= info->bytes_sent;
@@ -247,14 +244,16 @@ void QuicUnackedPacketMap::RemoveFromInFlight(TransmissionInfo* info) {
 void QuicUnackedPacketMap::RemoveFromInFlight(QuicPacketNumber packet_number) {
   DCHECK_GE(packet_number, least_unacked_);
   DCHECK_LT(packet_number, least_unacked_ + unacked_packets_.size());
-  TransmissionInfo* info = &unacked_packets_[packet_number - least_unacked_];
+  QuicTransmissionInfo* info =
+      &unacked_packets_[packet_number - least_unacked_];
   RemoveFromInFlight(info);
 }
 
 void QuicUnackedPacketMap::RestoreToInFlight(QuicPacketNumber packet_number) {
   DCHECK_GE(packet_number, least_unacked_);
   DCHECK_LT(packet_number, least_unacked_ + unacked_packets_.size());
-  TransmissionInfo* info = &unacked_packets_[packet_number - least_unacked_];
+  QuicTransmissionInfo* info =
+      &unacked_packets_[packet_number - least_unacked_];
   DCHECK(!info->is_unackable);
   bytes_in_flight_ += info->bytes_sent;
   info->in_flight = true;
@@ -269,7 +268,7 @@ void QuicUnackedPacketMap::CancelRetransmissionsForStream(
     if (frames->empty()) {
       continue;
     }
-    QuicUtils::RemoveFramesForStream(frames, stream_id);
+    RemoveFramesForStream(frames, stream_id);
     if (frames->empty()) {
       RemoveRetransmittability(packet_number);
     }
@@ -284,12 +283,12 @@ bool QuicUnackedPacketMap::HasInFlightPackets() const {
   return bytes_in_flight_ > 0;
 }
 
-const TransmissionInfo& QuicUnackedPacketMap::GetTransmissionInfo(
+const QuicTransmissionInfo& QuicUnackedPacketMap::GetTransmissionInfo(
     QuicPacketNumber packet_number) const {
   return unacked_packets_[packet_number - least_unacked_];
 }
 
-TransmissionInfo* QuicUnackedPacketMap::GetMutableTransmissionInfo(
+QuicTransmissionInfo* QuicUnackedPacketMap::GetMutableTransmissionInfo(
     QuicPacketNumber packet_number) {
   return &unacked_packets_[packet_number - least_unacked_];
 }

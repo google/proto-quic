@@ -23,7 +23,7 @@
       width: 100%;
       height: 100%;
       border-radius: 2px;
-      -webkit-transform-style: preserve-3d;
+      transform-style: preserve-3d;
     }
   </style>
   <script src="resources/perf_test_helper.js"></script>
@@ -50,7 +50,7 @@
       for (var i = 0; i < N; i++) {
         var elem = document.createElement("div");
         elem.style.backgroundColor = randomColorGenerator();
-        elem.style.webkitTransform = "rotateZ(" + ((i + 1) * 10.1).toString() + "deg)";
+        elem.style.transform = "rotateZ(" + ((i + 1) * 10.1).toString() + "deg)";
         backdrop.appendChild(elem);
         elem.animate(keyframes, {duration: duration, iterations: Infinity,
           direction: 'alternate', delay: -2 * duration * Math.random()});

@@ -30,7 +30,7 @@ class FakeProofSource : public ProofSource {
   void Activate();
 
   // ProofSource interface
-  bool GetProof(const IPAddress& server_ip,
+  bool GetProof(const QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,
@@ -38,7 +38,7 @@ class FakeProofSource : public ProofSource {
                 const QuicTagVector& connection_options,
                 scoped_refptr<ProofSource::Chain>* out_chain,
                 QuicCryptoProof* out_proof) override;
-  void GetProof(const IPAddress& server_ip,
+  void GetProof(const QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,
@@ -58,7 +58,7 @@ class FakeProofSource : public ProofSource {
   bool active_ = false;
 
   struct Params {
-    Params(const IPAddress& server_ip,
+    Params(const QuicIpAddress& server_ip,
            std::string hostname,
            std::string server_config,
            QuicVersion quic_version,
@@ -69,7 +69,7 @@ class FakeProofSource : public ProofSource {
     Params(Params&& other);
     Params& operator=(Params&& other);
 
-    IPAddress server_ip;
+    QuicIpAddress server_ip;
     std::string hostname;
     std::string server_config;
     QuicVersion quic_version;

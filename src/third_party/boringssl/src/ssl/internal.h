@@ -1019,6 +1019,9 @@ typedef struct ssl_handshake_st {
   /* key_block is the record-layer key block for TLS 1.2 and earlier. */
   uint8_t *key_block;
   uint8_t key_block_len;
+
+  /* hostname, on the server, is the value of the SNI extension. */
+  char *hostname;
 } SSL_HANDSHAKE;
 
 SSL_HANDSHAKE *ssl_handshake_new(enum ssl_hs_wait_t (*do_handshake)(SSL *ssl));
@@ -1062,7 +1065,6 @@ int ssl_ext_key_share_parse_clienthello(SSL *ssl, int *out_found,
                                         uint8_t *out_alert, CBS *contents);
 int ssl_ext_key_share_add_serverhello(SSL *ssl, CBB *out);
 
-int ssl_ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out);
 int ssl_ext_pre_shared_key_parse_serverhello(SSL *ssl, uint8_t *out_alert,
                                              CBS *contents);
 int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
@@ -1071,9 +1073,9 @@ int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
                                              uint8_t *out_alert, CBS *contents);
 int ssl_ext_pre_shared_key_add_serverhello(SSL *ssl, CBB *out);
 
-int ssl_ext_psk_key_exchange_modes_parse_clienthello(SSL *ssl,
-                                                     uint8_t *out_alert,
-                                                     CBS *contents);
+/* ssl_is_sct_list_valid does a shallow parse of the SCT list in |contents| and
+ * returns one iff it's valid. */
+int ssl_is_sct_list_valid(const CBS *contents);
 
 int ssl_write_client_hello(SSL *ssl);
 
@@ -1744,10 +1746,6 @@ int ssl3_write_app_data(SSL *ssl, const void *buf, int len);
 int ssl3_write_bytes(SSL *ssl, int type, const void *buf, int len);
 int ssl3_output_cert_chain(SSL *ssl);
 
-/* ssl_is_valid_cipher checks that |cipher| is valid according to the current
- * server configuration in |ssl|. It returns 1 if valid, and 0 otherwise. */
-int ssl_is_valid_cipher(const SSL *ssl, const SSL_CIPHER *cipher);
-
 const SSL_CIPHER *ssl3_choose_cipher(
     SSL *ssl, const struct ssl_early_callback_ctx *client_hello,
     const struct ssl_cipher_preference_list_st *srvr);
@@ -1832,7 +1830,6 @@ int ssl_init_wbio_buffer(SSL *ssl);
 void ssl_free_wbio_buffer(SSL *ssl);
 
 int tls1_change_cipher_state(SSL *ssl, int which);
-int tls1_setup_key_block(SSL *ssl);
 int tls1_handshake_digest(SSL *ssl, uint8_t *out, size_t out_len);
 int tls1_generate_master_secret(SSL *ssl, uint8_t *out, const uint8_t *premaster,
                                 size_t premaster_len);

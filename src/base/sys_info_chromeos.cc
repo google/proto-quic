@@ -200,6 +200,16 @@ std::string SysInfo::GetLsbReleaseBoard() {
 }
 
 // static
+std::string SysInfo::GetStrippedReleaseBoard() {
+  std::string board = GetLsbReleaseBoard();
+  const size_t index = board.find("-signed-");
+  if (index != std::string::npos)
+    board.resize(index);
+
+  return base::ToLowerASCII(board);
+}
+
+// static
 Time SysInfo::GetLsbReleaseTime() {
   return GetChromeOSVersionInfo().lsb_release_time();
 }

@@ -12,6 +12,7 @@
 #include "base/json/string_escape.h"
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "base/trace_event/trace_event.h"
 #include "base/trace_event/trace_event_memory_overhead.h"
 
@@ -105,12 +106,9 @@ void TypeNameDeduplicator::AppendAsTraceFormat(std::string* out) const {
 
 void TypeNameDeduplicator::EstimateTraceMemoryOverhead(
     TraceEventMemoryOverhead* overhead) {
-  // The size here is only an estimate; it fails to take into account the size
-  // of the tree nodes for the map, but as an estimate this should be fine.
-  size_t map_size = type_ids_.size() * sizeof(std::pair<const char*, int>);
-
+  size_t memory_usage = EstimateMemoryUsage(type_ids_);
   overhead->Add("TypeNameDeduplicator",
-                sizeof(TypeNameDeduplicator) + map_size);
+                sizeof(TypeNameDeduplicator) + memory_usage);
 }
 
 }  // namespace trace_event

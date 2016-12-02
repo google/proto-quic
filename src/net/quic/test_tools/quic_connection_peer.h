@@ -9,11 +9,11 @@
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_connection_stats.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
 
-struct QuicAckFrame;
 struct QuicPacketHeader;
 class QuicAlarm;
 class QuicConnectionHelperInterface;
@@ -23,7 +23,6 @@ class QuicFramer;
 class QuicPacketCreator;
 class QuicPacketGenerator;
 class QuicPacketWriter;
-class QuicReceivedPacketManager;
 class QuicSentPacketManager;
 class SendAlgorithmInterface;
 
@@ -65,10 +64,10 @@ class QuicConnectionPeer {
                              Perspective perspective);
 
   static void SetSelfAddress(QuicConnection* connection,
-                             const IPEndPoint& self_address);
+                             const QuicSocketAddress& self_address);
 
   static void SetPeerAddress(QuicConnection* connection,
-                             const IPEndPoint& peer_address);
+                             const QuicSocketAddress& peer_address);
 
   static bool IsSilentCloseEnabled(QuicConnection* connection);
 

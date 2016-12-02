@@ -8,7 +8,7 @@
 #include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 
@@ -31,8 +31,8 @@ class StatelessRejector {
                     const QuicClock* clock,
                     QuicRandom* random,
                     QuicByteCount chlo_packet_size,
-                    const IPEndPoint& client_address,
-                    const IPEndPoint& server_address);
+                    const QuicSocketAddress& client_address,
+                    const QuicSocketAddress& server_address);
 
   ~StatelessRejector();
 
@@ -98,8 +98,8 @@ class StatelessRejector {
   QuicConnectionId connection_id_;
   QuicConnectionId server_designated_connection_id_;
   QuicByteCount chlo_packet_size_;
-  IPEndPoint client_address_;
-  IPEndPoint server_address_;
+  QuicSocketAddress client_address_;
+  QuicSocketAddress server_address_;
   const QuicClock* clock_;
   QuicRandom* random_;
   const QuicCryptoServerConfig* crypto_config_;

@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
@@ -62,9 +63,9 @@ SYSROOTS = {
         'SysrootDir' : 'debian_wheezy_mips-sysroot'
     },
     ('Jessie', 'arm64'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
+        'Revision' : '5735a5e9605d549acb6495e1fb65384a54fe0a48',
         'Tarball' : 'debian_jessie_arm64_sysroot.tgz',
-        'Sha1Sum' : 'bd9b894d9db7f834b707ba4c9c2bbfbe0d162c6f',
+        'Sha1Sum' : '82ebae900d0aadd52cf76a8e7cdb6a782df6ef28',
         'SysrootDir' : 'debian_jessie_arm64-sysroot'
     },
     ('Precise', 'amd64'): {
@@ -245,8 +246,14 @@ def InstallSysroot(target_platform, target_arch):
   print 'Downloading %s' % url
   sys.stdout.flush()
   sys.stderr.flush()
-  subprocess.check_call(
-      ['wget', '--quiet', '-t', '3', '-O', tarball, url])
+  for _ in range(3):
+    try:
+      urllib.urlretrieve(url, tarball)
+      break
+    except:
+      pass
+  else:
+    raise Error('Failed to download %s' % url)
   sha1sum = GetSha1(tarball)
   if sha1sum != tarball_sha1sum:
     raise Error('Tarball sha1sum is wrong.'

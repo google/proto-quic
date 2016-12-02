@@ -43,8 +43,8 @@ class ConnectionExpireAlarm : public QuicAlarm::Delegate {
 }  // namespace
 
 BufferedPacket::BufferedPacket(std::unique_ptr<QuicReceivedPacket> packet,
-                               IPEndPoint server_address,
-                               IPEndPoint client_address)
+                               QuicSocketAddress server_address,
+                               QuicSocketAddress client_address)
     : packet(std::move(packet)),
       server_address(server_address),
       client_address(client_address) {}
@@ -80,8 +80,8 @@ QuicBufferedPacketStore::~QuicBufferedPacketStore() {}
 EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     QuicConnectionId connection_id,
     const QuicReceivedPacket& packet,
-    IPEndPoint server_address,
-    IPEndPoint client_address,
+    QuicSocketAddress server_address,
+    QuicSocketAddress client_address,
     bool is_chlo) {
   QUIC_BUG_IF(!FLAGS_quic_allow_chlo_buffering)
       << "Shouldn't buffer packets if disabled via flag.";

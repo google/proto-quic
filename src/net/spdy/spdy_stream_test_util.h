@@ -27,9 +27,8 @@ class ClosingDelegate : public SpdyStream::Delegate {
   ~ClosingDelegate() override;
 
   // SpdyStream::Delegate implementation.
-  void OnRequestHeadersSent() override;
-  SpdyResponseHeadersStatus OnResponseHeadersUpdated(
-      const SpdyHeaderBlock& response_headers) override;
+  void OnHeadersSent() override;
+  void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override;
   void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) override;
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
@@ -49,9 +48,8 @@ class StreamDelegateBase : public SpdyStream::Delegate {
   explicit StreamDelegateBase(const base::WeakPtr<SpdyStream>& stream);
   ~StreamDelegateBase() override;
 
-  void OnRequestHeadersSent() override;
-  SpdyResponseHeadersStatus OnResponseHeadersUpdated(
-      const SpdyHeaderBlock& response_headers) override;
+  void OnHeadersSent() override;
+  void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override;
   void OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) override;
   void OnDataSent() override;
   void OnTrailers(const SpdyHeaderBlock& trailers) override;
@@ -95,7 +93,7 @@ class StreamDelegateDoNothing : public StreamDelegateBase {
   ~StreamDelegateDoNothing() override;
 };
 
-// Test delegate that sends data immediately in OnResponseHeadersUpdated().
+// Test delegate that sends data immediately in OnHeadersReceived().
 class StreamDelegateSendImmediate : public StreamDelegateBase {
  public:
   // |data| can be NULL.
@@ -103,8 +101,7 @@ class StreamDelegateSendImmediate : public StreamDelegateBase {
                               base::StringPiece data);
   ~StreamDelegateSendImmediate() override;
 
-  SpdyResponseHeadersStatus OnResponseHeadersUpdated(
-      const SpdyHeaderBlock& response_headers) override;
+  void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override;
 
  private:
   base::StringPiece data_;
@@ -117,21 +114,20 @@ class StreamDelegateWithBody : public StreamDelegateBase {
                          base::StringPiece data);
   ~StreamDelegateWithBody() override;
 
-  void OnRequestHeadersSent() override;
+  void OnHeadersSent() override;
 
  private:
   scoped_refptr<StringIOBuffer> buf_;
 };
 
-// Test delegate that closes stream in OnResponseHeadersUpdated().
+// Test delegate that closes stream in OnHeadersReceived().
 class StreamDelegateCloseOnHeaders : public StreamDelegateBase {
  public:
   explicit StreamDelegateCloseOnHeaders(
       const base::WeakPtr<SpdyStream>& stream);
   ~StreamDelegateCloseOnHeaders() override;
 
-  SpdyResponseHeadersStatus OnResponseHeadersUpdated(
-      const SpdyHeaderBlock& response_headers) override;
+  void OnHeadersReceived(const SpdyHeaderBlock& response_headers) override;
 };
 
 } // namespace test

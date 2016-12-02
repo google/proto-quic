@@ -90,6 +90,10 @@ void TraceNetLogObserver::WatchForTraceStart(NetLog* netlog) {
   DCHECK(!net_log_to_watch_);
   DCHECK(!net_log());
   net_log_to_watch_ = netlog;
+  // Tracing can start before the observer is even created, for instance for
+  // startup tracing.
+  if (base::trace_event::TraceLog::GetInstance()->IsEnabled())
+    OnTraceLogEnabled();
   base::trace_event::TraceLog::GetInstance()->AddEnabledStateObserver(this);
 }
 

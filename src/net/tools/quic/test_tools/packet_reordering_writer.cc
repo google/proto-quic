@@ -11,11 +11,12 @@ PacketReorderingWriter::PacketReorderingWriter() {}
 
 PacketReorderingWriter::~PacketReorderingWriter() {}
 
-WriteResult PacketReorderingWriter::WritePacket(const char* buffer,
-                                                size_t buf_len,
-                                                const IPAddress& self_address,
-                                                const IPEndPoint& peer_address,
-                                                PerPacketOptions* options) {
+WriteResult PacketReorderingWriter::WritePacket(
+    const char* buffer,
+    size_t buf_len,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
+    PerPacketOptions* options) {
   if (!delay_next_) {
     WriteResult wr = QuicPacketWriterWrapper::WritePacket(
         buffer, buf_len, self_address, peer_address, options);

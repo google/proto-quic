@@ -11,11 +11,12 @@ LimitedMtuTestWriter::LimitedMtuTestWriter(QuicByteCount mtu) : mtu_(mtu) {}
 
 LimitedMtuTestWriter::~LimitedMtuTestWriter() {}
 
-WriteResult LimitedMtuTestWriter::WritePacket(const char* buffer,
-                                              size_t buf_len,
-                                              const IPAddress& self_address,
-                                              const IPEndPoint& peer_address,
-                                              PerPacketOptions* options) {
+WriteResult LimitedMtuTestWriter::WritePacket(
+    const char* buffer,
+    size_t buf_len,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
+    PerPacketOptions* options) {
   if (buf_len > mtu_) {
     // Drop the packet.
     return WriteResult(WRITE_STATUS_OK, buf_len);

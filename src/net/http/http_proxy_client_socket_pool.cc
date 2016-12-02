@@ -91,7 +91,8 @@ HttpProxyConnectJob::HttpProxyConnectJob(
           priority,
           respect_limits,
           delegate,
-          NetLogWithSource::Make(net_log, NetLogSourceType::CONNECT_JOB)),
+          NetLogWithSource::Make(net_log,
+                                 NetLogSourceType::HTTP_PROXY_CONNECT_JOB)),
       client_socket_(new HttpProxyClientSocketWrapper(
           group_name,
           priority,

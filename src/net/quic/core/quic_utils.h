@@ -1,8 +1,6 @@
 // Copyright (c) 2012 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
-// Some helpers for quic.
 
 #ifndef NET_QUIC_CORE_QUIC_UTILS_H_
 #define NET_QUIC_CORE_QUIC_UTILS_H_
@@ -16,7 +14,10 @@
 #include "base/strings/string_piece.h"
 #include "net/base/int128.h"
 #include "net/base/net_export.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_error_codes.h"
+#include "net/quic/core/quic_tag.h"
+#include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 #ifdef _MSC_VER
 // MSVC 2013 and prior don't have alignof or aligned(); they have __alignof and
@@ -65,30 +66,17 @@ class NET_EXPORT_PRIVATE QuicUtils {
   // Returns PeerAddressChangeType as a std::string.
   static std::string PeerAddressChangeTypeToString(PeerAddressChangeType type);
 
-  // Deletes all the sub-frames contained in |frames|.
-  static void DeleteFrames(QuicFrames* frames);
-
-  // Deletes all the QuicStreamFrames for the specified |stream_id|.
-  static void RemoveFramesForStream(QuicFrames* frames, QuicStreamId stream_id);
-
-  // Deletes and clears all the frames and the packet from serialized packet.
-  static void ClearSerializedPacket(SerializedPacket* serialized_packet);
-
   // Returns a packed representation of |path_id| and |packet_number| in which
   // the highest byte is set to |path_id| and the lower 7 bytes are the lower
   // 7 bytes of |packet_number|.
   static uint64_t PackPathIdAndPacketNumber(QuicPathId path_id,
                                             QuicPacketNumber packet_number);
 
-  // Allocates a new char[] of size |packet.encrypted_length| and copies in
-  // |packet.encrypted_buffer|.
-  static char* CopyBuffer(const SerializedPacket& packet);
-
   // Determines and returns change type of address change from |old_address| to
   // |new_address|.
   static PeerAddressChangeType DetermineAddressChangeType(
-      const IPEndPoint& old_address,
-      const IPEndPoint& new_address);
+      const QuicSocketAddress& old_address,
+      const QuicSocketAddress& new_address);
 
   // This converts |length| bytes of binary to a 2*|length|-character
   // hexadecimal representation.

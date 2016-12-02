@@ -12,7 +12,6 @@
 #include "net/quic/core/quic_write_blocked_list.h"
 
 using base::StringPiece;
-using std::min;
 using std::string;
 
 namespace net {
@@ -287,7 +286,7 @@ QuicConsumedData QuicStream::WritevData(
   QuicByteCount send_window = flow_controller_.SendWindowSize();
   if (stream_contributes_to_connection_flow_control_) {
     send_window =
-        min(send_window, connection_flow_controller_->SendWindowSize());
+        std::min(send_window, connection_flow_controller_->SendWindowSize());
   }
 
   if (session_->ShouldYield(id())) {
@@ -393,7 +392,7 @@ void QuicStream::StopReading() {
   sequencer_.StopReading();
 }
 
-const IPEndPoint& QuicStream::PeerAddressOfLatestPacket() const {
+const QuicSocketAddress& QuicStream::PeerAddressOfLatestPacket() const {
   return session_->connection()->last_packet_source_address();
 }
 

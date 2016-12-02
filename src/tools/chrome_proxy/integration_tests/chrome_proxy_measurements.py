@@ -11,7 +11,7 @@ from common.chrome_proxy_measurements import ChromeProxyValidation
 from integration_tests import chrome_proxy_metrics as metrics
 from metrics import loading
 from telemetry.core import exceptions, util
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 
 class ChromeProxyBypassOnTimeout(ChromeProxyValidation):
   """Checks the client bypasses when endpoint site times out."""
@@ -28,7 +28,7 @@ class ChromeProxyBypassOnTimeout(ChromeProxyValidation):
   def AddResults(self, tab, results):
     self._metrics.AddResultsForBypassOnTimeout(tab, results)
 
-class ChromeProxyDataSaving(page_test.PageTest):
+class ChromeProxyDataSaving(legacy_page_test.LegacyPageTest):
   """Chrome proxy data saving measurement."""
   def __init__(self, *args, **kwargs):
     super(ChromeProxyDataSaving, self).__init__(*args, **kwargs)
@@ -575,7 +575,7 @@ class ChromeProxySmoke(ChromeProxyValidation):
     for add_result in page_to_metrics[self._page.name]:
       add_result(tab, results)
 
-class ChromeProxyQuicSmoke(page_test.PageTest):
+class ChromeProxyQuicSmoke(legacy_page_test.LegacyPageTest):
   """Smoke measurement for basic chrome proxy correctness when using a
   proxy that supports QUIC."""
 
@@ -648,7 +648,7 @@ class ChromeProxyClientConfig(ChromeProxyValidation):
   def AddResults(self, tab, results):
     self._metrics.AddResultsForClientConfig(tab, results)
 
-class ChromeProxyVideoValidation(page_test.PageTest):
+class ChromeProxyVideoValidation(legacy_page_test.LegacyPageTest):
   """Validation for video pages.
 
   Measures pages using metrics.ChromeProxyVideoMetric. Pages can be fetched
@@ -734,7 +734,7 @@ class ChromeProxyVideoValidation(page_test.PageTest):
       err('Mismatch for content length (proxied=%s direct=%s): %s' %
           (str(pxocl), str(dcl), page.url))
 
-class ChromeProxyInstrumentedVideoValidation(page_test.PageTest):
+class ChromeProxyInstrumentedVideoValidation(legacy_page_test.LegacyPageTest):
   """Tests a specially instrumented page for correct video transcoding."""
 
   def __init__(self):
@@ -772,7 +772,7 @@ class ChromeProxyPingback(ChromeProxyValidation):
   def AddResults(self, tab, results):
     self._metrics.AddResultsForPingback(tab, results)
 
-class ChromeProxyQuicTransaction(page_test.PageTest):
+class ChromeProxyQuicTransaction(legacy_page_test.LegacyPageTest):
   """Chrome quic proxy usage validation when connecting to a proxy that
   supports QUIC."""
 

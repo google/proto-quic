@@ -19,6 +19,7 @@ def GetConfigurationForBuild(defines):
   #   win: Both ADM and ADMX.
   #   mac: Only plist.
   #   admx: Only ADMX.
+  #   adm: Only ADM.
   #   none/other: Used by all the writers.
   if '_chromium' in defines:
     config = {
@@ -32,6 +33,10 @@ def GetConfigurationForBuild(defines):
           'Software\\Policies\\Chromium\\Recommended',
       'win_mandatory_category_path': ['chromium'],
       'win_recommended_category_path': ['chromium_recommended'],
+      'win_category_path_strings': {
+        'chromium': 'Chromium',
+        'chromium_recommended': 'Chromium - {doc_recommended}'
+      },
       'admx_namespace': 'Chromium.Policies.Chromium',
       'admx_prefix': 'chromium',
       'linux_policy_path': '/etc/chromium/policies/',
@@ -46,10 +51,25 @@ def GetConfigurationForBuild(defines):
       'win_reg_mandatory_key_name': 'Software\\Policies\\Google\\Chrome',
       'win_reg_recommended_key_name':
           'Software\\Policies\\Google\\Chrome\\Recommended',
-      'win_mandatory_category_path': ['google', 'googlechrome'],
-      'win_recommended_category_path': ['google', 'googlechrome_recommended'],
+      # Note: Google:Cat_Google references Google.Policies from external
+      # in google.admx file.
+      'win_mandatory_category_path': ['Google:Cat_Google', 'googlechrome'],
+      'win_recommended_category_path':
+          ['Google:Cat_Google', 'googlechrome_recommended'],
+      'win_category_path_strings': {
+        # Strings in curly braces is looked up from localized 'messages' in
+        # policy_templates.json.
+        'googlechrome': 'Google Chrome',
+        'googlechrome_recommended': 'Google Chrome - {doc_recommended}'
+      },
+      # The string 'Google' is defined in google.adml for ADMX, but ADM doesn't
+      # support external references, so we define this map here.
+      'adm_category_path_strings': { 'Google:Cat_Google': 'Google' },
       'admx_namespace': 'Google.Policies.Chrome',
       'admx_prefix': 'chrome',
+      'admx_using_namespaces': {
+        'Google': 'Google.Policies'  # prefix: namespace
+      },
       'linux_policy_path': '/etc/opt/chrome/policies/',
     }
   else:

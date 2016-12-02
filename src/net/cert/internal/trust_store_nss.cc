@@ -7,11 +7,7 @@
 #include <cert.h>
 #include <certdb.h>
 
-#include "base/bind.h"
-#include "base/callback_helpers.h"
 #include "base/memory/ptr_util.h"
-#include "base/memory/weak_ptr.h"
-#include "base/task_runner.h"
 #include "crypto/nss_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
@@ -22,13 +18,14 @@
 
 namespace net {
 
-namespace {
+TrustStoreNSS::TrustStoreNSS(SECTrustType trust_type)
+    : trust_type_(trust_type) {}
 
-// Get all certs in NSS which have a subject matching |der_name| and which are
-// marked as a trusted CA.
-void GetAnchors(const scoped_refptr<ParsedCertificate>& cert,
-                SECTrustType trust_type,
-                TrustAnchors* out_anchors) {
+TrustStoreNSS::~TrustStoreNSS() = default;
+
+void TrustStoreNSS::FindTrustAnchorsForCert(
+    const scoped_refptr<ParsedCertificate>& cert,
+    TrustAnchors* out_anchors) const {
   crypto::EnsureNSSInit();
 
   SECItem name;
@@ -54,7 +51,7 @@ void GetAnchors(const scoped_refptr<ParsedCertificate>& cert,
 
     // TODO(mattm): handle explicit distrust (blacklisting)?
     const int ca_trust = CERTDB_TRUSTED_CA;
-    if ((SEC_GET_TRUST_FLAGS(&trust, trust_type) & ca_trust) != ca_trust)
+    if ((SEC_GET_TRUST_FLAGS(&trust, trust_type_) & ca_trust) != ca_trust)
       continue;
 
     CertErrors errors;
@@ -71,67 +68,6 @@ void GetAnchors(const scoped_refptr<ParsedCertificate>& cert,
         std::move(anchor_cert)));
   }
   CERT_DestroyCertList(found_certs);
-}
-
-class GetAnchorsRequest : public TrustStore::Request {
- public:
-  explicit GetAnchorsRequest(const TrustStore::TrustAnchorsCallback& callback);
-  // Destruction of the Request cancels it. GetAnchors will still run, but the
-  // callback will not be called since the WeakPtr will be invalidated.
-  ~GetAnchorsRequest() override = default;
-
-  void Start(const scoped_refptr<ParsedCertificate>& cert,
-             SECTrustType trust_type,
-             base::TaskRunner* task_runner);
-
- private:
-  void HandleGetAnchors(std::unique_ptr<TrustAnchors> anchors);
-
-  TrustStore::TrustAnchorsCallback callback_;
-  base::WeakPtrFactory<GetAnchorsRequest> weak_ptr_factory_;
-};
-
-GetAnchorsRequest::GetAnchorsRequest(
-    const TrustStore::TrustAnchorsCallback& callback)
-    : callback_(callback), weak_ptr_factory_(this) {}
-
-void GetAnchorsRequest::Start(const scoped_refptr<ParsedCertificate>& cert,
-                              SECTrustType trust_type,
-                              base::TaskRunner* task_runner) {
-  auto anchors = base::MakeUnique<TrustAnchors>();
-
-  auto* anchors_ptr = anchors.get();
-  task_runner->PostTaskAndReply(
-      FROM_HERE, base::Bind(&GetAnchors, cert, trust_type, anchors_ptr),
-      base::Bind(&GetAnchorsRequest::HandleGetAnchors,
-                 weak_ptr_factory_.GetWeakPtr(), base::Passed(&anchors)));
-}
-
-void GetAnchorsRequest::HandleGetAnchors(
-    std::unique_ptr<TrustAnchors> anchors) {
-  base::ResetAndReturn(&callback_).Run(std::move(*anchors));
-  // |this| may be deleted here.
-}
-
-}  // namespace
-
-TrustStoreNSS::TrustStoreNSS(SECTrustType trust_type,
-                             scoped_refptr<base::TaskRunner> nss_task_runner)
-    : trust_type_(trust_type), nss_task_runner_(std::move(nss_task_runner)) {}
-
-TrustStoreNSS::~TrustStoreNSS() = default;
-
-void TrustStoreNSS::FindTrustAnchorsForCert(
-    const scoped_refptr<ParsedCertificate>& cert,
-    const TrustAnchorsCallback& callback,
-    TrustAnchors* synchronous_matches,
-    std::unique_ptr<Request>* out_req) const {
-  if (callback.is_null())
-    return;
-
-  auto req = base::MakeUnique<GetAnchorsRequest>(callback);
-  req->Start(cert, trust_type_, nss_task_runner_.get());
-  *out_req = std::move(req);
 }
 
 }  // namespace net

@@ -5,10 +5,6 @@
 # This file contains common system config stuff for the Android build.
 
 if (is_android) {
-  assert(rebase_path("//", root_build_dir) == "../../",
-         "Android output directory must be nested 2 levels within src/ (" +
-             "e.g.: out-gn/Debug). http://crbug.com/412935")
-
   import("//build_overrides/build.gni")
 
   has_chrome_android_internal =
@@ -136,7 +132,7 @@ if (is_android) {
     # Required for Android M+ due to SELinux policies (stronger sandboxing).
     disable_incremental_isolated_processes = false
 
-    # Speed up incremental compiles by compiling only changed files.
+    # Speeds up incremental compiles by compiling only changed files.
     enable_incremental_javac = false
 
     # Adds intrumentation to each function. Writes a file with the order that
@@ -146,6 +142,10 @@ if (is_android) {
     # Builds secondary abi for APKs, supports build 32-bit arch as secondary
     # abi in 64-bit Monochrome and WebView.
     build_apk_secondary_abi = true
+
+    # Enables java8 language features (via retrolambda).
+    # work-in-progress (http://crbug.com/642600)
+    use_java8 = false
   }
 
   # We need a second declare_args block to make sure we are using the overridden

@@ -82,6 +82,22 @@ void AsyncRunner::RunCallbackAndDeleteInstance(
   task_runner->DeleteSoon(FROM_HERE, object_to_be_deleted.release());
 }
 
+void ChangeAtomicFlags(subtle::Atomic32* flags,
+                       subtle::Atomic32 set,
+                       subtle::Atomic32 clear) {
+  DCHECK(set != 0 || clear != 0);
+  DCHECK_EQ(0, set & clear);
+
+  subtle::Atomic32 bits = subtle::NoBarrier_Load(flags);
+  while (true) {
+    subtle::Atomic32 existing =
+        subtle::NoBarrier_CompareAndSwap(flags, bits, (bits | set) & ~clear);
+    if (existing == bits)
+      break;
+    bits = existing;
+  }
+}
+
 }  // namespace
 
 // StackSamplingProfiler::Module ----------------------------------------------
@@ -105,6 +121,21 @@ StackSamplingProfiler::Frame::~Frame() {}
 StackSamplingProfiler::Frame::Frame()
     : instruction_pointer(0), module_index(kUnknownModuleIndex) {
 }
+
+// StackSamplingProfiler::Sample ----------------------------------------------
+
+StackSamplingProfiler::Sample::Sample() {}
+
+StackSamplingProfiler::Sample::Sample(const Sample& sample) = default;
+
+StackSamplingProfiler::Sample::~Sample() {}
+
+StackSamplingProfiler::Sample::Sample(const Frame& frame) {
+  frames.push_back(std::move(frame));
+}
+
+StackSamplingProfiler::Sample::Sample(const std::vector<Frame>& frames)
+    : frames(frames) {}
 
 // StackSamplingProfiler::CallStackProfile ------------------------------------
 
@@ -229,6 +260,8 @@ void StackSamplingProfiler::SamplingThread::Stop() {
 
 // StackSamplingProfiler ------------------------------------------------------
 
+subtle::Atomic32 StackSamplingProfiler::process_phases_ = 0;
+
 StackSamplingProfiler::SamplingParams::SamplingParams()
     : initial_delay(TimeDelta::FromMilliseconds(0)),
       bursts(1),
@@ -272,7 +305,8 @@ void StackSamplingProfiler::Start() {
     return;
 
   std::unique_ptr<NativeStackSampler> native_sampler =
-      NativeStackSampler::Create(thread_id_, test_delegate_);
+      NativeStackSampler::Create(thread_id_, &RecordAnnotations,
+                                 test_delegate_);
   if (!native_sampler)
     return;
 
@@ -288,12 +322,53 @@ void StackSamplingProfiler::Stop() {
     sampling_thread_->Stop();
 }
 
+// static
+void StackSamplingProfiler::SetProcessPhase(int phase) {
+  DCHECK_LE(0, phase);
+  DCHECK_GT(static_cast<int>(sizeof(process_phases_) * 8), phase);
+  DCHECK_EQ(0, subtle::NoBarrier_Load(&process_phases_) & (1 << phase));
+  ChangeAtomicFlags(&process_phases_, 1 << phase, 0);
+}
+
+// static
+void StackSamplingProfiler::ResetAnnotationsForTesting() {
+  subtle::NoBarrier_Store(&process_phases_, 0u);
+}
+
+// static
+void StackSamplingProfiler::RecordAnnotations(Sample* sample) {
+  // The code inside this method must not do anything that could acquire a
+  // mutex, including allocating memory (which includes LOG messages) because
+  // that mutex could be held by a stopped thread, thus resulting in deadlock.
+  sample->process_phases = subtle::NoBarrier_Load(&process_phases_);
+}
+
 // StackSamplingProfiler::Frame global functions ------------------------------
 
 bool operator==(const StackSamplingProfiler::Module& a,
                 const StackSamplingProfiler::Module& b) {
   return a.base_address == b.base_address && a.id == b.id &&
       a.filename == b.filename;
+}
+
+bool operator==(const StackSamplingProfiler::Sample& a,
+                const StackSamplingProfiler::Sample& b) {
+  return a.process_phases == b.process_phases && a.frames == b.frames;
+}
+
+bool operator!=(const StackSamplingProfiler::Sample& a,
+                const StackSamplingProfiler::Sample& b) {
+  return !(a == b);
+}
+
+bool operator<(const StackSamplingProfiler::Sample& a,
+               const StackSamplingProfiler::Sample& b) {
+  if (a.process_phases < b.process_phases)
+    return true;
+  if (a.process_phases > b.process_phases)
+    return false;
+
+  return a.frames < b.frames;
 }
 
 bool operator==(const StackSamplingProfiler::Frame &a,

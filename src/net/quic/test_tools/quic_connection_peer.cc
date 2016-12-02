@@ -98,13 +98,13 @@ void QuicConnectionPeer::SetPerspective(QuicConnection* connection,
 
 // static
 void QuicConnectionPeer::SetSelfAddress(QuicConnection* connection,
-                                        const IPEndPoint& self_address) {
+                                        const QuicSocketAddress& self_address) {
   connection->self_address_ = self_address;
 }
 
 // static
 void QuicConnectionPeer::SetPeerAddress(QuicConnection* connection,
-                                        const IPEndPoint& peer_address) {
+                                        const QuicSocketAddress& peer_address) {
   connection->peer_address_ = peer_address;
 }
 

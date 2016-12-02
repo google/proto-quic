@@ -1,0 +1,42 @@
+{
+    "description": "Describes the Web Page Replay archives for a story set. This page set was built arround what is in the linked archive manually.",
+    "archives": {
+        "v8_top_25_000.wpr": [
+            "https://www.google.de/search?q=v8",
+            "https://www.youtube.com",
+            "https://www.youtube.com/watch?v=_kZsOISarzg",
+            "https://www.facebook.com/shakira",
+            "http://www.baidu.com/s?wd=v8",
+            "http://www.yahoo.co.jp",
+            "http://www.amazon.com/s/?field-keywords=v8",
+            "http://hi.wikipedia.org/wiki/%E0%A4%AE%E0%A5%81%E0%A4%96%E0%A4%AA%E0%A5%83%E0%A4%B7%E0%A5%8D%E0%A4%A0",
+            "https://en.wikipedia.org/w/index.php?title=Barack_Obama&veaction=edit",
+            "http://www.qq.com",
+            "http://www.twitter.com/taylorswift13",
+            "http://www.reddit.com",
+            "http://www.ebay.fr/sch/i.html?_nkw=v8",
+            "http://edition.cnn.com",
+            "http://world.taobao.com",
+            "http://www.instagram.com/archdigest",
+            "https://www.linkedin.com/m/",
+            "http://www.msn.com/ar-ae",
+            "http://www.bing.com/search?q=v8+engine",
+            "http://www.pinterest.com/categories/popular",
+            "http://www.sina.com.cn",
+            "http://weibo.com",
+            "http://yandex.ru/search/?text=v8",
+            "http://www.wikiwand.com/en/hill",
+            "http://meta.discourse.org",
+            "http://reddit.musicplayer.io",
+            "http://inbox.google.com",
+            "http://maps.google.co.jp/maps/search/restaurant+tokyo",
+            "https://adwords.google.com",
+            "http://pollouer.muc/Speedometer/CustomRunner.html?angular",
+            "http://pollouer.muc/Speedometer/CustomRunner.html?jquery",
+            "http://pollouer.muc/Speedometer/CustomRunner.html?backbone",
+            "http://pollouer.muc/Speedometer/CustomRunner.html?ember",
+            "http://pollouer.muc/Speedometer/CustomRunner.html?vanilla",
+            "https://cdn.ampproject.org/c/www.bbc.co.uk/news/amp/37344292#log=3"
+        ]
+    }
+}

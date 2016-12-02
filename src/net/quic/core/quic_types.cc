@@ -4,20 +4,18 @@
 
 #include "net/quic/core/quic_types.h"
 
-using std::ostream;
-
 namespace net {
 
 QuicConsumedData::QuicConsumedData(size_t bytes_consumed, bool fin_consumed)
     : bytes_consumed(bytes_consumed), fin_consumed(fin_consumed) {}
 
-ostream& operator<<(ostream& os, const QuicConsumedData& s) {
+std::ostream& operator<<(std::ostream& os, const QuicConsumedData& s) {
   os << "bytes_consumed: " << s.bytes_consumed
      << " fin_consumed: " << s.fin_consumed;
   return os;
 }
 
-ostream& operator<<(ostream& os, const Perspective& s) {
+std::ostream& operator<<(std::ostream& os, const Perspective& s) {
   if (s == Perspective::IS_SERVER) {
     os << "IS_SERVER";
   } else {

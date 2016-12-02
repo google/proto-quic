@@ -15,19 +15,13 @@ TrafficPolicer::TrafficPolicer(Simulator* simulator,
                                QuicByteCount max_bucket_size,
                                QuicBandwidth target_bandwidth,
                                Endpoint* input)
-    : Actor(simulator, name),
+    : PacketFilter(simulator, name, input),
       initial_bucket_size_(initial_bucket_size),
       max_bucket_size_(max_bucket_size),
       target_bandwidth_(target_bandwidth),
-      last_refill_time_(clock_->Now()),
-      input_(input),
-      output_(this) {
-  input_->SetTxPort(this);
-}
+      last_refill_time_(clock_->Now()) {}
 
 TrafficPolicer::~TrafficPolicer() {}
-
-void TrafficPolicer::Act() {}
 
 void TrafficPolicer::Refill() {
   QuicTime::Delta time_passed = clock_->Now() - last_refill_time_;
@@ -40,47 +34,27 @@ void TrafficPolicer::Refill() {
   last_refill_time_ = clock_->Now();
 }
 
-void TrafficPolicer::AcceptPacket(std::unique_ptr<Packet> packet) {
+bool TrafficPolicer::FilterPacket(const Packet& packet) {
   // Refill existing buckets.
   Refill();
 
   // Create a new bucket if one does not exist.
-  if (token_buckets_.count(packet->destination) == 0) {
+  if (token_buckets_.count(packet.destination) == 0) {
     token_buckets_.insert(
-        std::make_pair(packet->destination, initial_bucket_size_));
+        std::make_pair(packet.destination, initial_bucket_size_));
   }
 
-  auto bucket = token_buckets_.find(packet->destination);
+  auto bucket = token_buckets_.find(packet.destination);
   DCHECK(bucket != token_buckets_.end());
 
   // Silently drop the packet on the floor if out of tokens
-  if (bucket->second < packet->size) {
-    return;
+  if (bucket->second < packet.size) {
+    return false;
   }
 
-  bucket->second -= packet->size;
-  output_tx_port_->AcceptPacket(std::move(packet));
+  bucket->second -= packet.size;
+  return true;
 }
-
-QuicTime::Delta TrafficPolicer::TimeUntilAvailable() {
-  return output_tx_port_->TimeUntilAvailable();
-}
-
-TrafficPolicer::Output::Output(TrafficPolicer* policer)
-    : Endpoint(policer->simulator(), policer->name() + " (output port)"),
-      policer_(policer) {}
-
-TrafficPolicer::Output::~Output() {}
-
-UnconstrainedPortInterface* TrafficPolicer::Output::GetRxPort() {
-  return policer_->input_->GetRxPort();
-}
-
-void TrafficPolicer::Output::SetTxPort(ConstrainedPortInterface* port) {
-  policer_->output_tx_port_ = port;
-}
-
-void TrafficPolicer::Output::Act() {}
 
 }  // namespace simulator
 }  // namespace net

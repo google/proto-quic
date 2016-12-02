@@ -76,138 +76,6 @@ SCRIPT_TESTS = [
       ],
     }
   },
-  {
-    'args': [
-      'cc_perftests',
-      '--test-launcher-print-test-stdio=always'
-    ],
-    'name': 'cc_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Linux Perf',
-          'shards': [3]
-        },
-      ]
-    }
-  },
-  {
-    'args': [
-      'tracing_perftests',
-      '--test-launcher-print-test-stdio=always'
-    ],
-    'name': 'tracing_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Linux Perf',
-          'shards': [3]
-        },
-      ]
-    }
-  },
-  {
-    'args': [
-      'load_library_perf_tests',
-      '--test-launcher-print-test-stdio=always'
-    ],
-    'name': 'load_library_perf_tests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Linux Perf',
-          'shards': [3]
-        },
-        {
-          'name': 'Win 7 ATI GPU Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 7 Nvidia GPU Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 7 Perf',
-          'shards': [3]
-        },
-        {
-          'name': 'Win 7 x64 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 8 Perf',
-          'shards': [2]
-        },
-      ]
-    }
-  },
-  {
-    'args': [
-      'performance_browser_tests',
-      '--test-launcher-print-test-stdio=always',
-      '--gtest_filter=TabCapturePerformanceTest.*:CastV2PerformanceTest.*',
-      '--test-launcher-jobs=1',
-      '--enable-gpu'
-    ],
-    'name': 'performance_browser_tests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Mac 10.8 Perf',
-          'shards': [3]
-        },
-        {
-          'name': 'Mac 10.9 Perf',
-          'shards': [3]
-        },
-        {
-          'name': 'Win 7 ATI GPU Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 7 Nvidia GPU Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 7 Perf',
-          'shards': [3]
-        },
-        {
-          'name': 'Win 7 x64 Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 8 Perf',
-          'shards': [2]
-        },
-      ]
-    }
-  },
-  {
-    'args': [
-      'angle_perftests',
-      '--test-launcher-print-test-stdio=always',
-      '--test-launcher-jobs=1'
-    ],
-    'name': 'angle_perftests',
-    'script': 'gtest_perf_test.py',
-    'testers': {
-      'chromium.perf': [
-        {
-          'name': 'Win 7 ATI GPU Perf',
-          'shards': [2]
-        },
-        {
-          'name': 'Win 7 Nvidia GPU Perf',
-          'shards': [2]
-        },
-      ]
-    }
-  },
 ]
 
 
@@ -295,30 +163,149 @@ def get_waterfall_config():
     'android', target_bits=32, num_device_shards=7, num_host_shards=3)
 
   waterfall = add_tester(
-    waterfall, 'Win Zenbook Perf', 'win-zenbook', 'win', num_host_shards=5)
+    waterfall, 'Win Zenbook Perf', 'win-zenbook', 'win',
+    swarming=[
+      {
+       'gpu': '8086:161e',
+       'os': 'Windows-10-10240',
+       'device_ids': [
+           'build30-b1', 'build31-b1',
+           'build32-b1', 'build33-b1', 'build34-b1'
+          ]
+      }
+    ])
   waterfall = add_tester(
-    waterfall, 'Win 10 Perf', 'chromium-rel-win10', 'win', num_host_shards=5)
+    waterfall, 'Win 10 High-DPI Perf', 'win-high-dpi', 'win',
+    swarming=[
+      {
+       'gpu': '8086:1616',
+       'os': 'Windows-10-10240',
+       'device_ids': [
+           'build117-b1', 'build118-b1',
+           'build119-b1', 'build120-b1', 'build121-b1'
+          ]
+      }
+    ])
   waterfall = add_tester(
-    waterfall, 'Win 8 Perf', 'chromium-rel-win8-dual', 'win', num_host_shards=5)
+    waterfall, 'Win 10 Perf', 'chromium-rel-win10', 'win',
+    swarming=[
+      {
+       'gpu': '102b:0534',
+       'os': 'Windows-10-10240',
+       'device_ids': [
+           'build132-m1', 'build133-m1',
+           'build134-m1', 'build135-m1', 'build136-m1'
+          ]
+      }
+    ])
+  waterfall = add_tester(
+    waterfall, 'Win 8 Perf', 'chromium-rel-win8-dual', 'win',
+    swarming=[
+      {
+       'gpu': '102b:0532',
+       'os': 'Windows-2012ServerR2-SP0',
+       'device_ids': [
+           'build143-m1', 'build144-m1',
+           'build145-m1', 'build146-m1', 'build147-m1'
+          ],
+       'perf_tests': [
+         ('load_library_perf_tests', 2),
+         ('performance_browser_tests', 2)]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Win 7 Perf', 'chromium-rel-win7-dual',
-    'win', target_bits=32, num_host_shards=5)
+    'win', target_bits=32,
+    swarming=[
+      {
+       'gpu': '102b:0532',
+       'os': 'Windows-2008ServerR2-SP1',
+       'device_ids': [
+           'build185-m1', 'build186-m1',
+           'build187-m1', 'build188-m1', 'build189-m1'
+          ],
+       'perf_tests': [
+         ('load_library_perf_tests', 2),
+         ('performance_browser_tests', 2)]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Win 7 x64 Perf',
-    'chromium-rel-win7-x64-dual', 'win', num_host_shards=5)
+    'chromium-rel-win7-x64-dual', 'win',
+    swarming=[
+      {
+       'gpu': '102b:0532',
+       'os': 'Windows-2008ServerR2-SP1',
+       'device_ids': [
+           'build138-m1', 'build139-m1',
+           'build140-m1', 'build141-m1', 'build142-m1'
+          ],
+       'perf_tests': [
+         ('load_library_perf_tests', 2),
+         ('performance_browser_tests', 2)]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Win 7 ATI GPU Perf',
-    'chromium-rel-win7-gpu-ati', 'win', num_host_shards=5)
+    'chromium-rel-win7-gpu-ati', 'win',
+    swarming=[
+      {
+       'gpu': '1002:6779',
+       'os': 'Windows-2008ServerR2-SP1',
+       'device_ids': [
+           'build101-m1', 'build102-m1',
+           'build103-m1', 'build104-m1', 'build105-m1'
+          ],
+       'perf_tests': [
+         ('angle_perftests', 2),
+         ('load_library_perf_tests', 2),
+         ('performance_browser_tests', 2)]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Win 7 Intel GPU Perf',
-    'chromium-rel-win7-gpu-intel', 'win', num_host_shards=5)
+    'chromium-rel-win7-gpu-intel', 'win',
+    swarming=[
+      {
+       'gpu': '8086:041a',
+       'os': 'Windows-2008ServerR2-SP1',
+       'device_ids': [
+           'build164-m1', 'build165-m1',
+           'build166-m1', 'build167-m1', 'build168-m1'
+          ]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Win 7 Nvidia GPU Perf',
-    'chromium-rel-win7-gpu-nvidia', 'win', num_host_shards=5)
+    'chromium-rel-win7-gpu-nvidia', 'win',
+    swarming=[
+      {
+       'gpu': '10de:104a',
+       'os': 'Windows-2008ServerR2-SP1',
+       'device_ids': [
+           'build92-m1', 'build93-m1',
+           'build94-m1', 'build95-m1', 'build96-m1'
+          ],
+       'perf_tests': [
+         ('angle_perftests', 2),
+         ('load_library_perf_tests', 2),
+         ('performance_browser_tests', 2)]
+      }
+    ])
 
   waterfall = add_tester(
     waterfall, 'Mac 10.11 Perf', 'chromium-rel-mac11',
-    'mac', num_host_shards=5)
+    'mac',
+    swarming=[
+      {
+       'gpu': '8086:0166',
+       'os': 'Mac-10.11',
+       'device_ids': [
+           'build102-b1', 'build103-b1',
+           'build104-b1', 'build105-b1', 'build106-b1'
+          ]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Mac 10.10 Perf', 'chromium-rel-mac10',
     'mac',
@@ -333,9 +320,28 @@ def get_waterfall_config():
     ])
   waterfall = add_tester(
     waterfall, 'Mac Retina Perf',
-    'chromium-rel-mac-retina', 'mac', num_host_shards=5)
+    'chromium-rel-mac-retina', 'mac',
+    swarming=[
+      {
+       'gpu': '8086:0d26',
+       'os': 'Mac-10.11',
+       'device_ids': [
+           'build4-b1', 'build5-b1', 'build6-b1', 'build7-b1', 'build8-b1'
+          ]
+      }
+    ])
   waterfall = add_tester(
-    waterfall, 'Mac HDD Perf', 'chromium-rel-mac-hdd', 'mac', num_host_shards=5)
+    waterfall, 'Mac HDD Perf', 'chromium-rel-mac-hdd', 'mac',
+    swarming=[
+      {
+       'gpu': '10de:08a4',
+       'os': 'Mac-10.10',
+       'device_ids': [
+           'build24-b1', 'build25-b1',
+           'build26-b1', 'build27-b1', 'build28-b1'
+          ]
+      }
+    ])
   waterfall = add_tester(
     waterfall, 'Mac Pro 10.11 Perf',
     'chromium-rel-mac11-pro', 'mac',
@@ -364,7 +370,21 @@ def get_waterfall_config():
     ])
 
   waterfall = add_tester(
-    waterfall, 'Linux Perf', 'linux-release', 'linux', num_host_shards=5)
+    waterfall, 'Linux Perf', 'linux-release', 'linux',
+    swarming=[
+      {
+       'gpu': '102b:0534',
+       'os': 'Ubuntu-14.04',
+       'device_ids': [
+           'build148-m1', 'build149-m1',
+           'build150-m1', 'build151-m1', 'build152-m1'
+          ],
+       'perf_tests': [
+         ('cc_perftests', 2),
+         ('load_library_perf_tests', 2),
+         ('tracing_perftests', 2)]
+      }
+    ])
 
   return waterfall
 
@@ -527,8 +547,7 @@ BENCHMARK_NAME_BLACKLIST = [
 
 
 def current_benchmarks(use_whitelist):
-  current_dir = os.path.dirname(__file__)
-  benchmarks_dir = os.path.join(current_dir, 'benchmarks')
+  benchmarks_dir = os.path.join(os.getcwd(), 'benchmarks')
   top_level_dir = os.path.dirname(benchmarks_dir)
 
   all_benchmarks = discover.DiscoverClasses(
@@ -563,11 +582,9 @@ def get_sorted_benchmark_list_by_time(all_benchmarks):
     benchmark_avg_time = benchmark_avgs.get(benchmark.Name(), None)
     if benchmark_avg_time is None:
       # Assume that this is a new benchmark that was added after 11/1/16 when
-      # we generated the benchmarks. Use the old affinity algorith after
+      # we generated the benchmarks. Use the old affinity algorithm after
       # we have given the rest the same distribution, add it to the
       # new benchmarks list.
-      print ('Warning: Benchmark %s was not seen in times generated on Nov1 '
-        '2016, defaulting to old device affinity algorithm' % benchmark.Name())
       new_benchmarks.append(benchmark)
     else:
       # Need to multiple the seconds by 2 since we will be generating two tests
@@ -649,15 +666,19 @@ def generate_all_tests(waterfall):
   tests['AAAAA2 See //tools/perf/generate_perf_json.py to make changes'] = {}
   filename = '%s.json' % waterfall['name']
 
-  current_dir = os.path.dirname(os.path.abspath(__file__))
-  src_dir = os.path.dirname(os.path.dirname(current_dir))
+  src_dir = os.path.dirname(os.path.dirname(os.getcwd()))
 
   with open(os.path.join(src_dir, 'testing', 'buildbot', filename), 'w') as fp:
     json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
     fp.write('\n')
 
+def chdir_to_parent_directory():
+  parent_directory = os.path.dirname(os.path.abspath(__file__))
+  os.chdir(parent_directory)
 
 def main():
+  chdir_to_parent_directory()
+
   waterfall = get_waterfall_config()
   waterfall['name'] = 'chromium.perf'
   fyi_waterfall = get_fyi_waterfall_config()

@@ -36,14 +36,12 @@ class TimeDelta;
 namespace net {
 
 class DhcpProxyScriptFetcher;
-class HostResolver;
 class NetLog;
 class NetLogWithSource;
 class ProxyDelegate;
 class ProxyResolver;
 class ProxyResolverFactory;
 class ProxyResolverScriptData;
-class ProxyScriptDecider;
 class ProxyScriptFetcher;
 
 // This class can be used to resolve the proxy server to use when loading a

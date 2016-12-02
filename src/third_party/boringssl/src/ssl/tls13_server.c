@@ -109,76 +109,6 @@ static enum ssl_hs_wait_t do_process_client_hello(SSL *ssl, SSL_HANDSHAKE *hs) {
   }
   memcpy(ssl->s3->client_random, client_hello.random, client_hello.random_len);
 
-  uint8_t alert = SSL_AD_DECODE_ERROR;
-  CBS psk_key_exchange_modes;
-  if (ssl_early_callback_get_extension(&client_hello, &psk_key_exchange_modes,
-                                       TLSEXT_TYPE_psk_key_exchange_modes) &&
-      !ssl_ext_psk_key_exchange_modes_parse_clienthello(
-          ssl, &alert, &psk_key_exchange_modes)) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
-    return ssl_hs_error;
-  }
-
-  SSL_SESSION *session = NULL;
-  CBS binders;
-  if (hs->accept_psk_mode) {
-    CBS pre_shared_key;
-    if (ssl_early_callback_get_extension(&client_hello, &pre_shared_key,
-                                         TLSEXT_TYPE_pre_shared_key)) {
-      /* Verify that the pre_shared_key extension is the last extension in
-       * ClientHello. */
-      if (CBS_data(&pre_shared_key) + CBS_len(&pre_shared_key) !=
-          client_hello.extensions + client_hello.extensions_len) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_PRE_SHARED_KEY_MUST_BE_LAST);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-        return ssl_hs_error;
-      }
-
-      if (!ssl_ext_pre_shared_key_parse_clienthello(ssl, &session, &binders,
-                                                    &alert, &pre_shared_key)) {
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
-        return ssl_hs_error;
-      }
-    }
-  }
-
-  if (session != NULL &&
-      !ssl_session_is_resumable(ssl, session)) {
-    SSL_SESSION_free(session);
-    session = NULL;
-  }
-
-  if (session == NULL) {
-    if (!ssl_get_new_session(ssl, 1 /* server */)) {
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-      return ssl_hs_error;
-    }
-  } else {
-    /* Check the PSK binder. */
-    if (!tls13_verify_psk_binder(ssl, session, &binders)) {
-      SSL_SESSION_free(session);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
-      return ssl_hs_error;
-    }
-
-    /* Only authentication information carries over in TLS 1.3. */
-    ssl->s3->new_session = SSL_SESSION_dup(session, SSL_SESSION_DUP_AUTH_ONLY);
-    if (ssl->s3->new_session == NULL) {
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-      return ssl_hs_error;
-    }
-    ssl->s3->session_reused = 1;
-    SSL_SESSION_free(session);
-  }
-
-  if (ssl->ctx->dos_protection_cb != NULL &&
-      ssl->ctx->dos_protection_cb(&client_hello) == 0) {
-    /* Connection rejected for DOS reasons. */
-    OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-    return ssl_hs_error;
-  }
-
   /* TLS 1.3 requires the peer only advertise the null compression. */
   if (client_hello.compression_methods_len != 1 ||
       client_hello.compression_methods[0] != 0) {
@@ -208,6 +138,7 @@ static const SSL_CIPHER *choose_tls13_cipher(
            client_hello->cipher_suites_len);
 
   const int aes_is_fine = EVP_has_aes_hardware();
+  const uint16_t version = ssl3_protocol_version(ssl);
 
   const SSL_CIPHER *best = NULL;
   while (CBS_len(&cipher_suites) > 0) {
@@ -216,8 +147,11 @@ static const SSL_CIPHER *choose_tls13_cipher(
       return NULL;
     }
 
+    /* Limit to TLS 1.3 ciphers we know about. */
     const SSL_CIPHER *candidate = SSL_get_cipher_by_value(cipher_suite);
-    if (candidate == NULL || !ssl_is_valid_cipher(ssl, candidate)) {
+    if (candidate == NULL ||
+        SSL_CIPHER_get_min_version(candidate) > version ||
+        SSL_CIPHER_get_max_version(candidate) < version) {
       continue;
     }
 
@@ -240,19 +174,17 @@ static const SSL_CIPHER *choose_tls13_cipher(
 }
 
 static enum ssl_hs_wait_t do_select_parameters(SSL *ssl, SSL_HANDSHAKE *hs) {
-  if (!ssl->s3->session_reused) {
-    /* Call |cert_cb| to update server certificates if required. */
-    if (ssl->cert->cert_cb != NULL) {
-      int rv = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
-      if (rv == 0) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_CB_ERROR);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-        return ssl_hs_error;
-      }
-      if (rv < 0) {
-        hs->state = state_select_parameters;
-        return ssl_hs_x509_lookup;
-      }
+  /* Call |cert_cb| to update server certificates if required. */
+  if (ssl->cert->cert_cb != NULL) {
+    int rv = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
+    if (rv == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_CB_ERROR);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+      return ssl_hs_error;
+    }
+    if (rv < 0) {
+      hs->state = state_select_parameters;
+      return ssl_hs_x509_lookup;
     }
   }
 
@@ -264,32 +196,89 @@ static enum ssl_hs_wait_t do_select_parameters(SSL *ssl, SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
-  if (ssl->s3->session_reused) {
-    /* Clients may not offer sessions containing unsupported ciphers. */
-    if (!ssl_client_cipher_list_contains_cipher(
-            &client_hello,
-            (uint16_t)SSL_CIPHER_get_id(ssl->s3->new_session->cipher))) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_REQUIRED_CIPHER_MISSING);
+  /* Negotiate the cipher suite. */
+  ssl->s3->tmp.new_cipher = choose_tls13_cipher(ssl, &client_hello);
+  if (ssl->s3->tmp.new_cipher == NULL) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
+    return ssl_hs_error;
+  }
+
+  /* Decode the ticket if we agree on a PSK key exchange mode. */
+  uint8_t alert = SSL_AD_DECODE_ERROR;
+  SSL_SESSION *session = NULL;
+  CBS pre_shared_key, binders;
+  if (hs->accept_psk_mode &&
+      ssl_early_callback_get_extension(&client_hello, &pre_shared_key,
+                                       TLSEXT_TYPE_pre_shared_key)) {
+    /* Verify that the pre_shared_key extension is the last extension in
+     * ClientHello. */
+    if (CBS_data(&pre_shared_key) + CBS_len(&pre_shared_key) !=
+        client_hello.extensions + client_hello.extensions_len) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_PRE_SHARED_KEY_MUST_BE_LAST);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
       return ssl_hs_error;
     }
-  } else {
-    const SSL_CIPHER *cipher = choose_tls13_cipher(ssl, &client_hello);
-    if (cipher == NULL) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_HANDSHAKE_FAILURE);
+
+    if (!ssl_ext_pre_shared_key_parse_clienthello(ssl, &session, &binders,
+                                                  &alert, &pre_shared_key)) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
+      return ssl_hs_error;
+    }
+  }
+
+  if (session != NULL &&
+      !ssl_session_is_resumable(ssl, session)) {
+    SSL_SESSION_free(session);
+    session = NULL;
+  }
+
+  /* Set up the new session, either using the original one as a template or
+   * creating a fresh one. */
+  if (session == NULL) {
+    if (!ssl_get_new_session(ssl, 1 /* server */)) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
       return ssl_hs_error;
     }
 
-    ssl->s3->new_session->cipher = cipher;
+    ssl->s3->new_session->cipher = ssl->s3->tmp.new_cipher;
+
+    /* On new sessions, stash the SNI value in the session. */
+    if (ssl->s3->hs->hostname != NULL) {
+      ssl->s3->new_session->tlsext_hostname = BUF_strdup(ssl->s3->hs->hostname);
+      if (ssl->s3->new_session->tlsext_hostname == NULL) {
+        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+        return ssl_hs_error;
+      }
+    }
+  } else {
+    /* Check the PSK binder. */
+    if (!tls13_verify_psk_binder(ssl, session, &binders)) {
+      SSL_SESSION_free(session);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
+      return ssl_hs_error;
+    }
+
+    /* Only authentication information carries over in TLS 1.3. */
+    ssl->s3->new_session = SSL_SESSION_dup(session, SSL_SESSION_DUP_AUTH_ONLY);
+    if (ssl->s3->new_session == NULL) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+      return ssl_hs_error;
+    }
+    ssl->s3->session_reused = 1;
+    SSL_SESSION_free(session);
   }
 
-  ssl->s3->tmp.new_cipher = ssl->s3->new_session->cipher;
-  ssl->method->received_flight(ssl);
+  if (ssl->ctx->dos_protection_cb != NULL &&
+      ssl->ctx->dos_protection_cb(&client_hello) == 0) {
+    /* Connection rejected for DOS reasons. */
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
+    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+    return ssl_hs_error;
+  }
 
-  /* Resolve ALPN after the cipher suite is selected. HTTP/2 negotiation depends
-   * on the cipher suite. */
-  uint8_t alert;
+  /* HTTP/2 negotiation depends on the cipher suite, so ALPN negotiation was
+   * deferred. Complete it now. */
   if (!ssl_negotiate_alpn(ssl, &alert, &client_hello)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     return ssl_hs_error;
@@ -314,6 +303,8 @@ static enum ssl_hs_wait_t do_select_parameters(SSL *ssl, SSL_HANDSHAKE *hs) {
       !tls13_advance_key_schedule(ssl, psk_secret, hash_len)) {
     return ssl_hs_error;
   }
+
+  ssl->method->received_flight(ssl);
 
   /* Resolve ECDHE and incorporate it into the secret. */
   int need_retry;

@@ -45,7 +45,7 @@ ProofSource* QuicCryptoServerConfigPeer::GetProofSource() const {
 string QuicCryptoServerConfigPeer::NewSourceAddressToken(
     string config_id,
     SourceAddressTokens previous_tokens,
-    const IPAddress& ip,
+    const QuicIpAddress& ip,
     QuicRandom* rand,
     QuicWallTime now,
     CachedNetworkParameters* cached_network_params) {
@@ -57,7 +57,7 @@ string QuicCryptoServerConfigPeer::NewSourceAddressToken(
 HandshakeFailureReason QuicCryptoServerConfigPeer::ValidateSourceAddressTokens(
     string config_id,
     StringPiece srct,
-    const IPAddress& ip,
+    const QuicIpAddress& ip,
     QuicWallTime now,
     CachedNetworkParameters* cached_network_params) {
   SourceAddressTokens tokens;
@@ -74,7 +74,7 @@ HandshakeFailureReason QuicCryptoServerConfigPeer::ValidateSourceAddressTokens(
 HandshakeFailureReason
 QuicCryptoServerConfigPeer::ValidateSingleSourceAddressToken(
     StringPiece token,
-    const IPAddress& ip,
+    const QuicIpAddress& ip,
     QuicWallTime now) {
   SourceAddressTokens tokens;
   HandshakeFailureReason parse_status = server_config_->ParseSourceAddressToken(

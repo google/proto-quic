@@ -89,8 +89,14 @@ class BASE_EXPORT TaskTraits {
   TaskTraits& operator=(const TaskTraits& other) = default;
   ~TaskTraits();
 
-  // Allows tasks with these traits to do file I/O.
+  // Allows tasks with these traits to wait on synchronous file I/O.
   TaskTraits& WithFileIO();
+
+  // Allows tasks with these traits to wait on things other than file I/O. In
+  // particular, they may wait on a WaitableEvent or a ConditionVariable, join a
+  // thread or a process, or make a blocking system call that doesn't involve
+  // interactions with the file system.
+  TaskTraits& WithWait();
 
   // Applies |priority| to tasks with these traits.
   TaskTraits& WithPriority(TaskPriority priority);
@@ -98,8 +104,12 @@ class BASE_EXPORT TaskTraits {
   // Applies |shutdown_behavior| to tasks with these traits.
   TaskTraits& WithShutdownBehavior(TaskShutdownBehavior shutdown_behavior);
 
-  // Returns true if file I/O is allowed by these traits.
+  // Returns true if waiting on synchronous file I/O is allowed by these traits.
   bool with_file_io() const { return with_file_io_; }
+
+  // Returns true if waiting on things other than file I/O is allowed by these
+  // traits.
+  bool with_wait() const { return with_wait_; }
 
   // Returns the priority of tasks with these traits.
   TaskPriority priority() const { return priority_; }
@@ -109,6 +119,7 @@ class BASE_EXPORT TaskTraits {
 
  private:
   bool with_file_io_;
+  bool with_wait_;
   TaskPriority priority_;
   TaskShutdownBehavior shutdown_behavior_;
 };

@@ -54,6 +54,28 @@ uint32_t FuzzedDataProvider::ConsumeUint32InRange(uint32_t min, uint32_t max) {
   return min + result % (range + 1);
 }
 
+std::string FuzzedDataProvider::ConsumeRandomLengthString(size_t max_length) {
+  // Reads bytes from start of |remaining_data_|. Maps "\\" to "\", and maps "\"
+  // followed by anything else to the end of the string. As a result of this
+  // logic, a fuzzer can insert characters into the string, and the string will
+  // be lengthened to include those new characters, resulting in a more stable
+  // fuzzer than picking the length of a string independently from picking its
+  // contents.
+  std::string out;
+  for (size_t i = 0; i < max_length && !remaining_data_.empty(); ++i) {
+    char next = remaining_data_[0];
+    remaining_data_.remove_prefix(1);
+    if (next == '\\' && !remaining_data_.empty()) {
+      next = remaining_data_[0];
+      remaining_data_.remove_prefix(1);
+      if (next != '\\')
+        return out;
+    }
+    out += next;
+  }
+  return out;
+}
+
 int FuzzedDataProvider::ConsumeInt32InRange(int min, int max) {
   CHECK_LE(min, max);
 

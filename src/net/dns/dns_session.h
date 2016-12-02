@@ -23,12 +23,10 @@
 
 namespace base {
 class BucketRanges;
-class SampleVector;
 }
 
 namespace net {
 
-class ClientSocketFactory;
 class DatagramClientSocket;
 class NetLog;
 struct NetLogSource;

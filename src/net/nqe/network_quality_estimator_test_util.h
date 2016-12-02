@@ -25,11 +25,6 @@ namespace net {
 
 class ExternalEstimateProvider;
 
-namespace test_server {
-struct HttpRequest;
-class HttpResponse;
-}
-
 // Helps in setting the current network type and id.
 class TestNetworkQualityEstimator : public NetworkQualityEstimator {
  public:

@@ -25,6 +25,7 @@ public class MainActivity extends Activity {
     private static final String TAG = "CUSTOMTABSBENCH";
     private static final String DEFAULT_URL = "https://www.android.com";
     private static final String DEFAULT_PACKAGE = "com.google.android.apps.chrome";
+    private static final int NONE = -1;
 
     // Keep in sync with the same constants in CustomTabsConnection.
     private static final String DEBUG_OVERRIDE_KEY =
@@ -49,8 +50,8 @@ public class MainActivity extends Activity {
         String packageName = intent.getStringExtra("package_name");
         if (packageName == null) packageName = DEFAULT_PACKAGE;
         boolean warmup = intent.getBooleanExtra("warmup", false);
-        int delayToMayLaunchUrl = intent.getIntExtra("delay_to_may_launch_url", -1);
-        int delayToLaunchUrl = intent.getIntExtra("delay_to_launch_url", -1);
+        int delayToMayLaunchUrl = intent.getIntExtra("delay_to_may_launch_url", NONE);
+        int delayToLaunchUrl = intent.getIntExtra("delay_to_launch_url", NONE);
 
         int speculationMode = 0;
         String speculationModeValue = intent.getStringExtra("speculation_mode");
@@ -72,20 +73,21 @@ public class MainActivity extends Activity {
                         "Invalid prerender mode: " + speculationModeValue);
         }
 
-        launchCustomTabs(
-                packageName, url, warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
+        int timeoutSeconds = intent.getIntExtra("timeout", NONE);
+
+        launchCustomTabs(packageName, url, warmup, speculationMode, delayToMayLaunchUrl,
+                delayToLaunchUrl, timeoutSeconds);
     }
 
-    private static final class CustomCallback extends CustomTabsCallback {
+    private final class CustomCallback extends CustomTabsCallback {
         private final boolean mWarmup;
         private final int mSpeculationMode;
         private final int mDelayToMayLaunchUrl;
         private final int mDelayToLaunchUrl;
-        private long mIntentSentMs = 0;
-        private long mPageLoadStartedMs = 0;
-        private long mPageLoadFinishedMs = 0;
-        private long mFirstContentfulPaintMs = -1;
-        private boolean mAlreadyLogged = false;
+        private long mIntentSentMs = NONE;
+        private long mPageLoadStartedMs = NONE;
+        private long mPageLoadFinishedMs = NONE;
+        private long mFirstContentfulPaintMs = NONE;
 
         public CustomCallback(boolean warmup, int speculationMode, int delayToMayLaunchUrl,
                 int delayToLaunchUrl) {
@@ -96,28 +98,22 @@ public class MainActivity extends Activity {
         }
 
         public void recordIntentHasBeenSent() {
-            mIntentSentMs = SystemClock.elapsedRealtime();
+            mIntentSentMs = SystemClock.uptimeMillis();
         }
 
         @Override
         public void onNavigationEvent(int navigationEvent, Bundle extras) {
             switch (navigationEvent) {
                 case CustomTabsCallback.NAVIGATION_STARTED:
-                    mPageLoadStartedMs = SystemClock.elapsedRealtime();
+                    mPageLoadStartedMs = SystemClock.uptimeMillis();
                     break;
                 case CustomTabsCallback.NAVIGATION_FINISHED:
-                    mPageLoadFinishedMs = SystemClock.elapsedRealtime();
-                    if (mIntentSentMs != 0 && mPageLoadStartedMs != 0) {
-                        if (mFirstContentfulPaintMs != -1) {
-                            logMetrics();
+                    mPageLoadFinishedMs = SystemClock.uptimeMillis();
+                    if (mIntentSentMs != NONE && mPageLoadStartedMs != NONE) {
+                        if (mFirstContentfulPaintMs != NONE) {
+                            logMetricsAndFinish();
                         } else {
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    logMetrics();
-                                }
-                            }, 3000);
+                            logMetricsAndFinishDelayed(3000);
                         }
                     }
                     break;
@@ -129,26 +125,41 @@ public class MainActivity extends Activity {
         @Override
         public void extraCallback(String callbackName, Bundle args) {
             assert "NavigationMetrics".equals(callbackName);
-            long value = args.getLong("firstContentfulPaint", -1);
+            long firstPaintMs = args.getLong("firstContentfulPaint", NONE);
+            long navigationStartMs = args.getLong("navigationStart", NONE);
+            if (firstPaintMs == NONE || navigationStartMs == NONE) return;
             // Can be reported several times, only record the first one.
-            if (mFirstContentfulPaintMs == -1) mFirstContentfulPaintMs = value;
-            if (!mAlreadyLogged && mPageLoadFinishedMs != 0) logMetrics();
+            if (mFirstContentfulPaintMs == NONE) {
+                mFirstContentfulPaintMs = navigationStartMs + firstPaintMs;
+            }
+            if (mPageLoadFinishedMs != NONE) logMetricsAndFinish();
         }
 
-        private void logMetrics() {
-            if (mAlreadyLogged) return;
+        /** Outputs the available metrics, and die. Unavalaible metrics are set to -1. */
+        private void logMetricsAndFinish() {
             String logLine = (mWarmup ? "1" : "0") + "," + mSpeculationMode + ","
                     + mDelayToMayLaunchUrl + "," + mDelayToLaunchUrl + "," + mIntentSentMs + ","
                     + mPageLoadStartedMs + "," + mPageLoadFinishedMs + ","
                     + mFirstContentfulPaintMs;
             Log.w(TAG, logLine);
-            mAlreadyLogged = true;
+            MainActivity.this.finish();
+        }
+
+        /** Same as {@link logMetricsAndFinish()} with a set delay in ms. */
+        public void logMetricsAndFinishDelayed(int delayMs) {
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    logMetricsAndFinish();
+                }
+            }, 3000);
         }
     }
 
     private void onCustomTabsServiceConnected(CustomTabsClient client, final Uri uri,
             final CustomCallback cb, boolean warmup, final int prerenderMode,
-            int delayToMayLaunchUrl, final int delayToLaunchUrl) {
+            int delayToMayLaunchUrl, final int delayToLaunchUrl, final int timeoutSeconds) {
         final Handler handler = new Handler(Looper.getMainLooper());
         final CustomTabsSession session = client.newSession(cb);
         final CustomTabsIntent intent = (new CustomTabsIntent.Builder(session)).build();
@@ -157,6 +168,7 @@ public class MainActivity extends Activity {
             public void run() {
                 intent.launchUrl(MainActivity.this, uri);
                 cb.recordIntentHasBeenSent();
+                if (timeoutSeconds != NONE) cb.logMetricsAndFinishDelayed(timeoutSeconds * 1000);
             }
         };
         Runnable mayLaunchRunnable = new Runnable() {
@@ -175,7 +187,7 @@ public class MainActivity extends Activity {
         };
 
         if (warmup) client.warmup(0);
-        if (delayToMayLaunchUrl != -1) {
+        if (delayToMayLaunchUrl != NONE) {
             handler.postDelayed(mayLaunchRunnable, delayToMayLaunchUrl);
         } else {
             launchRunnable.run();
@@ -183,7 +195,8 @@ public class MainActivity extends Activity {
     }
 
     private void launchCustomTabs(String packageName, String url, final boolean warmup,
-            final int speculationMode, final int delayToMayLaunchUrl, final int delayToLaunchUrl) {
+            final int speculationMode, final int delayToMayLaunchUrl, final int delayToLaunchUrl,
+            final int timeoutSeconds) {
         final CustomCallback cb =
                 new CustomCallback(warmup, speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
         final Uri uri = Uri.parse(url);
@@ -193,7 +206,8 @@ public class MainActivity extends Activity {
                     public void onCustomTabsServiceConnected(
                             ComponentName name, final CustomTabsClient client) {
                         MainActivity.this.onCustomTabsServiceConnected(client, uri, cb, warmup,
-                                speculationMode, delayToMayLaunchUrl, delayToLaunchUrl);
+                                speculationMode, delayToMayLaunchUrl, delayToLaunchUrl,
+                                timeoutSeconds);
                     }
 
                     @Override

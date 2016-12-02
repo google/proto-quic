@@ -415,6 +415,11 @@ class BASE_EXPORT ActivityUserData {
 // objects.
 class BASE_EXPORT ThreadActivityTracker {
  public:
+  // This structure contains all the common information about the thread so
+  // it doesn't have to be repeated in every entry on the stack. It is defined
+  // and used completely within the .cc file.
+  struct Header;
+
   using ActivityId = uint32_t;
 
   // This is the base class for having the compiler manage an activity on the
@@ -510,11 +515,6 @@ class BASE_EXPORT ThreadActivityTracker {
  private:
   friend class ActivityTrackerTest;
 
-  // This structure contains all the common information about the thread so
-  // it doesn't have to be repeated in every entry on the stack. It is defined
-  // and used completely within the .cc file.
-  struct Header;
-
   Header* const header_;        // Pointer to the Header structure.
   Activity* const stack_;       // The stack of activities.
   const uint32_t stack_slots_;  // The total number of stack slots.
@@ -539,7 +539,7 @@ class BASE_EXPORT GlobalActivityTracker {
   // will be safely ignored. These are public so that an external process
   // can recognize records of this type within an allocator.
   enum : uint32_t {
-    kTypeIdActivityTracker = 0x5D7381AF + 2,   // SHA1(ActivityTracker) v2
+    kTypeIdActivityTracker = 0x5D7381AF + 3,   // SHA1(ActivityTracker) v3
     kTypeIdUserDataRecord = 0x615EDDD7 + 1,    // SHA1(UserDataRecord) v1
     kTypeIdGlobalDataRecord = 0xAFE61ABE + 1,  // SHA1(GlobalDataRecord) v1
 

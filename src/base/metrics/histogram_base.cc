@@ -118,7 +118,7 @@ void HistogramBase::WriteJSON(std::string* output) const {
   root.SetInteger("flags", flags());
   root.Set("params", std::move(parameters));
   root.Set("buckets", std::move(buckets));
-  root.SetInteger("pid", GetCurrentProcId());
+  root.SetInteger("pid", GetUniqueIdForProcess());
   serializer.Serialize(root);
 }
 

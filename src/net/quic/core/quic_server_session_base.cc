@@ -74,7 +74,7 @@ void QuicServerSessionBase::OnConfigNegotiated() {
 
     if (bandwidth_resumption_enabled_) {
       // Only do bandwidth resumption if estimate is recent enough.
-      const int64_t seconds_since_estimate =
+      const uint64_t seconds_since_estimate =
           connection()->clock()->WallNow().ToUNIXSeconds() -
           cached_network_params->timestamp();
       if (seconds_since_estimate <= kNumSecondsPerHour) {

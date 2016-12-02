@@ -40,7 +40,8 @@ int NumOpenFDs() {
 // Creates a new QuicClient and Initializes it. Caller is responsible for
 // deletion.
 QuicClient* CreateAndInitializeQuicClient(EpollServer* eps, uint16_t port) {
-  IPEndPoint server_address(IPEndPoint(net::test::Loopback4(), port));
+  QuicSocketAddress server_address(
+      QuicSocketAddress(QuicIpAddress::Loopback4(), port));
   QuicServerId server_id("hostname", server_address.port(),
                          PRIVACY_MODE_DISABLED);
   QuicVersionVector versions = AllSupportedVersions();

@@ -14,12 +14,6 @@
 #error "This file requires ARC support."
 #endif
 
-// This free-function is there to ensure that the object file in not discarded
-// at link time when building with gyp (it is required because targets is built
-// as a static library with gyp and not source set which cause the object file
-// to be discarded if no symbol is used). Remove once gyp support is dropped.
-void ScopedNSObjectUnittestArcLinkerWorkaround() {}
-
 namespace {
 
 template <typename NST>

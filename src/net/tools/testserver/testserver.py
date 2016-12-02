@@ -1683,19 +1683,34 @@ class TestPageHandler(testserver_base.BasePageHandler):
 
 class OCSPHandler(testserver_base.BasePageHandler):
   def __init__(self, request, client_address, socket_server):
-    handlers = [self.OCSPResponse]
+    handlers = [self.OCSPResponse, self.CaIssuersResponse]
     self.ocsp_response = socket_server.ocsp_response
+    self.ca_issuers_response = socket_server.ca_issuers_response
     testserver_base.BasePageHandler.__init__(self, request, client_address,
                                              socket_server, [], handlers, [],
                                              handlers, [])
 
   def OCSPResponse(self):
+    if not self._ShouldHandleRequest("/ocsp"):
+      return False
+    print 'handling ocsp request'
     self.send_response(200)
     self.send_header('Content-Type', 'application/ocsp-response')
     self.send_header('Content-Length', str(len(self.ocsp_response)))
     self.end_headers()
 
     self.wfile.write(self.ocsp_response)
+
+  def CaIssuersResponse(self):
+    if not self._ShouldHandleRequest("/ca_issuers"):
+      return False
+    print 'handling ca_issuers request'
+    self.send_response(200)
+    self.send_header('Content-Type', 'application/pkix-cert')
+    self.send_header('Content-Length', str(len(self.ca_issuers_response)))
+    self.end_headers()
+
+    self.wfile.write(self.ca_issuers_response)
 
 
 class TCPEchoHandler(SocketServer.BaseRequestHandler):
@@ -1898,6 +1913,20 @@ class ServerRunner(testserver_base.TestServerRunner):
                 'specified server cert file not found: ' +
                 self.options.cert_and_key_file + ' exiting...')
           pem_cert_and_key = file(self.options.cert_and_key_file, 'r').read()
+        elif self.options.aia_intermediate:
+          self.__ocsp_server = OCSPServer((host, 0), OCSPHandler)
+          print ('AIA server started on %s:%d...' %
+              (host, self.__ocsp_server.server_port))
+
+          (pem_cert_and_key, intermediate_cert_der) = \
+              minica.GenerateCertKeyAndIntermediate(
+                  subject = "127.0.0.1",
+                  ca_issuers_url = ("http://%s:%d/ca_issuers" %
+                                    (host, self.__ocsp_server.server_port)),
+                  serial = self.options.cert_serial)
+
+          self.__ocsp_server.ocsp_response = None
+          self.__ocsp_server.ca_issuers_response = intermediate_cert_der
         else:
           # generate a new certificate and run an OCSP server for it.
           self.__ocsp_server = OCSPServer((host, 0), OCSPHandler)
@@ -1976,6 +2005,7 @@ class ServerRunner(testserver_base.TestServerRunner):
             self.__ocsp_server.ocsp_response = '30030a0103'.decode('hex')
           else:
             self.__ocsp_server.ocsp_response = ocsp_der
+          self.__ocsp_server.ca_issuers_response = None
 
         for ca_cert in self.options.ssl_client_ca:
           if not os.path.isfile(ca_cert):
@@ -2137,6 +2167,11 @@ class ServerRunner(testserver_base.TestServerRunner):
                                   'path to the file containing the certificate '
                                   'and private key for the server in PEM '
                                   'format')
+    self.option_parser.add_option('--aia-intermediate', action='store_true',
+                                  dest='aia_intermediate',
+                                  help='generate a certificate chain that '
+                                  'requires AIA cert fetching, and run a '
+                                  'server to respond to the AIA request.')
     self.option_parser.add_option('--ocsp', dest='ocsp', default='ok',
                                   help='The type of OCSP response generated '
                                   'for the automatically generated '

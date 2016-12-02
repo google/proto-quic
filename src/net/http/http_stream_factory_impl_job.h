@@ -40,7 +40,6 @@ class HttpStream;
 class SpdySessionPool;
 class NetLog;
 struct SSLConfig;
-class QuicHttpStream;
 
 // An HttpStreamRequestImpl exists for each stream which is in progress of being
 // created for the StreamFactory.

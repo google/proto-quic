@@ -112,8 +112,9 @@ class QuicChromiumClientSessionTest
     QuicChromiumPacketWriter* writer =
         new net::QuicChromiumPacketWriter(socket.get());
     QuicConnection* connection = new QuicConnection(
-        0, kIpEndPoint, &helper_, &alarm_factory_, writer, true,
-        Perspective::IS_CLIENT, SupportedVersions(GetParam()));
+        0, QuicSocketAddress(QuicSocketAddressImpl(kIpEndPoint)), &helper_,
+        &alarm_factory_, writer, true, Perspective::IS_CLIENT,
+        SupportedVersions(GetParam()));
     session_.reset(new QuicChromiumClientSession(
         connection, std::move(socket),
         /*stream_factory=*/nullptr, &crypto_client_stream_factory_, &clock_,

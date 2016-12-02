@@ -15,9 +15,7 @@
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::pair;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -271,7 +269,7 @@ TEST_F(IntervalTest, IntervalOfTypeWithNoOperatorMinus) {
   // Interval<T> should work even if T does not support operator-().  We just
   // can't call Interval<T>::Length() for such types.
   const Interval<string> d1("a", "b");
-  const Interval<pair<int, int>> d2({1, 2}, {4, 3});
+  const Interval<std::pair<int, int>> d2({1, 2}, {4, 3});
   EXPECT_EQ("a", d1.min());
   EXPECT_EQ("b", d1.max());
   EXPECT_EQ(std::make_pair(1, 2), d2.min());

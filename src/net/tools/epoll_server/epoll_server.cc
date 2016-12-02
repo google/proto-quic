@@ -193,8 +193,8 @@ void EpollServer::RegisterFD(int fd, CB* cb, int event_mask) {
   VLOG(3) << "RegisterFD fd=" << fd << " event_mask=" << event_mask;
   FDToCBMap::iterator fd_i = cb_map_.find(CBAndEventMask(NULL, 0, fd));
   if (cb_map_.end() != fd_i) {
-    // do we just abort, or do we just unregister the other guy?
-    // for now, lets just unregister the other guy.
+    // do we just abort, or do we just unregister the other callback?
+    // for now, lets just unregister the other callback.
 
     // unregister any callback that may already be registered for this FD.
     CB* other_cb = fd_i->cb;

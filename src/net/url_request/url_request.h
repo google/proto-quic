@@ -40,10 +40,6 @@
 
 namespace base {
 class Value;
-
-namespace debug {
-class StackTrace;
-}  // namespace debug
 }  // namespace base
 
 namespace net {

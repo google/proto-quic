@@ -8,15 +8,20 @@ assert(is_chromecast)
 
 config("static_config") {
   ldflags = [
-    # We want to statically link libstdc++/libgcc.
-    "-static-libstdc++",
-    "-static-libgcc",
-
     # Don't allow visible symbols from libraries that contain
     # assembly code with symbols that aren't hidden properly.
     # http://b/26390825
     "-Wl,--exclude-libs=libffmpeg.a",
   ]
+
+  if (!is_android) {
+    ldflags += [
+      # We want to statically link libstdc++/libgcc on Linux.
+      # (On Android, libstdc++ and libgcc aren't used.)
+      "-static-libstdc++",
+      "-static-libgcc",
+    ]
+  }
 }
 
 config("ldconfig") {

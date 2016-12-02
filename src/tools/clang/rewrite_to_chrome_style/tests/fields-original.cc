@@ -142,6 +142,14 @@ struct LifetimeOf {
       !isGarbageCollected ? RefCountedLifetime : GarbageCollectedLifetime;
 };
 
+template <typename T>
+struct GenericHashTraitsBase {
+  // We don't want to capitalize fields in type traits
+  // (i.e. the |value| -> |kValue| rename is undesirable below).
+  // This problem is prevented by IsCallee heuristic.
+  static const int kWeakHandlingFlag = TypeTrait2<T>::value ? 123 : 456;
+};
+
 };  // namespace WTF
 
 void F() {

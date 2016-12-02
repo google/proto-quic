@@ -10,8 +10,8 @@
 #include "base/macros.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/simple_thread.h"
-#include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_config.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/quic_server.h"
 
 namespace net {
@@ -20,7 +20,7 @@ namespace test {
 // Simple wrapper class to run QuicServer in a dedicated thread.
 class ServerThread : public base::SimpleThread {
  public:
-  ServerThread(QuicServer* server, const IPEndPoint& address);
+  ServerThread(QuicServer* server, const QuicSocketAddress& address);
 
   ~ServerThread() override;
 
@@ -69,7 +69,7 @@ class ServerThread : public base::SimpleThread {
   base::WaitableEvent quit_;       // Notified when the server should quit.
 
   std::unique_ptr<QuicServer> server_;
-  IPEndPoint address_;
+  QuicSocketAddress address_;
   base::Lock port_lock_;
   int port_;
 

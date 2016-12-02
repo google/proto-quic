@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 
 namespace net {
@@ -24,8 +24,8 @@ class LimitedMtuTestWriter : public QuicPacketWriterWrapper {
   // Inherited from QuicPacketWriterWrapper.
   WriteResult WritePacket(const char* buffer,
                           size_t buf_len,
-                          const IPAddress& self_address,
-                          const IPEndPoint& peer_address,
+                          const QuicIpAddress& self_address,
+                          const QuicSocketAddress& peer_address,
                           PerPacketOptions* options) override;
 
  private:

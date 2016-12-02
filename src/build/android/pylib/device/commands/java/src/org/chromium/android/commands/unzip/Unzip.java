@@ -86,7 +86,7 @@ public class Unzip {
     public void run(String[] args) {
         if (args.length != 1) {
             showUsage(System.err);
-            throw new RuntimeException("Incorrect usage.");
+            throw new RuntimeException("Incorrect usage!");
         }
 
         unzip(args);

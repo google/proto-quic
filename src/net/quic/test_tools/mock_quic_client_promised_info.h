@@ -9,7 +9,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_client_promised_info.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 namespace net {

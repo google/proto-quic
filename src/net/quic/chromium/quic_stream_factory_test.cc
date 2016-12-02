@@ -60,7 +60,6 @@ using net::test::IsError;
 using net::test::IsOk;
 
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -115,8 +114,8 @@ struct TestParams {
   bool enable_connection_racing;
 };
 
-vector<TestParams> GetTestParams() {
-  vector<TestParams> params;
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
   QuicVersionVector all_supported_versions = AllSupportedVersions();
   for (const QuicVersion version : all_supported_versions) {
     params.push_back(TestParams{version, false});
@@ -154,8 +153,8 @@ struct PoolingTestParams {
   DestinationType destination_type;
 };
 
-vector<PoolingTestParams> GetPoolingTestParams() {
-  vector<PoolingTestParams> params;
+std::vector<PoolingTestParams> GetPoolingTestParams() {
+  std::vector<PoolingTestParams> params;
   QuicVersionVector all_supported_versions = AllSupportedVersions();
   for (const QuicVersion version : all_supported_versions) {
     params.push_back(PoolingTestParams{version, false, SAME_AS_FIRST});
@@ -243,7 +242,6 @@ class QuicStreamFactoryTestBase {
         url3_(kServer3Url),
         url4_(kServer4Url),
         privacy_mode_(PRIVACY_MODE_DISABLED),
-        enable_port_selection_(true),
         always_require_handshake_confirmation_(false),
         disable_connection_pooling_(false),
         load_server_info_timeout_srtt_multiplier_(0.0f),
@@ -284,10 +282,10 @@ class QuicStreamFactoryTestBase {
         /*SocketPerformanceWatcherFactory*/ nullptr,
         &crypto_client_stream_factory_, &random_generator_, clock_,
         kDefaultMaxPacketSize, string(), SupportedVersions(version_),
-        enable_port_selection_, always_require_handshake_confirmation_,
-        disable_connection_pooling_, load_server_info_timeout_srtt_multiplier_,
-        enable_connection_racing_, enable_non_blocking_io_, disable_disk_cache_,
-        prefer_aes_, receive_buffer_size_, delay_tcp_race_,
+        always_require_handshake_confirmation_, disable_connection_pooling_,
+        load_server_info_timeout_srtt_multiplier_, enable_connection_racing_,
+        enable_non_blocking_io_, disable_disk_cache_, prefer_aes_,
+        receive_buffer_size_, delay_tcp_race_,
         /*max_server_configs_stored_in_properties*/ 0,
         close_sessions_on_ip_change_,
         disable_quic_on_timeout_with_open_streams_,
@@ -582,7 +580,7 @@ class QuicStreamFactoryTestBase {
     string chlo_hash("test_chlo_hash");
     string signature("test_signature");
     string test_cert("test_cert");
-    vector<string> certs;
+    std::vector<string> certs;
     certs.push_back(test_cert);
     state->server_config = server_config;
     state->source_address_token = source_address_token;
@@ -622,7 +620,7 @@ class QuicStreamFactoryTestBase {
     string chlo_hash2("test_chlo_hash2");
     string signature2("test_signature2");
     string test_cert2("test_cert2");
-    vector<string> certs2;
+    std::vector<string> certs2;
     certs2.push_back(test_cert2);
     state2->server_config = server_config2;
     state2->source_address_token = source_address_token2;
@@ -735,7 +733,6 @@ class QuicStreamFactoryTestBase {
   TestCompletionCallback callback_;
 
   // Variables to configure QuicStreamFactory.
-  bool enable_port_selection_;
   bool always_require_handshake_confirmation_;
   bool disable_connection_pooling_;
   double load_server_info_timeout_srtt_multiplier_;
@@ -966,7 +963,8 @@ TEST_P(QuicStreamFactoryTest, PoolingWithServerMigration) {
                                            "192.168.0.1", "");
   IPEndPoint alt_address = IPEndPoint(IPAddress(1, 2, 3, 4), 443);
   QuicConfig config;
-  config.SetAlternateServerAddressToSend(alt_address);
+  config.SetAlternateServerAddressToSend(
+      QuicSocketAddress(QuicSocketAddressImpl(alt_address)));
 
   VerifyServerMigration(config, alt_address);
 
@@ -1403,7 +1401,7 @@ TEST_P(QuicStreamFactoryTest, MaxOpenStream) {
   socket_data.AddSocketDataToFactory(&socket_factory_);
 
   HttpRequestInfo request_info;
-  vector<std::unique_ptr<QuicHttpStream>> streams;
+  std::vector<std::unique_ptr<QuicHttpStream>> streams;
   // The MockCryptoClientStream sets max_open_streams to be
   // kDefaultMaxStreamsPerConnection / 2.
   for (size_t i = 0; i < kDefaultMaxStreamsPerConnection / 2; i++) {
@@ -1510,41 +1508,6 @@ TEST_P(QuicStreamFactoryTest, CancelCreate) {
 
   EXPECT_TRUE(socket_data.AllReadDataConsumed());
   EXPECT_TRUE(socket_data.AllWriteDataConsumed());
-}
-
-TEST_P(QuicStreamFactoryTest, CreateConsistentEphemeralPort) {
-  Initialize();
-  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-
-  // Sequentially connect to the default host, then another host, and then the
-  // default host.  Verify that the default host gets a consistent ephemeral
-  // port, that is different from the other host's connection.
-
-  string other_server_name = kServer2HostName;
-  EXPECT_NE(kDefaultServerHostName, other_server_name);
-  HostPortPair host_port_pair2(other_server_name, kDefaultServerPort);
-
-  int original_port = GetSourcePortForNewSession(host_port_pair_);
-  EXPECT_NE(original_port, GetSourcePortForNewSession(host_port_pair2));
-  EXPECT_EQ(original_port, GetSourcePortForNewSession(host_port_pair_));
-}
-
-TEST_P(QuicStreamFactoryTest, GoAwayDisablesConsistentEphemeralPort) {
-  Initialize();
-  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
-
-  // Get a session to the host using the port suggester.
-  int original_port = GetSourcePortForNewSessionAndGoAway(host_port_pair_);
-  // Verify that the port is different after the goaway.
-  EXPECT_NE(original_port, GetSourcePortForNewSession(host_port_pair_));
-  // Since the previous session did not goaway we should see the original port.
-  EXPECT_EQ(original_port, GetSourcePortForNewSession(host_port_pair_));
 }
 
 TEST_P(QuicStreamFactoryTest, CloseAllSessions) {
@@ -3838,7 +3801,8 @@ TEST_P(QuicStreamFactoryTest, ServerMigrationIPv4ToIPv4) {
   // Add alternate IPv4 server address to config.
   IPEndPoint alt_address = IPEndPoint(IPAddress(1, 2, 3, 4), 123);
   QuicConfig config;
-  config.SetAlternateServerAddressToSend(alt_address);
+  config.SetAlternateServerAddressToSend(
+      QuicSocketAddress(QuicSocketAddressImpl(alt_address)));
   VerifyServerMigration(config, alt_address);
 }
 
@@ -3850,7 +3814,8 @@ TEST_P(QuicStreamFactoryTest, ServerMigrationIPv6ToIPv6) {
   IPEndPoint alt_address = IPEndPoint(
       IPAddress(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), 123);
   QuicConfig config;
-  config.SetAlternateServerAddressToSend(alt_address);
+  config.SetAlternateServerAddressToSend(
+      QuicSocketAddress(QuicSocketAddressImpl(alt_address)));
   VerifyServerMigration(config, alt_address);
 }
 
@@ -3861,7 +3826,8 @@ TEST_P(QuicStreamFactoryTest, ServerMigrationIPv6ToIPv4) {
   // Add alternate IPv4 server address to config.
   IPEndPoint alt_address = IPEndPoint(IPAddress(1, 2, 3, 4), 123);
   QuicConfig config;
-  config.SetAlternateServerAddressToSend(alt_address);
+  config.SetAlternateServerAddressToSend(
+      QuicSocketAddress(QuicSocketAddressImpl(alt_address)));
   IPEndPoint expected_address(
       ConvertIPv4ToIPv4MappedIPv6(alt_address.address()), alt_address.port());
   VerifyServerMigration(config, expected_address);
@@ -3878,7 +3844,8 @@ TEST_P(QuicStreamFactoryTest, ServerMigrationIPv4ToIPv6Fails) {
   IPEndPoint alt_address = IPEndPoint(
       IPAddress(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), 123);
   QuicConfig config;
-  config.SetAlternateServerAddressToSend(alt_address);
+  config.SetAlternateServerAddressToSend(
+      QuicSocketAddress(QuicSocketAddressImpl(alt_address)));
 
   ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
   crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
@@ -4037,7 +4004,7 @@ TEST_P(QuicStreamFactoryTest, OnCertDBChanged) {
 TEST_P(QuicStreamFactoryTest, SharedCryptoConfig) {
   Initialize();
 
-  vector<string> cannoncial_suffixes;
+  std::vector<string> cannoncial_suffixes;
   cannoncial_suffixes.push_back(string(".c.youtube.com"));
   cannoncial_suffixes.push_back(string(".googlevideo.com"));
 
@@ -4072,7 +4039,7 @@ TEST_P(QuicStreamFactoryTest, SharedCryptoConfig) {
 
 TEST_P(QuicStreamFactoryTest, CryptoConfigWhenProofIsInvalid) {
   Initialize();
-  vector<string> cannoncial_suffixes;
+  std::vector<string> cannoncial_suffixes;
   cannoncial_suffixes.push_back(string(".c.youtube.com"));
   cannoncial_suffixes.push_back(string(".googlevideo.com"));
 
@@ -4972,7 +4939,8 @@ class QuicStreamFactoryWithDestinationTest
   HostPortPair origin1_;
   HostPortPair origin2_;
   MockRead hanging_read_;
-  vector<std::unique_ptr<SequencedSocketData>> sequenced_socket_data_vector_;
+  std::vector<std::unique_ptr<SequencedSocketData>>
+      sequenced_socket_data_vector_;
 };
 
 INSTANTIATE_TEST_CASE_P(Version,
@@ -5228,7 +5196,7 @@ TEST_P(QuicStreamFactoryTest, ClearCachedStatesInCryptoConfig) {
              QuicCryptoClientConfig* crypto_config)
         : server_id(host, port, privacy_mode),
           state(crypto_config->LookupOrCreate(server_id)) {
-      vector<string> certs(1);
+      std::vector<string> certs(1);
       certs[0] = "cert";
       state->SetProof(certs, "cert_sct", "chlo_hash", "signature");
       state->set_source_address_token("TOKEN");

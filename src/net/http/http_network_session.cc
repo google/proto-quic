@@ -26,7 +26,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_crypto_client_stream_factory.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/socket/client_socket_factory.h"
@@ -96,7 +96,6 @@ HttpNetworkSession::Params::Params()
       enable_quic_alternative_service_with_different_host(true),
       enable_quic(false),
       disable_quic_on_timeout_with_open_streams(false),
-      enable_quic_port_selection(true),
       quic_always_require_handshake_confirmation(false),
       quic_disable_connection_pooling(false),
       quic_load_server_info_timeout_srtt_multiplier(0.25f),
@@ -165,7 +164,6 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_max_packet_length,
           params.quic_user_agent_id,
           params.quic_supported_versions,
-          params.enable_quic_port_selection,
           params.quic_always_require_handshake_confirmation,
           params.quic_disable_connection_pooling,
           params.quic_load_server_info_timeout_srtt_multiplier,
@@ -291,8 +289,6 @@ std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
   dict->SetBoolean("quic_enabled", params_.enable_quic);
-  dict->SetBoolean("enable_quic_port_selection",
-                   params_.enable_quic_port_selection);
   std::unique_ptr<base::ListValue> connection_options(new base::ListValue);
   for (QuicTagVector::const_iterator it =
            params_.quic_connection_options.begin();

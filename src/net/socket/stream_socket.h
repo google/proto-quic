@@ -15,7 +15,6 @@
 
 namespace net {
 
-class AddressList;
 class IPEndPoint;
 class NetLogWithSource;
 class SSLInfo;

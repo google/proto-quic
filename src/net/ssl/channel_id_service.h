@@ -31,7 +31,6 @@ class ECPrivateKey;
 namespace net {
 
 class ChannelIDServiceJob;
-class ChannelIDServiceWorker;
 
 // A class for creating and fetching Channel IDs.
 

@@ -376,8 +376,7 @@ class SmoothnessToughScrollingCases(_Smoothness):
   def Name(cls):
     return 'smoothness.tough_scrolling_cases'
 
-
-@benchmark.Enabled('android')
+@benchmark.Disabled('all')  # crbug.com/667489
 class SmoothnessGpuRasterizationToughScrollingCases(_Smoothness):
   tag = 'gpu_rasterization'
   test = smoothness.Smoothness

@@ -179,9 +179,9 @@ class EmbeddedTestServerTest
                                               HttpStatusCode code,
                                               const HttpRequest& request) {
     request_relative_url_ = request.relative_url;
+    request_absolute_url_ = request.GetURL();
 
-    GURL absolute_url = server_->GetURL(request.relative_url);
-    if (absolute_url.path() == path) {
+    if (request_absolute_url_.path() == path) {
       std::unique_ptr<BasicHttpResponse> http_response(new BasicHttpResponse);
       http_response->set_code(code);
       http_response->set_content(content);
@@ -196,6 +196,7 @@ class EmbeddedTestServerTest
   int num_responses_received_;
   int num_responses_expected_;
   std::string request_relative_url_;
+  GURL request_absolute_url_;
   base::Thread io_thread_;
   scoped_refptr<TestURLRequestContextGetter> request_context_getter_;
   TestConnectionListener connection_listener_;
@@ -261,6 +262,7 @@ TEST_P(EmbeddedTestServerTest, RegisterRequestHandler) {
   EXPECT_EQ("text/html", GetContentTypeFromFetcher(*fetcher));
 
   EXPECT_EQ("/test?q=foo", request_relative_url_);
+  EXPECT_EQ(server_->GetURL("/test?q=foo"), request_absolute_url_);
 }
 
 TEST_P(EmbeddedTestServerTest, ServeFilesFromDirectory) {

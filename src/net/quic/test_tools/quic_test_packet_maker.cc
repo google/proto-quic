@@ -13,7 +13,6 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
-using std::make_pair;
 
 namespace net {
 namespace test {
@@ -27,8 +26,6 @@ QuicTestPacketMaker::QuicTestPacketMaker(QuicVersion version,
       connection_id_(connection_id),
       clock_(clock),
       host_(host),
-      spdy_request_framer_(HTTP2),
-      spdy_response_framer_(HTTP2),
       perspective_(perspective) {}
 
 QuicTestPacketMaker::~QuicTestPacketMaker() {}
@@ -98,7 +95,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
-    ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
+    ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
@@ -147,7 +144,7 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = ack_delay_time;
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
-    ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
+    ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
@@ -242,7 +239,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = ack_least_unacked; i <= largest_received; ++i) {
-    ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
+    ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
@@ -324,7 +321,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndDataPacket(
   QuicAckFrame ack(MakeAckFrame(largest_received));
   ack.ack_delay_time = QuicTime::Delta::Zero();
   for (QuicPacketNumber i = least_unacked; i <= largest_received; ++i) {
-    ack.received_packet_times.push_back(make_pair(i, clock_->Now()));
+    ack.received_packet_times.push_back(std::make_pair(i, clock_->Now()));
   }
   if (largest_received > 0) {
     ack.packets.Add(1, largest_received + 1);
@@ -354,18 +351,12 @@ QuicTestPacketMaker::MakeRequestHeadersAndMultipleDataFramesPacket(
     const std::vector<std::string>& data_writes) {
   InitializeHeader(packet_number, should_include_version);
   SpdySerializedFrame spdy_frame;
-  if (spdy_request_framer_.protocol_version() == SPDY3) {
-    SpdySynStreamIR syn_stream(stream_id, std::move(headers));
-    syn_stream.set_fin(fin);
-    syn_stream.set_priority(priority);
-    spdy_frame = spdy_request_framer_.SerializeSynStream(syn_stream);
-  } else {
-    SpdyHeadersIR headers_frame(stream_id, std::move(headers));
-    headers_frame.set_fin(fin);
-    headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
-    headers_frame.set_has_priority(true);
-    spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
-  }
+  SpdyHeadersIR headers_frame(stream_id, std::move(headers));
+  headers_frame.set_fin(fin);
+  headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
+  headers_frame.set_has_priority(true);
+  spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
+
   if (spdy_headers_frame_length) {
     *spdy_headers_frame_length = spdy_frame.size();
   }
@@ -421,18 +412,12 @@ QuicTestPacketMaker::MakeRequestHeadersPacket(QuicPacketNumber packet_number,
                                               QuicStreamOffset* offset) {
   InitializeHeader(packet_number, should_include_version);
   SpdySerializedFrame spdy_frame;
-  if (spdy_request_framer_.protocol_version() == SPDY3) {
-    SpdySynStreamIR syn_stream(stream_id, std::move(headers));
-    syn_stream.set_fin(fin);
-    syn_stream.set_priority(priority);
-    spdy_frame = spdy_request_framer_.SerializeSynStream(syn_stream);
-  } else {
-    SpdyHeadersIR headers_frame(stream_id, std::move(headers));
-    headers_frame.set_fin(fin);
-    headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
-    headers_frame.set_has_priority(true);
-    spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
-  }
+  SpdyHeadersIR headers_frame(stream_id, std::move(headers));
+  headers_frame.set_fin(fin);
+  headers_frame.set_weight(Spdy3PriorityToHttp2Weight(priority));
+  headers_frame.set_has_priority(true);
+  spdy_frame = spdy_request_framer_.SerializeFrame(headers_frame);
+
   if (spdy_headers_frame_length) {
     *spdy_headers_frame_length = spdy_frame.size();
   }
@@ -532,15 +517,10 @@ QuicTestPacketMaker::MakeResponseHeadersPacket(
     QuicStreamOffset* offset) {
   InitializeHeader(packet_number, should_include_version);
   SpdySerializedFrame spdy_frame;
-  if (spdy_response_framer_.protocol_version() == SPDY3) {
-    SpdySynReplyIR syn_reply(stream_id, std::move(headers));
-    syn_reply.set_fin(fin);
-    spdy_frame = spdy_response_framer_.SerializeSynReply(syn_reply);
-  } else {
-    SpdyHeadersIR headers_frame(stream_id, std::move(headers));
-    headers_frame.set_fin(fin);
-    spdy_frame = spdy_response_framer_.SerializeFrame(headers_frame);
-  }
+  SpdyHeadersIR headers_frame(stream_id, std::move(headers));
+  headers_frame.set_fin(fin);
+  spdy_frame = spdy_response_framer_.SerializeFrame(headers_frame);
+
   if (spdy_headers_frame_length) {
     *spdy_headers_frame_length = spdy_frame.size();
   }

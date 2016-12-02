@@ -31,7 +31,7 @@ class SpdyFramer;
 class NET_EXPORT_PRIVATE SpdyFrameBuilder {
  public:
   // Initializes a SpdyFrameBuilder with a buffer of given size
-  SpdyFrameBuilder(size_t size, SpdyMajorVersion version);
+  explicit SpdyFrameBuilder(size_t size);
 
   ~SpdyFrameBuilder();
 
@@ -51,24 +51,8 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   // GetWriteableBuffer() above.
   bool Seek(size_t length);
 
-  // Populates this frame with a SPDY control frame header using
-  // version-specific information from the |framer| and length information from
-  // |capacity_|. The given type must be a control frame type.
-  // Used only for SPDY3.
-  bool WriteControlFrameHeader(const SpdyFramer& framer,
-                               SpdyFrameType type,
-                               uint8_t flags);
-
-  // Populates this frame with a SPDY data frame header using version-specific
-  // information from the |framer| and length information from capacity_.
-  bool WriteDataFrameHeader(const SpdyFramer& framer,
-                            SpdyStreamId stream_id,
-                            uint8_t flags);
-
-  // Populates this frame with a HTTP2 frame prefix using version-specific
-  // information from the |framer| and length information from |capacity_|. The
-  // given type must be a control frame type.
-  // Used only for HTTP2.
+  // Populates this frame with a HTTP2 frame prefix using length information
+  // from |capacity_|. The given type must be a control frame type.
   bool BeginNewFrame(const SpdyFramer& framer,
                      SpdyFrameType type,
                      uint8_t flags,
@@ -76,11 +60,9 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
-    if (version_ == HTTP2) {
-      SPDY_BUG_IF(SpdyConstants::GetMaxFrameSizeLimit(version_) < length_)
-          << "Frame length " << length_
-          << " is longer than the maximum possible allowed length.";
-    }
+    SPDY_BUG_IF(SpdyConstants::kMaxFrameSizeLimit < length_)
+        << "Frame length " << length_
+        << " is longer than the maximum possible allowed length.";
     SpdySerializedFrame rv(buffer_.release(), length(), true);
     capacity_ = 0;
     length_ = 0;
@@ -131,7 +113,6 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
   // Update (in-place) the flags field in the frame being built to reflect the
   // given flags value.
-  // Used only for SPDY versions >=4.
   bool OverwriteFlags(const SpdyFramer& framer, uint8_t flags);
 
  private:
@@ -143,8 +124,6 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   size_t capacity_;  // Allocation size of payload, set by constructor.
   size_t length_;    // Length of the latest frame in the buffer.
   size_t offset_;    // Position at which the latest frame begins.
-
-  const SpdyMajorVersion version_;
 };
 
 }  // namespace net

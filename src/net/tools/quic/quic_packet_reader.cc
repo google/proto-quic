@@ -13,10 +13,9 @@
 #include <sys/epoll.h>
 
 #include "base/logging.h"
-#include "net/base/ip_address.h"
-#include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_socket_utils.h"
@@ -111,12 +110,13 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
       continue;
     }
 
-    IPEndPoint client_address = IPEndPoint(packets_[i].raw_address);
-    IPAddress server_ip;
+    QuicSocketAddress client_address =
+        QuicSocketAddress(packets_[i].raw_address);
+    QuicIpAddress server_ip;
     QuicWallTime packet_walltimestamp = QuicWallTime::Zero();
     QuicSocketUtils::GetAddressAndTimestampFromMsghdr(
         &mmsg_hdr_[i].msg_hdr, &server_ip, &packet_walltimestamp);
-    if (!IsInitializedAddress(server_ip)) {
+    if (!server_ip.IsInitialized()) {
       QUIC_BUG << "Unable to get server address.";
       continue;
     }
@@ -136,7 +136,7 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
     QuicReceivedPacket packet(reinterpret_cast<char*>(packets_[i].iov.iov_base),
                               mmsg_hdr_[i].msg_len, timestamp, false, ttl,
                               has_ttl);
-    IPEndPoint server_address(server_ip, port);
+    QuicSocketAddress server_address(server_ip, port);
     processor->ProcessPacket(server_address, client_address, packet);
   }
 
@@ -162,8 +162,8 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
     QuicPacketCount* packets_dropped) {
   char buf[kMaxPacketSize];
 
-  IPEndPoint client_address;
-  IPAddress server_ip;
+  QuicSocketAddress client_address;
+  QuicIpAddress server_ip;
   QuicWallTime walltimestamp = QuicWallTime::Zero();
   int bytes_read =
       QuicSocketUtils::ReadPacket(fd, buf, arraysize(buf), packets_dropped,
@@ -172,7 +172,7 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
     return false;  // ReadPacket failed.
   }
 
-  if (server_ip.empty()) {
+  if (!server_ip.IsInitialized()) {
     QUIC_BUG << "Unable to get server address.";
     return false;
   }
@@ -184,7 +184,7 @@ bool QuicPacketReader::ReadAndDispatchSinglePacket(
   QuicTime timestamp = clock.ConvertWallTimeToQuicTime(walltimestamp);
 
   QuicReceivedPacket packet(buf, bytes_read, timestamp, false);
-  IPEndPoint server_address(server_ip, port);
+  QuicSocketAddress server_address(server_ip, port);
   processor->ProcessPacket(server_address, client_address, packet);
 
   // The socket read was successful, so return true even if packet dispatch

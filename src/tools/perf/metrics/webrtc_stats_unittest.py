@@ -129,13 +129,14 @@ class WebRtcStatsUnittest(unittest.TestCase):
 
     self.assertTrue(results.received_values,
                     'Expected values for googDecodeMs and others, got none.')
-
-    # This also ensures we're clever enough to tell video packetsSent from audio
-    # packetsSent.
-    self.assertEqual(results.received_values[3].values,
-                     [4.0, 16.0])
-    self.assertEqual(results.received_values[5].values,
-                     [1.0, 8.0])
+    self.assertEqual(results.received_values[1].name,
+                     'peer_connection_0_audio_goog_rtt')
+    self.assertEqual(results.received_values[1].values,
+                     [20.0, 17.0])
+    self.assertEqual(results.received_values[7].name,
+                     'peer_connection_1_video_goog_rtt')
+    self.assertEqual(results.received_values[7].values,
+                     [100.0, 101.0])
 
   def testExtractsInterestingMetricsOnly(self):
     results = self._RunMetricOnJson(SAMPLE_JSON)
@@ -145,9 +146,9 @@ class WebRtcStatsUnittest(unittest.TestCase):
                   'The result should be a ListOfScalarValues instance with '
                   'a name <peer connection id>_<statistic>.')
     all_names = [value.name for value in results.received_values]
-    self.assertIn('peer_connection_0_video_packets_sent', all_names)
-    self.assertNotIn('peer_connection_1_video_packets_sent', all_names,
-                     'Peer connection 1 does not have a video packets sent in '
+    self.assertIn('peer_connection_0_audio_goog_rtt', all_names)
+    self.assertNotIn('peer_connection_1_audio_goog_rtt', all_names,
+                     'Peer connection 1 does not have a goog-rtt in '
                      'the JSON above, unlike peer connection 0 which does.')
     self.assertIn('peer_connection_0_video_goog_rtt', all_names)
     self.assertIn('peer_connection_1_video_goog_rtt', all_names)

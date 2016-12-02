@@ -327,7 +327,7 @@ class BASE_EXPORT DictionaryValue : public Value {
   // |out_value|.  If |out_value| is NULL, the removed value will be deleted.
   // This method returns true if |path| is a valid path; otherwise it will
   // return false and the DictionaryValue object will be unchanged.
-  virtual bool Remove(StringPiece path, std::unique_ptr<Value>* out_value);
+  bool Remove(StringPiece path, std::unique_ptr<Value>* out_value);
 
   // Like Remove(), but without special treatment of '.'.  This allows e.g. URLs
   // to be used as paths.
@@ -336,7 +336,7 @@ class BASE_EXPORT DictionaryValue : public Value {
 
   // Removes a path, clearing out all dictionaries on |path| that remain empty
   // after removing the value at |path|.
-  virtual bool RemovePath(StringPiece path, std::unique_ptr<Value>* out_value);
+  bool RemovePath(StringPiece path, std::unique_ptr<Value>* out_value);
 
   // Makes a copy of |this| but doesn't include empty dictionaries and lists in
   // the copy.  This never returns NULL, even if |this| itself is empty.

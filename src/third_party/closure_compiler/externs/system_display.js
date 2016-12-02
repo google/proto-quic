@@ -45,6 +45,35 @@ chrome.system.display.Insets;
 
 /**
  * @typedef {{
+ *   x: number,
+ *   y: number
+ * }}
+ * @see https://developer.chrome.com/extensions/system.display#type-Point
+ */
+chrome.system.display.Point;
+
+/**
+ * @typedef {{
+ *   displayPoint: !chrome.system.display.Point,
+ *   touchPoint: !chrome.system.display.Point
+ * }}
+ * @see https://developer.chrome.com/extensions/system.display#type-TouchCalibrationPair
+ */
+chrome.system.display.TouchCalibrationPair;
+
+/**
+ * @typedef {{
+ *   pair1: !chrome.system.display.TouchCalibrationPair,
+ *   pair2: !chrome.system.display.TouchCalibrationPair,
+ *   pair3: !chrome.system.display.TouchCalibrationPair,
+ *   pair4: !chrome.system.display.TouchCalibrationPair
+ * }}
+ * @see https://developer.chrome.com/extensions/system.display#type-TouchCalibrationPairQuad
+ */
+chrome.system.display.TouchCalibrationPairQuad;
+
+/**
+ * @typedef {{
  *   width: number,
  *   height: number,
  *   widthInNativePixels: number,
@@ -206,6 +235,37 @@ chrome.system.display.overscanCalibrationReset = function(id) {};
  * @see https://developer.chrome.com/extensions/system.display#method-overscanCalibrationComplete
  */
 chrome.system.display.overscanCalibrationComplete = function(id) {};
+
+/**
+ * Starts touch calibration for a display. This will show an overlay on the
+ * screen and initialize the UX for touch calibration. If touch calibration for
+ * display |id| is in progress this will reset calibration.
+ * @param {string} id The display's unique identifier.
+ * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationStart
+ */
+chrome.system.display.touchCalibrationStart = function(id) {};
+
+/**
+ * Sets the touch calibration pairs for a display. These |pairs| would be used
+ * to calibrate the touch screen for display |id|. If touch calibration for
+ * display |id| is in progress this will do nothing.
+ * @param {string} id The display's unique identifier.
+ * @param {!chrome.system.display.TouchCalibrationPairQuad} pairs The pairs of
+ *     point used to calibrate the display.
+ * @param {!chrome.system.display.Bounds} bounds Bounds of the display when the
+ *     touch calibration was performed. |bounds.left| and |bounds.top|
+ *     values are no-op.
+ * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationSet
+ */
+chrome.system.display.touchCalibrationSet = function(id, pairs, bounds) {};
+
+/**
+ * Resets the touch calibration for the display and removes the saved
+ * calibration data.
+ * @param {string} id The display's unique identifier.
+ * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationReset
+ */
+chrome.system.display.touchCalibrationReset = function(id) {};
 
 /**
  * Fired when anything changes to the display configuration.

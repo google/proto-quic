@@ -116,15 +116,15 @@ void TaskSchedulerImpl::Initialize(
   // Start the service thread. On platforms that support it (POSIX except NaCL
   // SFI), the service thread runs a MessageLoopForIO which is used to support
   // FileDescriptorWatcher in the scope in which tasks run.
-  constexpr MessageLoop::Type kServiceThreadMessageLoopType =
+  Thread::Options service_thread_options;
+  service_thread_options.message_loop_type =
 #if defined(OS_POSIX) && !defined(OS_NACL_SFI)
       MessageLoop::TYPE_IO;
 #else
       MessageLoop::TYPE_DEFAULT;
 #endif
-  constexpr size_t kDefaultStackSize = 0;
-  CHECK(service_thread_.StartWithOptions(
-      Thread::Options(kServiceThreadMessageLoopType, kDefaultStackSize)));
+  service_thread_options.timer_slack = TIMER_SLACK_MAXIMUM;
+  CHECK(service_thread_.StartWithOptions(service_thread_options));
 
   // Instantiate TaskTracker. Needs to happen after starting the service thread
   // to get its message_loop().

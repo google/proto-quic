@@ -118,7 +118,8 @@ std::unique_ptr<QuicConnection> QuartcFactory::CreateQuicConnection(
   QuicConnectionId dummy_id = 0;
   IPEndPoint dummy_address(IPAddress(0, 0, 0, 0), 0 /*Port*/);
   return std::unique_ptr<QuicConnection>(new QuicConnection(
-      dummy_id, dummy_address, this, /*QuicConnectionHelperInterface*/
+      dummy_id, QuicSocketAddress(QuicSocketAddressImpl(dummy_address)),
+      this, /*QuicConnectionHelperInterface*/
       this /*QuicAlarmFactory*/, writer.release(), true /*own the writer*/,
       perspective, AllSupportedVersions()));
 }

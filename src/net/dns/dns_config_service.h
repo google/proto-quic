@@ -28,8 +28,6 @@ class Value;
 
 namespace net {
 
-class IPAddress;
-
 // Default to 1 second timeout (before exponential backoff).
 const int64_t kDnsDefaultTimeoutMs = 1000;
 

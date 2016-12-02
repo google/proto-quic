@@ -5,7 +5,7 @@
 #include "net/quic/core/quic_data_reader.h"
 
 #include "net/base/int128.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 using base::StringPiece;
 

@@ -24,7 +24,6 @@ class HttpServerResponseInfo;
 class IPEndPoint;
 class ServerSocket;
 class StreamSocket;
-class WebSocket;
 
 class HttpServer {
  public:

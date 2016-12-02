@@ -8,10 +8,10 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
-#include "net/base/ip_endpoint.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -259,8 +259,8 @@ static bool CheckForDecryptionError(QuicFramer* framer) {
 
 // Regression test for b/17206611.
 TEST_P(QuicClientSessionTest, InvalidPacketReceived) {
-  IPEndPoint server_address(TestPeerIPAddress(), kTestPort);
-  IPEndPoint client_address(TestPeerIPAddress(), kTestPort);
+  QuicSocketAddress server_address(TestPeerIPAddress(), kTestPort);
+  QuicSocketAddress client_address(TestPeerIPAddress(), kTestPort);
 
   EXPECT_CALL(*connection_, ProcessUdpPacket(server_address, client_address, _))
       .WillRepeatedly(Invoke(implicit_cast<MockQuicConnection*>(connection_),
@@ -298,8 +298,8 @@ TEST_P(QuicClientSessionTest, InvalidPacketReceived) {
 
 // A packet with invalid framing should cause a connection to be closed.
 TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
-  IPEndPoint server_address(TestPeerIPAddress(), kTestPort);
-  IPEndPoint client_address(TestPeerIPAddress(), kTestPort);
+  QuicSocketAddress server_address(TestPeerIPAddress(), kTestPort);
+  QuicSocketAddress client_address(TestPeerIPAddress(), kTestPort);
 
   EXPECT_CALL(*connection_, ProcessUdpPacket(server_address, client_address, _))
       .WillRepeatedly(Invoke(implicit_cast<MockQuicConnection*>(connection_),

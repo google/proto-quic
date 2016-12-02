@@ -11,7 +11,7 @@
 #include <string>
 
 #include "net/base/net_export.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 
 namespace net {
@@ -183,23 +183,23 @@ class NET_EXPORT_PRIVATE QuicFixedTagVector : public QuicConfigValue {
   bool has_receive_values_;
 };
 
-// Stores IPEndPoint from CHLO or SHLO messages that are not negotiated.
-class NET_EXPORT_PRIVATE QuicFixedIPEndPoint : public QuicConfigValue {
+// Stores QuicSocketAddress from CHLO or SHLO messages that are not negotiated.
+class NET_EXPORT_PRIVATE QuicFixedSocketAddress : public QuicConfigValue {
  public:
-  QuicFixedIPEndPoint(QuicTag tag, QuicConfigPresence presence);
-  ~QuicFixedIPEndPoint() override;
+  QuicFixedSocketAddress(QuicTag tag, QuicConfigPresence presence);
+  ~QuicFixedSocketAddress() override;
 
   bool HasSendValue() const;
 
-  const IPEndPoint& GetSendValue() const;
+  const QuicSocketAddress& GetSendValue() const;
 
-  void SetSendValue(const IPEndPoint& value);
+  void SetSendValue(const QuicSocketAddress& value);
 
   bool HasReceivedValue() const;
 
-  const IPEndPoint& GetReceivedValue() const;
+  const QuicSocketAddress& GetReceivedValue() const;
 
-  void SetReceivedValue(const IPEndPoint& value);
+  void SetReceivedValue(const QuicSocketAddress& value);
 
   void ToHandshakeMessage(CryptoHandshakeMessage* out) const override;
 
@@ -208,9 +208,9 @@ class NET_EXPORT_PRIVATE QuicFixedIPEndPoint : public QuicConfigValue {
                                  std::string* error_details) override;
 
  private:
-  IPEndPoint send_value_;
+  QuicSocketAddress send_value_;
   bool has_send_value_;
-  IPEndPoint receive_value_;
+  QuicSocketAddress receive_value_;
   bool has_receive_value_;
 };
 
@@ -241,8 +241,18 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
   // Returns true if the client is sending or the server has received a
   // connection option.
+  // TODO(ianswett): Rename to HasClientRequestedSharedOption
   bool HasClientSentConnectionOption(QuicTag tag,
                                      Perspective perspective) const;
+
+  void SetClientConnectionOptions(
+      const QuicTagVector& client_connection_options);
+
+  // Returns true if the client has requested the specified connection option.
+  // Checks the client connection options if the |perspective| is client and
+  // connection options if the |perspective| is the server.
+  bool HasClientRequestedIndependentOption(QuicTag tag,
+                                           Perspective perspective) const;
 
   void SetIdleNetworkTimeout(QuicTime::Delta max_idle_network_timeout,
                              QuicTime::Delta default_idle_network_timeout);
@@ -351,11 +361,11 @@ class NET_EXPORT_PRIVATE QuicConfig {
   bool DisableConnectionMigration() const;
 
   void SetAlternateServerAddressToSend(
-      const IPEndPoint& alternate_server_address);
+      const QuicSocketAddress& alternate_server_address);
 
   bool HasReceivedAlternateServerAddress() const;
 
-  const IPEndPoint& ReceivedAlternateServerAddress() const;
+  const QuicSocketAddress& ReceivedAlternateServerAddress() const;
 
   void SetForceHolBlocking();
 
@@ -387,8 +397,11 @@ class NET_EXPORT_PRIVATE QuicConfig {
   // Maximum number of undecryptable packets stored before CHLO/SHLO.
   size_t max_undecryptable_packets_;
 
-  // Connection options.
+  // Connection options which affect the server side.  May also affect the
+  // client side in cases when identical behavior is desirable.
   QuicFixedTagVector connection_options_;
+  // Connection options which only affect the client side.
+  QuicFixedTagVector client_connection_options_;
   // Idle network timeout in seconds.
   QuicNegotiableUint32 idle_network_timeout_seconds_;
   // Whether to use silent close.  Defaults to 0 (false) and is otherwise true.
@@ -419,7 +432,7 @@ class NET_EXPORT_PRIVATE QuicConfig {
   QuicFixedUint32 connection_migration_disabled_;
 
   // An alternate server address the client could connect to.
-  QuicFixedIPEndPoint alternate_server_address_;
+  QuicFixedSocketAddress alternate_server_address_;
 
   // Force HOL blocking for measurement purposes.
   QuicFixedUint32 force_hol_blocking_;

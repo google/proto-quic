@@ -7,7 +7,7 @@
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -114,7 +114,9 @@ TEST_F(QuicConfigTest, ProcessClientHello) {
 }
 
 TEST_F(QuicConfigTest, ProcessServerHello) {
-  const IPEndPoint kTestServerAddress(IPAddress(127, 0, 3, 1), 1234);
+  QuicIpAddress host;
+  host.FromString("127.0.3.1");
+  const QuicSocketAddress kTestServerAddress = QuicSocketAddress(host, 1234);
   QuicConfig server_config;
   QuicTagVector cgst;
   cgst.push_back(kQBIC);
@@ -248,6 +250,56 @@ TEST_F(QuicConfigTest, HasClientSentConnectionOption) {
   EXPECT_EQ(1u, config_.ReceivedConnectionOptions().size());
   EXPECT_TRUE(
       config_.HasClientSentConnectionOption(kTBBR, Perspective::IS_SERVER));
+}
+
+TEST_F(QuicConfigTest, DontSendClientConnectionOptions) {
+  QuicConfig client_config;
+  QuicTagVector copt;
+  copt.push_back(kTBBR);
+  client_config.SetClientConnectionOptions(copt);
+
+  CryptoHandshakeMessage msg;
+  client_config.ToHandshakeMessage(&msg);
+
+  string error_details;
+  const QuicErrorCode error =
+      config_.ProcessPeerHello(msg, CLIENT, &error_details);
+  EXPECT_EQ(QUIC_NO_ERROR, error);
+  EXPECT_TRUE(config_.negotiated());
+
+  EXPECT_FALSE(config_.HasReceivedConnectionOptions());
+}
+
+TEST_F(QuicConfigTest, HasClientRequestedIndependentOption) {
+  QuicConfig client_config;
+  QuicTagVector client_opt;
+  client_opt.push_back(kRENO);
+  QuicTagVector copt;
+  copt.push_back(kTBBR);
+  client_config.SetClientConnectionOptions(client_opt);
+  client_config.SetConnectionOptionsToSend(copt);
+  EXPECT_TRUE(client_config.HasClientSentConnectionOption(
+      kTBBR, Perspective::IS_CLIENT));
+  EXPECT_TRUE(client_config.HasClientRequestedIndependentOption(
+      kRENO, Perspective::IS_CLIENT));
+  EXPECT_FALSE(client_config.HasClientRequestedIndependentOption(
+      kTBBR, Perspective::IS_CLIENT));
+
+  CryptoHandshakeMessage msg;
+  client_config.ToHandshakeMessage(&msg);
+
+  string error_details;
+  const QuicErrorCode error =
+      config_.ProcessPeerHello(msg, CLIENT, &error_details);
+  EXPECT_EQ(QUIC_NO_ERROR, error);
+  EXPECT_TRUE(config_.negotiated());
+
+  EXPECT_TRUE(config_.HasReceivedConnectionOptions());
+  EXPECT_EQ(1u, config_.ReceivedConnectionOptions().size());
+  EXPECT_FALSE(config_.HasClientRequestedIndependentOption(
+      kRENO, Perspective::IS_SERVER));
+  EXPECT_TRUE(config_.HasClientRequestedIndependentOption(
+      kTBBR, Perspective::IS_SERVER));
 }
 
 }  // namespace

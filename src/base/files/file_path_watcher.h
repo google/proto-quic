@@ -90,9 +90,12 @@ class BASE_EXPORT FilePathWatcher {
   static bool RecursiveWatchAvailable();
 
   // Invokes |callback| whenever updates to |path| are detected. This should be
-  // called at most once, and from a MessageLoop of TYPE_IO. Set |recursive| to
-  // true, to watch |path| and its children. The callback will be invoked on
-  // the same loop. Returns true on success.
+  // called at most once. Set |recursive| to true, to watch |path| and its
+  // children. The callback will be invoked on the same thread. Returns true on
+  // success.
+  //
+  // On POSIX, this must be called from a thread that supports
+  // FileDescriptorWatcher.
   //
   // Recursive watch is not supported on all platforms and file systems.
   // Watch() will return false in the case of failure.

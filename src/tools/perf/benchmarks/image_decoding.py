@@ -16,3 +16,8 @@ class ImageDecodingToughImageCases(perf_benchmark.PerfBenchmark):
   @classmethod
   def Name(cls):
     return 'image_decoding.image_decoding_measurement'
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    # crbug.com/667501
+    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 7'

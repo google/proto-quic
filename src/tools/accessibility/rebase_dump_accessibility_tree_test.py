@@ -24,8 +24,7 @@ import time
 import urllib
 
 # Load BeautifulSoup. It's checked into two places in the Chromium tree.
-sys.path.append(
-    'third_party/trace-viewer/third_party/tvcm/third_party/beautifulsoup')
+sys.path.append('third_party/WebKit/Tools/Scripts/webkitpy/thirdparty/')
 from BeautifulSoup import BeautifulSoup
 
 # The location of the DumpAccessibilityTree html test files and expectations.

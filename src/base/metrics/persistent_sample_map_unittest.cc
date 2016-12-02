@@ -31,7 +31,7 @@ std::unique_ptr<PersistentHistogramAllocator> DuplicateHistogramAllocator(
 TEST(PersistentSampleMapTest, AccumulateTest) {
   std::unique_ptr<PersistentHistogramAllocator> allocator =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta;
+  HistogramSamples::LocalMetadata meta;
   PersistentSampleMap samples(1, allocator.get(), &meta);
 
   samples.Accumulate(1, 100);
@@ -48,7 +48,7 @@ TEST(PersistentSampleMapTest, AccumulateTest) {
 TEST(PersistentSampleMapTest, Accumulate_LargeValuesDontOverflow) {
   std::unique_ptr<PersistentHistogramAllocator> allocator =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta;
+  HistogramSamples::LocalMetadata meta;
   PersistentSampleMap samples(1, allocator.get(), &meta);
 
   samples.Accumulate(250000000, 100);
@@ -65,7 +65,7 @@ TEST(PersistentSampleMapTest, Accumulate_LargeValuesDontOverflow) {
 TEST(PersistentSampleMapTest, AddSubtractTest) {
   std::unique_ptr<PersistentHistogramAllocator> allocator1 =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta1;
+  HistogramSamples::LocalMetadata meta1;
   PersistentSampleMap samples1(1, allocator1.get(), &meta1);
   samples1.Accumulate(1, 100);
   samples1.Accumulate(2, 100);
@@ -73,7 +73,7 @@ TEST(PersistentSampleMapTest, AddSubtractTest) {
 
   std::unique_ptr<PersistentHistogramAllocator> allocator2 =
       DuplicateHistogramAllocator(allocator1.get());
-  HistogramSamples::Metadata meta2;
+  HistogramSamples::LocalMetadata meta2;
   PersistentSampleMap samples2(2, allocator2.get(), &meta2);
   samples2.Accumulate(1, 200);
   samples2.Accumulate(2, 200);
@@ -101,7 +101,7 @@ TEST(PersistentSampleMapTest, AddSubtractTest) {
 TEST(PersistentSampleMapTest, PersistenceTest) {
   std::unique_ptr<PersistentHistogramAllocator> allocator1 =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta12;
+  HistogramSamples::LocalMetadata meta12;
   PersistentSampleMap samples1(12, allocator1.get(), &meta12);
   samples1.Accumulate(1, 100);
   samples1.Accumulate(2, 200);
@@ -154,7 +154,7 @@ TEST(PersistentSampleMapTest, PersistenceTest) {
 TEST(PersistentSampleMapIteratorTest, IterateTest) {
   std::unique_ptr<PersistentHistogramAllocator> allocator =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta;
+  HistogramSamples::LocalMetadata meta;
   PersistentSampleMap samples(1, allocator.get(), &meta);
   samples.Accumulate(1, 100);
   samples.Accumulate(2, 200);
@@ -192,7 +192,7 @@ TEST(PersistentSampleMapIteratorTest, IterateTest) {
 TEST(PersistentSampleMapIteratorTest, SkipEmptyRanges) {
   std::unique_ptr<PersistentHistogramAllocator> allocator1 =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta1;
+  HistogramSamples::LocalMetadata meta1;
   PersistentSampleMap samples1(1, allocator1.get(), &meta1);
   samples1.Accumulate(5, 1);
   samples1.Accumulate(10, 2);
@@ -202,7 +202,7 @@ TEST(PersistentSampleMapIteratorTest, SkipEmptyRanges) {
 
   std::unique_ptr<PersistentHistogramAllocator> allocator2 =
       DuplicateHistogramAllocator(allocator1.get());
-  HistogramSamples::Metadata meta2;
+  HistogramSamples::LocalMetadata meta2;
   PersistentSampleMap samples2(2, allocator2.get(), &meta2);
   samples2.Accumulate(5, 1);
   samples2.Accumulate(20, 4);
@@ -237,7 +237,7 @@ TEST(PersistentSampleMapIteratorTest, SkipEmptyRanges) {
 TEST(PersistentSampleMapIteratorDeathTest, IterateDoneTest) {
   std::unique_ptr<PersistentHistogramAllocator> allocator =
       CreateHistogramAllocator(64 << 10);  // 64 KiB
-  HistogramSamples::Metadata meta;
+  HistogramSamples::LocalMetadata meta;
   PersistentSampleMap samples(1, allocator.get(), &meta);
 
   std::unique_ptr<SampleCountIterator> it = samples.Iterator();

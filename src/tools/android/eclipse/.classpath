@@ -291,6 +291,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="out/Debug/lib.java/third_party/WebKit/public/blink_headers_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/ui/accessibility/ui_accessibility_java.jar"/>
     <classpathentry kind="lib" path="out/Debug/lib.java/ui/android/ui_java.jar"/>
+    <classpathentry kind="lib" path="out/Debug/lib.java/ui/base/mojo/mojo_bindings_java.jar"/>
 
     <!-- {% block additional_entries %} -->
     <!-- When this file is processed as a jinja2 template, additional

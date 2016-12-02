@@ -12,6 +12,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
+#include "base/metrics/field_trial_param_associator.h"
 #include "base/rand_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
@@ -1136,6 +1137,7 @@ TEST(FieldTrialDeathTest, OneTimeRandomizedTrialWithoutFieldTrialList) {
       "");
 }
 
+#if defined(OS_WIN)
 TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
   base::FieldTrialList field_trial_list(
       base::MakeUnique<base::MockEntropyProvider>());
@@ -1146,13 +1148,10 @@ TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
 
   base::FieldTrialList::CopyFieldTrialStateToFlags(field_trial_handle,
                                                    &cmd_line);
-#if defined(OS_WIN)
   EXPECT_TRUE(cmd_line.HasSwitch(field_trial_handle) ||
               cmd_line.HasSwitch(switches::kForceFieldTrials));
-#else
-  EXPECT_TRUE(cmd_line.HasSwitch(switches::kForceFieldTrials));
-#endif
 }
+#endif
 
 TEST(FieldTrialListTest, InstantiateAllocator) {
   FieldTrialList field_trial_list(nullptr);
@@ -1187,11 +1186,125 @@ TEST(FieldTrialListTest, AddTrialsToAllocator) {
 
   FieldTrialList field_trial_list2(nullptr);
   std::unique_ptr<base::SharedMemory> shm(new SharedMemory(handle, true));
-  shm.get()->Map(4 << 10);  // Hardcoded, equal to kFieldTrialAllocationSize.
+  // 4 KiB is enough to hold the trials only created for this test.
+  shm.get()->Map(4 << 10);
   FieldTrialList::CreateTrialsFromSharedMemory(std::move(shm));
   std::string check_string;
   FieldTrialList::AllStatesToString(&check_string);
   EXPECT_EQ(save_string, check_string);
+}
+
+TEST(FieldTrialListTest, DoNotAddSimulatedFieldTrialsToAllocator) {
+  constexpr char kTrialName[] = "trial";
+  base::SharedMemoryHandle handle;
+  {
+    // Create a simulated trial and a real trial and call group() on them, which
+    // should only add the real trial to the field trial allocator.
+    FieldTrialList field_trial_list(nullptr);
+    FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+
+    // This shouldn't add to the allocator.
+    scoped_refptr<FieldTrial> simulated_trial =
+        FieldTrial::CreateSimulatedFieldTrial(kTrialName, 100, "Simulated",
+                                              0.95);
+    simulated_trial->group();
+
+    // This should add to the allocator.
+    FieldTrial* real_trial =
+        FieldTrialList::CreateFieldTrial(kTrialName, "Real");
+    real_trial->group();
+
+    handle = base::SharedMemory::DuplicateHandle(
+        field_trial_list.field_trial_allocator_->shared_memory()->handle());
+  }
+
+  // Check that there's only one entry in the allocator.
+  FieldTrialList field_trial_list2(nullptr);
+  std::unique_ptr<base::SharedMemory> shm(new SharedMemory(handle, true));
+  // 4 KiB is enough to hold the trials only created for this test.
+  shm.get()->Map(4 << 10);
+  FieldTrialList::CreateTrialsFromSharedMemory(std::move(shm));
+  std::string check_string;
+  FieldTrialList::AllStatesToString(&check_string);
+  ASSERT_EQ(check_string.find("Simulated"), std::string::npos);
+}
+
+TEST(FieldTrialListTest, AssociateFieldTrialParams) {
+  std::string trial_name("Trial1");
+  std::string group_name("Group1");
+
+  // Create a field trial with some params.
+  FieldTrialList field_trial_list(nullptr);
+  FieldTrialList::CreateFieldTrial(trial_name, group_name);
+  std::map<std::string, std::string> params;
+  params["key1"] = "value1";
+  params["key2"] = "value2";
+  FieldTrialParamAssociator::GetInstance()->AssociateFieldTrialParams(
+      trial_name, group_name, params);
+  FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+
+  // Clear all cached params from the associator.
+  FieldTrialParamAssociator::GetInstance()->ClearAllCachedParamsForTesting();
+  // Check that the params have been cleared from the cache.
+  std::map<std::string, std::string> cached_params;
+  FieldTrialParamAssociator::GetInstance()->GetFieldTrialParamsWithoutFallback(
+      trial_name, group_name, &cached_params);
+  EXPECT_EQ(0U, cached_params.size());
+
+  // Check that we fetch the param from shared memory properly.
+  std::map<std::string, std::string> new_params;
+  FieldTrialParamAssociator::GetInstance()->GetFieldTrialParams(trial_name,
+                                                                &new_params);
+  EXPECT_EQ("value1", new_params["key1"]);
+  EXPECT_EQ("value2", new_params["key2"]);
+  EXPECT_EQ(2U, new_params.size());
+}
+
+TEST(FieldTrialListTest, ClearParamsFromSharedMemory) {
+  std::string trial_name("Trial1");
+  std::string group_name("Group1");
+
+  base::SharedMemoryHandle handle;
+  {
+    // Create a field trial with some params.
+    FieldTrialList field_trial_list(nullptr);
+    FieldTrial* trial =
+        FieldTrialList::CreateFieldTrial(trial_name, group_name);
+    std::map<std::string, std::string> params;
+    params["key1"] = "value1";
+    params["key2"] = "value2";
+    FieldTrialParamAssociator::GetInstance()->AssociateFieldTrialParams(
+        trial_name, group_name, params);
+    FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
+
+    // Clear all params from the associator AND shared memory. The allocated
+    // segments should be different.
+    FieldTrial::FieldTrialRef old_ref = trial->ref_;
+    FieldTrialParamAssociator::GetInstance()->ClearAllParamsForTesting();
+    FieldTrial::FieldTrialRef new_ref = trial->ref_;
+    EXPECT_NE(old_ref, new_ref);
+
+    // Check that there are no params associated with the field trial anymore.
+    std::map<std::string, std::string> new_params;
+    FieldTrialParamAssociator::GetInstance()->GetFieldTrialParams(trial_name,
+                                                                  &new_params);
+    EXPECT_EQ(0U, new_params.size());
+
+    // Now duplicate the handle so we can easily check that the trial is still
+    // in shared memory via AllStatesToString.
+    handle = base::SharedMemory::DuplicateHandle(
+        field_trial_list.field_trial_allocator_->shared_memory()->handle());
+  }
+
+  // Check that we have the trial.
+  FieldTrialList field_trial_list2(nullptr);
+  std::unique_ptr<base::SharedMemory> shm(new SharedMemory(handle, true));
+  // 4 KiB is enough to hold the trials only created for this test.
+  shm.get()->Map(4 << 10);
+  FieldTrialList::CreateTrialsFromSharedMemory(std::move(shm));
+  std::string check_string;
+  FieldTrialList::AllStatesToString(&check_string);
+  EXPECT_EQ("*Trial1/Group1/", check_string);
 }
 
 }  // namespace base

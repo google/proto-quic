@@ -6,16 +6,13 @@
 
 #include <stdarg.h>
 
-#include <iostream>
 #include <iterator>
 #include <limits>
 
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::pair;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -87,7 +84,7 @@ TEST_F(IntervalSetTest, IsDisjoint) {
 // Returns true iff <is> contains <count> intervals whose successive
 // endpoints match the sequence of args in <ap>:
 static bool VA_Check(const IntervalSet<int>& is, size_t count, va_list ap) {
-  vector<Interval<int>> intervals;
+  std::vector<Interval<int>> intervals;
   is.Get(&intervals);
   if (count != intervals.size()) {
     LOG(ERROR) << "Expected " << count << " intervals, got " << intervals.size()
@@ -204,14 +201,14 @@ TEST_F(IntervalSetTest, IntervalSetBasic) {
   // Test Get() (using an output iterator), begin()/end(), and rbegin()/rend()
   // to iterate over intervals.
   {
-    vector<Interval<int>> expected;
+    std::vector<Interval<int>> expected;
     iset.Get(&expected);
 
-    vector<Interval<int>> actual1;
+    std::vector<Interval<int>> actual1;
     iset.Get(back_inserter(actual1));
     ASSERT_EQ(expected.size(), actual1.size());
 
-    vector<Interval<int>> actual2;
+    std::vector<Interval<int>> actual2;
     std::copy(iset.begin(), iset.end(), back_inserter(actual2));
     ASSERT_EQ(expected.size(), actual2.size());
 
@@ -225,7 +222,7 @@ TEST_F(IntervalSetTest, IntervalSetBasic) {
 
     // Ensure that the rbegin()/rend() iterators correctly yield the intervals
     // in reverse order.
-    EXPECT_THAT(vector<Interval<int>>(iset.rbegin(), iset.rend()),
+    EXPECT_THAT(std::vector<Interval<int>>(iset.rbegin(), iset.rend()),
                 ElementsAreArray(expected.rbegin(), expected.rend()));
   }
 
@@ -587,7 +584,7 @@ TEST_F(IntervalSetTest, IntervalSetDifference) {
 }
 
 TEST_F(IntervalSetTest, IntervalSetDifferenceSingleBounds) {
-  vector<Interval<int>> ivals;
+  std::vector<Interval<int>> ivals;
   other.Get(&ivals);
   for (size_t i = 0; i < ivals.size(); ++i) {
     is.Difference(ivals[i].min(), ivals[i].max());
@@ -597,7 +594,7 @@ TEST_F(IntervalSetTest, IntervalSetDifferenceSingleBounds) {
 }
 
 TEST_F(IntervalSetTest, IntervalSetDifferenceSingleInterval) {
-  vector<Interval<int>> ivals;
+  std::vector<Interval<int>> ivals;
   other.Get(&ivals);
   for (size_t i = 0; i < ivals.size(); ++i) {
     is.Difference(ivals[i]);

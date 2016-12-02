@@ -19,6 +19,13 @@ namespace url {
 
 namespace {
 
+// Pass this enum through for methods which would like to know if whitespace
+// removal is necessary.
+enum WhitespaceRemovalPolicy {
+  REMOVE_WHITESPACE,
+  DO_NOT_REMOVE_WHITESPACE,
+};
+
 const int kNumStandardURLSchemes = 10;
 const SchemeWithType kStandardURLSchemes[kNumStandardURLSchemes] = {
     {kHttpScheme, SCHEME_WITH_PORT},
@@ -154,19 +161,19 @@ bool DoFindAndCompareScheme(const CHAR* str,
   return DoCompareSchemeComponent(spec, our_scheme, compare);
 }
 
-template<typename CHAR>
-bool DoCanonicalize(const CHAR* in_spec,
-                    int in_spec_len,
+template <typename CHAR>
+bool DoCanonicalize(const CHAR* spec,
+                    int spec_len,
                     bool trim_path_end,
+                    WhitespaceRemovalPolicy whitespace_policy,
                     CharsetConverter* charset_converter,
                     CanonOutput* output,
                     Parsed* output_parsed) {
-  // Remove any whitespace from the middle of the relative URL, possibly
-  // copying to the new buffer.
+  // Remove any whitespace from the middle of the relative URL if necessary.
+  // Possibly this will result in copying to the new buffer.
   RawCanonOutputT<CHAR> whitespace_buffer;
-  int spec_len;
-  const CHAR* spec = RemoveURLWhitespace(in_spec, in_spec_len,
-                                         &whitespace_buffer, &spec_len);
+  if (whitespace_policy == REMOVE_WHITESPACE)
+    spec = RemoveURLWhitespace(spec, spec_len, &whitespace_buffer, &spec_len);
 
   Parsed parsed_input;
 #ifdef WIN32
@@ -287,7 +294,8 @@ bool DoResolveRelative(const char* base_spec,
       // based on base_parsed_authority instead of base_parsed) and needs to be
       // re-created.
       DoCanonicalize(temporary_output.data(), temporary_output.length(), true,
-                     charset_converter, output, output_parsed);
+                     REMOVE_WHITESPACE, charset_converter, output,
+                     output_parsed);
       return did_resolve_succeed;
     }
   } else if (is_relative) {
@@ -300,8 +308,9 @@ bool DoResolveRelative(const char* base_spec,
   }
 
   // Not relative, canonicalize the input.
-  return DoCanonicalize(relative, relative_length, true, charset_converter,
-                        output, output_parsed);
+  return DoCanonicalize(relative, relative_length, true,
+                        DO_NOT_REMOVE_WHITESPACE, charset_converter, output,
+                        output_parsed);
 }
 
 template<typename CHAR>
@@ -348,8 +357,8 @@ bool DoReplaceComponents(const char* spec,
     RawCanonOutput<128> recanonicalized;
     Parsed recanonicalized_parsed;
     DoCanonicalize(scheme_replaced.data(), scheme_replaced.length(), true,
-                   charset_converter,
-                   &recanonicalized, &recanonicalized_parsed);
+                   REMOVE_WHITESPACE, charset_converter, &recanonicalized,
+                   &recanonicalized_parsed);
 
     // Recurse using the version with the scheme already replaced. This will now
     // use the replacement rules for the new scheme.
@@ -535,8 +544,8 @@ bool Canonicalize(const char* spec,
                   CharsetConverter* charset_converter,
                   CanonOutput* output,
                   Parsed* output_parsed) {
-  return DoCanonicalize(spec, spec_len, trim_path_end, charset_converter,
-                        output, output_parsed);
+  return DoCanonicalize(spec, spec_len, trim_path_end, REMOVE_WHITESPACE,
+                        charset_converter, output, output_parsed);
 }
 
 bool Canonicalize(const base::char16* spec,
@@ -545,8 +554,8 @@ bool Canonicalize(const base::char16* spec,
                   CharsetConverter* charset_converter,
                   CanonOutput* output,
                   Parsed* output_parsed) {
-  return DoCanonicalize(spec, spec_len, trim_path_end, charset_converter,
-                        output, output_parsed);
+  return DoCanonicalize(spec, spec_len, trim_path_end, REMOVE_WHITESPACE,
+                        charset_converter, output, output_parsed);
 }
 
 bool ResolveRelative(const char* base_spec,

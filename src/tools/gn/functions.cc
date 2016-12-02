@@ -45,7 +45,37 @@ bool VerifyNoBlockForFunctionCall(const FunctionCallNode* function,
   return false;
 }
 
+// This key is set as a scope property on the scope of a declare_args() block,
+// in order to prevent reading a variable defined earlier in the same call
+// (see `gn help declare_args` for more).
+const void *kInDeclareArgsKey = nullptr;
+
 }  // namespace
+
+
+bool EnsureNotReadingFromSameDeclareArgs(const ParseNode* node,
+                                         const Scope* cur_scope,
+                                         const Scope* val_scope,
+                                         Err* err) {
+  // If the value didn't come from a scope at all, we're safe.
+  if (!val_scope)
+    return true;
+
+  const Scope* val_args_scope = nullptr;
+  val_scope->GetProperty(&kInDeclareArgsKey, &val_args_scope);
+
+  const Scope* cur_args_scope = nullptr;
+  cur_scope->GetProperty(&kInDeclareArgsKey, &cur_args_scope);
+  if (!val_args_scope || !cur_args_scope || (val_args_scope != cur_args_scope))
+    return true;
+
+  *err = Err(node,
+      "Reading a variable defined in the same declare_args() call.\n"
+      "\n"
+      "If you need to set the value of one arg based on another, put\n"
+      "them in two separate declare_args() calls, one after the other.\n");
+  return false;
+}
 
 bool EnsureNotProcessingImport(const ParseNode* node,
                                const Scope* scope,
@@ -357,8 +387,9 @@ const char kDeclareArgs_Help[] =
 
   The precise behavior of declare args is:
 
-   1. The declare_arg block executes. Any variables in the enclosing scope are
-      available for reading.
+   1. The declare_args() block executes. Any variable defined in the enclosing
+      scope is available for reading, but any variable defined earlier in
+      the current scope is not (since the overrides haven't been applied yet).
 
    2. At the end of executing the block, any variables set within that scope
       are saved globally as build arguments, with their current values being
@@ -377,12 +408,10 @@ const char kDeclareArgs_Help[] =
       like [], "", or -1, and after the declare_args block, call exec_script if
       the value is unset by the user.
 
-    - Any code inside of the declare_args block will see the default values of
-      previous variables defined in the block rather than the user-overridden
-      value. This can be surprising because you will be used to seeing the
-      overridden value. If you need to make the default value of one arg
-      dependent on the possibly-overridden value of another, write two separate
-      declare_args blocks:
+    - Because you cannot read the value of a variable defined in the same
+      block, if you need to make the default value of one arg depend
+      on the possibly-overridden value of another, write two separate
+      declare_args() blocks:
 
         declare_args() {
           enable_foo = true
@@ -415,6 +444,7 @@ Value RunDeclareArgs(Scope* scope,
     return Value();
 
   Scope block_scope(scope);
+  block_scope.SetProperty(&kInDeclareArgsKey, &block_scope);
   block->Execute(&block_scope, err);
   if (err->has_error())
     return Value();

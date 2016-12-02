@@ -175,7 +175,7 @@ int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
   }
 
   const int retain_sha256 =
-      ssl->server && ssl->ctx->retain_only_sha256_of_client_certs;
+      ssl->server && ssl->retain_only_sha256_of_client_certs;
   int ret = 0;
 
   STACK_OF(X509) *chain = sk_X509_new_null();
@@ -269,7 +269,8 @@ int tls13_process_certificate(SSL *ssl, int allow_anonymous) {
         goto err;
       }
 
-      if (CBS_len(&sct) == 0) {
+      if (!ssl_is_sct_list_valid(&sct)) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_PARSING_EXTENSION);
         ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
         goto err;
       }
@@ -456,7 +457,8 @@ int tls13_prepare_certificate(SSL *ssl) {
     if (!CBB_add_u16(&extensions, TLSEXT_TYPE_certificate_timestamp) ||
         !CBB_add_u16_length_prefixed(&extensions, &contents) ||
         !CBB_add_bytes(&contents, ssl->ctx->signed_cert_timestamp_list,
-                       ssl->ctx->signed_cert_timestamp_list_length)) {
+                       ssl->ctx->signed_cert_timestamp_list_length) ||
+        !CBB_flush(&extensions)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       goto err;
     }
@@ -470,7 +472,8 @@ int tls13_prepare_certificate(SSL *ssl) {
         !CBB_add_u8(&contents, TLSEXT_STATUSTYPE_ocsp) ||
         !CBB_add_u24_length_prefixed(&contents, &ocsp_response) ||
         !CBB_add_bytes(&ocsp_response, ssl->ctx->ocsp_response,
-                       ssl->ctx->ocsp_response_length)) {
+                       ssl->ctx->ocsp_response_length) ||
+        !CBB_flush(&extensions)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       goto err;
     }

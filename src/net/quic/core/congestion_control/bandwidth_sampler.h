@@ -7,7 +7,7 @@
 
 #include "net/base/linked_hash_map.h"
 #include "net/quic/core/quic_bandwidth.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 
 namespace net {

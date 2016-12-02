@@ -35,10 +35,7 @@ class CertVerifier;
 class ChannelIDService;
 class CTVerifier;
 class SSLCertRequestInfo;
-struct SSLConfig;
-class SSLInfo;
 class TransportSecurityState;
-class X509Certificate;
 
 // This struct groups together several fields which are used by various
 // classes related to SSLClientSocket.

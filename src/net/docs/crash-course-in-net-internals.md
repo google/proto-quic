@@ -62,7 +62,7 @@ one for one for QUIC, and one for HTTP.  One of the final events of this source
 indicates how an HttpStream was created (Reusing an existing SOCKET /
 HTTP2_SESSION / QUIC_SESSION, or creating a new one).
 
-* CONNECT_JOB:  This corresponds to the ConnectJob subclasses that each socket
+* \*_CONNECT_JOB:  This corresponds to the ConnectJob subclasses that each socket
 pool uses.  A successful CONNECT_JOB return a SOCKET.  The events here vary a
 lot by job type.  Their main event is generally either to create a socket, or
 request a socket from another socket pool (Which creates another CONNECT_JOB)

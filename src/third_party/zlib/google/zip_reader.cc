@@ -514,11 +514,9 @@ FileWriterDelegate::FileWriterDelegate(base::File* file)
 }
 
 FileWriterDelegate::~FileWriterDelegate() {
-#if !defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)
-  const bool success =
-#endif
-      file_->SetLength(file_length_);
-  DPLOG_IF(ERROR, !success) << "Failed updating length of written file";
+  if (!file_->SetLength(file_length_)) {
+    DPLOG(ERROR) << "Failed updating length of written file";
+  }
 }
 
 bool FileWriterDelegate::PrepareOutput() {

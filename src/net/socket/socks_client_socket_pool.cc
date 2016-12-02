@@ -55,7 +55,7 @@ SOCKSConnectJob::SOCKSConnectJob(
           priority,
           respect_limits,
           delegate,
-          NetLogWithSource::Make(net_log, NetLogSourceType::CONNECT_JOB)),
+          NetLogWithSource::Make(net_log, NetLogSourceType::SOCKS_CONNECT_JOB)),
       socks_params_(socks_params),
       transport_pool_(transport_pool),
       resolver_(host_resolver),

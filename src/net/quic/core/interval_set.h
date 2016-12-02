@@ -55,6 +55,7 @@
 #include <stddef.h>
 
 #include <algorithm>
+#include <ostream>
 #include <set>
 #include <string>
 #include <utility>

@@ -20,7 +20,6 @@
 #include "net/log/net_log_capture_mode.h"
 
 namespace base {
-class DictionaryValue;
 class Value;
 }  // namespace base
 

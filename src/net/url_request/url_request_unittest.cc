@@ -9240,18 +9240,17 @@ TEST_F(HTTPSSessionTest, DontResumeSessionsForInvalidCertificates) {
 // This the fingerprint of the "Testing CA" certificate used by the testserver.
 // See net/data/ssl/certificates/ocsp-test-root.pem.
 static const SHA1HashValue kOCSPTestCertFingerprint = {{
-    0xa7, 0xea, 0x4b, 0x0d, 0x13, 0xc1, 0x63, 0xbf, 0xb8, 0x4e,
-    0x9a, 0xaf, 0x33, 0x05, 0xb0, 0x8f, 0x9c, 0xbe, 0x23, 0xe9,
+    0x80, 0x37, 0xe7, 0xee, 0x12, 0x19, 0xeb, 0x10, 0x79, 0x36,
+    0x00, 0x48, 0x57, 0x5a, 0xa6, 0x1e, 0x2b, 0x24, 0x1a, 0xd7,
 }};
 
 // This is the SHA256, SPKI hash of the "Testing CA" certificate used by the
 // testserver.
-static const SHA256HashValue kOCSPTestCertSPKI = { {
-  0xee, 0xe6, 0x51, 0x2d, 0x4c, 0xfa, 0xf7, 0x3e,
-  0x6c, 0xd8, 0xca, 0x67, 0xed, 0xb5, 0x5d, 0x49,
-  0x76, 0xe1, 0x52, 0xa7, 0x6e, 0x0e, 0xa0, 0x74,
-  0x09, 0x75, 0xe6, 0x23, 0x24, 0xbd, 0x1b, 0x28,
-} };
+static const SHA256HashValue kOCSPTestCertSPKI = {{
+    0x05, 0xa8, 0xf6, 0xfd, 0x8e, 0x10, 0xfe, 0x92, 0x2f, 0x22, 0x75,
+    0x46, 0x40, 0xf4, 0xc4, 0x57, 0x06, 0x0d, 0x95, 0xfd, 0x60, 0x31,
+    0x3b, 0xf3, 0xfc, 0x12, 0x47, 0xe7, 0x66, 0x1a, 0x82, 0xa3,
+}};
 
 // This is the policy OID contained in the certificates that testserver
 // generates.
@@ -9912,6 +9911,59 @@ TEST_P(HTTPSOCSPVerifyTest, VerifyResult) {
 INSTANTIATE_TEST_CASE_P(OCSPVerify,
                         HTTPSOCSPVerifyTest,
                         testing::ValuesIn(kOCSPVerifyData));
+
+static bool SystemSupportsAIA() {
+#if defined(OS_ANDROID)
+  return false;
+#else
+  return true;
+#endif
+}
+
+class HTTPSAIATest : public HTTPSOCSPTest {
+ public:
+  void SetupContext() override {
+    context_.set_ssl_config_service(new TestSSLConfigService(
+        false /* check for EV */, false /* online revocation checking */,
+        false /* require rev. checking for local anchors */,
+        false /* token binding enabled */));
+  }
+};
+
+TEST_F(HTTPSAIATest, AIAFetching) {
+  SpawnedTestServer::SSLOptions ssl_options(
+      SpawnedTestServer::SSLOptions::CERT_AUTO_AIA_INTERMEDIATE);
+  SpawnedTestServer test_server(
+      SpawnedTestServer::TYPE_HTTPS, ssl_options,
+      base::FilePath(FILE_PATH_LITERAL("net/data/ssl")));
+  ASSERT_TRUE(test_server.Start());
+
+  TestDelegate d;
+  d.set_allow_certificate_errors(true);
+  std::unique_ptr<URLRequest> r(context_.CreateRequest(
+      test_server.GetURL("/defaultresponse"), DEFAULT_PRIORITY, &d));
+
+  r->Start();
+  EXPECT_TRUE(r->is_pending());
+
+  base::RunLoop().Run();
+
+  EXPECT_EQ(1, d.response_started_count());
+
+  CertStatus cert_status = r->ssl_info().cert_status;
+  if (SystemSupportsAIA()) {
+    EXPECT_EQ(OK, d.request_status());
+    EXPECT_EQ(0u, cert_status & CERT_STATUS_ALL_ERRORS);
+    ASSERT_TRUE(r->ssl_info().cert);
+    EXPECT_EQ(2u, r->ssl_info().cert->GetIntermediateCertificates().size());
+  } else {
+    EXPECT_EQ(CERT_STATUS_AUTHORITY_INVALID,
+              cert_status & CERT_STATUS_ALL_ERRORS);
+  }
+  ASSERT_TRUE(r->ssl_info().unverified_cert);
+  EXPECT_EQ(
+      0u, r->ssl_info().unverified_cert->GetIntermediateCertificates().size());
+}
 
 class HTTPSHardFailTest : public HTTPSOCSPTest {
  protected:

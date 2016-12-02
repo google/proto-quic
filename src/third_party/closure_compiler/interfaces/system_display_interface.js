@@ -94,6 +94,37 @@ SystemDisplay.prototype = {
    * @see https://developer.chrome.com/extensions/system.display#method-overscanCalibrationComplete
    */
   overscanCalibrationComplete: assertNotReached,
+
+  /**
+   * Starts touch calibration for a display. This will show an overlay on the
+   * screen and initialize the UX for touch calibration. If touch calibration
+   * for display |id| is in progress this will reset calibration.
+   * @param {string} id The display's unique identifier.
+   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationStart
+   */
+  touchCalibrationStart: assertNotReached,
+
+  /**
+   * Sets the touch calibration pairs for a display. These |pairs| would be used
+   * to calibrate the touch screen for display |id|. If touch calibration for
+   * display |id| is in progress this will do nothing.
+   * @param {string} id The display's unique identifier.
+   * @param {!chrome.system.display.TouchCalibrationPairQuad} pairs The pairs of
+   *     point used to calibrate the display.
+   * @param {!chrome.system.display.Bounds} bounds Bounds of the display when
+   *     the touch calibration was performed. |bounds.left| and |bounds.top|
+   *     values are no-op.
+   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationSet
+   */
+  touchCalibrationSet: assertNotReached,
+
+  /**
+   * Resets the touch calibration for the display and removes the saved
+   * calibration data.
+   * @param {string} id The display's unique identifier.
+   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationReset
+   */
+  touchCalibrationReset: assertNotReached,
 };
 
 /**

@@ -26,7 +26,7 @@
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_address_mismatch.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_time.h"
 
@@ -432,21 +432,25 @@ void QuicConnectionLogger::OnPingSent() {
   no_packet_received_after_ping_ = true;
 }
 
-void QuicConnectionLogger::OnPacketReceived(const IPEndPoint& self_address,
-                                            const IPEndPoint& peer_address,
-                                            const QuicEncryptedPacket& packet) {
+void QuicConnectionLogger::OnPacketReceived(
+    const QuicSocketAddress& self_address,
+    const QuicSocketAddress& peer_address,
+    const QuicEncryptedPacket& packet) {
   if (local_address_from_self_.GetFamily() == ADDRESS_FAMILY_UNSPECIFIED) {
-    local_address_from_self_ = self_address;
-    UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.ConnectionTypeFromSelf",
-                              GetRealAddressFamily(self_address.address()),
-                              ADDRESS_FAMILY_LAST);
+    local_address_from_self_ = self_address.impl().socket_address();
+    UMA_HISTOGRAM_ENUMERATION(
+        "Net.QuicSession.ConnectionTypeFromSelf",
+        GetRealAddressFamily(self_address.impl().socket_address().address()),
+        ADDRESS_FAMILY_LAST);
   }
 
   previous_received_packet_size_ = last_received_packet_size_;
   last_received_packet_size_ = packet.length();
-  net_log_.AddEvent(NetLogEventType::QUIC_SESSION_PACKET_RECEIVED,
-                    base::Bind(&NetLogQuicPacketCallback, &self_address,
-                               &peer_address, packet.length()));
+  net_log_.AddEvent(
+      NetLogEventType::QUIC_SESSION_PACKET_RECEIVED,
+      base::Bind(&NetLogQuicPacketCallback,
+                 &self_address.impl().socket_address(),
+                 &peer_address.impl().socket_address(), packet.length()));
 }
 
 void QuicConnectionLogger::OnUnauthenticatedHeader(
@@ -581,12 +585,12 @@ void QuicConnectionLogger::OnPingFrame(const QuicPingFrame& frame) {
 
 void QuicConnectionLogger::OnPublicResetPacket(
     const QuicPublicResetPacket& packet) {
-  net_log_.AddEvent(
-      NetLogEventType::QUIC_SESSION_PUBLIC_RESET_PACKET_RECEIVED,
-      base::Bind(&NetLogQuicPublicResetPacketCallback,
-                 &local_address_from_shlo_, &packet.client_address));
-  UpdatePublicResetAddressMismatchHistogram(local_address_from_shlo_,
-                                            packet.client_address);
+  net_log_.AddEvent(NetLogEventType::QUIC_SESSION_PUBLIC_RESET_PACKET_RECEIVED,
+                    base::Bind(&NetLogQuicPublicResetPacketCallback,
+                               &local_address_from_shlo_,
+                               &packet.client_address.impl().socket_address()));
+  UpdatePublicResetAddressMismatchHistogram(
+      local_address_from_shlo_, packet.client_address.impl().socket_address());
 }
 
 void QuicConnectionLogger::OnVersionNegotiationPacket(
@@ -607,7 +611,8 @@ void QuicConnectionLogger::OnCryptoHandshakeMessageReceived(
     QuicSocketAddressCoder decoder;
     if (message.GetStringPiece(kCADR, &address) &&
         decoder.Decode(address.data(), address.size())) {
-      local_address_from_shlo_ = IPEndPoint(decoder.ip(), decoder.port());
+      local_address_from_shlo_ =
+          IPEndPoint(decoder.ip().impl().ip_address(), decoder.port());
       UMA_HISTOGRAM_ENUMERATION(
           "Net.QuicSession.ConnectionTypeFromPeer",
           GetRealAddressFamily(local_address_from_shlo_.address()),

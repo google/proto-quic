@@ -82,7 +82,7 @@ class LocalDeviceMonkeyTestRun(local_device_test_run.LocalDeviceTestRun):
         except device_errors.CommandFailedError:
           logging.exception('Failed to start MinidumpUploadService')
 
-    return result
+    return result, None
 
   #override
   def TearDown(self):

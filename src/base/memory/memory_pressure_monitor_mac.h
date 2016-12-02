@@ -27,7 +27,7 @@ class BASE_EXPORT MemoryPressureMonitor : public base::MemoryPressureMonitor {
   ~MemoryPressureMonitor() override;
 
   // Returns the currently-observed memory pressure.
-  MemoryPressureLevel GetCurrentPressureLevel() const override;
+  MemoryPressureLevel GetCurrentPressureLevel() override;
 
   void SetDispatchCallback(const DispatchCallback& callback) override;
 
@@ -38,12 +38,13 @@ class BASE_EXPORT MemoryPressureMonitor : public base::MemoryPressureMonitor {
       MemoryPressureLevelForMacMemoryPressure(int mac_memory_pressure);
   void OnMemoryPressureChanged(dispatch_source_s* event_source,
                                const DispatchCallback& dispatch_callback);
+  void SendStatisticsIfNecessary(bool pressure_level_changed);
 
   ScopedDispatchObject<dispatch_source_t> memory_level_event_source_;
 
   DispatchCallback dispatch_callback_;
 
-  CFTimeInterval last_pressure_change_;
+  CFTimeInterval last_statistic_report_;
 
   MemoryPressureLevel last_pressure_level_;
 

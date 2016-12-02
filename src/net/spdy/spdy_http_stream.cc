@@ -42,7 +42,7 @@ SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
       closed_stream_sent_bytes_(0),
       request_info_(NULL),
       response_info_(NULL),
-      response_headers_status_(RESPONSE_HEADERS_ARE_INCOMPLETE),
+      response_headers_complete_(false),
       user_buffer_len_(0),
       request_body_buf_size_(0),
       buffered_read_callback_pending_(false),
@@ -105,7 +105,7 @@ int SpdyHttpStream::ReadResponseHeaders(const CompletionCallback& callback) {
   CHECK(stream_.get());
 
   // Check if we already have the response headers. If so, return synchronously.
-  if (response_headers_status_ == RESPONSE_HEADERS_ARE_COMPLETE) {
+  if (response_headers_complete_) {
     CHECK(!stream_->IsIdle());
     return OK;
   }
@@ -301,7 +301,7 @@ void SpdyHttpStream::Cancel() {
   }
 }
 
-void SpdyHttpStream::OnRequestHeadersSent() {
+void SpdyHttpStream::OnHeadersSent() {
   if (HasUploadData()) {
     ReadAndSendRequestBodyData();
   } else {
@@ -309,9 +309,10 @@ void SpdyHttpStream::OnRequestHeadersSent() {
   }
 }
 
-SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
+void SpdyHttpStream::OnHeadersReceived(
     const SpdyHeaderBlock& response_headers) {
-  CHECK_EQ(response_headers_status_, RESPONSE_HEADERS_ARE_INCOMPLETE);
+  DCHECK(!response_headers_complete_);
+  response_headers_complete_ = true;
 
   if (!response_info_) {
     DCHECK_EQ(stream_->type(), SPDY_PUSH_STREAM);
@@ -319,13 +320,11 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
     response_info_ = push_response_info_.get();
   }
 
-  if (!SpdyHeadersToHttpResponse(response_headers, response_info_)) {
-    // We do not have complete headers yet.
-    return RESPONSE_HEADERS_ARE_INCOMPLETE;
-  }
+  const bool headers_valid =
+      SpdyHeadersToHttpResponse(response_headers, response_info_);
+  DCHECK(headers_valid);
 
   response_info_->response_time = stream_->response_time();
-  response_headers_status_ = RESPONSE_HEADERS_ARE_COMPLETE;
   // Don't store the SSLInfo in the response here, HttpNetworkTransaction
   // will take care of that part.
   response_info_->was_alpn_negotiated = was_alpn_negotiated_;
@@ -339,12 +338,10 @@ SpdyResponseHeadersStatus SpdyHttpStream::OnResponseHeadersUpdated(
   if (!response_callback_.is_null()) {
     DoResponseCallback(OK);
   }
-
-  return RESPONSE_HEADERS_ARE_COMPLETE;
 }
 
 void SpdyHttpStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
-  CHECK_EQ(response_headers_status_, RESPONSE_HEADERS_ARE_COMPLETE);
+  DCHECK(response_headers_complete_);
 
   // Note that data may be received for a SpdyStream prior to the user calling
   // ReadResponseBody(), therefore user_buffer_ may be NULL.  This may often
@@ -598,6 +595,9 @@ bool SpdyHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
 Error SpdyHttpStream::GetTokenBindingSignature(crypto::ECPrivateKey* key,
                                                TokenBindingType tb_type,
                                                std::vector<uint8_t>* out) {
+  if (stream_closed_)
+    return ERR_CONNECTION_CLOSED;
+
   return spdy_session_->GetTokenBindingSignature(key, tb_type, out);
 }
 

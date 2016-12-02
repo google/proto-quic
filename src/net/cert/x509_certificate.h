@@ -42,8 +42,7 @@ class PickleIterator;
 
 namespace net {
 
-class CRLSet;
-class CertVerifyResult;
+class X509Certificate;
 
 typedef std::vector<scoped_refptr<X509Certificate> > CertificateList;
 

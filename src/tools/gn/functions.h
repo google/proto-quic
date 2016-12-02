@@ -416,6 +416,16 @@ Value RunFunction(Scope* scope,
 
 // Helper functions -----------------------------------------------------------
 
+// Validates that the scope that a value is defined in is not the scope
+// of the current declare_args() call, if that's what we're in. It is
+// illegal to read a value from inside the same declare_args() call, since
+// the overrides will not have been applied yet (see `gn help declare_args`
+// for more).
+bool EnsureNotReadingFromSameDeclareArgs(const ParseNode* node,
+                                         const Scope* cur_scope,
+                                         const Scope* val_scope,
+                                         Err* err);
+
 // Verifies that the current scope is not processing an import. If it is, it
 // will set the error, blame the given parse node for it, and return false.
 bool EnsureNotProcessingImport(const ParseNode* node,
@@ -464,7 +474,7 @@ Label MakeLabelForScope(const Scope* scope,
                         const FunctionCallNode* function,
                         const std::string& name);
 
-// Some tyesp of blocks can't be nested inside other ones. For such cases,
+// Some types of blocks can't be nested inside other ones. For such cases,
 // instantiate this object upon entering the block and Enter() will fail if
 // there is already another non-nestable block on the stack.
 class NonNestableBlock {

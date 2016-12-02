@@ -216,17 +216,16 @@ if (use_allocator == "tcmalloc") {
       "$tcmalloc_dir/src",
     ]
 
-    configs -= [
-      "//build/config/compiler:chromium_code",
-
-      # Thumb mode disabled due to bug in clang integrated assembler
-      # TODO(https://llvm.org/bugs/show_bug.cgi?id=31058)
-      "//build/config/compiler:compiler_arm_thumb",
-    ]
+    configs -= [ "//build/config/compiler:chromium_code" ]
     configs += [
       "//build/config/compiler:no_chromium_code",
       ":tcmalloc_flags",
     ]
+
+    # Thumb mode disabled due to bug in clang integrated assembler
+    # TODO(https://llvm.org/bugs/show_bug.cgi?id=31058)
+    configs -= [ "//build/config/compiler:compiler_arm_thumb" ]
+    configs += [ "//build/config/compiler:compiler_arm" ]
 
     # TODO(crbug.com/633719) Make tcmalloc work with AFDO if possible.
     configs -= [ "//build/config/compiler:afdo" ]

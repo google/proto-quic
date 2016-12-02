@@ -8,6 +8,7 @@ import("//build/config/chromecast_build.gni")
 import("//build/config/crypto.gni")
 import("//build/config/dcheck_always_on.gni")
 import("//build/config/features.gni")
+import("//build/config/pch.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/ui.gni")
 import("//build/toolchain/goma.gni")
@@ -31,11 +32,6 @@ declare_args() {
   # of the current object. For iterator- and thread-heavy code, this can
   # significantly slow execution.
   enable_iterator_debugging = true
-
-  # Normally we try to decide whether to use precompiled headers or
-  # not based on the other build arguments, but in some cases it is
-  # easiest to force them off explicitly.
-  disable_precompiled_headers = false
 }
 
 # ==============================================
@@ -139,9 +135,6 @@ config("feature_flags") {
   }
   if (use_external_popup_menu) {
     defines += [ "USE_EXTERNAL_POPUP_MENU=1" ]
-  }
-  if (enable_webrtc) {
-    defines += [ "ENABLE_WEBRTC=1" ]
   }
   if (!enable_nacl) {
     defines += [ "DISABLE_NACL" ]
@@ -388,7 +381,7 @@ config("shared_library_config") {
 #
 # Recommend precompiled headers for targets with more than 50 .cc files.
 config("precompiled_headers") {
-  if (!is_official_build && !use_goma && !disable_precompiled_headers) {
+  if (enable_precompiled_headers) {
     if (is_win) {
       # This is a string rather than a file GN knows about. It has to match
       # exactly what's in the /FI flag below, and what might appear in the
@@ -412,6 +405,9 @@ config("precompiled_headers") {
       # file doesn't exist, no error will be generated (probably MS tested this
       # case but forgot the other one?). To reproduce this error, do a build,
       # then delete the precompile.c.obj file, then build again.
+      #
+      # TODO(sof): determine VS2015 status and retire the setting from all
+      # precompiled configurations.
       cflags_c = [ "/wd4206" ]
     } else if (is_mac) {
       precompiled_header = "build/precompile.h"

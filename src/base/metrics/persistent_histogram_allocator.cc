@@ -35,7 +35,7 @@ const char kResultHistogram[] = "UMA.CreatePersistentHistogram.Result";
 // so that, if the structure of that object changes, stored older versions
 // will be safely ignored.
 enum : uint32_t {
-  kTypeIdHistogram   = 0xF1645910 + 2,  // SHA1(Histogram)   v2
+  kTypeIdHistogram = 0xF1645910 + 3,    // SHA1(Histogram)   v3
   kTypeIdRangesArray = 0xBCEA225A + 1,  // SHA1(RangesArray) v1
   kTypeIdCountsArray = 0x53215530 + 1,  // SHA1(CountsArray) v1
 
@@ -226,6 +226,10 @@ PersistentMemoryAllocator::Reference PersistentSampleMapRecords::CreateNew(
 // This data will be held in persistent memory in order for processes to
 // locate and use histograms created elsewhere.
 struct PersistentHistogramAllocator::PersistentHistogramData {
+  // Expected size for 32/64-bit check.
+  static constexpr size_t kExpectedInstanceSize =
+      40 + 2 * HistogramSamples::Metadata::kExpectedInstanceSize;
+
   int32_t histogram_type;
   int32_t flags;
   int32_t minimum;
@@ -240,7 +244,7 @@ struct PersistentHistogramAllocator::PersistentHistogramData {
   // Space for the histogram name will be added during the actual allocation
   // request. This must be the last field of the structure. A zero-size array
   // or a "flexible" array would be preferred but is not (yet) valid C++.
-  char name[1];
+  char name[sizeof(uint64_t)];  // Force 64-bit alignment on 32-bit builds.
 };
 
 PersistentHistogramAllocator::Iterator::Iterator(
@@ -338,14 +342,15 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
       return nullptr;
     }
 
-    size_t ranges_bytes = (bucket_count + 1) * sizeof(HistogramBase::Sample);
+    size_t ranges_count = bucket_count + 1;
+    size_t ranges_bytes = ranges_count * sizeof(HistogramBase::Sample);
     PersistentMemoryAllocator::Reference counts_ref =
         memory_allocator_->Allocate(counts_bytes, kTypeIdCountsArray);
     PersistentMemoryAllocator::Reference ranges_ref =
         memory_allocator_->Allocate(ranges_bytes, kTypeIdRangesArray);
     HistogramBase::Sample* ranges_data =
-        memory_allocator_->GetAsObject<HistogramBase::Sample>(
-            ranges_ref, kTypeIdRangesArray);
+        memory_allocator_->GetAsArray<HistogramBase::Sample>(
+            ranges_ref, kTypeIdRangesArray, ranges_count);
 
     // Only continue here if all allocations were successful. If they weren't,
     // there is no way to free the space but that's not really a problem since
@@ -539,8 +544,9 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
   PersistentHistogramData histogram_data = *histogram_data_ptr;
 
   HistogramBase::Sample* ranges_data =
-      memory_allocator_->GetAsObject<HistogramBase::Sample>(
-          histogram_data.ranges_ref, kTypeIdRangesArray);
+      memory_allocator_->GetAsArray<HistogramBase::Sample>(
+          histogram_data.ranges_ref, kTypeIdRangesArray,
+          PersistentMemoryAllocator::kSizeAny);
 
   const uint32_t max_buckets =
       std::numeric_limits<uint32_t>::max() / sizeof(HistogramBase::Sample);
@@ -569,8 +575,9 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::CreateHistogram(
           created_ranges.release());
 
   HistogramBase::AtomicCount* counts_data =
-      memory_allocator_->GetAsObject<HistogramBase::AtomicCount>(
-          histogram_data.counts_ref, kTypeIdCountsArray);
+      memory_allocator_->GetAsArray<HistogramBase::AtomicCount>(
+          histogram_data.counts_ref, kTypeIdCountsArray,
+          PersistentMemoryAllocator::kSizeAny);
   size_t counts_bytes =
       CalculateRequiredCountsBytes(histogram_data.bucket_count);
   if (!counts_data || counts_bytes == 0 ||

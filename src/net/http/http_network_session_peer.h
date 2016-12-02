@@ -17,7 +17,6 @@ class ClientSocketPoolManager;
 class HttpNetworkSession;
 class HttpStreamFactory;
 class NetworkThrottleManager;
-class ProxyService;
 
 class NET_EXPORT_PRIVATE HttpNetworkSessionPeer {
  public:

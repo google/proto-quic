@@ -355,11 +355,19 @@ class AndroidProfileTool(object):
     """
     print 'Pulling cyglog data...'
     self._SetUpHostFolders()
-    self._device.PullFile(
-        self._DEVICE_CYGLOG_DIR, self._host_cyglog_dir)
+    self._device.PullFile(self._DEVICE_CYGLOG_DIR, self._host_cyglog_dir)
     files = os.listdir(self._host_cyglog_dir)
 
     if len(files) == 0:
       raise NoCyglogDataError('No cyglog data was collected')
 
-    return [os.path.join(self._host_cyglog_dir, x) for x in files]
+    # Temporary workaround/investigation: if (for unknown reason) 'adb pull' of
+    # the directory 'cyglog' into '.../Release/cyglog_data' produces
+    # '...cyglog_data/cyglog/files' instead of the usual '...cyglog_data/files',
+    # list the files deeper in the tree.
+    cyglog_dir = self._host_cyglog_dir
+    if (len(files) == 1) and (files[0] == 'cyglog'):
+      cyglog_dir = os.path.join(self._host_cyglog_dir, 'cyglog')
+      files = os.listdir(cyglog_dir)
+
+    return [os.path.join(cyglog_dir, x) for x in files]

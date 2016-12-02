@@ -163,10 +163,10 @@ as you see them:
   [go/bad-bisects](https://docs.google.com/spreadsheets/d/13PYIlRGE8eZzsrSocA3SR2LEHdzc8n9ORUoOE2vtO6I/edit#gid=0).
   The team triages these regularly. If you spot a really clear bug (bisect
   job red, bugs not being updated with bisect results) please file it in
-  crbug with label `Cr-Tests-AutoBisect`. If a bisect problem is blocking a
-  perf regression bug triage, **please file a new bug with label
-  `Cr-Tests-AutoBisect` and block the regression bug on the bisect bug**. This
+  crbug with component `Tests>AutoBisect`. If a bisect problem is blocking a
+  perf regression bug triage, **please file a new bug with component
+  `Tests>AutoBisect` and block the regression bug on the bisect bug**. This
   makes it much easier for the team to triage, dupe, and close bugs on the
   infrastructure without affecting the state of the perf regression bugs.
-* **Noisy Tests**: Please file a bug in crbug with label `Cr-Tests-Telemetry`
+* **Noisy Tests**: Please file a bug in crbug with component `Tests>Telemetry`
   and [cc the owner](http://go/perf-owners).

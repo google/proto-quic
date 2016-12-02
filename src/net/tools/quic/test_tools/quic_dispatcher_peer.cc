@@ -84,8 +84,8 @@ void QuicDispatcherPeer::set_new_sessions_allowed_per_event_loop(
 // static
 void QuicDispatcherPeer::SendPublicReset(
     QuicDispatcher* dispatcher,
-    const IPEndPoint& server_address,
-    const IPEndPoint& client_address,
+    const QuicSocketAddress& server_address,
+    const QuicSocketAddress& client_address,
     QuicConnectionId connection_id,
     QuicPacketNumber rejected_packet_number) {
   dispatcher->time_wait_list_manager()->SendPublicReset(

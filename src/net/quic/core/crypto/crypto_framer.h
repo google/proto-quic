@@ -15,13 +15,12 @@
 #include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 
 class CryptoFramer;
 class QuicData;
-class QuicDataReader;
 class QuicDataWriter;
 
 class NET_EXPORT_PRIVATE CryptoFramerVisitorInterface {

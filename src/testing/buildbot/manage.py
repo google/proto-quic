@@ -167,6 +167,7 @@ SKIP_GN_ISOLATE_MAP_TARGETS = {
   'content_junit_tests',
   'content_junit_tests',
   'junit_unit_tests',
+  'media_router_tests',
   'net_junit_tests',
   'net_junit_tests',
   'ui_junit_tests',

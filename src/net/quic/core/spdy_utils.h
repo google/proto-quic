@@ -14,7 +14,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_header_list.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {

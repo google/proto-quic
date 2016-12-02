@@ -3,7 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-"""Compress and upload Mac toolchain files."""
+"""Compress and upload Mac toolchain files.
+
+Stored in in https://pantheon.corp.google.com/storage/browser/chrome-mac-sdk/.
+"""
 
 import argparse
 import glob
@@ -24,32 +27,51 @@ TOOLCHAIN_URL = "gs://chrome-mac-sdk"
 # problematic it's possible this list is incorrect, and can be reduced to just
 # the unused platforms.  On the flip side, it's likely more directories can be
 # excluded.
-EXCLUDE_FOLDERS = [
+DEFAULT_EXCLUDE_FOLDERS = [
 'Contents/Applications',
 'Contents/Developer/Documentation',
+'Contents/Developer/Library/Xcode/Templates',
 'Contents/Developer/Platforms/AppleTVOS.platform',
 'Contents/Developer/Platforms/AppleTVSimulator.platform',
+'Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/'
+    'usr/share/man/',
 'Contents/Developer/Platforms/WatchOS.platform',
 'Contents/Developer/Platforms/WatchSimulator.platform',
-'Contents/Developer/Platforms/iPhoneOS.platform',
-'Contents/Developer/Platforms/iPhoneSimulator.platform',
-'Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-migrator',
+'Contents/Developer/Toolchains/Swift*',
 'Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift',
-'Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/'
-    'usr/share/man',
-'Contents/Developer/Library/Xcode/Templates'
+'Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-migrator',
+'Contents/Resources/Packages/MobileDevice.pkg',
+'Contents/SharedFrameworks/DNTDocumentationSupport.framework'
 ]
 
+MAC_EXCLUDE_FOLDERS = [
+'Contents/Developer/Platforms/iPhoneOS.platform',
+'Contents/Developer/Platforms/iPhoneSimulator.platform',
+]
+
+IOS_EXCLUDE_FOLDERS = [
+'Contents/Developer/Platforms/iPhoneOS.platform/DeviceSupport/'
+'Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/'
+    'iPhoneSimulator.sdk/Applications/',
+'Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/'
+    'iPhoneSimulator.sdk/System/Library/AccessibilityBundles/',
+'Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/'
+    'iPhoneSimulator.sdk/System/Library/CoreServices/',
+'Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/'
+    'iPhoneSimulator.sdk/System/Library/LinguisticData/',
+]
 
 def main():
   """Compress |target_dir| and upload to |TOOLCHAIN_URL|"""
   parser = argparse.ArgumentParser()
   parser.add_argument('target_dir',
                       help="Xcode installation directory.")
-  args = parser.parse_args()
+  parser.add_argument('platform', choices=['ios', 'mac'],
+                      help="Target platform for bundle.")
+  parser_args = parser.parse_args()
 
   # Verify this looks like an Xcode directory.
-  contents_dir = os.path.join(args.target_dir, 'Contents')
+  contents_dir = os.path.join(parser_args.target_dir, 'Contents')
   plist_file = os.path.join(contents_dir, 'version.plist')
   try:
     info = plistlib.readPlist(plist_file)
@@ -59,7 +81,10 @@ def main():
   build_version = info['ProductBuildVersion']
 
   # Look for previous toolchain tgz files with the same |build_version|.
-  wildcard_filename = '%s/toolchain-%s-*.tgz' % (TOOLCHAIN_URL, build_version)
+  fname = 'toolchain'
+  if parser_args.platform == 'ios':
+    fname = 'ios-' + fname
+  wildcard_filename = '%s/%s-%s-*.tgz' % (TOOLCHAIN_URL, fname, build_version)
   p = subprocess.Popen(['gsutil.py', 'ls', wildcard_filename],
                        stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE)
@@ -75,14 +100,20 @@ def main():
       print "Skipping duplicate upload."
       return 0
 
-  os.chdir(args.target_dir)
-  toolchain_file_name = "toolchain-%s-%s" % (build_version, next_count)
+  os.chdir(parser_args.target_dir)
+  toolchain_file_name = "%s-%s-%s" % (fname, build_version, next_count)
   toolchain_name = tempfile.mktemp(suffix='toolchain.tgz')
 
   print "Creating %s (%s)." % (toolchain_file_name, toolchain_name)
   os.environ["COPYFILE_DISABLE"] = "1"
+  os.environ["GZ_OPT"] = "-8"
   args = ['tar', '-cvzf', toolchain_name]
-  args.extend(map('--exclude={0}'.format, EXCLUDE_FOLDERS))
+  exclude_folders = DEFAULT_EXCLUDE_FOLDERS
+  if parser_args.platform == 'mac':
+    exclude_folders += MAC_EXCLUDE_FOLDERS
+  else:
+    exclude_folders += IOS_EXCLUDE_FOLDERS
+  args.extend(map('--exclude={0}'.format, exclude_folders))
   args.extend(['.'])
   subprocess.check_call(args)
 

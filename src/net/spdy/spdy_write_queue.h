@@ -16,7 +16,6 @@
 
 namespace net {
 
-class SpdyBuffer;
 class SpdyBufferProducer;
 class SpdyStream;
 

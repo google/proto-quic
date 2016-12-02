@@ -28,7 +28,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Called if an error is detected in the SpdySerializedFrame protocol.
   virtual void OnError(SpdyFramer::SpdyError error_code) = 0;
 
-  // Called if an error is detected in a SPDY stream.
+  // Called if an error is detected in a HTTP2 stream.
   virtual void OnStreamError(SpdyStreamId stream_id,
                              const std::string& description) = 0;
 
@@ -49,8 +49,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Called when data is received.
   // |stream_id| The stream receiving data.
   // |data| A buffer containing the data received.
-  // |len| The length of the data buffer (at most 2^24 - 1 for SPDY/3,
-  // but 2^16 - 1 - 8 for HTTP2).
+  // |len| The length of the data buffer (at most 2^16 - 1 - 8).
   virtual void OnStreamFrameData(SpdyStreamId stream_id,
                                  const char* data,
                                  size_t len) = 0;
@@ -136,12 +135,6 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
 
   // SpdyFramerVisitorInterface
   void OnError(SpdyFramer* spdy_framer) override;
-  void OnSynStream(SpdyStreamId stream_id,
-                   SpdyStreamId associated_stream_id,
-                   SpdyPriority priority,
-                   bool fin,
-                   bool unidirectional) override;
-  void OnSynReply(SpdyStreamId stream_id, bool fin) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -222,10 +215,6 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
 
   size_t GetFrameHeaderSize() const {
     return spdy_framer_.GetFrameHeaderSize();
-  }
-
-  size_t GetSynStreamMinimumSize() const {
-    return spdy_framer_.GetSynStreamMinimumSize();
   }
 
   size_t GetFrameMinimumSize() const {

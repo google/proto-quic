@@ -33,6 +33,12 @@ class FuzzedDataProvider {
   // Returns a std::string containing all remaining bytes of the input data.
   std::string ConsumeRemainingBytes();
 
+  // Returns a std::string of length from 0 to |max_length|. When it runs out of
+  // input data, returns what remains of the input. Designed to be more stable
+  // with respect to a fuzzer inserting characters than just picking a random
+  // length and then consuming that many bytes with ConsumeBytes().
+  std::string ConsumeRandomLengthString(size_t max_length);
+
   // Returns a number in the range [min, max] by consuming bytes from the input
   // data. The value might not be uniformly distributed in the given range. If
   // there's no input data left, always returns |min|. |min| must be less than

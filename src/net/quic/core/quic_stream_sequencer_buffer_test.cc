@@ -20,7 +20,6 @@
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::min;
 using std::string;
 
 namespace net {
@@ -330,26 +329,6 @@ TEST_F(QuicStreamSequencerBufferTest, Readv100Bytes) {
   // The first block should be released as its data has been read out.
   EXPECT_EQ(nullptr, helper_->GetBlock(0));
   EXPECT_TRUE(helper_->CheckBufferInvariants());
-}
-
-TEST_F(QuicStreamSequencerBufferTest, ReadvError) {
-  string source = string(100, 'b');
-  clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
-  QuicTime t1 = clock_.ApproximateNow();
-  // Write something into [0, 100).
-  size_t written;
-  buffer_->OnStreamData(0, source, t1, &written, &error_details_);
-  EXPECT_TRUE(helper_->GetBlock(0) != nullptr);
-  EXPECT_TRUE(buffer_->HasBytesToRead());
-  // Read into a iovec array with total capacity of 120 bytes.
-  iovec iov{nullptr, 120};
-  size_t read;
-  EXPECT_EQ(QUIC_STREAM_SEQUENCER_INVALID_STATE,
-            buffer_->Readv(&iov, 1, &read, &error_details_));
-  EXPECT_EQ(0u,
-            error_details_.find(
-                "QuicStreamSequencerBuffer error: Readv() dest == nullptr: true"
-                " blocks_[0] == nullptr: false"));
 }
 
 TEST_F(QuicStreamSequencerBufferTest, ReadvAcrossBlocks) {
@@ -852,8 +831,8 @@ class QuicStreamSequencerBufferRandomIOTest
     size_t start_chopping_offset = 0;
     size_t iterations = 0;
     while (start_chopping_offset < bytes_to_buffer_) {
-      size_t max_chunk = min<size_t>(max_chunk_size_bytes_,
-                                     bytes_to_buffer_ - start_chopping_offset);
+      size_t max_chunk = std::min<size_t>(
+          max_chunk_size_bytes_, bytes_to_buffer_ - start_chopping_offset);
       size_t chunk_size = rng_.RandUint64() % max_chunk + 1;
       chopped_stream[iterations] =
           OffsetSizePair(start_chopping_offset, chunk_size);
@@ -1013,7 +992,7 @@ TEST_F(QuicStreamSequencerBufferRandomIOTest, RandomWriteAndConsumeInPlace) {
         size_t bytes_to_process = rng_.RandUint64() % (avail_bytes + 1);
         size_t bytes_processed = 0;
         for (size_t i = 0; i < actually_num_read; ++i) {
-          size_t bytes_in_block = min<size_t>(
+          size_t bytes_in_block = std::min<size_t>(
               bytes_to_process - bytes_processed, dest_iov[i].iov_len);
           if (bytes_in_block == 0) {
             break;

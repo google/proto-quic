@@ -153,6 +153,8 @@ class DefaultDnsSocketPool : public DnsSocketPool {
   DISALLOW_COPY_AND_ASSIGN(DefaultDnsSocketPool);
 };
 
+DnsSocketPool::~DnsSocketPool() {}
+
 // static
 std::unique_ptr<DnsSocketPool> DnsSocketPool::CreateDefault(
     ClientSocketFactory* factory,

@@ -8,7 +8,6 @@
 
 #include "base/logging.h"
 
-using std::list;
 using std::string;
 
 namespace net {
@@ -60,7 +59,7 @@ QuicErrorCode QuicFrameList::OnStreamData(QuicStreamOffset offset,
 
 // Finds the place the frame should be inserted.  If an identical frame is
 // present, stops on the identical frame.
-list<QuicFrameList::FrameData>::iterator QuicFrameList::FindInsertionPoint(
+std::list<QuicFrameList::FrameData>::iterator QuicFrameList::FindInsertionPoint(
     QuicStreamOffset offset,
     size_t len) {
   if (frame_list_.empty()) {
@@ -87,7 +86,7 @@ list<QuicFrameList::FrameData>::iterator QuicFrameList::FindInsertionPoint(
 bool QuicFrameList::FrameOverlapsBufferedData(
     QuicStreamOffset offset,
     size_t data_len,
-    list<FrameData>::const_iterator insertion_point) const {
+    std::list<FrameData>::const_iterator insertion_point) const {
   if (frame_list_.empty() || insertion_point == frame_list_.end()) {
     return false;
   }
@@ -116,7 +115,7 @@ bool QuicFrameList::FrameOverlapsBufferedData(
 bool QuicFrameList::IsDuplicate(
     QuicStreamOffset offset,
     size_t data_len,
-    list<FrameData>::const_iterator insertion_point) const {
+    std::list<FrameData>::const_iterator insertion_point) const {
   // A frame is duplicate if the frame offset is smaller than the bytes consumed
   // or identical to an already received frame.
   return offset < total_bytes_read_ || (insertion_point != frame_list_.end() &&
@@ -124,7 +123,7 @@ bool QuicFrameList::IsDuplicate(
 }
 
 int QuicFrameList::GetReadableRegions(struct iovec* iov, int iov_len) const {
-  list<FrameData>::const_iterator it = frame_list_.begin();
+  std::list<FrameData>::const_iterator it = frame_list_.begin();
   int index = 0;
   QuicStreamOffset offset = total_bytes_read_;
   while (it != frame_list_.end() && index < iov_len) {
@@ -144,7 +143,7 @@ int QuicFrameList::GetReadableRegions(struct iovec* iov, int iov_len) const {
 }
 
 bool QuicFrameList::GetReadableRegion(iovec* iov, QuicTime* timestamp) const {
-  list<FrameData>::const_iterator it = frame_list_.begin();
+  std::list<FrameData>::const_iterator it = frame_list_.begin();
   if (it == frame_list_.end() || it->offset != total_bytes_read_) {
     return false;
   }
@@ -157,7 +156,7 @@ bool QuicFrameList::GetReadableRegion(iovec* iov, QuicTime* timestamp) const {
 bool QuicFrameList::MarkConsumed(size_t bytes_used) {
   size_t end_offset = total_bytes_read_ + bytes_used;
   while (!frame_list_.empty() && end_offset != total_bytes_read_) {
-    list<FrameData>::iterator it = frame_list_.begin();
+    std::list<FrameData>::iterator it = frame_list_.begin();
     if (it->offset != total_bytes_read_) {
       return false;
     }
@@ -184,7 +183,7 @@ bool QuicFrameList::MarkConsumed(size_t bytes_used) {
 }
 
 size_t QuicFrameList::Readv(const struct iovec* iov, size_t iov_len) {
-  list<FrameData>::iterator it = frame_list_.begin();
+  std::list<FrameData>::iterator it = frame_list_.begin();
   size_t iov_index = 0;
   size_t iov_offset = 0;
   size_t frame_offset = 0;

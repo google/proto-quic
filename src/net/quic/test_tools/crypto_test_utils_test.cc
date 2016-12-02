@@ -19,8 +19,8 @@ namespace test {
 class ShloVerifier {
  public:
   ShloVerifier(QuicCryptoServerConfig* crypto_config,
-               IPAddress server_ip,
-               IPEndPoint client_addr,
+               QuicIpAddress server_ip,
+               QuicSocketAddress client_addr,
                const QuicClock* clock,
                scoped_refptr<QuicSignedServerConfig> signed_config,
                QuicCompressedCertsCache* compressed_certs_cache)
@@ -93,8 +93,8 @@ class ShloVerifier {
   }
 
   QuicCryptoServerConfig* crypto_config_;
-  IPAddress server_ip_;
-  IPEndPoint client_addr_;
+  QuicIpAddress server_ip_;
+  QuicSocketAddress client_addr_;
   const QuicClock* clock_;
   scoped_refptr<QuicSignedServerConfig> signed_config_;
   QuicCompressedCertsCache* compressed_certs_cache_;
@@ -108,8 +108,8 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   QuicCryptoServerConfig crypto_config(
       QuicCryptoServerConfig::TESTING, QuicRandom::GetInstance(),
       CryptoTestUtils::ProofSourceForTesting());
-  IPAddress server_ip;
-  IPEndPoint client_addr(IPAddress::IPv4Localhost(), 1);
+  QuicIpAddress server_ip;
+  QuicSocketAddress client_addr(QuicIpAddress::Loopback4(), 1);
   scoped_refptr<QuicSignedServerConfig> signed_config(
       new QuicSignedServerConfig);
   QuicCompressedCertsCache compressed_certs_cache(
@@ -164,8 +164,8 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   ShloVerifier shlo_verifier(&crypto_config, server_ip, client_addr, &clock,
                              signed_config, &compressed_certs_cache);
   crypto_config.ValidateClientHello(
-      full_chlo, client_addr.address(), server_ip, version, &clock,
-      signed_config, shlo_verifier.GetValidateClientHelloCallback());
+      full_chlo, client_addr.host(), server_ip, version, &clock, signed_config,
+      shlo_verifier.GetValidateClientHelloCallback());
 }
 
 }  // namespace test

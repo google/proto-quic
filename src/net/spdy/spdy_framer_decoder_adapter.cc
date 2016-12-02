@@ -48,6 +48,13 @@ void SpdyFramerVisitorAdapter::OnError(SpdyFramer* framer) {
   visitor_->OnError(framer_);
 }
 
+void SpdyFramerVisitorAdapter::OnCommonHeader(SpdyStreamId stream_id,
+                                              size_t length,
+                                              uint8_t type,
+                                              uint8_t flags) {
+  visitor_->OnCommonHeader(stream_id, length, type, flags);
+}
+
 void SpdyFramerVisitorAdapter::OnDataFrameHeader(SpdyStreamId stream_id,
                                                  size_t length,
                                                  bool fin) {
@@ -77,19 +84,6 @@ SpdyHeadersHandlerInterface* SpdyFramerVisitorAdapter::OnHeaderFrameStart(
 void SpdyFramerVisitorAdapter::OnHeaderFrameEnd(SpdyStreamId stream_id,
                                                 bool end_headers) {
   visitor_->OnHeaderFrameEnd(stream_id, end_headers);
-}
-
-void SpdyFramerVisitorAdapter::OnSynStream(SpdyStreamId stream_id,
-                                           SpdyStreamId associated_stream_id,
-                                           SpdyPriority priority,
-                                           bool fin,
-                                           bool unidirectional) {
-  visitor_->OnSynStream(stream_id, associated_stream_id, priority, fin,
-                        unidirectional);
-}
-
-void SpdyFramerVisitorAdapter::OnSynReply(SpdyStreamId stream_id, bool fin) {
-  visitor_->OnSynReply(stream_id, fin);
 }
 
 void SpdyFramerVisitorAdapter::OnRstStream(SpdyStreamId stream_id,
@@ -190,7 +184,7 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
 
  public:
   explicit NestedSpdyFramerDecoder(SpdyFramer* outer)
-      : framer_(HTTP2, nullptr), outer_(outer) {
+      : framer_(nullptr), outer_(outer) {
     DVLOG(1) << PRETTY_THIS;
   }
   ~NestedSpdyFramerDecoder() override { DVLOG(1) << PRETTY_THIS; }

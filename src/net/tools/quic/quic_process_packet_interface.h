@@ -6,8 +6,8 @@
 #define NET_TOOLS_QUIC_QUIC_PROCESS_PACKET_INTERFACE_H_
 
 #include "base/macros.h"
-#include "net/base/ip_endpoint.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
 
@@ -15,8 +15,8 @@ namespace net {
 class ProcessPacketInterface {
  public:
   virtual ~ProcessPacketInterface() {}
-  virtual void ProcessPacket(const IPEndPoint& server_address,
-                             const IPEndPoint& client_address,
+  virtual void ProcessPacket(const QuicSocketAddress& server_address,
+                             const QuicSocketAddress& client_address,
                              const QuicReceivedPacket& packet) = 0;
 };
 

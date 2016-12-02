@@ -14,10 +14,6 @@
 
 namespace net {
 
-namespace der {
-class Input;
-}
-
 // A very simple implementation of a TrustStore, which contains a set of
 // trust anchors.
 class NET_EXPORT TrustStoreInMemory : public TrustStore {
@@ -31,11 +27,8 @@ class NET_EXPORT TrustStoreInMemory : public TrustStore {
   void AddTrustAnchor(scoped_refptr<TrustAnchor> anchor);
 
   // TrustStore implementation:
-  void FindTrustAnchorsForCert(
-      const scoped_refptr<ParsedCertificate>& cert,
-      const TrustAnchorsCallback& callback,
-      TrustAnchors* synchronous_matches,
-      std::unique_ptr<Request>* out_req) const override;
+  void FindTrustAnchorsForCert(const scoped_refptr<ParsedCertificate>& cert,
+                               TrustAnchors* matches) const override;
 
  private:
   // Multimap from normalized subject -> TrustAnchor.

@@ -23,6 +23,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -35,7 +36,6 @@
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::StringPiece;
-using std::make_pair;
 using std::string;
 
 namespace net {
@@ -275,8 +275,8 @@ namespace {
 class FullChloGenerator {
  public:
   FullChloGenerator(QuicCryptoServerConfig* crypto_config,
-                    IPAddress server_ip,
-                    IPEndPoint client_addr,
+                    QuicIpAddress server_ip,
+                    QuicSocketAddress client_addr,
                     const QuicClock* clock,
                     scoped_refptr<QuicSignedServerConfig> signed_config,
                     QuicCompressedCertsCache* compressed_certs_cache,
@@ -370,8 +370,8 @@ class FullChloGenerator {
 
  protected:
   QuicCryptoServerConfig* crypto_config_;
-  IPAddress server_ip_;
-  IPEndPoint client_addr_;
+  QuicIpAddress server_ip_;
+  QuicSocketAddress client_addr_;
   const QuicClock* clock_;
   scoped_refptr<QuicSignedServerConfig> signed_config_;
   QuicCompressedCertsCache* compressed_certs_cache_;
@@ -566,7 +566,7 @@ string CryptoTestUtils::GetValueForTag(const CryptoHandshakeMessage& message,
 
 uint64_t CryptoTestUtils::LeafCertHashForTesting() {
   scoped_refptr<ProofSource::Chain> chain;
-  IPAddress server_ip;
+  QuicIpAddress server_ip;
   QuicCryptoProof proof;
   std::unique_ptr<ProofSource> proof_source(
       CryptoTestUtils::ProofSourceForTesting());
@@ -1001,8 +1001,8 @@ string CryptoTestUtils::GenerateClientPublicValuesHex() {
 void CryptoTestUtils::GenerateFullCHLO(
     const CryptoHandshakeMessage& inchoate_chlo,
     QuicCryptoServerConfig* crypto_config,
-    IPAddress server_ip,
-    IPEndPoint client_addr,
+    QuicIpAddress server_ip,
+    QuicSocketAddress client_addr,
     QuicVersion version,
     const QuicClock* clock,
     scoped_refptr<QuicSignedServerConfig> proof,
@@ -1012,7 +1012,7 @@ void CryptoTestUtils::GenerateFullCHLO(
   FullChloGenerator generator(crypto_config, server_ip, client_addr, clock,
                               proof, compressed_certs_cache, out);
   crypto_config->ValidateClientHello(
-      inchoate_chlo, client_addr.address(), server_ip, version, clock, proof,
+      inchoate_chlo, client_addr.host(), server_ip, version, clock, proof,
       generator.GetValidateClientHelloCallback());
 }
 

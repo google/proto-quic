@@ -286,6 +286,26 @@ TEST_F(CertDatabaseNSSTest, ImportFromPKCS12InvalidFile) {
   EXPECT_EQ(0U, ListCerts().size());
 }
 
+TEST_F(CertDatabaseNSSTest, ImportFromPKCS12EmptyPassword) {
+  std::string pkcs12_data = ReadTestFile("client-empty-password.p12");
+
+  EXPECT_EQ(OK, cert_db_->ImportFromPKCS12(GetPublicModule(), pkcs12_data,
+                                           base::string16(),
+                                           true,  // is_extractable
+                                           NULL));
+  EXPECT_EQ(1U, ListCerts().size());
+}
+
+TEST_F(CertDatabaseNSSTest, ImportFromPKCS12NullPassword) {
+  std::string pkcs12_data = ReadTestFile("client-null-password.p12");
+
+  EXPECT_EQ(OK, cert_db_->ImportFromPKCS12(GetPublicModule(), pkcs12_data,
+                                           base::string16(),
+                                           true,  // is_extractable
+                                           NULL));
+  EXPECT_EQ(1U, ListCerts().size());
+}
+
 TEST_F(CertDatabaseNSSTest, ImportCACert_SSLTrust) {
   CertificateList certs = CreateCertificateListFromFile(
       GetTestCertsDirectory(), "root_ca_cert.pem",

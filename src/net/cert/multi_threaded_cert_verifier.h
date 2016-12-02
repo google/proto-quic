@@ -25,7 +25,6 @@ namespace net {
 
 class CertVerifierJob;
 class CertVerifierRequest;
-class CertVerifierWorker;
 class CertVerifyProc;
 
 // MultiThreadedCertVerifier is a CertVerifier implementation that runs

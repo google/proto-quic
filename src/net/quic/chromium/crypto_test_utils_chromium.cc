@@ -37,7 +37,6 @@
 using base::StringPiece;
 using base::StringPrintf;
 using std::string;
-using std::vector;
 
 namespace net {
 

@@ -487,12 +487,17 @@ const IdentifierNode* IdentifierNode::AsIdentifier() const {
 }
 
 Value IdentifierNode::Execute(Scope* scope, Err* err) const {
-  const Value* value = scope->GetValue(value_.value(), true);
+  const Scope* found_in_scope = nullptr;
+  const Value* value = scope->GetValueWithScope(value_.value(), true,
+                                                &found_in_scope);
   Value result;
   if (!value) {
     *err = MakeErrorDescribing("Undefined identifier");
     return result;
   }
+
+  if (!EnsureNotReadingFromSameDeclareArgs(this, scope, found_in_scope, err))
+    return result;
 
   result = *value;
   result.set_origin(this);

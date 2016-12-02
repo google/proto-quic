@@ -13,14 +13,13 @@
 #include "base/macros.h"
 #include "net/quic/core/quic_client_session_base.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
 namespace net {
 
 class QuicConnection;
 class QuicServerId;
-class QuicStream;
 
 class QuicClientSession : public QuicClientSessionBase {
  public:

@@ -40,16 +40,18 @@ class PersistentMemoryAllocatorTest : public testing::Test {
   uint32_t kAllocAlignment;
 
   struct TestObject1 {
-    int onething;
+    static constexpr size_t kExpectedInstanceSize = 4 + 1 + 3;
+    int32_t onething;
     char oranother;
   };
 
   struct TestObject2 {
-    int thiis;
-    long that;
+    static constexpr size_t kExpectedInstanceSize = 8 + 4 + 4 + 8 + 8;
+    int64_t thiis;
+    int32_t that;
     float andthe;
-    char other;
-    double thing;
+    double other;
+    char thing[8];
   };
 
   PersistentMemoryAllocatorTest() {
@@ -118,6 +120,18 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   allocator_->GetMemoryInfo(&meminfo1);
   EXPECT_EQ(meminfo0.total, meminfo1.total);
   EXPECT_GT(meminfo0.free, meminfo1.free);
+
+  // Verify that pointers can be turned back into references and that invalid
+  // addresses return null.
+  char* memory1 = allocator_->GetAsArray<char>(block1, 1, 1);
+  ASSERT_TRUE(memory1);
+  EXPECT_EQ(block1, allocator_->GetAsReference(memory1, 0));
+  EXPECT_EQ(block1, allocator_->GetAsReference(memory1, 1));
+  EXPECT_EQ(0U, allocator_->GetAsReference(memory1, 2));
+  EXPECT_EQ(0U, allocator_->GetAsReference(memory1 + 1, 0));
+  EXPECT_EQ(0U, allocator_->GetAsReference(memory1 + 16, 0));
+  EXPECT_EQ(0U, allocator_->GetAsReference(nullptr, 0));
+  EXPECT_EQ(0U, allocator_->GetAsReference(&base_name, 0));
 
   // Ensure that the test-object can be made iterable.
   PersistentMemoryAllocator::Iterator iter1a(allocator_.get());
@@ -786,7 +800,8 @@ TEST(FilePersistentMemoryAllocatorTest, AcceptableTest) {
       uint32_t type_id;
       Reference ref;
       while ((ref = iter.GetNext(&type_id)) != 0) {
-        const char* data = allocator.GetAsObject<char>(ref, 0);
+        const char* data = allocator.GetAsArray<char>(
+            ref, 0, PersistentMemoryAllocator::kSizeAny);
         uint32_t type = allocator.GetType(ref);
         size_t size = allocator.GetAllocSize(ref);
         // Ensure compiler can't optimize-out above variables.

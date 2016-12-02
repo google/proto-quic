@@ -82,19 +82,19 @@ using std::string;
 
 // Norbert Runge has noted these words in CP1252 that are mistakenly identified
 // as UTF-8 because of the last pair of characters:
-//  NESTL…Æ               0xC9 0xAE U+00C9 U+00AE   C9AE = U+026E;SMALL LEZH
-//  drauﬂ\u2019           0xDF 0x92 U+00DF U+2019   DF92 = U+07D2;NKO LETTER N
-//  Mutterschoﬂ\u201c     0xDF 0x93 U+00DF U+201C   DF93 = U+07D3;NKO LETTER BA
-//  Schoﬂ\u201c           0xDF 0x93 U+00DF U+201C
-//  weiﬂ\u201c            0xDF 0x93 U+00DF U+00AB
-//  Schnellfuﬂ\u201c      0xDF 0x93 U+00DF U+201C
-//  s¸ﬂ´                  0xDF 0xAB U+00DF U+00AB   DFAB = U+07EB;NKO HIGH TONE
+//  NESTL√â¬Æ               0xC9 0xAE U+00C9 U+00AE   C9AE = U+026E;SMALL LEZH
+//  drau√ü\u2019           0xDF 0x92 U+00DF U+2019   DF92 = U+07D2;NKO LETTER N
+//  Mutterscho√ü\u201c     0xDF 0x93 U+00DF U+201C   DF93 = U+07D3;NKO LETTER BA
+//  Scho√ü\u201c           0xDF 0x93 U+00DF U+201C
+//  wei√ü\u201c            0xDF 0x93 U+00DF U+00AB
+//  Schnellfu√ü\u201c      0xDF 0x93 U+00DF U+201C
+//  s√º√ü¬´                  0xDF 0xAB U+00DF U+00AB   DFAB = U+07EB;NKO HIGH TONE
 // These four byte combinations now explicitly boost Latin1/CP1252.
 
 // And for reference, here are a couple of Portuguese spellings
 // that may be mistaken as double-byte encodings.
-//   informaÁıes          0xE7 0xF5
-//   traiÁ„o              0xE7 0xE3
+//   informa√ß√µes          0xE7 0xF5
+//   trai√ß√£o              0xE7 0xE3
 
 
 static const char* kVersion = "2.2";

@@ -36,6 +36,10 @@ class AdmxWriterUnittest(xml_writer_base_unittest.XmlWriterBaseTest):
       'win_reg_recommended_key_name': 'Software\\Policies\\Test\\Recommended',
       'win_mandatory_category_path': ['test_category'],
       'win_recommended_category_path': ['test_recommended_category'],
+      'win_category_path_strings': {
+        'test_category': 'TestCategory',
+        'test_recommended_category': 'TestCategory - recommended'
+      },
       'admx_namespace': 'ADMXWriter.Test.Namespace',
       'admx_prefix': 'test_prefix',
       'build': 'test_product',

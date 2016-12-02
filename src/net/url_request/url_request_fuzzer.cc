@@ -21,7 +21,7 @@
 // Integration fuzzer for URLRequest's handling of HTTP requests. Can follow
 // redirects, both on the same server (using a new socket or the old one) and
 // across servers.
-// TODO(mmenke): Add support for testing HTTPS, FTP, auth, proxies, uploading,
+// TODO(mmenke): Add support for testing HTTPS, auth, proxies, uploading,
 // cancelation, deferring reads / redirects, using preconnected sockets, SPDY,
 // QUIC, DNS failures (they all currently resolve to localhost), IPv6 DNS
 // results, URLs with IPs instead of hostnames (v4 and v6), etc.

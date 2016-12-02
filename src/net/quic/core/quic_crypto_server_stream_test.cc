@@ -20,8 +20,9 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -478,7 +479,7 @@ TEST_P(QuicCryptoServerStreamTest, NoTokenBindingWithoutClientSupport) {
 
 class FailingProofSource : public ProofSource {
  public:
-  bool GetProof(const IPAddress& server_ip,
+  bool GetProof(const QuicIpAddress& server_ip,
                 const string& hostname,
                 const string& server_config,
                 QuicVersion quic_version,
@@ -489,7 +490,7 @@ class FailingProofSource : public ProofSource {
     return false;
   }
 
-  void GetProof(const IPAddress& server_ip,
+  void GetProof(const QuicIpAddress& server_ip,
                 const string& hostname,
                 const string& server_config,
                 QuicVersion quic_version,

@@ -264,6 +264,14 @@ template("msvc_toolchain") {
 
       command = "$python_path $tool_wrapper_path link-wrapper $env False $link /nologo /OUT:$exename /PDB:$pdbname @$rspfile"
 
+      if (is_official_build) {
+        # On bots, the binary's PDB grow and eventually exceed 4G, causing the
+        # link to fail. As there's no utility to keeping the PDB around
+        # incrementally anyway in this config (because we're doing
+        # non-incremental LTCG builds), delete it before linking.
+        command = "cmd /c $python_path $tool_wrapper_path delete-file $pdbname && $command"
+      }
+
       default_output_extension = ".exe"
       default_output_dir = "{{root_out_dir}}"
       description = "LINK {{output}}"

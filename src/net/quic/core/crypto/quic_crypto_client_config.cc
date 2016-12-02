@@ -4,6 +4,7 @@
 
 #include "net/quic/core/crypto/quic_crypto_client_config.h"
 
+#include <algorithm>
 #include <memory>
 
 #include "base/memory/ptr_util.h"
@@ -87,17 +88,17 @@ bool QuicCryptoClientConfig::CachedState::IsComplete(QuicWallTime now) const {
     return false;
   }
 
-  if (now.IsAfter(expiration_time_)) {
-    UMA_HISTOGRAM_CUSTOM_TIMES(
-        "Net.QuicClientHelloServerConfig.InvalidDuration",
-        base::TimeDelta::FromSeconds(now.ToUNIXSeconds() -
-                                     expiration_time_.ToUNIXSeconds()),
-        base::TimeDelta::FromMinutes(1), base::TimeDelta::FromDays(20), 50);
-    RecordInchoateClientHelloReason(SERVER_CONFIG_EXPIRED);
-    return false;
+  if (now.IsBefore(expiration_time_)) {
+    return true;
   }
 
-  return true;
+  UMA_HISTOGRAM_CUSTOM_TIMES(
+      "Net.QuicClientHelloServerConfig.InvalidDuration",
+      base::TimeDelta::FromSeconds(now.ToUNIXSeconds() -
+                                   expiration_time_.ToUNIXSeconds()),
+      base::TimeDelta::FromMinutes(1), base::TimeDelta::FromDays(20), 50);
+  RecordInchoateClientHelloReason(SERVER_CONFIG_EXPIRED);
+  return false;
 }
 
 bool QuicCryptoClientConfig::CachedState::IsEmpty() const {
@@ -725,7 +726,9 @@ QuicErrorCode QuicCryptoClientConfig::CacheNewServerConfig(
   QuicWallTime expiration_time = QuicWallTime::Zero();
   uint64_t expiry_seconds;
   if (message.GetUint64(kSTTL, &expiry_seconds) == QUIC_NO_ERROR) {
-    expiration_time = now.Add(QuicTime::Delta::FromSeconds(expiry_seconds));
+    // Only cache configs for a maximum of 1 week.
+    expiration_time = now.Add(QuicTime::Delta::FromSeconds(
+        std::min(expiry_seconds, kNumSecondsPerWeek)));
   }
 
   CachedState::ServerConfigState state =

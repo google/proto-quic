@@ -9,6 +9,7 @@
 
 #include "base/bind.h"
 #include "base/callback_forward.h"
+#include "base/compiler_specific.h"
 #include "base/mac/scoped_block.h"
 
 // BindBlock builds a callback from an Objective-C block. Example usages:
@@ -27,6 +28,13 @@
 // seven total arguments, and the bound block itself is used as one of these
 // arguments, so functionally the templates are limited to binding blocks with
 // zero through six arguments.
+//
+// For code compiled with ARC (automatic reference counting), use BindBlockArc.
+// This is because the method has a different implementation (to avoid over-
+// retaining the block) and need to have a different name not to break the ODR
+// (one definition rule). Another subtle difference is that the implementation
+// will call a different version of ScopedBlock constructor thus the linker must
+// not merge both functions.
 
 namespace base {
 
@@ -41,6 +49,8 @@ R RunBlock(base::mac::ScopedBlock<R(^)(Args...)> block, Args... args) {
 
 }  // namespace internal
 
+#if !defined(__has_feature) || !__has_feature(objc_arc)
+
 // Construct a callback from an objective-C block with up to six arguments (see
 // note above).
 template<typename R, typename... Args>
@@ -51,6 +61,18 @@ base::Callback<R(Args...)> BindBlock(R(^block)(Args...)) {
           base::mac::internal::ScopedBlockTraits<R (^)(Args...)>::Retain(
               block)));
 }
+
+#else
+
+// Construct a callback from an objective-C block with up to six arguments (see
+// note above).
+template <typename R, typename... Args>
+base::Callback<R(Args...)> BindBlockArc(R (^block)(Args...)) {
+  return base::Bind(&base::internal::RunBlock<R, Args...>,
+                    base::mac::ScopedBlock<R (^)(Args...)>(block));
+}
+
+#endif
 
 }  // namespace base
 

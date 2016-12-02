@@ -21,7 +21,6 @@ class SequencedTaskRunner;
 
 namespace net {
 
-class DrainableIOBuffer;
 class FileStream;
 class IOBuffer;
 class URLFetcherFileWriter;

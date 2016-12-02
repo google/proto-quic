@@ -30,8 +30,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/ip_address.h"
-#include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/quic_alarm.h"
@@ -44,11 +42,12 @@
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_packet_generator.h"
 #include "net/quic/core/quic_packet_writer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_received_packet_manager.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
 
@@ -179,8 +178,8 @@ class NET_EXPORT_PRIVATE QuicConnectionDebugVisitor
 
   // Called when a packet has been received, but before it is
   // validated or parsed.
-  virtual void OnPacketReceived(const IPEndPoint& self_address,
-                                const IPEndPoint& peer_address,
+  virtual void OnPacketReceived(const QuicSocketAddress& self_address,
+                                const QuicSocketAddress& peer_address,
                                 const QuicEncryptedPacket& packet) {}
 
   // Called when the unauthenticated portion of the header has been parsed.
@@ -309,7 +308,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // |writer| to write packets. |owns_writer| specifies whether the connection
   // takes ownership of |writer|. |helper| must outlive this connection.
   QuicConnection(QuicConnectionId connection_id,
-                 IPEndPoint address,
+                 QuicSocketAddress address,
                  QuicConnectionHelperInterface* helper,
                  QuicAlarmFactory* alarm_factory,
                  QuicPacketWriter* writer,
@@ -388,8 +387,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   // the peer.
   // In a client, the packet may be "stray" and have a different connection ID
   // than that of this connection.
-  virtual void ProcessUdpPacket(const IPEndPoint& self_address,
-                                const IPEndPoint& peer_address,
+  virtual void ProcessUdpPacket(const QuicSocketAddress& self_address,
+                                const QuicSocketAddress& peer_address,
                                 const QuicReceivedPacket& packet);
 
   // QuicBlockedWriterInterface
@@ -419,7 +418,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   }
 
   // Set self address.
-  void SetSelfAddress(IPEndPoint address) { self_address_ = address; }
+  void SetSelfAddress(QuicSocketAddress address) { self_address_ = address; }
 
   // The version of the protocol this connection is using.
   QuicVersion version() const { return framer_.version(); }
@@ -494,8 +493,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   void set_creator_debug_delegate(QuicPacketCreator::DebugDelegate* visitor) {
     packet_generator_.set_debug_delegate(visitor);
   }
-  const IPEndPoint& self_address() const { return self_address_; }
-  const IPEndPoint& peer_address() const { return peer_address_; }
+  const QuicSocketAddress& self_address() const { return self_address_; }
+  const QuicSocketAddress& peer_address() const { return peer_address_; }
   QuicConnectionId connection_id() const { return connection_id_; }
   const QuicClock* clock() const { return clock_; }
   QuicRandom* random_generator() const { return random_generator_; }
@@ -692,7 +691,7 @@ class NET_EXPORT_PRIVATE QuicConnection
 
   EncryptionLevel encryption_level() const { return encryption_level_; }
 
-  const IPEndPoint& last_packet_source_address() const {
+  const QuicSocketAddress& last_packet_source_address() const {
     return last_packet_source_address_;
   }
 
@@ -877,8 +876,8 @@ class NET_EXPORT_PRIVATE QuicConnection
   const QuicConnectionId connection_id_;
   // Address on the last successfully processed packet received from the
   // client.
-  IPEndPoint self_address_;
-  IPEndPoint peer_address_;
+  QuicSocketAddress self_address_;
+  QuicSocketAddress peer_address_;
 
   // Records change type when the peer initiates migration to a new peer
   // address. Reset to NO_CHANGE after peer migration is validated.
@@ -1059,10 +1058,10 @@ class NET_EXPORT_PRIVATE QuicConnection
   bool connected_;
 
   // Destination address of the last received packet.
-  IPEndPoint last_packet_destination_address_;
+  QuicSocketAddress last_packet_destination_address_;
 
   // Source address of the last received packet.
-  IPEndPoint last_packet_source_address_;
+  QuicSocketAddress last_packet_source_address_;
 
   // Set to false if the connection should not send truncated connection IDs to
   // the peer, even if the peer supports it.

@@ -24,12 +24,6 @@ class SpdyNoOpVisitor : public SpdyFramerVisitorInterface,
 
   // SpdyFramerVisitorInterface methods:
   void OnError(SpdyFramer* framer) override {}
-  void OnSynStream(SpdyStreamId stream_id,
-                   SpdyStreamId associated_stream_id,
-                   SpdyPriority priority,
-                   bool fin,
-                   bool unidirectional) override {}
-  void OnSynReply(SpdyStreamId stream_id, bool fin) override {}
   net::SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
   void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override {}

@@ -34,6 +34,7 @@ const char* const kDumpProviderWhitelist[] = {
     "Sql",
     "V8Isolate",
     "WinHeap",
+    "SyncDirectory",
     nullptr  // End of list marker.
 };
 
@@ -91,6 +92,8 @@ const char* const kAllocatorDumpNameWhitelist[] = {
     "v8/isolate_0x?/zapped_for_debug",
     "winheap",
     "winheap/allocated_objects",
+    "sync/0x?/kernel",
+    "sync/0x?/store",
     nullptr  // End of list marker.
 };
 

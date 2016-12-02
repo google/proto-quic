@@ -264,7 +264,7 @@ TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunLongTaskBeforeShutdown) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
   auto blocked_task = base::MakeUnique<Task>(
       FROM_HERE, Bind(&WaitableEvent::Wait, Unretained(&event)),
-      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+      TaskTraits().WithWait().WithShutdownBehavior(GetParam()), TimeDelta());
 
   // Inform |task_tracker_| that |blocked_task| will be posted.
   EXPECT_TRUE(tracker_.WillPostTask(blocked_task.get()));
@@ -802,6 +802,55 @@ TEST_F(TaskSchedulerTaskTrackerTest, LoadWillPostAndRunDuringShutdown) {
                                SequenceToken::Create()));
   EXPECT_EQ(kLoadTestNumIterations + 1, NumTasksExecuted());
   WAIT_FOR_ASYNC_SHUTDOWN_COMPLETED();
+}
+
+namespace {
+
+class WaitAllowedTestThread : public SimpleThread {
+ public:
+  WaitAllowedTestThread() : SimpleThread("WaitAllowedTestThread") {}
+
+ private:
+  void Run() override {
+    TaskTracker tracker;
+
+    // Waiting is allowed by default. Expect TaskTracker to disallow it before
+    // running a task without the WithWait() trait.
+    ThreadRestrictions::AssertWaitAllowed();
+    auto task_without_wait = MakeUnique<Task>(
+        FROM_HERE, Bind([]() {
+          EXPECT_DCHECK_DEATH({ ThreadRestrictions::AssertWaitAllowed(); });
+        }),
+        TaskTraits(), TimeDelta());
+    EXPECT_TRUE(tracker.WillPostTask(task_without_wait.get()));
+    tracker.RunTask(std::move(task_without_wait), SequenceToken::Create());
+
+    // Disallow waiting. Expect TaskTracker to allow it before running a task
+    // with the WithWait() trait.
+    ThreadRestrictions::DisallowWaiting();
+    auto task_with_wait =
+        MakeUnique<Task>(FROM_HERE, Bind([]() {
+                           // Shouldn't fail.
+                           ThreadRestrictions::AssertWaitAllowed();
+                         }),
+                         TaskTraits().WithWait(), TimeDelta());
+    EXPECT_TRUE(tracker.WillPostTask(task_with_wait.get()));
+    tracker.RunTask(std::move(task_with_wait), SequenceToken::Create());
+  }
+
+  DISALLOW_COPY_AND_ASSIGN(WaitAllowedTestThread);
+};
+
+}  // namespace
+
+// Verify that AssertIOAllowed() succeeds for a WithWait() task.
+TEST(TaskSchedulerTaskTrackerWaitAllowedTest, WaitAllowed) {
+  // Run the test on the separate thread since it is not possible to reset the
+  // "wait allowed" bit of a thread without being a friend of
+  // ThreadRestrictions.
+  WaitAllowedTestThread wait_allowed_test_thread;
+  wait_allowed_test_thread.Start();
+  wait_allowed_test_thread.Join();
 }
 
 }  // namespace internal

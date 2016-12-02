@@ -1754,48 +1754,6 @@ EVENT_TYPE(QUIC_SESSION_RST_STREAM_FRAME_RECEIVED)
 //   }
 EVENT_TYPE(QUIC_SESSION_RST_STREAM_FRAME_SENT)
 
-// Session received a CONGESTION_FEEDBACK frame.
-//   {
-//     "type": <The specific type of feedback being provided>,
-//     Other per-feedback type details:
-//
-//     for InterArrival:
-//     "accumulated_number_of_lost_packets": <Total number of lost packets
-//                                            over the life of this session>,
-//     "received_packets": <List of strings of the form:
-//                          <sequence_number>@<receive_time_in_ms>>,
-//
-//     for FixRate:
-//     "bitrate_in_bytes_per_second": <The configured bytes per second>,
-//
-//     for TCP:
-//     "accumulated_number_of_lost_packets": <Total number of lost packets
-//                                            over the life of this session>,
-//     "receive_window": <Number of bytes in the receive window>,
-//   }
-EVENT_TYPE(QUIC_SESSION_CONGESTION_FEEDBACK_FRAME_RECEIVED)
-
-// Session received a CONGESTION_FEEDBACK frame.
-//   {
-//     "type": <The specific type of feedback being provided>,
-//     Other per-feedback type details:
-//
-//     for InterArrival:
-//     "accumulated_number_of_lost_packets": <Total number of lost packets
-//                                            over the life of this session>,
-//     "received_packets": <List of strings of the form:
-//                          <sequence_number>@<receive_time_in_ms>>,
-//
-//     for FixRate:
-//     "bitrate_in_bytes_per_second": <The configured bytes per second>,
-//
-//     for TCP:
-//     "accumulated_number_of_lost_packets": <Total number of lost packets
-//                                            over the life of this session>,
-//     "receive_window": <Number of bytes in the receive window>,
-//   }
-EVENT_TYPE(QUIC_SESSION_CONGESTION_FEEDBACK_FRAME_SENT)
-
 // Session received a CONNECTION_CLOSE frame.
 //   {
 //     "quic_error": <QuicErrorCode in the frame>,

@@ -20,9 +20,7 @@
 namespace net {
 
 class BidirectionalStreamImpl;
-class ClientSocketHandle;
 class HttpStream;
-class SpdySession;
 
 class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
  public:

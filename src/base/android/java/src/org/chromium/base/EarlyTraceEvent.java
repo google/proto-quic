@@ -164,7 +164,7 @@ public class EarlyTraceEvent {
     }
 
     private static void dumpEvents(List<Event> events) {
-        long nativeNowUs = nativeGetTimeTicksNowUs();
+        long nativeNowUs = TimeUtils.nativeGetTimeTicksNowUs();
         long javaNowUs = SystemClock.elapsedRealtime() * 1000;
         long offsetMs = (nativeNowUs - javaNowUs) / 1000;
         for (Event event : events) {
@@ -173,7 +173,6 @@ public class EarlyTraceEvent {
         }
     }
 
-    private static native long nativeGetTimeTicksNowUs();
     private static native void nativeRecordEarlyEvent(
             String name, long beginTimeMs, long endTimeMs, int threadId);
 }

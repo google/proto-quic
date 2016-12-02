@@ -4,13 +4,14 @@
 
 import("//build/config/android/rules.gni")
 
+assert(current_toolchain == default_toolchain)
+
 java_binary("java_assertion_enabler") {
-  testonly = true
   java_files =
       [ "java/org/chromium/javaassertionenabler/AssertionEnabler.java" ]
   main_class = "org.chromium.javaassertionenabler.AssertionEnabler"
   deps = [
-    "//third_party/guava:guava_java",
     "//third_party/ow2_asm:asm_java",
   ]
+  wrapper_script_name = "helper/java_assertion_enabler"
 }

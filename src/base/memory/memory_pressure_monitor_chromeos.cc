@@ -134,7 +134,7 @@ void MemoryPressureMonitor::ScheduleEarlyCheck() {
 }
 
 MemoryPressureListener::MemoryPressureLevel
-MemoryPressureMonitor::GetCurrentPressureLevel() const {
+MemoryPressureMonitor::GetCurrentPressureLevel() {
   return current_memory_pressure_level_;
 }
 

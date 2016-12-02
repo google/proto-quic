@@ -37,9 +37,26 @@ bool FieldTrialParamAssociator::AssociateFieldTrialParams(
 bool FieldTrialParamAssociator::GetFieldTrialParams(
     const std::string& trial_name,
     FieldTrialParams* params) {
+  FieldTrial* field_trial = FieldTrialList::Find(trial_name);
+  if (!field_trial)
+    return false;
+
+  // First try the local map, falling back to getting it from shared memory.
+  if (GetFieldTrialParamsWithoutFallback(trial_name, field_trial->group_name(),
+                                         params)) {
+    return true;
+  }
+
+  // TODO(lawrencewu): add the params to field_trial_params_ for next time.
+  return FieldTrialList::GetParamsFromSharedMemory(field_trial, params);
+}
+
+bool FieldTrialParamAssociator::GetFieldTrialParamsWithoutFallback(
+    const std::string& trial_name,
+    const std::string& group_name,
+    FieldTrialParams* params) {
   AutoLock scoped_lock(lock_);
 
-  const std::string group_name = FieldTrialList::FindFullName(trial_name);
   const FieldTrialKey key(trial_name, group_name);
   if (!ContainsKey(field_trial_params_, key))
     return false;
@@ -49,6 +66,12 @@ bool FieldTrialParamAssociator::GetFieldTrialParams(
 }
 
 void FieldTrialParamAssociator::ClearAllParamsForTesting() {
+  AutoLock scoped_lock(lock_);
+  field_trial_params_.clear();
+  FieldTrialList::ClearParamsFromSharedMemoryForTesting();
+}
+
+void FieldTrialParamAssociator::ClearAllCachedParamsForTesting() {
   AutoLock scoped_lock(lock_);
   field_trial_params_.clear();
 }

@@ -4,7 +4,10 @@
 
 #include "net/quic/core/quic_headers_stream.h"
 
+#include <ostream>
 #include <string>
+#include <tuple>
+#include <utility>
 
 #include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_bug_tracker.h"
@@ -23,9 +26,7 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
-using std::ostream;
 using std::string;
-using std::vector;
 using testing::ElementsAre;
 using testing::_;
 using testing::AtLeast;
@@ -47,7 +48,7 @@ namespace test {
 
 class MockHpackDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
  public:
-  explicit MockHpackDebugVisitor() : HpackDebugVisitor() {}
+  MockHpackDebugVisitor() : HpackDebugVisitor() {}
 
   MOCK_METHOD1(OnUseEntry, void(QuicTime::Delta elapsed));
 
@@ -76,13 +77,6 @@ class MockVisitor : public SpdyFramerVisitorInterface {
                bool(SpdyStreamId stream_id,
                     const char* header_data,
                     size_t len));
-  MOCK_METHOD5(OnSynStream,
-               void(SpdyStreamId stream_id,
-                    SpdyStreamId associated_stream_id,
-                    SpdyPriority priority,
-                    bool fin,
-                    bool unidirectional));
-  MOCK_METHOD2(OnSynReply, void(SpdyStreamId stream_id, bool fin));
   MOCK_METHOD2(OnRstStream,
                void(SpdyStreamId stream_id, SpdyRstStreamStatus status));
   MOCK_METHOD1(OnSettings, void(bool clear_persisted));
@@ -148,7 +142,7 @@ enum Http2DecoderChoice {
   HTTP2_DECODER_NESTED_SPDY,
   HTTP2_DECODER_NEW
 };
-ostream& operator<<(ostream& os, Http2DecoderChoice v) {
+std::ostream& operator<<(std::ostream& os, Http2DecoderChoice v) {
   switch (v) {
     case HTTP2_DECODER_SPDY:
       return os << "SPDY";
@@ -161,7 +155,7 @@ ostream& operator<<(ostream& os, Http2DecoderChoice v) {
 }
 
 enum HpackDecoderChoice { HPACK_DECODER_SPDY, HPACK_DECODER_NEW };
-ostream& operator<<(ostream& os, HpackDecoderChoice v) {
+std::ostream& operator<<(std::ostream& os, HpackDecoderChoice v) {
   switch (v) {
     case HPACK_DECODER_SPDY:
       return os << "SPDY";
@@ -242,7 +236,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
     headers_[":version"] = "HTTP/1.1";
     headers_[":status"] = "200 Ok";
     headers_["content-length"] = "11";
-    framer_ = std::unique_ptr<SpdyFramer>(new SpdyFramer(HTTP2));
+    framer_ = std::unique_ptr<SpdyFramer>(new SpdyFramer);
     framer_->set_visitor(&visitor_);
     EXPECT_EQ(version(), session_.connection()->version());
     EXPECT_TRUE(headers_stream_ != nullptr);
@@ -257,6 +251,13 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
       saved_data_.append(static_cast<char*>(iov[i].iov_base), iov[i].iov_len);
       consumed += iov[i].iov_len;
     }
+    return QuicConsumedData(consumed, false);
+  }
+
+  QuicConsumedData SaveIovShort(const QuicIOVector& data) {
+    const iovec* iov = data.iov;
+    int consumed = 1;
+    saved_data_.append(static_cast<char*>(iov[0].iov_base), consumed);
     return QuicConsumedData(consumed, false);
   }
 
@@ -307,20 +308,20 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
     headers_handler_->OnHeaderBlockEnd(size);
   }
 
-  void WriteHeadersAndExpectSynStream(QuicStreamId stream_id,
-                                      bool fin,
-                                      SpdyPriority priority) {
-    WriteHeadersAndCheckData(stream_id, fin, priority, SYN_STREAM);
+  void WriteAndExpectRequestHeaders(QuicStreamId stream_id,
+                                    bool fin,
+                                    SpdyPriority priority) {
+    WriteHeadersAndCheckData(stream_id, fin, priority, true /*is_request*/);
   }
 
-  void WriteHeadersAndExpectSynReply(QuicStreamId stream_id, bool fin) {
-    WriteHeadersAndCheckData(stream_id, fin, 0, SYN_REPLY);
+  void WriteAndExpectResponseHeaders(QuicStreamId stream_id, bool fin) {
+    WriteHeadersAndCheckData(stream_id, fin, 0, false /*is_request*/);
   }
 
   void WriteHeadersAndCheckData(QuicStreamId stream_id,
                                 bool fin,
                                 SpdyPriority priority,
-                                SpdyFrameType type) {
+                                bool is_request) {
     // Write the headers and capture the outgoing data
     EXPECT_CALL(session_, WritevData(headers_stream_, kHeadersStreamId, _, _,
                                      false, nullptr))
@@ -329,7 +330,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
                                   nullptr);
 
     // Parse the outgoing data and check that it matches was was written.
-    if (type == SYN_STREAM) {
+    if (is_request) {
       EXPECT_CALL(visitor_,
                   OnHeaders(stream_id, kHasPriority,
                             Spdy3PriorityToHttp2Weight(priority),
@@ -424,11 +425,11 @@ TEST_P(QuicHeadersStreamTest, WriteHeaders) {
        stream_id < kClientDataStreamId3; stream_id += 2) {
     for (bool fin : kFins) {
       if (perspective() == Perspective::IS_SERVER) {
-        WriteHeadersAndExpectSynReply(stream_id, fin);
+        WriteAndExpectResponseHeaders(stream_id, fin);
       } else {
         for (SpdyPriority priority = 0; priority < 7; ++priority) {
           // TODO(rch): implement priorities correctly.
-          WriteHeadersAndExpectSynStream(stream_id, fin, 0);
+          WriteAndExpectRequestHeaders(stream_id, fin, 0);
         }
       }
     }
@@ -925,12 +926,12 @@ TEST_P(QuicHeadersStreamTest, HpackEncoderDebugVisitor) {
        stream_id < kClientDataStreamId3; stream_id += 2) {
     for (bool fin : {false, true}) {
       if (perspective() == Perspective::IS_SERVER) {
-        WriteHeadersAndExpectSynReply(stream_id, fin);
+        WriteAndExpectResponseHeaders(stream_id, fin);
         connection_->AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
       } else {
         for (SpdyPriority priority = 0; priority < 7; ++priority) {
           // TODO(rch): implement priorities correctly.
-          WriteHeadersAndExpectSynStream(stream_id, fin, 0);
+          WriteAndExpectRequestHeaders(stream_id, fin, 0);
           connection_->AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
         }
       }
@@ -942,7 +943,6 @@ TEST_P(QuicHeadersStreamTest, WritevStreamData) {
   QuicStreamId id = kClientDataStreamId1;
   QuicStreamOffset offset = 0;
   struct iovec iov;
-  string data;
 
   // This test will issue a write that will require fragmenting into
   // multiple HTTP/2 DATA frames.
@@ -951,7 +951,7 @@ TEST_P(QuicHeadersStreamTest, WritevStreamData) {
       kSpdyInitialFrameSizeLimit * kMinDataFrames + 1024;
   // Set headers stream send window large enough for data written below.
   headers_stream_->flow_controller()->UpdateSendWindowOffset(data_len * 2 * 4);
-  test::GenerateBody(&data, data_len);
+  string data(data_len, 'a');
 
   for (bool fin : {true, false}) {
     for (bool use_ack_listener : {true, false}) {
@@ -991,6 +991,64 @@ TEST_P(QuicHeadersStreamTest, WritevStreamData) {
       saved_payloads_.clear();
     }
   }
+}
+
+TEST_P(QuicHeadersStreamTest, WritevStreamDataFinOnly) {
+  struct iovec iov;
+  string data;
+
+  EXPECT_CALL(session_,
+              WritevData(headers_stream_, kHeadersStreamId, _, _, false, _))
+      .WillOnce(WithArgs<2, 5>(
+          Invoke(this, &QuicHeadersStreamTest::SaveIovAndNotifyAckListener)));
+
+  QuicConsumedData consumed_data = headers_stream_->WritevStreamData(
+      kClientDataStreamId1, MakeIOVector(data, &iov), 0, true, nullptr);
+
+  EXPECT_EQ(consumed_data.bytes_consumed, 0u);
+  EXPECT_EQ(consumed_data.fin_consumed, true);
+}
+
+TEST_P(QuicHeadersStreamTest, WritevStreamDataSendBlocked) {
+  QuicStreamId id = kClientDataStreamId1;
+  QuicStreamOffset offset = 0;
+  struct iovec iov;
+
+  // This test will issue a write that will require fragmenting into
+  // multiple HTTP/2 DATA frames.  It will ensure that only 1 frame
+  // will go out in the case that the underlying session becomes write
+  // blocked.  Buffering is required to preserve framing, but the
+  // amount of buffering is limited to one HTTP/2 data frame.
+  const int kMinDataFrames = 4;
+  const size_t data_len = kSpdyInitialFrameSizeLimit * kMinDataFrames + 1024;
+  // Set headers stream send window large enough for data written below.
+  headers_stream_->flow_controller()->UpdateSendWindowOffset(data_len * 2 * 4);
+  string data(data_len, 'a');
+
+  bool fin = true;
+  // So force the underlying |WritevData| to consume only 1 byte.
+  // In that case, |WritevStreamData| should consume just one
+  // HTTP/2 data frame's worth of data.
+  EXPECT_CALL(session_,
+              WritevData(headers_stream_, kHeadersStreamId, _, _, false, _))
+      .WillOnce(
+          WithArgs<2>(Invoke(this, &QuicHeadersStreamTest::SaveIovShort)));
+
+  QuicConsumedData consumed_data = headers_stream_->WritevStreamData(
+      id, MakeIOVector(data, &iov), offset, fin, nullptr);
+
+  // bytes_consumed is max HTTP/2 data frame size minus the HTTP/2
+  // data header size.
+  EXPECT_EQ(consumed_data.bytes_consumed,
+            kSpdyInitialFrameSizeLimit - SpdyConstants::kDataFrameMinimumSize);
+  EXPECT_EQ(consumed_data.fin_consumed, false);
+
+  // If session already blocked, then bytes_consumed should be zero.
+  consumed_data = headers_stream_->WritevStreamData(
+      id, MakeIOVector(data, &iov), offset, fin, nullptr);
+
+  EXPECT_EQ(consumed_data.bytes_consumed, 0u);
+  EXPECT_EQ(consumed_data.fin_consumed, false);
 }
 
 }  // namespace

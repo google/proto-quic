@@ -4,8 +4,6 @@
 
 package org.chromium.javaassertionenabler;
 
-import com.google.common.io.ByteStreams;
-
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -14,21 +12,30 @@ import org.objectweb.asm.Opcodes;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 /**
  * An application that enables Java ASSERT statements by modifying Java bytecode. It takes in a JAR
  * file, modifies bytecode of classes that use ASSERT, and outputs the bytecode to a new JAR file.
  */
 class AssertionEnabler {
+    static final String ASSERTION_DISABLED_NAME = "$assertionsDisabled";
     static final String CLASS_FILE_SUFFIX = ".class";
     static final String STATIC_INITIALIZER_NAME = "<clinit>";
-    static final String ASSERTION_DISABLED_NAME = "$assertionsDisabled";
+    static final String TEMPORARY_FILE_SUFFIX = ".temp";
+
+    static final int BUFFER_SIZE = 16384;
 
     static class AssertionEnablerVisitor extends ClassVisitor {
         AssertionEnablerVisitor(ClassWriter writer) {
@@ -68,32 +75,52 @@ class AssertionEnabler {
         }
     }
 
-    static void enableAssertionInJar(String inputJarPath, String outputJarPath) {
-        try (JarOutputStream outputStream = new JarOutputStream(
-                new BufferedOutputStream(new FileOutputStream(outputJarPath)))) {
-            JarFile jarFile = new JarFile(inputJarPath);
-            for (JarEntry entry : Collections.list(jarFile.entries())) {
-                try (BufferedInputStream inputStream = new BufferedInputStream(
-                        jarFile.getInputStream(entry))) {
-                    byte[] byteCode = ByteStreams.toByteArray(inputStream);
+    static byte[] readAllBytes(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int numRead = 0;
+        byte[] data = new byte[BUFFER_SIZE];
+        while ((numRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, numRead);
+        }
 
-                    if (entry.isDirectory() || !entry.getName().endsWith(CLASS_FILE_SUFFIX)) {
-                        outputStream.putNextEntry(entry);
-                        outputStream.write(byteCode);
-                        outputStream.closeEntry();
-                        continue;
-                    }
-                    ClassReader reader = new ClassReader(byteCode);
-                    ClassWriter writer = new ClassWriter(reader, 0);
-                    reader.accept(new AssertionEnablerVisitor(writer), 0);
-                    byte[] patchedByteCode = writer.toByteArray();
-                    outputStream.putNextEntry(new JarEntry(entry.getName()));
-                    outputStream.write(patchedByteCode);
-                    outputStream.closeEntry();
+        return buffer.toByteArray();
+    }
+
+    static void enableAssertionInJar(String inputJarPath, String outputJarPath) {
+        String tempJarPath = outputJarPath + TEMPORARY_FILE_SUFFIX;
+        try (ZipInputStream inputStream = new ZipInputStream(
+                    new BufferedInputStream(new FileInputStream(inputJarPath)));
+             ZipOutputStream tempStream = new ZipOutputStream(
+                    new BufferedOutputStream(new FileOutputStream(tempJarPath)))) {
+            ZipEntry entry = null;
+
+            while ((entry = inputStream.getNextEntry()) != null) {
+                byte[] byteCode = readAllBytes(inputStream);
+
+                if (entry.isDirectory() || !entry.getName().endsWith(CLASS_FILE_SUFFIX)) {
+                    tempStream.putNextEntry(entry);
+                    tempStream.write(byteCode);
+                    tempStream.closeEntry();
+                    continue;
                 }
+                ClassReader reader = new ClassReader(byteCode);
+                ClassWriter writer = new ClassWriter(reader, 0);
+                reader.accept(new AssertionEnablerVisitor(writer), 0);
+                byte[] patchedByteCode = writer.toByteArray();
+                tempStream.putNextEntry(new ZipEntry(entry.getName()));
+                tempStream.write(patchedByteCode);
+                tempStream.closeEntry();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+
+        try {
+            Path src = Paths.get(tempJarPath);
+            Path dest = Paths.get(outputJarPath);
+            Files.move(src, dest, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ioException) {
+            throw new RuntimeException(ioException);
         }
     }
 

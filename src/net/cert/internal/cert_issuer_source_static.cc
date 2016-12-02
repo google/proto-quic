@@ -24,7 +24,6 @@ void CertIssuerSourceStatic::SyncGetIssuersOf(const ParsedCertificate* cert,
 
 void CertIssuerSourceStatic::AsyncGetIssuersOf(
     const ParsedCertificate* cert,
-    const IssuerCallback& issuers_callback,
     std::unique_ptr<Request>* out_req) {
   // CertIssuerSourceStatic never returns asynchronous results.
   out_req->reset();

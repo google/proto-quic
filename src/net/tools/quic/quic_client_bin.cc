@@ -47,8 +47,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
-#include "net/base/ip_address.h"
-#include "net/base/ip_endpoint.h"
+#include "base/strings/stringprintf.h"
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
 #include "net/cert/cert_verifier.h"
@@ -56,9 +55,10 @@
 #include "net/http/transport_security_state.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client.h"
@@ -222,7 +222,7 @@ int main(int argc, char* argv[]) {
   base::MessageLoopForIO message_loop;
 
   // Determine IP address to connect to from supplied hostname.
-  net::IPAddress ip_addr;
+  net::QuicIpAddress ip_addr;
 
   GURL url(urls[0]);
   string host = FLAGS_host;
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
   if (port == 0) {
     port = url.EffectiveIntPort();
   }
-  if (!ip_addr.AssignFromIPLiteral(host)) {
+  if (!ip_addr.FromString(host)) {
     net::AddressList addresses;
     int rv = net::SynchronousHostResolver::Resolve(host, &addresses);
     if (rv != net::OK) {
@@ -241,10 +241,12 @@ int main(int argc, char* argv[]) {
                  << "' : " << net::ErrorToShortString(rv);
       return 1;
     }
-    ip_addr = addresses[0].address();
+    ip_addr =
+        net::QuicIpAddress(net::QuicIpAddressImpl(addresses[0].address()));
   }
 
-  string host_port = net::IPAddressToStringWithPort(ip_addr, port);
+  string host_port =
+      base::StringPrintf("%s:%d", ip_addr.ToString().c_str(), port);
   VLOG(1) << "Resolved " << host << " to " << host_port << endl;
 
   // Build the client, and try to connect.
@@ -271,8 +273,8 @@ int main(int argc, char* argv[]) {
         cert_verifier.get(), ct_policy_enforcer.get(),
         transport_security_state.get(), ct_verifier.get()));
   }
-  net::QuicClient client(net::IPEndPoint(ip_addr, port), server_id, versions,
-                         &epoll_server, std::move(proof_verifier));
+  net::QuicClient client(net::QuicSocketAddress(ip_addr, port), server_id,
+                         versions, &epoll_server, std::move(proof_verifier));
   client.set_initial_max_packet_length(
       FLAGS_initial_mtu != 0 ? FLAGS_initial_mtu : net::kDefaultMaxPacketSize);
   if (!client.Initialize()) {

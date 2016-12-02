@@ -11,7 +11,7 @@
 namespace net {
 namespace test {
 
-ServerThread::ServerThread(QuicServer* server, const IPEndPoint& address)
+ServerThread::ServerThread(QuicServer* server, const QuicSocketAddress& address)
     : SimpleThread("server_thread"),
       confirmed_(base::WaitableEvent::ResetPolicy::MANUAL,
                  base::WaitableEvent::InitialState::NOT_SIGNALED),

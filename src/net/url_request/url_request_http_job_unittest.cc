@@ -161,8 +161,7 @@ TEST_F(URLRequestHttpJobSetUpSourceTest, UnknownEncoding) {
 }
 
 // Received a malformed SDCH encoded response when there is no SdchManager.
-TEST_F(URLRequestHttpJobSetUpSourceTest,
-       SdchNotAdvertisedGotMalformedSdchResponse) {
+TEST_F(URLRequestHttpJobSetUpSourceTest, SdchNotAdvertisedGotSdchResponse) {
   MockWrite writes[] = {MockWrite(kSimpleGetMockWrite)};
   MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
                                "Content-Encoding: sdch\r\n"
@@ -184,7 +183,9 @@ TEST_F(URLRequestHttpJobSetUpSourceTest,
   request->Start();
 
   base::RunLoop().Run();
-  EXPECT_EQ(ERR_CONTENT_DECODING_INIT_FAILED, delegate_.request_status());
+  // Pass through the raw response the same way as if received unknown encoding.
+  EXPECT_EQ(OK, delegate_.request_status());
+  EXPECT_EQ("Test Content", delegate_.data_received());
 }
 
 class URLRequestHttpJobTest : public ::testing::Test {
@@ -775,6 +776,44 @@ class URLRequestHttpJobWithSdchSupportTest : public ::testing::Test {
   MockClientSocketFactory socket_factory_;
   TestURLRequestContext context_;
 };
+
+// Received a malformed SDCH encoded response that has no valid dictionary id.
+TEST_F(URLRequestHttpJobWithSdchSupportTest,
+       SdchAdvertisedGotMalformedSdchResponse) {
+  MockWrite writes[] = {
+      MockWrite("GET / HTTP/1.1\r\n"
+                "Host: www.example.com\r\n"
+                "Connection: keep-alive\r\n"
+                "User-Agent:\r\n"
+                "Accept-Encoding: gzip, deflate, sdch\r\n"
+                "Accept-Language: en-us,fr\r\n\r\n")};
+  MockRead reads[] = {MockRead("HTTP/1.1 200 OK\r\n"
+                               "Content-Encoding: sdch\r\n"
+                               "Content-Length: 12\r\n\r\n"),
+                      MockRead("Test Content")};
+
+  StaticSocketDataProvider socket_data(reads, arraysize(reads), writes,
+                                       arraysize(writes));
+  socket_factory_.AddSocketDataProvider(&socket_data);
+
+  MockSdchObserver sdch_observer;
+  SdchManager sdch_manager;
+  sdch_manager.AddObserver(&sdch_observer);
+  context_.set_sdch_manager(&sdch_manager);
+  TestDelegate delegate;
+  std::unique_ptr<URLRequest> request = context_.CreateRequest(
+      GURL("http://www.example.com"), DEFAULT_PRIORITY, &delegate);
+  request->Start();
+
+  base::RunLoop().Run();
+  // SdchPolicyDelegate::OnDictionaryIdError() detects that the response is
+  // malformed (missing dictionary), and will issue a pass-through of the raw
+  // response.
+  EXPECT_EQ(OK, delegate.request_status());
+  EXPECT_EQ("Test Content", delegate.data_received());
+  // Cleanup manager.
+  sdch_manager.RemoveObserver(&sdch_observer);
+}
 
 TEST_F(URLRequestHttpJobWithSdchSupportTest, GetDictionary) {
   MockWrite writes[] = {

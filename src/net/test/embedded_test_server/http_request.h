@@ -53,10 +53,10 @@ struct HttpRequest {
   ~HttpRequest();
 
   // Returns a GURL as a convenience to extract the path and query strings.
-  // TODO(svaldez): Use provided URL if available.
   GURL GetURL() const;
 
   std::string relative_url;  // Starts with '/'. Example: "/test?query=foo"
+  GURL base_url;
   HttpMethod method;
   std::string method_string;
   std::string all_headers;

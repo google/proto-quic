@@ -31,6 +31,7 @@
 #include "base/test/multiprocess_test.h"
 #include "base/test/test_switches.h"
 #include "base/test/test_timeouts.h"
+#include "base/threading/sequenced_worker_pool.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -379,6 +380,11 @@ void TestSuite::Initialize() {
     i18n::SetICUDefaultLocale("en_US");
 #endif
 #endif
+
+  // Enable SequencedWorkerPool in tests.
+  // TODO(fdoray): Remove this once the SequencedWorkerPool to TaskScheduler
+  // redirection experiment concludes https://crbug.com/622400.
+  SequencedWorkerPool::EnableForProcess();
 
   CatchMaybeTests();
   ResetCommandLine();

@@ -24,6 +24,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/stl_util.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/spdy/write_scheduler.h"

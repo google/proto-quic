@@ -412,6 +412,8 @@ SSL *SSL_new(SSL_CTX *ctx) {
   assert(ssl->sid_ctx_length <= sizeof ssl->sid_ctx);
   memcpy(&ssl->sid_ctx, &ctx->sid_ctx, sizeof(ssl->sid_ctx));
   ssl->verify_callback = ctx->default_verify_callback;
+  ssl->retain_only_sha256_of_client_certs =
+      ctx->retain_only_sha256_of_client_certs;
 
   ssl->param = X509_VERIFY_PARAM_new();
   if (!ssl->param) {
@@ -1706,6 +1708,15 @@ const char *SSL_get_servername(const SSL *ssl, const int type) {
     return ssl->tlsext_hostname;
   }
 
+  /* During the handshake, report the handshake value. */
+  if (ssl->s3->hs != NULL) {
+    return ssl->s3->hs->hostname;
+  }
+
+  /* SSL_get_servername may also be called after the handshake to look up the
+   * SNI value.
+   *
+   * TODO(davidben): This is almost unused. Can we remove it? */
   SSL_SESSION *session = SSL_get_session(ssl);
   if (session == NULL) {
     return NULL;
@@ -1768,16 +1779,15 @@ void SSL_get0_ocsp_response(const SSL *ssl, const uint8_t **out,
 
 int SSL_CTX_set_signed_cert_timestamp_list(SSL_CTX *ctx, const uint8_t *list,
                                            size_t list_len) {
-  OPENSSL_free(ctx->signed_cert_timestamp_list);
-  ctx->signed_cert_timestamp_list_length = 0;
-
-  ctx->signed_cert_timestamp_list = BUF_memdup(list, list_len);
-  if (ctx->signed_cert_timestamp_list == NULL) {
+  CBS sct_list;
+  CBS_init(&sct_list, list, list_len);
+  if (!ssl_is_sct_list_valid(&sct_list)) {
+    OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_SCT_LIST);
     return 0;
   }
-  ctx->signed_cert_timestamp_list_length = list_len;
 
-  return 1;
+  return CBS_stow(&sct_list, &ctx->signed_cert_timestamp_list,
+                  &ctx->signed_cert_timestamp_list_length);
 }
 
 int SSL_CTX_set_ocsp_response(SSL_CTX *ctx, const uint8_t *response,
@@ -2897,6 +2907,10 @@ const SSL_CIPHER *SSL_get_pending_cipher(const SSL *ssl) {
     return NULL;
   }
   return ssl->s3->tmp.new_cipher;
+}
+
+void SSL_set_retain_only_sha256_of_client_certs(SSL *ssl, int enabled) {
+  ssl->retain_only_sha256_of_client_certs = !!enabled;
 }
 
 void SSL_CTX_set_retain_only_sha256_of_client_certs(SSL_CTX *ctx, int enabled) {

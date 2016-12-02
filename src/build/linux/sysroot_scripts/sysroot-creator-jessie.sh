@@ -32,8 +32,12 @@ DEBIAN_PACKAGES="\
   krb5-multidev
   libasound2
   libasound2-dev
+  libatk-bridge2.0-0
+  libatk-bridge2.0-dev
   libatk1.0-0
   libatk1.0-dev
+  libatspi2.0-0
+  libatspi2.0-dev
   libattr1
   libavahi-client3
   libavahi-common3
@@ -186,6 +190,8 @@ DEBIAN_PACKAGES="\
   libxi-dev
   libxinerama1
   libxinerama-dev
+  libxkbcommon0
+  libxkbcommon-dev
   libxrandr2
   libxrandr-dev
   libxrender1

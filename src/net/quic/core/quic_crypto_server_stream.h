@@ -24,7 +24,6 @@ class CachedNetworkParameters;
 class CryptoHandshakeMessage;
 class QuicCryptoServerConfig;
 class QuicCryptoServerStreamBase;
-class QuicServerSessionBase;
 
 namespace test {
 class CryptoTestUtils;
@@ -91,7 +90,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
     // acceptable according to the visitor's policy. Otherwise, returns false
     // and populates |error_details|.
     virtual bool CanAcceptClientHello(const CryptoHandshakeMessage& message,
-                                      const IPEndPoint& self_address,
+                                      const QuicSocketAddress& self_address,
                                       std::string* error_details) const = 0;
   };
 
@@ -130,7 +129,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   // However, it is exposed here because that is the only place where the
   // configuration for the certificate used in the connection is accessible.
   bool ShouldSendExpectCTHeader() const {
-    return signed_config_->send_expect_ct_header;
+    return signed_config_->proof.send_expect_ct_header;
   }
 
  protected:

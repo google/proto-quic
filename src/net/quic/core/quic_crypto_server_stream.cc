@@ -15,7 +15,7 @@
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 
 using base::StringPiece;
@@ -161,8 +161,8 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   std::unique_ptr<ValidateCallback> cb(new ValidateCallback(this));
   validate_client_hello_cb_ = cb.get();
   crypto_config_->ValidateClientHello(
-      message, session()->connection()->peer_address().address(),
-      session()->connection()->self_address().address(), version(),
+      message, session()->connection()->peer_address().host(),
+      session()->connection()->self_address().host(), version(),
       session()->connection()->clock(), signed_config_, std::move(cb));
 }
 
@@ -294,8 +294,8 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
     crypto_config_->BuildServerConfigUpdateMessage(
         session()->connection()->version(), chlo_hash_,
         previous_source_address_tokens_,
-        session()->connection()->self_address().address(),
-        session()->connection()->peer_address().address(),
+        session()->connection()->self_address().host(),
+        session()->connection()->peer_address().host(),
         session()->connection()->clock(),
         session()->connection()->random_generator(), compressed_certs_cache_,
         *crypto_negotiated_params_, cached_network_params,
@@ -310,8 +310,8 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
   if (!crypto_config_->BuildServerConfigUpdateMessage(
           session()->connection()->version(), chlo_hash_,
           previous_source_address_tokens_,
-          session()->connection()->self_address().address(),
-          session()->connection()->peer_address().address(),
+          session()->connection()->self_address().host(),
+          session()->connection()->peer_address().host(),
           session()->connection()->clock(),
           session()->connection()->random_generator(), compressed_certs_cache_,
           *crypto_negotiated_params_, cached_network_params,
@@ -469,11 +469,11 @@ void QuicCryptoServerStream::ProcessClientHello(
       GenerateConnectionIdForReject(use_stateless_rejects_in_crypto_config);
   crypto_config_->ProcessClientHello(
       result, /*reject_only=*/false, connection->connection_id(),
-      connection->self_address().address(), connection->peer_address(),
-      version(), connection->supported_versions(),
-      use_stateless_rejects_in_crypto_config, server_designated_connection_id,
-      connection->clock(), connection->random_generator(),
-      compressed_certs_cache_, crypto_negotiated_params_, signed_config_,
+      connection->self_address().host(), connection->peer_address(), version(),
+      connection->supported_versions(), use_stateless_rejects_in_crypto_config,
+      server_designated_connection_id, connection->clock(),
+      connection->random_generator(), compressed_certs_cache_,
+      crypto_negotiated_params_, signed_config_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version()),
       chlo_packet_size_, std::move(done_cb));
 }

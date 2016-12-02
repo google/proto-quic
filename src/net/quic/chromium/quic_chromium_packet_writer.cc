@@ -30,8 +30,8 @@ QuicChromiumPacketWriter::~QuicChromiumPacketWriter() {}
 WriteResult QuicChromiumPacketWriter::WritePacket(
     const char* buffer,
     size_t buf_len,
-    const IPAddress& self_address,
-    const IPEndPoint& peer_address,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
     PerPacketOptions* /*options*/) {
   scoped_refptr<StringIOBuffer> buf(
       new StringIOBuffer(std::string(buffer, buf_len)));
@@ -110,7 +110,7 @@ void QuicChromiumPacketWriter::OnWriteComplete(int rv) {
 }
 
 QuicByteCount QuicChromiumPacketWriter::GetMaxPacketSize(
-    const IPEndPoint& peer_address) const {
+    const QuicSocketAddress& peer_address) const {
   return kMaxPacketSize;
 }
 

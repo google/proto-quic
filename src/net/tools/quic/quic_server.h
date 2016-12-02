@@ -16,13 +16,15 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/ip_endpoint.h"
 #include "net/quic/chromium/quic_chromium_connection_helper.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_framer.h"
+#include "net/quic/core/quic_version_manager.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_default_packet_writer.h"
+#include "net/tools/quic/quic_http_response_cache.h"
 
 namespace net {
 
@@ -35,16 +37,18 @@ class QuicPacketReader;
 
 class QuicServer : public EpollCallbackInterface {
  public:
-  explicit QuicServer(std::unique_ptr<ProofSource> proof_source);
+  QuicServer(std::unique_ptr<ProofSource> proof_source,
+             QuicHttpResponseCache* response_cache);
   QuicServer(std::unique_ptr<ProofSource> proof_source,
              const QuicConfig& config,
              const QuicCryptoServerConfig::ConfigOptions& server_config_options,
-             const QuicVersionVector& supported_versions);
+             const QuicVersionVector& supported_versions,
+             QuicHttpResponseCache* response_cache);
 
   ~QuicServer() override;
 
   // Start listening on the specified address.
-  bool CreateUDPSocketAndListen(const IPEndPoint& address);
+  bool CreateUDPSocketAndListen(const QuicSocketAddress& address);
 
   // Wait up to 50ms, and handle any events which occur.
   void WaitForEvents();
@@ -82,6 +86,8 @@ class QuicServer : public EpollCallbackInterface {
   QuicDispatcher* dispatcher() { return dispatcher_.get(); }
 
   QuicVersionManager* version_manager() { return &version_manager_; }
+
+  QuicHttpResponseCache* response_cache() { return response_cache_; }
 
  private:
   friend class net::test::QuicServerPeer;
@@ -123,6 +129,8 @@ class QuicServer : public EpollCallbackInterface {
   // Point to a QuicPacketReader object on the heap. The reader allocates more
   // space than allowed on the stack.
   std::unique_ptr<QuicPacketReader> packet_reader_;
+
+  QuicHttpResponseCache* response_cache_;  // unowned.
 
   DISALLOW_COPY_AND_ASSIGN(QuicServer);
 };

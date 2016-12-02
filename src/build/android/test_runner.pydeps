@@ -67,9 +67,17 @@
 ../../third_party/catapult/devil/devil/utils/timeout_retry.py
 ../../third_party/catapult/devil/devil/utils/watchdog_timer.py
 ../../third_party/catapult/devil/devil/utils/zip_utils.py
+../../tools/swarming_client/libs/__init__.py
+../../tools/swarming_client/libs/logdog/__init__.py
+../../tools/swarming_client/libs/logdog/bootstrap.py
+../../tools/swarming_client/libs/logdog/stream.py
+../../tools/swarming_client/libs/logdog/streamname.py
+../../tools/swarming_client/libs/logdog/varint.py
 ../util/lib/common/unittest_util.py
 devil_chromium.py
 pylib/__init__.py
+pylib/android/__init__.py
+pylib/android/logdog_logcat_monitor.py
 pylib/base/__init__.py
 pylib/base/base_test_result.py
 pylib/base/base_test_runner.py
@@ -94,9 +102,6 @@ pylib/instrumentation/instrumentation_test_instance.py
 pylib/instrumentation/test_result.py
 pylib/junit/__init__.py
 pylib/junit/junit_test_instance.py
-pylib/junit/setup.py
-pylib/junit/test_dispatcher.py
-pylib/junit/test_runner.py
 pylib/linker/__init__.py
 pylib/linker/setup.py
 pylib/linker/test_case.py

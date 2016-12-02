@@ -106,7 +106,6 @@ fun:*PaintInvalidationState*computePaintInvalidationRectInBacking*
 fun:*AdjustAndMarkTrait*mark*
 fun:*TraceTrait*trace*
 fun:*ChromeClientImpl*scheduleAnimation*
-fun:*blink*PODIntervalTree*searchForOverlapsFrom*
 fun:*hasAspectRatio*
 fun:*nextBreakablePosition*
 fun:*supportsCachedOffsets*

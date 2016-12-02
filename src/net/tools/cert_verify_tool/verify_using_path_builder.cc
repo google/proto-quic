@@ -9,8 +9,9 @@
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/threading/thread.h"
 #include "crypto/sha2.h"
-#include "net/base/test_completion_callback.h"
+#include "net/cert/cert_net_fetcher.h"
 #include "net/cert/internal/cert_issuer_source_aia.h"
 #include "net/cert/internal/cert_issuer_source_static.h"
 #include "net/cert/internal/parse_name.h"
@@ -23,9 +24,11 @@
 #include "net/tools/cert_verify_tool/cert_verify_tool_util.h"
 #include "net/url_request/url_request_context.h"
 #include "net/url_request/url_request_context_builder.h"
+#include "net/url_request/url_request_context_getter.h"
 
 #if defined(USE_NSS_CERTS)
 #include "base/threading/thread_task_runner_handle.h"
+#include "net/cert/internal/cert_issuer_source_nss.h"
 #include "net/cert/internal/trust_store_nss.h"
 #endif
 
@@ -167,6 +170,57 @@ scoped_refptr<net::ParsedCertificate> ParseCertificate(const CertInput& input) {
   return cert;
 }
 
+class URLRequestContextGetterForAia : public net::URLRequestContextGetter {
+ public:
+  URLRequestContextGetterForAia(
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+      : task_runner_(std::move(task_runner)) {}
+
+  net::URLRequestContext* GetURLRequestContext() override {
+    DCHECK(task_runner_->BelongsToCurrentThread());
+
+    if (!context_) {
+      // TODO(mattm): add command line flags to configure using
+      // CertIssuerSourceAia
+      // (similar to VERIFY_CERT_IO_ENABLED flag for CertVerifyProc).
+      net::URLRequestContextBuilder url_request_context_builder;
+      url_request_context_builder.set_user_agent(GetUserAgent());
+#if defined(OS_LINUX)
+      // On Linux, use a fixed ProxyConfigService, since the default one
+      // depends on glib.
+      //
+      // TODO(akalin): Remove this once http://crbug.com/146421 is fixed.
+      url_request_context_builder.set_proxy_config_service(
+          base::MakeUnique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
+#endif
+      context_ = url_request_context_builder.Build();
+    }
+
+    return context_.get();
+  }
+
+  void ShutDown() {
+    GetNetworkTaskRunner()->PostTask(
+        FROM_HERE,
+        base::Bind(&URLRequestContextGetterForAia::ShutdownOnNetworkThread,
+                   this));
+  }
+
+  scoped_refptr<base::SingleThreadTaskRunner> GetNetworkTaskRunner()
+      const override {
+    return task_runner_;
+  }
+
+ private:
+  ~URLRequestContextGetterForAia() override { DCHECK(!context_); }
+
+  void ShutdownOnNetworkThread() { context_.release(); }
+
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+
+  std::unique_ptr<net::URLRequestContext> context_;
+};
+
 }  // namespace
 
 // Verifies |target_der_cert| using CertPathBuilder.
@@ -183,7 +237,7 @@ bool VerifyUsingPathBuilder(
   net::TrustStoreCollection trust_store;
 
   net::TrustStoreInMemory trust_store_in_memory;
-  trust_store.AddTrustStoreSynchronousOnly(&trust_store_in_memory);
+  trust_store.AddTrustStore(&trust_store_in_memory);
   for (const auto& der_cert : root_der_certs) {
     scoped_refptr<net::ParsedCertificate> cert = ParseCertificate(der_cert);
     if (cert) {
@@ -193,9 +247,8 @@ bool VerifyUsingPathBuilder(
   }
 
 #if defined(USE_NSS_CERTS)
-  net::TrustStoreNSS trust_store_nss(trustSSL,
-                                     base::ThreadTaskRunnerHandle::Get());
-  trust_store.SetPrimaryTrustStore(&trust_store_nss);
+  net::TrustStoreNSS trust_store_nss(trustSSL);
+  trust_store.AddTrustStore(&trust_store_nss);
 #else
   if (root_der_certs.empty()) {
     std::cerr << "NOTE: CertPathBuilder does not currently use OS trust "
@@ -221,33 +274,29 @@ bool VerifyUsingPathBuilder(
   net::CertPathBuilder path_builder(target_cert, &trust_store,
                                     &signature_policy, time, &result);
   path_builder.AddCertIssuerSource(&intermediate_cert_issuer_source);
-
-  // TODO(mattm): add command line flags to configure using CertIssuerSourceAia
-  // (similar to VERIFY_CERT_IO_ENABLED flag for CertVerifyProc).
-  net::URLRequestContextBuilder url_request_context_builder;
-  url_request_context_builder.set_user_agent(GetUserAgent());
-#if defined(OS_LINUX)
-  // On Linux, use a fixed ProxyConfigService, since the default one
-  // depends on glib.
-  //
-  // TODO(akalin): Remove this once http://crbug.com/146421 is fixed.
-  url_request_context_builder.set_proxy_config_service(
-      base::MakeUnique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
+#if defined(USE_NSS_CERTS)
+  net::CertIssuerSourceNSS cert_issuer_source_nss;
+  path_builder.AddCertIssuerSource(&cert_issuer_source_nss);
 #endif
-  std::unique_ptr<net::URLRequestContext> url_request_context =
-      url_request_context_builder.Build();
-  net::CertNetFetcherImpl cert_net_fetcher(url_request_context.get());
-  net::CertIssuerSourceAia aia_cert_issuer_source(&cert_net_fetcher);
+
+  // Initialize an AIA fetcher, that uses a separate thread for running the
+  // networking message loop.
+  base::Thread::Options options(base::MessageLoop::TYPE_IO, 0);
+  base::Thread thread("network_thread");
+  CHECK(thread.StartWithOptions(options));
+  scoped_refptr<URLRequestContextGetterForAia> url_request_context_getter(
+      new URLRequestContextGetterForAia(thread.task_runner()));
+  auto cert_net_fetcher =
+      CreateCertNetFetcher(url_request_context_getter.get());
+  net::CertIssuerSourceAia aia_cert_issuer_source(cert_net_fetcher.get());
   path_builder.AddCertIssuerSource(&aia_cert_issuer_source);
 
-  net::TestClosure callback;
-  net::CompletionStatus rv = path_builder.Run(callback.closure());
+  // Run the path builder.
+  path_builder.Run();
 
-  if (rv == net::CompletionStatus::ASYNC) {
-    DVLOG(1) << "waiting for async completion...";
-    callback.WaitForResult();
-    DVLOG(1) << "async completed.";
-  }
+  // Stop the temporary network thread..
+  url_request_context_getter->ShutDown();
+  thread.Stop();
 
   // TODO(crbug.com/634443): Display any errors/warnings associated with path
   //                         building that were not part of a particular

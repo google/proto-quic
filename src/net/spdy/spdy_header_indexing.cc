@@ -10,8 +10,8 @@ using base::StringPiece;
 
 namespace net {
 
-int32_t FLAGS_gfe_spdy_indexing_set_bound = 300;
-int32_t FLAGS_gfe_spdy_tracking_set_bound = 2000;
+int32_t FLAGS_gfe_spdy_indexing_set_bound = 50;
+int32_t FLAGS_gfe_spdy_tracking_set_bound = 1000;
 
 HeaderIndexing::HeaderIndexing()
     : indexing_set_bound_(FLAGS_gfe_spdy_indexing_set_bound),
@@ -135,6 +135,7 @@ void HeaderIndexing::CreateInitIndexingHeaders() {
 }
 
 bool HeaderIndexing::ShouldIndex(StringPiece header, StringPiece /* value */) {
+  total_header_count_++;
   if (header.empty()) {
     return false;
   }
@@ -147,9 +148,11 @@ bool HeaderIndexing::ShouldIndex(StringPiece header, StringPiece /* value */) {
   if (tracking_set_.find(header_str) != tracking_set_.end()) {
     // Seen this header before. Add it to indexing set.
     TryInsertHeader(std::move(header_str), &indexing_set_, indexing_set_bound_);
+    missed_header_in_tracking_++;
   } else {
     // Add header to tracking set.
     TryInsertHeader(std::move(header_str), &tracking_set_, tracking_set_bound_);
+    missed_header_in_indexing_++;
   }
   return false;
 }

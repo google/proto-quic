@@ -30,8 +30,6 @@ class Time;
 
 namespace net {
 
-class X509Certificate;
-
 // CertPrincipal represents the issuer or subject field of an X.509 certificate.
 struct NET_EXPORT CertPrincipal {
   CertPrincipal();

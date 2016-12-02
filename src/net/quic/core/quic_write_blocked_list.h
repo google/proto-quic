@@ -13,7 +13,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/spdy/priority_write_scheduler.h"
 
 namespace net {

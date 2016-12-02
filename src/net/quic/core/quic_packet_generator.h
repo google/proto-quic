@@ -48,6 +48,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_packet_creator.h"
+#include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_types.h"
 
@@ -140,7 +141,7 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
 
   // Re-serializes frames with the original packet's packet number length.
   // Used for retransmitting packets to ensure they aren't too long.
-  void ReserializeAllFrames(const PendingRetransmission& retransmission,
+  void ReserializeAllFrames(const QuicPendingRetransmission& retransmission,
                             char* buffer,
                             size_t buffer_len);
 

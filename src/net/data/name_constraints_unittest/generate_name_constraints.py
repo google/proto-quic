@@ -211,6 +211,14 @@ def main():
   dnsname_constraints3.add_permitted(dns_name(".bar.com"))
   generate(dnsname_constraints3, "dnsname-permitted_with_leading_dot.pem")
 
+  dnsname_constraints4 = NameConstraintsGenerator()
+  dnsname_constraints4.add_excluded(dns_name(".bar.com"))
+  generate(dnsname_constraints4, "dnsname-excluded_with_leading_dot.pem")
+
+  dnsname_constraints5 = NameConstraintsGenerator()
+  dnsname_constraints5.add_permitted(dns_name(".."))
+  generate(dnsname_constraints5, "dnsname-permitted_two_dot.pem")
+
   c = NameConstraintsGenerator()
   c.add_excluded(dns_name("excluded.permitted.example.com"))
   generate(c, "dnsname-excluded.pem")

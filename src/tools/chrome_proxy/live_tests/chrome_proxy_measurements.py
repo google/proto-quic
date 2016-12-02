@@ -7,9 +7,9 @@ import logging
 import chrome_proxy_metrics as metrics
 from common import chrome_proxy_measurements as measurements
 from telemetry.core import exceptions
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 
-class ChromeProxyLatencyBase(page_test.PageTest):
+class ChromeProxyLatencyBase(legacy_page_test.LegacyPageTest):
   """Chrome latency measurement."""
 
   def __init__(self, *args, **kwargs):
@@ -49,7 +49,7 @@ class ChromeProxyLatencyDirect(ChromeProxyLatencyBase):
     super(ChromeProxyLatencyDirect, self).__init__(*args, **kwargs)
 
 
-class ChromeProxyDataSavingBase(page_test.PageTest):
+class ChromeProxyDataSavingBase(legacy_page_test.LegacyPageTest):
   """Chrome data saving measurement."""
   def __init__(self, *args, **kwargs):
     super(ChromeProxyDataSavingBase, self).__init__(*args, **kwargs)

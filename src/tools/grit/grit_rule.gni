@@ -246,12 +246,6 @@ if (enable_themes) {
     "enable_themes",
   ]
 }
-if (enable_webrtc) {
-  grit_defines += [
-    "-D",
-    "enable_webrtc",
-  ]
-}
 if (enable_task_manager) {
   grit_defines += [
     "-D",
@@ -262,12 +256,6 @@ if (enable_notifications) {
   grit_defines += [
     "-D",
     "enable_notifications",
-  ]
-}
-if (mac_views_browser) {
-  grit_defines += [
-    "-D",
-    "mac_views_browser",
   ]
 }
 

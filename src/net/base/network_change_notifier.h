@@ -15,8 +15,6 @@
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 
-class GURL;
-
 namespace net {
 
 struct DnsConfig;

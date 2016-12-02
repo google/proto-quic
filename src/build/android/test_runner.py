@@ -36,8 +36,6 @@ from pylib.base import test_instance_factory
 from pylib.base import test_run_factory
 from pylib.constants import host_paths
 from pylib.linker import setup as linker_setup
-from pylib.junit import setup as junit_setup
-from pylib.junit import test_dispatcher as junit_dispatcher
 from pylib.results import json_results
 from pylib.results import report_results
 
@@ -268,7 +266,8 @@ def AddJavaTestOptions(argument_group):
       dest='test_filter',
       help=('Test filter (if not fully qualified, will run all matches).'))
   argument_group.add_argument(
-      '--repeat', dest='repeat', type=int, default=0,
+      '--repeat', '--gtest_repeat', '--gtest-repeat', dest='repeat',
+      type=int, default=0,
       help='Number of times to repeat the specified set of tests.')
   argument_group.add_argument(
       '--break-on-failure', '--break_on_failure',
@@ -295,6 +294,10 @@ def AddJavaTestOptions(argument_group):
   argument_group.add_argument(
       '--disable-dalvik-asserts', dest='set_asserts', action='store_false',
       default=True, help='Removes the dalvik.vm.enableassertions property')
+  argument_group.add_argument(
+      '--gtest_also_run_disabled_tests', '--gtest-also-run-disabled-tests',
+      dest='run_disabled', action='store_true',
+      help='Also run disabled tests if applicable.')
 
 
 
@@ -348,6 +351,8 @@ def AddInstrumentationTestOptions(parser):
                      help='Path or name of the apk containing the tests '
                           '(name is without the .apk extension; '
                           'e.g. "ContentShellTest").')
+  group.add_argument('--test-jar', required=True,
+                     help='Path of jar containing test java files.')
   group.add_argument('--test-apk-incremental-install-script',
                      type=os.path.realpath,
                      help='Path to install script for the --test-apk.')
@@ -579,22 +584,6 @@ def _RunLinkerTests(args, devices):
   return exit_code
 
 
-def _RunJUnitTests(args):
-  """Subcommand of RunTestsCommand which runs junit tests."""
-  runner_factory, tests = junit_setup.Setup(args)
-  results, exit_code = junit_dispatcher.RunTests(tests, runner_factory)
-
-  report_results.LogFull(
-      results=results,
-      test_type='JUnit',
-      test_package=args.test_suite)
-
-  if args.json_results_file:
-    json_results.GenerateJsonResultsFile([results], args.json_results_file)
-
-  return exit_code
-
-
 def _RunPythonTests(args):
   """Subcommand of RunTestsCommand which runs python unit tests."""
   suite_vars = constants.PYTHON_UNIT_TEST_SUITES[args.suite_name]
@@ -644,7 +633,8 @@ def _GetAttachedDevices(blacklist_file, test_device, enable_cache, num_retries):
     return sorted(attached_devices)
 
 
-_DEFAULT_PLATFORM_MODE_TESTS = ['gtest', 'instrumentation', 'monkey', 'perf']
+_DEFAULT_PLATFORM_MODE_TESTS = ['gtest', 'instrumentation', 'junit',
+                                'monkey', 'perf']
 
 
 def RunTestsCommand(args): # pylint: disable=too-many-return-statements
@@ -682,8 +672,6 @@ def RunTestsCommand(args): # pylint: disable=too-many-return-statements
 
   if command == 'linker':
     return _RunLinkerTests(args, get_devices())
-  elif command == 'junit':
-    return _RunJUnitTests(args)
   elif command == 'python':
     return _RunPythonTests(args)
   else:

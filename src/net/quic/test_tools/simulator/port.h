@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/test_tools/simulator/actor.h"
 
 namespace net {

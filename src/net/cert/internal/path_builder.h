@@ -9,11 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "base/callback.h"
-#include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/cert/internal/cert_errors.h"
-#include "net/cert/internal/completion_status.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/trust_store.h"
 #include "net/der/input.h"
@@ -107,6 +104,9 @@ class NET_EXPORT CertPathBuilder {
   // TODO(mattm): allow caller specified hook/callback to extend path
   // verification.
   //
+  // TODO(eroman): The assumption is that |result| is default initialized. Can
+  // probably just internalize |result| into CertPathBuilder.
+  //
   // Creates a CertPathBuilder that attempts to find a path from |cert| to a
   // trust anchor in |trust_store|, which satisfies |signature_policy| and is
   // valid at |time|.  Details of attempted path(s) are stored in |*result|.
@@ -129,24 +129,12 @@ class NET_EXPORT CertPathBuilder {
   // it is a trust anchor or is directly signed by a trust anchor.)
   void AddCertIssuerSource(CertIssuerSource* cert_issuer_source);
 
-  // Begins verification of the target certificate.
+  // Executes verification of the target certificate.
   //
-  // If the return value is SYNC then the verification is complete and the
-  // |result| value can be inspected for the status, and |callback| will not be
-  // called.
-  // If the return value is ASYNC, the |callback| will be called asynchronously
-  // once the verification is complete. |result| should not be examined or
-  // modified until the |callback| is run.
-  //
-  // If |callback| is null, verification always completes synchronously, even if
-  // it fails to find a valid path and one could have been found asynchronously.
-  //
-  // The CertPathBuilder may be deleted while an ASYNC verification is pending,
-  // in which case the verification is cancelled, |callback| will not be called,
-  // and the output Result will be in an undefined state.
-  // It is safe to delete the CertPathBuilder during the |callback|.
-  // Run must not be called more than once on each CertPathBuilder instance.
-  CompletionStatus Run(const base::Closure& callback);
+  // Upon return results are written to the |result| object passed into the
+  // constructor. Run must not be called more than once on each CertPathBuilder
+  // instance.
+  void Run();
 
  private:
   enum State {
@@ -155,15 +143,10 @@ class NET_EXPORT CertPathBuilder {
     STATE_GET_NEXT_PATH_COMPLETE,
   };
 
-  CompletionStatus DoLoop(bool allow_async);
-
-  CompletionStatus DoGetNextPath(bool allow_async);
-  void HandleGotNextPath();
-  CompletionStatus DoGetNextPathComplete();
+  void DoGetNextPath();
+  void DoGetNextPathComplete();
 
   void AddResultPath(std::unique_ptr<ResultPath> result_path);
-
-  base::Closure callback_;
 
   std::unique_ptr<CertPathIter> cert_path_iter_;
   const SignaturePolicy* signature_policy_;

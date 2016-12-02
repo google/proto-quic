@@ -25,7 +25,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
-using std::min;
 using std::string;
 using testing::_;
 using testing::AnyNumber;
@@ -49,12 +48,13 @@ class MockStream : public QuicStream {
   MOCK_METHOD0(OnCanWrite, void());
   virtual bool IsFlowControlEnabled() const { return true; }
 
-  const IPEndPoint& PeerAddressOfLatestPacket() const override {
+  const QuicSocketAddress& PeerAddressOfLatestPacket() const override {
     return peer_address_;
   }
 
  protected:
-  IPEndPoint peer_address_ = IPEndPoint(net::test::Any4(), 65535);
+  QuicSocketAddress peer_address_ =
+      QuicSocketAddress(QuicIpAddress::Any4(), 65535);
 };
 
 namespace {
@@ -393,7 +393,7 @@ class QuicSequencerRandomTest : public QuicStreamSequencerTest {
     int payload_size = arraysize(kPayload) - 1;
     int remaining_payload = payload_size;
     while (remaining_payload != 0) {
-      int size = min(OneToN(6), remaining_payload);
+      int size = std::min(OneToN(6), remaining_payload);
       int index = payload_size - remaining_payload;
       list_.push_back(std::make_pair(index, string(kPayload + index, size)));
       remaining_payload -= size;
@@ -471,7 +471,8 @@ TEST_F(QuicSequencerRandomTest, RandomFramesNoDroppingBackup) {
       }
       int total_bytes_to_peek = arraysize(buffer);
       for (int i = 0; i < iovs_peeked; ++i) {
-        int bytes_to_peek = min<int>(peek_iov[i].iov_len, total_bytes_to_peek);
+        int bytes_to_peek =
+            std::min<int>(peek_iov[i].iov_len, total_bytes_to_peek);
         peeked_.append(static_cast<char*>(peek_iov[i].iov_base), bytes_to_peek);
         total_bytes_to_peek -= bytes_to_peek;
         if (total_bytes_to_peek == 0) {
@@ -658,30 +659,15 @@ TEST_F(QuicStreamSequencerTest, OutOfOrderTimestamps) {
   EXPECT_EQ(0u, sequencer_->NumBytesBuffered());
 }
 
-// TODO(danzh): Figure out the way to implement this test case without the use
-// of unsupported StringPiece constructor.
-#if 0
 TEST_F(QuicStreamSequencerTest, OnStreamFrameWithNullSource) {
   // Pass in a frame with data pointing to null address, expect to close
   // connection with error.
-  StringPiece source(nullptr, 5u);
+  StringPiece source;
+  source.set(nullptr, 5u);
   QuicStreamFrame frame(kClientDataStreamId1, false, 1, source);
   EXPECT_CALL(stream_, CloseConnectionWithDetails(
                            QUIC_STREAM_SEQUENCER_INVALID_STATE, _));
   sequencer_->OnStreamFrame(frame);
-}
-#endif
-
-TEST_F(QuicStreamSequencerTest, ReadvError) {
-  EXPECT_CALL(stream_, OnDataAvailable());
-  string source(100, 'a');
-  OnFrame(0u, source.data());
-  EXPECT_EQ(source.length(), sequencer_->NumBytesBuffered());
-  // Pass in a null iovec, expect to tear down connection.
-  EXPECT_CALL(stream_, CloseConnectionWithDetails(
-                           QUIC_STREAM_SEQUENCER_INVALID_STATE, _));
-  iovec iov{nullptr, 512};
-  sequencer_->Readv(&iov, 1u);
 }
 
 }  // namespace

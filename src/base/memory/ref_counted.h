@@ -224,6 +224,9 @@ class RefCountedData
 //
 //   class MyFoo : public RefCounted<MyFoo> {
 //    ...
+//    private:
+//     friend class RefCounted<MyFoo>;  // Allow destruction by RefCounted<>.
+//     ~MyFoo();                        // Destructor must be private/protected.
 //   };
 //
 //   void some_function() {

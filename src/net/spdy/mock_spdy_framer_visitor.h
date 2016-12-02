@@ -34,12 +34,6 @@ class MockSpdyFramerVisitor : public SpdyFramerVisitorInterface {
   MOCK_METHOD1(OnHeaderFrameStart,
                SpdyHeadersHandlerInterface*(SpdyStreamId stream_id));
   MOCK_METHOD2(OnHeaderFrameEnd, void(SpdyStreamId stream_id, bool end));
-  MOCK_METHOD5(OnSynStream, void(SpdyStreamId stream_id,
-                                 SpdyStreamId associated_stream_id,
-                                 SpdyPriority priority,
-                                 bool fin,
-                                 bool unidirectional));
-  MOCK_METHOD2(OnSynReply, void(SpdyStreamId stream_id, bool fin));
   MOCK_METHOD2(OnRstStream, void(SpdyStreamId stream_id,
                                  SpdyRstStreamStatus status));
   MOCK_METHOD1(OnSettings, void(bool clear_persisted));

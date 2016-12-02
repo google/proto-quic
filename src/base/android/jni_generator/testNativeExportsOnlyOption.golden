@@ -27,11 +27,9 @@ base::subtle::AtomicWord g_SampleForTests_clazz __attribute__((unused)) = 0;
 }  // namespace
 
 // Step 2: method stubs.
-extern "C" __attribute__((visibility("default")))
-jint
+JNI_GENERATOR_EXPORT jint
     Java_org_chromium_example_jni_1generator_SampleForTests_nativeStaticMethod(JNIEnv*
-    env,
-    jobject jcaller,
+    env, jobject jcaller,
     jlong nativeTest,
     jint arg1) {
   Test* native = reinterpret_cast<Test*>(nativeTest);
@@ -40,11 +38,9 @@ jint
       jcaller), arg1);
 }
 
-extern "C" __attribute__((visibility("default")))
-jint
+JNI_GENERATOR_EXPORT jint
     Java_org_chromium_example_jni_1generator_SampleForTests_nativeMethod(JNIEnv*
-    env,
-    jobject jcaller,
+    env, jobject jcaller,
     jlong nativeTest,
     jint arg1) {
   Test* native = reinterpret_cast<Test*>(nativeTest);
@@ -56,8 +52,7 @@ jint
 static jint Init(JNIEnv* env, const base::android::JavaParamRef<jobject>&
     jcaller);
 
-extern "C" __attribute__((visibility("default")))
-jint
+JNI_GENERATOR_EXPORT jint
     Java_org_chromium_example_jni_1generator_SampleForTests_00024MyInnerClass_nativeInit(JNIEnv*
     env, jobject jcaller) {
   return Init(env, base::android::JavaParamRef<jobject>(env, jcaller));
@@ -66,8 +61,7 @@ jint
 static jint Init(JNIEnv* env, const base::android::JavaParamRef<jobject>&
     jcaller);
 
-extern "C" __attribute__((visibility("default")))
-jint
+JNI_GENERATOR_EXPORT jint
     Java_org_chromium_example_jni_1generator_SampleForTests_00024MyOtherInnerClass_nativeInit(JNIEnv*
     env, jobject jcaller) {
   return Init(env, base::android::JavaParamRef<jobject>(env, jcaller));

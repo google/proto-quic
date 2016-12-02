@@ -234,6 +234,13 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int dup_flags) {
   memcpy(new_session->peer_sha256, session->peer_sha256, SHA256_DIGEST_LENGTH);
   new_session->peer_sha256_valid = session->peer_sha256_valid;
 
+  if (session->tlsext_hostname != NULL) {
+    new_session->tlsext_hostname = BUF_strdup(session->tlsext_hostname);
+    if (new_session->tlsext_hostname == NULL) {
+      goto err;
+    }
+  }
+
   new_session->timeout = session->timeout;
   new_session->time = session->time;
 
@@ -244,13 +251,6 @@ SSL_SESSION *SSL_SESSION_dup(SSL_SESSION *session, int dup_flags) {
            session->session_id_length);
 
     new_session->key_exchange_info = session->key_exchange_info;
-
-    if (session->tlsext_hostname != NULL) {
-      new_session->tlsext_hostname = BUF_strdup(session->tlsext_hostname);
-      if (new_session->tlsext_hostname == NULL) {
-        goto err;
-      }
-    }
 
     memcpy(new_session->original_handshake_hash,
            session->original_handshake_hash,
@@ -640,9 +640,14 @@ int ssl_session_is_resumable(const SSL *ssl, const SSL_SESSION *session) {
          /* Only resume if the session's version matches the negotiated
            * version. */
          ssl->version == session->ssl_version &&
-         /* Only resume if the session's cipher is still valid under the
-          * current configuration. */
-         ssl_is_valid_cipher(ssl, session->cipher);
+         /* Only resume if the session's cipher matches the negotiated one. */
+         ssl->s3->tmp.new_cipher == session->cipher &&
+         /* If the session contains a client certificate (either the full
+          * certificate or just the hash) then require that the form of the
+          * certificate matches the current configuration. */
+         ((session->x509_peer == NULL && !session->peer_sha256_valid) ||
+          session->peer_sha256_valid ==
+              ssl->retain_only_sha256_of_client_certs);
 }
 
 /* ssl_lookup_session looks up |session_id| in the session cache and sets

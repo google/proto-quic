@@ -58,19 +58,14 @@ int FuzzedSocket::Read(IOBuffer* buf,
   } else {
     // Otherwise, use |data_provider_|.
     sync = data_provider_->ConsumeBool();
-    result = data_provider_->ConsumeUint8();
-    if (result > buf_len)
-      result = buf_len;
+    std::string data = data_provider_->ConsumeRandomLengthString(buf_len);
+    result = data.size();
 
     if (result > 0) {
-      std::string data = data_provider_->ConsumeBytes(result);
-      result = data.size();
       std::copy(data.data(), data.data() + result, buf->data());
-    }
-
-    if (result == 0) {
-      net_error_ = ConsumeReadWriteErrorFromData();
-      result = net_error_;
+    } else {
+      result = ConsumeReadWriteErrorFromData();
+      net_error_ = result;
       if (!sync)
         error_pending_ = true;
     }
@@ -279,6 +274,7 @@ void FuzzedSocket::OnConnectComplete(const CompletionCallback& callback,
   connect_pending_ = false;
   if (result < 0)
     error_pending_ = false;
+  net_error_ = result;
   callback.Run(result);
 }
 

@@ -1028,6 +1028,18 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Accessibility.TwoFingersHeldGeneratedSpokenFeedbackCountdown">
+  <owner>dmazzoni@chromium.org</owner>
+  <description>
+    Metric recorded on Chrome OS when the user holds down two fingers on a touch
+    screen for more than the minimum number of seconds to trigger a countdown.
+    If the user continues to hold down two fingers through the countdown it will
+    toggle spoken feedback. If spoken feedback is toggled, the
+    StatusArea_SpokenFeedbackEnabled or StatusArea_SpokenFeedbackDisabled
+    actions will be recorded.
+  </description>
+</action>
+
 <action name="ActionBox.ClickButton">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -2193,8 +2205,10 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="BookmarkBar_DragEnd">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Logged when a bookmark drag ends in the bookmark bar
+  </description>
 </action>
 
 <action name="BookmarkBar_DragFromFolder">
@@ -2352,6 +2366,13 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="BookmarkManager_Drop">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user drops a bookmark after a drag in the bookmark manager.
+  </description>
+</action>
+
 <action name="BookmarkManager_Export">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
@@ -2395,6 +2416,13 @@ should be able to be added at any place in this file.
 <action name="BookmarkManager_Sort">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="BookmarkManager_StartDrag">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user starts a drag in the bookmark manager.
+  </description>
 </action>
 
 <action name="BookmarkManager_Sync">
@@ -9809,6 +9837,14 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="MobileSadTabFeedback">
+  <owner>jwanda@chromium.org</owner>
+  <description>
+    The user pressed the Send Feedback button on a tab that is displaying the
+    sad view.
+  </description>
+</action>
+
 <action name="MobileSettingsStorageClearAll">
   <owner>dmurph@chromium.org</owner>
   <description>
@@ -15715,6 +15751,14 @@ should be able to be added at any place in this file.
   <owner>tbarzic@google.com</owner>
   <description>
     Tracks Chrome Webstore Gallery Widget app being launched.
+  </description>
+</action>
+
+<action name="Win10WelcomePage_SetAsDefaultBrowser">
+  <owner>pmonette@chromium.org</owner>
+  <description>
+    The user clicked &quot;Open Windows Settings&quot; in the Win10 version of
+    the Welcome page.
   </description>
 </action>
 

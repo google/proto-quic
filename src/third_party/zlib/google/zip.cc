@@ -95,12 +95,13 @@ namespace zip {
 
 bool Unzip(const base::FilePath& src_file, const base::FilePath& dest_dir) {
   return UnzipWithFilterCallback(src_file, dest_dir,
-                                 base::Bind(&ExcludeNoFilesFilter));
+                                 base::Bind(&ExcludeNoFilesFilter), true);
 }
 
 bool UnzipWithFilterCallback(const base::FilePath& src_file,
                              const base::FilePath& dest_dir,
-                             const FilterCallback& filter_cb) {
+                             const FilterCallback& filter_cb,
+                             bool log_skipped_files) {
   ZipReader reader;
   if (!reader.Open(src_file)) {
     DLOG(WARNING) << "Failed to open " << src_file.value();
@@ -122,7 +123,7 @@ bool UnzipWithFilterCallback(const base::FilePath& src_file,
                       << reader.current_entry_info()->file_path().value();
         return false;
       }
-    } else {
+    } else if (log_skipped_files) {
       DLOG(WARNING) << "Skipped file "
                     << reader.current_entry_info()->file_path().value();
     }

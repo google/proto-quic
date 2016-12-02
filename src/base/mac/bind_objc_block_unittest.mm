@@ -9,17 +9,16 @@
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/callback_helpers.h"
+#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "testing/gtest_mac.h"
 
-// See bind_objc_block_unittest_arc.mm for why this is necessary. Remove once
-// gyp support is dropped.
-void BindObjcBlockUnittestArcLinkerWorkaround();
+#if defined(OS_IOS)
+#include "base/ios/weak_nsobject.h"
+#include "base/mac/scoped_nsautorelease_pool.h"
+#endif
 
 namespace {
-
-TEST(BindObjcBlockTest, EnableARCTests) {
-  BindObjcBlockUnittestArcLinkerWorkaround();
-}
 
 TEST(BindObjcBlockTest, TestScopedClosureRunnerExitScope) {
   int run_count = 0;
@@ -103,5 +102,23 @@ TEST(BindObjcBlockTest, TestSixArguments) {
   EXPECT_EQ(result1, "infiniteimprobabilitydrive");
   EXPECT_EQ(result2, 6);
 }
+
+#if defined(OS_IOS)
+
+TEST(BindObjcBlockTest, TestBlockReleased) {
+  base::WeakNSObject<NSObject> weak_nsobject;
+  {
+    base::mac::ScopedNSAutoreleasePool autorelease_pool;
+    NSObject* nsobject = [[[NSObject alloc] init] autorelease];
+    weak_nsobject.reset(nsobject);
+
+    auto callback = base::BindBlock(^{
+      [nsobject description];
+    });
+  }
+  EXPECT_NSEQ(nil, weak_nsobject);
+}
+
+#endif
 
 }  // namespace

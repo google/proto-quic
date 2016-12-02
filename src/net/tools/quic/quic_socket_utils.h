@@ -20,6 +20,8 @@
 #include "net/quic/core/quic_types.h"
 
 namespace net {
+class QuicIpAddress;
+class QuicSocketAddress;
 
 // This is the structure that SO_TIMESTAMPING fills into the cmsg header. It is
 // well-defined, but does not have a definition in a public header. See
@@ -51,7 +53,7 @@ class QuicSocketUtils {
   // |timestamp| if |hdr| contains |SO_TIMESTAMPING|. |address| and |timestamp|
   // must not be null.
   static void GetAddressAndTimestampFromMsghdr(struct msghdr* hdr,
-                                               IPAddress* address,
+                                               QuicIpAddress* address,
                                                QuicWallTime* walltimestamp);
 
   // If the msghdr contains an SO_RXQ_OVFL entry, this will set dropped_packets
@@ -95,9 +97,9 @@ class QuicSocketUtils {
                         char* buffer,
                         size_t buf_len,
                         QuicPacketCount* dropped_packets,
-                        IPAddress* self_address,
+                        QuicIpAddress* self_address,
                         QuicWallTime* walltimestamp,
-                        IPEndPoint* peer_address);
+                        QuicSocketAddress* peer_address);
 
   // Writes buf_len to the socket. If writing is successful, sets the result's
   // status to WRITE_STATUS_OK and sets bytes_written.  Otherwise sets the
@@ -106,18 +108,19 @@ class QuicSocketUtils {
   static WriteResult WritePacket(int fd,
                                  const char* buffer,
                                  size_t buf_len,
-                                 const IPAddress& self_address,
-                                 const IPEndPoint& peer_address);
+                                 const QuicIpAddress& self_address,
+                                 const QuicSocketAddress& peer_address);
 
   // A helper for WritePacket which fills in the cmsg with the supplied self
   // address.
   // Returns the length of the packet info structure used.
-  static size_t SetIpInfoInCmsg(const IPAddress& self_address, cmsghdr* cmsg);
+  static size_t SetIpInfoInCmsg(const QuicIpAddress& self_address,
+                                cmsghdr* cmsg);
 
   // Creates a UDP socket and sets appropriate socket options for QUIC.
   // Returns the created FD if successful, -1 otherwise.
   // |overflow_supported| is set to true if the socket supports it.
-  static int CreateUDPSocket(const IPEndPoint& address,
+  static int CreateUDPSocket(const QuicSocketAddress& address,
                              bool* overflow_supported);
 
  private:

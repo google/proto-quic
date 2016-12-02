@@ -19,6 +19,8 @@
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_config.h"
+#include "net/quic/core/quic_version_manager.h"
+#include "net/tools/quic/quic_http_response_cache.h"
 
 namespace net {
 
@@ -37,7 +39,8 @@ class QuicSimpleServer {
       std::unique_ptr<ProofSource> proof_source,
       const QuicConfig& config,
       const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
-      const QuicVersionVector& supported_versions);
+      const QuicVersionVector& supported_versions,
+      QuicHttpResponseCache* response_cache);
 
   virtual ~QuicSimpleServer();
 
@@ -110,6 +113,8 @@ class QuicSimpleServer {
 
   // The log to use for the socket.
   NetLog net_log_;
+
+  QuicHttpResponseCache* response_cache_;
 
   base::WeakPtrFactory<QuicSimpleServer> weak_factory_;
 

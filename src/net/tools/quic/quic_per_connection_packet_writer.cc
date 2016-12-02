@@ -15,8 +15,8 @@ QuicPerConnectionPacketWriter::~QuicPerConnectionPacketWriter() {}
 WriteResult QuicPerConnectionPacketWriter::WritePacket(
     const char* buffer,
     size_t buf_len,
-    const IPAddress& self_address,
-    const IPEndPoint& peer_address,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
     PerPacketOptions* options) {
   return shared_writer_->WritePacket(buffer, buf_len, self_address,
                                      peer_address, options);
@@ -35,7 +35,7 @@ void QuicPerConnectionPacketWriter::SetWritable() {
 }
 
 QuicByteCount QuicPerConnectionPacketWriter::GetMaxPacketSize(
-    const IPEndPoint& peer_address) const {
+    const QuicSocketAddress& peer_address) const {
   return shared_writer_->GetMaxPacketSize(peer_address);
 }
 

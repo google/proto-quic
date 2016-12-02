@@ -13,7 +13,6 @@
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 
-using std::min;
 using std::string;
 
 namespace net {
@@ -109,7 +108,7 @@ QuicErrorCode QuicNegotiableUint32::ProcessPeerHello(
   }
 
   set_negotiated(true);
-  negotiated_value_ = min(value, max_value_);
+  negotiated_value_ = std::min(value, max_value_);
   return QUIC_NO_ERROR;
 }
 
@@ -255,45 +254,45 @@ QuicErrorCode QuicFixedTagVector::ProcessPeerHello(
   return error;
 }
 
-QuicFixedIPEndPoint::QuicFixedIPEndPoint(QuicTag tag,
-                                         QuicConfigPresence presence)
+QuicFixedSocketAddress::QuicFixedSocketAddress(QuicTag tag,
+                                               QuicConfigPresence presence)
     : QuicConfigValue(tag, presence),
       has_send_value_(false),
       has_receive_value_(false) {}
 
-QuicFixedIPEndPoint::~QuicFixedIPEndPoint() {}
+QuicFixedSocketAddress::~QuicFixedSocketAddress() {}
 
-bool QuicFixedIPEndPoint::HasSendValue() const {
+bool QuicFixedSocketAddress::HasSendValue() const {
   return has_send_value_;
 }
 
-const IPEndPoint& QuicFixedIPEndPoint::GetSendValue() const {
+const QuicSocketAddress& QuicFixedSocketAddress::GetSendValue() const {
   QUIC_BUG_IF(!has_send_value_) << "No send value to get for tag:"
                                 << QuicTagToString(tag_);
   return send_value_;
 }
 
-void QuicFixedIPEndPoint::SetSendValue(const IPEndPoint& value) {
+void QuicFixedSocketAddress::SetSendValue(const QuicSocketAddress& value) {
   has_send_value_ = true;
   send_value_ = value;
 }
 
-bool QuicFixedIPEndPoint::HasReceivedValue() const {
+bool QuicFixedSocketAddress::HasReceivedValue() const {
   return has_receive_value_;
 }
 
-const IPEndPoint& QuicFixedIPEndPoint::GetReceivedValue() const {
+const QuicSocketAddress& QuicFixedSocketAddress::GetReceivedValue() const {
   QUIC_BUG_IF(!has_receive_value_) << "No receive value to get for tag:"
                                    << QuicTagToString(tag_);
   return receive_value_;
 }
 
-void QuicFixedIPEndPoint::SetReceivedValue(const IPEndPoint& value) {
+void QuicFixedSocketAddress::SetReceivedValue(const QuicSocketAddress& value) {
   has_receive_value_ = true;
   receive_value_ = value;
 }
 
-void QuicFixedIPEndPoint::ToHandshakeMessage(
+void QuicFixedSocketAddress::ToHandshakeMessage(
     CryptoHandshakeMessage* out) const {
   if (has_send_value_) {
     QuicSocketAddressCoder address_coder(send_value_);
@@ -301,7 +300,7 @@ void QuicFixedIPEndPoint::ToHandshakeMessage(
   }
 }
 
-QuicErrorCode QuicFixedIPEndPoint::ProcessPeerHello(
+QuicErrorCode QuicFixedSocketAddress::ProcessPeerHello(
     const CryptoHandshakeMessage& peer_hello,
     HelloType hello_type,
     string* error_details) {
@@ -314,7 +313,8 @@ QuicErrorCode QuicFixedIPEndPoint::ProcessPeerHello(
   } else {
     QuicSocketAddressCoder address_coder;
     if (address_coder.Decode(address.data(), address.length())) {
-      SetReceivedValue(IPEndPoint(address_coder.ip(), address_coder.port()));
+      SetReceivedValue(
+          QuicSocketAddress(address_coder.ip(), address_coder.port()));
     }
   }
   return QUIC_NO_ERROR;
@@ -325,6 +325,7 @@ QuicConfig::QuicConfig()
       max_idle_time_before_crypto_handshake_(QuicTime::Delta::Zero()),
       max_undecryptable_packets_(0),
       connection_options_(kCOPT, PRESENCE_OPTIONAL),
+      client_connection_options_(kCLOP, PRESENCE_OPTIONAL),
       idle_network_timeout_seconds_(kICSL, PRESENCE_REQUIRED),
       silent_close_(kSCLS, PRESENCE_OPTIONAL),
       max_streams_per_connection_(kMSPC, PRESENCE_OPTIONAL),
@@ -389,6 +390,23 @@ bool QuicConfig::HasClientSentConnectionOption(QuicTag tag,
     return true;
   }
   return false;
+}
+
+void QuicConfig::SetClientConnectionOptions(
+    const QuicTagVector& client_connection_options) {
+  client_connection_options_.SetSendValues(client_connection_options);
+}
+
+bool QuicConfig::HasClientRequestedIndependentOption(
+    QuicTag tag,
+    Perspective perspective) const {
+  if (perspective == Perspective::IS_SERVER) {
+    return (HasReceivedConnectionOptions() &&
+            ContainsQuicTag(ReceivedConnectionOptions(), tag));
+  }
+
+  return (client_connection_options_.HasSendValues() &&
+          ContainsQuicTag(client_connection_options_.GetSendValues(), tag));
 }
 
 void QuicConfig::SetIdleNetworkTimeout(
@@ -551,7 +569,7 @@ bool QuicConfig::DisableConnectionMigration() const {
 }
 
 void QuicConfig::SetAlternateServerAddressToSend(
-    const IPEndPoint& alternate_server_address) {
+    const QuicSocketAddress& alternate_server_address) {
   alternate_server_address_.SetSendValue(alternate_server_address);
 }
 
@@ -559,7 +577,7 @@ bool QuicConfig::HasReceivedAlternateServerAddress() const {
   return alternate_server_address_.HasReceivedValue();
 }
 
-const IPEndPoint& QuicConfig::ReceivedAlternateServerAddress() const {
+const QuicSocketAddress& QuicConfig::ReceivedAlternateServerAddress() const {
   return alternate_server_address_.GetReceivedValue();
 }
 

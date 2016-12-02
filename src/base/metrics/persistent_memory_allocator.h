@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <memory>
+#include <type_traits>
 
 #include "base/atomicops.h"
 #include "base/base_export.h"
@@ -47,6 +48,15 @@ class SharedMemory;
 // Note that memory not in active use is not accessed so it is possible to
 // use virtual memory, including memory-mapped files, as backing storage with
 // the OS "pinning" new (zeroed) physical RAM pages only as they are needed.
+//
+// All persistent memory segments can be freely accessed by builds of different
+// natural word widths (i.e. 32/64-bit) but users of this module must manually
+// ensure that the data recorded within are similarly safe. The GetAsObject<>()
+// methods use the kExpectedInstanceSize attribute of the structs to check this.
+//
+// Memory segments can NOT, however, be exchanged between CPUs of different
+// endianess. Attempts to do so will simply see the existing data as corrupt
+// and refuse to access any of it.
 class BASE_EXPORT PersistentMemoryAllocator {
  public:
   typedef uint32_t Reference;
@@ -116,6 +126,12 @@ class BASE_EXPORT PersistentMemoryAllocator {
       return allocator_->GetAsObject<T>(ref, type_id);
     }
 
+    // Similar to GetAsObject() but converts references to arrays of objects.
+    template <typename T>
+    const T* GetAsArray(Reference ref, uint32_t type_id, size_t count) const {
+      return allocator_->GetAsArray<T>(ref, type_id, count);
+    }
+
    private:
     // Weak-pointer to memory allocator being iterated over.
     const PersistentMemoryAllocator* allocator_;
@@ -141,6 +157,10 @@ class BASE_EXPORT PersistentMemoryAllocator {
 
   enum : uint32_t {
     kTypeIdAny = 0  // Match any type-id inside GetAsObject().
+  };
+
+  enum : size_t {
+    kSizeAny = 1  // Constant indicating that any array size is acceptable.
   };
 
   // This is the standard file extension (suitable for being passed to the
@@ -224,18 +244,26 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // TIME before accessing it or risk crashing! Once dereferenced, the pointer
   // is safe to reuse forever.
   //
-  // IMPORTANT: If there is any possibility that this allocator will be shared
-  // across different CPU architectures (perhaps because it is being persisted
-  // to disk), then it is essential that the object be of a fixed size. All
-  // fields must be of a defined type that does not change across CPU architec-
-  // tures or natural word sizes (i.e. 32/64 bit). Acceptable are char and
-  // (u)intXX_t. Unacceptable are int, bool, or wchar_t which are implemen-
-  // tation defined with regards to their size.
+  // It is essential that the object be of a fixed size. All fields must be of
+  // a defined type that does not change based on the compiler or the CPU
+  // natural word size. Acceptable are char, float, double, and (u)intXX_t.
+  // Unacceptable are int, bool, and wchar_t which are implementation defined
+  // with regards to their size.
   //
-  // ALSO: Alignment must be consistent. A uint64_t after a uint32_t will pad
+  // Alignment must also be consistent. A uint64_t after a uint32_t will pad
   // differently between 32 and 64 bit architectures. Either put the bigger
   // elements first, group smaller elements into blocks the size of larger
-  // elements, or manually insert padding fields as appropriate.
+  // elements, or manually insert padding fields as appropriate for the
+  // largest architecture, including at the end.
+  //
+  // To protected against mistakes, all objects must have the attribute
+  // |kExpectedInstanceSize| (static constexpr size_t)  that is a hard-coded
+  // numerical value -- NNN, not sizeof(T) -- that can be tested. If the
+  // instance size is not fixed, at least one build will fail.
+  //
+  // If the size of a structure changes, the type-ID used to recognize it
+  // should also change so later versions of the code don't try to read
+  // incompatible structures from earlier versions.
   //
   // NOTE: Though this method will guarantee that an object of the specified
   // type can be accessed without going outside the bounds of the memory
@@ -250,17 +278,48 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // based on knowledge of how the allocator is being used.
   template <typename T>
   T* GetAsObject(Reference ref, uint32_t type_id) {
-    static_assert(!std::is_polymorphic<T>::value, "no polymorphic objects");
+    static_assert(std::is_pod<T>::value, "only simple objects");
+    static_assert(T::kExpectedInstanceSize == sizeof(T), "inconsistent size");
     return const_cast<T*>(
         reinterpret_cast<volatile T*>(GetBlockData(ref, type_id, sizeof(T))));
   }
   template <typename T>
   const T* GetAsObject(Reference ref, uint32_t type_id) const {
-    static_assert(!std::is_polymorphic<T>::value, "no polymorphic objects");
+    static_assert(std::is_pod<T>::value, "only simple objects");
+    static_assert(T::kExpectedInstanceSize == sizeof(T), "inconsistent size");
     return const_cast<const T*>(
         reinterpret_cast<const volatile T*>(GetBlockData(
             ref, type_id, sizeof(T))));
   }
+
+  // Like GetAsObject but get an array of simple, fixed-size types.
+  //
+  // Use a |count| of the required number of array elements, or kSizeAny.
+  // GetAllocSize() can be used to calculate the upper bound but isn't reliable
+  // because padding can make space for extra elements that were not written.
+  //
+  // Remember that an array of char is a string but may not be NUL terminated.
+  //
+  // There are no compile-time or run-time checks to ensure 32/64-bit size
+  // compatibilty when using these accessors. Only use fixed-size types such
+  // as char, float, double, or (u)intXX_t.
+  template <typename T>
+  T* GetAsArray(Reference ref, uint32_t type_id, size_t count) {
+    static_assert(std::is_fundamental<T>::value, "use GetAsObject<>()");
+    return const_cast<T*>(reinterpret_cast<volatile T*>(
+        GetBlockData(ref, type_id, count * sizeof(T))));
+  }
+  template <typename T>
+  const T* GetAsArray(Reference ref, uint32_t type_id, size_t count) const {
+    static_assert(std::is_fundamental<T>::value, "use GetAsObject<>()");
+    return const_cast<const char*>(reinterpret_cast<const volatile T*>(
+        GetBlockData(ref, type_id, count * sizeof(T))));
+  }
+
+  // Get the corresponding reference for an object held in persistent memory.
+  // If the |memory| is not valid or the type does not match, a kReferenceNull
+  // result will be returned.
+  Reference GetAsReference(const void* memory, uint32_t type_id) const;
 
   // Get the number of bytes allocated to a block. This is useful when storing
   // arrays in order to validate the ending boundary. The returned value will

@@ -15,8 +15,6 @@
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_flags.h"
 
-using std::max;
-using std::min;
 
 namespace net {
 
@@ -55,12 +53,12 @@ void QuicReceivedPacketManager::RecordPacketReceived(
     // Record how out of order stats.
     ++stats_->packets_reordered;
     stats_->max_sequence_reordering =
-        max(stats_->max_sequence_reordering,
-            ack_frame_.largest_observed - packet_number);
+        std::max(stats_->max_sequence_reordering,
+                 ack_frame_.largest_observed - packet_number);
     int64_t reordering_time_us =
         (receipt_time - time_largest_observed_).ToMicroseconds();
     stats_->max_time_reordering_us =
-        max(stats_->max_time_reordering_us, reordering_time_us);
+        std::max(stats_->max_time_reordering_us, reordering_time_us);
   }
   if (packet_number > ack_frame_.largest_observed) {
     ack_frame_.largest_observed = packet_number;
@@ -149,7 +147,7 @@ bool QuicReceivedPacketManager::HasMissingPackets() const {
   return ack_frame_.packets.NumIntervals() > 1 ||
          (!ack_frame_.packets.Empty() &&
           ack_frame_.packets.Min() >
-              max(QuicPacketNumber(1), peer_least_packet_awaiting_ack_));
+              std::max(QuicPacketNumber(1), peer_least_packet_awaiting_ack_));
 }
 
 bool QuicReceivedPacketManager::HasNewMissingPackets() const {

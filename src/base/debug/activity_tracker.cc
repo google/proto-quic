@@ -150,7 +150,8 @@ ActivityTrackerMemoryAllocator::GetObjectReference() {
 
 void ActivityTrackerMemoryAllocator::ReleaseObjectReference(Reference ref) {
   // Zero the memory so that it is ready for immediate use if needed later.
-  char* mem_base = allocator_->GetAsObject<char>(ref, object_type_);
+  char* mem_base = allocator_->GetAsArray<char>(
+      ref, object_type_, PersistentMemoryAllocator::kSizeAny);
   DCHECK(mem_base);
   memset(mem_base, 0, object_size_);
 
@@ -306,9 +307,15 @@ void ActivityUserData::SetReference(StringPiece name,
 // the very first time the thread is seen. All fields must be of exact sizes
 // so there is no issue moving between 32 and 64-bit builds.
 struct ThreadActivityTracker::Header {
+  // Expected size for 32/64-bit check.
+  static constexpr size_t kExpectedInstanceSize = 80;
+
   // This unique number indicates a valid initialization of the memory.
   std::atomic<uint32_t> cookie;
-  uint32_t reserved;  // pad out to 64 bits
+
+  // The number of Activity slots (spaces that can hold an Activity) that
+  // immediately follow this structure in memory.
+  uint32_t stack_slots;
 
   // The process-id and thread-id (thread_ref.as_id) to which this data belongs.
   // These identifiers are not guaranteed to mean anything but are unique, in
@@ -329,9 +336,6 @@ struct ThreadActivityTracker::Header {
   // with these two values.
   int64_t start_time;
   int64_t start_ticks;
-
-  // The number of Activity slots in the data.
-  uint32_t stack_slots;
 
   // The current depth of the stack. This may be greater than the number of
   // slots. If the depth exceeds the number of slots, the newest entries
@@ -791,9 +795,23 @@ ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   }
 
   // Convert the memory block found above into an actual memory address.
+  // Doing the conversion as a Header object enacts the 32/64-bit size
+  // consistency checks which would not otherwise be done. Unfortunately,
+  // some older compilers and MSVC don't have standard-conforming definitions
+  // of std::atomic which cause it not to be plain-old-data. Don't check on
+  // those platforms assuming that the checks on other platforms will be
+  // sufficient.
+  // TODO(bcwhite): Review this after major compiler releases.
   DCHECK(mem_reference);
-  void* mem_base =
-      allocator_->GetAsObject<char>(mem_reference, kTypeIdActivityTracker);
+  void* mem_base;
+#if !defined(OS_WIN) && !defined(OS_ANDROID)
+  mem_base = allocator_->GetAsObject<ThreadActivityTracker::Header>(
+      mem_reference, kTypeIdActivityTracker);
+#else
+  mem_base = allocator_->GetAsArray<char>(mem_reference, kTypeIdActivityTracker,
+                                          PersistentMemoryAllocator::kSizeAny);
+#endif
+
   DCHECK(mem_base);
   DCHECK_LE(stack_memory_size_, allocator_->GetAllocSize(mem_reference));
 
@@ -826,8 +844,8 @@ void* GlobalActivityTracker::GetUserDataMemory(
       return nullptr;
   }
 
-  void* memory =
-      allocator_->GetAsObject<char>(*reference, kTypeIdUserDataRecord);
+  void* memory = allocator_->GetAsArray<char>(
+      *reference, kTypeIdUserDataRecord, PersistentMemoryAllocator::kSizeAny);
   DCHECK(memory);
   return memory;
 }
@@ -860,9 +878,10 @@ GlobalActivityTracker::GlobalActivityTracker(
                            kCachedUserDataMemories,
                            /*make_iterable=*/false),
       user_data_(
-          allocator_->GetAsObject<char>(
+          allocator_->GetAsArray<char>(
               allocator_->Allocate(kGlobalDataSize, kTypeIdGlobalDataRecord),
-              kTypeIdGlobalDataRecord),
+              kTypeIdGlobalDataRecord,
+              PersistentMemoryAllocator::kSizeAny),
           kGlobalDataSize) {
   // Ensure the passed memory is valid and empty (iterator finds nothing).
   uint32_t type;

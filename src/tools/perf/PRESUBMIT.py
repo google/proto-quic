@@ -128,7 +128,6 @@ def PostUploadHook(cl, change, output_api):
 
   results = []
   bots = [
-    'android_s5_perf_cq',
     'linux_perf_cq',
     'mac_retina_perf_cq',
     'winx64_10_perf_cq'

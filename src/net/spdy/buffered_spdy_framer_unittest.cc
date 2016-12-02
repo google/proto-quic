@@ -179,7 +179,7 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
 class BufferedSpdyFramerTest : public PlatformTest {};
 
 TEST_F(BufferedSpdyFramerTest, OnSetting) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   SpdySettingsIR settings_ir;
   settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, false, false, 2);
   settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, false, false, 3);

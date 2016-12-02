@@ -4,32 +4,13 @@
 
 #include "net/cert/internal/trust_store_collection.h"
 
-#include "base/bind.h"
 #include "net/cert/internal/test_helpers.h"
-#include "net/cert/internal/trust_store_test_helpers.h"
-#include "testing/gmock/include/gmock/gmock.h"
+#include "net/cert/internal/trust_store_in_memory.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 
 namespace {
-
-using ::testing::_;
-using ::testing::Property;
-using ::testing::StrictMock;
-
-void NotCalled(TrustAnchors anchors) {
-  ADD_FAILURE() << "NotCalled was called";
-}
-
-class MockTrustStore : public TrustStore {
- public:
-  MOCK_CONST_METHOD4(FindTrustAnchorsForCert,
-                     void(const scoped_refptr<ParsedCertificate>&,
-                          const TrustAnchorsCallback&,
-                          TrustAnchors*,
-                          std::unique_ptr<Request>*));
-};
 
 class TrustStoreCollectionTest : public testing::Test {
  public:
@@ -75,155 +56,46 @@ class TrustStoreCollectionTest : public testing::Test {
   scoped_refptr<ParsedCertificate> newintermediate_;
 };
 
-// Collection contains no stores, should return no results and complete
-// synchronously.
+// Collection contains no stores, should return no results.
 TEST_F(TrustStoreCollectionTest, NoStores) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
+  TrustAnchors matches;
 
   TrustStoreCollection collection;
-  collection.FindTrustAnchorsForCert(target_, base::Bind(&NotCalled),
-                                     &sync_matches, &req);
+  collection.FindTrustAnchorsForCert(target_, &matches);
 
-  EXPECT_FALSE(req);
-  EXPECT_TRUE(sync_matches.empty());
+  EXPECT_TRUE(matches.empty());
 }
 
-// Collection contains only one synchronous store, should complete
-// synchronously.
-TEST_F(TrustStoreCollectionTest, NoPrimaryStoreOneSyncStore) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
+// Collection contains only one store.
+TEST_F(TrustStoreCollectionTest, OneStore) {
+  TrustAnchors matches;
 
   TrustStoreCollection collection;
   TrustStoreInMemory in_memory;
   in_memory.AddTrustAnchor(newroot_);
-  collection.AddTrustStoreSynchronousOnly(&in_memory);
-  collection.FindTrustAnchorsForCert(newintermediate_, base::Bind(&NotCalled),
-                                     &sync_matches, &req);
+  collection.AddTrustStore(&in_memory);
+  collection.FindTrustAnchorsForCert(newintermediate_, &matches);
 
-  EXPECT_FALSE(req);
-  ASSERT_EQ(1U, sync_matches.size());
-  EXPECT_EQ(newroot_, sync_matches[0]);
+  ASSERT_EQ(1U, matches.size());
+  EXPECT_EQ(newroot_, matches[0]);
 }
 
-// Collection contains two synchronous stores, should complete synchronously.
-TEST_F(TrustStoreCollectionTest, NoPrimaryStoreTwoSyncStores) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
+// Collection contains two stores.
+TEST_F(TrustStoreCollectionTest, TwoStores) {
+  TrustAnchors matches;
 
   TrustStoreCollection collection;
   TrustStoreInMemory in_memory1;
   TrustStoreInMemory in_memory2;
   in_memory1.AddTrustAnchor(newroot_);
   in_memory2.AddTrustAnchor(oldroot_);
-  collection.AddTrustStoreSynchronousOnly(&in_memory1);
-  collection.AddTrustStoreSynchronousOnly(&in_memory2);
-  collection.FindTrustAnchorsForCert(newintermediate_, base::Bind(&NotCalled),
-                                     &sync_matches, &req);
+  collection.AddTrustStore(&in_memory1);
+  collection.AddTrustStore(&in_memory2);
+  collection.FindTrustAnchorsForCert(newintermediate_, &matches);
 
-  EXPECT_FALSE(req);
-  ASSERT_EQ(2U, sync_matches.size());
-  EXPECT_EQ(newroot_, sync_matches[0]);
-  EXPECT_EQ(oldroot_, sync_matches[1]);
-}
-
-// The secondary stores in the collection should not be passed a callback to
-// their FindTrustAnchorsForCert call.
-TEST_F(TrustStoreCollectionTest, SyncStoresAreQueriedSynchronously) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
-
-  TrustStoreCollection collection;
-  StrictMock<MockTrustStore> store;
-  collection.AddTrustStoreSynchronousOnly(&store);
-
-  EXPECT_CALL(
-      store,
-      FindTrustAnchorsForCert(
-          _, Property(&TrustStore::TrustAnchorsCallback::is_null, true), _, _));
-
-  collection.FindTrustAnchorsForCert(newintermediate_, base::Bind(&NotCalled),
-                                     &sync_matches, &req);
-
-  EXPECT_FALSE(req);
-  EXPECT_TRUE(sync_matches.empty());
-}
-
-// If the primary store completes synchronously, TrustStoreCollection should
-// complete synchronously also.
-TEST_F(TrustStoreCollectionTest, AllStoresAreSynchronous) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
-
-  TrustStoreCollection collection;
-  TrustStoreInMemory in_memory1;
-  TrustStoreInMemory in_memory2;
-  in_memory1.AddTrustAnchor(newroot_);
-  in_memory2.AddTrustAnchor(oldroot_);
-  collection.SetPrimaryTrustStore(&in_memory1);
-  collection.AddTrustStoreSynchronousOnly(&in_memory2);
-  collection.FindTrustAnchorsForCert(newintermediate_, base::Bind(&NotCalled),
-                                     &sync_matches, &req);
-
-  EXPECT_FALSE(req);
-  ASSERT_EQ(2U, sync_matches.size());
-  EXPECT_EQ(newroot_, sync_matches[0]);
-  EXPECT_EQ(oldroot_, sync_matches[1]);
-}
-
-// Primary store returns results asynchronously. No secondary stores registered.
-TEST_F(TrustStoreCollectionTest, AsyncPrimaryStore) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
-
-  TrustStoreInMemoryAsync in_memory_async;
-  in_memory_async.AddAsyncTrustAnchor(newroot_);
-
-  TrustStoreCollection collection;
-  collection.SetPrimaryTrustStore(&in_memory_async);
-
-  TrustAnchorResultRecorder anchor_results;
-  collection.FindTrustAnchorsForCert(
-      newintermediate_, anchor_results.Callback(), &sync_matches, &req);
-
-  ASSERT_TRUE(req);
-  EXPECT_TRUE(sync_matches.empty());
-
-  anchor_results.Run();
-  ASSERT_EQ(1U, anchor_results.matches().size());
-  EXPECT_EQ(newroot_, anchor_results.matches()[0]);
-}
-
-// Primary store returns results both synchronously and asynchronously, and
-// a secondary store returns results synchronously as well.
-TEST_F(TrustStoreCollectionTest, SyncAndAsyncPrimaryStoreAndSyncStore) {
-  std::unique_ptr<TrustStore::Request> req;
-  TrustAnchors sync_matches;
-
-  TrustStoreInMemoryAsync in_memory_async;
-  in_memory_async.AddAsyncTrustAnchor(newroot_);
-  in_memory_async.AddSyncTrustAnchor(newrootrollover_);
-
-  TrustStoreInMemory in_memory;
-  in_memory.AddTrustAnchor(oldroot_);
-
-  TrustStoreCollection collection;
-  collection.SetPrimaryTrustStore(&in_memory_async);
-  collection.AddTrustStoreSynchronousOnly(&in_memory);
-
-  TrustAnchorResultRecorder anchor_results;
-  collection.FindTrustAnchorsForCert(
-      newintermediate_, anchor_results.Callback(), &sync_matches, &req);
-
-  ASSERT_TRUE(req);
-  ASSERT_EQ(2U, sync_matches.size());
-  EXPECT_EQ(newrootrollover_, sync_matches[0]);
-  EXPECT_EQ(oldroot_, sync_matches[1]);
-
-  anchor_results.Run();
-  ASSERT_EQ(1U, anchor_results.matches().size());
-  EXPECT_EQ(newroot_, anchor_results.matches()[0]);
+  ASSERT_EQ(2U, matches.size());
+  EXPECT_EQ(newroot_, matches[0]);
+  EXPECT_EQ(oldroot_, matches[1]);
 }
 
 }  // namespace

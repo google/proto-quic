@@ -59,6 +59,7 @@
 
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
+#include "base/logging.h"
 #include "base/numerics/safe_math.h"
 #include "build/build_config.h"
 

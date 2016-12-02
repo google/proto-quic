@@ -98,7 +98,9 @@ BbrSender::BbrSender(const QuicClock* clock,
       probe_rtt_round_passed_(false),
       last_sample_is_app_limited_(false),
       recovery_state_(NOT_IN_RECOVERY),
-      end_recovery_at_(0) {
+      end_recovery_at_(0),
+      recovery_window_(max_congestion_window_),
+      enforce_startup_pacing_rate_increase_(FLAGS_quic_bbr_faster_startup) {
   EnterStartupMode();
 }
 
@@ -453,7 +455,24 @@ void BbrSender::CalculatePacingRate() {
     return;
   }
 
-  pacing_rate_ = pacing_gain_ * BandwidthEstimate();
+  QuicBandwidth target_rate = pacing_gain_ * BandwidthEstimate();
+
+  // Ensure that the pacing rate does not drop too low during the startup.
+  if (!is_at_full_bandwidth_ && enforce_startup_pacing_rate_increase_) {
+    // Pace at the rate of initial_window / RTT as soon as RTT measurements are
+    // available.
+    if (pacing_rate_.IsZero() && !rtt_stats_->min_rtt().IsZero()) {
+      pacing_rate_ = QuicBandwidth::FromBytesAndTimeDelta(
+          initial_congestion_window_, rtt_stats_->min_rtt());
+      return;
+    }
+
+    // Do not decrease the pacing rate during the startup.
+    pacing_rate_ = std::max(pacing_rate_, target_rate);
+    return;
+  }
+
+  pacing_rate_ = target_rate;
 }
 
 void BbrSender::CalculateCongestionWindow(QuicByteCount bytes_acked) {

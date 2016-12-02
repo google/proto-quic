@@ -5,7 +5,7 @@
 
 
 from grit.format.policy_templates.writers import template_writer
-
+import re
 
 NEWLINE = '\r\n'
 
@@ -223,17 +223,18 @@ class AdmWriter(template_writer.TemplateWriter):
           self._GetChromiumVersionString())
     self._AddGuiString(self.config['win_supported_os'],
                        self.messages['win_supported_winxpsp2']['text'])
-    category_path = self.config['win_mandatory_category_path']
-    recommended_category_path = self.config['win_recommended_category_path']
-    recommended_name = '%s - %s' % \
-        (self.config['app_name'], self.messages['doc_recommended']['text'])
-    if self.config['build'] == 'chrome':
-      self._AddGuiString(category_path[0], 'Google')
-      self._AddGuiString(category_path[1], self.config['app_name'])
-      self._AddGuiString(recommended_category_path[1], recommended_name)
-    elif self.config['build'] == 'chromium':
-      self._AddGuiString(category_path[0], self.config['app_name'])
-      self._AddGuiString(recommended_category_path[0], recommended_name)
+    categories = self.config['win_mandatory_category_path'] + \
+                  self.config['win_recommended_category_path']
+    strings = self.config['win_category_path_strings'].copy()
+    if 'adm_category_path_strings' in self.config:
+      strings.update(self.config['adm_category_path_strings'])
+    for category in categories:
+      if (category in strings):
+        # Replace {...} by localized messages.
+        string = re.sub(r"\{(\w+)\}", \
+                        lambda m: self.messages[m.group(1)]['text'], \
+                        strings[category])
+        self._AddGuiString(category, string)
     # All the policies will be written into self.policies.
     # The final template text will be assembled into self.lines by
     # self.EndTemplate().

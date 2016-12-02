@@ -72,7 +72,6 @@ static void RunTests(JNIEnv* env,
                      const JavaParamRef<jstring>& jcommand_line_flags,
                      const JavaParamRef<jstring>& jcommand_line_file_path,
                      const JavaParamRef<jstring>& jstdout_file_path,
-                     jboolean jstdout_fifo,
                      const JavaParamRef<jobject>& app_context,
                      const JavaParamRef<jstring>& jtest_data_dir) {
   // Command line initialized basically, will be fully initialized later.
@@ -106,15 +105,7 @@ static void RunTests(JNIEnv* env,
 
   // A few options, such "--gtest_list_tests", will just use printf directly
   // Always redirect stdout to a known file.
-  unlink(stdout_file_path.value().c_str());
-  if (jstdout_fifo) {
-    if (!base::android::CreateFIFO(stdout_file_path, 0666)) {
-      AndroidLog(ANDROID_LOG_ERROR, "Failed to create fifo %s: %s\n",
-                 stdout_file_path.value().c_str(), strerror(errno));
-      exit(EXIT_FAILURE);
-    }
-  }
-  if (!base::android::RedirectStream(stdout, stdout_file_path, "w+")) {
+  if (!base::android::RedirectStream(stdout, stdout_file_path, "a+")) {
     AndroidLog(ANDROID_LOG_ERROR, "Failed to redirect stream to file: %s: %s\n",
                stdout_file_path.value().c_str(), strerror(errno));
     exit(EXIT_FAILURE);

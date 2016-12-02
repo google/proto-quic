@@ -33,6 +33,45 @@ namespace {
 // after a certain timeout has passed without receiving an ACK.
 bool g_connect_backup_jobs_enabled = true;
 
+// Tracks why the IdleSocket is removed from the group's |idle_sockets_|.
+// This enum is used to back an UMA histogram, and should therefore be
+// treated as append-only.
+enum IdleSocketFate {
+  // (1) When an attempt is made to reuse the socket:
+
+  // Reusing an idle socket that is previously used.
+  IDLE_SOCKET_FATE_REUSE_REUSED = 0,
+  // Reusing an idle socket that is not previously used.
+  IDLE_SOCKET_FATE_REUSE_UNUSED = 1,
+  // Reusing an idle socket and found it unusable.
+  IDLE_SOCKET_FATE_REUSE_UNUSABLE = 2,
+
+  // (2) When releasing the socket to the pool, found it unusable:
+  IDLE_SOCKET_FATE_RELEASE_UNUSABLE = 3,
+
+  // (3) Socket is cleaned up in CleanupIdleSockets():
+
+  // Cleaning up the idle socket is forced.
+  IDLE_SOCKET_FATE_CLEAN_UP_FORCED = 4,
+  // Cleaning up a timed-out, reused idle socket.
+  IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_REUSED = 5,
+  // Cleaning up a timed-out, unused idle socket.
+  IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_UNUSED = 6,
+  // Cleaning up an unusable idle socket.
+  IDLE_SOCKET_FATE_CLEAN_UP_UNUSABLE = 7,
+
+  // (4) Socket is closed usually when per-origin socket limit is reached:
+  IDLE_SOCKET_FATE_CLOSE_ONE = 8,
+
+  // Max value.
+  IDLE_SOCKET_FATE_MAX = 9
+};
+
+void RecordIdleSocketFate(IdleSocketFate fate) {
+  UMA_HISTOGRAM_ENUMERATION("Net.Socket.IdleSocketFate", fate,
+                            IDLE_SOCKET_FATE_MAX);
+}
+
 }  // namespace
 
 ConnectJob::ConnectJob(const std::string& group_name,
@@ -455,8 +494,12 @@ bool ClientSocketPoolBaseHelper::AssignIdleSocketToRequest(
   //   the |idle_socket_it| will be set to the newest used idle socket.
   for (std::list<IdleSocket>::iterator it = idle_sockets->begin();
        it != idle_sockets->end();) {
+    // Check whether socket is usable. Note that it's unlikely that the socket
+    // is not usuable because this function is always invoked after a
+    // reusability check, but in theory socket can be closed asynchronously.
     if (!it->IsUsable()) {
       DecrementIdleCount();
+      RecordIdleSocketFate(IDLE_SOCKET_FATE_REUSE_UNUSABLE);
       delete it->socket;
       it = idle_sockets->erase(it);
       continue;
@@ -490,6 +533,9 @@ bool ClientSocketPoolBaseHelper::AssignIdleSocketToRequest(
             ClientSocketHandle::REUSED_IDLE :
             ClientSocketHandle::UNUSED_IDLE;
 
+    RecordIdleSocketFate(idle_socket.socket->WasEverUsed()
+                             ? IDLE_SOCKET_FATE_REUSE_REUSED
+                             : IDLE_SOCKET_FATE_REUSE_UNUSED);
     // If this socket took multiple attempts to obtain, don't report those
     // every time it's reused, just to the first user.
     if (idle_socket.socket->WasEverUsed())
@@ -657,15 +703,6 @@ bool ClientSocketPoolBaseHelper::IdleSocket::IsUsable() const {
   return socket->IsConnected();
 }
 
-bool ClientSocketPoolBaseHelper::IdleSocket::ShouldCleanup(
-    base::TimeTicks now,
-    base::TimeDelta timeout) const {
-  bool timed_out = (now - start_time) >= timeout;
-  if (timed_out)
-    return true;
-  return !IsUsable();
-}
-
 void ClientSocketPoolBaseHelper::CleanupIdleSockets(bool force) {
   if (idle_socket_count_ == 0)
     return;
@@ -678,17 +715,30 @@ void ClientSocketPoolBaseHelper::CleanupIdleSockets(bool force) {
   while (i != group_map_.end()) {
     Group* group = i->second;
 
-    std::list<IdleSocket>::iterator j = group->mutable_idle_sockets()->begin();
-    while (j != group->idle_sockets().end()) {
-      base::TimeDelta timeout =
-          j->socket->WasEverUsed() ?
-          used_idle_socket_timeout_ : unused_idle_socket_timeout_;
-      if (force || j->ShouldCleanup(now, timeout)) {
-        delete j->socket;
-        j = group->mutable_idle_sockets()->erase(j);
+    auto idle_socket_it = group->mutable_idle_sockets()->begin();
+    while (idle_socket_it != group->idle_sockets().end()) {
+      base::TimeDelta timeout = idle_socket_it->socket->WasEverUsed()
+                                    ? used_idle_socket_timeout_
+                                    : unused_idle_socket_timeout_;
+      bool timed_out = (now - idle_socket_it->start_time) >= timeout;
+      bool should_clean_up = force || timed_out || !idle_socket_it->IsUsable();
+      if (should_clean_up) {
+        if (force) {
+          RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_FORCED);
+        } else if (timed_out) {
+          RecordIdleSocketFate(
+              idle_socket_it->socket->WasEverUsed()
+                  ? IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_REUSED
+                  : IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_UNUSED);
+        } else {
+          DCHECK(!idle_socket_it->IsUsable());
+          RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_UNUSABLE);
+        }
+        delete idle_socket_it->socket;
+        idle_socket_it = group->mutable_idle_sockets()->erase(idle_socket_it);
         DecrementIdleCount();
       } else {
-        ++j;
+        ++idle_socket_it;
       }
     }
 
@@ -770,6 +820,7 @@ void ClientSocketPoolBaseHelper::ReleaseSocket(
     OnAvailableSocketSlot(group_name, group);
   } else {
     socket.reset();
+    RecordIdleSocketFate(IDLE_SOCKET_FATE_RELEASE_UNUSABLE);
   }
 
   CheckForStalledSocketGroups();
@@ -1090,6 +1141,7 @@ bool ClientSocketPoolBaseHelper::CloseOneIdleSocketExceptInGroup(
     if (!idle_sockets->empty()) {
       delete idle_sockets->front().socket;
       idle_sockets->pop_front();
+      RecordIdleSocketFate(IDLE_SOCKET_FATE_CLOSE_ONE);
       DecrementIdleCount();
       if (group->IsEmpty())
         RemoveGroup(i);

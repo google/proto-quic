@@ -32,8 +32,8 @@ static void DoSomething(JNIEnv* env, const base::android::JavaParamRef<jclass>&
     const base::android::JavaParamRef<jobject>& callback1,
     const base::android::JavaParamRef<jobject>& callback2);
 
-extern "C" __attribute__((visibility("default")))
-void Java_org_chromium_foo_Foo_nativeDoSomething(JNIEnv* env, jclass jcaller,
+JNI_GENERATOR_EXPORT void Java_org_chromium_foo_Foo_nativeDoSomething(JNIEnv*
+    env, jclass jcaller,
     jobject callback1,
     jobject callback2) {
   return DoSomething(env, base::android::JavaParamRef<jclass>(env, jcaller),

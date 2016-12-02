@@ -13,15 +13,11 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_framer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 
 struct QuicAckFrame;
-class QuicConnection;
-class QuicConnectionVisitorInterface;
-class QuicPacketCreator;
-class SendAlgorithmInterface;
 
 namespace test {
 

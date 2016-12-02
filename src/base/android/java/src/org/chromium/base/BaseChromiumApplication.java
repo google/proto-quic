@@ -10,6 +10,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.view.Window;
 
+import org.chromium.base.annotations.SuppressFBWarnings;
 import org.chromium.base.multidex.ChromiumMultiDexInstaller;
 
 import java.lang.reflect.InvocationHandler;
@@ -21,8 +22,7 @@ import java.lang.reflect.Proxy;
  * Basic application functionality that should be shared among all browser applications.
  */
 public class BaseChromiumApplication extends Application {
-
-    private static final String TAG = "cr.base";
+    private static final String TAG = "base";
     private static final String TOOLBAR_CALLBACK_INTERNAL_WRAPPER_CLASS =
             "android.support.v7.internal.app.ToolbarActionBar$ToolbarCallbackWrapper";
     // In builds using the --use_unpublished_apis flag, the ToolbarActionBar class name does not
@@ -43,6 +43,7 @@ public class BaseChromiumApplication extends Application {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         assert getBaseContext() != null;
+        checkAppBeingReplaced();
         ChromiumMultiDexInstaller.install(this);
     }
 
@@ -143,6 +144,18 @@ public class BaseChromiumApplication extends Application {
     @VisibleForTesting
     public static void initCommandLine(Context context) {
         ((BaseChromiumApplication) context.getApplicationContext()).initCommandLine();
+    }
+
+    /** Ensure this application object is not out-of-date. */
+    @SuppressFBWarnings("DM_EXIT")
+    private void checkAppBeingReplaced() {
+        // During app update the old apk can still be triggered by broadcasts and spin up an
+        // out-of-date application. Kill old applications in this bad state. See
+        // http://crbug.com/658130 for more context and http://b.android.com/56296 for the bug.
+        if (getResources() == null) {
+            Log.e(TAG, "getResources() null, closing app.");
+            System.exit(0);
+        }
     }
 
     /** Register hooks and listeners to start tracking the application status. */
