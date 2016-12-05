@@ -3116,6 +3116,14 @@ OPENSSL_EXPORT size_t SSL_get_server_random(const SSL *ssl, uint8_t *out,
  * NULL if one has not been negotiated yet or there is no pending handshake. */
 OPENSSL_EXPORT const SSL_CIPHER *SSL_get_pending_cipher(const SSL *ssl);
 
+/* SSL_set_retain_only_sha256_of_client_certs, on a server, sets whether only
+ * the SHA-256 hash of peer's certificate should be saved in memory and in the
+ * session. This can save memory, ticket size and session cache space. If
+ * enabled, |SSL_get_peer_certificate| will return NULL after the handshake
+ * completes. See the |peer_sha256| field of |SSL_SESSION| for the hash. */
+OPENSSL_EXPORT void SSL_set_retain_only_sha256_of_client_certs(SSL *ssl,
+                                                               int enable);
+
 /* SSL_CTX_set_retain_only_sha256_of_client_certs, on a server, sets whether
  * only the SHA-256 hash of peer's certificate should be saved in memory and in
  * the session. This can save memory, ticket size and session cache space. If
@@ -4200,6 +4208,11 @@ struct ssl_st {
    * we'll advertise support. */
   unsigned tlsext_channel_id_enabled:1;
 
+  /* retain_only_sha256_of_client_certs is true if we should compute the SHA256
+   * hash of the peer's certificate and then discard it to save memory and
+   * session space. Only effective on the server side. */
+  unsigned retain_only_sha256_of_client_certs:1;
+
   /* TODO(agl): remove once node.js not longer references this. */
   int tlsext_status_type;
 };
@@ -4538,6 +4551,7 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_NO_SHARED_GROUP 266
 #define SSL_R_PRE_SHARED_KEY_MUST_BE_LAST 267
 #define SSL_R_OLD_SESSION_PRF_HASH_MISMATCH 268
+#define SSL_R_INVALID_SCT_LIST 269
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

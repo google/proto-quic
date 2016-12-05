@@ -15,12 +15,7 @@
 #include "net/quic/core/quic_utils.h"
 
 using base::StringPiece;
-using std::make_pair;
-using std::max;
-using std::min;
-using std::pair;
 using std::string;
-using std::vector;
 
 // If true, enforce that QUIC CHLOs fit in one packet.
 bool FLAGS_quic_enforce_single_packet_chlo = true;
@@ -54,7 +49,7 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
 }
 
 QuicPacketCreator::~QuicPacketCreator() {
-  QuicUtils::DeleteFrames(&packet_.retransmittable_frames);
+  DeleteFrames(&packet_.retransmittable_frames);
 }
 
 void QuicPacketCreator::SetEncrypter(EncryptionLevel level,
@@ -115,7 +110,7 @@ void QuicPacketCreator::UpdatePacketNumberLength(
   DCHECK_LE(least_packet_awaited_by_peer, packet_.packet_number + 1);
   const QuicPacketNumber current_delta =
       packet_.packet_number + 1 - least_packet_awaited_by_peer;
-  const uint64_t delta = max(current_delta, max_packets_in_flight);
+  const uint64_t delta = std::max(current_delta, max_packets_in_flight);
   packet_.packet_number_length =
       QuicFramer::GetMinSequenceNumberLength(delta * 4);
 }
@@ -208,7 +203,8 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
   const size_t data_size = iov.total_length - iov_offset;
   size_t min_frame_size = QuicFramer::GetMinStreamFrameSize(
       id, offset, /* last_frame_in_packet= */ true);
-  size_t bytes_consumed = min<size_t>(BytesFree() - min_frame_size, data_size);
+  size_t bytes_consumed =
+      std::min<size_t>(BytesFree() - min_frame_size, data_size);
 
   bool set_fin = fin && bytes_consumed == data_size;  // Last frame.
   UniqueStreamBuffer buffer =
@@ -236,7 +232,7 @@ void QuicPacketCreator::CopyToBuffer(QuicIOVector iov,
 
   // Unroll the first iteration that handles iov_offset.
   const size_t iov_available = iov.iov[iovnum].iov_len - iov_offset;
-  size_t copy_len = min(length, iov_available);
+  size_t copy_len = std::min(length, iov_available);
 
   // Try to prefetch the next iov if there is at least one more after the
   // current. Otherwise, it looks like an irregular access that the hardware
@@ -266,13 +262,13 @@ void QuicPacketCreator::CopyToBuffer(QuicIOVector iov,
       break;
     }
     src = static_cast<char*>(iov.iov[iovnum].iov_base);
-    copy_len = min(length, iov.iov[iovnum].iov_len);
+    copy_len = std::min(length, iov.iov[iovnum].iov_len);
   }
   QUIC_BUG_IF(length > 0) << "Failed to copy entire length to buffer.";
 }
 
 void QuicPacketCreator::ReserializeAllFrames(
-    const PendingRetransmission& retransmission,
+    const QuicPendingRetransmission& retransmission,
     char* buffer,
     size_t buffer_len) {
   DCHECK(queued_frames_.empty());
@@ -335,11 +331,6 @@ void QuicPacketCreator::OnSerializedPacket() {
 
   delegate_->OnSerializedPacket(&packet_);
   ClearPacket();
-  // Maximum packet size may be only enacted while no packet is currently being
-  // constructed, so here we have a good opportunity to actually change it.
-  if (CanSetMaxPacketLength()) {
-    SetMaxPacketLength(max_packet_length_);
-  }
 }
 
 void QuicPacketCreator::ClearPacket() {
@@ -384,7 +375,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   const size_t available_size =
       max_plaintext_size_ - writer.length() - min_frame_size;
   const size_t bytes_consumed =
-      min<size_t>(available_size, remaining_data_size);
+      std::min<size_t>(available_size, remaining_data_size);
 
   const bool set_fin = fin && (bytes_consumed == remaining_data_size);
   UniqueStreamBuffer stream_buffer =
@@ -447,7 +438,7 @@ size_t QuicPacketCreator::ExpansionOnNewFrame() const {
 size_t QuicPacketCreator::BytesFree() {
   DCHECK_GE(max_plaintext_size_, PacketSize());
   return max_plaintext_size_ -
-         min(max_plaintext_size_, PacketSize() + ExpansionOnNewFrame());
+         std::min(max_plaintext_size_, PacketSize() + ExpansionOnNewFrame());
 }
 
 size_t QuicPacketCreator::PacketSize() {

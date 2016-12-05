@@ -19,7 +19,6 @@ class HttpRequestHeaders;
 class HttpResponseHeaders;
 class ProxyInfo;
 class ProxyService;
-class URLRequest;
 
 class TestProxyDelegate : public ProxyDelegate {
  public:

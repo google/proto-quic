@@ -121,12 +121,15 @@ void QuicSpdySession::OnConfigNegotiated() {
   if (FLAGS_quic_enable_force_hol_blocking && version > QUIC_VERSION_35 &&
       config()->ForceHolBlocking(perspective())) {
     force_hol_blocking_ = true;
-    // Autotuning makes sure that the headers stream flow control does
-    // not get in the way, and normal stream and connection level flow
-    // control are active anyway. This is really only for the client
-    // side (and mainly there just in tests and toys), where
-    // autotuning and/or large buffers are not enabled by default.
-    headers_stream_->flow_controller()->set_auto_tune_receive_window(true);
+    // Since all streams are tunneled through the headers stream, it
+    // is important that headers stream never flow control blocks.
+    // Otherwise, busy-loop behaviour can ensue where data streams
+    // data try repeatedly to write data not realizing that the
+    // tunnel through the headers stream is blocked.
+    headers_stream_->flow_controller()->UpdateReceiveWindowSize(
+        kStreamReceiveWindowLimit);
+    headers_stream_->flow_controller()->UpdateSendWindowOffset(
+        kStreamReceiveWindowLimit);
   }
 
   if (version > QUIC_VERSION_34) {

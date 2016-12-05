@@ -24,8 +24,8 @@ class PacketReorderingWriter : public QuicPacketWriterWrapper {
 
   WriteResult WritePacket(const char* buffer,
                           size_t buf_len,
-                          const IPAddress& self_address,
-                          const IPEndPoint& peer_address,
+                          const QuicIpAddress& self_address,
+                          const QuicSocketAddress& peer_address,
                           PerPacketOptions* options) override;
 
   void SetDelay(size_t num_packets_to_wait);
@@ -34,8 +34,8 @@ class PacketReorderingWriter : public QuicPacketWriterWrapper {
   bool delay_next_ = false;
   size_t num_packets_to_wait_ = 0;
   std::string delayed_data_;
-  IPAddress delayed_self_address_;
-  IPEndPoint delayed_peer_address_;
+  QuicIpAddress delayed_self_address_;
+  QuicSocketAddress delayed_peer_address_;
   std::unique_ptr<PerPacketOptions> delayed_options_;
 };
 

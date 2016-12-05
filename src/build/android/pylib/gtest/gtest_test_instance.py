@@ -288,6 +288,8 @@ class GtestTestInstance(test_instance.TestInstance):
     else:
       self._gtest_filter = None
 
+    self._run_disabled = args.run_disabled
+
     self._data_deps_delegate = data_deps_delegate
     self._runtime_deps_path = args.runtime_deps_path
     if not self._runtime_deps_path:
@@ -340,6 +342,10 @@ class GtestTestInstance(test_instance.TestInstance):
   @property
   def extras(self):
     return self._extras
+
+  @property
+  def gtest_also_run_disabled_tests(self):
+    return self._run_disabled
 
   @property
   def gtest_filter(self):
@@ -429,7 +435,10 @@ class GtestTestInstance(test_instance.TestInstance):
     disabled_filter_items = []
 
     if disabled_prefixes is None:
-      disabled_prefixes = ['DISABLED_', 'FLAKY_', 'FAILS_', 'PRE_', 'MANUAL_']
+      disabled_prefixes = ['FAILS_', 'PRE_', 'MANUAL_']
+      if not self._run_disabled:
+        disabled_prefixes += ['DISABLED_', 'FLAKY_']
+
     disabled_filter_items += ['%s*' % dp for dp in disabled_prefixes]
     disabled_filter_items += ['*.%s*' % dp for dp in disabled_prefixes]
 

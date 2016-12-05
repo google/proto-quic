@@ -9,7 +9,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_config.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 
@@ -44,7 +44,7 @@ class QuicConfigPeer {
   static void SetReceivedForceHolBlocking(QuicConfig* config);
 
   static void SetReceivedAlternateServerAddress(QuicConfig* config,
-                                                IPEndPoint addr);
+                                                QuicSocketAddress addr);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConfigPeer);

@@ -21,17 +21,14 @@
 using base::StringPiece;
 using base::ContainsKey;
 using std::string;
-using std::vector;
 
 namespace net {
 
 // static
 string SpdyUtils::SerializeUncompressedHeaders(const SpdyHeaderBlock& headers) {
-  SpdyMajorVersion spdy_version = HTTP2;
-
-  size_t length = SpdyFramer::GetSerializedLength(spdy_version, &headers);
-  SpdyFrameBuilder builder(length, spdy_version);
-  SpdyFramer framer(spdy_version);
+  size_t length = SpdyFramer::GetSerializedLength(&headers);
+  SpdyFrameBuilder builder(length);
+  SpdyFramer framer;
   framer.SerializeHeaderBlockWithoutCompression(&builder, headers);
   SpdySerializedFrame block(builder.take());
   return string(block.data(), length);
@@ -42,7 +39,7 @@ bool SpdyUtils::ParseHeaders(const char* data,
                              uint32_t data_len,
                              int64_t* content_length,
                              SpdyHeaderBlock* headers) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   if (!framer.ParseHeaderBlockInBuffer(data, data_len, headers) ||
       headers->empty()) {
     return false;  // Headers were invalid.
@@ -93,7 +90,7 @@ bool SpdyUtils::ParseTrailers(const char* data,
                               uint32_t data_len,
                               size_t* final_byte_offset,
                               SpdyHeaderBlock* trailers) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   if (!framer.ParseHeaderBlockInBuffer(data, data_len, trailers) ||
       trailers->empty()) {
     DVLOG(1) << "Request Trailers are invalid.";

@@ -103,12 +103,6 @@ class PosixDynamicThreadPoolTest : public testing::Test {
     peer_.set_num_idle_threads_cv(new ConditionVariable(peer_.lock()));
   }
 
-  void TearDown() override {
-    // Wake up the idle threads so they can terminate.
-    if (pool_.get())
-      pool_->Terminate();
-  }
-
   void WaitForTasksToStart(int num_tasks) {
     base::AutoLock num_waiting_to_start_locked(num_waiting_to_start_lock_);
     while (num_waiting_to_start_ < num_tasks) {

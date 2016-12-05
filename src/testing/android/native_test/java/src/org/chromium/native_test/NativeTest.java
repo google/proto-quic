@@ -45,7 +45,6 @@ public class NativeTest {
     private StringBuilder mCommandLineFlags = new StringBuilder();
     private TestStatusReporter mReporter;
     private boolean mRunInSubThread = false;
-    private boolean mStdoutFifo = false;
     private String mStdoutFilePath;
 
     private static class ReportingUncaughtExceptionHandler
@@ -122,10 +121,6 @@ public class NativeTest {
         }
 
         mStdoutFilePath = intent.getStringExtra(EXTRA_STDOUT_FILE);
-        if (mStdoutFilePath == null) {
-            mStdoutFilePath = new File(activity.getFilesDir(), "test.fifo").getAbsolutePath();
-            mStdoutFifo = true;
-        }
     }
 
     public void appendCommandLineFlags(String flags) {
@@ -155,7 +150,7 @@ public class NativeTest {
 
     private void runTests(Activity activity) {
         nativeRunTests(mCommandLineFlags.toString(), mCommandLineFilePath, mStdoutFilePath,
-                mStdoutFifo, activity.getApplicationContext(), UrlUtils.getIsolatedTestRoot());
+                activity.getApplicationContext(), UrlUtils.getIsolatedTestRoot());
         activity.finish();
         mReporter.testRunFinished(Process.myPid());
     }
@@ -168,5 +163,5 @@ public class NativeTest {
     }
 
     private native void nativeRunTests(String commandLineFlags, String commandLineFilePath,
-            String stdoutFilePath, boolean stdoutFifo, Context appContext, String testDataDir);
+            String stdoutFilePath, Context appContext, String testDataDir);
 }

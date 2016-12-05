@@ -430,7 +430,7 @@ base::NativeLibrary GSSAPISharedLibrary::LoadSharedLibrary() {
   } else {
     static const char* const kDefaultLibraryNames[] = {
 #if defined(OS_MACOSX)
-      "/System/Library/Frameworks/Kerberos.framework/Kerberos"
+      "/System/Library/Frameworks/GSS.framework/GSS"
 #elif defined(OS_OPENBSD)
       "libgssapi.so"          // Heimdal - OpenBSD
 #else

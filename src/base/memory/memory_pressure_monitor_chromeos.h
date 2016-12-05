@@ -58,7 +58,7 @@ class BASE_EXPORT MemoryPressureMonitor : public base::MemoryPressureMonitor {
   void ScheduleEarlyCheck();
 
   // Get the current memory pressure level.
-  MemoryPressureListener::MemoryPressureLevel GetCurrentPressureLevel() const
+  MemoryPressureListener::MemoryPressureLevel GetCurrentPressureLevel()
       override;
   void SetDispatchCallback(const DispatchCallback& callback) override;
 

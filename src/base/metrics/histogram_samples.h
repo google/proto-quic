@@ -27,6 +27,9 @@ class SampleCountIterator;
 class BASE_EXPORT HistogramSamples {
  public:
   struct Metadata {
+    // Expected size for 32/64-bit check.
+    static constexpr size_t kExpectedInstanceSize = 24;
+
     // Initialized when the sample-set is first created with a value provided
     // by the caller. It is generally used to identify the sample-set across
     // threads and processes, though not necessarily uniquely as it is possible
@@ -55,7 +58,21 @@ class BASE_EXPORT HistogramSamples {
     // might mismatch even when no memory corruption has happened.
     HistogramBase::AtomicCount redundant_count;
 
-    Metadata() : id(0), sum(0), redundant_count(0) {}
+    // 4 bytes of padding to explicitly extend this structure to a multiple of
+    // 64-bits. This is required to ensure the structure is the same size on
+    // both 32-bit and 64-bit builds.
+    char padding[4];
+  };
+
+  // Because sturctures held in persistent memory must be POD, there can be no
+  // default constructor to clear the fields. This derived class exists just
+  // to clear them when being allocated on the heap.
+  struct LocalMetadata : Metadata {
+    LocalMetadata() {
+      id = 0;
+      sum = 0;
+      redundant_count = 0;
+    }
   };
 
   explicit HistogramSamples(uint64_t id);
@@ -102,7 +119,7 @@ class BASE_EXPORT HistogramSamples {
   // In order to support histograms shared through an external memory segment,
   // meta values may be the local storage or external storage depending on the
   // wishes of the derived class.
-  Metadata local_meta_;
+  LocalMetadata local_meta_;
   Metadata* meta_;
 
   DISALLOW_COPY_AND_ASSIGN(HistogramSamples);

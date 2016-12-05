@@ -25,8 +25,6 @@
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 
 using base::StringPiece;
-using std::max;
-using std::min;
 using std::string;
 using testing::Invoke;
 using testing::_;
@@ -266,13 +264,13 @@ MockQuicConnection::MockQuicConnection(MockQuicConnectionHelper* helper,
                                        MockAlarmFactory* alarm_factory,
                                        Perspective perspective)
     : MockQuicConnection(kTestConnectionId,
-                         IPEndPoint(TestPeerIPAddress(), kTestPort),
+                         QuicSocketAddress(TestPeerIPAddress(), kTestPort),
                          helper,
                          alarm_factory,
                          perspective,
                          AllSupportedVersions()) {}
 
-MockQuicConnection::MockQuicConnection(IPEndPoint address,
+MockQuicConnection::MockQuicConnection(QuicSocketAddress address,
                                        MockQuicConnectionHelper* helper,
                                        MockAlarmFactory* alarm_factory,
                                        Perspective perspective)
@@ -288,7 +286,7 @@ MockQuicConnection::MockQuicConnection(QuicConnectionId connection_id,
                                        MockAlarmFactory* alarm_factory,
                                        Perspective perspective)
     : MockQuicConnection(connection_id,
-                         IPEndPoint(TestPeerIPAddress(), kTestPort),
+                         QuicSocketAddress(TestPeerIPAddress(), kTestPort),
                          helper,
                          alarm_factory,
                          perspective,
@@ -300,7 +298,7 @@ MockQuicConnection::MockQuicConnection(
     Perspective perspective,
     const QuicVersionVector& supported_versions)
     : MockQuicConnection(kTestConnectionId,
-                         IPEndPoint(TestPeerIPAddress(), kTestPort),
+                         QuicSocketAddress(TestPeerIPAddress(), kTestPort),
                          helper,
                          alarm_factory,
                          perspective,
@@ -308,7 +306,7 @@ MockQuicConnection::MockQuicConnection(
 
 MockQuicConnection::MockQuicConnection(
     QuicConnectionId connection_id,
-    IPEndPoint address,
+    QuicSocketAddress address,
     MockQuicConnectionHelper* helper,
     MockAlarmFactory* alarm_factory,
     Perspective perspective,
@@ -351,7 +349,7 @@ PacketSavingConnection::~PacketSavingConnection() {}
 
 void PacketSavingConnection::SendOrQueuePacket(SerializedPacket* packet) {
   encrypted_packets_.push_back(base::MakeUnique<QuicEncryptedPacket>(
-      QuicUtils::CopyBuffer(*packet), packet->encrypted_length, true));
+      CopyBuffer(*packet), packet->encrypted_length, true));
   // Transfer ownership of the packet to the SentPacketManager and the
   // ack notifier to the AckNotifierManager.
   sent_packet_manager_->OnPacketSent(packet, kInvalidPathId, 0,
@@ -504,8 +502,8 @@ string HexDumpWithMarks(const char* data,
   const int kSizeLimit = 1024;
   if (length > kSizeLimit || mark_length > kSizeLimit) {
     LOG(ERROR) << "Only dumping first " << kSizeLimit << " bytes.";
-    length = min(length, kSizeLimit);
-    mark_length = min(mark_length, kSizeLimit);
+    length = std::min(length, kSizeLimit);
+    mark_length = std::min(mark_length, kSizeLimit);
   }
 
   string hex;
@@ -536,8 +534,8 @@ string HexDumpWithMarks(const char* data,
 
 }  // namespace
 
-IPAddress TestPeerIPAddress() {
-  return Loopback4();
+QuicIpAddress TestPeerIPAddress() {
+  return QuicIpAddress::Loopback4();
 }
 
 QuicVersion QuicVersionMax() {
@@ -711,8 +709,8 @@ void CompareCharArraysWithHexError(const string& description,
                                    const char* expected,
                                    const int expected_len) {
   EXPECT_EQ(actual_len, expected_len);
-  const int min_len = min(actual_len, expected_len);
-  const int max_len = max(actual_len, expected_len);
+  const int min_len = std::min(actual_len, expected_len);
+  const int max_len = std::max(actual_len, expected_len);
   std::unique_ptr<bool[]> marks(new bool[max_len]);
   bool identical = (actual_len == expected_len);
   for (int i = 0; i < min_len; ++i) {

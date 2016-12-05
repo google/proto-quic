@@ -10,7 +10,6 @@
 #include "net/quic/core/quic_bug_tracker.h"
 
 using std::string;
-using std::max;
 
 namespace net {
 
@@ -129,7 +128,7 @@ bool QuicMultipathSentPacketManager::HasPendingRetransmissions() const {
   return path_manager != nullptr && path_manager->HasPendingRetransmissions();
 }
 
-PendingRetransmission
+QuicPendingRetransmission
 QuicMultipathSentPacketManager::NextPendingRetransmission() {
   // TODO(fayang): Move pending_retransmissions_ from path sent packet manager
   // to multipath sent packet manager.
@@ -138,9 +137,9 @@ QuicMultipathSentPacketManager::NextPendingRetransmission() {
   if (path_manager == nullptr) {
     OnUnrecoverablePathError(kDefaultPathId);
     QuicFrames retransmittable_frames;
-    return PendingRetransmission(kInvalidPathId, 0u, NOT_RETRANSMISSION,
-                                 retransmittable_frames, false, 0,
-                                 ENCRYPTION_NONE, PACKET_1BYTE_PACKET_NUMBER);
+    return QuicPendingRetransmission(
+        kInvalidPathId, 0u, NOT_RETRANSMISSION, retransmittable_frames, false,
+        0, ENCRYPTION_NONE, PACKET_1BYTE_PACKET_NUMBER);
   }
   return path_manager->NextPendingRetransmission();
 }
@@ -287,9 +286,9 @@ QuicPacketCount QuicMultipathSentPacketManager::EstimateMaxPacketsInFlight(
   for (PathSentPacketManagerInfo path_manager_info : path_managers_info_) {
     if (path_manager_info.manager != nullptr) {
       max_packets_in_flight =
-          max(max_packets_in_flight,
-              path_manager_info.manager->EstimateMaxPacketsInFlight(
-                  max_packet_length));
+          std::max(max_packets_in_flight,
+                   path_manager_info.manager->EstimateMaxPacketsInFlight(
+                       max_packet_length));
     }
   }
   DCHECK_LT(0u, max_packets_in_flight);
@@ -519,6 +518,16 @@ void QuicMultipathSentPacketManager::OnApplicationLimited() {
     }
     path_manager_info.manager->OnApplicationLimited();
   }
+}
+
+const SendAlgorithmInterface* QuicMultipathSentPacketManager::GetSendAlgorithm()
+    const {
+  QuicSentPacketManagerInterface* path_manager =
+      MaybeGetSentPacketManagerForActivePath(kDefaultPathId);
+  if (path_manager == nullptr) {
+    return nullptr;
+  }
+  return path_manager->GetSendAlgorithm();
 }
 
 }  // namespace net

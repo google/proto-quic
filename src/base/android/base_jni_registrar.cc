@@ -20,6 +20,7 @@
 #include "base/android/record_histogram.h"
 #include "base/android/record_user_action.h"
 #include "base/android/statistics_recorder_android.h"
+#include "base/android/time_utils.h"
 #include "base/android/trace_event_binding.h"
 #include "base/macros.h"
 #include "base/message_loop/message_pump_android.h"
@@ -51,6 +52,7 @@ static RegistrationMethod kBaseRegisteredMethods[] = {
     {"StatisticsRecorderAndroid",
      base::android::RegisterStatisticsRecorderAndroid},
     {"SystemMessageHandler", base::MessagePumpForUI::RegisterBindings},
+    {"TimeUtils", base::android::RegisterTimeUtils},
     {"TraceEvent", base::android::RegisterTraceEvent},
 };
 

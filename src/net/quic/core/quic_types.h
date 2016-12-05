@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "net/base/net_export.h"
+#include "net/quic/core/quic_time.h"
 
 namespace net {
 
@@ -26,6 +27,7 @@ typedef uint64_t QuicPacketNumber;
 typedef uint64_t QuicPublicResetNonceProof;
 typedef uint64_t QuicStreamOffset;
 typedef std::array<char, 32> DiversificationNonce;
+typedef std::vector<std::pair<QuicPacketNumber, QuicTime>> PacketTimeVector;
 
 // A struct for functions which consume data payloads and fins.
 struct NET_EXPORT_PRIVATE QuicConsumedData {

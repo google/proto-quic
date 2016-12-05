@@ -4,6 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import distutils.spawn
 import optparse
 import os
 import shutil
@@ -319,6 +320,13 @@ def _ParseOptions(argv):
   for arg in options.bootclasspath:
     bootclasspath += build_utils.ParseGnList(arg)
   options.bootclasspath = bootclasspath
+  if options.java_version == '1.8' and options.bootclasspath:
+    # Android's boot jar doesn't contain all java 8 classes.
+    # See: https://github.com/evant/gradle-retrolambda/issues/23.
+    javac_path = os.path.realpath(distutils.spawn.find_executable('javac'))
+    jdk_dir = os.path.dirname(os.path.dirname(javac_path))
+    rt_jar = os.path.join(jdk_dir, 'jre', 'lib', 'rt.jar')
+    options.bootclasspath.append(rt_jar)
 
   classpath = []
   for arg in options.classpath:

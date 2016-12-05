@@ -75,7 +75,7 @@ def main():
 
   if not os.path.exists(args.logdog_bin_cmd):
     logging.error(
-        'Logfog binary %s unavailable. Unable to upload logcats.',
+        'Logdog binary %s unavailable. Unable to upload logcats.',
         args.logdog_bin_cmd)
   elif not os.path.exists(args.source):
     logging.error(

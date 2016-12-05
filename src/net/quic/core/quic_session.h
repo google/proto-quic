@@ -20,12 +20,11 @@
 #include "base/containers/small_map.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_packet_creator.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 
@@ -106,8 +105,8 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   void OnPathDegrading() override;
 
   // Called on every incoming packet. Passes |packet| through to |connection_|.
-  virtual void ProcessUdpPacket(const IPEndPoint& self_address,
-                                const IPEndPoint& peer_address,
+  virtual void ProcessUdpPacket(const QuicSocketAddress& self_address,
+                                const QuicSocketAddress& peer_address,
                                 const QuicReceivedPacket& packet);
 
   // Called by streams when they want to write data to the peer.
@@ -177,7 +176,9 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   QuicConnection* connection() { return connection_; }
   const QuicConnection* connection() const { return connection_; }
   size_t num_active_requests() const { return dynamic_stream_map_.size(); }
-  const IPEndPoint& peer_address() const { return connection_->peer_address(); }
+  const QuicSocketAddress& peer_address() const {
+    return connection_->peer_address();
+  }
   QuicConnectionId connection_id() const {
     return connection_->connection_id();
   }

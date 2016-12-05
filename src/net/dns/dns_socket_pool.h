@@ -26,7 +26,7 @@ class StreamSocket;
 // to DNS servers.
 class NET_EXPORT_PRIVATE DnsSocketPool {
  public:
-  virtual ~DnsSocketPool() { }
+  virtual ~DnsSocketPool();
 
   // Creates a DnsSocketPool that implements the default strategy for managing
   // sockets.  (This varies by platform; see DnsSocketPoolImpl in
@@ -85,7 +85,7 @@ class NET_EXPORT_PRIVATE DnsSocketPool {
 
  private:
   ClientSocketFactory* socket_factory_;
-  const RandIntCallback& rand_int_callback_;
+  const RandIntCallback rand_int_callback_;
   NetLog* net_log_;
   const std::vector<IPEndPoint>* nameservers_;
   bool initialized_;

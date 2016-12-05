@@ -85,6 +85,11 @@ class WinTool(object):
     """Simple stamp command."""
     open(path, 'w').close()
 
+  def ExecDeleteFile(self, path):
+    """Simple file delete command."""
+    if os.path.exists(path):
+      os.unlink(path)
+
   def ExecRecursiveMirror(self, source, dest):
     """Emulation of rm -rf out && cp -af in out."""
     if os.path.exists(dest):

@@ -74,5 +74,69 @@
   "uncompiled": {
     "contexts": ["blessed_extension"],
     "nocompile": true
+  },
+  "alias": {
+    "channel": "stable",
+    "contexts": ["blessed_extension"],
+    "source": "alias_source"
+  },
+  "alias_source": {
+    "channel": "stable",
+    "contexts": ["blessed_extension"],
+    "alias": "alias"
+  },
+  "complex_alias": [{
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "source": "complex_alias_source"
+  }, {
+    "channel": "dev",
+    "contexts": ["webui"]
+  }],
+  "complex_alias_source": [{
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "alias": "complex_alias"
+  }, {
+    "channel": "dev",
+    "contexts": ["webui"]
+  }],
+  "parent_source" : {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "alias": "parent_source_alias"
+  },
+  "parent_source.child" : {
+    "channel": "beta",
+    "contexts": ["blessed_extension"]
+  },
+  "parent_source.child_source" : {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "alias": "parent_source_child_alias"
+  },
+  "parent_source_alias": {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "source": "parent_source"
+  },
+  "parent_source_child_alias": {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "source": "parent_source.child_source"
+  },
+  "alias_parent": {
+    "channel": "beta",
+    "contexts": ["blessed_extension"]
+  },
+  "alias_parent.child": {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "source": "child_source"
+  },
+  "child_source": {
+    "channel": "beta",
+    "contexts": ["blessed_extension"],
+    "alias": "alias_parent.child"
   }
 }

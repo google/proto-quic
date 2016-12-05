@@ -40,7 +40,8 @@ HttpRequest::~HttpRequest() {
 }
 
 GURL HttpRequest::GetURL() const {
-  // TODO(svaldez): Use real URL from the EmbeddedTestServer.
+  if (base_url.is_valid())
+    return base_url.Resolve(relative_url);
   return GURL("http://localhost" + relative_url);
 }
 

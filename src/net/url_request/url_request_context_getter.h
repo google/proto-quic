@@ -16,7 +16,6 @@ class SingleThreadTaskRunner;
 }  // namespace base
 
 namespace net {
-class CookieStore;
 class URLRequestContext;
 class URLRequestContextGetterObserver;
 

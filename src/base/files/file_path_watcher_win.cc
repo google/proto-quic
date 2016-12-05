@@ -11,7 +11,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/message_loop/message_loop.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/win/object_watcher.h"
@@ -21,25 +20,19 @@ namespace base {
 namespace {
 
 class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
-                            public base::win::ObjectWatcher::Delegate,
-                            public MessageLoop::DestructionObserver {
+                            public base::win::ObjectWatcher::Delegate {
  public:
   FilePathWatcherImpl()
       : handle_(INVALID_HANDLE_VALUE),
         recursive_watch_(false) {}
 
-  // FilePathWatcher::PlatformDelegate overrides.
+  // FilePathWatcher::PlatformDelegate:
   bool Watch(const FilePath& path,
              bool recursive,
              const FilePathWatcher::Callback& callback) override;
   void Cancel() override;
 
-  // Deletion of the FilePathWatcher will call Cancel() to dispose of this
-  // object in the right thread. This also observes destruction of the required
-  // cleanup thread, in case it quits before Cancel() is called.
-  void WillDestroyCurrentMessageLoop() override;
-
-  // Callback from MessageLoopForIO.
+  // base::win::ObjectWatcher::Delegate:
   void OnObjectSignaled(HANDLE object) override;
 
  private:
@@ -58,9 +51,6 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
 
   // Destroy the watch handle.
   void DestroyWatch();
-
-  // Cleans up and stops observing the |task_runner_| thread.
-  void CancelOnMessageLoopThread();
 
   // Callback to notify upon changes.
   FilePathWatcher::Callback callback_;
@@ -97,7 +87,6 @@ bool FilePathWatcherImpl::Watch(const FilePath& path,
   callback_ = callback;
   target_ = path;
   recursive_watch_ = recursive;
-  MessageLoop::current()->AddDestructionObserver(this);
 
   File::Info file_info;
   if (GetFileInfo(target_, &file_info)) {
@@ -120,30 +109,13 @@ void FilePathWatcherImpl::Cancel() {
     return;
   }
 
-  // Switch to the file thread if necessary so we can stop |watcher_|.
-  if (!task_runner()->BelongsToCurrentThread()) {
-    task_runner()->PostTask(
-        FROM_HERE, Bind(&FilePathWatcherImpl::CancelOnMessageLoopThread, this));
-  } else {
-    CancelOnMessageLoopThread();
-  }
-}
-
-void FilePathWatcherImpl::CancelOnMessageLoopThread() {
   DCHECK(task_runner()->BelongsToCurrentThread());
   set_cancelled();
 
   if (handle_ != INVALID_HANDLE_VALUE)
     DestroyWatch();
 
-  if (!callback_.is_null()) {
-    MessageLoop::current()->RemoveDestructionObserver(this);
-    callback_.Reset();
-  }
-}
-
-void FilePathWatcherImpl::WillDestroyCurrentMessageLoop() {
-  CancelOnMessageLoopThread();
+  callback_.Reset();
 }
 
 void FilePathWatcherImpl::OnObjectSignaled(HANDLE object) {

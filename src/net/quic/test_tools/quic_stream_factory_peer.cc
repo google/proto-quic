@@ -17,7 +17,6 @@
 #include "net/test/test_data_directory.h"
 
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -169,7 +168,7 @@ void QuicStreamFactoryPeer::CacheDummyServerConfig(
   string source_address_token("test_source_address_token");
   string signature("test_signature");
 
-  vector<string> certs;
+  std::vector<string> certs;
   // Load a certificate that is valid for *.example.org
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));

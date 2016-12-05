@@ -78,25 +78,37 @@ bool Scope::HasValues(SearchNested search_nested) const {
 
 const Value* Scope::GetValue(const base::StringPiece& ident,
                              bool counts_as_used) {
+  const Scope* found_in_scope = nullptr;
+  return GetValueWithScope(ident, counts_as_used, &found_in_scope);
+}
+
+const Value* Scope::GetValueWithScope(const base::StringPiece& ident,
+                                      bool counts_as_used,
+                                      const Scope** found_in_scope) {
   // First check for programmatically-provided values.
   for (auto* provider : programmatic_providers_) {
     const Value* v = provider->GetProgrammaticValue(ident);
-    if (v)
+    if (v) {
+      *found_in_scope = nullptr;
       return v;
+    }
   }
 
   RecordMap::iterator found = values_.find(ident);
   if (found != values_.end()) {
     if (counts_as_used)
       found->second.used = true;
+    *found_in_scope = this;
     return &found->second.value;
   }
 
   // Search in the parent scope.
   if (const_containing_)
-    return const_containing_->GetValue(ident);
-  if (mutable_containing_)
-    return mutable_containing_->GetValue(ident, counts_as_used);
+    return const_containing_->GetValueWithScope(ident, found_in_scope);
+  if (mutable_containing_) {
+    return mutable_containing_->GetValueWithScope(ident, counts_as_used,
+                                                  found_in_scope);
+  }
   return nullptr;
 }
 
@@ -131,11 +143,19 @@ base::StringPiece Scope::GetStorageKey(const base::StringPiece& ident) const {
 }
 
 const Value* Scope::GetValue(const base::StringPiece& ident) const {
+  const Scope *found_in_scope = nullptr;
+  return GetValueWithScope(ident, &found_in_scope);
+}
+
+const Value* Scope::GetValueWithScope(const base::StringPiece& ident,
+                                      const Scope** found_in_scope) const {
   RecordMap::const_iterator found = values_.find(ident);
-  if (found != values_.end())
+  if (found != values_.end()) {
+    *found_in_scope = this;
     return &found->second.value;
+  }
   if (containing())
-    return containing()->GetValue(ident);
+    return containing()->GetValueWithScope(ident, found_in_scope);
   return nullptr;
 }
 

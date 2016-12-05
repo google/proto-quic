@@ -193,6 +193,8 @@
       'WebKit Mac - WPTServe': 'release_bot',
       'WebKit Win - WPTServe': 'release_bot_x86',
       'WebKit Linux - RandomOrder': 'release_bot',
+      'WebKit Mac - RandomOrder': 'release_bot',
+      'WebKit Win - RandomOrder': 'release_bot_x86',
       'Win 10 Fast Ring': 'release_trybot',
       'Windows deterministic': 'release_bot_x86',
       'Windows Clang deterministic': 'clang_release_bot_minimal_symbols_x86',
@@ -351,11 +353,6 @@
 
     'chromium.webkit': {
       'Android Builder': 'android_release_bot_minimal_symbols',
-      'WebKit Linux Precise ASAN': 'asan_lsan_release_bot',
-      'WebKit Linux Precise (dbg)': 'debug_bot',
-      'WebKit Linux Precise Leak': 'release_bot',
-      'WebKit Linux Precise MSAN': 'msan_release_bot',
-      'WebKit Linux Precise': 'release_bot',
       'WebKit Linux Trusty ASAN': 'asan_lsan_release_bot',
       'WebKit Linux Trusty (dbg)': 'debug_bot',
       'WebKit Linux Trusty Leak': 'release_bot',
@@ -445,10 +442,6 @@
       # release trybots must *not* enable dchecks, because that could
       # cause them to produce different baselines than the release
       # waterfall bots, and run-webkit-tests can't handle that (by design).
-      'linux_precise_blink_compile_dbg': 'debug_trybot',
-      'linux_precise_blink_compile_rel': 'release_bot_minimal_symbols',
-      'linux_precise_blink_dbg': 'debug_trybot',
-      'linux_precise_blink_rel': 'release_bot_minimal_symbols',
       'linux_trusty_blink_compile_dbg': 'debug_trybot',
       'linux_trusty_blink_compile_rel': 'release_bot_minimal_symbols',
       'linux_trusty_blink_dbg': 'debug_trybot',
@@ -1421,11 +1414,11 @@
     ],
 
     'ubsan_release_bot': [
-      'ubsan', 'release_bot',
+      'ubsan', 'ubsan_no_recover_hack', 'release_bot',
     ],
 
     'ubsan_vptr_edge_release_bot': [
-      'ubsan_vptr', 'edge', 'release_bot',
+      'ubsan_vptr', 'ubsan_no_recover_hack', 'edge', 'release_bot',
     ],
 
     'ubsan_vptr_release_bot': [
@@ -1704,7 +1697,7 @@
     },
 
     'no_pch': {
-      'gn_args': 'disable_precompiled_headers=true',
+      'gn_args': 'enable_precompiled_headers=false',
     },
 
     'no_symbols': {

@@ -32,6 +32,8 @@ class Error(Exception):
 
 
 UNIT_REWRITES = {
+  'microsecond': 'microseconds',
+  'us': 'microseconds',
   'millisecond': 'ms',
   'milliseconds': 'ms',
   'kb': 'KB',

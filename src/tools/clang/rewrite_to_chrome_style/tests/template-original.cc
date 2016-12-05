@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
+
 namespace not_blink {
 
 void function(int x) {}
@@ -9,6 +11,7 @@ void function(int x) {}
 class Class {
  public:
   void method() {}
+  virtual void virtualMethod() {}
   template <typename T>
   void methodTemplate(T) {}
   template <typename T>
@@ -17,6 +20,17 @@ class Class {
 
 template <typename T>
 void functionTemplate(T x) {}
+
+template <typename T = Class>
+void functionTemplate2() {
+  T::staticMethodTemplate(123);
+}
+
+template <typename T = Class>
+class TemplatedClass {
+ public:
+  void anotherMethod() { T::staticMethodTemplate(123); }
+};
 
 }  // not_blink
 
@@ -119,6 +133,25 @@ void test() {
 
 }  // test_template_arg_is_method_template_in_non_member_context
 
+namespace test_inherited_field {
+
+template <typename T>
+class BaseClass {
+ public:
+  unsigned long m_size;
+};
+
+template <typename T>
+class DerivedClass : protected BaseClass<T> {
+ private:
+  using Base = BaseClass<T>;
+  // https://crbug.com/640016: Need to rewrite |m_size| into |size_|.
+  using Base::m_size;
+  void method() { m_size = 123; }
+};
+
+}  // namespace test_inherited_field
+
 namespace test_template_arg_is_method_template_in_member_context {
 
 struct Class {
@@ -161,4 +194,90 @@ void foo() {
 
 }  // namespace test_unnamed_arg
 
+namespace cxx_dependent_scope_member_expr_testing {
+
+class PartitionAllocator {
+ public:
+  static void method() {}
+};
+
+template <typename Allocator = PartitionAllocator>
+class Vector {
+ public:
+  // https://crbug.com/582315: |Allocator::method| is a
+  // CXXDependentScopeMemberExpr.
+  void anotherMethod() {
+    if (std::is_class<Allocator>::value)  // Shouldn't rename |value|
+      Allocator::method();                // Should rename |method| -> |Method|.
+  }
+};
+
+template <typename Allocator = PartitionAllocator>
+void test() {
+  // https://crbug.com/582315: |Allocator::method| is a
+  // DependentScopeDeclRefExpr.
+  if (std::is_class<Allocator>::value)  // Shouldn't rename |value|.
+    Allocator::method();                // Should rename |method|.
+}
+
+class InterceptingCanvasBase : public ::not_blink::Class {
+ public:
+  virtual void virtualMethodInBlink(){};
+};
+
+template <typename DerivedCanvas>
+class InterceptingCanvas : public InterceptingCanvasBase {
+ public:
+  void virtualMethod() override {
+    this->Class::virtualMethod();  // https://crbug.com/582315#c19
+    this->InterceptingCanvasBase::virtualMethodInBlink();
+  }
+};
+
+template <typename T>
+class ThreadSpecific {
+ public:
+  T* operator->();
+  operator T*();
+};
+
+template <typename T>
+inline ThreadSpecific<T>::operator T*() {
+  return nullptr;
+}
+
+template <typename T>
+inline T* ThreadSpecific<T>::operator->() {
+  return operator T*();
+}
+
+class Class {
+ public:
+  virtual void virtualMethodInBlink() {}
+};
+
+}  // namespace cxx_dependent_scope_member_expr_testing
+
 }  // namespace blink
+
+namespace not_blink {
+
+namespace cxx_dependent_scope_member_expr_testing {
+
+class Base : public ::blink::cxx_dependent_scope_member_expr_testing::Class {
+ public:
+  virtual void virtualMethod() {}
+};
+
+template <typename T>
+class Derived : public Base {
+ public:
+  void virtualMethod() override {
+    this->Class::virtualMethodInBlink();
+    this->Base::virtualMethod();
+  }
+};
+
+}  // namespace cxx_dependent_scope_member_expr_testing
+
+}  // namespace not_blink

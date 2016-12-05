@@ -25,14 +25,16 @@ QuicSimpleServerSession::QuicSimpleServerSession(
     QuicSession::Visitor* visitor,
     QuicCryptoServerStream::Helper* helper,
     const QuicCryptoServerConfig* crypto_config,
-    QuicCompressedCertsCache* compressed_certs_cache)
+    QuicCompressedCertsCache* compressed_certs_cache,
+    QuicHttpResponseCache* response_cache)
     : QuicServerSessionBase(config,
                             connection,
                             visitor,
                             helper,
                             crypto_config,
                             compressed_certs_cache),
-      highest_promised_stream_id_(0) {}
+      highest_promised_stream_id_(0),
+      response_cache_(response_cache) {}
 
 QuicSimpleServerSession::~QuicSimpleServerSession() {
   delete connection();
@@ -67,14 +69,14 @@ void QuicSimpleServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
 
 void QuicSimpleServerSession::PromisePushResources(
     const string& request_url,
-    const std::list<QuicInMemoryCache::ServerPushInfo>& resources,
+    const std::list<QuicHttpResponseCache::ServerPushInfo>& resources,
     QuicStreamId original_stream_id,
     const SpdyHeaderBlock& original_request_headers) {
   if (!server_push_enabled()) {
     return;
   }
 
-  for (QuicInMemoryCache::ServerPushInfo resource : resources) {
+  for (QuicHttpResponseCache::ServerPushInfo resource : resources) {
     SpdyHeaderBlock headers = SynthesizePushRequestHeaders(
         request_url, resource, original_request_headers);
     highest_promised_stream_id_ += 2;
@@ -94,7 +96,8 @@ QuicSpdyStream* QuicSimpleServerSession::CreateIncomingDynamicStream(
     return nullptr;
   }
 
-  QuicSpdyStream* stream = new QuicSimpleServerStream(id, this);
+  QuicSpdyStream* stream =
+      new QuicSimpleServerStream(id, this, response_cache_);
   ActivateStream(base::WrapUnique(stream));
   return stream;
 }
@@ -105,8 +108,8 @@ QuicSimpleServerStream* QuicSimpleServerSession::CreateOutgoingDynamicStream(
     return nullptr;
   }
 
-  QuicSimpleServerStream* stream =
-      new QuicSimpleServerStream(GetNextOutgoingStreamId(), this);
+  QuicSimpleServerStream* stream = new QuicSimpleServerStream(
+      GetNextOutgoingStreamId(), this, response_cache_);
   stream->SetPriority(priority);
   ActivateStream(base::WrapUnique(stream));
   return stream;
@@ -148,7 +151,7 @@ void QuicSimpleServerSession::HandleRstOnValidNonexistentStream(
 
 SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
     string request_url,
-    QuicInMemoryCache::ServerPushInfo resource,
+    QuicHttpResponseCache::ServerPushInfo resource,
     const SpdyHeaderBlock& original_request_headers) {
   GURL push_request_url = resource.request_url;
   string path = push_request_url.path();

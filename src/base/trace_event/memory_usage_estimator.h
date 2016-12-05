@@ -92,6 +92,11 @@ template <class T, class D>
 size_t EstimateMemoryUsage(const std::unique_ptr<T[], D>& array,
                            size_t array_length);
 
+// std::shared_ptr
+
+template <class T>
+size_t EstimateMemoryUsage(const std::shared_ptr<T>& ptr);
+
 // Containers
 
 template <class F, class S>
@@ -274,6 +279,28 @@ template <class T, class D>
 size_t EstimateMemoryUsage(const std::unique_ptr<T[], D>& array,
                            size_t array_length) {
   return EstimateMemoryUsage(array.get(), array_length);
+}
+
+// std::shared_ptr
+
+template <class T>
+size_t EstimateMemoryUsage(const std::shared_ptr<T>& ptr) {
+  auto use_count = ptr.use_count();
+  if (use_count == 0) {
+    return 0;
+  }
+  // Model shared_ptr after libc++,
+  // see __shared_ptr_pointer from include/memory
+  struct SharedPointer {
+    void* vtbl;
+    long shared_owners;
+    long shared_weak_owners;
+    T* value;
+  };
+  // If object of size S shared N > S times we prefer to (potentially)
+  // overestimate than to return 0.
+  return sizeof(SharedPointer) +
+         (EstimateItemMemoryUsage(*ptr) + (use_count - 1)) / use_count;
 }
 
 // std::pair

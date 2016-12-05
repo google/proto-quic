@@ -59,6 +59,11 @@ TEST(TimeTestOutOfBounds, FromExplodedOutOfBoundsTime) {
       {{9840633, 1, 0, 1, 1, 1, 0, 0}, true},
       // Underflow will fail as well.
       {{-9840633, 1, 0, 1, 1, 1, 0, 0}, true},
+      // Test integer overflow and underflow cases for the values themselves.
+      {{std::numeric_limits<int>::min(), 1, 0, 1, 1, 1, 0, 0}, true},
+      {{std::numeric_limits<int>::max(), 1, 0, 1, 1, 1, 0, 0}, true},
+      {{2016, std::numeric_limits<int>::min(), 0, 1, 1, 1, 0, 0}, false},
+      {{2016, std::numeric_limits<int>::max(), 0, 1, 1, 1, 0, 0}, false},
   };
 
   for (const auto& test : kDateTestData) {

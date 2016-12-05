@@ -14,8 +14,6 @@
 #include "net/log/net_log.h"
 
 namespace base {
-class DictionaryValue;
-class FilePath;
 class Value;
 }
 

@@ -757,121 +757,6 @@ struct FuzzTraits<cc::RenderPassList> {
 };
 
 template <>
-struct FuzzTraits<content::IndexedDBKey> {
-  static bool Fuzz(content::IndexedDBKey* p, Fuzzer* fuzzer) {
-    // TODO(mbarbella): Support mutation.
-    if (!fuzzer->ShouldGenerate())
-      return true;
-
-    ++g_depth;
-    blink::WebIDBKeyType web_type =
-        static_cast<blink::WebIDBKeyType>(RandInRange(7));
-    switch (web_type) {
-      case blink::WebIDBKeyTypeArray: {
-        size_t length = g_depth > 3 ? 0 : RandInRange(4);
-        std::vector<content::IndexedDBKey> array;
-        array.resize(length);
-        for (size_t i = 0; i < length; ++i) {
-            if (!FuzzParam(&array[i], fuzzer)) {
-              --g_depth;
-              return false;
-            }
-        }
-        *p = content::IndexedDBKey(array);
-        return true;
-      }
-      case blink::WebIDBKeyTypeBinary: {
-        std::string binary;
-        if (!FuzzParam(&binary, fuzzer)) {
-            --g_depth;
-            return false;
-        }
-        *p = content::IndexedDBKey(binary);
-        return true;
-      }
-      case blink::WebIDBKeyTypeString: {
-        base::string16 string;
-        if (!FuzzParam(&string, fuzzer))
-          return false;
-        *p = content::IndexedDBKey(string);
-        return true;
-      }
-      case blink::WebIDBKeyTypeDate:
-      case blink::WebIDBKeyTypeNumber: {
-        double number;
-        if (!FuzzParam(&number, fuzzer)) {
-            --g_depth;
-            return false;
-        }
-        *p = content::IndexedDBKey(number, web_type);
-        return true;
-      }
-      case blink::WebIDBKeyTypeInvalid:
-      case blink::WebIDBKeyTypeNull: {
-        *p = content::IndexedDBKey(web_type);
-        return true;
-      }
-      default: {
-          NOTREACHED();
-          --g_depth;
-          return false;
-      }
-    }
-  }
-};
-
-template <>
-struct FuzzTraits<content::IndexedDBKeyRange> {
-  static bool Fuzz(content::IndexedDBKeyRange* p, Fuzzer* fuzzer) {
-    content::IndexedDBKey lower = p->lower();
-    content::IndexedDBKey upper = p->upper();
-    bool lower_open = p->lower_open();
-    bool upper_open = p->upper_open();
-    if (!FuzzParam(&lower, fuzzer))
-      return false;
-    if (!FuzzParam(&upper, fuzzer))
-      return false;
-    if (!FuzzParam(&lower_open, fuzzer))
-      return false;
-    if (!FuzzParam(&upper_open, fuzzer))
-      return false;
-    *p = content::IndexedDBKeyRange(lower, upper, lower_open, upper_open);
-    return true;
-  }
-};
-
-template <>
-struct FuzzTraits<content::IndexedDBKeyPath> {
-  static bool Fuzz(content::IndexedDBKeyPath* p, Fuzzer* fuzzer) {
-    // TODO(mbarbella): Support mutation.
-    if (!fuzzer->ShouldGenerate())
-      return true;
-
-    switch (RandInRange(3)) {
-      case 0: {
-        std::vector<base::string16> array;
-        if (!FuzzParam(&array, fuzzer))
-          return false;
-        *p = content::IndexedDBKeyPath(array);
-        break;
-      }
-      case 1: {
-        base::string16 string;
-        if (!FuzzParam(&string, fuzzer))
-          return false;
-        *p = content::IndexedDBKeyPath(string);
-        break;
-      }
-      case 2: {
-        *p = content::IndexedDBKeyPath();
-        break;
-      }
-    }
-    return true;
-  }
-};
-
-template <>
 struct FuzzTraits<content::PageState> {
   static bool Fuzz(content::PageState* p, Fuzzer* fuzzer) {
     std::string data = p->ToEncodedData();
@@ -954,7 +839,8 @@ struct FuzzTraits<content::SyntheticGesturePacket> {
         if (!FuzzParam(&index, fuzzer))
           return false;
         content::SyntheticPointerActionParams* params =
-            new content::SyntheticPointerActionParams(action_type);
+            new content::SyntheticPointerActionParams();
+        params->set_pointer_action_type(action_type);
         params->set_position(position);
         params->set_index(index);
         gesture_params.reset(params);

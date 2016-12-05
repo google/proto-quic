@@ -71,7 +71,7 @@ void QuicConfigPeer::SetReceivedForceHolBlocking(QuicConfig* config) {
 
 // static
 void QuicConfigPeer::SetReceivedAlternateServerAddress(QuicConfig* config,
-                                                       IPEndPoint addr) {
+                                                       QuicSocketAddress addr) {
   config->alternate_server_address_.SetReceivedValue(addr);
 }
 

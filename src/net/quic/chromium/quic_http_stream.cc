@@ -429,7 +429,7 @@ bool QuicHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   if (!session_)
     return false;
 
-  *endpoint = session_->peer_address();
+  *endpoint = session_->peer_address().impl().socket_address();
   return true;
 }
 
@@ -807,7 +807,7 @@ int QuicHttpStream::ProcessResponseHeaders(const SpdyHeaderBlock& headers) {
     return ERR_QUIC_PROTOCOL_ERROR;
   }
   // Put the peer's IP address and port into the response.
-  IPEndPoint address = session_->peer_address();
+  IPEndPoint address = session_->peer_address().impl().socket_address();
   response_info_->socket_address = HostPortPair::FromIPEndPoint(address);
   response_info_->connection_info =
       ConnectionInfoFromQuicVersion(quic_version_);

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import copy
 import feature_compiler
 import unittest
 
@@ -16,14 +17,19 @@ class FeatureCompilerTest(unittest.TestCase):
   def _parseFeature(self, value):
     """Parses a feature from the given value and returns the result."""
     f = feature_compiler.Feature('alpha')
-    f.Parse(value)
+    f.Parse(value, {})
     return f
+
+  def _createTestFeatureCompiler(self, feature_class):
+    return feature_compiler.FeatureCompiler('chrome_root', [], feature_class,
+        'provider_class', 'out_root', 'out_base_filename')
 
   def _hasError(self, f, error):
     """Asserts that |error| is present somewhere in the given feature's
     errors."""
-    self.assertTrue(f.errors)
-    self.assertNotEqual(-1, str(f.errors).find(error), str(f.errors))
+    errors = f.GetErrors()
+    self.assertTrue(errors)
+    self.assertNotEqual(-1, str(errors).find(error), str(errors))
 
   def setUp(self):
     feature_compiler.ENABLE_ASSERTIONS = False
@@ -49,7 +55,7 @@ class FeatureCompilerTest(unittest.TestCase):
       'session_types': ['kiosk', 'regular'],
       'whitelist': ['zzz', 'yyy']
     })
-    self.assertFalse(f.errors)
+    self.assertFalse(f.GetErrors())
 
   def testInvalidAll(self):
     f = self._parseFeature({
@@ -89,12 +95,12 @@ class FeatureCompilerTest(unittest.TestCase):
     f = self._parseFeature({'dependencies': 'alpha',
                             'extension_types': ['extension'],
                             'channel': 'trunk'})
-    f.Validate('APIFeature')
+    f.Validate('APIFeature', {})
     self._hasError(f, 'APIFeatures must specify at least one context')
 
   def testManifestFeaturesNeedExtensionTypes(self):
     f = self._parseFeature({'dependencies': 'alpha', 'channel': 'beta'})
-    f.Validate('ManifestFeature')
+    f.Validate('ManifestFeature', {})
     self._hasError(f,
                    'ManifestFeatures must specify at least one extension type')
 
@@ -103,12 +109,12 @@ class FeatureCompilerTest(unittest.TestCase):
                             'channel': 'beta',
                             'extension_types': ['extension'],
                             'contexts': ['blessed_extension']})
-    f.Validate('ManifestFeature')
+    f.Validate('ManifestFeature', {})
     self._hasError(f, 'ManifestFeatures do not support contexts')
 
   def testPermissionFeaturesNeedExtensionTypes(self):
     f = self._parseFeature({'dependencies': 'alpha', 'channel': 'beta'})
-    f.Validate('PermissionFeature')
+    f.Validate('PermissionFeature', {})
     self._hasError(
         f, 'PermissionFeatures must specify at least one extension type')
 
@@ -117,32 +123,225 @@ class FeatureCompilerTest(unittest.TestCase):
                             'channel': 'beta',
                             'extension_types': ['extension'],
                             'contexts': ['blessed_extension']})
-    f.Validate('PermissionFeature')
+    f.Validate('PermissionFeature', {})
     self._hasError(f, 'PermissionFeatures do not support contexts')
 
   def testAllPermissionsNeedChannelOrDependencies(self):
     api_feature = self._parseFeature({'contexts': ['blessed_extension']})
-    api_feature.Validate('APIFeature')
+    api_feature.Validate('APIFeature', {})
     self._hasError(
         api_feature, 'Features must specify either a channel or dependencies')
     permission_feature = self._parseFeature({'extension_types': ['extension']})
-    permission_feature.Validate('PermissionFeature')
+    permission_feature.Validate('PermissionFeature', {})
     self._hasError(permission_feature,
                    'Features must specify either a channel or dependencies')
     manifest_feature = self._parseFeature({'extension_types': ['extension']})
-    manifest_feature.Validate('ManifestFeature')
+    manifest_feature.Validate('ManifestFeature', {})
     self._hasError(manifest_feature,
                    'Features must specify either a channel or dependencies')
     channel_feature = self._parseFeature({'contexts': ['blessed_extension'],
                                           'channel': 'trunk'})
-    channel_feature.Validate('APIFeature')
-    self.assertFalse(channel_feature.errors)
+    channel_feature.Validate('APIFeature', {})
+    self.assertFalse(channel_feature.GetErrors())
     dependency_feature = self._parseFeature(
                              {'contexts': ['blessed_extension'],
                               'dependencies': ['alpha']})
-    dependency_feature.Validate('APIFeature')
-    self.assertFalse(dependency_feature.errors)
+    dependency_feature.Validate('APIFeature', {})
+    self.assertFalse(dependency_feature.GetErrors())
 
+  def testBothAliasAndSource(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_alpha',
+        'source': 'feature_alpha'
+      }
+    }
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self._hasError(feature, 'Features cannot specify both alias and source.')
+
+  def testAliasOnNonApiFeature(self):
+    compiler = self._createTestFeatureCompiler('PermissionFeature')
+    compiler._json = {
+      'feature_alpha': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      },
+      'feature_beta': [{
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'source': 'feature_alpha'
+      },{
+        'channel': 'dev',
+        'context': ['blessed_extension']
+      }]
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self._hasError(feature, 'PermissionFeatures do not support alias.')
+
+    feature = compiler._features.get('feature_beta')
+    self.assertTrue(feature)
+    self._hasError(feature, 'PermissionFeatures do not support source.')
+
+  def testAliasFeature(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      },
+      'feature_beta': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'source': 'feature_alpha'
+      }
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self.assertFalse(feature.GetErrors())
+
+    feature = compiler._features.get('feature_beta')
+    self.assertTrue(feature)
+    self.assertFalse(feature.GetErrors())
+
+  def testMultipleAliasesInComplexFeature(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': [{
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      }, {
+        'contexts': ['blessed_extension'],
+        'channel': 'beta',
+        'alias': 'feature_beta'
+      }]
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self._hasError(feature, 'Error parsing feature "feature_alpha" at key ' +
+                            '"alias": Key can be set at most once per feature.')
+
+  def testAliasReferenceInComplexFeature(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': [{
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      }, {
+        'contexts': ['blessed_extension'],
+        'channel': 'beta',
+      }],
+      'feature_beta': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'source': 'feature_alpha'
+      }
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self.assertFalse(feature.GetErrors())
+
+    feature = compiler._features.get('feature_beta')
+    self.assertTrue(feature)
+    self.assertFalse(feature.GetErrors())
+
+  def testSourceMissingReference(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      },
+      'feature_beta': {
+        'contexts': ['blessed_extension'],
+        'channel': 'beta',
+        'source': 'does_not_exist'
+      }
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_beta')
+    self.assertTrue(feature)
+    self._hasError(feature, 'A feature source property should reference a ' +
+                            'feature whose alias property references it back.')
+
+
+  def testAliasMissingReferenceInComplexFeature(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': [{
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_beta'
+      }, {
+        'contexts': ['blessed_extension'],
+        'channel': 'beta'
+      }]
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self._hasError(feature, 'A feature alias property should reference a ' +
+                            'feature whose source property references it back.')
+
+  def testAliasReferenceMissingSourceInComplexFeature(self):
+    compiler = self._createTestFeatureCompiler('APIFeature')
+    compiler._json = {
+      'feature_alpha': {
+        'contexts': ['blessed_extension'],
+        'channel': 'beta',
+      },
+      'feature_beta': {
+        'channel': 'beta',
+        'contexts': ['blessed_extension'],
+        'alias': 'feature_alpha'
+      }
+    };
+    compiler.Compile()
+
+    feature = compiler._features.get('feature_alpha')
+    self.assertTrue(feature)
+    self.assertFalse(feature.GetErrors())
+
+    feature = compiler._features.get('feature_beta')
+    self.assertTrue(feature)
+    self._hasError(feature, 'A feature alias property should reference a ' +
+                            'feature whose source property references it back.')
+
+  def testComplexParentWithoutDefaultParent(self):
+    c = feature_compiler.FeatureCompiler(
+        None, None, 'APIFeature', None, None, None)
+    c._CompileFeature('bookmarks',
+        [{
+          'contexts': ['blessed_extension'],
+        }, {
+          'channel': 'stable',
+          'contexts': ['webui'],
+        }])
+
+    with self.assertRaisesRegexp(AssertionError,
+                                 'No default parent found for bookmarks'):
+      c._CompileFeature('bookmarks.export', { "whitelist": ["asdf"] })
 
 if __name__ == '__main__':
   unittest.main()

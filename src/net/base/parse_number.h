@@ -27,8 +27,6 @@
 //   This API tries to avoid these problems by picking sensible defaults for
 //   //net code. For more details see crbug.com/596523.
 
-class GURL;
-
 namespace net {
 
 // Format to use when parsing integers.

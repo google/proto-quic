@@ -34,15 +34,20 @@ class NET_EXPORT_PRIVATE Cubic {
   QuicPacketCount CongestionWindowAfterPacketLoss(QuicPacketCount current);
 
   // Compute a new congestion window to use after a received ACK.
-  // Returns the new congestion window in packets. The new congestion window
-  // follows a cubic function that depends on the time passed since last
-  // packet loss.
+  // Returns the new congestion window in packets. The new congestion
+  // window follows a cubic function that depends on the time passed
+  // since last packet loss.
   QuicPacketCount CongestionWindowAfterAck(QuicPacketCount current,
                                            QuicTime::Delta delay_min);
 
   // Call on ack arrival when sender is unable to use the available congestion
   // window. Resets Cubic state during quiescence.
   void OnApplicationLimited();
+
+  // If true, enable the fix for the convex-mode signing bug.  See
+  // b/32170105 for more information about the bug.
+  // TODO(jokulik):  Remove once the fix is enabled by default.
+  void SetFixConvexMode(bool fix_convex_mode);
 
  private:
   static const QuicTime::Delta MaxCubicTimeInterval() {
@@ -96,6 +101,10 @@ class NET_EXPORT_PRIVATE Cubic {
 
   // Last congestion window in packets computed by cubic function.
   QuicPacketCount last_target_congestion_window_;
+
+  // Fix convex mode for cubic.
+  // TODO(jokulik):  Remove once the cubic convex experiment is done.
+  bool fix_convex_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(Cubic);
 };

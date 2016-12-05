@@ -442,6 +442,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._store_tombstones = False
     self._initializeTombstonesAttributes(args)
 
+    self._should_save_logcat = None
+    self._initializeLogAttributes(args)
+
   def _initializeApkAttributes(self, args, error_func):
     if args.apk_under_test:
       apk_under_test_path = args.apk_under_test
@@ -487,16 +490,14 @@ class InstrumentationTestInstance(test_instance.TestInstance):
       assert self._suite.endswith('_incremental')
       self._suite = self._suite[:-len('_incremental')]
 
-    self._test_jar = os.path.join(
-        constants.GetOutDirectory(), constants.SDK_BUILD_TEST_JAVALIB_DIR,
-        '%s.jar' % self._suite)
+    self._test_jar = args.test_jar
     self._test_support_apk = apk_helper.ToHelper(os.path.join(
         constants.GetOutDirectory(), constants.SDK_BUILD_TEST_JAVALIB_DIR,
         '%sSupport.apk' % self._suite))
 
     if not os.path.exists(self._test_apk.path):
       error_func('Unable to find test APK: %s' % self._test_apk.path)
-    if not os.path.exists(self._test_jar):
+    if not self._test_jar or not os.path.exists(self._test_jar):
       error_func('Unable to find test JAR: %s' % self._test_jar)
 
     self._test_package = self._test_apk.GetPackageName()
@@ -551,9 +552,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
       self._excluded_annotations = []
 
     requested_annotations = set(a[0] for a in self._annotations)
-    self._excluded_annotations.extend(
-        annotation_element(a) for a in _EXCLUDE_UNLESS_REQUESTED_ANNOTATIONS
-        if a not in requested_annotations)
+    if not args.run_disabled:
+      self._excluded_annotations.extend(
+          annotation_element(a) for a in _EXCLUDE_UNLESS_REQUESTED_ANNOTATIONS
+          if a not in requested_annotations)
 
   def _initializeFlagAttributes(self, args):
     self._flags = ['--enable-test-intents']
@@ -594,6 +596,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   def _initializeTombstonesAttributes(self, args):
     self._store_tombstones = args.store_tombstones
 
+  def _initializeLogAttributes(self, args):
+    self._should_save_logcat = bool(args.json_results_file)
+
   @property
   def additional_apks(self):
     return self._additional_apks
@@ -625,6 +630,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def flags(self):
     return self._flags
+
+  @property
+  def should_save_logcat(self):
+    return self._should_save_logcat
 
   @property
   def package_info(self):

@@ -359,9 +359,6 @@ int main(int argc, char* const argv[]) {
       case 'h':
         PrintUsage();
         exit(kExitSuccess);
-      case 'u':
-      case 't':
-        // Ignore 'u' and 't', used by old version of iossim.
         break;
       default:
         PrintUsage();

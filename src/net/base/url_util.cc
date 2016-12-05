@@ -373,6 +373,9 @@ bool IsLocalhost(base::StringPiece host) {
 
 GURL SimplifyUrlForRequest(const GURL& url) {
   DCHECK(url.is_valid());
+  // Fast path to avoid re-canonicalization via ReplaceComponents.
+  if (!url.has_username() && !url.has_password() && !url.has_ref())
+    return url;
   GURL::Replacements replacements;
   replacements.ClearUsername();
   replacements.ClearPassword();

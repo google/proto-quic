@@ -6,6 +6,9 @@
 
 #include <stdint.h>
 
+#include <memory>
+
+#include "base/memory/ptr_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -23,7 +26,7 @@ class DestructorCounter {
 };
 
 TEST(IDMapTest, Basic) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
   EXPECT_TRUE(map.IsEmpty());
   EXPECT_EQ(0U, map.size());
 
@@ -62,7 +65,7 @@ TEST(IDMapTest, Basic) {
 }
 
 TEST(IDMapTest, IteratorRemainsValidWhenRemovingCurrentElement) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
 
   TestObject obj1;
   TestObject obj2;
@@ -73,7 +76,7 @@ TEST(IDMapTest, IteratorRemainsValidWhenRemovingCurrentElement) {
   map.Add(&obj3);
 
   {
-    IDMap<TestObject>::const_iterator iter(&map);
+    IDMap<TestObject*>::const_iterator iter(&map);
 
     EXPECT_EQ(1, map.iteration_depth());
 
@@ -95,7 +98,7 @@ TEST(IDMapTest, IteratorRemainsValidWhenRemovingCurrentElement) {
 }
 
 TEST(IDMapTest, IteratorRemainsValidWhenRemovingOtherElements) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
 
   const int kCount = 5;
   TestObject obj[kCount];
@@ -107,16 +110,16 @@ TEST(IDMapTest, IteratorRemainsValidWhenRemovingOtherElements) {
   int32_t ids_in_iteration_order[kCount];
   const TestObject* objs_in_iteration_order[kCount];
   int counter = 0;
-  for (IDMap<TestObject>::const_iterator iter(&map);
-       !iter.IsAtEnd(); iter.Advance()) {
+  for (IDMap<TestObject*>::const_iterator iter(&map); !iter.IsAtEnd();
+       iter.Advance()) {
     ids_in_iteration_order[counter] = iter.GetCurrentKey();
     objs_in_iteration_order[counter] = iter.GetCurrentValue();
     counter++;
   }
 
   counter = 0;
-  for (IDMap<TestObject>::const_iterator iter(&map);
-       !iter.IsAtEnd(); iter.Advance()) {
+  for (IDMap<TestObject*>::const_iterator iter(&map); !iter.IsAtEnd();
+       iter.Advance()) {
     EXPECT_EQ(1, map.iteration_depth());
 
     switch (counter) {
@@ -147,7 +150,7 @@ TEST(IDMapTest, IteratorRemainsValidWhenRemovingOtherElements) {
 }
 
 TEST(IDMapTest, CopyIterator) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
 
   TestObject obj1;
   TestObject obj2;
@@ -160,12 +163,12 @@ TEST(IDMapTest, CopyIterator) {
   EXPECT_EQ(0, map.iteration_depth());
 
   {
-    IDMap<TestObject>::const_iterator iter1(&map);
+    IDMap<TestObject*>::const_iterator iter1(&map);
     EXPECT_EQ(1, map.iteration_depth());
 
     // Make sure that copying the iterator correctly increments
     // map's iteration depth.
-    IDMap<TestObject>::const_iterator iter2(iter1);
+    IDMap<TestObject*>::const_iterator iter2(iter1);
     EXPECT_EQ(2, map.iteration_depth());
   }
 
@@ -175,7 +178,7 @@ TEST(IDMapTest, CopyIterator) {
 }
 
 TEST(IDMapTest, AssignIterator) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
 
   TestObject obj1;
   TestObject obj2;
@@ -188,10 +191,10 @@ TEST(IDMapTest, AssignIterator) {
   EXPECT_EQ(0, map.iteration_depth());
 
   {
-    IDMap<TestObject>::const_iterator iter1(&map);
+    IDMap<TestObject*>::const_iterator iter1(&map);
     EXPECT_EQ(1, map.iteration_depth());
 
-    IDMap<TestObject>::const_iterator iter2(&map);
+    IDMap<TestObject*>::const_iterator iter2(&map);
     EXPECT_EQ(2, map.iteration_depth());
 
     // Make sure that assigning the iterator correctly updates
@@ -205,7 +208,7 @@ TEST(IDMapTest, AssignIterator) {
 }
 
 TEST(IDMapTest, IteratorRemainsValidWhenClearing) {
-  IDMap<TestObject> map;
+  IDMap<TestObject*> map;
 
   const int kCount = 5;
   TestObject obj[kCount];
@@ -217,16 +220,16 @@ TEST(IDMapTest, IteratorRemainsValidWhenClearing) {
   int32_t ids_in_iteration_order[kCount];
   const TestObject* objs_in_iteration_order[kCount];
   int counter = 0;
-  for (IDMap<TestObject>::const_iterator iter(&map);
-       !iter.IsAtEnd(); iter.Advance()) {
+  for (IDMap<TestObject*>::const_iterator iter(&map); !iter.IsAtEnd();
+       iter.Advance()) {
     ids_in_iteration_order[counter] = iter.GetCurrentKey();
     objs_in_iteration_order[counter] = iter.GetCurrentValue();
     counter++;
   }
 
   counter = 0;
-  for (IDMap<TestObject>::const_iterator iter(&map);
-       !iter.IsAtEnd(); iter.Advance()) {
+  for (IDMap<TestObject*>::const_iterator iter(&map); !iter.IsAtEnd();
+       iter.Advance()) {
     switch (counter) {
       case 0:
         EXPECT_EQ(ids_in_iteration_order[0], iter.GetCurrentKey());
@@ -258,18 +261,17 @@ TEST(IDMapTest, OwningPointersDeletesThemOnRemove) {
   int map_external_ids[kCount];
 
   int owned_del_count = 0;
-  DestructorCounter* owned_obj[kCount];
   int map_owned_ids[kCount];
 
-  IDMap<DestructorCounter> map_external;
-  IDMap<DestructorCounter, IDMapOwnPointer> map_owned;
+  IDMap<DestructorCounter*> map_external;
+  IDMap<std::unique_ptr<DestructorCounter>> map_owned;
 
   for (int i = 0; i < kCount; ++i) {
     external_obj[i] = new DestructorCounter(&external_del_count);
     map_external_ids[i] = map_external.Add(external_obj[i]);
 
-    owned_obj[i] = new DestructorCounter(&owned_del_count);
-    map_owned_ids[i] = map_owned.Add(owned_obj[i]);
+    map_owned_ids[i] =
+        map_owned.Add(base::MakeUnique<DestructorCounter>(&owned_del_count));
   }
 
   for (int i = 0; i < kCount; ++i) {
@@ -295,17 +297,15 @@ TEST(IDMapTest, OwningPointersDeletesThemOnClear) {
   DestructorCounter* external_obj[kCount];
 
   int owned_del_count = 0;
-  DestructorCounter* owned_obj[kCount];
 
-  IDMap<DestructorCounter> map_external;
-  IDMap<DestructorCounter, IDMapOwnPointer> map_owned;
+  IDMap<DestructorCounter*> map_external;
+  IDMap<std::unique_ptr<DestructorCounter>> map_owned;
 
   for (int i = 0; i < kCount; ++i) {
     external_obj[i] = new DestructorCounter(&external_del_count);
     map_external.Add(external_obj[i]);
 
-    owned_obj[i] = new DestructorCounter(&owned_del_count);
-    map_owned.Add(owned_obj[i]);
+    map_owned.Add(base::MakeUnique<DestructorCounter>(&owned_del_count));
   }
 
   EXPECT_EQ(external_del_count, 0);
@@ -332,18 +332,16 @@ TEST(IDMapTest, OwningPointersDeletesThemOnDestruct) {
   DestructorCounter* external_obj[kCount];
 
   int owned_del_count = 0;
-  DestructorCounter* owned_obj[kCount];
 
   {
-    IDMap<DestructorCounter> map_external;
-    IDMap<DestructorCounter, IDMapOwnPointer> map_owned;
+    IDMap<DestructorCounter*> map_external;
+    IDMap<std::unique_ptr<DestructorCounter>> map_owned;
 
     for (int i = 0; i < kCount; ++i) {
       external_obj[i] = new DestructorCounter(&external_del_count);
       map_external.Add(external_obj[i]);
 
-      owned_obj[i] = new DestructorCounter(&owned_del_count);
-      map_owned.Add(owned_obj[i]);
+      map_owned.Add(base::MakeUnique<DestructorCounter>(&owned_del_count));
     }
   }
 
@@ -358,14 +356,14 @@ TEST(IDMapTest, OwningPointersDeletesThemOnDestruct) {
 }
 
 TEST(IDMapTest, Int64KeyType) {
-  IDMap<TestObject, IDMapExternalPointer, int64_t> map;
+  IDMap<TestObject*, int64_t> map;
   TestObject obj1;
   const int64_t kId1 = 999999999999999999;
 
   map.AddWithID(&obj1, kId1);
   EXPECT_EQ(&obj1, map.Lookup(kId1));
 
-  IDMap<TestObject, IDMapExternalPointer, int64_t>::const_iterator iter(&map);
+  IDMap<TestObject*, int64_t>::const_iterator iter(&map);
   ASSERT_FALSE(iter.IsAtEnd());
   EXPECT_EQ(kId1, iter.GetCurrentKey());
   EXPECT_EQ(&obj1, iter.GetCurrentValue());

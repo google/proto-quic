@@ -12,7 +12,7 @@
 #include "base/task_runner.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/privacy_mode.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_time.h"
 

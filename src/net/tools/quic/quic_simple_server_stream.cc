@@ -17,7 +17,7 @@
 #include "net/quic/core/quic_spdy_stream.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/spdy/spdy_protocol.h"
-#include "net/tools/quic/quic_in_memory_cache.h"
+#include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 
 using base::StringPiece;
@@ -26,9 +26,13 @@ using std::string;
 
 namespace net {
 
-QuicSimpleServerStream::QuicSimpleServerStream(QuicStreamId id,
-                                               QuicSpdySession* session)
-    : QuicSpdyStream(id, session), content_length_(-1) {}
+QuicSimpleServerStream::QuicSimpleServerStream(
+    QuicStreamId id,
+    QuicSpdySession* session,
+    QuicHttpResponseCache* response_cache)
+    : QuicSpdyServerStreamBase(id, session),
+      content_length_(-1),
+      response_cache_(response_cache) {}
 
 QuicSimpleServerStream::~QuicSimpleServerStream() {}
 
@@ -126,12 +130,11 @@ void QuicSimpleServerStream::SendResponse() {
   }
 
   // Find response in cache. If not found, send error response.
-  const QuicInMemoryCache::Response* response = nullptr;
+  const QuicHttpResponseCache::Response* response = nullptr;
   auto authority = request_headers_.find(":authority");
   auto path = request_headers_.find(":path");
   if (authority != request_headers_.end() && path != request_headers_.end()) {
-    response = QuicInMemoryCache::GetInstance()->GetResponse(authority->second,
-                                                             path->second);
+    response = response_cache_->GetResponse(authority->second, path->second);
   }
   if (response == nullptr) {
     DVLOG(1) << "Response not found in cache.";
@@ -139,13 +142,13 @@ void QuicSimpleServerStream::SendResponse() {
     return;
   }
 
-  if (response->response_type() == QuicInMemoryCache::CLOSE_CONNECTION) {
+  if (response->response_type() == QuicHttpResponseCache::CLOSE_CONNECTION) {
     DVLOG(1) << "Special response: closing connection.";
     CloseConnectionWithDetails(QUIC_NO_ERROR, "Toy server forcing close");
     return;
   }
 
-  if (response->response_type() == QuicInMemoryCache::IGNORE_REQUEST) {
+  if (response->response_type() == QuicHttpResponseCache::IGNORE_REQUEST) {
     DVLOG(1) << "Special response: ignoring request.";
     return;
   }
@@ -181,8 +184,8 @@ void QuicSimpleServerStream::SendResponse() {
       return;
     }
   }
-  std::list<QuicInMemoryCache::ServerPushInfo> resources =
-      QuicInMemoryCache::GetInstance()->GetServerPushResources(request_url);
+  std::list<QuicHttpResponseCache::ServerPushInfo> resources =
+      response_cache_->GetServerPushResources(request_url);
   DVLOG(1) << "Found " << resources.size() << " push resources for stream "
            << id();
 

@@ -41,13 +41,14 @@ WebSocketTransportConnectJob::WebSocketTransportConnectJob(
     Delegate* delegate,
     NetLog* pool_net_log,
     const NetLogWithSource& request_net_log)
-    : ConnectJob(
-          group_name,
-          timeout_duration,
-          priority,
-          respect_limits,
-          delegate,
-          NetLogWithSource::Make(pool_net_log, NetLogSourceType::CONNECT_JOB)),
+    : ConnectJob(group_name,
+                 timeout_duration,
+                 priority,
+                 respect_limits,
+                 delegate,
+                 NetLogWithSource::Make(
+                     pool_net_log,
+                     NetLogSourceType::WEB_SOCKET_TRANSPORT_CONNECT_JOB)),
       params_(params),
       resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),

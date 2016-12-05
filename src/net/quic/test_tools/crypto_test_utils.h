@@ -17,7 +17,7 @@
 #include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/quic_framer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 namespace net {
@@ -221,8 +221,8 @@ class CryptoTestUtils {
   static void GenerateFullCHLO(
       const CryptoHandshakeMessage& inchoate_chlo,
       QuicCryptoServerConfig* crypto_config,
-      IPAddress server_ip,
-      IPEndPoint client_addr,
+      QuicIpAddress server_ip,
+      QuicSocketAddress client_addr,
       QuicVersion version,
       const QuicClock* clock,
       scoped_refptr<QuicSignedServerConfig> signed_config,

@@ -7,7 +7,7 @@ import logging
 
 from common import chrome_proxy_metrics as metrics
 from telemetry.core import exceptions
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 
 
 def WaitForViaHeader(tab, url="http://check.googlezip.net/test.html"):
@@ -61,7 +61,7 @@ def WaitForViaHeader(tab, url="http://check.googlezip.net/test.html"):
       'PollDRPCheck("%s", "%s")' % (url, expected_via_header), 60)
 
 
-class ChromeProxyValidation(page_test.PageTest):
+class ChromeProxyValidation(legacy_page_test.LegacyPageTest):
   """Base class for all chrome proxy correctness measurements."""
 
   # Value of the extra via header. |None| if no extra via header is expected.

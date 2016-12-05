@@ -15,7 +15,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/stringprintf.h"
-#include "net/base/ip_address.h"
+#include "net/quic/core/quic_constants.h"
 #include "net/quic/core/quic_flags.h"
 
 using base::StringPiece;
@@ -75,10 +75,6 @@ uint128 IncrementalHash(uint128 hash, const char* data, size_t len) {
 #else
   return IncrementalHashSlow(hash, data, len);
 #endif
-}
-
-bool IsInitializedIPEndPoint(const IPEndPoint& address) {
-  return address.address().IsValid();
 }
 
 }  // namespace
@@ -194,72 +190,6 @@ string QuicUtils::PeerAddressChangeTypeToString(PeerAddressChangeType type) {
 }
 
 // static
-void QuicUtils::DeleteFrames(QuicFrames* frames) {
-  for (QuicFrame& frame : *frames) {
-    switch (frame.type) {
-      // Frames smaller than a pointer are inlined, so don't need to be deleted.
-      case PADDING_FRAME:
-      case MTU_DISCOVERY_FRAME:
-      case PING_FRAME:
-        break;
-      case STREAM_FRAME:
-        delete frame.stream_frame;
-        break;
-      case ACK_FRAME:
-        delete frame.ack_frame;
-        break;
-      case STOP_WAITING_FRAME:
-        delete frame.stop_waiting_frame;
-        break;
-      case RST_STREAM_FRAME:
-        delete frame.rst_stream_frame;
-        break;
-      case CONNECTION_CLOSE_FRAME:
-        delete frame.connection_close_frame;
-        break;
-      case GOAWAY_FRAME:
-        delete frame.goaway_frame;
-        break;
-      case BLOCKED_FRAME:
-        delete frame.blocked_frame;
-        break;
-      case WINDOW_UPDATE_FRAME:
-        delete frame.window_update_frame;
-        break;
-      case PATH_CLOSE_FRAME:
-        delete frame.path_close_frame;
-        break;
-      case NUM_FRAME_TYPES:
-        DCHECK(false) << "Cannot delete type: " << frame.type;
-    }
-  }
-  frames->clear();
-}
-
-// static
-void QuicUtils::RemoveFramesForStream(QuicFrames* frames,
-                                      QuicStreamId stream_id) {
-  QuicFrames::iterator it = frames->begin();
-  while (it != frames->end()) {
-    if (it->type != STREAM_FRAME || it->stream_frame->stream_id != stream_id) {
-      ++it;
-      continue;
-    }
-    delete it->stream_frame;
-    it = frames->erase(it);
-  }
-}
-
-// static
-void QuicUtils::ClearSerializedPacket(SerializedPacket* serialized_packet) {
-  if (!serialized_packet->retransmittable_frames.empty()) {
-    DeleteFrames(&serialized_packet->retransmittable_frames);
-  }
-  serialized_packet->encrypted_buffer = nullptr;
-  serialized_packet->encrypted_length = 0;
-}
-
-// static
 uint64_t QuicUtils::PackPathIdAndPacketNumber(QuicPathId path_id,
                                               QuicPacketNumber packet_number) {
   // Setting the nonce below relies on QuicPathId and QuicPacketNumber being
@@ -275,27 +205,20 @@ uint64_t QuicUtils::PackPathIdAndPacketNumber(QuicPathId path_id,
 }
 
 // static
-char* QuicUtils::CopyBuffer(const SerializedPacket& packet) {
-  char* dst_buffer = new char[packet.encrypted_length];
-  memcpy(dst_buffer, packet.encrypted_buffer, packet.encrypted_length);
-  return dst_buffer;
-}
-
-// static
 PeerAddressChangeType QuicUtils::DetermineAddressChangeType(
-    const IPEndPoint& old_address,
-    const IPEndPoint& new_address) {
-  if (!IsInitializedIPEndPoint(old_address) ||
-      !IsInitializedIPEndPoint(new_address) || old_address == new_address) {
+    const QuicSocketAddress& old_address,
+    const QuicSocketAddress& new_address) {
+  if (!old_address.IsInitialized() || !new_address.IsInitialized() ||
+      old_address == new_address) {
     return NO_CHANGE;
   }
 
-  if (old_address.address() == new_address.address()) {
+  if (old_address.host() == new_address.host()) {
     return PORT_CHANGE;
   }
 
-  bool old_ip_is_ipv4 = old_address.address().IsIPv4();
-  bool migrating_ip_is_ipv4 = new_address.address().IsIPv4();
+  bool old_ip_is_ipv4 = old_address.host().IsIPv4() ? true : false;
+  bool migrating_ip_is_ipv4 = new_address.host().IsIPv4() ? true : false;
   if (old_ip_is_ipv4 && !migrating_ip_is_ipv4) {
     return IPV4_TO_IPV6_CHANGE;
   }
@@ -304,8 +227,8 @@ PeerAddressChangeType QuicUtils::DetermineAddressChangeType(
     return migrating_ip_is_ipv4 ? IPV6_TO_IPV4_CHANGE : IPV6_TO_IPV6_CHANGE;
   }
 
-  if (IPAddressMatchesPrefix(old_address.address(), new_address.address(),
-                             24)) {
+  const int kSubnetMaskLength = 24;
+  if (old_address.host().InSameSubnet(new_address.host(), kSubnetMaskLength)) {
     // Subnet part does not change (here, we use /24), which is considered to be
     // caused by NATs.
     return IPV4_SUBNET_CHANGE;

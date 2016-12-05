@@ -22,8 +22,6 @@
 #include "net/http/http_server_properties.h"
 #include "net/http/http_server_properties_impl.h"
 
-class PrefService;
-
 namespace base {
 class SequencedTaskRunner;
 }

@@ -10,8 +10,6 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 
-class GURL;
-
 namespace net {
 
 // The interface used by HTTP jobs to retrieve HTTP Accept-Language

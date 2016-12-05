@@ -28,7 +28,6 @@
 #include <stddef.h>
 #include <tuple>
 
-#include "base/bind_helpers.h"
 #include "build/build_config.h"
 
 namespace base {

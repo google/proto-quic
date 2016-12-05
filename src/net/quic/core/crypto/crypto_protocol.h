@@ -107,6 +107,7 @@ const QuicTag kCONH = TAG('C', 'O', 'N', 'H');   // Conservative Handshake
                                                  // Retransmissions.
 const QuicTag kLFAK = TAG('L', 'F', 'A', 'K');   // Don't invoke FACK on the
                                                  // first ack.
+const QuicTag kCCVX = TAG('C', 'C', 'V', 'X');   // Fix Cubic convex bug.
 
 // Optional support of truncated Connection IDs.  If sent by a peer, the value
 // is the minimum number of bytes allowed for the connection ID sent to the
@@ -152,6 +153,7 @@ const QuicTag kKEXS = TAG('K', 'E', 'X', 'S');   // Key exchange methods
 const QuicTag kAEAD = TAG('A', 'E', 'A', 'D');   // Authenticated
                                                  // encryption algorithms
 const QuicTag kCOPT = TAG('C', 'O', 'P', 'T');   // Connection options
+const QuicTag kCLOP = TAG('C', 'L', 'O', 'P');   // Client connection options
 const QuicTag kICSL = TAG('I', 'C', 'S', 'L');   // Idle network timeout
 const QuicTag kSCLS = TAG('S', 'C', 'L', 'S');   // Silently close on timeout
 const QuicTag kMSPC = TAG('M', 'S', 'P', 'C');   // Max streams per connection.

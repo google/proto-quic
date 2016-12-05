@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_received_packet_manager_peer.h"
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_received_packet_manager.h"
 
 namespace net {

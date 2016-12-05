@@ -313,6 +313,9 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
     connection()->set_debug_visitor(nullptr);
     net_log_.EndEvent(NetLogEventType::QUIC_SESSION);
 
+    UMA_HISTOGRAM_COUNTS_1000("Net.QuicSession.AbortedPendingStreamRequests",
+                              stream_requests_.size());
+
     while (!stream_requests_.empty()) {
       StreamRequest* request = stream_requests_.front();
       stream_requests_.pop_front();
@@ -356,18 +359,15 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   if (round_trip_handshakes < 0 || !stream_factory_)
     return;
 
-  bool port_selected = stream_factory_->enable_port_selection();
   SSLInfo ssl_info;
   // QUIC supports only secure urls.
   if (GetSSLInfo(&ssl_info) && ssl_info.cert.get()) {
-    if (!port_selected) {
-      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.ConnectRandomPortForHTTPS",
-                                  round_trip_handshakes, 1, 3, 4);
-      if (require_confirmation_) {
-        UMA_HISTOGRAM_CUSTOM_COUNTS(
-            "Net.QuicSession.ConnectRandomPortRequiringConfirmationForHTTPS",
-            round_trip_handshakes, 1, 3, 4);
-      }
+    UMA_HISTOGRAM_CUSTOM_COUNTS("Net.QuicSession.ConnectRandomPortForHTTPS",
+                                round_trip_handshakes, 1, 3, 4);
+    if (require_confirmation_) {
+      UMA_HISTOGRAM_CUSTOM_COUNTS(
+          "Net.QuicSession.ConnectRandomPortRequiringConfirmationForHTTPS",
+          round_trip_handshakes, 1, 3, 4);
     }
   }
   const QuicConnectionStats stats = connection()->GetStats();
@@ -490,7 +490,10 @@ int QuicChromiumClientSession::TryCreateStream(
     return OK;
   }
 
+  request->pending_start_time_ = base::TimeTicks::Now();
   stream_requests_.push_back(request);
+  UMA_HISTOGRAM_COUNTS_1000("Net.QuicSession.NumPendingStreamRequests",
+                            stream_requests_.size());
   return ERR_IO_PENDING;
 }
 
@@ -796,6 +799,10 @@ void QuicChromiumClientSession::OnClosedStream() {
       !stream_requests_.empty() && crypto_stream_->encryption_established() &&
       !goaway_received() && !going_away_ && connection()->connected()) {
     StreamRequest* request = stream_requests_.front();
+    // TODO(ckrasic) - analyze data and then add logic to mark QUIC
+    // broken if wait times are excessive.
+    UMA_HISTOGRAM_TIMES("Net.QuicSession.PendingStreamsWaitTime",
+                        base::TimeTicks::Now() - request->pending_start_time_);
     stream_requests_.pop_front();
     request->OnRequestCompleteSuccess(CreateOutgoingReliableStreamImpl());
   }
@@ -811,7 +818,8 @@ void QuicChromiumClientSession::OnConfigNegotiated() {
     return;
 
   // Server has sent an alternate address to connect to.
-  IPEndPoint new_address = config()->ReceivedAlternateServerAddress();
+  IPEndPoint new_address =
+      config()->ReceivedAlternateServerAddress().impl().socket_address();
   IPEndPoint old_address;
   GetDefaultSocket()->GetPeerAddress(&old_address);
 
@@ -1339,7 +1347,9 @@ void QuicChromiumClientSession::OnReadError(
 bool QuicChromiumClientSession::OnPacket(const QuicReceivedPacket& packet,
                                          IPEndPoint local_address,
                                          IPEndPoint peer_address) {
-  ProcessUdpPacket(local_address, peer_address, packet);
+  ProcessUdpPacket(QuicSocketAddress(QuicSocketAddressImpl(local_address)),
+                   QuicSocketAddress(QuicSocketAddressImpl(peer_address)),
+                   packet);
   if (!connection()->connected()) {
     NotifyFactoryOfSessionClosedLater();
     return false;

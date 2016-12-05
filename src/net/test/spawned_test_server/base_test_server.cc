@@ -224,6 +224,7 @@ base::FilePath BaseTestServer::SSLOptions::GetCertificateFile() const {
     case CERT_BAD_VALIDITY:
       return base::FilePath(FILE_PATH_LITERAL("bad_validity.pem"));
     case CERT_AUTO:
+    case CERT_AUTO_AIA_INTERMEDIATE:
       return base::FilePath();
     default:
       NOTREACHED();
@@ -591,6 +592,10 @@ bool BaseTestServer::GenerateArguments(base::DictionaryValue* arguments) const {
 
   if (type_ == TYPE_HTTPS) {
     arguments->Set("https", base::Value::CreateNullValue());
+
+    if (ssl_options_.server_certificate ==
+        SSLOptions::CERT_AUTO_AIA_INTERMEDIATE)
+      arguments->Set("aia-intermediate", base::Value::CreateNullValue());
 
     std::string ocsp_arg = ssl_options_.GetOCSPArgument();
     if (!ocsp_arg.empty())

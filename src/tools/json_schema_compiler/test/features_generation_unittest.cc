@@ -53,6 +53,8 @@ struct FeatureComparator {
   std::string command_line_switch;
   std::unique_ptr<version_info::Channel> channel;
   bool internal;
+  std::string alias;
+  std::string source;
 };
 
 FeatureComparator::FeatureComparator(const std::string& name)
@@ -86,6 +88,8 @@ void FeatureComparator::CompareFeature(SimpleFeature* feature) {
   if (channel)
     EXPECT_EQ(*channel, feature->channel()) << name;
   EXPECT_EQ(internal, feature->IsInternal()) << name;
+  EXPECT_EQ(alias, feature->alias()) << name;
+  EXPECT_EQ(source, feature->source()) << name;
 }
 
 TEST(FeaturesGenerationTest, FeaturesTest) {
@@ -261,6 +265,61 @@ TEST(FeaturesGenerationTest, FeaturesTest) {
       comparator.whitelist = {"aaa"};
       comparator.CompareFeature(other_parent);
     }
+  }
+
+  // Test API aliases.
+  {
+    APIFeature* feature = GetAPIFeature("alias");
+    FeatureComparator comparator("alias");
+    comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
+    comparator.channel.reset(
+        new version_info::Channel(version_info::Channel::STABLE));
+    comparator.source = "alias_source";
+    comparator.CompareFeature(feature);
+  }
+  {
+    APIFeature* feature = GetAPIFeature("alias_source");
+    FeatureComparator comparator("alias_source");
+    comparator.contexts = {Feature::BLESSED_EXTENSION_CONTEXT};
+    comparator.channel.reset(
+        new version_info::Channel(version_info::Channel::STABLE));
+    comparator.alias = "alias";
+    comparator.CompareFeature(feature);
+  }
+  {
+    Feature* feature = provider.GetFeature("complex_alias");
+    ASSERT_EQ("", feature->alias());
+    ASSERT_EQ("complex_alias_source", feature->source());
+  }
+  {
+    Feature* feature = provider.GetFeature("complex_alias_source");
+    ASSERT_EQ("complex_alias", feature->alias());
+    ASSERT_EQ("", feature->source());
+  }
+  {
+    Feature* feature = GetAPIFeature("parent_source");
+    ASSERT_EQ("parent_source_alias", feature->alias());
+    ASSERT_EQ("", feature->source());
+  }
+  {
+    Feature* feature = GetAPIFeature("parent_source.child");
+    ASSERT_EQ("parent_source_alias", feature->alias());
+    ASSERT_EQ("", feature->source());
+  }
+  {
+    Feature* feature = GetAPIFeature("parent_source.child_source");
+    ASSERT_EQ("parent_source_child_alias", feature->alias());
+    ASSERT_EQ("", feature->source());
+  }
+  {
+    Feature* feature = GetAPIFeature("alias_parent");
+    ASSERT_EQ("", feature->alias());
+    ASSERT_EQ("", feature->source());
+  }
+  {
+    Feature* feature = GetAPIFeature("alias_parent.child");
+    ASSERT_EQ("", feature->alias());
+    ASSERT_EQ("child_source", feature->source());
   }
 }
 

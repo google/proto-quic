@@ -17,8 +17,6 @@ class GURL;
 
 namespace net {
 
-class X509Certificate;
-
 // OpenSSLPrivateKeyStore provides an interface for storing
 // public/private key pairs to system storage on platforms where
 // OpenSSL is used.

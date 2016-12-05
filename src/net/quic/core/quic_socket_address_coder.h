@@ -11,12 +11,10 @@
 #include <string>
 
 #include "base/macros.h"
-#include "net/base/ip_endpoint.h"
 #include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
-
-class IPAddress;
 
 // Serializes and parses a socket address (IP address and port), to be used in
 // the kCADR tag in the ServerHello handshake message and the Public Reset
@@ -24,19 +22,19 @@ class IPAddress;
 class NET_EXPORT_PRIVATE QuicSocketAddressCoder {
  public:
   QuicSocketAddressCoder();
-  explicit QuicSocketAddressCoder(const IPEndPoint& address);
+  explicit QuicSocketAddressCoder(const QuicSocketAddress& address);
   ~QuicSocketAddressCoder();
 
   std::string Encode() const;
 
   bool Decode(const char* data, size_t length);
 
-  const IPAddress& ip() const { return address_.address(); }
+  QuicIpAddress ip() const { return address_.host(); }
 
   uint16_t port() const { return address_.port(); }
 
  private:
-  IPEndPoint address_;
+  QuicSocketAddress address_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSocketAddressCoder);
 };

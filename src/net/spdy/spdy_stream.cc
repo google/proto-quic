@@ -59,8 +59,6 @@ bool ContainsUppercaseAscii(base::StringPiece str) {
 
 }  // namespace
 
-void SpdyStream::Delegate::OnTrailers(const SpdyHeaderBlock& trailers) {}
-
 // A wrapper around a stream that calls into ProduceHeadersFrame().
 class SpdyStream::HeadersBufferProducer : public SpdyBufferProducer {
  public:
@@ -106,7 +104,7 @@ SpdyStream::SpdyStream(SpdyStreamType type,
       request_headers_valid_(false),
       pending_send_status_(MORE_DATA_TO_SEND),
       request_time_(base::Time::Now()),
-      response_headers_status_(RESPONSE_HEADERS_ARE_INCOMPLETE),
+      response_state_(READY_FOR_HEADERS),
       io_state_(STATE_IDLE),
       response_status_(OK),
       net_log_(net_log),
@@ -157,27 +155,11 @@ void SpdyStream::PushedStreamReplay() {
   base::WeakPtr<SpdyStream> weak_this = GetWeakPtr();
 
   CHECK(delegate_);
-  SpdyResponseHeadersStatus status =
-      delegate_->OnResponseHeadersUpdated(response_headers_);
-  if (status == RESPONSE_HEADERS_ARE_INCOMPLETE) {
-    // Since RESPONSE_HEADERS_ARE_INCOMPLETE was returned, we must not
-    // have been closed. Since we don't have complete headers, assume
-    // we're waiting for another HEADERS frame, and we had better not
-    // have any pending data frames.
-    CHECK(weak_this);
-    if (!pending_recv_data_.empty()) {
-      LogStreamError(ERR_SPDY_PROTOCOL_ERROR,
-                     "Data received with incomplete headers.");
-      session_->CloseActiveStream(stream_id_, ERR_SPDY_PROTOCOL_ERROR);
-    }
-    return;
-  }
+  delegate_->OnHeadersReceived(response_headers_);
 
-  // OnResponseHeadersUpdated() may have closed |this|.
+  // OnHeadersReceived() may have closed |this|.
   if (!weak_this)
     return;
-
-  response_headers_status_ = RESPONSE_HEADERS_ARE_COMPLETE;
 
   while (!pending_recv_data_.empty()) {
     // Take ownership of the first element of |pending_recv_data_|.
@@ -389,83 +371,77 @@ void SpdyStream::SetRequestTime(base::Time t) {
   request_time_ = t;
 }
 
-int SpdyStream::OnInitialResponseHeadersReceived(
-    const SpdyHeaderBlock& initial_response_headers,
-    base::Time response_time,
-    base::TimeTicks recv_first_byte_time) {
-  // SpdySession guarantees that this is called at most once.
-  CHECK(response_headers_.empty());
+void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
+                                   base::Time response_time,
+                                   base::TimeTicks recv_first_byte_time) {
+  switch (response_state_) {
+    case READY_FOR_HEADERS:
+      // No header block has been received yet.
+      DCHECK(response_headers_.empty());
 
-  // Check to make sure that we don't receive the response headers
-  // before we're ready for it.
-  switch (type_) {
-    case SPDY_BIDIRECTIONAL_STREAM:
-      // For a bidirectional stream, we're ready for the response
-      // headers once we've finished sending the request headers.
-      if (io_state_ == STATE_IDLE) {
-        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                              "Response received before request sent");
-        return ERR_SPDY_PROTOCOL_ERROR;
+      if (response_headers.find(":status") == response_headers.end()) {
+        const std::string error("Response headers do not include :status.");
+        LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+        return;
       }
+
+      response_state_ = READY_FOR_DATA_OR_TRAILERS;
+
+      switch (type_) {
+        case SPDY_BIDIRECTIONAL_STREAM:
+        case SPDY_REQUEST_RESPONSE_STREAM:
+          // A bidirectional stream or a request/response stream is ready for
+          // the response headers only after request headers are sent.
+          if (io_state_ == STATE_IDLE) {
+            const std::string error("Response received before request sent.");
+            LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+            session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+            return;
+          }
+          break;
+
+        case SPDY_PUSH_STREAM:
+          // Push streams transition to a locally half-closed state upon
+          // headers.  We must continue to buffer data while waiting for a call
+          // to SetDelegate() (which may not ever happen).
+          DCHECK_EQ(io_state_, STATE_RESERVED_REMOTE);
+          if (!delegate_) {
+            io_state_ = STATE_HALF_CLOSED_LOCAL_UNCLAIMED;
+          } else {
+            io_state_ = STATE_HALF_CLOSED_LOCAL;
+          }
+          break;
+      }
+
+      DCHECK_NE(io_state_, STATE_IDLE);
+
+      response_time_ = response_time;
+      recv_first_byte_time_ = recv_first_byte_time;
+      SaveResponseHeaders(response_headers);
+
       break;
 
-    case SPDY_REQUEST_RESPONSE_STREAM:
-      // For a request/response stream, we're ready for the response
-      // headers once we've finished sending the request headers.
-      if (io_state_ == STATE_IDLE) {
-        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                              "Response received before request sent");
-        return ERR_SPDY_PROTOCOL_ERROR;
+    case READY_FOR_DATA_OR_TRAILERS:
+      // Second header block is trailers.
+      if (type_ == SPDY_PUSH_STREAM) {
+        const std::string error("Trailers not supported for push stream.");
+        LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+        return;
       }
+
+      response_state_ = TRAILERS_RECEIVED;
+      delegate_->OnTrailers(response_headers);
       break;
 
-    case SPDY_PUSH_STREAM:
-      // Push streams transition to a locally half-closed state upon headers.
-      // We must continue to buffer data while waiting for a call to
-      // SetDelegate() (which may not ever happen).
-      CHECK_EQ(io_state_, STATE_RESERVED_REMOTE);
-      if (!delegate_) {
-        io_state_ = STATE_HALF_CLOSED_LOCAL_UNCLAIMED;
-      } else {
-        io_state_ = STATE_HALF_CLOSED_LOCAL;
-      }
-      break;
+    case TRAILERS_RECEIVED:
+      // No further header blocks are allowed after trailers.
+      const std::string error("Header block received after trailers.");
+      LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+      session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+      return;
   }
-
-  DCHECK_NE(io_state_, STATE_IDLE);
-
-  response_time_ = response_time;
-  recv_first_byte_time_ = recv_first_byte_time;
-  return MergeWithResponseHeaders(initial_response_headers);
-}
-
-int SpdyStream::OnAdditionalResponseHeadersReceived(
-    const SpdyHeaderBlock& additional_response_headers) {
-  if (type_ == SPDY_REQUEST_RESPONSE_STREAM) {
-    if (response_headers_status_ != RESPONSE_HEADERS_ARE_COMPLETE) {
-      session_->ResetStream(
-          stream_id_, RST_STREAM_PROTOCOL_ERROR,
-          "Additional headers received for request/response stream");
-      return ERR_SPDY_PROTOCOL_ERROR;
-    }
-    response_headers_status_ = TRAILERS_RECEIVED;
-    delegate_->OnTrailers(additional_response_headers);
-    return OK;
-  }
-  if (type_ == SPDY_BIDIRECTIONAL_STREAM) {
-    DCHECK_EQ(RESPONSE_HEADERS_ARE_COMPLETE, response_headers_status_);
-    response_headers_status_ = TRAILERS_RECEIVED;
-    delegate_->OnTrailers(additional_response_headers);
-    return OK;
-  }
-  if (type_ == SPDY_PUSH_STREAM &&
-      response_headers_status_ == RESPONSE_HEADERS_ARE_COMPLETE) {
-    session_->ResetStream(
-        stream_id_, RST_STREAM_PROTOCOL_ERROR,
-        "Additional headers received for push stream");
-    return ERR_SPDY_PROTOCOL_ERROR;
-  }
-  return MergeWithResponseHeaders(additional_response_headers);
 }
 
 void SpdyStream::OnPushPromiseHeadersReceived(SpdyHeaderBlock headers) {
@@ -483,13 +459,26 @@ void SpdyStream::OnPushPromiseHeadersReceived(SpdyHeaderBlock headers) {
 void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   DCHECK(session_->IsStreamActive(stream_id_));
 
+  if (response_state_ == READY_FOR_HEADERS) {
+    const std::string error("DATA received before headers.");
+    LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+    return;
+  }
+
+  if (response_state_ == TRAILERS_RECEIVED && buffer) {
+    const std::string error("DATA received after trailers.");
+    LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+    return;
+  }
+
   // Track our bandwidth.
   recv_bytes_ += buffer ? buffer->GetRemainingSize() : 0;
   recv_last_byte_time_ = base::TimeTicks::Now();
 
-  // If we're still buffering data for a push stream, we will do the
-  // check for data received with incomplete headers in
-  // PushedStreamReplayData().
+  // If we're still buffering data for a push stream, we will do the check for
+  // data received with incomplete headers in PushedStreamReplay().
   if (io_state_ == STATE_HALF_CLOSED_LOCAL_UNCLAIMED) {
     DCHECK_EQ(type_, SPDY_PUSH_STREAM);
     // It should be valid for this to happen in the server push case.
@@ -501,25 +490,6 @@ void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
       // Note: we leave the stream open in the session until the stream
       //       is claimed.
     }
-    return;
-  }
-
-  if (response_headers_status_ == TRAILERS_RECEIVED && buffer) {
-    // TRAILERS_RECEIVED is only used in SPDY_REQUEST_RESPONSE_STREAM and
-    // SPDY_BIDIRECTIONAL_STREAM.
-    DCHECK(type_ == SPDY_REQUEST_RESPONSE_STREAM ||
-           type_ == SPDY_BIDIRECTIONAL_STREAM);
-    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                          "Data received after trailers");
-    return;
-  }
-
-  // If we have response headers but the delegate has indicated that
-  // it's still incomplete, then that's a protocol error.
-  if (response_headers_status_ == RESPONSE_HEADERS_ARE_INCOMPLETE) {
-    LogStreamError(ERR_SPDY_PROTOCOL_ERROR,
-                   "Data received with incomplete headers.");
-    session_->CloseActiveStream(stream_id_, ERR_SPDY_PROTOCOL_ERROR);
     return;
   }
 
@@ -571,7 +541,7 @@ void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
   CHECK(frame_type == HEADERS || frame_type == DATA) << frame_type;
 
   int result =
-      (frame_type == HEADERS) ? OnRequestHeadersSent() : OnDataSent(frame_size);
+      (frame_type == HEADERS) ? OnHeadersSent() : OnDataSent(frame_size);
   if (result == ERR_IO_PENDING) {
     // The write operation hasn't completed yet.
     return;
@@ -592,7 +562,7 @@ void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
     base::WeakPtr<SpdyStream> weak_this = GetWeakPtr();
     write_handler_guard_ = true;
     if (frame_type == HEADERS) {
-      delegate_->OnRequestHeadersSent();
+      delegate_->OnHeadersSent();
     } else {
       delegate_->OnDataSent();
     }
@@ -606,7 +576,7 @@ void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
   }
 }
 
-int SpdyStream::OnRequestHeadersSent() {
+int SpdyStream::OnHeadersSent() {
   CHECK_EQ(io_state_, STATE_IDLE);
   CHECK_NE(stream_id_, 0u);
 
@@ -648,7 +618,7 @@ void SpdyStream::OnClose(int status) {
   // SpdySession is shutting down while the stream is in an intermediate state.
   io_state_ = STATE_CLOSED;
   if (status == ERR_SPDY_RST_STREAM_NO_ERROR_RECEIVED) {
-    if (response_headers_status_ == RESPONSE_HEADERS_ARE_INCOMPLETE) {
+    if (response_state_ == READY_FOR_HEADERS) {
       status = ERR_SPDY_PROTOCOL_ERROR;
     } else {
       status = OK;
@@ -869,62 +839,31 @@ void SpdyStream::QueueNextDataFrame() {
           new SimpleBufferProducer(std::move(data_buffer))));
 }
 
-int SpdyStream::MergeWithResponseHeaders(
-    const SpdyHeaderBlock& new_response_headers) {
-  if (new_response_headers.find("transfer-encoding") !=
-      new_response_headers.end()) {
+void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {
+  DCHECK(response_headers_.empty());
+  if (response_headers.find("transfer-encoding") != response_headers.end()) {
     session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
                          "Received transfer-encoding header");
-    return ERR_SPDY_PROTOCOL_ERROR;
+    return;
   }
 
-  for (SpdyHeaderBlock::const_iterator it = new_response_headers.begin();
-      it != new_response_headers.end(); ++it) {
+  for (SpdyHeaderBlock::const_iterator it = response_headers.begin();
+       it != response_headers.end(); ++it) {
     // Disallow uppercase headers.
     if (ContainsUppercaseAscii(it->first)) {
       session_->ResetStream(
           stream_id_, RST_STREAM_PROTOCOL_ERROR,
           "Upper case characters in header: " + it->first.as_string());
-      return ERR_SPDY_PROTOCOL_ERROR;
-    }
-
-    SpdyHeaderBlock::iterator it2 = response_headers_.find(it->first);
-    // Disallow duplicate headers.  This is just to be conservative.
-    if (it2 != response_headers_.end()) {
-      session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                            "Duplicate header: " + it->first.as_string());
-      return ERR_SPDY_PROTOCOL_ERROR;
+      return;
     }
 
     response_headers_.insert(*it);
   }
 
-  // If delegate_ is not yet attached, we'll call
-  // OnResponseHeadersUpdated() after the delegate gets attached to
-  // the stream.
-  if (delegate_) {
-    // The call to OnResponseHeadersUpdated() below may delete |this|,
-    // so use |weak_this| to detect that.
-    base::WeakPtr<SpdyStream> weak_this = GetWeakPtr();
-
-    SpdyResponseHeadersStatus status =
-        delegate_->OnResponseHeadersUpdated(response_headers_);
-    if (status == RESPONSE_HEADERS_ARE_INCOMPLETE) {
-      // Since RESPONSE_HEADERS_ARE_INCOMPLETE was returned, we must not
-      // have been closed.
-      CHECK(weak_this);
-      // Incomplete headers are OK only for push streams.
-      if (type_ != SPDY_PUSH_STREAM) {
-        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                              "Incomplete headers");
-        return ERR_INCOMPLETE_SPDY_HEADERS;
-      }
-    } else if (weak_this) {
-      response_headers_status_ = RESPONSE_HEADERS_ARE_COMPLETE;
-    }
-  }
-
-  return OK;
+  // If delegate is not yet attached, OnHeadersReceived() will be called after
+  // the delegate gets attached to the stream.
+  if (delegate_)
+    delegate_->OnHeadersReceived(response_headers_);
 }
 
 #define STATE_CASE(s) \

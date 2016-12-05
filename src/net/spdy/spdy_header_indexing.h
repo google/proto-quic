@@ -5,6 +5,7 @@
 #ifndef NET_SPDY_SPDY_HEADER_INDEXING_H_
 #define NET_SPDY_SPDY_HEADER_INDEXING_H_
 
+#include <stdint.h>
 #include <memory>
 #include <string>
 #include <unordered_set>
@@ -41,11 +42,14 @@ class NET_EXPORT HeaderIndexing {
 
   // Not to make the indexing decision but to update sets.
   void UpdateSets(base::StringPiece header, base::StringPiece value) {
+    update_only_header_count_++;
     ShouldIndex(header, value);
   }
 
-  // TODO(yasong): Add function to log statistic info. For example, cache hit
-  // and miss rate.
+  int64_t total_header_count() { return total_header_count_; }
+  int64_t update_only_header_count() { return update_only_header_count_; }
+  int64_t missed_headers_in_indexing() { return missed_header_in_indexing_; }
+  int64_t missed_headers_in_tracking() { return missed_header_in_tracking_; }
 
  private:
   friend class test::HeaderIndexingPeer;
@@ -56,6 +60,10 @@ class NET_EXPORT HeaderIndexing {
   HeaderSet tracking_set_;
   const size_t indexing_set_bound_;
   const size_t tracking_set_bound_;
+  int64_t total_header_count_ = 0;
+  int64_t update_only_header_count_ = 0;
+  int64_t missed_header_in_indexing_ = 0;
+  int64_t missed_header_in_tracking_ = 0;
 };
 
 }  // namespace net

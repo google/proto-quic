@@ -14,6 +14,10 @@ if (current_cpu == "arm" || v8_current_cpu == "arm") {
     # platforms.
     arm_version = 7
 
+    # The ARM architecture. This will be a string like "armv6" or "armv7-a".
+    # An empty string means to use the default for the arm_version.
+    arm_arch = ""
+
     # The ARM floating point mode. This is either the string "hard", "soft", or
     # "softfp". An empty string means to use the default one for the
     # arm_version.
@@ -48,7 +52,9 @@ if (current_cpu == "arm" || v8_current_cpu == "arm") {
   }
 
   if (arm_version == 6) {
-    arm_arch = "armv6"
+    if (arm_arch == "") {
+      arm_arch = "armv6"
+    }
     if (arm_tune != "") {
       arm_tune = ""
     }
@@ -58,7 +64,9 @@ if (current_cpu == "arm" || v8_current_cpu == "arm") {
     arm_fpu = "vfp"
     arm_use_thumb = false
   } else if (arm_version == 7) {
-    arm_arch = "armv7-a"
+    if (arm_arch == "") {
+      arm_arch = "armv7-a"
+    }
     if (arm_tune == "") {
       arm_tune = "generic-armv7-a"
     }
@@ -80,7 +88,9 @@ if (current_cpu == "arm" || v8_current_cpu == "arm") {
       arm_fpu = "vfpv3-d16"
     }
   } else if (arm_version == 8) {
-    arm_arch = "armv8-a"
+    if (arm_arch == "") {
+      arm_arch = "armv8-a"
+    }
     if (arm_tune == "") {
       arm_tune = "generic-armv8-a"
     }

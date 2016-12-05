@@ -17,6 +17,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
@@ -25,10 +26,7 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
-using std::map;
-using std::pair;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {
@@ -138,9 +136,9 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
 class SourceAddressTokenTest : public ::testing::Test {
  public:
   SourceAddressTokenTest()
-      : ip4_(Loopback4()),
-        ip4_dual_(ConvertIPv4ToIPv4MappedIPv6(ip4_)),
-        ip6_(Loopback6()),
+      : ip4_(QuicIpAddress::Loopback4()),
+        ip4_dual_(ip4_.DualStacked()),
+        ip6_(QuicIpAddress::Loopback6()),
         original_time_(QuicWallTime::Zero()),
         rand_(QuicRandom::GetInstance()),
         server_(QuicCryptoServerConfig::TESTING,
@@ -155,19 +153,19 @@ class SourceAddressTokenTest : public ::testing::Test {
         rand_, &clock_, QuicCryptoServerConfig::ConfigOptions()));
   }
 
-  string NewSourceAddressToken(string config_id, const IPAddress& ip) {
+  string NewSourceAddressToken(string config_id, const QuicIpAddress& ip) {
     return NewSourceAddressToken(config_id, ip, nullptr);
   }
 
   string NewSourceAddressToken(string config_id,
-                               const IPAddress& ip,
+                               const QuicIpAddress& ip,
                                const SourceAddressTokens& previous_tokens) {
     return peer_.NewSourceAddressToken(config_id, previous_tokens, ip, rand_,
                                        clock_.WallNow(), nullptr);
   }
 
   string NewSourceAddressToken(string config_id,
-                               const IPAddress& ip,
+                               const QuicIpAddress& ip,
                                CachedNetworkParameters* cached_network_params) {
     SourceAddressTokens previous_tokens;
     return peer_.NewSourceAddressToken(config_id, previous_tokens, ip, rand_,
@@ -176,14 +174,14 @@ class SourceAddressTokenTest : public ::testing::Test {
 
   HandshakeFailureReason ValidateSourceAddressTokens(string config_id,
                                                      StringPiece srct,
-                                                     const IPAddress& ip) {
+                                                     const QuicIpAddress& ip) {
     return ValidateSourceAddressTokens(config_id, srct, ip, nullptr);
   }
 
   HandshakeFailureReason ValidateSourceAddressTokens(
       string config_id,
       StringPiece srct,
-      const IPAddress& ip,
+      const QuicIpAddress& ip,
       CachedNetworkParameters* cached_network_params) {
     return peer_.ValidateSourceAddressTokens(
         config_id, srct, ip, clock_.WallNow(), cached_network_params);
@@ -192,9 +190,9 @@ class SourceAddressTokenTest : public ::testing::Test {
   const string kPrimary = "<primary>";
   const string kOverride = "Config with custom source address token key";
 
-  IPAddress ip4_;
-  IPAddress ip4_dual_;
-  IPAddress ip6_;
+  QuicIpAddress ip4_;
+  QuicIpAddress ip4_dual_;
+  QuicIpAddress ip6_;
 
   MockClock clock_;
   QuicWallTime original_time_;
@@ -264,11 +262,7 @@ TEST_F(SourceAddressTokenTest, SourceAddressTokenMultipleAddresses) {
 
   // Now create a token which is usable for both addresses.
   SourceAddressToken previous_token;
-  IPAddress ip_address = ip6_;
-  if (ip6_.IsIPv4()) {
-    ip_address = ConvertIPv4ToIPv4MappedIPv6(ip_address);
-  }
-  previous_token.set_ip(IPAddressToPackedString(ip_address));
+  previous_token.set_ip(ip6_.DualStacked().ToPackedString());
   previous_token.set_timestamp(now.ToUNIXSeconds());
   SourceAddressTokens previous_tokens;
   (*previous_tokens.add_tokens()) = previous_token;

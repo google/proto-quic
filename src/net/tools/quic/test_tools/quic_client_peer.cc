@@ -29,7 +29,7 @@ void QuicClientPeer::CleanUpUDPSocket(QuicClient* client, int fd) {
 // static
 void QuicClientPeer::SetClientPort(QuicClient* client, int port) {
   client->fd_address_map_.back().second =
-      IPEndPoint(client->GetLatestClientAddress().address(), port);
+      QuicSocketAddress(client->GetLatestClientAddress().host(), port);
 }
 
 // static

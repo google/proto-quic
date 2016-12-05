@@ -20,8 +20,6 @@
 #include "net/http/http_stream_factory.h"
 #include "net/log/net_log_with_source.h"
 
-class GURL;
-
 namespace net {
 
 class HttpAuthController;

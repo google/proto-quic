@@ -7,7 +7,7 @@
 #include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_bandwidth.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

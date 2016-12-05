@@ -1641,8 +1641,9 @@
 
   The precise behavior of declare args is:
 
-   1. The declare_arg block executes. Any variables in the enclosing scope are
-      available for reading.
+   1. The declare_args() block executes. Any variable defined in the enclosing
+      scope is available for reading, but any variable defined earlier in
+      the current scope is not (since the overrides haven't been applied yet).
 
    2. At the end of executing the block, any variables set within that scope
       are saved globally as build arguments, with their current values being
@@ -1661,12 +1662,10 @@
       like [], "", or -1, and after the declare_args block, call exec_script if
       the value is unset by the user.
 
-    - Any code inside of the declare_args block will see the default values of
-      previous variables defined in the block rather than the user-overridden
-      value. This can be surprising because you will be used to seeing the
-      overridden value. If you need to make the default value of one arg
-      dependent on the possibly-overridden value of another, write two separate
-      declare_args blocks:
+    - Because you cannot read the value of a variable defined in the same
+      block, if you need to make the default value of one arg depend
+      on the possibly-overridden value of another, write two separate
+      declare_args() blocks:
 
         declare_args() {
           enable_foo = true

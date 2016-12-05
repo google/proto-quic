@@ -23,7 +23,6 @@ const size_t kLengthFieldSize = sizeof(uint32_t);
 const size_t SpdyHeadersBlockParser::kMaximumFieldLength = 16 * 1024;
 
 SpdyHeadersBlockParser::SpdyHeadersBlockParser(
-    SpdyMajorVersion spdy_version,
     SpdyHeadersHandlerInterface* handler)
     : state_(READING_HEADER_BLOCK_LEN),
       max_headers_in_block_(MaxNumberOfHeaders()),
@@ -31,8 +30,7 @@ SpdyHeadersBlockParser::SpdyHeadersBlockParser(
       remaining_key_value_pairs_for_frame_(0),
       handler_(handler),
       stream_id_(kInvalidStreamId),
-      error_(NO_PARSER_ERROR),
-      spdy_version_(spdy_version) {
+      error_(NO_PARSER_ERROR) {
   // The handler that we set must not be NULL.
   DCHECK(handler_ != NULL);
 }

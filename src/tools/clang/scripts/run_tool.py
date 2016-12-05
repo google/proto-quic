@@ -114,7 +114,7 @@ def _ExtractEditsFromStdout(build_directory, stdout):
   return edits
 
 
-def _ExecuteTool(toolname, build_directory, filename):
+def _ExecuteTool(toolname, tool_args, build_directory, filename):
   """Executes the tool.
 
   This is defined outside the class so it can be pickled for the multiprocessing
@@ -122,6 +122,7 @@ def _ExecuteTool(toolname, build_directory, filename):
 
   Args:
     toolname: Path to the tool to execute.
+    tool_args: Arguments to be passed to the tool. Can be None.
     build_directory: Directory that contains the compile database.
     filename: The file to run the tool over.
 
@@ -135,10 +136,11 @@ def _ExecuteTool(toolname, build_directory, filename):
     Otherwise, the filename and the output from stderr are associated with the
     keys "filename" and "stderr" respectively.
   """
+  args = [toolname, '-p', build_directory, filename]
+  if (tool_args):
+    args.extend(tool_args)
   command = subprocess.Popen(
-      (toolname, '-p', build_directory, filename),
-      stdout=subprocess.PIPE,
-      stderr=subprocess.PIPE)
+      args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   stdout, stderr = command.communicate()
   if command.returncode != 0:
     return {'status': False, 'filename': filename, 'stderr': stderr}
@@ -150,15 +152,17 @@ def _ExecuteTool(toolname, build_directory, filename):
 class _CompilerDispatcher(object):
   """Multiprocessing controller for running clang tools in parallel."""
 
-  def __init__(self, toolname, build_directory, filenames):
+  def __init__(self, toolname, tool_args, build_directory, filenames):
     """Initializer method.
 
     Args:
       toolname: Path to the tool to execute.
+      tool_args: Arguments to be passed to the tool. Can be None.
       build_directory: Directory that contains the compile database.
       filenames: The files to run the tool over.
     """
     self.__toolname = toolname
+    self.__tool_args = tool_args
     self.__build_directory = build_directory
     self.__filenames = filenames
     self.__success_count = 0
@@ -178,8 +182,9 @@ class _CompilerDispatcher(object):
     """Does the grunt work."""
     pool = multiprocessing.Pool()
     result_iterator = pool.imap_unordered(
-        functools.partial(_ExecuteTool, self.__toolname,
-                          self.__build_directory), self.__filenames)
+        functools.partial(_ExecuteTool, self.__toolname, self.__tool_args,
+                          self.__build_directory),
+                          self.__filenames)
     for result in result_iterator:
       self.__ProcessResult(result)
     sys.stdout.write('\n')
@@ -299,6 +304,9 @@ def main():
       'path_filter',
       nargs='*',
       help='optional paths to filter what files the tool is run on')
+  parser.add_argument(
+      '--tool-args', nargs='*',
+      help='optional arguments passed to the tool')
   args = parser.parse_args()
 
   os.environ['PATH'] = '%s%s%s' % (
@@ -321,7 +329,8 @@ def main():
     source_filenames = [f
                         for f in filenames
                         if os.path.splitext(f)[1] in extensions]
-  dispatcher = _CompilerDispatcher(args.tool, args.compile_database,
+  dispatcher = _CompilerDispatcher(args.tool, args.tool_args,
+                                   args.compile_database,
                                    source_filenames)
   dispatcher.Run()
   # Filter out edits to files that aren't in the git repository, since it's not

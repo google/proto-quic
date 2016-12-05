@@ -13,14 +13,6 @@ from metrics import Metric
 
 
 INTERESTING_METRICS = {
-    'packetsReceived': {
-        'units': 'packets',
-        'description': 'Packets received by the peer connection',
-    },
-    'packetsSent': {
-        'units': 'packets',
-        'description': 'Packets sent by the peer connection',
-    },
     'googDecodeMs': {
         'units': 'ms',
         'description': 'Time spent decoding.',
@@ -28,6 +20,10 @@ INTERESTING_METRICS = {
     'googMaxDecodeMs': {
         'units': 'ms',
         'description': 'Maximum time spent decoding one frame.',
+    },
+    'googAvgEncodeMs': {
+        'units': 'ms',
+        'description': 'Average time spent encoding one frame.'
     },
     'googRtt': {
         'units': 'ms',
@@ -70,10 +66,6 @@ INTERESTING_METRICS = {
         'units': 'bit/s',
         'description': ('The target encoding bitrate we estimate is good to '
                         'aim for given our bandwidth estimates.')
-    },
-    'googTransmitBitrate': {
-        'units': 'bit/s',
-        'description': 'The actual transmit bitrate.'
     },
 }
 

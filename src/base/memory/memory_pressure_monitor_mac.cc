@@ -18,6 +18,10 @@
 DISPATCH_EXPORT const struct dispatch_source_type_s
     _dispatch_source_type_memorypressure;
 
+namespace {
+static const int kUMATickSize = 5;
+}  // namespace
+
 namespace base {
 namespace mac {
 
@@ -44,9 +48,9 @@ MemoryPressureMonitor::MemoryPressureMonitor()
           dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0))),
       dispatch_callback_(
           base::Bind(&MemoryPressureListener::NotifyMemoryPressure)),
-      last_pressure_change_(CFAbsoluteTimeGetCurrent()),
+      last_statistic_report_(CFAbsoluteTimeGetCurrent()),
+      last_pressure_level_(MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE),
       reporting_error_(0) {
-  last_pressure_level_ = GetCurrentPressureLevel();
   dispatch_source_set_event_handler(memory_level_event_source_, ^{
     OnMemoryPressureChanged(memory_level_event_source_.get(),
                             dispatch_callback_);
@@ -59,41 +63,57 @@ MemoryPressureMonitor::~MemoryPressureMonitor() {
 }
 
 MemoryPressureListener::MemoryPressureLevel
-MemoryPressureMonitor::GetCurrentPressureLevel() const {
+MemoryPressureMonitor::GetCurrentPressureLevel() {
   int mac_memory_pressure;
   size_t length = sizeof(int);
   sysctlbyname("kern.memorystatus_vm_pressure_level", &mac_memory_pressure,
                &length, nullptr, 0);
-  return MemoryPressureLevelForMacMemoryPressure(mac_memory_pressure);
+  MemoryPressureListener::MemoryPressureLevel memory_pressure_level =
+      MemoryPressureLevelForMacMemoryPressure(mac_memory_pressure);
+  bool pressure_level_changed = false;
+  if (last_pressure_level_ != memory_pressure_level) {
+    pressure_level_changed = true;
+  }
+  SendStatisticsIfNecessary(pressure_level_changed);
+  last_pressure_level_ = memory_pressure_level;
+  return memory_pressure_level;
 }
+
 void MemoryPressureMonitor::OnMemoryPressureChanged(
     dispatch_source_s* event_source,
     const MemoryPressureMonitor::DispatchCallback& dispatch_callback) {
   int mac_memory_pressure = dispatch_source_get_data(event_source);
   MemoryPressureListener::MemoryPressureLevel memory_pressure_level =
       MemoryPressureLevelForMacMemoryPressure(mac_memory_pressure);
-  CFTimeInterval now = CFAbsoluteTimeGetCurrent();
-  CFTimeInterval since_last_change = now - last_pressure_change_;
-  last_pressure_change_ = now;
-
-  double ticks_to_report;
-  reporting_error_ =
-      modf(since_last_change + reporting_error_, &ticks_to_report);
-
-  // Sierra fails to call the handler when pressure returns to normal,
-  // which would skew our data. For example, if pressure went to 'warn'
-  // at T0, back to 'normal' at T1, then to 'critical' at T10, we would
-  // report 10 ticks of 'warn' instead of 1 tick of 'warn' and 9 ticks
-  // of 'normal'.
-  // This is rdar://29114314
-  if (mac::IsAtMostOS10_11())
-    RecordMemoryPressure(last_pressure_level_,
-                         static_cast<int>(ticks_to_report));
-
+  bool pressure_level_changed = false;
+  if (last_pressure_level_ != memory_pressure_level) {
+    pressure_level_changed = true;
+  }
+  SendStatisticsIfNecessary(pressure_level_changed);
   last_pressure_level_ = memory_pressure_level;
   if (memory_pressure_level !=
       MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE)
     dispatch_callback.Run(memory_pressure_level);
+}
+
+void MemoryPressureMonitor::SendStatisticsIfNecessary(
+    bool pressure_level_changed) {
+  CFTimeInterval now = CFAbsoluteTimeGetCurrent();
+  CFTimeInterval since_last_report = now - last_statistic_report_;
+  last_statistic_report_ = now;
+
+  double accumulated_time = since_last_report + reporting_error_;
+  int ticks_to_report = static_cast<int>(accumulated_time / kUMATickSize);
+  reporting_error_ = std::fmod(accumulated_time, kUMATickSize);
+
+  // Round up on change to ensure we capture it
+  if (pressure_level_changed && ticks_to_report < 1) {
+    ticks_to_report = 1;
+    reporting_error_ = 0;
+  }
+
+  if (ticks_to_report >= 1)
+    RecordMemoryPressure(last_pressure_level_, ticks_to_report);
 }
 
 void MemoryPressureMonitor::SetDispatchCallback(

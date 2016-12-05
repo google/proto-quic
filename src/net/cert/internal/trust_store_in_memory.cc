@@ -21,12 +21,10 @@ void TrustStoreInMemory::AddTrustAnchor(scoped_refptr<TrustAnchor> anchor) {
 
 void TrustStoreInMemory::FindTrustAnchorsForCert(
     const scoped_refptr<ParsedCertificate>& cert,
-    const TrustAnchorsCallback& callback,
-    TrustAnchors* synchronous_matches,
-    std::unique_ptr<Request>* out_req) const {
+    TrustAnchors* matches) const {
   auto range = anchors_.equal_range(cert->normalized_issuer().AsStringPiece());
   for (auto it = range.first; it != range.second; ++it)
-    synchronous_matches->push_back(it->second);
+    matches->push_back(it->second);
 }
 
 }  // namespace net

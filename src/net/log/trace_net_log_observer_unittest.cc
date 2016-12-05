@@ -319,6 +319,31 @@ TEST_F(TraceNetLogObserverTest, CreateObserverAfterTracingStarts) {
   TestNetLogEntry::List entries;
   net_log()->GetEntries(&entries);
   EXPECT_EQ(3u, entries.size());
+  EXPECT_EQ(1u, trace_events()->GetSize());
+}
+
+TEST_F(TraceNetLogObserverTest,
+       CreateObserverAfterTracingStartsDisabledCategory) {
+  set_trace_net_log_observer(nullptr);
+
+  std::string disabled_netlog_category =
+      std::string("-") + kNetLogTracingCategory;
+  TraceLog::GetInstance()->SetEnabled(
+      base::trace_event::TraceConfig(disabled_netlog_category, ""),
+      TraceLog::RECORDING_MODE);
+
+  set_trace_net_log_observer(new TraceNetLogObserver());
+  trace_net_log_observer()->WatchForTraceStart(net_log());
+  net_log()->AddGlobalEntry(NetLogEventType::CANCELLED);
+  trace_net_log_observer()->StopWatchForTraceStart();
+  net_log()->AddGlobalEntry(NetLogEventType::REQUEST_ALIVE);
+  net_log()->AddGlobalEntry(NetLogEventType::URL_REQUEST_START_JOB);
+
+  EndTraceAndFlush();
+
+  TestNetLogEntry::List entries;
+  net_log()->GetEntries(&entries);
+  EXPECT_EQ(3u, entries.size());
   EXPECT_EQ(0u, trace_events()->GetSize());
 }
 

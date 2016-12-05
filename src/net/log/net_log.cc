@@ -4,6 +4,7 @@
 
 #include "net/log/net_log.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "base/bind.h"
@@ -133,7 +134,11 @@ void NetLog::DeprecatedAddObserver(NetLog::ThreadSafeObserver* observer,
   base::AutoLock lock(lock_);
 
   DCHECK(!observer->net_log_);
-  observers_.AddObserver(observer);
+  DCHECK(!HasObserver(observer));
+  DCHECK_LT(observers_.size(), 20u);  // Performance sanity check.
+
+  observers_.push_back(observer);
+
   observer->net_log_ = this;
   observer->capture_mode_ = capture_mode;
   UpdateIsCapturing();
@@ -143,7 +148,7 @@ void NetLog::SetObserverCaptureMode(NetLog::ThreadSafeObserver* observer,
                                     NetLogCaptureMode capture_mode) {
   base::AutoLock lock(lock_);
 
-  DCHECK(observers_.HasObserver(observer));
+  DCHECK(HasObserver(observer));
   DCHECK_EQ(this, observer->net_log_);
   observer->capture_mode_ = capture_mode;
 }
@@ -151,9 +156,12 @@ void NetLog::SetObserverCaptureMode(NetLog::ThreadSafeObserver* observer,
 void NetLog::DeprecatedRemoveObserver(NetLog::ThreadSafeObserver* observer) {
   base::AutoLock lock(lock_);
 
-  DCHECK(observers_.HasObserver(observer));
   DCHECK_EQ(this, observer->net_log_);
-  observers_.RemoveObserver(observer);
+
+  auto it = std::find(observers_.begin(), observers_.end(), observer);
+  DCHECK(it != observers_.end());
+  observers_.erase(it);
+
   observer->net_log_ = NULL;
   observer->capture_mode_ = NetLogCaptureMode();
   UpdateIsCapturing();
@@ -161,8 +169,13 @@ void NetLog::DeprecatedRemoveObserver(NetLog::ThreadSafeObserver* observer) {
 
 void NetLog::UpdateIsCapturing() {
   lock_.AssertAcquired();
-  base::subtle::NoBarrier_Store(&is_capturing_,
-                                observers_.might_have_observers() ? 1 : 0);
+  base::subtle::NoBarrier_Store(&is_capturing_, observers_.size() ? 1 : 0);
+}
+
+bool NetLog::HasObserver(ThreadSafeObserver* observer) {
+  lock_.AssertAcquired();
+  auto it = std::find(observers_.begin(), observers_.end(), observer);
+  return it != observers_.end();
 }
 
 // static
@@ -279,8 +292,8 @@ void NetLog::AddEntry(NetLogEventType type,
 
   // Notify all of the log observers.
   base::AutoLock lock(lock_);
-  for (auto& observer : observers_)
-    observer.OnAddEntryData(entry_data);
+  for (auto* observer : observers_)
+    observer->OnAddEntryData(entry_data);
 }
 
 }  // namespace net

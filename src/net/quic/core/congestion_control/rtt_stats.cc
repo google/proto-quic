@@ -8,7 +8,6 @@
 
 #include "net/quic/core/quic_flags.h"
 
-using std::max;
 
 namespace net {
 
@@ -32,10 +31,10 @@ RttStats::RttStats()
       initial_rtt_us_(kInitialRttMs * kNumMicrosPerMilli) {}
 
 void RttStats::ExpireSmoothedMetrics() {
-  mean_deviation_ = max(mean_deviation_,
-                        QuicTime::Delta::FromMicroseconds(std::abs(
-                            (smoothed_rtt_ - latest_rtt_).ToMicroseconds())));
-  smoothed_rtt_ = max(smoothed_rtt_, latest_rtt_);
+  mean_deviation_ = std::max(
+      mean_deviation_, QuicTime::Delta::FromMicroseconds(std::abs(
+                           (smoothed_rtt_ - latest_rtt_).ToMicroseconds())));
+  smoothed_rtt_ = std::max(smoothed_rtt_, latest_rtt_);
 }
 
 // Updates the RTT based on a new sample.

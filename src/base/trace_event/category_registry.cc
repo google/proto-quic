@@ -10,9 +10,7 @@
 
 #include "base/atomicops.h"
 #include "base/debug/leak_annotations.h"
-#include "base/lazy_instance.h"
 #include "base/logging.h"
-#include "base/synchronization/lock.h"
 #include "base/third_party/dynamic_annotations/dynamic_annotations.h"
 #include "base/trace_event/trace_category.h"
 
@@ -30,15 +28,12 @@ static_assert(std::is_pod<TraceCategory>::value, "TraceCategory must be POD");
 // These entries must be kept consistent with the kCategory* consts below.
 TraceCategory g_categories[kMaxCategories] = {
     {0, 0, "tracing categories exhausted; must increase kMaxCategories"},
-    {0, 0, "tracing already shutdown"}, // See kCategoryAlreadyShutdown below.
-    {0, 0, "__metadata"},               // See kCategoryMetadata below.
-    {0, 0, "toplevel"},                 // Warmup the toplevel category.
+    {0, 0, "tracing already shutdown"},  // See kCategoryAlreadyShutdown below.
+    {0, 0, "__metadata"},                // See kCategoryMetadata below.
+    {0, 0, "toplevel"},                  // Warmup the toplevel category.
 };
 
 base::subtle::AtomicWord g_category_index = kNumBuiltinCategories;
-
-base::LazyInstance<base::Lock>::Leaky g_category_lock =
-    LAZY_INSTANCE_INITIALIZER;
 
 bool IsValidCategoryPtr(const TraceCategory* category) {
   // If any of these are hit, something has cached a corrupt category pointer.
@@ -73,14 +68,15 @@ void CategoryRegistry::Initialize() {
 
 // static
 void CategoryRegistry::ResetForTesting() {
-  AutoLock lock(g_category_lock.Get());
+  // reset_for_testing clears up only the enabled state and filters. The
+  // categories themselves cannot be cleared up because the static pointers
+  // injected by the macros still point to them and cannot be reset.
   for (size_t i = 0; i < kMaxCategories; ++i)
     g_categories[i].reset_for_testing();
 }
 
 // static
-bool CategoryRegistry::GetOrCreateCategoryByName(const char* category_name,
-                                                 TraceCategory** category) {
+TraceCategory* CategoryRegistry::GetCategoryByName(const char* category_name) {
   DCHECK(!strchr(category_name, '"'))
       << "Category names may not contain double quote";
 
@@ -90,28 +86,25 @@ bool CategoryRegistry::GetOrCreateCategoryByName(const char* category_name,
   // Search for pre-existing category group.
   for (size_t i = 0; i < category_index; ++i) {
     if (strcmp(g_categories[i].name(), category_name) == 0) {
-      *category = &g_categories[i];
-      return false;
+      return &g_categories[i];
     }
   }
+  return nullptr;
+}
 
-  // This is the slow path: the lock is not held in the case above, so more
-  // than one thread could have reached here trying to add the same category.
-  // Only hold the lock when actually appending a new category, and check the
-  // categories groups again.
-  // TODO(primiano): there should be no need for the acquire/release semantics
-  // on g_category_index below, the outer lock implies that. Remove once the
-  // tracing refactoring reaches a quieter state and we can afford the risk.
-  AutoLock lock(g_category_lock.Get());
-  category_index = base::subtle::Acquire_Load(&g_category_index);
-  for (size_t i = 0; i < category_index; ++i) {
-    if (strcmp(g_categories[i].name(), category_name) == 0) {
-      *category = &g_categories[i];
-      return false;
-    }
-  }
+bool CategoryRegistry::GetOrCreateCategoryLocked(
+    const char* category_name,
+    CategoryInitializerFn category_initializer_fn,
+    TraceCategory** category) {
+  // This is the slow path: the lock is not held in the fastpath
+  // (GetCategoryByName), so more than one thread could have reached here trying
+  // to add the same category.
+  *category = GetCategoryByName(category_name);
+  if (*category)
+    return false;
 
   // Create a new category.
+  size_t category_index = base::subtle::Acquire_Load(&g_category_index);
   if (category_index >= kMaxCategories) {
     NOTREACHED() << "must increase kMaxCategories";
     *category = kCategoryExhausted;
@@ -128,6 +121,7 @@ bool CategoryRegistry::GetOrCreateCategoryByName(const char* category_name,
   DCHECK(!(*category)->is_valid());
   DCHECK(!(*category)->is_enabled());
   (*category)->set_name(category_name_copy);
+  category_initializer_fn(*category);
 
   // Update the max index now.
   base::subtle::Release_Store(&g_category_index, category_index + 1);

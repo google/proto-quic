@@ -59,6 +59,10 @@
 #   deps (optional)
 #       Additional dependencies.
 #
+#   use_protobuf_full (optional)
+#       If adding protobuf library would be required, adds protobuf_full to deps
+#       instead of protobuf_lite.
+#
 # Parameters for compiling the generated code:
 #
 #   component_build_force_source_set (Default=false)
@@ -117,9 +121,9 @@ template("proto_library") {
     # also Windows executables have .exe at the end.
 
     plugin_host_label = invoker.generator_plugin_label + "($host_toolchain)"
-    plugin_path = get_label_info(plugin_host_label, "root_out_dir") + "/" +
-                  get_label_info(plugin_host_label, "name") +
-                  host_executable_suffix
+    plugin_path =
+        get_label_info(plugin_host_label, "root_out_dir") + "/" +
+        get_label_info(plugin_host_label, "name") + host_executable_suffix
     generate_with_plugin = true
   } else if (defined(invoker.generator_plugin_script)) {
     plugin_path = invoker.generator_plugin_script
@@ -301,8 +305,7 @@ template("proto_library") {
 
   # Option to disable building a library in component build.
   if (defined(invoker.component_build_force_source_set) &&
-      invoker.component_build_force_source_set &&
-      is_component_build) {
+      invoker.component_build_force_source_set && is_component_build) {
     link_target_type = "source_set"
   } else {
     link_target_type = "static_library"
@@ -348,9 +351,16 @@ template("proto_library") {
       # within protobuf_lite. Hence, dependencies require those headers too.
       # If using generator plugin, extra deps should be resolved by the invoker.
       if (generate_cc) {
-        public_deps = [
-          "//third_party/protobuf:protobuf_lite",
-        ]
+        if (defined(invoker.use_protobuf_full) &&
+            invoker.use_protobuf_full == true) {
+          public_deps = [
+            "//third_party/protobuf:protobuf_full",
+          ]
+        } else {
+          public_deps = [
+            "//third_party/protobuf:protobuf_lite",
+          ]
+        }
       }
     }
 

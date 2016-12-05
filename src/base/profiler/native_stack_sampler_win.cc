@@ -332,6 +332,8 @@ void SuspendThreadAndRecordStack(
     void* stack_copy_buffer,
     size_t stack_copy_buffer_size,
     std::vector<RecordedFrame>* stack,
+    NativeStackSampler::AnnotateCallback annotator,
+    StackSamplingProfiler::Sample* sample,
     NativeStackSamplerTestDelegate* test_delegate) {
   DCHECK(stack->empty());
 
@@ -366,6 +368,8 @@ void SuspendThreadAndRecordStack(
     if (PointsToGuardPage(bottom))
       return;
 
+    (*annotator)(sample);
+
     CopyMemoryFromStack(stack_copy_buffer,
                         reinterpret_cast<const void*>(bottom), top - bottom);
   }
@@ -383,6 +387,7 @@ void SuspendThreadAndRecordStack(
 class NativeStackSamplerWin : public NativeStackSampler {
  public:
   NativeStackSamplerWin(win::ScopedHandle thread_handle,
+                        AnnotateCallback annotator,
                         NativeStackSamplerTestDelegate* test_delegate);
   ~NativeStackSamplerWin() override;
 
@@ -421,6 +426,8 @@ class NativeStackSamplerWin : public NativeStackSampler {
 
   win::ScopedHandle thread_handle_;
 
+  const AnnotateCallback annotator_;
+
   NativeStackSamplerTestDelegate* const test_delegate_;
 
   // The stack base address corresponding to |thread_handle_|.
@@ -443,11 +450,15 @@ class NativeStackSamplerWin : public NativeStackSampler {
 
 NativeStackSamplerWin::NativeStackSamplerWin(
     win::ScopedHandle thread_handle,
+    AnnotateCallback annotator,
     NativeStackSamplerTestDelegate* test_delegate)
-    : thread_handle_(thread_handle.Take()), test_delegate_(test_delegate),
+    : thread_handle_(thread_handle.Take()),
+      annotator_(annotator),
+      test_delegate_(test_delegate),
       thread_stack_base_address_(
           GetThreadEnvironmentBlock(thread_handle_.Get())->Tib.StackBase),
       stack_copy_buffer_(new unsigned char[kStackCopyBufferSize]) {
+  DCHECK(annotator_);
 }
 
 NativeStackSamplerWin::~NativeStackSamplerWin() {
@@ -469,7 +480,7 @@ void NativeStackSamplerWin::RecordStackSample(
   std::vector<RecordedFrame> stack;
   SuspendThreadAndRecordStack(thread_handle_.Get(), thread_stack_base_address_,
                               stack_copy_buffer_.get(), kStackCopyBufferSize,
-                              &stack, test_delegate_);
+                              &stack, annotator_, sample, test_delegate_);
   CopyToSample(stack, sample, current_modules_);
 }
 
@@ -521,11 +532,11 @@ void NativeStackSamplerWin::CopyToSample(
     const std::vector<RecordedFrame>& stack,
     StackSamplingProfiler::Sample* sample,
     std::vector<StackSamplingProfiler::Module>* modules) {
-  sample->clear();
-  sample->reserve(stack.size());
+  sample->frames.clear();
+  sample->frames.reserve(stack.size());
 
   for (const RecordedFrame& frame : stack) {
-    sample->push_back(StackSamplingProfiler::Frame(
+    sample->frames.push_back(StackSamplingProfiler::Frame(
         reinterpret_cast<uintptr_t>(frame.instruction_pointer),
         GetModuleIndex(frame.module.Get(), modules)));
   }
@@ -535,6 +546,7 @@ void NativeStackSamplerWin::CopyToSample(
 
 std::unique_ptr<NativeStackSampler> NativeStackSampler::Create(
     PlatformThreadId thread_id,
+    AnnotateCallback annotator,
     NativeStackSamplerTestDelegate* test_delegate) {
 #if _WIN64
   // Get the thread's handle.
@@ -545,7 +557,7 @@ std::unique_ptr<NativeStackSampler> NativeStackSampler::Create(
 
   if (thread_handle) {
     return std::unique_ptr<NativeStackSampler>(new NativeStackSamplerWin(
-        win::ScopedHandle(thread_handle), test_delegate));
+        win::ScopedHandle(thread_handle), annotator, test_delegate));
   }
 #endif
   return std::unique_ptr<NativeStackSampler>();

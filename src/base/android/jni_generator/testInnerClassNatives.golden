@@ -34,8 +34,8 @@ base::subtle::AtomicWord g_MyInnerClass_clazz __attribute__((unused)) = 0;
 static jint Init(JNIEnv* env, const base::android::JavaParamRef<jobject>&
     jcaller);
 
-extern "C" __attribute__((visibility("default")))
-jint Java_org_chromium_TestJni_00024MyInnerClass_nativeInit(JNIEnv* env, jobject
+JNI_GENERATOR_EXPORT jint
+    Java_org_chromium_TestJni_00024MyInnerClass_nativeInit(JNIEnv* env, jobject
     jcaller) {
   return Init(env, base::android::JavaParamRef<jobject>(env, jcaller));
 }

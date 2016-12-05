@@ -61,10 +61,6 @@ QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v3, false)
 // If true, use async codepaths to invoke ProofSource::GetProof.
 QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
 
-// If true, requires handshake confirmations for all QUIC handshakes with
-// versions less than 33.
-QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation_pre33, false)
-
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event.
 QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, true)
@@ -115,14 +111,6 @@ QUIC_FLAG(bool, FLAGS_quic_create_session_after_insertion, false)
 // If true, rejected packet number is removed from public reset packet.
 QUIC_FLAG(bool, FLAGS_quic_remove_packet_number_from_public_reset, false)
 
-// If true, will send QUIC_PUSH_STREAM_TIMED_OUT when push stream is unclaimed
-// and times out.
-QUIC_FLAG(bool, FLAGS_quic_send_push_stream_timed_out_error, true)
-
-// If true, enable bugfix for FHOL experiment (fin-only
-// WritevStreamData).
-QUIC_FLAG(bool, FLAGS_quic_bugfix_fhol_writev_fin_only_v2, true)
-
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
 QUIC_FLAG(bool, FLAGS_quic_remove_v33_hacks2, false)
@@ -138,10 +126,6 @@ QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, false)
 // Cubic in packets.
 QUIC_FLAG(bool, FLAGS_quic_default_enable_cubic_bytes, true)
 
-// If enabled, fix double call of
-// InsertLocallyClosedStreamsHighestOffset in ResetPromised.
-QUIC_FLAG(bool, FLAGS_quic_bugfix_reset_promised, true)
-
 // Set the retransmission alarm only when there are unacked
 // retransmittable packets.
 QUIC_FLAG(bool, FLAGS_quic_more_conservative_retransmission_alarm, true)
@@ -156,3 +140,14 @@ QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
 // If true, fix version manager bug, in which version flag does not really
 // help.
 QUIC_FLAG(bool, FLAGS_quic_fix_version_manager, false)
+
+// Add a new client connection options field to QuicOptions which is only used
+// to configure client side features, such as congestion control.
+QUIC_FLAG(bool, FLAGS_quic_client_connection_options, true)
+
+// If true, fix some casts that were causing off-by-one errors in QUIC's cubic
+// "convex" increases.
+QUIC_FLAG(bool, FLAGS_quic_fix_cubic_convex_mode, false)
+
+// Ensure that BBR startup pacing rate does not drop below the initial one.
+QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, false)

@@ -6,7 +6,8 @@ import("//build/config/linux/pkg_config.gni")
 
 assert(is_linux, "This file should only be referenced on Linux")
 
-# Depend on //build/config/linux/gtk2 to use GTKv2.
+# Depend on //build/config/linux/gtk2 to use GTKv2. Depend on
+# //build/config/linux/gtk to get GTK 2 or 3 depending on the build flags.
 #
 # GN doesn't check visibility for configs so we give this an obviously internal
 # name to discourage random targets from accidentally depending on this and
@@ -22,16 +23,12 @@ pkg_config("gtk2_internal_config") {
 }
 
 # Basically no parts of Chrome should depend on GTK. To prevent accidents, the
-# parts that explicitly need GTK are whitelisted on this target.
+# parts that explicitly need GTK2 are whitelisted on this target.
 group("gtk2") {
   visibility = [
-    "//chrome/browser/ui/libgtkui:libgtk2ui",
     "//gpu/gles2_conform_support:gles2_conform_test_windowless",
-    "//remoting/host",
-    "//remoting/host/it2me:common",
-    "//remoting/host/it2me:remote_assistance_host",
-    "//remoting/host:remoting_me2me_host_static",
-    "//remoting/test:it2me_standalone_host_main",
+    "//build/config/linux/gtk",
+    "//chrome/browser/ui/libgtkui:*",
   ]
   public_configs = [ ":gtk2_internal_config" ]
 }

@@ -16,10 +16,6 @@ namespace android {
 
 const char kEarlyJavaCategory[] = "EarlyJava";
 
-static jlong GetTimeTicksNowUs(JNIEnv* env, const JavaParamRef<jclass>& clazz) {
-  return TimeTicks::Now().ToInternalValue();
-}
-
 static void RecordEarlyEvent(JNIEnv* env,
                              const JavaParamRef<jclass>& clazz,
                              const JavaParamRef<jstring>& jname,

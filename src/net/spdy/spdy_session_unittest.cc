@@ -4,6 +4,7 @@
 
 #include "net/spdy/spdy_session.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -2053,7 +2054,7 @@ TEST_F(SpdySessionTest, NetLogOnSessionEOF) {
   }
 }
 
-TEST_F(SpdySessionTest, SynCompressionHistograms) {
+TEST_F(SpdySessionTest, HeadersCompressionHistograms) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
   MockWrite writes[] = {
@@ -2084,8 +2085,8 @@ TEST_F(SpdySessionTest, SynCompressionHistograms) {
 
   base::RunLoop().RunUntilIdle();
   // Regression test of compression performance under the request fixture.
-  histogram_tester.ExpectBucketCount("Net.SpdySynStreamCompressionPercentage",
-                                     81, 1);
+  histogram_tester.ExpectBucketCount("Net.SpdyHeadersCompressionPercentage", 76,
+                                     1);
 
   // Read and process EOF.
   EXPECT_TRUE(session_);

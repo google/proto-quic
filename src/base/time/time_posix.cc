@@ -16,6 +16,7 @@
 #include <ostream>
 
 #include "base/logging.h"
+#include "base/numerics/safe_math.h"
 #include "build/build_config.h"
 
 #if defined(OS_ANDROID)
@@ -227,19 +228,28 @@ void Time::Explode(bool is_local, Exploded* exploded) const {
 
 // static
 bool Time::FromExploded(bool is_local, const Exploded& exploded, Time* time) {
+  CheckedNumeric<int> month = exploded.month;
+  month--;
+  CheckedNumeric<int> year = exploded.year;
+  year -= 1900;
+  if (!month.IsValid() || !year.IsValid()) {
+    *time = Time(0);
+    return false;
+  }
+
   struct tm timestruct;
-  timestruct.tm_sec    = exploded.second;
-  timestruct.tm_min    = exploded.minute;
-  timestruct.tm_hour   = exploded.hour;
-  timestruct.tm_mday   = exploded.day_of_month;
-  timestruct.tm_mon    = exploded.month - 1;
-  timestruct.tm_year   = exploded.year - 1900;
-  timestruct.tm_wday   = exploded.day_of_week;  // mktime/timegm ignore this
-  timestruct.tm_yday   = 0;     // mktime/timegm ignore this
-  timestruct.tm_isdst  = -1;    // attempt to figure it out
+  timestruct.tm_sec = exploded.second;
+  timestruct.tm_min = exploded.minute;
+  timestruct.tm_hour = exploded.hour;
+  timestruct.tm_mday = exploded.day_of_month;
+  timestruct.tm_mon = month.ValueOrDie();
+  timestruct.tm_year = year.ValueOrDie();
+  timestruct.tm_wday = exploded.day_of_week;  // mktime/timegm ignore this
+  timestruct.tm_yday = 0;                     // mktime/timegm ignore this
+  timestruct.tm_isdst = -1;                   // attempt to figure it out
 #if !defined(OS_NACL) && !defined(OS_SOLARIS)
-  timestruct.tm_gmtoff = 0;     // not a POSIX field, so mktime/timegm ignore
-  timestruct.tm_zone   = NULL;  // not a POSIX field, so mktime/timegm ignore
+  timestruct.tm_gmtoff = 0;   // not a POSIX field, so mktime/timegm ignore
+  timestruct.tm_zone = NULL;  // not a POSIX field, so mktime/timegm ignore
 #endif
 
   SysTime seconds;

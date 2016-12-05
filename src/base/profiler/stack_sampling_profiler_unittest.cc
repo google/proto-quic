@@ -49,6 +49,7 @@ namespace base {
 
 using SamplingParams = StackSamplingProfiler::SamplingParams;
 using Frame = StackSamplingProfiler::Frame;
+using Frames = std::vector<StackSamplingProfiler::Frame>;
 using Module = StackSamplingProfiler::Module;
 using Sample = StackSamplingProfiler::Sample;
 using CallStackProfile = StackSamplingProfiler::CallStackProfile;
@@ -396,7 +397,7 @@ const void* MaybeFixupFunctionAddressForILT(const void* function_address) {
 // Searches through the frames in |sample|, returning an iterator to the first
 // frame that has an instruction pointer within |target_function|. Returns
 // sample.end() if no such frames are found.
-Sample::const_iterator FindFirstFrameWithinFunction(
+Frames::const_iterator FindFirstFrameWithinFunction(
     const Sample& sample,
     TargetFunction target_function) {
   uintptr_t function_start = reinterpret_cast<uintptr_t>(
@@ -404,12 +405,12 @@ Sample::const_iterator FindFirstFrameWithinFunction(
           target_function)));
   uintptr_t function_end =
       reinterpret_cast<uintptr_t>(target_function(nullptr, nullptr, nullptr));
-  for (auto it = sample.begin(); it != sample.end(); ++it) {
+  for (auto it = sample.frames.begin(); it != sample.frames.end(); ++it) {
     if ((it->instruction_pointer >= function_start) &&
         (it->instruction_pointer <= function_end))
       return it;
   }
-  return sample.end();
+  return sample.frames.end();
 }
 
 // Formats a sample into a string that can be output for test diagnostics.
@@ -417,7 +418,7 @@ std::string FormatSampleForDiagnosticOutput(
     const Sample& sample,
     const std::vector<Module>& modules) {
   std::string output;
-  for (const Frame& frame : sample) {
+  for (const Frame& frame : sample.frames) {
     output += StringPrintf(
         "0x%p %s\n", reinterpret_cast<const void*>(frame.instruction_pointer),
         modules[frame.module_index].filename.AsUTF8Unsafe().c_str());
@@ -518,13 +519,12 @@ void TestLibraryUnload(bool wait_until_unloaded) {
 
   // Check that the stack contains a frame for
   // TargetThread::SignalAndWaitUntilSignaled().
-  Sample::const_iterator end_frame = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::SignalAndWaitUntilSignaled);
-  ASSERT_TRUE(end_frame != sample.end())
+  Frames::const_iterator end_frame = FindFirstFrameWithinFunction(
+      sample, &TargetThread::SignalAndWaitUntilSignaled);
+  ASSERT_TRUE(end_frame != sample.frames.end())
       << "Function at "
       << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::SignalAndWaitUntilSignaled))
+             &TargetThread::SignalAndWaitUntilSignaled))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
 
@@ -536,7 +536,7 @@ void TestLibraryUnload(bool wait_until_unloaded) {
     // ... WaitableEvent and system frames ...
     // TargetThread::SignalAndWaitUntilSignaled
     // TargetThread::OtherLibraryCallback
-    EXPECT_EQ(2, sample.end() - end_frame)
+    EXPECT_EQ(2, sample.frames.end() - end_frame)
         << "Stack:\n"
         << FormatSampleForDiagnosticOutput(sample, profile.modules);
   } else {
@@ -545,20 +545,19 @@ void TestLibraryUnload(bool wait_until_unloaded) {
     // the same stack as |wait_until_unloaded|, if not we should have the full
     // stack. The important thing is that we should not crash.
 
-    if ((sample.end() - 1) - end_frame == 2) {
+    if ((sample.frames.end() - 1) - end_frame == 2) {
       // This is the same case as |wait_until_unloaded|.
       return;
     }
 
     // Check that the stack contains a frame for
     // TargetThread::CallThroughOtherLibrary().
-    Sample::const_iterator other_library_frame = FindFirstFrameWithinFunction(
-        sample,
-        &TargetThread::CallThroughOtherLibrary);
-    ASSERT_TRUE(other_library_frame != sample.end())
+    Frames::const_iterator other_library_frame = FindFirstFrameWithinFunction(
+        sample, &TargetThread::CallThroughOtherLibrary);
+    ASSERT_TRUE(other_library_frame != sample.frames.end())
         << "Function at "
         << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-            &TargetThread::CallThroughOtherLibrary))
+               &TargetThread::CallThroughOtherLibrary))
         << " was not found in stack:\n"
         << FormatSampleForDiagnosticOutput(sample, profile.modules);
 
@@ -586,6 +585,8 @@ void TestLibraryUnload(bool wait_until_unloaded) {
 #define MAYBE_Basic DISABLED_Basic
 #endif
 TEST(StackSamplingProfilerTest, MAYBE_Basic) {
+  StackSamplingProfiler::ResetAnnotationsForTesting();
+
   SamplingParams params;
   params.sampling_interval = TimeDelta::FromMilliseconds(0);
   params.samples_per_burst = 1;
@@ -600,7 +601,8 @@ TEST(StackSamplingProfilerTest, MAYBE_Basic) {
   ASSERT_EQ(1u, profile.samples.size());
   EXPECT_EQ(params.sampling_interval, profile.sampling_period);
   const Sample& sample = profile.samples[0];
-  for (const auto& frame : sample) {
+  EXPECT_EQ(0u, sample.process_phases);
+  for (const auto& frame : sample.frames) {
     ASSERT_GE(frame.module_index, 0u);
     ASSERT_LT(frame.module_index, profile.modules.size());
   }
@@ -608,18 +610,52 @@ TEST(StackSamplingProfilerTest, MAYBE_Basic) {
   // Check that the stack contains a frame for
   // TargetThread::SignalAndWaitUntilSignaled() and that the frame has this
   // executable's module.
-  Sample::const_iterator loc = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::SignalAndWaitUntilSignaled);
-  ASSERT_TRUE(loc != sample.end())
+  Frames::const_iterator loc = FindFirstFrameWithinFunction(
+      sample, &TargetThread::SignalAndWaitUntilSignaled);
+  ASSERT_TRUE(loc != sample.frames.end())
       << "Function at "
       << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::SignalAndWaitUntilSignaled))
+             &TargetThread::SignalAndWaitUntilSignaled))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
   FilePath executable_path;
   EXPECT_TRUE(PathService::Get(FILE_EXE, &executable_path));
   EXPECT_EQ(executable_path, profile.modules[loc->module_index].filename);
+}
+
+// Checks that annotations are recorded in samples.
+#if defined(STACK_SAMPLING_PROFILER_SUPPORTED)
+#define MAYBE_Annotations Annotations
+#else
+#define MAYBE_Annotations DISABLED_Annotations
+#endif
+TEST(StackSamplingProfilerTest, MAYBE_Annotations) {
+  StackSamplingProfiler::ResetAnnotationsForTesting();
+
+  SamplingParams params;
+  params.sampling_interval = TimeDelta::FromMilliseconds(0);
+  params.samples_per_burst = 1;
+
+  // Check that a run picks up annotations.
+  StackSamplingProfiler::SetProcessPhase(1);
+  std::vector<CallStackProfile> profiles1;
+  CaptureProfiles(params, AVeryLongTimeDelta(), &profiles1);
+  ASSERT_EQ(1u, profiles1.size());
+  const CallStackProfile& profile1 = profiles1[0];
+  ASSERT_EQ(1u, profile1.samples.size());
+  const Sample& sample1 = profile1.samples[0];
+  EXPECT_EQ(1u << 1, sample1.process_phases);
+
+  // Run it a second time but with changed annotations. These annotations
+  // should appear in the first acquired sample.
+  StackSamplingProfiler::SetProcessPhase(2);
+  std::vector<CallStackProfile> profiles2;
+  CaptureProfiles(params, AVeryLongTimeDelta(), &profiles2);
+  ASSERT_EQ(1u, profiles2.size());
+  const CallStackProfile& profile2 = profiles2[0];
+  ASSERT_EQ(1u, profile2.samples.size());
+  const Sample& sample2 = profile2.samples[0];
+  EXPECT_EQ(sample1.process_phases | (1u << 2), sample2.process_phases);
 }
 
 // Checks that the profiler handles stacks containing dynamically-allocated
@@ -657,24 +693,22 @@ TEST(StackSamplingProfilerTest, MAYBE_Alloca) {
 
   // Check that the stack contains a frame for
   // TargetThread::SignalAndWaitUntilSignaled().
-  Sample::const_iterator end_frame = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::SignalAndWaitUntilSignaled);
-  ASSERT_TRUE(end_frame != sample.end())
+  Frames::const_iterator end_frame = FindFirstFrameWithinFunction(
+      sample, &TargetThread::SignalAndWaitUntilSignaled);
+  ASSERT_TRUE(end_frame != sample.frames.end())
       << "Function at "
       << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::SignalAndWaitUntilSignaled))
+             &TargetThread::SignalAndWaitUntilSignaled))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
 
   // Check that the stack contains a frame for TargetThread::CallWithAlloca().
-  Sample::const_iterator alloca_frame = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::CallWithAlloca);
-  ASSERT_TRUE(alloca_frame != sample.end())
+  Frames::const_iterator alloca_frame =
+      FindFirstFrameWithinFunction(sample, &TargetThread::CallWithAlloca);
+  ASSERT_TRUE(alloca_frame != sample.frames.end())
       << "Function at "
-      << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::CallWithAlloca))
+      << MaybeFixupFunctionAddressForILT(
+             reinterpret_cast<const void*>(&TargetThread::CallWithAlloca))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
 
@@ -927,25 +961,23 @@ TEST(StackSamplingProfilerTest, MAYBE_OtherLibrary) {
 
   // Check that the stack contains a frame for
   // TargetThread::CallThroughOtherLibrary().
-  Sample::const_iterator other_library_frame = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::CallThroughOtherLibrary);
-  ASSERT_TRUE(other_library_frame != sample.end())
+  Frames::const_iterator other_library_frame = FindFirstFrameWithinFunction(
+      sample, &TargetThread::CallThroughOtherLibrary);
+  ASSERT_TRUE(other_library_frame != sample.frames.end())
       << "Function at "
       << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::CallThroughOtherLibrary))
+             &TargetThread::CallThroughOtherLibrary))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
 
   // Check that the stack contains a frame for
   // TargetThread::SignalAndWaitUntilSignaled().
-  Sample::const_iterator end_frame = FindFirstFrameWithinFunction(
-      sample,
-      &TargetThread::SignalAndWaitUntilSignaled);
-  ASSERT_TRUE(end_frame != sample.end())
+  Frames::const_iterator end_frame = FindFirstFrameWithinFunction(
+      sample, &TargetThread::SignalAndWaitUntilSignaled);
+  ASSERT_TRUE(end_frame != sample.frames.end())
       << "Function at "
       << MaybeFixupFunctionAddressForILT(reinterpret_cast<const void*>(
-          &TargetThread::SignalAndWaitUntilSignaled))
+             &TargetThread::SignalAndWaitUntilSignaled))
       << " was not found in stack:\n"
       << FormatSampleForDiagnosticOutput(sample, profile.modules);
 

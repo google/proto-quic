@@ -20,7 +20,6 @@
 #include "url/url_canon.h"
 
 using base::StringPiece;
-using std::numeric_limits;
 using std::string;
 
 namespace net {

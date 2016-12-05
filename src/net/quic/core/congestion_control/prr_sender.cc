@@ -4,7 +4,7 @@
 
 #include "net/quic/core/congestion_control/prr_sender.h"
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 

@@ -20,7 +20,8 @@
 #  "windowed_test_launcher"
 #  : the test is a gtest-based test that uses the "brave-new-test-launcher"
 #    from //base/test:test_support and needs to run under Xvfb if run on
-#    an X11-based platform (use_x11=true).
+#    an X11-based platform (use_x11=true or use_ozone=true &&
+#    --ozone_platform=x11).
 #  "console_test_launcher"
 #  : the test is a gtest-based test that uses the "brave-new-test-launcher"
 #    from //base/test:test_support but does not need Xvfb.
@@ -99,6 +100,11 @@
   },
   "angle_deqp_gles3_tests": {
     "label": "//third_party/angle/src/tests:angle_deqp_gles3_tests",
+    "type": "raw",
+    "args": [],
+  },
+  "angle_deqp_gles31_tests": {
+    "label": "//third_party/angle/src/tests:angle_deqp_gles31_tests",
     "type": "raw",
     "args": [],
   },
@@ -376,6 +382,14 @@
     "label": "//device:device_unittests",
     "type": "console_test_launcher",
   },
+  "devtools_closure_compile": {
+    "label": "//third_party/WebKit/Source/devtools:devtools_closure_compile",
+    "type": "script",
+    "script": "//testing/scripts/run_devtools_closure_compile.py",
+    "args": [
+        "../../third_party/WebKit/Source/devtools/scripts/compile_frontend.py",
+    ],
+  },
   "display_unittests": {
     "label": "//ui/display:display_unittests",
     "type": "console_test_launcher",
@@ -430,6 +444,13 @@
     "label": "//ui/gl:gl_unittests",
     "type": "raw",
     "args": [],
+  },
+  "gl_unittests_ozonex": {
+    "label": "//ui/gl:gl_unittests_ozonex",
+    "label_type": "group",
+    "type": "windowed_test_launcher",
+    "executable": "gl_unittests",
+    "args": ["--ozone-platform=x11"],
   },
   "gn_all": {
     "label": "//:gn_all",
@@ -557,6 +578,17 @@
   "media_blink_unittests": {
     "label": "//media/blink:media_blink_unittests",
     "type": "windowed_test_launcher",
+  },
+  "media_router_tests": {
+    "label": "//chrome/test/media_router:media_router_tests",
+    "type": "script",
+    "script": "//chrome/test/media_router/internal/media_router_tests.py",
+    "args": [
+      "--extension",
+      "mr_extension/",
+      "--test_binary",
+      "./browser_tests",
+    ],
   },
   "midi_unittests": {
     "label": "//media/midi:midi_unittests",

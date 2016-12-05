@@ -5,26 +5,30 @@
 
 """Certificates for testing issuer lookup.
 
-               Root
-             /|    |
-            / |    |
-           /  |    |
-          /   |    |
-         /    |    |
-        v     v    v
-      I1_1  i1_2   I2
-        |    |     |
-        |    |     |
-        |    |     |
-        |    |     |
-        v    v     v
-       C1    C2    D
+                Root
+             /|   |   |\\
+            / |   |   | \\
+           /  |   |   |  \\
+          /   |   |   |   \\
+         /    |   |   |    \\
+        v     v   v   v     v
+      I1_1  i1_2  I2  I3_1 I3_2
+        |    |    |   |    |
+        |    |    |   |    |
+        |    |    |   |    |
+        |    |    |   |    |
+        v    v    v   |    |
+       C1    C2   D   E1   E2
 
 I1 (i1_1.pem) and i1 (i1_2.pem) have subjects that are equal after
 normalization.
 
+I3_1 and I3_2 have subjects that are exactly equal.
+
 C1 and C2 should (attempt to) chain up through both I1 and i1, since I1 and i1
 have the same the name (after normalization).
+
+E1 and E3 should (attempt to) chain up through both I3 intermediates.
 """
 
 import os
@@ -59,6 +63,11 @@ write_cert_to_file(i1_2, 'i1_2.pem')
 i2 = common.create_intermediate_certificate('I2', root)
 write_cert_to_file(i2, 'i2.pem')
 
+# Two intermediates with exactly the same name.
+i3_1 = common.create_intermediate_certificate('I3', root)
+write_cert_to_file(i3_1, 'i3_1.pem')
+i3_2 = common.create_intermediate_certificate('I3', root)
+write_cert_to_file(i3_2, 'i3_2.pem')
 
 # target certs
 
@@ -71,4 +80,9 @@ write_cert_to_file(c2, 'c2.pem')
 d = common.create_end_entity_certificate('D', i2)
 write_cert_to_file(d, 'd.pem')
 
+e1 = common.create_end_entity_certificate('E1', i3_1)
+write_cert_to_file(e1, 'e1.pem')
+
+e2 = common.create_end_entity_certificate('E2', i3_2)
+write_cert_to_file(e2, 'e2.pem')
 

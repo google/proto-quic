@@ -19,6 +19,7 @@
 
 import("//build/buildflag_header.gni")
 import("//build/config/allocator.gni")
+import("//build/config/arm.gni")
 import("//build/config/chromecast_build.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/compiler/compiler.gni")
@@ -39,6 +40,10 @@ declare_args() {
 
 if (is_android) {
   import("//build/config/android/rules.gni")
+}
+
+if (is_win) {
+  import("//build/config/win/visual_studio_version.gni")
 }
 
 config("base_flags") {
@@ -212,6 +217,8 @@ component("base") {
     "android/statistics_recorder_android.h",
     "android/sys_utils.cc",
     "android/sys_utils.h",
+    "android/time_utils.cc",
+    "android/time_utils.h",
     "android/trace_event_binding.cc",
     "android/trace_event_binding.h",
     "android/unguessable_token_android.cc",
@@ -316,6 +323,7 @@ component("base") {
     "files/dir_reader_linux.h",
     "files/dir_reader_posix.h",
     "files/file.cc",
+    "files/file.h",
     "files/file_descriptor_watcher_posix.cc",
     "files/file_descriptor_watcher_posix.h",
     "files/file_enumerator.cc",
@@ -585,6 +593,8 @@ component("base") {
     "numerics/safe_conversions_impl.h",
     "numerics/safe_math.h",
     "numerics/safe_math_impl.h",
+    "numerics/saturated_arithmetic.h",
+    "numerics/saturated_arithmetic_arm.h",
     "observer_list.h",
     "observer_list_threadsafe.h",
     "optional.h",
@@ -606,6 +616,7 @@ component("base") {
     "posix/safe_strerror.h",
     "posix/unix_domain_socket_linux.cc",
     "posix/unix_domain_socket_linux.h",
+    "post_task_and_reply_with_result_internal.h",
     "power_monitor/power_monitor.cc",
     "power_monitor/power_monitor.h",
     "power_monitor/power_monitor_device_source.cc",
@@ -812,6 +823,8 @@ component("base") {
     "task_scheduler/scheduler_worker_pool_params.h",
     "task_scheduler/scheduler_worker_stack.cc",
     "task_scheduler/scheduler_worker_stack.h",
+    "task_scheduler/scoped_set_task_priority_for_current_thread.cc",
+    "task_scheduler/scoped_set_task_priority_for_current_thread.h",
     "task_scheduler/sequence.cc",
     "task_scheduler/sequence.h",
     "task_scheduler/sequence_sort_key.cc",
@@ -1209,11 +1222,12 @@ component("base") {
       "rand_util_nacl.cc",
       "synchronization/read_write_lock_nacl.cc",
     ]
+  }
 
-    # Add stuff that doesn't work in NaCl.
+  # SpinLock uses inline assembly that doesn't work on NaCl, and for which there
+  # is no code for ARMv6.
+  if (!is_nacl && (current_cpu != "arm" || arm_version >= 7)) {
     sources += [
-      # SpinLock uses GNU-style inline assembly, which the pnacl-clang++
-      # compiler doesn't allow.
       "synchronization/spin_lock.cc",
       "synchronization/spin_lock.h",
     ]
@@ -1250,54 +1264,62 @@ component("base") {
 
       # These runtime files are copied to the output directory by the
       # vs_toolchain script that runs as part of toolchain configuration.
-      data += [
-        "$root_out_dir/msvcp140${vcrt_suffix}.dll",
-        "$root_out_dir/vccorlib140${vcrt_suffix}.dll",
-        "$root_out_dir/vcruntime140${vcrt_suffix}.dll",
+      if (visual_studio_version == "2015") {
+        data += [
+          "$root_out_dir/msvcp140${vcrt_suffix}.dll",
+          "$root_out_dir/vccorlib140${vcrt_suffix}.dll",
+          "$root_out_dir/vcruntime140${vcrt_suffix}.dll",
 
-        # Universal Windows 10 CRT files
-        "$root_out_dir/api-ms-win-core-console-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-datetime-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-debug-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-errorhandling-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-file-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-file-l1-2-0.dll",
-        "$root_out_dir/api-ms-win-core-file-l2-1-0.dll",
-        "$root_out_dir/api-ms-win-core-handle-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-heap-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-interlocked-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-libraryloader-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-localization-l1-2-0.dll",
-        "$root_out_dir/api-ms-win-core-memory-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-namedpipe-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-processenvironment-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-processthreads-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-processthreads-l1-1-1.dll",
-        "$root_out_dir/api-ms-win-core-profile-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-rtlsupport-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-string-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-synch-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-synch-l1-2-0.dll",
-        "$root_out_dir/api-ms-win-core-sysinfo-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-timezone-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-core-util-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-conio-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-convert-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-environment-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-filesystem-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-heap-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-locale-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-math-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-multibyte-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-private-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-process-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-runtime-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-stdio-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-string-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-time-l1-1-0.dll",
-        "$root_out_dir/api-ms-win-crt-utility-l1-1-0.dll",
-        "$root_out_dir/ucrtbase${vcrt_suffix}.dll",
-      ]
+          # Universal Windows 10 CRT files
+          "$root_out_dir/api-ms-win-core-console-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-datetime-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-debug-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-errorhandling-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-file-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-file-l1-2-0.dll",
+          "$root_out_dir/api-ms-win-core-file-l2-1-0.dll",
+          "$root_out_dir/api-ms-win-core-handle-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-heap-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-interlocked-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-libraryloader-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-localization-l1-2-0.dll",
+          "$root_out_dir/api-ms-win-core-memory-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-namedpipe-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-processenvironment-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-processthreads-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-processthreads-l1-1-1.dll",
+          "$root_out_dir/api-ms-win-core-profile-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-rtlsupport-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-string-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-synch-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-synch-l1-2-0.dll",
+          "$root_out_dir/api-ms-win-core-sysinfo-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-timezone-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-core-util-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-conio-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-convert-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-environment-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-filesystem-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-heap-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-locale-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-math-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-multibyte-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-private-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-process-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-runtime-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-stdio-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-string-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-time-l1-1-0.dll",
+          "$root_out_dir/api-ms-win-crt-utility-l1-1-0.dll",
+          "$root_out_dir/ucrtbase${vcrt_suffix}.dll",
+        ]
+      } else {
+        # TODO(thakis): V8 still relies on 2013: http://crbug.com/603131.
+        data += [
+          "$root_out_dir/msvcp120${vcrt_suffix}.dll",
+          "$root_out_dir/msvcr120${vcrt_suffix}.dll",
+        ]
+      }
       if (is_asan) {
         if (current_cpu == "x64") {
           data += [ "$clang_base_path/lib/clang/$clang_version/lib/windows/clang_rt.asan_dynamic-x86_64.dll" ]
@@ -1901,6 +1923,7 @@ test("base_unittests") {
     "metrics/statistics_recorder_unittest.cc",
     "native_library_unittest.cc",
     "numerics/safe_numerics_unittest.cc",
+    "numerics/saturated_arithmetic_unittest.cc",
     "observer_list_unittest.cc",
     "optional_unittest.cc",
     "os_compat_android_unittest.cc",
@@ -1963,6 +1986,7 @@ test("base_unittests") {
     "task_scheduler/scheduler_worker_pool_impl_unittest.cc",
     "task_scheduler/scheduler_worker_stack_unittest.cc",
     "task_scheduler/scheduler_worker_unittest.cc",
+    "task_scheduler/scoped_set_task_priority_for_current_thread_unittest.cc",
     "task_scheduler/sequence_sort_key_unittest.cc",
     "task_scheduler/sequence_unittest.cc",
     "task_scheduler/task_scheduler_impl_unittest.cc",
@@ -2263,6 +2287,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/SysUtils.java",
       "android/java/src/org/chromium/base/SystemMessageHandler.java",
       "android/java/src/org/chromium/base/ThreadUtils.java",
+      "android/java/src/org/chromium/base/TimeUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",
       "android/java/src/org/chromium/base/library_loader/LibraryLoader.java",
@@ -2337,6 +2362,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/SysUtils.java",
       "android/java/src/org/chromium/base/SystemMessageHandler.java",
       "android/java/src/org/chromium/base/ThreadUtils.java",
+      "android/java/src/org/chromium/base/TimeUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",
       "android/java/src/org/chromium/base/VisibleForTesting.java",

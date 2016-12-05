@@ -12,8 +12,6 @@
 #include "net/interfaces/proxy_resolver_service.mojom.h"
 
 namespace net {
-class HostResolver;
-class ProxyResolverErrorObserver;
 class ProxyResolverV8TracingFactory;
 
 class MojoProxyResolverFactoryImpl : public interfaces::ProxyResolverFactory {

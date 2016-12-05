@@ -10,9 +10,6 @@
 #include "net/proxy/dhcp_proxy_script_fetcher.h"
 
 namespace net {
-namespace interfaces {
-class ProxyResolverFactory;
-}
 
 class HostResolver;
 class MojoProxyResolverFactory;

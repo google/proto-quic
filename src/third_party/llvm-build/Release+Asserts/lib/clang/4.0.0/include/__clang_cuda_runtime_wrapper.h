@@ -121,6 +121,15 @@
 #undef __cxa_vec_delete3
 #undef __cxa_pure_virtual
 
+// math_functions.hpp expects this host function be defined on MacOS, but it
+// ends up not being there because of the games we play here.  Just define it
+// ourselves; it's simple enough.
+#ifdef __APPLE__
+inline __host__ double __signbitd(double x) {
+  return std::signbit(x);
+}
+#endif
+
 // We need decls for functions in CUDA's libdevice with __device__
 // attribute only. Alas they come either as __host__ __device__ or
 // with no attributes at all. To work around that, define __CUDA_RTC__
@@ -328,24 +337,6 @@ __device__ inline __cuda_builtin_gridDim_t::operator dim3() const {
 #pragma pop_macro("dim3")
 #pragma pop_macro("uint3")
 #pragma pop_macro("__USE_FAST_MATH__")
-
-// Device overrides for placement new and delete.
-#pragma push_macro("CUDA_NOEXCEPT")
-#if __cplusplus >= 201103L
-#define CUDA_NOEXCEPT noexcept
-#else
-#define CUDA_NOEXCEPT
-#endif
-
-__device__ inline void *operator new(__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
-  return __ptr;
-}
-__device__ inline void *operator new[](__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
-  return __ptr;
-}
-__device__ inline void operator delete(void *, void *) CUDA_NOEXCEPT {}
-__device__ inline void operator delete[](void *, void *) CUDA_NOEXCEPT {}
-#pragma pop_macro("CUDA_NOEXCEPT")
 
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

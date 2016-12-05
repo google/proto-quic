@@ -58,6 +58,10 @@ class BaseTestServer {
       // CERT_AUTO causes the testserver to generate a test certificate issued
       // by "Testing CA" (see net/data/ssl/certificates/ocsp-test-root.pem).
       CERT_AUTO,
+      // Generate an intermediate cert issued by "Testing CA", and generate a
+      // test certificate issued by that intermediate with an AIA record for
+      // retrieving the intermediate.
+      CERT_AUTO_AIA_INTERMEDIATE,
 
       CERT_MISMATCHED_NAME,
       CERT_EXPIRED,

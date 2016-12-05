@@ -35,7 +35,7 @@
 #include "net/net_features.h"
 #include "net/proxy/proxy_config_service.h"
 #include "net/proxy/proxy_service.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/socket/next_proto.h"
 #include "net/url_request/url_request_job_factory.h"
 
@@ -49,7 +49,6 @@ class CertVerifier;
 class ChannelIDService;
 class CookieStore;
 class CTVerifier;
-class FtpTransactionFactory;
 class HostMappingRules;
 class HttpAuthHandlerFactory;
 class HttpServerProperties;

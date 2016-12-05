@@ -6,7 +6,7 @@
 
 #include "base/stl_util.h"
 #include "net/quic/core/quic_framer.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 
 namespace net {
 namespace test {

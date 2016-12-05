@@ -9,8 +9,8 @@
       height: 100px;
       width: 100px;
       background-color: green;
-      -webkit-border-radius: 10px;
-      -webkit-transition: -webkit-transform 1s;
+      border-radius: 10px;
+      transition: transform 1s;
     }
 
     #poster {
@@ -77,7 +77,7 @@
         style += values[j];
       }
 
-      elem.style.webkitTransform = style;
+      elem.style.transform = style;
       i++;
 
       document.getElementById("from").innerHTML = "From:<br> " + oldStyle;

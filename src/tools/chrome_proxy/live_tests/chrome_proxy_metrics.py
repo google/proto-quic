@@ -8,7 +8,7 @@ import time
 from common import chrome_proxy_metrics
 from common import network_metrics
 from common.chrome_proxy_metrics import ChromeProxyMetricException
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
 

@@ -13,7 +13,6 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 
 namespace net {
 namespace test {

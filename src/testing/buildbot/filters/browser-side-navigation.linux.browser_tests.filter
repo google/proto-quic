@@ -19,3 +19,7 @@
 # https://crbug.com/650246: ResourcePrefetchPredictor doesn't work correctly yet
 # with PlzNavigate
 -ResourcePrefetchPredictorBrowserTest.*
+
+# https://crbug.com/668714: Allow setting net/ flags for NavigationHandle
+-NoStatePrefetchBrowserTest.PrefetchLoadFlag
+-NoStatePrefetchBrowserTest.Prefetch301LoadFlags

@@ -25,7 +25,6 @@
 
 namespace net {
 
-class AddressList;
 class ClientSocketHandle;
 class GrowableIOBuffer;
 class HttpStream;

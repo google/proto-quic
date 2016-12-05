@@ -32,7 +32,6 @@ class Origin;
 
 namespace net {
 class HostPortPair;
-class HttpRequestHeaders;
 class HttpResponseHeaders;
 class URLFetcherDelegate;
 class URLFetcherResponseWriter;

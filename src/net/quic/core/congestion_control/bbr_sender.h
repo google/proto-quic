@@ -15,7 +15,7 @@
 #include "net/quic/core/congestion_control/windowed_filter.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bandwidth.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 
@@ -269,6 +269,10 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   QuicPacketNumber end_recovery_at_;
   // A window used to limit the number of bytes in flight during loss recovery.
   QuicByteCount recovery_window_;
+
+  // Indicates whether to always only increase the pacing rate during startup.
+  // Latches |FLAGS_quic_bbr_faster_startup|.
+  bool enforce_startup_pacing_rate_increase_;
 
   DISALLOW_COPY_AND_ASSIGN(BbrSender);
 };

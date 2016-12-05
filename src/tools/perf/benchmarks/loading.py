@@ -10,6 +10,7 @@ from benchmarks import page_cycler_v2
 from telemetry import benchmark
 from telemetry.page import cache_temperature
 from telemetry.page import traffic_setting
+from telemetry.web_perf import timeline_based_measurement
 
 
 @benchmark.Enabled('android')
@@ -19,7 +20,9 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
   options = {'pageset_repeat': 2}
 
   def CreateTimelineBasedMeasurementOptions(self):
-    return page_cycler_v2.TimelineBasedMeasurementOptionsForLoadingMetric()
+    tbm_options = timeline_based_measurement.Options()
+    page_cycler_v2.AugmentOptionsForLoadingMetrics(tbm_options)
+    return tbm_options
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
@@ -38,9 +41,9 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
     return 'loading.mobile'
 
   def CreateStorySet(self, options):
-    return page_sets.LoadingMobileStorySet(cache_temperatures=[
-          cache_temperature.ANY])
-
+    return page_sets.LoadingMobileStorySet(
+        cache_temperatures=[cache_temperature.ANY],
+        traffic_settings=[traffic_setting.NONE, traffic_setting.REGULAR_3G])
 
 
 # Disabled because we do not plan on running CT benchmarks on the perf
@@ -53,7 +56,9 @@ class LoadingClusterTelemetry(perf_benchmark.PerfBenchmark):
   _ALL_NET_CONFIGS = traffic_setting.NETWORK_CONFIGS.keys()
 
   def CreateTimelineBasedMeasurementOptions(self):
-    return page_cycler_v2.TimelineBasedMeasurementOptionsForLoadingMetric()
+    tbm_options = timeline_based_measurement.Options()
+    page_cycler_v2.AugmentOptionsForLoadingMetrics(tbm_options)
+    return tbm_options
 
   @classmethod
   def Name(cls):

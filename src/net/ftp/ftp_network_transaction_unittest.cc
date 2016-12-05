@@ -109,13 +109,13 @@ class FtpSocketDataProvider : public SocketDataProvider {
                       "227 Entering Extended Passive Mode (|||31744|)\r\n");
       case PRE_LIST_PASV:
         return Verify("PASV\r\n", data, PRE_LIST,
-                      "227 Entering Passive Mode 127,0,0,1,123,456\r\n");
+                      "227 Entering Passive Mode 127,0,0,1,123,123\r\n");
       case PRE_RETR_EPSV:
         return Verify("EPSV\r\n", data, PRE_RETR,
                       "227 Entering Extended Passive Mode (|||31744|)\r\n");
       case PRE_RETR_PASV:
         return Verify("PASV\r\n", data, PRE_RETR,
-                      "227 Entering Passive Mode 127,0,0,1,123,456\r\n");
+                      "227 Entering Passive Mode 127,0,0,1,123,123\r\n");
       case PRE_NOPASV:
         // Use unallocated 599 FTP error code to make sure it falls into the
         // generic ERR_FTP_FAILED bucket.
@@ -841,15 +841,33 @@ class FtpSocketDataProviderCloseConnection : public FtpSocketDataProvider {
   DISALLOW_COPY_AND_ASSIGN(FtpSocketDataProviderCloseConnection);
 };
 
+class BorkedFtpSocketDataProvider : public FtpSocketDataProvider {
+ public:
+  BorkedFtpSocketDataProvider() {}
+  ~BorkedFtpSocketDataProvider() override {}
+
+  MockWriteResult OnWrite(const std::string& data) override {
+    switch (state()) {
+      case PRE_USER:
+        return Verify("USER anonymous\r\n", data, PRE_PASSWD, "957 Spam\r\n");
+      default:
+        return FtpSocketDataProvider::OnWrite(data);
+    }
+  }
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(BorkedFtpSocketDataProvider);
+};
+
 class FtpNetworkTransactionTest
     : public PlatformTest,
       public ::testing::WithParamInterface<int> {
  public:
-  FtpNetworkTransactionTest()
-      : host_resolver_(new MockHostResolver),
-        transaction_(host_resolver_.get(), &mock_socket_factory_) {
+  FtpNetworkTransactionTest() : host_resolver_(new MockHostResolver) {
+    SetUpTransaction();
+
     scoped_refptr<RuleBasedHostResolverProc> rules(
-        new RuleBasedHostResolverProc(NULL));
+        new RuleBasedHostResolverProc(nullptr));
     if (GetFamily() == AF_INET) {
       rules->AddIPLiteralRule("*", "127.0.0.1", "127.0.0.1");
     } else if (GetFamily() == AF_INET6) {
@@ -858,6 +876,15 @@ class FtpNetworkTransactionTest
       NOTREACHED();
     }
     host_resolver_->set_rules(rules.get());
+  }
+
+  // Sets up an FtpNetworkTransaction and MocketClientSocketFactory, replacing
+  // the default one. Only needs to be called if a test runs multiple
+  // transactions.
+  void SetUpTransaction() {
+    mock_socket_factory_.reset(new MockClientSocketFactory());
+    transaction_.reset(new FtpNetworkTransaction(host_resolver_.get(),
+                                                 mock_socket_factory_.get()));
   }
 
  protected:
@@ -879,7 +906,7 @@ class FtpNetworkTransactionTest
     // Expect EPSV usage for non-IPv4 control connections.
     ctrl_socket->set_use_epsv((GetFamily() != AF_INET));
 
-    mock_socket_factory_.AddSocketDataProvider(ctrl_socket);
+    mock_socket_factory_->AddSocketDataProvider(ctrl_socket);
 
     std::string mock_data("mock-data");
     MockRead data_reads[] = {
@@ -892,27 +919,26 @@ class FtpNetworkTransactionTest
     std::unique_ptr<StaticSocketDataProvider> data_socket(
         new StaticSocketDataProvider(data_reads, arraysize(data_reads), NULL,
                                      0));
-    mock_socket_factory_.AddSocketDataProvider(data_socket.get());
+    mock_socket_factory_->AddSocketDataProvider(data_socket.get());
     FtpRequestInfo request_info = GetRequestInfo(request);
-    EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
+    EXPECT_EQ(LOAD_STATE_IDLE, transaction_->GetLoadState());
     ASSERT_EQ(ERR_IO_PENDING,
-              transaction_.Start(&request_info, callback_.callback(),
-                                 NetLogWithSource()));
-    EXPECT_NE(LOAD_STATE_IDLE, transaction_.GetLoadState());
+              transaction_->Start(&request_info, callback_.callback(),
+                                  NetLogWithSource()));
+    EXPECT_NE(LOAD_STATE_IDLE, transaction_->GetLoadState());
     ASSERT_EQ(expected_result, callback_.WaitForResult());
     if (expected_result == OK) {
       scoped_refptr<IOBuffer> io_buffer(new IOBuffer(kBufferSize));
       memset(io_buffer->data(), 0, kBufferSize);
-      ASSERT_EQ(ERR_IO_PENDING,
-                transaction_.Read(io_buffer.get(), kBufferSize,
-                                  callback_.callback()));
+      ASSERT_EQ(ERR_IO_PENDING, transaction_->Read(io_buffer.get(), kBufferSize,
+                                                   callback_.callback()));
       ASSERT_EQ(static_cast<int>(mock_data.length()),
                 callback_.WaitForResult());
       EXPECT_EQ(mock_data, std::string(io_buffer->data(), mock_data.length()));
 
       // Do another Read to detect that the data socket is now closed.
-      int rv = transaction_.Read(io_buffer.get(), kBufferSize,
-                                 callback_.callback());
+      int rv = transaction_->Read(io_buffer.get(), kBufferSize,
+                                  callback_.callback());
       if (rv == ERR_IO_PENDING) {
         EXPECT_EQ(0, callback_.WaitForResult());
       } else {
@@ -920,7 +946,7 @@ class FtpNetworkTransactionTest
       }
     }
     EXPECT_EQ(FtpSocketDataProvider::QUIT, ctrl_socket->state());
-    EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
+    EXPECT_EQ(LOAD_STATE_IDLE, transaction_->GetLoadState());
   }
 
   void TransactionFailHelper(FtpSocketDataProvider* ctrl_socket,
@@ -934,8 +960,8 @@ class FtpNetworkTransactionTest
   }
 
   std::unique_ptr<MockHostResolver> host_resolver_;
-  MockClientSocketFactory mock_socket_factory_;
-  FtpNetworkTransaction transaction_;
+  std::unique_ptr<MockClientSocketFactory> mock_socket_factory_;
+  std::unique_ptr<FtpNetworkTransaction> transaction_;
   TestCompletionCallback callback_;
 };
 
@@ -946,12 +972,12 @@ TEST_P(FtpNetworkTransactionTest, FailedLookup) {
   rules->AddSimulatedFailure("badhost");
   host_resolver_->set_rules(rules.get());
 
-  EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
+  EXPECT_EQ(LOAD_STATE_IDLE, transaction_->GetLoadState());
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.Start(&request_info, callback_.callback(),
-                               NetLogWithSource()));
+            transaction_->Start(&request_info, callback_.callback(),
+                                NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_NAME_NOT_RESOLVED));
-  EXPECT_EQ(LOAD_STATE_IDLE, transaction_.GetLoadState());
+  EXPECT_EQ(LOAD_STATE_IDLE, transaction_->GetLoadState());
 }
 
 // Check that when determining the host, the square brackets decorating IPv6
@@ -977,27 +1003,27 @@ TEST_P(FtpNetworkTransactionTest, DirectoryTransaction) {
   FtpSocketDataProviderDirectoryListing ctrl_socket;
   ExecuteTransaction(&ctrl_socket, "ftp://host", OK);
 
-  EXPECT_TRUE(transaction_.GetResponseInfo()->is_directory_listing);
-  EXPECT_EQ(-1, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_TRUE(transaction_->GetResponseInfo()->is_directory_listing);
+  EXPECT_EQ(-1, transaction_->GetResponseInfo()->expected_content_size);
   EXPECT_EQ((GetFamily() == AF_INET) ? "127.0.0.1" : "::1",
-            transaction_.GetResponseInfo()->socket_address.host());
-  EXPECT_EQ(21, transaction_.GetResponseInfo()->socket_address.port());
+            transaction_->GetResponseInfo()->socket_address.host());
+  EXPECT_EQ(21, transaction_->GetResponseInfo()->socket_address.port());
 }
 
 TEST_P(FtpNetworkTransactionTest, DirectoryTransactionWithPasvFallback) {
   FtpSocketDataProviderDirectoryListingWithPasvFallback ctrl_socket;
   ExecuteTransaction(&ctrl_socket, "ftp://host", OK);
 
-  EXPECT_TRUE(transaction_.GetResponseInfo()->is_directory_listing);
-  EXPECT_EQ(-1, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_TRUE(transaction_->GetResponseInfo()->is_directory_listing);
+  EXPECT_EQ(-1, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, DirectoryTransactionWithTypecode) {
   FtpSocketDataProviderDirectoryListing ctrl_socket;
   ExecuteTransaction(&ctrl_socket, "ftp://host/;type=d", OK);
 
-  EXPECT_TRUE(transaction_.GetResponseInfo()->is_directory_listing);
-  EXPECT_EQ(-1, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_TRUE(transaction_->GetResponseInfo()->is_directory_listing);
+  EXPECT_EQ(-1, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, DirectoryTransactionMultilineWelcome) {
@@ -1054,10 +1080,10 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransaction) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file", OK);
 
   // We pass an artificial value of 18 as a response to the SIZE command.
-  EXPECT_EQ(18, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_EQ(18, transaction_->GetResponseInfo()->expected_content_size);
   EXPECT_EQ((GetFamily() == AF_INET) ? "127.0.0.1" : "::1",
-            transaction_.GetResponseInfo()->socket_address.host());
-  EXPECT_EQ(21, transaction_.GetResponseInfo()->socket_address.port());
+            transaction_->GetResponseInfo()->socket_address.host());
+  EXPECT_EQ(21, transaction_->GetResponseInfo()->socket_address.port());
 }
 
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithPasvFallback) {
@@ -1065,7 +1091,7 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithPasvFallback) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file", OK);
 
   // We pass an artificial value of 18 as a response to the SIZE command.
-  EXPECT_EQ(18, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_EQ(18, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithTypecodeA) {
@@ -1074,7 +1100,7 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithTypecodeA) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file;type=a", OK);
 
   // We pass an artificial value of 18 as a response to the SIZE command.
-  EXPECT_EQ(18, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_EQ(18, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithTypecodeI) {
@@ -1082,7 +1108,7 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionWithTypecodeI) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file;type=i", OK);
 
   // We pass an artificial value of 18 as a response to the SIZE command.
-  EXPECT_EQ(18, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_EQ(18, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionMultilineWelcome) {
@@ -1161,9 +1187,37 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvUnsafePort4) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_UNSAFE_PORT);
 }
 
+TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvInvalidPort1) {
+  // Unsafe. 8 * 256 + 1 = 2049, which is used by nfs.
+  FtpSocketDataProviderEvilPasv ctrl_socket(
+      "227 Portscan (127,0,0,1,256,100)\r\n", FtpSocketDataProvider::PRE_QUIT);
+  ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+}
+
+TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvInvalidPort2) {
+  // Unsafe. 8 * 256 + 1 = 2049, which is used by nfs.
+  FtpSocketDataProviderEvilPasv ctrl_socket(
+      "227 Portscan (127,0,0,1,100,256)\r\n", FtpSocketDataProvider::PRE_QUIT);
+  ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+}
+
+TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvInvalidPort3) {
+  // Unsafe. 8 * 256 + 1 = 2049, which is used by nfs.
+  FtpSocketDataProviderEvilPasv ctrl_socket(
+      "227 Portscan (127,0,0,1,-100,100)\r\n", FtpSocketDataProvider::PRE_QUIT);
+  ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+}
+
+TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvInvalidPort4) {
+  // Unsafe. 8 * 256 + 1 = 2049, which is used by nfs.
+  FtpSocketDataProviderEvilPasv ctrl_socket(
+      "227 Portscan (127,0,0,1,100,-100)\r\n", FtpSocketDataProvider::PRE_QUIT);
+  ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+}
+
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvUnsafeHost) {
   FtpSocketDataProviderEvilPasv ctrl_socket(
-      "227 Portscan (10,1,2,3,123,456)\r\n", FtpSocketDataProvider::PRE_RETR);
+      "227 Portscan (10,1,2,3,123,123)\r\n", FtpSocketDataProvider::PRE_RETR);
   ctrl_socket.set_use_epsv(GetFamily() != AF_INET);
   std::string mock_data("mock-data");
   MockRead data_reads[] = {
@@ -1172,21 +1226,21 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilPasvUnsafeHost) {
   StaticSocketDataProvider data_socket1;
   StaticSocketDataProvider data_socket2(data_reads, arraysize(data_reads),
                                         NULL, 0);
-  mock_socket_factory_.AddSocketDataProvider(&ctrl_socket);
-  mock_socket_factory_.AddSocketDataProvider(&data_socket1);
-  mock_socket_factory_.AddSocketDataProvider(&data_socket2);
+  mock_socket_factory_->AddSocketDataProvider(&ctrl_socket);
+  mock_socket_factory_->AddSocketDataProvider(&data_socket1);
+  mock_socket_factory_->AddSocketDataProvider(&data_socket2);
   FtpRequestInfo request_info = GetRequestInfo("ftp://host/file");
 
   // Start the transaction.
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.Start(&request_info, callback_.callback(),
-                               NetLogWithSource()));
+            transaction_->Start(&request_info, callback_.callback(),
+                                NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsOk());
 
   // The transaction fires the callback when we can start reading data. That
   // means that the data socket should be open.
   MockTCPClientSocket* data_socket =
-      static_cast<MockTCPClientSocket*>(transaction_.data_socket_.get());
+      static_cast<MockTCPClientSocket*>(transaction_->data_socket_.get());
   ASSERT_TRUE(data_socket);
   ASSERT_TRUE(data_socket->IsConnected());
 
@@ -1291,6 +1345,16 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilEpsvUnsafePort4) {
   ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_UNSAFE_PORT);
 }
 
+TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilEpsvInvalidPort) {
+  // This test makes no sense for IPv4 connections (we don't use EPSV there).
+  if (GetFamily() == AF_INET)
+    return;
+
+  FtpSocketDataProviderEvilEpsv ctrl_socket("227 Portscan (|||4294973296|)\r\n",
+                                            FtpSocketDataProvider::PRE_QUIT);
+  ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+}
+
 TEST_P(FtpNetworkTransactionTest, DownloadTransactionEvilEpsvWeirdSep) {
   // This test makes no sense for IPv4 connections (we don't use EPSV there).
   if (GetFamily() == AF_INET)
@@ -1351,7 +1415,7 @@ TEST_P(FtpNetworkTransactionTest,
   ExecuteTransaction(&ctrl_socket, "ftp://host/foo%2f..%2fbar%5c", OK);
 
   // We pass an artificial value of 18 as a response to the SIZE command.
-  EXPECT_EQ(18, transaction_.GetResponseInfo()->expected_content_size);
+  EXPECT_EQ(18, transaction_->GetResponseInfo()->expected_content_size);
 }
 
 TEST_P(FtpNetworkTransactionTest, EvilRestartUser) {
@@ -1359,13 +1423,13 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartUser) {
   ctrl_socket1.InjectFailure(FtpSocketDataProvider::PRE_PASSWD,
                              FtpSocketDataProvider::PRE_QUIT,
                              "530 Login authentication failed\r\n");
-  mock_socket_factory_.AddSocketDataProvider(&ctrl_socket1);
+  mock_socket_factory_->AddSocketDataProvider(&ctrl_socket1);
 
   FtpRequestInfo request_info = GetRequestInfo("ftp://host/file");
 
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.Start(&request_info, callback_.callback(),
-                               NetLogWithSource()));
+            transaction_->Start(&request_info, callback_.callback(),
+                                NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_FTP_FAILED));
 
   MockRead ctrl_reads[] = {
@@ -1378,12 +1442,11 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartUser) {
   };
   StaticSocketDataProvider ctrl_socket2(ctrl_reads, arraysize(ctrl_reads),
                                         ctrl_writes, arraysize(ctrl_writes));
-  mock_socket_factory_.AddSocketDataProvider(&ctrl_socket2);
+  mock_socket_factory_->AddSocketDataProvider(&ctrl_socket2);
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.RestartWithAuth(
-                AuthCredentials(
-                    base::ASCIIToUTF16("foo\nownz0red"),
-                    base::ASCIIToUTF16("innocent")),
+            transaction_->RestartWithAuth(
+                AuthCredentials(base::ASCIIToUTF16("foo\nownz0red"),
+                                base::ASCIIToUTF16("innocent")),
                 callback_.callback()));
   EXPECT_THAT(callback_.WaitForResult(), IsError(ERR_MALFORMED_IDENTITY));
 }
@@ -1393,13 +1456,13 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartPassword) {
   ctrl_socket1.InjectFailure(FtpSocketDataProvider::PRE_PASSWD,
                              FtpSocketDataProvider::PRE_QUIT,
                              "530 Login authentication failed\r\n");
-  mock_socket_factory_.AddSocketDataProvider(&ctrl_socket1);
+  mock_socket_factory_->AddSocketDataProvider(&ctrl_socket1);
 
   FtpRequestInfo request_info = GetRequestInfo("ftp://host/file");
 
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.Start(&request_info, callback_.callback(),
-                               NetLogWithSource()));
+            transaction_->Start(&request_info, callback_.callback(),
+                                NetLogWithSource()));
   ASSERT_THAT(callback_.WaitForResult(), IsError(ERR_FTP_FAILED));
 
   MockRead ctrl_reads[] = {
@@ -1414,9 +1477,9 @@ TEST_P(FtpNetworkTransactionTest, EvilRestartPassword) {
   };
   StaticSocketDataProvider ctrl_socket2(ctrl_reads, arraysize(ctrl_reads),
                                         ctrl_writes, arraysize(ctrl_writes));
-  mock_socket_factory_.AddSocketDataProvider(&ctrl_socket2);
+  mock_socket_factory_->AddSocketDataProvider(&ctrl_socket2);
   ASSERT_EQ(ERR_IO_PENDING,
-            transaction_.RestartWithAuth(
+            transaction_->RestartWithAuth(
                 AuthCredentials(base::ASCIIToUTF16("innocent"),
                                 base::ASCIIToUTF16("foo\nownz0red")),
                 callback_.callback()));
@@ -1446,7 +1509,7 @@ TEST_P(FtpNetworkTransactionTest, DownloadTransactionBigSize) {
       FtpSocketDataProvider::PRE_CWD);
   ExecuteTransaction(&ctrl_socket, "ftp://host/file", OK);
   EXPECT_EQ(3204427776LL,
-            transaction_.GetResponseInfo()->expected_content_size);
+            transaction_->GetResponseInfo()->expected_content_size);
 }
 
 // Regression test for http://crbug.com/25023.
@@ -1658,6 +1721,91 @@ TEST_P(FtpNetworkTransactionTest, ZeroLengthDirInPWD) {
                         FtpSocketDataProvider::PRE_TYPE,
                         "257 \"\"\r\n",
                         OK);
+}
+
+TEST_P(FtpNetworkTransactionTest, UnexpectedInitiatedResponseForDirectory) {
+  // The states for a directory listing where an initiated response will cause
+  // an error.  Includes all commands sent on the directory listing path, except
+  // CWD, SIZE, LIST, and QUIT commands.
+  FtpSocketDataProvider::State kFailingStates[] = {
+      FtpSocketDataProvider::PRE_USER, FtpSocketDataProvider::PRE_PASSWD,
+      FtpSocketDataProvider::PRE_SYST, FtpSocketDataProvider::PRE_PWD,
+      FtpSocketDataProvider::PRE_TYPE,
+      GetFamily() != AF_INET ? FtpSocketDataProvider::PRE_LIST_EPSV
+                             : FtpSocketDataProvider::PRE_LIST_PASV,
+      FtpSocketDataProvider::PRE_CWD,
+  };
+
+  for (FtpSocketDataProvider::State state : kFailingStates) {
+    SetUpTransaction();
+    FtpSocketDataProviderDirectoryListing ctrl_socket;
+    ctrl_socket.InjectFailure(state, FtpSocketDataProvider::PRE_QUIT,
+                              "157 Foo\r\n");
+    ExecuteTransaction(&ctrl_socket, "ftp://host/", ERR_INVALID_RESPONSE);
+  }
+}
+
+TEST_P(FtpNetworkTransactionTest, UnexpectedInitiatedResponseForFile) {
+  // The states for a download where an initiated response will cause an error.
+  // Includes all commands sent on the file download path, except CWD, SIZE, and
+  // QUIT commands.
+  const FtpSocketDataProvider::State kFailingStates[] = {
+      FtpSocketDataProvider::PRE_USER, FtpSocketDataProvider::PRE_PASSWD,
+      FtpSocketDataProvider::PRE_SYST, FtpSocketDataProvider::PRE_PWD,
+      FtpSocketDataProvider::PRE_TYPE,
+      GetFamily() != AF_INET ? FtpSocketDataProvider::PRE_RETR_EPSV
+                             : FtpSocketDataProvider::PRE_RETR_PASV,
+      FtpSocketDataProvider::PRE_CWD};
+
+  for (FtpSocketDataProvider::State state : kFailingStates) {
+    LOG(ERROR) << "??: " << state;
+    SetUpTransaction();
+    FtpSocketDataProviderFileDownload ctrl_socket;
+    ctrl_socket.InjectFailure(state, FtpSocketDataProvider::PRE_QUIT,
+                              "157 Foo\r\n");
+    ExecuteTransaction(&ctrl_socket, "ftp://host/file", ERR_INVALID_RESPONSE);
+  }
+}
+
+// Make sure that receiving extra unexpected responses correctly results in
+// sending a QUIT message, without triggering a DCHECK.
+TEST_P(FtpNetworkTransactionTest, ExtraResponses) {
+  FtpSocketDataProviderDirectoryListing ctrl_socket;
+  ctrl_socket.InjectFailure(FtpSocketDataProvider::PRE_TYPE,
+                            FtpSocketDataProvider::PRE_QUIT,
+                            "157 Foo\r\n"
+                            "157 Bar\r\n"
+                            "157 Trombones\r\n");
+  ExecuteTransaction(&ctrl_socket, "ftp://host/", ERR_INVALID_RESPONSE);
+}
+
+// Make sure that receiving extra unexpected responses to a QUIT message
+// correctly results in ending the transaction with an error, without triggering
+// a DCHECK.
+TEST_P(FtpNetworkTransactionTest, ExtraQuitResponses) {
+  FtpSocketDataProviderDirectoryListing ctrl_socket;
+  ctrl_socket.InjectFailure(FtpSocketDataProvider::PRE_QUIT,
+                            FtpSocketDataProvider::QUIT,
+                            "221 Foo\r\n"
+                            "221 Bar\r\n"
+                            "221 Trombones\r\n");
+  ExecuteTransaction(&ctrl_socket, "ftp://host/", ERR_INVALID_RESPONSE);
+}
+
+TEST_P(FtpNetworkTransactionTest, InvalidRemoteDirectory) {
+  FtpSocketDataProviderFileDownload ctrl_socket;
+  TransactionFailHelper(
+      &ctrl_socket, "ftp://host/file", FtpSocketDataProvider::PRE_PWD,
+      FtpSocketDataProvider::PRE_QUIT,
+      "257 \"foo\rbar\" is your current location\r\n", ERR_INVALID_RESPONSE);
+}
+
+TEST_P(FtpNetworkTransactionTest, InvalidRemoteDirectory2) {
+  FtpSocketDataProviderFileDownload ctrl_socket;
+  TransactionFailHelper(
+      &ctrl_socket, "ftp://host/file", FtpSocketDataProvider::PRE_PWD,
+      FtpSocketDataProvider::PRE_QUIT,
+      "257 \"foo\nbar\" is your current location\r\n", ERR_INVALID_RESPONSE);
 }
 
 INSTANTIATE_TEST_CASE_P(FTP,

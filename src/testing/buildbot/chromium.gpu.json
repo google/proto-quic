@@ -11,7 +11,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -292,7 +293,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -589,7 +591,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -870,7 +873,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -1167,7 +1171,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -1460,7 +1465,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -1770,7 +1776,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -2051,7 +2058,8 @@
     "gtest_tests": [
       {
         "args": [
-          "--use-gpu-in-tests"
+          "--use-gpu-in-tests",
+          "--test-launcher-retry-limit=0"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true,

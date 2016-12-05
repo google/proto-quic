@@ -71,6 +71,14 @@ NET_EXPORT std::string GetTelephonySimOperator();
 // true, it suggests that use of data may incur extra costs.
 NET_EXPORT bool GetIsRoaming();
 
+// Returns true if the system's captive portal probe was blocked for the current
+// default data network. The method will return false if the captive portal
+// probe was not blocked, the login process to the captive portal has been
+// successfully completed, or if the captive portal status can't be determined.
+// Requires ACCESS_NETWORK_STATE permission. Only available on Android
+// Marshmallow and later versions. Returns false on earlier versions.
+NET_EXPORT bool GetIsCaptivePortal();
+
 // Gets the SSID of the currently associated WiFi access point if there is one.
 // Otherwise, returns empty string.
 NET_EXPORT_PRIVATE std::string GetWifiSSID();

@@ -8,11 +8,11 @@
 #include <stdint.h>
 
 #include <string>
+#include <vector>
 
 #include "base/atomicops.h"
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/observer_list.h"
 #include "base/strings/string16.h"
 #include "base/synchronization/lock.h"
 #include "base/time/time.h"
@@ -26,7 +26,6 @@
 #include "net/log/net_log_source_type.h"
 
 namespace base {
-class DictionaryValue;
 class Value;
 }
 
@@ -208,6 +207,10 @@ class NET_EXPORT NetLog {
   // |has_observers_|. Must have acquired |lock_| prior to calling.
   void UpdateIsCapturing();
 
+  // Returns true if |observer| is watching this NetLog. Must
+  // be called while |lock_| is already held.
+  bool HasObserver(ThreadSafeObserver* observer);
+
   // |lock_| protects access to |observers_|.
   base::Lock lock_;
 
@@ -219,8 +222,15 @@ class NET_EXPORT NetLog {
   // so it can be accessed without needing a lock.
   base::subtle::Atomic32 is_capturing_;
 
+  // |observers_| is a list of observers, ordered by when they were added.
+  // Pointers contained in |observers_| are non-owned, and must
+  // remain valid.
+  //
   // |lock_| must be acquired whenever reading or writing to this.
-  base::ObserverList<ThreadSafeObserver, true> observers_;
+  //
+  // In practice |observers_| will be very small (<5) so O(n)
+  // operations on it are fine.
+  std::vector<ThreadSafeObserver*> observers_;
 
   DISALLOW_COPY_AND_ASSIGN(NetLog);
 };

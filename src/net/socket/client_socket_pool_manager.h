@@ -14,8 +14,6 @@
 #include "net/base/request_priority.h"
 #include "net/http/http_network_session.h"
 
-class GURL;
-
 namespace base {
 class Value;
 }

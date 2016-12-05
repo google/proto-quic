@@ -9,7 +9,15 @@
 {
   'targets': [
     {
+      'target_name': 'accessibility_private',
+      'includes': ['../include_js.gypi'],
+    },
+    {
       'target_name': 'autofill_private',
+      'includes': ['../include_js.gypi'],
+    },
+    {
+      'target_name': 'automation',
       'includes': ['../include_js.gypi'],
     },
     {

@@ -12,8 +12,6 @@
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/stream_socket.h"
 
-class GURL;
-
 namespace net {
 
 class HostPortPair;
@@ -21,7 +19,6 @@ class HttpAuthController;
 class HttpStream;
 class HttpResponseInfo;
 class HttpRequestHeaders;
-struct HttpRequestInfo;
 class HttpAuthController;
 class NetLogWithSource;
 

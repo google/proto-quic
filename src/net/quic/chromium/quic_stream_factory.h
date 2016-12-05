@@ -37,7 +37,7 @@
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_crypto_stream.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -199,7 +199,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
       size_t max_packet_length,
       const std::string& user_agent_id,
       const QuicVersionVector& supported_versions,
-      bool enable_port_selection,
       bool always_require_handshake_confirmation,
       bool disable_connection_pooling,
       float load_server_info_timeout_srtt_multiplier,
@@ -368,8 +367,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   QuicChromiumConnectionHelper* helper() { return helper_.get(); }
 
   QuicChromiumAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
-
-  bool enable_port_selection() const { return enable_port_selection_; }
 
   bool has_quic_server_info_factory() {
     return quic_server_info_factory_.get() != nullptr;
@@ -549,11 +546,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   QuicVersionVector supported_versions_;
 
-  // Determine if we should consistently select a client UDP port. If false,
-  // then we will just let the OS select a random client port for each new
-  // connection.
-  bool enable_port_selection_;
-
   // Set if we always require handshake confirmation. If true, this will
   // introduce at least one RTT for the handshake before the client sends data.
   bool always_require_handshake_confirmation_;
@@ -628,14 +620,6 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   // If set, configure QUIC sockets to not fragment packets.
   bool quic_do_not_fragment_;
-
-  // Each profile will (probably) have a unique port_seed_ value.  This value
-  // is used to help seed a pseudo-random number generator (PortSuggester) so
-  // that we consistently (within this profile) suggest the same ephemeral
-  // port when we re-connect to any given server/port.  The differences between
-  // profiles (probablistically) prevent two profiles from colliding in their
-  // ephemeral port requests.
-  uint64_t port_seed_;
 
   // Local address of socket that was created in CreateSession.
   IPEndPoint local_address_;

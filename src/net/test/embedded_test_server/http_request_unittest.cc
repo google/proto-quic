@@ -145,5 +145,19 @@ TEST(HttpRequestTest, ParseGet) {
   EXPECT_FALSE(request->has_content);
 }
 
+TEST(HttpRequestTest, GetURL) {
+  HttpRequest request;
+  request.relative_url = "/foobar.html?q=foo";
+  request.base_url = GURL("https://127.0.0.1:8080");
+  EXPECT_EQ("https://127.0.0.1:8080/foobar.html?q=foo",
+            request.GetURL().spec());
+}
+
+TEST(HttpRequestTest, GetURLFallback) {
+  HttpRequest request;
+  request.relative_url = "/foobar.html?q=foo";
+  EXPECT_EQ("http://localhost/foobar.html?q=foo", request.GetURL().spec());
+}
+
 }  // namespace test_server
 }  // namespace net

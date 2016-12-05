@@ -37,7 +37,6 @@ class HttpUserAgentSettings;
 class ProxyInfo;
 class SSLPrivateKey;
 class UploadDataStream;
-class URLRequestContext;
 
 // A URLRequestJob subclass that is built on top of HttpTransaction. It
 // provides an implementation for both HTTP and HTTPS.

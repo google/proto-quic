@@ -16,9 +16,6 @@ namespace net {
 
 namespace {
 
-using std::min;
-using std::pair;
-using std::set;
 using std::string;
 
 const uint8_t kOrbit[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -250,7 +247,7 @@ class SlowStrikeRegister {
     if (horizon_ > current_time) {
       return 0;
     }
-    return 1 + min(current_time - horizon_, window_secs_);
+    return 1 + std::min(current_time - horizon_, window_secs_);
   }
 
  private:

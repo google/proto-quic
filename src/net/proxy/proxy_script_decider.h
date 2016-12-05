@@ -33,7 +33,6 @@ namespace net {
 class DhcpProxyScriptFetcher;
 class NetLog;
 class NetLogCaptureMode;
-class NetLogParameter;
 class ProxyResolver;
 class ProxyScriptFetcher;
 

@@ -23,10 +23,8 @@ class FuzzedDataProvider;
 namespace net {
 
 class AddressList;
-class ClientSocketFactory;
 class DnsClient;
 class NetLog;
-class ScopedDefaultHostResolverProc;
 
 // HostResolver that uses a fuzzer to determine what results to return. It
 // inherits from HostResolverImpl, unlike MockHostResolver, so more closely

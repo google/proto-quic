@@ -16,7 +16,7 @@
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_connection_stats.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 

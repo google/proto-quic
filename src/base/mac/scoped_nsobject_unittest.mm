@@ -8,15 +8,7 @@
 #include "base/mac/scoped_nsobject.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-// See scoped_nsobject_unittest_arc.mm for why this is necessary. Remove once
-// gyp support is dropped.
-void ScopedNSObjectUnittestArcLinkerWorkaround();
-
 namespace {
-
-TEST(ScopedNSObjectTest, EnableARCTests) {
-  ScopedNSObjectUnittestArcLinkerWorkaround();
-}
 
 TEST(ScopedNSObjectTest, ScopedNSObject) {
   base::scoped_nsobject<NSObject> p1([[NSObject alloc] init]);

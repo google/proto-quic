@@ -25,6 +25,12 @@ class AdmlWriterUnittest(xml_writer_base_unittest.XmlWriterBaseTest):
       'app_name': 'test',
       'build': 'test',
       'win_supported_os': 'SUPPORTED_TESTOS',
+      'win_mandatory_category_path': ['test_category'],
+      'win_recommended_category_path': ['test_recommended_category'],
+      'win_category_path_strings': {
+        'test_category': 'TestCategory',
+        'test_recommended_category': 'TestCategory - recommended'
+      },
     }
     self.writer = adml_writer.GetWriter(config)
     self.writer.messages = {
@@ -73,7 +79,9 @@ class AdmlWriterUnittest(xml_writer_base_unittest.XmlWriterBaseTest):
         '<?xml version="1.0" ?><policyDefinitionResources'
         ' revision="1.0" schemaVersion="1.0"><displayName/><description/>'
         '<resources><stringTable><string id="SUPPORTED_TESTOS">Supported on'
-        ' Test OS or higher</string></stringTable><presentationTable/>'
+        ' Test OS or higher</string><string id="test_category">TestCategory'
+        '</string><string id="test_recommended_category">'
+        'TestCategory - recommended</string></stringTable><presentationTable/>'
         '</resources></policyDefinitionResources>')
     self.AssertXMLEquals(output, expected_output)
 
@@ -87,7 +95,9 @@ class AdmlWriterUnittest(xml_writer_base_unittest.XmlWriterBaseTest):
         ' revision="1.0" schemaVersion="1.0"><!--test version: 39.0.0.0-->'
         '<displayName/><description/><resources><stringTable>'
         '<string id="SUPPORTED_TESTOS">Supported on'
-        ' Test OS or higher</string></stringTable><presentationTable/>'
+        ' Test OS or higher</string><string id="test_category">TestCategory'
+        '</string><string id="test_recommended_category">'
+        'TestCategory - recommended</string></stringTable><presentationTable/>'
         '</resources></policyDefinitionResources>')
     self.AssertXMLEquals(output, expected_output)
 
@@ -111,6 +121,9 @@ class AdmlWriterUnittest(xml_writer_base_unittest.XmlWriterBaseTest):
     expected_output = (
         '<string id="SUPPORTED_TESTOS">'
         'Supported on Test OS or higher</string>\n'
+        '<string id="test_category">TestCategory</string>\n'
+        '<string id="test_recommended_category">'
+        'TestCategory - recommended</string>\n'
         '<string id="PolicyGroup_group">Test Group Caption</string>')
     self.AssertXMLEquals(output, expected_output)
     # Assert generated presentation elements.

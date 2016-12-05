@@ -19,8 +19,6 @@ class FilePath;
 class SequencedTaskRunner;
 }
 
-class GURL;
-
 namespace net {
 
 // Implements the DefaultChannelIDStore::PersistentStore interface

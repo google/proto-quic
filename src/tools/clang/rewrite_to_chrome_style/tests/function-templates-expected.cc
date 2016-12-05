@@ -21,14 +21,11 @@ class Checked {
  public:
   template <typename U, typename V>
   Checked(const Checked<U, V>& rhs) {
-    // This (incorrectly) doesn't get rewritten, since it's not instantiated. In
-    // this case, the AST representation contains a bunch of
-    // CXXDependentScopeMemberExpr nodes.
-    if (rhs.hasOverflowed())
-      this->overflowed();
-    if (!IsInBounds<T>(rhs.m_value))
-      this->overflowed();
-    value_ = static_cast<T>(rhs.m_value);
+    if (rhs.HasOverflowed())
+      this->Overflowed();
+    if (!IsInBounds<T>(rhs.value_))
+      this->Overflowed();
+    value_ = static_cast<T>(rhs.value_);
   }
 
   bool HasOverflowed() const { return false; }
@@ -40,11 +37,28 @@ class Checked {
 
 template <typename To, typename From>
 To Bitwise_cast(From from) {
-  static_assert(sizeof(To) == sizeof(From));
+  static_assert(sizeof(To) == sizeof(From), "msg");
   return reinterpret_cast<To>(from);
 }
 
 }  // namespace WTF
+
+namespace mojo {
+
+template <typename U>
+struct ArrayTraits;
+
+template <typename U>
+struct ArrayTraits<WTF::Checked<U, int>> {
+  static bool HasOverflowed(WTF::Checked<U, int>& input) {
+    // |hasOverflowed| below should be rewritten to |HasOverflowed|
+    // (because this is a method of WTF::Checked;  it doesn't matter
+    // that we are not in WTF namespace *here*).
+    return input.HasOverflowed();
+  }
+};
+
+}  // namespace mojo
 
 using WTF::Bitwise_cast;
 using WTF::SafeCast;

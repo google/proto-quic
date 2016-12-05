@@ -23,9 +23,10 @@
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_connection.h"
+#include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_iovector.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_session.h"
@@ -63,7 +64,7 @@ static const QuicStreamId kClientDataStreamId3 = 9;
 static const QuicStreamId kServerDataStreamId1 = 4;
 
 // Returns the test peer IP address.
-IPAddress TestPeerIPAddress();
+QuicIpAddress TestPeerIPAddress();
 
 // Upper limit on versions we support.
 QuicVersion QuicVersionMax();
@@ -391,7 +392,7 @@ class MockQuicConnection : public QuicConnection {
                      Perspective perspective);
 
   // Uses a ConnectionId of 42.
-  MockQuicConnection(IPEndPoint address,
+  MockQuicConnection(QuicSocketAddress address,
                      MockQuicConnectionHelper* helper,
                      MockAlarmFactory* alarm_factory,
                      Perspective perspective);
@@ -409,7 +410,7 @@ class MockQuicConnection : public QuicConnection {
                      const QuicVersionVector& supported_versions);
 
   MockQuicConnection(QuicConnectionId connection_id,
-                     IPEndPoint address,
+                     QuicSocketAddress address,
                      MockQuicConnectionHelper* helper,
                      MockAlarmFactory* alarm_factory,
                      Perspective perspective,
@@ -423,8 +424,8 @@ class MockQuicConnection : public QuicConnection {
   void AdvanceTime(QuicTime::Delta delta);
 
   MOCK_METHOD3(ProcessUdpPacket,
-               void(const IPEndPoint& self_address,
-                    const IPEndPoint& peer_address,
+               void(const QuicSocketAddress& self_address,
+                    const QuicSocketAddress& peer_address,
                     const QuicReceivedPacket& packet));
   MOCK_METHOD1(SendConnectionClose, void(QuicErrorCode error));
   MOCK_METHOD3(CloseConnection,
@@ -458,8 +459,8 @@ class MockQuicConnection : public QuicConnection {
     QuicConnection::OnError(framer);
   }
 
-  void ReallyProcessUdpPacket(const IPEndPoint& self_address,
-                              const IPEndPoint& peer_address,
+  void ReallyProcessUdpPacket(const QuicSocketAddress& self_address,
+                              const QuicSocketAddress& peer_address,
                               const QuicReceivedPacket& packet) {
     QuicConnection::ProcessUdpPacket(self_address, peer_address, packet);
   }
@@ -725,14 +726,14 @@ class MockPacketWriter : public QuicPacketWriter {
   MOCK_METHOD5(WritePacket,
                WriteResult(const char* buffer,
                            size_t buf_len,
-                           const IPAddress& self_address,
-                           const IPEndPoint& peer_address,
+                           const QuicIpAddress& self_address,
+                           const QuicSocketAddress& peer_address,
                            PerPacketOptions* options));
   MOCK_CONST_METHOD0(IsWriteBlockedDataBuffered, bool());
   MOCK_CONST_METHOD0(IsWriteBlocked, bool());
   MOCK_METHOD0(SetWritable, void());
   MOCK_CONST_METHOD1(GetMaxPacketSize,
-                     QuicByteCount(const IPEndPoint& peer_address));
+                     QuicByteCount(const QuicSocketAddress& peer_address));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockPacketWriter);
@@ -855,8 +856,8 @@ class MockQuicConnectionDebugVisitor : public QuicConnectionDebugVisitor {
   MOCK_METHOD0(OnPingSent, void());
 
   MOCK_METHOD3(OnPacketReceived,
-               void(const IPEndPoint&,
-                    const IPEndPoint&,
+               void(const QuicSocketAddress&,
+                    const QuicSocketAddress&,
                     const QuicEncryptedPacket&));
 
   MOCK_METHOD1(OnIncorrectConnectionId, void(QuicConnectionId));
@@ -914,7 +915,7 @@ class MockSentPacketManager : public QuicSentPacketManagerInterface {
   MOCK_METHOD0(MaybeRetransmitTailLossProbe, bool(void));
   MOCK_METHOD0(NeuterUnencryptedPackets, void(void));
   MOCK_CONST_METHOD0(HasPendingRetransmissions, bool(void));
-  MOCK_METHOD0(NextPendingRetransmission, PendingRetransmission(void));
+  MOCK_METHOD0(NextPendingRetransmission, QuicPendingRetransmission(void));
   MOCK_CONST_METHOD0(HasUnackedPackets, bool(void));
   MOCK_CONST_METHOD1(GetLeastUnacked, QuicPacketNumber(QuicPathId));
   MOCK_METHOD6(OnPacketSent,
@@ -949,6 +950,7 @@ class MockSentPacketManager : public QuicSentPacketManagerInterface {
   MOCK_CONST_METHOD0(GetConsecutiveRtoCount, size_t(void));
   MOCK_CONST_METHOD0(GetConsecutiveTlpCount, size_t(void));
   MOCK_METHOD0(OnApplicationLimited, void(void));
+  MOCK_CONST_METHOD0(GetSendAlgorithm, const SendAlgorithmInterface*(void));
 };
 
 class MockConnectionCloseDelegate

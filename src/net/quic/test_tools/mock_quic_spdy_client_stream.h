@@ -7,7 +7,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_header_list.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "testing/gmock/include/gmock/gmock.h"
 // #include "testing/gtest/include/gtest/gtest.h"

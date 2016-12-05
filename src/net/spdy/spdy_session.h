@@ -614,19 +614,9 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   FRIEND_TEST_ALL_PREFIXES(SpdyNetworkTransactionTest,
                            ServerPushValidCrossOriginWithOpenSession);
 
-  typedef std::deque<base::WeakPtr<SpdyStreamRequest> >
+  typedef std::deque<base::WeakPtr<SpdyStreamRequest>>
       PendingStreamRequestQueue;
-
-  struct ActiveStreamInfo {
-    ActiveStreamInfo();
-    explicit ActiveStreamInfo(SpdyStream* stream);
-    ~ActiveStreamInfo();
-
-    SpdyStream* stream;
-    bool waiting_for_reply_headers_frame;
-  };
-  typedef std::map<SpdyStreamId, ActiveStreamInfo> ActiveStreamMap;
-
+  typedef std::map<SpdyStreamId, SpdyStream*> ActiveStreamMap;
   typedef std::set<SpdyStream*> CreatedStreamSet;
 
   enum AvailabilityState {
@@ -682,7 +672,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // possible.
   void ProcessPendingStreamRequests();
 
-  bool TryCreatePushStream(SpdyStreamId stream_id,
+  void TryCreatePushStream(SpdyStreamId stream_id,
                            SpdyStreamId associated_stream_id,
                            SpdyPriority priority,
                            SpdyHeaderBlock headers);
@@ -824,14 +814,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Returns the stream if found (and returns it from the pending
   // list). Returns NULL otherwise.
   base::WeakPtr<SpdyStream> GetActivePushStream(const GURL& url);
-
-  // Delegates to |stream->OnInitialResponseHeadersReceived()|. If an
-  // error is returned, the last reference to |this| may have been
-  // released.
-  int OnInitialResponseHeadersReceived(const SpdyHeaderBlock& response_headers,
-                                       base::Time response_time,
-                                       base::TimeTicks recv_first_byte_time,
-                                       SpdyStream* stream);
 
   void RecordPingRTTHistogram(base::TimeDelta duration);
   void RecordHistograms();

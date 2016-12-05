@@ -20,12 +20,12 @@
 #include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_data_reader.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_clock.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
-#include "net/tools/quic/quic_in_memory_cache.h"
+#include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_packet_reader.h"
 #include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/quic_simple_dispatcher.h"
@@ -34,14 +34,13 @@
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40
 #endif
-
 namespace net {
 namespace {
 
-// Specifies the directory used during QuicInMemoryCache
+// Specifies the directory used during QuicHttpResponseCache
 // construction to seed the cache. Cache directory can be
 // generated using `wget -p --save-headers <url>`
-std::string FLAGS_quic_in_memory_cache_dir = "";
+std::string FLAGS_quic_response_cache_dir = "";
 
 const int kEpollFlags = EPOLLIN | EPOLLOUT | EPOLLET;
 const char kSourceAddressTokenSecret[] = "secret";
@@ -50,17 +49,20 @@ const char kSourceAddressTokenSecret[] = "secret";
 
 const size_t kNumSessionsToCreatePerSocketEvent = 16;
 
-QuicServer::QuicServer(std::unique_ptr<ProofSource> proof_source)
+QuicServer::QuicServer(std::unique_ptr<ProofSource> proof_source,
+                       QuicHttpResponseCache* response_cache)
     : QuicServer(std::move(proof_source),
                  QuicConfig(),
                  QuicCryptoServerConfig::ConfigOptions(),
-                 AllSupportedVersions()) {}
+                 AllSupportedVersions(),
+                 response_cache) {}
 
 QuicServer::QuicServer(
     std::unique_ptr<ProofSource> proof_source,
     const QuicConfig& config,
     const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
-    const QuicVersionVector& supported_versions)
+    const QuicVersionVector& supported_versions,
+    QuicHttpResponseCache* response_cache)
     : port_(0),
       fd_(-1),
       packets_dropped_(0),
@@ -71,7 +73,8 @@ QuicServer::QuicServer(
                      std::move(proof_source)),
       crypto_config_options_(crypto_config_options),
       version_manager_(supported_versions),
-      packet_reader_(new QuicPacketReader()) {
+      packet_reader_(new QuicPacketReader()),
+      response_cache_(response_cache) {
   Initialize();
 }
 
@@ -93,9 +96,8 @@ void QuicServer::Initialize() {
 
   epoll_server_.set_timeout_in_us(50 * 1000);
 
-  if (!FLAGS_quic_in_memory_cache_dir.empty()) {
-    QuicInMemoryCache::GetInstance()->InitializeFromDirectory(
-        FLAGS_quic_in_memory_cache_dir);
+  if (!FLAGS_quic_response_cache_dir.empty()) {
+    response_cache_->InitializeFromDirectory(FLAGS_quic_response_cache_dir);
   }
 
   QuicEpollClock clock(&epoll_server_);
@@ -106,35 +108,27 @@ void QuicServer::Initialize() {
 
 QuicServer::~QuicServer() {}
 
-bool QuicServer::CreateUDPSocketAndListen(const IPEndPoint& address) {
+bool QuicServer::CreateUDPSocketAndListen(const QuicSocketAddress& address) {
   fd_ = QuicSocketUtils::CreateUDPSocket(address, &overflow_supported_);
   if (fd_ < 0) {
     LOG(ERROR) << "CreateSocket() failed: " << strerror(errno);
     return false;
   }
 
-  sockaddr_storage raw_addr;
-  socklen_t raw_addr_len = sizeof(raw_addr);
-  CHECK(address.ToSockAddr(reinterpret_cast<sockaddr*>(&raw_addr),
-                           &raw_addr_len));
-  int rc =
-      bind(fd_, reinterpret_cast<const sockaddr*>(&raw_addr), sizeof(raw_addr));
+  sockaddr_storage addr = address.generic_address();
+  int rc = bind(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
   if (rc < 0) {
     LOG(ERROR) << "Bind failed: " << strerror(errno);
     return false;
   }
-
-  DVLOG(1) << "Listening on " << address.ToString();
+  LOG(INFO) << "Listening on " << address.ToString();
+  port_ = address.port();
   if (port_ == 0) {
-    SockaddrStorage storage;
-    IPEndPoint server_address;
-    if (getsockname(fd_, storage.addr, &storage.addr_len) != 0 ||
-        !server_address.FromSockAddr(storage.addr, storage.addr_len)) {
+    QuicSocketAddress address;
+    if (address.FromSocket(fd_) != 0) {
       LOG(ERROR) << "Unable to get self address.  Error: " << strerror(errno);
-      return false;
     }
-    port_ = server_address.port();
-    DVLOG(1) << "Kernel assigned port is " << port_;
+    port_ = address.port();
   }
 
   epoll_server_.RegisterFD(fd_, this, kEpollFlags);
@@ -157,7 +151,8 @@ QuicDispatcher* QuicServer::CreateQuicDispatcher() {
       std::unique_ptr<QuicCryptoServerStream::Helper>(
           new QuicSimpleCryptoServerStreamHelper(QuicRandom::GetInstance())),
       std::unique_ptr<QuicEpollAlarmFactory>(
-          new QuicEpollAlarmFactory(&epoll_server_)));
+          new QuicEpollAlarmFactory(&epoll_server_)),
+      response_cache_);
 }
 
 void QuicServer::WaitForEvents() {

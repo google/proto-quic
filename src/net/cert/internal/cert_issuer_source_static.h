@@ -27,7 +27,6 @@ class NET_EXPORT CertIssuerSourceStatic : public CertIssuerSource {
   void SyncGetIssuersOf(const ParsedCertificate* cert,
                         ParsedCertificateList* issuers) override;
   void AsyncGetIssuersOf(const ParsedCertificate* cert,
-                         const IssuerCallback& issuers_callback,
                          std::unique_ptr<Request>* out_req) override;
 
  private:

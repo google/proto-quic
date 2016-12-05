@@ -278,7 +278,7 @@ bool QuicClientBase::WaitForEvents() {
   return session()->num_active_requests() != 0;
 }
 
-bool QuicClientBase::MigrateSocket(const IPAddress& new_host) {
+bool QuicClientBase::MigrateSocket(const QuicIpAddress& new_host) {
   if (!connected()) {
     return false;
   }
@@ -307,12 +307,16 @@ void QuicClientBase::WaitForStreamToClose(QuicStreamId id) {
   }
 }
 
-void QuicClientBase::WaitForCryptoHandshakeConfirmed() {
+bool QuicClientBase::WaitForCryptoHandshakeConfirmed() {
   DCHECK(connected());
 
   while (connected() && !session_->IsCryptoHandshakeConfirmed()) {
     WaitForEvents();
   }
+
+  // If the handshake fails due to a timeout, the connection will be closed.
+  LOG_IF(ERROR, !connected()) << "Handshake with server failed.";
+  return connected();
 }
 
 bool QuicClientBase::connected() const {

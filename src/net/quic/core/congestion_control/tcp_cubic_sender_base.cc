@@ -15,8 +15,6 @@
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 
-using std::max;
-using std::min;
 
 namespace net {
 
@@ -115,7 +113,7 @@ void TcpCubicSenderBase::ResumeConnectionState(
 }
 
 void TcpCubicSenderBase::SetNumEmulatedConnections(int num_connections) {
-  num_connections_ = max(1, num_connections);
+  num_connections_ = std::max(1, num_connections);
 }
 
 float TcpCubicSenderBase::RenoBeta() const {
@@ -152,7 +150,7 @@ void TcpCubicSenderBase::OnPacketAcked(QuicPacketNumber acked_packet_number,
                                        QuicByteCount acked_bytes,
                                        QuicByteCount prior_in_flight) {
   largest_acked_packet_number_ =
-      max(acked_packet_number, largest_acked_packet_number_);
+      std::max(acked_packet_number, largest_acked_packet_number_);
   if (InRecovery()) {
     if (!no_prr_) {
       // PRR is used when in recovery.

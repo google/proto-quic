@@ -45,6 +45,8 @@ class NET_EXPORT_PRIVATE CubicBytes {
   // window. Resets Cubic state during quiescence.
   void OnApplicationLimited();
 
+  void SetFixConvexMode(bool fix_convex_mode);
+
  private:
   static const QuicTime::Delta MaxCubicTimeInterval() {
     return QuicTime::Delta::FromMilliseconds(30);
@@ -88,6 +90,10 @@ class NET_EXPORT_PRIVATE CubicBytes {
 
   // Last congestion window in packets computed by cubic function.
   QuicByteCount last_target_congestion_window_;
+
+  // Fix convex mode for cubic.
+  // TODO(jokulik):  Remove once the cubic convex experiment is done.
+  bool fix_convex_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(CubicBytes);
 };

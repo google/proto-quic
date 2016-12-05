@@ -20,7 +20,6 @@ class HostPortPair;
 class ProxyInfo;
 class ProxyServer;
 class ProxyService;
-class URLRequest;
 
 // Delegate for setting up a connection.
 class NET_EXPORT ProxyDelegate {

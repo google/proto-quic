@@ -112,7 +112,7 @@ class Scope {
 
   const Settings* settings() const { return settings_; }
 
-  // See the const_/mutable_containing_ var declaraions below. Yes, it's a
+  // See the const_/mutable_containing_ var declarations below. Yes, it's a
   // bit weird that we can have a const pointer to the "mutable" one.
   Scope* mutable_containing() { return mutable_containing_; }
   const Scope* mutable_containing() const { return mutable_containing_; }
@@ -137,9 +137,18 @@ class Scope {
   //
   // counts_as_used should be set if the variable is being read in a way that
   // should count for unused variable checking.
+  //
+  // found_in_scope is set to the scope that contains the definition of the
+  // ident. If the value was provided programmatically (like host_cpu),
+  // found_in_scope will be set to null.
   const Value* GetValue(const base::StringPiece& ident,
                         bool counts_as_used);
   const Value* GetValue(const base::StringPiece& ident) const;
+  const Value* GetValueWithScope(const base::StringPiece& ident,
+                                 const Scope** found_in_scope) const;
+  const Value* GetValueWithScope(const base::StringPiece& ident,
+                                 bool counts_as_used,
+                                 const Scope** found_in_scope);
 
   // Returns the requested value as a mutable one if possible. If the value
   // is not found in a mutable scope, then returns null. Note that the value

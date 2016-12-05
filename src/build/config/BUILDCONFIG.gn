@@ -130,9 +130,6 @@ declare_args() {
   # separate flags.
   is_official_build = false
 
-  # Debug build. Enabling official builds automatically sets is_debug to false.
-  is_debug = !is_official_build
-
   # Whether we're a traditional desktop unix.
   is_desktop_linux = current_os == "linux"
 
@@ -150,6 +147,11 @@ declare_args() {
   host_toolchain = ""
 
   # DON'T ADD MORE FLAGS HERE. Read the comment above.
+}
+
+declare_args() {
+  # Debug build. Enabling official builds automatically sets is_debug to false.
+  is_debug = !is_official_build
 }
 
 declare_args() {
@@ -469,6 +471,7 @@ default_compiler_configs = [
   "//build/config:feature_flags",
   "//build/config/compiler:afdo",
   "//build/config/compiler:compiler",
+  "//build/config/compiler:pthread",
   "//build/config/compiler:clang_stackrealign",
   "//build/config/compiler:compiler_arm_fpu",
   "//build/config/compiler:compiler_arm_thumb",

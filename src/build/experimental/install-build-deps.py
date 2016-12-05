@@ -39,6 +39,7 @@ _packages_dev = (
   'elfutils',
   'fakeroot',
   'flex',
+  'fonts-ipafont',
   'fonts-thai-tlwg',
   'g++',
   'git-core',

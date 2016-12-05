@@ -224,6 +224,13 @@ void WontCompile() {
   Closure cb2 = Bind(cb);
 }
 
+#elif defined(NCTEST_DISALLOW_ONCECALLBACK_RUN_ON_LVALUE)  // [r"static_assert failed \"OnceCallback::Run\(\) may only be invoked on an rvalue, i\.e\. std::move\(callback\)\.Run\(\)\.\""]
+
+void WontCompile() {
+  OnceClosure cb = Bind([] {});
+  cb.Run();
+}
+
 #endif
 
 }  // namespace base

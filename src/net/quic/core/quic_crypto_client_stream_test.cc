@@ -10,7 +10,7 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
@@ -232,6 +232,41 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(stream());
   EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer,
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+}
+
+TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateWithCert) {
+  // Test that the crypto client stream can receive and use server config
+  // updates with certificates after the connection has been established.
+  CompleteCryptoHandshake();
+
+  // Build a server config update message with certificates
+  QuicCryptoServerConfig crypto_config(
+      QuicCryptoServerConfig::TESTING, QuicRandom::GetInstance(),
+      CryptoTestUtils::ProofSourceForTesting());
+  CryptoTestUtils::FakeServerOptions options;
+  CryptoTestUtils::SetupCryptoServerConfigForTest(
+      connection_->clock(), QuicRandom::GetInstance(), &crypto_config, options);
+  SourceAddressTokens tokens;
+  QuicCompressedCertsCache cache(1);
+  CachedNetworkParameters network_params;
+  CryptoHandshakeMessage server_config_update;
+  EXPECT_TRUE(crypto_config.BuildServerConfigUpdateMessage(
+      session_->connection()->version(), stream()->chlo_hash(), tokens,
+      QuicIpAddress::Loopback6(), QuicIpAddress::Loopback6(),
+      connection_->clock(), QuicRandom::GetInstance(), &cache,
+      stream()->crypto_negotiated_params(), &network_params, QuicTagVector(),
+      &server_config_update));
+
+  std::unique_ptr<QuicData> data(
+      CryptoFramer::ConstructHandshakeMessage(server_config_update));
+  stream()->OnStreamFrame(QuicStreamFrame(kCryptoStreamId, /*fin=*/false,
+                                          /*offset=*/0, data->AsStringPiece()));
+
+  // Recreate connection with the new config and verify a 0-RTT attempt.
+  CreateConnection();
+
+  stream()->CryptoConnect();
+  EXPECT_TRUE(session_->IsEncryptionEstablished());
 }
 
 TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateBeforeHandshake) {

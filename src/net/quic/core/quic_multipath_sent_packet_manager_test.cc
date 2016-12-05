@@ -128,7 +128,7 @@ TEST_F(QuicMultipathSentPacketManagerTest, HasPendingRetransmissions) {
 TEST_F(QuicMultipathSentPacketManagerTest, NextPendingRetransmission) {
   SerializedPacket packet(kDefaultPathId, 1, PACKET_6BYTE_PACKET_NUMBER,
                           nullptr, 1250, false, false);
-  PendingRetransmission retransmission(
+  QuicPendingRetransmission retransmission(
       packet.path_id, packet.packet_number, LOSS_RETRANSMISSION,
       packet.retransmittable_frames, packet.has_crypto_handshake,
       packet.num_padding_bytes, packet.encryption_level,

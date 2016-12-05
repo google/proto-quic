@@ -18,8 +18,6 @@
 
 namespace net {
 
-class X509Certificate;
-
 // QuicServerInfo is an interface for fetching information about a QUIC server.
 // This information may be stored on disk so does not include keys or other
 // sensitive information. Primarily it's intended for caching the QUIC server's

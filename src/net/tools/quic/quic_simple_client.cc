@@ -21,7 +21,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/socket/udp_client_socket.h"
@@ -29,7 +29,6 @@
 #include "net/spdy/spdy_http_utils.h"
 
 using std::string;
-using std::vector;
 using base::StringPiece;
 
 namespace net {
@@ -60,7 +59,7 @@ QuicSimpleClient::QuicSimpleClient(
       initialized_(false),
       packet_reader_started_(false),
       weak_factory_(this) {
-  set_server_address(server_address);
+  set_server_address(QuicSocketAddress(QuicSocketAddressImpl(server_address)));
 }
 
 QuicSimpleClient::~QuicSimpleClient() {
@@ -71,23 +70,25 @@ QuicSimpleClient::~QuicSimpleClient() {
   }
 }
 
-bool QuicSimpleClient::CreateUDPSocketAndBind(IPEndPoint server_address,
-                                              IPAddress bind_to_address,
+bool QuicSimpleClient::CreateUDPSocketAndBind(QuicSocketAddress server_address,
+                                              QuicIpAddress bind_to_address,
                                               int bind_to_port) {
   std::unique_ptr<UDPClientSocket> socket(
       new UDPClientSocket(DatagramSocket::DEFAULT_BIND, RandIntCallback(),
                           &net_log_, NetLogSource()));
 
-  int address_family = server_address.GetSockAddrFamily();
-  if (bind_to_address.size() != 0) {
-    client_address_ = IPEndPoint(bind_to_address, bind_to_port);
+  int address_family =
+      server_address.impl().socket_address().GetSockAddrFamily();
+  if (bind_to_address.impl().ip_address().size() != 0) {
+    client_address_ =
+        IPEndPoint(bind_to_address.impl().ip_address(), bind_to_port);
   } else if (address_family == AF_INET) {
     client_address_ = IPEndPoint(IPAddress::IPv4AllZeros(), bind_to_port);
   } else {
     client_address_ = IPEndPoint(IPAddress::IPv6AllZeros(), bind_to_port);
   }
 
-  int rc = socket->Connect(server_address);
+  int rc = socket->Connect(server_address.impl().socket_address());
   if (rc != OK) {
     LOG(ERROR) << "Connect failed: " << ErrorToShortString(rc);
     return false;
@@ -162,15 +163,16 @@ void QuicSimpleClient::OnReadError(int result,
   Disconnect();
 }
 
-IPEndPoint QuicSimpleClient::GetLatestClientAddress() const {
-  return client_address_;
+QuicSocketAddress QuicSimpleClient::GetLatestClientAddress() const {
+  return QuicSocketAddress(QuicSocketAddressImpl(client_address_));
 }
 
 bool QuicSimpleClient::OnPacket(const QuicReceivedPacket& packet,
                                 IPEndPoint local_address,
                                 IPEndPoint peer_address) {
-  session()->connection()->ProcessUdpPacket(local_address, peer_address,
-                                            packet);
+  session()->connection()->ProcessUdpPacket(
+      QuicSocketAddress(QuicSocketAddressImpl(local_address)),
+      QuicSocketAddress(QuicSocketAddressImpl(peer_address)), packet);
   if (!session()->connection()->connected()) {
     return false;
   }

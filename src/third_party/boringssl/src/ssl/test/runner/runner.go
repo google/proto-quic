@@ -169,10 +169,10 @@ var channelIDKey *ecdsa.PrivateKey
 var channelIDBytes []byte
 
 var testOCSPResponse = []byte{1, 2, 3, 4}
-var testSCTList = []byte{5, 6, 7, 8}
+var testSCTList = []byte{0, 6, 0, 4, 5, 6, 7, 8}
 
 var testOCSPExtension = append([]byte{byte(extensionStatusRequest) >> 8, byte(extensionStatusRequest), 0, 8, statusTypeOCSP, 0, 0, 4}, testOCSPResponse...)
-var testSCTExtension = append([]byte{byte(extensionSignedCertificateTimestamp) >> 8, byte(extensionSignedCertificateTimestamp), 0, 4}, testSCTList...)
+var testSCTExtension = append([]byte{byte(extensionSignedCertificateTimestamp) >> 8, byte(extensionSignedCertificateTimestamp), 0, byte(len(testSCTList))}, testSCTList...)
 
 func initCertificates() {
 	for i := range testCerts {
@@ -4852,6 +4852,8 @@ func addExtensionTests() {
 			config: Config{
 				MaxVersion: ver.version,
 				NextProtos: []string{"foo", "bar", "baz"},
+				// Prior to TLS 1.3, exercise the asynchronous session callback.
+				SessionTicketsDisabled: ver.version < VersionTLS13,
 			},
 			flags: []string{
 				"-expect-advertised-alpn", "\x03foo\x03bar\x03baz",
@@ -5167,6 +5169,10 @@ func addExtensionTests() {
 			resumeSession: true,
 		})
 
+		var differentSCTList []byte
+		differentSCTList = append(differentSCTList, testSCTList...)
+		differentSCTList[len(differentSCTList)-1] ^= 1
+
 		// The SCT extension did not specify that it must only be sent on resumption as it
 		// should have, so test that we tolerate but ignore it.
 		testCases = append(testCases, testCase{
@@ -5174,7 +5180,7 @@ func addExtensionTests() {
 			config: Config{
 				MaxVersion: ver.version,
 				Bugs: ProtocolBugs{
-					SendSCTListOnResume: []byte("bogus"),
+					SendSCTListOnResume: differentSCTList,
 				},
 			},
 			flags: []string{
@@ -5197,6 +5203,42 @@ func addExtensionTests() {
 			},
 			expectedSCTList: testSCTList,
 			resumeSession:   true,
+		})
+
+		emptySCTListCert := *testCerts[0].cert
+		emptySCTListCert.SignedCertificateTimestampList = []byte{0, 0}
+
+		// Test empty SCT list.
+		testCases = append(testCases, testCase{
+			name:     "SignedCertificateTimestampListEmpty-Client-" + ver.name,
+			testType: clientTest,
+			config: Config{
+				MaxVersion:   ver.version,
+				Certificates: []Certificate{emptySCTListCert},
+			},
+			flags: []string{
+				"-enable-signed-cert-timestamps",
+			},
+			shouldFail:    true,
+			expectedError: ":ERROR_PARSING_EXTENSION:",
+		})
+
+		emptySCTCert := *testCerts[0].cert
+		emptySCTCert.SignedCertificateTimestampList = []byte{0, 6, 0, 2, 1, 2, 0, 0}
+
+		// Test empty SCT in non-empty list.
+		testCases = append(testCases, testCase{
+			name:     "SignedCertificateTimestampListEmptySCT-Client-" + ver.name,
+			testType: clientTest,
+			config: Config{
+				MaxVersion:   ver.version,
+				Certificates: []Certificate{emptySCTCert},
+			},
+			flags: []string{
+				"-enable-signed-cert-timestamps",
+			},
+			shouldFail:    true,
+			expectedError: ":ERROR_PARSING_EXTENSION:",
 		})
 
 		// Test that certificate-related extensions are not sent unsolicited.
@@ -5435,6 +5477,10 @@ func addExtensionTests() {
 		expectedError: ":UNEXPECTED_EXTENSION:",
 	})
 
+	var differentSCTList []byte
+	differentSCTList = append(differentSCTList, testSCTList...)
+	differentSCTList[len(differentSCTList)-1] ^= 1
+
 	// Test that extensions on intermediates are allowed but ignored.
 	testCases = append(testCases, testCase{
 		name: "IgnoreExtensionsOnIntermediates-TLS13",
@@ -5446,7 +5492,7 @@ func addExtensionTests() {
 				// the intermediate's extensions do not override the
 				// leaf's.
 				SendOCSPOnIntermediates: []byte{1, 3, 3, 7},
-				SendSCTOnIntermediates:  []byte{1, 3, 3, 7},
+				SendSCTOnIntermediates:  differentSCTList,
 			},
 		},
 		flags: []string{
@@ -5513,6 +5559,17 @@ func addExtensionTests() {
 		resumeSession: true,
 		shouldFail:    true,
 		expectedError: ":DUPLICATE_EXTENSION:",
+	})
+
+	testCases = append(testCases, testCase{
+		name:     "SignedCertificateTimestampListInvalid-Server",
+		testType: serverTest,
+		flags: []string{
+			"-signed-cert-timestamps",
+			base64.StdEncoding.EncodeToString([]byte{0, 0}),
+		},
+		shouldFail: true,
+		expectedError: ":INVALID_SCT_LIST:",
 	})
 }
 
@@ -5727,6 +5784,54 @@ func addResumptionVersionTests() {
 		expectResumeRejected: true,
 	})
 
+	// Sessions are not resumed if they do not use the preferred cipher.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-CipherNotPreferred",
+		resumeSession: true,
+		config: Config{
+			MaxVersion: VersionTLS12,
+			Bugs: ProtocolBugs{
+				ExpectNewTicket: true,
+				FilterTicket: func(in []byte) ([]byte, error) {
+					return SetShimTicketCipherSuite(in, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA)
+				},
+			},
+		},
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+		shouldFail:           false,
+		expectResumeRejected: true,
+	})
+
+	// TLS 1.3 allows sessions to be resumed at a different cipher if their
+	// PRF hashes match, but BoringSSL will always decline such resumptions.
+	testCases = append(testCases, testCase{
+		testType:      serverTest,
+		name:          "Resume-Server-CipherNotPreferred-TLS13",
+		resumeSession: true,
+		config: Config{
+			MaxVersion:   VersionTLS13,
+			CipherSuites: []uint16{TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_GCM_SHA256},
+			Bugs: ProtocolBugs{
+				FilterTicket: func(in []byte) ([]byte, error) {
+					// If the client (runner) offers ChaCha20-Poly1305 first, the
+					// server (shim) always prefers it. Switch it to AES-GCM.
+					return SetShimTicketCipherSuite(in, TLS_AES_128_GCM_SHA256)
+				},
+			},
+		},
+		flags: []string{
+			"-ticket-key",
+			base64.StdEncoding.EncodeToString(TestShimTicketKey),
+		},
+		shouldFail:           false,
+		expectResumeRejected: true,
+	})
+
+	// Sessions may not be resumed if they contain another version's cipher.
 	testCases = append(testCases, testCase{
 		testType:      serverTest,
 		name:          "Resume-Server-DeclineBadCipher-TLS13",
@@ -5746,8 +5851,9 @@ func addResumptionVersionTests() {
 		expectResumeRejected: true,
 	})
 
-	// Clients must not advertise a session without also advertising the
-	// cipher.
+	// If the client does not offer the cipher from the session, decline to
+	// resume. Clients are forbidden from doing this, but BoringSSL selects
+	// the cipher first, so we only decline.
 	testCases = append(testCases, testCase{
 		testType:      serverTest,
 		name:          "Resume-Server-UnofferedCipher",
@@ -5763,10 +5869,13 @@ func addResumptionVersionTests() {
 				SendCipherSuites: []uint16{TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
 			},
 		},
-		shouldFail:    true,
-		expectedError: ":REQUIRED_CIPHER_MISSING:",
+		expectResumeRejected: true,
 	})
 
+	// In TLS 1.3, clients may advertise a cipher list which does not
+	// include the selected cipher. Test that we tolerate this. Servers may
+	// resume at another cipher if the PRF matches, but BoringSSL will
+	// always decline.
 	testCases = append(testCases, testCase{
 		testType:      serverTest,
 		name:          "Resume-Server-UnofferedCipher-TLS13",
@@ -5782,8 +5891,7 @@ func addResumptionVersionTests() {
 				SendCipherSuites: []uint16{TLS_AES_128_GCM_SHA256},
 			},
 		},
-		shouldFail:    true,
-		expectedError: ":REQUIRED_CIPHER_MISSING:",
+		expectResumeRejected: true,
 	})
 
 	// Sessions may not be resumed at a different cipher.
@@ -9479,6 +9587,87 @@ func addCertificateTests() {
 	}
 }
 
+func addRetainOnlySHA256ClientCertTests() {
+	for _, ver := range tlsVersions {
+		// Test that enabling
+		// SSL_CTX_set_retain_only_sha256_of_client_certs without
+		// actually requesting a client certificate is a no-op.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "RetainOnlySHA256-NoCert-" + ver.name,
+			config: Config{
+				MinVersion: ver.version,
+				MaxVersion: ver.version,
+			},
+			flags: []string{
+				"-retain-only-sha256-client-cert-initial",
+				"-retain-only-sha256-client-cert-resume",
+			},
+			resumeSession: true,
+		})
+
+		// Test that when retaining only a SHA-256 certificate is
+		// enabled, the hash appears as expected.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "RetainOnlySHA256-Cert-" + ver.name,
+			config: Config{
+				MinVersion:   ver.version,
+				MaxVersion:   ver.version,
+				Certificates: []Certificate{rsaCertificate},
+			},
+			flags: []string{
+				"-verify-peer",
+				"-retain-only-sha256-client-cert-initial",
+				"-retain-only-sha256-client-cert-resume",
+				"-expect-sha256-client-cert-initial",
+				"-expect-sha256-client-cert-resume",
+			},
+			resumeSession: true,
+		})
+
+		// Test that when the config changes from on to off, a
+		// resumption is rejected because the server now wants the full
+		// certificate chain.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "RetainOnlySHA256-OnOff-" + ver.name,
+			config: Config{
+				MinVersion:   ver.version,
+				MaxVersion:   ver.version,
+				Certificates: []Certificate{rsaCertificate},
+			},
+			flags: []string{
+				"-verify-peer",
+				"-retain-only-sha256-client-cert-initial",
+				"-expect-sha256-client-cert-initial",
+			},
+			resumeSession:        true,
+			expectResumeRejected: true,
+		})
+
+		// Test that when the config changes from off to on, a
+		// resumption is rejected because the server now wants just the
+		// hash.
+		testCases = append(testCases, testCase{
+			testType: serverTest,
+			name:     "RetainOnlySHA256-OffOn-" + ver.name,
+			config: Config{
+				MinVersion:   ver.version,
+				MaxVersion:   ver.version,
+				Certificates: []Certificate{rsaCertificate},
+			},
+			flags: []string{
+				"-verify-peer",
+				"-retain-only-sha256-client-cert-resume",
+				"-expect-sha256-client-cert-resume",
+			},
+			resumeSession:        true,
+			expectResumeRejected: true,
+		})
+	}
+}
+
 func worker(statusChan chan statusMsg, c chan *testCase, shimPath string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -9605,6 +9794,7 @@ func main() {
 	addPeekTests()
 	addRecordVersionTests()
 	addCertificateTests()
+	addRetainOnlySHA256ClientCertTests()
 
 	var wg sync.WaitGroup
 

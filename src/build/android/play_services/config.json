@@ -8,7 +8,8 @@
     "play-services-cast",
     "play-services-iid",
     "play-services-gcm",
-    "play-services-nearby"
+    "play-services-nearby",
+    "play-services-vision"
   ],
   "version_number": "9.8.0",
   "version_xml_path": "res/values/version.xml"

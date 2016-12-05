@@ -21,6 +21,12 @@ namespace base {
 
 namespace internal {
 
+template <typename CallbackType>
+struct IsOnceCallback : std::false_type {};
+
+template <typename Signature>
+struct IsOnceCallback<OnceCallback<Signature>> : std::true_type {};
+
 // RunMixin provides different variants of `Run()` function to `Callback<>`
 // based on the type of callback.
 template <typename CallbackType>
@@ -28,13 +34,28 @@ class RunMixin;
 
 // Specialization for OnceCallback.
 template <typename R, typename... Args>
-class RunMixin<Callback<R(Args...), CopyMode::MoveOnly, RepeatMode::Once>> {
+class RunMixin<OnceCallback<R(Args...)>> {
  private:
-  using CallbackType =
-      Callback<R(Args...), CopyMode::MoveOnly, RepeatMode::Once>;
+  using CallbackType = OnceCallback<R(Args...)>;
 
  public:
   using PolymorphicInvoke = R(*)(internal::BindStateBase*, Args&&...);
+
+  R Run(Args... args) & {
+    // Note: even though this static_assert will trivially always fail, it
+    // cannot be simply replaced with static_assert(false, ...) because:
+    // - Per [dcl.dcl]/p4, a program is ill-formed if the constant-expression
+    //   argument does not evaluate to true.
+    // - Per [temp.res]/p8, if no valid specialization can be generated for a
+    //   template definition, and that template is not instantiated, the
+    //   template definition is ill-formed, no diagnostic required.
+    // These two clauses, taken together, would allow a conforming C++ compiler
+    // to immediately reject static_assert(false, ...), even inside an
+    // uninstantiated template.
+    static_assert(!IsOnceCallback<CallbackType>::value,
+                  "OnceCallback::Run() may only be invoked on an rvalue, i.e. "
+                  "std::move(callback).Run().");
+  }
 
   R Run(Args... args) && {
     // Move the callback instance into a local variable before the invocation,
@@ -49,10 +70,10 @@ class RunMixin<Callback<R(Args...), CopyMode::MoveOnly, RepeatMode::Once>> {
 };
 
 // Specialization for RepeatingCallback.
-template <typename R, typename... Args, CopyMode copy_mode>
-class RunMixin<Callback<R(Args...), copy_mode, RepeatMode::Repeating>> {
+template <typename R, typename... Args>
+class RunMixin<RepeatingCallback<R(Args...)>> {
  private:
-  using CallbackType = Callback<R(Args...), copy_mode, RepeatMode::Repeating>;
+  using CallbackType = RepeatingCallback<R(Args...)>;
 
  public:
   using PolymorphicInvoke = R(*)(internal::BindStateBase*, Args&&...);
@@ -69,10 +90,8 @@ template <typename From, typename To>
 struct IsCallbackConvertible : std::false_type {};
 
 template <typename Signature>
-struct IsCallbackConvertible<
-  Callback<Signature, CopyMode::Copyable, RepeatMode::Repeating>,
-  Callback<Signature, CopyMode::MoveOnly, RepeatMode::Once>> : std::true_type {
-};
+struct IsCallbackConvertible<RepeatingCallback<Signature>,
+                             OnceCallback<Signature>> : std::true_type {};
 
 }  // namespace internal
 

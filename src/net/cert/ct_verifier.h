@@ -12,7 +12,6 @@
 
 namespace net {
 
-class CTLogVerifier;
 class NetLogWithSource;
 class X509Certificate;
 

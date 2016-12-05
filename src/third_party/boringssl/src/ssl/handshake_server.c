@@ -231,6 +231,7 @@ int ssl3_accept(SSL *ssl) {
       case SSL3_ST_SR_CLNT_HELLO_B:
       case SSL3_ST_SR_CLNT_HELLO_C:
       case SSL3_ST_SR_CLNT_HELLO_D:
+      case SSL3_ST_SR_CLNT_HELLO_E:
         ret = ssl3_get_client_hello(ssl);
         if (ssl->state == SSL_ST_TLS13) {
           break;
@@ -481,7 +482,7 @@ int ssl3_accept(SSL *ssl) {
         /* If we aren't retaining peer certificates then we can discard it
          * now. */
         if (ssl->s3->new_session != NULL &&
-            ssl->ctx->retain_only_sha256_of_client_certs) {
+            ssl->retain_only_sha256_of_client_certs) {
           X509_free(ssl->s3->new_session->x509_peer);
           ssl->s3->new_session->x509_peer = NULL;
           sk_X509_pop_free(ssl->s3->new_session->x509_chain, X509_free);
@@ -729,76 +730,6 @@ static int ssl3_get_client_hello(SSL *ssl) {
     memcpy(ssl->s3->client_random, client_hello.random,
            client_hello.random_len);
 
-    /* Determine whether we are doing session resumption. */
-    int tickets_supported = 0, renew_ticket = 0;
-    switch (ssl_get_prev_session(ssl, &session, &tickets_supported,
-                                 &renew_ticket, &client_hello)) {
-      case ssl_session_success:
-        break;
-      case ssl_session_error:
-        goto err;
-      case ssl_session_retry:
-        ssl->rwstate = SSL_PENDING_SESSION;
-        goto err;
-    }
-
-    /* The EMS state is needed when making the resumption decision, but
-     * extensions are not normally parsed until later. This detects the EMS
-     * extension for the resumption decision and it's checked against the result
-     * of the normal parse later in this function. */
-    CBS ems;
-    int have_extended_master_secret =
-        ssl->version != SSL3_VERSION &&
-        ssl_early_callback_get_extension(&client_hello, &ems,
-                                         TLSEXT_TYPE_extended_master_secret) &&
-        CBS_len(&ems) == 0;
-
-    if (session != NULL) {
-      if (session->extended_master_secret &&
-          !have_extended_master_secret) {
-        /* A ClientHello without EMS that attempts to resume a session with EMS
-         * is fatal to the connection. */
-        al = SSL_AD_HANDSHAKE_FAILURE;
-        OPENSSL_PUT_ERROR(SSL, SSL_R_RESUMED_EMS_SESSION_WITHOUT_EMS_EXTENSION);
-        goto f_err;
-      }
-
-      if (!ssl_session_is_resumable(ssl, session) ||
-          /* If the client offers the EMS extension, but the previous session
-           * didn't use it, then negotiate a new session. */
-          have_extended_master_secret != session->extended_master_secret) {
-        SSL_SESSION_free(session);
-        session = NULL;
-      }
-    }
-
-    if (session != NULL) {
-      /* Use the old session. */
-      ssl->s3->hs->ticket_expected = renew_ticket;
-      ssl->session = session;
-      session = NULL;
-      ssl->s3->session_reused = 1;
-    } else {
-      ssl->s3->hs->ticket_expected = tickets_supported;
-      ssl_set_session(ssl, NULL);
-      if (!ssl_get_new_session(ssl, 1 /* server */)) {
-        goto err;
-      }
-
-      /* Clear the session ID if we want the session to be single-use. */
-      if (!(ssl->ctx->session_cache_mode & SSL_SESS_CACHE_SERVER)) {
-        ssl->s3->new_session->session_id_length = 0;
-      }
-    }
-
-    if (ssl->ctx->dos_protection_cb != NULL &&
-        ssl->ctx->dos_protection_cb(&client_hello) == 0) {
-      /* Connection rejected for DOS reasons. */
-      al = SSL_AD_INTERNAL_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
-      goto f_err;
-    }
-
     /* Only null compression is supported. */
     if (memchr(client_hello.compression_methods, 0,
                client_hello.compression_methods_len) == NULL) {
@@ -813,30 +744,10 @@ static int ssl3_get_client_hello(SSL *ssl) {
       goto err;
     }
 
-    if (have_extended_master_secret != ssl->s3->tmp.extended_master_secret) {
-      al = SSL_AD_INTERNAL_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_EMS_STATE_INCONSISTENT);
-      goto f_err;
-    }
-
     ssl->state = SSL3_ST_SR_CLNT_HELLO_D;
   }
 
-  /* Determine the remaining connection parameters. This is a separate state so
-   * |cert_cb| does not cause earlier logic to run multiple times. */
-  assert(ssl->state == SSL3_ST_SR_CLNT_HELLO_D);
-
-  if (ssl->session != NULL) {
-    /* Check that the cipher is in the list. */
-    if (!ssl_client_cipher_list_contains_cipher(
-            &client_hello, (uint16_t)ssl->session->cipher->id)) {
-      al = SSL_AD_ILLEGAL_PARAMETER;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_REQUIRED_CIPHER_MISSING);
-      goto f_err;
-    }
-
-    ssl->s3->tmp.new_cipher = ssl->session->cipher;
-  } else {
+  if (ssl->state == SSL3_ST_SR_CLNT_HELLO_D) {
     /* Call |cert_cb| to update server certificates if required. */
     if (ssl->cert->cert_cb != NULL) {
       int rv = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
@@ -851,16 +762,92 @@ static int ssl3_get_client_hello(SSL *ssl) {
       }
     }
 
-    const SSL_CIPHER *c =
+    /* Negotiate the cipher suite. This must be done after |cert_cb| so the
+     * certificate is finalized. */
+    ssl->s3->tmp.new_cipher =
         ssl3_choose_cipher(ssl, &client_hello, ssl_get_cipher_preferences(ssl));
-    if (c == NULL) {
+    if (ssl->s3->tmp.new_cipher == NULL) {
       al = SSL_AD_HANDSHAKE_FAILURE;
       OPENSSL_PUT_ERROR(SSL, SSL_R_NO_SHARED_CIPHER);
       goto f_err;
     }
 
-    ssl->s3->new_session->cipher = c;
-    ssl->s3->tmp.new_cipher = c;
+    ssl->state = SSL3_ST_SR_CLNT_HELLO_E;
+  }
+
+  assert(ssl->state == SSL3_ST_SR_CLNT_HELLO_E);
+
+  /* Determine whether we are doing session resumption. */
+  int tickets_supported = 0, renew_ticket = 0;
+  switch (ssl_get_prev_session(ssl, &session, &tickets_supported, &renew_ticket,
+                               &client_hello)) {
+    case ssl_session_success:
+      break;
+    case ssl_session_error:
+      goto err;
+    case ssl_session_retry:
+      ssl->rwstate = SSL_PENDING_SESSION;
+      goto err;
+  }
+
+  if (session != NULL) {
+    if (session->extended_master_secret &&
+        !ssl->s3->tmp.extended_master_secret) {
+      /* A ClientHello without EMS that attempts to resume a session with EMS
+       * is fatal to the connection. */
+      al = SSL_AD_HANDSHAKE_FAILURE;
+      OPENSSL_PUT_ERROR(SSL, SSL_R_RESUMED_EMS_SESSION_WITHOUT_EMS_EXTENSION);
+      goto f_err;
+    }
+
+    if (!ssl_session_is_resumable(ssl, session) ||
+        /* If the client offers the EMS extension, but the previous session
+         * didn't use it, then negotiate a new session. */
+        ssl->s3->tmp.extended_master_secret !=
+            session->extended_master_secret) {
+      SSL_SESSION_free(session);
+      session = NULL;
+    }
+  }
+
+  if (session != NULL) {
+    /* Use the old session. */
+    ssl->s3->hs->ticket_expected = renew_ticket;
+    ssl->session = session;
+    session = NULL;
+    ssl->s3->session_reused = 1;
+  } else {
+    ssl->s3->hs->ticket_expected = tickets_supported;
+    ssl_set_session(ssl, NULL);
+    if (!ssl_get_new_session(ssl, 1 /* server */)) {
+      goto err;
+    }
+
+    /* Clear the session ID if we want the session to be single-use. */
+    if (!(ssl->ctx->session_cache_mode & SSL_SESS_CACHE_SERVER)) {
+      ssl->s3->new_session->session_id_length = 0;
+    }
+  }
+
+  if (ssl->ctx->dos_protection_cb != NULL &&
+      ssl->ctx->dos_protection_cb(&client_hello) == 0) {
+    /* Connection rejected for DOS reasons. */
+    al = SSL_AD_INTERNAL_ERROR;
+    OPENSSL_PUT_ERROR(SSL, SSL_R_CONNECTION_REJECTED);
+    goto f_err;
+  }
+
+  if (ssl->session == NULL) {
+    ssl->s3->new_session->cipher = ssl->s3->tmp.new_cipher;
+
+    /* On new sessions, stash the SNI value in the session. */
+    if (ssl->s3->hs->hostname != NULL) {
+      ssl->s3->new_session->tlsext_hostname = BUF_strdup(ssl->s3->hs->hostname);
+      if (ssl->s3->new_session->tlsext_hostname == NULL) {
+        al = SSL_AD_INTERNAL_ERROR;
+        goto f_err;
+      }
+    }
 
     /* Determine whether to request a client certificate. */
     ssl->s3->hs->cert_request = !!(ssl->verify_mode & SSL_VERIFY_PEER);
@@ -881,13 +868,13 @@ static int ssl3_get_client_hello(SSL *ssl) {
     }
   }
 
-  /* Resolve ALPN after the cipher suite is selected. HTTP/2 negotiation depends
-   * on the cipher suite. */
+  /* HTTP/2 negotiation depends on the cipher suite, so ALPN negotiation was
+   * deferred. Complete it now. */
   if (!ssl_negotiate_alpn(ssl, &al, &client_hello)) {
     goto f_err;
   }
 
-  /* Now that the cipher is known, initialize the handshake hash. */
+  /* Now that all parameters are known, initialize the handshake hash. */
   if (!ssl3_init_handshake_hash(ssl)) {
     goto f_err;
   }
@@ -1326,7 +1313,7 @@ static int ssl3_get_client_certificate(SSL *ssl) {
   CBS_init(&certificate_msg, ssl->init_msg, ssl->init_num);
   uint8_t alert;
   STACK_OF(X509) *chain = ssl_parse_cert_chain(
-      ssl, &alert, ssl->ctx->retain_only_sha256_of_client_certs
+      ssl, &alert, ssl->retain_only_sha256_of_client_certs
                        ? ssl->s3->new_session->peer_sha256
                        : NULL,
       &certificate_msg);
@@ -1365,7 +1352,7 @@ static int ssl3_get_client_certificate(SSL *ssl) {
     ssl->s3->new_session->verify_result = X509_V_OK;
   } else {
     /* The hash would have been filled in. */
-    if (ssl->ctx->retain_only_sha256_of_client_certs) {
+    if (ssl->retain_only_sha256_of_client_certs) {
       ssl->s3->new_session->peer_sha256_valid = 1;
     }
 

@@ -16,7 +16,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_data_reader.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/socket/udp_server_socket.h"
 #include "net/tools/quic/quic_simple_dispatcher.h"
 #include "net/tools/quic/quic_simple_per_connection_packet_writer.h"
@@ -40,7 +40,8 @@ QuicSimpleServer::QuicSimpleServer(
     std::unique_ptr<ProofSource> proof_source,
     const QuicConfig& config,
     const QuicCryptoServerConfig::ConfigOptions& crypto_config_options,
-    const QuicVersionVector& supported_versions)
+    const QuicVersionVector& supported_versions,
+    QuicHttpResponseCache* response_cache)
     : version_manager_(supported_versions),
       helper_(
           new QuicChromiumConnectionHelper(&clock_, QuicRandom::GetInstance())),
@@ -55,6 +56,7 @@ QuicSimpleServer::QuicSimpleServer(
       read_pending_(false),
       synchronous_read_count_(0),
       read_buffer_(new IOBufferWithSize(kReadBufferSize)),
+      response_cache_(response_cache),
       weak_factory_(this) {
   Initialize();
 }
@@ -129,7 +131,7 @@ int QuicSimpleServer::Listen(const IPEndPoint& address) {
       std::unique_ptr<QuicConnectionHelperInterface>(helper_),
       std::unique_ptr<QuicCryptoServerStream::Helper>(
           new QuicSimpleServerSessionHelper(QuicRandom::GetInstance())),
-      std::unique_ptr<QuicAlarmFactory>(alarm_factory_)));
+      std::unique_ptr<QuicAlarmFactory>(alarm_factory_), response_cache_));
   QuicSimpleServerPacketWriter* writer =
       new QuicSimpleServerPacketWriter(socket_.get(), dispatcher_.get());
   dispatcher_->InitializeWithWriter(writer);
@@ -199,7 +201,9 @@ void QuicSimpleServer::OnReadComplete(int result) {
 
   QuicReceivedPacket packet(read_buffer_->data(), result,
                             helper_->GetClock()->Now(), false);
-  dispatcher_->ProcessPacket(server_address_, client_address_, packet);
+  dispatcher_->ProcessPacket(
+      QuicSocketAddress(QuicSocketAddressImpl(server_address_)),
+      QuicSocketAddress(QuicSocketAddressImpl(client_address_)), packet);
 
   StartReading();
 }

@@ -15,7 +15,7 @@
 #include "net/base/port_util.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_response_headers.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "url/gurl.h"
 

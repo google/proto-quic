@@ -17,6 +17,7 @@ namespace base {
 // request defaults if the behavior is critical to the task.
 TaskTraits::TaskTraits()
     : with_file_io_(false),
+      with_wait_(false),
       priority_(TaskPriority::BACKGROUND),
       shutdown_behavior_(TaskShutdownBehavior::SKIP_ON_SHUTDOWN) {}
 
@@ -24,6 +25,11 @@ TaskTraits::~TaskTraits() = default;
 
 TaskTraits& TaskTraits::WithFileIO() {
   with_file_io_ = true;
+  return *this;
+}
+
+TaskTraits& TaskTraits::WithWait() {
+  with_wait_ = true;
   return *this;
 }
 

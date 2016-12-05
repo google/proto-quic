@@ -32,7 +32,6 @@ class ProxyDelegate;
 class SSLClientSocketPool;
 class SSLSocketParams;
 class SpdySessionPool;
-class SpdyStream;
 class TransportClientSocketPool;
 class TransportSocketParams;
 

@@ -120,7 +120,7 @@ class RecordingProofVerifier : public ProofVerifier {
 }  // anonymous namespace
 
 MockableQuicClient::MockableQuicClient(
-    IPEndPoint server_address,
+    QuicSocketAddress server_address,
     const QuicServerId& server_id,
     const QuicVersionVector& supported_versions,
     EpollServer* epoll_server)
@@ -131,7 +131,7 @@ MockableQuicClient::MockableQuicClient(
                          epoll_server) {}
 
 MockableQuicClient::MockableQuicClient(
-    IPEndPoint server_address,
+    QuicSocketAddress server_address,
     const QuicServerId& server_id,
     const QuicConfig& config,
     const QuicVersionVector& supported_versions,
@@ -144,7 +144,7 @@ MockableQuicClient::MockableQuicClient(
                          nullptr) {}
 
 MockableQuicClient::MockableQuicClient(
-    IPEndPoint server_address,
+    QuicSocketAddress server_address,
     const QuicServerId& server_id,
     const QuicConfig& config,
     const QuicVersionVector& supported_versions,
@@ -161,8 +161,8 @@ MockableQuicClient::MockableQuicClient(
       test_writer_(nullptr),
       track_last_incoming_packet_(false) {}
 
-void MockableQuicClient::ProcessPacket(const IPEndPoint& self_address,
-                                       const IPEndPoint& peer_address,
+void MockableQuicClient::ProcessPacket(const QuicSocketAddress& self_address,
+                                       const QuicSocketAddress& peer_address,
                                        const QuicReceivedPacket& packet) {
   QuicClient::ProcessPacket(self_address, peer_address, packet);
   if (track_last_incoming_packet_)
@@ -199,7 +199,7 @@ void MockableQuicClient::UseConnectionId(QuicConnectionId connection_id) {
   override_connection_id_ = connection_id;
 }
 
-QuicTestClient::QuicTestClient(IPEndPoint server_address,
+QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                const string& server_hostname,
                                const QuicVersionVector& supported_versions)
     : QuicTestClient(server_address,
@@ -207,7 +207,7 @@ QuicTestClient::QuicTestClient(IPEndPoint server_address,
                      QuicConfig(),
                      supported_versions) {}
 
-QuicTestClient::QuicTestClient(IPEndPoint server_address,
+QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                const string& server_hostname,
                                const QuicConfig& config,
                                const QuicVersionVector& supported_versions)
@@ -223,7 +223,7 @@ QuicTestClient::QuicTestClient(IPEndPoint server_address,
   Initialize();
 }
 
-QuicTestClient::QuicTestClient(IPEndPoint server_address,
+QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                const string& server_hostname,
                                const QuicConfig& config,
                                const QuicVersionVector& supported_versions,
@@ -504,7 +504,7 @@ void QuicTestClient::Disconnect() {
   connect_attempted_ = false;
 }
 
-IPEndPoint QuicTestClient::local_address() const {
+QuicSocketAddress QuicTestClient::local_address() const {
   return client_->GetLatestClientAddress();
 }
 
@@ -649,19 +649,19 @@ void QuicTestClient::UseConnectionId(QuicConnectionId connection_id) {
   client_->UseConnectionId(connection_id);
 }
 
-void QuicTestClient::MigrateSocket(const IPAddress& new_host) {
+void QuicTestClient::MigrateSocket(const QuicIpAddress& new_host) {
   client_->MigrateSocket(new_host);
 }
 
-IPAddress QuicTestClient::bind_to_address() const {
+QuicIpAddress QuicTestClient::bind_to_address() const {
   return client_->bind_to_address();
 }
 
-void QuicTestClient::set_bind_to_address(IPAddress address) {
+void QuicTestClient::set_bind_to_address(QuicIpAddress address) {
   client_->set_bind_to_address(address);
 }
 
-const IPEndPoint& QuicTestClient::address() const {
+const QuicSocketAddress& QuicTestClient::address() const {
   return client_->server_address();
 }
 

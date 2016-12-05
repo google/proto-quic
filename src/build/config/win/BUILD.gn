@@ -48,24 +48,36 @@ config("compiler") {
   cflags_c = [ "/TC" ]
   cflags_cc = [ "/TP" ]
 
-  cflags += [
-    # Tell the compiler to crash on failures. This is undocumented
-    # and unsupported but very handy.
-    "/d2FastFail",
+  # Flags not supported in version 2013.
+  if (visual_studio_version != "2013" && visual_studio_version != "2013e") {
+    cflags += [
+      # Tell the compiler to crash on failures. This is undocumented
+      # and unsupported but very handy.
+      "/d2FastFail",
+    ]
+  }
 
-    # Work around crbug.com/526851, bug in VS 2015 RTM compiler.
-    "/Zc:sizedDealloc-",
+  if (visual_studio_version == "2015") {
+    cflags += [
+      # Work around crbug.com/526851, bug in VS 2015 RTM compiler.
+      "/Zc:sizedDealloc-",
 
-    # Disable thread-safe statics to avoid overhead and because
-    # they are disabled on other platforms. See crbug.com/587210
-    # and -fno-threadsafe-statics.
-    "/Zc:threadSafeInit-",
-  ]
+      # Disable thread-safe statics to avoid overhead and because
+      # they are disabled on other platforms. See crbug.com/587210
+      # and -fno-threadsafe-statics.
+      "/Zc:threadSafeInit-",
+    ]
+  }
 
   # Building with Clang on Windows is a work in progress and very
   # experimental. See crbug.com/82385.
+  # Keep this in sync with the similar block in build/common.gypi
   if (is_clang) {
-    cflags += [ "-fmsc-version=1900" ]
+    if (visual_studio_version == "2013") {
+      cflags += [ "-fmsc-version=1800" ]
+    } else if (visual_studio_version == "2015") {
+      cflags += [ "-fmsc-version=1900" ]
+    }
 
     if (current_cpu == "x86") {
       cflags += [ "-m32" ]
@@ -96,8 +108,8 @@ config("compiler") {
     assert(!is_win_fastlink)
     ldflags = [ "/PROFILE" ]
   } else {
-    if (!is_debug && !is_component_build && !is_clang) {
-      if (is_win_fastlink) {
+    if (!is_debug && !is_component_build) {
+      if (is_win_fastlink || is_clang) {
         # /PROFILE implies the following linker flags. Therefore if we are
         # skipping /PROFILE because it is incompatible with /DEBUG:FASTLINK
         # we should explicitly add these flags in order to avoid unintended

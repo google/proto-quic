@@ -445,6 +445,25 @@ class CheckOpResult {
   std::string* message_;
 };
 
+// Crashes in the fastest, simplest possible way with no attempt at logging.
+#if defined(COMPILER_GCC) || defined(__clang__)
+#define IMMEDIATE_CRASH() __builtin_trap()
+#else
+#define IMMEDIATE_CRASH() ((void)(*(volatile char*)0 = 0))
+#endif
+
+// Specialization of IMMEDIATE_CRASH which will raise a custom exception on
+// Windows to signal this is OOM and not a normal assert.
+#if defined(OS_WIN)
+#define OOM_CRASH()                                                     \
+  do {                                                                  \
+    ::RaiseException(0xE0000008, EXCEPTION_NONCONTINUABLE, 0, nullptr); \
+    IMMEDIATE_CRASH();                                                  \
+  } while (0)
+#else
+#define OOM_CRASH() IMMEDIATE_CRASH()
+#endif
+
 // CHECK dies with a fatal error if condition is not true.  It is *not*
 // controlled by NDEBUG, so the check will be executed regardless of
 // compilation mode.
@@ -454,20 +473,14 @@ class CheckOpResult {
 
 #if defined(OFFICIAL_BUILD) && defined(NDEBUG)
 
-// Make all CHECK functions discard their log strings to reduce code
-// bloat, and improve performance, for official release builds.
-
-#if defined(COMPILER_GCC) || __clang__
-#define LOGGING_CRASH() __builtin_trap()
-#else
-#define LOGGING_CRASH() ((void)(*(volatile char*)0 = 0))
-#endif
-
+// Make all CHECK functions discard their log strings to reduce code bloat, and
+// improve performance, for official release builds.
+//
 // This is not calling BreakDebugger since this is called frequently, and
 // calling an out-of-line function instead of a noreturn inline macro prevents
 // compiler optimizations.
-#define CHECK(condition)                                                \
-  !(condition) ? LOGGING_CRASH() : EAT_STREAM_PARAMETERS
+#define CHECK(condition) \
+  !(condition) ? IMMEDIATE_CRASH() : EAT_STREAM_PARAMETERS
 
 #define PCHECK(condition) CHECK(condition)
 
@@ -527,10 +540,24 @@ class CheckOpResult {
 // it uses the definition for operator<<, with a few special cases below.
 template <typename T>
 inline typename std::enable_if<
-    base::internal::SupportsOstreamOperator<const T&>::value,
+    base::internal::SupportsOstreamOperator<const T&>::value &&
+        !std::is_function<typename std::remove_pointer<T>::type>::value,
     void>::type
 MakeCheckOpValueString(std::ostream* os, const T& v) {
   (*os) << v;
+}
+
+// Provide an overload for functions and function pointers. Function pointers
+// don't implicitly convert to void* but do implicitly convert to bool, so
+// without this function pointers are always printed as 1 or 0. (MSVC isn't
+// standards-conforming here and converts function pointers to regular
+// pointers, so this is a no-op for MSVC.)
+template <typename T>
+inline typename std::enable_if<
+    std::is_function<typename std::remove_pointer<T>::type>::value,
+    void>::type
+MakeCheckOpValueString(std::ostream* os, const T& v) {
+  (*os) << reinterpret_cast<const void*>(v);
 }
 
 // We need overloads for enums that don't support operator<<.

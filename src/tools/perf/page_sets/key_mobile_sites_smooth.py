@@ -170,7 +170,10 @@ class KeyMobileSitesSmoothPageSet(story.StorySet):
     # See crbug.com/409086.
     # self.AddStory(GroupClonedListImagesSmoothPage(self))
     self.AddStory(GoogleNewsMobile2SmoothPage(self))
-    self.AddStory(AmazonNicolasCageSmoothPage(self))
+    # Amazon's Nicolas Cage search is currently failing. Reenable it once it's
+    # not anymore.
+    # crbug.com/667432
+    # self.AddStory(AmazonNicolasCageSmoothPage(self))
     self.AddStory(CNNArticleSmoothPage(self))
 
     # Add pages with custom labels.

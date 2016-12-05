@@ -28,7 +28,6 @@
 
 namespace net {
 
-class AddressList;
 class ClientSocketHandle;
 class HostResolver;
 class HttpServerProperties;

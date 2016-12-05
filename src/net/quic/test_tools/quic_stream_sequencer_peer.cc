@@ -7,7 +7,6 @@
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
 
-using std::map;
 using std::string;
 
 namespace net {

@@ -178,12 +178,6 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                          size_t len) override;
   void OnStreamEnd(SpdyStreamId stream_id) override;
   void OnStreamPadding(SpdyStreamId stream_id, size_t len) override;
-  void OnSynReply(SpdyStreamId stream_id, bool fin) override;
-  void OnSynStream(SpdyStreamId stream_id,
-                   SpdyStreamId associated_stream_id,
-                   SpdyPriority priority,
-                   bool fin,
-                   bool unidirectional) override;
   bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
 
@@ -732,32 +726,6 @@ void SpdyTestDeframerImpl::OnStreamPadding(SpdyStreamId stream_id, size_t len) {
   CHECK_GE(255u, len);
   padding_len_ += len;
   CHECK_LE(padding_len_, 256u) << "len=" << len;
-}
-
-// Obsolete.
-void SpdyTestDeframerImpl::OnSynStream(SpdyStreamId stream_id,
-                                       SpdyStreamId associated_stream_id,
-                                       SpdyPriority priority,
-                                       bool fin,
-                                       bool unidirectional) {
-  DVLOG(1) << "OnSynStream stream_id: " << stream_id;
-  CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
-                               << Http2FrameTypeToString(frame_type_);
-  frame_type_ = UNKNOWN;
-  stream_id_ = stream_id;
-  fin_ = fin;
-  LOG(DFATAL) << "SYN_STREAM is not a valid HTTP/2 frame type.";
-}
-
-// Obsolete.
-void SpdyTestDeframerImpl::OnSynReply(SpdyStreamId stream_id, bool fin) {
-  DVLOG(1) << "OnSynReply stream_id: " << stream_id;
-  CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
-                               << Http2FrameTypeToString(frame_type_);
-  frame_type_ = UNKNOWN;
-  stream_id_ = stream_id;
-  fin_ = fin;
-  LOG(DFATAL) << "SYN_REPLY is not a valid HTTP/2 frame type.";
 }
 
 // WINDOW_UPDATE is supposed to be hop-by-hop, according to the spec.

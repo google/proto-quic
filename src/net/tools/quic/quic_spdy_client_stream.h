@@ -11,7 +11,7 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_spdy_stream.h"
 #include "net/spdy/spdy_framer.h"
 

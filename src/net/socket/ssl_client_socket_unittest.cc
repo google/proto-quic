@@ -2298,9 +2298,11 @@ TEST_F(SSLClientSocketCertRequestInfoTest, CertKeyTypes) {
 }
 
 TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledTLSExtension) {
-  SpawnedTestServer::SSLOptions ssl_options;
-  ssl_options.signed_cert_timestamps_tls_ext = "test";
+  // Encoding of SCT List containing 'test'.
+  std::string sct_ext("\x00\x06\x00\x04test", 8);
 
+  SpawnedTestServer::SSLOptions ssl_options;
+  ssl_options.signed_cert_timestamps_tls_ext = sct_ext;
   ASSERT_TRUE(StartTestServer(ssl_options));
 
   SSLConfig ssl_config;
@@ -2310,8 +2312,8 @@ TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledTLSExtension) {
   SetCTVerifier(&ct_verifier);
 
   // Check that the SCT list is extracted as expected.
-  EXPECT_CALL(ct_verifier, Verify(_, "", "test", _, _)).WillRepeatedly(
-      Return(ERR_CT_NO_SCTS_VERIFIED_OK));
+  EXPECT_CALL(ct_verifier, Verify(_, "", sct_ext, _, _))
+      .WillRepeatedly(Return(ERR_CT_NO_SCTS_VERIFIED_OK));
 
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));

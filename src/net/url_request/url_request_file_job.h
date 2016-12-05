@@ -24,9 +24,6 @@
 namespace base {
 class TaskRunner;
 }
-namespace file_util {
-struct FileInfo;
-}
 
 namespace net {
 

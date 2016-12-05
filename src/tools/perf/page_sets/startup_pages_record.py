@@ -28,8 +28,10 @@ class StartupPagesRecordPageSet(story.StorySet):
     urls_list = [
         # Why: typical page
         'http://bbc.co.uk',
+        # TODO(charliea): Reenable this when kabook.com is no longer crashing.
+        # crbug.com/667470
         # Why: Horribly complex page - stress test!
-        'http://kapook.com',
+        # 'http://kapook.com',
     ]
 
     for url in urls_list:

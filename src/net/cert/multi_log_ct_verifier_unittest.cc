@@ -121,19 +121,15 @@ class MultiLogCTVerifierTest : public ::testing::Test {
 
   bool VerifySinglePrecertificateChain(scoped_refptr<X509Certificate> chain) {
     SignedCertificateTimestampAndStatusList scts;
-    TestNetLog test_net_log;
-    NetLogWithSource net_log =
-        NetLogWithSource::Make(&test_net_log, NetLogSourceType::CONNECT_JOB);
-
     return verifier_->Verify(chain.get(), std::string(), std::string(), &scts,
-                             net_log) == OK;
+                             NetLogWithSource()) == OK;
   }
 
   bool CheckPrecertificateVerification(scoped_refptr<X509Certificate> chain) {
     SignedCertificateTimestampAndStatusList scts;
     TestNetLog test_net_log;
-    NetLogWithSource net_log =
-        NetLogWithSource::Make(&test_net_log, NetLogSourceType::CONNECT_JOB);
+    NetLogWithSource net_log = NetLogWithSource::Make(
+        &test_net_log, NetLogSourceType::SSL_CONNECT_JOB);
     return (VerifySinglePrecertificateChain(chain, net_log, &scts) &&
             ct::CheckForSingleVerifiedSCTInResult(scts, kLogDescription) &&
             ct::CheckForSCTOrigin(

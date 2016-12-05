@@ -48,17 +48,10 @@ def main():
       break
     index += 1
 
-  xvfb_proc = None
-  openbox_proc = None
-  xcompmgr_proc = None
-  env = os.environ.copy()
-  if args.xvfb and xvfb.should_start_xvfb(env):
-    xvfb_proc, openbox_proc, xcompmgr_proc = xvfb.start_xvfb(env=env,
-                                                             build_dir='.')
-    assert xvfb_proc and openbox_proc and xcompmgr_proc, 'Failed to start xvfb'
   # Compatibility with gtest-based sharding.
   total_shards = None
   shard_index = None
+  env = os.environ.copy()
   if 'GTEST_TOTAL_SHARDS' in env:
     total_shards = int(env['GTEST_TOTAL_SHARDS'])
     del env['GTEST_TOTAL_SHARDS']
@@ -71,14 +64,12 @@ def main():
       '--total-shards=%d' % total_shards,
       '--shard-index=%d' % shard_index
     ]
-  try:
-    return common.run_command([sys.executable] + rest_args + sharding_args + [
-      '--write-full-results-to', args.isolated_script_test_output], env=env)
-  finally:
-    xvfb.kill(xvfb_proc)
-    xvfb.kill(openbox_proc)
-    xvfb.kill(xcompmgr_proc)
-
+  cmd = [sys.executable] + rest_args + sharding_args + [
+      '--write-full-results-to', args.isolated_script_test_output]
+  if args.xvfb:
+    return xvfb.run_executable(cmd, '.', env)
+  else:
+    return common.run_command(cmd, env=env)
 
 
 # This is not really a "script test" so does not need to manually add

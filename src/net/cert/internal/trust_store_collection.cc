@@ -9,29 +9,16 @@ namespace net {
 TrustStoreCollection::TrustStoreCollection() = default;
 TrustStoreCollection::~TrustStoreCollection() = default;
 
-void TrustStoreCollection::SetPrimaryTrustStore(TrustStore* store) {
-  DCHECK(!primary_store_);
+void TrustStoreCollection::AddTrustStore(TrustStore* store) {
   DCHECK(store);
-  primary_store_ = store;
-}
-
-void TrustStoreCollection::AddTrustStoreSynchronousOnly(TrustStore* store) {
-  DCHECK(store);
-  sync_only_stores_.push_back(store);
+  stores_.push_back(store);
 }
 
 void TrustStoreCollection::FindTrustAnchorsForCert(
     const scoped_refptr<ParsedCertificate>& cert,
-    const TrustAnchorsCallback& callback,
-    TrustAnchors* synchronous_matches,
-    std::unique_ptr<Request>* out_req) const {
-  if (primary_store_)
-    primary_store_->FindTrustAnchorsForCert(cert, callback, synchronous_matches,
-                                            out_req);
-
-  for (auto* store : sync_only_stores_) {
-    store->FindTrustAnchorsForCert(cert, TrustAnchorsCallback(),
-                                   synchronous_matches, nullptr);
+    TrustAnchors* matches) const {
+  for (auto* store : stores_) {
+    store->FindTrustAnchorsForCert(cert, matches);
   }
 }
 

@@ -18,8 +18,6 @@
 
 namespace net {
 
-class SSLInfo;
-
 class SSLServerContextImpl : public SSLServerContext {
  public:
   SSLServerContextImpl(X509Certificate* certificate,

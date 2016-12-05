@@ -33,7 +33,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                   const base::FilePath& sct_path);
 
   // ProofSource interface
-  bool GetProof(const IPAddress& server_ip,
+  bool GetProof(const QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,
@@ -42,7 +42,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 scoped_refptr<ProofSource::Chain>* out_chain,
                 QuicCryptoProof* proof) override;
 
-  void GetProof(const IPAddress& server_ip,
+  void GetProof(const QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,

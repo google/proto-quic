@@ -16,6 +16,9 @@ if (current_cpu == "arm" || current_cpu == "arm64") {
 if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
 }
+if (is_win) {
+  import("//build/config/win/visual_studio_version.gni")
+}
 if (is_mac) {
   import("//build/config/mac/symbols.gni")
 }
@@ -372,10 +375,13 @@ config("compiler") {
     # Additionally, on cast Android x86, --icf=all causes issues.
     if (is_android && current_cpu == "x86") {
       ldflags += [ "-Wl,--icf=none" ]
-    } else if (is_clang || is_chromeos ||
+    } else if ((is_clang && !is_android) || is_chromeos ||
                (current_cpu != "x86" && current_cpu != "x64")) {
+      # TODO(thakis): Remove `!is_android` above once our gold has been rolled
+      # with the fix for https://sourceware.org/bugzilla/show_bug.cgi?id=17704
+      # merged.  See also https://crbug.com/663886
       ldflags += [ "-Wl,--icf=all" ]
-    } else if (!is_android) {
+    } else if (!is_android || is_clang) {
       ldflags += [ "-Wl,--icf=safe" ]
     }
   }
@@ -496,6 +502,16 @@ config("compiler") {
   }
 }
 
+# This is separate from :compiler (and not even a sub-config there)
+# so that some targets can remove it from the list with:
+#   configs -= [ "//build/config/compiler:pthread" ]
+config("pthread") {
+  if (is_linux) {
+    cflags = [ "-pthread" ]
+    ldflags = [ "-pthread" ]
+  }
+}
+
 # This provides the basic options to select the target CPU and ABI.
 # It is factored out of "compiler" so that special cases can use this
 # without using everything that "compiler" brings in.  Options that
@@ -544,12 +560,6 @@ config("compiler_cpu_abi") {
         ldflags += [ "--target=aarch64-linux-gnu" ]
       }
     } else if (current_cpu == "mipsel" && !is_nacl) {
-      if (is_clang) {
-        # Temporarily needed due to unsupported MIPS macro instructions
-        # in inline asm code in third_party projects (libwebp and webrtc).
-        # TODO(lmilko) Enable integrated-as.
-        cflags += [ "-fno-integrated-as" ]
-      }
       if (mips_arch_variant == "r6") {
         if (is_clang) {
           cflags += [
@@ -769,6 +779,14 @@ config("compiler_arm_thumb") {
   }
 }
 
+config("compiler_arm") {
+  if (current_cpu == "arm" && is_chromeos) {
+    # arm is normally the default mode for clang, but on chromeos a wrapper
+    # is used to pass -mthumb, and therefor change the default.
+    cflags = [ "-marm" ]
+  }
+}
+
 # runtime_library -------------------------------------------------------------
 #
 # Sets the runtime library and associated options.
@@ -905,20 +923,22 @@ config("default_warnings") {
       "/wd4459",
     ]
 
-    cflags += [
-      # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
-      # TODO(brucedawson): fix warnings, crbug.com/554200
-      "/wd4312",
-    ]
-
-    if (current_cpu == "x86") {
+    if (visual_studio_version == "2015") {
       cflags += [
-        # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
-        # 4267. Example: short TruncTest(size_t x) { return x; }
-        # Since we disable 4244 we need to disable 4267 during migration.
-        # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-        "/wd4267",
+        # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
+        # TODO(brucedawson): fix warnings, crbug.com/554200
+        "/wd4312",
       ]
+
+      if (current_cpu == "x86") {
+        cflags += [
+          # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
+          # 4267. Example: short TruncTest(size_t x) { return x; }
+          # Since we disable 4244 we need to disable 4267 during migration.
+          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+          "/wd4267",
+        ]
+      }
     }
 
     # VS xtree header file needs to be patched or 4702 (unreachable code
@@ -931,6 +951,7 @@ config("default_warnings") {
 
     # Building with Clang on Windows is a work in progress and very
     # experimental. See crbug.com/82385.
+    # Keep this in sync with the similar block in build/common.gypi
     if (is_clang) {
       cflags += [
         # TODO(hans): Make this list shorter eventually, http://crbug.com/504657
@@ -1052,10 +1073,18 @@ config("default_warnings") {
 config("chromium_code") {
   if (is_win) {
     cflags = [ "/W4" ]  # Warning level 4.
+
+    # Assume UTF-8 by default to avoid code page dependencies.
+    cflags += [ "/utf-8" ]
   } else {
     cflags = [ "-Wall" ]
     if (treat_warnings_as_errors) {
       cflags += [ "-Werror" ]
+
+      # The compiler driver can sometimes (rarely) emit warnings before calling
+      # the actual linker.  Make sure these warnings are treated as errors as
+      # well.
+      ldflags = [ "-Werror" ]
     }
     if (is_clang) {
       # Enable -Wextra for chromium_code when we control the compiler.
@@ -1112,6 +1141,7 @@ config("no_chromium_code") {
     # code. crbug.com/589724
     if (treat_warnings_as_errors && is_clang) {
       cflags += [ "-Werror" ]
+      ldflags = [ "-Werror" ]
     }
     if (is_clang && !is_nacl) {
       # TODO(thakis): Remove !is_nacl once
@@ -1524,7 +1554,7 @@ config("symbols") {
     import("//build/toolchain/goma.gni")
     cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
 
-    if (is_win_fastlink) {
+    if (is_win_fastlink && visual_studio_version != "2013") {
       # Tell VS 2015+ to create a PDB that references debug
       # information in .obj and .lib files instead of copying
       # it all. This flag is incompatible with /PROFILE

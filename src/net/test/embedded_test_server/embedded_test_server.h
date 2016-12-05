@@ -205,16 +205,21 @@ class EmbeddedTestServer {
 
   // The most general purpose method. Any request processing can be added using
   // this method. Takes ownership of the object. The |callback| is called
-  // on the server's IO thread.
+  // on the server's IO thread so all handlers must be registered before the
+  // server is started.
   void RegisterRequestHandler(const HandleRequestCallback& callback);
 
   // Adds request monitors. The |callback| is called before any handlers are
   // called, but can not respond it. This is useful to monitor requests that
-  // will be handled by other request handlers.
+  // will be handled by other request handlers. The |callback| is called
+  // on the server's IO thread so all monitors must be registered before the
+  // server is started.
   void RegisterRequestMonitor(const MonitorRequestCallback& callback);
 
   // Adds default handlers, including those added by AddDefaultHandlers, to be
-  // tried after all other user-specified handlers have been tried.
+  // tried after all other user-specified handlers have been tried. The
+  // |callback| is called on the server's IO thread so all handlers must be
+  // registered before the server is started.
   void RegisterDefaultHandler(const HandleRequestCallback& callback);
 
   bool FlushAllSocketsAndConnectionsOnUIThread();

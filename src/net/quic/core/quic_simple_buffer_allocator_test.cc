@@ -4,7 +4,7 @@
 
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

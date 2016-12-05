@@ -16,7 +16,6 @@
 
 using base::StringPiece;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -45,9 +44,9 @@ size_t CryptoSecretBoxer::GetKeySize() {
   return kKeySize;
 }
 
-void CryptoSecretBoxer::SetKeys(const vector<string>& keys) {
+void CryptoSecretBoxer::SetKeys(const std::vector<string>& keys) {
   DCHECK(!keys.empty());
-  vector<string> copy = keys;
+  std::vector<string> copy = keys;
   for (const string& key : keys) {
     DCHECK_EQ(kKeySize, key.size());
   }

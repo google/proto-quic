@@ -112,6 +112,10 @@ NET_ERROR(CONTEXT_SHUT_DOWN, -26)
 // checks, for instance).
 NET_ERROR(BLOCKED_BY_RESPONSE, -27)
 
+// The request failed after the response was received, based on client-side
+// heuristics that point to the possiblility of a cross-site scripting attack.
+NET_ERROR(BLOCKED_BY_XSS_AUDITOR, -28)
+
 // A connection was closed (corresponding to a TCP FIN).
 NET_ERROR(CONNECTION_CLOSED, -100)
 

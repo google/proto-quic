@@ -10,7 +10,7 @@
 
 #include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -78,6 +78,8 @@ class BbrSenderTest : public ::testing::Test {
                   "BBR sender",
                   Perspective::IS_SERVER,
                   42) {
+    FLAGS_quic_bbr_faster_startup = true;
+
     rtt_stats_ = bbr_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = new BbrSender(simulator_.GetClock(), rtt_stats_,
                             QuicSentPacketManagerPeer::GetUnackedPacketMap(
@@ -109,6 +111,7 @@ class BbrSenderTest : public ::testing::Test {
   const QuicClock* clock_;
   const RttStats* rtt_stats_;
   BbrSender* sender_;
+  QuicFlagSaver flags_;
 
   // Creates a default setup, which is a network with a bottleneck between the
   // receiver and the switch.  The switch has the buffers four times larger than
@@ -233,7 +236,7 @@ TEST_F(BbrSenderTest, PacketLossOnSmallBufferStartup) {
   float loss_rate =
       static_cast<float>(bbr_sender_.connection()->GetStats().packets_lost) /
       bbr_sender_.connection()->GetStats().packets_sent;
-  EXPECT_LE(loss_rate, 0.20);
+  EXPECT_LE(loss_rate, 0.27);
 }
 
 // Ensures the code transitions loss recovery states correctly (NOT_IN_RECOVERY
@@ -428,6 +431,37 @@ TEST_F(BbrSenderTest, InFlightAwareGainCycling) {
   simulator_.RunFor(0.75 * sender_->ExportDebugState().min_rtt);
   EXPECT_EQ(BbrSender::PROBE_BW, sender_->ExportDebugState().mode);
   EXPECT_EQ(2, sender_->ExportDebugState().gain_cycle_index);
+}
+
+// Ensure that the pacing rate does not drop at startup.
+TEST_F(BbrSenderTest, NoBandwidthDropOnStartup) {
+  CreateDefaultSetup();
+
+  const QuicTime::Delta timeout = QuicTime::Delta::FromSeconds(5);
+  bool simulator_result;
+
+  QuicBandwidth initial_rate = QuicBandwidth::FromBytesAndTimeDelta(
+      kInitialCongestionWindowPackets * kDefaultTCPMSS,
+      QuicTime::Delta::FromMicroseconds(rtt_stats_->initial_rtt_us()));
+  EXPECT_GE(sender_->PacingRate(0), initial_rate);
+
+  // Send a packet.
+  bbr_sender_.AddBytesToTransfer(1000);
+  simulator_result = simulator_.RunUntilOrTimeout(
+      [this]() { return receiver_.bytes_received() == 1000; }, timeout);
+  ASSERT_TRUE(simulator_result);
+  EXPECT_GE(sender_->PacingRate(0), initial_rate);
+
+  // Wait for a while.
+  simulator_.RunFor(QuicTime::Delta::FromSeconds(2));
+  EXPECT_GE(sender_->PacingRate(0), initial_rate);
+
+  // Send another packet.
+  bbr_sender_.AddBytesToTransfer(1000);
+  simulator_result = simulator_.RunUntilOrTimeout(
+      [this]() { return receiver_.bytes_received() == 2000; }, timeout);
+  ASSERT_TRUE(simulator_result);
+  EXPECT_GE(sender_->PacingRate(0), initial_rate);
 }
 
 }  // namespace test

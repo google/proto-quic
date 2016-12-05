@@ -19,7 +19,6 @@
 
 namespace net {
 
-class NetworkDelegate;
 class URLRequestThrottlerManager;
 
 // URLRequestThrottlerEntry represents an entry of URLRequestThrottlerManager.

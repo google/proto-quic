@@ -19,8 +19,6 @@
 #include "net/websockets/websocket_inflater.h"
 #include "net/websockets/websocket_stream.h"
 
-class GURL;
-
 namespace net {
 
 class WebSocketDeflateParameters;

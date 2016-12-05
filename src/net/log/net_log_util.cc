@@ -38,7 +38,7 @@
 #include "net/proxy/proxy_retry_info.h"
 #include "net/proxy/proxy_service.h"
 #include "net/quic/core/quic_error_codes.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_context.h"

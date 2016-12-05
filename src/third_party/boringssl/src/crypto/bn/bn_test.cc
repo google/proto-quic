@@ -568,26 +568,53 @@ static bool TestModSqrt(FileTest *t, BN_CTX *ctx) {
   bssl::UniquePtr<BIGNUM> a = GetBIGNUM(t, "A");
   bssl::UniquePtr<BIGNUM> p = GetBIGNUM(t, "P");
   bssl::UniquePtr<BIGNUM> mod_sqrt = GetBIGNUM(t, "ModSqrt");
-  if (!a || !p || !mod_sqrt) {
+  bssl::UniquePtr<BIGNUM> mod_sqrt2(BN_new());
+  if (!a || !p || !mod_sqrt || !mod_sqrt2 ||
+      // There are two possible answers.
+      !BN_sub(mod_sqrt2.get(), p.get(), mod_sqrt.get())) {
     return false;
+  }
+
+  // -0 is 0, not P.
+  if (BN_is_zero(mod_sqrt.get())) {
+    BN_zero(mod_sqrt2.get());
   }
 
   bssl::UniquePtr<BIGNUM> ret(BN_new());
-  bssl::UniquePtr<BIGNUM> ret2(BN_new());
   if (!ret ||
-      !ret2 ||
-      !BN_mod_sqrt(ret.get(), a.get(), p.get(), ctx) ||
-      // There are two possible answers.
-      !BN_sub(ret2.get(), p.get(), ret.get())) {
+      !BN_mod_sqrt(ret.get(), a.get(), p.get(), ctx)) {
     return false;
   }
 
-  if (BN_cmp(ret2.get(), mod_sqrt.get()) != 0 &&
+  if (BN_cmp(ret.get(), mod_sqrt2.get()) != 0 &&
       !ExpectBIGNUMsEqual(t, "sqrt(A) (mod P)", mod_sqrt.get(), ret.get())) {
     return false;
   }
 
   return true;
+}
+
+static bool TestNotModSquare(FileTest *t, BN_CTX *ctx) {
+  bssl::UniquePtr<BIGNUM> not_mod_square = GetBIGNUM(t, "NotModSquare");
+  bssl::UniquePtr<BIGNUM> p = GetBIGNUM(t, "P");
+  bssl::UniquePtr<BIGNUM> ret(BN_new());
+  if (!not_mod_square || !p || !ret) {
+    return false;
+  }
+
+  if (BN_mod_sqrt(ret.get(), not_mod_square.get(), p.get(), ctx)) {
+    t->PrintLine("BN_mod_sqrt unexpectedly succeeded.");
+    return false;
+  }
+
+  uint32_t err = ERR_peek_error();
+  if (ERR_GET_LIB(err) == ERR_LIB_BN &&
+      ERR_GET_REASON(err) == BN_R_NOT_A_SQUARE) {
+    ERR_clear_error();
+    return true;
+  }
+
+  return false;
 }
 
 static bool TestModInv(FileTest *t, BN_CTX *ctx) {
@@ -634,6 +661,7 @@ static const Test kTests[] = {
     {"ModExp", TestModExp},
     {"Exp", TestExp},
     {"ModSqrt", TestModSqrt},
+    {"NotModSquare", TestNotModSquare},
     {"ModInv", TestModInv},
 };
 
@@ -1200,6 +1228,37 @@ static bool TestNegativeZero(BN_CTX *ctx) {
       strcmp(dec.get(), "-0") != 0 ||
       strcmp(hex.get(), "-0") != 0) {
     fprintf(stderr, "BN_bn2dec or BN_bn2hex failed with negative zero.\n");
+    return false;
+  }
+
+  // Test that |BN_rshift| and |BN_rshift1| will not produce a negative zero.
+  if (!BN_set_word(a.get(), 1)) {
+    return false;
+  }
+
+  BN_set_negative(a.get(), 1);
+  if (!BN_rshift(b.get(), a.get(), 1) ||
+      !BN_rshift1(c.get(), a.get())) {
+    return false;
+  }
+
+  if (!BN_is_zero(b.get()) || BN_is_negative(b.get())) {
+    fprintf(stderr, "BN_rshift(-1, 1) produced the wrong result.\n");
+    return false;
+  }
+
+  if (!BN_is_zero(c.get()) || BN_is_negative(c.get())) {
+    fprintf(stderr, "BN_rshift1(-1) produced the wrong result.\n");
+    return false;
+  }
+
+  // Test that |BN_div_word| will not produce a negative zero.
+  if (BN_div_word(a.get(), 2) == (BN_ULONG)-1) {
+    return false;
+  }
+
+  if (!BN_is_zero(a.get()) || BN_is_negative(a.get())) {
+    fprintf(stderr, "BN_div_word(-1, 2) produced the wrong result.\n");
     return false;
   }
 

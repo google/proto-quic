@@ -22,7 +22,6 @@ struct GeneralizedTime;
 
 class SignaturePolicy;
 class TrustAnchor;
-class TrustStore;
 
 // VerifyCertificateChain() verifies a certificate path (chain) based on the
 // rules in RFC 5280. The caller is responsible for building the path and

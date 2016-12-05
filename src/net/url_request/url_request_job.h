@@ -31,7 +31,6 @@ namespace net {
 class AuthChallengeInfo;
 class AuthCredentials;
 class CookieOptions;
-class Filter;
 class HttpRequestHeaders;
 class HttpResponseInfo;
 class IOBuffer;

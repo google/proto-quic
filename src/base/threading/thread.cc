@@ -261,12 +261,7 @@ bool Thread::GetThreadWasQuitProperly() {
 
 void Thread::SetMessageLoop(MessageLoop* message_loop) {
   DCHECK(owning_sequence_checker_.CalledOnValidSequence());
-
-  // TODO(gab): Figure out why some callers pass in a null |message_loop|...
-  // https://crbug.com/629139#c15
-  // DCHECK(message_loop);
-  if (!message_loop)
-    return;
+  DCHECK(message_loop);
 
   // Setting |message_loop_| should suffice for this thread to be considered
   // as "running", until Stop() is invoked.

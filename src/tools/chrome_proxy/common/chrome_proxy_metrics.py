@@ -6,7 +6,7 @@ import logging
 import time
 
 from common import network_metrics
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
 

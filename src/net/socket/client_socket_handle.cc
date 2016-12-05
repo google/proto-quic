@@ -66,8 +66,6 @@ void ClientSocketHandle::ResetInternal(bool cancel) {
     RemoveHigherLayeredPool(higher_pool_);
   pool_ = NULL;
   idle_time_ = base::TimeDelta();
-  init_time_ = base::TimeTicks();
-  setup_time_ = base::TimeDelta();
   connect_timing_ = LoadTimingInfo::ConnectTiming();
   pool_id_ = -1;
 }
@@ -161,7 +159,6 @@ void ClientSocketHandle::HandleInitCompletion(int result) {
   }
   is_initialized_ = true;
   CHECK_NE(-1, pool_id_) << "Pool should have set |pool_id_| to a valid value.";
-  setup_time_ = base::TimeTicks::Now() - init_time_;
 
   // Broadcast that the socket has been acquired.
   // TODO(eroman): This logging is not complete, in particular set_socket() and

@@ -4,7 +4,10 @@
 
 import re
 
+from benchmarks import page_cycler_v2
+
 from core import perf_benchmark
+
 from telemetry import benchmark
 from telemetry.timeline import chrome_trace_category_filter
 from telemetry.timeline import chrome_trace_config
@@ -37,6 +40,7 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
     options.SetTimelineBasedMetrics(['clockSyncLatencyMetric', 'powerMetric'])
+    page_cycler_v2.AugmentOptionsForLoadingMetrics(options)
     return options
 
   def CreateStorySet(self, options):

@@ -18,7 +18,7 @@ sys.path.append(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'perf'))
 from metrics import Metric
 
-from telemetry.page import page_test
+from telemetry.page import legacy_page_test
 # All network metrics are Chrome only for now.
 from telemetry.value import scalar
 

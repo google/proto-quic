@@ -18,7 +18,6 @@
 
 namespace net {
 
-class DrainableIOBuffer;
 class IOBuffer;
 class UploadElementReader;
 

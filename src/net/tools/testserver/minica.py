@@ -128,55 +128,84 @@ def Name(cn = None, c = None, o = None):
 
 # The private key and root certificate name are hard coded here:
 
-# This is the private key
-KEY = RSA(0x00a71998f2930bfe73d031a87f133d2f378eeeeed52a77e44d0fc9ff6f07ff32cbf3da999de4ed65832afcb0807f98787506539d258a0ce3c2c77967653099a9034a9b115a876c39a8c4e4ed4acd0c64095946fb39eeeb47a0704dbb018acf48c3a1c4b895fc409fb4a340a986b1afc45519ab9eca47c30185c771c64aa5ecf07d,
-          3,
-          0x6f6665f70cb2a9a28acbc5aa0cd374cfb49f49e371a542de0a86aa4a0554cc87f7e71113edf399021ca875aaffbafaf8aee268c3b15ded2c84fb9a4375bbc6011d841e57833bc6f998d25daf6fa7f166b233e3e54a4bae7a5aaaba21431324967d5ff3e1d4f413827994262115ca54396e7068d0afa7af787a5782bc7040e6d3)
-
-# And the same thing in PEM format
-KEY_PEM = '''-----BEGIN RSA PRIVATE KEY-----
-MIICXAIBAAKBgQCnGZjykwv+c9AxqH8TPS83ju7u1Sp35E0Pyf9vB/8yy/PamZ3k
-7WWDKvywgH+YeHUGU50ligzjwsd5Z2UwmakDSpsRWodsOajE5O1KzQxkCVlG+znu
-60egcE27AYrPSMOhxLiV/ECftKNAqYaxr8RVGaueykfDAYXHccZKpezwfQIBAwKB
-gG9mZfcMsqmiisvFqgzTdM+0n0njcaVC3gqGqkoFVMyH9+cRE+3zmQIcqHWq/7r6
-+K7iaMOxXe0shPuaQ3W7xgEdhB5XgzvG+ZjSXa9vp/FmsjPj5UpLrnpaqrohQxMk
-ln1f8+HU9BOCeZQmIRXKVDlucGjQr6eveHpXgrxwQObTAkEA2wBAfuduw5G0/VfN
-Wx66D5fbPccfYFqLM5LuTimLmNqzK2gIKXckB2sm44gJZ6wVlumaB1CSNug2LNYx
-3cAjUwJBAMNUo1hbI8ugqqwI9kpxv9+2Heea4BlnXbS6tYF8pvkHMoliuxNbXmmB
-u4zNB5iZ6V0ZZ4nvtUNo2cGr/h/Lcu8CQQCSACr/RPSCYSNTj948vya1D+d+hL+V
-kbIiYfQ0G7Jl5yIc8AVw+hgE8hntBVuacrkPRmaviwwkms7IjsvpKsI3AkEAgjhs
-5ZIX3RXHHVtO3EvVP86+mmdAEO+TzdHOVlMZ+1ohsOx8t5I+8QEnszNaZbvw6Lua
-W/UjgkXmgR1UFTJMnwJBAKErmAw21/g3SST0a4wlyaGT/MbXL8Ouwnb5IOKQVe55
-CZdeVeSh6cJ4hAcQKfr2s1JaZTJFIBPGKAif5HqpydA=
------END RSA PRIVATE KEY-----
-'''
+# This is the root private key
+ROOT_KEY = RSA(0x00c1541fac63d3b969aa231a02cb2e0d9ee7b26724f136c121b2c28bdae5caa87733cc407ad83842ef20ec67d941b448a1ce3557cf5ddebf3c9bde8f36f253ee73e670d1c4c6631d1ddc0e39cbde09b833f66347ea379c3fa891d61a0ca005b38b0b2cad1058e3589c9f30600be81e4ff4ac220972c17b74f92f03d72b496f643543d0b27a5227f1efee13c138888b23cb101877b3b4dc091f0b3bb6fc3c792187b05ab38e97862f8af6156bcbfbb824385132c6741e6c65cfcd5f13142421a210b95185884c4866f3ea644dfb8006133d14e72a4704f3e700cf827ca5ffd2ef74c2ab6a5259ffff40f0f7f607891388f917fc9fc9e65742df1bfa0b322140bb65,
+              65537,
+              0x00980f2db66ef249e4954074a5fbdf663135363a3071554ac4d19079661bd5b179c890ffaa5fc4a8c8e3116e81104fd7cd049f2a48dd2165332bb9fad511f6f817cb09b3c45cf1fa25d13e9331099c8578c173c74dae9dc3e83784ba0a7216e9e8144af8786221b741c167d033ad47a245e4da04aa710a44aff5cdc480b48adbba3575d1315555690f081f9f69691e801e34c21240bcd3df9573ec5f9aa290c5ed19404fb911ab28b7680e0be086487273db72da6621f24d8c66197a5f1b7687efe1d9e3b6655af2891d4540482e1246ff5f62ce61b8b5dcb2c66ade6bb41e0bf071445fb8544aa0a489780f770a6f1031ee19347641794f4ad17354d579a9d061)
 
 # Root certificate CN
-ISSUER_CN = "Testing CA"
+ROOT_CN = "Testing CA"
 
 # All certificates are issued under this policy OID, in the Google arc:
 CERT_POLICY_OID = asn1.OID([1, 3, 6, 1, 4, 1, 11129, 2, 4, 1])
 
 # These result in the following root certificate:
 # -----BEGIN CERTIFICATE-----
-# MIIBzTCCATagAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwpUZXN0aW5nIENBMB4X
-# DTEwMDEwMTA2MDAwMFoXDTMyMTIwMTA2MDAwMFowFTETMBEGA1UEAxMKVGVzdGluZyBDQTCBnTAN
-# BgkqhkiG9w0BAQEFAAOBiwAwgYcCgYEApxmY8pML/nPQMah/Ez0vN47u7tUqd+RND8n/bwf/Msvz
-# 2pmd5O1lgyr8sIB/mHh1BlOdJYoM48LHeWdlMJmpA0qbEVqHbDmoxOTtSs0MZAlZRvs57utHoHBN
-# uwGKz0jDocS4lfxAn7SjQKmGsa/EVRmrnspHwwGFx3HGSqXs8H0CAQOjLzAtMBIGA1UdEwEB/wQI
-# MAYBAf8CAQAwFwYDVR0gBBAwDjAMBgorBgEEAdZ5AgQBMA0GCSqGSIb3DQEBCwUAA4GBAHJJigXg
-# ArH/E9n3AilgivA58hawSRVqiTHHv7oAguDRrA4zC8IvsL6b/6LV7nA3KWM0OUSZSGE3zQb9UlB2
-# nNYsPMdv0Ls4GuOzVfy4bnQXqMWIflRw9L5Z5KH8Vu5U3ohoOUCfWN1sYMoeS9/22K9xtRsDPS+d
-# pQo7Q6ZoOo8o
+# MIIC1DCCAbygAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwpUZXN0
+# aW5nIENBMB4XDTEwMDEwMTA2MDAwMFoXDTMyMTIwMTA2MDAwMFowFTETMBEGA1UE
+# AxMKVGVzdGluZyBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMFU
+# H6xj07lpqiMaAssuDZ7nsmck8TbBIbLCi9rlyqh3M8xAetg4Qu8g7GfZQbRIoc41
+# V89d3r88m96PNvJT7nPmcNHExmMdHdwOOcveCbgz9mNH6jecP6iR1hoMoAWziwss
+# rRBY41icnzBgC+geT/SsIglywXt0+S8D1ytJb2Q1Q9CyelIn8e/uE8E4iIsjyxAY
+# d7O03AkfCzu2/Dx5IYewWrOOl4YvivYVa8v7uCQ4UTLGdB5sZc/NXxMUJCGiELlR
+# hYhMSGbz6mRN+4AGEz0U5ypHBPPnAM+CfKX/0u90wqtqUln//0Dw9/YHiROI+Rf8
+# n8nmV0LfG/oLMiFAu2UCAwEAAaMvMC0wEgYDVR0TAQH/BAgwBgEB/wIBATAXBgNV
+# HSAEEDAOMAwGCisGAQQB1nkCBAEwDQYJKoZIhvcNAQELBQADggEBADNrvoAyqAVm
+# bydPBBfLRqyH4DXt2vuMVmnSdnWnOxYiEezGmNSNiO1k1ZFBwVSsd+JHrT24lax9
+# kvU1yQDW//PBu3ijfZOCaIUleQiGXHMGfV4MjzgYbxpvHOvEUC6IXmYCsIEwcZgK
+# lrwnfJQ3MVU4hOgGTlOTWYPtCwvTsBObNRLdIs+ifMQiWmzPBlM8XeX4e5acDjTb
+# emcN4szU3EcgmCA0LvBIRI4F6NWpaIJl2WnLyMUDyKq4vjpRJOZkNwAC+525duDr
+# JFE4PKR2Lh53nJQIJv6mcTZQkX1mmw0yzqWxcGCoHACma3TgSwOHryvSopL+t26+
+# ZlQvP2ygwqY=
 # -----END CERTIFICATE-----
 
 # If you update any of the above, you can generate a new root by running this
 # file as a script.
 
+INTERMEDIATE_KEY = RSA(0x00c661afcc659f88855a83ade8fb792dc13d0cf388b17bece9149cf0b8556d27b19101d081fb2a842d13a2ac95d8308ddd66783843ecc5806513959eb6b30dd69b2845d97e10d0bbbf653d686dc8828935022cc96f9e030b567157257d3d6526734080bb9727cee0d30f4209d5820e1d662f358fc789c0e9366d84f89adf1beb8d843f74e6f325876ac35d5c11691fcb296967c06edf69450c16bb2314c14599fe90725d5ec90f2db6698afae72bba0cfbf77967c7e8b49f2172f9381827c27ab7f9471c62bd8da4a6c657966ec1385cf41d739449835888f30d64971619dcd380408cd74f25c3be19833a92620c9cf710da67e15ac8cef69bc7e4e5e7f813c1ed,
+                       65537,
+                       0x77c5e2edf52d2cafd6c649e9b06aa9455226cfa26805fa337f4e81c7c94bedfb3721715208e2d28aa4a042b2f5a3db03212ad44dae564ffeb6a44efedf7c2b65e21aca056301a3591b36c82600394fbdc16268fc0adaabadb5207871f4ef6d17888a30b84240955cd889768681cf23d0de0fe88f008c8841643e341acd397e2d1104a23242e566088b7617c26ae8b48a85b6c9b7dc64ef1fa5e9b124ff8c1659a82d8225f28a820cc6ca07beff0354364c631a9142309fea1d8b054f6e00e23c54b493a21fcbe89a646b39d1acba5bc2ace9bba0252671d42a15202f3afccc912114d6c20eb3131e74289f2c744c5b39e7d3780fe21402ab1c3ae65854fee401)
+
+# Intermediate certificate CN
+INTERMEDIATE_CN = "Testing Intermediate CA"
+
+LEAF_KEY = RSA(0x00cd12d317b39cfbb160fb1dc9c9f0dc8fef3604dda4d8c557392ce1d616483713f78216cadbefd1c76ea0f3bbbe410e24b233b1b73583922b09314e249b2cfde1be0995e13f160fb630c10d447750da20ffaa4880006717feaa3e4db602e4f511b5cc312f770f44b037784effec62640f948aa189c3769f03bdd0e22a36ecfa5951f5577de195a4fba33c879b657968b79138fd7ab389a9968522f7389c6052be1ff78bc168d3ea961e132a044eba33ac07ead95367c7b815e91eca924d914fd0d811349b8bf500707ba71a43a2901a545f34e1792e72654f6649fab9716f4ba17379ee8042186bbba9b9bac416a60474cc60686f0e6e4b01259cc3cb5873edf9,
+               65537,
+               0x009c23e81bd4c30314743dded9646b82d408937db2f0afa7d9988be6cba59d886a287aa13605ad9c7117776efc94885de76cd3554da46e301d9a5b331f4613449edb9ddac36cd0345848d8c46c4bd880acbd5cfee48ee9efe813e16a33da124fd213348c8292494ac84d03ca4aabc5e25fc67ea32e0c6845fc884b01d8988768b8b931c41de49708dbcd5fcb61823f9a1f7507c6f364be4cb5a8cf24af4925997030dd4f67a0c9c6813401cc8b2f5d1971ee0022770239b7042fde8228c33942e9c0a0b18854cb1b5542be928338ab33ac936bbba174e55457007b16f36011dbb8f4258abe64e42b1cfa79803d30170b7ecf3e7c595d42003fff72591e07acd9cd)
+
+LEAF_KEY_PEM = '''-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEAzRLTF7Oc+7Fg+x3JyfDcj+82BN2k2MVXOSzh1hZINxP3ghbK
+2+/Rx26g87u+QQ4ksjOxtzWDkisJMU4kmyz94b4JleE/Fg+2MMENRHdQ2iD/qkiA
+AGcX/qo+TbYC5PURtcwxL3cPRLA3eE7/7GJkD5SKoYnDdp8DvdDiKjbs+llR9Vd9
+4ZWk+6M8h5tleWi3kTj9erOJqZaFIvc4nGBSvh/3i8Fo0+qWHhMqBE66M6wH6tlT
+Z8e4FekeypJNkU/Q2BE0m4v1AHB7pxpDopAaVF804XkucmVPZkn6uXFvS6Fzee6A
+Qhhru6m5usQWpgR0zGBobw5uSwElnMPLWHPt+QIDAQABAoIBAQCcI+gb1MMDFHQ9
+3tlka4LUCJN9svCvp9mYi+bLpZ2Iaih6oTYFrZxxF3du/JSIXeds01VNpG4wHZpb
+Mx9GE0Se253aw2zQNFhI2MRsS9iArL1c/uSO6e/oE+FqM9oST9ITNIyCkklKyE0D
+ykqrxeJfxn6jLgxoRfyISwHYmIdouLkxxB3klwjbzV/LYYI/mh91B8bzZL5MtajP
+JK9JJZlwMN1PZ6DJxoE0AcyLL10Zce4AIncCObcEL96CKMM5QunAoLGIVMsbVUK+
+koM4qzOsk2u7oXTlVFcAexbzYBHbuPQlir5k5Csc+nmAPTAXC37PPnxZXUIAP/9y
+WR4HrNnNAoGBAPmOqTe7ntto6rDEsU1cKOJFKIZ7UVcSByyz8aLrvj1Rb2mkrNJU
+SdTqJvtqrvDXgO0HuGtFOzsZrRV9+XRPd2P0mP0uhfRiYGWT8hnILGyI2+7zlC/w
+HDtLEefelhtdOVKgUaLQXptSn7aGalUHghZKWjRNT5ah+U85MoI2ZkDbAoGBANJe
+KvrBBPSFLj+x2rsMhG+ksK0I6tivapVvSTtDV3ME1DvA/4BIMV/nIZyoH4AYI72c
+m/vD66+eCqh75cq5BzbVD63tR+ZRi/VdT1HJcl2IFXynk6eaBw8v7gpQyx6t3iSK
+lx/dIdpLt1BQuR4qI6x1wYp7Utn98soEkiFXzgq7AoGBAJTLBYPQXvgNBxlcPSaV
+016Nw4rjTe0vN43kwCbWjjf7LQV9BPnm/Zpv/cwboLDCnQE2gDOdNKKZPYS59pjt
+pI65UNpr+bxrR3RpEIlku2/+7br8ChfG/t4vdT6djTxFih8ErYf42t+bFNT8Mbv+
+3QYzULMsgU6bxo0A2meezbrPAoGBAK/IxmtQXP6iRxosWRUSCZxs5sFAgVVdh1el
+bXEa/Xj8IQhpZlbgfHmh3oFULzZPdZYcxm7jsQ7HpipRlZwHbtLPyNFSRFFd9PCr
+7vrttSYY77OBKC3V1G5JY8S07HYPXV/1ewDCPGZ3/I8dVQKyvap/n6FDGeFUhctv
+dFhuUZq/AoGAWLXlbcIl1cvOhfFJ5owohJhzh9oW9tlCtjV5/dlix2RaE5CtDZWS
+oMm4sQu9HiA8jLDP1MEEMRFPrPXdrZnxnSqVd1DgabSegD1/ZCb1QlWwQWkk5QU+
+wotPOMI33L50kZqUaDP+1XSL0Dyfo/pYpm4tYy/5QmP6WKXCtFUXybI=
+-----END RSA PRIVATE KEY-----
+'''
 
 # Various OIDs
 
 AIA_OCSP = asn1.OID([1, 3, 6, 1, 5, 5, 7, 48, 1])
+AIA_CA_ISSUERS = asn1.OID([1, 3, 6, 1, 5, 5, 7, 48, 2])
 AUTHORITY_INFORMATION_ACCESS = asn1.OID([1, 3, 6, 1, 5, 5, 7, 1, 1])
 BASIC_CONSTRAINTS = asn1.OID([2, 5, 29, 19])
 CERT_POLICIES = asn1.OID([2, 5, 29, 32])
@@ -190,7 +219,8 @@ SHA256_WITH_RSA_ENCRYPTION = asn1.OID([1, 2, 840, 113549, 1, 1, 11])
 
 
 def MakeCertificate(
-    issuer_cn, subject_cn, serial, pubkey, privkey, ocsp_url = None):
+    issuer_cn, subject_cn, serial, pubkey, privkey, ocsp_url = None,
+    ca_issuers_url = None, is_ca=False, path_len=None):
   '''MakeCertificate returns a DER encoded certificate, signed by privkey.'''
   extensions = asn1.SEQUENCE([])
 
@@ -198,7 +228,7 @@ def MakeCertificate(
   c = "XX"
   o = "Testing Org"
 
-  if issuer_cn == subject_cn:
+  if is_ca:
     # Root certificate.
     c = None
     o = None
@@ -207,24 +237,33 @@ def MakeCertificate(
         BASIC_CONSTRAINTS,
         True,
         asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE([
-          True, # IsCA
-          0, # Path len
-        ]))),
+            True, # IsCA
+        ] + ([path_len] if path_len is not None else []) # Path len
+        ))),
       ]))
 
-  if ocsp_url is not None:
+  if ocsp_url is not None or ca_issuers_url is not None:
+    aia_entries = []
+    if ocsp_url is not None:
+      aia_entries.append(
+          asn1.SEQUENCE([
+            AIA_OCSP,
+            asn1.Raw(asn1.TagAndLength(0x86, len(ocsp_url)) + ocsp_url),
+          ]))
+    if ca_issuers_url is not None:
+      aia_entries.append(
+          asn1.SEQUENCE([
+            AIA_CA_ISSUERS,
+            asn1.Raw(asn1.TagAndLength(0x86,
+                                       len(ca_issuers_url)) + ca_issuers_url),
+            ]))
     extensions.children.append(
       asn1.SEQUENCE([
         AUTHORITY_INFORMATION_ACCESS,
         # There is implicitly a critical=False here. Since false is the default,
         # encoding the value would be invalid DER.
-        asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE([
-          asn1.SEQUENCE([
-            AIA_OCSP,
-            asn1.Raw(asn1.TagAndLength(0x86, len(ocsp_url)) + ocsp_url),
-          ]),
-        ]))),
-      ]))
+        asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE(aia_entries))),
+        ]))
 
   extensions.children.append(
     asn1.SEQUENCE([
@@ -401,8 +440,8 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
 
   if serial == 0:
     serial = RandomNumber(16)
-  cert_der = MakeCertificate(ISSUER_CN, bytes(subject), serial, KEY, KEY,
-                             bytes(ocsp_url))
+  cert_der = MakeCertificate(ROOT_CN, bytes(subject), serial, LEAF_KEY,
+                             ROOT_KEY, bytes(ocsp_url))
   cert_pem = DERToPEM(cert_der)
 
   ocsp_der = None
@@ -424,7 +463,7 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
           SHA256_WITH_RSA_ENCRYPTION,
           None,
         ]),
-        asn1.BitString(KEY.Sign(invalid_data)),
+        asn1.BitString(ROOT_KEY.Sign(invalid_data)),
       ])
       resp = asn1.SEQUENCE([
         asn1.ENUMERATED(0),
@@ -436,9 +475,31 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
       ocsp_der = asn1.ToDER(resp)
     else:
       ocsp_der = MakeOCSPResponse(
-          ISSUER_CN, KEY, serial, ocsp_states, ocsp_dates, ocsp_produced)
+          ROOT_CN, ROOT_KEY, serial, ocsp_states, ocsp_dates, ocsp_produced)
 
-  return (cert_pem + KEY_PEM, ocsp_der)
+  return (cert_pem + LEAF_KEY_PEM, ocsp_der)
+
+
+def GenerateCertKeyAndIntermediate(subject, ca_issuers_url, serial=0):
+  '''Returns a (cert_and_key_pem, intermediate_cert_pem) where:
+       * cert_and_key_pem contains a certificate and private key in PEM format
+         with the given subject common name and caIssuers URL.
+       * intermediate_cert_pem contains a PEM encoded certificate that signed
+         cert_and_key_pem and was signed by ocsp-test-root.pem.'''
+  if serial == 0:
+    serial = RandomNumber(16)
+  target_cert_der = MakeCertificate(INTERMEDIATE_CN, bytes(subject), serial,
+                                    LEAF_KEY, INTERMEDIATE_KEY,
+                                    ca_issuers_url=bytes(ca_issuers_url))
+  target_cert_pem = DERToPEM(target_cert_der)
+
+  intermediate_serial = RandomNumber(16)
+  intermediate_cert_der = MakeCertificate(ROOT_CN, INTERMEDIATE_CN,
+                                          intermediate_serial,
+                                          INTERMEDIATE_KEY, ROOT_KEY,
+                                          is_ca=True)
+
+  return target_cert_pem + LEAF_KEY_PEM, intermediate_cert_der
 
 
 if __name__ == '__main__':
@@ -450,7 +511,8 @@ if __name__ == '__main__':
                                '..', 'data', 'ssl', 'scripts'))
   import crlsetutil
 
-  der_root = MakeCertificate(ISSUER_CN, ISSUER_CN, 1, KEY, KEY, None)
+  der_root = MakeCertificate(ROOT_CN, ROOT_CN, 1, ROOT_KEY, ROOT_KEY,
+                             is_ca=True, path_len=1)
   print 'ocsp-test-root.pem:'
   print DERToPEM(der_root)
 

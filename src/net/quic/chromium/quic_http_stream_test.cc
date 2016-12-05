@@ -85,7 +85,7 @@ class TestQuicConnection : public QuicConnection {
                      QuicChromiumAlarmFactory* alarm_factory,
                      QuicPacketWriter* writer)
       : QuicConnection(connection_id,
-                       address,
+                       QuicSocketAddress(QuicSocketAddressImpl(address)),
                        helper,
                        alarm_factory,
                        writer,
@@ -253,7 +253,9 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
   }
 
   void ProcessPacket(std::unique_ptr<QuicReceivedPacket> packet) {
-    connection_->ProcessUdpPacket(self_addr_, peer_addr_, *packet);
+    connection_->ProcessUdpPacket(
+        QuicSocketAddress(QuicSocketAddressImpl(self_addr_)),
+        QuicSocketAddress(QuicSocketAddressImpl(peer_addr_)), *packet);
   }
 
   // Configures the test fixture to use the list of expected writes.

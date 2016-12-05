@@ -12,7 +12,8 @@
 
 #include "base/macros.h"
 #include "net/quic/core/quic_clock.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
 #include "net/tools/quic/quic_socket_utils.h"
 
@@ -24,12 +25,6 @@ namespace net {
 // Read in larger batches to minimize recvmmsg overhead.
 const int kNumPacketsPerReadMmsgCall = 16;
 #endif
-
-namespace test {
-class QuicServerPeer;
-}  // namespace test
-
-class QuicDispatcher;
 
 class QuicPacketReader {
  public:

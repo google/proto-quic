@@ -14,7 +14,6 @@
 #include "base/files/file_path.h"
 #include "base/files/file_path_watcher.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/single_thread_task_runner.h"
 
 namespace base {
@@ -30,13 +29,9 @@ namespace base {
 // detect the creation and deletion of files, just not the modification of
 // files. It does however detect the attribute changes that the FSEvents impl
 // would miss.
-class FilePathWatcherKQueue : public FilePathWatcher::PlatformDelegate,
-                              public MessageLoop::DestructionObserver {
+class FilePathWatcherKQueue : public FilePathWatcher::PlatformDelegate {
  public:
   FilePathWatcherKQueue();
-
-  // MessageLoop::DestructionObserver overrides.
-  void WillDestroyCurrentMessageLoop() override;
 
   // FilePathWatcher::PlatformDelegate overrides.
   bool Watch(const FilePath& path,
@@ -60,9 +55,6 @@ class FilePathWatcherKQueue : public FilePathWatcher::PlatformDelegate,
 
   // Called when data is available in |kqueue_|.
   void OnKQueueReadable();
-
-  // Can only be called on |io_task_runner_|'s thread.
-  void CancelOnMessageLoopThread();
 
   // Returns true if the kevent values are error free.
   bool AreKeventValuesValid(struct kevent* kevents, int count);

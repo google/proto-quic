@@ -73,8 +73,9 @@ class LocalDeviceTestRun(test_run.TestRun):
           thread.exit()
 
         result = None
+        rerun = None
         try:
-          result = self._RunTest(dev, test)
+          result, rerun = self._RunTest(dev, test)
           if isinstance(result, base_test_result.BaseTestResult):
             results.AddResult(result)
           elif isinstance(result, list):
@@ -84,12 +85,13 @@ class LocalDeviceTestRun(test_run.TestRun):
                 'Unexpected result type: %s' % type(result).__name__)
         except:
           if isinstance(tests, test_collection.TestCollection):
-            tests.add(test)
+            rerun = test
           raise
         finally:
           if isinstance(tests, test_collection.TestCollection):
+            if rerun:
+              tests.add(rerun)
             tests.test_completed()
-
 
       logging.info('Finished running tests on this device.')
 
@@ -117,7 +119,7 @@ class LocalDeviceTestRun(test_run.TestRun):
           test_names = (self._GetUniqueTestName(t) for t in tests)
           try_results.AddResults(
               base_test_result.BaseTestResult(
-                  t, base_test_result.ResultType.UNKNOWN)
+                  t, base_test_result.ResultType.NOTRUN)
               for t in test_names if not t.endswith('*'))
 
           try:

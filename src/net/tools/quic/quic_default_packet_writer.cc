@@ -13,11 +13,12 @@ QuicDefaultPacketWriter::QuicDefaultPacketWriter(int fd)
 
 QuicDefaultPacketWriter::~QuicDefaultPacketWriter() {}
 
-WriteResult QuicDefaultPacketWriter::WritePacket(const char* buffer,
-                                                 size_t buf_len,
-                                                 const IPAddress& self_address,
-                                                 const IPEndPoint& peer_address,
-                                                 PerPacketOptions* options) {
+WriteResult QuicDefaultPacketWriter::WritePacket(
+    const char* buffer,
+    size_t buf_len,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
+    PerPacketOptions* options) {
   DCHECK(!write_blocked_);
   DCHECK(nullptr == options)
       << "QuicDefaultPacketWriter does not accept any options.";
@@ -42,7 +43,7 @@ void QuicDefaultPacketWriter::SetWritable() {
 }
 
 QuicByteCount QuicDefaultPacketWriter::GetMaxPacketSize(
-    const IPEndPoint& peer_address) const {
+    const QuicSocketAddress& peer_address) const {
   return kMaxPacketSize;
 }
 

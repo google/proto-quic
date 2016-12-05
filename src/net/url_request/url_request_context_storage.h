@@ -18,7 +18,6 @@ class ChannelIDService;
 class CookieStore;
 class CTPolicyEnforcer;
 class CTVerifier;
-class FtpTransactionFactory;
 class HostResolver;
 class HttpAuthHandlerFactory;
 class HttpNetworkSession;

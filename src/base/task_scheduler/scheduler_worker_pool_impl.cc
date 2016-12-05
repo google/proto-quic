@@ -767,7 +767,7 @@ void SchedulerWorkerPoolImpl::WakeUpWorker(SchedulerWorker* worker) {
   DCHECK(worker);
   RemoveFromIdleWorkersStack(worker);
   worker->WakeUp();
-  // TOOD(robliao): Honor StandbyThreadPolicy::ONE here and consider adding
+  // TODO(robliao): Honor StandbyThreadPolicy::ONE here and consider adding
   // hysteresis to the CanDetach check. See https://crbug.com/666041.
 }
 

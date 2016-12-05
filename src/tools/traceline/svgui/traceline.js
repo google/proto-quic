@@ -21,11 +21,11 @@
 //     will mouse over something else on your way to scrolling.
 //   - Help / legend
 //   - Loading indicator / debug console.
-//   - OH MAN BETTER COLORS PLEASE
+//   - Better colors.
 //
 // Dean McNamee <deanm@chromium.org>
 
-// Man... namespaces are such a pain.
+// XML namespaces.
 var svgNS = 'http://www.w3.org/2000/svg';
 var xhtmlNS = 'http://www.w3.org/1999/xhtml';
 
@@ -287,10 +287,10 @@ function() {
   }
 };
 
-// Oh man, so here we go.  For two reasons, I implement my own scrolling
-// system.  First off, is that in order to scale, we want to have as little
-// on the DOM as possible.  This means not having off-screen elements in the
-// DOM, as this slows down everything.  This comes at a cost of more expensive
+// So here we go.  For two reasons, I implement my own scrolling system.
+// First off, is that in order to scale, we want to have as little on the DOM
+// as possible.  This means not having off-screen elements in the DOM, as this
+// slows down everything.  This comes at a cost of more expensive
 // scrolling performance since you have to re-render the scene.  The second
 // reason is a bug I stumbled into:
 //  https://bugs.webkit.org/show_bug.cgi?id=21968

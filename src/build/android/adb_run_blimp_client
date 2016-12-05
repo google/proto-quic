@@ -8,5 +8,5 @@ optional_url=$1
 
 adb shell am start \
   -a android.intent.action.VIEW \
-  -n org.chromium.blimp/org.chromium.blimp.BlimpRendererActivity \
+  -n org.chromium.blimp/org.chromium.blimp.app.BlimpRendererActivity \
   ${optional_url:+-d "$optional_url"}

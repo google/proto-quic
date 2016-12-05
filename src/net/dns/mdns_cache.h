@@ -17,7 +17,6 @@
 
 namespace net {
 
-class ParsedDnsRecord;
 class RecordParsed;
 
 // mDNS Cache

@@ -99,6 +99,8 @@ class NET_EXPORT_PRIVATE QuicCryptoClientStream
   // ChannelIDSource operated asynchronously. Intended for testing.
   bool WasChannelIDSourceCallbackRun() const;
 
+  std::string chlo_hash() const { return chlo_hash_; }
+
  private:
   // ChannelIDSourceCallbackImpl is passed as the callback method to
   // GetChannelIDKey. The ChannelIDSource calls this class with the result of

@@ -9,8 +9,6 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::min;
-using std::vector;
 
 namespace net {
 namespace test {

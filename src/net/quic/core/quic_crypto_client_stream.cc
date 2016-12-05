@@ -14,12 +14,11 @@
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_utils.h"
 
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -171,7 +170,7 @@ void QuicCryptoClientStream::HandleServerConfigUpdateMessage(
       crypto_config_->LookupOrCreate(server_id_);
   QuicErrorCode error = crypto_config_->ProcessServerConfigUpdate(
       server_config_update, session()->connection()->clock()->WallNow(),
-      session()->connection()->version(), cached->chlo_hash(), cached,
+      session()->connection()->version(), chlo_hash_, cached,
       crypto_negotiated_params_, &error_details);
 
   if (error != QUIC_NO_ERROR) {

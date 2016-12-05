@@ -36,7 +36,7 @@ TEST(SpdyProtocolDeathTest, TestSpdySettingsAndIdOutOfBounds) {
   std::unique_ptr<SettingsFlagsAndId> flags_and_id;
 
   EXPECT_SPDY_BUG(flags_and_id.reset(new SettingsFlagsAndId(1, 0xffffffff)),
-                  "SPDY setting ID too large.");
+                  "HTTP2 setting ID too large.");
   // Make sure that we get expected values in opt mode.
   if (flags_and_id.get() != nullptr) {
     EXPECT_EQ(1, flags_and_id->flags());

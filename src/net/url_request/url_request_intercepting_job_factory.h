@@ -32,9 +32,14 @@ class URLRequestInterceptor;
 class NET_EXPORT URLRequestInterceptingJobFactory
     : public URLRequestJobFactory {
  public:
+  // Takes ownership of |job_factory| and |interceptor|.
   URLRequestInterceptingJobFactory(
       std::unique_ptr<URLRequestJobFactory> job_factory,
       std::unique_ptr<URLRequestInterceptor> interceptor);
+  // Does not take ownership of |job_factory| and |interceptor|.  Necessary if
+  // ownership is held elsewhere.
+  URLRequestInterceptingJobFactory(URLRequestJobFactory* job_factory,
+                                   URLRequestInterceptor* interceptor);
   ~URLRequestInterceptingJobFactory() override;
 
   // URLRequestJobFactory implementation
@@ -57,8 +62,10 @@ class NET_EXPORT URLRequestInterceptingJobFactory
   bool IsSafeRedirectTarget(const GURL& location) const override;
 
  private:
-  std::unique_ptr<URLRequestJobFactory> job_factory_;
-  std::unique_ptr<URLRequestInterceptor> interceptor_;
+  // |owning_| indicates if this object owns |job_factory_| and |interceptor_|.
+  bool owning_;
+  URLRequestJobFactory* job_factory_;
+  URLRequestInterceptor* interceptor_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestInterceptingJobFactory);
 };

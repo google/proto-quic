@@ -20,9 +20,8 @@
 #include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/test/test_data_directory.h"
-#include "net/tools/quic/quic_in_memory_cache.h"
+#include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server.h"
-#include "net/tools/quic/test_tools/quic_in_memory_cache_peer.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -93,9 +92,8 @@ class URLRequestQuicTest : public ::testing::Test {
  private:
   void StartQuicServer() {
     // Set up in-memory cache.
-    test::QuicInMemoryCachePeer::ResetForTests();
-    QuicInMemoryCache::GetInstance()->AddSimpleResponse(
-        kTestServerHost, kHelloPath, kHelloStatus, kHelloBodyValue);
+    response_cache_.AddSimpleResponse(kTestServerHost, kHelloPath, kHelloStatus,
+                                      kHelloBodyValue);
     net::QuicConfig config;
     // Set up server certs.
     std::unique_ptr<net::ProofSourceChromium> proof_source(
@@ -107,7 +105,8 @@ class URLRequestQuicTest : public ::testing::Test {
         directory.Append(FILE_PATH_LITERAL("quic_test.example.com.key.sct"))));
     server_.reset(new QuicSimpleServer(
         test::CryptoTestUtils::ProofSourceForTesting(), config,
-        net::QuicCryptoServerConfig::ConfigOptions(), AllSupportedVersions()));
+        net::QuicCryptoServerConfig::ConfigOptions(), AllSupportedVersions(),
+        &response_cache_));
     int rv = server_->Listen(
         net::IPEndPoint(net::IPAddress::IPv4AllZeros(), kTestServerPort));
     EXPECT_GE(rv, 0) << "Quic server fails to start";
@@ -125,6 +124,7 @@ class URLRequestQuicTest : public ::testing::Test {
   std::unique_ptr<MappedHostResolver> host_resolver_;
   std::unique_ptr<QuicSimpleServer> server_;
   std::unique_ptr<TestURLRequestContext> context_;
+  QuicHttpResponseCache response_cache_;
   MockCertVerifier cert_verifier_;
 };
 

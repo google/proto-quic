@@ -14,7 +14,6 @@ namespace net {
 namespace simulator {
 
 class Simulator;
-struct ScheduledActor;
 
 // Actor is the base class for all participants of the simulation which can
 // schedule events to be triggered at the specified time.  Every actor has a

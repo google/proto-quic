@@ -127,6 +127,12 @@ bool GetIsRoaming() {
       base::android::GetApplicationContext());
 }
 
+bool GetIsCaptivePortal() {
+  return Java_AndroidNetworkLibrary_getIsCaptivePortal(
+      base::android::AttachCurrentThread(),
+      base::android::GetApplicationContext());
+}
+
 std::string GetWifiSSID() {
   return base::android::ConvertJavaStringToUTF8(
       Java_AndroidNetworkLibrary_getWifiSSID(

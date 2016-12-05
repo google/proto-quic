@@ -25,7 +25,7 @@ struct SharedHpackHuffmanTable {
     std::unique_ptr<HpackHuffmanTable> mutable_table(new HpackHuffmanTable());
     CHECK(mutable_table->Initialize(&code[0], code.size()));
     CHECK(mutable_table->IsInitialized());
-    table.reset(mutable_table.release());
+    table = std::move(mutable_table);
   }
 
   static SharedHpackHuffmanTable* GetInstance() {
@@ -44,7 +44,7 @@ struct SharedHpackStaticTable {
     std::unique_ptr<HpackStaticTable> mutable_table(new HpackStaticTable());
     mutable_table->Initialize(&static_table[0], static_table.size());
     CHECK(mutable_table->IsInitialized());
-    table.reset(mutable_table.release());
+    table = std::move(mutable_table);
   }
 
   static SharedHpackStaticTable* GetInstance() {

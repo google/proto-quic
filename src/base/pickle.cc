@@ -233,7 +233,6 @@ void PickleSizer::AddBytes(int length) {
 
 void PickleSizer::AddAttachment() {
   // From IPC::Message::WriteAttachment
-  AddBool();
   AddInt();
 }
 

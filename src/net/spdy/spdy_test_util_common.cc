@@ -686,11 +686,7 @@ void SpdySessionPoolPeer::SetStreamInitialRecvWindowSize(size_t window) {
   pool_->stream_max_recv_window_size_ = window;
 }
 
-SpdyTestUtil::SpdyTestUtil()
-    : headerless_spdy_framer_(HTTP2),
-      request_spdy_framer_(HTTP2),
-      response_spdy_framer_(HTTP2),
-      default_url_(GURL(kDefaultUrl)) {}
+SpdyTestUtil::SpdyTestUtil() : default_url_(GURL(kDefaultUrl)) {}
 
 SpdyTestUtil::~SpdyTestUtil() {}
 
@@ -1056,7 +1052,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyPostReply(
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyDataFrame(int stream_id,
                                                          bool fin) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   SpdyDataIR data_ir(stream_id,
                      base::StringPiece(kUploadData, kUploadDataSize));
   data_ir.set_fin(fin);
@@ -1067,7 +1063,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyDataFrame(int stream_id,
                                                          const char* data,
                                                          uint32_t len,
                                                          bool fin) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   SpdyDataIR data_ir(stream_id, base::StringPiece(data, len));
   data_ir.set_fin(fin);
   return SpdySerializedFrame(framer.SerializeData(data_ir));
@@ -1078,7 +1074,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyDataFrame(int stream_id,
                                                          uint32_t len,
                                                          bool fin,
                                                          int padding_length) {
-  SpdyFramer framer(HTTP2);
+  SpdyFramer framer;
   SpdyDataIR data_ir(stream_id, base::StringPiece(data, len));
   data_ir.set_fin(fin);
   data_ir.set_padding_len(padding_length);

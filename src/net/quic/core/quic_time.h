@@ -24,12 +24,6 @@
 
 namespace net {
 
-static const int kNumSecondsPerMinute = 60;
-static const int kNumSecondsPerHour = kNumSecondsPerMinute * 60;
-static const uint64_t kNumMicrosPerSecond = base::Time::kMicrosecondsPerSecond;
-static const uint64_t kNumMicrosPerMilli =
-    base::Time::kMicrosecondsPerMillisecond;
-
 // A QuicTime is a purely relative time. QuicTime values from different clocks
 // cannot be compared to each other. If you need an absolute time, see
 // QuicWallTime, below.

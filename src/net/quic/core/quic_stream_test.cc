@@ -23,7 +23,6 @@
 #include "testing/gmock_mutant.h"
 
 using base::StringPiece;
-using std::min;
 using std::string;
 using testing::AnyNumber;
 using testing::AtLeast;

@@ -14,12 +14,6 @@
 #include "net/url_request/url_request_test_util.h"
 #include "net/websockets/websocket_stream.h"
 
-class GURL;
-
-namespace base {
-class Timer;
-}  // namespace base
-
 namespace url {
 class Origin;
 }  // namespace url
@@ -27,11 +21,9 @@ class Origin;
 namespace net {
 
 class MockClientSocketFactory;
-class NetLogWithSource;
 class ProxyService;
 class SequencedSocketData;
 struct SSLSocketDataProvider;
-class URLRequestContext;
 
 class LinearCongruentialGenerator {
  public:

@@ -24,14 +24,35 @@ import tempfile
 import urllib2
 
 # This can be changed after running /build/package_mac_toolchain.py.
-TOOLCHAIN_REVISION = '5B1008'
-TOOLCHAIN_SUB_REVISION = 3
-TOOLCHAIN_VERSION = '%s-%s' % (TOOLCHAIN_REVISION, TOOLCHAIN_SUB_REVISION)
+MAC_TOOLCHAIN_VERSION = '5B1008'
+MAC_TOOLCHAIN_SUB_REVISION = 3
+MAC_TOOLCHAIN_VERSION = '%s-%s' % (MAC_TOOLCHAIN_VERSION,
+                                   MAC_TOOLCHAIN_SUB_REVISION)
+IOS_TOOLCHAIN_VERSION = '8B62'
+IOS_TOOLCHAIN_SUB_REVISION = 1
+IOS_TOOLCHAIN_VERSION = '%s-%s' % (IOS_TOOLCHAIN_VERSION,
+                                   IOS_TOOLCHAIN_SUB_REVISION)
+
+# Absolute path to src/ directory.
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Absolute path to a file with gclient solutions.
+GCLIENT_CONFIG = os.path.join(os.path.dirname(REPO_ROOT), '.gclient')
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TOOLCHAIN_BUILD_DIR = os.path.join(BASE_DIR, 'mac_files', 'Xcode.app')
 STAMP_FILE = os.path.join(BASE_DIR, 'mac_files', 'toolchain_build_revision')
 TOOLCHAIN_URL = 'gs://chrome-mac-sdk/'
+
+def IsIOSPlatform():
+  try:
+    env = {}
+    execfile(GCLIENT_CONFIG, env, env)
+    if 'ios' in env.get('target_os', []):
+      return True
+  except:
+    pass
+  return False
 
 
 def ReadStampFile():
@@ -172,10 +193,18 @@ def main():
     print 'Using local toolchain.'
     return 0
 
-  toolchain_revision = os.environ.get('MAC_TOOLCHAIN_REVISION',
-                                      TOOLCHAIN_VERSION)
-  if ReadStampFile() == toolchain_revision:
-    print 'Toolchain (%s) is already up to date.' % toolchain_revision
+  if IsIOSPlatform():
+    default_version = IOS_TOOLCHAIN_VERSION
+    toolchain_filename = 'ios-toolchain-%s.tgz'
+  else:
+    default_version = MAC_TOOLCHAIN_VERSION
+    toolchain_filename = 'toolchain-%s.tgz'
+
+  toolchain_version = os.environ.get('MAC_TOOLCHAIN_REVISION',
+                                      default_version)
+
+  if ReadStampFile() == toolchain_version:
+    print 'Toolchain (%s) is already up to date.' % toolchain_version
     AcceptLicense()
     return 0
 
@@ -186,18 +215,18 @@ def main():
   # Reset the stamp file in case the build is unsuccessful.
   WriteStampFile('')
 
-  toolchain_file = '%s.tgz' % toolchain_revision
+  toolchain_file = '%s.tgz' % toolchain_version
   toolchain_full_url = TOOLCHAIN_URL + toolchain_file
 
-  print 'Updating toolchain to %s...' % toolchain_revision
+  print 'Updating toolchain to %s...' % toolchain_version
   try:
-    toolchain_file = 'toolchain-%s.tgz' % toolchain_revision
+    toolchain_file = toolchain_filename % toolchain_version
     toolchain_full_url = TOOLCHAIN_URL + toolchain_file
     DownloadAndUnpack(toolchain_full_url, TOOLCHAIN_BUILD_DIR)
     AcceptLicense()
 
-    print 'Toolchain %s unpacked.' % toolchain_revision
-    WriteStampFile(toolchain_revision)
+    print 'Toolchain %s unpacked.' % toolchain_version
+    WriteStampFile(toolchain_version)
     return 0
   except Exception as e:
     print 'Failed to download toolchain %s.' % toolchain_file

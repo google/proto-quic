@@ -29,7 +29,7 @@ def get_files_to_clean(build_dir, recursive=False):
   """Get the list of files to clean."""
   allowed = frozenset(
       ('', '.apk', '.app', '.dll', '.dylib', '.exe', '.nexe', '.so'))
-  non_x_ok_exts = frozenset(('.apk', '.isolated'))
+  non_x_ok_exts = frozenset(('.apk', '.isolated', '.jar'))
   min_timestamp = 0
   if os.path.exists(os.path.join(build_dir, 'build.ninja')):
     min_timestamp = os.path.getmtime(os.path.join(build_dir, 'build.ninja'))
@@ -45,7 +45,7 @@ def get_files_to_clean(build_dir, recursive=False):
   ret_files = set()
   for root, dirs, files in os.walk(build_dir):
     if not recursive:
-      dirs[:] = [d for d in dirs if d.endswith('_apk')]
+      dirs[:] = [d for d in dirs if d.endswith(('_apk', 'lib.java'))]
     for f in (f for f in files if check(os.path.join(root, f))):
       ret_files.add(os.path.relpath(os.path.join(root, f), build_dir))
   return ret_files
@@ -77,7 +77,7 @@ def remove_pe_metadata(filename):
   return ret
 
 
-def remove_apk_timestamps(filename):
+def remove_zip_timestamps(filename):
   """Remove the timestamps embedded in an apk archive."""
   sys.stdout.write('Processing: %s\n' % os.path.basename(filename))
   with zipfile.ZipFile(filename, 'r') as zf:
@@ -106,8 +106,8 @@ def remove_metadata_worker(file_queue, failed_queue, build_dir):
     if f.endswith(('.dll', '.exe')):
       if remove_pe_metadata(os.path.join(build_dir, f)):
         failed_queue.put(f)
-    elif f.endswith('.apk'):
-      remove_apk_timestamps(os.path.join(build_dir, f))
+    elif f.endswith(('.apk', '.jar')):
+      remove_zip_timestamps(os.path.join(build_dir, f))
     file_queue.task_done()
 
 

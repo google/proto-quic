@@ -8,12 +8,17 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 #include "net/quic/test_tools/simulator/link.h"
+#include "net/quic/test_tools/simulator/packet_filter.h"
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/quic/test_tools/simulator/switch.h"
 #include "net/quic/test_tools/simulator/traffic_policer.h"
 
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+using testing::_;
+using testing::Return;
+using testing::StrictMock;
 
 namespace net {
 namespace simulator {
@@ -564,6 +569,52 @@ TEST(SimulatorTest, RunFor) {
   EXPECT_EQ(33, counter.get_value());
 }
 
+class MockPacketFilter : public PacketFilter {
+ public:
+  MockPacketFilter(Simulator* simulator, std::string name, Endpoint* endpoint)
+      : PacketFilter(simulator, name, endpoint) {}
+  MOCK_METHOD1(FilterPacket, bool(const Packet&));
+};
+
+// Set up two trivial packet filters, one allowing any packets, and one dropping
+// all of them.
+TEST(SimulatorTest, PacketFilter) {
+  const QuicBandwidth bandwidth =
+      QuicBandwidth::FromBytesPerSecond(1024 * 1024);
+  const QuicTime::Delta base_propagation_delay =
+      QuicTime::Delta::FromMilliseconds(5);
+
+  Simulator simulator;
+  LinkSaturator saturator_a(&simulator, "Saturator A", 1000, "Saturator B");
+  LinkSaturator saturator_b(&simulator, "Saturator B", 1000, "Saturator A");
+
+  // Attach packets to the switch to create a delay between the point at which
+  // the packet is generated and the point at which it is filtered.  Note that
+  // if the saturators were connected directly, the link would be always
+  // available for the endpoint which has all of its packets dropped, resulting
+  // in saturator looping infinitely.
+  Switch network_switch(&simulator, "Switch", 8,
+                        bandwidth * base_propagation_delay * 10);
+  StrictMock<MockPacketFilter> a_to_b_filter(&simulator, "A -> B filter",
+                                             network_switch.port(1));
+  StrictMock<MockPacketFilter> b_to_a_filter(&simulator, "B -> A filter",
+                                             network_switch.port(2));
+  SymmetricLink link_a(&a_to_b_filter, &saturator_b, bandwidth,
+                       base_propagation_delay);
+  SymmetricLink link_b(&b_to_a_filter, &saturator_a, bandwidth,
+                       base_propagation_delay);
+
+  // Allow packets from A to B, but not from B to A.
+  EXPECT_CALL(a_to_b_filter, FilterPacket(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(b_to_a_filter, FilterPacket(_)).WillRepeatedly(Return(false));
+
+  // Run the simulation for a while, and expect that only B will receive any
+  // packets.
+  simulator.RunFor(QuicTime::Delta::FromSeconds(10));
+  EXPECT_GE(saturator_b.counter()->packets(), 1u);
+  EXPECT_EQ(saturator_a.counter()->packets(), 0u);
+}
+
 // Set up a traffic policer in one direction that throttles at 25% of link
 // bandwidth, and put two link saturators at each endpoint.
 TEST(SimulatorTest, TrafficPolicer) {
@@ -587,8 +638,7 @@ TEST(SimulatorTest, TrafficPolicer) {
 
   SymmetricLink link1(&saturator1, network_switch.port(1), bandwidth,
                       base_propagation_delay);
-  SymmetricLink link2(&saturator2, policer.output(), bandwidth,
-                      base_propagation_delay);
+  SymmetricLink link2(&saturator2, &policer, bandwidth, base_propagation_delay);
 
   // Ensure the initial burst passes without being dropped at all.
   bool simulator_result = simulator.RunUntilOrTimeout(
@@ -646,8 +696,7 @@ TEST(SimulatorTest, TrafficPolicerBurst) {
 
   SymmetricLink link1(&saturator1, network_switch.port(1), bandwidth,
                       base_propagation_delay);
-  SymmetricLink link2(&saturator2, policer.output(), bandwidth,
-                      base_propagation_delay);
+  SymmetricLink link2(&saturator2, &policer, bandwidth, base_propagation_delay);
 
   // Ensure at least one packet is sent on each side.
   bool simulator_result = simulator.RunUntilOrTimeout(

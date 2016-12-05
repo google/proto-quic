@@ -21,7 +21,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 
 using base::StringPiece;
-using std::min;
 using std::string;
 using testing::AnyNumber;
 using testing::Invoke;
@@ -255,7 +254,7 @@ TEST_P(QuicSpdyStreamTest, ProcessHeadersAndBodyFragments) {
     for (size_t offset = 0; offset < body.size(); offset += fragment_size) {
       size_t remaining_data = body.size() - offset;
       StringPiece fragment(body.data() + offset,
-                           min(fragment_size, remaining_data));
+                           std::min(fragment_size, remaining_data));
       QuicStreamFrame frame(kClientDataStreamId1, false, offset,
                             StringPiece(fragment));
       stream_->OnStreamFrame(frame);
@@ -388,9 +387,8 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlBlocked) {
 
   // Try to send more data than the flow control limit allows.
   string headers = SpdyUtils::SerializeUncompressedHeaders(headers_);
-  string body;
   const uint64_t kOverflow = 15;
-  GenerateBody(&body, kWindow + kOverflow);
+  string body(kWindow + kOverflow, 'a');
 
   EXPECT_CALL(*connection_, SendBlocked(kClientDataStreamId1));
   EXPECT_CALL(*session_, WritevData(_, _, _, _, _, _))
@@ -427,8 +425,8 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlNoWindowUpdateIfNotConsumed) {
                          stream_->flow_controller()));
 
   // Stream receives enough data to fill a fraction of the receive window.
-  string body;
-  GenerateBody(&body, kWindow / 3);
+  string body(kWindow / 3, 'a');
+  auto headers = AsHeaderList(headers_);
   ProcessHeaders(false, headers_);
 
   QuicStreamFrame frame1(kClientDataStreamId1, false, 0, StringPiece(body));
@@ -463,8 +461,7 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlWindowUpdate) {
                          stream_->flow_controller()));
 
   // Stream receives enough data to fill a fraction of the receive window.
-  string body;
-  GenerateBody(&body, kWindow / 3);
+  string body(kWindow / 3, 'a');
   ProcessHeaders(false, headers_);
   stream_->ConsumeHeaderList();
 
@@ -521,8 +518,7 @@ TEST_P(QuicSpdyStreamTest, ConnectionFlowControlWindowUpdate) {
 
   // Each stream gets a quarter window of data. This should not trigger a
   // WINDOW_UPDATE for either stream, nor for the connection.
-  string body;
-  GenerateBody(&body, kWindow / 4);
+  string body(kWindow / 4, 'a');
   QuicStreamFrame frame1(kClientDataStreamId1, false, 0, StringPiece(body));
   stream_->OnStreamFrame(frame1);
   QuicStreamFrame frame2(kClientDataStreamId2, false, 0, StringPiece(body));
@@ -558,8 +554,7 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlViolation) {
   ProcessHeaders(false, headers_);
 
   // Receive data to overflow the window, violating flow control.
-  string body;
-  GenerateBody(&body, kWindow + 1);
+  string body(kWindow + 1, 'a');
   QuicStreamFrame frame(kClientDataStreamId1, false, 0, StringPiece(body));
   EXPECT_CALL(*connection_,
               CloseConnection(QUIC_FLOW_CONTROL_RECEIVED_TOO_MUCH_DATA, _, _));
@@ -596,8 +591,7 @@ TEST_P(QuicSpdyStreamTest, ConnectionFlowControlViolation) {
   ProcessHeaders(false, headers_);
 
   // Send enough data to overflow the connection level flow control window.
-  string body;
-  GenerateBody(&body, kConnectionWindow + 1);
+  string body(kConnectionWindow + 1, 'a');
   EXPECT_LT(body.size(), kStreamWindow);
   QuicStreamFrame frame(kClientDataStreamId1, false, 0, StringPiece(body));
 

@@ -96,98 +96,35 @@ AllocatorDispatch g_allocator_hooks = {
 #if defined(OS_WIN)
 // A structure containing some information about a given heap.
 struct WinHeapInfo {
-  HANDLE heap_id;
   size_t committed_size;
   size_t uncommitted_size;
   size_t allocated_size;
   size_t block_count;
 };
 
-bool GetHeapInformation(WinHeapInfo* heap_info,
-                        const std::set<void*>& block_to_skip) {
-  // NOTE: crbug.com/464430
-  // As a part of the Client/Server Runtine Subsystem (CSRSS) lockdown in the
-  // referenced bug, it will invalidate the heap used by CSRSS. The author has
-  // not found a way to clean up an invalid heap handle, so it will be left in
-  // the process's heap list. Therefore we need to support when there is this
-  // invalid heap handle in the heap list.
-  // HeapLock implicitly checks certain aspects of the HEAP structure, such as
-  // the signature. If this passes, we assume that this heap is valid and is
-  // not the one owned by CSRSS.
-  if (!::HeapLock(heap_info->heap_id)) {
-    return false;
-  }
-  PROCESS_HEAP_ENTRY heap_entry;
-  heap_entry.lpData = nullptr;
-  // Walk over all the entries in this heap.
-  while (::HeapWalk(heap_info->heap_id, &heap_entry) != FALSE) {
-    if (block_to_skip.count(heap_entry.lpData) == 1)
-      continue;
-    if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0) {
-      heap_info->allocated_size += heap_entry.cbData;
-      heap_info->block_count++;
-    } else if ((heap_entry.wFlags & PROCESS_HEAP_REGION) != 0) {
-      heap_info->committed_size += heap_entry.Region.dwCommittedSize;
-      heap_info->uncommitted_size += heap_entry.Region.dwUnCommittedSize;
-    }
-  }
-  CHECK(::HeapUnlock(heap_info->heap_id) == TRUE);
-  return true;
-}
-
-void WinHeapMemoryDumpImpl(WinHeapInfo* all_heap_info) {
-// This method might be flaky for 2 reasons:
-//   - GetProcessHeaps is racy by design. It returns a snapshot of the
-//     available heaps, but there's no guarantee that that snapshot remains
-//     valid. If a heap disappears between GetProcessHeaps() and HeapWalk()
-//     then chaos should be assumed. This flakyness is acceptable for tracing.
-//   - The MSDN page for HeapLock says: "If the HeapLock function is called on
-//     a heap created with the HEAP_NO_SERIALIZATION flag, the results are
-//     undefined."
-//   - Note that multiple heaps occur on Windows primarily because system and
-//     3rd party DLLs will each create their own private heap. It's possible to
-//     retrieve the heap the CRT allocates from and report specifically on that
-//     heap. It's interesting to report all heaps, as e.g. loading or invoking
-//     on a Windows API may consume memory from a private heap.
+// NOTE: crbug.com/665516
+// Unfortunately, there is no safe way to collect information from secondary
+// heaps due to limitations and racy nature of this piece of WinAPI.
+void WinHeapMemoryDumpImpl(WinHeapInfo* main_heap_info) {
 #if defined(SYZYASAN)
   if (base::debug::IsBinaryInstrumented())
     return;
 #endif
-
-  // Retrieves the number of heaps in the current process.
-  DWORD number_of_heaps = ::GetProcessHeaps(0, NULL);
-
-  // Try to retrieve a handle to all the heaps owned by this process. Returns
-  // false if the number of heaps has changed.
-  //
-  // This is inherently racy as is, but it's not something that we observe a lot
-  // in Chrome, the heaps tend to be created at startup only.
-  std::unique_ptr<HANDLE[]> all_heaps(new HANDLE[number_of_heaps]);
-  if (::GetProcessHeaps(number_of_heaps, all_heaps.get()) != number_of_heaps)
-    return;
-
-  // Skip the pointer to the heap array to avoid accounting the memory used by
-  // this dump provider.
-  std::set<void*> block_to_skip;
-  block_to_skip.insert(all_heaps.get());
-
-  // Retrieves some metrics about each heap.
-  size_t heap_info_errors = 0;
-  for (size_t i = 0; i < number_of_heaps; ++i) {
-    WinHeapInfo heap_info = {0};
-    heap_info.heap_id = all_heaps[i];
-    if (GetHeapInformation(&heap_info, block_to_skip)) {
-      all_heap_info->allocated_size += heap_info.allocated_size;
-      all_heap_info->committed_size += heap_info.committed_size;
-      all_heap_info->uncommitted_size += heap_info.uncommitted_size;
-      all_heap_info->block_count += heap_info.block_count;
-    } else {
-      ++heap_info_errors;
-      // See notes in GetHeapInformation() but we only expect 1 heap to not be
-      // able to be read.
-      CHECK_EQ(1u, heap_info_errors);
+  HANDLE main_heap = ::GetProcessHeap();
+  ::HeapLock(main_heap);
+  PROCESS_HEAP_ENTRY heap_entry;
+  heap_entry.lpData = nullptr;
+  // Walk over all the entries in the main heap.
+  while (::HeapWalk(main_heap, &heap_entry) != FALSE) {
+    if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0) {
+      main_heap_info->allocated_size += heap_entry.cbData;
+      main_heap_info->block_count++;
+    } else if ((heap_entry.wFlags & PROCESS_HEAP_REGION) != 0) {
+      main_heap_info->committed_size += heap_entry.Region.dwCommittedSize;
+      main_heap_info->uncommitted_size += heap_entry.Region.dwUnCommittedSize;
     }
   }
+  CHECK(::HeapUnlock(main_heap) == TRUE);
 }
 #endif  // defined(OS_WIN)
 }  // namespace
@@ -237,17 +174,17 @@ bool MallocDumpProvider::OnMemoryDump(const MemoryDumpArgs& args,
   // See crrev.com/1531463004 for detailed explanation.
   resident_size = stats.max_size_in_use;
 #elif defined(OS_WIN)
-  WinHeapInfo all_heap_info = {};
-  WinHeapMemoryDumpImpl(&all_heap_info);
+  WinHeapInfo main_heap_info = {};
+  WinHeapMemoryDumpImpl(&main_heap_info);
   total_virtual_size =
-      all_heap_info.committed_size + all_heap_info.uncommitted_size;
+      main_heap_info.committed_size + main_heap_info.uncommitted_size;
   // Resident size is approximated with committed heap size. Note that it is
   // possible to do this with better accuracy on windows by intersecting the
   // working set with the virtual memory ranges occuipied by the heap. It's not
   // clear that this is worth it, as it's fairly expensive to do.
-  resident_size = all_heap_info.committed_size;
-  allocated_objects_size = all_heap_info.allocated_size;
-  allocated_objects_count = all_heap_info.block_count;
+  resident_size = main_heap_info.committed_size;
+  allocated_objects_size = main_heap_info.allocated_size;
+  allocated_objects_count = main_heap_info.block_count;
 #else
   struct mallinfo info = mallinfo();
   DCHECK_GE(info.arena + info.hblkhd, info.uordblks);

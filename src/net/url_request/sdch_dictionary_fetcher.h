@@ -27,7 +27,6 @@ namespace net {
 
 class NetLogWithSource;
 class URLRequest;
-class URLRequestThrottlerEntryInterface;
 
 // This class is used by embedder SDCH policy object to fetch
 // dictionaries. It queues requests for dictionaries and dispatches

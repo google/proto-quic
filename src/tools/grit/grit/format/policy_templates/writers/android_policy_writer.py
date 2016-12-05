@@ -64,18 +64,12 @@ class AndroidPolicyWriter(xml_formatted_writer.XMLFormattedWriter):
   def CanBeRecommended(self, policy):
     return False
 
-  def IsDeprecatedPolicySupported(self, policy):
-    return True
-
-  def IsFuturePolicySupported(self, policy):
-    return True
-
   def WritePolicy(self, policy):
     name = policy['name']
     self.AddStringResource(name + 'Title', policy['caption'])
 
-    # Get the first line of the policy description.
-    description = policy['desc'].split('\n', 1)[0]
+    # Get the policy description.
+    description = policy['desc']
     self.AddStringResource(name + 'Desc', description)
 
     items = policy.get('items')

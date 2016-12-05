@@ -45,7 +45,14 @@ template("convert_plist") {
     outputs = [
       invoker.output,
     ]
-    args = [
+    args = []
+    if (!use_system_xcode) {
+      args += [
+        "--developer_dir",
+        hermetic_xcode_path,
+      ]
+    }
+    args += [
       "plutil",
       "-convert",
       invoker.format,

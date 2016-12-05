@@ -529,7 +529,7 @@ int TCPSocketPosix::BuildTcpSocketPosix(
 
   tcp_socket->reset(
       new TCPSocketPosix(nullptr, net_log_.net_log(), net_log_.source()));
-  (*tcp_socket)->socket_.reset(accept_socket_.release());
+  (*tcp_socket)->socket_ = std::move(accept_socket_);
   return OK;
 }
 

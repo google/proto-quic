@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/core/quic_constants.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
 

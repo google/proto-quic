@@ -20,88 +20,75 @@ const int kMaxFetchesPerCert = 5;
 
 class AiaRequest : public CertIssuerSource::Request {
  public:
-  explicit AiaRequest(const CertIssuerSource::IssuerCallback& issuers_callback);
+  AiaRequest() {}
   ~AiaRequest() override;
 
   // CertIssuerSource::Request implementation.
-  CompletionStatus GetNext(scoped_refptr<ParsedCertificate>* out_cert) override;
+  void GetNext(ParsedCertificateList* issuers) override;
 
   void AddCertFetcherRequest(
       std::unique_ptr<CertNetFetcher::Request> cert_fetcher_request);
 
-  void OnFetchCompleted(Error error, const std::vector<uint8_t>& fetched_bytes);
+  bool AddCompletedFetchToResults(Error error,
+                                  std::vector<uint8_t> fetched_bytes,
+                                  ParsedCertificateList* results);
 
  private:
-  bool HasNext() const { return current_result_ < results_.size(); }
-
-  CertIssuerSource::IssuerCallback issuers_callback_;
   std::vector<std::unique_ptr<CertNetFetcher::Request>> cert_fetcher_requests_;
-  size_t pending_requests_ = 0;
-  ParsedCertificateList results_;
-  size_t current_result_ = 0;
+  size_t current_request_ = 0;
 
   DISALLOW_COPY_AND_ASSIGN(AiaRequest);
 };
 
-AiaRequest::AiaRequest(const CertIssuerSource::IssuerCallback& issuers_callback)
-    : issuers_callback_(issuers_callback) {}
-
 AiaRequest::~AiaRequest() = default;
 
-CompletionStatus AiaRequest::GetNext(
-    scoped_refptr<ParsedCertificate>* out_cert) {
-  if (HasNext()) {
-    *out_cert = std::move(results_[current_result_++]);
-    return CompletionStatus::SYNC;
+void AiaRequest::GetNext(ParsedCertificateList* out_certs) {
+  // TODO(eroman): Rather than blocking in FIFO order, select the one that
+  // completes first.
+  while (current_request_ < cert_fetcher_requests_.size()) {
+    Error error;
+    std::vector<uint8_t> bytes;
+    auto req = std::move(cert_fetcher_requests_[current_request_++]);
+    req->WaitForResult(&error, &bytes);
+
+    if (AddCompletedFetchToResults(error, std::move(bytes), out_certs))
+      return;
   }
-  *out_cert = nullptr;
-  if (pending_requests_)
-    return CompletionStatus::ASYNC;
-  return CompletionStatus::SYNC;
 }
 
 void AiaRequest::AddCertFetcherRequest(
     std::unique_ptr<CertNetFetcher::Request> cert_fetcher_request) {
   DCHECK(cert_fetcher_request);
   cert_fetcher_requests_.push_back(std::move(cert_fetcher_request));
-  pending_requests_++;
 }
 
-void AiaRequest::OnFetchCompleted(Error error,
-                                  const std::vector<uint8_t>& fetched_bytes) {
-  DCHECK_GT(pending_requests_, 0U);
-  pending_requests_--;
-  bool client_waiting_for_callback = !HasNext();
+bool AiaRequest::AddCompletedFetchToResults(Error error,
+                                            std::vector<uint8_t> fetched_bytes,
+                                            ParsedCertificateList* results) {
   if (error != OK) {
     // TODO(mattm): propagate error info.
     LOG(ERROR) << "AiaRequest::OnFetchCompleted got error " << error;
-  } else {
-    // RFC 5280 section 4.2.2.1:
-    //
-    //    Conforming applications that support HTTP or FTP for accessing
-    //    certificates MUST be able to accept individual DER encoded
-    //    certificates and SHOULD be able to accept "certs-only" CMS messages.
-    //
-    // TODO(mattm): Is supporting CMS message format important?
-    //
-    // TODO(mattm): Avoid copying bytes. Change the CertNetFetcher and
-    // ParsedCertificate interface to allow passing through ownership of the
-    // bytes.
-    CertErrors errors;
-    if (!ParsedCertificate::CreateAndAddToVector(fetched_bytes.data(),
-                                                 fetched_bytes.size(), {},
-                                                 &results_, &errors)) {
-      // TODO(crbug.com/634443): propagate error info.
-      LOG(ERROR) << "Error parsing cert retrieved from AIA:\n"
-                 << errors.ToDebugString();
-    }
+    return false;
   }
-  // If the client is waiting for results, need to run callback if:
-  //  * Some are available now.
-  //  * The last fetch finished, even with no results. (Client needs to know to
-  //    stop waiting.)
-  if (client_waiting_for_callback && (HasNext() || pending_requests_ == 0))
-    issuers_callback_.Run(this);
+  // RFC 5280 section 4.2.2.1:
+  //
+  //    Conforming applications that support HTTP or FTP for accessing
+  //    certificates MUST be able to accept individual DER encoded
+  //    certificates and SHOULD be able to accept "certs-only" CMS messages.
+  //
+  // TODO(mattm): Is supporting CMS message format important?
+  //
+  // TODO(eroman): Avoid copying bytes in the certificate?
+  CertErrors errors;
+  if (!ParsedCertificate::CreateAndAddToVector(
+          fetched_bytes.data(), fetched_bytes.size(), {}, results, &errors)) {
+    // TODO(crbug.com/634443): propagate error info.
+    LOG(ERROR) << "Error parsing cert retrieved from AIA:\n"
+               << errors.ToDebugString();
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -116,10 +103,8 @@ void CertIssuerSourceAia::SyncGetIssuersOf(const ParsedCertificate* cert,
   // CertIssuerSourceAia never returns synchronous results.
 }
 
-void CertIssuerSourceAia::AsyncGetIssuersOf(
-    const ParsedCertificate* cert,
-    const IssuerCallback& issuers_callback,
-    std::unique_ptr<Request>* out_req) {
+void CertIssuerSourceAia::AsyncGetIssuersOf(const ParsedCertificate* cert,
+                                            std::unique_ptr<Request>* out_req) {
   out_req->reset();
 
   if (!cert->has_authority_info_access())
@@ -152,16 +137,14 @@ void CertIssuerSourceAia::AsyncGetIssuersOf(
   if (urls.empty())
     return;
 
-  std::unique_ptr<AiaRequest> aia_request(new AiaRequest(issuers_callback));
+  std::unique_ptr<AiaRequest> aia_request(new AiaRequest());
 
   for (const auto& url : urls) {
     // TODO(mattm): add synchronous failure mode to FetchCaIssuers interface so
     // that this doesn't need to wait for async callback just to tell that an
     // URL has an unsupported scheme?
     aia_request->AddCertFetcherRequest(cert_fetcher_->FetchCaIssuers(
-        url, kTimeoutMilliseconds, kMaxResponseBytes,
-        base::Bind(&AiaRequest::OnFetchCompleted,
-                   base::Unretained(aia_request.get()))));
+        url, kTimeoutMilliseconds, kMaxResponseBytes));
   }
 
   *out_req = std::move(aia_request);

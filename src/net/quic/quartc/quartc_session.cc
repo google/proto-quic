@@ -28,7 +28,7 @@ class DummyProofSource : public net::ProofSource {
   ~DummyProofSource() override {}
 
   // ProofSource override.
-  bool GetProof(const net::IPAddress& server_ip,
+  bool GetProof(const net::QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,
@@ -44,7 +44,7 @@ class DummyProofSource : public net::ProofSource {
     return true;
   }
 
-  void GetProof(const net::IPAddress& server_ip,
+  void GetProof(const net::QuicIpAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,
@@ -99,7 +99,7 @@ QuicConnectionId QuartcCryptoServerStreamHelper::GenerateConnectionIdForReject(
 
 bool QuartcCryptoServerStreamHelper::CanAcceptClientHello(
     const CryptoHandshakeMessage& message,
-    const IPEndPoint& self_address,
+    const QuicSocketAddress& self_address,
     std::string* error_details) const {
   return true;
 }

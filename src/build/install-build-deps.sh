@@ -98,9 +98,9 @@ chromeos_dev_list="libbluetooth-dev libxkbcommon-dev realpath"
 
 # Packages needed for development
 dev_list="bison cdbs curl dpkg-dev elfutils devscripts fakeroot
-          flex fonts-thai-tlwg g++ git-core git-svn gperf language-pack-da
-          language-pack-fr language-pack-he language-pack-zh-hant
-          libasound2-dev libbrlapi-dev libav-tools
+          flex fonts-ipafont fonts-thai-tlwg g++ git-core git-svn gperf
+          language-pack-da language-pack-fr language-pack-he
+          language-pack-zh-hant libasound2-dev libbrlapi-dev libav-tools
           libbz2-dev libcairo2-dev libcap-dev libcups2-dev libcurl4-gnutls-dev
           libdrm-dev libelf-dev libffi-dev libgconf2-dev libglib2.0-dev
           libglu1-mesa-dev libgnome-keyring-dev libgtk2.0-dev libkrb5-dev

@@ -10,12 +10,18 @@
 #include <limits>
 
 #include "base/macros.h"
-#include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
 
 // Definitions of constant values used throughout the QUIC code.
 
 namespace net {
+
+// Simple time constants.
+const uint64_t kNumSecondsPerMinute = 60;
+const uint64_t kNumSecondsPerHour = kNumSecondsPerMinute * 60;
+const uint64_t kNumSecondsPerWeek = kNumSecondsPerHour * 24 * 7;
+const uint64_t kNumMicrosPerMilli = 1000;
+const uint64_t kNumMicrosPerSecond = 1000 * 1000;
 
 // Default initial maximum size in bytes of a QUIC packet.
 const QuicByteCount kDefaultMaxPacketSize = 1350;

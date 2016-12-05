@@ -32,7 +32,6 @@ struct HttpRequestInfo;
 class HttpRequestHeaders;
 class HttpResponseInfo;
 class IOBuffer;
-class IOBufferWithSize;
 class SSLCertRequestInfo;
 class SSLInfo;
 class UploadDataStream;

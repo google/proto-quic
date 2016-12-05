@@ -14,7 +14,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using std::vector;
 using testing::AnyNumber;
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -177,7 +176,7 @@ class QuicSentPacketManagerTest : public ::testing::Test {
     QuicSentPacketManagerPeer::MarkForRetransmission(
         &manager_, kDefaultPathId, old_packet_number, transmission_type);
     EXPECT_TRUE(manager_.HasPendingRetransmissions());
-    PendingRetransmission next_retransmission =
+    QuicPendingRetransmission next_retransmission =
         manager_.NextPendingRetransmission();
     EXPECT_EQ(old_packet_number, next_retransmission.packet_number);
     EXPECT_EQ(transmission_type, next_retransmission.transmission_type);
@@ -253,7 +252,8 @@ class QuicSentPacketManagerTest : public ::testing::Test {
                              HAS_RETRANSMITTABLE_DATA))
         .Times(1)
         .WillOnce(Return(true));
-    const PendingRetransmission pending = manager_.NextPendingRetransmission();
+    const QuicPendingRetransmission pending =
+        manager_.NextPendingRetransmission();
     SerializedPacket packet(CreatePacket(retransmission_packet_number, false));
     manager_.OnPacketSent(&packet, pending.path_id, pending.packet_number,
                           clock_.Now(), pending.transmission_type,
@@ -1424,6 +1424,60 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   options.push_back(kRENO);
   options.push_back(kBYTE);
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
+  manager_.SetFromConfig(config);
+  EXPECT_EQ(kRenoBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                            ->GetCongestionControlType());
+}
+
+TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
+  FLAGS_quic_allow_new_bbr = true;
+  FLAGS_quic_client_connection_options = true;
+  QuicConfig config;
+  QuicTagVector options;
+
+  // No change if the server receives client options.
+  const SendAlgorithmInterface* mock_sender =
+      QuicSentPacketManagerPeer::GetSendAlgorithm(manager_);
+  options.push_back(kRENO);
+  config.SetClientConnectionOptions(options);
+  EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));
+  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
+  manager_.SetFromConfig(config);
+  EXPECT_EQ(mock_sender, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_));
+
+  // Change the congestion control on the client with client options.
+  QuicSentPacketManagerPeer::SetPerspective(&manager_, Perspective::IS_CLIENT);
+  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
+  manager_.SetFromConfig(config);
+  EXPECT_EQ(kReno, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                       ->GetCongestionControlType());
+
+  options.clear();
+  options.push_back(kTBBR);
+  config.SetClientConnectionOptions(options);
+  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
+  manager_.SetFromConfig(config);
+  EXPECT_EQ(kBBR, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                      ->GetCongestionControlType());
+
+  options.clear();
+  options.push_back(kBYTE);
+  config.SetClientConnectionOptions(options);
+  EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
+  manager_.SetFromConfig(config);
+  if (FLAGS_quic_default_enable_cubic_bytes) {
+    EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                          ->GetCongestionControlType());
+  } else {
+    EXPECT_EQ(kCubicBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                               ->GetCongestionControlType());
+  }
+
+  options.clear();
+  options.push_back(kRENO);
+  options.push_back(kBYTE);
+  config.SetClientConnectionOptions(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
   EXPECT_EQ(kRenoBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)

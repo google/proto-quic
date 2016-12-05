@@ -35,7 +35,7 @@ class BASE_EXPORT MemoryPressureMonitor {
   static void RecordMemoryPressure(MemoryPressureLevel level, int ticks);
 
   // Returns the currently observed memory pressure.
-  virtual MemoryPressureLevel GetCurrentPressureLevel() const = 0;
+  virtual MemoryPressureLevel GetCurrentPressureLevel() = 0;
 
   // Sets a notification callback. The default callback invokes
   // base::MemoryPressureListener::NotifyMemoryPressure.

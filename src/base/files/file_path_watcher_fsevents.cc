@@ -14,7 +14,6 @@
 #include "base/logging.h"
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
-#include "base/message_loop/message_loop.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
 
@@ -79,7 +78,6 @@ FilePathWatcherFSEvents::FilePathWatcherFSEvents()
 bool FilePathWatcherFSEvents::Watch(const FilePath& path,
                                     bool recursive,
                                     const FilePathWatcher::Callback& callback) {
-  DCHECK(MessageLoopForIO::current());
   DCHECK(!callback.is_null());
   DCHECK(callback_.is_null());
 

@@ -578,15 +578,11 @@ TEST_F(BidirectionalStreamTest,
 // BidirectionalStreamSpdyImpl.
 TEST_F(BidirectionalStreamTest, TestReadDataAfterClose) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
-  // Empty DATA frame with an END_STREAM flag.
-  SpdySerializedFrame end_stream(
-      spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
   MockWrite writes[] = {
       CreateMockWrite(req, 0),
   };
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1012,10 +1008,6 @@ TEST_F(BidirectionalStreamTest, TestCoalesceSmallDataBuffers) {
 // read even if the read queue is empty.
 TEST_F(BidirectionalStreamTest, TestCompleteAsyncRead) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
-  // Empty DATA frame with an END_STREAM flag.
-  SpdySerializedFrame end_stream(
-      spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
-
   MockWrite writes[] = {CreateMockWrite(req, 0)};
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
@@ -1069,14 +1061,9 @@ TEST_F(BidirectionalStreamTest, TestCompleteAsyncRead) {
 
 TEST_F(BidirectionalStreamTest, TestBuffering) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
-  // Empty DATA frame with an END_STREAM flag.
-  SpdySerializedFrame end_stream(
-      spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
-
   MockWrite writes[] = {CreateMockWrite(req, 0)};
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1148,16 +1135,11 @@ TEST_F(BidirectionalStreamTest, TestBuffering) {
 
 TEST_F(BidirectionalStreamTest, TestBufferingWithTrailers) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
-  // Empty DATA frame with an END_STREAM flag.
-  SpdySerializedFrame end_stream(
-      spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
-
   MockWrite writes[] = {
       CreateMockWrite(req, 0),
   };
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1238,9 +1220,6 @@ TEST_F(BidirectionalStreamTest, DeleteStreamAfterSendData) {
   };
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  SpdySerializedFrame response_body_frame(
-      spdy_util_.ConstructSpdyDataFrame(1, false));
-
   MockRead reads[] = {
       CreateMockRead(resp, 1),
       MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause.
@@ -1427,7 +1406,6 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnHeadersReceived) {
   };
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1477,7 +1455,6 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnDataRead) {
   };
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1531,7 +1508,6 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnTrailersReceived) {
   };
 
   const char* const kExtraResponseHeaders[] = {"header-name", "header-value"};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
 
@@ -1631,17 +1607,12 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnFailed) {
 
 TEST_F(BidirectionalStreamTest, TestHonorAlternativeServiceHeader) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
-  // Empty DATA frame with an END_STREAM flag.
-  SpdySerializedFrame end_stream(
-      spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
-
   MockWrite writes[] = {CreateMockWrite(req, 0)};
 
   std::string alt_svc_header_value = NextProtoToString(kProtoQUIC);
   alt_svc_header_value.append("=\"www.example.org:443\"");
   const char* const kExtraResponseHeaders[] = {"alt-svc",
                                                alt_svc_header_value.c_str()};
-
   SpdySerializedFrame resp(
       spdy_util_.ConstructSpdyGetReply(kExtraResponseHeaders, 1, 1));
   SpdySerializedFrame body_frame(spdy_util_.ConstructSpdyDataFrame(1, true));

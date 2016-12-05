@@ -705,28 +705,19 @@ static int ext_sni_parse_clienthello(SSL *ssl, uint8_t *out_alert,
     return 0;
   }
 
-  /* TODO(davidben): SNI should be resolved before resumption. We have the
-   * early callback as a replacement, but we should fix the current callback
-   * and avoid the need for |SSL_CTX_set_session_id_context|. */
-  if (ssl->session == NULL) {
-    assert(ssl->s3->new_session->tlsext_hostname == NULL);
-
-    /* Copy the hostname as a string. */
-    if (!CBS_strdup(&host_name, &ssl->s3->new_session->tlsext_hostname)) {
-      *out_alert = SSL_AD_INTERNAL_ERROR;
-      return 0;
-    }
-
-    ssl->s3->hs->should_ack_sni = 1;
+  /* Copy the hostname as a string. */
+  if (!CBS_strdup(&host_name, &ssl->s3->hs->hostname)) {
+    *out_alert = SSL_AD_INTERNAL_ERROR;
+    return 0;
   }
 
+  ssl->s3->hs->should_ack_sni = 1;
   return 1;
 }
 
 static int ext_sni_add_serverhello(SSL *ssl, CBB *out) {
-  if (ssl->session != NULL ||
-      !ssl->s3->hs->should_ack_sni ||
-      ssl->s3->new_session->tlsext_hostname == NULL) {
+  if (ssl->s3->session_reused ||
+      !ssl->s3->hs->should_ack_sni) {
     return 1;
   }
 
@@ -1366,6 +1357,7 @@ static int ext_sct_parse_serverhello(SSL *ssl, uint8_t *out_alert,
 
   /* TLS 1.3 SCTs are included in the Certificate extensions. */
   if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
+    *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
 
@@ -1373,7 +1365,7 @@ static int ext_sct_parse_serverhello(SSL *ssl, uint8_t *out_alert,
    * ClientHello and thus this function should never have been called. */
   assert(ssl->signed_cert_timestamps_enabled);
 
-  if (CBS_len(contents) == 0) {
+  if (!ssl_is_sct_list_valid(contents)) {
     *out_alert = SSL_AD_DECODE_ERROR;
     return 0;
   }
@@ -1429,11 +1421,6 @@ static int ext_sct_add_serverhello(SSL *ssl, CBB *out) {
 /* Application-level Protocol Negotiation.
  *
  * https://tools.ietf.org/html/rfc7301 */
-
-static void ext_alpn_init(SSL *ssl) {
-  OPENSSL_free(ssl->s3->alpn_selected);
-  ssl->s3->alpn_selected = NULL;
-}
 
 static int ext_alpn_add_clienthello(SSL *ssl, CBB *out) {
   if (ssl->alpn_client_proto_list == NULL ||
@@ -1919,7 +1906,7 @@ static size_t ext_pre_shared_key_clienthello_length(SSL *ssl) {
   return 15 + ssl->session->tlsext_ticklen + binder_len;
 }
 
-int ssl_ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
+static int ext_pre_shared_key_add_clienthello(SSL *ssl, CBB *out) {
   uint16_t min_version, max_version;
   if (!ssl_get_version_range(ssl, &min_version, &max_version)) {
     return 0;
@@ -2016,9 +2003,14 @@ int ssl_ext_pre_shared_key_parse_clienthello(SSL *ssl,
 
   /* TLS 1.3 session tickets are renewed separately as part of the
    * NewSessionTicket. */
-  int renew;
-  return tls_process_ticket(ssl, out_session, &renew, CBS_data(&ticket),
-                            CBS_len(&ticket), NULL, 0);
+  int unused_renew;
+  if (!tls_process_ticket(ssl, out_session, &unused_renew, CBS_data(&ticket),
+                          CBS_len(&ticket), NULL, 0)) {
+    *out_alert = SSL_AD_INTERNAL_ERROR;
+    return 0;
+  }
+
+  return 1;
 }
 
 int ssl_ext_pre_shared_key_add_serverhello(SSL *ssl, CBB *out) {
@@ -2063,9 +2055,13 @@ static int ext_psk_key_exchange_modes_add_clienthello(SSL *ssl, CBB *out) {
   return CBB_flush(out);
 }
 
-int ssl_ext_psk_key_exchange_modes_parse_clienthello(SSL *ssl,
-                                                     uint8_t *out_alert,
-                                                     CBS *contents) {
+static int ext_psk_key_exchange_modes_parse_clienthello(SSL *ssl,
+                                                        uint8_t *out_alert,
+                                                        CBS *contents) {
+  if (contents == NULL) {
+    return 1;
+  }
+
   CBS ke_modes;
   if (!CBS_get_u8_length_prefixed(contents, &ke_modes) ||
       CBS_len(&ke_modes) == 0 ||
@@ -2517,7 +2513,7 @@ static const struct tls_extension kExtensions[] = {
   },
   {
     TLSEXT_TYPE_application_layer_protocol_negotiation,
-    ext_alpn_init,
+    NULL,
     ext_alpn_add_clienthello,
     ext_alpn_parse_serverhello,
     /* ALPN is negotiated late in |ssl_negotiate_alpn|. */
@@ -2561,7 +2557,7 @@ static const struct tls_extension kExtensions[] = {
     NULL,
     ext_psk_key_exchange_modes_add_clienthello,
     forbid_parse_serverhello,
-    ignore_parse_clienthello,
+    ext_psk_key_exchange_modes_parse_clienthello,
     dont_add_serverhello,
   },
   {
@@ -2656,7 +2652,7 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
     const size_t len_before = CBB_len(&extensions);
     if (!kExtensions[i].add_clienthello(ssl, &extensions)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_ADDING_EXTENSION);
-      ERR_add_error_dataf("extension: %u", (unsigned)kExtensions[i].value);
+      ERR_add_error_dataf("extension %u", (unsigned)kExtensions[i].value);
       goto err;
     }
 
@@ -2718,7 +2714,7 @@ int ssl_add_clienthello_tlsext(SSL *ssl, CBB *out, size_t header_len) {
   }
 
   /* The PSK extension must be last, including after the padding. */
-  if (!ssl_ext_pre_shared_key_add_clienthello(ssl, &extensions)) {
+  if (!ext_pre_shared_key_add_clienthello(ssl, &extensions)) {
     goto err;
   }
 
@@ -2749,7 +2745,7 @@ int ssl_add_serverhello_tlsext(SSL *ssl, CBB *out) {
 
     if (!kExtensions[i].add_serverhello(ssl, &extensions)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_ADDING_EXTENSION);
-      ERR_add_error_dataf("extension: %u", (unsigned)kExtensions[i].value);
+      ERR_add_error_dataf("extension %u", (unsigned)kExtensions[i].value);
       goto err;
     }
   }
@@ -2819,7 +2815,7 @@ static int ssl_scan_clienthello_tlsext(
     if (!ext->parse_clienthello(ssl, &alert, &extension)) {
       *out_alert = alert;
       OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_PARSING_EXTENSION);
-      ERR_add_error_dataf("extension: %u", (unsigned)type);
+      ERR_add_error_dataf("extension %u", (unsigned)type);
       return 0;
     }
   }
@@ -2847,7 +2843,7 @@ static int ssl_scan_clienthello_tlsext(
     uint8_t alert = SSL_AD_DECODE_ERROR;
     if (!kExtensions[i].parse_clienthello(ssl, &alert, contents)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_MISSING_EXTENSION);
-      ERR_add_error_dataf("extension: %u", (unsigned)kExtensions[i].value);
+      ERR_add_error_dataf("extension %u", (unsigned)kExtensions[i].value);
       *out_alert = alert;
       return 0;
     }
@@ -2926,7 +2922,7 @@ static int ssl_scan_serverhello_tlsext(SSL *ssl, CBS *cbs, int *out_alert) {
     uint8_t alert = SSL_AD_DECODE_ERROR;
     if (!ext->parse_serverhello(ssl, &alert, &extension)) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_PARSING_EXTENSION);
-      ERR_add_error_dataf("extension: %u", (unsigned)type);
+      ERR_add_error_dataf("extension %u", (unsigned)type);
       *out_alert = alert;
       return 0;
     }
@@ -2939,7 +2935,7 @@ static int ssl_scan_serverhello_tlsext(SSL *ssl, CBS *cbs, int *out_alert) {
       uint8_t alert = SSL_AD_DECODE_ERROR;
       if (!kExtensions[i].parse_serverhello(ssl, &alert, NULL)) {
         OPENSSL_PUT_ERROR(SSL, SSL_R_MISSING_EXTENSION);
-        ERR_add_error_dataf("extension: %u", (unsigned)kExtensions[i].value);
+        ERR_add_error_dataf("extension %u", (unsigned)kExtensions[i].value);
         *out_alert = alert;
         return 0;
       }
@@ -3473,4 +3469,27 @@ int ssl_do_channel_id_callback(SSL *ssl) {
   int ret = SSL_set1_tls_channel_id(ssl, key);
   EVP_PKEY_free(key);
   return ret;
+}
+
+int ssl_is_sct_list_valid(const CBS *contents) {
+  /* Shallow parse the SCT list for sanity. By the RFC
+   * (https://tools.ietf.org/html/rfc6962#section-3.3) neither the list nor any
+   * of the SCTs may be empty. */
+  CBS copy = *contents;
+  CBS sct_list;
+  if (!CBS_get_u16_length_prefixed(&copy, &sct_list) ||
+      CBS_len(&copy) != 0 ||
+      CBS_len(&sct_list) == 0) {
+    return 0;
+  }
+
+  while (CBS_len(&sct_list) > 0) {
+    CBS sct;
+    if (!CBS_get_u16_length_prefixed(&sct_list, &sct) ||
+        CBS_len(&sct) == 0) {
+      return 0;
+    }
+  }
+
+  return 1;
 }

@@ -51,8 +51,8 @@ class QuicBufferedPacketStoreTest : public ::testing::Test {
  public:
   QuicBufferedPacketStoreTest()
       : store_(&visitor_, &clock_, &alarm_factory_),
-        server_address_(Loopback6(), 65535),
-        client_address_(Loopback6(), 65535),
+        server_address_(QuicIpAddress::Any6(), 65535),
+        client_address_(QuicIpAddress::Any6(), 65535),
         packet_content_("some encrypted content"),
         packet_time_(QuicTime::Zero() + QuicTime::Delta::FromMicroseconds(42)),
         packet_(packet_content_.data(), packet_content_.size(), packet_time_) {}
@@ -63,8 +63,8 @@ class QuicBufferedPacketStoreTest : public ::testing::Test {
   MockClock clock_;
   MockAlarmFactory alarm_factory_;
   QuicBufferedPacketStore store_;
-  IPEndPoint server_address_;
-  IPEndPoint client_address_;
+  QuicSocketAddress server_address_;
+  QuicSocketAddress client_address_;
   string packet_content_;
   QuicTime packet_time_;
   QuicReceivedPacket packet_;
@@ -88,7 +88,7 @@ TEST_F(QuicBufferedPacketStoreTest, SimpleEnqueueAndDeliverPacket) {
 }
 
 TEST_F(QuicBufferedPacketStoreTest, DifferentPacketAddressOnOneConnection) {
-  IPEndPoint addr_with_new_port(Loopback4(), 256);
+  QuicSocketAddress addr_with_new_port(QuicIpAddress::Any4(), 256);
   QuicConnectionId connection_id = 1;
   store_.EnqueuePacket(connection_id, packet_, server_address_, client_address_,
                        false);
@@ -275,7 +275,7 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery1) {
   QuicConnectionId connection_id2 = 2;
   // Use different client address to differetiate packets from different
   // connections.
-  IPEndPoint another_client_address(Loopback4(), 255);
+  QuicSocketAddress another_client_address(QuicIpAddress::Any4(), 255);
   store_.EnqueuePacket(connection_id2, packet_, server_address_,
                        another_client_address, false);
   // Advance clock to the time when connection 1 expires.
@@ -337,7 +337,7 @@ TEST_F(QuicBufferedPacketStoreTest, PacketQueueExpiredBeforeDelivery2) {
   QuicConnectionId connection_id3 = 3;
   // Use different client address to differetiate packets from different
   // connections.
-  IPEndPoint another_client_address(Any4(), 255);
+  QuicSocketAddress another_client_address(QuicIpAddress::Any4(), 255);
   store_.EnqueuePacket(connection_id3, packet_, server_address_,
                        another_client_address, true);
 

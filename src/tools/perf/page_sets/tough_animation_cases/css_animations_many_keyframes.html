@@ -20,7 +20,7 @@ var numKeyframes = 500;
 var duration = 4000;
 
 function makeKeyframes(numKeyframes, width, height) {
-  var keyframes = '@-webkit-keyframes anim {\n'
+  var keyframes = '@keyframes anim {\n'
   for (var i = 0; i < numKeyframes + 1; i++) {
     var fraction = i / numKeyframes;
     var t = fraction * 2 * Math.PI;
@@ -38,7 +38,7 @@ style.textContent = makeKeyframes(numKeyframes, 550, 800);
 
 for (var i = 0; i < N; i++) {
   var target = document.createElement('target');
-  target.style.webkitAnimation = 'anim ' + duration + 'ms linear infinite ' + (-duration / 10 * i / N) + 'ms';
+  target.style.animation = 'anim ' + duration + 'ms linear infinite ' + (-duration / 10 * i / N) + 'ms';
   container.appendChild(target);
 }
 

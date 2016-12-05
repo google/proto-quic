@@ -33,9 +33,6 @@ per-file include_tracer.py=thakis@chromium.org
 
 per-file ipc_messages_log.py=yfriedman@chromium.org
 
-per-file isolate_driver.py=maruel@chromium.org
-per-file isolate_driver.py=vadimsh@chromium.org
-
 per-file licenses.py=file://tools/copyright_scanner/OWNERS
 
 per-file remove_stale_pyc_files.py=dtu@chromium.org

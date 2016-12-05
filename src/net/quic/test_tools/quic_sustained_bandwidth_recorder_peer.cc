@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/quic_sustained_bandwidth_recorder_peer.h"
 
-#include "net/quic/core/quic_protocol.h"
+#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sustained_bandwidth_recorder.h"
 
 namespace net {

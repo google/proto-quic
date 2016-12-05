@@ -20,10 +20,6 @@ namespace base {
 class FilePath;
 }
 
-namespace crypto {
-class RSAPrivateKey;
-}
-
 namespace net {
 
 class EVRootCAMetadata;

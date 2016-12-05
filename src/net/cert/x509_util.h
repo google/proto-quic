@@ -17,7 +17,6 @@
 #include "net/base/net_export.h"
 
 namespace crypto {
-class ECPrivateKey;
 class RSAPrivateKey;
 }
 

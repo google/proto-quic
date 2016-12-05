@@ -37,20 +37,20 @@ static std::vector<uint32_t> HashNameIntoFive32BitIntegers(std::string name) {
   return output;
 }
 
-IPEndPoint GetAddressFromName(std::string name) {
+QuicSocketAddress GetAddressFromName(std::string name) {
   const std::vector<uint32_t> hash = HashNameIntoFive32BitIntegers(name);
 
   // Generate a random port between 1025 and 65535.
   const uint16_t port = 1025 + hash[0] % (65535 - 1025 + 1);
 
   // Generate a random 10.x.x.x address, where x is between 1 and 254.
-  std::vector<uint8_t> ip_address;
-  ip_address.push_back(10);
-  for (size_t i = 1; i <= 4; i++) {
-    ip_address.push_back(1 + hash[i] % 254);
+  std::string ip_address({10, 0, 0, 0});
+  for (size_t i = 1; i < 4; i++) {
+    ip_address[i] = 1 + hash[i] % 254;
   }
-
-  return IPEndPoint(IPAddress(ip_address), port);
+  QuicIpAddress host;
+  host.FromPackedString(ip_address.c_str(), ip_address.length());
+  return QuicSocketAddress(host, port);
 }
 
 QuicEndpoint::QuicEndpoint(Simulator* simulator,
@@ -168,11 +168,12 @@ QuicEndpoint::Writer::Writer(QuicEndpoint* endpoint)
 
 QuicEndpoint::Writer::~Writer() {}
 
-WriteResult QuicEndpoint::Writer::WritePacket(const char* buffer,
-                                              size_t buf_len,
-                                              const IPAddress& self_address,
-                                              const IPEndPoint& peer_address,
-                                              PerPacketOptions* options) {
+WriteResult QuicEndpoint::Writer::WritePacket(
+    const char* buffer,
+    size_t buf_len,
+    const QuicIpAddress& self_address,
+    const QuicSocketAddress& peer_address,
+    PerPacketOptions* options) {
   DCHECK(!IsWriteBlocked());
   DCHECK(options == nullptr);
   DCHECK(buf_len <= kMaxPacketSize);
@@ -208,7 +209,7 @@ void QuicEndpoint::Writer::SetWritable() {
   is_blocked_ = false;
 }
 QuicByteCount QuicEndpoint::Writer::GetMaxPacketSize(
-    const IPEndPoint& /*peer_address*/) const {
+    const QuicSocketAddress& /*peer_address*/) const {
   return kMaxPacketSize;
 }
 

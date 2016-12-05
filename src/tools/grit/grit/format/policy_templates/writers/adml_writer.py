@@ -5,6 +5,7 @@
 
 from xml.dom import minidom
 from grit.format.policy_templates.writers import xml_formatted_writer
+import re
 
 
 def GetWriter(config):
@@ -132,26 +133,22 @@ class ADMLWriter(xml_formatted_writer.XMLFormattedWriter):
     # Policy-Group.
     self._AddString(group['name'] + '_group', group['caption'])
 
-  def _AddBaseStrings(self, build):
+  def _AddBaseStrings(self):
     ''' Adds ADML "string" elements to the string-table that are referenced by
     the ADMX file but not related to any specific Policy-Group or Policy.
     '''
     self._AddString(self.config['win_supported_os'],
                     self.messages['win_supported_winxpsp2']['text'])
-    recommended_name = '%s - %s' % \
-        (self.config['app_name'], self.messages['doc_recommended']['text'])
-    if build == 'chrome':
-      self._AddString(self.config['win_mandatory_category_path'][0],
-                      'Google')
-      self._AddString(self.config['win_mandatory_category_path'][1],
-                      self.config['app_name'])
-      self._AddString(self.config['win_recommended_category_path'][1],
-                      recommended_name)
-    elif build == 'chromium':
-      self._AddString(self.config['win_mandatory_category_path'][0],
-                      self.config['app_name'])
-      self._AddString(self.config['win_recommended_category_path'][0],
-                      recommended_name)
+    categories = self.config['win_mandatory_category_path'] + \
+                  self.config['win_recommended_category_path']
+    strings = self.config['win_category_path_strings']
+    for category in categories:
+      if (category in strings):
+        # Replace {...} by localized messages.
+        string = re.sub(r"\{(\w+)\}", \
+                        lambda m: self.messages[m.group(1)]['text'], \
+                        strings[category])
+        self._AddString(category, string)
 
   def BeginTemplate(self):
     dom_impl = minidom.getDOMImplementation('')
@@ -169,7 +166,7 @@ class ADMLWriter(xml_formatted_writer.XMLFormattedWriter):
     resources_elem = self.AddElement(policy_definitions_resources_elem,
                                      'resources')
     self._string_table_elem = self.AddElement(resources_elem, 'stringTable')
-    self._AddBaseStrings(self.config['build'])
+    self._AddBaseStrings()
     self._presentation_table_elem = self.AddElement(resources_elem,
                                                    'presentationTable')
 

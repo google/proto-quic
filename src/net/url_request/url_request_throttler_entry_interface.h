@@ -16,9 +16,7 @@
 
 namespace net {
 
-class NetworkDelegate;
 class URLRequest;
-class URLRequestThrottlerHeaderInterface;
 
 // Interface provided on entries of the URL request throttler manager.
 class NET_EXPORT URLRequestThrottlerEntryInterface

@@ -18,7 +18,6 @@
 using base::StringPiece;
 using base::StringPrintf;
 using std::string;
-using std::vector;
 
 namespace net {
 
@@ -286,7 +285,7 @@ string CryptoHandshakeMessage::DebugStringInternal(size_t indent) const {
         if (!it->second.empty()) {
           QuicSocketAddressCoder decoder;
           if (decoder.Decode(it->second.data(), it->second.size())) {
-            ret += IPAddressToStringWithPort(decoder.ip(), decoder.port());
+            ret += QuicSocketAddress(decoder.ip(), decoder.port()).ToString();
             done = true;
           }
         }
