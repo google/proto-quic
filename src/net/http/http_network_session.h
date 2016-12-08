@@ -33,6 +33,9 @@
 
 namespace base {
 class Value;
+namespace trace_event {
+class ProcessMemoryDump;
+}
 }
 
 namespace net {
@@ -274,6 +277,11 @@ class NET_EXPORT HttpNetworkSession
   void GetSSLConfig(const HttpRequestInfo& request,
                     SSLConfig* server_config,
                     SSLConfig* proxy_config) const;
+
+  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
+  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_absolute_name) const;
 
  private:
   friend class HttpNetworkSessionPeer;

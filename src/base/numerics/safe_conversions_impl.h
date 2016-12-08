@@ -5,10 +5,8 @@
 #ifndef BASE_NUMERICS_SAFE_CONVERSIONS_IMPL_H_
 #define BASE_NUMERICS_SAFE_CONVERSIONS_IMPL_H_
 
-#include <limits.h>
 #include <stdint.h>
 
-#include <climits>
 #include <limits>
 #include <type_traits>
 
@@ -16,14 +14,20 @@ namespace base {
 namespace internal {
 
 // The std library doesn't provide a binary max_exponent for integers, however
-// we can compute one by adding one to the number of non-sign bits. This allows
-// for accurate range comparisons between floating point and integer types.
+// we can compute an analog using std::numeric_limits<>::digits.
 template <typename NumericType>
 struct MaxExponent {
-  static const int value = std::numeric_limits<NumericType>::is_iec559
+  static const int value = std::is_floating_point<NumericType>::value
                                ? std::numeric_limits<NumericType>::max_exponent
-                               : (sizeof(NumericType) * CHAR_BIT + 1 -
-                                  std::numeric_limits<NumericType>::is_signed);
+                               : std::numeric_limits<NumericType>::digits + 1;
+};
+
+// The number of bits (including the sign) in an integer. Eliminates sizeof
+// hacks.
+template <typename NumericType>
+struct IntegerBitsPlusSign {
+  static const int value = std::numeric_limits<NumericType>::digits +
+                           std::is_signed<NumericType>::value;
 };
 
 enum IntegerRepresentation {
@@ -33,7 +37,7 @@ enum IntegerRepresentation {
 
 // A range for a given nunmeric Src type is contained for a given numeric Dst
 // type if both numeric_limits<Src>::max() <= numeric_limits<Dst>::max() and
-// numeric_limits<Src>::min() >= numeric_limits<Dst>::min() are true.
+// numeric_limits<Src>::lowest() >= numeric_limits<Dst>::lowest() are true.
 // We implement this as template specializations rather than simple static
 // comparisons to ensure type correctness in our comparisons.
 enum NumericRangeRepresentation {
@@ -44,16 +48,14 @@ enum NumericRangeRepresentation {
 // Helper templates to statically determine if our destination type can contain
 // maximum and minimum values represented by the source type.
 
-template <
-    typename Dst,
-    typename Src,
-    IntegerRepresentation DstSign = std::numeric_limits<Dst>::is_signed
-                                            ? INTEGER_REPRESENTATION_SIGNED
-                                            : INTEGER_REPRESENTATION_UNSIGNED,
-    IntegerRepresentation SrcSign =
-        std::numeric_limits<Src>::is_signed
-            ? INTEGER_REPRESENTATION_SIGNED
-            : INTEGER_REPRESENTATION_UNSIGNED >
+template <typename Dst,
+          typename Src,
+          IntegerRepresentation DstSign = std::is_signed<Dst>::value
+                                              ? INTEGER_REPRESENTATION_SIGNED
+                                              : INTEGER_REPRESENTATION_UNSIGNED,
+          IntegerRepresentation SrcSign = std::is_signed<Src>::value
+                                              ? INTEGER_REPRESENTATION_SIGNED
+                                              : INTEGER_REPRESENTATION_UNSIGNED>
 struct StaticDstRangeRelationToSrcRange;
 
 // Same sign: Dst is guaranteed to contain Src only if its range is equal or
@@ -135,8 +137,8 @@ constexpr inline RangeConstraint GetRangeConstraint(bool is_in_upper_bound,
 // such that the resulting maximum is represented exactly as a floating point.
 template <typename Dst, typename Src>
 struct NarrowingRange {
-  typedef typename std::numeric_limits<Src> SrcLimits;
-  typedef typename std::numeric_limits<Dst> DstLimits;
+  using SrcLimits = typename std::numeric_limits<Src>;
+  using DstLimits = typename std::numeric_limits<Dst>;
   // The following logic avoids warnings where the max function is
   // instantiated with invalid values for a bit shift (even though
   // such a function can never be called).
@@ -154,23 +156,19 @@ struct NarrowingRange {
     return DstLimits::max() - static_cast<Dst>((UINTMAX_C(1) << shift) - 1);
   }
 
-  static constexpr Dst min() {
-    return std::numeric_limits<Dst>::is_iec559 ? -DstLimits::max()
-                                               : DstLimits::min();
-  }
+  static constexpr Dst lowest() { return DstLimits::lowest(); }
 };
 
-template <
-    typename Dst,
-    typename Src,
-    IntegerRepresentation DstSign = std::numeric_limits<Dst>::is_signed
-                                            ? INTEGER_REPRESENTATION_SIGNED
-                                            : INTEGER_REPRESENTATION_UNSIGNED,
-    IntegerRepresentation SrcSign = std::numeric_limits<Src>::is_signed
-                                            ? INTEGER_REPRESENTATION_SIGNED
-                                            : INTEGER_REPRESENTATION_UNSIGNED,
-    NumericRangeRepresentation DstRange =
-        StaticDstRangeRelationToSrcRange<Dst, Src>::value >
+template <typename Dst,
+          typename Src,
+          IntegerRepresentation DstSign = std::is_signed<Dst>::value
+                                              ? INTEGER_REPRESENTATION_SIGNED
+                                              : INTEGER_REPRESENTATION_UNSIGNED,
+          IntegerRepresentation SrcSign = std::is_signed<Src>::value
+                                              ? INTEGER_REPRESENTATION_SIGNED
+                                              : INTEGER_REPRESENTATION_UNSIGNED,
+          NumericRangeRepresentation DstRange =
+              StaticDstRangeRelationToSrcRange<Dst, Src>::value>
 struct DstRangeRelationToSrcRangeImpl;
 
 // The following templates are for ranges that must be verified at runtime. We
@@ -200,7 +198,7 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
                                       NUMERIC_RANGE_NOT_CONTAINED> {
   static constexpr RangeConstraint Check(Src value) {
     return GetRangeConstraint((value <= NarrowingRange<Dst, Src>::max()),
-                              (value >= NarrowingRange<Dst, Src>::min()));
+                              (value >= NarrowingRange<Dst, Src>::lowest()));
   }
 };
 
@@ -224,7 +222,7 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
                                       INTEGER_REPRESENTATION_UNSIGNED,
                                       NUMERIC_RANGE_NOT_CONTAINED> {
   static constexpr RangeConstraint Check(Src value) {
-    return sizeof(Dst) > sizeof(Src)
+    return IntegerBitsPlusSign<Dst>::value > IntegerBitsPlusSign<Src>::value
                ? RANGE_VALID
                : GetRangeConstraint(
                      value <= static_cast<Src>(NarrowingRange<Dst, Src>::max()),
@@ -251,97 +249,56 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
 
 template <typename Dst, typename Src>
 constexpr RangeConstraint DstRangeRelationToSrcRange(Src value) {
-  static_assert(std::numeric_limits<Src>::is_specialized,
-                "Argument must be numeric.");
-  static_assert(std::numeric_limits<Dst>::is_specialized,
-                "Result must be numeric.");
+  static_assert(std::is_arithmetic<Src>::value, "Argument must be numeric.");
+  static_assert(std::is_arithmetic<Dst>::value, "Result must be numeric.");
   return DstRangeRelationToSrcRangeImpl<Dst, Src>::Check(value);
 }
 
 // Integer promotion templates used by the portable checked integer arithmetic.
 template <size_t Size, bool IsSigned>
-struct IntegerForSizeAndSign;
-template <>
-struct IntegerForSizeAndSign<1, true> {
-  typedef int8_t type;
-};
-template <>
-struct IntegerForSizeAndSign<1, false> {
-  typedef uint8_t type;
-};
-template <>
-struct IntegerForSizeAndSign<2, true> {
-  typedef int16_t type;
-};
-template <>
-struct IntegerForSizeAndSign<2, false> {
-  typedef uint16_t type;
-};
-template <>
-struct IntegerForSizeAndSign<4, true> {
-  typedef int32_t type;
-};
-template <>
-struct IntegerForSizeAndSign<4, false> {
-  typedef uint32_t type;
-};
-template <>
-struct IntegerForSizeAndSign<8, true> {
-  typedef int64_t type;
-};
-template <>
-struct IntegerForSizeAndSign<8, false> {
-  typedef uint64_t type;
-  static_assert(sizeof(uintmax_t) == 8,
-                "Max integer size not supported for this toolchain.");
-};
+struct IntegerForDigitsAndSign;
+
+#define INTEGER_FOR_DIGITS_AND_SIGN(I)                          \
+  template <>                                                   \
+  struct IntegerForDigitsAndSign<IntegerBitsPlusSign<I>::value, \
+                                 std::is_signed<I>::value> {    \
+    using type = I;                                             \
+  }
+
+INTEGER_FOR_DIGITS_AND_SIGN(int8_t);
+INTEGER_FOR_DIGITS_AND_SIGN(uint8_t);
+INTEGER_FOR_DIGITS_AND_SIGN(int16_t);
+INTEGER_FOR_DIGITS_AND_SIGN(uint16_t);
+INTEGER_FOR_DIGITS_AND_SIGN(int32_t);
+INTEGER_FOR_DIGITS_AND_SIGN(uint32_t);
+INTEGER_FOR_DIGITS_AND_SIGN(int64_t);
+INTEGER_FOR_DIGITS_AND_SIGN(uint64_t);
+#undef INTEGER_FOR_DIGITS_AND_SIGN
 
 // WARNING: We have no IntegerForSizeAndSign<16, *>. If we ever add one to
 // support 128-bit math, then the ArithmeticPromotion template below will need
 // to be updated (or more likely replaced with a decltype expression).
+static_assert(IntegerBitsPlusSign<intmax_t>::value == 64,
+              "Max integer size not supported for this toolchain.");
 
-template <typename Integer>
-struct UnsignedIntegerForSize {
-  typedef typename std::enable_if<
-      std::numeric_limits<Integer>::is_integer,
-      typename IntegerForSizeAndSign<sizeof(Integer), false>::type>::type type;
-};
-
-template <typename Integer>
-struct SignedIntegerForSize {
-  typedef typename std::enable_if<
-      std::numeric_limits<Integer>::is_integer,
-      typename IntegerForSizeAndSign<sizeof(Integer), true>::type>::type type;
-};
-
-template <typename Integer>
+template <typename Integer, bool IsSigned = std::is_signed<Integer>::value>
 struct TwiceWiderInteger {
-  typedef typename std::enable_if<
-      std::numeric_limits<Integer>::is_integer,
-      typename IntegerForSizeAndSign<
-          sizeof(Integer) * 2,
-          std::numeric_limits<Integer>::is_signed>::type>::type type;
+  using type =
+      typename IntegerForDigitsAndSign<IntegerBitsPlusSign<Integer>::value * 2,
+                                       IsSigned>::type;
 };
 
 template <typename Integer>
 struct PositionOfSignBit {
-  static const typename std::enable_if<std::numeric_limits<Integer>::is_integer,
-                                       size_t>::type value =
-      CHAR_BIT * sizeof(Integer) - 1;
+  static const size_t value = IntegerBitsPlusSign<Integer>::value - 1;
 };
 
 enum ArithmeticPromotionCategory {
-  LEFT_PROMOTION,          // Use the type of the left-hand argument.
-  RIGHT_PROMOTION,         // Use the type of the right-hand argument.
-  MAX_EXPONENT_PROMOTION,  // Use the type supporting the largest exponent.
-  BIG_ENOUGH_PROMOTION     // Attempt to find a big enough type.
+  LEFT_PROMOTION,  // Use the type of the left-hand argument.
+  RIGHT_PROMOTION  // Use the type of the right-hand argument.
 };
 
-template <ArithmeticPromotionCategory Promotion,
-          typename Lhs,
-          typename Rhs = Lhs>
-struct ArithmeticPromotion;
-
+// Determines the type that can represent the largest positive value.
 template <typename Lhs,
           typename Rhs,
           ArithmeticPromotionCategory Promotion =
@@ -360,20 +317,48 @@ struct MaxExponentPromotion<Lhs, Rhs, RIGHT_PROMOTION> {
   using type = Rhs;
 };
 
+// Determines the type that can represent the lowest arithmetic value.
 template <typename Lhs,
-          typename Rhs = Lhs,
-          bool is_intmax_type =
-              std::is_integral<
-                  typename MaxExponentPromotion<Lhs, Rhs>::type>::value &&
-              sizeof(typename MaxExponentPromotion<Lhs, Rhs>::type) ==
-                  sizeof(intmax_t),
-          bool is_max_exponent =
-              StaticDstRangeRelationToSrcRange<
-                  typename MaxExponentPromotion<Lhs, Rhs>::type,
-                  Lhs>::value ==
-              NUMERIC_RANGE_CONTAINED&& StaticDstRangeRelationToSrcRange<
-                  typename MaxExponentPromotion<Lhs, Rhs>::type,
-                  Rhs>::value == NUMERIC_RANGE_CONTAINED>
+          typename Rhs,
+          ArithmeticPromotionCategory Promotion =
+              std::is_signed<Lhs>::value
+                  ? (std::is_signed<Rhs>::value
+                         ? (MaxExponent<Lhs>::value > MaxExponent<Rhs>::value
+                                ? LEFT_PROMOTION
+                                : RIGHT_PROMOTION)
+                         : LEFT_PROMOTION)
+                  : (std::is_signed<Rhs>::value
+                         ? RIGHT_PROMOTION
+                         : (MaxExponent<Lhs>::value < MaxExponent<Rhs>::value
+                                ? LEFT_PROMOTION
+                                : RIGHT_PROMOTION))>
+struct LowestValuePromotion;
+
+template <typename Lhs, typename Rhs>
+struct LowestValuePromotion<Lhs, Rhs, LEFT_PROMOTION> {
+  using type = Lhs;
+};
+
+template <typename Lhs, typename Rhs>
+struct LowestValuePromotion<Lhs, Rhs, RIGHT_PROMOTION> {
+  using type = Rhs;
+};
+
+// Determines the type that is best able to represent an arithmetic result.
+template <
+    typename Lhs,
+    typename Rhs = Lhs,
+    bool is_intmax_type =
+        std::is_integral<typename MaxExponentPromotion<Lhs, Rhs>::type>::value&&
+            IntegerBitsPlusSign<typename MaxExponentPromotion<Lhs, Rhs>::type>::
+                value == IntegerBitsPlusSign<intmax_t>::value,
+    bool is_max_exponent =
+        StaticDstRangeRelationToSrcRange<
+            typename MaxExponentPromotion<Lhs, Rhs>::type,
+            Lhs>::value ==
+        NUMERIC_RANGE_CONTAINED&& StaticDstRangeRelationToSrcRange<
+            typename MaxExponentPromotion<Lhs, Rhs>::type,
+            Rhs>::value == NUMERIC_RANGE_CONTAINED>
 struct BigEnoughPromotion;
 
 // The side with the max exponent is big enough.
@@ -386,9 +371,10 @@ struct BigEnoughPromotion<Lhs, Rhs, is_intmax_type, true> {
 // We can use a twice wider type to fit.
 template <typename Lhs, typename Rhs>
 struct BigEnoughPromotion<Lhs, Rhs, false, false> {
-  using type = typename IntegerForSizeAndSign<
-      sizeof(typename MaxExponentPromotion<Lhs, Rhs>::type) * 2,
-      std::is_signed<Lhs>::value || std::is_signed<Rhs>::value>::type;
+  using type =
+      typename TwiceWiderInteger<typename MaxExponentPromotion<Lhs, Rhs>::type,
+                                 std::is_signed<Lhs>::value ||
+                                     std::is_signed<Rhs>::value>::type;
   static const bool is_contained = true;
 };
 
@@ -399,35 +385,20 @@ struct BigEnoughPromotion<Lhs, Rhs, true, false> {
   static const bool is_contained = false;
 };
 
-// These are the supported promotion types.
-
-// Use the type supporting the largest exponent.
-template <typename Lhs, typename Rhs>
-struct ArithmeticPromotion<MAX_EXPONENT_PROMOTION, Lhs, Rhs> {
-  using type = typename MaxExponentPromotion<Lhs, Rhs>::type;
-  static const bool is_contained = true;
-};
-
-// Attempt to find a big enough type.
-template <typename Lhs, typename Rhs>
-struct ArithmeticPromotion<BIG_ENOUGH_PROMOTION, Lhs, Rhs> {
-  using type = typename BigEnoughPromotion<Lhs, Rhs>::type;
-  static const bool is_contained = BigEnoughPromotion<Lhs, Rhs>::is_contained;
-};
-
 // We can statically check if operations on the provided types can wrap, so we
 // can skip the checked operations if they're not needed. So, for an integer we
 // care if the destination type preserves the sign and is twice the width of
 // the source.
 template <typename T, typename Lhs, typename Rhs>
 struct IsIntegerArithmeticSafe {
-  static const bool value = !std::numeric_limits<T>::is_iec559 &&
-                            StaticDstRangeRelationToSrcRange<T, Lhs>::value ==
-                                NUMERIC_RANGE_CONTAINED &&
-                            sizeof(T) >= (2 * sizeof(Lhs)) &&
-                            StaticDstRangeRelationToSrcRange<T, Rhs>::value !=
-                                NUMERIC_RANGE_CONTAINED &&
-                            sizeof(T) >= (2 * sizeof(Rhs));
+  static const bool value =
+      !std::is_floating_point<T>::value &&
+      StaticDstRangeRelationToSrcRange<T, Lhs>::value ==
+          NUMERIC_RANGE_CONTAINED &&
+      IntegerBitsPlusSign<T>::value >= (2 * IntegerBitsPlusSign<Lhs>::value) &&
+      StaticDstRangeRelationToSrcRange<T, Rhs>::value !=
+          NUMERIC_RANGE_CONTAINED &&
+      IntegerBitsPlusSign<T>::value >= (2 * IntegerBitsPlusSign<Rhs>::value);
 };
 
 // This hacks around libstdc++ 4.6 missing stuff in type_traits.
@@ -628,7 +599,7 @@ template <template <typename, typename> class C, typename L, typename R>
 constexpr bool SafeCompare(const L lhs, const R rhs) {
   static_assert(std::is_arithmetic<L>::value && std::is_arithmetic<R>::value,
                 "Types must be numeric.");
-  using Promotion = ArithmeticPromotion<BIG_ENOUGH_PROMOTION, L, R>;
+  using Promotion = BigEnoughPromotion<L, R>;
   using BigType = typename Promotion::type;
   return Promotion::is_contained
              // Force to a larger type for speed if both are contained.

@@ -2371,6 +2371,42 @@ should be able to be added at any place in this file.
   <description>
     Fired when a user drops a bookmark after a drag in the bookmark manager.
   </description>
+  <obsolete>
+    Superseded by BookmarkManager_DropToList, BookmarkManager_DropToTree,
+    BookmarkManager_DropToListItem and BookmarkManager_DropToTreeItem.
+  </obsolete>
+</action>
+
+<action name="BookmarkManager_DropToList">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user drops a bookmark into the bookmark list between other
+    items in the bookmark manager.
+  </description>
+</action>
+
+<action name="BookmarkManager_DropToListItem">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user drops a bookmark directly onto a bookmark list item in the
+    bookmark manager.
+  </description>
+</action>
+
+<action name="BookmarkManager_DropToTree">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user drops a bookmark into the bookmark tree between other
+    nodes in the bookmark manager.
+  </description>
+</action>
+
+<action name="BookmarkManager_DropToTreeItem">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user drops a bookmark directly onto a bookmark tree item in the
+    bookmark manager.
+  </description>
 </action>
 
 <action name="BookmarkManager_Export">
@@ -2422,6 +2458,24 @@ should be able to be added at any place in this file.
   <owner>calamity@chromium.org</owner>
   <description>
     Fired when a user starts a drag in the bookmark manager.
+  </description>
+  <obsolete>
+    Superseded by BookmarkManager_StartDragFromList and
+    BookmarkManager_StartDragFromTree.
+  </obsolete>
+</action>
+
+<action name="BookmarkManager_StartDragFromList">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user starts a drag to the tree in the bookmark manager.
+  </description>
+</action>
+
+<action name="BookmarkManager_StartDragFromTree">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Fired when a user starts a drag from the tree in the bookmark manager.
   </description>
 </action>
 
@@ -13630,6 +13684,16 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="ScreenOrientationChange">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <description>
+    The use rotates the device triggering a screen orientation change. This
+    action is Android-specific.
+  </description>
+</action>
+
 <action name="Screenshot_Annotate">
   <owner>derat@chromium.org</owner>
   <owner>jdufault@chromium.org</owner>
@@ -13789,6 +13853,14 @@ should be able to be added at any place in this file.
   <description>The Windows Settings app became focused.</description>
 </action>
 
+<action name="SettingsAppMonitor.CheckItOut">
+  <owner>grt@chromium.org</owner>
+  <owner>pmonette@chromium.org</owner>
+  <description>
+    The user clicked the &quot;Check it out&quot; button in the Edge promo.
+  </description>
+</action>
+
 <action name="SettingsAppMonitor.ChooserInvoked">
   <owner>grt@chromium.org</owner>
   <description>
@@ -13817,6 +13889,20 @@ should be able to be added at any place in this file.
   <description>
     The user selected a different browser from the Windows Settings app's
     browser chooser.
+  </description>
+</action>
+
+<action name="SettingsAppMonitor.PromoFocused">
+  <owner>grt@chromium.org</owner>
+  <owner>pmonette@chromium.org</owner>
+  <description>The Edge promo became focused.</description>
+</action>
+
+<action name="SettingsAppMonitor.SwitchAnyway">
+  <owner>grt@chromium.org</owner>
+  <owner>pmonette@chromium.org</owner>
+  <description>
+    The user clicked the &quot;Switch Anyway&quot; button in the Edge promo.
   </description>
 </action>
 

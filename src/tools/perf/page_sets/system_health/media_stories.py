@@ -46,6 +46,7 @@ class _MediaStory(system_health_story.SystemHealthStory):
           self.PLAY_DURATION - self._GetTimeInSeconds(action_runner))
 
   def _GetTimeInSeconds(self, action_runner):
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     time_func = (
         'document.querySelector("%s").textContent' % self.TIME_SELECTOR)
     minutes, seconds = action_runner.EvaluateJavaScript(time_func).split(':')

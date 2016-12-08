@@ -8,6 +8,7 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/quic/quartc/quartc_alarm_factory.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -193,7 +194,7 @@ class QuartcStreamTest : public ::testing::Test,
   std::unique_ptr<QuicConnection> connection_;
   // Used to implement the QuicConnectionHelperInterface.
   SimpleBufferAllocator buffer_allocator_;
-  QuicClock clock_;
+  QuicChromiumClock clock_;
 };
 
 // Write an entire string.

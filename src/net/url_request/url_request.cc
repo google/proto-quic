@@ -762,14 +762,14 @@ int URLRequest::Read(IOBuffer* dest, int dest_size) {
   }
 
   int rv = job_->Read(dest, dest_size);
-  if (rv == ERR_IO_PENDING)
+  if (rv == ERR_IO_PENDING) {
     set_status(URLRequestStatus::FromError(ERR_IO_PENDING));
+  } else if (rv <= 0) {
+    NotifyRequestCompleted();
+  }
 
   // If rv is not 0 or actual bytes read, the status cannot be success.
   DCHECK(rv >= 0 || status_.status() != URLRequestStatus::SUCCESS);
-
-  if (rv == 0 && status_.is_success())
-    NotifyRequestCompleted();
   return rv;
 }
 

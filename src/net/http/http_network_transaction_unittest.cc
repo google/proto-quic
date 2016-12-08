@@ -4784,7 +4784,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxySpdyGetWithProxyAuth) {
     "proxy-authenticate", "Basic realm=\"MyRealm1\""
   };
   SpdySerializedFrame resp_authentication(spdy_util_.ConstructSpdyReplyError(
-      "407 Proxy Authentication Required", kExtraAuthenticationHeaders,
+      "407", kExtraAuthenticationHeaders,
       arraysize(kExtraAuthenticationHeaders) / 2, 1));
   SpdySerializedFrame body_authentication(
       spdy_util_.ConstructSpdyDataFrame(1, true));
@@ -7873,7 +7873,7 @@ TEST_F(HttpNetworkTransactionTest, RedirectOfHttpsConnectViaSpdyProxy) {
     "http://login.example.com/",
   };
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyReplyError(
-      "302 Redirect", kExtraHeaders, arraysize(kExtraHeaders) / 2, 1));
+      "302", kExtraHeaders, arraysize(kExtraHeaders) / 2, 1));
   MockRead data_reads[] = {
       CreateMockRead(resp, 1), MockRead(ASYNC, 0, 3),  // EOF
   };
@@ -7969,7 +7969,7 @@ TEST_F(HttpNetworkTransactionTest, ErrorResponseToHttpsConnectViaSpdyProxy) {
     "http://login.example.com/",
   };
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyReplyError(
-      "404 Not Found", kExtraHeaders, arraysize(kExtraHeaders) / 2, 1));
+      "404", kExtraHeaders, arraysize(kExtraHeaders) / 2, 1));
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(
       1, "The host does not exist", 23, true));
   MockRead data_reads[] = {

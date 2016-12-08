@@ -159,6 +159,7 @@ xmlCreateEntity(xmlDictPtr dict, const xmlChar *name, int type,
     memset(ret, 0, sizeof(xmlEntity));
     ret->type = XML_ENTITY_DECL;
     ret->checked = 0;
+    ret->guard = XML_ENTITY_NOT_BEING_CHECKED;
 
     /*
      * fill the structure.
@@ -931,6 +932,7 @@ xmlCopyEntity(xmlEntityPtr ent) {
 	cur->orig = xmlStrdup(ent->orig);
     if (ent->URI != NULL)
 	cur->URI = xmlStrdup(ent->URI);
+    cur->guard = 0;
     return(cur);
 }
 

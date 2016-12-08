@@ -177,7 +177,7 @@ android_java_prebuilt("legacy_http_javalib") {
 
 # TODO(dgn): Use the POM files instead of hardcoding the dependencies.
 gms_path = "$default_extras_android_sdk_root/extras/google/m2repository/com/google/android/gms"
-gms_version = "9.8.0"
+gms_version = "10.0.1"
 
 android_aar_prebuilt("google_play_services_basement_java") {
   deps = [

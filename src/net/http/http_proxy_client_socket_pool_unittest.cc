@@ -649,7 +649,7 @@ TEST_P(HttpProxyClientSocketPoolTest, TunnelSetupRedirect) {
   };
   const int responseHeadersSize = arraysize(responseHeaders) / 2;
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyReplyError(
-      "302 Found", responseHeaders, responseHeadersSize, 1));
+      "302", responseHeaders, responseHeadersSize, 1));
   MockRead spdy_reads[] = {
       CreateMockRead(resp, 1, ASYNC), MockRead(ASYNC, 0, 2),
   };

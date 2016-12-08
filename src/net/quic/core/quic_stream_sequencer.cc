@@ -14,12 +14,12 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_bug_tracker.h"
-#include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 using base::IntToString;
 using base::StringPiece;

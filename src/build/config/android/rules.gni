@@ -1433,6 +1433,9 @@ if (enable_java_templates) {
     _lib_dex_path = "$base_path.dex.jar"
     _rebased_lib_dex_path = rebase_path(_lib_dex_path, root_build_dir)
     _template_name = target_name
+    if (defined(invoker.java_files)) {
+      _java_sources_file = "$base_path.sources"
+    }
 
     enable_multidex =
         defined(invoker.enable_multidex) && invoker.enable_multidex
@@ -1616,6 +1619,10 @@ if (enable_java_templates) {
       build_config = _build_config
       android_manifest = _android_manifest
 
+      if (defined(_java_sources_file)) {
+        java_sources_file = _java_sources_file
+      }
+
       deps = _android_manifest_deps
 
       if (defined(invoker.deps)) {
@@ -1782,6 +1789,9 @@ if (enable_java_templates) {
       jar_path = _jar_path
       dex_path = _lib_dex_path
       emma_never_instrument = _emma_never_instrument
+      if (defined(_java_sources_file)) {
+        java_sources_file = _java_sources_file
+      }
 
       if (defined(invoker.deps)) {
         deps += invoker.deps

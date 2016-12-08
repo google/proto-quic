@@ -26,10 +26,49 @@ usage() {
   exit 1
 }
 
+# Waits for the user to press 'Y' or 'N'. Either uppercase of lowercase is
+# accepted. Returns 0 for 'Y' and 1 for 'N'. If an optional parameter has
+# been provided to yes_no(), the function also accepts RETURN as a user input.
+# The parameter specifies the exit code that should be returned in that case.
+# The function will echo the user's selection followed by a newline character.
+# Users can abort the function by pressing CTRL-C. This will call "exit 1".
+yes_no() {
+  if [ 0 -ne "${do_default-0}" ] ; then
+    [ $1 -eq 0 ] && echo "Y" || echo "N"
+    return $1
+  fi
+  local c
+  while :; do
+    c="$(trap 'stty echo -iuclc icanon 2>/dev/null' EXIT INT TERM QUIT
+         stty -echo iuclc -icanon 2>/dev/null
+         dd count=1 bs=1 2>/dev/null | od -An -tx1)"
+    case "$c" in
+      " 0a") if [ -n "$1" ]; then
+               [ $1 -eq 0 ] && echo "Y" || echo "N"
+               return $1
+             fi
+             ;;
+      " 79") echo "Y"
+             return 0
+             ;;
+      " 6e") echo "N"
+             return 1
+             ;;
+      "")    echo "Aborted" >&2
+             exit 1
+             ;;
+      *)     # The user pressed an unrecognized key. As we are not echoing
+             # any incorrect user input, alert the user by ringing the bell.
+             (tput bel) 2>/dev/null
+             ;;
+    esac
+  done
+}
+
 # Checks whether a particular package is available in the repos.
 # USAGE: $ package_exists <package name>
 package_exists() {
-  apt-cache pkgnames | grep -x "$1" > /dev/null 2>&1
+  [ ! -z "`apt-cache search --names-only "$1"`" ]
 }
 
 # These default to on because (some) bots need them and it keeps things
@@ -72,12 +111,12 @@ if ! which lsb_release > /dev/null; then
 fi
 
 lsb_release=$(lsb_release --codename --short)
-ubuntu_codenames="(precise|trusty|utopic|vivid|wily|xenial)"
+supported_releases="(precise|trusty|utopic|vivid|wily|xenial|jessie)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
-  if [[ ! $lsb_release =~ $ubuntu_codenames ]]; then
+  if [[ ! $lsb_release =~ $supported_releases ]]; then
     echo "ERROR: Only Ubuntu 12.04 (precise), 14.04 (trusty), " \
-      "14.10 (utopic), 15.04 (vivid), 15.10 (wily) and 16.04 (xenial) " \
-      "are currently supported" >&2
+      "14.10 (utopic), 15.04 (vivid), 15.10 (wily) and 16.04 (xenial), " \
+      "and Debian 8 (jessie) are currently supported" >&2
     exit 1
   fi
 
@@ -99,17 +138,16 @@ chromeos_dev_list="libbluetooth-dev libxkbcommon-dev realpath"
 # Packages needed for development
 dev_list="bison cdbs curl dpkg-dev elfutils devscripts fakeroot
           flex fonts-ipafont fonts-thai-tlwg g++ git-core git-svn gperf
-          language-pack-da language-pack-fr language-pack-he
-          language-pack-zh-hant libasound2-dev libbrlapi-dev libav-tools
-          libbz2-dev libcairo2-dev libcap-dev libcups2-dev libcurl4-gnutls-dev
-          libdrm-dev libelf-dev libffi-dev libgconf2-dev libglib2.0-dev
-          libglu1-mesa-dev libgnome-keyring-dev libgtk2.0-dev libkrb5-dev
-          libnspr4-dev libnss3-dev libpam0g-dev libpci-dev libpulse-dev
-          libsctp-dev libspeechd-dev libsqlite3-dev libssl-dev libudev-dev
-          libwww-perl libxslt1-dev libxss-dev libxt-dev libxtst-dev openbox
-          patch perl pkg-config python python-cherrypy3 python-crypto
-          python-dev python-numpy python-opencv python-openssl python-psutil
-          python-yaml rpm ruby subversion ttf-dejavu-core wdiff xcompmgr zip
+          libasound2-dev libbrlapi-dev libav-tools libbz2-dev libcairo2-dev
+          libcap-dev libcups2-dev libcurl4-gnutls-dev libdrm-dev libelf-dev
+          libffi-dev libgconf2-dev libglib2.0-dev libglu1-mesa-dev
+          libgnome-keyring-dev libgtk2.0-dev libkrb5-dev libnspr4-dev
+          libnss3-dev libpam0g-dev libpci-dev libpulse-dev libsctp-dev
+          libspeechd-dev libsqlite3-dev libssl-dev libudev-dev libwww-perl
+          libxslt1-dev libxss-dev libxt-dev libxtst-dev openbox patch perl
+          pkg-config python python-cherrypy3 python-crypto python-dev
+          python-numpy python-opencv python-openssl python-psutil python-yaml
+          rpm ruby subversion ttf-dejavu-core wdiff xcompmgr zip
           $chromeos_dev_list"
 
 # 64-bit systems need a minimum set of 32-bit compat packages for the pre-built
@@ -152,9 +190,45 @@ fi
 lib32_list="linux-libc-dev:i386"
 
 # arm cross toolchain packages needed to build chrome on armhf
-arm_list="libc6-dev-armhf-cross
-          linux-libc-dev-armhf-cross
-          g++-arm-linux-gnueabihf"
+EM_REPO="deb http://emdebian.org/tools/debian/ jessie main"
+EM_SOURCE=$(cat <<EOF
+# Repo added by Chromium $0
+${EM_REPO}
+# deb-src http://emdebian.org/tools/debian/ jessie main
+EOF
+)
+EM_ARCHIVE_KEY_FINGER="084C6C6F39159EDB67969AA87DE089671804772E"
+GPP_ARM_PACKAGE="g++-arm-linux-gnueabihf"
+case $lsb_release in
+  "jessie")
+    eval $(apt-config shell APT_SOURCESDIR 'Dir::Etc::sourceparts/d')
+    CROSSTOOLS_LIST="${APT_SOURCESDIR}/crosstools.list"
+    arm_list="libc6-dev:armhf
+              linux-libc-dev:armhf"
+    if test "$do_inst_arm" = "1"; then
+      if $(dpkg-query -W ${GPP_ARM_PACKAGE} &>/dev/null); then
+        arm_list+=" ${GPP_ARM_PACKAGE}"
+      else
+        echo "The Debian Cross-toolchains repository is necessary to"
+        echo "cross-compile Chromium for arm."
+        echo -n "Do you want me to add it for you (y/N) "
+        if yes_no 1; then
+          gpg --keyserver pgp.mit.edu --recv-keys ${EM_ARCHIVE_KEY_FINGER}
+          gpg -a --export ${EM_ARCHIVE_KEY_FINGER} | sudo apt-key add -
+          if ! grep "^${EM_REPO}" "${CROSSTOOLS_LIST}" &>/dev/null; then
+            echo "${EM_SOURCE}" | sudo tee -a "${CROSSTOOLS_LIST}" >/dev/null
+          fi
+          arm_list+=" ${GPP_ARM_PACKAGE}"
+        fi
+      fi
+    fi
+    ;;
+  *)
+    arm_list="libc6-dev-armhf-cross
+              linux-libc-dev-armhf-cross
+              ${GPP_ARM_PACKAGE}"
+    ;;
+esac
 
 # Work around for dependency issue Ubuntu/Trusty: http://crbug.com/435056
 case $lsb_release in
@@ -210,11 +284,6 @@ dev_list="${dev_list} libgbm-dev${mesa_variant}
 nacl_list="${nacl_list} libgl1-mesa-glx${mesa_variant}:i386"
 
 # Some package names have changed over time
-if package_exists ttf-mscorefonts-installer; then
-  dev_list="${dev_list} ttf-mscorefonts-installer"
-else
-  dev_list="${dev_list} msttcorefonts"
-fi
 if package_exists libnspr4-dbg; then
   dbg_list="${dbg_list} libnspr4-dbg libnss3-dbg"
   lib_list="${lib_list} libnspr4 libnss3"
@@ -257,6 +326,14 @@ if package_exists php7.0-cgi; then
 else
   dev_list="${dev_list} php5-cgi libapache2-mod-php5"
 fi
+# ttf-mscorefonts-installer is in the Debian contrib repo, which has
+# dependencies on non-free software.  Install it only if the user has already
+# enabled contrib.
+if package_exists ttf-mscorefonts-installer; then
+  dev_list="${dev_list} ttf-mscorefonts-installer"
+elif package_exists msttcorefonts; then
+  dev_list="${dev_list} msttcorefonts"
+fi
 # Ubuntu 16.04 has this package deleted.
 if package_exists ttf-kochi-gothic; then
   dev_list="${dev_list} ttf-kochi-gothic"
@@ -284,45 +361,6 @@ if file -L /sbin/init | grep -q 'ELF 64-bit'; then
       grep -E --color=never --only-matching '\bg\+\+-[0-9.]+-multilib\b')
   lib32_list="$lib32_list $multilib_package"
 fi
-
-# Waits for the user to press 'Y' or 'N'. Either uppercase of lowercase is
-# accepted. Returns 0 for 'Y' and 1 for 'N'. If an optional parameter has
-# been provided to yes_no(), the function also accepts RETURN as a user input.
-# The parameter specifies the exit code that should be returned in that case.
-# The function will echo the user's selection followed by a newline character.
-# Users can abort the function by pressing CTRL-C. This will call "exit 1".
-yes_no() {
-  if [ 0 -ne "${do_default-0}" ] ; then
-    [ $1 -eq 0 ] && echo "Y" || echo "N"
-    return $1
-  fi
-  local c
-  while :; do
-    c="$(trap 'stty echo -iuclc icanon 2>/dev/null' EXIT INT TERM QUIT
-         stty -echo iuclc -icanon 2>/dev/null
-         dd count=1 bs=1 2>/dev/null | od -An -tx1)"
-    case "$c" in
-      " 0a") if [ -n "$1" ]; then
-               [ $1 -eq 0 ] && echo "Y" || echo "N"
-               return $1
-             fi
-             ;;
-      " 79") echo "Y"
-             return 0
-             ;;
-      " 6e") echo "N"
-             return 1
-             ;;
-      "")    echo "Aborted" >&2
-             exit 1
-             ;;
-      *)     # The user pressed an unrecognized key. As we are not echoing
-             # any incorrect user input, alert the user by ringing the bell.
-             (tput bel) 2>/dev/null
-             ;;
-    esac
-  done
-}
 
 if test "$do_inst_syms" = "" && test 0 -eq ${do_quick_check-0}
 then
@@ -403,6 +441,9 @@ fi
 if test "$do_inst_lib32" = "1" || test "$do_inst_nacl" = "1"; then
   if [[ ! $lsb_release =~ (precise) ]]; then
     sudo dpkg --add-architecture i386
+  fi
+  if [[ $lsb_release = "jessie" ]]; then
+    sudo dpkg --add-architecture armhf
   fi
 fi
 sudo apt-get update
@@ -497,4 +538,24 @@ if test "$do_inst_nacl" = "1"; then
       /usr/lib/i386-linux-gnu/libssl.so
 else
   echo "Skipping symbolic links for NaCl."
+fi
+
+echo "Installing locales."
+CHROMIUM_LOCALES="da_DK.UTF-8 fr_FR.UTF-8 he_IL.UTF-8 zh_TW.UTF-8"
+LOCALE_GEN=/etc/locale.gen
+if [ -e ${LOCALE_GEN} ]; then
+  OLD_LOCALE_GEN="$(cat /etc/locale.gen)"
+  for CHROMIUM_LOCALE in ${CHROMIUM_LOCALES}; do
+    sudo sed -i "s/^# ${CHROMIUM_LOCALE}/${CHROMIUM_LOCALE}/" ${LOCALE_GEN}
+  done
+  # Regenerating locales can take a while, so only do it if we need to.
+  if (echo "${OLD_LOCALE_GEN}" | cmp -s ${LOCALE_GEN}); then
+    echo "Locales already up-to-date."
+  else
+    sudo locale-gen
+  fi
+else
+  for CHROMIUM_LOCALE in ${CHROMIUM_LOCALES}; do
+    sudo locale-gen ${CHROMIUM_LOCALE}
+  done
 fi

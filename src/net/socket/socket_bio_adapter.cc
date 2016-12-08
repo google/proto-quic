@@ -53,6 +53,16 @@ bool SocketBIOAdapter::HasPendingReadData() {
   return read_result_ > 0;
 }
 
+size_t SocketBIOAdapter::GetAllocationSize() const {
+  size_t buffer_size = 0;
+  if (read_buffer_)
+    buffer_size += read_buffer_capacity_;
+
+  if (write_buffer_)
+    buffer_size += write_buffer_capacity_;
+  return buffer_size;
+}
+
 int SocketBIOAdapter::BIORead(char* out, int len) {
   if (len <= 0)
     return len;

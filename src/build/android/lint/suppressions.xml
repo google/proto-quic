@@ -267,12 +267,8 @@ Still reading?
   <issue id="TypographyDashes" severity="Error">
     <ignore regexp="chrome/app/policy/android/values-v21/restriction_values.xml"/>
   </issue>
-  <issue id="Typos" severity="Error">
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rPT/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tr/android_chrome_strings.xml"/>
-    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
-  </issue>
+  <!-- Typos check disabled due to lint bug: http://crbug.com/671170 -->
+  <issue id="Typos" severity="ignore" />
   <issue id="UnusedAttribute" severity="ignore"/>
   <issue id="UnusedIds" severity="ignore"/>
   <issue id="UnusedQuantity" severity="Error">

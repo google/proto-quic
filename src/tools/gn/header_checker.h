@@ -19,7 +19,6 @@
 
 class BuildSettings;
 class InputFile;
-class Label;
 class LocationRange;
 class SourceFile;
 class Target;

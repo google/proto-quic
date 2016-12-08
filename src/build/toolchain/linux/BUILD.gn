@@ -21,6 +21,24 @@ clang_toolchain("clang_arm64") {
   }
 }
 
+gcc_toolchain("arm64") {
+  toolprefix = "aarch64-linux-gnu-"
+
+  cc = "${toolprefix}gcc"
+  cxx = "${toolprefix}g++"
+
+  ar = "${toolprefix}ar"
+  ld = cxx
+  readelf = "${toolprefix}readelf"
+  nm = "${toolprefix}nm"
+
+  toolchain_args = {
+    current_cpu = "arm64"
+    current_os = "linux"
+    is_clang = false
+  }
+}
+
 gcc_toolchain("arm") {
   toolprefix = "arm-linux-gnueabihf-"
 

@@ -9,7 +9,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/net_errors.h"
-#include "net/quic/core/quic_clock.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 namespace net {
 
@@ -23,9 +23,11 @@ QuicChromiumPacketReader::QuicChromiumPacketReader(
     : socket_(socket),
       visitor_(visitor),
       read_pending_(false),
+      num_packets_read_(0),
       clock_(clock),
       yield_after_packets_(yield_after_packets),
       yield_after_duration_(yield_after_duration),
+      yield_after_(QuicTime::Infinite()),
       read_buffer_(new IOBufferWithSize(static_cast<size_t>(kMaxPacketSize))),
       net_log_(net_log),
       weak_factory_(this) {}
@@ -36,45 +38,42 @@ void QuicChromiumPacketReader::StartReading() {
   if (read_pending_)
     return;
 
-  int num_packets_read = 0;
-  QuicTime yield_after = clock_->Now() + yield_after_duration_;
+  if (num_packets_read_ == 0)
+    yield_after_ = clock_->Now() + yield_after_duration_;
 
   DCHECK(socket_);
-  while (true) {
-    read_pending_ = true;
-    int rv = socket_->Read(read_buffer_.get(), read_buffer_->size(),
-                           base::Bind(&QuicChromiumPacketReader::OnReadComplete,
-                                      weak_factory_.GetWeakPtr()));
-    UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.AsyncRead", rv == ERR_IO_PENDING);
-    if (rv == ERR_IO_PENDING)
-      return;
-    if (!OnPacketRead(rv))
-      return;
-    if (++num_packets_read > yield_after_packets_ ||
-        clock_->Now() > yield_after) {
-      // Schedule the work through the message loop to avoid blocking the thread
-      // for too long.
-      base::ThreadTaskRunnerHandle::Get()->PostTask(
-          FROM_HERE, base::Bind(&QuicChromiumPacketReader::StartReading,
-                                weak_factory_.GetWeakPtr()));
-      return;
-    }
+  read_pending_ = true;
+  int rv = socket_->Read(read_buffer_.get(), read_buffer_->size(),
+                         base::Bind(&QuicChromiumPacketReader::OnReadComplete,
+                                    weak_factory_.GetWeakPtr()));
+  UMA_HISTOGRAM_BOOLEAN("Net.QuicSession.AsyncRead", rv == ERR_IO_PENDING);
+  if (rv == ERR_IO_PENDING) {
+    num_packets_read_ = 0;
+    return;
+  }
+
+  if (++num_packets_read_ > yield_after_packets_ ||
+      clock_->Now() > yield_after_) {
+    num_packets_read_ = 0;
+    // Data was read, process it.
+    // Schedule the work through the message loop to 1) prevent infinite
+    // recursion and 2) avoid blocking the thread for too long.
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE, base::Bind(&QuicChromiumPacketReader::OnReadComplete,
+                              weak_factory_.GetWeakPtr(), rv));
+  } else {
+    OnReadComplete(rv);
   }
 }
 
 void QuicChromiumPacketReader::OnReadComplete(int result) {
-  if (OnPacketRead(result))
-    StartReading();
-}
-
-bool QuicChromiumPacketReader::OnPacketRead(int result) {
   read_pending_ = false;
   if (result == 0)
     result = ERR_CONNECTION_CLOSED;
 
   if (result < 0) {
     visitor_->OnReadError(result, socket_);
-    return false;
+    return;
   }
 
   QuicReceivedPacket packet(read_buffer_->data(), result, clock_->Now());
@@ -82,7 +81,10 @@ bool QuicChromiumPacketReader::OnPacketRead(int result) {
   IPEndPoint peer_address;
   socket_->GetLocalAddress(&local_address);
   socket_->GetPeerAddress(&peer_address);
-  return visitor_->OnPacket(packet, local_address, peer_address);
+  if (!visitor_->OnPacket(packet, local_address, peer_address))
+    return;
+
+  StartReading();
 }
 
 }  // namespace net

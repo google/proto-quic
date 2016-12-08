@@ -32,6 +32,7 @@ def LoginAccount(action_runner, credential,
 
   # Wait until the "Sign in" button is enabled and then click it.
   login_button_selector = '.login-form .login-button'
+  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.WaitForJavaScriptCondition('''
       (function() {
         var loginButton = document.querySelector("%s");

@@ -36,19 +36,23 @@ def ReadCssProperties(filename):
   with open(path_util.GetInputFile(filename)) as f:
     content = f.readlines()
 
-  # Looking for a line like "case CSSPropertyGrid: return 453;".
+  # Looking for a pair of lines like "case CSSPropertyGrid:\n return 453;".
   ENUM_REGEX = re.compile(r"""CSSProperty(.*):  # capture the enum name
                               \s*return\s*
                               ([0-9]+)          # capture the id
                               """, re.VERBOSE)
 
   properties = {}
+  previous_line = ''
   for line in content:
-    enum_match = ENUM_REGEX.search(line)
+    enum_match = ENUM_REGEX.search(previous_line + '\n' + line)
     if enum_match:
       enum_name = enum_match.group(1)
       property_id = int(enum_match.group(2))
       properties[property_id] = EnumToCssProperty(enum_name)
+      previous_line = ''
+    else:
+      previous_line = line
 
   return properties
 

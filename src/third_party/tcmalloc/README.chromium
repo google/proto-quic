@@ -103,3 +103,4 @@ Modifications:
 - Add TC_MALLOPT_IS_OVERRIDDEN_BY_TCMALLOC mallopt() arg
 - Added tc_malloc_skip_new_handler.
 - Added TCMALLOC_DONT_REPLACE_SYSTEM_ALLOC which bypasses the libc_override logic.
+- Backported 7df7f14 "issue-693: enable futex usage on arm" from upstream.

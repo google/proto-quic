@@ -48,6 +48,8 @@ def _CreateArgumentParser():
   parser.add_argument('--url', help='URL to load.')
   parser.add_argument('--prefetch_delay_ms',
                       help='Prefetch delay in ms. -1 to disable prefetch.')
+  parser.add_argument('--output_filename',
+                      help='CSV file to append the result to.')
   return parser
 
 
@@ -97,9 +99,9 @@ def _Go(device, url, prefetch_delay_ms):
   result = customtabs_benchmark.RunOnce(
       device, url, warmup=True, speculation_mode=prefetch_mode,
       delay_to_may_launch_url=2000,
-      delay_to_launch_url=max(0, prefetch_delay_ms), cold=False,
+      delay_to_launch_url=prefetch_delay_ms, cold=False,
       chrome_args=chrome_args, reset_chrome_state=False)
-  print customtabs_benchmark.ParseResult(result)
+  return customtabs_benchmark.ParseResult(result)
 
 
 def main():
@@ -115,7 +117,10 @@ def main():
     sys.exit(1)
 
   _Setup(device, args.database)
-  _Go(device, args.url, int(args.prefetch_delay_ms))
+  result = _Go(device, args.url, int(args.prefetch_delay_ms))
+  print result
+  with open(args.output_filename, 'a') as f:
+    f.write(','.join(str(x) for x in result) + '\n')
 
 
 if __name__ == '__main__':

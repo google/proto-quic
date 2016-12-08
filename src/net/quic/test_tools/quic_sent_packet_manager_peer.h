@@ -32,9 +32,6 @@ class QuicSentPacketManagerPeer {
 
   static bool GetUndoRetransmits(QuicSentPacketManager* sent_packet_manager);
 
-  static QuicByteCount GetReceiveWindow(
-      QuicSentPacketManager* sent_packet_manager);
-
   static void SetPerspective(QuicSentPacketManager* sent_packet_manager,
                              Perspective perspective);
 

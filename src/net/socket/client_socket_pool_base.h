@@ -56,6 +56,9 @@
 
 namespace base {
 class DictionaryValue;
+namespace trace_event {
+class ProcessMemoryDump;
+}
 }
 
 namespace net {
@@ -337,6 +340,11 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
   std::unique_ptr<base::DictionaryValue> GetInfoAsValue(
       const std::string& name,
       const std::string& type) const;
+
+  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
+  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_dump_absolute_name) const;
 
   base::TimeDelta ConnectionTimeout() const {
     return connect_job_factory_->ConnectionTimeout();
@@ -791,6 +799,11 @@ class ClientSocketPoolBase {
   LoadState GetLoadState(const std::string& group_name,
                          const ClientSocketHandle* handle) const {
     return helper_.GetLoadState(group_name, handle);
+  }
+
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_dump_absolute_name) const {
+    return helper_.DumpMemoryStats(pmd, parent_dump_absolute_name);
   }
 
   virtual void OnConnectJobComplete(int result, ConnectJob* job) {

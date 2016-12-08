@@ -28,7 +28,7 @@ class DummyProofSource : public net::ProofSource {
   ~DummyProofSource() override {}
 
   // ProofSource override.
-  bool GetProof(const net::QuicIpAddress& server_ip,
+  bool GetProof(const net::QuicSocketAddress& server_addr,
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,
@@ -44,7 +44,7 @@ class DummyProofSource : public net::ProofSource {
     return true;
   }
 
-  void GetProof(const net::QuicIpAddress& server_ip,
+  void GetProof(const net::QuicSocketAddress& server_addr,
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,

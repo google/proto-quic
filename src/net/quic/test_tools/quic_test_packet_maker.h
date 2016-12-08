@@ -122,6 +122,7 @@ class QuicTestPacketMaker {
       bool fin,
       SpdyPriority priority,
       SpdyHeaderBlock headers,
+      QuicStreamOffset* header_stream_offset,
       size_t* spdy_headers_frame_length,
       const std::vector<std::string>& data_writes);
 
@@ -197,6 +198,13 @@ class QuicTestPacketMaker {
                                               bool fin,
                                               SpdyHeaderBlock headers,
                                               QuicStreamOffset* offset);
+
+  std::unique_ptr<QuicReceivedPacket> MakeSettingsPacket(
+      QuicPacketNumber packet_number,
+      SpdySettingsIds id,
+      size_t value,
+      bool should_include_version,
+      QuicStreamOffset* offset);
 
   SpdyHeaderBlock GetRequestHeaders(const std::string& method,
                                     const std::string& scheme,

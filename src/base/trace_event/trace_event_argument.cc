@@ -244,36 +244,36 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
                                              const base::Value& value) {
   DCHECK_CURRENT_CONTAINER_IS(kStackTypeDict);
   switch (value.GetType()) {
-    case base::Value::TYPE_NULL:
-    case base::Value::TYPE_BINARY:
+    case base::Value::Type::NONE:
+    case base::Value::Type::BINARY:
       NOTREACHED();
       break;
 
-    case base::Value::TYPE_BOOLEAN: {
+    case base::Value::Type::BOOLEAN: {
       bool bool_value;
       value.GetAsBoolean(&bool_value);
       SetBooleanWithCopiedName(name, bool_value);
     } break;
 
-    case base::Value::TYPE_INTEGER: {
+    case base::Value::Type::INTEGER: {
       int int_value;
       value.GetAsInteger(&int_value);
       SetIntegerWithCopiedName(name, int_value);
     } break;
 
-    case base::Value::TYPE_DOUBLE: {
+    case base::Value::Type::DOUBLE: {
       double double_value;
       value.GetAsDouble(&double_value);
       SetDoubleWithCopiedName(name, double_value);
     } break;
 
-    case base::Value::TYPE_STRING: {
+    case base::Value::Type::STRING: {
       const StringValue* string_value;
       value.GetAsString(&string_value);
       SetStringWithCopiedName(name, string_value->GetString());
     } break;
 
-    case base::Value::TYPE_DICTIONARY: {
+    case base::Value::Type::DICTIONARY: {
       const DictionaryValue* dict_value;
       value.GetAsDictionary(&dict_value);
       BeginDictionaryWithCopiedName(name);
@@ -284,7 +284,7 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
       EndDictionary();
     } break;
 
-    case base::Value::TYPE_LIST: {
+    case base::Value::Type::LIST: {
       const ListValue* list_value;
       value.GetAsList(&list_value);
       BeginArrayWithCopiedName(name);
@@ -298,36 +298,36 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
 void TracedValue::AppendBaseValue(const base::Value& value) {
   DCHECK_CURRENT_CONTAINER_IS(kStackTypeArray);
   switch (value.GetType()) {
-    case base::Value::TYPE_NULL:
-    case base::Value::TYPE_BINARY:
+    case base::Value::Type::NONE:
+    case base::Value::Type::BINARY:
       NOTREACHED();
       break;
 
-    case base::Value::TYPE_BOOLEAN: {
+    case base::Value::Type::BOOLEAN: {
       bool bool_value;
       value.GetAsBoolean(&bool_value);
       AppendBoolean(bool_value);
     } break;
 
-    case base::Value::TYPE_INTEGER: {
+    case base::Value::Type::INTEGER: {
       int int_value;
       value.GetAsInteger(&int_value);
       AppendInteger(int_value);
     } break;
 
-    case base::Value::TYPE_DOUBLE: {
+    case base::Value::Type::DOUBLE: {
       double double_value;
       value.GetAsDouble(&double_value);
       AppendDouble(double_value);
     } break;
 
-    case base::Value::TYPE_STRING: {
+    case base::Value::Type::STRING: {
       const StringValue* string_value;
       value.GetAsString(&string_value);
       AppendString(string_value->GetString());
     } break;
 
-    case base::Value::TYPE_DICTIONARY: {
+    case base::Value::Type::DICTIONARY: {
       const DictionaryValue* dict_value;
       value.GetAsDictionary(&dict_value);
       BeginDictionary();
@@ -338,7 +338,7 @@ void TracedValue::AppendBaseValue(const base::Value& value) {
       EndDictionary();
     } break;
 
-    case base::Value::TYPE_LIST: {
+    case base::Value::Type::LIST: {
       const ListValue* list_value;
       value.GetAsList(&list_value);
       BeginArray();

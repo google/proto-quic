@@ -15,12 +15,12 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_clock.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 using base::StringPiece;

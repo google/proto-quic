@@ -14,9 +14,12 @@
 #include <utility>
 #include <vector>
 
+#include "base/allocator/features.h"
 #include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/containers/hash_tables.h"
+#include "base/debug/debugging_flags.h"
+#include "base/debug/thread_heap_usage_tracker.h"
 #include "base/gtest_prod_util.h"
 #include "base/lazy_instance.h"
 #include "base/location.h"
@@ -59,71 +62,76 @@ struct TrackingInfo;
 // with great efficiency (i.e., copying of strings is never needed, and
 // comparisons for equality can be based on pointer comparisons).
 //
-// Next, a Births instance is created for use ONLY on the thread where this
-// instance was created.  That Births instance records (in a base class
-// BirthOnThread) references to the static data provided in a Location instance,
-// as well as a pointer specifying the thread on which the birth takes place.
-// Hence there is at most one Births instance for each Location on each thread.
-// The derived Births class contains slots for recording statistics about all
-// instances born at the same location.  Statistics currently include only the
-// count of instances constructed.
+// Next, a Births instance is constructed or found. A Births instance records
+// (in a base class BirthOnThread) references to the static data provided in a
+// Location instance, as well as a pointer to the ThreadData bound to the thread
+// on which the birth takes place (see discussion on ThreadData below). There is
+// at most one Births instance for each Location / ThreadData pair. The derived
+// Births class contains slots for recording statistics about all instances born
+// at the same location. Statistics currently include only the count of
+// instances constructed.
 //
 // Since the base class BirthOnThread contains only constant data, it can be
-// freely accessed by any thread at any time (i.e., only the statistic needs to
-// be handled carefully, and stats are updated exclusively on the birth thread).
+// freely accessed by any thread at any time. The statistics must be handled
+// more carefully; they are updated exclusively by the single thread to which
+// the ThreadData is bound at a given time.
 //
 // For Tasks, having now either constructed or found the Births instance
 // described above, a pointer to the Births instance is then recorded into the
-// PendingTask structure in MessageLoop.  This fact alone is very useful in
-// debugging, when there is a question of where an instance came from.  In
-// addition, the birth time is also recorded and used to later evaluate the
-// lifetime duration of the whole Task.  As a result of the above embedding, we
-// can find out a Task's location of birth, and thread of birth, without using
-// any locks, as all that data is constant across the life of the process.
+// PendingTask structure.  This fact alone is very useful in debugging, when
+// there is a question of where an instance came from.  In addition, the birth
+// time is also recorded and used to later evaluate the lifetime duration of the
+// whole Task.  As a result of the above embedding, we can find out a Task's
+// location of birth, and name of birth thread, without using any locks, as all
+// that data is constant across the life of the process.
 //
 // The above work *could* also be done for any other object as well by calling
 // TallyABirthIfActive() and TallyRunOnNamedThreadIfTracking() as appropriate.
 //
-// The amount of memory used in the above data structures depends on how many
-// threads there are, and how many Locations of construction there are.
-// Fortunately, we don't use memory that is the product of those two counts, but
-// rather we only need one Births instance for each thread that constructs an
-// instance at a Location.  In many cases, instances are only created on one
-// thread, so the memory utilization is actually fairly restrained.
+// The upper bound for the amount of memory used in the above data structures is
+// the product of the number of ThreadData instances and the number of
+// Locations. Fortunately, Locations are often created on a single thread and
+// the memory utilization is actually fairly restrained.
 //
 // Lastly, when an instance is deleted, the final tallies of statistics are
 // carefully accumulated.  That tallying writes into slots (members) in a
-// collection of DeathData instances.  For each birth place Location that is
-// destroyed on a thread, there is a DeathData instance to record the additional
-// death count, as well as accumulate the run-time and queue-time durations for
-// the instance as it is destroyed (dies).  By maintaining a single place to
-// aggregate this running sum *only* for the given thread, we avoid the need to
-// lock such DeathData instances. (i.e., these accumulated stats in a DeathData
-// instance are exclusively updated by the singular owning thread).
+// collection of DeathData instances.  For each Births / death ThreadData pair,
+// there is a DeathData instance to record the additional death count, as well
+// as to accumulate the run-time and queue-time durations for the instance as it
+// is destroyed (dies). Since a ThreadData is bound to at most one thread at a
+// time, there is no need to lock such DeathData instances. (i.e., these
+// accumulated stats in a DeathData instance are exclusively updated by the
+// singular owning thread).
 //
-// With the above life cycle description complete, the major remaining detail
-// is explaining how each thread maintains a list of DeathData instances, and
-// of Births instances, and is able to avoid additional (redundant/unnecessary)
-// allocations.
+// With the above life cycle description complete, the major remaining detail is
+// explaining how existing Births and DeathData instances are found to avoid
+// redundant allocations.
 //
-// Each thread maintains a list of data items specific to that thread in a
-// ThreadData instance (for that specific thread only).  The two critical items
-// are lists of DeathData and Births instances.  These lists are maintained in
-// STL maps, which are indexed by Location.  As noted earlier, we can compare
-// locations very efficiently as we consider the underlying data (file,
-// function, line) to be atoms, and hence pointer comparison is used rather than
-// (slow) string comparisons.
+// A ThreadData instance maintains maps of Births and DeathData instances. The
+// Births map is indexed by Location and the DeathData map is indexed by
+// Births*. As noted earlier, we can compare Locations very efficiently as we
+// consider the underlying data (file, function, line) to be atoms, and hence
+// pointer comparison is used rather than (slow) string comparisons.
 //
-// To provide a mechanism for iterating over all "known threads," which means
-// threads that have recorded a birth or a death, we create a singly linked list
-// of ThreadData instances.  Each such instance maintains a pointer to the next
-// one.  A static member of ThreadData provides a pointer to the first item on
-// this global list, and access via that all_thread_data_list_head_ item
-// requires the use of the list_lock_.
-// When new ThreadData instances is added to the global list, it is pre-pended,
-// which ensures that any prior acquisition of the list is valid (i.e., the
-// holder can iterate over it without fear of it changing, or the necessity of
-// using an additional lock.  Iterations are actually pretty rare (used
+// The first time that a thread calls ThreadData::InitializeThreadContext() or
+// ThreadData::Get(), a ThreadData instance is bound to it and stored in TLS. If
+// a ThreadData bound to a terminated thread with the same sanitized name (i.e.
+// name without trailing digits) as the current thread is available, it is
+// reused. Otherwise, a new ThreadData instance is instantiated. Since a
+// ThreadData is bound to at most one thread at a time, there is no need to
+// acquire a lock to access its maps. Over time, a ThreadData may be bound to
+// different threads that share the same sanitized name.
+//
+// We maintain a list of all ThreadData instances for the current process. Each
+// ThreadData instance has a pointer to the next one. A static member of
+// ThreadData provides a pointer to the first item on this global list, and
+// access via that all_thread_data_list_head_ item requires the use of the
+// list_lock_.
+//
+// When new ThreadData instances are added to the global list, they are pre-
+// pended, which ensures that any prior acquisition of the list is valid (i.e.,
+// the holder can iterate over it without fear of it changing, or the necessity
+// of using an additional lock.  Iterations are actually pretty rare (used
 // primarily for cleanup, or snapshotting data for display), so this lock has
 // very little global performance impact.
 //
@@ -170,12 +178,13 @@ struct TrackingInfo;
 // memory reference).
 //
 // TODO(jar): We can implement a Snapshot system that *tries* to grab the
-// snapshots on the source threads *when* they have MessageLoops available
-// (worker threads don't have message loops generally, and hence gathering from
-// them will continue to be asynchronous).  We had an implementation of this in
-// the past, but the difficulty is dealing with message loops being terminated.
-// We can *try* to spam the available threads via some task runner to
-// achieve this feat, and it *might* be valuable when we are collecting data
+// snapshots on the source threads *when* they have SingleThreadTaskRunners
+// available (worker threads don't have SingleThreadTaskRunners, and hence
+// gathering from them will continue to be asynchronous).  We had an
+// implementation of this in the past, but the difficulty is dealing with
+// threads being terminated. We can *try* to post a task to threads that have a
+// SingleThreadTaskRunner and check if that succeeds (will fail if the thread
+// has been terminated). This *might* be valuable when we are collecting data
 // for upload via UMA (where correctness of data may be more significant than
 // for a single screen of about:profiler).
 //
@@ -226,7 +235,7 @@ struct BASE_EXPORT BirthOnThreadSnapshot {
   ~BirthOnThreadSnapshot();
 
   LocationSnapshot location;
-  std::string thread_name;
+  std::string sanitized_thread_name;
 };
 
 //------------------------------------------------------------------------------
@@ -248,6 +257,8 @@ class BASE_EXPORT Births: public BirthOnThread {
   DISALLOW_COPY_AND_ASSIGN(Births);
 };
 
+class DeathData;
+
 //------------------------------------------------------------------------------
 // A "snapshotted" representation of the DeathData class.
 
@@ -265,7 +276,15 @@ struct BASE_EXPORT DeathDataSnapshot {
                     int32_t run_duration_sample,
                     int32_t queue_duration_sum,
                     int32_t queue_duration_max,
-                    int32_t queue_duration_sample);
+                    int32_t queue_duration_sample,
+                    int32_t alloc_ops,
+                    int32_t free_ops,
+                    int32_t allocated_bytes,
+                    int32_t freed_bytes,
+                    int32_t alloc_overhead_bytes,
+                    int32_t max_allocated_bytes);
+  DeathDataSnapshot(const DeathData& death_data);
+  DeathDataSnapshot(const DeathDataSnapshot& other);
   ~DeathDataSnapshot();
 
   // Calculates and returns the delta between this snapshot and an earlier
@@ -279,6 +298,13 @@ struct BASE_EXPORT DeathDataSnapshot {
   int32_t queue_duration_sum;
   int32_t queue_duration_max;
   int32_t queue_duration_sample;
+
+  int32_t alloc_ops;
+  int32_t free_ops;
+  int32_t allocated_bytes;
+  int32_t freed_bytes;
+  int32_t alloc_overhead_bytes;
+  int32_t max_allocated_bytes;
 };
 
 //------------------------------------------------------------------------------
@@ -287,13 +313,7 @@ struct BASE_EXPORT DeathDataSnapshot {
 
 struct DeathDataPhaseSnapshot {
   DeathDataPhaseSnapshot(int profiling_phase,
-                         int count,
-                         int32_t run_duration_sum,
-                         int32_t run_duration_max,
-                         int32_t run_duration_sample,
-                         int32_t queue_duration_sum,
-                         int32_t queue_duration_max,
-                         int32_t queue_duration_sample,
+                         const DeathData& death_data,
                          const DeathDataPhaseSnapshot* prev);
 
   // Profiling phase at which completion this snapshot was taken.
@@ -326,9 +346,26 @@ class BASE_EXPORT DeathData {
 
   // Update stats for a task destruction (death) that had a Run() time of
   // |duration|, and has had a queueing delay of |queue_duration|.
-  void RecordDeath(const int32_t queue_duration,
-                   const int32_t run_duration,
-                   const uint32_t random_number);
+  void RecordDurations(const int32_t queue_duration,
+                       const int32_t run_duration,
+                       const uint32_t random_number);
+
+  // Update stats for a task destruction that performed |alloc_ops|
+  // allocations, |free_ops| frees, allocated |allocated_bytes| bytes, freed
+  // |freed_bytes|, where an estimated |alloc_overhead_bytes| went to heap
+  // overhead, and where at most |max_allocated_bytes| were outstanding at any
+  // one time.
+  // Note that |alloc_overhead_bytes|/|alloc_ops| yields the average estimated
+  // heap overhead of allocations in the task, and |allocated_bytes|/|alloc_ops|
+  // yields the average size of allocation.
+  // Note also that |allocated_bytes|-|freed_bytes| yields the net heap memory
+  // usage of the task, which can be negative.
+  void RecordAllocations(const uint32_t alloc_ops,
+                         const uint32_t free_ops,
+                         const uint32_t allocated_bytes,
+                         const uint32_t freed_bytes,
+                         const uint32_t alloc_overhead_bytes,
+                         const uint32_t max_allocated_bytes);
 
   // Metrics and past snapshots accessors, used only for serialization and in
   // tests.
@@ -351,6 +388,22 @@ class BASE_EXPORT DeathData {
   int32_t queue_duration_sample() const {
     return base::subtle::NoBarrier_Load(&queue_duration_sample_);
   }
+  int32_t alloc_ops() const {
+    return base::subtle::NoBarrier_Load(&alloc_ops_);
+  }
+  int32_t free_ops() const { return base::subtle::NoBarrier_Load(&free_ops_); }
+  int32_t allocated_bytes() const {
+    return base::subtle::NoBarrier_Load(&allocated_bytes_);
+  }
+  int32_t freed_bytes() const {
+    return base::subtle::NoBarrier_Load(&freed_bytes_);
+  }
+  int32_t alloc_overhead_bytes() const {
+    return base::subtle::NoBarrier_Load(&alloc_overhead_bytes_);
+  }
+  int32_t max_allocated_bytes() const {
+    return base::subtle::NoBarrier_Load(&max_allocated_bytes_);
+  }
   const DeathDataPhaseSnapshot* last_phase_snapshot() const {
     return last_phase_snapshot_;
   }
@@ -361,6 +414,12 @@ class BASE_EXPORT DeathData {
   void OnProfilingPhaseCompleted(int profiling_phase);
 
  private:
+  // A saturating addition operation for member variables. This elides the
+  // use of atomic-primitive reads for members that are only written on the
+  // owning thread.
+  static void SaturatingMemberAdd(const uint32_t addend,
+                                  base::subtle::Atomic32* sum);
+
   // Members are ordered from most regularly read and updated, to least
   // frequently used.  This might help a bit with cache lines.
   // Number of runs seen (divisor for calculating averages).
@@ -383,6 +442,24 @@ class BASE_EXPORT DeathData {
   // snapshot thread.
   base::subtle::Atomic32 run_duration_max_;
   base::subtle::Atomic32 queue_duration_max_;
+
+  // The cumulative number of allocation and free operations.
+  base::subtle::Atomic32 alloc_ops_;
+  base::subtle::Atomic32 free_ops_;
+
+  // The number of bytes allocated by the task.
+  base::subtle::Atomic32 allocated_bytes_;
+
+  // The number of bytes freed by the task.
+  base::subtle::Atomic32 freed_bytes_;
+
+  // The cumulative number of overhead bytes. Where available this yields an
+  // estimate of the heap overhead for allocations.
+  base::subtle::Atomic32 alloc_overhead_bytes_;
+
+  // The high-watermark for the number of outstanding heap allocated bytes.
+  base::subtle::Atomic32 max_allocated_bytes_;
+
   // Samples, used by crowd sourcing gatherers.  These are almost never read,
   // and rarely updated.  They can be modified only on the death thread.
   base::subtle::Atomic32 run_duration_sample_;
@@ -407,14 +484,14 @@ struct BASE_EXPORT TaskSnapshot {
   TaskSnapshot();
   TaskSnapshot(const BirthOnThreadSnapshot& birth,
                const DeathDataSnapshot& death_data,
-               const std::string& death_thread_name);
+               const std::string& death_sanitized_thread_name);
   ~TaskSnapshot();
 
   BirthOnThreadSnapshot birth;
   // Delta between death data for a thread for a certain profiling phase and the
   // snapshot for the pervious phase, if any.  Otherwise, just a snapshot.
   DeathDataSnapshot death_data;
-  std::string death_thread_name;
+  std::string death_sanitized_thread_name;
 };
 
 //------------------------------------------------------------------------------
@@ -450,9 +527,8 @@ class BASE_EXPORT ThreadData {
 
   // Initialize the current thread context with a new instance of ThreadData.
   // This is used by all threads that have names, and should be explicitly
-  // set *before* any births on the threads have taken place.  It is generally
-  // only used by the message loop, which has a well defined thread name.
-  static void InitializeThreadContext(const std::string& suggested_name);
+  // set *before* any births on the threads have taken place.
+  static void InitializeThreadContext(const std::string& thread_name);
 
   // Using Thread Local Store, find the current instance for collecting data.
   // If an instance does not exist, construct one (and remember it for use on
@@ -510,7 +586,9 @@ class BASE_EXPORT ThreadData {
   static void TallyRunInAScopedRegionIfTracking(const Births* births,
                                                 const TaskStopwatch& stopwatch);
 
-  const std::string& thread_name() const { return thread_name_; }
+  const std::string& sanitized_thread_name() const {
+    return sanitized_thread_name_;
+  }
 
   // Initializes all statics if needed (this initialization call should be made
   // while we are single threaded).
@@ -559,12 +637,7 @@ class BASE_EXPORT ThreadData {
   typedef std::vector<std::pair<const Births*, DeathDataPhaseSnapshot>>
       DeathsSnapshot;
 
-  // Worker thread construction creates a name since there is none.
-  explicit ThreadData(int thread_number);
-
-  // Message loop based construction should provide a name.
-  explicit ThreadData(const std::string& suggested_name);
-
+  explicit ThreadData(const std::string& sanitized_thread_name);
   ~ThreadData();
 
   // Push this instance to the head of all_thread_data_list_head_, linking it to
@@ -628,6 +701,12 @@ class BASE_EXPORT ThreadData {
   // ThreadData instances.
   static void ShutdownSingleThreadedCleanup(bool leak);
 
+  // Returns a ThreadData instance for a thread whose sanitized name is
+  // |sanitized_thread_name|. The returned instance may have been extracted from
+  // the list of retired ThreadData instances or newly allocated.
+  static ThreadData* GetRetiredOrCreateThreadData(
+      const std::string& sanitized_thread_name);
+
   // When non-null, this specifies an external function that supplies monotone
   // increasing time functcion.
   static NowFunction* now_function_for_testing_;
@@ -635,21 +714,15 @@ class BASE_EXPORT ThreadData {
   // We use thread local store to identify which ThreadData to interact with.
   static base::ThreadLocalStorage::StaticSlot tls_index_;
 
-  // List of ThreadData instances for use with worker threads.  When a worker
-  // thread is done (terminated), we push it onto this list.  When a new worker
-  // thread is created, we first try to re-use a ThreadData instance from the
-  // list, and if none are available, construct a new one.
-  // This is only accessed while list_lock_ is held.
-  static ThreadData* first_retired_worker_;
+  // Linked list of ThreadData instances that were associated with threads that
+  // have been terminated and that have not been associated with a new thread
+  // since then. This is only accessed while |list_lock_| is held.
+  static ThreadData* first_retired_thread_data_;
 
   // Link to the most recently created instance (starts a null terminated list).
   // The list is traversed by about:profiler when it needs to snapshot data.
   // This is only accessed while list_lock_ is held.
   static ThreadData* all_thread_data_list_head_;
-
-  // The next available worker thread number.  This should only be accessed when
-  // the list_lock_ is held.
-  static int worker_thread_data_creation_count_;
 
   // The number of times TLS has called us back to cleanup a ThreadData
   // instance.  This is only accessed while list_lock_ is held.
@@ -671,23 +744,16 @@ class BASE_EXPORT ThreadData {
 
   // Link to next instance (null terminated list).  Used to globally track all
   // registered instances (corresponds to all registered threads where we keep
-  // data).
+  // data). Only modified in the constructor.
   ThreadData* next_;
 
-  // Pointer to another ThreadData instance for a Worker-Thread that has been
-  // retired (its thread was terminated).  This value is non-NULL only for a
-  // retired ThreadData associated with a Worker-Thread.
-  ThreadData* next_retired_worker_;
+  // Pointer to another retired ThreadData instance. This value is nullptr if
+  // this is associated with an active thread.
+  ThreadData* next_retired_thread_data_;
 
-  // The name of the thread that is being recorded.  If this thread has no
-  // message_loop, then this is a worker thread, with a sequence number postfix.
-  std::string thread_name_;
-
-  // Indicate if this is a worker thread, and the ThreadData contexts should be
-  // stored in the unregistered_thread_data_pool_ when not in use.
-  // Value is zero when it is not a worker thread.  Value is a positive integer
-  // corresponding to the created thread name if it is a worker thread.
-  int worker_thread_number_;
+  // The name of the thread that is being recorded, with all trailing digits
+  // replaced with a single "*" character.
+  const std::string sanitized_thread_name_;
 
   // A map used on each thread to keep track of Births on this thread.
   // This map should only be accessed on the thread it was constructed on.
@@ -755,12 +821,24 @@ class BASE_EXPORT TaskStopwatch {
   // this thread during that period.
   int32_t RunDurationMs() const;
 
+#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+  const base::debug::ThreadHeapUsageTracker& heap_usage() const {
+    return heap_usage_;
+  }
+  bool heap_tracking_enabled() const { return heap_tracking_enabled_; }
+#endif
+
   // Returns tracking info for the current thread.
   ThreadData* GetThreadData() const;
 
  private:
   // Time when the stopwatch was started.
   TrackedTime start_time_;
+
+#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+  base::debug::ThreadHeapUsageTracker heap_usage_;
+  bool heap_tracking_enabled_;
+#endif
 
   // Wallclock duration of the task.
   int32_t wallclock_duration_ms_;

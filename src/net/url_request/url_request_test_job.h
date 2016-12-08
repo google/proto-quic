@@ -69,6 +69,7 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
   static GURL test_url_3();
   static GURL test_url_4();
   static GURL test_url_error();
+  static GURL test_url_redirect_to_url_1();
   static GURL test_url_redirect_to_url_2();
 
   // The data that corresponds to each of the URLs above
@@ -82,6 +83,9 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
 
   // The headers for a redirect response
   static std::string test_redirect_headers();
+
+  // The headers for a redirect response to the first test url.
+  static std::string test_redirect_to_url_1_headers();
 
   // The headers for a redirect response to the second test url.
   static std::string test_redirect_to_url_2_headers();

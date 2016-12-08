@@ -7,9 +7,13 @@
 #include <utility>
 
 #include "base/memory/memory_coordinator_client_registry.h"
+#include "base/strings/stringprintf.h"
 #include "base/time/clock.h"
 #include "base/time/default_clock.h"
+#include "base/trace_event/process_memory_dump.h"
+#include "net/cert/x509_util_openssl.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 namespace net {
 
@@ -80,6 +84,45 @@ bool SSLClientSessionCache::IsExpired(SSL_SESSION* session, time_t now) {
   return now < SSL_SESSION_get_time(session) ||
          now >=
              SSL_SESSION_get_time(session) + SSL_SESSION_get_timeout(session);
+}
+
+void SSLClientSessionCache::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd) {
+  std::string absolute_name = "net/ssl_session_cache";
+  base::trace_event::MemoryAllocatorDump* cache_dump =
+      pmd->GetAllocatorDump(absolute_name);
+  // This method can be reached from different URLRequestContexts. Since this is
+  // a singleton, only log memory stats once.
+  // TODO(xunjieli): Change this once crbug.com/458365 is fixed.
+  if (cache_dump)
+    return;
+  cache_dump = pmd->CreateAllocatorDump(absolute_name);
+  base::AutoLock lock(lock_);
+  for (const auto& pair : cache_) {
+    auto entry = pair.second.get();
+    auto cert_chain = entry->x509_chain;
+    size_t cert_count = sk_X509_num(cert_chain);
+    base::trace_event::MemoryAllocatorDump* entry_dump =
+        pmd->CreateAllocatorDump(
+            base::StringPrintf("%s/entry_%p", absolute_name.c_str(), entry));
+    int cert_size = 0;
+    for (size_t i = 0; i < cert_count; ++i) {
+      X509* cert = sk_X509_value(cert_chain, i);
+      cert_size += i2d_X509(cert, nullptr);
+    }
+    // This measures the lower bound of the serialized certificate. It doesn't
+    // measure the actual memory used, which is 4x this amount (see
+    // crbug.com/671420 for more details).
+    entry_dump->AddScalar("cert_size",
+                          base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                          cert_size);
+    entry_dump->AddScalar("serialized_cert_count",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          cert_count);
+    entry_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
+                          base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                          cert_size);
+  }
 }
 
 void SSLClientSessionCache::FlushExpiredSessions() {

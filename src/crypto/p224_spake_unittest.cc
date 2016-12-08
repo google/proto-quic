@@ -127,7 +127,7 @@ TEST(MutualAuth, Fuzz) {
 
     // We'll only be testing small values of i, but we don't want that to bias
     // the test coverage. So we disperse the value of i by multiplying by the
-    // FNV, 32-bit prime, producing a poor-man's PRNG.
+    // FNV, 32-bit prime, producing a simplistic PRNG.
     const uint32_t rand = i * 16777619;
 
     for (unsigned round = 0;; round++) {

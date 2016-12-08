@@ -179,10 +179,18 @@ TEST_P(QuicSpdyStreamTest, ParseHeaderStatusCode) {
   Initialize(kShouldProcessData);
   int status_code = 0;
 
-  // Valid status code.
+  // Valid status codes.
   headers_[":status"] = "404";
   EXPECT_TRUE(stream_->ParseHeaderStatusCode(headers_, &status_code));
   EXPECT_EQ(404, status_code);
+
+  headers_[":status"] = "100";
+  EXPECT_TRUE(stream_->ParseHeaderStatusCode(headers_, &status_code));
+  EXPECT_EQ(100, status_code);
+
+  headers_[":status"] = "599";
+  EXPECT_TRUE(stream_->ParseHeaderStatusCode(headers_, &status_code));
+  EXPECT_EQ(599, status_code);
 
   // Invalid status codes.
   headers_[":status"] = "010";
@@ -201,6 +209,12 @@ TEST_P(QuicSpdyStreamTest, ParseHeaderStatusCode) {
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   headers_[":status"] = "+20";
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
+
+  headers_[":status"] = "-10";
+  EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
+
+  headers_[":status"] = "-100";
   EXPECT_FALSE(stream_->ParseHeaderStatusCode(headers_, &status_code));
 
   // Leading or trailing spaces are also invalid.

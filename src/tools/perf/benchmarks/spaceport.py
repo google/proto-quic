@@ -76,6 +76,7 @@ class _SpaceportMeasurement(legacy_page_test.LegacyPageTest):
     num_results = 0
     num_tests_in_spaceport = 24
     while num_results < num_tests_in_spaceport:
+      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       tab.WaitForJavaScriptExpression(
           'Object.keys(window.__results).length > %d' % num_results, 180)
       num_results = tab.EvaluateJavaScript(

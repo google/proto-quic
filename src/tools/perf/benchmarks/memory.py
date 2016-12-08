@@ -227,7 +227,10 @@ class MemoryLongRunningIdleGmail(_MemoryV8Benchmark):
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
-    return cls.IsSvelte(possible_browser)  # http://crbug.com/611167
+    return (cls.IsSvelte(possible_browser) or  # http://crbug.com/611167
+            # http://crbug.com/671650
+            ((possible_browser.browser_type == 'reference' and
+              possible_browser.platform.GetDeviceTypeName() == 'Nexus 5')))
 
 
 @benchmark.Enabled('has tabs')  # http://crbug.com/612210

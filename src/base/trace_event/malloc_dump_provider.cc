@@ -105,26 +105,28 @@ struct WinHeapInfo {
 // NOTE: crbug.com/665516
 // Unfortunately, there is no safe way to collect information from secondary
 // heaps due to limitations and racy nature of this piece of WinAPI.
-void WinHeapMemoryDumpImpl(WinHeapInfo* main_heap_info) {
+void WinHeapMemoryDumpImpl(WinHeapInfo* crt_heap_info) {
 #if defined(SYZYASAN)
   if (base::debug::IsBinaryInstrumented())
     return;
 #endif
-  HANDLE main_heap = ::GetProcessHeap();
-  ::HeapLock(main_heap);
+
+  // Iterate through whichever heap our CRT is using.
+  HANDLE crt_heap = reinterpret_cast<HANDLE>(_get_heap_handle());
+  ::HeapLock(crt_heap);
   PROCESS_HEAP_ENTRY heap_entry;
   heap_entry.lpData = nullptr;
   // Walk over all the entries in the main heap.
-  while (::HeapWalk(main_heap, &heap_entry) != FALSE) {
+  while (::HeapWalk(crt_heap, &heap_entry) != FALSE) {
     if ((heap_entry.wFlags & PROCESS_HEAP_ENTRY_BUSY) != 0) {
-      main_heap_info->allocated_size += heap_entry.cbData;
-      main_heap_info->block_count++;
+      crt_heap_info->allocated_size += heap_entry.cbData;
+      crt_heap_info->block_count++;
     } else if ((heap_entry.wFlags & PROCESS_HEAP_REGION) != 0) {
-      main_heap_info->committed_size += heap_entry.Region.dwCommittedSize;
-      main_heap_info->uncommitted_size += heap_entry.Region.dwUnCommittedSize;
+      crt_heap_info->committed_size += heap_entry.Region.dwCommittedSize;
+      crt_heap_info->uncommitted_size += heap_entry.Region.dwUnCommittedSize;
     }
   }
-  CHECK(::HeapUnlock(main_heap) == TRUE);
+  CHECK(::HeapUnlock(crt_heap) == TRUE);
 }
 #endif  // defined(OS_WIN)
 }  // namespace

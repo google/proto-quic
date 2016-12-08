@@ -79,22 +79,6 @@ declare_args() {
 
 # Additional dependent variables -----------------------------------------------
 
-# The seccomp-bpf sandbox is only supported on five architectures
-# currently.
-# Do not disable seccomp_bpf anywhere without talking to
-# security@chromium.org!
-use_seccomp_bpf =
-    (is_linux || is_android) &&
-    (current_cpu == "x86" || current_cpu == "x64" || current_cpu == "arm" ||
-     current_cpu == "arm64" || current_cpu == "mipsel")
-
-# Enable notifications everywhere except iOS.
-enable_notifications = !is_ios
-
-enable_web_speech = !is_android && !is_ios
-
-enable_task_manager = !is_ios && !is_android
-
 enable_themes = !is_android && !is_ios
 
 # Whether we are using the rlz library or not.  Platforms like Android send

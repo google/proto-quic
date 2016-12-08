@@ -49,12 +49,14 @@ def GetMicroDumps(dump_path):
   for line in data.splitlines():
     if current_dump is not None:
       if _MICRODUMP_END.match(line):
+        current_dump.append(line)
         all_dumps.append(current_dump)
         current_dump = None
       else:
         current_dump.append(line)
     elif _MICRODUMP_BEGIN.match(line):
       current_dump = []
+      current_dump.append(line)
   return all_dumps
 
 
@@ -107,7 +109,7 @@ def main():
     return 0
 
   symbolized_dumps = []
-  for index, micro_dump in micro_dumps:
+  for micro_dump in micro_dumps:
     symbolized_dumps.append(SymbolizeMicroDump(
         args.stackwalker_binary_path, micro_dump, args.symbols_path))
 

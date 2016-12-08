@@ -6,6 +6,7 @@
 //  Operating System:
 //    OS_WIN / OS_MACOSX / OS_LINUX / OS_POSIX (MACOSX or LINUX) /
 //    OS_NACL (NACL_SFI or NACL_NONSFI) / OS_NACL_SFI / OS_NACL_NONSFI
+//    OS_CHROMEOS is set by the build system
 //  Compiler:
 //    COMPILER_MSVC / COMPILER_GCC
 //  Processor:

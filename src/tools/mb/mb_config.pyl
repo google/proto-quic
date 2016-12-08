@@ -42,7 +42,6 @@
       'Android Cronet x86 Builder (dbg)': 'android_cronet_debug_static_bot_x86',
       'Android MIPS Builder (dbg)': 'android_debug_static_minimal_symbols_mipsel',
       'Android N5X Swarm Builder': 'android_release_bot_minimal_symbols_arm64',
-      'Android Swarm Builder': 'android_release_bot_minimal_symbols',
       'Android arm Builder (dbg)': 'android_debug_static_bot',
       'Android arm64 Builder (dbg)': 'android_debug_static_bot_arm64',
       'Android x64 Builder (dbg)': 'android_debug_static_bot_x64',
@@ -125,7 +124,7 @@
 
       'CrWinClang(dbg)': 'clang_debug_bot_minimal_symbols_x86',
       'CrWinClang64': 'clang_official_release_bot_minimal_symbols',
-      'CrWinClang64(dll)': 'clang_minimal_symbols_shared_release_bot',
+      'CrWinClang64(dll)': 'clang_shared_release_bot',
       'CrWinClangGoma': 'clang_official_optimize_release_bot_minimal_symbols_x86',
       'CrWinGoma': 'release_bot_x86',
       'CrWinGoma(dll)': 'shared_release_bot_x86',
@@ -146,7 +145,7 @@
       'ClangToTWin(dll)': 'clang_tot_minimal_symbols_shared_release_x86',
       'ClangToTWin64': 'clang_tot_official_minimal_symbols_static_release',
       'ClangToTWin64(dbg)': 'clang_tot_minimal_symbols_shared_debug',
-      'ClangToTWin64(dll)': 'clang_tot_minimal_symbols_shared_release',
+      'ClangToTWin64(dll)': 'clang_tot_shared_release',
       'ClangToTiOS': 'ios',
       'Closure Compilation Linux': 'closure_compilation',
       'CrWinAsan': 'asan_clang_fuzzer_static_v8_heap_x86_full_symbols_release',
@@ -160,6 +159,7 @@
       'CrWinClngLLDdbg': 'clang_tot_minimal_symbols_shared_debug_use_lld_x86',
       'EarlGreyiOS': 'ios',
       'GomaCanaryiOS': 'ios',
+      'ios-simulator': 'ios',
       'Headless Linux (dbg)': '//build/args/bots/chromium.fyi/headless_linux_dbg.gn',
       'MD Top Chrome ChromeOS material-hybrid': 'chromeos_with_codecs_debug_bot',
       'MD Top Chrome ChromeOS non-material': 'chromeos_with_codecs_debug_bot',
@@ -604,7 +604,6 @@
       'android_one_perf_bisect': 'official_goma_minimal_symbols_android',
       'android_perf_bisect_builder': 'official_goma_minimal_symbols_android',
       'android_s5_perf_bisect': 'official_goma_minimal_symbols_android',
-      'android_s5_perf_cq': 'official_goma_minimal_symbols_android',
       'android_webview_arm64_aosp_perf_bisect': 'official_goma_minimal_symbols_android',
       'linux_fyi_perf_bisect': 'official_goma',
       'linux_perf_bisect': 'official_goma',
@@ -1034,8 +1033,8 @@
       'clang', 'official', 'release_trybot', 'x86',
     ],
 
-    'clang_minimal_symbols_shared_release_bot': [
-      'clang', 'minimal_symbols', 'shared_release_bot',
+    'clang_shared_release_bot': [
+      'clang', 'shared_release_bot',
     ],
 
     'clang_tot_asan_lsan_static_release': [
@@ -1082,6 +1081,10 @@
 
     'clang_tot_minimal_symbols_shared_release': [
       'clang_tot', 'minimal_symbols', 'shared', 'release',
+    ],
+
+    'clang_tot_shared_release': [
+      'clang_tot', 'shared', 'release',
     ],
 
     'clang_tot_minimal_symbols_shared_release_x86': [

@@ -19,6 +19,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/test/gtest_util.h"
 #include "base/test/mock_entropy_provider.h"
+#include "base/test/scoped_feature_list.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -1145,15 +1146,21 @@ TEST(FieldTrialListTest, TestCopyFieldTrialStateToFlags) {
   base::FilePath test_file_path = base::FilePath(FILE_PATH_LITERAL("Program"));
   base::CommandLine cmd_line = base::CommandLine(test_file_path);
   const char field_trial_handle[] = "test-field-trial-handle";
+  const char enable_features_switch[] = "test-enable-features";
+  const char disable_features_switch[] = "test-disable-features";
 
-  base::FieldTrialList::CopyFieldTrialStateToFlags(field_trial_handle,
-                                                   &cmd_line);
+  base::FieldTrialList::CopyFieldTrialStateToFlags(
+      field_trial_handle, enable_features_switch, disable_features_switch,
+      &cmd_line);
   EXPECT_TRUE(cmd_line.HasSwitch(field_trial_handle) ||
               cmd_line.HasSwitch(switches::kForceFieldTrials));
 }
 #endif
 
 TEST(FieldTrialListTest, InstantiateAllocator) {
+  test::ScopedFeatureList scoped_feature_list;
+  scoped_feature_list.Init();
+
   FieldTrialList field_trial_list(nullptr);
   FieldTrialList::CreateFieldTrial("Trial1", "Group1");
 
@@ -1176,6 +1183,9 @@ TEST(FieldTrialListTest, AddTrialsToAllocator) {
   // Scoping the first FieldTrialList, as we need another one to test that it
   // matches.
   {
+    test::ScopedFeatureList scoped_feature_list;
+    scoped_feature_list.Init();
+
     FieldTrialList field_trial_list(nullptr);
     FieldTrialList::CreateFieldTrial("Trial1", "Group1");
     FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded();
@@ -1198,6 +1208,9 @@ TEST(FieldTrialListTest, DoNotAddSimulatedFieldTrialsToAllocator) {
   constexpr char kTrialName[] = "trial";
   base::SharedMemoryHandle handle;
   {
+    test::ScopedFeatureList scoped_feature_list;
+    scoped_feature_list.Init();
+
     // Create a simulated trial and a real trial and call group() on them, which
     // should only add the real trial to the field trial allocator.
     FieldTrialList field_trial_list(nullptr);
@@ -1230,6 +1243,9 @@ TEST(FieldTrialListTest, DoNotAddSimulatedFieldTrialsToAllocator) {
 }
 
 TEST(FieldTrialListTest, AssociateFieldTrialParams) {
+  test::ScopedFeatureList scoped_feature_list;
+  scoped_feature_list.Init();
+
   std::string trial_name("Trial1");
   std::string group_name("Group1");
 
@@ -1266,6 +1282,9 @@ TEST(FieldTrialListTest, ClearParamsFromSharedMemory) {
 
   base::SharedMemoryHandle handle;
   {
+    test::ScopedFeatureList scoped_feature_list;
+    scoped_feature_list.Init();
+
     // Create a field trial with some params.
     FieldTrialList field_trial_list(nullptr);
     FieldTrial* trial =

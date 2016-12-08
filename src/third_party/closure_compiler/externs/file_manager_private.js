@@ -692,6 +692,9 @@ chrome.fileManagerPrivate.onDeviceChanged;
 /** @type {!ChromeEvent} */
 chrome.fileManagerPrivate.onDriveSyncError;
 
+/** @type {!ChromeEvent} */
+chrome.fileManagerPrivate.onAppsUpdated;
+
 /** @enum {string} */
 chrome.fileManagerPrivate.Verb = {
   OPEN_WITH: 'open_with',

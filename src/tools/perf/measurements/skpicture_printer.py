@@ -30,6 +30,7 @@ class SkpicturePrinter(legacy_page_test.LegacyPageTest):
     # Replace win32 path separator char '\' with '\\'.
     outpath = os.path.abspath(
         os.path.join(self._skp_outdir, page.file_safe_name))
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     js = _JS.format(outpath.replace('\\', '\\\\'))
     tab.EvaluateJavaScript(js)
     pictures = glob.glob(os.path.join(outpath, '*.skp'))

@@ -396,7 +396,6 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // * zero or one header block ("trailers").
   // Each header block must have a ":status" header field.  SpdyStream enforces
   // these requirements, and resets the stream if they are not met.
-  // TODO(bnc) https://crbug.com/662197 Add support for informational headers.
   enum ResponseState {
     READY_FOR_HEADERS,
     READY_FOR_DATA_OR_TRAILERS,

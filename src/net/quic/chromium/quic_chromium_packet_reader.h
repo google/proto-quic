@@ -53,17 +53,14 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketReader {
   // A completion callback invoked when a read completes.
   void OnReadComplete(int result);
 
-  // Called when a packet is read and it should be processed.
-  // Returns false if the read was an error or the packet couldn't
-  // be processed.
-  bool OnPacketRead(int result);
-
   DatagramClientSocket* socket_;
   Visitor* visitor_;
   bool read_pending_;
+  int num_packets_read_;
   QuicClock* clock_;  // Owned by QuicStreamFactory
   int yield_after_packets_;
   QuicTime::Delta yield_after_duration_;
+  QuicTime yield_after_;
   scoped_refptr<IOBufferWithSize> read_buffer_;
   NetLogWithSource net_log_;
 

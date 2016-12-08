@@ -67,8 +67,8 @@ class XMLFormattedWriter(template_writer.TemplateWriter):
     # This is problematic both for the OSX Workgroup Manager (plist files) and
     # the Windows Group Policy Editor (admx files). What they need instead:
     #  <string>value of string</string>
-    # So we use the poor man's pretty printer here. It assumes that there are
-    # no mixed-content nodes.
+    # So we use a hacky pretty printer here. It assumes that there are no
+    # mixed-content nodes.
     # Get all the XML content in a one-line string.
     xml = doc.toxml(**kwargs)
     # Determine where the line breaks will be. (They will only be between tags.)

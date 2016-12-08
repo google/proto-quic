@@ -10,7 +10,6 @@
 #include "base/base_switches.h"
 #include "base/build_time.h"
 #include "base/command_line.h"
-#include "base/feature_list.h"
 #include "base/logging.h"
 #include "base/metrics/field_trial_param_associator.h"
 #include "base/pickle.h"
@@ -49,6 +48,10 @@ const char kActivationMarker = '*';
 // for now while the implementation is fleshed out (e.g. data format, single
 // shared memory segment). See https://codereview.chromium.org/2365273004/ and
 // crbug.com/653874
+// The browser is the only process that has write access to the shared memory.
+// This is safe from race conditions because MakeIterable is a release operation
+// and GetNextOfType is an acquire operation, so memory writes before
+// MakeIterable happen before memory reads after GetNextOfType.
 const bool kUseSharedMemoryForFieldTrials = true;
 
 // Constants for the field trial allocator.
@@ -79,14 +82,14 @@ struct FieldTrialEntry {
   uint32_t activated;
 
   // Size of the pickled structure, NOT the total size of this entry.
-  uint32_t size;
+  uint32_t pickle_size;
 
   // Returns an iterator over the data containing names and params.
   PickleIterator GetPickleIterator() const {
-    char* src = reinterpret_cast<char*>(const_cast<FieldTrialEntry*>(this)) +
-                sizeof(FieldTrialEntry);
+    const char* src =
+        reinterpret_cast<const char*>(this) + sizeof(FieldTrialEntry);
 
-    Pickle pickle(src, size);
+    Pickle pickle(src, pickle_size);
     return PickleIterator(pickle);
   }
 
@@ -248,7 +251,19 @@ bool ParseFieldTrialsString(const std::string& trials_string,
   return true;
 }
 
-void AddForceFieldTrialsFlag(CommandLine* cmd_line) {
+void AddFeatureAndFieldTrialFlags(const char* enable_features_switch,
+                                  const char* disable_features_switch,
+                                  CommandLine* cmd_line) {
+  std::string enabled_features;
+  std::string disabled_features;
+  FeatureList::GetInstance()->GetFeatureOverrides(&enabled_features,
+                                                  &disabled_features);
+
+  if (!enabled_features.empty())
+    cmd_line->AppendSwitchASCII(enable_features_switch, enabled_features);
+  if (!disabled_features.empty())
+    cmd_line->AppendSwitchASCII(disable_features_switch, disabled_features);
+
   std::string field_trial_states;
   FieldTrialList::AllStatesToString(&field_trial_states);
   if (!field_trial_states.empty()) {
@@ -805,6 +820,24 @@ void FieldTrialList::CreateTrialsFromCommandLine(
   }
 }
 
+// static
+void FieldTrialList::CreateFeaturesFromCommandLine(
+    const base::CommandLine& command_line,
+    const char* enable_features_switch,
+    const char* disable_features_switch,
+    FeatureList* feature_list) {
+  // Fallback to command line if not using shared memory.
+  if (!kUseSharedMemoryForFieldTrials ||
+      !global_->field_trial_allocator_.get()) {
+    return feature_list->InitializeFromCommandLine(
+        command_line.GetSwitchValueASCII(enable_features_switch),
+        command_line.GetSwitchValueASCII(disable_features_switch));
+  }
+
+  feature_list->InitializeFromSharedMemory(
+      global_->field_trial_allocator_.get());
+}
+
 #if defined(POSIX_WITH_ZYGOTE)
 // static
 bool FieldTrialList::CreateTrialsFromDescriptor(int fd_key) {
@@ -854,12 +887,19 @@ int FieldTrialList::GetFieldTrialHandle() {
 // static
 void FieldTrialList::CopyFieldTrialStateToFlags(
     const char* field_trial_handle_switch,
+    const char* enable_features_switch,
+    const char* disable_features_switch,
     CommandLine* cmd_line) {
   // TODO(lawrencewu): Ideally, having the global would be guaranteed. However,
   // content browser tests currently don't create a FieldTrialList because they
   // don't run ChromeBrowserMainParts code where it's done for Chrome.
-  if (!global_)
+  // Some tests depend on the enable and disable features flag switch, though,
+  // so we can still add those even though AllStatesToString() will be a no-op.
+  if (!global_) {
+    AddFeatureAndFieldTrialFlags(enable_features_switch,
+                                 disable_features_switch, cmd_line);
     return;
+  }
 
 #if defined(OS_WIN) || defined(POSIX_WITH_ZYGOTE)
   // Use shared memory to pass the state if the feature is enabled, otherwise
@@ -869,7 +909,8 @@ void FieldTrialList::CopyFieldTrialStateToFlags(
     // If the readonly handle didn't get duplicated properly, then fallback to
     // original behavior.
     if (global_->readonly_allocator_handle_ == kInvalidPlatformFile) {
-      AddForceFieldTrialsFlag(cmd_line);
+      AddFeatureAndFieldTrialFlags(enable_features_switch,
+                                   disable_features_switch, cmd_line);
       return;
     }
 
@@ -895,7 +936,8 @@ void FieldTrialList::CopyFieldTrialStateToFlags(
   }
 #endif
 
-  AddForceFieldTrialsFlag(cmd_line);
+  AddFeatureAndFieldTrialFlags(enable_features_switch, disable_features_switch,
+                               cmd_line);
 }
 
 // static
@@ -1011,7 +1053,7 @@ bool FieldTrialList::GetParamsFromSharedMemory(
 
   size_t allocated_size =
       global_->field_trial_allocator_->GetAllocSize(field_trial->ref_);
-  size_t actual_size = sizeof(FieldTrialEntry) + entry->size;
+  size_t actual_size = sizeof(FieldTrialEntry) + entry->pickle_size;
   if (allocated_size < actual_size)
     return false;
 
@@ -1059,7 +1101,7 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
     FieldTrialEntry* new_entry =
         allocator->GetAsObject<FieldTrialEntry>(new_ref, kFieldTrialType);
     new_entry->activated = prev_entry->activated;
-    new_entry->size = pickle.size();
+    new_entry->pickle_size = pickle.size();
 
     // TODO(lawrencewu): Modify base::Pickle to be able to write over a section
     // in memory, so we can avoid this memcpy.
@@ -1171,6 +1213,10 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
     AddToAllocatorWhileLocked(registered.second);
   }
 
+  // Add all existing features.
+  FeatureList::GetInstance()->AddFeaturesToAllocator(
+      global_->field_trial_allocator_.get());
+
 #if defined(OS_WIN) || defined(POSIX_WITH_ZYGOTE)
   // Set |readonly_allocator_handle_| so we can pass it to be inherited and
   // via the command line.
@@ -1219,7 +1265,7 @@ void FieldTrialList::AddToAllocatorWhileLocked(FieldTrial* field_trial) {
   FieldTrialEntry* entry =
       allocator->GetAsObject<FieldTrialEntry>(ref, kFieldTrialType);
   entry->activated = trial_state.activated;
-  entry->size = pickle.size();
+  entry->pickle_size = pickle.size();
 
   // TODO(lawrencewu): Modify base::Pickle to be able to write over a section in
   // memory, so we can avoid this memcpy.

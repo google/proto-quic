@@ -119,6 +119,29 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     print log
 
 
+class _BlinkPerfMeasurementSlimmingPaintInvalidation(_BlinkPerfMeasurement):
+  """Measures blink perf with the new paint invalidation system (see:
+  https://goo.gl/eQczQW). The benchmarks using this measurement should be
+  removed when slimming paint invalidation ships."""
+  def CustomizeBrowserOptions(self, options):
+    _BlinkPerfMeasurement.CustomizeBrowserOptions(self, options)
+    options.AppendExtraBrowserArgs([
+        '--enable-blink-features=SlimmingPaintInvalidation'
+    ])
+
+
+class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
+  test = _BlinkPerfMeasurement
+
+  @classmethod
+  def Name(cls):
+    return 'blink_perf.' + cls.tag
+
+  def CreateStorySet(self, options):
+    path = os.path.join(BLINK_PERF_BASE_DIR, self.subdir)
+    return CreateStorySetFromPath(path, SKIPPED_FILE)
+
+
 class _SharedPywebsocketPageState(shared_page_state.SharedPageState):
   """Runs a pywebsocket server."""
 
@@ -129,17 +152,9 @@ class _SharedPywebsocketPageState(shared_page_state.SharedPageState):
 
 
 @benchmark.Disabled('all') # http://crbug.com/670069
-class BlinkPerfBindings(perf_benchmark.PerfBenchmark):
+class BlinkPerfBindings(_BlinkPerfBenchmark):
   tag = 'bindings'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.bindings'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Bindings')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'Bindings'
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
@@ -151,48 +166,28 @@ class BlinkPerfBindings(perf_benchmark.PerfBenchmark):
 
 
 @benchmark.Enabled('content-shell')
-class BlinkPerfBlinkGC(perf_benchmark.PerfBenchmark):
+class BlinkPerfBlinkGC(_BlinkPerfBenchmark):
   tag = 'blink_gc'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.blink_gc'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'BlinkGC')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'BlinkGC'
 
 
-class BlinkPerfCSS(perf_benchmark.PerfBenchmark):
+class BlinkPerfCSS(_BlinkPerfBenchmark):
   tag = 'css'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.css'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'CSS')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'CSS'
 
 
 @benchmark.Disabled('android-webview', # http://crbug.com/593200
                     'reference')  # http://crbug.com/576779
-class BlinkPerfCanvas(perf_benchmark.PerfBenchmark):
+class BlinkPerfCanvas(_BlinkPerfBenchmark):
   tag = 'canvas'
-  test = _BlinkPerfMeasurement
+  subdir = 'Canvas'
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
     return cls.IsSvelte(possible_browser)  # http://crbug.com/593973.
 
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.canvas'
-
   def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Canvas')
+    path = os.path.join(BLINK_PERF_BASE_DIR, self.subdir)
     story_set = CreateStorySetFromPath(
         path, SKIPPED_FILE,
         shared_page_state_class=(
@@ -204,143 +199,85 @@ class BlinkPerfCanvas(perf_benchmark.PerfBenchmark):
     return story_set
 
 
-class BlinkPerfDOM(perf_benchmark.PerfBenchmark):
+class BlinkPerfDOM(_BlinkPerfBenchmark):
   tag = 'dom'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.dom'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'DOM')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'DOM'
 
 
 @benchmark.Disabled('win')  # http://crbug.com/588819
-class BlinkPerfEvents(perf_benchmark.PerfBenchmark):
+class BlinkPerfEvents(_BlinkPerfBenchmark):
   tag = 'events'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.events'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Events')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'Events'
 
 
 @benchmark.Disabled('win8')  # http://crbug.com/462350
 @benchmark.Disabled('win-reference')  # http://crbug.com/642884
-class BlinkPerfLayout(perf_benchmark.PerfBenchmark):
+class BlinkPerfLayout(_BlinkPerfBenchmark):
   tag = 'layout'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.layout'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Layout')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'Layout'
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
     return cls.IsSvelte(possible_browser)  # http://crbug.com/551950
 
 
-class BlinkPerfPaint(perf_benchmark.PerfBenchmark):
+class BlinkPerfPaint(_BlinkPerfBenchmark):
   tag = 'paint'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.paint'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Paint')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'Paint'
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
     return cls.IsSvelte(possible_browser)  # http://crbug.com/574483
 
 
+class BlinkPerfPaintSlimmingPaintInvalidation(BlinkPerfPaint):
+  tag = 'paint_slimmingpaintinvalidation'
+  test = _BlinkPerfMeasurementSlimmingPaintInvalidation
+
+
 @benchmark.Disabled('win')  # crbug.com/488493
-class BlinkPerfParser(perf_benchmark.PerfBenchmark):
+class BlinkPerfParser(_BlinkPerfBenchmark):
   tag = 'parser'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.parser'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Parser')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'Parser'
 
 
-class BlinkPerfSVG(perf_benchmark.PerfBenchmark):
+class BlinkPerfSVG(_BlinkPerfBenchmark):
   tag = 'svg'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.svg'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'SVG')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'SVG'
 
 
-class BlinkPerfShadowDOM(perf_benchmark.PerfBenchmark):
+class BlinkPerfSVGSlimmingPaintInvalidation(BlinkPerfSVG):
+  tag = 'svg_slimmingpaintinvalidation'
+  test = _BlinkPerfMeasurementSlimmingPaintInvalidation
+
+
+class BlinkPerfShadowDOM(_BlinkPerfBenchmark):
   tag = 'shadow_dom'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.shadow_dom'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'ShadowDOM')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'ShadowDOM'
 
 
 # This benchmark is for local testing, doesn't need to run on bots.
 @benchmark.Disabled('all')
-class BlinkPerfXMLHttpRequest(perf_benchmark.PerfBenchmark):
+class BlinkPerfXMLHttpRequest(_BlinkPerfBenchmark):
   tag = 'xml_http_request'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.xml_http_request'
-
-  def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'XMLHttpRequest')
-    return CreateStorySetFromPath(path, SKIPPED_FILE)
+  subdir = 'XMLHttpRequest'
 
 
 # Disabled on Windows and ChromeOS due to https://crbug.com/521887
 #@benchmark.Disabled('win', 'chromeos')
 # Disabling on remaining platforms due to heavy flake https://crbug.com/646938
 @benchmark.Disabled('all')
-class BlinkPerfPywebsocket(perf_benchmark.PerfBenchmark):
+class BlinkPerfPywebsocket(_BlinkPerfBenchmark):
   """The blink_perf.pywebsocket tests measure turn-around-time of 10MB
   send/receive for XHR, Fetch API and WebSocket. We might ignore < 10%
   regressions, because the tests are noisy and such regressions are
   often unreproducible (https://crbug.com/549017).
   """
   tag = 'pywebsocket'
-  test = _BlinkPerfMeasurement
-
-  @classmethod
-  def Name(cls):
-    return 'blink_perf.pywebsocket'
+  subdir = 'Pywebsocket'
 
   def CreateStorySet(self, options):
-    path = os.path.join(BLINK_PERF_BASE_DIR, 'Pywebsocket')
+    path = os.path.join(BLINK_PERF_BASE_DIR, self.subdir)
     return CreateStorySetFromPath(
         path, SKIPPED_FILE,
         shared_page_state_class=_SharedPywebsocketPageState)

@@ -16,10 +16,8 @@
 #include "tools/gn/path_output.h"
 #include "tools/gn/toolchain.h"
 
-class BuildSettings;
 struct EscapeOptions;
 class Settings;
-class Target;
 class Tool;
 
 class NinjaToolchainWriter {

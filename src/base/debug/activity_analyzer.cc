@@ -83,6 +83,23 @@ ThreadActivityAnalyzer* GlobalActivityAnalyzer::GetAnalyzerForThread(
   return found->second.get();
 }
 
+std::vector<std::string> GlobalActivityAnalyzer::GetLogMessages() {
+  std::vector<std::string> messages;
+  PersistentMemoryAllocator::Reference ref;
+
+  PersistentMemoryAllocator::Iterator iter(allocator_.get());
+  while ((ref = iter.GetNextOfType(
+              GlobalActivityTracker::kTypeIdGlobalLogMessage)) != 0) {
+    const char* message = allocator_->GetAsArray<char>(
+        ref, GlobalActivityTracker::kTypeIdGlobalLogMessage,
+        PersistentMemoryAllocator::kSizeAny);
+    if (message)
+      messages.push_back(message);
+  }
+
+  return messages;
+}
+
 GlobalActivityAnalyzer::ProgramLocation
 GlobalActivityAnalyzer::GetProgramLocationFromAddress(uint64_t address) {
   // TODO(bcwhite): Implement this.

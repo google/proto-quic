@@ -38,6 +38,7 @@
 #endif
 
 #if defined(OS_MACOSX) && !defined(OS_IOS)
+#include "base/mac/mac_util.h"
 #include "net/cert/test_keychain_search_list_mac.h"
 #endif
 
@@ -120,6 +121,16 @@ bool SupportsDetectingKnownRoots() {
   return false;
 #endif
   return true;
+}
+
+bool WeakKeysAreInvalid() {
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  // Starting with Mac OS 10.12, certs with weak keys are treated as
+  // (recoverable) invalid certificate errors.
+  return base::mac::IsAtLeastOS10_12();
+#else
+  return false;
+#endif
 }
 
 // Template helper to load a series of certificate files into a CertificateList.
@@ -407,7 +418,7 @@ TEST_F(CertVerifyProcTest, RejectWeakKeys) {
         EXPECT_NE(OK, error);
         EXPECT_EQ(CERT_STATUS_WEAK_KEY,
                   verify_result.cert_status & CERT_STATUS_WEAK_KEY);
-        EXPECT_NE(CERT_STATUS_INVALID,
+        EXPECT_EQ(WeakKeysAreInvalid() ? CERT_STATUS_INVALID : 0,
                   verify_result.cert_status & CERT_STATUS_INVALID);
       } else {
         EXPECT_THAT(error, IsOk());
@@ -1392,6 +1403,11 @@ TEST_F(CertVerifyProcTest, CRLSetDuringPathBuilding) {
 // The verifier should rollback until it just tries A(B) alone, at which point
 // it will pull B(F) & F(E) from the keychain and succeed.
 TEST_F(CertVerifyProcTest, MacCRLIntermediate) {
+  if (base::mac::IsAtLeastOS10_12()) {
+    // TODO(crbug.com/671889): Investigate SecTrustSetKeychains issue on Sierra.
+    LOG(INFO) << "Skipping test, SecTrustSetKeychains does not work on 10.12";
+    return;
+  }
   const char* const kPath2Files[] = {
       "multi-root-A-by-B.pem", "multi-root-B-by-C.pem", "multi-root-C-by-E.pem",
       "multi-root-E-by-E.pem"};
@@ -1748,12 +1764,7 @@ const WeakDigestTestData kVerifyRootCATestData[] = {
     {"weak_digest_md2_root.pem", "weak_digest_sha1_intermediate.pem",
      "weak_digest_sha1_ee.pem", EXPECT_SHA1 | EXPECT_SHA1_LEAF},
 };
-#if defined(OS_ANDROID)
-#define MAYBE_VerifyRoot DISABLED_VerifyRoot
-#else
-#define MAYBE_VerifyRoot VerifyRoot
-#endif
-INSTANTIATE_TEST_CASE_P(MAYBE_VerifyRoot,
+INSTANTIATE_TEST_CASE_P(VerifyRoot,
                         CertVerifyProcWeakDigestTest,
                         testing::ValuesIn(kVerifyRootCATestData));
 
@@ -1770,7 +1781,7 @@ const WeakDigestTestData kVerifyIntermediateCATestData[] = {
      "weak_digest_sha1_ee.pem", EXPECT_MD2 | EXPECT_SHA1 | EXPECT_SHA1_LEAF},
 };
 // Disabled on NSS - MD4 is not supported, and MD2 and MD5 are disabled.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_ANDROID)
+#if defined(USE_NSS_CERTS) || defined(OS_IOS)
 #define MAYBE_VerifyIntermediate DISABLED_VerifyIntermediate
 #else
 #define MAYBE_VerifyIntermediate VerifyIntermediate
@@ -1795,7 +1806,7 @@ const WeakDigestTestData kVerifyEndEntityTestData[] = {
 // Disabled on NSS - NSS caches chains/signatures in such a way that cannot
 // be cleared until NSS is cleanly shutdown, which is not presently supported
 // in Chromium.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_ANDROID)
+#if defined(USE_NSS_CERTS) || defined(OS_IOS)
 #define MAYBE_VerifyEndEntity DISABLED_VerifyEndEntity
 #else
 #define MAYBE_VerifyEndEntity VerifyEndEntity
@@ -1818,7 +1829,7 @@ const WeakDigestTestData kVerifyIncompleteIntermediateTestData[] = {
 };
 // Disabled on NSS - libpkix does not return constructed chains on error,
 // preventing us from detecting/inspecting the verified chain.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_ANDROID)
+#if defined(USE_NSS_CERTS) || defined(OS_IOS)
 #define MAYBE_VerifyIncompleteIntermediate \
     DISABLED_VerifyIncompleteIntermediate
 #else
@@ -1843,7 +1854,7 @@ const WeakDigestTestData kVerifyIncompleteEETestData[] = {
 };
 // Disabled on NSS - libpkix does not return constructed chains on error,
 // preventing us from detecting/inspecting the verified chain.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_ANDROID)
+#if defined(USE_NSS_CERTS) || defined(OS_IOS)
 #define MAYBE_VerifyIncompleteEndEntity DISABLED_VerifyIncompleteEndEntity
 #else
 #define MAYBE_VerifyIncompleteEndEntity VerifyIncompleteEndEntity
@@ -1868,7 +1879,7 @@ const WeakDigestTestData kVerifyMixedTestData[] = {
 };
 // NSS does not support MD4 and does not enable MD2 by default, making all
 // permutations invalid.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_ANDROID)
+#if defined(USE_NSS_CERTS) || defined(OS_IOS)
 #define MAYBE_VerifyMixed DISABLED_VerifyMixed
 #else
 #define MAYBE_VerifyMixed VerifyMixed
@@ -1947,6 +1958,9 @@ WRAPPED_INSTANTIATE_TEST_CASE_P(
 // Test that CertVerifyProcMac reacts appropriately when Apple's certificate
 // verifier rejects a certificate with a fatal error. This is a regression
 // test for https://crbug.com/472291.
+// (Since 10.12, this causes a recoverable error instead of a fatal one.)
+// TODO(mattm): Try to find a different way to cause a fatal error that works
+// on 10.12.
 TEST_F(CertVerifyProcTest, LargeKey) {
   // Load root_ca_cert.pem into the test root store.
   ScopedTestRoot test_root(
@@ -1963,7 +1977,7 @@ TEST_F(CertVerifyProcTest, LargeKey) {
   int error = Verify(cert.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
                      &verify_result);
   EXPECT_THAT(error, IsError(ERR_CERT_INVALID));
-  EXPECT_EQ(CERT_STATUS_INVALID, verify_result.cert_status);
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_INVALID);
 }
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 

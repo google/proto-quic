@@ -94,10 +94,7 @@ group("telemetry_chrome_test") {
   }
 
   if (is_linux) {
-    data_deps += [
-      "//tools/xdisplaycheck",
-      "//breakpad:dump_syms($host_toolchain)",
-    ]
+    data_deps += [ "//breakpad:dump_syms($host_toolchain)" ]
   }
 
   if (is_mac) {

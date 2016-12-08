@@ -89,11 +89,22 @@ if (is_linux) {
   net_configs += [ "//build/config/linux:libresolv" ]
 }
 
+source_set("constants") {
+  sources = [
+    "base/trace_constants.cc",
+    "base/trace_constants.h",
+  ]
+  deps = [
+    "//base",
+  ]
+}
+
 component("net") {
   sources = gypi_values.net_nacl_common_sources
   net_unfiltered_sources = []
 
   deps = [
+    ":constants",
     ":net_resources",
     "//base",
     "//net/base/registry_controlled_domains",
@@ -1030,14 +1041,16 @@ if (is_linux) {
 
   source_set("epoll_quic_tools") {
     sources = [
+      "tools/quic/platform/impl/quic_epoll_clock.cc",
+      "tools/quic/platform/impl/quic_epoll_clock.h",
+      "tools/quic/platform/impl/quic_socket_utils.cc",
+      "tools/quic/platform/impl/quic_socket_utils.h",
       "tools/quic/quic_client.cc",
       "tools/quic/quic_client.h",
       "tools/quic/quic_default_packet_writer.cc",
       "tools/quic/quic_default_packet_writer.h",
       "tools/quic/quic_epoll_alarm_factory.cc",
       "tools/quic/quic_epoll_alarm_factory.h",
-      "tools/quic/quic_epoll_clock.cc",
-      "tools/quic/quic_epoll_clock.h",
       "tools/quic/quic_epoll_connection_helper.cc",
       "tools/quic/quic_epoll_connection_helper.h",
       "tools/quic/quic_packet_reader.cc",
@@ -1046,8 +1059,6 @@ if (is_linux) {
       "tools/quic/quic_packet_writer_wrapper.h",
       "tools/quic/quic_server.cc",
       "tools/quic/quic_server.h",
-      "tools/quic/quic_socket_utils.cc",
-      "tools/quic/quic_socket_utils.h",
     ]
     deps = [
 #      ":balsa",

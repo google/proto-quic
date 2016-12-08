@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <algorithm>
 #include <utility>
 
 #include "base/bind.h"
@@ -21,14 +22,18 @@
 #include "base/profiler/scoped_tracker.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
+#include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_local.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "crypto/ec_private_key.h"
 #include "crypto/openssl_util.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_ev_whitelist.h"
 #include "net/cert/ct_policy_enforcer.h"
@@ -802,6 +807,50 @@ int64_t SSLClientSocketImpl::GetTotalReceivedBytes() const {
   return transport_->socket()->GetTotalReceivedBytes();
 }
 
+void SSLClientSocketImpl::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_dump_absolute_name) const {
+  size_t total_size = 0;
+  base::trace_event::MemoryAllocatorDump* socket_dump =
+      pmd->CreateAllocatorDump(base::StringPrintf(
+          "%s/ssl_socket_%p", parent_dump_absolute_name.c_str(), this));
+  if (transport_adapter_) {
+    size_t bio_buffers_size = transport_adapter_->GetAllocationSize();
+    socket_dump->AddScalar("buffer_size",
+                           base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                           bio_buffers_size);
+    total_size += bio_buffers_size;
+  }
+  size_t total_cert_size = 0;
+  size_t certs_count = 0;
+  if (server_cert_chain_) {
+    certs_count = server_cert_chain_->size();
+    for (size_t i = 0; i < certs_count; ++i) {
+      X509* cert = server_cert_chain_->Get(i);
+      total_cert_size += i2d_X509(cert, nullptr);
+    }
+  }
+  total_size += total_cert_size;
+  // This measures the lower bound of the serialized certificate. It doesn't
+  // measure the actual memory used, which is 4x this amount (see
+  // crbug.com/671420 for more details).
+  socket_dump->AddScalar("serialized_cert_size",
+                         base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                         total_cert_size);
+  socket_dump->AddScalar("cert_count",
+                         base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                         certs_count);
+  socket_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
+                         base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                         total_size);
+}
+
+// static
+void SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd) {
+  SSLContext::GetInstance()->session_cache()->DumpMemoryStats(pmd);
+}
+
 int SSLClientSocketImpl::Read(IOBuffer* buf,
                               int buf_len,
                               const CompletionCallback& callback) {
@@ -937,27 +986,6 @@ int SSLClientSocketImpl::Init() {
   SSL_set_mode(ssl_.get(), mode.set_mask);
   SSL_clear_mode(ssl_.get(), mode.clear_mask);
 
-  std::string command;
-  if (SSLClientSocket::IsPostQuantumExperimentEnabled()) {
-    // These are experimental, non-standard ciphersuites.  They are part of an
-    // experiment in post-quantum cryptography.  They're not intended to
-    // represent a de-facto standard, and will be removed from BoringSSL in
-    // ~2018.
-    if (EVP_has_aes_hardware()) {
-      command.append(
-          "CECPQ1-RSA-AES256-GCM-SHA384:"
-          "CECPQ1-ECDSA-AES256-GCM-SHA384:");
-    }
-    command.append(
-        "CECPQ1-RSA-CHACHA20-POLY1305-SHA256:"
-        "CECPQ1-ECDSA-CHACHA20-POLY1305-SHA256:");
-    if (!EVP_has_aes_hardware()) {
-      command.append(
-          "CECPQ1-RSA-AES256-GCM-SHA384:"
-          "CECPQ1-ECDSA-AES256-GCM-SHA384:");
-    }
-  }
-
   // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
   // (note that SHA256 and SHA384 only select legacy CBC ciphers). Also disable
   // DHE_RSA_WITH_AES_256_GCM_SHA384. Historically, AES_256_GCM was not
@@ -966,7 +994,8 @@ int SSLClientSocketImpl::Init() {
   //
   // TODO(davidben): Remove the DHE_RSA_WITH_AES_256_GCM_SHA384 exclusion when
   // the DHEEnabled administrative policy expires.
-  command.append("ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
+  std::string command(
+      "ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");
@@ -1330,7 +1359,7 @@ void SSLClientSocketImpl::OnHandshakeIOComplete(int result) {
 }
 
 int SSLClientSocketImpl::DoHandshakeLoop(int last_io_result) {
-  TRACE_EVENT0("net", "SSLClientSocketImpl::DoHandshakeLoop");
+  TRACE_EVENT0(kNetTracingCategory, "SSLClientSocketImpl::DoHandshakeLoop");
   int rv = last_io_result;
   do {
     // Default to STATE_NONE for next state.

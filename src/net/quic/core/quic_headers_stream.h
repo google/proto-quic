@@ -98,6 +98,9 @@ class NET_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
   // Release underlying buffer if allowed.
   void MaybeReleaseSequencerBuffer();
 
+  // Sends SETTINGS_MAX_HEADER_LIST_SIZE SETTINGS frame.
+  size_t SendMaxHeaderListSize(size_t value);
+
   // Sets how much encoded data the hpack decoder of spdy_framer_ is willing to
   // buffer.
   void set_max_decode_buffer_size_bytes(size_t max_decode_buffer_size_bytes) {

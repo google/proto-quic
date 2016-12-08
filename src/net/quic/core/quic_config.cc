@@ -10,6 +10,7 @@
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 
@@ -338,7 +339,8 @@ QuicConfig::QuicConfig()
       multipath_enabled_(kMPTH, PRESENCE_OPTIONAL),
       connection_migration_disabled_(kNCMR, PRESENCE_OPTIONAL),
       alternate_server_address_(kASAD, PRESENCE_OPTIONAL),
-      force_hol_blocking_(kFHL2, PRESENCE_OPTIONAL) {
+      force_hol_blocking_(kFHL2, PRESENCE_OPTIONAL),
+      support_max_header_list_size_(kSMHL, PRESENCE_OPTIONAL) {
   SetDefaults();
 }
 
@@ -593,6 +595,14 @@ bool QuicConfig::ForceHolBlocking(Perspective perspective) const {
   }
 }
 
+void QuicConfig::SetSupportMaxHeaderListSize() {
+  support_max_header_list_size_.SetSendValue(1);
+}
+
+bool QuicConfig::SupportMaxHeaderListSize() const {
+  return support_max_header_list_size_.HasReceivedValue();
+}
+
 bool QuicConfig::negotiated() const {
   // TODO(ianswett): Add the negotiated parameters once and iterate over all
   // of them in negotiated, ToHandshakeMessage, ProcessClientHello, and
@@ -616,6 +626,9 @@ void QuicConfig::SetDefaults() {
 
   SetInitialStreamFlowControlWindowToSend(kMinimumFlowControlSendWindow);
   SetInitialSessionFlowControlWindowToSend(kMinimumFlowControlSendWindow);
+  if (FLAGS_quic_send_max_header_list_size) {
+    SetSupportMaxHeaderListSize();
+  }
 }
 
 void QuicConfig::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
@@ -632,6 +645,7 @@ void QuicConfig::ToHandshakeMessage(CryptoHandshakeMessage* out) const {
   connection_options_.ToHandshakeMessage(out);
   alternate_server_address_.ToHandshakeMessage(out);
   force_hol_blocking_.ToHandshakeMessage(out);
+  support_max_header_list_size_.ToHandshakeMessage(out);
 }
 
 QuicErrorCode QuicConfig::ProcessPeerHello(
@@ -692,6 +706,10 @@ QuicErrorCode QuicConfig::ProcessPeerHello(
   if (error == QUIC_NO_ERROR) {
     error = force_hol_blocking_.ProcessPeerHello(peer_hello, hello_type,
                                                  error_details);
+  }
+  if (error == QUIC_NO_ERROR) {
+    error = support_max_header_list_size_.ProcessPeerHello(
+        peer_hello, hello_type, error_details);
   }
   return error;
 }

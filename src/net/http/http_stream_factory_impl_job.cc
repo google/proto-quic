@@ -24,6 +24,7 @@
 #include "build/build_config.h"
 #include "net/base/port_util.h"
 #include "net/base/proxy_delegate.h"
+#include "net/base/trace_constants.h"
 #include "net/cert/cert_verifier.h"
 #include "net/http/bidirectional_stream_impl.h"
 #include "net/http/http_basic_stream.h"
@@ -500,14 +501,12 @@ int HttpStreamFactoryImpl::Job::OnHostResolution(
 }
 
 void HttpStreamFactoryImpl::Job::OnIOComplete(int result) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "HttpStreamFactoryImpl::Job::OnIOComplete");
+  TRACE_EVENT0(kNetTracingCategory, "HttpStreamFactoryImpl::Job::OnIOComplete");
   RunLoop(result);
 }
 
 int HttpStreamFactoryImpl::Job::RunLoop(int result) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "HttpStreamFactoryImpl::Job::RunLoop");
+  TRACE_EVENT0(kNetTracingCategory, "HttpStreamFactoryImpl::Job::RunLoop");
   result = DoLoop(result);
 
   if (result == ERR_IO_PENDING)

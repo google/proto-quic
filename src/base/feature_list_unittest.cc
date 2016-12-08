@@ -13,6 +13,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
+#include "base/metrics/persistent_memory_allocator.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -466,6 +467,70 @@ TEST_F(FeatureListTest, UninitializedInstance_IsEnabledReturnsFalse) {
   EXPECT_TRUE(FeatureList::IsEnabled(kFeatureOnByDefault));
   EXPECT_EQ(nullptr, FeatureList::GetInstance());
   EXPECT_FALSE(FeatureList::IsEnabled(kFeatureOffByDefault));
+}
+
+TEST_F(FeatureListTest, StoreAndRetrieveFeaturesFromSharedMemory) {
+  std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
+
+  // Create some overrides.
+  feature_list->RegisterOverride(kFeatureOffByDefaultName,
+                                 FeatureList::OVERRIDE_ENABLE_FEATURE, nullptr);
+  feature_list->RegisterOverride(
+      kFeatureOnByDefaultName, FeatureList::OVERRIDE_DISABLE_FEATURE, nullptr);
+  feature_list->FinalizeInitialization();
+
+  // Create an allocator and store the overrides.
+  std::unique_ptr<SharedMemory> shm(new SharedMemory());
+  shm->CreateAndMapAnonymous(4 << 10);
+  SharedPersistentMemoryAllocator allocator(std::move(shm), 1, "", false);
+  feature_list->AddFeaturesToAllocator(&allocator);
+
+  std::unique_ptr<base::FeatureList> feature_list2(new base::FeatureList);
+
+  // Check that the new feature list is empty.
+  EXPECT_FALSE(feature_list2->IsFeatureOverriddenFromCommandLine(
+      kFeatureOffByDefaultName, FeatureList::OVERRIDE_ENABLE_FEATURE));
+  EXPECT_FALSE(feature_list2->IsFeatureOverriddenFromCommandLine(
+      kFeatureOnByDefaultName, FeatureList::OVERRIDE_DISABLE_FEATURE));
+
+  feature_list2->InitializeFromSharedMemory(&allocator);
+  // Check that the new feature list now has 2 overrides.
+  EXPECT_TRUE(feature_list2->IsFeatureOverriddenFromCommandLine(
+      kFeatureOffByDefaultName, FeatureList::OVERRIDE_ENABLE_FEATURE));
+  EXPECT_TRUE(feature_list2->IsFeatureOverriddenFromCommandLine(
+      kFeatureOnByDefaultName, FeatureList::OVERRIDE_DISABLE_FEATURE));
+}
+
+TEST_F(FeatureListTest, StoreAndRetrieveAssociatedFeaturesFromSharedMemory) {
+  FieldTrialList field_trial_list(nullptr);
+  std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
+
+  // Create some overrides.
+  FieldTrial* trial1 = FieldTrialList::CreateFieldTrial("TrialExample1", "A");
+  FieldTrial* trial2 = FieldTrialList::CreateFieldTrial("TrialExample2", "B");
+  feature_list->RegisterFieldTrialOverride(
+      kFeatureOnByDefaultName, FeatureList::OVERRIDE_USE_DEFAULT, trial1);
+  feature_list->RegisterFieldTrialOverride(
+      kFeatureOffByDefaultName, FeatureList::OVERRIDE_USE_DEFAULT, trial2);
+  feature_list->FinalizeInitialization();
+
+  // Create an allocator and store the overrides.
+  std::unique_ptr<SharedMemory> shm(new SharedMemory());
+  shm->CreateAndMapAnonymous(4 << 10);
+  SharedPersistentMemoryAllocator allocator(std::move(shm), 1, "", false);
+  feature_list->AddFeaturesToAllocator(&allocator);
+
+  std::unique_ptr<base::FeatureList> feature_list2(new base::FeatureList);
+  feature_list2->InitializeFromSharedMemory(&allocator);
+  feature_list2->FinalizeInitialization();
+
+  // Check that the field trials are still associated.
+  FieldTrial* associated_trial1 =
+      feature_list2->GetAssociatedFieldTrial(kFeatureOnByDefault);
+  FieldTrial* associated_trial2 =
+      feature_list2->GetAssociatedFieldTrial(kFeatureOffByDefault);
+  EXPECT_EQ(associated_trial1, trial1);
+  EXPECT_EQ(associated_trial2, trial2);
 }
 
 }  // namespace base

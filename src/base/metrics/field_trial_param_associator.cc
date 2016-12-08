@@ -21,11 +21,10 @@ bool FieldTrialParamAssociator::AssociateFieldTrialParams(
     const std::string& trial_name,
     const std::string& group_name,
     const FieldTrialParams& params) {
-  AutoLock scoped_lock(lock_);
-
   if (FieldTrialList::IsTrialActive(trial_name))
     return false;
 
+  AutoLock scoped_lock(lock_);
   const FieldTrialKey key(trial_name, group_name);
   if (ContainsKey(field_trial_params_, key))
     return false;

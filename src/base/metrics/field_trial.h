@@ -65,6 +65,7 @@
 
 #include "base/base_export.h"
 #include "base/command_line.h"
+#include "base/feature_list.h"
 #include "base/files/file.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
@@ -508,6 +509,14 @@ class BASE_EXPORT FieldTrialList {
                                           const char* field_trial_handle_switch,
                                           int fd_key);
 
+  // Creates base::Feature overrides from the command line by first trying to
+  // use shared memory and then falling back to the command line if it fails.
+  static void CreateFeaturesFromCommandLine(
+      const base::CommandLine& command_line,
+      const char* enable_features_switch,
+      const char* disable_features_switch,
+      FeatureList* feature_list);
+
 #if defined(OS_WIN)
   // On Windows, we need to explicitly pass down any handles to be inherited.
   // This function adds the shared memory handle to field trial state to the
@@ -527,6 +536,8 @@ class BASE_EXPORT FieldTrialList {
   // Needs the |field_trial_handle_switch| argument to be passed in since base/
   // can't depend on content/.
   static void CopyFieldTrialStateToFlags(const char* field_trial_handle_switch,
+                                         const char* enable_features_switch,
+                                         const char* disable_features_switch,
                                          base::CommandLine* cmd_line);
 
   // Create a FieldTrial with the given |name| and using 100% probability for

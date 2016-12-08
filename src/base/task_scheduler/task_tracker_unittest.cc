@@ -431,6 +431,34 @@ TEST_P(TaskSchedulerTaskTrackerTest, SingletonAllowed) {
   }
 }
 
+// Verify that AssertIOAllowed() succeeds only for a WithFileIO() task.
+TEST_P(TaskSchedulerTaskTrackerTest, IOAllowed) {
+  TaskTracker tracker;
+
+  // Unset the IO allowed bit. Expect TaskTracker to set it before running a
+  // task with the WithFileIO() trait.
+  ThreadRestrictions::SetIOAllowed(false);
+  auto task_with_file_io = MakeUnique<Task>(
+      FROM_HERE, Bind([]() {
+        // Shouldn't fail.
+        ThreadRestrictions::AssertIOAllowed();
+      }),
+      TaskTraits().WithFileIO().WithShutdownBehavior(GetParam()), TimeDelta());
+  EXPECT_TRUE(tracker.WillPostTask(task_with_file_io.get()));
+  tracker.RunTask(std::move(task_with_file_io), SequenceToken::Create());
+
+  // Set the IO allowed bit. Expect TaskTracker to unset it before running a
+  // task without the WithFileIO() trait.
+  ThreadRestrictions::SetIOAllowed(true);
+  auto task_without_file_io = MakeUnique<Task>(
+      FROM_HERE, Bind([]() {
+        EXPECT_DCHECK_DEATH({ ThreadRestrictions::AssertIOAllowed(); });
+      }),
+      TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
+  EXPECT_TRUE(tracker.WillPostTask(task_without_file_io.get()));
+  tracker.RunTask(std::move(task_without_file_io), SequenceToken::Create());
+}
+
 static void RunTaskRunnerHandleVerificationTask(
     TaskTracker* tracker,
     std::unique_ptr<Task> verify_task) {

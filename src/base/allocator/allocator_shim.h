@@ -86,10 +86,10 @@ BASE_EXPORT void SetCallNewHandlerOnMallocFailure(bool value);
 // regardless of SetCallNewHandlerOnMallocFailure().
 BASE_EXPORT void* UncheckedAlloc(size_t size);
 
-// Inserts |dispatch| in front of the allocator chain. This method is NOT
+// Inserts |dispatch| in front of the allocator chain. This method is
 // thread-safe w.r.t concurrent invocations of InsertAllocatorDispatch().
-// The callers have the responsibility of linearizing the changes to the chain
-// (or more likely call these always on the same thread).
+// The callers have responsibility for inserting a single dispatch no more
+// than once.
 BASE_EXPORT void InsertAllocatorDispatch(AllocatorDispatch* dispatch);
 
 // Test-only. Rationale: (1) lack of use cases; (2) dealing safely with a

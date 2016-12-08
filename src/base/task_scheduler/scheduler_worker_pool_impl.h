@@ -115,8 +115,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   class SchedulerWorkerDelegateImpl;
 
   SchedulerWorkerPoolImpl(StringPiece name,
-                          SchedulerWorkerPoolParams::IORestriction
-                              io_restriction,
                           const TimeDelta& suggested_reclaim_time,
                           TaskTracker* task_tracker,
                           DelayedTaskManager* delayed_task_manager);
@@ -161,9 +159,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   // PriorityQueue from which all threads of this worker pool get work.
   PriorityQueue shared_priority_queue_;
-
-  // Indicates whether Tasks on this worker pool are allowed to make I/O calls.
-  const SchedulerWorkerPoolParams::IORestriction io_restriction_;
 
   // Suggested reclaim time for workers.
   const TimeDelta suggested_reclaim_time_;

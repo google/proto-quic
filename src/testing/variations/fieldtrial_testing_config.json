@@ -218,10 +218,6 @@
                     "name": "EnableViaFlag",
                     "forcing_flag": "enable-browser-task-scheduler",
                     "params": {
-                        "Background": "3;8;0.1;0;30000",
-                        "BackgroundFileIO": "3;8;0.1;0;30000",
-                        "Foreground": "8;32;0.3;0;30000",
-                        "ForegroundFileIO": "8;32;0.3;0;30000",
                         "RedirectHistoryService": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
@@ -780,6 +776,27 @@
             "experiments": [
                 {
                     "name": "Enable"
+                }
+            ]
+        }
+    ],
+    "Html5ByDefault": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "engagement_threshold_for_flash": "1"
+                    },
+                    "enable_features": [
+                        "PreferHtmlOverPlugins"
+                    ]
                 }
             ]
         }
@@ -1485,24 +1502,6 @@
             ]
         }
     ],
-    "PreferHtmlOverPlugins": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "PreferHtmlOverPlugins"
-                    ]
-                }
-            ]
-        }
-    ],
     "PrintScaling": [
         {
             "platforms": [
@@ -1900,6 +1899,21 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "SeccompSandboxAndroid": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "SandboxEnabled",
+                    "enable_features": [
+                        "SeccompSandboxAndroid"
+                    ]
                 }
             ]
         }
@@ -2302,6 +2316,21 @@
                     "name": "Enabled",
                     "enable_features": [
                         "ViewsSimplifiedFullscreenUI"
+                    ]
+                }
+            ]
+        }
+    ],
+    "VrShell": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "VrShell"
                     ]
                 }
             ]

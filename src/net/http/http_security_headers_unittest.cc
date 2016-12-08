@@ -789,9 +789,9 @@ TEST_F(HttpSecurityHeadersTest, UpdateDynamicPKPMaxAge0) {
   std::string failure_log;
 
   // Damage the hashes to cause a pin validation failure.
-  new_static_pkp_state2.spki_hashes[0].data()[0] ^= 0x80;
-  new_static_pkp_state2.spki_hashes[1].data()[0] ^= 0x80;
-  new_static_pkp_state2.spki_hashes[2].data()[0] ^= 0x80;
+  for (size_t i = 0; i < new_static_pkp_state2.spki_hashes.size(); i++) {
+    new_static_pkp_state2.spki_hashes[i].data()[0] ^= 0x80;
+  }
 
   const bool is_issued_by_known_root = true;
   HostPortPair domain_port(domain, 443);

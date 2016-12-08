@@ -6,6 +6,8 @@ from page_sets.system_health import platforms
 from page_sets.system_health import system_health_story
 from page_sets.system_health.loading_stories import LoadGmailMobileStory
 
+from telemetry import decorators
+
 _WAIT_FOR_VIDEO_SECONDS = 5
 
 class _BackgroundStory(system_health_story.SystemHealthStory):
@@ -76,6 +78,7 @@ class BackgroundImgurMobileStory(_BackgroundStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
+@decorators.Disabled('android')  # crbug.com.com/664505
 class BackgroundGmailMobileStory(LoadGmailMobileStory):
   NAME = 'background:tools:gmail'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY

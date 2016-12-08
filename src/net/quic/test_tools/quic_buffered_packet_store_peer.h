@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "net/quic/core/quic_alarm.h"
-#include "net/quic/core/quic_clock.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 namespace net {
 

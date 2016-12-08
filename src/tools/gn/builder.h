@@ -14,7 +14,6 @@
 #include "tools/gn/label_ptr.h"
 #include "tools/gn/unique_vector.h"
 
-class Config;
 class Err;
 class Loader;
 class ParseNode;

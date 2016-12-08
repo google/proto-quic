@@ -53,10 +53,6 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
   virtual void SendServerConfigUpdate(
       const CachedNetworkParameters* cached_network_params) = 0;
 
-  // Called by the ServerHello AckNotifier once the SHLO has been ACKed by the
-  // client.
-  virtual void OnServerHelloAcked() = 0;
-
   // These are all accessors and setters to their respective counters.
   virtual uint8_t NumHandshakeMessages() const = 0;
   virtual uint8_t NumHandshakeMessagesWithServerNonces() const = 0;
@@ -111,7 +107,6 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
   bool GetBase64SHA256ClientChannelID(std::string* output) const override;
   void SendServerConfigUpdate(
       const CachedNetworkParameters* cached_network_params) override;
-  void OnServerHelloAcked() override;
   uint8_t NumHandshakeMessages() const override;
   uint8_t NumHandshakeMessagesWithServerNonces() const override;
   int NumServerConfigUpdateMessagesSent() const override;

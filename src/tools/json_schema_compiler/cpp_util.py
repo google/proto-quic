@@ -60,16 +60,16 @@ def GetValueType(type_):
   """Returns the Value::Type corresponding to the model.Type.
   """
   return {
-      PropertyType.ARRAY: 'base::Value::TYPE_LIST',
-      PropertyType.BINARY: 'base::Value::TYPE_BINARY',
-      PropertyType.BOOLEAN: 'base::Value::TYPE_BOOLEAN',
+      PropertyType.ARRAY: 'base::Value::Type::LIST',
+      PropertyType.BINARY: 'base::Value::Type::BINARY',
+      PropertyType.BOOLEAN: 'base::Value::Type::BOOLEAN',
       # PropertyType.CHOICES can be any combination of types.
-      PropertyType.DOUBLE: 'base::Value::TYPE_DOUBLE',
-      PropertyType.ENUM: 'base::Value::TYPE_STRING',
-      PropertyType.FUNCTION: 'base::Value::TYPE_DICTIONARY',
-      PropertyType.INTEGER: 'base::Value::TYPE_INTEGER',
-      PropertyType.OBJECT: 'base::Value::TYPE_DICTIONARY',
-      PropertyType.STRING: 'base::Value::TYPE_STRING',
+      PropertyType.DOUBLE: 'base::Value::Type::DOUBLE',
+      PropertyType.ENUM: 'base::Value::Type::STRING',
+      PropertyType.FUNCTION: 'base::Value::Type::DICTIONARY',
+      PropertyType.INTEGER: 'base::Value::Type::INTEGER',
+      PropertyType.OBJECT: 'base::Value::Type::DICTIONARY',
+      PropertyType.STRING: 'base::Value::Type::STRING',
   }[type_.property_type]
 
 

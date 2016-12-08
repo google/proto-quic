@@ -42,7 +42,7 @@ json_schema_api("api") {
 }
 
 json_features("features_compiler_test") {
-  feature_class = "APIFeature"
+  feature_type = "APIFeature"
   provider_class = "CompilerTestFeatureProvider"
   sources = [
     "features_test.json",

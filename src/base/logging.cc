@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include "base/debug/activity_tracker.h"
 #include "base/macros.h"
 #include "build/build_config.h"
 
@@ -722,6 +723,12 @@ LogMessage::~LogMessage() {
   }
 
   if (severity_ == LOG_FATAL) {
+    // Write the log message to the global activity tracker, if running.
+    base::debug::GlobalActivityTracker* tracker =
+        base::debug::GlobalActivityTracker::Get();
+    if (tracker)
+      tracker->RecordLogMessage(str_newline);
+
     // Ensure the first characters of the string are on the stack so they
     // are contained in minidumps for diagnostic purposes.
     char str_stack[1024];

@@ -10,7 +10,6 @@
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/message_loop/message_loop.h"
-#include "base/threading/thread_checker.h"
 #include "build/build_config.h"
 
 namespace base {
@@ -105,8 +104,6 @@ class BASE_EXPORT RunLoop {
   // Used to record that QuitWhenIdle() was called on the MessageLoop, meaning
   // that we should quit Run once it becomes idle.
   bool quit_when_idle_received_;
-
-  base::ThreadChecker thread_checker_;
 
   // WeakPtrFactory for QuitClosure safety.
   base::WeakPtrFactory<RunLoop> weak_factory_;

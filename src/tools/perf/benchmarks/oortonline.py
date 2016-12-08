@@ -95,6 +95,10 @@ class OortOnlineTBMv2(perf_benchmark.PerfBenchmark):
     return options
 
   @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() == 'Nexus 9'
+
+  @classmethod
   def Name(cls):
     return 'oortonline_tbmv2'
 

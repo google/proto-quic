@@ -19,6 +19,12 @@
 
 namespace net {
 
+namespace {
+
+const uint8_t kRcodeMask = 0xf;
+
+}  // namespace
+
 DnsResourceRecord::DnsResourceRecord() {
 }
 
@@ -221,12 +227,12 @@ bool DnsResponse::IsValid() const {
 
 uint16_t DnsResponse::flags() const {
   DCHECK(parser_.IsValid());
-  return base::NetToHost16(header()->flags) & ~(dns_protocol::kRcodeMask);
+  return base::NetToHost16(header()->flags) & ~(kRcodeMask);
 }
 
 uint8_t DnsResponse::rcode() const {
   DCHECK(parser_.IsValid());
-  return base::NetToHost16(header()->flags) & dns_protocol::kRcodeMask;
+  return base::NetToHost16(header()->flags) & kRcodeMask;
 }
 
 unsigned DnsResponse::answer_count() const {

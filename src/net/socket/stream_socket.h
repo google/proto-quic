@@ -13,6 +13,12 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/socket.h"
 
+namespace base {
+namespace trace_event {
+class ProcessMemoryDump;
+}
+}
+
 namespace net {
 
 class IPEndPoint;
@@ -109,6 +115,13 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
   // 0 if the socket does not implement the function. The count is reset when
   // Disconnect() is called.
   virtual int64_t GetTotalReceivedBytes() const = 0;
+
+  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
+  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
+  // Default implementation does nothing.
+  virtual void DumpMemoryStats(
+      base::trace_event::ProcessMemoryDump* pmd,
+      const std::string& parent_dump_absolute_name) const {};
 
  protected:
   // The following class is only used to gather statistics about the history of

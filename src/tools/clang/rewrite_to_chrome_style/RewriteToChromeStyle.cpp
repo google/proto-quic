@@ -78,6 +78,16 @@ AST_MATCHER(clang::CXXMethodDecl, isInstanceMethod) {
   return Node.isInstance();
 }
 
+// TODO(lukasza): Remove this matcher definition, after we pull
+// https://reviews.llvm.org/D27207 (aka rL288366) from upstream clang.
+AST_MATCHER_P(clang::Type,
+              hasUnqualifiedDesugaredType,
+              clang::ast_matchers::internal::Matcher<clang::Type>,
+              InnerMatcher) {
+  const clang::Type* desugaredType = Node.getUnqualifiedDesugaredType();
+  return InnerMatcher.matches(*desugaredType, Finder, Builder);
+}
+
 AST_MATCHER_P(clang::FunctionTemplateDecl,
               templatedDecl,
               clang::ast_matchers::internal::Matcher<clang::FunctionDecl>,
@@ -1190,29 +1200,15 @@ int main(int argc, const char* argv[]) {
   // - const blink::Foo&
   // - blink::Foo*
   // - blink::Foo<T>
-  // - ...
-  // TODO(lukasza): The matchers below can be simplified after
-  // https://llvm.org/bugs/show_bug.cgi?id=30331 is fixed.
-  // Simplified matchers:
-  //    auto blink_qual_type_base_matcher =
-  //        qualType(hasDeclaration(in_blink_namespace));
-  //    auto blink_qual_type_matcher = qualType(anyOf(
-  //        blink_qual_type_base_matcher,
-  //        pointsTo(blink_qual_type_base_matcher),
-  //        references(blink_qual_type_base_matcher)));
-  auto blink_qual_type_bug_workaround_matcher1 = hasBaseType(
+  auto blink_qual_type_base_matcher = hasBaseType(hasUnqualifiedDesugaredType(
       anyOf(enumType(hasDeclaration(in_blink_namespace)),
+            injectedClassNameType(hasDeclaration(in_blink_namespace)),
             recordType(hasDeclaration(in_blink_namespace)),
             templateSpecializationType(hasDeclaration(in_blink_namespace)),
-            templateTypeParmType(hasDeclaration(in_blink_namespace)),
-            typedefType(hasDeclaration(in_blink_namespace))));
-  auto blink_qual_type_base_matcher =
-      qualType(anyOf(blink_qual_type_bug_workaround_matcher1,
-                     hasBaseType(elaboratedType(
-                         namesType(blink_qual_type_bug_workaround_matcher1)))));
-  auto blink_qual_type_matcher =
-      qualType(anyOf(blink_qual_type_base_matcher, pointsTo(in_blink_namespace),
-                     references(in_blink_namespace)));
+            templateTypeParmType(hasDeclaration(in_blink_namespace)))));
+  auto blink_qual_type_matcher = qualType(anyOf(
+      blink_qual_type_base_matcher, pointsTo(blink_qual_type_base_matcher),
+      references(blink_qual_type_base_matcher)));
 
   // Template-dependent decl lookup ========
   // Given

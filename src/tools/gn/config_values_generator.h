@@ -11,7 +11,6 @@
 class ConfigValues;
 class Err;
 class Scope;
-class Token;
 
 // This class fills in the config values from a given scope. It's shared
 // between the "config" function call and all the different binary target types

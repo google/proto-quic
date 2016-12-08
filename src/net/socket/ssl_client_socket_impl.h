@@ -37,6 +37,9 @@
 namespace base {
 class FilePath;
 class SequencedTaskRunner;
+namespace trace_event {
+class ProcessMemoryDump;
+}
 }
 
 namespace crypto {
@@ -114,6 +117,13 @@ class SSLClientSocketImpl : public SSLClientSocket,
   void ClearConnectionAttempts() override {}
   void AddConnectionAttempts(const ConnectionAttempts& attempts) override {}
   int64_t GetTotalReceivedBytes() const override;
+  void DumpMemoryStats(
+      base::trace_event::ProcessMemoryDump* pmd,
+      const std::string& parent_dump_absolute_name) const override;
+
+  // Dumps memory allocation stats. |pmd| is the browser process memory dump.
+  static void DumpSSLClientSessionMemoryStats(
+      base::trace_event::ProcessMemoryDump* pmd);
 
   // Socket implementation.
   int Read(IOBuffer* buf,

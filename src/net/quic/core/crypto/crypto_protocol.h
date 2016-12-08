@@ -107,6 +107,12 @@ const QuicTag kCONH = TAG('C', 'O', 'N', 'H');   // Conservative Handshake
                                                  // Retransmissions.
 const QuicTag kLFAK = TAG('L', 'F', 'A', 'K');   // Don't invoke FACK on the
                                                  // first ack.
+
+// TODO(fayang): Remove this connection option in QUIC_VERSION_37, in which
+// MAX_HEADER_LIST_SIZE settings frame should be supported.
+const QuicTag kSMHL = TAG('S', 'M', 'H', 'L');   // Support MAX_HEADER_LIST_SIZE
+                                                 // settings frame.
+
 const QuicTag kCCVX = TAG('C', 'C', 'V', 'X');   // Fix Cubic convex bug.
 
 // Optional support of truncated Connection IDs.  If sent by a peer, the value

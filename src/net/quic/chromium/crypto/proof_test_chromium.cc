@@ -139,14 +139,14 @@ TEST_P(ProofTest, DISABLED_Verify) {
   scoped_refptr<ProofSource::Chain> first_chain;
   string error_details;
   QuicCryptoProof proof, first_proof;
-  QuicIpAddress server_ip;
+  QuicSocketAddress server_addr;
 
-  ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               first_chlo_hash, QuicTagVector(), &first_chain,
-                               &first_proof));
-  ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               second_chlo_hash, QuicTagVector(), &chain,
-                               &proof));
+  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
+                               quic_version, first_chlo_hash, QuicTagVector(),
+                               &first_chain, &first_proof));
+  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
+                               quic_version, second_chlo_hash, QuicTagVector(),
+                               &chain, &proof));
 
   // Check that the proof source is caching correctly:
   ASSERT_EQ(first_chain->certs, chain->certs);
@@ -184,13 +184,13 @@ TEST_P(ProofTest, VerifySourceAsync) {
   const string first_chlo_hash = "first chlo hash bytes";
   const string second_chlo_hash = "first chlo hash bytes";
   const QuicVersion quic_version = GetParam();
-  QuicIpAddress server_ip;
+  QuicSocketAddress server_addr;
 
   // Call synchronous version
   scoped_refptr<ProofSource::Chain> expected_chain;
   QuicCryptoProof expected_proof;
-  ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, quic_version,
-                               first_chlo_hash, QuicTagVector(),
+  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
+                               quic_version, first_chlo_hash, QuicTagVector(),
                                &expected_chain, &expected_proof));
 
   // Call asynchronous version and compare results
@@ -200,7 +200,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
   QuicCryptoProof proof;
   std::unique_ptr<ProofSource::Callback> cb(
       new TestCallback(&called, &ok, &chain, &proof));
-  source->GetProof(server_ip, hostname, server_config, quic_version,
+  source->GetProof(server_addr, hostname, server_config, quic_version,
                    first_chlo_hash, QuicTagVector(), std::move(cb));
   // TODO(gredner): whan GetProof really invokes the callback asynchronously,
   // figure out what to do here.
@@ -219,9 +219,9 @@ TEST_P(ProofTest, UseAfterFree) {
   scoped_refptr<ProofSource::Chain> chain;
   string error_details;
   QuicCryptoProof proof;
-  QuicIpAddress server_ip;
+  QuicSocketAddress server_addr;
 
-  ASSERT_TRUE(source->GetProof(server_ip, hostname, server_config, GetParam(),
+  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config, GetParam(),
                                chlo_hash, QuicTagVector(), &chain, &proof));
 
   // Make sure we can safely access results after deleting where they came from.

@@ -234,10 +234,10 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
 
   void ShouldSucceed(const CryptoHandshakeMessage& message) {
     bool called = false;
-    QuicIpAddress server_ip;
+    QuicSocketAddress server_address;
     config_.ValidateClientHello(
-        message, client_address_.host(), server_ip, supported_versions_.front(),
-        &clock_, signed_config_,
+        message, client_address_.host(), server_address,
+        supported_versions_.front(), &clock_, signed_config_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, true, "", &called)));
     EXPECT_TRUE(called);
@@ -253,10 +253,10 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   void ShouldFailMentioning(const char* error_substr,
                             const CryptoHandshakeMessage& message,
                             bool* called) {
-    QuicIpAddress server_ip;
+    QuicSocketAddress server_address;
     config_.ValidateClientHello(
-        message, client_address_.host(), server_ip, supported_versions_.front(),
-        &clock_, signed_config_,
+        message, client_address_.host(), server_address,
+        supported_versions_.front(), &clock_, signed_config_,
         std::unique_ptr<ValidateCallback>(
             new ValidateCallback(this, false, error_substr, called)));
   }
@@ -310,12 +310,12 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   void ProcessValidationResult(scoped_refptr<ValidateCallback::Result> result,
                                bool should_succeed,
                                const char* error_substr) {
-    QuicIpAddress server_ip;
+    QuicSocketAddress server_address;
     QuicConnectionId server_designated_connection_id =
         rand_for_id_generation_.RandUint64();
     bool called;
     config_.ProcessClientHello(
-        result, /*reject_only=*/false, /*connection_id=*/1, server_ip,
+        result, /*reject_only=*/false, /*connection_id=*/1, server_address,
         client_address_, supported_versions_.front(), supported_versions_,
         use_stateless_rejects_, server_designated_connection_id, &clock_, rand_,
         &compressed_certs_cache_, params_, signed_config_,

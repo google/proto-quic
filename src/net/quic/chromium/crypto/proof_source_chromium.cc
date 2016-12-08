@@ -77,7 +77,7 @@ bool ProofSourceChromium::Initialize(const base::FilePath& cert_path,
 }
 
 bool ProofSourceChromium::GetProof(
-    const QuicIpAddress& server_ip,
+    const QuicSocketAddress& server_addr,
     const string& hostname,
     const string& server_config,
     QuicVersion quic_version,
@@ -133,7 +133,7 @@ bool ProofSourceChromium::GetProof(
   return true;
 }
 
-void ProofSourceChromium::GetProof(const QuicIpAddress& server_ip,
+void ProofSourceChromium::GetProof(const QuicSocketAddress& server_addr,
                                    const std::string& hostname,
                                    const std::string& server_config,
                                    QuicVersion quic_version,
@@ -146,7 +146,7 @@ void ProofSourceChromium::GetProof(const QuicIpAddress& server_ip,
   string signature;
   string leaf_cert_sct;
   QuicCryptoProof out_proof;
-  const bool ok = GetProof(server_ip, hostname, server_config, quic_version,
+  const bool ok = GetProof(server_addr, hostname, server_config, quic_version,
                            chlo_hash, connection_options, &chain, &out_proof);
   callback->Run(ok, chain, out_proof, nullptr /* details */);
 }

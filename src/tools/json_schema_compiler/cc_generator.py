@@ -307,7 +307,7 @@ class _Generator(object):
               self._util_cc_helper.GetValueTypeString('value'))))
         .Append('return false;'))
     elif type_.property_type == PropertyType.OBJECT:
-      (c.Sblock('if (!value.IsType(base::Value::TYPE_DICTIONARY)) {')
+      (c.Sblock('if (!value.IsType(base::Value::Type::DICTIONARY)) {')
         .Concat(self._GenerateError(
           '"expected dictionary, got " + ' +
           self._util_cc_helper.GetValueTypeString('value')))
@@ -713,7 +713,7 @@ class _Generator(object):
       value_var = param.unix_name + '_value'
       (c.Append('const base::Value* %(value_var)s = NULL;')
         .Append('if (args.Get(%(i)s, &%(value_var)s) &&')
-        .Sblock('    !%(value_var)s->IsType(base::Value::TYPE_NULL)) {')
+        .Sblock('    !%(value_var)s->IsType(base::Value::Type::NONE)) {')
         .Concat(self._GeneratePopulatePropertyFromValue(
             param, value_var, 'params', failure_value))
         .Eblock('}')
@@ -888,7 +888,7 @@ class _Generator(object):
                                                     failure_value))
     elif underlying_type.property_type == PropertyType.BINARY:
       (c.Append('const base::BinaryValue* binary_value = NULL;')
-        .Sblock('if (!%(src_var)s->IsType(base::Value::TYPE_BINARY)) {')
+        .Sblock('if (!%(src_var)s->IsType(base::Value::Type::BINARY)) {')
         .Concat(self._GenerateError(
           '"\'%%(key)s\': expected binary, got " + ' +
           self._util_cc_helper.GetValueTypeString('%%(src_var)s', True)))

@@ -58,9 +58,6 @@ declare_args() {
 config("feature_flags") {
   # Don't use deprecated V8 APIs anywhere.
   defines = [ "V8_DEPRECATION_WARNINGS" ]
-  if (enable_notifications) {
-    defines += [ "ENABLE_NOTIFICATIONS" ]
-  }
   if (enable_pdf) {
     defines += [ "ENABLE_PDF=1" ]
   }
@@ -138,9 +135,6 @@ config("feature_flags") {
   }
   if (!enable_nacl) {
     defines += [ "DISABLE_NACL" ]
-  }
-  if (enable_task_manager) {
-    defines += [ "ENABLE_TASK_MANAGER=1" ]
   }
   if (enable_themes) {
     defines += [ "ENABLE_THEMES=1" ]

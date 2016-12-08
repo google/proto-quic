@@ -175,6 +175,31 @@ void DoParseAuthority(const CHAR* spec,
   }
 }
 
+template <typename CHAR>
+inline void FindQueryAndRefParts(const CHAR* spec,
+                          const Component& path,
+                          int* query_separator,
+                          int* ref_separator) {
+  int path_end = path.begin + path.len;
+  for (int i = path.begin; i < path_end; i++) {
+    switch (spec[i]) {
+      case '?':
+        // Only match the query string if it precedes the reference fragment
+        // and when we haven't found one already.
+        if (*query_separator < 0)
+          *query_separator = i;
+        break;
+      case '#':
+        // Record the first # sign only.
+        if (*ref_separator < 0) {
+          *ref_separator = i;
+          return;
+        }
+        break;
+    }
+  }
+}
+
 template<typename CHAR>
 void ParsePath(const CHAR* spec,
                const Component& path,
@@ -193,25 +218,9 @@ void ParsePath(const CHAR* spec,
   DCHECK(path.len > 0) << "We should never have 0 length paths";
 
   // Search for first occurrence of either ? or #.
-  int path_end = path.begin + path.len;
-
   int query_separator = -1;  // Index of the '?'
   int ref_separator = -1;    // Index of the '#'
-  for (int i = path.begin; i < path_end; i++) {
-    switch (spec[i]) {
-      case '?':
-        // Only match the query string if it precedes the reference fragment
-        // and when we haven't found one already.
-        if (ref_separator < 0 && query_separator < 0)
-          query_separator = i;
-        break;
-      case '#':
-        // Record the first # sign only.
-        if (ref_separator < 0)
-          ref_separator = i;
-        break;
-    }
-  }
+  FindQueryAndRefParts(spec, path, &query_separator, &ref_separator);
 
   // Markers pointing to the character after each of these corresponding
   // components. The code below words from the end back to the beginning,
@@ -219,6 +228,7 @@ void ParsePath(const CHAR* spec,
   int file_end, query_end;
 
   // Ref fragment: from the # to the end of the path.
+  int path_end = path.begin + path.len;
   if (ref_separator >= 0) {
     file_end = query_end = ref_separator;
     *ref = MakeRange(ref_separator + 1, path_end);

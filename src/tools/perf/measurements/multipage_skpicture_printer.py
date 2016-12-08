@@ -28,5 +28,6 @@ class MultipageSkpicturePrinter(legacy_page_test.LegacyPageTest):
     # Replace win32 path separator char '\' with '\\'.
     outpath = os.path.abspath(
         os.path.join(self._mskp_outdir, page.file_safe_name + '.mskp'))
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     js = _JS.format(outpath.replace('\\', '\\\\'))
     tab.EvaluateJavaScript(js)

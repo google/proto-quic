@@ -13,6 +13,7 @@
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/address_list.h"
+#include "net/base/trace_constants.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
 #include "net/log/net_log_event_type.h"
@@ -81,7 +82,8 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
     std::unique_ptr<ClientSocketHandle> connection,
     const NetLogWithSource& net_log,
     bool is_secure) {
-  TRACE_EVENT0("net", "SpdySessionPool::CreateAvailableSessionFromSocket");
+  TRACE_EVENT0(kNetTracingCategory,
+               "SpdySessionPool::CreateAvailableSessionFromSocket");
 
   UMA_HISTOGRAM_ENUMERATION(
       "Net.SpdySessionGet", IMPORTED_FROM_SOCKET, SPDY_SESSION_GET_MAX);

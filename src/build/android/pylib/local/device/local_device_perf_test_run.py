@@ -241,7 +241,7 @@ class DeviceTestShard(TestShard):
             except device_errors.CommandTimeoutError:
               logging.exception(
                   'Device failed to recover after failing %s.', test)
-          tries_left = tries_left - 1
+          tries_left -= 1
 
       results.AddResult(base_test_result.BaseTestResult(test, result_type))
     return results
@@ -310,6 +310,7 @@ class HostTestShard(TestShard):
           result_type = self._RunSingleTest(test)
         finally:
           self._TestTearDown()
+          tries_left -= 1
       results.AddResult(base_test_result.BaseTestResult(test, result_type))
     return results
 
@@ -323,7 +324,7 @@ class HostTestShard(TestShard):
 
 class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
 
-  _DEFAULT_TIMEOUT = 3 * 60 * 60  # 3 hours.
+  _DEFAULT_TIMEOUT = 5 * 60 * 60  # 5 hours.
   _CONFIG_VERSION = 1
 
   def __init__(self, env, test_instance):

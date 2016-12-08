@@ -108,6 +108,12 @@ void MockCryptoClientStream::SendOnCryptoHandshakeEvent(
   if (event == QuicSession::HANDSHAKE_CONFIRMED) {
     handshake_confirmed_ = true;
     SetConfigNegotiated();
+    session()->connection()->SetDecrypter(ENCRYPTION_FORWARD_SECURE,
+                                          QuicDecrypter::Create(kNULL));
+    session()->connection()->SetEncrypter(ENCRYPTION_FORWARD_SECURE,
+                                          QuicEncrypter::Create(kNULL));
+    session()->connection()->SetDefaultEncryptionLevel(
+        ENCRYPTION_FORWARD_SECURE);
   }
   session()->OnCryptoHandshakeEvent(event);
 }

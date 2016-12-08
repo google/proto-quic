@@ -280,4 +280,21 @@ class Derived : public Base {
 
 }  // namespace cxx_dependent_scope_member_expr_testing
 
+namespace blink_methods_called_from_mojo_traits_are_not_rewritten {
+
+template <typename V>
+struct MapTraits;
+
+template <typename V>
+struct MapTraits<blink::test_unnamed_arg::Class<V>> {
+  static void SetToEmpty(blink::test_unnamed_arg::Class<V>* output) {
+    // Need to rewrite |f| to |F| below (because this method name
+    // does get rewritten when processing blink::test_unnamed_arg::Class).
+    // See also https://crbug.com/670434.
+    output->f(123);
+  }
+};
+
+}  // namespace blink_methods_called_from_mojo_traits_are_not_rewritten
+
 }  // namespace not_blink

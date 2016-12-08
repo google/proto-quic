@@ -63,6 +63,30 @@ __declspec(restrict) void* calloc(size_t n, size_t size) {
   return ShimCalloc(n, size);
 }
 
+// The symbols
+//   * __acrt_heap
+//   * __acrt_initialize_heap
+//   * __acrt_uninitialize_heap
+//   * _get_heap_handle
+// must be overridden all or none, as they are otherwise supplied
+// by heap_handle.obj in the ucrt.lib file.
+HANDLE __acrt_heap = nullptr;
+
+bool __acrt_initialize_heap() {
+  __acrt_heap = ::HeapCreate(0, 0, 0);
+  return true;
+}
+
+bool __acrt_uninitialize_heap() {
+  ::HeapDestroy(__acrt_heap);
+  __acrt_heap = nullptr;
+  return true;
+}
+
+intptr_t _get_heap_handle(void) {
+  return reinterpret_cast<intptr_t>(__acrt_heap);
+}
+
 // The default dispatch translation unit has to define also the following
 // symbols (unless they are ultimately routed to the system symbols):
 //   void malloc_stats(void);

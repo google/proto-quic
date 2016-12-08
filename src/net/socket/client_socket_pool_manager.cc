@@ -4,8 +4,6 @@
 
 #include "net/socket/client_socket_pool_manager.h"
 
-#include <string>
-
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
 #include "net/base/load_flags.h"

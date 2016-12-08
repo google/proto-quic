@@ -3176,7 +3176,7 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "media_mojo_shell_unittests"
+        "test": "media_service_unittests"
       },
       {
         "swarming": {

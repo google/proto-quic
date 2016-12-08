@@ -265,6 +265,79 @@ bool HttpUtil::ParseRangeHeader(const std::string& ranges_specifier,
 }
 
 // static
+// From RFC 2616 14.16:
+// content-range-spec =
+//     bytes-unit SP byte-range-resp-spec "/" ( instance-length | "*" )
+// byte-range-resp-spec = (first-byte-pos "-" last-byte-pos) | "*"
+// instance-length = 1*DIGIT
+// bytes-unit = "bytes"
+bool HttpUtil::ParseContentRangeHeader(base::StringPiece content_range_spec,
+                                       int64_t* first_byte_position,
+                                       int64_t* last_byte_position,
+                                       int64_t* instance_length) {
+  *first_byte_position = *last_byte_position = *instance_length = -1;
+  content_range_spec = TrimLWS(content_range_spec);
+
+  size_t space_position = content_range_spec.find(' ');
+  if (space_position == base::StringPiece::npos)
+    return false;
+
+  // Invalid header if it doesn't contain "bytes-unit".
+  if (!base::LowerCaseEqualsASCII(
+          TrimLWS(content_range_spec.substr(0, space_position)), "bytes")) {
+    return false;
+  }
+
+  size_t slash_position = content_range_spec.find('/', space_position + 1);
+  if (slash_position == base::StringPiece::npos)
+    return false;
+
+  // Obtain the part behind the space and before slash.
+  base::StringPiece byte_range_resp_spec = TrimLWS(content_range_spec.substr(
+      space_position + 1, slash_position - (space_position + 1)));
+
+  if (byte_range_resp_spec != "*") {
+    size_t minus_position = byte_range_resp_spec.find('-');
+    if (minus_position == base::StringPiece::npos)
+      return false;
+
+    // Obtain first-byte-pos and last-byte-pos.
+    if (!base::StringToInt64(
+            TrimLWS(byte_range_resp_spec.substr(0, minus_position)),
+            first_byte_position) ||
+        !base::StringToInt64(
+            TrimLWS(byte_range_resp_spec.substr(minus_position + 1)),
+            last_byte_position)) {
+      *first_byte_position = *last_byte_position = -1;
+      return false;
+    }
+    if (*first_byte_position < 0 || *last_byte_position < 0 ||
+        *first_byte_position > *last_byte_position)
+      return false;
+  }
+
+  // Parse the instance-length part.
+  base::StringPiece instance_length_spec =
+      TrimLWS(content_range_spec.substr(slash_position + 1));
+
+  if (base::StartsWith(instance_length_spec, "*",
+                       base::CompareCase::SENSITIVE)) {
+    return false;
+  } else if (!base::StringToInt64(instance_length_spec, instance_length)) {
+    *instance_length = -1;
+    return false;
+  }
+
+  // We have all the values; let's verify that they make sense for a 206
+  // response.
+  if (*first_byte_position < 0 || *last_byte_position < 0 ||
+      *instance_length < 0 || *instance_length - 1 < *last_byte_position)
+    return false;
+
+  return true;
+}
+
+// static
 bool HttpUtil::ParseRetryAfterHeader(const std::string& retry_after_string,
                                      base::Time now,
                                      base::TimeDelta* retry_after) {
@@ -426,7 +499,8 @@ bool HttpUtil::IsNonCoalescingHeader(std::string::const_iterator name_begin,
 }
 
 bool HttpUtil::IsLWS(char c) {
-  return strchr(HTTP_LWS, c) != NULL;
+  const base::StringPiece kWhiteSpaceCharacters(HTTP_LWS);
+  return kWhiteSpaceCharacters.find(c) != base::StringPiece::npos;
 }
 
 // static

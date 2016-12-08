@@ -133,12 +133,13 @@ class WinTool(object):
     # non-Windows don't do that there.
     link = subprocess.Popen(args, shell=sys.platform == 'win32', env=env,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    out, _ = link.communicate()
-    for line in out.splitlines():
+    # Read output one line at a time as it shows up to avoid OOM failures when
+    # GBs of output is produced.
+    for line in link.stdout:
       if (not line.startswith('   Creating library ') and
           not line.startswith('Generating code') and
           not line.startswith('Finished generating code')):
-        print line
+        print line,
     return link.returncode
 
   def ExecLinkWithManifests(self, arch, embed_manifest, out, ldcmd, resname,

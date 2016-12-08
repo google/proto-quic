@@ -82,7 +82,11 @@ template("generate_nmf") {
       if (current_cpu != "x86" && current_cpu != "x64") {
         nmfflags +=
             [ "--library-path=" + rebase_path("${nacl_toolchain_tooldir}/lib") ]
-        data += [ "${lib_path}/lib/" ]
+        if (current_cpu == "arm") {
+          data += [ "${lib_path}/libarm/" ]
+        } else {
+          data += [ "${lib_path}/lib/" ]
+        }
       } else {
         # For x86-32, the lib/ directory is called lib32/ instead.
         if (current_cpu == "x86") {

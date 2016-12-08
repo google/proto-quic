@@ -128,7 +128,6 @@ static const uint16_t kTypeNSEC = 47;
 // DNS reply codes (RCODEs).
 //
 // https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-6
-static const uint8_t kRcodeMask = 0xf;
 static const uint8_t kRcodeNOERROR = 0;
 static const uint8_t kRcodeFORMERR = 1;
 static const uint8_t kRcodeSERVFAIL = 2;

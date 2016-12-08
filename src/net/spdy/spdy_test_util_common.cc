@@ -1001,12 +1001,12 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyGetReplyRedirect(int stream_id) {
   static const char* const kExtraHeaders[] = {
     "location", "http://www.foo.com/index.php",
   };
-  return ConstructSpdyReplyError("301 Moved Permanently", kExtraHeaders,
+  return ConstructSpdyReplyError("301", kExtraHeaders,
                                  arraysize(kExtraHeaders) / 2, stream_id);
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyReplyError(int stream_id) {
-  return ConstructSpdyReplyError("500 Internal Server Error", NULL, 0, 1);
+  return ConstructSpdyReplyError("500", NULL, 0, 1);
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGetReply(

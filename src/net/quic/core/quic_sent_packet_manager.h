@@ -57,11 +57,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
     virtual void OnRetransmissionMarked(QuicPathId path_id,
                                         QuicPacketNumber packet_number,
                                         TransmissionType transmission_type) = 0;
-    // Called when |packet_number| is marked as not retransmittable.
-    virtual void OnPacketMarkedNotRetransmittable(
-        QuicPathId path_id,
-        QuicPacketNumber packet_number,
-        QuicTime::Delta delta_largest_observed) = 0;
     // Called when any transmission of |packet_number| is handled.
     virtual void OnPacketMarkedHandled(
         QuicPathId path_id,
@@ -279,17 +274,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
                                   QuicByteCount prior_in_flight,
                                   QuicTime event_time);
 
-  // Called when frames of |packet_number| has been received but the packet
-  // itself has not been received by the peer. Currently, this method is not
-  // used.
-  // TODO(fayang): Update the comment when multipath sent packet manager is
-  // landed.
-  // The packet needs no longer to be retransmitted, but the packet remains
-  // pending if it is and the congestion control does not consider the packet
-  // acked.
-  void MarkPacketNotRetransmittable(QuicPacketNumber packet_number,
-                                    QuicTime::Delta ack_delay_time);
-
   // Removes the retransmittability and in flight properties from the packet at
   // |info| due to receipt by the peer.
   void MarkPacketHandled(QuicPacketNumber packet_number,
@@ -312,15 +296,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   // QuicTransmissionInfo |info|.
   void RecordSpuriousRetransmissions(const QuicTransmissionInfo& info,
                                      QuicPacketNumber acked_packet_number);
-
-  // Returns mutable QuicTransmissionInfo associated with |packet_number|, which
-  // must be unacked.
-  QuicTransmissionInfo* GetMutableTransmissionInfo(
-      QuicPacketNumber packet_number);
-
-  // Remove any packets no longer needed for retransmission, congestion, or
-  // RTT measurement purposes.
-  void RemoveObsoletePackets();
 
   // Sets the send algorithm to the given congestion control type and points the
   // pacing sender at |send_algorithm_|. Can be called any number of times.
@@ -364,9 +339,6 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
   LossDetectionInterface* loss_algorithm_;
   GeneralLossAlgorithm general_loss_algorithm_;
   bool n_connection_simulation_;
-
-  // Receiver side buffer in bytes.
-  QuicByteCount receive_buffer_bytes_;
 
   // Least packet number which the peer is still waiting for.
   QuicPacketNumber least_packet_awaited_by_peer_;

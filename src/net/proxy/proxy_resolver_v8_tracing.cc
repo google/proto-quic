@@ -23,6 +23,7 @@
 #include "net/base/address_list.h"
 #include "net/base/net_errors.h"
 #include "net/base/network_interfaces.h"
+#include "net/base/trace_constants.h"
 #include "net/dns/host_resolver.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_info.h"
@@ -562,7 +563,7 @@ void Job::ExecuteNonBlocking() {
 }
 
 int Job::ExecuteProxyResolver() {
-  TRACE_EVENT0("net", "Job::ExecuteProxyResolver");
+  TRACE_EVENT0(kNetTracingCategory, "Job::ExecuteProxyResolver");
   int result = ERR_UNEXPECTED;  // Initialized to silence warnings.
 
   switch (operation_) {

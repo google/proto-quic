@@ -181,7 +181,7 @@ enum QuicErrorCode {
 
   // Crypto errors.
 
-  // Hanshake failed.
+  // Handshake failed.
   QUIC_HANDSHAKE_FAILED = 28,
   // Handshake message contained out of order tags.
   QUIC_CRYPTO_TAGS_OUT_OF_ORDER = 29,
@@ -207,7 +207,7 @@ enum QuicErrorCode {
   QUIC_CRYPTO_MESSAGE_INDEX_NOT_FOUND = 37,
   // A demand for an unsupport proof type was received.
   QUIC_UNSUPPORTED_PROOF_DEMAND = 94,
-  // An internal error occured in crypto processing.
+  // An internal error occurred in crypto processing.
   QUIC_CRYPTO_INTERNAL_ERROR = 38,
   // A crypto handshake message specified an unsupported version.
   QUIC_CRYPTO_VERSION_NOT_SUPPORTED = 39,

@@ -109,17 +109,11 @@ public class MainActivity extends Activity {
                     break;
                 case CustomTabsCallback.NAVIGATION_FINISHED:
                     mPageLoadFinishedMs = SystemClock.uptimeMillis();
-                    if (mIntentSentMs != NONE && mPageLoadStartedMs != NONE) {
-                        if (mFirstContentfulPaintMs != NONE) {
-                            logMetricsAndFinish();
-                        } else {
-                            logMetricsAndFinishDelayed(3000);
-                        }
-                    }
                     break;
                 default:
                     break;
             }
+            if (allSet()) logMetricsAndFinish();
         }
 
         @Override
@@ -132,7 +126,12 @@ public class MainActivity extends Activity {
             if (mFirstContentfulPaintMs == NONE) {
                 mFirstContentfulPaintMs = navigationStartMs + firstPaintMs;
             }
-            if (mPageLoadFinishedMs != NONE) logMetricsAndFinish();
+            if (allSet()) logMetricsAndFinish();
+        }
+
+        private boolean allSet() {
+            return mIntentSentMs != NONE && mPageLoadStartedMs != NONE
+                    && mFirstContentfulPaintMs != NONE && mPageLoadFinishedMs != NONE;
         }
 
         /** Outputs the available metrics, and die. Unavalaible metrics are set to -1. */
@@ -153,7 +152,7 @@ public class MainActivity extends Activity {
                 public void run() {
                     logMetricsAndFinish();
                 }
-            }, 3000);
+            }, delayMs);
         }
     }
 

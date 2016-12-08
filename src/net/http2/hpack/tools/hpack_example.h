@@ -1,0 +1,32 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef NET_HTTP2_HPACK_TOOLS_HPACK_EXAMPLE_H_
+#define NET_HTTP2_HPACK_TOOLS_HPACK_EXAMPLE_H_
+
+// Parses HPACK examples in the format seen in the HPACK specification,
+// RFC 7541. For example:
+//
+//       10                                      | == Literal never indexed ==
+//       08                                      |   Literal name (len = 8)
+//       7061 7373 776f 7264                     | password
+//       06                                      |   Literal value (len = 6)
+//       7365 6372 6574                          | secret
+//                                               | -> password: secret
+//
+// (excluding the leading "//").
+
+#include <string>
+
+#include "base/strings/string_piece.h"
+
+namespace net {
+namespace test {
+
+std::string HpackExampleToStringOrDie(base::StringPiece example);
+
+}  // namespace test
+}  // namespace net
+
+#endif  // NET_HTTP2_HPACK_TOOLS_HPACK_EXAMPLE_H_

@@ -419,7 +419,7 @@ Value ExecuteMinus(const BinaryOpNode* op_node,
                    const Value& right,
                    Err* err) {
   // Left-hand-side int. The only thing to do is subtract another int.
-  if (left.type() == Value::INTEGER && right.type() != Value::INTEGER) {
+  if (left.type() == Value::INTEGER && right.type() == Value::INTEGER) {
     // Int - int -> subtraction.
     return Value(op_node, left.int_value() - right.int_value());
   }

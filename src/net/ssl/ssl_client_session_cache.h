@@ -24,6 +24,9 @@
 
 namespace base {
 class Clock;
+namespace trace_event {
+class ProcessMemoryDump;
+}
 }
 
 namespace net {
@@ -55,6 +58,10 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
   void Flush();
 
   void SetClockForTesting(std::unique_ptr<base::Clock> clock);
+
+  // Dumps memory allocation stats. |pmd| is the ProcessMemoryDump of the
+  // browser process.
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd);
 
  private:
   // base::MemoryCoordinatorClient implementation:

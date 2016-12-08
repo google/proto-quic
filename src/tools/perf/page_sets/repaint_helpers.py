@@ -39,6 +39,7 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
   with action_runner.CreateInteraction('Repaint'):
     action_runner.RepaintContinuously(seconds=5)
 
+  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.ExecuteJavaScript("""
       window.benchmark_results.message_handled =
           chrome.gpuBenchmarking.sendMessageToMicroBenchmark(

@@ -36,10 +36,15 @@ struct SafeEnvironmentVariableInfo {
   bool capture_at_generation;
 };
 
+// clang-format off
 SafeEnvironmentVariableInfo kSafeEnvironmentVariables[] = {
-    {"HOME", true}, {"LANG", true},    {"PATH", true},
-    {"USER", true}, {"TMPDIR", false},
+    {"HOME", true},
+    {"LANG", true},
+    {"PATH", true},
+    {"USER", true},
+    {"TMPDIR", false},
 };
+// clang-format on
 
 XcodeWriter::TargetOsType GetTargetOs(const Args& args) {
   const Value* target_os_value = args.GetArgOverride(variables::kTargetOs);
@@ -63,8 +68,7 @@ std::string GetBuildScript(const std::string& target_name,
   // variable overridding settings, including the SDK, thus breaking hermetic
   // build).
   script << "env -i ";
-  for (size_t i = 0; i < arraysize(kSafeEnvironmentVariables); ++i) {
-    const auto& variable = kSafeEnvironmentVariables[i];
+  for (const auto& variable : kSafeEnvironmentVariables) {
     script << variable.name << "=\"";
 
     std::string value;

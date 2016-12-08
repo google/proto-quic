@@ -416,6 +416,12 @@ TEST_P(QuicCryptoServerStreamTest, OnlySendSCUPAfterHandshakeComplete) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
+  // Do not send MAX_HEADER_LIST_SIZE SETTING frame.
+  // TODO(fayang): This SETTING frame cannot be decrypted and
+  // CryptoTestUtils::MovePackets stops processing parsing following packets.
+  // Actually, crypto stream test should use QuicSession instead of
+  // QuicSpdySession (b/32366134).
+  FLAGS_quic_send_max_header_list_size = false;
   Initialize();
 
   InitializeFakeClient(/* supports_stateless_rejects= */ false);
@@ -479,7 +485,7 @@ TEST_P(QuicCryptoServerStreamTest, NoTokenBindingWithoutClientSupport) {
 
 class FailingProofSource : public ProofSource {
  public:
-  bool GetProof(const QuicIpAddress& server_ip,
+  bool GetProof(const QuicSocketAddress& server_address,
                 const string& hostname,
                 const string& server_config,
                 QuicVersion quic_version,
@@ -490,7 +496,7 @@ class FailingProofSource : public ProofSource {
     return false;
   }
 
-  void GetProof(const QuicIpAddress& server_ip,
+  void GetProof(const QuicSocketAddress& server_address,
                 const string& hostname,
                 const string& server_config,
                 QuicVersion quic_version,

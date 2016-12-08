@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 namespace net {
 namespace simulator {

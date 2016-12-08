@@ -23,7 +23,7 @@ outfile = sys.argv[4]
 if not os.path.isfile(outfile) or \
    os.stat(outfile).st_mtime > os.stat(infile).st_mtime:
   with open(outfile, 'w') as outfileobj:
-    subprocess.check_call([dumpsyms, '-r', infile], stdout=outfileobj)
+    subprocess.check_call([dumpsyms, infile], stdout=outfileobj)
 
 if strip_binary != '0':
   subprocess.check_call(['strip', infile])

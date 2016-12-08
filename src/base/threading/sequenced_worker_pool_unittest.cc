@@ -248,7 +248,6 @@ class SequencedWorkerPoolTest
       std::vector<SchedulerWorkerPoolParams> worker_pool_params;
       worker_pool_params.emplace_back(
           "SchedulerWorkerPoolName", ThreadPriority::NORMAL,
-          SchedulerWorkerPoolParams::IORestriction::ALLOWED,
           SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY,
           kNumWorkerThreads, TimeDelta::Max());
       TaskScheduler::CreateAndSetDefaultTaskScheduler(

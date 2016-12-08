@@ -22,10 +22,6 @@ class Target;
 using PBXAttributes = std::map<std::string, std::string>;
 class PBXProject;
 
-namespace base {
-class FilePath;
-}
-
 class XcodeWriter {
  public:
   enum TargetOsType {

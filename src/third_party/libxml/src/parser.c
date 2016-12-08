@@ -137,18 +137,24 @@ xmlParserEntityCheck(xmlParserCtxtPtr ctxt, size_t size,
      * This may look absurd but is needed to detect
      * entities problems
      */
+    if ((ent != NULL) && (ent->guard == XML_ENTITY_BEING_CHECKED)) {
+        xmlFatalErr(ctxt, XML_ERR_ENTITY_LOOP, NULL);
+        return (1);
+    }
     if ((ent != NULL) && (ent->etype != XML_INTERNAL_PREDEFINED_ENTITY) &&
 	(ent->content != NULL) && (ent->checked == 0) &&
 	(ctxt->errNo != XML_ERR_ENTITY_LOOP)) {
 	unsigned long oldnbent = ctxt->nbentities;
 	xmlChar *rep;
 
+        ent->guard = XML_ENTITY_BEING_CHECKED;
 	ent->checked = 1;
 
         ++ctxt->depth;
 	rep = xmlStringDecodeEntities(ctxt, ent->content,
 				  XML_SUBSTITUTE_REF, 0, 0, 0);
         --ctxt->depth;
+        ent->guard = XML_ENTITY_NOT_BEING_CHECKED;
 	if (ctxt->errNo == XML_ERR_ENTITY_LOOP) {
 	    ent->content[0] = 0;
 	}
@@ -7329,23 +7335,28 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
 	 * if its replacement text matches the production labeled
 	 * content.
 	 */
-	if (ent->etype == XML_INTERNAL_GENERAL_ENTITY) {
-	    ctxt->depth++;
-	    ret = xmlParseBalancedChunkMemoryInternal(ctxt, ent->content,
-	                                              user_data, &list);
-	    ctxt->depth--;
-
-	} else if (ent->etype == XML_EXTERNAL_GENERAL_PARSED_ENTITY) {
-	    ctxt->depth++;
-	    ret = xmlParseExternalEntityPrivate(ctxt->myDoc, ctxt, ctxt->sax,
-	                                   user_data, ctxt->depth, ent->URI,
-					   ent->ExternalID, &list);
-	    ctxt->depth--;
-	} else {
-	    ret = XML_ERR_ENTITY_PE_INTERNAL;
-	    xmlErrMsgStr(ctxt, XML_ERR_INTERNAL_ERROR,
-			 "invalid entity type found\n", NULL);
-	}
+        if (ent->guard == XML_ENTITY_BEING_CHECKED) {
+            ret = XML_ERR_ENTITY_LOOP;
+        } else {
+            ent->guard = XML_ENTITY_BEING_CHECKED;
+            if (ent->etype == XML_INTERNAL_GENERAL_ENTITY) {
+                ctxt->depth++;
+                ret = xmlParseBalancedChunkMemoryInternal(ctxt, ent->content,
+                                                          user_data, &list);
+                ctxt->depth--;
+            } else if (ent->etype == XML_EXTERNAL_GENERAL_PARSED_ENTITY) {
+                ctxt->depth++;
+                ret = xmlParseExternalEntityPrivate(ctxt->myDoc, ctxt, ctxt->sax,
+                                               user_data, ctxt->depth, ent->URI,
+                                               ent->ExternalID, &list);
+                ctxt->depth--;
+            } else {
+                ret = XML_ERR_ENTITY_PE_INTERNAL;
+                xmlErrMsgStr(ctxt, XML_ERR_INTERNAL_ERROR,
+                             "invalid entity type found\n", NULL);
+            }
+            ent->guard = XML_ENTITY_NOT_BEING_CHECKED;
+        }
 
 	/*
 	 * Store the number of entities needing parsing for this entity
@@ -7448,23 +7459,29 @@ xmlParseReference(xmlParserCtxtPtr ctxt) {
 	    else
 		user_data = ctxt->userData;
 
-	    if (ent->etype == XML_INTERNAL_GENERAL_ENTITY) {
-		ctxt->depth++;
-		ret = xmlParseBalancedChunkMemoryInternal(ctxt,
-				   ent->content, user_data, NULL);
-		ctxt->depth--;
-	    } else if (ent->etype ==
-		       XML_EXTERNAL_GENERAL_PARSED_ENTITY) {
-		ctxt->depth++;
-		ret = xmlParseExternalEntityPrivate(ctxt->myDoc, ctxt,
-			   ctxt->sax, user_data, ctxt->depth,
-			   ent->URI, ent->ExternalID, NULL);
-		ctxt->depth--;
-	    } else {
-		ret = XML_ERR_ENTITY_PE_INTERNAL;
-		xmlErrMsgStr(ctxt, XML_ERR_INTERNAL_ERROR,
-			     "invalid entity type found\n", NULL);
-	    }
+            if (ent->guard == XML_ENTITY_BEING_CHECKED) {
+                ret = XML_ERR_ENTITY_LOOP;
+            } else {
+                ent->guard = XML_ENTITY_BEING_CHECKED;
+                if (ent->etype == XML_INTERNAL_GENERAL_ENTITY) {
+                    ctxt->depth++;
+                    ret = xmlParseBalancedChunkMemoryInternal(ctxt,
+                                       ent->content, user_data, NULL);
+                    ctxt->depth--;
+                } else if (ent->etype ==
+                           XML_EXTERNAL_GENERAL_PARSED_ENTITY) {
+                    ctxt->depth++;
+                    ret = xmlParseExternalEntityPrivate(ctxt->myDoc, ctxt,
+                               ctxt->sax, user_data, ctxt->depth,
+                               ent->URI, ent->ExternalID, NULL);
+                    ctxt->depth--;
+                } else {
+                    ret = XML_ERR_ENTITY_PE_INTERNAL;
+                    xmlErrMsgStr(ctxt, XML_ERR_INTERNAL_ERROR,
+                                 "invalid entity type found\n", NULL);
+                }
+                ent->guard = XML_ENTITY_NOT_BEING_CHECKED;
+            }
 	    if (ret == XML_ERR_ENTITY_LOOP) {
 		xmlFatalErr(ctxt, XML_ERR_ENTITY_LOOP, NULL);
 		return;

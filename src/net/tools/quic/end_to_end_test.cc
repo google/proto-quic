@@ -44,12 +44,12 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
 #include "net/tools/epoll_server/epoll_server.h"
+#include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_server.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
-#include "net/tools/quic/quic_socket_utils.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "net/tools/quic/test_tools/packet_dropping_test_writer.h"
 #include "net/tools/quic/test_tools/packet_reordering_writer.h"
@@ -1331,8 +1331,7 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kBBR;
       break;
     case kQBIC:
-      expected_congestion_control_type =
-          FLAGS_quic_default_enable_cubic_bytes ? kCubicBytes : kCubic;
+      expected_congestion_control_type = kCubicBytes;
       break;
     default:
       DLOG(FATAL) << "Unexpected congestion control tag";
@@ -1767,23 +1766,71 @@ TEST_P(EndToEndTest, FlowControlsSynced) {
       QuicServerPeer::GetDispatcher(server_thread_->server());
   auto server_session = static_cast<QuicSpdySession*>(
       dispatcher->session_map().begin()->second.get());
-
   ExpectFlowControlsSynced(client_session->flow_controller(),
                            server_session->flow_controller());
   ExpectFlowControlsSynced(
       QuicSessionPeer::GetCryptoStream(client_session)->flow_controller(),
       QuicSessionPeer::GetCryptoStream(server_session)->flow_controller());
-  ExpectFlowControlsSynced(
-      QuicSpdySessionPeer::GetHeadersStream(client_session)->flow_controller(),
-      QuicSpdySessionPeer::GetHeadersStream(server_session)->flow_controller());
+  SpdyFramer spdy_framer;
+  SpdySettingsIR settings_frame;
+  settings_frame.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, false, false,
+                            kDefaultMaxUncompressedHeaderSize);
+  SpdySerializedFrame frame(spdy_framer.SerializeFrame(settings_frame));
+  QuicFlowController* client_header_stream_flow_controller =
+      QuicSpdySessionPeer::GetHeadersStream(client_session)->flow_controller();
+  QuicFlowController* server_header_stream_flow_controller =
+      QuicSpdySessionPeer::GetHeadersStream(server_session)->flow_controller();
+  if (FLAGS_quic_send_max_header_list_size) {
+    // Both client and server are sending this SETTINGS frame, and the send
+    // window is consumed. But because of timing issue, the server may send or
+    // not send the frame, and the client may send/ not send / receive / not
+    // receive the frame.
+    // TODO(fayang): Rewrite this part because it is hacky.
+    QuicByteCount win_difference1 = QuicFlowControllerPeer::ReceiveWindowSize(
+                                        server_header_stream_flow_controller) -
+                                    QuicFlowControllerPeer::SendWindowSize(
+                                        client_header_stream_flow_controller);
+    QuicByteCount win_difference2 = QuicFlowControllerPeer::ReceiveWindowSize(
+                                        client_header_stream_flow_controller) -
+                                    QuicFlowControllerPeer::SendWindowSize(
+                                        server_header_stream_flow_controller);
+    EXPECT_TRUE(win_difference1 == 0 || win_difference1 == frame.size());
+    EXPECT_TRUE(win_difference2 == 0 || win_difference2 == frame.size());
+  } else {
+    ExpectFlowControlsSynced(
+        QuicSpdySessionPeer::GetHeadersStream(client_session)
+            ->flow_controller(),
+        QuicSpdySessionPeer::GetHeadersStream(server_session)
+            ->flow_controller());
+  }
 
   if (!client_session->force_hol_blocking()) {
-    EXPECT_EQ(static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
-                  client_session->flow_controller())) /
-                  QuicFlowControllerPeer::ReceiveWindowSize(
-                      QuicSpdySessionPeer::GetHeadersStream(client_session)
-                          ->flow_controller()),
-              kSessionToStreamRatio);
+    if (FLAGS_quic_send_max_header_list_size) {
+      // Client *may* have received the SETTINGs frame.
+      // TODO(fayang): Rewrite this part because it is hacky.
+      float ratio1 =
+          static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
+              client_session->flow_controller())) /
+          QuicFlowControllerPeer::ReceiveWindowSize(
+              QuicSpdySessionPeer::GetHeadersStream(client_session)
+                  ->flow_controller());
+      float ratio2 =
+          static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
+              client_session->flow_controller())) /
+          (QuicFlowControllerPeer::ReceiveWindowSize(
+               QuicSpdySessionPeer::GetHeadersStream(client_session)
+                   ->flow_controller()) +
+           frame.size());
+      EXPECT_TRUE(ratio1 == kSessionToStreamRatio ||
+                  ratio2 == kSessionToStreamRatio);
+    } else {
+      EXPECT_EQ(static_cast<float>(QuicFlowControllerPeer::ReceiveWindowSize(
+                    client_session->flow_controller())) /
+                    QuicFlowControllerPeer::ReceiveWindowSize(
+                        QuicSpdySessionPeer::GetHeadersStream(client_session)
+                            ->flow_controller()),
+                kSessionToStreamRatio);
+    }
   }
 
   server_thread_->Resume();

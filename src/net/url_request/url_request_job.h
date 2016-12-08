@@ -360,15 +360,19 @@ class NET_EXPORT URLRequestJob : public base::PowerObserver {
   // |bytes_read| unfiltered bytes have been read for this job.
   void RecordBytesRead(int bytes_read);
 
-  // NotifyDone marks that request is done. It is really a glorified
+  // OnDone marks that request is done. It is really a glorified
   // set_status, but also does internal state checking and job tracking. It
   // should be called once per request, when the job is finished doing all IO.
-  void NotifyDone(const URLRequestStatus& status);
+  //
+  // If |notify_done| is true, will notify the URLRequest if there was an error
+  // asynchronously.  Otherwise, the caller will need to do this itself,
+  // possibly through a synchronous return value.
+  // TODO(mmenke):  Remove |notify_done|, and make caller handle notification.
+  void OnDone(const URLRequestStatus& status, bool notify_done);
 
-  // Some work performed by NotifyDone must be completed asynchronously so
-  // as to avoid re-entering URLRequest::Delegate. This method performs that
-  // work.
-  void CompleteNotifyDone();
+  // Takes care of the notification initiated by OnDone() to avoid re-entering
+  // the URLRequest::Delegate.
+  void NotifyDone();
 
   // Subclasses may implement this method to record packet arrival times.
   // The default implementation does nothing.  Only invoked when bytes have been

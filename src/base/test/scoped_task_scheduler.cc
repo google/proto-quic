@@ -23,7 +23,6 @@ ScopedTaskScheduler::ScopedTaskScheduler() {
   std::vector<SchedulerWorkerPoolParams> worker_pool_params_vector;
   worker_pool_params_vector.emplace_back(
       "Simple", ThreadPriority::NORMAL,
-      SchedulerWorkerPoolParams::IORestriction::ALLOWED,
       SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY, kMaxThreads,
       TimeDelta::Max());
   TaskScheduler::CreateAndSetDefaultTaskScheduler(

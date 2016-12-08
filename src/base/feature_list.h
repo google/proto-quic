@@ -13,6 +13,7 @@
 #include "base/base_export.h"
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
+#include "base/metrics/persistent_memory_allocator.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
 
@@ -92,6 +93,11 @@ class BASE_EXPORT FeatureList {
   void InitializeFromCommandLine(const std::string& enable_features,
                                  const std::string& disable_features);
 
+  // Initializes feature overrides through the field trial allocator, which
+  // we're using to store the feature names, their override state, and the name
+  // of the associated field trial.
+  void InitializeFromSharedMemory(PersistentMemoryAllocator* allocator);
+
   // Specifies whether a feature override enables or disables the feature.
   enum OverrideState {
     OVERRIDE_USE_DEFAULT,
@@ -123,6 +129,9 @@ class BASE_EXPORT FeatureList {
   void RegisterFieldTrialOverride(const std::string& feature_name,
                                   OverrideState override_state,
                                   FieldTrial* field_trial);
+
+  // Loops through feature overrides and serializes them all into |allocator|.
+  void AddFeaturesToAllocator(PersistentMemoryAllocator* allocator);
 
   // Returns comma-separated lists of feature names (in the same format that is
   // accepted by InitializeFromCommandLine()) corresponding to features that
@@ -180,6 +189,10 @@ class BASE_EXPORT FeatureList {
 
  private:
   FRIEND_TEST_ALL_PREFIXES(FeatureListTest, CheckFeatureIdentity);
+  FRIEND_TEST_ALL_PREFIXES(FeatureListTest,
+                           StoreAndRetrieveFeaturesFromSharedMemory);
+  FRIEND_TEST_ALL_PREFIXES(FeatureListTest,
+                           StoreAndRetrieveAssociatedFeaturesFromSharedMemory);
 
   struct OverrideEntry {
     // The overridden enable (on/off) state of the feature.

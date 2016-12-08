@@ -15,6 +15,9 @@
 #include "base/profiler/scoped_tracker.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "base/values.h"
 #include "net/base/network_throttle_manager_impl.h"
 #include "net/http/http_auth_handler_factory.h"
@@ -24,11 +27,11 @@
 #include "net/proxy/proxy_service.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_crypto_client_stream_factory.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
 #include "net/socket/next_proto.h"
@@ -160,7 +163,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.socket_performance_watcher_factory,
           params.quic_crypto_client_stream_factory,
           params.quic_random ? params.quic_random : QuicRandom::GetInstance(),
-          params.quic_clock ? params.quic_clock : new QuicClock(),
+          params.quic_clock ? params.quic_clock : new QuicChromiumClock(),
           params.quic_max_packet_length,
           params.quic_user_agent_id,
           params.quic_supported_versions,
@@ -375,6 +378,29 @@ void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,
   } else if (params_.enable_token_binding && params_.channel_id_service) {
     server_config->token_binding_params.push_back(TB_PARAM_ECDSAP256);
   }
+}
+
+void HttpNetworkSession::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_absolute_name) const {
+  std::string name = base::StringPrintf("net/http_network_session_%p", this);
+  base::trace_event::MemoryAllocatorDump* http_network_session_dump =
+      pmd->GetAllocatorDump(name);
+  // If memory dump already exists, it means that this is not the first
+  // DumpMemoryStats() invocation on this object and it is reached by another
+  // "parent." If that's the case, add an ownership edge and return early.
+  // This is needed because URLRequestContexts can share an HttpNetworkSession.
+  if (http_network_session_dump != nullptr) {
+    pmd->AddOwnershipEdge(pmd->GetAllocatorDump(parent_absolute_name)->guid(),
+                          http_network_session_dump->guid());
+
+    return;
+  }
+  http_network_session_dump = pmd->CreateAllocatorDump(name);
+  normal_socket_pool_manager_->DumpMemoryStats(
+      pmd, http_network_session_dump->absolute_name());
+  pmd->AddOwnershipEdge(pmd->GetAllocatorDump(parent_absolute_name)->guid(),
+                        http_network_session_dump->guid());
 }
 
 ClientSocketPoolManager* HttpNetworkSession::GetSocketPoolManager(

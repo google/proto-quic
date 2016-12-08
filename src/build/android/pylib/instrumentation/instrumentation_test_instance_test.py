@@ -94,6 +94,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
       },
     ]
 
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -131,6 +132,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._test_filter = 'org.chromium.test.SampleTest.testMethod1'
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -178,6 +180,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._test_filter = 'org.chromium.test.SampleTest2.*'
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -216,7 +219,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
 
     o._GetTestsFromPickle = mock.MagicMock(return_value=raw_tests)
     o._test_filter = '*-org.chromium.test.SampleTest.testMethod1'
-
+    o._test_jar = 'path/to/test.jar'
     expected_tests = [
       {
         'annotations': {
@@ -288,6 +291,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._annotations = [('SmallTest', None)]
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -335,6 +339,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._excluded_annotations = [('SmallTest', None)]
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -392,6 +397,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._annotations = [('TestValue', '1')]
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -439,6 +445,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._annotations = [('Feature', 'Bar')]
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()
@@ -497,6 +504,7 @@ class InstrumentationTestInstanceTest(unittest.TestCase):
     ]
 
     o._annotations = [('Feature', 'Bar'), ('Feature', 'Baz')]
+    o._test_jar = 'path/to/test.jar'
     with mock.patch(_INSTRUMENTATION_TEST_INSTANCE_PATH % '_GetTestsFromPickle',
                     return_value=raw_tests):
       actual_tests = o.GetTests()

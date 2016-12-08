@@ -23,6 +23,7 @@
 #include "net/quic/chromium/quic_chromium_packet_reader.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_spdy_stream.h"
+#include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/tools/quic/quic_client_base.h"
 
 namespace net {
@@ -83,7 +84,7 @@ class QuicSimpleClient : public QuicClientBase,
   void StartPacketReaderIfNotStarted();
 
   //  Used by |helper_| to time alarms.
-  QuicClock clock_;
+  QuicChromiumClock clock_;
 
   // Address of the client if the client is connected to the server.
   IPEndPoint client_address_;
