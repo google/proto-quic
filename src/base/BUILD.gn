@@ -36,14 +36,15 @@ declare_args() {
   # See //base/build_time.cc and //build/write_build_date_header.py for more
   # details and the expected format.
   override_build_date = "N/A"
+
+  # Turn on memory profiling in the task profiler when the heap shim is
+  # available, except for official builds for now.
+  enable_memory_task_profiler =
+      use_experimental_allocator_shim && (!is_official_build || is_syzyasan)
 }
 
 if (is_android) {
   import("//build/config/android/rules.gni")
-}
-
-if (is_win) {
-  import("//build/config/win/visual_studio_version.gni")
 }
 
 config("base_flags") {
@@ -250,6 +251,7 @@ component("base") {
     "build_time.cc",
     "build_time.h",
     "callback.h",
+    "callback_forward.h",
     "callback_helpers.cc",
     "callback_helpers.h",
     "callback_internal.cc",
@@ -1264,62 +1266,54 @@ component("base") {
 
       # These runtime files are copied to the output directory by the
       # vs_toolchain script that runs as part of toolchain configuration.
-      if (visual_studio_version == "2015") {
-        data += [
-          "$root_out_dir/msvcp140${vcrt_suffix}.dll",
-          "$root_out_dir/vccorlib140${vcrt_suffix}.dll",
-          "$root_out_dir/vcruntime140${vcrt_suffix}.dll",
+      data += [
+        "$root_out_dir/msvcp140${vcrt_suffix}.dll",
+        "$root_out_dir/vccorlib140${vcrt_suffix}.dll",
+        "$root_out_dir/vcruntime140${vcrt_suffix}.dll",
 
-          # Universal Windows 10 CRT files
-          "$root_out_dir/api-ms-win-core-console-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-datetime-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-debug-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-errorhandling-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-file-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-file-l1-2-0.dll",
-          "$root_out_dir/api-ms-win-core-file-l2-1-0.dll",
-          "$root_out_dir/api-ms-win-core-handle-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-heap-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-interlocked-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-libraryloader-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-localization-l1-2-0.dll",
-          "$root_out_dir/api-ms-win-core-memory-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-namedpipe-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-processenvironment-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-processthreads-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-processthreads-l1-1-1.dll",
-          "$root_out_dir/api-ms-win-core-profile-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-rtlsupport-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-string-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-synch-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-synch-l1-2-0.dll",
-          "$root_out_dir/api-ms-win-core-sysinfo-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-timezone-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-core-util-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-conio-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-convert-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-environment-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-filesystem-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-heap-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-locale-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-math-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-multibyte-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-private-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-process-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-runtime-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-stdio-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-string-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-time-l1-1-0.dll",
-          "$root_out_dir/api-ms-win-crt-utility-l1-1-0.dll",
-          "$root_out_dir/ucrtbase${vcrt_suffix}.dll",
-        ]
-      } else {
-        # TODO(thakis): V8 still relies on 2013: http://crbug.com/603131.
-        data += [
-          "$root_out_dir/msvcp120${vcrt_suffix}.dll",
-          "$root_out_dir/msvcr120${vcrt_suffix}.dll",
-        ]
-      }
+        # Universal Windows 10 CRT files
+        "$root_out_dir/api-ms-win-core-console-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-datetime-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-debug-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-errorhandling-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-file-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-file-l1-2-0.dll",
+        "$root_out_dir/api-ms-win-core-file-l2-1-0.dll",
+        "$root_out_dir/api-ms-win-core-handle-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-heap-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-interlocked-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-libraryloader-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-localization-l1-2-0.dll",
+        "$root_out_dir/api-ms-win-core-memory-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-namedpipe-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-processenvironment-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-processthreads-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-processthreads-l1-1-1.dll",
+        "$root_out_dir/api-ms-win-core-profile-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-rtlsupport-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-string-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-synch-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-synch-l1-2-0.dll",
+        "$root_out_dir/api-ms-win-core-sysinfo-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-timezone-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-core-util-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-conio-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-convert-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-environment-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-filesystem-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-heap-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-locale-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-math-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-multibyte-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-private-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-process-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-runtime-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-stdio-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-string-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-time-l1-1-0.dll",
+        "$root_out_dir/api-ms-win-crt-utility-l1-1-0.dll",
+        "$root_out_dir/ucrtbase${vcrt_suffix}.dll",
+      ]
       if (is_asan) {
         if (current_cpu == "x64") {
           data += [ "$clang_base_path/lib/clang/$clang_version/lib/windows/clang_rt.asan_dynamic-x86_64.dll" ]
@@ -1525,7 +1519,10 @@ component("base") {
 buildflag_header("debugging_flags") {
   header = "debugging_flags.h"
   header_dir = "base/debug"
-  flags = [ "ENABLE_PROFILING=$enable_profiling" ]
+  flags = [
+    "ENABLE_PROFILING=$enable_profiling",
+    "ENABLE_MEMORY_TASK_PROFILER=$enable_memory_task_profiler",
+  ]
 }
 
 # This is the subset of files from base that should not be used with a dynamic
@@ -1992,6 +1989,7 @@ test("base_unittests") {
     "task_scheduler/task_scheduler_impl_unittest.cc",
     "task_scheduler/task_tracker_posix_unittest.cc",
     "task_scheduler/task_tracker_unittest.cc",
+    "task_scheduler/task_traits_unittest.cc",
     "task_scheduler/task_unittest.cc",
     "task_scheduler/test_task_factory.cc",
     "task_scheduler/test_task_factory.h",

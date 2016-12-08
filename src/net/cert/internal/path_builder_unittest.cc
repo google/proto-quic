@@ -11,6 +11,7 @@
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/signature_policy.h"
 #include "net/cert/internal/test_helpers.h"
+#include "net/cert/internal/trust_store_collection.h"
 #include "net/cert/internal/trust_store_in_memory.h"
 #include "net/cert/internal/verify_certificate_chain.h"
 #include "net/cert/pem_tokenizer.h"
@@ -591,13 +592,18 @@ TEST_F(PathBuilderKeyRolloverTest, TestAnchorsNoMatchAndNoIssuerSources) {
 // Tests that multiple trust root matches on a single path will be considered.
 // Both roots have the same subject but different keys. Only one of them will
 // verify.
-TEST_F(PathBuilderKeyRolloverTest, DISABLED_TestMultipleRootMatchesOnlyOneWorks) {
-  TrustStoreInMemory trust_store;
+TEST_F(PathBuilderKeyRolloverTest, TestMultipleRootMatchesOnlyOneWorks) {
+  TrustStoreCollection trust_store_collection;
+  TrustStoreInMemory trust_store1;
+  TrustStoreInMemory trust_store2;
+  trust_store_collection.AddTrustStore(&trust_store1);
+  trust_store_collection.AddTrustStore(&trust_store2);
   // Add two trust anchors (newroot_ and oldroot_). Path building will attempt
-  // them in this same order.
-  trust_store.AddTrustAnchor(
+  // them in this same order, as trust_store1 was added to
+  // trust_store_collection first.
+  trust_store1.AddTrustAnchor(
       TrustAnchor::CreateFromCertificateNoConstraints(newroot_));
-  trust_store.AddTrustAnchor(oldroot_);
+  trust_store2.AddTrustAnchor(oldroot_);
 
   // Only oldintermediate is supplied, so the path with newroot should fail,
   // oldroot should succeed.
@@ -605,8 +611,8 @@ TEST_F(PathBuilderKeyRolloverTest, DISABLED_TestMultipleRootMatchesOnlyOneWorks)
   sync_certs.AddCert(oldintermediate_);
 
   CertPathBuilder::Result result;
-  CertPathBuilder path_builder(target_, &trust_store, &signature_policy_, time_,
-                               &result);
+  CertPathBuilder path_builder(target_, &trust_store_collection,
+                               &signature_policy_, time_, &result);
   path_builder.AddCertIssuerSource(&sync_certs);
 
   path_builder.Run();

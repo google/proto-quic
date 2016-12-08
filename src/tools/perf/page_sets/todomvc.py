@@ -48,6 +48,7 @@ class TodoMVCPage(page_module.Page):
         """
     )
     action_runner.WaitForJavaScriptCondition('this.becameIdle === true')
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     action_runner.ExecuteJavaScript('console.timeEnd("%s");' % INTERACTION_NAME)
 
 

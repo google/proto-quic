@@ -67,10 +67,7 @@ def main_run(args):
 
 
 def main_compile_targets(args):
-  if 'android' == args.properties.get('target_platform'):
-    json.dump(['${name}_apk'], args.output)
-  else:
-    json.dump(['$name'], args.output)
+  json.dump(['$name'], args.output)
 
 
 if __name__ == '__main__':

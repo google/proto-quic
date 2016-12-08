@@ -61,13 +61,8 @@ static struct InitModule {
     int x = 0;
     // futexes are ints, so we can use them only when
     // that's the same size as the lockword_ in SpinLock.
-#ifdef __arm__
-    // ARM linux doesn't support sys_futex1(void*, int, int, struct timespec*);
-    have_futex = 0;
-#else
     have_futex = (sizeof (Atomic32) == sizeof (int) && 
                   syscall(__NR_futex, &x, FUTEX_WAKE, 1, 0) >= 0);
-#endif
     if (have_futex &&
         syscall(__NR_futex, &x, FUTEX_WAKE | futex_private_flag, 1, 0) < 0) {
       futex_private_flag = 0;

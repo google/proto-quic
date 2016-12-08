@@ -15,8 +15,6 @@
 class Builder;
 class BuildSettings;
 class Err;
-class Pool;
-class Settings;
 class Target;
 class Toolchain;
 

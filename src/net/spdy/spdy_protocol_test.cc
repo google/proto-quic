@@ -15,6 +15,7 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::ostream;
+using std::string;
 
 namespace net {
 
@@ -87,19 +88,19 @@ TEST(SpdyDataIRTest, Construct) {
   EXPECT_NE(base::StringPiece(d1.data(), d1.data_len()), s2);
 
   // Confirm copies a const string.
-  const std::string foo = "foo";
+  const string foo = "foo";
   SpdyDataIR d3(3, foo);
   EXPECT_EQ(foo, d3.data());
 
   // Confirm copies a non-const string.
-  std::string bar = "bar";
+  string bar = "bar";
   SpdyDataIR d4(4, bar);
   EXPECT_EQ("bar", bar);
   EXPECT_EQ("bar", base::StringPiece(d4.data(), d4.data_len()));
 
   // Confirm moves an rvalue reference. Note that the test string "baz" is too
   // short to trigger the move optimization, and instead a copy occurs.
-  std::string baz = "the quick brown fox";
+  string baz = "the quick brown fox";
   SpdyDataIR d5(5, std::move(baz));
   EXPECT_EQ("", baz);
   EXPECT_EQ(base::StringPiece(d5.data(), d5.data_len()), "the quick brown fox");
@@ -151,6 +152,48 @@ TEST(SpdyProtocolTest, Http2WeightToSpdy3Priority) {
   EXPECT_EQ(6u, Http2WeightToSpdy3Priority(37));
   EXPECT_EQ(6u, Http2WeightToSpdy3Priority(2));
   EXPECT_EQ(7u, Http2WeightToSpdy3Priority(1));
+}
+
+TEST(SpdyProtocolTest, ParseSettingsId) {
+  SpdySettingsIds setting_id;
+  EXPECT_FALSE(SpdyConstants::ParseSettingsId(0, &setting_id));
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(1, &setting_id));
+  EXPECT_EQ(SETTINGS_HEADER_TABLE_SIZE, setting_id);
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(2, &setting_id));
+  EXPECT_EQ(SETTINGS_ENABLE_PUSH, setting_id);
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(3, &setting_id));
+  EXPECT_EQ(SETTINGS_MAX_CONCURRENT_STREAMS, setting_id);
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(4, &setting_id));
+  EXPECT_EQ(SETTINGS_INITIAL_WINDOW_SIZE, setting_id);
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(5, &setting_id));
+  EXPECT_EQ(SETTINGS_MAX_FRAME_SIZE, setting_id);
+  EXPECT_TRUE(SpdyConstants::ParseSettingsId(6, &setting_id));
+  EXPECT_EQ(SETTINGS_MAX_HEADER_LIST_SIZE, setting_id);
+  EXPECT_FALSE(SpdyConstants::ParseSettingsId(7, &setting_id));
+}
+
+TEST(SpdyProtocolTest, SettingsIdToString) {
+  struct {
+    SpdySettingsIds setting_id;
+    bool expected_bool;
+    const string expected_string;
+  } test_cases[] = {
+      {static_cast<SpdySettingsIds>(0), false, "SETTINGS_UNKNOWN"},
+      {SETTINGS_HEADER_TABLE_SIZE, true, "SETTINGS_HEADER_TABLE_SIZE"},
+      {SETTINGS_ENABLE_PUSH, true, "SETTINGS_ENABLE_PUSH"},
+      {SETTINGS_MAX_CONCURRENT_STREAMS, true,
+       "SETTINGS_MAX_CONCURRENT_STREAMS"},
+      {SETTINGS_INITIAL_WINDOW_SIZE, true, "SETTINGS_INITIAL_WINDOW_SIZE"},
+      {SETTINGS_MAX_FRAME_SIZE, true, "SETTINGS_MAX_FRAME_SIZE"},
+      {SETTINGS_MAX_HEADER_LIST_SIZE, true, "SETTINGS_MAX_HEADER_LIST_SIZE"},
+      {static_cast<SpdySettingsIds>(7), false, "SETTINGS_UNKNOWN"}};
+  for (auto test_case : test_cases) {
+    const char* settings_id_string;
+    EXPECT_EQ(test_case.expected_bool,
+              SpdyConstants::SettingsIdToString(test_case.setting_id,
+                                                &settings_id_string));
+    EXPECT_EQ(test_case.expected_string, settings_id_string);
+  }
 }
 
 TEST(SpdyStreamPrecedenceTest, Basic) {

@@ -4,7 +4,7 @@
 
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 
-#include "net/tools/quic/quic_epoll_clock.h"
+#include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

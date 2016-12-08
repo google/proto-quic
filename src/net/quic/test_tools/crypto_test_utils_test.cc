@@ -19,13 +19,13 @@ namespace test {
 class ShloVerifier {
  public:
   ShloVerifier(QuicCryptoServerConfig* crypto_config,
-               QuicIpAddress server_ip,
+               QuicSocketAddress server_addr,
                QuicSocketAddress client_addr,
                const QuicClock* clock,
                scoped_refptr<QuicSignedServerConfig> signed_config,
                QuicCompressedCertsCache* compressed_certs_cache)
       : crypto_config_(crypto_config),
-        server_ip_(server_ip),
+        server_addr_(server_addr),
         client_addr_(client_addr),
         clock_(clock),
         signed_config_(signed_config),
@@ -56,7 +56,7 @@ class ShloVerifier {
       const scoped_refptr<ValidateClientHelloResultCallback::Result>& result) {
     result_ = result;
     crypto_config_->ProcessClientHello(
-        result_, /*reject_only=*/false, /*connection_id=*/1, server_ip_,
+        result_, /*reject_only=*/false, /*connection_id=*/1, server_addr_,
         client_addr_, AllSupportedVersions().front(), AllSupportedVersions(),
         /*use_stateless_rejects=*/true, /*server_designated_connection_id=*/0,
         clock_, QuicRandom::GetInstance(), compressed_certs_cache_, params_,
@@ -93,7 +93,7 @@ class ShloVerifier {
   }
 
   QuicCryptoServerConfig* crypto_config_;
-  QuicIpAddress server_ip_;
+  QuicSocketAddress server_addr_;
   QuicSocketAddress client_addr_;
   const QuicClock* clock_;
   scoped_refptr<QuicSignedServerConfig> signed_config_;
@@ -108,7 +108,7 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   QuicCryptoServerConfig crypto_config(
       QuicCryptoServerConfig::TESTING, QuicRandom::GetInstance(),
       CryptoTestUtils::ProofSourceForTesting());
-  QuicIpAddress server_ip;
+  QuicSocketAddress server_addr;
   QuicSocketAddress client_addr(QuicIpAddress::Loopback4(), 1);
   scoped_refptr<QuicSignedServerConfig> signed_config(
       new QuicSignedServerConfig);
@@ -157,15 +157,15 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
     nullptr);
   // clang-format on
 
-  CryptoTestUtils::GenerateFullCHLO(inchoate_chlo, &crypto_config, server_ip,
+  CryptoTestUtils::GenerateFullCHLO(inchoate_chlo, &crypto_config, server_addr,
                                     client_addr, version, &clock, signed_config,
                                     &compressed_certs_cache, &full_chlo);
   // Verify that full_chlo can pass crypto_config's verification.
-  ShloVerifier shlo_verifier(&crypto_config, server_ip, client_addr, &clock,
+  ShloVerifier shlo_verifier(&crypto_config, server_addr, client_addr, &clock,
                              signed_config, &compressed_certs_cache);
   crypto_config.ValidateClientHello(
-      full_chlo, client_addr.host(), server_ip, version, &clock, signed_config,
-      shlo_verifier.GetValidateClientHelloCallback());
+      full_chlo, client_addr.host(), server_addr, version, &clock,
+      signed_config, shlo_verifier.GetValidateClientHelloCallback());
 }
 
 }  // namespace test

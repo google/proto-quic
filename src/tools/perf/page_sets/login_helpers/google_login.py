@@ -43,6 +43,7 @@ def LoginGoogleAccount(action_runner,
        'https%3A%2F%2Faccounts.google.com%2FManageAccount')
 
   # Wait until either the email or password input is visible.
+  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.WaitForJavaScriptCondition('%s || %s' % (
       _EMAIL_INPUT_VISIBLE_CONDITION, _PASSWORD_INPUT_VISIBLE_CONDITION))
 

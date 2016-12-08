@@ -9,7 +9,6 @@
 
 #include "Edge.h"
 
-struct BlinkGCPluginOptions;
 class FieldPoint;
 
 // This visitor checks that the fields of a class are "well formed".

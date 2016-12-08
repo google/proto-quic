@@ -18,7 +18,7 @@
 #include "net/base/ip_address.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/tools/quic/quic_epoll_clock.h"
+#include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/test_tools/quic_test_client.h"
 

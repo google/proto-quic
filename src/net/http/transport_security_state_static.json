@@ -60,7 +60,8 @@
       "static_spki_hashes": [
         "GoogleBackup2048",
         "GoogleG2",
-        "GeoTrustGlobal"
+        "GeoTrustGlobal",
+        "GlobalSignRootCA_R2"
       ],
       "report_uri": "http://clients3.google.com/cert_upload_json"
     },
@@ -8782,7 +8783,9 @@
     { "name": "winebid.com", "include_subdomains": true, "mode": "force-https" },
 
     // Entries submitted through hstspreload.appspot.com in Chrome 51 or later.
-    // START OF BULK ADDITIONS
+    // These entries are subject to the continued requirements documented at
+    // https://hstspreload.org/#continued-requirements
+    // START OF BULK ENTRIES
     { "name": "050media.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "0x.sk", "include_subdomains": true, "mode": "force-https" },
     { "name": "0x44.net", "include_subdomains": true, "mode": "force-https" },
@@ -18745,11 +18748,11 @@
     { "name": "rijk-catering.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "rvsbevestigingen.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "yhb.io", "include_subdomains": true, "mode": "force-https" },
-    // END OF BULK ADDITIONS
+    // END OF BULK ENTRIES
 
-    // Manual additions in Chrome 51 or later that do not belong in a
+    // Manual additions and changes in Chrome 51 or later that do not belong in a
     // special section above.
-    // START OF MANUAL ADDITIONS
+    // START OF MANUAL ENTRIES
     { "name": "bodhi.fedoraproject.org", "include_subdomains": true, "mode": "force-https" },
     { "name": "communityblog.fedoraproject.org", "include_subdomains": true, "mode": "force-https" },
     { "name": "keys.fedoraproject.org", "include_subdomains": true, "mode": "force-https" },
@@ -18798,7 +18801,7 @@
     { "name": "www.amazon.nl", "include_subdomains": true, "mode": "force-https" },
     { "name": "crypto.is", "include_subdomains": true, "mode": "force-https", "expect_ct": true, "expect_ct_report_uri": "https://clients3.google.com/ct_upload" },
     { "name": "ritter.vg", "expect_ct": true, "expect_ct_report_uri": "https://clients3.google.com/ct_upload", "expect_staple": true, "expect_staple_report_uri": "https://asac.casa/expectstaple.jsp" },
-    // END OF MANUAL ADDITIONS
+    // END OF MANUAL ENTRIES
 
     // To avoid trailing comma changes from showing up in diffs, we place a
     // single entry at the end.

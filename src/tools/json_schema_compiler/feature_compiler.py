@@ -55,8 +55,6 @@ CC_FILE_BEGIN = """
 
 #include "%(header_file_path)s"
 
-#include "extensions/common/features/api_feature.h"
-#include "extensions/common/features/behavior_feature.h"
 #include "extensions/common/features/complex_feature.h"
 #include "extensions/common/features/manifest_feature.h"
 #include "extensions/common/features/permission_feature.h"
@@ -215,8 +213,8 @@ FEATURE_GRAMMAR = (
     },
   })
 
-FEATURE_CLASSES = ['APIFeature', 'BehaviorFeature',
-                   'ManifestFeature', 'PermissionFeature']
+FEATURE_TYPES = ['APIFeature', 'BehaviorFeature',
+                 'ManifestFeature', 'PermissionFeature']
 
 def HasProperty(property_name, value):
   return property_name in value
@@ -258,6 +256,13 @@ def IsFeatureCrossReference(property_name, reverse_property_name, feature,
   if feature.has_parent:
     return True
   return reverse_reference_value == ('"%s"' % feature.name)
+
+SIMPLE_FEATURE_CPP_CLASSES = ({
+  'APIFeature': 'SimpleFeature',
+  'ManifestFeature': 'ManifestFeature',
+  'PermissionFeature': 'PermissionFeature',
+  'BehaviorFeature': 'SimpleFeature',
+})
 
 VALIDATION = ({
   'all': [
@@ -500,17 +505,18 @@ class Feature(object):
     for key, key_grammar in FEATURE_GRAMMAR.iteritems():
       self._ParseKey(key, parsed_json, shared_values, key_grammar)
 
-  def Validate(self, feature_class, shared_values):
+  def Validate(self, feature_type, shared_values):
     feature_values = self.feature_values.copy()
     feature_values.update(shared_values)
-    for validator, error in (VALIDATION[feature_class] + VALIDATION['all']):
+    for validator, error in (VALIDATION[feature_type] + VALIDATION['all']):
       if not validator(feature_values):
         self.AddError(error)
 
-  def GetCode(self, feature_class):
+  def GetCode(self, feature_type):
     """Returns the Code object for generating this feature."""
     c = Code()
-    c.Append('%s* feature = new %s();' % (feature_class, feature_class))
+    cpp_feature_class = SIMPLE_FEATURE_CPP_CLASSES[feature_type]
+    c.Append('%s* feature = new %s();' % (cpp_feature_class, cpp_feature_class))
     c.Append('feature->set_name("%s");' % self.name)
     c.Concat(GetCodeForFeatureValues(self.GetAllFeatureValues()))
     return c
@@ -544,7 +550,7 @@ class ComplexFeature(Feature):
     Feature.__init__(self, name)
     self.feature_list = []
 
-  def GetCode(self, feature_class):
+  def GetCode(self, feature_type):
     c = Code()
     c.Append('std::vector<Feature*> features;')
     for f in self.feature_list:
@@ -552,7 +558,7 @@ class ComplexFeature(Feature):
       # set.
       assert not f.shared_values
       c.Sblock('{')
-      c.Concat(f.GetCode(feature_class))
+      c.Concat(f.GetCode(feature_type))
       c.Append('features.push_back(feature);')
       c.Eblock('}')
     c.Append('ComplexFeature* feature(new ComplexFeature(&features));')
@@ -578,12 +584,12 @@ class ComplexFeature(Feature):
 class FeatureCompiler(object):
   """A compiler to load, parse, and generate C++ code for a number of
   features.json files."""
-  def __init__(self, chrome_root, source_files, feature_class,
+  def __init__(self, chrome_root, source_files, feature_type,
                provider_class, out_root, out_base_filename):
     # See __main__'s ArgumentParser for documentation on these properties.
     self._chrome_root = chrome_root
     self._source_files = source_files
-    self._feature_class = feature_class
+    self._feature_type = feature_type
     self._provider_class = provider_class
     self._out_root = out_root
     self._out_base_filename = out_base_filename
@@ -657,7 +663,7 @@ class FeatureCompiler(object):
         if parent:
           feature.SetParent(parent)
         feature.Parse(value, shared_values)
-        feature.Validate(self._feature_class, shared_values)
+        feature.Validate(self._feature_type, shared_values)
         return feature
       except:
         print('Failure to parse feature "%s"' % feature_name)
@@ -690,7 +696,7 @@ class FeatureCompiler(object):
     self._features[feature_name].SetSharedValues(final_shared_values)
 
   def _FinalValidation(self):
-    validators = FINAL_VALIDATION['all'] + FINAL_VALIDATION[self._feature_class]
+    validators = FINAL_VALIDATION['all'] + FINAL_VALIDATION[self._feature_type]
     for name, feature in self._features.items():
       for validator, error in validators:
         if not validator(feature, self._features):
@@ -712,7 +718,7 @@ class FeatureCompiler(object):
     for k in sorted(self._features.keys()):
       c.Sblock('{')
       feature = self._features[k]
-      c.Concat(feature.GetCode(self._feature_class))
+      c.Concat(feature.GetCode(self._feature_type))
       c.Append('AddFeature("%s", feature);' % k)
       c.Eblock('}')
     c.Eblock('}')
@@ -755,7 +761,7 @@ if __name__ == '__main__':
   parser.add_argument('chrome_root', type=str,
                       help='The root directory of the chrome checkout')
   parser.add_argument(
-      'feature_class', type=str,
+      'feature_type', type=str,
       help='The name of the class to use in feature generation ' +
                '(e.g. APIFeature, PermissionFeature)')
   parser.add_argument('provider_class', type=str,
@@ -768,9 +774,9 @@ if __name__ == '__main__':
   parser.add_argument('source_files', type=str, nargs='+',
                       help='The source features.json files')
   args = parser.parse_args()
-  if args.feature_class not in FEATURE_CLASSES:
-    raise NameError('Unknown feature class: %s' % args.feature_class)
-  c = FeatureCompiler(args.chrome_root, args.source_files, args.feature_class,
+  if args.feature_type not in FEATURE_TYPES:
+    raise NameError('Unknown feature type: %s' % args.feature_type)
+  c = FeatureCompiler(args.chrome_root, args.source_files, args.feature_type,
                       args.provider_class, args.out_root,
                       args.out_base_filename)
   c.Load()

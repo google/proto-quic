@@ -23,7 +23,8 @@ namespace {
 
 const char* const kTypeNames[] = {"null",   "boolean", "integer",    "double",
                                   "string", "binary",  "dictionary", "list"};
-static_assert(arraysize(kTypeNames) == Value::TYPE_LIST + 1,
+static_assert(arraysize(kTypeNames) ==
+                  static_cast<size_t>(Value::Type::LIST) + 1,
               "kTypeNames Has Wrong Size");
 
 std::unique_ptr<Value> CopyWithoutEmptyChildren(const Value& node);
@@ -60,10 +61,10 @@ std::unique_ptr<DictionaryValue> CopyDictionaryWithoutEmptyChildren(
 
 std::unique_ptr<Value> CopyWithoutEmptyChildren(const Value& node) {
   switch (node.GetType()) {
-    case Value::TYPE_LIST:
+    case Value::Type::LIST:
       return CopyListWithoutEmptyChildren(static_cast<const ListValue&>(node));
 
-    case Value::TYPE_DICTIONARY:
+    case Value::Type::DICTIONARY:
       return CopyDictionaryWithoutEmptyChildren(
           static_cast<const DictionaryValue&>(node));
 
@@ -79,14 +80,14 @@ Value::~Value() {
 
 // static
 std::unique_ptr<Value> Value::CreateNullValue() {
-  return WrapUnique(new Value(TYPE_NULL));
+  return WrapUnique(new Value(Type::NONE));
 }
 
 // static
 const char* Value::GetTypeName(Value::Type type) {
-  DCHECK_GE(type, 0);
+  DCHECK_GE(static_cast<int>(type), 0);
   DCHECK_LT(static_cast<size_t>(type), arraysize(kTypeNames));
-  return kTypeNames[type];
+  return kTypeNames[static_cast<size_t>(type)];
 }
 
 bool Value::GetAsBinary(const BinaryValue** out_value) const {
@@ -136,7 +137,7 @@ bool Value::GetAsDictionary(const DictionaryValue** out_value) const {
 Value* Value::DeepCopy() const {
   // This method should only be getting called for null Values--all subclasses
   // need to provide their own implementation;.
-  DCHECK(IsType(TYPE_NULL));
+  DCHECK(IsType(Type::NONE));
   return CreateNullValue().release();
 }
 
@@ -147,8 +148,8 @@ std::unique_ptr<Value> Value::CreateDeepCopy() const {
 bool Value::Equals(const Value* other) const {
   // This method should only be getting called for null Values--all subclasses
   // need to provide their own implementation;.
-  DCHECK(IsType(TYPE_NULL));
-  return other->IsType(TYPE_NULL);
+  DCHECK(IsType(Type::NONE));
+  return other->IsType(Type::NONE);
 }
 
 // static
@@ -170,15 +171,13 @@ Value& Value::operator=(const Value& that) {
 ///////////////////// FundamentalValue ////////////////////
 
 FundamentalValue::FundamentalValue(bool in_value)
-    : Value(TYPE_BOOLEAN), boolean_value_(in_value) {
-}
+    : Value(Type::BOOLEAN), boolean_value_(in_value) {}
 
 FundamentalValue::FundamentalValue(int in_value)
-    : Value(TYPE_INTEGER), integer_value_(in_value) {
-}
+    : Value(Type::INTEGER), integer_value_(in_value) {}
 
 FundamentalValue::FundamentalValue(double in_value)
-    : Value(TYPE_DOUBLE), double_value_(in_value) {
+    : Value(Type::DOUBLE), double_value_(in_value) {
   if (!std::isfinite(double_value_)) {
     NOTREACHED() << "Non-finite (i.e. NaN or positive/negative infinity) "
                  << "values cannot be represented in JSON";
@@ -190,34 +189,34 @@ FundamentalValue::~FundamentalValue() {
 }
 
 bool FundamentalValue::GetAsBoolean(bool* out_value) const {
-  if (out_value && IsType(TYPE_BOOLEAN))
+  if (out_value && IsType(Type::BOOLEAN))
     *out_value = boolean_value_;
-  return (IsType(TYPE_BOOLEAN));
+  return (IsType(Type::BOOLEAN));
 }
 
 bool FundamentalValue::GetAsInteger(int* out_value) const {
-  if (out_value && IsType(TYPE_INTEGER))
+  if (out_value && IsType(Type::INTEGER))
     *out_value = integer_value_;
-  return (IsType(TYPE_INTEGER));
+  return (IsType(Type::INTEGER));
 }
 
 bool FundamentalValue::GetAsDouble(double* out_value) const {
-  if (out_value && IsType(TYPE_DOUBLE))
+  if (out_value && IsType(Type::DOUBLE))
     *out_value = double_value_;
-  else if (out_value && IsType(TYPE_INTEGER))
+  else if (out_value && IsType(Type::INTEGER))
     *out_value = integer_value_;
-  return (IsType(TYPE_DOUBLE) || IsType(TYPE_INTEGER));
+  return (IsType(Type::DOUBLE) || IsType(Type::INTEGER));
 }
 
 FundamentalValue* FundamentalValue::DeepCopy() const {
   switch (GetType()) {
-    case TYPE_BOOLEAN:
+    case Type::BOOLEAN:
       return new FundamentalValue(boolean_value_);
 
-    case TYPE_INTEGER:
+    case Type::INTEGER:
       return new FundamentalValue(integer_value_);
 
-    case TYPE_DOUBLE:
+    case Type::DOUBLE:
       return new FundamentalValue(double_value_);
 
     default:
@@ -231,15 +230,15 @@ bool FundamentalValue::Equals(const Value* other) const {
     return false;
 
   switch (GetType()) {
-    case TYPE_BOOLEAN: {
+    case Type::BOOLEAN: {
       bool lhs, rhs;
       return GetAsBoolean(&lhs) && other->GetAsBoolean(&rhs) && lhs == rhs;
     }
-    case TYPE_INTEGER: {
+    case Type::INTEGER: {
       int lhs, rhs;
       return GetAsInteger(&lhs) && other->GetAsInteger(&rhs) && lhs == rhs;
     }
-    case TYPE_DOUBLE: {
+    case Type::DOUBLE: {
       double lhs, rhs;
       return GetAsDouble(&lhs) && other->GetAsDouble(&rhs) && lhs == rhs;
     }
@@ -252,14 +251,12 @@ bool FundamentalValue::Equals(const Value* other) const {
 ///////////////////// StringValue ////////////////////
 
 StringValue::StringValue(StringPiece in_value)
-    : Value(TYPE_STRING), value_(in_value.as_string()) {
+    : Value(Type::STRING), value_(in_value.as_string()) {
   DCHECK(IsStringUTF8(in_value));
 }
 
 StringValue::StringValue(const string16& in_value)
-    : Value(TYPE_STRING),
-      value_(UTF16ToUTF8(in_value)) {
-}
+    : Value(Type::STRING), value_(UTF16ToUTF8(in_value)) {}
 
 StringValue::~StringValue() {
 }
@@ -303,13 +300,10 @@ bool StringValue::Equals(const Value* other) const {
 
 ///////////////////// BinaryValue ////////////////////
 
-BinaryValue::BinaryValue()
-    : Value(TYPE_BINARY),
-      size_(0) {
-}
+BinaryValue::BinaryValue() : Value(Type::BINARY), size_(0) {}
 
 BinaryValue::BinaryValue(std::unique_ptr<char[]> buffer, size_t size)
-    : Value(TYPE_BINARY), buffer_(std::move(buffer)), size_(size) {}
+    : Value(Type::BINARY), buffer_(std::move(buffer)), size_(size) {}
 
 BinaryValue::~BinaryValue() {
 }
@@ -355,9 +349,7 @@ std::unique_ptr<DictionaryValue> DictionaryValue::From(
   return nullptr;
 }
 
-DictionaryValue::DictionaryValue()
-    : Value(TYPE_DICTIONARY) {
-}
+DictionaryValue::DictionaryValue() : Value(Type::DICTIONARY) {}
 
 DictionaryValue::~DictionaryValue() {
   Clear();
@@ -561,7 +553,7 @@ bool DictionaryValue::GetBinary(StringPiece path,
                                 const BinaryValue** out_value) const {
   const Value* value;
   bool result = Get(path, &value);
-  if (!result || !value->IsType(TYPE_BINARY))
+  if (!result || !value->IsType(Type::BINARY))
     return false;
 
   if (out_value)
@@ -580,7 +572,7 @@ bool DictionaryValue::GetDictionary(StringPiece path,
                                     const DictionaryValue** out_value) const {
   const Value* value;
   bool result = Get(path, &value);
-  if (!result || !value->IsType(TYPE_DICTIONARY))
+  if (!result || !value->IsType(Type::DICTIONARY))
     return false;
 
   if (out_value)
@@ -600,7 +592,7 @@ bool DictionaryValue::GetList(StringPiece path,
                               const ListValue** out_value) const {
   const Value* value;
   bool result = Get(path, &value);
-  if (!result || !value->IsType(TYPE_LIST))
+  if (!result || !value->IsType(Type::LIST))
     return false;
 
   if (out_value)
@@ -685,7 +677,7 @@ bool DictionaryValue::GetDictionaryWithoutPathExpansion(
     const DictionaryValue** out_value) const {
   const Value* value;
   bool result = GetWithoutPathExpansion(key, &value);
-  if (!result || !value->IsType(TYPE_DICTIONARY))
+  if (!result || !value->IsType(Type::DICTIONARY))
     return false;
 
   if (out_value)
@@ -709,7 +701,7 @@ bool DictionaryValue::GetListWithoutPathExpansion(
     const ListValue** out_value) const {
   const Value* value;
   bool result = GetWithoutPathExpansion(key, &value);
-  if (!result || !value->IsType(TYPE_LIST))
+  if (!result || !value->IsType(Type::LIST))
     return false;
 
   if (out_value)
@@ -790,7 +782,7 @@ void DictionaryValue::MergeDictionary(const DictionaryValue* dictionary) {
   for (DictionaryValue::Iterator it(*dictionary); !it.IsAtEnd(); it.Advance()) {
     const Value* merge_value = &it.value();
     // Check whether we have to merge dictionaries.
-    if (merge_value->IsType(Value::TYPE_DICTIONARY)) {
+    if (merge_value->IsType(Value::Type::DICTIONARY)) {
       DictionaryValue* sub_dict;
       if (GetDictionaryWithoutPathExpansion(it.key(), &sub_dict)) {
         sub_dict->MergeDictionary(
@@ -865,8 +857,7 @@ std::unique_ptr<ListValue> ListValue::From(std::unique_ptr<Value> value) {
   return nullptr;
 }
 
-ListValue::ListValue() : Value(TYPE_LIST) {
-}
+ListValue::ListValue() : Value(Type::LIST) {}
 
 ListValue::~ListValue() {
   Clear();
@@ -956,7 +947,7 @@ bool ListValue::GetString(size_t index, string16* out_value) const {
 bool ListValue::GetBinary(size_t index, const BinaryValue** out_value) const {
   const Value* value;
   bool result = Get(index, &value);
-  if (!result || !value->IsType(TYPE_BINARY))
+  if (!result || !value->IsType(Type::BINARY))
     return false;
 
   if (out_value)
@@ -975,7 +966,7 @@ bool ListValue::GetDictionary(size_t index,
                               const DictionaryValue** out_value) const {
   const Value* value;
   bool result = Get(index, &value);
-  if (!result || !value->IsType(TYPE_DICTIONARY))
+  if (!result || !value->IsType(Type::DICTIONARY))
     return false;
 
   if (out_value)
@@ -993,7 +984,7 @@ bool ListValue::GetDictionary(size_t index, DictionaryValue** out_value) {
 bool ListValue::GetList(size_t index, const ListValue** out_value) const {
   const Value* value;
   bool result = Get(index, &value);
-  if (!result || !value->IsType(TYPE_LIST))
+  if (!result || !value->IsType(Type::LIST))
     return false;
 
   if (out_value)
@@ -1171,6 +1162,13 @@ std::ostream& operator<<(std::ostream& out, const Value& value) {
   std::string json;
   JSONWriter::WriteWithOptions(value, JSONWriter::OPTIONS_PRETTY_PRINT, &json);
   return out << json;
+}
+
+std::ostream& operator<<(std::ostream& out, const Value::Type& type) {
+  if (static_cast<int>(type) < 0 ||
+      static_cast<size_t>(type) >= arraysize(kTypeNames))
+    return out << "Invalid Type (index = " << static_cast<int>(type) << ")";
+  return out << Value::GetTypeName(type);
 }
 
 }  // namespace base

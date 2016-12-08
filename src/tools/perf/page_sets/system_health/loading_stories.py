@@ -187,6 +187,7 @@ class LoadWashingtonPostMobileStory(_LoadingStory):
     # window does not have a "Close" button, instead it has only a "Send link
     # to phone" button. So on tablets we run with the popup window open. The
     # popup is transparent, so this is mostly an aesthetical issue.
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     has_button = action_runner.EvaluateJavaScript(
         '!!document.querySelector("%s")' % self._CLOSE_BUTTON_SELECTOR)
     if has_button:
@@ -278,6 +279,7 @@ class LoadDocsStory(_LoadingStory):
       'https://docs.google.com/document/d/1GvzDP-tTLmJ0myRhUAfTYWs3ZUFilUICg8psNHyccwQ/edit?usp=sharing')
 
 
+@decorators.Disabled('android')  # crbug.com.com/664505
 class _LoadGmailBaseStory(_LoadingStory):
   NAME = 'load:tools:gmail'
   URL = 'https://mail.google.com/mail/'

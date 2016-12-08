@@ -39,7 +39,7 @@ class DictionaryHiddenRootValue : public DictionaryValue {
   DictionaryHiddenRootValue(std::unique_ptr<std::string> json,
                             std::unique_ptr<Value> root)
       : json_(std::move(json)) {
-    DCHECK(root->IsType(Value::TYPE_DICTIONARY));
+    DCHECK(root->IsType(Value::Type::DICTIONARY));
     DictionaryValue::Swap(static_cast<DictionaryValue*>(root.get()));
   }
 
@@ -91,7 +91,7 @@ class ListHiddenRootValue : public ListValue {
   ListHiddenRootValue(std::unique_ptr<std::string> json,
                       std::unique_ptr<Value> root)
       : json_(std::move(json)) {
-    DCHECK(root->IsType(Value::TYPE_LIST));
+    DCHECK(root->IsType(Value::Type::LIST));
     ListValue::Swap(static_cast<ListValue*>(root.get()));
   }
 
@@ -140,7 +140,7 @@ class ListHiddenRootValue : public ListValue {
 class JSONStringValue : public Value {
  public:
   explicit JSONStringValue(StringPiece piece)
-      : Value(TYPE_STRING), string_piece_(piece) {}
+      : Value(Type::STRING), string_piece_(piece) {}
 
   // Overridden from Value:
   bool GetAsString(std::string* out_value) const override {
@@ -154,8 +154,8 @@ class JSONStringValue : public Value {
   Value* DeepCopy() const override { return new StringValue(string_piece_); }
   bool Equals(const Value* other) const override {
     std::string other_string;
-    return other->IsType(TYPE_STRING) && other->GetAsString(&other_string) &&
-        StringPiece(other_string) == string_piece_;
+    return other->IsType(Type::STRING) && other->GetAsString(&other_string) &&
+           StringPiece(other_string) == string_piece_;
   }
 
  private:
@@ -255,15 +255,15 @@ std::unique_ptr<Value> JSONParser::Parse(StringPiece input) {
   // Dictionaries and lists can contain JSONStringValues, so wrap them in a
   // hidden root.
   if (!(options_ & JSON_DETACHABLE_CHILDREN)) {
-    if (root->IsType(Value::TYPE_DICTIONARY)) {
+    if (root->IsType(Value::Type::DICTIONARY)) {
       return MakeUnique<DictionaryHiddenRootValue>(std::move(input_copy),
                                                    std::move(root));
     }
-    if (root->IsType(Value::TYPE_LIST)) {
+    if (root->IsType(Value::Type::LIST)) {
       return MakeUnique<ListHiddenRootValue>(std::move(input_copy),
                                              std::move(root));
     }
-    if (root->IsType(Value::TYPE_STRING)) {
+    if (root->IsType(Value::Type::STRING)) {
       // A string type could be a JSONStringValue, but because there's no
       // corresponding HiddenRootValue, the memory will be lost. Deep copy to
       // preserve it.

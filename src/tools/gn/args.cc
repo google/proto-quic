@@ -6,6 +6,7 @@
 
 #include "base/sys_info.h"
 #include "build/build_config.h"
+#include "tools/gn/string_utils.h"
 #include "tools/gn/variables.h"
 
 const char kBuildArgs_Help[] =
@@ -219,19 +220,34 @@ bool Args::DeclareArgs(const Scope::KeyValueMap& args,
 
 bool Args::VerifyAllOverridesUsed(Err* err) const {
   base::AutoLock lock(lock_);
-  Scope::KeyValueMap all_overrides(all_overrides_);
+  Scope::KeyValueMap unused_overrides(all_overrides_);
   for (const auto& map_pair : declared_arguments_per_toolchain_)
-    RemoveDeclaredOverrides(map_pair.second, &all_overrides);
+    RemoveDeclaredOverrides(map_pair.second, &unused_overrides);
 
-  if (all_overrides.empty())
+  if (unused_overrides.empty())
     return true;
 
-  *err = Err(
-      all_overrides.begin()->second.origin(), "Build argument has no effect.",
-      "The variable \"" + all_overrides.begin()->first.as_string() +
-          "\" was set as a build argument\nbut never appeared in a " +
-          "declare_args() block in any buildfile.\n\n"
-          "To view possible args, run \"gn args --list <builddir>\"");
+  // Some assignments in args.gn had no effect.  Show an error for the first
+  // unused assignment.
+  base::StringPiece name = unused_overrides.begin()->first;
+  const Value& value = unused_overrides.begin()->second;
+
+  std::string err_help(
+      "The variable \"" + name + "\" was set as a build argument\n"
+      "but never appeared in a declare_args() block in any buildfile.\n\n"
+      "To view all possible args, run \"gn args --list <builddir>\"");
+
+  // Use all declare_args for a spelling suggestion.
+  std::vector<base::StringPiece> candidates;
+  for (const auto& map_pair : declared_arguments_per_toolchain_) {
+    for (const auto& declared_arg : map_pair.second)
+      candidates.push_back(declared_arg.first);
+  }
+  base::StringPiece suggestion = SpellcheckString(name, candidates);
+  if (!suggestion.empty())
+    err_help = "Did you mean \"" + suggestion + "\"?\n\n" + err_help;
+
+  *err = Err(value.origin(), "Build argument has no effect.", err_help);
   return false;
 }
 
@@ -266,6 +282,7 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
   static const char kX86[] = "x86";
   static const char kX64[] = "x64";
   static const char kArm[] = "arm";
+  static const char kArm64[] = "arm64";
   static const char kMips[] = "mipsel";
   static const char kS390X[] = "s390x";
   static const char kPPC64[] = "ppc64";
@@ -280,6 +297,8 @@ void Args::SetSystemVarsLocked(Scope* dest) const {
     arch = kX64;
   else if (os_arch.substr(0, 3) == "arm")
     arch = kArm;
+  else if (os_arch == "aarch64")
+    arch = kArm64;
   else if (os_arch == "mips")
     arch = kMips;
   else if (os_arch == "s390x")

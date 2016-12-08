@@ -11,7 +11,6 @@
 #include "tools/gn/path_output.h"
 #include "tools/gn/substitution_type.h"
 
-class FileTemplate;
 class OutputFile;
 class Settings;
 class Target;

@@ -19,9 +19,10 @@ namespace internal {
 // boundary conditions such as overflow, underflow, and invalid conversions.
 // The CheckedNumeric type implicitly converts from floating point and integer
 // data types, and contains overloads for basic arithmetic operations (i.e.: +,
-// -, *, / for all types and %, <<, >>, &, |, ^ for integers; additionally the
-// result of all bitwise logical operations is always promoted to an unsigned
-// CheckedNumeric type matching the width of the larger operand).
+// -, *, / for all types and %, <<, >>, &, |, ^ for integers). Type promotions
+// are a slightly modified version of the standard C arithmetic rules with the
+// two differences being that there is no default promotion to int and bitwise
+// logical operations always return an unsigned of the wider type.
 //
 // You may also use one of the variadic convenience functions, which accept
 // standard arithmetic or CheckedNumeric types, perform arithmetic operations,
@@ -36,13 +37,21 @@ namespace internal {
 //  CheckAnd() - Bitwise AND (integer only with unsigned result).
 //  CheckOr()  - Bitwise OR (integer only with unsigned result).
 //  CheckXor() - Bitwise XOR (integer only with unsigned result).
+//  CheckMax() - Maximum of supplied arguments.
+//  CheckMin() - Minimum of supplied arguments.
 //
 // The unary negation, increment, and decrement operators are supported, along
 // with the following unary arithmetic methods, which return a new
 // CheckedNumeric as a result of the operation:
 //  Abs() - Absolute value.
-//  UnsignedAbs() - Absolute value as an equival-width unsigned underlying type
+//  UnsignedAbs() - Absolute value as an equal-width unsigned underlying type
 //          (valid for only integral types).
+//  Max() - Returns whichever is greater of the current instance or argument.
+//          The underlying return type is whichever has the greatest magnitude.
+//  Min() - Returns whichever is lowest of the current instance or argument.
+//          The underlying return type is whichever has can represent the lowest
+//          number in the smallest width (e.g. int8_t over unsigned, int over
+//          int8_t, and float over int).
 //
 // The following methods convert from CheckedNumeric to standard numeric values:
 //  AssignIfValid() - Assigns the underlying value to the supplied destination
@@ -71,8 +80,8 @@ namespace internal {
 //  CheckedNumeric::Cast<Dst>() - Instance method returning a CheckedNumeric
 //          derived from casting the current instance to a CheckedNumeric of
 //          the supplied destination type.
-//  CheckNum() - Creates a new CheckedNumeric from the underlying type of the
-//          supplied arithmetic or CheckedNumeric type.
+//  MakeCheckedNum() - Creates a new CheckedNumeric from the underlying type of
+//          the supplied arithmetic, CheckedNumeric, or StrictNumeric type.
 //
 // Comparison operations are explicitly not supported because they could result
 // in a crash on an unexpected CHECK condition. You should use patterns like the
@@ -88,7 +97,7 @@ class CheckedNumeric {
                 "CheckedNumeric<T>: T must be a numeric type.");
 
  public:
-  typedef T type;
+  using type = T;
 
   constexpr CheckedNumeric() {}
 
@@ -105,8 +114,7 @@ class CheckedNumeric {
   template <typename Src>
   constexpr CheckedNumeric(Src value)  // NOLINT(runtime/explicit)
       : state_(value) {
-    static_assert(std::numeric_limits<Src>::is_specialized,
-                  "Argument must be numeric.");
+    static_assert(std::is_arithmetic<Src>::value, "Argument must be numeric.");
   }
 
   // This is not an explicit constructor because we want a seamless conversion
@@ -199,7 +207,7 @@ class CheckedNumeric {
   CheckedNumeric operator-() const {
     // Negation is always valid for floating point.
     T value = 0;
-    bool is_valid = (std::numeric_limits<T>::is_iec559 || IsValid()) &&
+    bool is_valid = (std::is_floating_point<T>::value || IsValid()) &&
                     CheckedNeg(state_.value(), &value);
     return CheckedNumeric<T>(value, is_valid);
   }
@@ -214,9 +222,39 @@ class CheckedNumeric {
   CheckedNumeric Abs() const {
     // Absolute value is always valid for floating point.
     T value = 0;
-    bool is_valid = (std::numeric_limits<T>::is_iec559 || IsValid()) &&
+    bool is_valid = (std::is_floating_point<T>::value || IsValid()) &&
                     CheckedAbs(state_.value(), &value);
     return CheckedNumeric<T>(value, is_valid);
+  }
+
+  template <typename U>
+  constexpr CheckedNumeric<typename MathWrapper<CheckedMaxOp, T, U>::type> Max(
+      const U rhs) const {
+    using R = typename UnderlyingType<U>::type;
+    using result_type = typename MathWrapper<CheckedMaxOp, T, U>::type;
+    // TODO(jschuh): This can be converted to the MathOp version and remain
+    // constexpr once we have C++14 support.
+    return CheckedNumeric<result_type>(
+        static_cast<result_type>(
+            IsGreater<T, R>::Test(state_.value(), Wrapper<U>::value(rhs))
+                ? state_.value()
+                : Wrapper<U>::value(rhs)),
+        state_.is_valid() && Wrapper<U>::is_valid(rhs));
+  }
+
+  template <typename U>
+  constexpr CheckedNumeric<typename MathWrapper<CheckedMinOp, T, U>::type> Min(
+      const U rhs) const {
+    using R = typename UnderlyingType<U>::type;
+    using result_type = typename MathWrapper<CheckedMinOp, T, U>::type;
+    // TODO(jschuh): This can be converted to the MathOp version and remain
+    // constexpr once we have C++14 support.
+    return CheckedNumeric<result_type>(
+        static_cast<result_type>(
+            IsLess<T, R>::Test(state_.value(), Wrapper<U>::value(rhs))
+                ? state_.value()
+                : Wrapper<U>::value(rhs)),
+        state_.is_valid() && Wrapper<U>::is_valid(rhs));
   }
 
   // This function is available only for integral types. It returns an unsigned
@@ -255,7 +293,7 @@ class CheckedNumeric {
   template <template <typename, typename, typename> class M,
             typename L,
             typename R>
-  static CheckedNumeric MathOp(const L& lhs, const R& rhs) {
+  static CheckedNumeric MathOp(const L lhs, const R rhs) {
     using Math = typename MathWrapper<M, L, R>::math;
     T result = 0;
     bool is_valid =
@@ -266,7 +304,7 @@ class CheckedNumeric {
 
   // Assignment arithmetic operations.
   template <template <typename, typename, typename> class M, typename R>
-  CheckedNumeric& MathOp(const R& rhs) {
+  CheckedNumeric& MathOp(const R rhs) {
     using Math = typename MathWrapper<M, T, R>::math;
     T result = 0;  // Using T as the destination saves a range check.
     bool is_valid = state_.is_valid() && Wrapper<R>::is_valid(rhs) &&
@@ -292,11 +330,19 @@ class CheckedNumeric {
 
   template <typename Src>
   struct Wrapper<CheckedNumeric<Src>> {
-    static constexpr bool is_valid(const CheckedNumeric<Src>& v) {
+    static constexpr bool is_valid(const CheckedNumeric<Src> v) {
       return v.IsValid();
     }
-    static constexpr Src value(const CheckedNumeric<Src>& v) {
+    static constexpr Src value(const CheckedNumeric<Src> v) {
       return v.state_.value();
+    }
+  };
+
+  template <typename Src>
+  struct Wrapper<StrictNumeric<Src>> {
+    static constexpr bool is_valid(const StrictNumeric<Src>) { return true; }
+    static constexpr Src value(const StrictNumeric<Src> v) {
+      return static_cast<Src>(v);
     }
   };
 };
@@ -340,16 +386,15 @@ template <template <typename, typename, typename> class M,
           typename R,
           typename... Args>
 struct ResultType {
-  // The typedef was required here because MSVC fails to compile with "using".
-  typedef
-      typename ResultType<M, typename ResultType<M, L, R>::type, Args...>::type
-          type;
+  using type =
+      typename ResultType<M, typename ResultType<M, L, R>::type, Args...>::type;
 };
 
 // Convience wrapper to return a new CheckedNumeric from the provided arithmetic
 // or CheckedNumericType.
 template <typename T>
-CheckedNumeric<typename UnderlyingType<T>::type> CheckNum(T value) {
+constexpr CheckedNumeric<typename UnderlyingType<T>::type> MakeCheckedNum(
+    const T value) {
   return value;
 }
 
@@ -362,8 +407,9 @@ CheckedNumeric<typename MathWrapper<M, L, R>::type> ChkMathOp(const L lhs,
   using Math = typename MathWrapper<M, L, R>::math;
   return CheckedNumeric<typename Math::result_type>::template MathOp<M>(lhs,
                                                                         rhs);
-};
+}
 
+// General purpose wrapper template for arithmetic operations.
 template <template <typename, typename, typename> class M,
           typename L,
           typename R,
@@ -375,8 +421,16 @@ ChkMathOp(const L lhs, const R rhs, const Args... args) {
                        : decltype(ChkMathOp<M>(tmp, args...))(tmp);
 };
 
-// This is just boilerplate for the standard arithmetic operator overloads.
-// A macro isn't the nicest solution, but it beats rewriting these repeatedly.
+// The following macros are just boilerplate for the standard arithmetic
+// operator overloads and variadic function templates. A macro isn't the nicest
+// solution, but it beats rewriting these over and over again.
+#define BASE_NUMERIC_ARITHMETIC_VARIADIC(NAME)                                \
+  template <typename L, typename R, typename... Args>                         \
+  CheckedNumeric<typename ResultType<Checked##NAME##Op, L, R, Args...>::type> \
+      Check##NAME(const L lhs, const R rhs, const Args... args) {             \
+    return ChkMathOp<Checked##NAME##Op, L, R, Args...>(lhs, rhs, args...);    \
+  }
+
 #define BASE_NUMERIC_ARITHMETIC_OPERATORS(NAME, OP, COMPOUND_OP)               \
   /* Binary arithmetic operator for all CheckedNumeric operations. */          \
   template <typename L, typename R,                                            \
@@ -393,11 +447,7 @@ ChkMathOp(const L lhs, const R rhs, const Args... args) {
     return MathOp<Checked##NAME##Op>(rhs);                                     \
   }                                                                            \
   /* Variadic arithmetic functions that return CheckedNumeric. */              \
-  template <typename L, typename R, typename... Args>                          \
-  CheckedNumeric<typename ResultType<Checked##NAME##Op, L, R, Args...>::type>  \
-      Check##NAME(const L lhs, const R rhs, const Args... args) {              \
-    return ChkMathOp<Checked##NAME##Op, L, R, Args...>(lhs, rhs, args...);     \
-  }
+  BASE_NUMERIC_ARITHMETIC_VARIADIC(NAME)
 
 BASE_NUMERIC_ARITHMETIC_OPERATORS(Add, +, +=)
 BASE_NUMERIC_ARITHMETIC_OPERATORS(Sub, -, -=)
@@ -409,7 +459,10 @@ BASE_NUMERIC_ARITHMETIC_OPERATORS(Rsh, >>, >>=)
 BASE_NUMERIC_ARITHMETIC_OPERATORS(And, &, &=)
 BASE_NUMERIC_ARITHMETIC_OPERATORS(Or, |, |=)
 BASE_NUMERIC_ARITHMETIC_OPERATORS(Xor, ^, ^=)
+BASE_NUMERIC_ARITHMETIC_VARIADIC(Max)
+BASE_NUMERIC_ARITHMETIC_VARIADIC(Min)
 
+#undef BASE_NUMERIC_ARITHMETIC_VARIADIC
 #undef BASE_NUMERIC_ARITHMETIC_OPERATORS
 
 // These are some extra StrictNumeric operators to support simple pointer
@@ -437,7 +490,9 @@ using internal::CheckedNumeric;
 using internal::IsValidForType;
 using internal::ValueOrDieForType;
 using internal::ValueOrDefaultForType;
-using internal::CheckNum;
+using internal::MakeCheckedNum;
+using internal::CheckMax;
+using internal::CheckMin;
 using internal::CheckAdd;
 using internal::CheckSub;
 using internal::CheckMul;

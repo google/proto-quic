@@ -135,8 +135,8 @@ bool ExtractPortFromEPSVResponse(const FtpCtrlResponse& response, int* port) {
   char separator = epsv_line[start + 1];
 
   // Make sure we have "(<d><d><d>...", where <d> is not a number.
-  if (isdigit(separator) || epsv_line[start + 2] != separator ||
-      epsv_line[start + 3] != separator) {
+  if ((separator >= '0' && separator <= '9') ||
+      epsv_line[start + 2] != separator || epsv_line[start + 3] != separator) {
     return false;
   }
 

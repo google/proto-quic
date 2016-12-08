@@ -1,0 +1,106 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "net/http2/decoder/payload_decoders/window_update_payload_decoder.h"
+
+#include <stddef.h>
+
+#include "base/bind.h"
+#include "base/logging.h"
+#include "net/http2/decoder/frame_parts.h"
+#include "net/http2/decoder/frame_parts_collector.h"
+#include "net/http2/decoder/http2_frame_decoder_listener.h"
+#include "net/http2/decoder/payload_decoders/payload_decoder_base_test_util.h"
+#include "net/http2/http2_constants.h"
+#include "net/http2/http2_structures_test_util.h"
+#include "net/http2/tools/http2_frame_builder.h"
+#include "net/http2/tools/http2_random.h"
+#include "net/http2/tools/random_decoder_test.h"
+#include "testing/gtest/include/gtest/gtest.h"
+
+namespace net {
+namespace test {
+
+class WindowUpdatePayloadDecoderPeer {
+ public:
+  static constexpr Http2FrameType FrameType() {
+    return Http2FrameType::WINDOW_UPDATE;
+  }
+
+  // Returns the mask of flags that affect the decoding of the payload (i.e.
+  // flags that that indicate the presence of certain fields or padding).
+  static constexpr uint8_t FlagsAffectingPayloadDecoding() { return 0; }
+
+  static void Randomize(WindowUpdatePayloadDecoder* p, RandomBase* rng) {
+    test::Randomize(&p->window_update_fields_, rng);
+    VLOG(1) << "WindowUpdatePayloadDecoderPeer::Randomize "
+            << "window_update_fields_: " << p->window_update_fields_;
+  }
+};
+
+namespace {
+
+struct Listener : public FramePartsCollector {
+  void OnWindowUpdate(const Http2FrameHeader& header,
+                      uint32_t window_size_increment) override {
+    VLOG(1) << "OnWindowUpdate: " << header
+            << "; window_size_increment=" << window_size_increment;
+    EXPECT_EQ(Http2FrameType::WINDOW_UPDATE, header.type);
+    StartAndEndFrame(header)->OnWindowUpdate(header, window_size_increment);
+  }
+
+  void OnFrameSizeError(const Http2FrameHeader& header) override {
+    VLOG(1) << "OnFrameSizeError: " << header;
+    FrameError(header)->OnFrameSizeError(header);
+  }
+};
+
+class WindowUpdatePayloadDecoderTest
+    : public AbstractPayloadDecoderTest<WindowUpdatePayloadDecoder,
+                                        WindowUpdatePayloadDecoderPeer,
+                                        Listener> {
+ public:
+  static bool ApproveSizeForWrongSize(size_t size) {
+    return size != Http2WindowUpdateFields::EncodedSize();
+  }
+
+ protected:
+  Http2WindowUpdateFields RandWindowUpdateFields() {
+    Http2WindowUpdateFields fields;
+    test::Randomize(&fields, RandomPtr());
+    VLOG(3) << "RandWindowUpdateFields: " << fields;
+    return fields;
+  }
+};
+
+// Confirm we get an error if the payload is not the correct size to hold
+// exactly one Http2WindowUpdateFields.
+TEST_F(WindowUpdatePayloadDecoderTest, WrongSize) {
+  Http2FrameBuilder fb;
+  fb.Append(RandWindowUpdateFields());
+  fb.Append(RandWindowUpdateFields());
+  fb.Append(RandWindowUpdateFields());
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(
+      0, fb.buffer(),
+      base::Bind(&WindowUpdatePayloadDecoderTest::ApproveSizeForWrongSize)));
+}
+
+TEST_F(WindowUpdatePayloadDecoderTest, VariousPayloads) {
+  for (int n = 0; n < 100; ++n) {
+    uint32_t stream_id = n == 0 ? 0 : RandStreamId();
+    Http2WindowUpdateFields fields = RandWindowUpdateFields();
+    Http2FrameBuilder fb;
+    fb.Append(fields);
+    Http2FrameHeader header(fb.size(), Http2FrameType::WINDOW_UPDATE,
+                            RandFlags(), stream_id);
+    set_frame_header(header);
+    FrameParts expected(header);
+    expected.opt_window_update_increment = fields.window_size_increment;
+    EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(fb.buffer(), expected));
+  }
+}
+
+}  // namespace
+}  // namespace test
+}  // namespace net

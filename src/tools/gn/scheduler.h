@@ -33,7 +33,6 @@ class Scheduler {
   scoped_refptr<base::SingleThreadTaskRunner> task_runner() {
     return main_loop_.task_runner();
   }
-  base::SequencedWorkerPool* pool() { return pool_.get(); }
 
   InputFileManager* input_file_manager() { return input_file_manager_.get(); }
 

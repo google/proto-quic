@@ -371,6 +371,10 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
   bool ForceHolBlocking(Perspective perspective) const;
 
+  void SetSupportMaxHeaderListSize();
+
+  bool SupportMaxHeaderListSize() const;
+
   bool negotiated() const;
 
   // ToHandshakeMessage serialises the settings in this object as a series of
@@ -436,6 +440,9 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
   // Force HOL blocking for measurement purposes.
   QuicFixedUint32 force_hol_blocking_;
+
+  // Whether support HTTP/2 SETTINGS_MAX_HEADER_LIST_SIZE SETTINGS frame.
+  QuicFixedUint32 support_max_header_list_size_;
 };
 
 }  // namespace net

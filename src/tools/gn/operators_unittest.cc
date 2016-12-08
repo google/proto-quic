@@ -237,6 +237,34 @@ TEST(Operators, ListRemove) {
   EXPECT_EQ("bar", new_value->list_value()[0].string_value());
 }
 
+TEST(Operators, IntegerAdd) {
+  Err err;
+  TestWithScope setup;
+
+  TestBinaryOpNode node(Token::PLUS, "+");
+  node.SetLeftToValue(Value(nullptr, static_cast<int64_t>(123)));
+  node.SetRightToValue(Value(nullptr, static_cast<int64_t>(456)));
+  Value ret = ExecuteBinaryOperator(setup.scope(), &node, node.left(),
+                                    node.right(), &err);
+  ASSERT_FALSE(err.has_error());
+  ASSERT_EQ(Value::INTEGER, ret.type());
+  EXPECT_EQ(579, ret.int_value());
+}
+
+TEST(Operators, IntegerSubtract) {
+  Err err;
+  TestWithScope setup;
+
+  TestBinaryOpNode node(Token::MINUS, "-");
+  node.SetLeftToValue(Value(nullptr, static_cast<int64_t>(123)));
+  node.SetRightToValue(Value(nullptr, static_cast<int64_t>(456)));
+  Value ret = ExecuteBinaryOperator(setup.scope(), &node, node.left(),
+                                    node.right(), &err);
+  ASSERT_FALSE(err.has_error());
+  ASSERT_EQ(Value::INTEGER, ret.type());
+  EXPECT_EQ(-333, ret.int_value());
+}
+
 TEST(Operators, ShortCircuitAnd) {
   Err err;
   TestWithScope setup;

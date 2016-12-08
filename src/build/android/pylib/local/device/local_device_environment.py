@@ -187,9 +187,14 @@ class LocalDeviceEnvironment(environment.Environment):
       # so that an invalid cache can be flushed just by disabling it for one
       # run.
       cache_path = _DeviceCachePath(d)
-      with open(cache_path, 'w') as f:
-        f.write(d.DumpCacheData())
-        logging.info('Wrote device cache: %s', cache_path)
+      if os.path.exists(os.path.dirname(cache_path)):
+        with open(cache_path, 'w') as f:
+          f.write(d.DumpCacheData())
+          logging.info('Wrote device cache: %s', cache_path)
+      else:
+        logging.warning(
+            'Unable to write device cache as %s directory does not exist',
+            os.path.dirname(cache_path))
 
     self.parallel_devices.pMap(tear_down_device)
 

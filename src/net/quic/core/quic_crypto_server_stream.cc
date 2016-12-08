@@ -162,7 +162,7 @@ void QuicCryptoServerStream::OnHandshakeMessage(
   validate_client_hello_cb_ = cb.get();
   crypto_config_->ValidateClientHello(
       message, session()->connection()->peer_address().host(),
-      session()->connection()->self_address().host(), version(),
+      session()->connection()->self_address(), version(),
       session()->connection()->clock(), signed_config_, std::move(cb));
 }
 
@@ -294,7 +294,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
     crypto_config_->BuildServerConfigUpdateMessage(
         session()->connection()->version(), chlo_hash_,
         previous_source_address_tokens_,
-        session()->connection()->self_address().host(),
+        session()->connection()->self_address(),
         session()->connection()->peer_address().host(),
         session()->connection()->clock(),
         session()->connection()->random_generator(), compressed_certs_cache_,
@@ -310,7 +310,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
   if (!crypto_config_->BuildServerConfigUpdateMessage(
           session()->connection()->version(), chlo_hash_,
           previous_source_address_tokens_,
-          session()->connection()->self_address().host(),
+          session()->connection()->self_address(),
           session()->connection()->peer_address().host(),
           session()->connection()->clock(),
           session()->connection()->random_generator(), compressed_certs_cache_,
@@ -366,10 +366,6 @@ void QuicCryptoServerStream::FinishSendServerConfigUpdate(
   WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
 
   ++num_server_config_update_messages_sent_;
-}
-
-void QuicCryptoServerStream::OnServerHelloAcked() {
-  session()->connection()->OnHandshakeComplete();
 }
 
 uint8_t QuicCryptoServerStream::NumHandshakeMessages() const {
@@ -469,7 +465,7 @@ void QuicCryptoServerStream::ProcessClientHello(
       GenerateConnectionIdForReject(use_stateless_rejects_in_crypto_config);
   crypto_config_->ProcessClientHello(
       result, /*reject_only=*/false, connection->connection_id(),
-      connection->self_address().host(), connection->peer_address(), version(),
+      connection->self_address(), connection->peer_address(), version(),
       connection->supported_versions(), use_stateless_rejects_in_crypto_config,
       server_designated_connection_id, connection->clock(),
       connection->random_generator(), compressed_certs_cache_,

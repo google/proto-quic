@@ -31,6 +31,7 @@ class SearchGoogleStory(system_health_story.SystemHealthStory):
     action_runner.WaitForElement(selector=self._RESULT_SELECTOR)
     action_runner.Wait(1)
     # TODO(petrcermak): Turn this into a proper Telemetry API (ScrollToElement).
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     result_visible_expression = ('''
         (function() {
           var resultElem = document.querySelector(\'%s\');

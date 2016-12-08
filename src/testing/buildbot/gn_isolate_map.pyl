@@ -571,13 +571,26 @@
     "label": "//media:media_unittests",
     "type": "windowed_test_launcher",
   },
-  "media_mojo_shell_unittests": {
-    "label": "//media/mojo/services:media_mojo_shell_unittests",
+  "media_service_unittests": {
+    "label": "//media/mojo/services:media_service_unittests",
     "type": "console_test_launcher",
   },
   "media_blink_unittests": {
     "label": "//media/blink:media_blink_unittests",
     "type": "windowed_test_launcher",
+  },
+  "media_router_perf_tests": {
+    "label": "//chrome/test/media_router:media_router_perf_tests",
+    "type": "script",
+    "script": "//chrome/test/media_router/telemetry/run_benchmark",
+    "args": [
+      "--browser=release",
+      "--also-run-disabled-tests",
+      "-v",
+      "--use-live-sites",
+      "--output-format=chartjson",
+      "--output-dir=${ISOLATED_OUTDIR}",
+    ],
   },
   "media_router_tests": {
     "label": "//chrome/test/media_router:media_router_tests",

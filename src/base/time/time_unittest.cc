@@ -1116,17 +1116,17 @@ TEST(TimeDeltaLogging, DCheckEqCompiles) {
 
 TEST(TimeDeltaLogging, EmptyIsZero) {
   TimeDelta zero;
-  EXPECT_EQ("0s", AnyToString(zero));
+  EXPECT_EQ("0 s", AnyToString(zero));
 }
 
 TEST(TimeDeltaLogging, FiveHundredMs) {
   TimeDelta five_hundred_ms = TimeDelta::FromMilliseconds(500);
-  EXPECT_EQ("0.5s", AnyToString(five_hundred_ms));
+  EXPECT_EQ("0.5 s", AnyToString(five_hundred_ms));
 }
 
 TEST(TimeDeltaLogging, MinusTenSeconds) {
   TimeDelta minus_ten_seconds = TimeDelta::FromSeconds(-10);
-  EXPECT_EQ("-10s", AnyToString(minus_ten_seconds));
+  EXPECT_EQ("-10 s", AnyToString(minus_ten_seconds));
 }
 
 TEST(TimeDeltaLogging, DoesNotMessUpFormattingFlags) {

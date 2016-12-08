@@ -111,6 +111,7 @@ class PolymerShadowPage(PolymerPage):
 
   def AnimateShadow(self, action_runner, eid):
     for i in range(1, 6):
+      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       action_runner.ExecuteJavaScript(
           'document.getElementById("{0}").z = {1}'.format(eid, i))
       action_runner.Wait(1)
@@ -137,6 +138,7 @@ class PolymerSampler(PolymerPage):
 
   def RunNavigateSteps(self, action_runner):
     super(PolymerSampler, self).RunNavigateSteps(action_runner)
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     waitForLoadJS = """
       window.Polymer.whenPolymerReady(function() {
         %s.contentWindow.Polymer.whenPolymerReady(function() {
@@ -190,11 +192,13 @@ class PolymerSampler(PolymerPage):
   def DoActionOnWidgetType(self, action_runner, widget_type, action_function):
     # Find all widgets of this type, but skip any that are disabled or are
     # currently active as they typically don't produce animation frames.
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     element_list_query = (self.iframe_js +
         ('.querySelectorAll("body %s:not([disabled]):'
          'not([active])")' % widget_type))
     roles_count_query = element_list_query + '.length'
     for i in range(action_runner.EvaluateJavaScript(roles_count_query)):
+      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       element_query = element_list_query + ("[%d]" % i)
       if action_runner.EvaluateJavaScript(
           element_query + '.offsetParent != null'):

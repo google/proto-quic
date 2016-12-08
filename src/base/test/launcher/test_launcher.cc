@@ -962,30 +962,29 @@ void TestLauncher::CombinePositiveTestFilters(
   has_at_least_one_positive_filter_ = !filter_a.empty() || !filter_b.empty();
   if (!has_at_least_one_positive_filter_) {
     return;
-  } else {
-    // If two positive filters are present, only run tests that match a pattern
-    // in both filters.
-    if (!filter_a.empty() && !filter_b.empty()) {
-      for (size_t i = 0; i < tests_.size(); i++) {
-        std::string test_name =
-            FormatFullTestName(tests_[i].test_case_name, tests_[i].test_name);
-        bool found_a = false;
-        bool found_b = false;
-        for (size_t k = 0; k < filter_a.size(); ++k) {
-          found_a = found_a || MatchPattern(test_name, filter_a[k]);
-        }
-        for (size_t k = 0; k < filter_b.size(); ++k) {
-          found_b = found_b || MatchPattern(test_name, filter_b[k]);
-        }
-        if (found_a && found_b) {
-          positive_test_filter_.push_back(test_name);
-        }
+  }
+  // If two positive filters are present, only run tests that match a pattern
+  // in both filters.
+  if (!filter_a.empty() && !filter_b.empty()) {
+    for (size_t i = 0; i < tests_.size(); i++) {
+      std::string test_name =
+          FormatFullTestName(tests_[i].test_case_name, tests_[i].test_name);
+      bool found_a = false;
+      bool found_b = false;
+      for (size_t k = 0; k < filter_a.size(); ++k) {
+        found_a = found_a || MatchPattern(test_name, filter_a[k]);
       }
-    } else if (!filter_a.empty()) {
-      positive_test_filter_ = filter_a;
-    } else {
-      positive_test_filter_ = filter_b;
+      for (size_t k = 0; k < filter_b.size(); ++k) {
+        found_b = found_b || MatchPattern(test_name, filter_b[k]);
+      }
+      if (found_a && found_b) {
+        positive_test_filter_.push_back(test_name);
+      }
     }
+  } else if (!filter_a.empty()) {
+    positive_test_filter_ = filter_a;
+  } else {
+    positive_test_filter_ = filter_b;
   }
 }
 

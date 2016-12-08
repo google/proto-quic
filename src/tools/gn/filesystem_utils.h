@@ -15,8 +15,6 @@
 #include "tools/gn/target.h"
 
 class Err;
-class Location;
-class Value;
 
 std::string FilePathToUTF8(const base::FilePath::StringType& str);
 inline std::string FilePathToUTF8(const base::FilePath& path) {

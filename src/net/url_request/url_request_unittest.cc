@@ -5549,7 +5549,7 @@ TEST_F(URLRequestTestHTTP, RedirectWithHeaderRemovalTest) {
   EXPECT_EQ("None", d.data_received());
 }
 
-TEST_F(URLRequestTestHTTP, CancelTest) {
+TEST_F(URLRequestTestHTTP, CancelAfterStart) {
   TestDelegate d;
   {
     std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
@@ -5570,7 +5570,7 @@ TEST_F(URLRequestTestHTTP, CancelTest) {
   }
 }
 
-TEST_F(URLRequestTestHTTP, CancelTest2) {
+TEST_F(URLRequestTestHTTP, CancelInResponseStarted) {
   ASSERT_TRUE(http_test_server()->Start());
 
   TestDelegate d;
@@ -5592,11 +5592,34 @@ TEST_F(URLRequestTestHTTP, CancelTest2) {
   }
 }
 
-TEST_F(URLRequestTestHTTP, CancelTest3) {
+TEST_F(URLRequestTestHTTP, CancelOnDataReceived) {
   ASSERT_TRUE(http_test_server()->Start());
 
   TestDelegate d;
   {
+    std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
+        http_test_server()->GetURL("/defaultresponse"), DEFAULT_PRIORITY, &d));
+
+    d.set_cancel_in_received_data(true);
+
+    r->Start();
+    EXPECT_TRUE(r->is_pending());
+
+    base::RunLoop().Run();
+
+    EXPECT_EQ(1, d.response_started_count());
+    EXPECT_NE(0, d.received_bytes_count());
+    EXPECT_FALSE(d.received_data_before_response());
+    EXPECT_EQ(ERR_ABORTED, d.request_status());
+  }
+}
+
+TEST_F(URLRequestTestHTTP, CancelDuringEofRead) {
+  ASSERT_TRUE(http_test_server()->Start());
+
+  TestDelegate d;
+  {
+    // This returns an empty response (With headers).
     std::unique_ptr<URLRequest> r(default_context_.CreateRequest(
         http_test_server()->GetURL("/"), DEFAULT_PRIORITY, &d));
 
@@ -5608,16 +5631,13 @@ TEST_F(URLRequestTestHTTP, CancelTest3) {
     base::RunLoop().Run();
 
     EXPECT_EQ(1, d.response_started_count());
-    // There is no guarantee about how much data was received
-    // before the cancel was issued.  It could have been 0 bytes,
-    // or it could have been all the bytes.
-    // EXPECT_EQ(0, d.bytes_received());
+    EXPECT_EQ(0, d.received_bytes_count());
     EXPECT_FALSE(d.received_data_before_response());
     EXPECT_EQ(ERR_ABORTED, d.request_status());
   }
 }
 
-TEST_F(URLRequestTestHTTP, CancelTest4) {
+TEST_F(URLRequestTestHTTP, CancelByDestroyingAfterStart) {
   ASSERT_TRUE(http_test_server()->Start());
 
   TestDelegate d;
@@ -5643,7 +5663,7 @@ TEST_F(URLRequestTestHTTP, CancelTest4) {
   EXPECT_EQ(0, d.bytes_received());
 }
 
-TEST_F(URLRequestTestHTTP, CancelTest5) {
+TEST_F(URLRequestTestHTTP, CancelWhileReadingFromCache) {
   ASSERT_TRUE(http_test_server()->Start());
 
   // populate cache
@@ -6084,7 +6104,7 @@ TEST_F(URLRequestTestHTTP, ProcessPKPAndSendReport) {
   std::unique_ptr<base::Value> value(
       base::JSONReader::Read(mock_report_sender.latest_report()));
   ASSERT_TRUE(value);
-  ASSERT_TRUE(value->IsType(base::Value::TYPE_DICTIONARY));
+  ASSERT_TRUE(value->IsType(base::Value::Type::DICTIONARY));
   base::DictionaryValue* report_dict;
   ASSERT_TRUE(value->GetAsDictionary(&report_dict));
   std::string report_hostname;
@@ -6149,7 +6169,7 @@ TEST_F(URLRequestTestHTTP, ProcessPKPReportOnly) {
   std::unique_ptr<base::Value> value(
       base::JSONReader::Read(mock_report_sender.latest_report()));
   ASSERT_TRUE(value);
-  ASSERT_TRUE(value->IsType(base::Value::TYPE_DICTIONARY));
+  ASSERT_TRUE(value->IsType(base::Value::Type::DICTIONARY));
   base::DictionaryValue* report_dict;
   ASSERT_TRUE(value->GetAsDictionary(&report_dict));
   std::string report_hostname;

@@ -851,8 +851,8 @@ void Parser::AssignComments(ParseNode* file) {
     if ((*i)->AsFunctionCall() || (*i)->AsList() || (*i)->AsBlock())
       continue;
 
-    const Location& start = (*i)->GetRange().begin();
-    const Location& end = (*i)->GetRange().end();
+    Location start = (*i)->GetRange().begin();
+    Location end = (*i)->GetRange().end();
 
     // Don't assign suffix comments to something that starts on an earlier
     // line, so that in:

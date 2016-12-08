@@ -19,6 +19,7 @@
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
 #include "net/base/sockaddr_storage.h"
+#include "net/base/trace_constants.h"
 
 namespace net {
 
@@ -369,7 +370,8 @@ void SocketPosix::DetachFromThread() {
 }
 
 void SocketPosix::OnFileCanReadWithoutBlocking(int fd) {
-  TRACE_EVENT0("net", "SocketPosix::OnFileCanReadWithoutBlocking");
+  TRACE_EVENT0(kNetTracingCategory,
+               "SocketPosix::OnFileCanReadWithoutBlocking");
   DCHECK(!accept_callback_.is_null() || !read_callback_.is_null());
   if (!accept_callback_.is_null()) {
     AcceptCompleted();

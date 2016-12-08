@@ -176,5 +176,22 @@ TEST_F(ActivityAnalyzerTest, GlobalAnalyzerConstruction) {
   EXPECT_EQ(tk1, tk2);
 }
 
+TEST_F(ActivityAnalyzerTest, GlobalLogMessages) {
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+
+  PersistentMemoryAllocator* allocator =
+      GlobalActivityTracker::Get()->allocator();
+  GlobalActivityAnalyzer analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
+
+  GlobalActivityTracker::Get()->RecordLogMessage("hello world");
+  GlobalActivityTracker::Get()->RecordLogMessage("foo bar");
+
+  std::vector<std::string> messages = analyzer.GetLogMessages();
+  ASSERT_EQ(2U, messages.size());
+  EXPECT_EQ("hello world", messages[0]);
+  EXPECT_EQ("foo bar", messages[1]);
+}
+
 }  // namespace debug
 }  // namespace base

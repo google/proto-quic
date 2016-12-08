@@ -158,57 +158,47 @@ bool SpdyConstants::IsValidHTTP2FrameStreamId(
   }
 }
 
-bool SpdyConstants::IsValidSettingId(int setting_id_field) {
-  // HEADER_TABLE_SIZE is the first valid setting id.
-  if (setting_id_field < SerializeSettingId(SETTINGS_HEADER_TABLE_SIZE)) {
+bool SpdyConstants::ParseSettingsId(int wire_setting_id,
+                                    SpdySettingsIds* setting_id) {
+  // HEADER_TABLE_SIZE is the first defined setting id.
+  if (wire_setting_id < SETTINGS_MIN) {
     return false;
   }
 
-  // MAX_HEADER_LIST_SIZE is the last valid setting id.
-  if (setting_id_field > SerializeSettingId(SETTINGS_MAX_HEADER_LIST_SIZE)) {
+  // MAX_HEADER_LIST_SIZE is the last defined setting id.
+  if (wire_setting_id > SETTINGS_MAX) {
     return false;
   }
 
+  *setting_id = static_cast<SpdySettingsIds>(wire_setting_id);
   return true;
 }
 
-SpdySettingsIds SpdyConstants::ParseSettingId(int setting_id_field) {
-  switch (setting_id_field) {
-    case 1:
-      return SETTINGS_HEADER_TABLE_SIZE;
-    case 2:
-      return SETTINGS_ENABLE_PUSH;
-    case 3:
-      return SETTINGS_MAX_CONCURRENT_STREAMS;
-    case 4:
-      return SETTINGS_INITIAL_WINDOW_SIZE;
-    case 5:
-      return SETTINGS_MAX_FRAME_SIZE;
-    case 6:
-      return SETTINGS_MAX_HEADER_LIST_SIZE;
-  }
-  SPDY_BUG << "Unhandled setting ID " << setting_id_field;
-  return SETTINGS_UPLOAD_BANDWIDTH;
-}
-
-int SpdyConstants::SerializeSettingId(SpdySettingsIds id) {
+bool SpdyConstants::SettingsIdToString(SpdySettingsIds id,
+                                       const char** settings_id_string) {
   switch (id) {
     case SETTINGS_HEADER_TABLE_SIZE:
-      return 1;
+      *settings_id_string = "SETTINGS_HEADER_TABLE_SIZE";
+      return true;
     case SETTINGS_ENABLE_PUSH:
-      return 2;
+      *settings_id_string = "SETTINGS_ENABLE_PUSH";
+      return true;
     case SETTINGS_MAX_CONCURRENT_STREAMS:
-      return 3;
+      *settings_id_string = "SETTINGS_MAX_CONCURRENT_STREAMS";
+      return true;
     case SETTINGS_INITIAL_WINDOW_SIZE:
-      return 4;
+      *settings_id_string = "SETTINGS_INITIAL_WINDOW_SIZE";
+      return true;
     case SETTINGS_MAX_FRAME_SIZE:
-      return 5;
+      *settings_id_string = "SETTINGS_MAX_FRAME_SIZE";
+      return true;
     case SETTINGS_MAX_HEADER_LIST_SIZE:
-      return 6;
-    default:
-      SPDY_BUG << "Serializing unhandled setting id " << id;
-      return -1;
+      *settings_id_string = "SETTINGS_MAX_HEADER_LIST_SIZE";
+      return true;
   }
+
+  *settings_id_string = "SETTINGS_UNKNOWN";
+  return false;
 }
 
 bool SpdyConstants::IsValidRstStreamStatus(int rst_stream_status_field) {

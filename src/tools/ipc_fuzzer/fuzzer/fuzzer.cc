@@ -504,36 +504,36 @@ struct FuzzTraits<base::ListValue> {
     if (fuzzer->ShouldGenerate())
       list_length = g_depth > 3 ? 0 : RandInRange(8);
     for (size_t index = 0; index < list_length; ++index) {
-      switch (RandInRange(8)) {
-        case base::Value::TYPE_BOOLEAN: {
+      switch (static_cast<base::Value::Type>(RandInRange(8))) {
+        case base::Value::Type::BOOLEAN: {
           bool tmp;
           p->GetBoolean(index, &tmp);
           fuzzer->FuzzBool(&tmp);
           p->Set(index, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_INTEGER: {
+        case base::Value::Type::INTEGER: {
           int tmp;
           p->GetInteger(index, &tmp);
           fuzzer->FuzzInt(&tmp);
           p->Set(index, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_DOUBLE: {
+        case base::Value::Type::DOUBLE: {
           double tmp;
           p->GetDouble(index, &tmp);
           fuzzer->FuzzDouble(&tmp);
           p->Set(index, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_STRING: {
+        case base::Value::Type::STRING: {
           std::string tmp;
           p->GetString(index, &tmp);
           fuzzer->FuzzString(&tmp);
           p->Set(index, new base::StringValue(tmp));
           break;
         }
-        case base::Value::TYPE_BINARY: {
+        case base::Value::Type::BINARY: {
           char tmp[200];
           size_t bin_length = RandInRange(sizeof(tmp));
           fuzzer->FuzzData(tmp, bin_length);
@@ -541,21 +541,21 @@ struct FuzzTraits<base::ListValue> {
                  base::BinaryValue::CreateWithCopiedBuffer(tmp, bin_length));
           break;
         }
-        case base::Value::TYPE_DICTIONARY: {
+        case base::Value::Type::DICTIONARY: {
           base::DictionaryValue* tmp = new base::DictionaryValue();
           p->GetDictionary(index, &tmp);
           FuzzParam(tmp, fuzzer);
           p->Set(index, tmp);
           break;
         }
-        case base::Value::TYPE_LIST: {
+        case base::Value::Type::LIST: {
           base::ListValue* tmp = new base::ListValue();
           p->GetList(index, &tmp);
           FuzzParam(tmp, fuzzer);
           p->Set(index, tmp);
           break;
         }
-        case base::Value::TYPE_NULL:
+        case base::Value::Type::NONE:
         default:
           break;
       }
@@ -577,32 +577,32 @@ struct FuzzTraits<base::DictionaryValue> {
     for (size_t index = 0; index < dict_length; ++index) {
       std::string property;
       fuzzer->FuzzString(&property);
-      switch (RandInRange(8)) {
-        case base::Value::TYPE_BOOLEAN: {
+      switch (static_cast<base::Value::Type>(RandInRange(8))) {
+        case base::Value::Type::BOOLEAN: {
           bool tmp;
           fuzzer->FuzzBool(&tmp);
           p->SetWithoutPathExpansion(property, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_INTEGER: {
+        case base::Value::Type::INTEGER: {
           int tmp;
           fuzzer->FuzzInt(&tmp);
           p->SetWithoutPathExpansion(property, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_DOUBLE: {
+        case base::Value::Type::DOUBLE: {
           double tmp;
           fuzzer->FuzzDouble(&tmp);
           p->SetWithoutPathExpansion(property, new base::FundamentalValue(tmp));
           break;
         }
-        case base::Value::TYPE_STRING: {
+        case base::Value::Type::STRING: {
           std::string tmp;
           fuzzer->FuzzString(&tmp);
           p->SetWithoutPathExpansion(property, new base::StringValue(tmp));
           break;
         }
-        case base::Value::TYPE_BINARY: {
+        case base::Value::Type::BINARY: {
           char tmp[200];
           size_t bin_length = RandInRange(sizeof(tmp));
           fuzzer->FuzzData(tmp, bin_length);
@@ -611,19 +611,19 @@ struct FuzzTraits<base::DictionaryValue> {
               base::BinaryValue::CreateWithCopiedBuffer(tmp, bin_length));
           break;
         }
-        case base::Value::TYPE_DICTIONARY: {
+        case base::Value::Type::DICTIONARY: {
           base::DictionaryValue* tmp = new base::DictionaryValue();
           FuzzParam(tmp, fuzzer);
           p->SetWithoutPathExpansion(property, tmp);
           break;
         }
-        case base::Value::TYPE_LIST: {
+        case base::Value::Type::LIST: {
           base::ListValue* tmp = new base::ListValue();
           FuzzParam(tmp, fuzzer);
           p->SetWithoutPathExpansion(property, tmp);
           break;
         }
-        case base::Value::TYPE_NULL:
+        case base::Value::Type::NONE:
         default:
           break;
       }

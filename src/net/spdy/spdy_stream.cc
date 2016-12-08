@@ -14,6 +14,7 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -28,6 +29,38 @@
 namespace net {
 
 namespace {
+
+enum StatusHeader {
+  STATUS_HEADER_NOT_INCLUDED = 0,
+  STATUS_HEADER_DOES_NOT_START_WITH_NUMBER = 1,
+  STATUS_HEADER_IS_NUMBER = 2,
+  STATUS_HEADER_HAS_STATUS_TEXT = 3,
+  STATUS_HEADER_MAX = STATUS_HEADER_HAS_STATUS_TEXT
+};
+
+StatusHeader ParseStatusHeaderImpl(const SpdyHeaderBlock& response_headers,
+                                   int* status) {
+  SpdyHeaderBlock::const_iterator it = response_headers.find(":status");
+  if (it == response_headers.end())
+    return STATUS_HEADER_NOT_INCLUDED;
+
+  // Save status in |*status| even if some text follows the status code.
+  base::StringPiece status_string = it->second;
+  base::StringPiece::size_type end = status_string.find(' ');
+  if (!StringToInt(status_string.substr(0, end), status))
+    return STATUS_HEADER_DOES_NOT_START_WITH_NUMBER;
+
+  return end == base::StringPiece::npos ? STATUS_HEADER_IS_NUMBER
+                                        : STATUS_HEADER_HAS_STATUS_TEXT;
+}
+
+StatusHeader ParseStatusHeader(const SpdyHeaderBlock& response_headers,
+                               int* status) {
+  StatusHeader status_header = ParseStatusHeaderImpl(response_headers, status);
+  UMA_HISTOGRAM_ENUMERATION("Net.Http2ResponseStatusHeader", status_header,
+                            STATUS_HEADER_MAX + 1);
+  return status_header;
+}
 
 std::unique_ptr<base::Value> NetLogSpdyStreamErrorCallback(
     SpdyStreamId stream_id,
@@ -375,15 +408,34 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
                                    base::Time response_time,
                                    base::TimeTicks recv_first_byte_time) {
   switch (response_state_) {
-    case READY_FOR_HEADERS:
+    case READY_FOR_HEADERS: {
       // No header block has been received yet.
       DCHECK(response_headers_.empty());
-
-      if (response_headers.find(":status") == response_headers.end()) {
-        const std::string error("Response headers do not include :status.");
-        LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
-        return;
+      int status;
+      switch (ParseStatusHeader(response_headers, &status)) {
+        case STATUS_HEADER_NOT_INCLUDED: {
+          const std::string error("Response headers do not include :status.");
+          LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+          session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+          return;
+        }
+        case STATUS_HEADER_DOES_NOT_START_WITH_NUMBER: {
+          const std::string error("Cannot parse :status.");
+          LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
+          session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+          return;
+        }
+        // Intentional fallthrough for the following two cases,
+        // to maintain compatibility with broken servers that include
+        // status text in the response.
+        case STATUS_HEADER_IS_NUMBER:
+        case STATUS_HEADER_HAS_STATUS_TEXT:
+          // Ignore informational headers.
+          // TODO(bnc): Add support for 103 Early Hints,
+          // https://crbug.com/671310.
+          if (status / 100 == 1) {
+            return;
+          }
       }
 
       response_state_ = READY_FOR_DATA_OR_TRAILERS;
@@ -421,7 +473,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       SaveResponseHeaders(response_headers);
 
       break;
-
+    }
     case READY_FOR_DATA_OR_TRAILERS:
       // Second header block is trailers.
       if (type_ == SPDY_PUSH_STREAM) {
@@ -440,7 +492,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       const std::string error("Header block received after trailers.");
       LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
       session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
-      return;
+      break;
   }
 }
 

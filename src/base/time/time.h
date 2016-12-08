@@ -495,8 +495,9 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   static Time FromJsTime(double ms_since_epoch);
   double ToJsTime() const;
 
-  // Converts to Java convention for times, a number of
+  // Converts to/from Java convention for times, a number of
   // milliseconds since the epoch.
+  static Time FromJavaTime(int64_t ms_since_epoch);
   int64_t ToJavaTime() const;
 
 #if defined(OS_POSIX)

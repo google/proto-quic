@@ -1848,11 +1848,15 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   SpdyPriority priority =
       ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY);
   size_t spdy_headers_frame_length;
+  QuicStreamOffset header_stream_offset = 0;
+  mock_quic_data.AddWrite(client_packet_maker().MakeSettingsPacket(
+      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize, true,
+      &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
-      1, test::kClientDataStreamId1, /*should_include_version=*/true,
+      2, test::kClientDataStreamId1, /*should_include_version=*/true,
       /*fin=*/true, priority,
       client_packet_maker().GetRequestHeaders("GET", "https", "/"),
-      &spdy_headers_frame_length));
+      &spdy_headers_frame_length, &header_stream_offset));
   size_t spdy_response_headers_frame_length;
   mock_quic_data.AddRead(server_packet_maker().MakeResponseHeadersPacket(
       1, test::kClientDataStreamId1, /*should_include_version=*/false,
@@ -1971,11 +1975,15 @@ TEST_P(HttpStreamFactoryBidirectionalQuicTest,
   SpdyPriority priority =
       ConvertRequestPriorityToQuicPriority(DEFAULT_PRIORITY);
   size_t spdy_headers_frame_length;
+  QuicStreamOffset header_stream_offset = 0;
+  mock_quic_data.AddWrite(client_packet_maker().MakeSettingsPacket(
+      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize, true,
+      &header_stream_offset));
   mock_quic_data.AddWrite(client_packet_maker().MakeRequestHeadersPacket(
-      1, test::kClientDataStreamId1, /*should_include_version=*/true,
+      2, test::kClientDataStreamId1, /*should_include_version=*/true,
       /*fin=*/true, priority,
       client_packet_maker().GetRequestHeaders("GET", "https", "/"),
-      &spdy_headers_frame_length));
+      &spdy_headers_frame_length, &header_stream_offset));
   size_t spdy_response_headers_frame_length;
   mock_quic_data.AddRead(server_packet_maker().MakeResponseHeadersPacket(
       1, test::kClientDataStreamId1, /*should_include_version=*/false,

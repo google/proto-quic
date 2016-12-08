@@ -11,6 +11,7 @@ def _GetCurrentLocation(action_runner):
 
 
 def _WaitForLocationChange(action_runner, old_href):
+  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.WaitForJavaScriptCondition(
       'document.location.href != "%s"' % old_href)
 

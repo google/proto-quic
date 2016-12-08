@@ -62,7 +62,7 @@ class QuicSentPacketManagerTest : public ::testing::Test {
                  kDefaultPathId,
                  &clock_,
                  &stats_,
-                 FLAGS_quic_default_enable_cubic_bytes ? kCubicBytes : kCubic,
+                 kCubicBytes,
                  kNack,
                  /*delegate=*/nullptr),
         send_algorithm_(new StrictMock<MockSendAlgorithm>),
@@ -1412,13 +1412,8 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
   QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
-  if (FLAGS_quic_default_enable_cubic_bytes) {
-    EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                          ->GetCongestionControlType());
-  } else {
-    EXPECT_EQ(kCubicBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                               ->GetCongestionControlType());
-  }
+  EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                        ->GetCongestionControlType());
 
   options.clear();
   options.push_back(kRENO);
@@ -1466,13 +1461,8 @@ TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
   config.SetClientConnectionOptions(options);
   EXPECT_CALL(*network_change_visitor_, OnCongestionChange());
   manager_.SetFromConfig(config);
-  if (FLAGS_quic_default_enable_cubic_bytes) {
-    EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                          ->GetCongestionControlType());
-  } else {
-    EXPECT_EQ(kCubicBytes, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
-                               ->GetCongestionControlType());
-  }
+  EXPECT_EQ(kCubic, QuicSentPacketManagerPeer::GetSendAlgorithm(manager_)
+                        ->GetCongestionControlType());
 
   options.clear();
   options.push_back(kRENO);

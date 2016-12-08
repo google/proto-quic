@@ -14,9 +14,9 @@
 #include "base/memory/weak_ptr.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm_factory.h"
-#include "net/quic/core/quic_clock.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 namespace base {
 class TaskRunner;

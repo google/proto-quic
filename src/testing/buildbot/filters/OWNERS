@@ -1,1 +1,11 @@
 *
+# PlzNavigate: please check with team before disabling any tests.
+per-file browser-side-navigation*=set noparent
+per-file browser-side-navigation*=ananta@chromium.org
+per-file browser-side-navigation*=arthursonzogni@chromium.org
+per-file browser-side-navigation*=clamy@chromium.org
+per-file browser-side-navigation*=creis@chromium.org
+per-file browser-side-navigation*=jam@chromium.org
+per-file browser-side-navigation*=nasko@chromium.org
+per-file browser-side-navigation*=scottmg@chromium.org
+per-file browser-side-navigation*=yzshen@chromium.org

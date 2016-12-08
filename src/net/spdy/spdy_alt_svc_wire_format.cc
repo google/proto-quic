@@ -9,6 +9,7 @@
 #include <string>
 
 #include "base/logging.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 
 namespace net {
@@ -22,7 +23,8 @@ bool ParsePositiveIntegerImpl(StringPiece::const_iterator c,
                               StringPiece::const_iterator end,
                               T* value) {
   *value = 0;
-  for (; c != end && isdigit(*c); ++c) {
+  // TODO(mmenke):  This really should be using methods in parse_number.h.
+  for (; c != end && '0' <= *c && *c <= '9'; ++c) {
     if (*value > std::numeric_limits<T>::max() / 10) {
       return false;
     }
@@ -277,22 +279,20 @@ bool SpdyAltSvcWireFormat::PercentDecode(StringPiece::const_iterator c,
     }
     DCHECK_EQ('%', *c);
     ++c;
-    if (c == end || !isxdigit(*c)) {
+    if (c == end || !base::IsHexDigit(*c)) {
       return false;
     }
-    char decoded = tolower(*c);
-    // '0' is 0, 'a' is 10.
-    decoded += isdigit(*c) ? (0 - '0') : (10 - 'a');
     // Network byte order is big-endian.
-    decoded <<= 4;
+    int decoded = base::HexDigitToInt(*c) << 4;
+
     ++c;
-    if (c == end || !isxdigit(*c)) {
+    if (c == end || !base::IsHexDigit(*c)) {
       return false;
     }
-    decoded += tolower(*c);
-    // '0' is 0, 'a' is 10.
-    decoded += isdigit(*c) ? (0 - '0') : (10 - 'a');
-    output->push_back(decoded);
+    // Network byte order is big-endian.
+    decoded += base::HexDigitToInt(*c);
+
+    output->push_back(static_cast<char>(decoded));
   }
   return true;
 }

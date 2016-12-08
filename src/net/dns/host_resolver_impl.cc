@@ -44,6 +44,7 @@
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/base/url_util.h"
 #include "net/dns/address_sorter.h"
 #include "net/dns/dns_client.h"
@@ -770,7 +771,7 @@ class HostResolverImpl::ProcTask
                         const uint32_t attempt_number,
                         int error,
                         const int os_error) {
-    TRACE_EVENT0("net", "ProcTask::OnLookupComplete");
+    TRACE_EVENT0(kNetTracingCategory, "ProcTask::OnLookupComplete");
     DCHECK(network_task_runner_->BelongsToCurrentThread());
     // If results are empty, we should return an error.
     bool empty_list_on_ok = (error == OK && results.empty());

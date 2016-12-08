@@ -9,8 +9,6 @@
 
 #include "tools/gn/label_ptr.h"
 
-class Target;
-
 // Provides an iterator for iterating over multiple LabelTargetVectors to
 // make it convenient to iterate over all deps of a target.
 //

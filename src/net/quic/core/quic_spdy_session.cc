@@ -102,6 +102,14 @@ QuicSpdyStream* QuicSpdySession::GetSpdyDataStream(
   return static_cast<QuicSpdyStream*>(GetOrCreateDynamicStream(stream_id));
 }
 
+void QuicSpdySession::OnCryptoHandshakeEvent(CryptoHandshakeEvent event) {
+  QuicSession::OnCryptoHandshakeEvent(event);
+  if (FLAGS_quic_send_max_header_list_size && event == HANDSHAKE_CONFIRMED &&
+      config()->SupportMaxHeaderListSize()) {
+    headers_stream()->SendMaxHeaderListSize(kDefaultMaxUncompressedHeaderSize);
+  }
+}
+
 void QuicSpdySession::OnPromiseHeaderList(QuicStreamId stream_id,
                                           QuicStreamId promised_stream_id,
                                           size_t frame_len,

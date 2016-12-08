@@ -147,9 +147,7 @@ bool InputFileManager::AsyncLoadFile(const LocationRange& origin,
       }
     }
   }
-  g_scheduler->pool()->PostWorkerTaskWithShutdownBehavior(
-      FROM_HERE, schedule_this,
-      base::SequencedWorkerPool::BLOCK_SHUTDOWN);
+  g_scheduler->ScheduleWork(schedule_this);
   return true;
 }
 

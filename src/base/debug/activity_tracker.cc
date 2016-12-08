@@ -858,6 +858,19 @@ void GlobalActivityTracker::ReleaseUserDataMemory(
   *reference = PersistentMemoryAllocator::kReferenceNull;
 }
 
+void GlobalActivityTracker::RecordLogMessage(StringPiece message) {
+  // Allocate at least one extra byte so the string is NUL terminated. All
+  // memory returned by the allocator is guaranteed to be zeroed.
+  PersistentMemoryAllocator::Reference ref =
+      allocator_->Allocate(message.size() + 1, kTypeIdGlobalLogMessage);
+  char* memory = allocator_->GetAsArray<char>(ref, kTypeIdGlobalLogMessage,
+                                              message.size() + 1);
+  if (memory) {
+    memcpy(memory, message.data(), message.size());
+    allocator_->MakeIterable(ref);
+  }
+}
+
 GlobalActivityTracker::GlobalActivityTracker(
     std::unique_ptr<PersistentMemoryAllocator> allocator,
     int stack_depth)

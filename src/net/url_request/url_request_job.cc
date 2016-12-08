@@ -495,8 +495,9 @@ void URLRequestJob::NotifyHeadersComplete() {
     source_stream_ = SetUpSourceStream();
 
     if (!source_stream_) {
-      NotifyDone(URLRequestStatus(URLRequestStatus::FAILED,
-                                  ERR_CONTENT_DECODING_INIT_FAILED));
+      OnDone(URLRequestStatus(URLRequestStatus::FAILED,
+                              ERR_CONTENT_DECODING_INIT_FAILED),
+             true);
       return;
     }
     if (source_stream_->type() == SourceStream::TYPE_NONE) {
@@ -563,7 +564,7 @@ void URLRequestJob::NotifyStartError(const URLRequestStatus &status) {
   // |this| may have been deleted here.
 }
 
-void URLRequestJob::NotifyDone(const URLRequestStatus &status) {
+void URLRequestJob::OnDone(const URLRequestStatus& status, bool notify_done) {
   DCHECK(!done_) << "Job sending done notification twice";
   if (done_)
     return;
@@ -589,15 +590,18 @@ void URLRequestJob::NotifyDone(const URLRequestStatus &status) {
 
   MaybeNotifyNetworkBytes();
 
-  // Complete this notification later.  This prevents us from re-entering the
-  // delegate if we're done because of a synchronous call.
-  base::ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE, base::Bind(&URLRequestJob::CompleteNotifyDone,
-                            weak_factory_.GetWeakPtr()));
+  if (notify_done) {
+    // Complete this notification later.  This prevents us from re-entering the
+    // delegate if we're done because of a synchronous call.
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::Bind(&URLRequestJob::NotifyDone, weak_factory_.GetWeakPtr()));
+  }
 }
 
-void URLRequestJob::CompleteNotifyDone() {
-  // Check if we should notify the delegate that we're done because of an error.
+void URLRequestJob::NotifyDone() {
+  // Check if we should notify the URLRequest that we're done because of an
+  // error.
   if (!request_->status().is_success()) {
     // We report the error differently depending on whether we've called
     // OnResponseStarted yet.
@@ -613,7 +617,7 @@ void URLRequestJob::CompleteNotifyDone() {
 
 void URLRequestJob::NotifyCanceled() {
   if (!done_) {
-    NotifyDone(URLRequestStatus(URLRequestStatus::CANCELED, ERR_ABORTED));
+    OnDone(URLRequestStatus(URLRequestStatus::CANCELED, ERR_ABORTED), true);
   }
 }
 
@@ -669,20 +673,21 @@ void URLRequestJob::SourceStreamReadComplete(bool synchronous, int result) {
   pending_read_buffer_ = nullptr;
 
   if (result < 0) {
-    NotifyDone(URLRequestStatus::FromError(result));
+    OnDone(URLRequestStatus::FromError(result), !synchronous);
     return;
   }
 
   if (result > 0) {
     postfilter_bytes_read_ += result;
-    if (!synchronous)
-      request_->NotifyReadCompleted(result);
-    return;
+  } else {
+    DCHECK_EQ(0, result);
+    DoneReading();
+    // In the synchronous case, the caller will notify the URLRequest of
+    // completion. In the async case, the NotifyReadCompleted call will.
+    // TODO(mmenke): Can this be combined with the error case?
+    OnDone(URLRequestStatus(), false);
   }
 
-  DCHECK_EQ(0, result);
-  DoneReading();
-  NotifyDone(URLRequestStatus());
   if (!synchronous)
     request_->NotifyReadCompleted(result);
 }
@@ -713,7 +718,7 @@ int URLRequestJob::ReadRawDataHelper(IOBuffer* buf,
 void URLRequestJob::FollowRedirect(const RedirectInfo& redirect_info) {
   int rv = request_->Redirect(redirect_info);
   if (rv != OK)
-    NotifyDone(URLRequestStatus(URLRequestStatus::FAILED, rv));
+    OnDone(URLRequestStatus(URLRequestStatus::FAILED, rv), true);
 }
 
 void URLRequestJob::GatherRawReadStats(int bytes_read) {

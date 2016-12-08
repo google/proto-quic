@@ -5,6 +5,7 @@
 import("//build/config/android/config.gni")
 import("//build/config/chrome_build.gni")
 import("//build/config/chromecast_build.gni")
+import("//build/config/compiler/pgo/pgo.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/toolchain.gni")
@@ -39,15 +40,6 @@ declare_args() {
   # than copying it all. This should improve linker performance. mspdbcmf.exe
   # can be used to convert a fastlink pdb to a normal one.
   is_win_fastlink = false
-
-  # Specify the current PGO phase, only used for the Windows MSVS build. Here's
-  # the different values that can be used:
-  #     0 : Means that PGO is turned off.
-  #     1 : Used during the PGI (instrumentation) phase.
-  #     2 : Used during the PGO (optimization) phase.
-  #
-  # TODO(sebmarchand): Add support for the PGU (update) phase.
-  chrome_pgo_phase = 0
 
   # Whether or not we should turn on incremental WPO. Only affects the VS
   # Windows build.

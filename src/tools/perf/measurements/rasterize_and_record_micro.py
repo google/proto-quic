@@ -35,6 +35,7 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
     time.sleep(self._start_wait_time)
 
     # Enqueue benchmark
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     tab.ExecuteJavaScript("""
         window.benchmark_results = {};
         window.benchmark_results.done = false;

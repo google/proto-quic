@@ -63,8 +63,6 @@ void BackgroundDoWrite(TargetWriteInfo* write_info, const Target* target) {
     write_info->rules[target->toolchain()].emplace_back(
         target, std::move(rule));
   }
-
-  g_scheduler->DecrementWorkCount();
 }
 
 // Called on the main thread.
@@ -73,7 +71,6 @@ void ItemResolvedAndGeneratedCallback(TargetWriteInfo* write_info,
   const Item* item = record->item();
   const Target* target = item->AsTarget();
   if (target) {
-    g_scheduler->IncrementWorkCount();
     g_scheduler->ScheduleWork(base::Bind(&BackgroundDoWrite,
                                          write_info, target));
   }

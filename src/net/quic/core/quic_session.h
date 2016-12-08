@@ -185,19 +185,19 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
   // Returns the number of currently open streams, excluding the reserved
   // headers and crypto streams, and never counting unfinished streams.
-  virtual size_t GetNumActiveStreams() const;
+  size_t GetNumActiveStreams() const;
 
   // Returns the number of currently open peer initiated streams, excluding the
   // reserved headers and crypto streams.
-  virtual size_t GetNumOpenIncomingStreams() const;
+  size_t GetNumOpenIncomingStreams() const;
 
   // Returns the number of currently open self initiated streams, excluding the
   // reserved headers and crypto streams.
-  virtual size_t GetNumOpenOutgoingStreams() const;
+  size_t GetNumOpenOutgoingStreams() const;
 
   // Returns the number of "available" streams, the stream ids less than
   // largest_peer_created_stream_id_ that have not yet been opened.
-  virtual size_t GetNumAvailableStreams() const;
+  size_t GetNumAvailableStreams() const;
 
   // Add the stream to the session's write-blocked list because it is blocked by
   // connection-level flow control but not by its own stream-level flow control.
@@ -354,10 +354,6 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // derived class's own implementation.
   virtual void HandleRstOnValidNonexistentStream(
       const QuicRstStreamFrame& frame);
-
-  Visitor* visitor() { return visitor_; }
-
-  const Visitor* visitor() const { return visitor_; }
 
  private:
   friend class test::QuicSessionPeer;

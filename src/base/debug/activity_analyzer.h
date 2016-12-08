@@ -132,6 +132,9 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   // Ownership stays with the global analyzer object.
   ThreadActivityAnalyzer* GetAnalyzerForThread(const ThreadKey& key);
 
+  // Gets all log messages stored within.
+  std::vector<std::string> GetLogMessages();
+
   // Gets the corresponding "program location" for a given "program counter".
   // This will return {0,0} if no mapping could be found.
   ProgramLocation GetProgramLocationFromAddress(uint64_t address);

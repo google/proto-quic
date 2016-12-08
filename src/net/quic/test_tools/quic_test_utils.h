@@ -81,8 +81,6 @@ IPAddress Loopback6();
 // Returns an address for 0.0.0.0.
 IPAddress Any4();
 
-void GenerateBody(std::string* body, int length);
-
 // Create an encrypted packet for testing.
 // If versions == nullptr, uses &AllSupportedVersions().
 // Note that the packet is encrypted with NullEncrypter, so to decrypt the

@@ -53,9 +53,10 @@ def SmokeTestGenerator(benchmark):
       def CreateStorySet(self, options):
         # pylint: disable=super-on-old-class
         story_set = super(SinglePageBenchmark, self).CreateStorySet(options)
-        for story in story_set.stories:
-          story_set.stories = [story]
-          break
+        # Only smoke test the first story since smoke testing everything takes
+        # too long.
+        for s in story_set.stories[1:]:
+          story_set.RemoveStory(s)
         return story_set
 
     # Set the benchmark's default arguments.

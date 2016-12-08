@@ -477,13 +477,6 @@ class EpollServer {
   // Returns true when the EpollServer() is being destroyed.
   bool in_shutdown() const { return in_shutdown_; }
 
-  // Summary:
-  //   A function for implementing the ready list. It invokes OnEvent for each
-  //   of the fd in the ready list, and takes care of adding them back to the
-  //   ready list if the callback requests it (by checking that out_ready_mask
-  //   is non-zero).
-  void CallReadyListCallbacks();
-
  protected:
   virtual void SetNonblocking(int fd);
 
@@ -629,6 +622,13 @@ class EpollServer {
   virtual void WaitForEventsAndCallHandleEvents(int64_t timeout_in_us,
                                                 struct epoll_event events[],
                                                 int events_size);
+
+  // Summary:
+  //   A function for implementing the ready list. It invokes OnEvent for each
+  //   of the fd in the ready list, and takes care of adding them back to the
+  //   ready list if the callback requests it (by checking that out_ready_mask
+  //   is non-zero).
+  void CallReadyListCallbacks();
 
   // Summary:
   //   An internal function for implementing the ready list. It adds a fd's

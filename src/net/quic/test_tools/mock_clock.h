@@ -9,7 +9,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/time/time.h"
-#include "net/quic/core/quic_clock.h"
+#include "net/quic/platform/api/quic_clock.h"
 
 namespace net {
 
@@ -18,14 +18,15 @@ class MockClock : public QuicClock {
   MockClock();
   ~MockClock() override;
 
-  void AdvanceTime(QuicTime::Delta delta);
-
+  // QuicClock implementation:
   QuicTime Now() const override;
-
   QuicTime ApproximateNow() const override;
-
   QuicWallTime WallNow() const override;
 
+  // Advances the current time by |delta|, which may be negative.
+  void AdvanceTime(QuicTime::Delta delta);
+
+  // Returns the current time in ticks.
   base::TimeTicks NowInTicks() const;
 
  private:

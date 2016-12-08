@@ -542,6 +542,7 @@ class BASE_EXPORT GlobalActivityTracker {
     kTypeIdActivityTracker = 0x5D7381AF + 3,   // SHA1(ActivityTracker) v3
     kTypeIdUserDataRecord = 0x615EDDD7 + 1,    // SHA1(UserDataRecord) v1
     kTypeIdGlobalDataRecord = 0xAFE61ABE + 1,  // SHA1(GlobalDataRecord) v1
+    kTypeIdGlobalLogMessage = 0x4CF434F9 + 1,  // SHA1(GlobalLogMessage) v1
 
     kTypeIdActivityTrackerFree = ~kTypeIdActivityTracker,
     kTypeIdUserDataRecordFree = ~kTypeIdUserDataRecord,
@@ -652,6 +653,10 @@ class BASE_EXPORT GlobalActivityTracker {
 
   // Releases memory for user-defined activity data.
   void ReleaseUserDataMemory(PersistentMemoryAllocator::Reference* reference);
+
+  // Records a log message. The current implementation does NOT recycle these
+  // only store critical messages such as FATAL ones.
+  void RecordLogMessage(StringPiece message);
 
   // Accesses the global data record for storing arbitrary key/value pairs.
   ActivityUserData& user_data() { return user_data_; }

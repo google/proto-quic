@@ -134,29 +134,21 @@ enum SpdySettingsFlags {
   SETTINGS_FLAG_PERSISTED = 0x02,
 };
 
-// List of known settings. Avoid changing these enum values, as persisted
-// settings are keyed on them, and they are also exposed in net-internals.
 enum SpdySettingsIds {
-  SETTINGS_UPLOAD_BANDWIDTH = 0x1,
-  SETTINGS_DOWNLOAD_BANDWIDTH = 0x2,
-  // Network round trip time in milliseconds.
-  SETTINGS_ROUND_TRIP_TIME = 0x3,
-  // The maximum number of simultaneous live streams in each direction.
-  SETTINGS_MAX_CONCURRENT_STREAMS = 0x4,
-  // TCP congestion window in packets.
-  SETTINGS_CURRENT_CWND = 0x5,
-  // Downstream byte retransmission rate in percentage.
-  SETTINGS_DOWNLOAD_RETRANS_RATE = 0x6,
-  // Initial window size in bytes
-  SETTINGS_INITIAL_WINDOW_SIZE = 0x7,
   // HPACK header table maximum size.
-  SETTINGS_HEADER_TABLE_SIZE = 0x8,
+  SETTINGS_HEADER_TABLE_SIZE = 0x1,
+  SETTINGS_MIN = SETTINGS_HEADER_TABLE_SIZE,
   // Whether or not server push (PUSH_PROMISE) is enabled.
-  SETTINGS_ENABLE_PUSH = 0x9,
+  SETTINGS_ENABLE_PUSH = 0x2,
+  // The maximum number of simultaneous live streams in each direction.
+  SETTINGS_MAX_CONCURRENT_STREAMS = 0x3,
+  // Initial window size in bytes
+  SETTINGS_INITIAL_WINDOW_SIZE = 0x4,
   // The size of the largest frame payload that a receiver is willing to accept.
-  SETTINGS_MAX_FRAME_SIZE = 0xa,
+  SETTINGS_MAX_FRAME_SIZE = 0x5,
   // The maximum size of header list that the sender is prepared to accept.
-  SETTINGS_MAX_HEADER_LIST_SIZE = 0xb,
+  SETTINGS_MAX_HEADER_LIST_SIZE = 0x6,
+  SETTINGS_MAX = SETTINGS_MAX_HEADER_LIST_SIZE
 };
 
 // Status codes for RST_STREAM frames.
@@ -268,18 +260,14 @@ class NET_EXPORT_PRIVATE SpdyConstants {
   static bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
                                         SpdyFrameType frame_type_field);
 
-  // Returns true if a given on-the-wire enumeration of a setting id is valid
-  // false otherwise.
-  static bool IsValidSettingId(int setting_id_field);
+  // If |wire_setting_id| is the on-the-wire representation of a defined
+  // SETTINGS parameter, parse it to |*setting_id| and return true.
+  static bool ParseSettingsId(int wire_setting_id, SpdySettingsIds* setting_id);
 
-  // Parses a setting id from an on-the-wire enumeration
-  // Behavior is undefined for invalid setting id fields; consumers should first
-  // use IsValidSettingId() to verify validity of setting id fields.
-  static SpdySettingsIds ParseSettingId(int setting_id_field);
-
-  // Serializes a given setting id to the on-the-wire enumeration value.
-  // Returns -1 on failure (I.E. Invalid setting id).
-  static int SerializeSettingId(SpdySettingsIds id);
+  // Return if |id| corresponds to a defined setting; stringify |id| to
+  // |*settings_id_string| regardless.
+  static bool SettingsIdToString(SpdySettingsIds id,
+                                 const char** settings_id_string);
 
   // Returns true if a given on-the-wire enumeration of a RST_STREAM status code
   // is valid, false otherwise.

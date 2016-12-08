@@ -8,9 +8,14 @@
 #include "base/debug/alias.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_dump_manager.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "net/cookies/cookie_store.h"
 #include "net/dns/host_resolver.h"
 #include "net/http/http_transaction_factory.h"
+#include "net/socket/ssl_client_socket_impl.h"
 #include "net/url_request/http_user_agent_settings.h"
 #include "net/url_request/url_request.h"
 
@@ -37,10 +42,15 @@ URLRequestContext::URLRequestContext()
       sdch_manager_(nullptr),
       network_quality_estimator_(nullptr),
       url_requests_(new std::set<const URLRequest*>),
-      enable_brotli_(false) {}
+      enable_brotli_(false) {
+  base::trace_event::MemoryDumpManager::GetInstance()->RegisterDumpProvider(
+      this, "URLRequestContext", base::ThreadTaskRunnerHandle::Get());
+}
 
 URLRequestContext::~URLRequestContext() {
   AssertNoURLRequests();
+  base::trace_event::MemoryDumpManager::GetInstance()->UnregisterDumpProvider(
+      this);
 }
 
 void URLRequestContext::CopyFrom(const URLRequestContext* other) {
@@ -106,6 +116,26 @@ void URLRequestContext::AssertNoURLRequests() const {
     CHECK(false) << "Leaked " << num_requests << " URLRequest(s). First URL: "
                  << request->url().spec().c_str() << ".";
   }
+}
+
+bool URLRequestContext::OnMemoryDump(
+    const base::trace_event::MemoryDumpArgs& args,
+    base::trace_event::ProcessMemoryDump* pmd) {
+  if (name_.empty())
+    name_ = "unknown";
+  base::trace_event::MemoryAllocatorDump* dump = pmd->CreateAllocatorDump(
+      base::StringPrintf("net/url_request_context/%s_%p", name_.c_str(), this));
+  dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+                  base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                  url_requests_->size());
+  HttpTransactionFactory* transaction_factory = http_transaction_factory();
+  if (transaction_factory) {
+    HttpNetworkSession* network_session = transaction_factory->GetSession();
+    if (network_session)
+      network_session->DumpMemoryStats(pmd, dump->absolute_name());
+  }
+  SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(pmd);
+  return true;
 }
 
 }  // namespace net

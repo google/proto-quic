@@ -8,6 +8,7 @@
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
+#include "net/base/parse_number.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/core/quic_utils.h"
@@ -290,15 +291,19 @@ bool QuicSpdyStream::ParseHeaderStatusCode(const SpdyHeaderBlock& header,
   if (status.size() != 3) {
     return false;
   }
-  // First character must be an integer in range [1,5].
-  if (status[0] < '1' || status[0] > '5') {
+
+  unsigned int result;
+  if (!ParseUint32(status, &result, nullptr)) {
     return false;
   }
-  // The remaining two characters must be integers.
-  if (!isdigit(status[1]) || !isdigit(status[2])) {
+
+  // Valid status codes are only in the range [100, 599].
+  if (result < 100 || result >= 600) {
     return false;
   }
-  return StringToInt(status, status_code);
+
+  *status_code = static_cast<int>(result);
+  return true;
 }
 
 bool QuicSpdyStream::FinishedReadingTrailers() const {

@@ -80,9 +80,10 @@ class BASE_EXPORT TaskTraits {
  public:
   // Constructs a default TaskTraits for tasks with
   //     (1) no I/O,
-  //     (2) low priority, and
+  //     (2) priority inherited from the calling context, and
   //     (3) may block shutdown or be skipped on shutdown.
-  // Tasks that require stricter guarantees should highlight those by requesting
+  // Tasks that require stricter guarantees and/or know the specific
+  // TaskPriority appropriate for them should highlight those by requesting
   // explicit traits below.
   TaskTraits();
   TaskTraits(const TaskTraits& other) = default;

@@ -56,7 +56,7 @@ void PrintValue(const base::Value* value, int indentLevel) {
       PrintValue(&iter.value(), indentLevel + 1);
       iter.Advance();
     }
-  } else if (value->IsType(base::Value::TYPE_NULL)) {
+  } else if (value->IsType(base::Value::Type::NONE)) {
     OutputString(indent + "<null>\n");
   }
 }

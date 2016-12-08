@@ -1303,118 +1303,19 @@ int64_t HttpResponseHeaders::GetInt64HeaderValue(
   return result;
 }
 
-// From RFC 2616 14.16:
-// content-range-spec =
-//     bytes-unit SP byte-range-resp-spec "/" ( instance-length | "*" )
-// byte-range-resp-spec = (first-byte-pos "-" last-byte-pos) | "*"
-// instance-length = 1*DIGIT
-// bytes-unit = "bytes"
 bool HttpResponseHeaders::GetContentRange(int64_t* first_byte_position,
                                           int64_t* last_byte_position,
                                           int64_t* instance_length) const {
   size_t iter = 0;
   std::string content_range_spec;
-  *first_byte_position = *last_byte_position = *instance_length = -1;
-  if (!EnumerateHeader(&iter, kContentRange, &content_range_spec))
-    return false;
-
-  // If the header value is empty, we have an invalid header.
-  if (content_range_spec.empty())
-    return false;
-
-  size_t space_position = content_range_spec.find(' ');
-  if (space_position == std::string::npos)
-    return false;
-
-  // Invalid header if it doesn't contain "bytes-unit".
-  std::string::const_iterator content_range_spec_begin =
-      content_range_spec.begin();
-  std::string::const_iterator content_range_spec_end =
-      content_range_spec.begin() + space_position;
-  HttpUtil::TrimLWS(&content_range_spec_begin, &content_range_spec_end);
-  if (!base::LowerCaseEqualsASCII(
-          base::StringPiece(content_range_spec_begin, content_range_spec_end),
-          "bytes")) {
+  if (!EnumerateHeader(&iter, kContentRange, &content_range_spec)) {
+    *first_byte_position = *last_byte_position = *instance_length = -1;
     return false;
   }
 
-  size_t slash_position = content_range_spec.find('/', space_position + 1);
-  if (slash_position == std::string::npos)
-    return false;
-
-  // Obtain the part behind the space and before slash.
-  std::string::const_iterator byte_range_resp_spec_begin =
-      content_range_spec.begin() + space_position + 1;
-  std::string::const_iterator byte_range_resp_spec_end =
-      content_range_spec.begin() + slash_position;
-  HttpUtil::TrimLWS(&byte_range_resp_spec_begin, &byte_range_resp_spec_end);
-
-  // Parse the byte-range-resp-spec part.
-  std::string byte_range_resp_spec(byte_range_resp_spec_begin,
-                                   byte_range_resp_spec_end);
-  // If byte-range-resp-spec != "*".
-  if (!base::LowerCaseEqualsASCII(byte_range_resp_spec, "*")) {
-    size_t minus_position = byte_range_resp_spec.find('-');
-    if (minus_position != std::string::npos) {
-      // Obtain first-byte-pos.
-      std::string::const_iterator first_byte_pos_begin =
-          byte_range_resp_spec.begin();
-      std::string::const_iterator first_byte_pos_end =
-          byte_range_resp_spec.begin() + minus_position;
-      HttpUtil::TrimLWS(&first_byte_pos_begin, &first_byte_pos_end);
-
-      bool ok = base::StringToInt64(StringPiece(first_byte_pos_begin,
-                                                first_byte_pos_end),
-                                    first_byte_position);
-
-      // Obtain last-byte-pos.
-      std::string::const_iterator last_byte_pos_begin =
-          byte_range_resp_spec.begin() + minus_position + 1;
-      std::string::const_iterator last_byte_pos_end =
-          byte_range_resp_spec.end();
-      HttpUtil::TrimLWS(&last_byte_pos_begin, &last_byte_pos_end);
-
-      ok &= base::StringToInt64(StringPiece(last_byte_pos_begin,
-                                            last_byte_pos_end),
-                                last_byte_position);
-      if (!ok) {
-        *first_byte_position = *last_byte_position = -1;
-        return false;
-      }
-      if (*first_byte_position < 0 || *last_byte_position < 0 ||
-          *first_byte_position > *last_byte_position)
-        return false;
-    } else {
-      return false;
-    }
-  }
-
-  // Parse the instance-length part.
-  // If instance-length == "*".
-  std::string::const_iterator instance_length_begin =
-      content_range_spec.begin() + slash_position + 1;
-  std::string::const_iterator instance_length_end =
-      content_range_spec.end();
-  HttpUtil::TrimLWS(&instance_length_begin, &instance_length_end);
-
-  if (base::StartsWith(
-          base::StringPiece(instance_length_begin, instance_length_end), "*",
-          base::CompareCase::SENSITIVE)) {
-    return false;
-  } else if (!base::StringToInt64(StringPiece(instance_length_begin,
-                                              instance_length_end),
-                                  instance_length)) {
-    *instance_length = -1;
-    return false;
-  }
-
-  // We have all the values; let's verify that they make sense for a 206
-  // response.
-  if (*first_byte_position < 0 || *last_byte_position < 0 ||
-      *instance_length < 0 || *instance_length - 1 < *last_byte_position)
-    return false;
-
-  return true;
+  return HttpUtil::ParseContentRangeHeader(content_range_spec,
+                                           first_byte_position,
+                                           last_byte_position, instance_length);
 }
 
 std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(

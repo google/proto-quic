@@ -398,6 +398,44 @@ TEST_F(TraceNetLogObserverTest, EventsWithAndWithoutParameters) {
   EXPECT_TRUE(item2_params.empty());
 }
 
+TEST(TraceNetLogObserverCategoryTest, DisabledCategory) {
+  TraceNetLogObserver observer;
+  NetLog net_log;
+  observer.WatchForTraceStart(&net_log);
+
+  EXPECT_FALSE(net_log.IsCapturing());
+
+  std::string disabled_netlog_category =
+      std::string("-") + kNetLogTracingCategory;
+  TraceLog::GetInstance()->SetEnabled(
+      base::trace_event::TraceConfig(disabled_netlog_category, ""),
+      TraceLog::RECORDING_MODE);
+
+  EXPECT_FALSE(net_log.IsCapturing());
+  observer.StopWatchForTraceStart();
+  EXPECT_FALSE(net_log.IsCapturing());
+
+  TraceLog::GetInstance()->SetDisabled();
+}
+
+TEST(TraceNetLogObserverCategoryTest, EnabledCategory) {
+  TraceNetLogObserver observer;
+  NetLog net_log;
+  observer.WatchForTraceStart(&net_log);
+
+  EXPECT_FALSE(net_log.IsCapturing());
+
+  TraceLog::GetInstance()->SetEnabled(
+      base::trace_event::TraceConfig(kNetLogTracingCategory, ""),
+      TraceLog::RECORDING_MODE);
+
+  EXPECT_TRUE(net_log.IsCapturing());
+  observer.StopWatchForTraceStart();
+  EXPECT_FALSE(net_log.IsCapturing());
+
+  TraceLog::GetInstance()->SetDisabled();
+}
+
 }  // namespace
 
 }  // namespace net

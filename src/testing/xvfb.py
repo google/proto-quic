@@ -42,7 +42,7 @@ def kill(proc, timeout_in_seconds=10):
     print >> sys.stderr, 'Xvfb running after SIGTERM and SIGKILL; good luck!'
 
 
-def run_executable(cmd, build_dir, env):
+def run_executable(cmd, env):
   """Runs an executable within Xvfb on Linux or normally on other platforms.
 
   Returns the exit code of the specified commandline, or 1 on failure.
@@ -71,17 +71,17 @@ def run_executable(cmd, build_dir, env):
       env['_CHROMIUM_INSIDE_XVFB'] = '1'
       return subprocess.call(['xvfb-run', '-a', "--server-args=-screen 0 "
                               "1280x800x24 -ac -nolisten tcp -dpi 96",
-                              __file__, build_dir] + cmd, env=env)
+                              __file__] + cmd, env=env)
   else:
     return test_env.run_executable(cmd, env)
 
 
 def main():
-  if len(sys.argv) < 3:
+  if len(sys.argv) < 2:
     print >> sys.stderr, (
-        'Usage: xvfb.py [path to build_dir] [command args...]')
+        'Usage: xvfb.py [command args...]')
     return 2
-  return run_executable(sys.argv[2:], sys.argv[1], os.environ.copy())
+  return run_executable(sys.argv[1:], os.environ.copy())
 
 
 if __name__ == "__main__":

@@ -25,17 +25,17 @@ bool AppendArgumentFromJSONValue(const std::string& key,
                                  base::CommandLine* command_line) {
   std::string argument_name = "--" + key;
   switch (value_node.GetType()) {
-    case base::Value::TYPE_NULL:
+    case base::Value::Type::NONE:
       command_line->AppendArg(argument_name);
       break;
-    case base::Value::TYPE_INTEGER: {
+    case base::Value::Type::INTEGER: {
       int value;
       bool result = value_node.GetAsInteger(&value);
       DCHECK(result);
       command_line->AppendArg(argument_name + "=" + base::IntToString(value));
       break;
     }
-    case base::Value::TYPE_STRING: {
+    case base::Value::Type::STRING: {
       std::string value;
       bool result = value_node.GetAsString(&value);
       if (!result || value.empty())
@@ -43,11 +43,11 @@ bool AppendArgumentFromJSONValue(const std::string& key,
       command_line->AppendArg(argument_name + "=" + value);
       break;
     }
-    case base::Value::TYPE_BOOLEAN:
-    case base::Value::TYPE_DOUBLE:
-    case base::Value::TYPE_LIST:
-    case base::Value::TYPE_DICTIONARY:
-    case base::Value::TYPE_BINARY:
+    case base::Value::Type::BOOLEAN:
+    case base::Value::Type::DOUBLE:
+    case base::Value::Type::LIST:
+    case base::Value::Type::DICTIONARY:
+    case base::Value::Type::BINARY:
     default:
       NOTREACHED() << "improper json type";
       return false;
@@ -207,7 +207,7 @@ bool LocalTestServer::AddCommandLineArguments(
     const std::string& key = it.key();
 
     // Add arguments from a list.
-    if (value.IsType(base::Value::TYPE_LIST)) {
+    if (value.IsType(base::Value::Type::LIST)) {
       const base::ListValue* list = NULL;
       if (!value.GetAsList(&list) || !list || list->empty())
         return false;

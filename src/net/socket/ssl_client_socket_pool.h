@@ -233,6 +233,11 @@ class NET_EXPORT_PRIVATE SSLClientSocketPool
   LoadState GetLoadState(const std::string& group_name,
                          const ClientSocketHandle* handle) const override;
 
+  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
+  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_dump_absolute_name) const;
+
   std::unique_ptr<base::DictionaryValue> GetInfoAsValue(
       const std::string& name,
       const std::string& type,

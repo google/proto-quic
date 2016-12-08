@@ -18,7 +18,6 @@ class Label;
 class ListNode;
 class ParseNode;
 class Scope;
-class Token;
 class Value;
 
 // -----------------------------------------------------------------------------

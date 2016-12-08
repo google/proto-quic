@@ -9,6 +9,7 @@
 #include "base/trace_event/trace_event.h"
 #include "net/base/load_flags.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/proxy/proxy_info.h"
 #include "net/url_request/url_request.h"
 
@@ -17,8 +18,7 @@ namespace net {
 int NetworkDelegate::NotifyBeforeURLRequest(
     URLRequest* request, const CompletionCallback& callback,
     GURL* new_url) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "NetworkDelegate::NotifyBeforeURLRequest");
+  TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::NotifyBeforeURLRequest");
   DCHECK(CalledOnValidThread());
   DCHECK(request);
   DCHECK(!callback.is_null());
@@ -33,7 +33,7 @@ int NetworkDelegate::NotifyBeforeStartTransaction(
     URLRequest* request,
     const CompletionCallback& callback,
     HttpRequestHeaders* headers) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+  TRACE_EVENT0(kNetTracingCategory,
                "NetworkDelegate::NotifyBeforeStartTransation");
   DCHECK(CalledOnValidThread());
   DCHECK(headers);
@@ -54,8 +54,7 @@ void NetworkDelegate::NotifyBeforeSendHeaders(
 void NetworkDelegate::NotifyStartTransaction(
     URLRequest* request,
     const HttpRequestHeaders& headers) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "NetworkDelegate::NotifyStartTransaction");
+  TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::NotifyStartTransaction");
   DCHECK(CalledOnValidThread());
   OnStartTransaction(request, headers);
 }
@@ -66,8 +65,7 @@ int NetworkDelegate::NotifyHeadersReceived(
     const HttpResponseHeaders* original_response_headers,
     scoped_refptr<HttpResponseHeaders>* override_response_headers,
     GURL* allowed_unsafe_redirect_url) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "NetworkDelegate::NotifyHeadersReceived");
+  TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::NotifyHeadersReceived");
   DCHECK(CalledOnValidThread());
   DCHECK(original_response_headers);
   DCHECK(!callback.is_null());
@@ -88,7 +86,7 @@ void NetworkDelegate::NotifyResponseStarted(URLRequest* request,
 
 void NetworkDelegate::NotifyNetworkBytesReceived(URLRequest* request,
                                                  int64_t bytes_received) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+  TRACE_EVENT0(kNetTracingCategory,
                "NetworkDelegate::NotifyNetworkBytesReceived");
   DCHECK(CalledOnValidThread());
   DCHECK_GT(bytes_received, 0);
@@ -112,8 +110,7 @@ void NetworkDelegate::NotifyBeforeRedirect(URLRequest* request,
 void NetworkDelegate::NotifyCompleted(URLRequest* request,
                                       bool started,
                                       int net_error) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "NetworkDelegate::NotifyCompleted");
+  TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::NotifyCompleted");
   DCHECK(CalledOnValidThread());
   DCHECK(request);
   // TODO(cbentzel): Remove ScopedTracker below once crbug.com/475753 is fixed.
@@ -124,7 +121,7 @@ void NetworkDelegate::NotifyCompleted(URLRequest* request,
 }
 
 void NetworkDelegate::NotifyURLRequestDestroyed(URLRequest* request) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+  TRACE_EVENT0(kNetTracingCategory,
                "NetworkDelegate::NotifyURLRequestDestroyed");
   DCHECK(CalledOnValidThread());
   DCHECK(request);
@@ -170,8 +167,7 @@ bool NetworkDelegate::CanAccessFile(const URLRequest& request,
 bool NetworkDelegate::CanEnablePrivacyMode(
     const GURL& url,
     const GURL& first_party_for_cookies) const {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "NetworkDelegate::CanEnablePrivacyMode");
+  TRACE_EVENT0(kNetTracingCategory, "NetworkDelegate::CanEnablePrivacyMode");
   DCHECK(CalledOnValidThread());
   return OnCanEnablePrivacyMode(url, first_party_for_cookies);
 }

@@ -67,7 +67,7 @@ def main():
   cmd = [sys.executable] + rest_args + sharding_args + [
       '--write-full-results-to', args.isolated_script_test_output]
   if args.xvfb:
-    return xvfb.run_executable(cmd, '.', env)
+    return xvfb.run_executable(cmd, env)
   else:
     return common.run_command(cmd, env=env)
 

@@ -192,6 +192,10 @@ class QuicHeadersStream::SpdyFramerVisitor
         break;
       // TODO(fayang): Need to support SETTINGS_MAX_HEADER_LIST_SIZE when
       // clients are actually sending it.
+      case SETTINGS_MAX_HEADER_LIST_SIZE:
+        if (FLAGS_quic_send_max_header_list_size) {
+          break;
+        }
       default:
         CloseConnection("Unsupported field of HTTP/2 SETTINGS frame: " +
                         base::IntToString(id));
@@ -578,6 +582,15 @@ void QuicHeadersStream::MaybeReleaseSequencerBuffer() {
       spdy_session_->ShouldReleaseHeadersStreamSequencerBuffer()) {
     sequencer()->ReleaseBufferIfEmpty();
   }
+}
+
+size_t QuicHeadersStream::SendMaxHeaderListSize(size_t value) {
+  SpdySettingsIR settings_frame;
+  settings_frame.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, false, false, value);
+
+  SpdySerializedFrame frame(spdy_framer_.SerializeFrame(settings_frame));
+  WriteOrBufferData(StringPiece(frame.data(), frame.size()), false, nullptr);
+  return frame.size();
 }
 
 bool QuicHeadersStream::OnDataFrameHeader(QuicStreamId stream_id,

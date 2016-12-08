@@ -33,7 +33,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using net::test::CryptoTestUtils;
-using net::test::GenerateBody;
 using net::test::MockQuicConnection;
 using net::test::MockQuicConnectionHelper;
 using net::test::QuicConfigPeer;

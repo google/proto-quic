@@ -88,7 +88,7 @@ void StatelessRejector::Process(std::unique_ptr<StatelessRejector> rejector,
   StatelessRejector* rejector_ptr = rejector.get();
   rejector_ptr->crypto_config_->ValidateClientHello(
       rejector_ptr->chlo_, rejector_ptr->client_address_.host(),
-      rejector_ptr->server_address_.host(), rejector_ptr->version_,
+      rejector_ptr->server_address_, rejector_ptr->version_,
       rejector_ptr->clock_, rejector_ptr->signed_config_,
       std::unique_ptr<ValidateCallback>(
           new ValidateCallback(std::move(rejector), std::move(done_cb))));
@@ -127,8 +127,8 @@ void StatelessRejector::ProcessClientHello(
       new ProcessClientHelloCallback(std::move(rejector), std::move(done_cb)));
   crypto_config_->ProcessClientHello(
       result,
-      /*reject_only=*/true, connection_id_, server_address_.host(),
-      client_address_, version_, versions_,
+      /*reject_only=*/true, connection_id_, server_address_, client_address_,
+      version_, versions_,
       /*use_stateless_rejects=*/true, server_designated_connection_id_, clock_,
       random_, compressed_certs_cache_, params_, signed_config_,
       QuicCryptoStream::CryptoMessageFramingOverhead(version_),

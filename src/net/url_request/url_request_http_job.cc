@@ -31,6 +31,7 @@
 #include "net/base/registry_controlled_domains/registry_controlled_domain.h"
 #include "net/base/sdch_manager.h"
 #include "net/base/sdch_problem_codes.h"
+#include "net/base/trace_constants.h"
 #include "net/base/url_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cookies/cookie_store.h"
@@ -689,14 +690,12 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
     //   which target a top-level browsing context.
     //
     // * Otherwise, do not include same-site cookies.
-    url::Origin requested_origin(request_->url());
-    url::Origin site_for_cookies(request_->first_party_for_cookies());
-
     if (registry_controlled_domains::SameDomainOrHost(
-            requested_origin, site_for_cookies,
+            request_->url(), request_->first_party_for_cookies(),
             registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {
-      if (registry_controlled_domains::SameDomainOrHost(
-              requested_origin, request_->initiator(),
+      if (request_->initiator() &&
+          registry_controlled_domains::SameDomainOrHost(
+              request_->url(), request_->initiator().value().GetURL(),
               registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {
         options.set_same_site_cookie_mode(
             CookieOptions::SameSiteCookieMode::INCLUDE_STRICT_AND_LAX);
@@ -855,8 +854,7 @@ void URLRequestHttpJob::ProcessExpectCTHeader() {
 }
 
 void URLRequestHttpJob::OnStartCompleted(int result) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "URLRequestHttpJob::OnStartCompleted");
+  TRACE_EVENT0(kNetTracingCategory, "URLRequestHttpJob::OnStartCompleted");
   RecordTimer();
 
   // If the job is done (due to cancellation), can just ignore this
@@ -938,8 +936,7 @@ void URLRequestHttpJob::OnHeadersReceivedCallback(int result) {
 }
 
 void URLRequestHttpJob::OnReadCompleted(int result) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
-               "URLRequestHttpJob::OnReadCompleted");
+  TRACE_EVENT0(kNetTracingCategory, "URLRequestHttpJob::OnReadCompleted");
   read_in_progress_ = false;
 
   DCHECK_NE(ERR_IO_PENDING, result);
@@ -1487,12 +1484,25 @@ void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {
                                    total_time);
       }
     }
+
+    UMA_HISTOGRAM_CUSTOM_COUNTS("Net.HttpJob.PrefilterBytesRead",
+                                prefilter_bytes_read(), 1, 50000000, 50);
     if (response_info_->was_cached) {
       UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeCached", total_time);
+      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.HttpJob.PrefilterBytesRead.Cache",
+                                  prefilter_bytes_read(), 1, 50000000, 50);
+
       if (response_info_->unused_since_prefetch)
         UMA_HISTOGRAM_COUNTS("Net.Prefetch.HitBytes", prefilter_bytes_read());
     } else {
       UMA_HISTOGRAM_TIMES("Net.HttpJob.TotalTimeNotCached", total_time);
+      UMA_HISTOGRAM_CUSTOM_COUNTS("Net.HttpJob.PrefilterBytesRead.Net",
+                                  prefilter_bytes_read(), 1, 50000000, 50);
+
+      if (request_info_.load_flags & LOAD_PREFETCH) {
+        UMA_HISTOGRAM_COUNTS("Net.Prefetch.PrefilterBytesReadFromNetwork",
+                             prefilter_bytes_read());
+      }
       if (is_https_google) {
         if (used_quic) {
           UMA_HISTOGRAM_MEDIUM_TIMES(
@@ -1504,10 +1514,6 @@ void URLRequestHttpJob::RecordPerfHistograms(CompletionCause reason) {
       }
     }
   }
-
-  if (request_info_.load_flags & LOAD_PREFETCH && !request_->was_cached())
-    UMA_HISTOGRAM_COUNTS("Net.Prefetch.PrefilterBytesReadFromNetwork",
-                         prefilter_bytes_read());
 
   start_time_ = base::TimeTicks();
 }

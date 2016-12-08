@@ -4362,7 +4362,7 @@ TEST_F(SpdyNetworkTransactionTest, SpdyBasicAuth) {
     "Basic realm=\"MyRealm\""
   };
   SpdySerializedFrame resp_authentication(spdy_util_.ConstructSpdyReplyError(
-      "401 Authentication Required", kExtraAuthenticationHeaders,
+      "401", kExtraAuthenticationHeaders,
       arraysize(kExtraAuthenticationHeaders) / 2, 1));
   SpdySerializedFrame body_authentication(
       spdy_util_.ConstructSpdyDataFrame(1, true));
@@ -6155,6 +6155,32 @@ TEST_F(SpdyNetworkTransactionTest, RstStreamNoErrorAfterResponse) {
   NormalSpdyTransactionHelper helper(CreateChunkedPostRequest(),
                                      DEFAULT_PRIORITY, NetLogWithSource(),
                                      nullptr);
+  helper.RunToCompletion(&data);
+  TransactionHelperResult out = helper.output();
+  EXPECT_THAT(out.rv, IsOk());
+  EXPECT_EQ("HTTP/1.1 200", out.status_line);
+  EXPECT_EQ("hello!", out.response_data);
+}
+
+TEST_F(SpdyNetworkTransactionTest, 100Continue) {
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  SpdyHeaderBlock informational_headers;
+  informational_headers[spdy_util_.GetStatusKey()] = "100";
+  SpdySerializedFrame informational_response(
+      spdy_util_.ConstructSpdyReply(1, std::move(informational_headers)));
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {
+      CreateMockRead(informational_response, 1), CreateMockRead(resp, 2),
+      CreateMockRead(body, 3), MockRead(ASYNC, 0, 4)  // EOF
+  };
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
+                                     NetLogWithSource(), nullptr);
   helper.RunToCompletion(&data);
   TransactionHelperResult out = helper.output();
   EXPECT_THAT(out.rv, IsOk());

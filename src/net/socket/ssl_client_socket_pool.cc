@@ -16,6 +16,7 @@
 #include "base/values.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/http/http_proxy_client_socket.h"
 #include "net/http/http_proxy_client_socket_pool.h"
 #include "net/log/net_log_source_type.h"
@@ -176,7 +177,7 @@ void SSLConnectJob::OnIOComplete(int result) {
 }
 
 int SSLConnectJob::DoLoop(int result) {
-  TRACE_EVENT0("net", "SSLConnectJob::DoLoop");
+  TRACE_EVENT0(kNetTracingCategory, "SSLConnectJob::DoLoop");
   DCHECK_NE(next_state_, STATE_NONE);
 
   int rv = result;
@@ -294,7 +295,7 @@ int SSLConnectJob::DoTunnelConnectComplete(int result) {
 }
 
 int SSLConnectJob::DoSSLConnect() {
-  TRACE_EVENT0("net", "SSLConnectJob::DoSSLConnect");
+  TRACE_EVENT0(kNetTracingCategory, "SSLConnectJob::DoSSLConnect");
   // TODO(pkasting): Remove ScopedTracker below once crbug.com/462815 is fixed.
   tracked_objects::ScopedTracker tracking_profile(
       FROM_HERE_WITH_EXPLICIT_FUNCTION("462815 SSLConnectJob::DoSSLConnect"));
@@ -376,9 +377,6 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
         SSLConnectionStatusToCipherSuite(ssl_info.connection_status);
     UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_CipherSuite", cipher_suite);
 
-    const SSL_CIPHER* cipher = SSL_get_cipher_by_value(cipher_suite);
-    bool is_cecpq1 = cipher && SSL_CIPHER_is_CECPQ1(cipher);
-
     if (ssl_info.key_exchange_group != 0) {
       UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_KeyExchange.ECDHE",
                                   ssl_info.key_exchange_group);
@@ -422,27 +420,6 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                                    base::TimeDelta::FromMilliseconds(1),
                                    base::TimeDelta::FromMinutes(1),
                                    100);
-
-        // These are hosts that we expect to always offer CECPQ1.  Connections
-        // to them, whether or not this browser is in the experiment group, form
-        // the basis of our comparisons.
-        bool cecpq1_expected_to_be_offered =
-            ssl_info.is_issued_by_known_root &&
-            (host == "play.google.com" || host == "checkout.google.com" ||
-             host == "wallet.google.com");
-        if (cecpq1_expected_to_be_offered) {
-          UMA_HISTOGRAM_CUSTOM_TIMES(
-              "Net.SSL_Connection_Latency_PostQuantumSupported_Full_Handshake",
-              connect_duration, base::TimeDelta::FromMilliseconds(1),
-              base::TimeDelta::FromMinutes(1), 100);
-          if (SSLClientSocket::IsPostQuantumExperimentEnabled()) {
-            // But don't trust that these hosts offer CECPQ1: make sure.  If
-            // we're doing everything right on the server side, |is_cecpq1|
-            // should always be true if we get here, modulo MITM.
-            UMA_HISTOGRAM_BOOLEAN("Net.SSL_Connection_PostQuantum_Negotiated",
-                                  is_cecpq1);
-          }
-        }
       }
     }
   }
@@ -635,6 +612,12 @@ int SSLClientSocketPool::IdleSocketCountInGroup(
 LoadState SSLClientSocketPool::GetLoadState(
     const std::string& group_name, const ClientSocketHandle* handle) const {
   return base_.GetLoadState(group_name, handle);
+}
+
+void SSLClientSocketPool::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_dump_absolute_name) const {
+  base_.DumpMemoryStats(pmd, parent_dump_absolute_name);
 }
 
 std::unique_ptr<base::DictionaryValue> SSLClientSocketPool::GetInfoAsValue(

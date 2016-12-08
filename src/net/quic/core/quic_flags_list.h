@@ -122,10 +122,6 @@ QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)
 // stream.
 QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, false)
 
-// Default enable QUIC's Cubic in bytes implementation instead of
-// Cubic in packets.
-QUIC_FLAG(bool, FLAGS_quic_default_enable_cubic_bytes, true)
-
 // Set the retransmission alarm only when there are unacked
 // retransmittable packets.
 QUIC_FLAG(bool, FLAGS_quic_more_conservative_retransmission_alarm, true)
@@ -151,3 +147,7 @@ QUIC_FLAG(bool, FLAGS_quic_fix_cubic_convex_mode, false)
 
 // Ensure that BBR startup pacing rate does not drop below the initial one.
 QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, false)
+
+// If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
+// beginning of a connection.
+QUIC_FLAG(bool, FLAGS_quic_send_max_header_list_size, true)

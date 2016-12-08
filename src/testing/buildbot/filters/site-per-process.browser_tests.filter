@@ -8,9 +8,12 @@
 -ProcessManagementTest.ProcessOverflow
 -RedirectTest.ClientEmptyReferer
 -ReferrerPolicyTest.HttpsRedirect
+
+# crbug.com/671734: WebNavigationApiTest.ServerRedirectSingleProcess from
+# fails with --site-per-process
 -WebNavigationApiTest.ServerRedirectSingleProcess
 
-# crbug.com/448592: Get extension browsertests to pass with --site-per-process
+# crbug.com/671712: All 4 IsolatedAppTest tests time out with --site-per-process
 -IsolatedAppTest.CookieIsolation
 -IsolatedAppTest.CrossProcessClientRedirect
 -IsolatedAppTest.IsolatedAppProcessModel

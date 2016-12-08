@@ -39,18 +39,6 @@ bool g_call_new_handler_on_malloc_failure = false;
 subtle::Atomic32 g_new_handler_lock = 0;
 #endif
 
-// In theory this should be just base::ThreadChecker. But we can't afford
-// the luxury of a LazyInstance<ThreadChecker> here as it would cause a new().
-bool CalledOnValidThread() {
-  using subtle::Atomic32;
-  const Atomic32 kInvalidTID = static_cast<Atomic32>(kInvalidThreadId);
-  static Atomic32 g_tid = kInvalidTID;
-  Atomic32 cur_tid = static_cast<Atomic32>(PlatformThread::CurrentId());
-  Atomic32 prev_tid =
-      subtle::NoBarrier_CompareAndSwap(&g_tid, kInvalidTID, cur_tid);
-  return prev_tid == kInvalidTID || prev_tid == cur_tid;
-}
-
 inline size_t GetCachedPageSize() {
   static size_t pagesize = 0;
   if (!pagesize)
@@ -112,25 +100,35 @@ void* UncheckedAlloc(size_t size) {
 }
 
 void InsertAllocatorDispatch(AllocatorDispatch* dispatch) {
-  // Ensure this is always called on the same thread.
-  DCHECK(CalledOnValidThread());
+  // Loop in case of (an unlikely) race on setting the list head.
+  size_t kMaxRetries = 7;
+  for (size_t i = 0; i < kMaxRetries; ++i) {
+    const AllocatorDispatch* chain_head = GetChainHead();
+    dispatch->next = chain_head;
 
-  dispatch->next = GetChainHead();
+    // This function guarantees to be thread-safe w.r.t. concurrent
+    // insertions. It also has to guarantee that all the threads always
+    // see a consistent chain, hence the MemoryBarrier() below.
+    // InsertAllocatorDispatch() is NOT a fastpath, as opposite to malloc(), so
+    // we don't really want this to be a release-store with a corresponding
+    // acquire-load during malloc().
+    subtle::MemoryBarrier();
+    subtle::AtomicWord old_value =
+        reinterpret_cast<subtle::AtomicWord>(chain_head);
+    // Set the chain head to the new dispatch atomically. If we lose the race,
+    // the comparison will fail, and the new head of chain will be returned.
+    if (subtle::NoBarrier_CompareAndSwap(
+            &g_chain_head, old_value,
+            reinterpret_cast<subtle::AtomicWord>(dispatch)) == old_value) {
+      // Success.
+      return;
+    }
+  }
 
-  // This function does not guarantee to be thread-safe w.r.t. concurrent
-  // insertions, but still has to guarantee that all the threads always
-  // see a consistent chain, hence the MemoryBarrier() below.
-  // InsertAllocatorDispatch() is NOT a fastpath, as opposite to malloc(), so
-  // we don't really want this to be a release-store with a corresponding
-  // acquire-load during malloc().
-  subtle::MemoryBarrier();
-
-  subtle::NoBarrier_Store(&g_chain_head,
-                          reinterpret_cast<subtle::AtomicWord>(dispatch));
+  CHECK(false);  // Too many retries, this shouldn't happen.
 }
 
 void RemoveAllocatorDispatchForTesting(AllocatorDispatch* dispatch) {
-  DCHECK(CalledOnValidThread());
   DCHECK_EQ(GetChainHead(), dispatch);
   subtle::NoBarrier_Store(&g_chain_head,
                           reinterpret_cast<subtle::AtomicWord>(dispatch->next));

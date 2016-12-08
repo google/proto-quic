@@ -37,9 +37,11 @@ import device_setup
 _CHROME_PACKAGE = 'com.google.android.apps.chrome'
 _COMMAND_LINE_PATH = '/data/local/tmp/chrome-command-line'
 _TEST_APP_PACKAGE_NAME = 'org.chromium.customtabsclient.test'
+_INVALID_VALUE = -1
+
 
 # Command line arguments for Chrome.
-CHROME_ARGS = [
+_CHROME_ARGS = [
     # Disable backgound network requests that may pollute WPR archive, pollute
     # HTTP cache generation, and introduce noise in loading performance.
     '--disable-background-networking',
@@ -151,8 +153,9 @@ def ParseResult(result_line):
   assert len(tokens) == 8
   intent_sent_timestamp = int(tokens[4])
   return Result(bool(tokens[0]), tokens[1], int(tokens[2]), int(tokens[3]),
-                int(tokens[5]) - intent_sent_timestamp,
-                int(tokens[6]) - intent_sent_timestamp, int(tokens[7]))
+                max(_INVALID_VALUE, int(tokens[5]) - intent_sent_timestamp),
+                max(_INVALID_VALUE, int(tokens[6]) - intent_sent_timestamp),
+                max(_INVALID_VALUE, int(tokens[7]) - intent_sent_timestamp))
 
 
 def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
@@ -180,7 +183,12 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
         config = configs[random.randint(0, len(configs) - 1)]
         chrome_args = _CHROME_ARGS + wpr_attributes.chrome_args
         if config['speculation_mode'] == 'no_state_prefetch':
-          chrome_args.append('--prerender=prefetch')
+          # NoStatePrefetch is enabled through an experiment.
+          chrome_args.extend([
+              '--force-fieldtrials=trial/group',
+              '--force-fieldtrial-params=trial.group:mode/no_state_prefetch',
+              '--enable-features="NoStatePrefetch<trial"'])
+
         result = RunOnce(device, config['url'], config['warmup'],
                          config['speculation_mode'],
                          config['delay_to_may_launch_url'],
@@ -221,9 +229,9 @@ def ProcessOutput(filename):
   result['speculation_mode'] = data[:, 1]
   result['delay_to_may_launch_url'] = data[:, 2]
   result['delay_to_launch_url'] = data[:, 3]
-  result['commit'] = data[:, 5] - data[:, 4]
-  result['plt'] = data[:, 6] - data[:, 4]
-  result['first_contentful_paint'] = data[7]
+  result['commit'] = data[:, 4]
+  result['plt'] = data[:, 5]
+  result['first_contentful_paint'] = data[:, 6]
   return result
 
 

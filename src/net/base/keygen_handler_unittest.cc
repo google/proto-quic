@@ -15,7 +15,6 @@
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/threading/thread_restrictions.h"
 #include "base/threading/worker_pool.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -176,9 +175,6 @@ void ConcurrencyTestCallback(const std::string& challenge,
                              base::WaitableEvent* event,
                              std::unique_ptr<KeygenHandler> handler,
                              std::string* result) {
-  // We allow Singleton use on the worker thread here since we use a
-  // WaitableEvent to synchronize, so it's safe.
-  base::ThreadRestrictions::ScopedAllowSingleton scoped_allow_singleton;
   handler->set_stores_key(false);  // Don't leave the key-pair behind.
   *result = handler->GenKeyAndSignChallenge();
   event->Signal();

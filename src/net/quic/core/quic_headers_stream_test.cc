@@ -545,7 +545,7 @@ TEST_P(QuicHeadersStreamTest, ProcessPushPromiseDisabledSetting) {
     EXPECT_CALL(
         *connection_,
         CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
-                        "Unsupported field of HTTP/2 SETTINGS frame: 9", _));
+                        "Unsupported field of HTTP/2 SETTINGS frame: 2", _));
   }
   headers_stream_->OnStreamFrame(stream_frame_);
   EXPECT_EQ(
@@ -745,10 +745,13 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdySettingsFrame) {
 
 TEST_P(QuicHeadersStreamTest, RespectHttp2SettingsFrameSupportedFields) {
   FLAGS_quic_respect_http2_settings_frame = true;
+  FLAGS_quic_send_max_header_list_size = true;
   const uint32_t kTestHeaderTableSize = 1000;
   SpdySettingsIR data;
-  // Respect supported settings frames SETTINGS_HEADER_TABLE_SIZE.
+  // Respect supported settings frames SETTINGS_HEADER_TABLE_SIZE,
+  // SETTINGS_MAX_HEADER_LIST_SIZE.
   data.AddSetting(SETTINGS_HEADER_TABLE_SIZE, true, true, kTestHeaderTableSize);
+  data.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, true, true, 2000);
   SpdySerializedFrame frame(framer_->SerializeFrame(data));
   stream_frame_.data_buffer = frame.data();
   stream_frame_.data_length = frame.size();
@@ -760,22 +763,16 @@ TEST_P(QuicHeadersStreamTest, RespectHttp2SettingsFrameSupportedFields) {
 
 TEST_P(QuicHeadersStreamTest, RespectHttp2SettingsFrameUnsupportedFields) {
   FLAGS_quic_respect_http2_settings_frame = true;
+  FLAGS_quic_send_max_header_list_size = true;
   SpdySettingsIR data;
-  // Does not support SETTINGS_MAX_HEADER_LIST_SIZE,
-  // SETTINGS_MAX_CONCURRENT_STREAMS, SETTINGS_INITIAL_WINDOW_SIZE,
-  // SETTINGS_ENABLE_PUSH and SETTINGS_MAX_FRAME_SIZE.
-  data.AddSetting(SETTINGS_MAX_HEADER_LIST_SIZE, true, true, 2000);
+  // Does not support SETTINGS_MAX_CONCURRENT_STREAMS,
+  // SETTINGS_INITIAL_WINDOW_SIZE, SETTINGS_ENABLE_PUSH and
+  // SETTINGS_MAX_FRAME_SIZE.
   data.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, true, true, 100);
   data.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, true, true, 100);
   data.AddSetting(SETTINGS_ENABLE_PUSH, true, true, 1);
   data.AddSetting(SETTINGS_MAX_FRAME_SIZE, true, true, 1250);
   SpdySerializedFrame frame(framer_->SerializeFrame(data));
-  EXPECT_CALL(
-      *connection_,
-      CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
-                      "Unsupported field of HTTP/2 SETTINGS frame: " +
-                          base::IntToString(SETTINGS_MAX_HEADER_LIST_SIZE),
-                      _));
   EXPECT_CALL(
       *connection_,
       CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,

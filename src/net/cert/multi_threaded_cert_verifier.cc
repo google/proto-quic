@@ -24,6 +24,7 @@
 #include "base/values.h"
 #include "net/base/hash_value.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/cert/cert_verify_proc.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
@@ -189,7 +190,7 @@ void DoVerifyOnWorkerThread(const scoped_refptr<CertVerifyProc>& verify_proc,
                             const CertificateList& additional_trust_anchors,
                             int* error,
                             CertVerifyResult* result) {
-  TRACE_EVENT0("net", "DoVerifyOnWorkerThread");
+  TRACE_EVENT0(kNetTracingCategory, "DoVerifyOnWorkerThread");
   *error = verify_proc->Verify(cert.get(), hostname, ocsp_response, flags,
                                crl_set.get(), additional_trust_anchors, result);
 
@@ -308,7 +309,7 @@ class CertVerifierJob {
   }
 
   void OnJobCompleted(std::unique_ptr<ResultHelper> verify_result) {
-    TRACE_EVENT0("net", "CertVerifierJob::OnJobCompleted");
+    TRACE_EVENT0(kNetTracingCategory, "CertVerifierJob::OnJobCompleted");
     std::unique_ptr<CertVerifierJob> keep_alive =
         cert_verifier_->RemoveJob(this);
 

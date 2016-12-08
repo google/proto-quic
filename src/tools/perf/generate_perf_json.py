@@ -496,14 +496,20 @@ def generate_telemetry_tests(
     # For each set of dimensions it is only triggered on one of the devices
     swarming_dimensions = []
     for dimension in tester_config['swarming_dimensions']:
-      sharding_map = benchmark_sharding_map.get(str(num_shards), None)
-      if not sharding_map and not use_whitelist:
-        raise Exception('Invalid number of shards, generate new sharding map')
       device_affinity = None
-      if use_whitelist:
-        device_affinity = current_shard
+      if benchmark_sharding_map:
+        sharding_map = benchmark_sharding_map.get(str(num_shards), None)
+        if not sharding_map and not use_whitelist:
+          raise Exception('Invalid number of shards, generate new sharding map')
+        if use_whitelist:
+          device_affinity = current_shard
+        else:
+          device_affinity = sharding_map.get(benchmark.Name(), None)
       else:
-        device_affinity = sharding_map.get(benchmark.Name(), None)
+        # No sharding map was provided, default to legacy device
+        # affinity algorithm
+        device_affinity = bot_utils.GetDeviceAffinity(
+          num_shards, benchmark.Name())
       if device_affinity is None:
         raise Exception('Device affinity for benchmark %s not found'
           % benchmark.Name())
@@ -545,9 +551,17 @@ BENCHMARK_NAME_BLACKLIST = [
     'skpicture_printer_ct',
 ]
 
+# Certain swarming bots are not sharding correctly with the new device affinity
+# algorithm.  Reverting to legacy algorithm to try and get them to complete.
+# See crbug.com/670284
+LEGACY_DEVICE_AFFIINITY_ALGORITHM = [
+  'Win Zenbook Perf',
+  'Win 10 High-DPI Perf',
+  'Mac HDD Perf',
+]
 
 def current_benchmarks(use_whitelist):
-  benchmarks_dir = os.path.join(os.getcwd(), 'benchmarks')
+  benchmarks_dir = os.path.join(src_dir(), 'tools', 'perf', 'benchmarks')
   top_level_dir = os.path.dirname(benchmarks_dir)
 
   all_benchmarks = discover.DiscoverClasses(
@@ -574,8 +588,10 @@ def get_sorted_benchmark_list_by_time(all_benchmarks):
   runtime_list = []
   benchmark_avgs = {}
   new_benchmarks = []
+  timing_file_path = os.path.join(src_dir(), 'tools', 'perf',
+      'desktop_benchmark_avg_times.json')
   # Load in the avg times as calculated on Nov 1st, 2016
-  with open('desktop_benchmark_avg_times.json') as f:
+  with open(timing_file_path) as f:
     benchmark_avgs = json.load(f)
 
   for benchmark in all_benchmarks:
@@ -640,8 +656,11 @@ def generate_all_tests(waterfall):
       if len(config['swarming_dimensions']) > 1:
         raise Exception('Invalid assumption on number of swarming dimensions')
       # Generate benchmarks
+      sharding_map = benchmark_sharding_map
+      if name in LEGACY_DEVICE_AFFIINITY_ALGORITHM:
+        sharding_map = None
       isolated_scripts = generate_telemetry_tests(
-          config, benchmark_list, benchmark_sharding_map, use_whitelist)
+          config, benchmark_list, sharding_map, use_whitelist)
       # Generate swarmed non-telemetry tests if present
       if config['swarming_dimensions'][0].get('perf_tests', False):
         isolated_scripts += generate_cplusplus_isolate_script_test(
@@ -666,19 +685,16 @@ def generate_all_tests(waterfall):
   tests['AAAAA2 See //tools/perf/generate_perf_json.py to make changes'] = {}
   filename = '%s.json' % waterfall['name']
 
-  src_dir = os.path.dirname(os.path.dirname(os.getcwd()))
-
-  with open(os.path.join(src_dir, 'testing', 'buildbot', filename), 'w') as fp:
+  buildbot_dir = os.path.join(src_dir(), 'testing', 'buildbot')
+  with open(os.path.join(buildbot_dir, filename), 'w') as fp:
     json.dump(tests, fp, indent=2, separators=(',', ': '), sort_keys=True)
     fp.write('\n')
 
-def chdir_to_parent_directory():
-  parent_directory = os.path.dirname(os.path.abspath(__file__))
-  os.chdir(parent_directory)
+def src_dir():
+  file_path = os.path.abspath(__file__)
+  return os.path.dirname(os.path.dirname(os.path.dirname(file_path)))
 
 def main():
-  chdir_to_parent_directory()
-
   waterfall = get_waterfall_config()
   waterfall['name'] = 'chromium.perf'
   fyi_waterfall = get_fyi_waterfall_config()

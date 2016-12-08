@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/trace_event/trace_event.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_pool.h"
 
@@ -137,7 +138,7 @@ void ClientSocketHandle::SetSocket(std::unique_ptr<StreamSocket> s) {
 }
 
 void ClientSocketHandle::OnIOComplete(int result) {
-  TRACE_EVENT0("net", "ClientSocketHandle::OnIOComplete");
+  TRACE_EVENT0(kNetTracingCategory, "ClientSocketHandle::OnIOComplete");
   CompletionCallback callback = user_callback_;
   user_callback_.Reset();
   HandleInitCompletion(result);

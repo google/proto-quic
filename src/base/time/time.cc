@@ -126,7 +126,7 @@ int64_t SaturatedSub(TimeDelta delta, int64_t value) {
 }  // namespace time_internal
 
 std::ostream& operator<<(std::ostream& os, TimeDelta time_delta) {
-  return os << time_delta.InSecondsF() << "s";
+  return os << time_delta.InSecondsF() << " s";
 }
 
 // Time -----------------------------------------------------------------------
@@ -201,6 +201,11 @@ double Time::ToJsTime() const {
   }
   return (static_cast<double>(us_ - kTimeTToMicrosecondsOffset) /
           kMicrosecondsPerMillisecond);
+}
+
+Time Time::FromJavaTime(int64_t ms_since_epoch) {
+  return base::Time::UnixEpoch() +
+         base::TimeDelta::FromMilliseconds(ms_since_epoch);
 }
 
 int64_t Time::ToJavaTime() const {

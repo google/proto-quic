@@ -55,11 +55,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 namespace base {
-
-// Forward declaration for ObserverListThreadSafeTraits.
-template <class ObserverType>
-class ObserverListThreadSafe;
-
 namespace internal {
 
 template <typename ObserverType, typename Method>
@@ -75,27 +70,9 @@ struct Dispatcher<ObserverType, void(ReceiverType::*)(Params...)> {
 
 }  // namespace internal
 
-// This class is used to work around VS2005 not accepting:
-//
-// friend class
-//     base::RefCountedThreadSafe<ObserverListThreadSafe<ObserverType>>;
-//
-// Instead of friending the class, we could friend the actual function
-// which calls delete.  However, this ends up being
-// RefCountedThreadSafe::DeleteInternal(), which is private.  So we
-// define our own templated traits class so we can friend it.
-template <class T>
-struct ObserverListThreadSafeTraits {
-  static void Destruct(const ObserverListThreadSafe<T>* x) {
-    delete x;
-  }
-};
-
 template <class ObserverType>
 class ObserverListThreadSafe
-    : public RefCountedThreadSafe<
-        ObserverListThreadSafe<ObserverType>,
-        ObserverListThreadSafeTraits<ObserverType>> {
+    : public RefCountedThreadSafe<ObserverListThreadSafe<ObserverType>> {
  public:
   using NotificationType =
       typename ObserverList<ObserverType>::NotificationType;
@@ -180,8 +157,7 @@ class ObserverListThreadSafe
   }
 
  private:
-  // See comment above ObserverListThreadSafeTraits' definition.
-  friend struct ObserverListThreadSafeTraits<ObserverType>;
+  friend class RefCountedThreadSafe<ObserverListThreadSafe<ObserverType>>;
 
   struct ObserverListContext {
     explicit ObserverListContext(NotificationType type)

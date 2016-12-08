@@ -2245,6 +2245,11 @@ if (enable_java_templates) {
       _accumulated_deps = invoker.deps
     }
 
+    # Caller overriding build config must have valid java sources file if it has
+    # java files.
+    assert(!defined(invoker.override_build_config) ||
+           !defined(invoker.java_files) || defined(invoker.java_sources_file))
+
     assert(defined(invoker.java_files) || defined(invoker.srcjars) ||
            defined(invoker.srcjar_deps))
     _base_path = "$target_gen_dir/$target_name"
@@ -2326,7 +2331,11 @@ if (enable_java_templates) {
       _java_files += invoker.java_files
     }
     if (_java_files != []) {
-      _java_sources_file = "$_base_path.sources"
+      if (defined(invoker.java_sources_file)) {
+        _java_sources_file = invoker.java_sources_file
+      } else {
+        _java_sources_file = "$_base_path.sources"
+      }
       write_file(_java_sources_file, rebase_path(_java_files, root_build_dir))
     }
 

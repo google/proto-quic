@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <algorithm>
+#include <new>
 #include <type_traits>
 
 #include "base/allocator/allocator_shim.h"
@@ -144,7 +145,14 @@ ThreadHeapUsage* GetOrCreateThreadUsage() {
     // Prevent reentrancy due to the allocation below.
     g_thread_allocator_usage.Set(kInitializingSentinel);
 
-    allocator_usage = new ThreadHeapUsage;
+    // Delegate the allocation of the per-thread structure to the underlying
+    // heap shim, for symmetry with the deallocation. Otherwise interposing
+    // shims may mis-attribute or mis-direct this allocation.
+    const AllocatorDispatch* next = allocator_dispatch.next;
+    allocator_usage = new (next->alloc_function(next, sizeof(ThreadHeapUsage)))
+        ThreadHeapUsage();
+    static_assert(std::is_pod<ThreadHeapUsage>::value,
+                  "AllocatorDispatch must be POD");
     memset(allocator_usage, 0, sizeof(*allocator_usage));
     g_thread_allocator_usage.Set(allocator_usage);
   }
@@ -254,7 +262,11 @@ ThreadHeapUsageTracker::GetDispatchForTesting() {
 void ThreadHeapUsageTracker::EnsureTLSInitialized() {
   if (!g_thread_allocator_usage.initialized()) {
     g_thread_allocator_usage.Initialize([](void* allocator_usage) {
-      delete static_cast<ThreadHeapUsage*>(allocator_usage);
+      // Delegate the freeing of the per-thread structure to the next-lower
+      // heap shim. Otherwise this free will re-initialize the TLS on thread
+      // exit.
+      allocator_dispatch.next->free_function(allocator_dispatch.next,
+                                             allocator_usage);
     });
   }
 }

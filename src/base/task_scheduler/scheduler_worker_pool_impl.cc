@@ -308,11 +308,9 @@ std::unique_ptr<SchedulerWorkerPoolImpl> SchedulerWorkerPoolImpl::Create(
     const ReEnqueueSequenceCallback& re_enqueue_sequence_callback,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager) {
-  std::unique_ptr<SchedulerWorkerPoolImpl> worker_pool(
-      new SchedulerWorkerPoolImpl(params.name(),
-                                  params.io_restriction(),
-                                  params.suggested_reclaim_time(),
-                                  task_tracker, delayed_task_manager));
+  auto worker_pool = WrapUnique(new SchedulerWorkerPoolImpl(
+      params.name(), params.suggested_reclaim_time(), task_tracker,
+      delayed_task_manager));
   if (worker_pool->Initialize(
           params.priority_hint(), params.standby_thread_policy(),
           params.max_threads(), re_enqueue_sequence_callback)) {
@@ -519,10 +517,6 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnMainEntry(
 
   // New threads haven't run GetWork() yet, so reset the |idle_start_time_|.
   idle_start_time_ = TimeTicks();
-
-  ThreadRestrictions::SetIOAllowed(
-      outer_->io_restriction_ ==
-          SchedulerWorkerPoolParams::IORestriction::ALLOWED);
 }
 
 scoped_refptr<Sequence>
@@ -676,12 +670,10 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnDetach() {
 
 SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
     StringPiece name,
-    SchedulerWorkerPoolParams::IORestriction io_restriction,
     const TimeDelta& suggested_reclaim_time,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager)
     : name_(name.as_string()),
-      io_restriction_(io_restriction),
       suggested_reclaim_time_(suggested_reclaim_time),
       idle_workers_stack_lock_(shared_priority_queue_.container_lock()),
       idle_workers_stack_cv_for_testing_(

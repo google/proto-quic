@@ -77,4 +77,5 @@ class AdwordCampaignDesktopPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForElement(text='Welcome to AdWords!')
+    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     action_runner.ExecuteJavaScript('console.timeEnd("%s");' % INTERACTION_NAME)

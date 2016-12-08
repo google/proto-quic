@@ -28,6 +28,7 @@
 #include "net/base/load_flags.h"
 #include "net/base/load_timing_info.h"
 #include "net/base/network_interfaces.h"
+#include "net/base/trace_constants.h"
 #include "net/base/url_util.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
@@ -367,7 +368,7 @@ void NetworkQualityEstimator::NotifyStartTransaction(
 }
 
 void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+  TRACE_EVENT0(kNetTracingCategory,
                "NetworkQualityEstimator::NotifyHeadersReceived");
   DCHECK(thread_checker_.CalledOnValidThread());
 
@@ -534,7 +535,7 @@ void NetworkQualityEstimator::RecordAccuracyAfterMainFrame(
 
 void NetworkQualityEstimator::NotifyRequestCompleted(const URLRequest& request,
                                                      int net_error) {
-  TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("net"),
+  TRACE_EVENT0(kNetTracingCategory,
                "NetworkQualityEstimator::NotifyRequestCompleted");
   DCHECK(thread_checker_.CalledOnValidThread());
 

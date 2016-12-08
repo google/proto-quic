@@ -103,7 +103,7 @@ class NET_EXPORT_PRIVATE ProofSource {
   // cert.
   //
   // This function may be called concurrently.
-  virtual bool GetProof(const QuicIpAddress& server_ip,
+  virtual bool GetProof(const QuicSocketAddress& server_address,
                         const std::string& hostname,
                         const std::string& server_config,
                         QuicVersion quic_version,
@@ -116,7 +116,7 @@ class NET_EXPORT_PRIVATE ProofSource {
   // are delivered to |callback|.  Callers should expect that |callback| might
   // be invoked synchronously.  The ProofSource takes ownership of |callback| in
   // any case.
-  virtual void GetProof(const QuicIpAddress& server_ip,
+  virtual void GetProof(const QuicSocketAddress& server_address,
                         const std::string& hostname,
                         const std::string& server_config,
                         QuicVersion quic_version,

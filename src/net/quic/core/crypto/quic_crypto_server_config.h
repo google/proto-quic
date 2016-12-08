@@ -261,8 +261,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // client_hello: the incoming client hello message.
   // client_ip: the IP address of the client, which is used to generate and
   //     validate source-address tokens.
-  // server_ip: the IP address of the server. The IP address may be used for
-  //     certificate selection.
+  // server_address: the IP address and port of the server. The IP address and
+  //     port may be used for certificate selection.
   // version: protocol version used for this connection.
   // clock: used to validate client nonces and ephemeral keys.
   // crypto_proof: in/out parameter to which will be written the crypto proof
@@ -276,7 +276,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   void ValidateClientHello(
       const CryptoHandshakeMessage& client_hello,
       const QuicIpAddress& client_ip,
-      const QuicIpAddress& server_ip,
+      const QuicSocketAddress& server_address,
       QuicVersion version,
       const QuicClock* clock,
       scoped_refptr<QuicSignedServerConfig> crypto_proof,
@@ -316,7 +316,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
           validate_chlo_result,
       bool reject_only,
       QuicConnectionId connection_id,
-      const QuicIpAddress& server_ip,
+      const QuicSocketAddress& server_address,
       const QuicSocketAddress& client_address,
       QuicVersion version,
       const QuicVersionVector& supported_versions,
@@ -343,7 +343,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicVersion version,
       base::StringPiece chlo_hash,
       const SourceAddressTokens& previous_source_address_tokens,
-      const QuicIpAddress& server_ip,
+      const QuicSocketAddress& server_address,
       const QuicIpAddress& client_ip,
       const QuicClock* clock,
       QuicRandom* rand,
@@ -367,7 +367,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicVersion version,
       base::StringPiece chlo_hash,
       const SourceAddressTokens& previous_source_address_tokens,
-      const QuicIpAddress& server_ip,
+      const QuicSocketAddress& server_address,
       const QuicIpAddress& client_ip,
       const QuicClock* clock,
       QuicRandom* rand,
@@ -511,7 +511,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   // whether it can be shown to be fresh (i.e. not a replay). The results are
   // written to |info|.
   void EvaluateClientHello(
-      const QuicIpAddress& server_ip,
+      const QuicSocketAddress& server_address,
       QuicVersion version,
       scoped_refptr<Config> requested_config,
       scoped_refptr<Config> primary_config,

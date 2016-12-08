@@ -73,7 +73,6 @@ QuicSentPacketManager::QuicSentPacketManager(
       loss_algorithm_(&general_loss_algorithm_),
       general_loss_algorithm_(loss_type),
       n_connection_simulation_(false),
-      receive_buffer_bytes_(kDefaultSocketReceiveBuffer),
       least_packet_awaited_by_peer_(1),
       first_rto_transmission_(0),
       consecutive_rto_count_(0),
@@ -124,11 +123,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
       }
     } else if (config.HasClientRequestedIndependentOption(kBYTE,
                                                           perspective_)) {
-      if (FLAGS_quic_default_enable_cubic_bytes) {
-        SetSendAlgorithm(kCubic);
-      } else {
-        SetSendAlgorithm(kCubicBytes);
-      }
+      SetSendAlgorithm(kCubic);
     }
   } else {
     if (FLAGS_quic_allow_new_bbr && config.HasReceivedConnectionOptions() &&
@@ -144,11 +139,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
       }
     } else if (config.HasReceivedConnectionOptions() &&
                ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-      if (FLAGS_quic_default_enable_cubic_bytes) {
-        SetSendAlgorithm(kCubic);
-      } else {
-        SetSendAlgorithm(kCubicBytes);
-      }
+      SetSendAlgorithm(kCubic);
     }
   }
   using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests;
@@ -496,29 +487,6 @@ QuicPacketNumber QuicSentPacketManager::GetNewestRetransmission(
         unacked_packets_.GetTransmissionInfo(retransmission).retransmission;
   }
   return packet_number;
-}
-
-void QuicSentPacketManager::MarkPacketNotRetransmittable(
-    QuicPacketNumber packet_number,
-    QuicTime::Delta ack_delay_time) {
-  if (!unacked_packets_.IsUnacked(packet_number)) {
-    return;
-  }
-
-  const QuicTransmissionInfo& transmission_info =
-      unacked_packets_.GetTransmissionInfo(packet_number);
-  QuicPacketNumber newest_transmission =
-      GetNewestRetransmission(packet_number, transmission_info);
-  // We do not need to retransmit this packet anymore.
-  if (delegate_ != nullptr) {
-    delegate_->OnPacketMarkedNotRetransmittable(path_id_, newest_transmission,
-                                                ack_delay_time);
-  } else {
-    pending_retransmissions_.erase(newest_transmission);
-  }
-
-  unacked_packets_.NotifyAndClearListeners(newest_transmission, ack_delay_time);
-  unacked_packets_.RemoveRetransmittability(packet_number);
 }
 
 void QuicSentPacketManager::MarkPacketHandled(QuicPacketNumber packet_number,
@@ -1044,15 +1012,6 @@ size_t QuicSentPacketManager::GetConsecutiveRtoCount() const {
 
 size_t QuicSentPacketManager::GetConsecutiveTlpCount() const {
   return consecutive_tlp_count_;
-}
-
-QuicTransmissionInfo* QuicSentPacketManager::GetMutableTransmissionInfo(
-    QuicPacketNumber packet_number) {
-  return unacked_packets_.GetMutableTransmissionInfo(packet_number);
-}
-
-void QuicSentPacketManager::RemoveObsoletePackets() {
-  unacked_packets_.RemoveObsoletePackets();
 }
 
 void QuicSentPacketManager::OnApplicationLimited() {

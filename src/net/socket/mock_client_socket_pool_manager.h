@@ -5,6 +5,8 @@
 #ifndef NET_SOCKET_MOCK_CLIENT_SOCKET_POOL_MANAGER_H_
 #define NET_SOCKET_MOCK_CLIENT_SOCKET_POOL_MANAGER_H_
 
+#include <string>
+
 #include "base/macros.h"
 #include "net/socket/client_socket_pool_manager.h"
 #include "net/socket/client_socket_pool_manager_impl.h"
@@ -39,6 +41,9 @@ class MockClientSocketPoolManager : public ClientSocketPoolManager {
   SSLClientSocketPool* GetSocketPoolForSSLWithProxy(
       const HostPortPair& proxy_server) override;
   std::unique_ptr<base::Value> SocketPoolInfoToValue() const override;
+  void DumpMemoryStats(
+      base::trace_event::ProcessMemoryDump* pmd,
+      const std::string& parent_dump_absolute_name) const override;
 
  private:
   using TransportSocketPoolMap =

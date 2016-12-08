@@ -107,6 +107,7 @@ class StartupMetric(Metric):
     get_histogram_js = 'statsCollectionController.getBrowserHistogram("%s")'
 
     for display_name, histogram_name in self.HISTOGRAMS_TO_RECORD.iteritems():
+      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       result = tab.EvaluateJavaScript(get_histogram_js % histogram_name)
       result = json.loads(result)
       measured_time = 0

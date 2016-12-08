@@ -5,18 +5,18 @@
 # Generates the FeatureProviders files for extension features files.
 # The following variables are required:
 #   sources: The features.json files to use.
-#   feature_class: The name of the feature class to generate, e.g. APIFeature.
+#   feature_type: The type of the features to generate, e.g. APIFeature.
 #   provider_class: The name of the provider class to generate, e.g.
 #                   APIFeatureProvider.
 #   deps/public_deps/visibility: normal meaning
 template("json_features") {
   assert(defined(invoker.sources),
          "\"sources\" must be defined for the $target_name template.")
-  assert(defined(invoker.feature_class),
-         "\"feature_class\" must be defined for the $target_name template.")
+  assert(defined(invoker.feature_type),
+         "\"feature_type\" must be defined for the $target_name template.")
   assert(defined(invoker.provider_class),
          "\"provider_class\" must be defined for the $target_name template.")
-  feature_class = invoker.feature_class
+  feature_type = invoker.feature_type
   provider_class = invoker.provider_class
 
   compiler_root = "//tools/json_schema_compiler"
@@ -40,7 +40,7 @@ template("json_features") {
     rebased = rebase_path(sources, root_build_dir)
     args = [
              ".",
-             "$feature_class",
+             "$feature_type",
              "$provider_class",
              rebase_path(target_gen_dir, root_build_dir),
              "$base_filename",

@@ -25,7 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib
+import urllib2
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
@@ -248,7 +248,9 @@ def InstallSysroot(target_platform, target_arch):
   sys.stderr.flush()
   for _ in range(3):
     try:
-      urllib.urlretrieve(url, tarball)
+      response = urllib2.urlopen(url)
+      with open(tarball, "wb") as f:
+        f.write(response.read())
       break
     except:
       pass

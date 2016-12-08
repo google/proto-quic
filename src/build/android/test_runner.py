@@ -15,6 +15,7 @@ import os
 import signal
 import sys
 import threading
+import traceback
 import unittest
 
 import devil_chromium
@@ -71,7 +72,10 @@ def AddCommonOptions(parser):
                            ' located (must include build type). This will take'
                            ' precedence over --debug, --release and'
                            ' --build-directory'))
-  group.add_argument('--num_retries', '--num-retries', dest='num_retries',
+  group.add_argument('--num_retries', '--num-retries',
+                     '--test_launcher_retry_limit',
+                     '--test-launcher-retry-limit',
+                     dest='num_retries',
                      type=int, default=2,
                      help=('Number of retries for a test before '
                            'giving up (default: %(default)s).'))
@@ -351,7 +355,7 @@ def AddInstrumentationTestOptions(parser):
                      help='Path or name of the apk containing the tests '
                           '(name is without the .apk extension; '
                           'e.g. "ContentShellTest").')
-  group.add_argument('--test-jar', required=True,
+  group.add_argument('--test-jar',
                      help='Path of jar containing test java files.')
   group.add_argument('--test-apk-incremental-install-script',
                      type=os.path.realpath,
@@ -700,7 +704,19 @@ def RunTestsInPlatformMode(args):
   ### Set up sigterm handler.
 
   def unexpected_sigterm(_signum, _frame):
-    infra_error('Received SIGTERM. Shutting down.')
+    msg = [
+      'Received SIGTERM. Shutting down.',
+    ]
+    for live_thread in threading.enumerate():
+      # pylint: disable=protected-access
+      thread_stack = ''.join(traceback.format_stack(
+          sys._current_frames()[live_thread.ident]))
+      msg.extend([
+        'Thread "%s" (ident: %s) is currently running:' % (
+            live_thread.name, live_thread.ident),
+        thread_stack])
+
+    infra_error('\n'.join(msg))
 
   sigterm_handler = signal_handler.SignalHandler(
       signal.SIGTERM, unexpected_sigterm)

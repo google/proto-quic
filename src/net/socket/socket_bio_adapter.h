@@ -78,6 +78,9 @@ class NET_EXPORT_PRIVATE SocketBIOAdapter {
   // but not yet consumed by the BIO.
   bool HasPendingReadData();
 
+  // Returns the allocation size estimate in bytes.
+  size_t GetAllocationSize() const;
+
  private:
   int BIORead(char* out, int len);
   void HandleSocketReadResult(int result);

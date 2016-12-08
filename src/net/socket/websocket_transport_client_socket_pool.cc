@@ -18,6 +18,7 @@
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
 #include "net/log/net_log_source_type.h"
@@ -124,7 +125,8 @@ int WebSocketTransportConnectJob::DoResolveHost() {
 }
 
 int WebSocketTransportConnectJob::DoResolveHostComplete(int result) {
-  TRACE_EVENT0("net", "WebSocketTransportConnectJob::DoResolveHostComplete");
+  TRACE_EVENT0(kNetTracingCategory,
+               "WebSocketTransportConnectJob::DoResolveHostComplete");
   connect_timing_.dns_end = base::TimeTicks::Now();
   // Overwrite connection start time, since for connections that do not go
   // through proxies, |connect_start| should not include dns lookup time.

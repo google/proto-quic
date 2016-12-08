@@ -27,9 +27,7 @@
 #include "tools/gn/unique_vector.h"
 
 class DepsIteratorRange;
-class InputFile;
 class Settings;
-class Token;
 class Toolchain;
 
 class Target : public Item {

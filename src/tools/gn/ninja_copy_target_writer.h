@@ -8,8 +8,6 @@
 #include "base/macros.h"
 #include "tools/gn/ninja_target_writer.h"
 
-class Tool;
-
 // Writes a .ninja file for a copy target type.
 class NinjaCopyTargetWriter : public NinjaTargetWriter {
  public:

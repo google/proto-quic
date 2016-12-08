@@ -46,12 +46,6 @@ bool QuicSentPacketManagerPeer::GetUndoRetransmits(
 }
 
 // static
-QuicByteCount QuicSentPacketManagerPeer::GetReceiveWindow(
-    QuicSentPacketManager* sent_packet_manager) {
-  return sent_packet_manager->receive_buffer_bytes_;
-}
-
-// static
 void QuicSentPacketManagerPeer::SetPerspective(
     QuicSentPacketManager* sent_packet_manager,
     Perspective perspective) {

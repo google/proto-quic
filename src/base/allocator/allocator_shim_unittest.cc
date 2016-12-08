@@ -12,6 +12,7 @@
 #include <new>
 #include <vector>
 
+#include "base/allocator/features.h"
 #include "base/atomicops.h"
 #include "base/process/process_metrics.h"
 #include "base/synchronization/waitable_event.h"
@@ -20,7 +21,9 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-#if !defined(OS_WIN)
+#if defined(OS_WIN)
+#include <windows.h>
+#else
 #include <unistd.h>
 #endif
 
@@ -328,6 +331,12 @@ TEST_F(AllocatorShimTest, NewHandlerConcurrency) {
   RemoveAllocatorDispatchForTesting(&g_mock_dispatch);
   ASSERT_EQ(kNumThreads, GetNumberOfNewHandlerCalls());
 }
+
+#if defined(OS_WIN) && BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
+TEST_F(AllocatorShimTest, ShimReplacesCRTHeapWhenEnabled) {
+  ASSERT_NE(::GetProcessHeap(), reinterpret_cast<HANDLE>(_get_heap_handle()));
+}
+#endif  // defined(OS_WIN) && BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
 
 }  // namespace
 }  // namespace allocator

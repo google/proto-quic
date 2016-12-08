@@ -11,6 +11,7 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/trace_event/trace_event.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/dns/dns_util.h"
 
 namespace net {
@@ -162,7 +163,7 @@ void HostCache::Set(const Key& key,
                     const Entry& entry,
                     base::TimeTicks now,
                     base::TimeDelta ttl) {
-  TRACE_EVENT0("net", "HostCache::Set");
+  TRACE_EVENT0(kNetTracingCategory, "HostCache::Set");
   DCHECK(CalledOnValidThread());
   if (caching_is_disabled())
     return;

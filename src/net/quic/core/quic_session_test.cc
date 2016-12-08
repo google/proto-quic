@@ -69,6 +69,8 @@ class TestCryptoStream : public QuicCryptoStream {
         session()->config()->ProcessPeerHello(msg, CLIENT, &error_details);
     EXPECT_EQ(QUIC_NO_ERROR, error);
     session()->OnConfigNegotiated();
+    session()->connection()->SetDefaultEncryptionLevel(
+        ENCRYPTION_FORWARD_SECURE);
     session()->OnCryptoHandshakeEvent(QuicSession::HANDSHAKE_CONFIRMED);
   }
 
@@ -516,6 +518,12 @@ TEST_P(QuicSessionTestServer, TestBatchedWrites) {
 TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
   // Encryption needs to be established before data can be sent.
   CryptoHandshakeMessage msg;
+  MockPacketWriter* writer = static_cast<MockPacketWriter*>(
+      QuicConnectionPeer::GetWriter(session_.connection()));
+  if (FLAGS_quic_send_max_header_list_size) {
+    EXPECT_CALL(*writer, WritePacket(_, _, _, _, _))
+        .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 0)));
+  }
   session_.GetCryptoStream()->OnHandshakeMessage(msg);
 
   // Drive congestion control manually.
@@ -551,8 +559,6 @@ TEST_P(QuicSessionTestServer, OnCanWriteBundlesStreams) {
 
   // Expect that we only send one packet, the writes from different streams
   // should be bundled together.
-  MockPacketWriter* writer = static_cast<MockPacketWriter*>(
-      QuicConnectionPeer::GetWriter(session_.connection()));
   EXPECT_CALL(*writer, WritePacket(_, _, _, _, _))
       .WillOnce(Return(WriteResult(WRITE_STATUS_OK, 0)));
   EXPECT_CALL(*send_algorithm, OnPacketSent(_, _, _, _, _));

@@ -23,6 +23,8 @@
 #include "base/strings/string_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/spdy/hpack/hpack_constants.h"
+#include "net/spdy/hpack/hpack_decoder.h"
+#include "net/spdy/hpack/hpack_decoder2.h"
 #include "net/spdy/spdy_bitmasks.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_flags.h"
@@ -1351,26 +1353,22 @@ size_t SpdyFramer::ProcessSettingsFramePayload(const char* data,
 }
 
 bool SpdyFramer::ProcessSetting(const char* data) {
-  int id_field;
-  SpdySettingsIds id;
-  uint8_t flags = 0;
-  uint32_t value;
-
   // Extract fields.
   // Maintain behavior of old SPDY 2 bug with byte ordering of flags/id.
-  id_field = base::NetToHost16(*(reinterpret_cast<const uint16_t*>(data)));
-  value = base::NetToHost32(*(reinterpret_cast<const uint32_t*>(data + 2)));
+  int id_field = base::NetToHost16(*(reinterpret_cast<const uint16_t*>(data)));
+  int32_t value =
+      base::NetToHost32(*(reinterpret_cast<const uint32_t*>(data + 2)));
 
   // Validate id.
-  if (!SpdyConstants::IsValidSettingId(id_field)) {
+  SpdySettingsIds setting_id;
+  if (!SpdyConstants::ParseSettingsId(id_field, &setting_id)) {
     DLOG(WARNING) << "Unknown SETTINGS ID: " << id_field;
     // Ignore unknown settings for extensibility.
     return true;
   }
-  id = SpdyConstants::ParseSettingId(id_field);
 
   // Validation succeeded. Pass on to visitor.
-  visitor_->OnSetting(id, flags, value);
+  visitor_->OnSetting(setting_id, /*flags=*/0, value);
   return true;
 }
 
@@ -1918,9 +1916,8 @@ SpdySerializedFrame SpdyFramer::SerializeSettings(
 
   DCHECK_EQ(GetSettingsMinimumSize(), builder.length());
   for (SpdySettingsIR::ValueMap::const_iterator it = values->begin();
-       it != values->end();
-       ++it) {
-    int setting_id = SpdyConstants::SerializeSettingId(it->first);
+       it != values->end(); ++it) {
+    int setting_id = it->first;
     DCHECK_GE(setting_id, 0);
     builder.WriteUInt16(static_cast<uint16_t>(setting_id));
     builder.WriteUInt32(it->second.value);
@@ -2364,7 +2361,11 @@ HpackEncoder* SpdyFramer::GetHpackEncoder() {
 
 HpackDecoderInterface* SpdyFramer::GetHpackDecoder() {
   if (hpack_decoder_.get() == nullptr) {
-    hpack_decoder_.reset(new HpackDecoder());
+    if (FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2) {
+      hpack_decoder_.reset(new HpackDecoder2());
+    } else {
+      hpack_decoder_.reset(new HpackDecoder());
+    }
   }
   return hpack_decoder_.get();
 }

@@ -32,6 +32,6 @@ cd $PROTO_QUIC_ROOT
 git add .
 git add ../modified_files
 git add ../proto_quic_tools
-git add ../CONTRIBUTING
+git add ../CONTRIBUTING.md
 git add ../README.md
 cd -

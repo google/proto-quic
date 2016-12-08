@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 #include <type_traits>
 
 #include "base/compiler_specific.h"
@@ -16,6 +17,12 @@
 #include "net/cert/cert_database.h"
 #include "net/http/http_network_session.h"
 #include "net/socket/client_socket_pool_manager.h"
+
+namespace base {
+namespace trace_event {
+class ProcessMemoryDump;
+}
+}
 
 namespace net {
 
@@ -73,6 +80,10 @@ class ClientSocketPoolManagerImpl : public base::NonThreadSafe,
 
   // CertDatabase::Observer methods:
   void OnCertDBChanged(const X509Certificate* cert) override;
+
+  void DumpMemoryStats(
+      base::trace_event::ProcessMemoryDump* pmd,
+      const std::string& parent_dump_absolute_name) const override;
 
  private:
   using TransportSocketPoolMap =

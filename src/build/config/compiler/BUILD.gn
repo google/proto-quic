@@ -16,9 +16,6 @@ if (current_cpu == "arm" || current_cpu == "arm64") {
 if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
 }
-if (is_win) {
-  import("//build/config/win/visual_studio_version.gni")
-}
 if (is_mac) {
   import("//build/config/mac/symbols.gni")
 }
@@ -444,13 +441,16 @@ config("compiler") {
   if (!is_debug && (allow_posix_link_time_opt || is_cfi) && !is_nacl) {
     if (use_thin_lto) {
       cflags += [ "-flto=thin" ]
-      ldflags += [
-        "-flto=thin",
+      ldflags += [ "-flto=thin" ]
 
-        # Limit the parallelism to the sweet spot on most of the machines.
-        # As of now, ThinLTO does not scale beyond 16 cores anyway.
-        "-Wl,-plugin-opt,jobs=16",
-      ]
+      # Limit the parallelism to avoid too agressive competition between
+      # linker jobs. This is still suboptimal to a potential dynamic
+      # resource allocation scheme, but should be good enough.
+      if (use_lld) {
+        ldflags += [ "-Wl,--thinlto-jobs=8" ]
+      } else {
+        ldflags += [ "-Wl,-plugin-opt,jobs=8" ]
+      }
     } else {
       # Note: ThinLTO does not currently have this feature implemented
       # For Full LTO, it provides a measurable runtime speedup of Chrome.
@@ -923,22 +923,20 @@ config("default_warnings") {
       "/wd4459",
     ]
 
-    if (visual_studio_version == "2015") {
-      cflags += [
-        # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
-        # TODO(brucedawson): fix warnings, crbug.com/554200
-        "/wd4312",
-      ]
+    cflags += [
+      # C4312 is a VS 2015 64-bit warning for integer to larger pointer.
+      # TODO(brucedawson): fix warnings, crbug.com/554200
+      "/wd4312",
+    ]
 
-      if (current_cpu == "x86") {
-        cflags += [
-          # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
-          # 4267. Example: short TruncTest(size_t x) { return x; }
-          # Since we disable 4244 we need to disable 4267 during migration.
-          # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-          "/wd4267",
-        ]
-      }
+    if (current_cpu == "x86") {
+      cflags += [
+        # VC++ 2015 changes 32-bit size_t truncation warnings from 4244 to
+        # 4267. Example: short TruncTest(size_t x) { return x; }
+        # Since we disable 4244 we need to disable 4267 during migration.
+        # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
+        "/wd4267",
+      ]
     }
 
     # VS xtree header file needs to be patched or 4702 (unreachable code
@@ -951,7 +949,6 @@ config("default_warnings") {
 
     # Building with Clang on Windows is a work in progress and very
     # experimental. See crbug.com/82385.
-    # Keep this in sync with the similar block in build/common.gypi
     if (is_clang) {
       cflags += [
         # TODO(hans): Make this list shorter eventually, http://crbug.com/504657
@@ -1284,12 +1281,12 @@ if (is_win) {
       } else {
         common_optimize_on_ldflags += [ "/LTCG" ]  # Link-time code generation.
       }
-    }
-    if (full_wpo_on_official) {
-      if (use_incremental_wpo) {
-        arflags = [ "/LTCG:INCREMENTAL" ]
-      } else {
-        arflags = [ "/LTCG" ]
+      if (full_wpo_on_official) {
+        if (use_incremental_wpo) {
+          arflags = [ "/LTCG:INCREMENTAL" ]
+        } else {
+          arflags = [ "/LTCG" ]
+        }
       }
     }
   }
@@ -1551,10 +1548,9 @@ config("afdo") {
 # Full symbols.
 config("symbols") {
   if (is_win) {
-    import("//build/toolchain/goma.gni")
     cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
 
-    if (is_win_fastlink && visual_studio_version != "2013") {
+    if (is_win_fastlink) {
       # Tell VS 2015+ to create a PDB that references debug
       # information in .obj and .lib files instead of copying
       # it all. This flag is incompatible with /PROFILE

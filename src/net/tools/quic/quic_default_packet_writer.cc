@@ -4,7 +4,7 @@
 
 #include "net/tools/quic/quic_default_packet_writer.h"
 
-#include "net/tools/quic/quic_socket_utils.h"
+#include "net/tools/quic/platform/impl/quic_socket_utils.h"
 
 namespace net {
 

@@ -7,7 +7,6 @@
 
 #include <stddef.h>
 
-#include <cassert>
 #include <limits>
 #include <ostream>
 #include <type_traits>
@@ -42,6 +41,8 @@ namespace base {
 //      across any range of arithmetic types. StrictNumeric is the return type
 //      for values extracted from a CheckedNumeric class instance. The raw
 //      arithmetic value is extracted via static_cast to the underlying type.
+//  MakeStrictNum() - Creates a new StrictNumeric from the underlying type of
+//      the supplied arithmetic or StrictNumeric type.
 
 // Convenience function that returns true if the supplied value is in range
 // for the destination type.
@@ -53,19 +54,17 @@ constexpr bool IsValueInRangeForNumericType(Src value) {
 
 // Convenience function for determining if a numeric value is negative without
 // throwing compiler warnings on: unsigned(value) < 0.
-template <typename T>
-constexpr typename std::enable_if<std::numeric_limits<T>::is_signed, bool>::type
-IsValueNegative(T value) {
-  static_assert(std::numeric_limits<T>::is_specialized,
-                "Argument must be numeric.");
+template <typename T,
+          typename std::enable_if<std::is_signed<T>::value>::type* = nullptr>
+constexpr bool IsValueNegative(T value) {
+  static_assert(std::is_arithmetic<T>::value, "Argument must be numeric.");
   return value < 0;
 }
 
-template <typename T>
-constexpr typename std::enable_if<!std::numeric_limits<T>::is_signed,
-                                  bool>::type IsValueNegative(T) {
-  static_assert(std::numeric_limits<T>::is_specialized,
-                "Argument must be numeric.");
+template <typename T,
+          typename std::enable_if<!std::is_signed<T>::value>::type* = nullptr>
+constexpr bool IsValueNegative(T) {
+  static_assert(std::is_arithmetic<T>::value, "Argument must be numeric.");
   return false;
 }
 
@@ -106,19 +105,40 @@ struct SaturatedCastNaNBehaviorReturnZero {
 };
 
 namespace internal {
-// This wrapper is used for C++11 constexpr support by avoiding the declaration
-// of local variables in the saturated_cast template function.
-// TODO(jschuh): convert this back to a switch once we support C++14.
-template <typename Dst, class NaNHandler, typename Src>
+// These wrappers are used for C++11 constexpr support by avoiding both the
+// declaration of local variables and invalid evaluation resulting from the
+// lack of "constexpr if" support in the saturated_cast template function.
+// TODO(jschuh): Convert to single function with a switch once we support C++14.
+template <
+    typename Dst,
+    class NaNHandler,
+    typename Src,
+    typename std::enable_if<std::is_integral<Dst>::value>::type* = nullptr>
 constexpr Dst saturated_cast_impl(const Src value,
                                   const RangeConstraint constraint) {
   return constraint == RANGE_VALID
              ? static_cast<Dst>(value)
              : (constraint == RANGE_UNDERFLOW
-                    ? std::numeric_limits<Dst>::min()
+                    ? std::numeric_limits<Dst>::lowest()
                     : (constraint == RANGE_OVERFLOW
                            ? std::numeric_limits<Dst>::max()
                            : NaNHandler::template HandleFailure<Dst>()));
+}
+
+template <typename Dst,
+          class NaNHandler,
+          typename Src,
+          typename std::enable_if<std::is_floating_point<Dst>::value>::type* =
+              nullptr>
+constexpr Dst saturated_cast_impl(const Src value,
+                                  const RangeConstraint constraint) {
+  return constraint == RANGE_VALID
+             ? static_cast<Dst>(value)
+             : (constraint == RANGE_UNDERFLOW
+                    ? -std::numeric_limits<Dst>::infinity()
+                    : (constraint == RANGE_OVERFLOW
+                           ? std::numeric_limits<Dst>::infinity()
+                           : std::numeric_limits<Dst>::quiet_NaN()));
 }
 
 // saturated_cast<> is analogous to static_cast<> for numeric types, except
@@ -130,12 +150,8 @@ template <typename Dst,
           typename Src>
 constexpr Dst saturated_cast(Src value) {
   using SrcType = typename UnderlyingType<Src>::type;
-  return std::numeric_limits<Dst>::is_iec559
-             ? static_cast<Dst>(
-                   static_cast<SrcType>(value))  // Floating point optimization.
-             : internal::saturated_cast_impl<Dst, NaNHandler>(
-                   value,
-                   internal::DstRangeRelationToSrcRange<Dst, SrcType>(value));
+  return internal::saturated_cast_impl<Dst, NaNHandler>(
+      value, internal::DstRangeRelationToSrcRange<Dst, SrcType>(value));
 }
 
 // strict_cast<> is analogous to static_cast<> for numeric types, except that
@@ -145,8 +161,7 @@ template <typename Dst, typename Src>
 constexpr Dst strict_cast(Src value) {
   using SrcType = typename UnderlyingType<Src>::type;
   static_assert(UnderlyingType<Src>::is_numeric, "Argument must be numeric.");
-  static_assert(std::numeric_limits<Dst>::is_specialized,
-                "Result must be numeric.");
+  static_assert(std::is_arithmetic<Dst>::value, "Result must be numeric.");
 
   // If you got here from a compiler error, it's because you tried to assign
   // from a source type to a destination type that has insufficient range.
@@ -191,7 +206,7 @@ struct IsNumericRangeContained<
 template <typename T>
 class StrictNumeric {
  public:
-  typedef T type;
+  using type = T;
 
   constexpr StrictNumeric() : value_(0) {}
 
@@ -229,6 +244,13 @@ class StrictNumeric {
   const T value_;
 };
 
+// Convience wrapper returns a StrictNumeric from the provided arithmetic type.
+template <typename T>
+constexpr StrictNumeric<typename UnderlyingType<T>::type> MakeStrictNum(
+    const T value) {
+  return value;
+}
+
 // Overload the ostream output operator to make logging work nicely.
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const StrictNumeric<T>& value) {
@@ -258,9 +280,10 @@ STRICT_COMPARISON_OP(IsNotEqual, !=);
 using internal::strict_cast;
 using internal::saturated_cast;
 using internal::StrictNumeric;
+using internal::MakeStrictNum;
 
-// Explicitly make a shorter size_t typedef for convenience.
-typedef StrictNumeric<size_t> SizeT;
+// Explicitly make a shorter size_t alias for convenience.
+using SizeT = StrictNumeric<size_t>;
 
 }  // namespace base
 

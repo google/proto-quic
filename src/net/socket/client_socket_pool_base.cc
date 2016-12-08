@@ -14,11 +14,15 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
+#include "net/base/trace_constants.h"
 #include "net/log/net_log.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
@@ -128,7 +132,7 @@ void ConnectJob::SetSocket(std::unique_ptr<StreamSocket> socket) {
 }
 
 void ConnectJob::NotifyDelegateOfCompletion(int rv) {
-  TRACE_EVENT0("net", "ConnectJob::NotifyDelegateOfCompletion");
+  TRACE_EVENT0(kNetTracingCategory, "ConnectJob::NotifyDelegateOfCompletion");
   // The delegate will own |this|.
   Delegate* delegate = delegate_;
   delegate_ = NULL;
@@ -695,6 +699,29 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
   }
   dict->Set("groups", all_groups_dict);
   return dict;
+}
+
+void ClientSocketPoolBaseHelper::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_dump_absolute_name) const {
+  base::trace_event::MemoryAllocatorDump* socket_pool_dump = nullptr;
+  size_t socket_count = 0;
+  for (const auto& kv : group_map_) {
+    for (const auto& socket : kv.second->idle_sockets()) {
+      // Only create a MemoryAllocatorDump if there is at least one idle socket
+      if (!socket_pool_dump) {
+        socket_pool_dump = pmd->CreateAllocatorDump(base::StringPrintf(
+            "%s/socket_pool", parent_dump_absolute_name.c_str()));
+      }
+      socket.socket->DumpMemoryStats(pmd, socket_pool_dump->absolute_name());
+      ++socket_count;
+    }
+  }
+  if (socket_pool_dump) {
+    socket_pool_dump->AddScalar(
+        base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+        base::trace_event::MemoryAllocatorDump::kUnitsObjects, socket_count);
+  }
 }
 
 bool ClientSocketPoolBaseHelper::IdleSocket::IsUsable() const {

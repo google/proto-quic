@@ -5,11 +5,20 @@
 # V8 extras
 # Adding V8 extras files requires API owners review
 
-v8_extra_library_files = [
+# This list is for files that export symbols that are used in other extras
+# files. Putting them here causes them to be executed first during snapshot
+# creation.
+_v8_extras_dependencies =
+    [ "//third_party/WebKit/Source/core/streams/CommonStrings.js" ]
+
+_v8_extras = [
   "//third_party/WebKit/Source/core/streams/ByteLengthQueuingStrategy.js",
   "//third_party/WebKit/Source/core/streams/CountQueuingStrategy.js",
   "//third_party/WebKit/Source/core/streams/ReadableStream.js",
 ]
+
+v8_extra_library_files = _v8_extras_dependencies + _v8_extras
+
 v8_experimental_extra_library_files =
     [ "//third_party/WebKit/Source/core/streams/WritableStream.js" ]
 

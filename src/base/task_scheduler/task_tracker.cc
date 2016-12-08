@@ -220,13 +220,12 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
   const bool is_delayed = !task->delayed_run_time.is_null();
 
   if (can_run_task) {
-    // All tasks run through here and the scheduler itself doesn't use
-    // singletons. Therefore, it isn't necessary to reset the singleton allowed
-    // bit after running the task.
-    ThreadRestrictions::SetSingletonAllowed(
-        task->traits.shutdown_behavior() !=
-        TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN);
-
+    const bool previous_singleton_allowed =
+        ThreadRestrictions::SetSingletonAllowed(
+            task->traits.shutdown_behavior() !=
+            TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN);
+    const bool previous_io_allowed =
+        ThreadRestrictions::SetIOAllowed(task->traits.with_file_io());
     const bool previous_wait_allowed =
         ThreadRestrictions::SetWaitAllowed(task->traits.with_wait());
 
@@ -267,6 +266,8 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
     }
 
     ThreadRestrictions::SetWaitAllowed(previous_wait_allowed);
+    ThreadRestrictions::SetIOAllowed(previous_io_allowed);
+    ThreadRestrictions::SetSingletonAllowed(previous_singleton_allowed);
 
     AfterRunTask(shutdown_behavior);
   }

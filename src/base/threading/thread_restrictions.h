@@ -135,20 +135,6 @@ class BASE_EXPORT ThreadRestrictions {
     DISALLOW_COPY_AND_ASSIGN(ScopedAllowIO);
   };
 
-  // Constructing a ScopedAllowSingleton temporarily allows accessing for the
-  // current thread.  Doing this is almost always incorrect.
-  class BASE_EXPORT ScopedAllowSingleton {
-   public:
-    ScopedAllowSingleton() { previous_value_ = SetSingletonAllowed(true); }
-    ~ScopedAllowSingleton() { SetSingletonAllowed(previous_value_); }
-   private:
-    // Whether singleton use is allowed when the ScopedAllowSingleton was
-    // constructed.
-    bool previous_value_;
-
-    DISALLOW_COPY_AND_ASSIGN(ScopedAllowSingleton);
-  };
-
 #if DCHECK_IS_ON()
   // Set whether the current thread to make IO calls.
   // Threads start out in the *allowed* state.

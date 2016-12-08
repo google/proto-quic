@@ -19,12 +19,9 @@
 #include "tools/gn/source_dir.h"
 #include "tools/gn/value.h"
 
-class FunctionCallNode;
-class ImportManager;
 class Item;
 class ParseNode;
 class Settings;
-class TargetManager;
 class Template;
 
 // Scope for the script execution.

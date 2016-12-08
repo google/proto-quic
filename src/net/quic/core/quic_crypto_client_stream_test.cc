@@ -252,10 +252,10 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateWithCert) {
   CryptoHandshakeMessage server_config_update;
   EXPECT_TRUE(crypto_config.BuildServerConfigUpdateMessage(
       session_->connection()->version(), stream()->chlo_hash(), tokens,
-      QuicIpAddress::Loopback6(), QuicIpAddress::Loopback6(),
-      connection_->clock(), QuicRandom::GetInstance(), &cache,
-      stream()->crypto_negotiated_params(), &network_params, QuicTagVector(),
-      &server_config_update));
+      QuicSocketAddress(QuicIpAddress::Loopback6(), 1234),
+      QuicIpAddress::Loopback6(), connection_->clock(),
+      QuicRandom::GetInstance(), &cache, stream()->crypto_negotiated_params(),
+      &network_params, QuicTagVector(), &server_config_update));
 
   std::unique_ptr<QuicData> data(
       CryptoFramer::ConstructHandshakeMessage(server_config_update));

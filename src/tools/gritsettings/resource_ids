@@ -352,6 +352,11 @@
   "devtools_resources.grd": {
     "includes": [28450],
   },
+
+  "cloud_print/virtual_driver/win/install/virtual_driver_setup_resources.grd": {
+    "includes": [28600],
+	"messages": [28650],
+  },
   # END "everything else" section.
   # Everything but chrome/, components/, content/, and ios/
 

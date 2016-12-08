@@ -7,8 +7,8 @@
 #include <limits>
 
 #include "base/rand_util.h"
+#include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
-#include "net/tools/quic/quic_socket_utils.h"
 
 namespace net {
 namespace test {

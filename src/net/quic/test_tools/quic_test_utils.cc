@@ -558,14 +558,6 @@ IPAddress Any4() {
   return IPAddress::IPv4AllZeros();
 }
 
-void GenerateBody(string* body, int length) {
-  body->clear();
-  body->reserve(length);
-  for (int i = 0; i < length; ++i) {
-    body->append(1, static_cast<char>(32 + i % (126 - 32)));
-  }
-}
-
 QuicEncryptedPacket* ConstructEncryptedPacket(QuicConnectionId connection_id,
                                               bool version_flag,
                                               bool multipath_flag,

@@ -117,6 +117,8 @@ class NET_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   // If an outgoing stream can be created, return true.
   virtual bool ShouldCreateOutgoingDynamicStream() = 0;
 
+  void OnCryptoHandshakeEvent(CryptoHandshakeEvent event) override;
+
  private:
   friend class test::QuicSpdySessionPeer;
 

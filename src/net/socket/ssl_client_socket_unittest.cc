@@ -18,6 +18,10 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
+#include "base/trace_event/trace_event_argument.h"
+#include "base/values.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -3672,6 +3676,66 @@ TEST_F(SSLClientSocketTest, AccessDeniedClientCerts) {
 
   rv = callback.GetResult(rv);
   EXPECT_THAT(rv, IsError(ERR_BAD_SSL_CLIENT_AUTH_CERT));
+}
+
+// Basic test for dumping memory stats.
+TEST_F(SSLClientSocketTest, DumpMemoryStats) {
+  ASSERT_TRUE(StartTestServer(SpawnedTestServer::SSLOptions()));
+
+  int rv;
+  ASSERT_TRUE(CreateAndConnectSSLClientSocket(SSLConfig(), &rv));
+  EXPECT_THAT(rv, IsOk());
+
+  base::trace_event::MemoryDumpArgs dump_args = {
+      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
+      new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
+  base::trace_event::MemoryAllocatorDump* parent_dump1 =
+      process_memory_dump->CreateAllocatorDump("parent1");
+  sock_->DumpMemoryStats(process_memory_dump.get(),
+                         parent_dump1->absolute_name());
+
+  // Read the response without writing a request, so the read will be pending.
+  TestCompletionCallback read_callback;
+  scoped_refptr<IOBuffer> buf(new IOBuffer(4096));
+  rv = sock_->Read(buf.get(), 4096, read_callback.callback());
+  EXPECT_EQ(ERR_IO_PENDING, rv);
+
+  // Dump memory again and check that |buffer_size| contain the read buffer.
+  base::trace_event::MemoryAllocatorDump* parent_dump2 =
+      process_memory_dump->CreateAllocatorDump("parent2");
+  sock_->DumpMemoryStats(process_memory_dump.get(),
+                         parent_dump2->absolute_name());
+
+  const base::trace_event::ProcessMemoryDump::AllocatorDumpsMap&
+      allocator_dumps = process_memory_dump->allocator_dumps();
+  bool did_dump[] = {false, false};
+  // Checks that there are two dumps because DumpMemoryStats() is invoked twice.
+  for (const auto& pair : allocator_dumps) {
+    const std::string& dump_name = pair.first;
+    if (dump_name.find("ssl_socket") == std::string::npos)
+      continue;
+    std::unique_ptr<base::Value> raw_attrs =
+        pair.second->attributes_for_testing()->ToBaseValue();
+    base::DictionaryValue* attrs;
+    ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
+    base::DictionaryValue* buffer_size_attrs;
+    ASSERT_TRUE(attrs->GetDictionary("buffer_size", &buffer_size_attrs));
+    std::string buffer_size;
+    ASSERT_TRUE(buffer_size_attrs->GetString("value", &buffer_size));
+    ASSERT_TRUE(attrs->HasKey("serialized_cert_size"));
+    ASSERT_TRUE(attrs->HasKey("cert_count"));
+    if (dump_name.find("parent1/ssl_socket") != std::string::npos) {
+      did_dump[0] = true;
+      ASSERT_EQ("0", buffer_size);
+    }
+    if (dump_name.find("parent2/ssl_socket") != std::string::npos) {
+      did_dump[1] = true;
+      // The read buffer is not released, so |buffer_size| can't be 0.
+      ASSERT_NE("0", buffer_size);
+    }
+  }
+  EXPECT_THAT(did_dump, testing::ElementsAre(true, true));
 }
 
 }  // namespace net

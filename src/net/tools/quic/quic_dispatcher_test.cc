@@ -1148,7 +1148,7 @@ class BufferedPacketStoreTest
     chlo.SetVector(net::kCOPT, net::QuicTagVector{net::kSREJ});
     // Pass an inchoate CHLO.
     CryptoTestUtils::GenerateFullCHLO(
-        chlo, &crypto_config_, server_ip_, client_addr_, version, clock_,
+        chlo, &crypto_config_, server_addr_, client_addr_, version, clock_,
         signed_config_, QuicDispatcherPeer::GetCache(dispatcher_.get()),
         &full_chlo_);
   }
@@ -1158,7 +1158,7 @@ class BufferedPacketStoreTest
   }
 
  protected:
-  QuicIpAddress server_ip_;
+  QuicSocketAddress server_addr_;
   QuicSocketAddress client_addr_;
   scoped_refptr<QuicSignedServerConfig> signed_config_;
   const QuicClock* clock_;
@@ -1597,7 +1597,7 @@ class AsyncGetProofTest : public QuicDispatcherTest {
     chlo_.SetVector(net::kCOPT, net::QuicTagVector{net::kSREJ});
     // Pass an inchoate CHLO.
     CryptoTestUtils::GenerateFullCHLO(
-        chlo_, &crypto_config_, server_ip_, client_addr_, version, clock_,
+        chlo_, &crypto_config_, server_addr_, client_addr_, version, clock_,
         signed_config_, QuicDispatcherPeer::GetCache(dispatcher_.get()),
         &full_chlo_);
 
@@ -1648,7 +1648,7 @@ class AsyncGetProofTest : public QuicDispatcherTest {
 
  private:
   QuicCryptoServerConfigPeer crypto_config_peer_;
-  QuicIpAddress server_ip_;
+  QuicSocketAddress server_addr_;
   scoped_refptr<QuicSignedServerConfig> signed_config_;
   const QuicClock* clock_;
   CryptoHandshakeMessage chlo_;

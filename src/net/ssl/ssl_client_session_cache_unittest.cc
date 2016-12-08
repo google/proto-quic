@@ -9,6 +9,8 @@
 #include "base/strings/string_number_conversions.h"
 #include "base/test/simple_test_clock.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
 
@@ -297,6 +299,42 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
       base::MemoryPressureListener::MEMORY_PRESSURE_LEVEL_CRITICAL);
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(0u, cache.size());
+}
+
+// Basic test for dumping memory stats.
+TEST(SSLClientSessionCacheTest, TestDumpMemoryStats) {
+  SSLClientSessionCache::Config config;
+  SSLClientSessionCache cache(config);
+
+  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
+
+  // Insert three entries.
+  cache.Insert("key1", session1.get());
+  cache.Insert("key2", session2.get());
+  cache.Insert("key3", session3.get());
+  EXPECT_EQ(session1.get(), cache.Lookup("key1").get());
+  EXPECT_EQ(session2.get(), cache.Lookup("key2").get());
+  EXPECT_EQ(session3.get(), cache.Lookup("key3").get());
+  EXPECT_EQ(3u, cache.size());
+
+  base::trace_event::MemoryDumpArgs dump_args = {
+      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
+      new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
+  cache.DumpMemoryStats(process_memory_dump.get());
+
+  const base::trace_event::ProcessMemoryDump::AllocatorDumpsMap&
+      allocator_dumps = process_memory_dump->allocator_dumps();
+
+  size_t num_entry_dump = 0;
+  for (const auto& pair : allocator_dumps) {
+    const std::string& dump_name = pair.first;
+    if (dump_name.find("net/ssl_session_cache/entry") != std::string::npos)
+      num_entry_dump++;
+  }
+  ASSERT_EQ(3u, num_entry_dump);
 }
 
 }  // namespace net

@@ -347,6 +347,7 @@ QuicTestPacketMaker::MakeRequestHeadersAndMultipleDataFramesPacket(
     bool fin,
     SpdyPriority priority,
     SpdyHeaderBlock headers,
+    QuicStreamOffset* header_stream_offset,
     size_t* spdy_headers_frame_length,
     const std::vector<std::string>& data_writes) {
   InitializeHeader(packet_number, should_include_version);
@@ -360,12 +361,16 @@ QuicTestPacketMaker::MakeRequestHeadersAndMultipleDataFramesPacket(
   if (spdy_headers_frame_length) {
     *spdy_headers_frame_length = spdy_frame.size();
   }
-  QuicStreamFrame frame(
-      kHeadersStreamId, false, 0,
-      base::StringPiece(spdy_frame.data(), spdy_frame.size()));
-
   QuicFrames frames;
+  QuicStreamOffset header_offset =
+      header_stream_offset == nullptr ? 0 : *header_stream_offset;
+  QuicStreamFrame frame(
+      kHeadersStreamId, false, header_offset,
+      base::StringPiece(spdy_frame.data(), spdy_frame.size()));
   frames.push_back(QuicFrame(&frame));
+  if (header_stream_offset != nullptr) {
+    *header_stream_offset += spdy_frame.size();
+  }
 
   QuicStreamOffset offset = 0;
   // QuicFrame takes a raw pointer. Use a std::vector here so we keep
@@ -626,6 +631,32 @@ void QuicTestPacketMaker::InitializeHeader(QuicPacketNumber packet_number,
   header_.public_header.version_flag = should_include_version;
   header_.public_header.packet_number_length = PACKET_1BYTE_PACKET_NUMBER;
   header_.packet_number = packet_number;
+}
+
+std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeSettingsPacket(
+    QuicPacketNumber packet_number,
+    SpdySettingsIds id,
+    size_t value,
+    bool should_include_version,
+    QuicStreamOffset* offset) {
+  SpdySettingsIR settings_frame;
+  settings_frame.AddSetting(id, false, false, value);
+  SpdySerializedFrame spdy_frame(
+      spdy_request_framer_.SerializeFrame(settings_frame));
+  InitializeHeader(packet_number, should_include_version);
+  if (offset != nullptr) {
+    QuicStreamFrame quic_frame(
+        kHeadersStreamId, false, *offset,
+        StringPiece(spdy_frame.data(), spdy_frame.size()));
+    *offset += spdy_frame.size();
+    return MakePacket(header_, QuicFrame(&quic_frame));
+  } else {
+    QuicStreamFrame quic_frame(
+        kHeadersStreamId, false, 0,
+        StringPiece(spdy_frame.data(), spdy_frame.size()));
+    LOG(INFO) << "quic_frame: " << quic_frame;
+    return MakePacket(header_, QuicFrame(&quic_frame));
+  }
 }
 
 }  // namespace test
