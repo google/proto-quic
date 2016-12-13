@@ -24,6 +24,8 @@ std::string BattOrErrorToString(BattOrError error) {
       return "UNEXPECTED MESSAGE";
     case BATTOR_ERROR_TOO_MANY_INIT_RETRIES:
       return "TOO MANY INIT RETRIES";
+    case BATTOR_ERROR_TOO_MANY_START_TRACING_RETRIES:
+      return "TOO MANY START_TRACING RETRIES";
   }
 
   NOTREACHED();

@@ -6,9 +6,6 @@
 
 #include <cstdlib>  // std::abs
 
-#include "net/quic/core/quic_flags.h"
-
-
 namespace net {
 
 namespace {

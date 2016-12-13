@@ -106,12 +106,15 @@ struct LogOnFailure {
 #define TEST_EXPECTED_SUCCESS(actual) TEST_EXPECTED_VALIDITY(true, actual)
 #define TEST_EXPECTED_FAILURE(actual) TEST_EXPECTED_VALIDITY(false, actual)
 
-#define TEST_EXPECTED_VALUE(expected, actual)                              \
-  EXPECT_EQ(static_cast<Dst>(expected),                                    \
-            ((actual)                                                      \
-                 .template Cast<Dst>()                                     \
-                 .template ValueOrDie<Dst, LogOnFailure>()))               \
-      << "Result test: Value " << GetNumericValueForTest(actual) << " as " \
+// We have to handle promotions, so infer the underlying type below from actual.
+#define TEST_EXPECTED_VALUE(expected, actual)                               \
+  EXPECT_EQ(static_cast<typename std::decay<decltype(actual)>::type::type>( \
+                expected),                                                  \
+            ((actual)                                                       \
+                 .template ValueOrDie<                                      \
+                     typename std::decay<decltype(actual)>::type::type,     \
+                     LogOnFailure>()))                                      \
+      << "Result test: Value " << GetNumericValueForTest(actual) << " as "  \
       << dst << " on line " << line
 
 // Test the simple pointer arithmetic overrides.
@@ -143,6 +146,8 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_FAILURE(-CheckedNumeric<Dst>(DstLimits::lowest()));
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()).Abs());
   TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(-1).Abs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeCheckedNum(-DstLimits::max()).Abs());
 
   TEST_EXPECTED_SUCCESS(CheckedNumeric<Dst>(DstLimits::max()) + -1);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) + -1);
@@ -161,6 +166,13 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) / -1);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(-1) / 2);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) * -1);
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      MakeCheckedNum(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeCheckedNum(DstLimits::max()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(0).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(-1).UnsignedAbs());
 
   // Modulus is legal only for integers.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() % 1);
@@ -221,6 +233,12 @@ static void TestSpecializedArithmetic(
       CheckedNumeric<typename std::make_signed<Dst>::type>(
           std::numeric_limits<typename std::make_signed<Dst>::type>::lowest())
           .UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      MakeCheckedNum(DstLimits::lowest()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      MakeCheckedNum(DstLimits::max()).UnsignedAbs());
+  TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(0).UnsignedAbs());
+  TEST_EXPECTED_VALUE(1, CheckedNumeric<Dst>(1).UnsignedAbs());
 
   // Modulus is legal only for integers.
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>() % 1);

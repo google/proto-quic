@@ -10,13 +10,20 @@
 #include <unistd.h>
 
 #include "base/mac/mac_util.h"
+#include "base/mac/mach_logging.h"
 #include "base/posix/eintr_wrapper.h"
 
 namespace base {
 
-SharedMemoryHandle::SharedMemoryHandle() {}
+SharedMemoryHandle::SharedMemoryHandle()
+    : type_(MACH), memory_object_(MACH_PORT_NULL) {}
+
+SharedMemoryHandle::SharedMemoryHandle(
+    const base::FileDescriptor& file_descriptor)
+    : type_(POSIX), file_descriptor_(file_descriptor) {}
 
 SharedMemoryHandle::SharedMemoryHandle(mach_vm_size_t size) {
+  type_ = MACH;
   mach_port_t named_right;
   kern_return_t kr = mach_make_memory_entry_64(
       mach_task_self(),
@@ -39,7 +46,8 @@ SharedMemoryHandle::SharedMemoryHandle(mach_vm_size_t size) {
 SharedMemoryHandle::SharedMemoryHandle(mach_port_t memory_object,
                                        mach_vm_size_t size,
                                        base::ProcessId pid)
-    : memory_object_(memory_object),
+    : type_(MACH),
+      memory_object_(memory_object),
       size_(size),
       pid_(pid),
       ownership_passes_to_ipc_(false) {}
@@ -53,6 +61,7 @@ SharedMemoryHandle& SharedMemoryHandle::operator=(
   if (this == &handle)
     return *this;
 
+  type_ = handle.type_;
   CopyRelevantData(handle);
   return *this;
 }
@@ -74,8 +83,16 @@ bool SharedMemoryHandle::operator==(const SharedMemoryHandle& handle) const {
   if (!IsValid() && !handle.IsValid())
     return true;
 
-  return memory_object_ == handle.memory_object_ && size_ == handle.size_ &&
-         pid_ == handle.pid_;
+  if (type_ != handle.type_)
+    return false;
+
+  switch (type_) {
+    case POSIX:
+      return file_descriptor_.fd == handle.file_descriptor_.fd;
+    case MACH:
+      return memory_object_ == handle.memory_object_ && size_ == handle.size_ &&
+             pid_ == handle.pid_;
+  }
 }
 
 bool SharedMemoryHandle::operator!=(const SharedMemoryHandle& handle) const {
@@ -83,10 +100,16 @@ bool SharedMemoryHandle::operator!=(const SharedMemoryHandle& handle) const {
 }
 
 bool SharedMemoryHandle::IsValid() const {
-  return memory_object_ != MACH_PORT_NULL;
+  switch (type_) {
+    case POSIX:
+      return file_descriptor_.fd >= 0;
+    case MACH:
+      return memory_object_ != MACH_PORT_NULL;
+  }
 }
 
 mach_port_t SharedMemoryHandle::GetMemoryObject() const {
+  DCHECK_EQ(type_, MACH);
   return memory_object_;
 }
 
@@ -96,8 +119,19 @@ bool SharedMemoryHandle::GetSize(size_t* size) const {
     return true;
   }
 
-  *size = size_;
-  return true;
+  switch (type_) {
+    case SharedMemoryHandle::POSIX:
+      struct stat st;
+      if (fstat(file_descriptor_.fd, &st) != 0)
+        return false;
+      if (st.st_size < 0)
+        return false;
+      *size = st.st_size;
+      return true;
+    case SharedMemoryHandle::MACH:
+      *size = size_;
+      return true;
+  }
 }
 
 bool SharedMemoryHandle::MapAt(off_t offset,
@@ -105,42 +139,69 @@ bool SharedMemoryHandle::MapAt(off_t offset,
                                void** memory,
                                bool read_only) {
   DCHECK(IsValid());
-  DCHECK_EQ(pid_, GetCurrentProcId());
-  kern_return_t kr = mach_vm_map(
-      mach_task_self(),
-      reinterpret_cast<mach_vm_address_t*>(memory),  // Output parameter
-      bytes,
-      0,  // Alignment mask
-      VM_FLAGS_ANYWHERE, memory_object_, offset,
-      FALSE,                                           // Copy
-      VM_PROT_READ | (read_only ? 0 : VM_PROT_WRITE),  // Current protection
-      VM_PROT_WRITE | VM_PROT_READ | VM_PROT_IS_MASK,  // Maximum protection
-      VM_INHERIT_NONE);
-  return kr == KERN_SUCCESS;
+  switch (type_) {
+    case SharedMemoryHandle::POSIX:
+      *memory = mmap(nullptr, bytes, PROT_READ | (read_only ? 0 : PROT_WRITE),
+                     MAP_SHARED, file_descriptor_.fd, offset);
+      return *memory != MAP_FAILED;
+    case SharedMemoryHandle::MACH:
+      DCHECK_EQ(pid_, GetCurrentProcId());
+      kern_return_t kr = mach_vm_map(
+          mach_task_self(),
+          reinterpret_cast<mach_vm_address_t*>(memory),    // Output parameter
+          bytes,
+          0,                                               // Alignment mask
+          VM_FLAGS_ANYWHERE,
+          memory_object_,
+          offset,
+          FALSE,                                           // Copy
+          VM_PROT_READ | (read_only ? 0 : VM_PROT_WRITE),  // Current protection
+          VM_PROT_WRITE | VM_PROT_READ | VM_PROT_IS_MASK,  // Maximum protection
+          VM_INHERIT_NONE);
+      return kr == KERN_SUCCESS;
+  }
 }
 
 void SharedMemoryHandle::Close() const {
   if (!IsValid())
     return;
 
-  kern_return_t kr = mach_port_deallocate(mach_task_self(), memory_object_);
-  if (kr != KERN_SUCCESS)
-    DPLOG(ERROR) << "Error deallocating mach port: " << kr;
+  switch (type_) {
+    case POSIX:
+      if (IGNORE_EINTR(close(file_descriptor_.fd)) < 0)
+        DPLOG(ERROR) << "Error closing fd";
+      break;
+    case MACH:
+      kern_return_t kr = mach_port_deallocate(mach_task_self(), memory_object_);
+      if (kr != KERN_SUCCESS)
+        MACH_DLOG(ERROR, kr) << "Error deallocating mach port";
+      break;
+  }
 }
 
 void SharedMemoryHandle::SetOwnershipPassesToIPC(bool ownership_passes) {
+  DCHECK_EQ(type_, MACH);
   ownership_passes_to_ipc_ = ownership_passes;
 }
 
 bool SharedMemoryHandle::OwnershipPassesToIPC() const {
+  DCHECK_EQ(type_, MACH);
   return ownership_passes_to_ipc_;
 }
 
 void SharedMemoryHandle::CopyRelevantData(const SharedMemoryHandle& handle) {
-  memory_object_ = handle.memory_object_;
-  size_ = handle.size_;
-  pid_ = handle.pid_;
-  ownership_passes_to_ipc_ = handle.ownership_passes_to_ipc_;
+  type_ = handle.type_;
+  switch (type_) {
+    case POSIX:
+      file_descriptor_ = handle.file_descriptor_;
+      break;
+    case MACH:
+      memory_object_ = handle.memory_object_;
+      size_ = handle.size_;
+      pid_ = handle.pid_;
+      ownership_passes_to_ipc_ = handle.ownership_passes_to_ipc_;
+      break;
+  }
 }
 
 }  // namespace base

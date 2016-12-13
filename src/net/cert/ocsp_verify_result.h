@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_OCSP_VERIFY_RESULT_H
-#define NET_CERT_OCSP_VERIFY_RESULT_H
+#ifndef NET_CERT_OCSP_VERIFY_RESULT_H_
+#define NET_CERT_OCSP_VERIFY_RESULT_H_
 
 #include <string>
 
@@ -65,4 +65,4 @@ struct NET_EXPORT OCSPVerifyResult {
 
 }  // namespace net
 
-#endif  // NET_CERT_OCSP_VERIFY_RESULT_H
+#endif  // NET_CERT_OCSP_VERIFY_RESULT_H_

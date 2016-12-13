@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_PROXY_DHCP_SCRIPT_FETCHER_H_
-#define NET_PROXY_DHCP_SCRIPT_FETCHER_H_
+#ifndef NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_H_
+#define NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_H_
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
@@ -97,4 +97,4 @@ class NET_EXPORT_PRIVATE DoNothingDhcpProxyScriptFetcher
 
 }  // namespace net
 
-#endif  // NET_PROXY_DHCP_SCRIPT_FETCHER_H_
+#endif  // NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_H_

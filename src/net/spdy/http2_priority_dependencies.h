@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_HTTP2_PRIORITY_DEPENDENCIES_H_
-#define NET_HTTP2_PRIORITY_DEPENDENCIES_H_
+#ifndef NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_
+#define NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_
 
 #include <list>
 #include <map>
@@ -58,4 +58,4 @@ class NET_EXPORT_PRIVATE Http2PriorityDependencies {
 
 }  // namespace net
 
-#endif  // NET_HTTP2_PRIORITY_DEPENDENCIES_H_
+#endif  // NET_SPDY_HTTP2_PRIORITY_DEPENDENCIES_H_

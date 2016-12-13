@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef NET_TEST_TEST_CERTIFICATE_DATA_H_
+#define NET_TEST_TEST_CERTIFICATE_DATA_H_
+
 #include <stdint.h>
 
 namespace {
@@ -782,3 +785,5 @@ const uint8_t VARIABLE_IS_NOT_USED MITDN[] = {
     0x6C, 0x69, 0x65, 0x6E, 0x74, 0x20, 0x43, 0x41, 0x20, 0x76, 0x31};
 
 }  // namespace
+
+#endif  // NET_TEST_TEST_CERTIFICATE_DATA_H_

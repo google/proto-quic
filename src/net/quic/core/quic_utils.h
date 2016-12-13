@@ -13,10 +13,10 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/int128.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 #ifdef _MSC_VER
@@ -31,7 +31,7 @@
 
 namespace net {
 
-class NET_EXPORT_PRIVATE QuicUtils {
+class QUIC_EXPORT_PRIVATE QuicUtils {
  public:
   // Returns the 64 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param

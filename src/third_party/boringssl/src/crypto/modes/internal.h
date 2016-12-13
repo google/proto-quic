@@ -51,6 +51,8 @@
 
 #include <openssl/base.h>
 
+#include <string.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -64,90 +66,58 @@ extern "C" {
 #define STRICT_ALIGNMENT 0
 #endif
 
-#if !defined(PEDANTIC) && !defined(OPENSSL_NO_ASM)
 #if defined(__GNUC__) && __GNUC__ >= 2
-#if defined(OPENSSL_X86_64)
-#define BSWAP8(x)                 \
-  ({                              \
-    uint64_t ret = (x);           \
-    asm("bswapq %0" : "+r"(ret)); \
-    ret;                          \
-  })
-#define BSWAP4(x)                 \
-  ({                              \
-    uint32_t ret = (x);           \
-    asm("bswapl %0" : "+r"(ret)); \
-    ret;                          \
-  })
-#elif defined(OPENSSL_X86)
-#define BSWAP8(x)                                     \
-  ({                                                  \
-    uint32_t lo = (uint64_t)(x) >> 32, hi = (x);      \
-    asm("bswapl %0; bswapl %1" : "+r"(hi), "+r"(lo)); \
-    (uint64_t) hi << 32 | lo;                         \
-  })
-#define BSWAP4(x)                 \
-  ({                              \
-    uint32_t ret = (x);           \
-    asm("bswapl %0" : "+r"(ret)); \
-    ret;                          \
-  })
-#elif defined(OPENSSL_AARCH64)
-#define BSWAP8(x)                          \
-  ({                                       \
-    uint64_t ret;                          \
-    asm("rev %0,%1" : "=r"(ret) : "r"(x)); \
-    ret;                                   \
-  })
-#define BSWAP4(x)                            \
-  ({                                         \
-    uint32_t ret;                            \
-    asm("rev %w0,%w1" : "=r"(ret) : "r"(x)); \
-    ret;                                     \
-  })
-#elif defined(OPENSSL_ARM) && !defined(STRICT_ALIGNMENT)
-#define BSWAP8(x)                                     \
-  ({                                                  \
-    uint32_t lo = (uint64_t)(x) >> 32, hi = (x);      \
-    asm("rev %0,%0; rev %1,%1" : "+r"(hi), "+r"(lo)); \
-    (uint64_t) hi << 32 | lo;                         \
-  })
-#define BSWAP4(x)                                      \
-  ({                                                   \
-    uint32_t ret;                                      \
-    asm("rev %0,%1" : "=r"(ret) : "r"((uint32_t)(x))); \
-    ret;                                               \
-  })
-#endif
+static inline uint32_t CRYPTO_bswap4(uint32_t x) {
+  return __builtin_bswap32(x);
+}
+
+static inline uint64_t CRYPTO_bswap8(uint64_t x) {
+  return __builtin_bswap64(x);
+}
 #elif defined(_MSC_VER)
-#if _MSC_VER >= 1300
 OPENSSL_MSVC_PRAGMA(warning(push, 3))
 #include <intrin.h>
 OPENSSL_MSVC_PRAGMA(warning(pop))
 #pragma intrinsic(_byteswap_uint64, _byteswap_ulong)
-#define BSWAP8(x) _byteswap_uint64((uint64_t)(x))
-#define BSWAP4(x) _byteswap_ulong((uint32_t)(x))
-#elif defined(OPENSSL_X86)
-__inline uint32_t _bswap4(uint32_t val) {
-  _asm mov eax, val
-  _asm bswap eax
+static inline uint32_t CRYPTO_bswap4(uint32_t x) {
+  return _byteswap_ulong(x);
 }
-#define BSWAP4(x) _bswap4(x)
-#endif
-#endif
-#endif
 
-#if defined(BSWAP4) && !defined(STRICT_ALIGNMENT)
-#define GETU32(p) BSWAP4(*(const uint32_t *)(p))
-#define PUTU32(p, v) *(uint32_t *)(p) = BSWAP4(v)
+static inline uint64_t CRYPTO_bswap8(uint64_t x) {
+  return _byteswap_uint64(x);
+}
 #else
-#define GETU32(p) \
-  ((uint32_t)(p)[0] << 24 | (uint32_t)(p)[1] << 16 | (uint32_t)(p)[2] << 8 | (uint32_t)(p)[3])
-#define PUTU32(p, v)                                   \
-  ((p)[0] = (uint8_t)((v) >> 24), (p)[1] = (uint8_t)((v) >> 16), \
-   (p)[2] = (uint8_t)((v) >> 8), (p)[3] = (uint8_t)(v))
+static inline uint32_t CRYPTO_bswap4(uint32_t x) {
+  x = (x >> 16) | (x << 16);
+  x = ((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8);
+  return x;
+}
+
+static inline uint64_t CRYPTO_bswap8(uint64_t x) {
+  return CRYPTO_bswap4(x >> 32) | (((uint64_t)CRYPTO_bswap4(x)) << 32);
+}
 #endif
 
+static inline uint32_t GETU32(const void *in) {
+  uint32_t v;
+  memcpy(&v, in, sizeof(v));
+  return CRYPTO_bswap4(v);
+}
+
+static inline void PUTU32(void *out, uint32_t v) {
+  v = CRYPTO_bswap4(v);
+  memcpy(out, &v, sizeof(v));
+}
+
+static inline uint32_t GETU32_aligned(const void *in) {
+  const char *alias = (const char *) in;
+  return CRYPTO_bswap4(*((const uint32_t *) alias));
+}
+
+static inline void PUTU32_aligned(void *in, uint32_t v) {
+  char *alias = (char *) in;
+  *((uint32_t *) alias) = CRYPTO_bswap4(v);
+}
 
 /* block128_f is the type of a 128-bit, block cipher. */
 typedef void (*block128_f)(const uint8_t in[16], uint8_t out[16],
@@ -155,6 +125,16 @@ typedef void (*block128_f)(const uint8_t in[16], uint8_t out[16],
 
 /* GCM definitions */
 typedef struct { uint64_t hi,lo; } u128;
+
+/* gmult_func multiplies |Xi| by the GCM key and writes the result back to
+ * |Xi|. */
+typedef void (*gmult_func)(uint64_t Xi[2], const u128 Htable[16]);
+
+/* ghash_func repeatedly multiplies |Xi| by the GCM key and adds in blocks from
+ * |inp|. The result is written back to |Xi| and the |len| argument must be a
+ * multiple of 16. */
+typedef void (*ghash_func)(uint64_t Xi[2], const u128 Htable[16],
+                           const uint8_t *inp, size_t len);
 
 /* This differs from upstream's |gcm128_context| in that it does not have the
  * |key| pointer, in order to make it |memcpy|-friendly. Rather the key is
@@ -166,14 +146,11 @@ struct gcm128_context {
     uint32_t d[4];
     uint8_t c[16];
     size_t t[16 / sizeof(size_t)];
-  } Yi, EKi, EK0, len, Xi, H;
+  } Yi, EKi, EK0, len, Xi;
 
-  /* Relative position of Xi, H and pre-computed Htable is used in some
-   * assembler modules, i.e. don't change the order! */
   u128 Htable[16];
-  void (*gmult)(uint64_t Xi[2], const u128 Htable[16]);
-  void (*ghash)(uint64_t Xi[2], const u128 Htable[16], const uint8_t *inp,
-                size_t len);
+  gmult_func gmult;
+  ghash_func ghash;
 
   unsigned int mres, ares;
   block128_f block;
@@ -212,6 +189,12 @@ void CRYPTO_ctr128_encrypt_ctr32(const uint8_t *in, uint8_t *out, size_t len,
                                  uint8_t ecount_buf[16], unsigned *num,
                                  ctr128_f ctr);
 
+#if !defined(OPENSSL_NO_ASM) && \
+    (defined(OPENSSL_X86) || defined(OPENSSL_X86_64))
+void aesni_ctr32_encrypt_blocks(const uint8_t *in, uint8_t *out, size_t blocks,
+                                const void *key, const uint8_t *ivec);
+#endif
+
 
 /* GCM.
  *
@@ -221,6 +204,12 @@ void CRYPTO_ctr128_encrypt_ctr32(const uint8_t *in, uint8_t *out, size_t len,
  * can be safely copied. */
 
 typedef struct gcm128_context GCM128_CONTEXT;
+
+/* CRYPTO_ghash_init writes a precomputed table of powers of |gcm_key| to
+ * |out_table| and sets |*out_mult| and |*out_hash| to (potentially hardware
+ * accelerated) functions for performing operations in the GHASH field. */
+void CRYPTO_ghash_init(gmult_func *out_mult, ghash_func *out_hash,
+                       u128 out_table[16], const uint8_t *gcm_key);
 
 /* CRYPTO_gcm128_init initialises |ctx| to use |block| (typically AES) with
  * the given key. */
@@ -345,11 +334,36 @@ size_t CRYPTO_cts128_encrypt_block(const uint8_t *in, uint8_t *out, size_t len,
                                    block128_f block);
 
 
-#if !defined(OPENSSL_NO_ASM) && \
-    (defined(OPENSSL_X86) || defined(OPENSSL_X86_64))
-void aesni_ctr32_encrypt_blocks(const uint8_t *in, uint8_t *out, size_t blocks,
-                                const void *key, const uint8_t *ivec);
-#endif
+/* POLYVAL.
+ *
+ * POLYVAL is a polynomial authenticator that operates over a field very
+ * similar to the one that GHASH uses. See
+ * https://tools.ietf.org/html/draft-irtf-cfrg-gcmsiv-02#section-3. */
+
+typedef union {
+  uint64_t u[2];
+  uint8_t c[16];
+} polyval_block;
+
+struct polyval_ctx {
+  polyval_block S;
+  u128 Htable[16];
+  gmult_func gmult;
+  ghash_func ghash;
+};
+
+/* CRYPTO_POLYVAL_init initialises |ctx| using |key|. */
+void CRYPTO_POLYVAL_init(struct polyval_ctx *ctx, const uint8_t key[16]);
+
+/* CRYPTO_POLYVAL_update_blocks updates the accumulator in |ctx| given the
+ * blocks from |in|. Only a whole number of blocks can be processed so |in_len|
+ * must be a multiple of 16. */
+void CRYPTO_POLYVAL_update_blocks(struct polyval_ctx *ctx, const uint8_t *in,
+                                  size_t in_len);
+
+/* CRYPTO_POLYVAL_finish writes the accumulator from |ctx| to |out|. */
+void CRYPTO_POLYVAL_finish(const struct polyval_ctx *ctx, uint8_t out[16]);
+
 
 #if defined(__cplusplus)
 } /* extern C */

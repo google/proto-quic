@@ -141,4 +141,4 @@ class DummySpnegoAuthenticator {
 }  // namespace android
 }  // namespace net
 
-#endif  // NET_ANDROID_DUMMY_SPNEGO_AUTHENTICATOR_DRIVER_H
+#endif  // NET_ANDROID_DUMMY_SPNEGO_AUTHENTICATOR_H_

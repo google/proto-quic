@@ -271,8 +271,6 @@ class SpdySessionPoolPeer {
 
   void RemoveAliases(const SpdySessionKey& key);
   void SetEnableSendingInitialData(bool enabled);
-  void SetSessionMaxRecvWindowSize(size_t window);
-  void SetStreamInitialRecvWindowSize(size_t window);
 
  private:
   SpdySessionPool* const pool_;

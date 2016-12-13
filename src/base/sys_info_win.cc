@@ -153,7 +153,7 @@ void SysInfo::OperatingSystemVersionNumbers(int32_t* major_version,
   win::OSInfo* os_info = win::OSInfo::GetInstance();
   *major_version = os_info->version_number().major;
   *minor_version = os_info->version_number().minor;
-  *bugfix_version = 0;
+  *bugfix_version = os_info->version_number().build;
 }
 
 }  // namespace base

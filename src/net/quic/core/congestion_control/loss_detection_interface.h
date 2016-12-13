@@ -4,20 +4,20 @@
 //
 // The pure virtual class for send side loss detection algorithm.
 
-#ifndef NET_QUIC_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
-#define NET_QUIC_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
+#ifndef NET_QUIC_CORE_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
+#define NET_QUIC_CORE_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
 
-#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 class QuicUnackedPacketMap;
 class RttStats;
 
-class NET_EXPORT_PRIVATE LossDetectionInterface {
+class QUIC_EXPORT_PRIVATE LossDetectionInterface {
  public:
   virtual ~LossDetectionInterface() {}
 
@@ -46,4 +46,4 @@ class NET_EXPORT_PRIVATE LossDetectionInterface {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_
+#endif  // NET_QUIC_CORE_CONGESTION_CONTROL_LOSS_DETECTION_INTERFACE_H_

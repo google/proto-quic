@@ -30,7 +30,6 @@
 #include "base/metrics/sparse_histogram.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -1896,9 +1895,9 @@ HostResolverImpl::HostResolverImpl(const Options& options, NetLog* net_log)
 HostResolverImpl::~HostResolverImpl() {
   // Prevent the dispatcher from starting new jobs.
   dispatcher_->SetLimitsToZero();
-  // It's now safe for Jobs to call KillDsnTask on destruction, because
+  // It's now safe for Jobs to call KillDnsTask on destruction, because
   // OnJobComplete will not start any new jobs.
-  base::STLDeleteValues(&jobs_);
+  jobs_.clear();
 
   NetworkChangeNotifier::RemoveIPAddressObserver(this);
   NetworkChangeNotifier::RemoveConnectionTypeObserver(this);
@@ -1949,7 +1948,7 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
   // Next we need to attach our request to a "job". This job is responsible for
   // calling "getaddrinfo(hostname)" on a worker thread.
 
-  JobMap::iterator jobit = jobs_.find(key);
+  auto jobit = jobs_.find(key);
   Job* job;
   if (jobit == jobs_.end()) {
     job = new Job(weak_ptr_factory_.GetWeakPtr(), key, priority,
@@ -1967,14 +1966,14 @@ int HostResolverImpl::Resolve(const RequestInfo& info,
         return rv;
       }
     }
-    jobs_.insert(jobit, std::make_pair(key, job));
+    jobs_[key] = base::WrapUnique(job);
   } else {
-    job = jobit->second;
+    job = jobit->second.get();
   }
 
   // Can't complete synchronously. Create and attach request.
-  std::unique_ptr<RequestImpl> req(new RequestImpl(
-      source_net_log, info, priority, callback, addresses, job));
+  auto req = base::MakeUnique<RequestImpl>(source_net_log, info, priority,
+                                           callback, addresses, job);
   job->AddRequest(req.get());
   *out_req = std::move(req);
 
@@ -2303,9 +2302,11 @@ void HostResolverImpl::CacheResult(const Key& key,
 
 void HostResolverImpl::RemoveJob(Job* job) {
   DCHECK(job);
-  JobMap::iterator it = jobs_.find(job->key());
-  if (it != jobs_.end() && it->second == job)
+  auto it = jobs_.find(job->key());
+  if (it != jobs_.end() && it->second.get() == job) {
+    it->second.release();
     jobs_.erase(it);
+  }
 }
 
 HostResolverImpl::Key HostResolverImpl::GetEffectiveKeyForRequest(
@@ -2359,10 +2360,10 @@ void HostResolverImpl::AbortAllInProgressJobs() {
   // In Abort, a Request callback could spawn new Jobs with matching keys, so
   // first collect and remove all running jobs from |jobs_|.
   std::vector<std::unique_ptr<Job>> jobs_to_abort;
-  for (JobMap::iterator it = jobs_.begin(); it != jobs_.end(); ) {
-    Job* job = it->second;
+  for (auto it = jobs_.begin(); it != jobs_.end();) {
+    Job* job = it->second.get();
     if (job->is_running()) {
-      jobs_to_abort.push_back(base::WrapUnique(job));
+      jobs_to_abort.push_back(std::move(it->second));
       jobs_.erase(it++);
     } else {
       DCHECK(job->is_queued());
@@ -2399,7 +2400,7 @@ void HostResolverImpl::AbortDnsTasks() {
   dispatcher_->SetLimits(
       PrioritizedDispatcher::Limits(limits.reserved_slots.size(), 0));
 
-  for (JobMap::iterator it = jobs_.begin(); it != jobs_.end(); ++it)
+  for (auto it = jobs_.begin(); it != jobs_.end(); ++it)
     it->second->AbortDnsTask();
   dispatcher_->SetLimits(limits);
 }
@@ -2414,8 +2415,8 @@ void HostResolverImpl::TryServingAllJobsFromHosts() {
   // Life check to bail once |this| is deleted.
   base::WeakPtr<HostResolverImpl> self = weak_ptr_factory_.GetWeakPtr();
 
-  for (JobMap::iterator it = jobs_.begin(); self.get() && it != jobs_.end();) {
-    Job* job = it->second;
+  for (auto it = jobs_.begin(); self.get() && it != jobs_.end();) {
+    Job* job = it->second.get();
     ++it;
     // This could remove |job| from |jobs_|, but iterator will remain valid.
     job->ServeFromHosts();

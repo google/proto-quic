@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_TYPES_H_
-#define NET_QUIC_QUIC_TYPES_H_
+#ifndef NET_QUIC_CORE_QUIC_TYPES_H_
+#define NET_QUIC_CORE_QUIC_TYPES_H_
 
 #include <stddef.h>
+
 #include <array>
 #include <map>
 #include <ostream>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -30,15 +31,16 @@ typedef std::array<char, 32> DiversificationNonce;
 typedef std::vector<std::pair<QuicPacketNumber, QuicTime>> PacketTimeVector;
 
 // A struct for functions which consume data payloads and fins.
-struct NET_EXPORT_PRIVATE QuicConsumedData {
+struct QUIC_EXPORT_PRIVATE QuicConsumedData {
   QuicConsumedData(size_t bytes_consumed, bool fin_consumed);
 
   // By default, gtest prints the raw bytes of an object. The bool data
   // member causes this object to have padding bytes, which causes the
   // default gtest object printer to read uninitialize memory. So we need
   // to teach gtest how to print this object.
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
-                                                     const QuicConsumedData& s);
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(
+      std::ostream& os,
+      const QuicConsumedData& s);
 
   // How many bytes were consumed.
   size_t bytes_consumed;
@@ -66,7 +68,7 @@ enum WriteStatus {
 
 // A struct used to return the result of write calls including either the number
 // of bytes written or the error code, depending upon the status.
-struct NET_EXPORT_PRIVATE WriteResult {
+struct QUIC_EXPORT_PRIVATE WriteResult {
   WriteResult(WriteStatus status, int bytes_written_or_error_code);
   WriteResult();
 
@@ -97,8 +99,8 @@ enum HasRetransmittableData : int8_t {
 enum IsHandshake : int8_t { NOT_HANDSHAKE, IS_HANDSHAKE };
 
 enum class Perspective { IS_SERVER, IS_CLIENT };
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const Perspective& s);
+QUIC_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                             const Perspective& s);
 
 // Describes whether a ConnectionClose was originated by the peer.
 enum class ConnectionCloseSource { FROM_PEER, FROM_SELF };
@@ -256,4 +258,4 @@ enum PeerAddressChangeType {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_TYPES_H_
+#endif  // NET_QUIC_CORE_QUIC_TYPES_H_

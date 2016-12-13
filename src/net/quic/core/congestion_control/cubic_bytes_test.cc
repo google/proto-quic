@@ -4,6 +4,8 @@
 
 #include "net/quic/core/congestion_control/cubic_bytes.h"
 
+#include <cstdint>
+
 #include "base/logging.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/mock_clock.h"

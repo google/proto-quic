@@ -248,7 +248,7 @@ class HttpServerTest : public testing::Test,
   }
 
   void HandleAcceptResult(std::unique_ptr<StreamSocket> socket) {
-    server_->accepted_socket_.reset(socket.release());
+    server_->accepted_socket_ = std::move(socket);
     server_->HandleAcceptResult(OK);
   }
 

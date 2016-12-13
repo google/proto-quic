@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_TOOLS_QUIC_QUIC_IN_MEMORY_CACHE_H_
-#define NET_TOOLS_QUIC_QUIC_IN_MEMORY_CACHE_H_
+#ifndef NET_TOOLS_QUIC_QUIC_HTTP_RESPONSE_CACHE_H_
+#define NET_TOOLS_QUIC_QUIC_HTTP_RESPONSE_CACHE_H_
 
 #include <list>
 #include <map>
@@ -17,6 +17,7 @@
 #include "base/strings/string_piece.h"
 #include "net/http/http_response_headers.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_mutex.h"
 #include "net/spdy/spdy_framer.h"
 #include "url/gurl.h"
 
@@ -201,21 +202,23 @@ class QuicHttpResponseCache {
                                  ServerPushInfo resource);
 
   // Cached responses.
-  std::unordered_map<std::string, std::unique_ptr<Response>> responses_;
+  std::unordered_map<std::string, std::unique_ptr<Response>> responses_
+      GUARDED_BY(response_mutex_);
 
   // The default response for cache misses, if set.
-  std::unique_ptr<Response> default_response_;
+  std::unique_ptr<Response> default_response_ GUARDED_BY(response_mutex_);
 
   // A map from request URL to associated server push responses (if any).
-  std::multimap<std::string, ServerPushInfo> server_push_resources_;
+  std::multimap<std::string, ServerPushInfo> server_push_resources_
+      GUARDED_BY(response_mutex_);
 
   // Protects against concurrent access from test threads setting responses, and
   // server threads accessing those responses.
-  mutable base::Lock response_mutex_;
+  mutable QuicMutex response_mutex_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicHttpResponseCache);
 };
 
 }  // namespace net
 
-#endif  // NET_TOOLS_QUIC_QUIC_IN_MEMORY_CACHE_H_
+#endif  // NET_TOOLS_QUIC_QUIC_HTTP_RESPONSE_CACHE_H_

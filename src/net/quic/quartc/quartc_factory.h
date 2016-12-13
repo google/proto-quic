@@ -7,10 +7,10 @@
 
 #include "base/at_exit.h"
 #include "base/message_loop/message_loop.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/quic/quartc/quartc_alarm_factory.h"
 #include "net/quic/quartc/quartc_factory_interface.h"
@@ -23,9 +23,9 @@ namespace net {
 // QuartcSessionInterface. Implements the QuicAlarmFactory to create alarms
 // using the QuartcTaskRunner. Implements the QuicConnectionHelperInterface used
 // by the QuicConnections. Only one QuartcFactory is expected to be created.
-class NET_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
-                                         public QuicAlarmFactory,
-                                         public QuicConnectionHelperInterface {
+class QUIC_EXPORT_PRIVATE QuartcFactory : public QuartcFactoryInterface,
+                                          public QuicAlarmFactory,
+                                          public QuicConnectionHelperInterface {
  public:
   QuartcFactory(const QuartcFactoryConfig& factory_config);
   ~QuartcFactory() override;

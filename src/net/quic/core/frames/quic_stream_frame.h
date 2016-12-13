@@ -6,17 +6,19 @@
 #define NET_QUIC_CORE_FRAMES_QUIC_STREAM_FRAME_H_
 
 #include <memory>
+#include <ostream>
 
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_buffer_allocator.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Deleter for stream buffers. Copyable to support platforms where the deleter
 // of a unique_ptr must be copyable. Otherwise it would be nice for this to be
 // move-only.
-class NET_EXPORT_PRIVATE StreamBufferDeleter {
+class QUIC_EXPORT_PRIVATE StreamBufferDeleter {
  public:
   StreamBufferDeleter() : allocator_(nullptr) {}
   explicit StreamBufferDeleter(QuicBufferAllocator* allocator)
@@ -34,10 +36,10 @@ class NET_EXPORT_PRIVATE StreamBufferDeleter {
 using UniqueStreamBuffer = std::unique_ptr<char[], StreamBufferDeleter>;
 
 // Allocates memory of size |size| using |allocator| for a QUIC stream buffer.
-NET_EXPORT_PRIVATE UniqueStreamBuffer
+QUIC_EXPORT_PRIVATE UniqueStreamBuffer
 NewStreamBuffer(QuicBufferAllocator* allocator, size_t size);
 
-struct NET_EXPORT_PRIVATE QuicStreamFrame {
+struct QUIC_EXPORT_PRIVATE QuicStreamFrame {
   QuicStreamFrame();
   QuicStreamFrame(QuicStreamId stream_id,
                   bool fin,
@@ -50,8 +52,8 @@ struct NET_EXPORT_PRIVATE QuicStreamFrame {
                   UniqueStreamBuffer buffer);
   ~QuicStreamFrame();
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                                     const QuicStreamFrame& s);
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                                      const QuicStreamFrame& s);
 
   QuicStreamId stream_id;
   bool fin;
@@ -76,4 +78,4 @@ static_assert(sizeof(QuicStreamFrame) <= 64,
 
 }  // namespace net
 
-#endif  // NET_QUIC_CORE_QUIC_FRAMES_H_
+#endif  // NET_QUIC_CORE_FRAMES_QUIC_STREAM_FRAME_H_

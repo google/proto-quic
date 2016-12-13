@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_
-#define NET_QUIC_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_
+#ifndef NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_
+#define NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,10 +16,8 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
-#include "base/synchronization/lock.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
@@ -30,6 +28,8 @@
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/proto/source_address_token.pb.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_mutex.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -83,11 +83,12 @@ class PrimaryConfigChangedCallback {
 };
 
 // Callback used to accept the result of the |client_hello| validation step.
-class NET_EXPORT_PRIVATE ValidateClientHelloResultCallback {
+class QUIC_EXPORT_PRIVATE ValidateClientHelloResultCallback {
  public:
   // Opaque token that holds information about the client_hello and
   // its validity.  Can be interpreted by calling ProcessClientHello.
-  struct NET_EXPORT_PRIVATE Result : public base::RefCountedThreadSafe<Result> {
+  struct QUIC_EXPORT_PRIVATE Result
+      : public base::RefCountedThreadSafe<Result> {
     Result(const CryptoHandshakeMessage& in_client_hello,
            QuicIpAddress in_client_ip,
            QuicWallTime in_now);
@@ -115,7 +116,7 @@ class NET_EXPORT_PRIVATE ValidateClientHelloResultCallback {
 };
 
 // Callback used to accept the result of the ProcessClientHello method.
-class NET_EXPORT_PRIVATE ProcessClientHelloResultCallback {
+class QUIC_EXPORT_PRIVATE ProcessClientHelloResultCallback {
  public:
   ProcessClientHelloResultCallback();
   virtual ~ProcessClientHelloResultCallback();
@@ -160,10 +161,10 @@ class RejectionObserver {
 // order to support clients resuming with a previous configuration.
 // TODO(agl): when adding configurations at runtime is added, this object will
 // need to consider locking.
-class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
+class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
  public:
   // ConfigOptions contains options for generating server configs.
-  struct NET_EXPORT_PRIVATE ConfigOptions {
+  struct QUIC_EXPORT_PRIVATE ConfigOptions {
     ConfigOptions();
     ConfigOptions(const ConfigOptions& other);
     ~ConfigOptions();
@@ -428,8 +429,8 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
 
   // Config represents a server config: a collection of preferences and
   // Diffie-Hellman public values.
-  class NET_EXPORT_PRIVATE Config : public QuicCryptoConfig,
-                                    public base::RefCounted<Config> {
+  class QUIC_EXPORT_PRIVATE Config : public QuicCryptoConfig,
+                                     public base::RefCounted<Config> {
    public:
     Config();
 
@@ -738,18 +739,19 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   //   1) configs_.empty() <-> primary_config_ == nullptr
   //   2) primary_config_ != nullptr -> primary_config_->is_primary
   //   3) ∀ c∈configs_, c->is_primary <-> c == primary_config_
-  mutable base::Lock configs_lock_;
+  mutable QuicMutex configs_lock_;
   // configs_ contains all active server configs. It's expected that there are
   // about half-a-dozen configs active at any one time.
-  ConfigMap configs_;
+  ConfigMap configs_ GUARDED_BY(configs_lock_);
   // primary_config_ points to a Config (which is also in |configs_|) which is
   // the primary config - i.e. the one that we'll give out to new clients.
-  mutable scoped_refptr<Config> primary_config_;
+  mutable scoped_refptr<Config> primary_config_ GUARDED_BY(configs_lock_);
   // next_config_promotion_time_ contains the nearest, future time when an
   // active config will be promoted to primary.
-  mutable QuicWallTime next_config_promotion_time_;
+  mutable QuicWallTime next_config_promotion_time_ GUARDED_BY(configs_lock_);
   // Callback to invoke when the primary config changes.
-  std::unique_ptr<PrimaryConfigChangedCallback> primary_config_changed_cb_;
+  std::unique_ptr<PrimaryConfigChangedCallback> primary_config_changed_cb_
+      GUARDED_BY(configs_lock_);
 
   // Used to protect the source-address tokens that are given to clients.
   CryptoSecretBoxer source_address_token_boxer_;
@@ -785,7 +787,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerConfig {
   DISALLOW_COPY_AND_ASSIGN(QuicCryptoServerConfig);
 };
 
-struct NET_EXPORT_PRIVATE QuicSignedServerConfig
+struct QUIC_EXPORT_PRIVATE QuicSignedServerConfig
     : public base::RefCounted<QuicSignedServerConfig> {
   QuicSignedServerConfig();
 
@@ -803,4 +805,4 @@ struct NET_EXPORT_PRIVATE QuicSignedServerConfig
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_
+#endif  // NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_SERVER_CONFIG_H_

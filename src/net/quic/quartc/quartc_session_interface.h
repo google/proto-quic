@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_stream_interface.h"
 
 namespace net {
@@ -17,7 +17,7 @@ namespace net {
 // Given a PacketTransport, provides a way to send and receive separate streams
 // of reliable, in-order, encrypted data. For example, this can build on top of
 // a WebRTC IceTransport for sending and receiving data over QUIC.
-class NET_EXPORT_PRIVATE QuartcSessionInterface {
+class QUIC_EXPORT_PRIVATE QuartcSessionInterface {
  public:
   virtual ~QuartcSessionInterface() {}
 

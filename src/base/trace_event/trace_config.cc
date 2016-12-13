@@ -169,6 +169,20 @@ void TraceConfig::EventFilterConfig::SetArgs(
   args_ = std::move(args);
 }
 
+bool TraceConfig::EventFilterConfig::GetArgAsSet(
+    const char* key,
+    std::unordered_set<std::string>* out_set) const {
+  const ListValue* list = nullptr;
+  if (!args_->GetList(key, &list))
+    return false;
+  for (size_t i = 0; i < list->GetSize(); ++i) {
+    std::string value;
+    if (list->GetString(i, &value))
+      out_set->insert(value);
+  }
+  return true;
+}
+
 bool TraceConfig::EventFilterConfig::IsCategoryGroupEnabled(
     const char* category_group_name) const {
   CStringTokenizer category_group_tokens(

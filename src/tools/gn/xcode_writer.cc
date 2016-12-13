@@ -36,15 +36,10 @@ struct SafeEnvironmentVariableInfo {
   bool capture_at_generation;
 };
 
-// clang-format off
 SafeEnvironmentVariableInfo kSafeEnvironmentVariables[] = {
-    {"HOME", true},
-    {"LANG", true},
-    {"PATH", true},
-    {"USER", true},
-    {"TMPDIR", false},
+    {"HOME", true}, {"LANG", true},    {"PATH", true},
+    {"USER", true}, {"TMPDIR", false},
 };
-// clang-format on
 
 XcodeWriter::TargetOsType GetTargetOs(const Args& args) {
   const Value* target_os_value = args.GetArgOverride(variables::kTargetOs);

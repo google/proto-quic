@@ -1109,6 +1109,25 @@ type ProtocolBugs struct {
 	// copies of each KeyShareEntry.
 	DuplicateKeyShares bool
 
+	// SendEarlyAlert, if true, sends a fatal alert after the ClientHello.
+	SendEarlyAlert bool
+
+	// SendEarlyDataLength, if non-zero, is the amount of early data to send after
+	// the ClientHello.
+	SendEarlyDataLength int
+
+	// OmitEarlyDataExtension, if true, causes the early data extension to
+	// be omitted in the ClientHello.
+	OmitEarlyDataExtension bool
+
+	// SendEarlyDataOnSecondClientHello, if true, causes the TLS 1.3 client to
+	// send early data after the second ClientHello.
+	SendEarlyDataOnSecondClientHello bool
+
+	// InterleaveEarlyData, if true, causes the TLS 1.3 client to send early
+	// data interleaved with the second ClientHello and the client Finished.
+	InterleaveEarlyData bool
+
 	// EmptyEncryptedExtensions, if true, causes the TLS 1.3 server to
 	// emit an empty EncryptedExtensions block.
 	EmptyEncryptedExtensions bool
@@ -1197,6 +1216,10 @@ type ProtocolBugs struct {
 
 	// SendNoPSKBinder, if true, causes the client to send no PSK binders.
 	SendNoPSKBinder bool
+
+	// SendExtraPSKBinder, if true, causes the client to send an extra PSK
+	// binder.
+	SendExtraPSKBinder bool
 
 	// PSKBinderFirst, if true, causes the client to send the PSK Binder
 	// extension as the first extension instead of the last extension.

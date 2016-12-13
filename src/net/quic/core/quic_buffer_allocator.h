@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_BUFFER_ALLOCATOR_H_
-#define NET_QUIC_QUIC_BUFFER_ALLOCATOR_H_
+#ifndef NET_QUIC_CORE_QUIC_BUFFER_ALLOCATOR_H_
+#define NET_QUIC_CORE_QUIC_BUFFER_ALLOCATOR_H_
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Abstract base class for classes which allocate and delete buffers.
-class NET_EXPORT_PRIVATE QuicBufferAllocator {
+class QUIC_EXPORT_PRIVATE QuicBufferAllocator {
  public:
   virtual ~QuicBufferAllocator();
 
@@ -34,4 +34,4 @@ class NET_EXPORT_PRIVATE QuicBufferAllocator {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_BUFFER_ALLOCATOR_H_
+#endif  // NET_QUIC_CORE_QUIC_BUFFER_ALLOCATOR_H_

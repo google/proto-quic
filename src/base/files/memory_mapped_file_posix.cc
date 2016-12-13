@@ -31,7 +31,7 @@ bool MemoryMappedFile::MapFileRegionToMemory(
 
   if (region == MemoryMappedFile::Region::kWholeFile) {
     int64_t file_len = file_.GetLength();
-    if (file_len == -1) {
+    if (file_len < 0) {
       DPLOG(ERROR) << "fstat " << file_.GetPlatformFile();
       return false;
     }
@@ -78,7 +78,12 @@ bool MemoryMappedFile::MapFileRegionToMemory(
       // POSIX won't auto-extend the file when it is written so it must first
       // be explicitly extended to the maximum size. Zeros will fill the new
       // space.
-      file_.SetLength(std::max(file_.GetLength(), region.offset + region.size));
+      auto file_len = file_.GetLength();
+      if (file_len < 0) {
+        DPLOG(ERROR) << "fstat " << file_.GetPlatformFile();
+        return false;
+      }
+      file_.SetLength(std::max(file_len, region.offset + region.size));
       flags |= PROT_READ | PROT_WRITE;
       break;
   }

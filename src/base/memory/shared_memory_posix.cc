@@ -14,12 +14,13 @@
 #include "base/files/file_util.h"
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
+#include "base/memory/shared_memory_helper.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/safe_strerror.h"
 #include "base/process/process_metrics.h"
-#include "base/profiler/scoped_tracker.h"
 #include "base/scoped_generic.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 
 #if defined(OS_ANDROID)
@@ -28,77 +29,6 @@
 #endif
 
 namespace base {
-
-namespace {
-
-struct ScopedPathUnlinkerTraits {
-  static FilePath* InvalidValue() { return nullptr; }
-
-  static void Free(FilePath* path) {
-    // TODO(erikchen): Remove ScopedTracker below once http://crbug.com/466437
-    // is fixed.
-    tracked_objects::ScopedTracker tracking_profile(
-        FROM_HERE_WITH_EXPLICIT_FUNCTION(
-            "466437 SharedMemory::Create::Unlink"));
-    if (unlink(path->value().c_str()))
-      PLOG(WARNING) << "unlink";
-  }
-};
-
-// Unlinks the FilePath when the object is destroyed.
-typedef ScopedGeneric<FilePath*, ScopedPathUnlinkerTraits> ScopedPathUnlinker;
-
-#if !defined(OS_ANDROID)
-// Makes a temporary file, fdopens it, and then unlinks it. |fp| is populated
-// with the fdopened FILE. |readonly_fd| is populated with the opened fd if
-// options.share_read_only is true. |path| is populated with the location of
-// the file before it was unlinked.
-// Returns false if there's an unhandled failure.
-bool CreateAnonymousSharedMemory(const SharedMemoryCreateOptions& options,
-                                 ScopedFILE* fp,
-                                 ScopedFD* readonly_fd,
-                                 FilePath* path) {
-  // It doesn't make sense to have a open-existing private piece of shmem
-  DCHECK(!options.open_existing_deprecated);
-  // Q: Why not use the shm_open() etc. APIs?
-  // A: Because they're limited to 4mb on OS X.  FFFFFFFUUUUUUUUUUU
-  FilePath directory;
-  ScopedPathUnlinker path_unlinker;
-  if (GetShmemTempDir(options.executable, &directory)) {
-    // TODO(erikchen): Remove ScopedTracker below once http://crbug.com/466437
-    // is fixed.
-    tracked_objects::ScopedTracker tracking_profile(
-        FROM_HERE_WITH_EXPLICIT_FUNCTION(
-            "466437 SharedMemory::Create::OpenTemporaryFile"));
-    fp->reset(base::CreateAndOpenTemporaryFileInDir(directory, path));
-
-    // Deleting the file prevents anyone else from mapping it in (making it
-    // private), and prevents the need for cleanup (once the last fd is
-    // closed, it is truly freed).
-    if (*fp)
-      path_unlinker.reset(path);
-  }
-
-  if (*fp) {
-    if (options.share_read_only) {
-      // TODO(erikchen): Remove ScopedTracker below once
-      // http://crbug.com/466437 is fixed.
-      tracked_objects::ScopedTracker tracking_profile(
-          FROM_HERE_WITH_EXPLICIT_FUNCTION(
-              "466437 SharedMemory::Create::OpenReadonly"));
-      // Also open as readonly so that we can ShareReadOnlyToProcess.
-      readonly_fd->reset(HANDLE_EINTR(open(path->value().c_str(), O_RDONLY)));
-      if (!readonly_fd->is_valid()) {
-        DPLOG(ERROR) << "open(\"" << path->value() << "\", O_RDONLY) failed";
-        fp->reset();
-        return false;
-      }
-    }
-  }
-  return true;
-}
-#endif  // !defined(OS_ANDROID)
-}
 
 SharedMemory::SharedMemory()
     : mapped_file_(-1),
@@ -185,11 +115,6 @@ bool SharedMemory::GetSizeFromSharedMemoryHandle(
 // In case we want to delete it later, it may be useful to save the value
 // of mem_filename after FilePathForMemoryName().
 bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
-  // TODO(erikchen): Remove ScopedTracker below once http://crbug.com/466437
-  // is fixed.
-  tracked_objects::ScopedTracker tracking_profile1(
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(
-          "466437 SharedMemory::Create::Start"));
   DCHECK_EQ(-1, mapped_file_);
   if (options.size == 0) return false;
 
@@ -292,7 +217,8 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
     return false;
   }
 
-  return PrepareMapFile(std::move(fp), std::move(readonly_fd));
+  return PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file_,
+                        &readonly_mapped_file_);
 }
 
 // Our current implementation of shmem is with mmap()ing of files.
@@ -324,7 +250,8 @@ bool SharedMemory::Open(const std::string& name, bool read_only) {
     DPLOG(ERROR) << "open(\"" << path.value() << "\", O_RDONLY) failed";
     return false;
   }
-  return PrepareMapFile(std::move(fp), std::move(readonly_fd));
+  return PrepareMapFile(std::move(fp), std::move(readonly_fd), &mapped_file_,
+                        &readonly_mapped_file_);
 }
 #endif  // !defined(OS_ANDROID)
 
@@ -401,44 +328,6 @@ void SharedMemory::Close() {
 }
 
 #if !defined(OS_ANDROID)
-bool SharedMemory::PrepareMapFile(ScopedFILE fp, ScopedFD readonly_fd) {
-  DCHECK_EQ(-1, mapped_file_);
-  DCHECK_EQ(-1, readonly_mapped_file_);
-  if (fp == NULL)
-    return false;
-
-  // This function theoretically can block on the disk, but realistically
-  // the temporary files we create will just go into the buffer cache
-  // and be deleted before they ever make it out to disk.
-  base::ThreadRestrictions::ScopedAllowIO allow_io;
-
-  struct stat st = {};
-  if (fstat(fileno(fp.get()), &st))
-    NOTREACHED();
-  if (readonly_fd.is_valid()) {
-    struct stat readonly_st = {};
-    if (fstat(readonly_fd.get(), &readonly_st))
-      NOTREACHED();
-    if (st.st_dev != readonly_st.st_dev || st.st_ino != readonly_st.st_ino) {
-      LOG(ERROR) << "writable and read-only inodes don't match; bailing";
-      return false;
-    }
-  }
-
-  mapped_file_ = HANDLE_EINTR(dup(fileno(fp.get())));
-  if (mapped_file_ == -1) {
-    if (errno == EMFILE) {
-      LOG(WARNING) << "Shared memory creation failed; out of file descriptors";
-      return false;
-    } else {
-      NOTREACHED() << "Call to dup failed, errno=" << errno;
-    }
-  }
-  readonly_mapped_file_ = readonly_fd.release();
-
-  return true;
-}
-
 // For the given shmem named |mem_name|, return a filename to mmap()
 // (and possibly create).  Modifies |filename|.  Return false on
 // error, or true of we are happy.

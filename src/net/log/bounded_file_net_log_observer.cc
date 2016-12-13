@@ -259,8 +259,10 @@ void BoundedFileNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
   size_t queue_size = write_queue_->AddEntryToQueue(std::move(json));
 
   // If events build up in |write_queue_|, trigger the file thread to drain
-  // the queue.
-  if (queue_size >= kNumWriteQueueEvents) {
+  // the queue. Because only 1 item is added to the queue at a time, if
+  // queue_size > kNumWriteQueueEvents a task has already been posted, or will
+  // be posted.
+  if (queue_size == kNumWriteQueueEvents) {
     task_runner_->PostTask(
         FROM_HERE, base::Bind(&BoundedFileNetLogObserver::FileWriter::Flush,
                               base::Unretained(file_writer_), write_queue_));

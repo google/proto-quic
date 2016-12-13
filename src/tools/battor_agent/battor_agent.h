@@ -183,6 +183,9 @@ class BattOrAgent : public BattOrConnection::Listener,
   // The number of times we've attempted to init the BattOr.
   uint8_t num_init_attempts_;
 
+  // The number of times we've attempted the BattOr StartTracing command.
+  uint8_t num_start_tracing_attempts_;
+
   // The number of times that we've attempted to read the last message.
   uint8_t num_read_attempts_;
 

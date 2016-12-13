@@ -88,3 +88,7 @@ LOAD_FLAG(SUPPORT_ASYNC_REVALIDATION, 1 << 17)
 // Indicates that this request is not to be migrated to a new network when QUIC
 // connection migration is enabled.
 LOAD_FLAG(DISABLE_CONNECTION_MIGRATION, 1 << 18)
+
+// Indicates that the cache should not check that the request matches the
+// response's vary header.
+LOAD_FLAG(SKIP_VARY_CHECK, 1 << 19)

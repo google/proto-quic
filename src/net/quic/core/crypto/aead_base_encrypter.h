@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_AEAD_BASE_ENCRYPTER_H_
-#define NET_QUIC_CRYPTO_AEAD_BASE_ENCRYPTER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_AEAD_BASE_ENCRYPTER_H_
+#define NET_QUIC_CORE_CRYPTO_AEAD_BASE_ENCRYPTER_H_
 
 #include <stddef.h>
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/scoped_evp_aead_ctx.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // AeadBaseEncrypter is the base class of AEAD QuicEncrypter subclasses.
-class NET_EXPORT_PRIVATE AeadBaseEncrypter : public QuicEncrypter {
+class QUIC_EXPORT_PRIVATE AeadBaseEncrypter : public QuicEncrypter {
  public:
   AeadBaseEncrypter(const EVP_AEAD* aead_alg,
                     size_t key_size,
@@ -73,4 +73,4 @@ class NET_EXPORT_PRIVATE AeadBaseEncrypter : public QuicEncrypter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_AEAD_BASE_ENCRYPTER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_AEAD_BASE_ENCRYPTER_H_

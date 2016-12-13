@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_STRIKE_REGISTER_H_
-#define NET_QUIC_CRYPTO_STRIKE_REGISTER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_H_
+#define NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_H_
 
 #include <stdint.h>
 
@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -71,7 +71,7 @@ enum InsertStatus {
 // before the creation time given to the constructor. (See
 // |ExternalTimeToInternal|) This avoids having to worry about overflow since
 // we assume that no process will run for 130 years.
-class NET_EXPORT_PRIVATE StrikeRegister {
+class QUIC_EXPORT_PRIVATE StrikeRegister {
  public:
   enum StartupType {
     // DENY_REQUESTS_AT_STARTUP is the typical mode for a strike register.
@@ -220,4 +220,4 @@ class NET_EXPORT_PRIVATE StrikeRegister {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_STRIKE_REGISTER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_H_

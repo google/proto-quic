@@ -184,7 +184,8 @@ class _FileGroup(object):
     return len(self._zip_infos)
 
   def FindByPattern(self, pattern):
-    return next(i for i in self._zip_infos if re.match(pattern, i.filename))
+    return next((i for i in self._zip_infos if re.match(pattern, i.filename)),
+                None)
 
   def FindLargest(self):
     return max(self._zip_infos, key=lambda i: i.file_size)
@@ -365,6 +366,9 @@ def PrintPakAnalysis(apk_filename, min_pak_resource_size):
   print 'Total compressed size: %s' % _FormatBytes(total_compress_size)
   print 'Total uncompressed size: %s' % _FormatBytes(total_file_size)
   print
+
+  if not paks:
+    return
 
   # Output the table of details about all pak files.
   print '%25s%11s%21s%21s' % (

@@ -259,4 +259,3 @@ TEST_F(CtSerializationTest, EncodesValidSignedTreeHead) {
 }
 
 }  // namespace net
-

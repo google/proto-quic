@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_SENT_PACKET_MANAGER_H_
-#define NET_QUIC_QUIC_SENT_PACKET_MANAGER_H_
+#ifndef NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_H_
+#define NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_H_
 
 #include <stddef.h>
 
@@ -15,7 +15,6 @@
 
 #include "base/macros.h"
 #include "net/base/linked_hash_map.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/general_loss_algorithm.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/pacing_sender.h"
@@ -24,6 +23,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -41,7 +41,7 @@ struct QuicConnectionStats;
 // retransmittable data associated with each packet. If a packet is
 // retransmitted, it will keep track of each version of a packet so that if a
 // previous transmission is acked, the data will not be retransmitted.
-class NET_EXPORT_PRIVATE QuicSentPacketManager
+class QUIC_EXPORT_PRIVATE QuicSentPacketManager
     : public QuicSentPacketManagerInterface {
  public:
   // A delegate interface which manages pending retransmissions.
@@ -395,4 +395,4 @@ class NET_EXPORT_PRIVATE QuicSentPacketManager
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SENT_PACKET_MANAGER_H_
+#endif  // NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_H_

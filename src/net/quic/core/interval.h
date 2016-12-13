@@ -57,8 +57,8 @@
 //   EXPECT_TRUE(r1.Empty());  // Now r1 is empty.
 //   EXPECT_FALSE(r1.Contains(r1.min()));  // e.g. doesn't contain its own min.
 
-#ifndef NET_QUIC_INTERVAL_H_
-#define NET_QUIC_INTERVAL_H_
+#ifndef NET_QUIC_CORE_INTERVAL_H_
+#define NET_QUIC_CORE_INTERVAL_H_
 
 #include <stddef.h>
 
@@ -299,4 +299,4 @@ bool Interval<T>::Difference(const Interval& i,
 
 }  // namespace net
 
-#endif  // NET_QUIC_INTERVAL_H_
+#endif  // NET_QUIC_CORE_INTERVAL_H_

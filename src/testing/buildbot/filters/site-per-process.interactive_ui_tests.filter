@@ -1,3 +1,4 @@
 # List below tests to be excluded from running.
 
-# This list is currently empty. Hooray!
+# https://crbug.com/666858: No drag-and-drop events should fire...
+-*DragAndDropBrowserTest.CrossSiteDrag*

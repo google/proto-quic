@@ -184,7 +184,10 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
 
  public:
   explicit NestedSpdyFramerDecoder(SpdyFramer* outer)
-      : framer_(nullptr), outer_(outer) {
+      : framer_(nullptr,
+                outer->compression_enabled() ? SpdyFramer::ENABLE_COMPRESSION
+                                             : SpdyFramer::DISABLE_COMPRESSION),
+        outer_(outer) {
     DVLOG(1) << PRETTY_THIS;
   }
   ~NestedSpdyFramerDecoder() override { DVLOG(1) << PRETTY_THIS; }

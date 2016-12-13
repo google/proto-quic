@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_FAILING_HTTP_TRANSACTION_FACTORY_H_
-#define NET_FAILING_HTTP_TRANSACTION_FACTORY_H_
+#ifndef NET_HTTP_FAILING_HTTP_TRANSACTION_FACTORY_H_
+#define NET_HTTP_FAILING_HTTP_TRANSACTION_FACTORY_H_
 
 #include <memory>
 
@@ -40,4 +40,4 @@ class NET_EXPORT FailingHttpTransactionFactory : public HttpTransactionFactory {
 
 }  // namespace net
 
-#endif  // NET_FAILING_HTTP_TRANSACTION_FACTORY_H_
+#endif  // NET_HTTP_FAILING_HTTP_TRANSACTION_FACTORY_H_

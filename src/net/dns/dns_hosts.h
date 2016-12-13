@@ -75,4 +75,3 @@ bool NET_EXPORT_PRIVATE ParseHostsFile(const base::FilePath& path,
 }  // namespace net
 
 #endif  // NET_DNS_DNS_HOSTS_H_
-

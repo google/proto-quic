@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_BASE_X509_CERT_NET_LOG_PARAM_H_
-#define NET_BASE_X509_CERT_NET_LOG_PARAM_H_
+#ifndef NET_CERT_X509_CERTIFICATE_NET_LOG_PARAM_H_
+#define NET_CERT_X509_CERTIFICATE_NET_LOG_PARAM_H_
 
 #include <memory>
 
@@ -23,4 +23,4 @@ std::unique_ptr<base::Value> NetLogX509CertificateCallback(
 
 }  // namespace net
 
-#endif  // NET_BASE_X509_CERT_NET_LOG_PARAM_H_
+#endif  // NET_CERT_X509_CERTIFICATE_NET_LOG_PARAM_H_

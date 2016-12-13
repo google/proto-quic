@@ -49,7 +49,7 @@ class FtpDirectoryListingParserTest : public testing::Test {
     EXPECT_EQ(test_case.size, entry.size);
 
     base::Time::Exploded time_exploded;
-    entry.last_modified.LocalExplode(&time_exploded);
+    entry.last_modified.UTCExplode(&time_exploded);
 
     // Only test members displayed on the directory listing.
     EXPECT_EQ(test_case.year, time_exploded.year);
@@ -68,11 +68,10 @@ class FtpDirectoryListingParserTest : public testing::Test {
     mock_current_time_exploded.day_of_month = 15;
     mock_current_time_exploded.hour = 12;
     mock_current_time_exploded.minute = 45;
-    return base::Time::FromLocalExploded(mock_current_time_exploded);
+    return base::Time::FromUTCExploded(mock_current_time_exploded);
   }
 };
 
 }  // namespace net
 
 #endif  // NET_FTP_FTP_DIRECTORY_LISTING_PARSER_UNITTEST_H_
-

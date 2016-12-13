@@ -47,7 +47,7 @@ class EpollAlarmCallbackInterface;
 class ReadPipeCallback;
 
 struct EpollEvent {
-  EpollEvent(int events, bool is_epoll_wait)
+  EpollEvent(int events)
       : in_events(events),
         out_ready_mask(0) {
   }

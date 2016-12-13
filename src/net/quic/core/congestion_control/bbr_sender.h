@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <ostream>
 
+#include "base/macros.h"
 #include "net/quic/core/congestion_control/bandwidth_sampler.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/congestion_control/windowed_filter.h"
@@ -18,6 +19,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -36,7 +38,7 @@ typedef uint64_t QuicRoundTripCount;
 // TODO(vasilvv): implement traffic policer (long-term sampling) mode.
 //
 // TODO(vasilvv): implement packet conservation.
-class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
+class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
  public:
   enum Mode {
     // Startup phase of the connection.
@@ -277,10 +279,11 @@ class NET_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   DISALLOW_COPY_AND_ASSIGN(BbrSender);
 };
 
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const BbrSender::Mode& mode);
-NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                            const BbrSender::DebugState& state);
+QUIC_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                             const BbrSender::Mode& mode);
+QUIC_EXPORT_PRIVATE std::ostream& operator<<(
+    std::ostream& os,
+    const BbrSender::DebugState& state);
 
 }  // namespace net
 

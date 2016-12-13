@@ -12,7 +12,6 @@
 #include "base/location.h"
 #include "base/memory/ptr_util.h"
 #include "base/single_thread_task_runner.h"
-#include "base/stl_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/clock.h"
 #include "base/time/default_clock.h"
@@ -208,7 +207,6 @@ MDnsClientImpl::Core::Core(base::Clock* clock, base::Timer* timer)
 }
 
 MDnsClientImpl::Core::~Core() {
-  base::STLDeleteValues(&listeners_);
 }
 
 bool MDnsClientImpl::Core::Init(MDnsSocketFactory* socket_factory) {
@@ -348,17 +346,12 @@ void MDnsClientImpl::Core::AlertListeners(
 void MDnsClientImpl::Core::AddListener(
     MDnsListenerImpl* listener) {
   ListenerKey key(listener->GetName(), listener->GetType());
-  std::pair<ListenerMap::iterator, bool> observer_insert_result =
-      listeners_.insert(make_pair(
-          key, static_cast<base::ObserverList<MDnsListenerImpl>*>(NULL)));
 
-  // If an equivalent key does not exist, actually create the observer list.
-  if (observer_insert_result.second)
-    observer_insert_result.first->second =
-        new base::ObserverList<MDnsListenerImpl>();
+  std::unique_ptr<base::ObserverList<MDnsListenerImpl>>& observer_list =
+      listeners_[key];
 
-  base::ObserverList<MDnsListenerImpl>* observer_list =
-      observer_insert_result.first->second;
+  if (!observer_list)
+    observer_list = base::MakeUnique<base::ObserverList<MDnsListenerImpl>>();
 
   observer_list->AddObserver(listener);
 }
@@ -385,7 +378,6 @@ void MDnsClientImpl::Core::RemoveListener(MDnsListenerImpl* listener) {
 void MDnsClientImpl::Core::CleanupObserverList(const ListenerKey& key) {
   ListenerMap::iterator found = listeners_.find(key);
   if (found != listeners_.end() && !found->second->might_have_observers()) {
-    delete found->second;
     listeners_.erase(found);
   }
 }

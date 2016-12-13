@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_
-#define NET_QUIC_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_
+#ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_
+#define NET_QUIC_CORE_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,20 +16,20 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // QuicServerConfigProtobuf contains QUIC server config block and the private
 // keys needed to prove ownership.
 // TODO(rch): sync with server more rationally.
-class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
+class QUIC_EXPORT_PRIVATE QuicServerConfigProtobuf {
  public:
   // PrivateKey contains a QUIC tag of a key exchange algorithm and a
   // serialised private key for that algorithm. The format of the serialised
   // private key is specific to the algorithm in question.
-  class NET_EXPORT_PRIVATE PrivateKey {
+  class QUIC_EXPORT_PRIVATE PrivateKey {
    public:
     QuicTag tag() const { return tag_; }
     void set_tag(QuicTag tag) { tag_ = tag; }
@@ -113,4 +113,4 @@ class NET_EXPORT_PRIVATE QuicServerConfigProtobuf {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_
+#endif  // NET_QUIC_CORE_CRYPTO_CRYPTO_SERVER_CONFIG_PROTOBUF_H_

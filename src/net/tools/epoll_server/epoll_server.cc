@@ -680,7 +680,7 @@ void EpollServer::CallReadyListCallbacks() {
   std::swap(ready_list_.lh_first, tmp_list_.lh_first);
   if (tmp_list_.lh_first) {
     tmp_list_.lh_first->entry.le_prev = &tmp_list_.lh_first;
-    EpollEvent event(0, false);
+    EpollEvent event(0);
     while (tmp_list_.lh_first != NULL) {
       DCHECK_GT(ready_list_size_, 0);
       CBAndEventMask* cb_and_mask = tmp_list_.lh_first;

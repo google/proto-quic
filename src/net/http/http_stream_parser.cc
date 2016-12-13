@@ -20,7 +20,6 @@
 #include "net/http/http_request_headers.h"
 #include "net/http/http_request_info.h"
 #include "net/http/http_response_headers.h"
-#include "net/http/http_status_line_validator.h"
 #include "net/http/http_util.h"
 #include "net/log/net_log_event_type.h"
 #include "net/socket/client_socket_handle.h"
@@ -31,23 +30,6 @@
 namespace net {
 
 namespace {
-
-enum HttpHeaderParserEvent {
-  HEADER_PARSER_INVOKED = 0,
-  // Obsolete: HEADER_HTTP_09_RESPONSE = 1,
-  HEADER_ALLOWED_TRUNCATED_HEADERS = 2,
-  HEADER_SKIPPED_WS_PREFIX = 3,
-  HEADER_SKIPPED_NON_WS_PREFIX = 4,
-  HEADER_HTTP_09_RESPONSE_OVER_HTTP = 5,
-  HEADER_HTTP_09_RESPONSE_OVER_SSL = 6,
-  HEADER_HTTP_09_ON_REUSED_SOCKET = 7,
-  NUM_HEADER_EVENTS
-};
-
-void RecordHeaderParserEvent(HttpHeaderParserEvent header_event) {
-  UMA_HISTOGRAM_ENUMERATION("Net.HttpHeaderParserEvent", header_event,
-                            NUM_HEADER_EVENTS);
-}
 
 const uint64_t kMaxMergedHeaderAndBodySize = 1400;
 const size_t kRequestBodyBufferSize = 1 << 14;  // 16KB
@@ -860,7 +842,6 @@ int HttpStreamParser::HandleReadHeaderResult(int result) {
       // The response looks to be a truncated set of HTTP headers.
       io_state_ = STATE_READ_BODY_COMPLETE;
       end_offset = read_buf_->offset();
-      RecordHeaderParserEvent(HEADER_ALLOWED_TRUNCATED_HEADERS);
     } else {
       // The response is apparently using HTTP/0.9.  Treat the entire response
       // as the body.
@@ -977,30 +958,10 @@ int HttpStreamParser::ParseResponseHeaders(int end_offset) {
   scoped_refptr<HttpResponseHeaders> headers;
   DCHECK_EQ(0, read_buf_unused_offset_);
 
-  RecordHeaderParserEvent(HEADER_PARSER_INVOKED);
-
-  if (response_header_start_offset_ > 0) {
-    bool has_non_whitespace_in_prefix = false;
-    for (int i = 0; i < response_header_start_offset_; ++i) {
-      if (!strchr(" \t\r\n", read_buf_->StartOfBuffer()[i])) {
-        has_non_whitespace_in_prefix = true;
-        break;
-      }
-    }
-    if (has_non_whitespace_in_prefix) {
-      RecordHeaderParserEvent(HEADER_SKIPPED_NON_WS_PREFIX);
-    } else {
-      RecordHeaderParserEvent(HEADER_SKIPPED_WS_PREFIX);
-    }
-  }
-
   if (response_header_start_offset_ >= 0) {
     received_bytes_ += end_offset;
-    std::string raw_headers =
-        HttpUtil::AssembleRawHeaders(read_buf_->StartOfBuffer(), end_offset);
-    ValidateStatusLine(
-        std::string(read_buf_->StartOfBuffer(), raw_headers.find('\0')));
-    headers = new HttpResponseHeaders(raw_headers);
+    headers = new HttpResponseHeaders(
+        HttpUtil::AssembleRawHeaders(read_buf_->StartOfBuffer(), end_offset));
   } else {
     // Enough data was read -- there is no status line, so this is HTTP/0.9, or
     // the server is broken / doesn't speak HTTP.
@@ -1017,14 +978,6 @@ int HttpStreamParser::ParseResponseHeaders(int end_offset) {
     }
 
     headers = new HttpResponseHeaders(std::string("HTTP/0.9 200 OK"));
-
-    if (request_->url.SchemeIsCryptographic()) {
-      RecordHeaderParserEvent(HEADER_HTTP_09_RESPONSE_OVER_SSL);
-    } else {
-      RecordHeaderParserEvent(HEADER_HTTP_09_RESPONSE_OVER_HTTP);
-    }
-    if (connection_->is_reused())
-      RecordHeaderParserEvent(HEADER_HTTP_09_ON_REUSED_SOCKET);
   }
 
   // Check for multiple Content-Length headers when the response is not
@@ -1220,13 +1173,6 @@ bool HttpStreamParser::ShouldMergeRequestHeadersAndBody(
       return true;
   }
   return false;
-}
-
-void HttpStreamParser::ValidateStatusLine(const std::string& status_line) {
-  HttpStatusLineValidator::StatusLineStatus status =
-      HttpStatusLineValidator::ValidateStatusLine(status_line);
-  UMA_HISTOGRAM_ENUMERATION("Net.HttpStatusLineStatus", status,
-                            HttpStatusLineValidator::STATUS_LINE_MAX);
 }
 
 bool HttpStreamParser::SendRequestBuffersEmpty() {

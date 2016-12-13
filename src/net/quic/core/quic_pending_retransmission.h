@@ -7,11 +7,12 @@
 
 #include "net/quic/core/frames/quic_frame.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Struct to store the pending retransmission information.
-struct NET_EXPORT_PRIVATE QuicPendingRetransmission {
+struct QUIC_EXPORT_PRIVATE QuicPendingRetransmission {
   QuicPendingRetransmission(QuicPathId path_id,
                             QuicPacketNumber packet_number,
                             TransmissionType transmission_type,

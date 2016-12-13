@@ -31,7 +31,9 @@ namespace {
 
 class SpdyDeframerVisitorTest : public ::testing::Test {
  protected:
-  SpdyDeframerVisitorTest() {
+  SpdyDeframerVisitorTest()
+      : encoder_(SpdyFramer::ENABLE_COMPRESSION),
+        decoder_(SpdyFramer::ENABLE_COMPRESSION) {
     decoder_.set_process_single_input_frame(true);
     auto collector = MakeUnique<DeframerCallbackCollector>(&collected_frames_);
     auto log_and_collect =

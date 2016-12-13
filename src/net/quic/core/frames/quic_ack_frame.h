@@ -5,19 +5,20 @@
 #ifndef NET_QUIC_CORE_FRAMES_QUIC_ACK_FRAME_H_
 #define NET_QUIC_CORE_FRAMES_QUIC_ACK_FRAME_H_
 
+#include <ostream>
 #include <string>
 
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/interval_set.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // A sequence of packet numbers where each number is unique. Intended to be used
 // in a sliding window fashion, where smaller old packet numbers are removed and
 // larger new packet numbers are added, with the occasional random access.
-class NET_EXPORT_PRIVATE PacketNumberQueue {
+class QUIC_EXPORT_PRIVATE PacketNumberQueue {
  public:
   using const_iterator = IntervalSet<QuicPacketNumber>::const_iterator;
   using const_reverse_iterator =
@@ -86,7 +87,7 @@ class NET_EXPORT_PRIVATE PacketNumberQueue {
   const_reverse_iterator rend() const;
   const_iterator lower_bound(QuicPacketNumber packet_number) const;
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(
       std::ostream& os,
       const PacketNumberQueue& q);
 
@@ -94,13 +95,13 @@ class NET_EXPORT_PRIVATE PacketNumberQueue {
   IntervalSet<QuicPacketNumber> packet_number_intervals_;
 };
 
-struct NET_EXPORT_PRIVATE QuicAckFrame {
+struct QUIC_EXPORT_PRIVATE QuicAckFrame {
   QuicAckFrame();
   QuicAckFrame(const QuicAckFrame& other);
   ~QuicAckFrame();
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
-                                                     const QuicAckFrame& s);
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                                      const QuicAckFrame& s);
 
   // The highest packet number we've observed from the peer.
   QuicPacketNumber largest_observed;
@@ -122,7 +123,7 @@ struct NET_EXPORT_PRIVATE QuicAckFrame {
 // True if the packet number is greater than largest_observed or is listed
 // as missing.
 // Always returns false for packet numbers less than least_unacked.
-NET_EXPORT_PRIVATE bool IsAwaitingPacket(
+QUIC_EXPORT_PRIVATE bool IsAwaitingPacket(
     const QuicAckFrame& ack_frame,
     QuicPacketNumber packet_number,
     QuicPacketNumber peer_least_packet_awaiting_ack);

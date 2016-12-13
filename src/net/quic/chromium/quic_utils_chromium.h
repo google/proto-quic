@@ -4,8 +4,8 @@
 //
 // Some helpers for quic that are for chromium codebase.
 
-#ifndef NET_QUIC_QUIC_UTILS_CHROMIUM_H_
-#define NET_QUIC_QUIC_UTILS_CHROMIUM_H_
+#ifndef NET_QUIC_CHROMIUM_QUIC_UTILS_CHROMIUM_H_
+#define NET_QUIC_CHROMIUM_QUIC_UTILS_CHROMIUM_H_
 
 #include "base/logging.h"
 
@@ -76,4 +76,4 @@ typename Collection::value_type::second_type* FindOrNull(
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_UTILS_CHROMIUM_H_
+#endif  // NET_QUIC_CHROMIUM_QUIC_UTILS_CHROMIUM_H_

@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "base/sha1.h"
+#include "base/time/time.h"
 #include "crypto/sha2.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parse_ocsp.h"

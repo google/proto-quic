@@ -102,7 +102,7 @@ class QuicTestDispatcher : public QuicSimpleDispatcher {
   QuicServerSessionBase* CreateQuicSession(
       QuicConnectionId id,
       const QuicSocketAddress& client) override {
-    base::AutoLock lock(factory_lock_);
+    QuicReaderMutexLock lock(&factory_lock_);
     if (session_factory_ == nullptr && stream_factory_ == nullptr &&
         crypto_stream_factory_ == nullptr) {
       return QuicSimpleDispatcher::CreateQuicSession(id, client);
@@ -128,7 +128,7 @@ class QuicTestDispatcher : public QuicSimpleDispatcher {
   }
 
   void SetSessionFactory(QuicTestServer::SessionFactory* factory) {
-    base::AutoLock lock(factory_lock_);
+    QuicWriterMutexLock lock(&factory_lock_);
     DCHECK(session_factory_ == nullptr);
     DCHECK(stream_factory_ == nullptr);
     DCHECK(crypto_stream_factory_ == nullptr);
@@ -136,21 +136,21 @@ class QuicTestDispatcher : public QuicSimpleDispatcher {
   }
 
   void SetStreamFactory(QuicTestServer::StreamFactory* factory) {
-    base::AutoLock lock(factory_lock_);
+    QuicWriterMutexLock lock(&factory_lock_);
     DCHECK(session_factory_ == nullptr);
     DCHECK(stream_factory_ == nullptr);
     stream_factory_ = factory;
   }
 
   void SetCryptoStreamFactory(QuicTestServer::CryptoStreamFactory* factory) {
-    base::AutoLock lock(factory_lock_);
+    QuicWriterMutexLock lock(&factory_lock_);
     DCHECK(session_factory_ == nullptr);
     DCHECK(crypto_stream_factory_ == nullptr);
     crypto_stream_factory_ = factory;
   }
 
  private:
-  base::Lock factory_lock_;
+  QuicMutex factory_lock_;
   QuicTestServer::SessionFactory* session_factory_;             // Not owned.
   QuicTestServer::StreamFactory* stream_factory_;               // Not owned.
   QuicTestServer::CryptoStreamFactory* crypto_stream_factory_;  // Not owned.

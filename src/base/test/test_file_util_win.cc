@@ -159,49 +159,6 @@ bool DenyFilePermission(const FilePath& path, DWORD permission) {
   return rc == ERROR_SUCCESS;
 }
 
-// Checks if the volume supports Alternate Data Streams. This is required for
-// the Zone Identifier implementation.
-bool VolumeSupportsADS(const FilePath& path) {
-  wchar_t drive[MAX_PATH] = {0};
-  wcscpy_s(drive, MAX_PATH, path.value().c_str());
-
-  if (!PathStripToRootW(drive))
-    return false;
-
-  DWORD fs_flags = 0;
-  if (!GetVolumeInformationW(drive, NULL, 0, 0, NULL, &fs_flags, NULL, 0))
-    return false;
-
-  if (fs_flags & FILE_NAMED_STREAMS)
-    return true;
-
-  return false;
-}
-
-// Return whether the ZoneIdentifier is correctly set to "Internet" (3)
-// Only returns a valid result when called from same process as the
-// one that (was supposed to have) set the zone identifier.
-bool HasInternetZoneIdentifier(const FilePath& full_path) {
-  FilePath zone_path(full_path.value() + L":Zone.Identifier");
-  std::string zone_path_contents;
-  if (!ReadFileToString(zone_path, &zone_path_contents))
-    return false;
-
-  std::vector<std::string> lines = SplitString(
-      zone_path_contents, "\n", TRIM_WHITESPACE, SPLIT_WANT_ALL);
-  switch (lines.size()) {
-    case 3:
-      // optional empty line at end of file:
-      if (!lines[2].empty())
-        return false;
-      // fall through:
-    case 2:
-      return lines[0] == "[ZoneTransfer]" && lines[1] == "ZoneId=3";
-    default:
-      return false;
-  }
-}
-
 bool MakeFileUnreadable(const FilePath& path) {
   return DenyFilePermission(path, GENERIC_READ);
 }

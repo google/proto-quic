@@ -22,14 +22,14 @@ ProofSource* QuicCryptoServerConfigPeer::GetProofSource() {
 
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfigPeer::GetPrimaryConfig() {
-  base::AutoLock locked(server_config_->configs_lock_);
+  QuicReaderMutexLock locked(&server_config_->configs_lock_);
   return scoped_refptr<QuicCryptoServerConfig::Config>(
       server_config_->primary_config_);
 }
 
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfigPeer::GetConfig(string config_id) {
-  base::AutoLock locked(server_config_->configs_lock_);
+  QuicReaderMutexLock locked(&server_config_->configs_lock_);
   if (config_id == "<primary>") {
     return scoped_refptr<QuicCryptoServerConfig::Config>(
         server_config_->primary_config_);
@@ -120,7 +120,7 @@ void QuicCryptoServerConfigPeer::CheckConfigs(const char* server_config_id1,
 
   va_end(ap);
 
-  base::AutoLock locked(server_config_->configs_lock_);
+  QuicReaderMutexLock locked(&server_config_->configs_lock_);
 
   ASSERT_EQ(expected.size(), server_config_->configs_.size()) << ConfigsDebug();
 
@@ -166,7 +166,7 @@ string QuicCryptoServerConfigPeer::ConfigsDebug() {
 }
 
 void QuicCryptoServerConfigPeer::SelectNewPrimaryConfig(int seconds) {
-  base::AutoLock locked(server_config_->configs_lock_);
+  QuicWriterMutexLock locked(&server_config_->configs_lock_);
   server_config_->SelectNewPrimaryConfig(
       QuicWallTime::FromUNIXSeconds(seconds));
 }

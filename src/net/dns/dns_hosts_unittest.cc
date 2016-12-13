@@ -183,4 +183,3 @@ TEST(DnsHostsTest, HostsParser_EndsWithNewlineAndToken) {
 }  // namespace
 
 }  // namespace net
-

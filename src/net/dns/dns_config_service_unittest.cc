@@ -244,4 +244,3 @@ TEST_F(DnsConfigServiceTest, WatchFailure) {
 }
 
 }  // namespace net
-

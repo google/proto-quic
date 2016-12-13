@@ -19,6 +19,7 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/heap_profiler.h"
 #include "base/trace_event/heap_profiler_allocation_context_tracker.h"
+#include "base/trace_event/heap_profiler_event_filter.h"
 #include "base/trace_event/heap_profiler_stack_frame_deduplicator.h"
 #include "base/trace_event/heap_profiler_type_name_deduplicator.h"
 #include "base/trace_event/malloc_dump_provider.h"
@@ -210,7 +211,7 @@ void MemoryDumpManager::Initialize(MemoryDumpManagerDelegate* delegate,
       !(TraceLog::GetInstance()->enabled_modes() & TraceLog::FILTERING_MODE)) {
     // Create trace config with heap profiling filter.
     TraceConfig::EventFilterConfig heap_profiler_filter_config(
-        TraceLog::TraceEventFilter::kHeapProfilerPredicate);
+        HeapProfilerEventFilter::kName);
     heap_profiler_filter_config.AddIncludedCategory("*");
     heap_profiler_filter_config.AddIncludedCategory(
         MemoryDumpManager::kTraceCategory);

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_ADDRESS_MISMATCH_H_
-#define NET_QUIC_QUIC_ADDRESS_MISMATCH_H_
+#ifndef NET_QUIC_CORE_QUIC_ADDRESS_MISMATCH_H_
+#define NET_QUIC_CORE_QUIC_ADDRESS_MISMATCH_H_
 
 #include "net/base/ip_endpoint.h"
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -35,9 +35,9 @@ enum QuicAddressMismatch {
 // is empty.
 //
 // Only used by the Net.QuicSession.PublicResetAddressMismatch histogram.
-NET_EXPORT_PRIVATE int GetAddressMismatch(const IPEndPoint& first_address,
-                                          const IPEndPoint& second_address);
+QUIC_EXPORT_PRIVATE int GetAddressMismatch(const IPEndPoint& first_address,
+                                           const IPEndPoint& second_address);
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_ADDRESS_MISMATCH_H_
+#endif  // NET_QUIC_CORE_QUIC_ADDRESS_MISMATCH_H_

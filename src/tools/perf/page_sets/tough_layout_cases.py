@@ -34,8 +34,7 @@ class ToughLayoutCasesPageSet(story.StorySet):
       'http://oilevent.com',
       'http://www.muzoboss.ru',
       'http://natunkantha.com',
-      # http://crbug.com/671645
-      #'http://www.mossiella.com',
+      'http://www.mossiella.com',
       'http://bookish.com',
       'http://mydiyclub.com',
       'http://amarchoti.blogspot.com',

@@ -17,6 +17,7 @@
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "base/values.h"
 #include "net/base/test_completion_callback.h"
 #include "net/log/net_log_entry.h"
@@ -139,6 +140,35 @@ class BoundedFileNetLogObserverTest : public testing::Test {
     }
   }
 
+  // Reads the NetLog data that was written to disk to |root|. |events|
+  // points at the "events" section.
+  ::testing::AssertionResult ReadNetLogFromDisk(
+      std::unique_ptr<base::Value>* root,
+      base::ListValue** events) {
+    std::string input;
+    AddAllFiles(&input);
+    if (input.empty()) {
+      return ::testing::AssertionFailure() << "input is empty";
+    }
+
+    base::JSONReader reader;
+    *root = reader.ReadToValue(input);
+    if (!*root) {
+      return ::testing::AssertionFailure() << reader.GetErrorMessage();
+    }
+
+    base::DictionaryValue* dict;
+    if (!(*root)->GetAsDictionary(&dict)) {
+      return ::testing::AssertionFailure() << "Not a dictionary";
+    }
+
+    if (!dict->GetList("events", events)) {
+      return ::testing::AssertionFailure() << "No events list";
+    }
+
+    return ::testing::AssertionSuccess();
+  }
+
  protected:
   base::FilePath log_path_;
   NetLog net_log_;
@@ -176,23 +206,16 @@ TEST_F(BoundedFileNetLogObserverTest, GeneratesValidJSONForNoEvents) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  // Parse JSON
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.Read(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that there are no events
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(0u, events->GetSize());
 
   // Check that constants are printed
+  base::DictionaryValue* dict;
+  ASSERT_TRUE(root->GetAsDictionary(&dict));
   base::DictionaryValue* constants;
   ASSERT_TRUE(dict->GetDictionary("constants", &constants));
 }
@@ -240,21 +263,11 @@ TEST_F(BoundedFileNetLogObserverTest, GeneratesValidJSONWithOneEvent) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  // Parse input.
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that there is 1 event written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(1u, events->GetSize());
 }
 
@@ -271,19 +284,11 @@ TEST_F(BoundedFileNetLogObserverTest, GeneratesValidJSONWithMultipleEvents) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that 2 events are written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(2u, events->GetSize());
 }
 
@@ -305,24 +310,17 @@ TEST_F(BoundedFileNetLogObserverTest, EqualToOneFile) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(static_cast<size_t>(kNumEvents), events->GetSize());
 
   // Check that the last event in array is the last event written.
   base::Value* last_event = nullptr;
   ASSERT_TRUE(events->Get(events->GetSize() - 1, &last_event));
+  base::DictionaryValue* dict;
   last_event->GetAsDictionary(&dict);
   base::Value* id_value = nullptr;
   ASSERT_TRUE(dict->Get("source.id", &id_value));
@@ -367,24 +365,17 @@ TEST_F(BoundedFileNetLogObserverTest, OneEventOverOneFile) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(static_cast<size_t>(kNumEvents), events->GetSize());
 
   // Check that the last event in array is the last event written.
   base::Value* last_event = nullptr;
   ASSERT_TRUE(events->Get(events->GetSize() - 1, &last_event));
+  base::DictionaryValue* dict;
   last_event->GetAsDictionary(&dict);
   base::Value* id_value = nullptr;
   ASSERT_TRUE(dict->Get("source.id", &id_value));
@@ -417,24 +408,17 @@ TEST_F(BoundedFileNetLogObserverTest, EqualToTwoFiles) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(static_cast<size_t>(kNumEvents), events->GetSize());
 
   // Check that the last event in array is the last event written.
   base::Value* last_event = nullptr;
   ASSERT_TRUE(events->Get(events->GetSize() - 1, &last_event));
+  base::DictionaryValue* dict;
   last_event->GetAsDictionary(&dict);
   base::Value* id_value = nullptr;
   ASSERT_TRUE(dict->Get("source.id", &id_value));
@@ -482,24 +466,17 @@ TEST_F(BoundedFileNetLogObserverTest, FillAllFilesNoOverwriting) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(static_cast<size_t>(kNumEvents), events->GetSize());
 
   // Check that the last event in array is the last event written.
   base::Value* last_event = nullptr;
   ASSERT_TRUE(events->Get(events->GetSize() - 1, &last_event));
+  base::DictionaryValue* dict;
   last_event->GetAsDictionary(&dict);
   base::Value* id_value = nullptr;
   ASSERT_TRUE(dict->Get("source.id", &id_value));
@@ -540,19 +517,11 @@ TEST_F(BoundedFileNetLogObserverTest, DropOldEventsFromWriteQueue) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(
       static_cast<size_t>(kTotalNumFiles * ((kFileSize - 1) / kEventSize + 1)),
       events->GetSize());
@@ -560,6 +529,7 @@ TEST_F(BoundedFileNetLogObserverTest, DropOldEventsFromWriteQueue) {
   // Check that the oldest event was dropped from the queue.
   base::Value* event_to_check = nullptr;
   ASSERT_TRUE(events->Get(0, &event_to_check));
+  base::DictionaryValue* dict;
   event_to_check->GetAsDictionary(&dict);
   base::Value* id_value = nullptr;
   ASSERT_TRUE(dict->Get("source.id", &id_value));
@@ -599,19 +569,9 @@ TEST_F(BoundedFileNetLogObserverTest, OverwriteAllFiles) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
-
-  // Check that the correct number of events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
+  std::unique_ptr<base::Value> root;
   base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the minimum number of events that should fit in event files
   // have been written to all files.
@@ -635,6 +595,7 @@ TEST_F(BoundedFileNetLogObserverTest, OverwriteAllFiles) {
   // file, mark the corresponding bool in |events_written| as true.
   for (size_t i = 0; i < events->GetSize(); i++) {
     ASSERT_TRUE(events->Get(i, &event));
+    base::DictionaryValue* dict;
     event->GetAsDictionary(&dict);
     ASSERT_TRUE(dict->Get("source.id", &id_value));
     ASSERT_TRUE(id_value->GetAsInteger(&id));
@@ -685,18 +646,9 @@ TEST_F(BoundedFileNetLogObserverTest, PartiallyOverwriteFiles) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
-
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
+  std::unique_ptr<base::Value> root;
   base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that the minimum number of events that should fit in event files
   // have been written to a file.
@@ -712,6 +664,7 @@ TEST_F(BoundedFileNetLogObserverTest, PartiallyOverwriteFiles) {
   int id;
   for (size_t i = 0; i < events->GetSize(); i++) {
     ASSERT_TRUE(events->Get(i, &event));
+    base::DictionaryValue* dict;
     event->GetAsDictionary(&dict);
     ASSERT_TRUE(dict->Get("source.id", &id_value));
     ASSERT_TRUE(id_value->GetAsInteger(&id));
@@ -748,13 +701,9 @@ TEST_F(BoundedFileNetLogObserverTest, CustomConstants) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that custom constant was correctly printed.
   base::DictionaryValue* dict;
@@ -784,22 +733,16 @@ TEST_F(BoundedFileNetLogObserverTest, GeneratesValidJSONWithContext) {
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that no events were written.
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(0u, events->GetSize());
 
   // Make sure additional information is present and validate it.
+  base::DictionaryValue* dict;
+  ASSERT_TRUE(root->GetAsDictionary(&dict));
   base::DictionaryValue* tab_info;
   base::DictionaryValue* quic_info;
   ASSERT_TRUE(dict->GetDictionary("tabInfo", &tab_info));
@@ -835,24 +778,60 @@ TEST_F(BoundedFileNetLogObserverTest,
 
   closure.WaitForResult();
 
-  std::string input;
-  AddAllFiles(&input);
-  ASSERT_FALSE(input.empty());
-
-  base::JSONReader reader;
-  std::unique_ptr<base::Value> root(reader.ReadToValue(input));
-  ASSERT_TRUE(root) << reader.GetErrorMessage();
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
 
   // Check that 1 event was written
-  base::DictionaryValue* dict;
-  ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::ListValue* events;
-  ASSERT_TRUE(dict->GetList("events", &events));
   ASSERT_EQ(1u, events->GetSize());
 
   // Make sure additional information is present, but don't validate it.
+  base::DictionaryValue* dict;
+  ASSERT_TRUE(root->GetAsDictionary(&dict));
   base::DictionaryValue* tab_info;
   ASSERT_TRUE(dict->GetDictionary("tabInfo", &tab_info));
+}
+
+// Adds events concurrently from several different threads. The exact order of
+// events seen by this test is non-deterministic.
+TEST_F(BoundedFileNetLogObserverTest, AddEventsFromMultipleThreads) {
+  const size_t kNumThreads = 10;
+  std::vector<std::unique_ptr<base::Thread>> threads(kNumThreads);
+  // Start all the threads. Waiting for them to start is to hopefuly improve
+  // the odds of hitting interesting races once events start being added.
+  for (size_t i = 0; i < threads.size(); ++i) {
+    threads[i] = base::MakeUnique<base::Thread>(
+        base::StringPrintf("WorkerThread%i", static_cast<int>(i)));
+    threads[i]->Start();
+    threads[i]->WaitUntilThreadStarted();
+  }
+
+  logger_->StartObserving(&net_log_, log_path_, nullptr, nullptr,
+                          kLargeFileSize, kTotalNumFiles);
+
+  const size_t kNumEventsAddedPerThread = 200;
+
+  // Add events in parallel from all the threads.
+  for (size_t i = 0; i < kNumThreads; ++i) {
+    threads[i]->task_runner()->PostTask(
+        FROM_HERE, base::Bind(&BoundedFileNetLogObserverTest::AddEntries,
+                              base::Unretained(this), kNumEventsAddedPerThread,
+                              kDummyEventSize));
+  }
+
+  // Join all the threads.
+  threads.clear();
+
+  // Stop observing.
+  TestClosure closure;
+  logger_->StopObserving(nullptr, closure.closure());
+  closure.WaitForResult();
+
+  // Check that the expected number of events were written to disk.
+  std::unique_ptr<base::Value> root;
+  base::ListValue* events;
+  ASSERT_TRUE(ReadNetLogFromDisk(&root, &events));
+  ASSERT_EQ(kNumEventsAddedPerThread * kNumThreads, events->GetSize());
 }
 
 }  // namespace

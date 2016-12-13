@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_CRYPTO_PROTOCOL_H_
-#define NET_QUIC_CRYPTO_CRYPTO_PROTOCOL_H_
+#ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_PROTOCOL_H_
+#define NET_QUIC_CORE_CRYPTO_CRYPTO_PROTOCOL_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -260,4 +260,4 @@ const size_t kClientHelloMinimumSize = 1024;
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_CRYPTO_PROTOCOL_H_
+#endif  // NET_QUIC_CORE_CRYPTO_CRYPTO_PROTOCOL_H_

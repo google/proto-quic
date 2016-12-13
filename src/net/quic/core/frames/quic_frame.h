@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CORE_FRAMES_FRAME_H_
-#define NET_QUIC_CORE_FRAMES_FRAME_H_
+#ifndef NET_QUIC_CORE_FRAMES_QUIC_FRAME_H_
+#define NET_QUIC_CORE_FRAMES_QUIC_FRAME_H_
 
+#include <ostream>
 #include <vector>
 
 #include "net/quic/core/frames/quic_ack_frame.h"
@@ -20,12 +21,12 @@
 #include "net/quic/core/frames/quic_stop_waiting_frame.h"
 #include "net/quic/core/frames/quic_stream_frame.h"
 #include "net/quic/core/frames/quic_window_update_frame.h"
-#include "net/quic/core/quic_constants.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-struct NET_EXPORT_PRIVATE QuicFrame {
+struct QUIC_EXPORT_PRIVATE QuicFrame {
   QuicFrame();
   explicit QuicFrame(QuicPaddingFrame padding_frame);
   explicit QuicFrame(QuicMtuDiscoveryFrame frame);
@@ -41,8 +42,8 @@ struct NET_EXPORT_PRIVATE QuicFrame {
   explicit QuicFrame(QuicBlockedFrame* frame);
   explicit QuicFrame(QuicPathCloseFrame* frame);
 
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
-                                                     const QuicFrame& frame);
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
+                                                      const QuicFrame& frame);
 
   QuicFrameType type;
   union {
@@ -70,12 +71,12 @@ static_assert(sizeof(QuicFrame) <= 16,
 typedef std::vector<QuicFrame> QuicFrames;
 
 // Deletes all the sub-frames contained in |frames|.
-NET_EXPORT_PRIVATE void DeleteFrames(QuicFrames* frames);
+QUIC_EXPORT_PRIVATE void DeleteFrames(QuicFrames* frames);
 
 // Deletes all the QuicStreamFrames for the specified |stream_id|.
-NET_EXPORT_PRIVATE void RemoveFramesForStream(QuicFrames* frames,
-                                              QuicStreamId stream_id);
+QUIC_EXPORT_PRIVATE void RemoveFramesForStream(QuicFrames* frames,
+                                               QuicStreamId stream_id);
 
 }  // namespace net
 
-#endif  // NET_QUIC_CORE_FRAMES_FRAMES_H_
+#endif  // NET_QUIC_CORE_FRAMES_QUIC_FRAME_H_

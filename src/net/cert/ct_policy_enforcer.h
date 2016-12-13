@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_CT_POLICY_ENFORCER_H
-#define NET_CERT_CT_POLICY_ENFORCER_H
+#ifndef NET_CERT_CT_POLICY_ENFORCER_H_
+#define NET_CERT_CT_POLICY_ENFORCER_H_
 
 #include <stddef.h>
 #include <vector>
@@ -105,4 +105,4 @@ class NET_EXPORT CTPolicyEnforcer {
 
 }  // namespace net
 
-#endif  // NET_CERT_CT_POLICY_ENFORCER_H
+#endif  // NET_CERT_CT_POLICY_ENFORCER_H_

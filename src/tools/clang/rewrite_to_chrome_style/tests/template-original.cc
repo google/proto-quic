@@ -258,6 +258,17 @@ class Class {
 
 }  // namespace cxx_dependent_scope_member_expr_testing
 
+namespace blacklisting_of_renaming_of_begin_method {
+
+template <typename T>
+class IntrusiveHeap {
+ public:
+  // https://crbug.com/672353: |begin| shouldn't be rewritten to |Begin|.
+  const T* begin() const { return nullptr; }
+};
+
+}  // namespace blacklisting_of_renaming_of_begin_method
+
 }  // namespace blink
 
 namespace not_blink {

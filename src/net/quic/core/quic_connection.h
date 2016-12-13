@@ -13,8 +13,8 @@
 //
 // Note: this class is not thread-safe.
 
-#ifndef NET_QUIC_QUIC_CONNECTION_H_
-#define NET_QUIC_QUIC_CONNECTION_H_
+#ifndef NET_QUIC_CORE_QUIC_CONNECTION_H_
+#define NET_QUIC_CORE_QUIC_CONNECTION_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -30,7 +30,6 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_alarm_factory.h"
@@ -47,6 +46,7 @@
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -93,7 +93,7 @@ static_assert(kMtuDiscoveryTargetPacketSizeHigh > kDefaultMaxPacketSize,
 
 // Class that receives callbacks from the connection when frames are received
 // and when other interesting events happen.
-class NET_EXPORT_PRIVATE QuicConnectionVisitorInterface {
+class QUIC_EXPORT_PRIVATE QuicConnectionVisitorInterface {
  public:
   virtual ~QuicConnectionVisitorInterface() {}
 
@@ -161,7 +161,7 @@ class NET_EXPORT_PRIVATE QuicConnectionVisitorInterface {
 // Interface which gets callbacks from the QuicConnection at interesting
 // points.  Implementations must not mutate the state of the connection
 // as a result of these callbacks.
-class NET_EXPORT_PRIVATE QuicConnectionDebugVisitor
+class QUIC_EXPORT_PRIVATE QuicConnectionDebugVisitor
     : public QuicSentPacketManagerInterface::DebugDelegate {
  public:
   ~QuicConnectionDebugVisitor() override {}
@@ -271,7 +271,7 @@ class NET_EXPORT_PRIVATE QuicConnectionDebugVisitor
 // ordinarily be on the heap. Instead, store them inline in an arena.
 using QuicConnectionArena = QuicOneBlockArena<1024>;
 
-class NET_EXPORT_PRIVATE QuicConnectionHelperInterface {
+class QUIC_EXPORT_PRIVATE QuicConnectionHelperInterface {
  public:
   virtual ~QuicConnectionHelperInterface() {}
 
@@ -285,7 +285,7 @@ class NET_EXPORT_PRIVATE QuicConnectionHelperInterface {
   virtual QuicBufferAllocator* GetBufferAllocator() = 0;
 };
 
-class NET_EXPORT_PRIVATE QuicConnection
+class QUIC_EXPORT_PRIVATE QuicConnection
     : public QuicFramerVisitorInterface,
       public QuicBlockedWriterInterface,
       public QuicPacketGenerator::DelegateInterface,
@@ -616,7 +616,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // as densely as possible into packets.  In addition, this bundler
   // can be configured to ensure that an ACK frame is included in the
   // first packet created, if there's new ack information to be sent.
-  class NET_EXPORT_PRIVATE ScopedPacketBundler {
+  class QUIC_EXPORT_PRIVATE ScopedPacketBundler {
    public:
     // In addition to all outgoing frames being bundled when the
     // bundler is in scope, setting |include_ack| to true ensures that
@@ -635,7 +635,7 @@ class NET_EXPORT_PRIVATE QuicConnection
   // Delays setting the retransmission alarm until the scope is exited.
   // When nested, only the outermost scheduler will set the alarm, and inner
   // ones have no effect.
-  class NET_EXPORT_PRIVATE ScopedRetransmissionScheduler {
+  class QUIC_EXPORT_PRIVATE ScopedRetransmissionScheduler {
    public:
     explicit ScopedRetransmissionScheduler(QuicConnection* connection);
     ~ScopedRetransmissionScheduler();
@@ -1112,4 +1112,4 @@ class NET_EXPORT_PRIVATE QuicConnection
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CONNECTION_H_
+#endif  // NET_QUIC_CORE_QUIC_CONNECTION_H_

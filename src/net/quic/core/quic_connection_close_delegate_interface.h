@@ -7,11 +7,12 @@
 
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Pure virtual class to close connection on unrecoverable errors.
-class NET_EXPORT_PRIVATE QuicConnectionCloseDelegateInterface {
+class QUIC_EXPORT_PRIVATE QuicConnectionCloseDelegateInterface {
  public:
   virtual ~QuicConnectionCloseDelegateInterface() {}
 

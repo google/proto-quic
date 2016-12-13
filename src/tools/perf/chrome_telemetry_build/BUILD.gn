@@ -85,7 +85,57 @@ group("telemetry_chrome_test") {
 
   data = [
     "//tools/perf/chrome_telemetry_build/",
-    "//third_party/catapult/",
+
+    # Breakdown the catapult directory so we can exclude
+    # third_party/catapult/tracing/test_data.  See crbug.com/670284
+    "//third_party/catapult/AUTHORS",
+    "//third_party/catapult/bin/",
+    "//third_party/catapult/catapult_build/",
+    "//third_party/catapult/codereview.settings",
+    "//third_party/catapult/common/",
+    "//third_party/catapult/CONTRIBUTING.md",
+    "//third_party/catapult/dashboard/",
+    "//third_party/catapult/dependency_manager/",
+    "//third_party/catapult/devil/",
+    "//third_party/catapult/docs/",
+    "//third_party/catapult/experimental/",
+    "//third_party/catapult/firefighter/",
+    "//third_party/catapult/hooks/",
+    "//third_party/catapult/infra/",
+    "//third_party/catapult/LICENSE",
+    "//third_party/catapult/navbar.md",
+    "//third_party/catapult/netlog_viewer/",
+    "//third_party/catapult/OWNERS",
+    "//third_party/catapult/PRESUBMIT.py",
+    "//third_party/catapult/pylintrc",
+    "//third_party/catapult/README.md",
+    "//third_party/catapult/systrace/",
+    "//third_party/catapult/telemetry/",
+    "//third_party/catapult/third_party/",
+    "//third_party/catapult/trace_processor/",
+
+    # We don't want to include catapult/tracing/test_data
+    "//third_party/catapult/tracing/app.yaml",
+    "//third_party/catapult/tracing/bin/",
+    "//third_party/catapult/tracing/bower.json",
+    "//third_party/catapult/tracing/BUILD.gn",
+    "//third_party/catapult/tracing/docs/",
+    "//third_party/catapult/tracing/images/",
+    "//third_party/catapult/tracing/LICENSE",
+    "//third_party/catapult/tracing/OWNERS",
+    "//third_party/catapult/tracing/package.json",
+    "//third_party/catapult/tracing/PRESUBMIT.py",
+    "//third_party/catapult/tracing/README.md",
+    "//third_party/catapult/tracing/skp_data/",
+    "//third_party/catapult/tracing/third_party/",
+    "//third_party/catapult/tracing/trace_viewer.gyp",
+    "//third_party/catapult/tracing/trace_viewer.gypi",
+    "//third_party/catapult/tracing/tracing/",
+    "//third_party/catapult/tracing/tracing_build/",
+    "//third_party/catapult/tracing/tracing_examples/",
+    "//third_party/catapult/tracing/tracing_project.py",
+    "//third_party/catapult/WATCHLISTS",
+
     "//components/crash/content/tools/generate_breakpad_symbols.py",
   ]
 

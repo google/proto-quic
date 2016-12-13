@@ -4,18 +4,16 @@
 //
 // Implements Proportional Rate Reduction (PRR) per RFC 6937.
 
-#ifndef NET_QUIC_CONGESTION_CONTROL_PRR_SENDER_H_
-#define NET_QUIC_CONGESTION_CONTROL_PRR_SENDER_H_
+#ifndef NET_QUIC_CORE_CONGESTION_CONTROL_PRR_SENDER_H_
+#define NET_QUIC_CORE_CONGESTION_CONTROL_PRR_SENDER_H_
 
-#include <stddef.h>
-
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE PrrSender {
+class QUIC_EXPORT_PRIVATE PrrSender {
  public:
   PrrSender();
   // OnPacketLost should be called on the first loss that triggers a recovery
@@ -42,4 +40,4 @@ class NET_EXPORT_PRIVATE PrrSender {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CONGESTION_CONTROL_PRR_SENDER_H_
+#endif  // NET_QUIC_CORE_CONGESTION_CONTROL_PRR_SENDER_H_

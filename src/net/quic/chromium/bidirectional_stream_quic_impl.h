@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_
-#define NET_QUIC_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_
+#ifndef NET_QUIC_CHROMIUM_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_
+#define NET_QUIC_CHROMIUM_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_
 
 #include <stdint.h>
 
@@ -140,4 +140,4 @@ class NET_EXPORT_PRIVATE BidirectionalStreamQuicImpl
 
 }  // namespace net
 
-#endif  // NET_QUIC_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_
+#endif  // NET_QUIC_CHROMIUM_BIDIRECTIONAL_STREAM_QUIC_IMPL_H_

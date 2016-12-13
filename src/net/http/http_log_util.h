@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_HTTP_HTTP_LOG_UTIL_
-#define NET_HTTP_HTTP_LOG_UTIL_
+#ifndef NET_HTTP_HTTP_LOG_UTIL_H_
+#define NET_HTTP_HTTP_LOG_UTIL_H_
 
 #include <string>
 
@@ -39,4 +39,4 @@ std::unique_ptr<base::ListValue> ElideSpdyHeaderBlockForNetLog(
 
 }  // namespace net
 
-#endif  // NET_HTTP_HTTP_LOG_UTIL_
+#endif  // NET_HTTP_HTTP_LOG_UTIL_H_

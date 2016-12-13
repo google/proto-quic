@@ -634,44 +634,6 @@ struct FuzzTraits<base::DictionaryValue> {
 };
 
 template <>
-struct FuzzTraits<blink::WebGamepad> {
-  static bool Fuzz(blink::WebGamepad* p, Fuzzer* fuzzer) {
-    if (!FuzzParam(&p->connected, fuzzer))
-      return false;
-    if (!FuzzParam(&p->timestamp, fuzzer))
-      return false;
-    unsigned idLength = static_cast<unsigned>(
-        RandInRange(blink::WebGamepad::idLengthCap + 1));
-    if (!FuzzParamArray(&p->id[0], idLength, fuzzer))
-      return false;
-    p->axesLength = static_cast<unsigned>(
-        RandInRange(blink::WebGamepad::axesLengthCap + 1));
-    if (!FuzzParamArray(&p->axes[0], p->axesLength, fuzzer))
-      return false;
-    p->buttonsLength = static_cast<unsigned>(
-        RandInRange(blink::WebGamepad::buttonsLengthCap + 1));
-    if (!FuzzParamArray(&p->buttons[0], p->buttonsLength, fuzzer))
-      return false;
-    unsigned mappingsLength = static_cast<unsigned>(
-      RandInRange(blink::WebGamepad::mappingLengthCap + 1));
-    if (!FuzzParamArray(&p->mapping[0], mappingsLength, fuzzer))
-      return false;
-    return true;
-  }
-};
-
-template <>
-struct FuzzTraits<blink::WebGamepadButton> {
-  static bool Fuzz(blink::WebGamepadButton* p, Fuzzer* fuzzer) {
-    if (!FuzzParam(&p->pressed, fuzzer))
-      return false;
-    if (!FuzzParam(&p->value, fuzzer))
-      return false;
-    return true;
-  }
-};
-
-template <>
 struct FuzzTraits<cc::CompositorFrame> {
   static bool Fuzz(cc::CompositorFrame* p, Fuzzer* fuzzer) {
     // TODO(mbarbella): Support mutation.

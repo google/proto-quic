@@ -319,6 +319,10 @@ NextCipherSuite:
 		hello.cipherSuites = c.config.Bugs.SendCipherSuites
 	}
 
+	if c.config.Bugs.SendEarlyDataLength > 0 && !c.config.Bugs.OmitEarlyDataExtension {
+		hello.hasEarlyData = true
+	}
+
 	var helloBytes []byte
 	if c.config.Bugs.SendV2ClientHello {
 		// Test that the peer left-pads random.
@@ -355,6 +359,12 @@ NextCipherSuite:
 
 	if err := c.simulatePacketLoss(nil); err != nil {
 		return err
+	}
+	if c.config.Bugs.SendEarlyAlert {
+		c.sendAlert(alertHandshakeFailure)
+	}
+	if c.config.Bugs.SendEarlyDataLength > 0 {
+		c.sendFakeEarlyData(c.config.Bugs.SendEarlyDataLength)
 	}
 	msg, err := c.readHandshake()
 	if err != nil {
@@ -452,15 +462,27 @@ NextCipherSuite:
 			hello.hasKeyShares = false
 		}
 
-		hello.hasEarlyData = false
+		hello.hasEarlyData = c.config.Bugs.SendEarlyDataOnSecondClientHello
 		hello.raw = nil
 
 		if len(hello.pskIdentities) > 0 {
 			generatePSKBinders(hello, pskCipherSuite, session.masterSecret, append(helloBytes, helloRetryRequest.marshal()...), c.config)
 		}
 		secondHelloBytes = hello.marshal()
-		c.writeRecord(recordTypeHandshake, secondHelloBytes)
+
+		if c.config.Bugs.InterleaveEarlyData {
+			c.sendFakeEarlyData(4)
+			c.writeRecord(recordTypeHandshake, secondHelloBytes[:16])
+			c.sendFakeEarlyData(4)
+			c.writeRecord(recordTypeHandshake, secondHelloBytes[16:])
+		} else {
+			c.writeRecord(recordTypeHandshake, secondHelloBytes)
+		}
 		c.flushHandshake()
+
+		if c.config.Bugs.SendEarlyDataOnSecondClientHello {
+			c.sendFakeEarlyData(4)
+		}
 
 		msg, err = c.readHandshake()
 		if err != nil {
@@ -622,7 +644,6 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	//
 	// TODO(davidben): This will need to be handled slightly earlier once
 	// 0-RTT is implemented.
-	var psk []byte
 	if hs.serverHello.hasPSKIdentity {
 		// We send at most one PSK identity.
 		if hs.session == nil || hs.serverHello.pskIdentity != 0 {
@@ -634,13 +655,11 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 			c.sendAlert(alertHandshakeFailure)
 			return errors.New("tls: server resumed an invalid session for the cipher suite")
 		}
-		psk = hs.session.masterSecret
+		hs.finishedHash.addEntropy(hs.session.masterSecret)
 		c.didResume = true
 	} else {
-		psk = zeroSecret
+		hs.finishedHash.addEntropy(zeroSecret)
 	}
-
-	earlySecret := hs.finishedHash.extractKey(zeroSecret, psk)
 
 	if !hs.serverHello.hasKeyShare {
 		c.sendAlert(alertUnsupportedExtension)
@@ -648,7 +667,6 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	}
 
 	// Resolve ECDHE and compute the handshake secret.
-	var ecdheSecret []byte
 	if !c.config.Bugs.MissingKeyShare && !c.config.Bugs.SecondClientHelloMissingKeyShare {
 		curve, ok := hs.keyShares[hs.serverHello.keyShare.group]
 		if !ok {
@@ -657,22 +675,19 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 		}
 		c.curveID = hs.serverHello.keyShare.group
 
-		var err error
-		ecdheSecret, err = curve.finish(hs.serverHello.keyShare.keyExchange)
+		ecdheSecret, err := curve.finish(hs.serverHello.keyShare.keyExchange)
 		if err != nil {
 			return err
 		}
+		hs.finishedHash.addEntropy(ecdheSecret)
 	} else {
-		ecdheSecret = zeroSecret
+		hs.finishedHash.addEntropy(zeroSecret)
 	}
 
-	// Compute the handshake secret.
-	handshakeSecret := hs.finishedHash.extractKey(earlySecret, ecdheSecret)
-
 	// Switch to handshake traffic keys.
-	clientHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, clientHandshakeTrafficLabel)
+	clientHandshakeTrafficSecret := hs.finishedHash.deriveSecret(clientHandshakeTrafficLabel)
 	c.out.useTrafficSecret(c.vers, hs.suite, clientHandshakeTrafficSecret, clientWrite)
-	serverHandshakeTrafficSecret := hs.finishedHash.deriveSecret(handshakeSecret, serverHandshakeTrafficLabel)
+	serverHandshakeTrafficSecret := hs.finishedHash.deriveSecret(serverHandshakeTrafficLabel)
 	c.in.useTrafficSecret(c.vers, hs.suite, serverHandshakeTrafficSecret, serverWrite)
 
 	msg, err := c.readHandshake()
@@ -800,9 +815,9 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 
 	// The various secrets do not incorporate the client's final leg, so
 	// derive them now before updating the handshake context.
-	masterSecret := hs.finishedHash.extractKey(handshakeSecret, zeroSecret)
-	clientTrafficSecret := hs.finishedHash.deriveSecret(masterSecret, clientApplicationTrafficLabel)
-	serverTrafficSecret := hs.finishedHash.deriveSecret(masterSecret, serverApplicationTrafficLabel)
+	hs.finishedHash.addEntropy(zeroSecret)
+	clientTrafficSecret := hs.finishedHash.deriveSecret(clientApplicationTrafficLabel)
+	serverTrafficSecret := hs.finishedHash.deriveSecret(serverApplicationTrafficLabel)
 
 	if certReq != nil && !c.config.Bugs.SkipClientCertificate {
 		certMsg := &certificateMsg{
@@ -871,6 +886,12 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	if c.config.Bugs.PartialClientFinishedWithClientHello {
 		// The first byte has already been sent.
 		c.writeRecord(recordTypeHandshake, finished.marshal()[1:])
+	} else if c.config.Bugs.InterleaveEarlyData {
+		finishedBytes := finished.marshal()
+		c.sendFakeEarlyData(4)
+		c.writeRecord(recordTypeHandshake, finishedBytes[:1])
+		c.sendFakeEarlyData(4)
+		c.writeRecord(recordTypeHandshake, finishedBytes[1:])
 	} else {
 		c.writeRecord(recordTypeHandshake, finished.marshal())
 	}
@@ -883,8 +904,8 @@ func (hs *clientHandshakeState) doTLS13Handshake() error {
 	c.out.useTrafficSecret(c.vers, hs.suite, clientTrafficSecret, clientWrite)
 	c.in.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, serverWrite)
 
-	c.exporterSecret = hs.finishedHash.deriveSecret(masterSecret, exporterLabel)
-	c.resumptionSecret = hs.finishedHash.deriveSecret(masterSecret, resumptionLabel)
+	c.exporterSecret = hs.finishedHash.deriveSecret(exporterLabel)
+	c.resumptionSecret = hs.finishedHash.deriveSecret(resumptionLabel)
 	return nil
 }
 
@@ -1648,11 +1669,16 @@ func generatePSKBinders(hello *clientHelloMsg, pskCipherSuite *cipherSuite, psk,
 		binderLen--
 	}
 
+	numBinders := 1
+	if config.Bugs.SendExtraPSKBinder {
+		numBinders++
+	}
+
 	// Fill hello.pskBinders with appropriate length arrays of zeros so the
 	// length prefixes are correct when computing the binder over the truncated
 	// ClientHello message.
-	hello.pskBinders = make([][]byte, len(hello.pskIdentities))
-	for i := range hello.pskIdentities {
+	hello.pskBinders = make([][]byte, numBinders)
+	for i := range hello.pskBinders {
 		hello.pskBinders[i] = make([]byte, binderLen)
 	}
 

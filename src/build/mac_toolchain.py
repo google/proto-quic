@@ -157,7 +157,8 @@ def AcceptLicense():
 def _UseHermeticToolchain():
   current_dir = os.path.dirname(os.path.realpath(__file__))
   script_path = os.path.join(current_dir, 'mac/should_use_hermetic_xcode.py')
-  proc = subprocess.Popen([script_path], stdout=subprocess.PIPE)
+  target_os = 'ios' if IsIOSPlatform() else 'mac'
+  proc = subprocess.Popen([script_path, target_os], stdout=subprocess.PIPE)
   return '1' in proc.stdout.readline()
 
 

@@ -451,7 +451,83 @@ TEST(NetworkQualityEstimatorTest, ComputedPercentiles) {
   }
 }
 
-TEST(NetworkQualityEstimatorTest, ObtainOperatingParams) {
+// Verifies that the observers receive the notifications when default estimates
+// are added to the observations.
+TEST(NetworkQualityEstimatorTest, DefaultObservations) {
+  TestEffectiveConnectionTypeObserver effective_connection_type_observer;
+  TestRTTAndThroughputEstimatesObserver rtt_throughput_estimates_observer;
+  TestRTTObserver rtt_observer;
+  TestThroughputObserver throughput_observer;
+  std::map<std::string, std::string> variation_params;
+  TestNetworkQualityEstimator estimator(
+      nullptr, variation_params, false, false,
+      true /* add_default_platform_observations */);
+  base::TimeDelta rtt;
+  int32_t kbps;
+
+  // Default estimates should be available.
+  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(115), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(55), rtt);
+  EXPECT_TRUE(
+      estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
+  EXPECT_EQ(1961, kbps);
+
+  estimator.AddEffectiveConnectionTypeObserver(
+      &effective_connection_type_observer);
+  estimator.AddRTTAndThroughputEstimatesObserver(
+      &rtt_throughput_estimates_observer);
+  estimator.AddRTTObserver(&rtt_observer);
+  estimator.AddThroughputObserver(&throughput_observer);
+
+  // Simulate network change to 3G. Default estimates should be available.
+  estimator.SimulateNetworkChange(
+      NetworkChangeNotifier::ConnectionType::CONNECTION_3G, "test-3");
+  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  // Taken from network_quality_estimator_params.cc.
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(272), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(209), rtt);
+  EXPECT_TRUE(
+      estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
+  EXPECT_EQ(749, kbps);
+
+  EXPECT_NE(EFFECTIVE_CONNECTION_TYPE_UNKNOWN,
+            estimator.GetEffectiveConnectionType());
+  EXPECT_EQ(
+      1U,
+      effective_connection_type_observer.effective_connection_types().size());
+  EXPECT_NE(
+      EFFECTIVE_CONNECTION_TYPE_UNKNOWN,
+      effective_connection_type_observer.effective_connection_types().front());
+
+  EXPECT_EQ(3, rtt_throughput_estimates_observer.notifications_received());
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(272),
+            rtt_throughput_estimates_observer.http_rtt());
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(209),
+            rtt_throughput_estimates_observer.transport_rtt());
+  EXPECT_EQ(749,
+            rtt_throughput_estimates_observer.downstream_throughput_kbps());
+
+  EXPECT_EQ(2U, rtt_observer.observations().size());
+  EXPECT_EQ(272, rtt_observer.observations().at(0).rtt_ms);
+  EXPECT_EQ(NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_HTTP_FROM_PLATFORM,
+            rtt_observer.observations().at(0).source);
+  EXPECT_EQ(209, rtt_observer.observations().at(1).rtt_ms);
+  EXPECT_EQ(NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_TRANSPORT_FROM_PLATFORM,
+            rtt_observer.observations().at(1).source);
+
+  EXPECT_EQ(1U, throughput_observer.observations().size());
+  EXPECT_EQ(749, throughput_observer.observations().at(0).throughput_kbps);
+  EXPECT_EQ(NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_HTTP_FROM_PLATFORM,
+            throughput_observer.observations().at(0).source);
+}
+
+// Verifies that the default observations are added to the set of observations.
+// If default observations are overridden using field trial parameters, verify
+// that the overriding values are used.
+TEST(NetworkQualityEstimatorTest, DefaultObservationsOverridden) {
   std::map<std::string, std::string> variation_params;
   variation_params["Unknown.DefaultMedianKbps"] = "100";
   variation_params["WiFi.DefaultMedianKbps"] = "200";
@@ -462,29 +538,36 @@ TEST(NetworkQualityEstimatorTest, ObtainOperatingParams) {
   // Negative variation value should not be used.
   variation_params["2G.DefaultMedianRTTMsec"] = "-5";
 
-  TestNetworkQualityEstimator estimator(variation_params);
+  variation_params["Unknown.DefaultMedianTransportRTTMsec"] = "500";
+  variation_params["WiFi.DefaultMedianTransportRTTMsec"] = "1000";
+  // Negative variation value should not be used.
+  variation_params["2G.DefaultMedianTransportRTTMsec"] = "-5";
+
+  TestNetworkQualityEstimator estimator(
+      nullptr, variation_params, false, false,
+      true /* add_default_platform_observations */);
 
   base::TimeDelta rtt;
-  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
   int32_t kbps;
+
+  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(1000), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(500), rtt);
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
-
   EXPECT_EQ(100, kbps);
-  EXPECT_EQ(base::TimeDelta::FromMilliseconds(1000), rtt);
-
-  EXPECT_FALSE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
 
   // Simulate network change to Wi-Fi.
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, "test-1");
-
   EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(2000), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(1000), rtt);
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(200, kbps);
-  EXPECT_EQ(base::TimeDelta::FromMilliseconds(2000), rtt);
-  EXPECT_FALSE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
 
   // Peak network quality should not be affected by the network quality
   // estimator field trial.
@@ -497,19 +580,25 @@ TEST(NetworkQualityEstimatorTest, ObtainOperatingParams) {
   // available.
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test-2");
-
-  EXPECT_FALSE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  // Taken from network_quality_estimator_params.cc.
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(1726), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(1531), rtt);
   EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
   EXPECT_EQ(300, kbps);
 
-  // Simulate network change to 3G. Default estimates should be unavailable.
+  // Simulate network change to 3G. Default estimates should be available.
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_3G, "test-3");
-
-  EXPECT_FALSE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
-  EXPECT_FALSE(
+  EXPECT_TRUE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(272), rtt);
+  EXPECT_TRUE(estimator.GetRecentTransportRTT(base::TimeTicks(), &rtt));
+  EXPECT_EQ(base::TimeDelta::FromMilliseconds(209), rtt);
+  EXPECT_TRUE(
       estimator.GetRecentDownlinkThroughputKbps(base::TimeTicks(), &kbps));
+  EXPECT_EQ(749, kbps);
 }
 
 TEST(NetworkQualityEstimatorTest, ObtainAlgorithmToUseFromParams) {
@@ -1339,7 +1428,7 @@ TEST(NetworkQualityEstimatorTest, TestThroughputNoRequestOverlap) {
     TestNetworkQualityEstimator estimator(
         std::unique_ptr<net::ExternalEstimateProvider>(), variation_params,
         test.allow_small_localhost_requests,
-        test.allow_small_localhost_requests);
+        test.allow_small_localhost_requests, false);
 
     base::TimeDelta rtt;
     EXPECT_FALSE(estimator.GetRecentHttpRTT(base::TimeTicks(), &rtt));
@@ -1366,9 +1455,18 @@ TEST(NetworkQualityEstimatorTest, TestThroughputNoRequestOverlap) {
   }
 }
 
+#if defined(OS_IOS)
+// Flaky on iOS: crbug.com/672917.
+#define MAYBE_TestEffectiveConnectionTypeObserver \
+  DISABLED_TestEffectiveConnectionTypeObserver
+#else
+#define MAYBE_TestEffectiveConnectionTypeObserver \
+  TestEffectiveConnectionTypeObserver
+#endif
+
 // Tests that the effective connection type is computed at the specified
 // interval, and that the observers are notified of any change.
-TEST(NetworkQualityEstimatorTest, TestEffectiveConnectionTypeObserver) {
+TEST(NetworkQualityEstimatorTest, MAYBE_TestEffectiveConnectionTypeObserver) {
   base::HistogramTester histogram_tester;
   std::unique_ptr<base::SimpleTestTickClock> tick_clock(
       new base::SimpleTestTickClock());

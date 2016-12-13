@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_
-#define NET_QUIC_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_
+#ifndef NET_QUIC_CORE_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_
+#define NET_QUIC_CORE_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_
 
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -27,7 +27,7 @@ class QuicMultipathSentPacketManagerPeer;
 // (3) consults paths which should timeout on a retransmission timeout.
 // TODO(fayang): Currently above duties are not fully implemented, need to
 // finish them.
-class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
+class QUIC_EXPORT_PRIVATE QuicMultipathSentPacketManager
     : public QuicSentPacketManagerInterface {
  public:
   // Multipath sent packet manager takes ownership of |manager|.
@@ -183,7 +183,7 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
   };
 
   // PathSentPacketManagerInfo contains sent packet manager and its state.
-  struct NET_EXPORT_PRIVATE PathSentPacketManagerInfo {
+  struct QUIC_EXPORT_PRIVATE PathSentPacketManagerInfo {
     PathSentPacketManagerInfo();
     PathSentPacketManagerInfo(QuicSentPacketManagerInterface* manager,
                               PathSentPacketManagerState state);
@@ -220,4 +220,4 @@ class NET_EXPORT_PRIVATE QuicMultipathSentPacketManager
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_
+#endif  // NET_QUIC_CORE_QUIC_MULTIPATH_SENT_PACKET_MANAGER_H_

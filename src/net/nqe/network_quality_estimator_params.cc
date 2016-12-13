@@ -127,26 +127,79 @@ void ObtainDefaultObservations(
     const std::map<std::string, std::string>& variation_params,
     NetworkQuality default_observations[]) {
   for (size_t i = 0; i < NetworkChangeNotifier::CONNECTION_LAST; ++i) {
-    NetworkChangeNotifier::ConnectionType type =
-        static_cast<NetworkChangeNotifier::ConnectionType>(i);
     DCHECK_EQ(InvalidRTT(), default_observations[i].http_rtt());
     DCHECK_EQ(InvalidRTT(), default_observations[i].transport_rtt());
     DCHECK_EQ(kInvalidThroughput,
               default_observations[i].downstream_throughput_kbps());
+  }
 
-    base::TimeDelta default_rtt = InvalidRTT();
+  // Default observations for HTTP RTT, transport RTT, and downstream throughput
+  // Kbps for the various connection types. These may be overridden by
+  // variations params. The default observation for a connection type
+  // corresponds to typical network quality for that connection type.
+  default_observations[NetworkChangeNotifier::CONNECTION_UNKNOWN] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(115),
+                     base::TimeDelta::FromMilliseconds(55), 1961);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_ETHERNET] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(90),
+                     base::TimeDelta::FromMilliseconds(33), 1456);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_WIFI] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(116),
+                     base::TimeDelta::FromMilliseconds(66), 2658);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_2G] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(1726),
+                     base::TimeDelta::FromMilliseconds(1531), 74);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_3G] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(272),
+                     base::TimeDelta::FromMilliseconds(209), 749);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_4G] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(137),
+                     base::TimeDelta::FromMilliseconds(80), 1708);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_NONE] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(163),
+                     base::TimeDelta::FromMilliseconds(83), 575);
+
+  default_observations[NetworkChangeNotifier::CONNECTION_BLUETOOTH] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(385),
+                     base::TimeDelta::FromMilliseconds(318), 476);
+
+  // Override using the values provided via variation params.
+  for (size_t i = 0; i <= NetworkChangeNotifier::CONNECTION_LAST; ++i) {
+    NetworkChangeNotifier::ConnectionType type =
+        static_cast<NetworkChangeNotifier::ConnectionType>(i);
+
     int32_t variations_value = kMinimumRTTVariationParameterMsec - 1;
     std::string parameter_name = std::string(GetNameForConnectionType(type))
                                      .append(".DefaultMedianRTTMsec");
     auto it = variation_params.find(parameter_name);
-
     if (it != variation_params.end() &&
         base::StringToInt(it->second, &variations_value) &&
         variations_value >= kMinimumRTTVariationParameterMsec) {
-      default_rtt = base::TimeDelta::FromMilliseconds(variations_value);
+      default_observations[i] =
+          NetworkQuality(base::TimeDelta::FromMilliseconds(variations_value),
+                         default_observations[i].transport_rtt(),
+                         default_observations[i].downstream_throughput_kbps());
     }
 
-    int32_t downstream_throughput_kbps = kInvalidThroughput;
+    variations_value = kMinimumRTTVariationParameterMsec - 1;
+    parameter_name = std::string(GetNameForConnectionType(type))
+                         .append(".DefaultMedianTransportRTTMsec");
+    it = variation_params.find(parameter_name);
+    if (it != variation_params.end() &&
+        base::StringToInt(it->second, &variations_value) &&
+        variations_value >= kMinimumRTTVariationParameterMsec) {
+      default_observations[i] =
+          NetworkQuality(default_observations[i].http_rtt(),
+                         base::TimeDelta::FromMilliseconds(variations_value),
+                         default_observations[i].downstream_throughput_kbps());
+    }
+
     variations_value = kMinimumThroughputVariationParameterKbps - 1;
     parameter_name = std::string(GetNameForConnectionType(type))
                          .append(".DefaultMedianKbps");
@@ -155,12 +208,10 @@ void ObtainDefaultObservations(
     if (it != variation_params.end() &&
         base::StringToInt(it->second, &variations_value) &&
         variations_value >= kMinimumThroughputVariationParameterKbps) {
-      downstream_throughput_kbps = variations_value;
+      default_observations[i] = NetworkQuality(
+          default_observations[i].http_rtt(),
+          default_observations[i].transport_rtt(), variations_value);
     }
-
-    default_observations[i] =
-        NetworkQuality(default_rtt, default_observations[i].transport_rtt(),
-                       downstream_throughput_kbps);
   }
 }
 

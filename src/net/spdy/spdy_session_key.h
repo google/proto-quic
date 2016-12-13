@@ -58,4 +58,3 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
 }  // namespace net
 
 #endif  // NET_SPDY_SPDY_SESSION_KEY_H_
-

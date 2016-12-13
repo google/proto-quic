@@ -105,7 +105,8 @@
               } , { # else: OS != android
                 'conditions': [
                   # Big Endian
-                  [ 'v8_host_byteorder=="big"', {
+                  [ 'v8_host_byteorder=="big" or target_arch=="mips" or \
+                     target_arch=="mips64"', {
                     'files': [
                       'common/icudtb.dat',
                     ],
@@ -123,7 +124,8 @@
           'target_name': 'data_assembly',
           'type': 'none',
           'conditions': [
-            [ 'v8_host_byteorder=="big"', { # Big Endian
+            [ 'v8_host_byteorder=="big" or target_arch=="mips" or \
+               target_arch=="mips64"', { # Big Endian
               'data_assembly_inputs': [
                 'common/icudtb.dat',
               ],
@@ -186,10 +188,15 @@
              '<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtb_dat.S',
           ],
           'conditions': [
-            [ 'v8_host_byteorder=="big"', {
-              'sources!': ['<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtl_dat.S'],
+            [ 'v8_host_byteorder=="big" or target_arch=="mips" or \
+               target_arch=="mips64"', {
+              'sources!': [
+                '<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtl_dat.S'
+              ],
             }, {
-              'sources!': ['<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtb_dat.S'],
+              'sources!': [
+                '<(SHARED_INTERMEDIATE_DIR)/third_party/icu/icudtb_dat.S'
+              ],
             }],
             [ 'use_system_icu==1 and want_separate_host_toolset==1', {
               'toolsets': ['host'],

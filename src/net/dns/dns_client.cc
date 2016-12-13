@@ -103,4 +103,3 @@ std::unique_ptr<DnsClient> DnsClient::CreateClientForTesting(
 }
 
 }  // namespace net
-

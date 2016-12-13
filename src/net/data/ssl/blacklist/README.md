@@ -8,6 +8,17 @@ are included.
 
 ## Compromises & Misissuances
 
+### China Internet Network Information Center (CNNIC)
+
+For details, see <https://security.googleblog.com/2015/03/maintaining-digital-certificate-security.html>
+
+As a result of misissuance of a sub-CA certificate, CNNIC end-entity
+certificates were temporarily whitelisted, and then trust in the root fully
+removed.
+
+  * [1c01c6f4dbb2fefc22558b2bca32563f49844acfc32b7be4b0ff599f9e8c7af7.pem](1c01c6f4dbb2fefc22558b2bca32563f49844acfc32b7be4b0ff599f9e8c7af7.pem)
+  * [e28393773da845a679f2080cc7fb44a3b7a1c3792cb7eb7729fdcb6a8d99aea7.pem](e28393773da845a679f2080cc7fb44a3b7a1c3792cb7eb7729fdcb6a8d99aea7.pem)
+
 ### Comodo
 
 For details, see <https://www.comodo.com/Comodo-Fraud-Incident-2011-03-23.html>,

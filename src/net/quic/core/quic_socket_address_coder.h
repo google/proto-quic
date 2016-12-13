@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_SOCKET_ADDRESS_CODER_H_
-#define NET_QUIC_QUIC_SOCKET_ADDRESS_CODER_H_
+#ifndef NET_QUIC_CORE_QUIC_SOCKET_ADDRESS_CODER_H_
+#define NET_QUIC_CORE_QUIC_SOCKET_ADDRESS_CODER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -11,7 +11,7 @@
 #include <string>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -19,7 +19,7 @@ namespace net {
 // Serializes and parses a socket address (IP address and port), to be used in
 // the kCADR tag in the ServerHello handshake message and the Public Reset
 // packet.
-class NET_EXPORT_PRIVATE QuicSocketAddressCoder {
+class QUIC_EXPORT_PRIVATE QuicSocketAddressCoder {
  public:
   QuicSocketAddressCoder();
   explicit QuicSocketAddressCoder(const QuicSocketAddress& address);
@@ -41,4 +41,4 @@ class NET_EXPORT_PRIVATE QuicSocketAddressCoder {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SOCKET_ADDRESS_CODER_H_
+#endif  // NET_QUIC_CORE_QUIC_SOCKET_ADDRESS_CODER_H_

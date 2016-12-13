@@ -634,19 +634,66 @@ template("ios_app_bundle") {
       ]
     }
 
+    _app_product_type = "com.apple.product-type.application"
+    _product_type = _app_product_type
+    if (defined(invoker.product_type)) {
+      _product_type = invoker.product_type
+    }
+
+    _app_bundle_extension = ".app"
+    _bundle_extension = _app_bundle_extension
+    if (defined(invoker.bundle_extension)) {
+      _bundle_extension = invoker.bundle_extension
+    }
+
+    # Only write PkgInfo for real application, not application extension (they
+    # have the same product type but a different extension).
+    _write_pkg_info = _product_type == _app_product_type &&
+                      _bundle_extension == _app_bundle_extension
+
+    if (_write_pkg_info) {
+      _create_pkg_info = target_name + "_pkg_info"
+      action(_create_pkg_info) {
+        forward_variables_from(invoker, [ "testonly" ])
+        script = "//build/config/mac/write_pkg_info.py"
+        sources = get_target_outputs(":$_generate_info_plist")
+        outputs = [
+          # Cannot name the output PkgInfo as the name will not be unique if
+          # multiple ios_app_bundle are defined in the same BUILD.gn file. The
+          # file is renamed in the bundle_data outputs to the correct name.
+          "$target_gen_dir/$target_name",
+        ]
+        args = [ "--plist" ] + rebase_path(sources, root_build_dir) +
+               [ "--output" ] + rebase_path(outputs, root_build_dir)
+        deps = [
+          ":$_generate_info_plist",
+        ]
+      }
+
+      _bundle_data_pkg_info = target_name + "_bundle_data_pkg_info"
+      bundle_data(_bundle_data_pkg_info) {
+        forward_variables_from(invoker, [ "testonly" ])
+        sources = get_target_outputs(":$_create_pkg_info")
+        outputs = [
+          "{{bundle_resources_dir}}/PkgInfo",
+        ]
+        public_deps = [
+          ":$_create_pkg_info",
+        ]
+      }
+    }
+
     create_signed_bundle(_target_name) {
       forward_variables_from(invoker,
                              [
                                "bundle_deps",
                                "bundle_deps_filter",
-                               "bundle_extension",
                                "data_deps",
                                "deps",
                                "enable_code_signing",
                                "entitlements_path",
                                "entitlements_target",
                                "extra_system_frameworks",
-                               "product_type",
                                "public_configs",
                                "public_deps",
                                "testonly",
@@ -656,25 +703,22 @@ template("ios_app_bundle") {
       output_name = _output_name
       bundle_binary_target = ":$_lipo_executable_target"
       bundle_binary_output = _output_name
+      bundle_extension = _bundle_extension
+      product_type = _product_type
 
       if (!defined(bundle_deps)) {
         bundle_deps = []
       }
       bundle_deps += [ ":$_bundle_data_info_plist" ]
+      if (_write_pkg_info) {
+        bundle_deps += [ ":$_bundle_data_pkg_info" ]
+      }
 
       if (use_ios_simulator) {
         if (!defined(data_deps)) {
           data_deps = []
         }
         data_deps += [ "//testing/iossim" ]
-      }
-
-      if (!defined(product_type)) {
-        product_type = "com.apple.product-type.application"
-      }
-
-      if (!defined(bundle_extension)) {
-        bundle_extension = ".app"
       }
     }
   }
@@ -749,7 +793,7 @@ set_defaults("ios_appex_bundle") {
 #       string, path of the xib or storyboard to compile.
 #
 # Forwards all variables to the bundle_data target.
-template("bundle_data_xib") {
+template("bundle_data_ib_file") {
   assert(defined(invoker.source), "source needs to be defined for $target_name")
 
   _source_extension = get_path_info(invoker.source, "extension")
@@ -757,12 +801,19 @@ template("bundle_data_xib") {
          "source must be a .xib or .storyboard for $target_name")
 
   _target_name = target_name
-  _compile_xib = target_name + "_compile_xib"
+  if (_source_extension == "xib") {
+    _compile_ib_file = target_name + "_compile_xib"
+    _output_extension = "nib"
+  } else {
+    _compile_ib_file = target_name + "_compile_storyboard"
+    _output_extension = "storyboardc"
+  }
 
-  compile_xibs(_compile_xib) {
+  compile_ib_files(_compile_ib_file) {
     sources = [
       invoker.source,
     ]
+    output_extension = _output_extension
     visibility = [ ":$_target_name" ]
     ibtool_flags = [
       "--minimum-deployment-target",
@@ -781,9 +832,9 @@ template("bundle_data_xib") {
     if (!defined(public_deps)) {
       public_deps = []
     }
-    public_deps += [ ":$_compile_xib" ]
+    public_deps += [ ":$_compile_ib_file" ]
 
-    sources = get_target_outputs(":$_compile_xib")
+    sources = get_target_outputs(":$_compile_ib_file")
 
     outputs = [
       "{{bundle_resources_dir}}/{{source_file_part}}",

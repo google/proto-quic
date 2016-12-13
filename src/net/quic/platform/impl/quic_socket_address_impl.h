@@ -6,11 +6,12 @@
 #define NET_QUIC_PLATFORM_IMPL_QUIC_SOCKET_ADDRESS_IMPL_H_
 
 #include "net/base/ip_endpoint.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/impl/quic_ip_address_impl.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE QuicSocketAddressImpl {
+class QUIC_EXPORT_PRIVATE QuicSocketAddressImpl {
  public:
   QuicSocketAddressImpl() = default;
   explicit QuicSocketAddressImpl(IPEndPoint addr);

@@ -8,8 +8,8 @@
 // type has a non-trivial destructor, the arena must outlive the
 // QuicArenaScopedPtr. Does not support array overloads.
 
-#ifndef NET_QUIC_QUIC_ARENA_SCOPED_PTR_H_
-#define NET_QUIC_QUIC_ARENA_SCOPED_PTR_H_
+#ifndef NET_QUIC_CORE_QUIC_ARENA_SCOPED_PTR_H_
+#define NET_QUIC_CORE_QUIC_ARENA_SCOPED_PTR_H_
 
 #include <cstdint>  // for uintptr_t
 
@@ -207,4 +207,4 @@ QuicArenaScopedPtr<T>::QuicArenaScopedPtr(void* value, ConstructFrom from_arena)
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_ARENA_SCOPED_PTR_H_
+#endif  // NET_QUIC_CORE_QUIC_ARENA_SCOPED_PTR_H_

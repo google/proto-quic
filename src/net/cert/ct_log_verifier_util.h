@@ -27,4 +27,4 @@ NET_EXPORT std::string HashNodes(const std::string& lh, const std::string& rh);
 
 }  // namespace net
 
-#endif
+#endif  // NET_CERT_CT_LOG_VERIFIER_UTIL_H_

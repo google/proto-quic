@@ -5,8 +5,8 @@
 // A toy server, which listens on a specified address for QUIC traffic and
 // handles incoming responses.
 
-#ifndef NET_QUIC_TOOLS_QUIC_SIMPLE_SERVER_H_
-#define NET_QUIC_TOOLS_QUIC_SIMPLE_SERVER_H_
+#ifndef NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_H_
+#define NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_H_
 
 #include <memory>
 
@@ -123,4 +123,4 @@ class QuicSimpleServer {
 
 }  // namespace net
 
-#endif  // NET_QUIC_TOOLS_QUIC_SIMPLE_SERVER_H_
+#endif  // NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_H_

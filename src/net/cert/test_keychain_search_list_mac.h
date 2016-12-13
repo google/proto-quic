@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_KEYCHAIN_SEARCH_LIST_MAC_H_
-#define NET_CERT_KEYCHAIN_SEARCH_LIST_MAC_H_
+#ifndef NET_CERT_TEST_KEYCHAIN_SEARCH_LIST_MAC_H_
+#define NET_CERT_TEST_KEYCHAIN_SEARCH_LIST_MAC_H_
 
 #include <CoreServices/CoreServices.h>
 #include <Security/Security.h>
@@ -43,4 +43,4 @@ class NET_EXPORT TestKeychainSearchList {
 
 }  // namespace net
 
-#endif  // NET_CERT_KEYCHAIN_SEARCH_LIST_MAC_H_
+#endif  // NET_CERT_TEST_KEYCHAIN_SEARCH_LIST_MAC_H_

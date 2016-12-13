@@ -94,4 +94,3 @@ class NET_EXPORT_PRIVATE SerialWorker
 }  // namespace net
 
 #endif  // NET_DNS_SERIAL_WORKER_H_
-

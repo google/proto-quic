@@ -5,7 +5,10 @@
 #ifndef NET_QUIC_CORE_FRAMES_QUIC_WINDOW_UPDATE_FRAME_H_
 #define NET_QUIC_CORE_FRAMES_QUIC_WINDOW_UPDATE_FRAME_H_
 
+#include <ostream>
+
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -14,11 +17,11 @@ namespace net {
 // than a window delta.
 // TODO(rjshade): A possible future optimization is to make stream_id and
 //                byte_offset variable length, similar to stream frames.
-struct NET_EXPORT_PRIVATE QuicWindowUpdateFrame {
+struct QUIC_EXPORT_PRIVATE QuicWindowUpdateFrame {
   QuicWindowUpdateFrame() {}
   QuicWindowUpdateFrame(QuicStreamId stream_id, QuicStreamOffset byte_offset);
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(
       std::ostream& os,
       const QuicWindowUpdateFrame& w);
 

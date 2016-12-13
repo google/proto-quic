@@ -8,9 +8,7 @@
 
 #include "base/logging.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_constants.h"
-#include "net/quic/core/quic_packets.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

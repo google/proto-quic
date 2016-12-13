@@ -126,12 +126,12 @@ class HttpStreamFactoryImplJobControllerTest
     test_proxy_delegate->set_alternative_proxy_server(
         ProxyServer::FromPacString("QUIC myproxy.org:443"));
     EXPECT_TRUE(test_proxy_delegate->alternative_proxy_server().is_quic());
-    session_deps_.proxy_delegate.reset(test_proxy_delegate.release());
+    session_deps_.proxy_delegate = std::move(test_proxy_delegate);
 
     if (use_alternative_proxy) {
       std::unique_ptr<ProxyService> proxy_service =
           ProxyService::CreateFixedFromPacResult("HTTPS myproxy.org:443");
-      session_deps_.proxy_service.reset(proxy_service.release());
+      session_deps_.proxy_service = std::move(proxy_service);
     }
     session_ = SpdySessionDependencies::SpdyCreateSession(&session_deps_);
     factory_ =

@@ -8,15 +8,15 @@
 #include <ostream>
 #include <string>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_error_codes.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-struct NET_EXPORT_PRIVATE QuicConnectionCloseFrame {
+struct QUIC_EXPORT_PRIVATE QuicConnectionCloseFrame {
   QuicConnectionCloseFrame();
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(
       std::ostream& os,
       const QuicConnectionCloseFrame& c);
 

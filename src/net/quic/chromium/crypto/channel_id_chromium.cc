@@ -128,7 +128,7 @@ QuicAsyncStatus ChannelIDSourceChromium::Job::GetChannelIDKey(
   next_state_ = STATE_GET_CHANNEL_ID_KEY;
   switch (DoLoop(OK)) {
     case OK:
-      channel_id_key->reset(channel_id_key_.release());
+      *channel_id_key = std::move(channel_id_key_);
       return QUIC_SUCCESS;
     case ERR_IO_PENDING:
       callback_.reset(callback);

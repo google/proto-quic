@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_CERT_COMPRESSOR_H_
-#define NET_QUIC_CRYPTO_CERT_COMPRESSOR_H_
+#ifndef NET_QUIC_CORE_CRYPTO_CERT_COMPRESSOR_H_
+#define NET_QUIC_CORE_CRYPTO_CERT_COMPRESSOR_H_
 
 #include <string>
 #include <vector>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/common_cert_set.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -28,7 +28,7 @@ namespace net {
 //   3) Otherwise the certificates are compressed with zlib using a pre-shared
 //      dictionary that consists of the certificates handled with the above
 //      methods and a small chunk of common substrings.
-class NET_EXPORT_PRIVATE CertCompressor {
+class QUIC_EXPORT_PRIVATE CertCompressor {
  public:
   // CompressChain compresses the certificates in |certs| and returns a
   // compressed representation. |common_sets| contains the common certificate
@@ -55,4 +55,4 @@ class NET_EXPORT_PRIVATE CertCompressor {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_CERT_COMPRESSOR_H_
+#endif  // NET_QUIC_CORE_CRYPTO_CERT_COMPRESSOR_H_

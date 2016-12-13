@@ -30,6 +30,52 @@ struct IntegerBitsPlusSign {
                            std::is_signed<NumericType>::value;
 };
 
+// Helper templates for integer manipulations.
+
+template <typename Integer>
+struct PositionOfSignBit {
+  static const size_t value = IntegerBitsPlusSign<Integer>::value - 1;
+};
+
+template <typename T>
+constexpr bool HasSignBit(T x) {
+  // Cast to unsigned since right shift on signed is undefined.
+  return !!(static_cast<typename std::make_unsigned<T>::type>(x) >>
+            PositionOfSignBit<T>::value);
+}
+
+// This wrapper undoes the standard integer promotions.
+template <typename T>
+constexpr T BinaryComplement(T x) {
+  return static_cast<T>(~x);
+}
+
+// This performs a safe, non-branching absolute value via unsigned overflow.
+template <typename T>
+constexpr T SafeUnsignedAbsImpl(T value, T sign_mask) {
+  static_assert(!std::is_signed<T>::value, "Types must be unsigned.");
+  return (value ^ sign_mask) - sign_mask;
+}
+
+template <typename T,
+          typename std::enable_if<std::is_integral<T>::value &&
+                                  std::is_signed<T>::value>::type* = nullptr>
+constexpr typename std::make_unsigned<T>::type SafeUnsignedAbs(T value) {
+  using UnsignedT = typename std::make_unsigned<T>::type;
+  return SafeUnsignedAbsImpl(
+      static_cast<UnsignedT>(value),
+      // The sign mask is all ones for negative and zero otherwise.
+      static_cast<UnsignedT>(-static_cast<T>(HasSignBit(value))));
+}
+
+template <typename T,
+          typename std::enable_if<std::is_integral<T>::value &&
+                                  !std::is_signed<T>::value>::type* = nullptr>
+constexpr T SafeUnsignedAbs(T value) {
+  // T is unsigned, so |value| must already be positive.
+  return static_cast<T>(value);
+}
+
 enum IntegerRepresentation {
   INTEGER_REPRESENTATION_UNSIGNED,
   INTEGER_REPRESENTATION_SIGNED
@@ -286,11 +332,6 @@ struct TwiceWiderInteger {
   using type =
       typename IntegerForDigitsAndSign<IntegerBitsPlusSign<Integer>::value * 2,
                                        IsSigned>::type;
-};
-
-template <typename Integer>
-struct PositionOfSignBit {
-  static const size_t value = IntegerBitsPlusSign<Integer>::value - 1;
 };
 
 enum ArithmeticPromotionCategory {

@@ -298,6 +298,15 @@ class NET_EXPORT NetworkQualityEstimator
                      nqe::internal::CachedNetworkQuality> read_prefs);
 
  protected:
+  // A protected constructor for testing that allows setting the value of
+  // |add_default_platform_observations_|.
+  NetworkQualityEstimator(
+      std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
+      const std::map<std::string, std::string>& variation_params,
+      bool use_local_host_requests_for_tests,
+      bool use_smaller_responses_for_tests,
+      bool add_default_platform_observations);
+
   // NetworkChangeNotifier::ConnectionTypeObserver implementation:
   void OnConnectionTypeChanged(
       NetworkChangeNotifier::ConnectionType type) override;
@@ -363,7 +372,8 @@ class NET_EXPORT NetworkQualityEstimator
                            AdaptiveRecomputationEffectiveConnectionType);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, StoreObservations);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, TestAddObservation);
-  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, ObtainOperatingParams);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           DefaultObservationsOverridden);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            ObtainAlgorithmToUseFromParams);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest, HalfLifeParam);
@@ -578,6 +588,9 @@ class NET_EXPORT NetworkQualityEstimator
   // network quality. Set to true only for tests.
   bool use_small_responses_;
 
+  // If true, default values provided by the platform are used for estimation.
+  const bool add_default_platform_observations_;
+
   // The factor by which the weight of an observation reduces every second.
   const double weight_multiplier_per_second_;
 
@@ -619,7 +632,7 @@ class NET_EXPORT NetworkQualityEstimator
   // estimator field trial parameters. The observations are indexed by
   // ConnectionType.
   nqe::internal::NetworkQuality
-      default_observations_[NetworkChangeNotifier::CONNECTION_LAST];
+      default_observations_[NetworkChangeNotifier::CONNECTION_LAST + 1];
 
   // Thresholds for different effective connection types obtained from field
   // trial variation params. These thresholds encode how different connection

@@ -7,8 +7,8 @@
 // packets on one path at the same time. Currently, next packet number is
 // tracked per-path.
 
-#ifndef NET_QUIC_QUIC_PACKET_CREATOR_H_
-#define NET_QUIC_QUIC_PACKET_CREATOR_H_
+#ifndef NET_QUIC_CORE_QUIC_PACKET_CREATOR_H_
+#define NET_QUIC_CORE_QUIC_PACKET_CREATOR_H_
 
 #include <stddef.h>
 
@@ -20,22 +20,22 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_pending_retransmission.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 namespace test {
 class QuicPacketCreatorPeer;
 }
 
-class NET_EXPORT_PRIVATE QuicPacketCreator {
+class QUIC_EXPORT_PRIVATE QuicPacketCreator {
  public:
   // A delegate interface for further processing serialized packet.
-  class NET_EXPORT_PRIVATE DelegateInterface
+  class QUIC_EXPORT_PRIVATE DelegateInterface
       : public QuicConnectionCloseDelegateInterface {
    public:
     ~DelegateInterface() override {}
@@ -48,7 +48,7 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
   // Interface which gets callbacks from the QuicPacketCreator at interesting
   // points.  Implementations must not mutate the state of the creator
   // as a result of these callbacks.
-  class NET_EXPORT_PRIVATE DebugDelegate {
+  class QUIC_EXPORT_PRIVATE DebugDelegate {
    public:
     virtual ~DebugDelegate() {}
 
@@ -317,4 +317,4 @@ class NET_EXPORT_PRIVATE QuicPacketCreator {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_PACKET_CREATOR_H_
+#endif  // NET_QUIC_CORE_QUIC_PACKET_CREATOR_H_

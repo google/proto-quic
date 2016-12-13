@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_BUFFERED_PACKET_STORE_H_
-#define NET_QUIC_QUIC_BUFFERED_PACKET_STORE_H_
+#ifndef NET_QUIC_CORE_QUIC_BUFFERED_PACKET_STORE_H_
+#define NET_QUIC_CORE_QUIC_BUFFERED_PACKET_STORE_H_
 
 #include "net/base/linked_hash_map.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -29,7 +29,7 @@ class QuicBufferedPacketStorePeer;
 // of connections: connections with CHLO buffered and those without CHLO. The
 // latter has its own upper limit along with the max number of connections this
 // store can hold. The former pool can grow till this store is full.
-class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
+class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
  public:
   enum EnqueuePacketResult {
     SUCCESS = 0,
@@ -38,7 +38,7 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
   };
 
   // A packets with client/server address.
-  struct NET_EXPORT_PRIVATE BufferedPacket {
+  struct QUIC_EXPORT_PRIVATE BufferedPacket {
     BufferedPacket(std::unique_ptr<QuicReceivedPacket> packet,
                    QuicSocketAddress server_address,
                    QuicSocketAddress client_address);
@@ -54,7 +54,7 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
   };
 
   // A queue of BufferedPackets for a connection.
-  struct NET_EXPORT_PRIVATE BufferedPacketList {
+  struct QUIC_EXPORT_PRIVATE BufferedPacketList {
     BufferedPacketList();
     BufferedPacketList(BufferedPacketList&& other);
 
@@ -69,7 +69,7 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
   typedef linked_hash_map<QuicConnectionId, BufferedPacketList>
       BufferedPacketMap;
 
-  class NET_EXPORT_PRIVATE VisitorInterface {
+  class QUIC_EXPORT_PRIVATE VisitorInterface {
    public:
     virtual ~VisitorInterface() {}
 
@@ -158,4 +158,4 @@ class NET_EXPORT_PRIVATE QuicBufferedPacketStore {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_BUFFERED_PACKET_STORE_H_
+#endif  // NET_QUIC_CORE_QUIC_BUFFERED_PACKET_STORE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CORE_QUIC_SPDY_SERVER_STREAM_BASE_H_
-#define NET_QUIC_CORE_QUIC_SPDY_SERVER_STREAM_BASE_H_
+#ifndef NET_TOOLS_QUIC_QUIC_SPDY_SERVER_STREAM_BASE_H_
+#define NET_TOOLS_QUIC_QUIC_SPDY_SERVER_STREAM_BASE_H_
 
 #include "net/quic/core/quic_spdy_stream.h"
 
@@ -23,4 +23,4 @@ class QuicSpdyServerStreamBase : public QuicSpdyStream {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CORE_QUIC_SPDY_SERVER_STREAM_BASE_H_
+#endif  // NET_TOOLS_QUIC_QUIC_SPDY_SERVER_STREAM_BASE_H_

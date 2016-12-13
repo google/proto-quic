@@ -311,7 +311,7 @@ CryptoHandshakeMessage* QuicCryptoServerConfig::AddConfig(
   }
 
   {
-    base::AutoLock locked(configs_lock_);
+    QuicWriterMutexLock locked(&configs_lock_);
     if (configs_.find(config->id) != configs_.end()) {
       LOG(WARNING) << "Failed to add config because another with the same "
                       "server config id already exists: "
@@ -361,7 +361,7 @@ bool QuicCryptoServerConfig::SetConfigs(
   } else {
     VLOG(1) << "Updating configs:";
 
-    base::AutoLock locked(configs_lock_);
+    QuicWriterMutexLock locked(&configs_lock_);
     ConfigMap new_configs;
 
     for (std::vector<scoped_refptr<Config>>::const_iterator i =
@@ -409,7 +409,7 @@ void QuicCryptoServerConfig::SetSourceAddressTokenKeys(
 }
 
 void QuicCryptoServerConfig::GetConfigIds(std::vector<string>* scids) const {
-  base::AutoLock locked(configs_lock_);
+  QuicReaderMutexLock locked(&configs_lock_);
   for (ConfigMap::const_iterator it = configs_.begin(); it != configs_.end();
        ++it) {
     scids->push_back(it->first);
@@ -436,7 +436,7 @@ void QuicCryptoServerConfig::ValidateClientHello(
   scoped_refptr<Config> requested_config;
   scoped_refptr<Config> primary_config;
   {
-    base::AutoLock locked(configs_lock_);
+    QuicReaderMutexLock locked(&configs_lock_);
 
     if (!primary_config_.get()) {
       result->error_code = QUIC_CRYPTO_INTERNAL_ERROR;
@@ -444,9 +444,13 @@ void QuicCryptoServerConfig::ValidateClientHello(
     } else {
       if (!next_config_promotion_time_.IsZero() &&
           next_config_promotion_time_.IsAfter(now)) {
+        configs_lock_.ReaderUnlock();
+        configs_lock_.WriterLock();
         SelectNewPrimaryConfig(now);
         DCHECK(primary_config_.get());
         DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+        configs_lock_.WriterUnlock();
+        configs_lock_.ReaderLock();
       }
     }
 
@@ -629,16 +633,20 @@ void QuicCryptoServerConfig::ProcessClientHello(
   scoped_refptr<Config> primary_config;
   bool no_primary_config = false;
   {
-    base::AutoLock locked(configs_lock_);
+    QuicReaderMutexLock locked(&configs_lock_);
 
     if (!primary_config_) {
       no_primary_config = true;
     } else {
       if (!next_config_promotion_time_.IsZero() &&
           next_config_promotion_time_.IsAfter(now)) {
+        configs_lock_.ReaderUnlock();
+        configs_lock_.WriterLock();
         SelectNewPrimaryConfig(now);
         DCHECK(primary_config_.get());
         DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+        configs_lock_.WriterUnlock();
+        configs_lock_.ReaderLock();
       }
 
       // Use the config that the client requested in order to do key-agreement.
@@ -995,9 +1003,7 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
 
 scoped_refptr<QuicCryptoServerConfig::Config>
 QuicCryptoServerConfig::GetConfigWithScid(StringPiece requested_scid) const {
-  // In Chromium, we will dead lock if the lock is held by the current thread.
-  // Chromium doesn't have AssertReaderHeld API call.
-  // configs_lock_.AssertReaderHeld();
+  configs_lock_.AssertReaderHeld();
 
   if (!requested_scid.empty()) {
     ConfigMap::const_iterator it = configs_.find(requested_scid.as_string());
@@ -1346,7 +1352,7 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   QuicWallTime expiry_time = QuicWallTime::Zero();
   const CommonCertSets* common_cert_sets;
   {
-    base::AutoLock locked(configs_lock_);
+    QuicReaderMutexLock locked(&configs_lock_);
     serialized = primary_config_->serialized;
     common_cert_sets = primary_config_->common_cert_sets;
     expiry_time = primary_config_->expiry_time;
@@ -1403,7 +1409,7 @@ void QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   string source_address_token;
   const CommonCertSets* common_cert_sets;
   {
-    base::AutoLock locked(configs_lock_);
+    QuicReaderMutexLock locked(&configs_lock_);
     serialized = primary_config_->serialized;
     common_cert_sets = primary_config_->common_cert_sets;
     source_address_token = NewSourceAddressToken(
@@ -1815,7 +1821,7 @@ void QuicCryptoServerConfig::set_enable_serving_sct(bool enable_serving_sct) {
 
 void QuicCryptoServerConfig::AcquirePrimaryConfigChangedCb(
     std::unique_ptr<PrimaryConfigChangedCallback> cb) {
-  base::AutoLock locked(configs_lock_);
+  QuicWriterMutexLock locked(&configs_lock_);
   primary_config_changed_cb_ = std::move(cb);
 }
 
@@ -1858,7 +1864,7 @@ string QuicCryptoServerConfig::NewSourceAddressToken(
 }
 
 int QuicCryptoServerConfig::NumberOfConfigs() const {
-  base::AutoLock locked(configs_lock_);
+  QuicReaderMutexLock locked(&configs_lock_);
   return configs_.size();
 }
 

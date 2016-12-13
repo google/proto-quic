@@ -170,6 +170,7 @@ crypto_sources = [
   "src/crypto/modes/gcm.c",
   "src/crypto/modes/internal.h",
   "src/crypto/modes/ofb.c",
+  "src/crypto/modes/polyval.c",
   "src/crypto/newhope/error_correction.c",
   "src/crypto/newhope/internal.h",
   "src/crypto/newhope/newhope.c",
@@ -568,6 +569,7 @@ fuzzers = [
   "privkey",
   "read_pem",
   "server",
+  "session",
   "spki",
   "ssl_ctx_api",
 ]

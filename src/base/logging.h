@@ -426,9 +426,23 @@ const LogSeverity LOG_0 = LOG_ERROR;
 #define PLOG_IF(severity, condition) \
   LAZY_STREAM(PLOG_STREAM(severity), LOG_IS_ON(severity) && (condition))
 
-// The actual stream used isn't important.
-#define EAT_STREAM_PARAMETERS                                           \
-  true ? (void) 0 : ::logging::LogMessageVoidify() & LOG_STREAM(FATAL)
+BASE_EXPORT extern std::ostream* g_swallow_stream;
+
+// Note that g_swallow_stream is used instead of an arbitrary LOG() stream to
+// avoid the creation of an object with a non-trivial destructor (LogMessage).
+// On MSVC x86 (checked on 2015 Update 3), this causes a few additional
+// pointless instructions to be emitted even at full optimization level, even
+// though the : arm of the ternary operator is clearly never executed. Using a
+// simpler object to be &'d with Voidify() avoids these extra instructions.
+// Using a simpler POD object with a templated operator<< also works to avoid
+// these instructions. However, this causes warnings on statically defined
+// implementations of operator<<(std::ostream, ...) in some .cc files, because
+// they become defined-but-unreferenced functions. A reinterpret_cast of 0 to an
+// ostream* also is not suitable, because some compilers warn of undefined
+// behavior.
+#define EAT_STREAM_PARAMETERS \
+  true ? (void)0              \
+       : ::logging::LogMessageVoidify() & (*::logging::g_swallow_stream)
 
 // Captures the result of a CHECK_EQ (for example) and facilitates testing as a
 // boolean.

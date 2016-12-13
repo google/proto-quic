@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_BASE_IP_ADDRESS_NET_H_
-#define NET_BASE_IP_ADDRESS_NET_H_
+#ifndef NET_BASE_IP_ADDRESS_H_
+#define NET_BASE_IP_ADDRESS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -205,4 +205,4 @@ bool IPAddressStartsWith(const IPAddress& address, const uint8_t (&prefix)[N]) {
 
 }  // namespace net
 
-#endif  // NET_BASE_IP_ADDRESS_NET_H_
+#endif  // NET_BASE_IP_ADDRESS_H_

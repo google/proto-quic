@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H
-#define NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H
+#ifndef NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H_
+#define NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H_
 
 #include "net/cert/internal/test_helpers.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -33,4 +33,4 @@ class PkitsTest : public ::testing::Test {
 // Inline the generated test code:
 #include "net/third_party/nist-pkits/pkits_testcases-inl.h"
 
-#endif  // NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H
+#endif  // NET_CERT_INTERNAL_NIST_PKITS_UNITTEST_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_DATA_READER_H_
-#define NET_QUIC_QUIC_DATA_READER_H_
+#ifndef NET_QUIC_CORE_QUIC_DATA_READER_H_
+#define NET_QUIC_CORE_QUIC_DATA_READER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -13,7 +13,7 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/int128.h"
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -31,7 +31,7 @@ namespace net {
 // trusted and it is up to the caller to throw away the failed instance and
 // handle the error as appropriate. None of the Read*() methods should ever be
 // called after failure, as they will also fail immediately.
-class NET_EXPORT_PRIVATE QuicDataReader {
+class QUIC_EXPORT_PRIVATE QuicDataReader {
  public:
   // Caller must provide an underlying buffer to work on.
   QuicDataReader(const char* data, const size_t len);
@@ -125,4 +125,4 @@ class NET_EXPORT_PRIVATE QuicDataReader {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_DATA_READER_H_
+#endif  // NET_QUIC_CORE_QUIC_DATA_READER_H_

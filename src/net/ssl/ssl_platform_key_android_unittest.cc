@@ -35,14 +35,13 @@ namespace {
 
 typedef base::android::ScopedJavaLocalRef<jobject> ScopedJava;
 
-// Resize a string to |size| bytes of data, then return its data buffer
-// address cast as an 'unsigned char*', as expected by OpenSSL functions.
+// Resize a string to |size| bytes of data, then return its data buffer address
+// cast as an 'uint8_t*', as expected by OpenSSL functions.
 // |str| the target string.
 // |size| the number of bytes to write into the string.
-// Return the string's new buffer in memory, as an 'unsigned char*'
-// pointer.
-unsigned char* OpenSSLWriteInto(std::string* str, size_t size) {
-  return reinterpret_cast<unsigned char*>(base::WriteInto(str, size + 1));
+// Return the string's new buffer in memory, as an 'uint8_t*' pointer.
+uint8_t* OpenSSLWriteInto(std::string* str, size_t size) {
+  return reinterpret_cast<uint8_t*>(base::WriteInto(str, size + 1));
 }
 
 bool ReadTestFile(const char* filename, std::string* pkcs8) {
@@ -51,45 +50,12 @@ bool ReadTestFile(const char* filename, std::string* pkcs8) {
   return base::ReadFileToString(file_path, pkcs8);
 }
 
-// Load a given private key file into an EVP_PKEY.
-// |filename| is the key file path.
-// Returns a new EVP_PKEY on success, NULL on failure.
-bssl::UniquePtr<EVP_PKEY> ImportPrivateKeyFile(const char* filename) {
-  std::string pkcs8;
-  if (!ReadTestFile(filename, &pkcs8))
-    return nullptr;
-
+// Parses a PKCS#8 key into an OpenSSL private key object.
+bssl::UniquePtr<EVP_PKEY> ImportPrivateKeyOpenSSL(const std::string& pkcs8) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
   CBS cbs;
   CBS_init(&cbs, reinterpret_cast<const uint8_t*>(pkcs8.data()), pkcs8.size());
-  bssl::UniquePtr<EVP_PKEY> pkey(EVP_parse_private_key(&cbs));
-  if (!pkey) {
-    LOG(ERROR) << "Could not load private key file: " << filename;
-    return nullptr;
-  }
-
-  return pkey;
-}
-
-// Imports the public key from the specified test certificate.
-bssl::UniquePtr<EVP_PKEY> ImportPublicKeyFromCertificateFile(
-    const char* filename) {
-  crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-
-  scoped_refptr<X509Certificate> cert =
-      ImportCertFromFile(GetTestCertsDirectory(), filename);
-  if (!cert) {
-    LOG(ERROR) << "Could not open certificate file: " << filename;
-    return nullptr;
-  }
-
-  bssl::UniquePtr<EVP_PKEY> pkey(X509_get_pubkey(cert->os_cert_handle()));
-  if (!pkey) {
-    LOG(ERROR) << "Could not load public key from certificate: " << filename;
-    return nullptr;
-  }
-
-  return pkey;
+  return bssl::UniquePtr<EVP_PKEY>(EVP_parse_private_key(&cbs));
 }
 
 // Retrieve a JNI local ref from encoded PKCS#8 data.
@@ -107,140 +73,42 @@ ScopedJava GetPKCS8PrivateKeyJava(android::PrivateKeyType key_type,
   return key;
 }
 
-const char kTestRsaKeyFile[] = "client_1.pk8";
-const char kTestRsaCertificateFile[] = "client_1.pem";
-
-// Retrieve a JNI local ref for our test RSA key.
-ScopedJava GetRSATestKeyJava() {
-  std::string key;
-  if (!ReadTestFile(kTestRsaKeyFile, &key))
-    return ScopedJava();
-  return GetPKCS8PrivateKeyJava(android::PRIVATE_KEY_TYPE_RSA, key);
-}
-
-const char kTestEcdsaKeyFile[] = "client_4.pk8";
-const char kTestEcdsaCertificateFile[] = "client_4.pem";
-
-// Retrieve a JNI local ref for our test ECDSA key.
-ScopedJava GetECDSATestKeyJava() {
-  std::string key;
-  if (!ReadTestFile(kTestEcdsaKeyFile, &key))
-    return ScopedJava();
-  return GetPKCS8PrivateKeyJava(android::PRIVATE_KEY_TYPE_ECDSA, key);
-}
-
-// Call this function to verify that one message signed with our
-// test ECDSA private key is correct. Since ECDSA signing introduces
-// random elements in the signature, it is not possible to compare
-// signature bits directly. However, one can use the public key
-// to do the check.
-bool VerifyTestECDSASignature(const base::StringPiece& message,
-                              const base::StringPiece& signature) {
+bool VerifyWithOpenSSL(const EVP_MD* md,
+                       const base::StringPiece& digest,
+                       EVP_PKEY* key,
+                       const base::StringPiece& signature) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  bssl::UniquePtr<EVP_PKEY> pkey =
-      ImportPublicKeyFromCertificateFile(kTestEcdsaCertificateFile);
-  if (!pkey)
-    return false;
-
-  EC_KEY* pub_key = EVP_PKEY_get0_EC_KEY(pkey.get());
-  if (!pub_key) {
-    LOG(ERROR) << "Could not get ECDSA public key";
-    return false;
-  }
-
-  const unsigned char* digest =
-      reinterpret_cast<const unsigned char*>(message.data());
-  int digest_len = static_cast<int>(message.size());
-  const unsigned char* sigbuf =
-      reinterpret_cast<const unsigned char*>(signature.data());
-  int siglen = static_cast<int>(signature.size());
-
-  if (!ECDSA_verify(0, digest, digest_len, sigbuf, siglen, pub_key)) {
-    LOG(ERROR) << "ECDSA_verify() failed";
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(key, nullptr));
+  if (!ctx || !EVP_PKEY_verify_init(ctx.get()) ||
+      !EVP_PKEY_CTX_set_signature_md(ctx.get(), md) ||
+      !EVP_PKEY_verify(
+          ctx.get(), reinterpret_cast<const uint8_t*>(signature.data()),
+          signature.size(), reinterpret_cast<const uint8_t*>(digest.data()),
+          digest.size())) {
     return false;
   }
+
   return true;
 }
 
-// Sign a message with OpenSSL, return the result as a string.
-// |message| is the message to be signed.
-// |openssl_key| is an OpenSSL EVP_PKEY to use.
-// |result| receives the result.
-// Returns true on success, false otherwise.
-bool SignWithOpenSSL(int hash_nid,
-                     const base::StringPiece& message,
-                     EVP_PKEY* openssl_key,
+bool SignWithOpenSSL(const EVP_MD* md,
+                     const base::StringPiece& digest,
+                     EVP_PKEY* key,
                      std::string* result) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
 
-  RSA* rsa = EVP_PKEY_get0_RSA(openssl_key);
-  if (!rsa) {
-    LOG(ERROR) << "Could not get RSA from EVP_PKEY";
+  size_t sig_len;
+  bssl::UniquePtr<EVP_PKEY_CTX> ctx(EVP_PKEY_CTX_new(key, nullptr));
+  if (!ctx || !EVP_PKEY_sign_init(ctx.get()) ||
+      !EVP_PKEY_CTX_set_signature_md(ctx.get(), md) ||
+      !EVP_PKEY_sign(ctx.get(), OpenSSLWriteInto(result, EVP_PKEY_size(key)),
+                     &sig_len, reinterpret_cast<const uint8_t*>(digest.data()),
+                     digest.size())) {
     return false;
   }
 
-  const unsigned char* digest =
-      reinterpret_cast<const unsigned char*>(message.data());
-  unsigned int digest_len = static_cast<unsigned int>(message.size());
-
-  // With RSA, the signature will always be RSA_size() bytes.
-  size_t max_signature_size = static_cast<size_t>(RSA_size(rsa));
-  std::string signature;
-  unsigned char* p = OpenSSLWriteInto(&signature, max_signature_size);
-  unsigned int p_len = 0;
-  if (!RSA_sign(hash_nid, digest, digest_len, p, &p_len, rsa)) {
-    LOG(ERROR) << "RSA_sign() failed";
-    return false;
-  }
-
-  size_t signature_size = static_cast<size_t>(p_len);
-  if (signature_size == 0) {
-    LOG(ERROR) << "Signature is empty!";
-    return false;
-  }
-  if (signature_size > max_signature_size) {
-    LOG(ERROR) << "Signature size mismatch, actual " << signature_size
-               << ", expected <= " << max_signature_size;
-    return false;
-  }
-  signature.resize(signature_size);
-  result->swap(signature);
-  return true;
-}
-
-// Check that a generated signature for a given message matches
-// OpenSSL output byte-by-byte.
-// |message| is the input message.
-// |signature| is the generated signature for the message.
-// |openssl_key| is a raw EVP_PKEY for the same private key than the
-// one which was used to generate the signature.
-// Returns true on success, false otherwise.
-bool CompareSignatureWithOpenSSL(int hash_nid,
-                                 const base::StringPiece& message,
-                                 const base::StringPiece& signature,
-                                 EVP_PKEY* openssl_key) {
-  std::string openssl_signature;
-  if (!SignWithOpenSSL(hash_nid, message, openssl_key, &openssl_signature))
-    return false;
-
-  if (signature.size() != openssl_signature.size()) {
-    LOG(ERROR) << "Signature size mismatch, actual " << signature.size()
-               << ", expected " << openssl_signature.size();
-    return false;
-  }
-  for (size_t n = 0; n < signature.size(); ++n) {
-    if (openssl_signature[n] != signature[n]) {
-      LOG(ERROR) << "Signature byte mismatch at index " << n << "actual "
-                 << signature[n] << ", expected " << openssl_signature[n];
-      LOG(ERROR) << "Actual signature  : "
-                 << base::HexEncode(signature.data(), signature.size());
-      LOG(ERROR) << "Expected signature: "
-                 << base::HexEncode(openssl_signature.data(),
-                                    openssl_signature.size());
-      return false;
-    }
-  }
+  result->resize(sig_len);
   return true;
 }
 
@@ -282,81 +150,84 @@ static const struct {
     {"SHA-512", NID_sha512, SSLPrivateKey::Hash::SHA512},
 };
 
+struct TestKey {
+  const char* cert_file;
+  const char* key_file;
+  android::PrivateKeyType android_key_type;
+  SSLPrivateKey::Type key_type;
+};
+
+static const TestKey kTestKeys[] = {
+    {"client_1.pem", "client_1.pk8", android::PRIVATE_KEY_TYPE_RSA,
+     SSLPrivateKey::Type::RSA},
+    {"client_4.pem", "client_4.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
+     SSLPrivateKey::Type::ECDSA_P256},
+    {"client_5.pem", "client_5.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
+     SSLPrivateKey::Type::ECDSA_P384},
+    {"client_6.pem", "client_6.pk8", android::PRIVATE_KEY_TYPE_ECDSA,
+     SSLPrivateKey::Type::ECDSA_P521},
+};
+
 }  // namespace
 
-TEST(SSLPlatformKeyAndroid, RSA) {
+class SSLPlatformKeyAndroidTest : public testing::TestWithParam<TestKey> {};
+
+TEST_P(SSLPlatformKeyAndroidTest, SignHashes) {
   crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
+  const TestKey& test_key = GetParam();
 
   scoped_refptr<X509Certificate> cert =
-      ImportCertFromFile(GetTestCertsDirectory(), kTestRsaCertificateFile);
+      ImportCertFromFile(GetTestCertsDirectory(), test_key.cert_file);
   ASSERT_TRUE(cert);
-  ScopedJava rsa_key = GetRSATestKeyJava();
-  ASSERT_FALSE(rsa_key.is_null());
+
+  std::string key_bytes;
+  ASSERT_TRUE(ReadTestFile(test_key.key_file, &key_bytes));
+  ScopedJava java_key =
+      GetPKCS8PrivateKeyJava(test_key.android_key_type, key_bytes);
+  ASSERT_FALSE(java_key.is_null());
 
   scoped_refptr<SSLPrivateKey> wrapper_key =
-      WrapJavaPrivateKey(cert.get(), rsa_key);
+      WrapJavaPrivateKey(cert.get(), java_key);
   ASSERT_TRUE(wrapper_key);
 
-  bssl::UniquePtr<EVP_PKEY> openssl_key = ImportPrivateKeyFile(kTestRsaKeyFile);
+  bssl::UniquePtr<EVP_PKEY> openssl_key = ImportPrivateKeyOpenSSL(key_bytes);
   ASSERT_TRUE(openssl_key);
 
   // Check that the wrapper key returns the correct length and type.
-  EXPECT_EQ(SSLPrivateKey::Type::RSA, wrapper_key->GetType());
+  EXPECT_EQ(test_key.key_type, wrapper_key->GetType());
   EXPECT_EQ(static_cast<size_t>(EVP_PKEY_size(openssl_key.get())),
             wrapper_key->GetMaxSignatureLengthInBytes());
 
   // Test signing against each hash.
   for (const auto& hash : kHashes) {
-    SCOPED_TRACE(hash.name);
-
-    const EVP_MD* md = EVP_get_digestbynid(hash.nid);
-    ASSERT_TRUE(md);
-    std::string digest(EVP_MD_size(md), 'a');
-
-    std::string signature;
-    DoKeySigningWithWrapper(wrapper_key.get(), hash.hash, digest, &signature);
-    ASSERT_TRUE(CompareSignatureWithOpenSSL(hash.nid, digest, signature,
-                                            openssl_key.get()));
-  }
-}
-
-TEST(SSLPlatformKeyAndroid, ECDSA) {
-  crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
-
-  scoped_refptr<X509Certificate> cert =
-      ImportCertFromFile(GetTestCertsDirectory(), kTestEcdsaCertificateFile);
-  ASSERT_TRUE(cert);
-  ScopedJava ecdsa_key = GetECDSATestKeyJava();
-  ASSERT_FALSE(ecdsa_key.is_null());
-
-  scoped_refptr<SSLPrivateKey> wrapper_key =
-      WrapJavaPrivateKey(cert.get(), ecdsa_key);
-  ASSERT_TRUE(wrapper_key);
-
-  bssl::UniquePtr<EVP_PKEY> openssl_key =
-      ImportPrivateKeyFile(kTestEcdsaKeyFile);
-  ASSERT_TRUE(openssl_key);
-
-  // Check that the wrapper key returns the correct length and type.
-  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P256, wrapper_key->GetType());
-  EXPECT_EQ(static_cast<size_t>(EVP_PKEY_size(openssl_key.get())),
-            wrapper_key->GetMaxSignatureLengthInBytes());
-
-  // Test signing against each hash.
-  for (const auto& hash : kHashes) {
-    // ECDSA does not sign MD5-SHA1.
-    if (hash.nid == NID_md5_sha1)
+    // Only RSA signs MD5-SHA1.
+    if (test_key.key_type != SSLPrivateKey::Type::RSA &&
+        hash.nid == NID_md5_sha1) {
       continue;
+    }
 
     SCOPED_TRACE(hash.name);
+
     const EVP_MD* md = EVP_get_digestbynid(hash.nid);
     ASSERT_TRUE(md);
     std::string digest(EVP_MD_size(md), 'a');
 
     std::string signature;
     DoKeySigningWithWrapper(wrapper_key.get(), hash.hash, digest, &signature);
-    ASSERT_TRUE(VerifyTestECDSASignature(digest, signature));
+    EXPECT_TRUE(VerifyWithOpenSSL(md, digest, openssl_key.get(), signature));
+
+    // RSA signing is deterministic, so further check the signature matches.
+    if (test_key.key_type == SSLPrivateKey::Type::RSA) {
+      std::string openssl_signature;
+      ASSERT_TRUE(
+          SignWithOpenSSL(md, digest, openssl_key.get(), &openssl_signature));
+      EXPECT_EQ(openssl_signature, signature);
+    }
   }
 }
+
+INSTANTIATE_TEST_CASE_P(,
+                        SSLPlatformKeyAndroidTest,
+                        testing::ValuesIn(kTestKeys));
 
 }  // namespace net

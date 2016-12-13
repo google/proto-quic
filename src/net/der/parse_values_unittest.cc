@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/der/parse_values.h"
+
 #include <stdint.h>
 
 #include "base/macros.h"
-#include "net/der/parse_values.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

@@ -5,15 +5,16 @@
 #include "net/quic/core/congestion_control/general_loss_algorithm.h"
 
 #include <algorithm>
+#include <cstdint>
 
 #include "base/logging.h"
+#include "base/stl_util.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
 
 namespace net {
 namespace test {

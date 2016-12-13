@@ -74,14 +74,6 @@ class Other {
   static void lock() {}
 };
 
-class NonIterators {
-  // begin()/end() and friends are renamed if they don't return an iterator.
-  void begin() {}
-  int end() { return 0; }
-  void rbegin() {}
-  int rend() { return 0; }
-};
-
 // Test that the actual method definition is also updated.
 void Task::doTheWork() {
   reallyDoTheWork();

@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_PROOF_VERIFIER_H_
-#define NET_QUIC_CRYPTO_PROOF_VERIFIER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_PROOF_VERIFIER_H_
+#define NET_QUIC_CORE_CRYPTO_PROOF_VERIFIER_H_
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // ProofVerifyDetails is an abstract class that acts as a container for any
 // implementation specific details that a ProofVerifier wishes to return. These
 // details are saved in the CachedState for the origin in question.
-class NET_EXPORT_PRIVATE ProofVerifyDetails {
+class QUIC_EXPORT_PRIVATE ProofVerifyDetails {
  public:
   virtual ~ProofVerifyDetails() {}
 
@@ -29,14 +29,14 @@ class NET_EXPORT_PRIVATE ProofVerifyDetails {
 
 // ProofVerifyContext is an abstract class that acts as a container for any
 // implementation specific context that a ProofVerifier needs.
-class NET_EXPORT_PRIVATE ProofVerifyContext {
+class QUIC_EXPORT_PRIVATE ProofVerifyContext {
  public:
   virtual ~ProofVerifyContext() {}
 };
 
 // ProofVerifierCallback provides a generic mechanism for a ProofVerifier to
 // call back after an asynchronous verification.
-class NET_EXPORT_PRIVATE ProofVerifierCallback {
+class QUIC_EXPORT_PRIVATE ProofVerifierCallback {
  public:
   virtual ~ProofVerifierCallback() {}
 
@@ -53,7 +53,7 @@ class NET_EXPORT_PRIVATE ProofVerifierCallback {
 
 // A ProofVerifier checks the signature on a server config, and the certificate
 // chain that backs the public key.
-class NET_EXPORT_PRIVATE ProofVerifier {
+class QUIC_EXPORT_PRIVATE ProofVerifier {
  public:
   virtual ~ProofVerifier() {}
 
@@ -110,4 +110,4 @@ class NET_EXPORT_PRIVATE ProofVerifier {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_PROOF_VERIFIER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_PROOF_VERIFIER_H_

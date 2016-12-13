@@ -23,7 +23,7 @@
 #include "net/http/http_server_properties_impl.h"
 
 namespace base {
-class SequencedTaskRunner;
+class SingleThreadTaskRunner;
 }
 
 namespace net {
@@ -84,7 +84,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // Must be constructed on the Pref thread.
   HttpServerPropertiesManager(
       PrefDelegate* pref_delegate,
-      scoped_refptr<base::SequencedTaskRunner> network_task_runner);
+      scoped_refptr<base::SingleThreadTaskRunner> network_task_runner);
   ~HttpServerPropertiesManager() override;
 
   // Initialize on Network thread.
@@ -277,7 +277,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // Pref thread
   // -----------
 
-  const scoped_refptr<base::SequencedTaskRunner> pref_task_runner_;
+  const scoped_refptr<base::SingleThreadTaskRunner> pref_task_runner_;
 
   base::WeakPtr<HttpServerPropertiesManager> pref_weak_ptr_;
 
@@ -291,7 +291,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // Network thread
   // --------------
 
-  const scoped_refptr<base::SequencedTaskRunner> network_task_runner_;
+  const scoped_refptr<base::SingleThreadTaskRunner> network_task_runner_;
 
   // Used to post |prefs::kHttpServerProperties| pref update tasks.
   std::unique_ptr<base::OneShotTimer> network_prefs_update_timer_;

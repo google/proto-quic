@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_CLIENT_PROMISED_INFO_H_
-#define NET_QUIC_QUIC_CLIENT_PROMISED_INFO_H_
+#ifndef NET_QUIC_CORE_QUIC_CLIENT_PROMISED_INFO_H_
+#define NET_QUIC_CORE_QUIC_CLIENT_PROMISED_INFO_H_
 
-#include <sys/types.h>
 #include <string>
+#include <sys/types.h>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_client_session_base.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_spdy_stream.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
@@ -28,7 +28,7 @@ class QuicClientPromisedInfoPeer;
 // stream from the time a PUSH_PROMISE is received until rendezvous
 // between the promised response and the corresponding client request
 // is complete.
-class NET_EXPORT_PRIVATE QuicClientPromisedInfo
+class QUIC_EXPORT_PRIVATE QuicClientPromisedInfo
     : public QuicClientPushPromiseIndex::TryHandle {
  public:
   // Interface to QuicSpdyClientStream
@@ -111,4 +111,4 @@ class NET_EXPORT_PRIVATE QuicClientPromisedInfo
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CLIENT_PROMISED_INFO_H_
+#endif  // NET_QUIC_CORE_QUIC_CLIENT_PROMISED_INFO_H_

@@ -166,12 +166,17 @@ DEBIAN_PACKAGES="\
   libx11-xcb1
   libx11-xcb-dev
   libxau6
+  libaudit1
   libxau-dev
   libxcb1
   libxcb1-dev
+  libxcb-dri2-0
+  libxcb-dri3-0
   libxcb-glx0
+  libxcb-present0
   libxcb-render0
   libxcb-render0-dev
+  libxcb-sync1
   libxcb-shm0
   libxcb-shm0-dev
   libxcomposite1
@@ -196,6 +201,7 @@ DEBIAN_PACKAGES="\
   libxrandr-dev
   libxrender1
   libxrender-dev
+  libxshmfence1
   libxss1
   libxss-dev
   libxt6

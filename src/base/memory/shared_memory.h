@@ -34,7 +34,10 @@ class FilePath;
 
 // Options for creating a shared memory object.
 struct BASE_EXPORT SharedMemoryCreateOptions {
-#if !(defined(OS_MACOSX) && !defined(OS_IOS))
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  // The type of OS primitive that should back the SharedMemory object.
+  SharedMemoryHandle::Type type = SharedMemoryHandle::MACH;
+#else
   // DEPRECATED (crbug.com/345734):
   // If NULL, the object is anonymous.  This pointer is owned by the caller
   // and must live through the call to Create().
@@ -46,7 +49,7 @@ struct BASE_EXPORT SharedMemoryCreateOptions {
   // shared memory must not exist.  This flag is meaningless unless
   // name_deprecated is non-NULL.
   bool open_existing_deprecated = false;
-#endif  // !(defined(OS_MACOSX) && !defined(OS_IOS))
+#endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 
   // Size of the shared memory object to be created.
   // When opening an existing object, this has no effect.
@@ -101,7 +104,7 @@ class BASE_EXPORT SharedMemory {
   // The caller is responsible for destroying the duplicated OS primitive.
   static SharedMemoryHandle DuplicateHandle(const SharedMemoryHandle& handle);
 
-#if defined(OS_POSIX) && !(defined(OS_MACOSX) && !defined(OS_IOS))
+#if defined(OS_POSIX)
   // This method requires that the SharedMemoryHandle is backed by a POSIX fd.
   static int GetFdFromSharedMemoryHandle(const SharedMemoryHandle& handle);
 #endif
@@ -255,13 +258,16 @@ class BASE_EXPORT SharedMemory {
  private:
 #if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID) && \
     !(defined(OS_MACOSX) && !defined(OS_IOS))
-  bool PrepareMapFile(ScopedFILE fp, ScopedFD readonly);
   bool FilePathForMemoryName(const std::string& mem_name, FilePath* path);
 #endif
+
   enum ShareMode {
     SHARE_READONLY,
     SHARE_CURRENT_MODE,
   };
+
+  bool Share(SharedMemoryHandle* new_handle, ShareMode share_mode);
+
   bool ShareToProcessCommon(ProcessHandle process,
                             SharedMemoryHandle* new_handle,
                             bool close_self,
@@ -276,6 +282,12 @@ class BASE_EXPORT SharedMemory {
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
   // The OS primitive that backs the shared memory region.
   SharedMemoryHandle shm_;
+
+  // The mechanism by which the memory is mapped. Only valid if |memory_| is not
+  // |nullptr|.
+  SharedMemoryHandle::Type mapped_memory_mechanism_;
+
+  int readonly_mapped_file_;
 #elif defined(OS_POSIX)
   int                mapped_file_;
   int                readonly_mapped_file_;

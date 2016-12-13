@@ -28,7 +28,7 @@ namespace net {
 string SpdyUtils::SerializeUncompressedHeaders(const SpdyHeaderBlock& headers) {
   size_t length = SpdyFramer::GetSerializedLength(&headers);
   SpdyFrameBuilder builder(length);
-  SpdyFramer framer;
+  SpdyFramer framer(SpdyFramer::DISABLE_COMPRESSION);
   framer.SerializeHeaderBlockWithoutCompression(&builder, headers);
   SpdySerializedFrame block(builder.take());
   return string(block.data(), length);
@@ -39,7 +39,7 @@ bool SpdyUtils::ParseHeaders(const char* data,
                              uint32_t data_len,
                              int64_t* content_length,
                              SpdyHeaderBlock* headers) {
-  SpdyFramer framer;
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   if (!framer.ParseHeaderBlockInBuffer(data, data_len, headers) ||
       headers->empty()) {
     return false;  // Headers were invalid.
@@ -90,7 +90,7 @@ bool SpdyUtils::ParseTrailers(const char* data,
                               uint32_t data_len,
                               size_t* final_byte_offset,
                               SpdyHeaderBlock* trailers) {
-  SpdyFramer framer;
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   if (!framer.ParseHeaderBlockInBuffer(data, data_len, trailers) ||
       trailers->empty()) {
     DVLOG(1) << "Request Trailers are invalid.";

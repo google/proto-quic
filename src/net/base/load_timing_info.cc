@@ -20,4 +20,3 @@ LoadTimingInfo::LoadTimingInfo(const LoadTimingInfo& other) = default;
 LoadTimingInfo::~LoadTimingInfo() {}
 
 }  // namespace net
-

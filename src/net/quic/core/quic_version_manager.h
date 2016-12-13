@@ -6,11 +6,12 @@
 #define NET_QUIC_CORE_QUIC_VERSION_MANAGER_H_
 
 #include "net/quic/core/quic_versions.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Used to generate filtered supported versions based on flags.
-class NET_EXPORT_PRIVATE QuicVersionManager {
+class QUIC_EXPORT_PRIVATE QuicVersionManager {
  public:
   explicit QuicVersionManager(QuicVersionVector supported_versions);
   virtual ~QuicVersionManager();

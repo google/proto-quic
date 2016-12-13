@@ -50,14 +50,14 @@ void CryptoSecretBoxer::SetKeys(const std::vector<string>& keys) {
   for (const string& key : keys) {
     DCHECK_EQ(kKeySize, key.size());
   }
-  base::AutoLock l(lock_);
+  QuicWriterMutexLock l(&lock_);
   keys_.swap(copy);
 }
 
 string CryptoSecretBoxer::Box(QuicRandom* rand, StringPiece plaintext) const {
   std::unique_ptr<Aes128Gcm12Encrypter> encrypter(new Aes128Gcm12Encrypter());
   {
-    base::AutoLock l(lock_);
+    QuicReaderMutexLock l(&lock_);
     DCHECK_EQ(kKeySize, keys_[0].size());
     if (!encrypter->SetKey(keys_[0])) {
       DLOG(DFATAL) << "CryptoSecretBoxer's encrypter->SetKey failed.";
@@ -104,7 +104,7 @@ bool CryptoSecretBoxer::Unbox(StringPiece ciphertext,
   size_t plaintext_length = 0;
   bool ok = false;
   {
-    base::AutoLock l(lock_);
+    QuicReaderMutexLock l(&lock_);
     for (const string& key : keys_) {
       if (decrypter->SetKey(key)) {
         decrypter->SetNoncePrefix(nonce_prefix);

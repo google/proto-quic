@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
-#define NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
+#ifndef NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_FACTORY_H_
+#define NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_FACTORY_H_
 
 #include <memory>
 
@@ -68,4 +68,4 @@ class NET_EXPORT DhcpProxyScriptFetcherFactory {
 
 }  // namespace net
 
-#endif  // NET_PROXY_DHCP_SCRIPT_FETCHER_FACTORY_H_
+#endif  // NET_PROXY_DHCP_PROXY_SCRIPT_FETCHER_FACTORY_H_

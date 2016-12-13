@@ -37,8 +37,8 @@
 // mode is ended via |FinishBatchOperations|, the current packet
 // will be serialzied, even if it is not full.
 
-#ifndef NET_QUIC_QUIC_PACKET_GENERATOR_H_
-#define NET_QUIC_QUIC_PACKET_GENERATOR_H_
+#ifndef NET_QUIC_CORE_QUIC_PACKET_GENERATOR_H_
+#define NET_QUIC_CORE_QUIC_PACKET_GENERATOR_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -46,11 +46,11 @@
 #include <list>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -58,9 +58,9 @@ namespace test {
 class QuicPacketGeneratorPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE QuicPacketGenerator {
+class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
  public:
-  class NET_EXPORT_PRIVATE DelegateInterface
+  class QUIC_EXPORT_PRIVATE DelegateInterface
       : public QuicPacketCreator::DelegateInterface {
    public:
     ~DelegateInterface() override {}
@@ -217,4 +217,4 @@ class NET_EXPORT_PRIVATE QuicPacketGenerator {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_PACKET_GENERATOR_H_
+#endif  // NET_QUIC_CORE_QUIC_PACKET_GENERATOR_H_

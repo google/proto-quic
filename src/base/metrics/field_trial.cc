@@ -12,7 +12,6 @@
 #include "base/command_line.h"
 #include "base/logging.h"
 #include "base/metrics/field_trial_param_associator.h"
-#include "base/pickle.h"
 #include "base/process/memory.h"
 #include "base/rand_util.h"
 #include "base/strings/string_number_conversions.h"
@@ -68,70 +67,6 @@ const uint32_t kFieldTrialType = 0xABA17E13 + 2;  // SHA1(FieldTrialEntry) v2
 #if !defined(OS_NACL)
 const size_t kFieldTrialAllocationSize = 128 << 10;  // 128 KiB
 #endif
-
-// We create one FieldTrialEntry per field trial in shared memory, via
-// AddToAllocatorWhileLocked. The FieldTrialEntry is followed by a base::Pickle
-// object that we unpickle and read from. Any changes to this structure requires
-// a bump in kFieldTrialType id defined above.
-struct FieldTrialEntry {
-  // Expected size for 32/64-bit check.
-  static constexpr size_t kExpectedInstanceSize = 8;
-
-  // Whether or not this field trial is activated. This is really just a boolean
-  // but marked as a uint32_t for portability reasons.
-  uint32_t activated;
-
-  // Size of the pickled structure, NOT the total size of this entry.
-  uint32_t pickle_size;
-
-  // Returns an iterator over the data containing names and params.
-  PickleIterator GetPickleIterator() const {
-    const char* src =
-        reinterpret_cast<const char*>(this) + sizeof(FieldTrialEntry);
-
-    Pickle pickle(src, pickle_size);
-    return PickleIterator(pickle);
-  }
-
-  // Takes the iterator and writes out the first two items into |trial_name| and
-  // |group_name|.
-  bool ReadStringPair(PickleIterator* iter,
-                      StringPiece* trial_name,
-                      StringPiece* group_name) const {
-    if (!iter->ReadStringPiece(trial_name))
-      return false;
-    if (!iter->ReadStringPiece(group_name))
-      return false;
-    return true;
-  }
-
-  // Calling this is only valid when the entry is initialized. That is, it
-  // resides in shared memory and has a pickle containing the trial name and
-  // group name following it.
-  bool GetTrialAndGroupName(StringPiece* trial_name,
-                            StringPiece* group_name) const {
-    PickleIterator iter = GetPickleIterator();
-    return ReadStringPair(&iter, trial_name, group_name);
-  }
-
-  // Calling this is only valid when the entry is initialized as well. Reads the
-  // parameters following the trial and group name and stores them as key-value
-  // mappings in |params|.
-  bool GetParams(std::map<std::string, std::string>* params) const {
-    PickleIterator iter = GetPickleIterator();
-    StringPiece tmp;
-    if (!ReadStringPair(&iter, &tmp, &tmp))
-      return false;
-
-    while (true) {
-      StringPiece key;
-      StringPiece value;
-      if (!ReadStringPair(&iter, &key, &value))
-        return key.empty();  // Non-empty is bad: got one of a pair.
-      (*params)[key.as_string()] = value.as_string();
-    }
-  }
-};
 
 // Writes out string1 and then string2 to pickle.
 bool WriteStringPair(Pickle* pickle,
@@ -313,6 +248,49 @@ FieldTrial::State::State() : activated(false) {}
 FieldTrial::State::State(const State& other) = default;
 
 FieldTrial::State::~State() {}
+
+bool FieldTrial::FieldTrialEntry::GetTrialAndGroupName(
+    StringPiece* trial_name,
+    StringPiece* group_name) const {
+  PickleIterator iter = GetPickleIterator();
+  return ReadStringPair(&iter, trial_name, group_name);
+}
+
+bool FieldTrial::FieldTrialEntry::GetParams(
+    std::map<std::string, std::string>* params) const {
+  PickleIterator iter = GetPickleIterator();
+  StringPiece tmp;
+  // Skip reading trial and group name.
+  if (!ReadStringPair(&iter, &tmp, &tmp))
+    return false;
+
+  while (true) {
+    StringPiece key;
+    StringPiece value;
+    if (!ReadStringPair(&iter, &key, &value))
+      return key.empty();  // Non-empty is bad: got one of a pair.
+    (*params)[key.as_string()] = value.as_string();
+  }
+}
+
+PickleIterator FieldTrial::FieldTrialEntry::GetPickleIterator() const {
+  const char* src =
+      reinterpret_cast<const char*>(this) + sizeof(FieldTrialEntry);
+
+  Pickle pickle(src, pickle_size);
+  return PickleIterator(pickle);
+}
+
+bool FieldTrial::FieldTrialEntry::ReadStringPair(
+    PickleIterator* iter,
+    StringPiece* trial_name,
+    StringPiece* group_name) const {
+  if (!iter->ReadStringPiece(trial_name))
+    return false;
+  if (!iter->ReadStringPiece(group_name))
+    return false;
+  return true;
+}
 
 void FieldTrial::Disable() {
   DCHECK(!group_reported_);
@@ -742,8 +720,9 @@ void FieldTrialList::GetInitiallyActiveFieldTrials(
   FieldTrial::FieldTrialRef ref;
   while ((ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
          SharedPersistentMemoryAllocator::kReferenceNull) {
-    const FieldTrialEntry* entry =
-        allocator->GetAsObject<const FieldTrialEntry>(ref, kFieldTrialType);
+    const FieldTrial::FieldTrialEntry* entry =
+        allocator->GetAsObject<const FieldTrial::FieldTrialEntry>(
+            ref, kFieldTrialType);
 
     StringPiece trial_name;
     StringPiece group_name;
@@ -985,10 +964,12 @@ void FieldTrialList::OnGroupFinalized(bool is_locked, FieldTrial* field_trial) {
   if (!global_)
     return;
   if (is_locked) {
-    AddToAllocatorWhileLocked(field_trial);
+    AddToAllocatorWhileLocked(global_->field_trial_allocator_.get(),
+                              field_trial);
   } else {
     AutoLock auto_lock(global_->lock_);
-    AddToAllocatorWhileLocked(field_trial);
+    AddToAllocatorWhileLocked(global_->field_trial_allocator_.get(),
+                              field_trial);
   }
 }
 
@@ -1047,13 +1028,14 @@ bool FieldTrialList::GetParamsFromSharedMemory(
   if (!field_trial->ref_)
     return false;
 
-  const FieldTrialEntry* entry =
-      global_->field_trial_allocator_->GetAsObject<const FieldTrialEntry>(
-          field_trial->ref_, kFieldTrialType);
+  const FieldTrial::FieldTrialEntry* entry =
+      global_->field_trial_allocator_
+          ->GetAsObject<const FieldTrial::FieldTrialEntry>(field_trial->ref_,
+                                                           kFieldTrialType);
 
   size_t allocated_size =
       global_->field_trial_allocator_->GetAllocSize(field_trial->ref_);
-  size_t actual_size = sizeof(FieldTrialEntry) + entry->pickle_size;
+  size_t actual_size = sizeof(FieldTrial::FieldTrialEntry) + entry->pickle_size;
   if (allocated_size < actual_size)
     return false;
 
@@ -1083,9 +1065,9 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
   while ((prev_ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
          FieldTrialAllocator::kReferenceNull) {
     // Get the existing field trial entry in shared memory.
-    const FieldTrialEntry* prev_entry =
-        allocator->GetAsObject<const FieldTrialEntry>(prev_ref,
-                                                      kFieldTrialType);
+    const FieldTrial::FieldTrialEntry* prev_entry =
+        allocator->GetAsObject<const FieldTrial::FieldTrialEntry>(
+            prev_ref, kFieldTrialType);
     StringPiece trial_name;
     StringPiece group_name;
     if (!prev_entry->GetTrialAndGroupName(&trial_name, &group_name))
@@ -1095,17 +1077,19 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
     Pickle pickle;
     pickle.WriteString(trial_name);
     pickle.WriteString(group_name);
-    size_t total_size = sizeof(FieldTrialEntry) + pickle.size();
+    size_t total_size = sizeof(FieldTrial::FieldTrialEntry) + pickle.size();
     FieldTrial::FieldTrialRef new_ref =
         allocator->Allocate(total_size, kFieldTrialType);
-    FieldTrialEntry* new_entry =
-        allocator->GetAsObject<FieldTrialEntry>(new_ref, kFieldTrialType);
+    FieldTrial::FieldTrialEntry* new_entry =
+        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(new_ref,
+                                                            kFieldTrialType);
     new_entry->activated = prev_entry->activated;
     new_entry->pickle_size = pickle.size();
 
     // TODO(lawrencewu): Modify base::Pickle to be able to write over a section
     // in memory, so we can avoid this memcpy.
-    char* dst = reinterpret_cast<char*>(new_entry) + sizeof(FieldTrialEntry);
+    char* dst = reinterpret_cast<char*>(new_entry) +
+                sizeof(FieldTrial::FieldTrialEntry);
     memcpy(dst, pickle.data(), pickle.size());
 
     // Update the ref on the field trial and add it to the list to be made
@@ -1121,6 +1105,34 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
   for (const auto& ref : new_refs) {
     allocator->MakeIterable(ref);
   }
+}
+
+// static
+void FieldTrialList::DumpAllFieldTrialsToPersistentAllocator(
+    PersistentMemoryAllocator* allocator) {
+  if (!global_)
+    return;
+  AutoLock auto_lock(global_->lock_);
+  for (const auto& registered : global_->registered_) {
+    AddToAllocatorWhileLocked(allocator, registered.second);
+  }
+}
+
+// static
+std::vector<const FieldTrial::FieldTrialEntry*>
+FieldTrialList::GetAllFieldTrialsFromPersistentAllocator(
+    PersistentMemoryAllocator const& allocator) {
+  std::vector<const FieldTrial::FieldTrialEntry*> entries;
+  FieldTrial::FieldTrialRef ref;
+  FieldTrialAllocator::Iterator iter(&allocator);
+  while ((ref = iter.GetNextOfType(kFieldTrialType)) !=
+         FieldTrialAllocator::kReferenceNull) {
+    const FieldTrial::FieldTrialEntry* entry =
+        allocator.GetAsObject<const FieldTrial::FieldTrialEntry>(
+            ref, kFieldTrialType);
+    entries.push_back(entry);
+  }
+  return entries;
 }
 
 #if defined(OS_WIN)
@@ -1159,8 +1171,9 @@ bool FieldTrialList::CreateTrialsFromSharedMemory(
   FieldTrial::FieldTrialRef ref;
   while ((ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
          FieldTrialAllocator::kReferenceNull) {
-    const FieldTrialEntry* entry =
-        shalloc->GetAsObject<const FieldTrialEntry>(ref, kFieldTrialType);
+    const FieldTrial::FieldTrialEntry* entry =
+        shalloc->GetAsObject<const FieldTrial::FieldTrialEntry>(
+            ref, kFieldTrialType);
 
     StringPiece trial_name;
     StringPiece group_name;
@@ -1210,7 +1223,8 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
 
   // Add all existing field trials.
   for (const auto& registered : global_->registered_) {
-    AddToAllocatorWhileLocked(registered.second);
+    AddToAllocatorWhileLocked(global_->field_trial_allocator_.get(),
+                              registered.second);
   }
 
   // Add all existing features.
@@ -1227,9 +1241,9 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
 #endif
 
 // static
-void FieldTrialList::AddToAllocatorWhileLocked(FieldTrial* field_trial) {
-  FieldTrialAllocator* allocator = global_->field_trial_allocator_.get();
-
+void FieldTrialList::AddToAllocatorWhileLocked(
+    PersistentMemoryAllocator* allocator,
+    FieldTrial* field_trial) {
   // Don't do anything if the allocator hasn't been instantiated yet.
   if (allocator == nullptr)
     return;
@@ -1254,7 +1268,7 @@ void FieldTrialList::AddToAllocatorWhileLocked(FieldTrial* field_trial) {
     return;
   }
 
-  size_t total_size = sizeof(FieldTrialEntry) + pickle.size();
+  size_t total_size = sizeof(FieldTrial::FieldTrialEntry) + pickle.size();
   FieldTrial::FieldTrialRef ref =
       allocator->Allocate(total_size, kFieldTrialType);
   if (ref == FieldTrialAllocator::kReferenceNull) {
@@ -1262,14 +1276,15 @@ void FieldTrialList::AddToAllocatorWhileLocked(FieldTrial* field_trial) {
     return;
   }
 
-  FieldTrialEntry* entry =
-      allocator->GetAsObject<FieldTrialEntry>(ref, kFieldTrialType);
+  FieldTrial::FieldTrialEntry* entry =
+      allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref, kFieldTrialType);
   entry->activated = trial_state.activated;
   entry->pickle_size = pickle.size();
 
   // TODO(lawrencewu): Modify base::Pickle to be able to write over a section in
   // memory, so we can avoid this memcpy.
-  char* dst = reinterpret_cast<char*>(entry) + sizeof(FieldTrialEntry);
+  char* dst =
+      reinterpret_cast<char*>(entry) + sizeof(FieldTrial::FieldTrialEntry);
   memcpy(dst, pickle.data(), pickle.size());
 
   allocator->MakeIterable(ref);
@@ -1289,13 +1304,15 @@ void FieldTrialList::ActivateFieldTrialEntryWhileLocked(
   if (ref == FieldTrialAllocator::kReferenceNull) {
     // It's fine to do this even if the allocator hasn't been instantiated
     // yet -- it'll just return early.
-    AddToAllocatorWhileLocked(field_trial);
+    AddToAllocatorWhileLocked(global_->field_trial_allocator_.get(),
+                              field_trial);
   } else {
     // It's also okay to do this even though the callee doesn't have a lock --
     // the only thing that happens on a stale read here is a slight performance
     // hit from the child re-synchronizing activation state.
-    FieldTrialEntry* entry =
-        allocator->GetAsObject<FieldTrialEntry>(ref, kFieldTrialType);
+    FieldTrial::FieldTrialEntry* entry =
+        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref,
+                                                            kFieldTrialType);
     entry->activated = true;
   }
 }

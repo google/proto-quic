@@ -7,8 +7,10 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "base/base_export.h"
@@ -82,7 +84,7 @@ class BASE_EXPORT TraceConfig {
     HeapProfiler heap_profiler_options;
   };
 
-  class EventFilterConfig {
+  class BASE_EXPORT EventFilterConfig {
    public:
     EventFilterConfig(const std::string& predicate_name);
     EventFilterConfig(const EventFilterConfig& tc);
@@ -94,6 +96,7 @@ class BASE_EXPORT TraceConfig {
     void AddIncludedCategory(const std::string& category);
     void AddExcludedCategory(const std::string& category);
     void SetArgs(std::unique_ptr<base::DictionaryValue> args);
+    bool GetArgAsSet(const char* key, std::unordered_set<std::string>*) const;
 
     bool IsCategoryGroupEnabled(const char* category_group_name) const;
 

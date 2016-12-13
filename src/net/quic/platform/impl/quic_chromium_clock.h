@@ -7,12 +7,13 @@
 
 #include "base/time/time.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Clock to efficiently retrieve an approximately accurate time from an
 // EpollServer.
-class NET_EXPORT_PRIVATE QuicChromiumClock : public QuicClock {
+class QUIC_EXPORT_PRIVATE QuicChromiumClock : public QuicClock {
  public:
   QuicChromiumClock();
   ~QuicChromiumClock() override;

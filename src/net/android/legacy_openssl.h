@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_ANDROID_LEGACY_OPENSSL_H
-#define NET_ANDROID_LEGACY_OPENSSL_H
+#ifndef NET_ANDROID_LEGACY_OPENSSL_H_
+#define NET_ANDROID_LEGACY_OPENSSL_H_
 
 // This file contains a replica of the Android system OpenSSL ABI shipped in
 // Android 4.1.x (API level 16). The ABI may not necessarily be compatible with
@@ -94,4 +94,4 @@ struct AndroidEVP_PKEY {
 }  // namespace android
 }  // namespace net
 
-#endif  // NET_ANDROID_LEGACY_OPENSSL_H
+#endif  // NET_ANDROID_LEGACY_OPENSSL_H_

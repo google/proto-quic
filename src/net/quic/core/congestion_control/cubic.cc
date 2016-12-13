@@ -4,15 +4,13 @@
 
 #include "net/quic/core/congestion_control/cubic.h"
 
-#include <stdint.h>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 #include "base/logging.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
-#include "net/quic/core/quic_time.h"
-
 
 namespace net {
 

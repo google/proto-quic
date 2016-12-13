@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BOUNDED_FILE_NET_LOG_OBSERVER_H_
-#define BOUNDED_FILE_NET_LOG_OBSERVER_H_
+#ifndef NET_LOG_BOUNDED_FILE_NET_LOG_OBSERVER_H_
+#define NET_LOG_BOUNDED_FILE_NET_LOG_OBSERVER_H_
 
 #include <queue>
 
@@ -132,4 +132,4 @@ class NET_EXPORT BoundedFileNetLogObserver : public NetLog::ThreadSafeObserver {
 
 }  // namespace net
 
-#endif  // BOUNDED_FILE_NET_LOG_OBSERVER_H_
+#endif  // NET_LOG_BOUNDED_FILE_NET_LOG_OBSERVER_H_

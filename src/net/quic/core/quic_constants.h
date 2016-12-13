@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_CONSTANTS_H_
-#define NET_QUIC_QUIC_CONSTANTS_H_
+#ifndef NET_QUIC_CORE_QUIC_CONSTANTS_H_
+#define NET_QUIC_CORE_QUIC_CONSTANTS_H_
 
 #include <stddef.h>
+
 #include <cstdint>
 #include <limits>
 
 #include "base/macros.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 // Definitions of constant values used throughout the QUIC code.
 
@@ -93,7 +95,7 @@ const QuicStreamId kHeadersStreamId = 3;
 
 // Header key used to identify final offset on data stream when sending HTTP/2
 // trailing headers over QUIC.
-NET_EXPORT_PRIVATE extern const char* const kFinalOffsetHeaderKey;
+QUIC_EXPORT_PRIVATE extern const char* const kFinalOffsetHeaderKey;
 
 // Maximum delayed ack time, in ms.
 const int64_t kMaxDelayedAckTimeMs = 25;
@@ -184,4 +186,4 @@ const QuicPacketNumber kMaxPacketGap = 5000;
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CONSTANTS_H_
+#endif  // NET_QUIC_CORE_QUIC_CONSTANTS_H_

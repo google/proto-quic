@@ -44,21 +44,31 @@ class TestJobProtocolHandler : public URLRequestJobFactory::ProtocolHandler {
 GURL URLRequestTestJob::test_url_1() {
   return GURL("test:url1");
 }
+
 GURL URLRequestTestJob::test_url_2() {
   return GURL("test:url2");
 }
+
 GURL URLRequestTestJob::test_url_3() {
   return GURL("test:url3");
 }
+
 GURL URLRequestTestJob::test_url_4() {
   return GURL("test:url4");
 }
+
+GURL URLRequestTestJob::test_url_auto_advance_async_reads_1() {
+  return GURL("test:url_auto_advance_async_reads_1");
+}
+
 GURL URLRequestTestJob::test_url_error() {
   return GURL("test:error");
 }
+
 GURL URLRequestTestJob::test_url_redirect_to_url_1() {
   return GURL("test:redirect_to_1");
 }
+
 GURL URLRequestTestJob::test_url_redirect_to_url_2() {
   return GURL("test:redirect_to_2");
 }
@@ -133,15 +143,7 @@ URLRequestTestJob::CreateProtocolHandler() {
 
 URLRequestTestJob::URLRequestTestJob(URLRequest* request,
                                      NetworkDelegate* network_delegate)
-    : URLRequestJob(request, network_delegate),
-      auto_advance_(false),
-      stage_(WAITING),
-      priority_(DEFAULT_PRIORITY),
-      offset_(0),
-      async_buf_(NULL),
-      async_buf_size_(0),
-      response_headers_length_(0),
-      weak_factory_(this) {}
+    : URLRequestTestJob(request, network_delegate, false) {}
 
 URLRequestTestJob::URLRequestTestJob(URLRequest* request,
                                      NetworkDelegate* network_delegate,
@@ -154,6 +156,7 @@ URLRequestTestJob::URLRequestTestJob(URLRequest* request,
       async_buf_(NULL),
       async_buf_size_(0),
       response_headers_length_(0),
+      async_reads_(false),
       weak_factory_(this) {}
 
 URLRequestTestJob::URLRequestTestJob(URLRequest* request,
@@ -167,12 +170,13 @@ URLRequestTestJob::URLRequestTestJob(URLRequest* request,
       priority_(DEFAULT_PRIORITY),
       response_data_(response_data),
       offset_(0),
-      async_buf_(NULL),
+      async_buf_(nullptr),
       async_buf_size_(0),
       response_headers_(new net::HttpResponseHeaders(
           net::HttpUtil::AssembleRawHeaders(response_headers.c_str(),
                                             response_headers.size()))),
       response_headers_length_(response_headers.size()),
+      async_reads_(false),
       weak_factory_(this) {}
 
 URLRequestTestJob::~URLRequestTestJob() {
@@ -204,18 +208,22 @@ void URLRequestTestJob::Start() {
 void URLRequestTestJob::StartAsync() {
   if (!response_headers_.get()) {
     SetResponseHeaders(test_headers());
-    if (request_->url().spec() == test_url_1().spec()) {
+    if (request_->url() == test_url_1()) {
       response_data_ = test_data_1();
       stage_ = DATA_AVAILABLE;  // Simulate a synchronous response for this one.
-    } else if (request_->url().spec() == test_url_2().spec()) {
+    } else if (request_->url() == test_url_2()) {
       response_data_ = test_data_2();
-    } else if (request_->url().spec() == test_url_3().spec()) {
+    } else if (request_->url() == test_url_3()) {
       response_data_ = test_data_3();
-    } else if (request_->url().spec() == test_url_4().spec()) {
+    } else if (request_->url() == test_url_4()) {
       response_data_ = test_data_4();
-    } else if (request_->url().spec() == test_url_redirect_to_url_1().spec()) {
+    } else if (request_->url() == test_url_auto_advance_async_reads_1()) {
+      response_data_ = test_data_1();
+      stage_ = DATA_AVAILABLE;  // Data is available immediately.
+      async_reads_ = true;      // All reads complete asynchronously.
+    } else if (request_->url() == test_url_redirect_to_url_1()) {
       SetResponseHeaders(test_redirect_to_url_1_headers());
-    } else if (request_->url().spec() == test_url_redirect_to_url_2().spec()) {
+    } else if (request_->url() == test_url_redirect_to_url_2()) {
       SetResponseHeaders(test_redirect_to_url_2_headers());
     } else {
       AdvanceJob();
@@ -243,24 +251,33 @@ void URLRequestTestJob::SetResponseHeaders(
   response_headers_length_ = response_headers.size();
 }
 
+int URLRequestTestJob::CopyDataForRead(IOBuffer* buf, int buf_size) {
+  int bytes_read = 0;
+  if (offset_ < static_cast<int>(response_data_.length())) {
+    bytes_read = buf_size;
+    if (bytes_read + offset_ > static_cast<int>(response_data_.length()))
+      bytes_read = static_cast<int>(response_data_.length()) - offset_;
+
+    memcpy(buf->data(), &response_data_.c_str()[offset_], bytes_read);
+    offset_ += bytes_read;
+  }
+  return bytes_read;
+}
+
 int URLRequestTestJob::ReadRawData(IOBuffer* buf, int buf_size) {
-  if (stage_ == WAITING) {
+  if (stage_ == WAITING || async_reads_) {
     async_buf_ = buf;
     async_buf_size_ = buf_size;
+    if (stage_ != WAITING) {
+      stage_ = WAITING;
+      base::ThreadTaskRunnerHandle::Get()->PostTask(
+          FROM_HERE, base::Bind(&URLRequestTestJob::ProcessNextOperation,
+                                weak_factory_.GetWeakPtr()));
+    }
     return ERR_IO_PENDING;
   }
 
-  if (offset_ >= static_cast<int>(response_data_.length()))
-    return 0;  // done reading
-
-  int to_read = buf_size;
-  if (to_read + offset_ > static_cast<int>(response_data_.length()))
-    to_read = static_cast<int>(response_data_.length()) - offset_;
-
-  memcpy(buf->data(), &response_data_.c_str()[offset_], to_read);
-  offset_ += to_read;
-
-  return to_read;
+  return CopyDataForRead(buf, buf_size);
 }
 
 void URLRequestTestJob::GetResponseInfo(HttpResponseInfo* info) {
@@ -322,7 +339,7 @@ void URLRequestTestJob::ProcessNextOperation() {
       stage_ = DATA_AVAILABLE;
       // OK if ReadRawData wasn't called yet.
       if (async_buf_) {
-        int result = ReadRawData(async_buf_, async_buf_size_);
+        int result = CopyDataForRead(async_buf_, async_buf_size_);
         if (result < 0)
           NOTREACHED() << "Reads should not fail in DATA_AVAILABLE.";
         if (NextReadAsync()) {

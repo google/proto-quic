@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/time/time.h"
 #include "net/der/encode_values.h"
+
+#include "base/time/time.h"
+#include "net/der/parse_values.h"
 
 namespace net {
 
 namespace der {
 
 bool EncodeTimeAsGeneralizedTime(const base::Time& time,
-                                 der::GeneralizedTime* generalized_time) {
+                                 GeneralizedTime* generalized_time) {
   base::Time::Exploded exploded;
   time.UTCExplode(&exploded);
   if (!exploded.HasValidValues())

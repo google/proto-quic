@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_URL_REQUEST_URL_REQUEST_HANGING_READ_JOB_H_
-#define NET_URL_REQUEST_URL_REQUEST_HANGING_READ_JOB_H_
+#ifndef NET_TEST_URL_REQUEST_URL_REQUEST_HANGING_READ_JOB_H_
+#define NET_TEST_URL_REQUEST_URL_REQUEST_HANGING_READ_JOB_H_
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -44,4 +44,4 @@ class URLRequestHangingReadJob : public URLRequestJob {
 
 }  // namespace net
 
-#endif  // NET_URL_REQUEST_URL_REQUEST_SIMPLE_JOB_H_
+#endif  // NET_TEST_URL_REQUEST_URL_REQUEST_HANGING_READ_JOB_H_

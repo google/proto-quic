@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_CRYPTO_SERVER_STREAM_H_
-#define NET_QUIC_QUIC_CRYPTO_SERVER_STREAM_H_
+#ifndef NET_QUIC_CORE_QUIC_CRYPTO_SERVER_STREAM_H_
+#define NET_QUIC_CORE_QUIC_CRYPTO_SERVER_STREAM_H_
 
 #include <cstdint>
 #include <memory>
 #include <string>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/quic_compressed_certs_cache.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/proto/source_address_token.pb.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_crypto_stream.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -32,7 +32,7 @@ class QuicCryptoServerStreamPeer;
 
 // TODO(alyssar) see what can be moved out of QuicCryptoServerStream with
 // various code and test refactoring.
-class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
+class QUIC_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
  public:
   explicit QuicCryptoServerStreamBase(QuicSession* session);
 
@@ -70,7 +70,7 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStreamBase : public QuicCryptoStream {
       const CryptoHandshakeMessage& message);
 };
 
-class NET_EXPORT_PRIVATE QuicCryptoServerStream
+class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
     : public QuicCryptoServerStreamBase {
  public:
   class Helper {
@@ -279,4 +279,4 @@ class NET_EXPORT_PRIVATE QuicCryptoServerStream
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CRYPTO_SERVER_STREAM_H_
+#endif  // NET_QUIC_CORE_QUIC_CRYPTO_SERVER_STREAM_H_

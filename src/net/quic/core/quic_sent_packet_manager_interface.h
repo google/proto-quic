@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
-#define NET_QUIC_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
+#ifndef NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
+#define NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sustained_bandwidth_recorder.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 class QuicConfig;
 class RttStats;
 
-class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
+class QUIC_EXPORT_PRIVATE QuicSentPacketManagerInterface {
  public:
   // Interface which gets callbacks from the QuicSentPacketManager at
   // interesting points.  Implementations must not mutate the state of
   // the packet manager or connection as a result of these callbacks.
-  class NET_EXPORT_PRIVATE DebugDelegate {
+  class QUIC_EXPORT_PRIVATE DebugDelegate {
    public:
     virtual ~DebugDelegate() {}
 
@@ -45,7 +45,7 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
   // Interface which gets callbacks from the QuicSentPacketManager when
   // network-related state changes. Implementations must not mutate the
   // state of the packet manager as a result of these callbacks.
-  class NET_EXPORT_PRIVATE NetworkChangeVisitor {
+  class QUIC_EXPORT_PRIVATE NetworkChangeVisitor {
    public:
     virtual ~NetworkChangeVisitor() {}
 
@@ -198,4 +198,4 @@ class NET_EXPORT_PRIVATE QuicSentPacketManagerInterface {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_
+#endif  // NET_QUIC_CORE_QUIC_SENT_PACKET_MANAGER_INTERFACE_H_

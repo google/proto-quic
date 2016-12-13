@@ -11,6 +11,7 @@
 #include "base/time/time.h"
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/process_memory_dump.h"
+#include "base/trace_event/trace_event_argument.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "third_party/boringssl/src/include/openssl/ssl.h"
 
@@ -325,16 +326,16 @@ TEST(SSLClientSessionCacheTest, TestDumpMemoryStats) {
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
   cache.DumpMemoryStats(process_memory_dump.get());
 
-  const base::trace_event::ProcessMemoryDump::AllocatorDumpsMap&
-      allocator_dumps = process_memory_dump->allocator_dumps();
-
-  size_t num_entry_dump = 0;
-  for (const auto& pair : allocator_dumps) {
-    const std::string& dump_name = pair.first;
-    if (dump_name.find("net/ssl_session_cache/entry") != std::string::npos)
-      num_entry_dump++;
-  }
-  ASSERT_EQ(3u, num_entry_dump);
+  const base::trace_event::MemoryAllocatorDump* dump =
+      process_memory_dump->GetAllocatorDump("net/ssl_session_cache");
+  ASSERT_NE(nullptr, dump);
+  std::unique_ptr<base::Value> raw_attrs =
+      dump->attributes_for_testing()->ToBaseValue();
+  base::DictionaryValue* attrs;
+  ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
+  ASSERT_TRUE(attrs->HasKey("cert_count"));
+  ASSERT_TRUE(attrs->HasKey("serialized_cert_size"));
+  ASSERT_TRUE(attrs->HasKey(base::trace_event::MemoryAllocatorDump::kNameSize));
 }
 
 }  // namespace net

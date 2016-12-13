@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -16,7 +16,7 @@ namespace net {
 // in-order. To send/receive data out of order, use separate streams. To
 // send/receive unreliably, close a stream after reliability is no longer
 // needed.
-class NET_EXPORT_PRIVATE QuartcStreamInterface {
+class QUIC_EXPORT_PRIVATE QuartcStreamInterface {
  public:
   virtual ~QuartcStreamInterface() {}
 

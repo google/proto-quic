@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_ERROR_CODES_H_
-#define NET_QUIC_QUIC_ERROR_CODES_H_
+#ifndef NET_QUIC_CORE_QUIC_ERROR_CODES_H_
+#define NET_QUIC_CORE_QUIC_ERROR_CODES_H_
 
 #include <stdint.h>
 
 #include <limits>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -283,12 +283,12 @@ static_assert(static_cast<int>(QUIC_LAST_ERROR) <=
               "QuicErrorCode exceeds single octet");
 
 // Returns the name of the QuicRstStreamErrorCode as a char*
-NET_EXPORT_PRIVATE const char* QuicRstStreamErrorCodeToString(
+QUIC_EXPORT_PRIVATE const char* QuicRstStreamErrorCodeToString(
     QuicRstStreamErrorCode error);
 
 // Returns the name of the QuicErrorCode as a char*
-NET_EXPORT_PRIVATE const char* QuicErrorCodeToString(QuicErrorCode error);
+QUIC_EXPORT_PRIVATE const char* QuicErrorCodeToString(QuicErrorCode error);
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_ERROR_CODES_H_
+#endif  // NET_QUIC_CORE_QUIC_ERROR_CODES_H_

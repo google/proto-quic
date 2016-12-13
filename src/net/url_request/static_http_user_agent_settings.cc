@@ -25,4 +25,3 @@ std::string StaticHttpUserAgentSettings::GetUserAgent() const {
 }
 
 }  // namespace net
-

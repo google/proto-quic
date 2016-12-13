@@ -30,10 +30,6 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
     if possible_browser.browser_type == 'reference':
       return True
 
-    # crbug.com/651188
-    if possible_browser.browser_type == 'android-webview':
-      return True
-
     return False
 
   @classmethod

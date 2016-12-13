@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef WRITE_TO_FILE_NET_LOG_OBSERVER_H_
-#define WRITE_TO_FILE_NET_LOG_OBSERVER_H_
+#ifndef NET_LOG_WRITE_TO_FILE_NET_LOG_OBSERVER_H_
+#define NET_LOG_WRITE_TO_FILE_NET_LOG_OBSERVER_H_
 
 #include <stdio.h>
 
@@ -90,4 +90,4 @@ class NET_EXPORT WriteToFileNetLogObserver : public NetLog::ThreadSafeObserver {
 
 }  // namespace net
 
-#endif  // WRITE_TO_FILE_NET_LOG_OBSERVER_H_
+#endif  // NET_LOG_WRITE_TO_FILE_NET_LOG_OBSERVER_H_

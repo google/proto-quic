@@ -69,4 +69,3 @@ class RemoteTestServer : public BaseTestServer {
 }  // namespace net
 
 #endif  // NET_TEST_SPAWNED_TEST_SERVER_REMOTE_TEST_SERVER_H_
-

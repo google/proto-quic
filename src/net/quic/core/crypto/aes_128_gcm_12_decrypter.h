@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
-#define NET_QUIC_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
+#define NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/aead_base_decrypter.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -20,7 +20,7 @@ namespace net {
 //
 // It uses an authentication tag of 12 bytes (96 bits). The fixed prefix
 // of the nonce is four bytes.
-class NET_EXPORT_PRIVATE Aes128Gcm12Decrypter : public AeadBaseDecrypter {
+class QUIC_EXPORT_PRIVATE Aes128Gcm12Decrypter : public AeadBaseDecrypter {
  public:
   enum {
     // Authentication tags are truncated to 96 bits.
@@ -39,4 +39,4 @@ class NET_EXPORT_PRIVATE Aes128Gcm12Decrypter : public AeadBaseDecrypter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_DECRYPTER_H_

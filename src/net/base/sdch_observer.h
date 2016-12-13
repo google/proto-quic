@@ -56,4 +56,4 @@ class NET_EXPORT SdchObserver {
 
 }  // namespace net
 
-#endif  // NET_BASE_SDCH_MANAGER_H_
+#endif  // NET_BASE_SDCH_OBSERVER_H_

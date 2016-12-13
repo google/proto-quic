@@ -432,6 +432,11 @@ TEST(TraceConfigTest, TraceConfigFromValidString) {
   base::JSONWriter::Write(*event_filter.filter_args(), &json_out);
   EXPECT_STREQ(json_out.c_str(),
                "{\"event_name_whitelist\":[\"a snake\",\"a dog\"]}");
+  std::unordered_set<std::string> filter_values;
+  EXPECT_TRUE(event_filter.GetArgAsSet("event_name_whitelist", &filter_values));
+  EXPECT_EQ(2u, filter_values.size());
+  EXPECT_EQ(1u, filter_values.count("a snake"));
+  EXPECT_EQ(1u, filter_values.count("a dog"));
 
   const char config_string_2[] = "{\"included_categories\":[\"*\"]}";
   TraceConfig tc2(config_string_2);

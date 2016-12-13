@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
-#define NET_QUIC_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
+#ifndef NET_QUIC_CORE_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
+#define NET_QUIC_CORE_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
 
 #include <stdint.h>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "base/synchronization/lock.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/strike_register.h"
 #include "net/quic/core/crypto/strike_register_client.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_mutex.h"
 
 namespace net {
 
 // StrikeRegisterClient implementation that wraps a local in-memory
 // strike register.
-class NET_EXPORT_PRIVATE LocalStrikeRegisterClient
+class QUIC_EXPORT_PRIVATE LocalStrikeRegisterClient
     : public StrikeRegisterClient {
  public:
   LocalStrikeRegisterClient(unsigned max_entries,
@@ -34,12 +34,12 @@ class NET_EXPORT_PRIVATE LocalStrikeRegisterClient
                                    ResultCallback* cb) override;
 
  private:
-  mutable base::Lock m_;
-  StrikeRegister strike_register_;
+  mutable QuicMutex m_;
+  StrikeRegister strike_register_ GUARDED_BY(m_);
 
   DISALLOW_COPY_AND_ASSIGN(LocalStrikeRegisterClient);
 };
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
+#endif  // NET_QUIC_CORE_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_

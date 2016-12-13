@@ -155,8 +155,57 @@ class WorkingSetInformationBuffer {
     return UncheckedMalloc(size, reinterpret_cast<void**>(&buffer_));
   }
 
-  PSAPI_WORKING_SET_INFORMATION* get() { return buffer_; }
   const PSAPI_WORKING_SET_INFORMATION* operator ->() const { return buffer_; }
+
+  size_t GetPageEntryCount() const { return number_of_entries; }
+
+  // This function is used to get page entries for a process.
+  bool QueryPageEntries(const ProcessHandle& process_) {
+    int retries = 5;
+    number_of_entries = 4096;  // Just a guess.
+
+    for (;;) {
+      size_t buffer_size =
+          sizeof(PSAPI_WORKING_SET_INFORMATION) +
+          (number_of_entries * sizeof(PSAPI_WORKING_SET_BLOCK));
+
+      if (!Reserve(buffer_size))
+        return false;
+
+      // On success, |buffer_| is populated with info about the working set of
+      // |process_|. On ERROR_BAD_LENGTH failure, increase the size of the
+      // buffer and try again.
+      if (QueryWorkingSet(process_, buffer_, buffer_size))
+        break;  // Success
+
+      if (GetLastError() != ERROR_BAD_LENGTH)
+        return false;
+
+      number_of_entries = buffer_->NumberOfEntries;
+
+      // Maybe some entries are being added right now. Increase the buffer to
+      // take that into account. Increasing by 10% should generally be enough,
+      // especially considering the potentially low memory condition during the
+      // call (when called from OomMemoryDetails) and the potentially high
+      // number of entries (300K was observed in crash dumps).
+      number_of_entries *= 1.1;
+
+      if (--retries == 0) {
+        // If we're looping, eventually fail.
+        return false;
+      }
+    }
+
+    // TODO(chengx): Remove the comment and the logic below. It is no longer
+    // needed since we don't have Win2000 support.
+    // On windows 2000 the function returns 1 even when the buffer is too small.
+    // The number of entries that we are going to parse is the minimum between
+    // the size we allocated and the real number of entries.
+    number_of_entries = std::min(number_of_entries,
+                                 static_cast<size_t>(buffer_->NumberOfEntries));
+
+    return true;
+  }
 
  private:
   void Clear() {
@@ -165,6 +214,9 @@ class WorkingSetInformationBuffer {
   }
 
   PSAPI_WORKING_SET_INFORMATION* buffer_ = nullptr;
+
+  // Number of page entries.
+  size_t number_of_entries = 0;
 
   DISALLOW_COPY_AND_ASSIGN(WorkingSetInformationBuffer);
 };
@@ -179,44 +231,12 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   DCHECK(ws_usage);
   memset(ws_usage, 0, sizeof(*ws_usage));
 
-  DWORD number_of_entries = 4096;  // Just a guess.
   WorkingSetInformationBuffer buffer;
-  int retries = 5;
-  for (;;) {
-    DWORD buffer_size = sizeof(PSAPI_WORKING_SET_INFORMATION) +
-                        (number_of_entries * sizeof(PSAPI_WORKING_SET_BLOCK));
+  if (!buffer.QueryPageEntries(process_))
+    return false;
 
-    if (!buffer.Reserve(buffer_size))
-      return false;
-
-    // Call the function once to get number of items
-    if (QueryWorkingSet(process_, buffer.get(), buffer_size))
-      break;  // Success
-
-    if (GetLastError() != ERROR_BAD_LENGTH)
-      return false;
-
-    number_of_entries = static_cast<DWORD>(buffer->NumberOfEntries);
-
-    // Maybe some entries are being added right now. Increase the buffer to
-    // take that into account. Increasing by 10% should generally be enough,
-    // especially considering the potentially low memory condition during the
-    // call (when called from OomMemoryDetails) and the potentially high
-    // number of entries (300K was observed in crash dumps).
-    number_of_entries = static_cast<DWORD>(number_of_entries * 1.1);
-
-    if (--retries == 0) {
-      // If we're looping, eventually fail.
-      return false;
-    }
-  }
-
-  // On windows 2000 the function returns 1 even when the buffer is too small.
-  // The number of entries that we are going to parse is the minimum between the
-  // size we allocated and the real number of entries.
-  number_of_entries =
-      std::min(number_of_entries, static_cast<DWORD>(buffer->NumberOfEntries));
-  for (unsigned int i = 0; i < number_of_entries; i++) {
+  size_t num_page_entries = buffer.GetPageEntryCount();
+  for (size_t i = 0; i < num_page_entries; i++) {
     if (buffer->WorkingSetInfo[i].Shared) {
       ws_shareable++;
       if (buffer->WorkingSetInfo[i].ShareCount > 1)
@@ -229,6 +249,28 @@ bool ProcessMetrics::GetWorkingSetKBytes(WorkingSetKBytes* ws_usage) const {
   ws_usage->priv = ws_private * PAGESIZE_KB;
   ws_usage->shareable = ws_shareable * PAGESIZE_KB;
   ws_usage->shared = ws_shared * PAGESIZE_KB;
+
+  return true;
+}
+
+// This function calculates the proportional set size for a process.
+bool ProcessMetrics::GetProportionalSetSizeBytes(uint64_t* pss_bytes) const {
+  double ws_pss = 0.0;
+
+  WorkingSetInformationBuffer buffer;
+  if (!buffer.QueryPageEntries(process_))
+    return false;
+
+  size_t num_page_entries = buffer.GetPageEntryCount();
+  for (size_t i = 0; i < num_page_entries; i++) {
+    if (buffer->WorkingSetInfo[i].Shared &&
+        buffer->WorkingSetInfo[i].ShareCount > 0)
+      ws_pss += 1.0 / buffer->WorkingSetInfo[i].ShareCount;
+    else
+      ws_pss += 1.0;
+  }
+
+  *pss_bytes = static_cast<uint64_t>(ws_pss * GetPageSize());
   return true;
 }
 

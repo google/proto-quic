@@ -248,4 +248,3 @@ bool RemoteTestServer::Init(const base::FilePath& document_root) {
 }
 
 }  // namespace net
-

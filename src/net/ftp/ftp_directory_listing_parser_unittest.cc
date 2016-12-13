@@ -49,7 +49,7 @@ TEST_P(FtpDirectoryListingParserTest, Parse) {
   mock_current_time_exploded.hour = 12;
   mock_current_time_exploded.minute = 45;
   base::Time mock_current_time(
-      base::Time::FromLocalExploded(mock_current_time_exploded));
+      base::Time::FromUTCExploded(mock_current_time_exploded));
 
   SCOPED_TRACE(base::StringPrintf("Test case: %s", param.name));
 
@@ -109,7 +109,7 @@ TEST_P(FtpDirectoryListingParserTest, Parse) {
     EXPECT_EQ(size, entry.size);
 
     base::Time::Exploded time_exploded;
-    entry.last_modified.LocalExplode(&time_exploded);
+    entry.last_modified.UTCExplode(&time_exploded);
     EXPECT_EQ(year, time_exploded.year);
     EXPECT_EQ(month, time_exploded.month);
     EXPECT_EQ(day_of_month, time_exploded.day_of_month);

@@ -158,4 +158,3 @@ bool NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate::operator()(
 }
 
 }  // namespace net
-

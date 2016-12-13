@@ -22,11 +22,5 @@ const TraceLog::InternalTraceOptions
 const TraceLog::InternalTraceOptions
     TraceLog::kInternalEnableArgumentFilter = 1 << 5;
 
-// TraceEventFilter predicate names used in trace config.
-const char* const TraceLog::TraceEventFilter::kEventWhitelistPredicate =
-    "event_whitelist_predicate";
-const char* const TraceLog::TraceEventFilter::kHeapProfilerPredicate =
-    "heap_profiler_predicate";
-
 }  // namespace trace_event
 }  // namespace base

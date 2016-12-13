@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_ANDROID_KEYSTORE_H
-#define NET_ANDROID_KEYSTORE_H
+#ifndef NET_ANDROID_KEYSTORE_H_
+#define NET_ANDROID_KEYSTORE_H_
 
 #include <jni.h>
 #include <stdint.h>
@@ -77,4 +77,4 @@ base::android::ScopedJavaLocalRef<jobject> GetOpenSSLEngineForPrivateKey(
 }  // namespace android
 }  // namespace net
 
-#endif  // NET_ANDROID_KEYSTORE_H
+#endif  // NET_ANDROID_KEYSTORE_H_

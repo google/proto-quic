@@ -73,6 +73,7 @@
 #include "base/memory/shared_memory.h"
 #include "base/metrics/persistent_memory_allocator.h"
 #include "base/observer_list_threadsafe.h"
+#include "base/pickle.h"
 #include "base/process/launch.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
@@ -131,6 +132,43 @@ class BASE_EXPORT FieldTrial : public RefCounted<FieldTrial> {
     State();
     State(const State& other);
     ~State();
+  };
+
+  // We create one FieldTrialEntry per field trial in shared memory, via
+  // AddToAllocatorWhileLocked. The FieldTrialEntry is followed by a
+  // base::Pickle object that we unpickle and read from. Any changes to this
+  // structure requires a bump in kFieldTrialType id defined in the .cc file.
+  struct BASE_EXPORT FieldTrialEntry {
+    // Expected size for 32/64-bit check.
+    static constexpr size_t kExpectedInstanceSize = 8;
+
+    // Whether or not this field trial is activated. This is really just a
+    // boolean but marked as a uint32_t for portability reasons.
+    uint32_t activated;
+
+    // Size of the pickled structure, NOT the total size of this entry.
+    uint32_t pickle_size;
+
+    // Calling this is only valid when the entry is initialized. That is, it
+    // resides in shared memory and has a pickle containing the trial name and
+    // group name following it.
+    bool GetTrialAndGroupName(StringPiece* trial_name,
+                              StringPiece* group_name) const;
+
+    // Calling this is only valid when the entry is initialized as well. Reads
+    // the parameters following the trial and group name and stores them as
+    // key-value mappings in |params|.
+    bool GetParams(std::map<std::string, std::string>* params) const;
+
+   private:
+    // Returns an iterator over the data containing names and params.
+    PickleIterator GetPickleIterator() const;
+
+    // Takes the iterator and writes out the first two items into |trial_name|
+    // and |group_name|.
+    bool ReadStringPair(PickleIterator* iter,
+                        StringPiece* trial_name,
+                        StringPiece* group_name) const;
   };
 
   typedef std::vector<ActiveGroup> ActiveGroups;
@@ -577,6 +615,18 @@ class BASE_EXPORT FieldTrialList {
   // Clears all the params in the allocator.
   static void ClearParamsFromSharedMemoryForTesting();
 
+  // Dumps field trial state to an allocator so that it can be analyzed after a
+  // crash.
+  static void DumpAllFieldTrialsToPersistentAllocator(
+      PersistentMemoryAllocator* allocator);
+
+  // Retrieves field trial state from an allocator so that it can be analyzed
+  // after a crash. The pointers in the returned vector are into the persistent
+  // memory segment and so are only valid as long as the allocator is valid.
+  static std::vector<const FieldTrial::FieldTrialEntry*>
+  GetAllFieldTrialsFromPersistentAllocator(
+      PersistentMemoryAllocator const& allocator);
+
  private:
   // Allow tests to access our innards for testing purposes.
   FRIEND_TEST_ALL_PREFIXES(FieldTrialListTest, InstantiateAllocator);
@@ -620,7 +670,8 @@ class BASE_EXPORT FieldTrialList {
 
   // Adds the field trial to the allocator. Caller must hold a lock before
   // calling this.
-  static void AddToAllocatorWhileLocked(FieldTrial* field_trial);
+  static void AddToAllocatorWhileLocked(PersistentMemoryAllocator* allocator,
+                                        FieldTrial* field_trial);
 
   // Activate the corresponding field trial entry struct in shared memory.
   static void ActivateFieldTrialEntryWhileLocked(FieldTrial* field_trial);

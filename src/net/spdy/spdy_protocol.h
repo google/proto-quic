@@ -38,6 +38,9 @@ typedef uint32_t SpdyStreamId;
 // flow control).
 const SpdyStreamId kSessionFlowControlStreamId = 0;
 
+// Max stream id.
+const SpdyStreamId kMaxStreamId = 0x7fffffff;
+
 // The maximum possible frame payload size allowed by the spec.
 const uint32_t kSpdyMaxFrameSizeLimit = (1 << 24) - 1;
 

@@ -7,8 +7,8 @@
 // if an allocation out of the arena ever fails in debug builds; falls back to
 // heap allocation in release builds.
 
-#ifndef NET_QUIC_QUIC_ONE_BLOCK_ARENA_H_
-#define NET_QUIC_QUIC_ONE_BLOCK_ARENA_H_
+#ifndef NET_QUIC_CORE_QUIC_ONE_BLOCK_ARENA_H_
+#define NET_QUIC_CORE_QUIC_ONE_BLOCK_ARENA_H_
 
 #include "net/quic/core/quic_arena_scoped_ptr.h"
 #include "net/quic/core/quic_flags.h"
@@ -74,4 +74,4 @@ QuicArenaScopedPtr<T> QuicOneBlockArena<ArenaSize>::New(Args&&... args) {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_ONE_BLOCK_ARENA_H_
+#endif  // NET_QUIC_CORE_QUIC_ONE_BLOCK_ARENA_H_

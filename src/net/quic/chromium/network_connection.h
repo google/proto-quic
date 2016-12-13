@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_NETWORK_CONNECTION_H_
-#define NET_QUIC_NETWORK_CONNECTION_H_
+#ifndef NET_QUIC_CHROMIUM_NETWORK_CONNECTION_H_
+#define NET_QUIC_CHROMIUM_NETWORK_CONNECTION_H_
 
 #include "base/macros.h"
 #include "net/base/net_export.h"
@@ -58,4 +58,4 @@ class NET_EXPORT NetworkConnection
 
 }  // namespace net
 
-#endif  // NET_QUIC_NETWORK_CONNECTION_H_
+#endif  // NET_QUIC_CHROMIUM_NETWORK_CONNECTION_H_
