@@ -65,4 +65,3 @@ void TestDataStream::Consume(int bytes) {
 }
 
 }  // namespace net
-

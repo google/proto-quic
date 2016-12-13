@@ -36,4 +36,3 @@ class NET_EXPORT StaticHttpUserAgentSettings : public HttpUserAgentSettings {
 }  // namespace net
 
 #endif  // NET_URL_REQUEST_STATIC_HTTP_USER_AGENT_SETTINGS_H_
-

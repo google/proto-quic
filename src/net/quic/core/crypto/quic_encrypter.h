@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_QUIC_ENCRYPTER_H_
-#define NET_QUIC_CRYPTO_QUIC_ENCRYPTER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_QUIC_ENCRYPTER_H_
+#define NET_QUIC_CORE_CRYPTO_QUIC_ENCRYPTER_H_
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE QuicEncrypter {
+class QUIC_EXPORT_PRIVATE QuicEncrypter {
  public:
   virtual ~QuicEncrypter() {}
 
@@ -82,4 +82,4 @@ class NET_EXPORT_PRIVATE QuicEncrypter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_QUIC_ENCRYPTER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_QUIC_ENCRYPTER_H_

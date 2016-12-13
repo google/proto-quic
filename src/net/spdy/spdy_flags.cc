@@ -16,6 +16,9 @@ bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
 // clients allow it.
 bool FLAGS_chromium_reloadable_flag_increase_hpack_table_size = false;
 
+// Use Http2FrameDecoderAdapter.
+bool FLAGS_use_http2_frame_decoder_adapter = false;
+
 // Use NestedSpdyFramerDecoder.
 bool FLAGS_use_nested_spdy_framer_decoder = false;
 

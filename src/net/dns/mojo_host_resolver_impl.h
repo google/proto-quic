@@ -5,7 +5,8 @@
 #ifndef NET_DNS_MOJO_HOST_RESOLVER_IMPL_H_
 #define NET_DNS_MOJO_HOST_RESOLVER_IMPL_H_
 
-#include <set>
+#include <list>
+#include <memory>
 
 #include "base/macros.h"
 #include "base/threading/thread_checker.h"
@@ -36,8 +37,8 @@ class MojoHostResolverImpl {
  private:
   class Job;
 
-  // Removes |job| from the set of pending jobs, and deletes it.
-  void DeleteJob(Job* job);
+  // Removes |job| from the set of pending jobs.
+  void DeleteJob(std::list<Job>::iterator job);
 
   // Resolver for resolving incoming requests. Not owned.
   net::HostResolver* resolver_;
@@ -46,8 +47,7 @@ class MojoHostResolverImpl {
   const NetLogWithSource net_log_;
 
   // All pending jobs, so they can be cancelled when this service is destroyed.
-  // Owns all jobs.
-  std::set<Job*> pending_jobs_;
+  std::list<Job> pending_jobs_;
 
   base::ThreadChecker thread_checker_;
 

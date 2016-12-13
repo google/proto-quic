@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_NSS_CERT_DATABASE_CHROMEOS_
-#define NET_CERT_NSS_CERT_DATABASE_CHROMEOS_
+#ifndef NET_CERT_NSS_CERT_DATABASE_CHROMEOS_H_
+#define NET_CERT_NSS_CERT_DATABASE_CHROMEOS_H_
 
 #include "base/callback.h"
 #include "base/macros.h"
@@ -51,4 +51,4 @@ class NET_EXPORT NSSCertDatabaseChromeOS : public NSSCertDatabase {
 
 }  // namespace net
 
-#endif  // NET_CERT_NSS_CERT_DATABASE_CHROMEOS_
+#endif  // NET_CERT_NSS_CERT_DATABASE_CHROMEOS_H_

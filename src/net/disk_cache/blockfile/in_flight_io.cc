@@ -11,8 +11,6 @@
 #include "base/task_runner.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "base/trace_event/trace_event.h"
-#include "net/base/trace_constants.h"
 
 namespace disk_cache {
 
@@ -27,7 +25,6 @@ void BackgroundIO::OnIOSignalled() {
   // TODO(pkasting): Remove ScopedTracker below once crbug.com/477117 is fixed.
   tracked_objects::ScopedTracker tracking_profile(
       FROM_HERE_WITH_EXPLICIT_FUNCTION("477117 BackgroundIO::OnIOSignalled"));
-  TRACE_EVENT0(net::kNetTracingCategory, "BackgroundIO::OnIOSignalled");
   if (controller_)
     controller_->InvokeCallback(this, false);
 }

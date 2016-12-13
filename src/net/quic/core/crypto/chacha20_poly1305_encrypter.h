@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
-#define NET_QUIC_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
+#ifndef NET_QUIC_CORE_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
+#define NET_QUIC_CORE_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
 
 #include <stddef.h>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/aead_base_encrypter.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -21,7 +21,7 @@ namespace net {
 //
 // It uses an authentication tag of 16 bytes (128 bits). There is no
 // fixed nonce prefix.
-class NET_EXPORT_PRIVATE ChaCha20Poly1305Encrypter : public AeadBaseEncrypter {
+class QUIC_EXPORT_PRIVATE ChaCha20Poly1305Encrypter : public AeadBaseEncrypter {
  public:
   enum {
     kAuthTagSize = 12,
@@ -36,4 +36,4 @@ class NET_EXPORT_PRIVATE ChaCha20Poly1305Encrypter : public AeadBaseEncrypter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
+#endif  // NET_QUIC_CORE_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_

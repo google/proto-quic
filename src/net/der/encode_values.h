@@ -6,7 +6,6 @@
 #define NET_DER_ENCODE_VALUES_H_
 
 #include "net/base/net_export.h"
-#include "net/der/parse_values.h"
 
 namespace base {
 class Time;
@@ -15,6 +14,8 @@ class Time;
 namespace net {
 
 namespace der {
+
+struct GeneralizedTime;
 
 // Encodes |time|, a UTC-based time, to DER |generalized_time|, for comparing
 // against other GeneralizedTime objects.
@@ -25,4 +26,4 @@ NET_EXPORT bool EncodeTimeAsGeneralizedTime(const base::Time& time,
 
 }  // namespace net
 
-#endif  // NET_DER_ENCODE_VALUES_H
+#endif  // NET_DER_ENCODE_VALUES_H_

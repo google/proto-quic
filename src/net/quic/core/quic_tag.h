@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_TAG_H_
-#define NET_QUIC_QUIC_TAG_H_
+#ifndef NET_QUIC_CORE_QUIC_TAG_H_
+#define NET_QUIC_CORE_QUIC_TAG_H_
 
 #include <map>
 #include <string>
 #include <vector>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -27,29 +27,29 @@ typedef std::vector<QuicTag> QuicTagVector;
 
 // MakeQuicTag returns a value given the four bytes. For example:
 //   MakeQuicTag('C', 'H', 'L', 'O');
-NET_EXPORT_PRIVATE QuicTag MakeQuicTag(char a, char b, char c, char d);
+QUIC_EXPORT_PRIVATE QuicTag MakeQuicTag(char a, char b, char c, char d);
 
 // Returns true if |tag_vector| contains |tag|.
-NET_EXPORT_PRIVATE bool ContainsQuicTag(const QuicTagVector& tag_vector,
-                                        QuicTag tag);
+QUIC_EXPORT_PRIVATE bool ContainsQuicTag(const QuicTagVector& tag_vector,
+                                         QuicTag tag);
 
 // Sets |out_result| to the first tag in |our_tags| that is also in |their_tags|
 // and returns true. If there is no intersection it returns false.
 //
 // If |out_index| is non-nullptr and a match is found then the index of that
 // match in |their_tags| is written to |out_index|.
-NET_EXPORT_PRIVATE bool FindMutualQuicTag(const QuicTagVector& our_tags,
-                                          const QuicTag* their_tags,
-                                          size_t num_their_tags,
-                                          QuicTag* out_result,
-                                          size_t* out_index);
+QUIC_EXPORT_PRIVATE bool FindMutualQuicTag(const QuicTagVector& our_tags,
+                                           const QuicTag* their_tags,
+                                           size_t num_their_tags,
+                                           QuicTag* out_result,
+                                           size_t* out_index);
 
 // A utility function that converts a tag to a std::string. It will try to
 // maintain
 // the human friendly name if possible (i.e. kABCD -> "ABCD"), or will just
 // treat it as a number if not.
-NET_EXPORT_PRIVATE std::string QuicTagToString(QuicTag tag);
+QUIC_EXPORT_PRIVATE std::string QuicTagToString(QuicTag tag);
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_TAG_H_
+#endif  // NET_QUIC_CORE_QUIC_TAG_H_

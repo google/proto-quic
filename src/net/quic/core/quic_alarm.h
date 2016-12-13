@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_ALARM_H_
-#define NET_QUIC_QUIC_ALARM_H_
+#ifndef NET_QUIC_CORE_QUIC_ALARM_H_
+#define NET_QUIC_CORE_QUIC_ALARM_H_
 
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_arena_scoped_ptr.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -19,9 +19,9 @@ namespace net {
 // An alarm may be cancelled, in which case it may or may not be
 // removed from the underlying scheduling system, but in either case
 // the task will not be executed.
-class NET_EXPORT_PRIVATE QuicAlarm {
+class QUIC_EXPORT_PRIVATE QuicAlarm {
  public:
-  class NET_EXPORT_PRIVATE Delegate {
+  class QUIC_EXPORT_PRIVATE Delegate {
    public:
     virtual ~Delegate() {}
 
@@ -86,4 +86,4 @@ class NET_EXPORT_PRIVATE QuicAlarm {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_ALARM_H_
+#endif  // NET_QUIC_CORE_QUIC_ALARM_H_

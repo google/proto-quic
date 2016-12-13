@@ -170,7 +170,7 @@ def _OnStaleMd5(lint_path, config_path, processed_config_path,
     if os.path.exists(result_path):
       os.remove(result_path)
 
-    env = {}
+    env = os.environ.copy()
     stderr_filter = None
     if cache_dir:
       env['_JAVA_OPTIONS'] = '-Duser.home=%s' % _RebasePath(cache_dir)

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_H_
-#define NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_H_
+#ifndef NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_H_
+#define NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_H_
 
 // QuicStreamSequencerBuffer implements QuicStreamSequencerBufferInterface.
 // It is a circular stream buffer with random write and
@@ -67,8 +67,8 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -76,18 +76,18 @@ namespace test {
 class QuicStreamSequencerBufferPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
+class QUIC_EXPORT_PRIVATE QuicStreamSequencerBuffer {
  public:
   // A Gap indicates a missing chunk of bytes between
   // [begin_offset, end_offset) in the stream
-  struct NET_EXPORT_PRIVATE Gap {
+  struct QUIC_EXPORT_PRIVATE Gap {
     Gap(QuicStreamOffset begin_offset, QuicStreamOffset end_offset);
     QuicStreamOffset begin_offset;
     QuicStreamOffset end_offset;
   };
 
   // A FrameInfo stores the length of a frame and the time it arrived.
-  struct NET_EXPORT_PRIVATE FrameInfo {
+  struct QUIC_EXPORT_PRIVATE FrameInfo {
     FrameInfo();
     FrameInfo(size_t length, QuicTime timestamp);
 
@@ -257,4 +257,4 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBuffer {
 };
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_H_
+#endif  // NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_H_

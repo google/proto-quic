@@ -164,4 +164,3 @@ TEST_F(SerialWorkerTest, ExecuteAndSerializeReads) {
 }  // namespace
 
 }  // namespace net
-

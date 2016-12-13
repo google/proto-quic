@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_STATELESS_REJECTOR_H_
-#define NET_QUIC_STATELESS_REJECTOR_H_
+#ifndef NET_TOOLS_QUIC_STATELESS_REJECTOR_H_
+#define NET_TOOLS_QUIC_STATELESS_REJECTOR_H_
 
 #include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_framer.h"
@@ -115,4 +115,4 @@ class StatelessRejector {
 
 }  // namespace net
 
-#endif  // NET_QUIC_STATELESS_REJECTOR_H_
+#endif  // NET_TOOLS_QUIC_STATELESS_REJECTOR_H_

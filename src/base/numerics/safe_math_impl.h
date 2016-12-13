@@ -42,21 +42,6 @@ struct UnsignedOrFloatForSize<Numeric, false, true> {
   using type = Numeric;
 };
 
-// Helper templates for integer manipulations.
-
-template <typename T>
-constexpr bool HasSignBit(T x) {
-  // Cast to unsigned since right shift on signed is undefined.
-  return !!(static_cast<typename std::make_unsigned<T>::type>(x) >>
-            PositionOfSignBit<T>::value);
-}
-
-// This wrapper undoes the standard integer promotions.
-template <typename T>
-constexpr T BinaryComplement(T x) {
-  return static_cast<T>(~x);
-}
-
 // Probe for builtin math overflow support on Clang and version check on GCC.
 #if defined(__has_builtin)
 #define USE_OVERFLOW_BUILTINS (__has_builtin(__builtin_add_overflow))
@@ -192,27 +177,21 @@ template <typename T,
               ((IntegerBitsPlusSign<T>::value * 2) >
                IntegerBitsPlusSign<intmax_t>::value)>::type* = nullptr>
 bool CheckedMulImpl(T x, T y, T* result) {
-  if (x && y) {
-    if (x > 0) {
-      if (y > 0) {
-        if (x > std::numeric_limits<T>::max() / y)
-          return false;
-      } else {
-        if (y < std::numeric_limits<T>::lowest() / x)
-          return false;
-      }
-    } else {
-      if (y > 0) {
-        if (x < std::numeric_limits<T>::lowest() / y)
-          return false;
-      } else {
-        if (y < std::numeric_limits<T>::max() / x)
-          return false;
-      }
-    }
-  }
-  *result = x * y;
-  return true;
+  // Since the value of x*y is potentially undefined if we have a signed type,
+  // we compute it using the unsigned type of the same size.
+  using UnsignedDst = typename std::make_unsigned<T>::type;
+  const T is_negative = HasSignBit(x) ^ HasSignBit(y);
+  const UnsignedDst ux = SafeUnsignedAbs(x);
+  const UnsignedDst uy = SafeUnsignedAbs(y);
+  UnsignedDst uresult = static_cast<UnsignedDst>(ux * uy);
+  // This is a non-branching conditional negation.
+  *result = static_cast<T>((uresult ^ -is_negative) + is_negative);
+  // This uses the unsigned overflow check on the absolute value, with a +1
+  // bound for a negative result.
+  return (uy == 0 ||
+          ux <= (static_cast<UnsignedDst>(std::numeric_limits<T>::max()) +
+                 is_negative) /
+                    uy);
 }
 
 template <typename T,
@@ -529,11 +508,8 @@ template <typename T,
           typename std::enable_if<std::is_integral<T>::value &&
                                   std::is_signed<T>::value>::type* = nullptr>
 bool CheckedAbs(T value, T* result) {
-  if (value != std::numeric_limits<T>::lowest()) {
-    *result = std::abs(value);
-    return true;
-  }
-  return false;
+  *result = static_cast<T>(SafeUnsignedAbs(value));
+  return *result != std::numeric_limits<T>::lowest();
 }
 
 template <typename T,
@@ -543,24 +519,6 @@ bool CheckedAbs(T value, T* result) {
   // T is unsigned, so |value| must already be positive.
   *result = value;
   return true;
-}
-
-template <typename T,
-          typename std::enable_if<std::is_integral<T>::value &&
-                                  std::is_signed<T>::value>::type* = nullptr>
-constexpr typename std::make_unsigned<T>::type SafeUnsignedAbs(T value) {
-  using UnsignedT = typename std::make_unsigned<T>::type;
-  return value == std::numeric_limits<T>::lowest()
-             ? static_cast<UnsignedT>(std::numeric_limits<T>::max()) + 1
-             : static_cast<UnsignedT>(std::abs(value));
-}
-
-template <typename T,
-          typename std::enable_if<std::is_integral<T>::value &&
-                                  !std::is_signed<T>::value>::type* = nullptr>
-constexpr T SafeUnsignedAbs(T value) {
-  // T is unsigned, so |value| must already be positive.
-  return static_cast<T>(value);
 }
 
 // This is just boilerplate that wraps the standard floating point arithmetic.

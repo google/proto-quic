@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
-#define NET_QUIC_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
+#ifndef NET_QUIC_CORE_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
+#define NET_QUIC_CORE_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
 
 #include <stdint.h>
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -23,7 +23,7 @@ class QuicSustainedBandwidthRecorderPeer;
 // to the client in a server config update message. A sustained bandwidth
 // estimate is only marked as valid if the QuicSustainedBandwidthRecorder has
 // been given uninterrupted reliable estimates over a certain period of time.
-class NET_EXPORT_PRIVATE QuicSustainedBandwidthRecorder {
+class QUIC_EXPORT_PRIVATE QuicSustainedBandwidthRecorder {
  public:
   QuicSustainedBandwidthRecorder();
 
@@ -91,4 +91,4 @@ class NET_EXPORT_PRIVATE QuicSustainedBandwidthRecorder {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
+#endif  // NET_QUIC_CORE_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_

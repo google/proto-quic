@@ -112,7 +112,7 @@ bool CreateKeyAndSelfSignedCert(const std::string& subject,
                                       not_valid_after,
                                       der_cert);
   if (success)
-    key->reset(new_key.release());
+    *key = std::move(new_key);
 
   return success;
 }

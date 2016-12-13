@@ -73,7 +73,7 @@ HttpServerPropertiesManager::PrefDelegate::~PrefDelegate() {}
 
 HttpServerPropertiesManager::HttpServerPropertiesManager(
     PrefDelegate* pref_delegate,
-    scoped_refptr<base::SequencedTaskRunner> network_task_runner)
+    scoped_refptr<base::SingleThreadTaskRunner> network_task_runner)
     : pref_task_runner_(base::ThreadTaskRunnerHandle::Get()),
       pref_delegate_(pref_delegate),
       setting_prefs_(false),
@@ -100,7 +100,7 @@ void HttpServerPropertiesManager::InitializeOnNetworkThread() {
   http_server_properties_impl_.reset(new HttpServerPropertiesImpl());
 
   network_prefs_update_timer_.reset(new base::OneShotTimer);
-
+  network_prefs_update_timer_->SetTaskRunner(network_task_runner_);
   pref_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(&HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefThread,

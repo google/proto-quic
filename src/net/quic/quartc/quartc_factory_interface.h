@@ -10,14 +10,14 @@
 
 #include <memory>
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/quartc/quartc_session_interface.h"
 #include "net/quic/quartc/quartc_task_runner_interface.h"
 
 namespace net {
 
 // Used to create instances for Quartc objects such as QuartcSession.
-class NET_EXPORT_PRIVATE QuartcFactoryInterface {
+class QUIC_EXPORT_PRIVATE QuartcFactoryInterface {
  public:
   virtual ~QuartcFactoryInterface() {}
 
@@ -55,7 +55,7 @@ struct QuartcFactoryConfig {
 };
 
 // Creates a new instance of QuartcFactoryInterface.
-NET_EXPORT_PRIVATE std::unique_ptr<QuartcFactoryInterface> CreateQuartcFactory(
+QUIC_EXPORT_PRIVATE std::unique_ptr<QuartcFactoryInterface> CreateQuartcFactory(
     const QuartcFactoryConfig& factory_config);
 
 }  // namespace net

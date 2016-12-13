@@ -385,9 +385,17 @@
   "devtools_closure_compile": {
     "label": "//third_party/WebKit/Source/devtools:devtools_closure_compile",
     "type": "script",
-    "script": "//testing/scripts/run_devtools_closure_compile.py",
+    "script": "//testing/scripts/run_devtools_check.py",
     "args": [
         "../../third_party/WebKit/Source/devtools/scripts/compile_frontend.py",
+    ],
+  },
+  "devtools_eslint": {
+    "label": "//third_party/WebKit/Source/devtools:devtools_eslint",
+    "type": "script",
+    "script": "//testing/scripts/run_devtools_check.py",
+    "args": [
+        "../../third_party/WebKit/Source/devtools/scripts/buildbot/run_eslint.py",
     ],
   },
   "display_unittests": {
@@ -633,10 +641,6 @@
   },
   "mojo_public_system_unittests": {
     "label": "//mojo/edk/test:mojo_public_system_unittests",
-    "type": "console_test_launcher",
-  },
-  "mojo_runner_host_unittests": {
-    "label": "//services/service_manager/runner/host:mojo_runner_host_unittests",
     "type": "console_test_launcher",
   },
   "mojo_system_unittests": {
@@ -901,6 +905,10 @@
   },
   "mus_ime_unittests": {
     "label": "//services/ui/ime:mus_ime_unittests",
+    "type": "windowed_test_launcher",
+  },
+  "native_theme_unittests": {
+    "label": "//ui/native_theme:native_theme_unittests",
     "type": "windowed_test_launcher",
   },
   "ui_android_unittests": {

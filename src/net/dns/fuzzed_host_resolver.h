@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_DNS_FUZZED_HOST_RESOLVER_
-#define NET_DNS_FUZZED_HOST_RESOLVER_
+#ifndef NET_DNS_FUZZED_HOST_RESOLVER_H_
+#define NET_DNS_FUZZED_HOST_RESOLVER_H_
 
 #include <stdint.h>
 
@@ -78,4 +78,4 @@ class FuzzedHostResolver : public HostResolverImpl {
 
 }  // namespace net
 
-#endif  // NET_DNS_FUZZED_HOST_RESOLVER_
+#endif  // NET_DNS_FUZZED_HOST_RESOLVER_H_

@@ -36,6 +36,9 @@ namespace base {
 //  IsValueNegative<>() - A convenience function that will accept any arithmetic
 //      type as an argument and will return whether the value is less than zero.
 //      Unsigned types always return false.
+//  SafeUnsignedAbs() - Returns the absolute value of the supplied integer
+//      parameter as an unsigned result (thus avoiding an overflow if the value
+//      is the signed, two's complement minimum).
 //  StrictNumeric<> - A wrapper type that performs assignments and copies via
 //      the strict_cast<> template, and can perform valid arithmetic comparisons
 //      across any range of arithmetic types. StrictNumeric is the return type
@@ -279,6 +282,7 @@ STRICT_COMPARISON_OP(IsNotEqual, !=);
 
 using internal::strict_cast;
 using internal::saturated_cast;
+using internal::SafeUnsignedAbs;
 using internal::StrictNumeric;
 using internal::MakeStrictNum;
 

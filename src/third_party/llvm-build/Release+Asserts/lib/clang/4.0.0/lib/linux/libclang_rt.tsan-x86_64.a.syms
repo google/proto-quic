@@ -496,6 +496,7 @@
   __sanitizer_get_estimated_allocated_size;
   __sanitizer_get_free_bytes;
   __sanitizer_get_heap_size;
+  __sanitizer_get_module_and_offset_for_pc;
   __sanitizer_get_number_of_counters;
   __sanitizer_get_ownership;
   __sanitizer_get_total_unique_caller_callee_pairs;

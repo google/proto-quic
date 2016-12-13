@@ -8,11 +8,12 @@
 #include "base/memory/ref_counted.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Pure virtual class to listen for packet acknowledgements.
-class NET_EXPORT_PRIVATE QuicAckListenerInterface
+class QUIC_EXPORT_PRIVATE QuicAckListenerInterface
     : public base::RefCounted<QuicAckListenerInterface> {
  public:
   QuicAckListenerInterface() {}
@@ -33,7 +34,7 @@ class NET_EXPORT_PRIVATE QuicAckListenerInterface
   virtual ~QuicAckListenerInterface() {}
 };
 
-struct NET_EXPORT_PRIVATE AckListenerWrapper {
+struct QUIC_EXPORT_PRIVATE AckListenerWrapper {
   AckListenerWrapper(QuicAckListenerInterface* listener,
                      QuicPacketLength data_length);
   AckListenerWrapper(const AckListenerWrapper& other);

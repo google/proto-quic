@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SSL_SSL_CLIENT_SESSION_CACHE_H
-#define NET_SSL_SSL_CLIENT_SESSION_CACHE_H
+#ifndef NET_SSL_SSL_CLIENT_SESSION_CACHE_H_
+#define NET_SSL_SSL_CLIENT_SESSION_CACHE_H_
 
 #include <stddef.h>
 #include <time.h>
@@ -94,4 +94,4 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
 
 }  // namespace net
 
-#endif  // NET_SSL_SSL_CLIENT_SESSION_CACHE_H
+#endif  // NET_SSL_SSL_CLIENT_SESSION_CACHE_H_

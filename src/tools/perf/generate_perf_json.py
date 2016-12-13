@@ -76,6 +76,35 @@ SCRIPT_TESTS = [
       ],
     }
   },
+  {
+    'args': [
+      'tracing_perftests',
+      '--adb-path',
+      'src/third_party/catapult/devil/bin/deps/linux2/x86_64/bin/adb',
+    ],
+    'name': 'tracing_perftests',
+    'script': 'gtest_perf_test.py',
+    'testers': {
+      'chromium.perf': [
+        {
+          'name': 'Android Nexus5 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus6 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus7v2 Perf',
+          'shards': [2]
+        },
+        {
+          'name': 'Android Nexus9 Perf',
+          'shards': [2]
+        },
+      ]
+    }
+  },
 ]
 
 
@@ -123,7 +152,13 @@ def get_fyi_waterfall_config():
       {
        'gpu': '8086:22b1',
        'os': 'Windows-10-10586',
-       'device_ids': ['build47-b4', 'build48-b4'],
+       'device_ids': [
+           'build136-b1', 'build137-b1', 'build138-b1', 'build139-b1',
+           'build140-b1', 'build141-b1', 'build142-b1', 'build143-b1',
+           'build144-b1', 'build145-b1', 'build146-b1', 'build147-b1',
+           'build148-b1', 'build149-b1', 'build150-b1', 'build151-b1',
+           'build152-b1', 'build153-b1', 'build154-b1', 'build155-b1',
+           'build47-b4', 'build48-b4'],
        'perf_tests': [
          ('cc_perftests', 0),
          ('gpu_perftests', 0),
@@ -132,8 +167,22 @@ def get_fyi_waterfall_config():
          ('performance_browser_tests', 1),
          ('tracing_perftests', 1)]
       }
-    ],
-    use_whitelist=True)
+    ])
+  waterfall = add_tester(
+    waterfall, 'Android Swarming N5X Tester',
+    'fyi-android-swarming-n5x', 'android',
+    swarming=[
+      {
+       'os': 'Android',
+       'android_devices': '1',
+       'device_ids': [
+           'build245-m4--device1', 'build245-m4--device2',
+           'build245-m4--device3', 'build245-m4--device4',
+           'build245-m4--device5', 'build245-m4--device6',
+           'build245-m4--device7'
+        ]
+      }
+    ])
   return waterfall
 
 
@@ -405,6 +454,7 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       'can_use_on_swarming_builders': True,
       'expiration': 21600,
       'hard_timeout': 7200,
+      'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
     }
   return result
@@ -465,6 +515,8 @@ def get_swarming_dimension(dimension, device_affinity):
   }
   if 'gpu' in dimension:
     complete_dimension['gpu'] = dimension['gpu']
+  if 'android_devices' in dimension:
+    complete_dimension['android_devices'] = dimension['android_devices']
   return complete_dimension
 
 
@@ -644,6 +696,7 @@ def generate_all_tests(waterfall):
   benchmark_sharding_map['22'] = shard_benchmarks(22, all_benchmarks)
   benchmark_sharding_map['5'] = shard_benchmarks(5, all_benchmarks)
   benchmark_sharding_map['1'] = shard_benchmarks(1, all_benchmarks)
+  benchmark_sharding_map['7'] = shard_benchmarks(7, all_benchmarks)
 
   for name, config in waterfall['testers'].iteritems():
     use_whitelist = config['use_whitelist']

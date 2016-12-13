@@ -321,7 +321,7 @@ int64_t File::GetLength() {
 
   stat_wrapper_t file_info;
   if (CallFstat(file_.get(), &file_info))
-    return false;
+    return -1;
 
   return file_info.st_size;
 }

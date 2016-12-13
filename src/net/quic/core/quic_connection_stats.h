@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_CONNECTION_STATS_H_
-#define NET_QUIC_QUIC_CONNECTION_STATS_H_
+#ifndef NET_QUIC_CORE_QUIC_CONNECTION_STATS_H_
+#define NET_QUIC_CORE_QUIC_CONNECTION_STATS_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <ostream>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 // Structure to hold stats for a QuicConnection.
-struct NET_EXPORT_PRIVATE QuicConnectionStats {
+struct QUIC_EXPORT_PRIVATE QuicConnectionStats {
   QuicConnectionStats();
   QuicConnectionStats(const QuicConnectionStats& other);
   ~QuicConnectionStats();
 
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(
       std::ostream& os,
       const QuicConnectionStats& s);
 
@@ -93,4 +93,4 @@ struct NET_EXPORT_PRIVATE QuicConnectionStats {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CONNECTION_STATS_H_
+#endif  // NET_QUIC_CORE_QUIC_CONNECTION_STATS_H_

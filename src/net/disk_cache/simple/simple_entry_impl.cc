@@ -205,7 +205,7 @@ SimpleEntryImpl::SimpleEntryImpl(net::CacheType cache_type,
 void SimpleEntryImpl::SetActiveEntryProxy(
     std::unique_ptr<ActiveEntryProxy> active_entry_proxy) {
   DCHECK(!active_entry_proxy_);
-  active_entry_proxy_.reset(active_entry_proxy.release());
+  active_entry_proxy_ = std::move(active_entry_proxy);
 }
 
 int SimpleEntryImpl::OpenEntry(Entry** out_entry,

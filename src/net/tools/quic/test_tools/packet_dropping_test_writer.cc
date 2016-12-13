@@ -84,7 +84,7 @@ WriteResult PacketDroppingTestWriter::WritePacket(
   ++num_calls_to_write_;
   ReleaseOldPackets();
 
-  base::AutoLock locked(config_mutex_);
+  QuicReaderMutexLock lock(&config_mutex_);
   if (fake_drop_first_n_packets_ > 0 &&
       num_calls_to_write_ <=
           static_cast<uint64_t>(fake_drop_first_n_packets_)) {
@@ -168,7 +168,7 @@ QuicTime PacketDroppingTestWriter::ReleaseNextPacket() {
   if (delayed_packets_.empty()) {
     return QuicTime::Zero();
   }
-  base::AutoLock locked(config_mutex_);
+  QuicReaderMutexLock lock(&config_mutex_);
   DelayedPacketList::iterator iter = delayed_packets_.begin();
   // Determine if we should re-order.
   if (delayed_packets_.size() > 1 && fake_packet_reorder_percentage_ > 0 &&

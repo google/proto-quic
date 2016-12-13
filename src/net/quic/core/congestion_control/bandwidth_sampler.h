@@ -9,6 +9,7 @@
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -16,7 +17,7 @@ namespace test {
 class BandwidthSamplerPeer;
 }  // namespace test
 
-struct NET_EXPORT_PRIVATE BandwidthSample {
+struct QUIC_EXPORT_PRIVATE BandwidthSample {
   // The bandwidth at that particular sample. Zero if no valid bandwidth sample
   // is available.
   QuicBandwidth bandwidth;
@@ -115,7 +116,7 @@ struct NET_EXPORT_PRIVATE BandwidthSample {
 // up until an ack for a packet that was sent after OnAppLimited() was called.
 // Note that while the scenario above is not the only scenario when the
 // connection is app-limited, the approach works in other cases too.
-class NET_EXPORT_PRIVATE BandwidthSampler {
+class QUIC_EXPORT_PRIVATE BandwidthSampler {
  public:
   BandwidthSampler();
   ~BandwidthSampler();

@@ -6,8 +6,8 @@
 // In each direction, the data on such a stream first contains compressed
 // headers then body data.
 
-#ifndef NET_QUIC_QUIC_SPDY_STREAM_H_
-#define NET_QUIC_QUIC_SPDY_STREAM_H_
+#ifndef NET_QUIC_CORE_QUIC_SPDY_STREAM_H_
+#define NET_QUIC_CORE_QUIC_SPDY_STREAM_H_
 
 #include <stddef.h>
 #include <sys/types.h>
@@ -18,12 +18,12 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/iovec.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/spdy/spdy_framer.h"
 
@@ -43,10 +43,10 @@ class QuicSpdySession;
 const SpdyPriority kDefaultPriority = 3;
 
 // A QUIC stream that can send and receive HTTP2 (SPDY) headers.
-class NET_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
+class QUIC_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
  public:
   // Visitor receives callbacks from the stream.
-  class NET_EXPORT_PRIVATE Visitor {
+  class QUIC_EXPORT_PRIVATE Visitor {
    public:
     Visitor() {}
 
@@ -232,4 +232,4 @@ class NET_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SPDY_STREAM_H_
+#endif  // NET_QUIC_CORE_QUIC_SPDY_STREAM_H_

@@ -179,8 +179,8 @@ class NET_EXPORT HostResolverImpl
   class LoopbackProbeJob;
   class DnsTask;
   class RequestImpl;
-  typedef HostCache::Key Key;
-  typedef std::map<Key, Job*> JobMap;
+  using Key = HostCache::Key;
+  using JobMap = std::map<Key, std::unique_ptr<Job>>;
 
   // Number of consecutive failures of DnsTask (with successful fallback to
   // ProcTask) before the DnsClient is disabled until the next DNS change.
@@ -263,7 +263,7 @@ class NET_EXPORT HostResolverImpl
                    const HostCache::Entry& entry,
                    base::TimeDelta ttl);
 
-  // Removes |job| from |jobs_|, only if it exists.
+  // Removes |job| from |jobs_|, only if it exists, but does not delete it.
   void RemoveJob(Job* job);
 
   // Aborts all in progress jobs with ERR_NETWORK_CHANGED and notifies their

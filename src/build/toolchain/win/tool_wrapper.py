@@ -140,7 +140,7 @@ class WinTool(object):
           not line.startswith('Generating code') and
           not line.startswith('Finished generating code')):
         print line,
-    return link.returncode
+    return link.wait()
 
   def ExecLinkWithManifests(self, arch, embed_manifest, out, ldcmd, resname,
                             mt, rc, intermediate_manifest, *manifests):

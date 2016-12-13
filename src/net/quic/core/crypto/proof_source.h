@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_PROOF_SOURCE_H_
-#define NET_QUIC_CRYPTO_PROOF_SOURCE_H_
+#ifndef NET_QUIC_CORE_CRYPTO_PROOF_SOURCE_H_
+#define NET_QUIC_CORE_CRYPTO_PROOF_SOURCE_H_
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "base/memory/ref_counted.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_crypto_proof.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
 
 // ProofSource is an interface by which a QUIC server can obtain certificate
 // chains and signatures that prove its identity.
-class NET_EXPORT_PRIVATE ProofSource {
+class QUIC_EXPORT_PRIVATE ProofSource {
  public:
   // Chain is a reference-counted wrapper for a std::vector of std::stringified
   // certificates.
-  struct NET_EXPORT_PRIVATE Chain : public base::RefCounted<Chain> {
+  struct QUIC_EXPORT_PRIVATE Chain : public base::RefCounted<Chain> {
     explicit Chain(const std::vector<std::string>& certs);
 
     const std::vector<std::string> certs;
@@ -127,4 +127,4 @@ class NET_EXPORT_PRIVATE ProofSource {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_PROOF_SOURCE_H_
+#endif  // NET_QUIC_CORE_CRYPTO_PROOF_SOURCE_H_

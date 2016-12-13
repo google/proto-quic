@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_CONFIG_H_
-#define NET_QUIC_QUIC_CONFIG_H_
+#ifndef NET_QUIC_CORE_QUIC_CONFIG_H_
+#define NET_QUIC_CORE_QUIC_CONFIG_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
 #include <string>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -41,7 +41,7 @@ enum HelloType {
 
 // An abstract base class that stores a value that can be sent in CHLO/SHLO
 // message. These values can be OPTIONAL or REQUIRED, depending on |presence_|.
-class NET_EXPORT_PRIVATE QuicConfigValue {
+class QUIC_EXPORT_PRIVATE QuicConfigValue {
  public:
   QuicConfigValue(QuicTag tag, QuicConfigPresence presence);
   virtual ~QuicConfigValue();
@@ -61,7 +61,7 @@ class NET_EXPORT_PRIVATE QuicConfigValue {
   const QuicConfigPresence presence_;
 };
 
-class NET_EXPORT_PRIVATE QuicNegotiableValue : public QuicConfigValue {
+class QUIC_EXPORT_PRIVATE QuicNegotiableValue : public QuicConfigValue {
  public:
   QuicNegotiableValue(QuicTag tag, QuicConfigPresence presence);
   ~QuicNegotiableValue() override;
@@ -75,7 +75,7 @@ class NET_EXPORT_PRIVATE QuicNegotiableValue : public QuicConfigValue {
   bool negotiated_;
 };
 
-class NET_EXPORT_PRIVATE QuicNegotiableUint32 : public QuicNegotiableValue {
+class QUIC_EXPORT_PRIVATE QuicNegotiableUint32 : public QuicNegotiableValue {
   // TODO(fayang): some negotiated values use uint32 as bool (e.g., silent
   // close). Consider adding a QuicNegotiableBool type.
  public:
@@ -115,7 +115,7 @@ class NET_EXPORT_PRIVATE QuicNegotiableUint32 : public QuicNegotiableValue {
 };
 
 // Stores uint32_t from CHLO or SHLO messages that are not negotiated.
-class NET_EXPORT_PRIVATE QuicFixedUint32 : public QuicConfigValue {
+class QUIC_EXPORT_PRIVATE QuicFixedUint32 : public QuicConfigValue {
  public:
   QuicFixedUint32(QuicTag name, QuicConfigPresence presence);
   ~QuicFixedUint32() override;
@@ -148,7 +148,7 @@ class NET_EXPORT_PRIVATE QuicFixedUint32 : public QuicConfigValue {
 };
 
 // Stores tag from CHLO or SHLO messages that are not negotiated.
-class NET_EXPORT_PRIVATE QuicFixedTagVector : public QuicConfigValue {
+class QUIC_EXPORT_PRIVATE QuicFixedTagVector : public QuicConfigValue {
  public:
   QuicFixedTagVector(QuicTag name, QuicConfigPresence presence);
   QuicFixedTagVector(const QuicFixedTagVector& other);
@@ -184,7 +184,7 @@ class NET_EXPORT_PRIVATE QuicFixedTagVector : public QuicConfigValue {
 };
 
 // Stores QuicSocketAddress from CHLO or SHLO messages that are not negotiated.
-class NET_EXPORT_PRIVATE QuicFixedSocketAddress : public QuicConfigValue {
+class QUIC_EXPORT_PRIVATE QuicFixedSocketAddress : public QuicConfigValue {
  public:
   QuicFixedSocketAddress(QuicTag tag, QuicConfigPresence presence);
   ~QuicFixedSocketAddress() override;
@@ -216,7 +216,7 @@ class NET_EXPORT_PRIVATE QuicFixedSocketAddress : public QuicConfigValue {
 
 // QuicConfig contains non-crypto configuration options that are negotiated in
 // the crypto handshake.
-class NET_EXPORT_PRIVATE QuicConfig {
+class QUIC_EXPORT_PRIVATE QuicConfig {
  public:
   QuicConfig();
   QuicConfig(const QuicConfig& other);
@@ -447,4 +447,4 @@ class NET_EXPORT_PRIVATE QuicConfig {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CONFIG_H_
+#endif  // NET_QUIC_CORE_QUIC_CONFIG_H_

@@ -215,4 +215,3 @@ bool ParseHostsFile(const base::FilePath& path, DnsHosts* dns_hosts) {
 }
 
 }  // namespace net
-

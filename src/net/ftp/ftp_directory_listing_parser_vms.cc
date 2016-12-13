@@ -192,8 +192,8 @@ bool VmsDateListingToTime(const std::vector<base::string16>& columns,
   if (!base::StringToInt(time_parts[1], &time_exploded.minute))
     return false;
 
-  // We don't know the time zone of the server, so just use local time.
-  *time = base::Time::FromLocalExploded(time_exploded);
+  // We don't know the time zone of the server, so just use UTC.
+  *time = base::Time::FromUTCExploded(time_exploded);
   return true;
 }
 

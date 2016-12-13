@@ -1721,6 +1721,15 @@ OPENSSL_EXPORT long SSL_CTX_set_timeout(SSL_CTX *ctx, long timeout);
  * |ctx|. */
 OPENSSL_EXPORT long SSL_CTX_get_timeout(const SSL_CTX *ctx);
 
+/* SSL_set_session_timeout sets the default lifetime, in seconds, of the
+ * session created in |ssl| to |timeout|, and returns the old value.
+ *
+ * By default the value |SSL_DEFAULT_SESSION_TIMEOUT| is used, which can be
+ * overridden at the context level by calling |SSL_CTX_set_timeout|.
+ *
+ * If |timeout| is zero the newly created session will not be resumable. */
+OPENSSL_EXPORT long SSL_set_session_timeout(SSL *ssl, long timeout);
+
 /* SSL_CTX_set_session_id_context sets |ctx|'s session ID context to |sid_ctx|.
  * It returns one on success and zero on error. The session ID context is an
  * application-defined opaque byte string. A session will not be used in a
@@ -2502,15 +2511,14 @@ OPENSSL_EXPORT int SSL_select_next_proto(uint8_t **out, uint8_t *out_len,
  *
  * See draft-balfanz-tls-channelid-01. */
 
-/* SSL_CTX_enable_tls_channel_id either configures a TLS server to accept TLS
- * Channel IDs from clients, or configures a client to send TLS Channel IDs to
- * a server. It returns one. */
-OPENSSL_EXPORT int SSL_CTX_enable_tls_channel_id(SSL_CTX *ctx);
+/* SSL_CTX_set_tls_channel_id_enabled configures whether connections associated
+ * with |ctx| should enable Channel ID. */
+OPENSSL_EXPORT void SSL_CTX_set_tls_channel_id_enabled(SSL_CTX *ctx,
+                                                       int enabled);
 
-/* SSL_enable_tls_channel_id either configures a TLS server to accept TLS
- * Channel IDs from clients, or configures a client to send TLS Channel IDs to
- * server. It returns one. */
-OPENSSL_EXPORT int SSL_enable_tls_channel_id(SSL *ssl);
+/* SSL_set_tls_channel_id_enabled configures whether |ssl| should enable Channel
+ * ID. */
+OPENSSL_EXPORT void SSL_set_tls_channel_id_enabled(SSL *ssl, int enabled);
 
 /* SSL_CTX_set1_tls_channel_id configures a TLS client to send a TLS Channel ID
  * to compatible servers. |private_key| must be a P-256 EC key. It returns one
@@ -2942,10 +2950,11 @@ OPENSSL_EXPORT int SSL_CTX_set_max_send_fragment(SSL_CTX *ctx,
 OPENSSL_EXPORT int SSL_set_max_send_fragment(SSL *ssl,
                                              size_t max_send_fragment);
 
-/* ssl_early_callback_ctx is passed to certain callbacks that are called very
- * early on during the server handshake. At this point, much of the SSL* hasn't
- * been filled out and only the ClientHello can be depended on. */
-struct ssl_early_callback_ctx {
+/* ssl_early_callback_ctx (aka |SSL_CLIENT_HELLO|) is passed to certain
+ * callbacks that are called very early on during the server handshake. At this
+ * point, much of the SSL* hasn't been filled out and only the ClientHello can
+ * be depended on. */
+typedef struct ssl_early_callback_ctx {
   SSL *ssl;
   const uint8_t *client_hello;
   size_t client_hello_len;
@@ -2960,15 +2969,15 @@ struct ssl_early_callback_ctx {
   size_t compression_methods_len;
   const uint8_t *extensions;
   size_t extensions_len;
-};
+} SSL_CLIENT_HELLO;
 
-/* SSL_early_callback_ctx_extension_get searches the extensions in |ctx| for an
- * extension of the given type. If not found, it returns zero. Otherwise it
- * sets |out_data| to point to the extension contents (not including the type
- * and length bytes), sets |out_len| to the length of the extension contents
- * and returns one. */
+/* SSL_early_callback_ctx_extension_get searches the extensions in
+ * |client_hello| for an extension of the given type. If not found, it returns
+ * zero. Otherwise it sets |out_data| to point to the extension contents (not
+ * including the type and length bytes), sets |out_len| to the length of the
+ * extension contents and returns one. */
 OPENSSL_EXPORT int SSL_early_callback_ctx_extension_get(
-    const struct ssl_early_callback_ctx *ctx, uint16_t extension_type,
+    const SSL_CLIENT_HELLO *client_hello, uint16_t extension_type,
     const uint8_t **out_data, size_t *out_len);
 
 /* SSL_CTX_set_select_certificate_cb sets a callback that is called before most
@@ -2978,19 +2987,19 @@ OPENSSL_EXPORT int SSL_early_callback_ctx_extension_get(
  * pause the handshake to perform an asynchronous operation. If paused,
  * |SSL_get_error| will return |SSL_ERROR_PENDING_CERTIFICATE|.
  *
- * Note: The |ssl_early_callback_ctx| is only valid for the duration of the
- * callback and is not valid while the handshake is paused. Further, unlike with
- * most callbacks, when the handshake loop is resumed, it will not call the
- * callback a second time. The caller must finish reconfiguring the connection
- * before resuming the handshake. */
+ * Note: The |SSL_CLIENT_HELLO| is only valid for the duration of the callback
+ * and is not valid while the handshake is paused. Further, unlike with most
+ * callbacks, when the handshake loop is resumed, it will not call the callback
+ * a second time. The caller must finish reconfiguring the connection before
+ * resuming the handshake. */
 OPENSSL_EXPORT void SSL_CTX_set_select_certificate_cb(
-    SSL_CTX *ctx, int (*cb)(const struct ssl_early_callback_ctx *));
+    SSL_CTX *ctx, int (*cb)(const SSL_CLIENT_HELLO *));
 
 /* SSL_CTX_set_dos_protection_cb sets a callback that is called once the
  * resumption decision for a ClientHello has been made. It can return one to
  * allow the handshake to continue or zero to cause the handshake to abort. */
 OPENSSL_EXPORT void SSL_CTX_set_dos_protection_cb(
-    SSL_CTX *ctx, int (*cb)(const struct ssl_early_callback_ctx *));
+    SSL_CTX *ctx, int (*cb)(const SSL_CLIENT_HELLO *));
 
 /* SSL_ST_* are possible values for |SSL_state| and the bitmasks that make them
  * up. */
@@ -3627,6 +3636,12 @@ OPENSSL_EXPORT int SSL_set_min_version(SSL *ssl, uint16_t version);
 /* SSL_set_max_version calls |SSL_set_max_proto_version|. */
 OPENSSL_EXPORT int SSL_set_max_version(SSL *ssl, uint16_t version);
 
+/* SSL_CTX_enable_tls_channel_id calls |SSL_CTX_set_tls_channel_id_enabled|. */
+OPENSSL_EXPORT int SSL_CTX_enable_tls_channel_id(SSL_CTX *ctx);
+
+/* SSL_enable_tls_channel_id calls |SSL_set_tls_channel_id_enabled|. */
+OPENSSL_EXPORT int SSL_enable_tls_channel_id(SSL *ssl);
+
 
 /* Private structures.
  *
@@ -3916,12 +3931,12 @@ struct ssl_ctx_st {
    * with an error and cause SSL_get_error to return
    * SSL_ERROR_PENDING_CERTIFICATE. Note: when the handshake loop is resumed, it
    * will not call the callback a second time. */
-  int (*select_certificate_cb)(const struct ssl_early_callback_ctx *);
+  int (*select_certificate_cb)(const SSL_CLIENT_HELLO *);
 
   /* dos_protection_cb is called once the resumption decision for a ClientHello
    * has been made. It returns one to continue the handshake or zero to
    * abort. */
-  int (*dos_protection_cb) (const struct ssl_early_callback_ctx *);
+  int (*dos_protection_cb) (const SSL_CLIENT_HELLO *);
 
   /* Maximum amount of data to send in one fragment. actual record size can be
    * more than this due to padding and MAC overheads. */
@@ -4042,6 +4057,8 @@ struct ssl_ctx_st {
   int freelist_max_len;
 };
 
+typedef struct ssl_handshake_st SSL_HANDSHAKE;
+
 struct ssl_st {
   /* method is the method table corresponding to the current protocol (DTLS or
    * TLS). */
@@ -4080,7 +4097,7 @@ struct ssl_st {
    * with a better mechanism. */
   BIO *bbio;
 
-  int (*handshake_func)(SSL *);
+  int (*handshake_func)(SSL_HANDSHAKE *hs);
 
   BUF_MEM *init_buf; /* buffer used during init */
 
@@ -4215,6 +4232,10 @@ struct ssl_st {
 
   /* TODO(agl): remove once node.js not longer references this. */
   int tlsext_status_type;
+
+  /* session_timeout is the default lifetime in seconds of the session
+   * created in this connection. */
+  long session_timeout;
 };
 
 
@@ -4267,7 +4288,6 @@ struct ssl_st {
 #define SSL_CTRL_NEED_TMP_RSA doesnt_exist
 #define SSL_CTRL_OPTIONS doesnt_exist
 #define SSL_CTRL_SESS_NUMBER doesnt_exist
-#define SSL_CTRL_SET_CHANNEL_ID doesnt_exist
 #define SSL_CTRL_SET_CURVES doesnt_exist
 #define SSL_CTRL_SET_CURVES_LIST doesnt_exist
 #define SSL_CTRL_SET_MAX_CERT_LIST doesnt_exist
@@ -4299,7 +4319,6 @@ struct ssl_st {
 #define SSL_CTX_clear_chain_certs SSL_CTX_clear_chain_certs
 #define SSL_CTX_clear_mode SSL_CTX_clear_mode
 #define SSL_CTX_clear_options SSL_CTX_clear_options
-#define SSL_CTX_enable_tls_channel_id SSL_CTX_enable_tls_channel_id
 #define SSL_CTX_get0_chain_certs SSL_CTX_get0_chain_certs
 #define SSL_CTX_get_extra_chain_certs SSL_CTX_get_extra_chain_certs
 #define SSL_CTX_get_max_cert_list SSL_CTX_get_max_cert_list
@@ -4315,7 +4334,6 @@ struct ssl_st {
 #define SSL_CTX_set0_chain SSL_CTX_set0_chain
 #define SSL_CTX_set1_chain SSL_CTX_set1_chain
 #define SSL_CTX_set1_curves SSL_CTX_set1_curves
-#define SSL_CTX_set1_tls_channel_id SSL_CTX_set1_tls_channel_id
 #define SSL_CTX_set_max_cert_list SSL_CTX_set_max_cert_list
 #define SSL_CTX_set_max_send_fragment SSL_CTX_set_max_send_fragment
 #define SSL_CTX_set_mode SSL_CTX_set_mode
@@ -4336,7 +4354,6 @@ struct ssl_st {
 #define SSL_clear_chain_certs SSL_clear_chain_certs
 #define SSL_clear_mode SSL_clear_mode
 #define SSL_clear_options SSL_clear_options
-#define SSL_enable_tls_channel_id SSL_enable_tls_channel_id
 #define SSL_get0_certificate_types SSL_get0_certificate_types
 #define SSL_get0_chain_certs SSL_get0_chain_certs
 #define SSL_get_max_cert_list SSL_get_max_cert_list
@@ -4344,14 +4361,12 @@ struct ssl_st {
 #define SSL_get_options SSL_get_options
 #define SSL_get_secure_renegotiation_support \
     SSL_get_secure_renegotiation_support
-#define SSL_get_tls_channel_id SSL_get_tls_channel_id
 #define SSL_need_tmp_RSA SSL_need_tmp_RSA
 #define SSL_num_renegotiations SSL_num_renegotiations
 #define SSL_session_reused SSL_session_reused
 #define SSL_set0_chain SSL_set0_chain
 #define SSL_set1_chain SSL_set1_chain
 #define SSL_set1_curves SSL_set1_curves
-#define SSL_set1_tls_channel_id SSL_set1_tls_channel_id
 #define SSL_set_max_cert_list SSL_set_max_cert_list
 #define SSL_set_max_send_fragment SSL_set_max_send_fragment
 #define SSL_set_mode SSL_set_mode
@@ -4552,6 +4567,8 @@ BORINGSSL_MAKE_DELETER(SSL_SESSION, SSL_SESSION_free)
 #define SSL_R_PRE_SHARED_KEY_MUST_BE_LAST 267
 #define SSL_R_OLD_SESSION_PRF_HASH_MISMATCH 268
 #define SSL_R_INVALID_SCT_LIST 269
+#define SSL_R_TOO_MUCH_SKIPPED_EARLY_DATA 270
+#define SSL_R_PSK_IDENTITY_BINDER_COUNT_MISMATCH 271
 #define SSL_R_SSLV3_ALERT_CLOSE_NOTIFY 1000
 #define SSL_R_SSLV3_ALERT_UNEXPECTED_MESSAGE 1010
 #define SSL_R_SSLV3_ALERT_BAD_RECORD_MAC 1020

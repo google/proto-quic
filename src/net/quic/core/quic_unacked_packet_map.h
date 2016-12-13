@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_UNACKED_PACKET_MAP_H_
-#define NET_QUIC_QUIC_UNACKED_PACKET_MAP_H_
+#ifndef NET_QUIC_CORE_QUIC_UNACKED_PACKET_MAP_H_
+#define NET_QUIC_CORE_QUIC_UNACKED_PACKET_MAP_H_
 
 #include <stddef.h>
 
 #include <deque>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_transmission_info.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -20,7 +20,7 @@ namespace net {
 // 1) Track retransmittable data, including multiple transmissions of frames.
 // 2) Track packets and bytes in flight for congestion control.
 // 3) Track sent time of packets to provide RTT measurements from acks.
-class NET_EXPORT_PRIVATE QuicUnackedPacketMap {
+class QUIC_EXPORT_PRIVATE QuicUnackedPacketMap {
  public:
   QuicUnackedPacketMap();
   ~QuicUnackedPacketMap();
@@ -200,4 +200,4 @@ class NET_EXPORT_PRIVATE QuicUnackedPacketMap {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_UNACKED_PACKET_MAP_H_
+#endif  // NET_QUIC_CORE_QUIC_UNACKED_PACKET_MAP_H_

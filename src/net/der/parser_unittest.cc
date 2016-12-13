@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/logging.h"
-#include "base/numerics/safe_math.h"
+#include "net/der/parser.h"
+
 #include "net/der/input.h"
 #include "net/der/parse_values.h"
-#include "net/der/parser.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

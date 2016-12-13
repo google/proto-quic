@@ -7,9 +7,9 @@
 
 #include <utility>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace base {
 class TaskRunner;
@@ -20,7 +20,7 @@ namespace net {
 // Creates Chromium-based QuartcAlarms used throughout QUIC. The alarm posts
 // messages to the Chromium message queue for tasks such as retransmission.
 // Used for the tests inside Chromium.
-class NET_EXPORT_PRIVATE QuartcAlarmFactory : public QuicAlarmFactory {
+class QUIC_EXPORT_PRIVATE QuartcAlarmFactory : public QuicAlarmFactory {
  public:
   QuartcAlarmFactory(base::TaskRunner* task_runner, const QuicClock* clock);
   ~QuartcAlarmFactory() override;

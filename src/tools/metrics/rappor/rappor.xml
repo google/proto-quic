@@ -994,6 +994,99 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Media.Autoplay.CrossOrigin.Allowed.ChildFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a cross-origin iframe URL containing media that was allowed to
+    autoplay.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.Autoplay.CrossOrigin.Allowed.TopLevelFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the top-level frame URL that has a cross-origin iframe
+    containing media that was allowed to autoplay.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.Autoplay.CrossOrigin.Blocked.ChildFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a cross-origin iframe URL containing media that was blocked to
+    autoplay.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.Autoplay.CrossOrigin.Blocked.TopLevelFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the top-level frame URL that has a cross-origin iframe
+    containing media that was blocked to autoplay.
+  </summary>
+</rappor-metric>
+
+<rappor-metric
+    name="Media.Autoplay.CrossOrigin.PlayedWithGestureAfterBlock.ChildFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a cross-origin iframe URL containing media that was blocked to
+    autoplay but the user plays the media by gesture at some point.
+  </summary>
+</rappor-metric>
+
+<rappor-metric
+    name="Media.Autoplay.CrossOrigin.PlayedWithGestureAfterBlock.TopLevelFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the top-level frame URL that has a cross-origin iframe
+    containing media that was allowed to autoplay but the user plays the media
+    by gesture at some point.
+  </summary>
+</rappor-metric>
+
+<rappor-metric
+    name="Media.Autoplay.CrossOrigin.UserPausedAutoplayingVideo.ChildFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a cross-origin iframe URL containing an autoplaying video but
+    the user actively paused it.
+  </summary>
+</rappor-metric>
+
+<rappor-metric
+    name="Media.Autoplay.CrossOrigin.UserPausedAutoplayingVideo.TopLevelFrame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the top-level frame URL that has a cross-origin iframe
+    containing an autoplaying video but the user actively paused it.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="Media.OriginUrl.EME" type="ETLD_PLUS_ONE">
   <owner>xhwang@chromium.org</owner>
   <summary>
@@ -1157,6 +1250,36 @@ now we are only interested in H264, VP8 and VP9.
     The eTLD+1 of the website visited by a user by typing the URL in the omnibox
     including those completed from suggestions but not including those that end
     up being searches in the search engine.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="NTP.SuggestionsImpressions.IconsColor"
+    type="UMA_RAPPOR_TYPE">
+  <owner>mastiz@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a most visited tile displayed in the NTP, for cases where the
+    fallback color was used (as opposed to having an icon, or simply being
+    gray).
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="NTP.SuggestionsImpressions.IconsGray"
+    type="UMA_RAPPOR_TYPE">
+  <owner>mastiz@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a most visited tile displayed in the NTP, for cases where the
+    gray fallback icon was used (as opposed to having an icon, or a fallback
+    color).
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="NTP.SuggestionsImpressions.IconsReal"
+    type="UMA_RAPPOR_TYPE">
+  <owner>mastiz@chromium.org</owner>
+  <summary>
+    The eTLD+1 of a most visited tile displayed in the NTP, for cases where the
+    real icon was used (as opposed to having a fallback color or simply being
+    gray).
   </summary>
 </rappor-metric>
 

@@ -63,13 +63,28 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
 
   // The canned URLs this handler will respond to without having been
   // explicitly initialized with response headers and data.
-  // FIXME(brettw): we should probably also have a redirect one
+
+  // URL that, by default, automatically advances through each state.  Reads
+  // complete synchronously.
   static GURL test_url_1();
+
+  // URLs that, by default, must be manually advanced through each state.
   static GURL test_url_2();
   static GURL test_url_3();
   static GURL test_url_4();
+
+  // URL that, by default, automatically advances through each state.  Reads
+  // complete asynchronously. Has same response body as test_url_1(), which is
+  // (test_data_1()).
+  static GURL test_url_auto_advance_async_reads_1();
+
+  // URL that fails with ERR_INVALID_URL.
   static GURL test_url_error();
+
+  // Redirects to test_url_1().
   static GURL test_url_redirect_to_url_1();
+
+  // Redirects to test_url_2().
   static GURL test_url_redirect_to_url_2();
 
   // The data that corresponds to each of the URLs above
@@ -151,6 +166,10 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
   // Assigns |response_headers_| and |response_headers_length_|.
   void SetResponseHeaders(const std::string& response_headers);
 
+  // Copies as much of the response body as will into |buf|, and returns number
+  // of bytes written.
+  int CopyDataForRead(IOBuffer* buf, int buf_size);
+
   bool auto_advance_;
 
   Stage stage_;
@@ -177,6 +196,8 @@ class NET_EXPORT_PRIVATE URLRequestTestJob : public URLRequestJob {
 
   // Original size in bytes of the response headers before decoding.
   int response_headers_length_;
+
+  bool async_reads_;
 
   base::WeakPtrFactory<URLRequestTestJob> weak_factory_;
 };

@@ -202,6 +202,8 @@ if (build_with_chromium) {
         libfuzzer_options = [ "max_len=2048" ]
       } else if ("read_pem" == fuzzer) {
         libfuzzer_options = [ "max_len=512" ]
+      } else if ("session" == fuzzer) {
+        libfuzzer_options = [ "max_len=8192" ]
       } else if ("server" == fuzzer) {
         libfuzzer_options = [ "max_len=4096" ]
       } else if ("spki" == fuzzer) {

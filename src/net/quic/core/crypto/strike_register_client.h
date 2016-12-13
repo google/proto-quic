@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_STRIKE_REGISTER_CLIENT_H_
-#define NET_QUIC_CRYPTO_STRIKE_REGISTER_CLIENT_H_
+#ifndef NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_CLIENT_H_
+#define NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_CLIENT_H_
 
 #include <string>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/strike_register.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Interface implemented by clients that talk to strike registers
 // implemented as local or remote services.
-class NET_EXPORT_PRIVATE StrikeRegisterClient {
+class QUIC_EXPORT_PRIVATE StrikeRegisterClient {
  public:
   // Single use callback that will be invoked once the validation
   // operation is complete.
-  class NET_EXPORT_PRIVATE ResultCallback {
+  class QUIC_EXPORT_PRIVATE ResultCallback {
    public:
     ResultCallback() {}
     virtual ~ResultCallback() {}
@@ -57,4 +57,4 @@ class NET_EXPORT_PRIVATE StrikeRegisterClient {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_STRIKE_REGISTER_CLIENT_H_
+#endif  // NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_CLIENT_H_

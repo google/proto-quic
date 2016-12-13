@@ -336,7 +336,7 @@ int UDPSocketWin::GetPeerAddress(IPEndPoint* address) const {
     std::unique_ptr<IPEndPoint> remote_address(new IPEndPoint());
     if (!remote_address->FromSockAddr(storage.addr, storage.addr_len))
       return ERR_ADDRESS_INVALID;
-    remote_address_.reset(remote_address.release());
+    remote_address_ = std::move(remote_address);
   }
 
   *address = *remote_address_;
@@ -357,7 +357,7 @@ int UDPSocketWin::GetLocalAddress(IPEndPoint* address) const {
     std::unique_ptr<IPEndPoint> local_address(new IPEndPoint());
     if (!local_address->FromSockAddr(storage.addr, storage.addr_len))
       return ERR_ADDRESS_INVALID;
-    local_address_.reset(local_address.release());
+    local_address_ = std::move(local_address);
     net_log_.AddEvent(NetLogEventType::UDP_LOCAL_ADDRESS,
                       CreateNetLogUDPConnectCallback(
                           local_address_.get(),

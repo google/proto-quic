@@ -98,31 +98,30 @@ void SSLClientSessionCache::DumpMemoryStats(
     return;
   cache_dump = pmd->CreateAllocatorDump(absolute_name);
   base::AutoLock lock(lock_);
+  int total_serialized_cert_size = 0;
+  int total_cert_count = 0;
   for (const auto& pair : cache_) {
     auto entry = pair.second.get();
     auto cert_chain = entry->x509_chain;
     size_t cert_count = sk_X509_num(cert_chain);
-    base::trace_event::MemoryAllocatorDump* entry_dump =
-        pmd->CreateAllocatorDump(
-            base::StringPrintf("%s/entry_%p", absolute_name.c_str(), entry));
-    int cert_size = 0;
+    total_cert_count += cert_count;
     for (size_t i = 0; i < cert_count; ++i) {
       X509* cert = sk_X509_value(cert_chain, i);
-      cert_size += i2d_X509(cert, nullptr);
+      total_serialized_cert_size += i2d_X509(cert, nullptr);
     }
-    // This measures the lower bound of the serialized certificate. It doesn't
-    // measure the actual memory used, which is 4x this amount (see
-    // crbug.com/671420 for more details).
-    entry_dump->AddScalar("cert_size",
-                          base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                          cert_size);
-    entry_dump->AddScalar("serialized_cert_count",
-                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
-                          cert_count);
-    entry_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
-                          base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                          cert_size);
   }
+  // This measures the lower bound of the serialized certificate. It doesn't
+  // measure the actual memory used, which is 4x this amount (see
+  // crbug.com/671420 for more details).
+  cache_dump->AddScalar("serialized_cert_size",
+                        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                        total_serialized_cert_size);
+  cache_dump->AddScalar("cert_count",
+                        base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                        total_cert_count);
+  cache_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
+                        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                        total_serialized_cert_size);
 }
 
 void SSLClientSessionCache::FlushExpiredSessions() {

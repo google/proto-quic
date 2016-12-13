@@ -133,107 +133,32 @@ void EVP_tls_cbc_copy_mac(uint8_t *out, unsigned md_size,
   /* mac_end is the index of |in| just after the end of the MAC. */
   unsigned mac_end = in_len;
   unsigned mac_start = mac_end - md_size;
-  /* scan_start contains the number of bytes that we can ignore because
-   * the MAC's position can only vary by 255 bytes. */
-  unsigned scan_start = 0;
-  unsigned i, j;
-  unsigned rotate_offset;
 
   assert(orig_len >= in_len);
   assert(in_len >= md_size);
   assert(md_size <= EVP_MAX_MD_SIZE);
 
+  /* scan_start contains the number of bytes that we can ignore because
+   * the MAC's position can only vary by 255 bytes. */
+  unsigned scan_start = 0;
   /* This information is public so it's safe to branch based on it. */
   if (orig_len > md_size + 255 + 1) {
     scan_start = orig_len - (md_size + 255 + 1);
   }
 
-  /* Ideally the next statement would be:
-   *
-   *   rotate_offset = (mac_start - scan_start) % md_size;
-   *
-   * However, division is not a constant-time operation (at least on Intel
-   * chips). Thus we enumerate the possible values of md_size and handle each
-   * separately. The value of |md_size| is public information (it's determined
-   * by the cipher suite in the ServerHello) so our timing can vary based on
-   * its value. */
-
-  rotate_offset = mac_start - scan_start;
-  /* rotate_offset can be, at most, 255 (bytes of padding) + 1 (padding length)
-   * + md_size = 256 + 48 (since SHA-384 is the largest hash) = 304. */
-  assert(rotate_offset <= 304);
-
-  /* Below is an SMT-LIB2 verification that the Barrett reductions below are
-   * correct within this range:
-   *
-   * (define-fun barrett (
-   *     (x (_ BitVec 32))
-   *     (mul (_ BitVec 32))
-   *     (shift (_ BitVec 32))
-   *     (divisor (_ BitVec 32)) ) (_ BitVec 32)
-   *   (let ((q (bvsub x (bvmul divisor (bvlshr (bvmul x mul) shift))) ))
-   *     (ite (bvuge q divisor)
-   *       (bvsub q divisor)
-   *       q)))
-   *
-   * (declare-fun x () (_ BitVec 32))
-   *
-   * (assert (or
-   *   (let (
-   *     (divisor (_ bv20 32))
-   *     (mul (_ bv25 32))
-   *     (shift (_ bv9 32))
-   *     (limit (_ bv853 32)))
-   *
-   *     (and (bvule x limit) (not (= (bvurem x divisor)
-   *                                  (barrett x mul shift divisor)))))
-   *
-   *   (let (
-   *     (divisor (_ bv48 32))
-   *     (mul (_ bv10 32))
-   *     (shift (_ bv9 32))
-   *     (limit (_ bv768 32)))
-   *
-   *     (and (bvule x limit) (not (= (bvurem x divisor)
-   *                                  (barrett x mul shift divisor)))))
-   * ))
-   *
-   * (check-sat)
-   * (get-model)
-   */
-
-  if (md_size == 16) {
-    rotate_offset &= 15;
-  } else if (md_size == 20) {
-    /* 1/20 is approximated as 25/512 and then Barrett reduction is used.
-     * Analytically, this is correct for 0 <= rotate_offset <= 853. */
-    unsigned q = (rotate_offset * 25) >> 9;
-    rotate_offset -= q * 20;
-    rotate_offset -=
-        constant_time_select(constant_time_ge(rotate_offset, 20), 20, 0);
-  } else if (md_size == 32) {
-    rotate_offset &= 31;
-  } else if (md_size == 48) {
-    /* 1/48 is approximated as 10/512 and then Barrett reduction is used.
-     * Analytically, this is correct for 0 <= rotate_offset <= 768. */
-    unsigned q = (rotate_offset * 10) >> 9;
-    rotate_offset -= q * 48;
-    rotate_offset -=
-        constant_time_select(constant_time_ge(rotate_offset, 48), 48, 0);
-  } else {
-    /* This should be impossible therefore this path doesn't run in constant
-     * time. */
-    assert(0);
-    rotate_offset = rotate_offset % md_size;
-  }
-
+  unsigned rotate_offset = 0;
+  uint8_t mac_started = 0;
   memset(rotated_mac, 0, md_size);
-  for (i = scan_start, j = 0; i < orig_len; i++) {
-    uint8_t mac_started = constant_time_ge_8(i, mac_start);
+  for (unsigned i = scan_start, j = 0; i < orig_len; i++, j++) {
+    if (j >= md_size) {
+      j -= md_size;
+    }
+    unsigned is_mac_start = constant_time_eq(i, mac_start);
+    mac_started |= is_mac_start;
     uint8_t mac_ended = constant_time_ge_8(i, mac_end);
-    uint8_t b = in[i];
-    rotated_mac[j++] |= b & mac_started & ~mac_ended;
-    j &= constant_time_lt(j, md_size);
+    rotated_mac[j] |= in[i] & mac_started & ~mac_ended;
+    /* Save the offset that |mac_start| is mapped to. */
+    rotate_offset |= j & is_mac_start;
   }
 
   /* Now rotate the MAC. We rotate in log(md_size) steps, one for each bit
@@ -243,7 +168,7 @@ void EVP_tls_cbc_copy_mac(uint8_t *out, unsigned md_size,
     /* Rotate by |offset| iff the corresponding bit is set in
      * |rotate_offset|, placing the result in |rotated_mac_tmp|. */
     const uint8_t skip_rotate = (rotate_offset & 1) - 1;
-    for (i = 0, j = offset; i < md_size; i++, j++) {
+    for (unsigned i = 0, j = offset; i < md_size; i++, j++) {
       if (j >= md_size) {
         j -= md_size;
       }

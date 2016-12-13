@@ -202,7 +202,7 @@ template("info_plist") {
   }
 }
 
-# Template to combile .xib or .storyboard files.
+# Template to compile .xib and .storyboard files.
 #
 # Arguments
 #
@@ -211,7 +211,7 @@ template("info_plist") {
 #
 #     ibtool_flags:
 #         (optional) list of string, additional flags to pass to the ibtool
-template("compile_xibs") {
+template("compile_ib_files") {
   action_foreach(target_name) {
     forward_variables_from(invoker,
                            [
@@ -219,23 +219,28 @@ template("compile_xibs") {
                              "visibility",
                            ])
     assert(defined(invoker.sources),
-           "Sources must be specified for $target_name")
+           "sources must be specified for $target_name")
+    assert(defined(invoker.output_extension),
+           "output_extension must be specified for $target_name")
 
     ibtool_flags = []
     if (defined(invoker.ibtool_flags)) {
       ibtool_flags = invoker.ibtool_flags
     }
 
-    script = "//build/config/mac/compile_xib.py"
+    _output_extension = invoker.output_extension
+
+    script = "//build/config/mac/compile_ib_files.py"
     sources = invoker.sources
     outputs = [
-      "$target_gen_dir/$target_name/{{source_name_part}}.nib",
+      "$target_gen_dir/$target_name/{{source_name_part}}.$_output_extension",
     ]
     args = [
       "--input",
       "{{source}}",
       "--output",
-      rebase_path("$target_gen_dir/$target_name/{{source_name_part}}.nib"),
+      rebase_path(
+          "$target_gen_dir/$target_name/{{source_name_part}}.$_output_extension"),
     ]
     if (!use_system_xcode) {
       args += [

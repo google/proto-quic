@@ -26,10 +26,10 @@
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/chromium/quic_chromium_connection_helper.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
+#include "net/quic/chromium/quic_crypto_client_stream_factory.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_client_promised_info.h"
-#include "net/quic/core/quic_crypto_client_stream_factory.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/socket/datagram_client_socket.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -558,6 +558,11 @@ QuicChromiumClientSession::CreateOutgoingReliableStreamImpl() {
 
 QuicCryptoClientStream* QuicChromiumClientSession::GetCryptoStream() {
   return crypto_stream_.get();
+}
+
+bool QuicChromiumClientSession::GetRemoteEndpoint(IPEndPoint* endpoint) {
+  *endpoint = peer_address().impl().socket_address();
+  return true;
 }
 
 // TODO(rtenneti): Add unittests for GetSSLInfo which exercise the various ways

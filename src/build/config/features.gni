@@ -79,8 +79,6 @@ declare_args() {
 
 # Additional dependent variables -----------------------------------------------
 
-enable_themes = !is_android && !is_ios
-
 # Whether we are using the rlz library or not.  Platforms like Android send
 # rlz codes for searches but do not use the library.
 enable_rlz_support = is_win || is_mac || is_ios || is_chromeos
@@ -89,10 +87,6 @@ enable_rlz = is_chrome_branded && enable_rlz_support
 # Chrome OS: whether to also build the upcoming version of
 # ChromeVox, which can then be enabled via a command-line switch.
 enable_chromevox_next = false
-
-enable_configuration_policy = !is_ios
-
-enable_mac_keystone = is_mac && is_chrome_branded && is_official_build
 #
 # =============================================
 #   PLEASE DO NOT ADD MORE FLAGS TO THIS FILE

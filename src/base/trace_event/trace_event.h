@@ -55,14 +55,14 @@
 
 #define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE() \
   UNLIKELY(*INTERNAL_TRACE_EVENT_UID(category_group_enabled) &           \
-           (base::trace_event::TraceCategory::ENABLED_FOR_RECORDING |         \
-            base::trace_event::TraceCategory::ENABLED_FOR_ETW_EXPORT |        \
-            base::trace_event::TraceCategory::ENABLED_FOR_FILTERING))
+           (base::trace_event::TraceCategory::ENABLED_FOR_RECORDING |    \
+            base::trace_event::TraceCategory::ENABLED_FOR_ETW_EXPORT))
 
-#define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_FILTERING_MODE( \
-    category_group_enabled)                                             \
-  UNLIKELY(category_group_enabled&                                      \
-               base::trace_event::TraceCategory::ENABLED_FOR_FILTERING)
+#define INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()                  \
+  UNLIKELY(*INTERNAL_TRACE_EVENT_UID(category_group_enabled) &         \
+           (base::trace_event::TraceCategory::ENABLED_FOR_RECORDING |  \
+            base::trace_event::TraceCategory::ENABLED_FOR_ETW_EXPORT | \
+            base::trace_event::TraceCategory::ENABLED_FOR_FILTERING))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementation specific tracing API definitions.
@@ -171,14 +171,6 @@
 #define TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION \
     base::trace_event::TraceLog::GetInstance()->UpdateTraceEventDuration
 
-// Call EndEvent on the filter for a filtered event.
-// void TRACE_EVENT_API_UPDATE_TRACE_EVENT_DURATION(
-//     const unsigned char* category_group_enabled,
-//     const char* name,
-//     base::trace_event::TraceEventHandle id)
-#define TRACE_EVENT_API_END_FILTERED_EVENT \
-  base::trace_event::TraceLog::GetInstance()->EndFilteredEvent
-
 // Adds a metadata event to the trace log. The |AppendValueAsTraceFormat| method
 // on the convertable value will be called at flush time.
 // TRACE_EVENT_API_ADD_METADATA_EVENT(
@@ -236,43 +228,43 @@
 
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
-#define INTERNAL_TRACE_EVENT_ADD(phase, category_group, name, flags, ...) \
-    do { \
-      INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group); \
-      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-        trace_event_internal::AddTraceEvent( \
-            phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, \
-            trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
-            flags, trace_event_internal::kNoId, ##__VA_ARGS__); \
-      } \
-    } while (0)
+#define INTERNAL_TRACE_EVENT_ADD(phase, category_group, name, flags, ...)  \
+  do {                                                                     \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                   \
+      trace_event_internal::AddTraceEvent(                                 \
+          phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,   \
+          trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
+          flags, trace_event_internal::kNoId, ##__VA_ARGS__);              \
+    }                                                                      \
+  } while (0)
 
 // Implementation detail: internal macro to create static category and add begin
 // event if the category is enabled. Also adds the end event when the scope
 // ends.
-#define INTERNAL_TRACE_EVENT_ADD_SCOPED(category_group, name, ...) \
-    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group); \
-    trace_event_internal::ScopedTracer INTERNAL_TRACE_EVENT_UID(tracer); \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-      base::trace_event::TraceEventHandle h = \
-          trace_event_internal::AddTraceEvent( \
-              TRACE_EVENT_PHASE_COMPLETE, \
-              INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, \
-              trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
-              TRACE_EVENT_FLAG_NONE, trace_event_internal::kNoId, \
-              ##__VA_ARGS__); \
-      INTERNAL_TRACE_EVENT_UID(tracer).Initialize( \
-          INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, h); \
-    }
-
-#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(                           \
-    category_group, name, bind_id, flow_flags, ...)                          \
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED(category_group, name, ...)           \
   INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                    \
   trace_event_internal::ScopedTracer INTERNAL_TRACE_EVENT_UID(tracer);       \
-  if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) {    \
+  if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                       \
+    base::trace_event::TraceEventHandle h =                                  \
+        trace_event_internal::AddTraceEvent(                                 \
+            TRACE_EVENT_PHASE_COMPLETE,                                      \
+            INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,          \
+            trace_event_internal::kGlobalScope, trace_event_internal::kNoId, \
+            TRACE_EVENT_FLAG_NONE, trace_event_internal::kNoId,              \
+            ##__VA_ARGS__);                                                  \
+    INTERNAL_TRACE_EVENT_UID(tracer).Initialize(                             \
+        INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, h);          \
+  }
+
+#define INTERNAL_TRACE_EVENT_ADD_SCOPED_WITH_FLOW(category_group, name,      \
+                                                  bind_id, flow_flags, ...)  \
+  INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                    \
+  trace_event_internal::ScopedTracer INTERNAL_TRACE_EVENT_UID(tracer);       \
+  if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                       \
     trace_event_internal::TraceID trace_event_bind_id((bind_id));            \
-    unsigned int trace_event_flags = flow_flags |                            \
-                                     trace_event_bind_id.id_flags();         \
+    unsigned int trace_event_flags =                                         \
+        flow_flags | trace_event_bind_id.id_flags();                         \
     base::trace_event::TraceEventHandle h =                                  \
         trace_event_internal::AddTraceEvent(                                 \
             TRACE_EVENT_PHASE_COMPLETE,                                      \
@@ -285,20 +277,20 @@
 
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
-#define INTERNAL_TRACE_EVENT_ADD_WITH_ID(phase, category_group, name, id,      \
-                                         flags, ...)                           \
-    do {                                                                       \
-      INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                  \
-      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) {  \
-        trace_event_internal::TraceID trace_event_trace_id((id));              \
-        unsigned int trace_event_flags = flags |                               \
-                                         trace_event_trace_id.id_flags();      \
-        trace_event_internal::AddTraceEvent(                                   \
-            phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled),           \
-            name, trace_event_trace_id.scope(), trace_event_trace_id.raw_id(), \
-            trace_event_flags, trace_event_internal::kNoId, ##__VA_ARGS__);    \
-      } \
-    } while (0)
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID(phase, category_group, name, id, \
+                                         flags, ...)                      \
+  do {                                                                    \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);               \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                  \
+      trace_event_internal::TraceID trace_event_trace_id((id));           \
+      unsigned int trace_event_flags =                                    \
+          flags | trace_event_trace_id.id_flags();                        \
+      trace_event_internal::AddTraceEvent(                                \
+          phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,  \
+          trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),    \
+          trace_event_flags, trace_event_internal::kNoId, ##__VA_ARGS__); \
+    }                                                                     \
+  } while (0)
 
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
@@ -306,62 +298,62 @@
                                                 timestamp, flags, ...)       \
   do {                                                                       \
     INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                  \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) {  \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                     \
       trace_event_internal::AddTraceEventWithThreadIdAndTimestamp(           \
           phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,     \
           trace_event_internal::kGlobalScope, trace_event_internal::kNoId,   \
-          TRACE_EVENT_API_CURRENT_THREAD_ID,                                 \
-          timestamp, flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,            \
+          TRACE_EVENT_API_CURRENT_THREAD_ID, timestamp,                      \
+          flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,                       \
           trace_event_internal::kNoId, ##__VA_ARGS__);                       \
     }                                                                        \
   } while (0)
 
 // Implementation detail: internal macro to create static category and add
 // event if the category is enabled.
-#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(                 \
-    phase, category_group, name, id, thread_id, timestamp, flags, ...)      \
-  do {                                                                      \
-    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-      trace_event_internal::TraceID trace_event_trace_id((id));             \
-      unsigned int trace_event_flags = flags |                              \
-                                       trace_event_trace_id.id_flags();     \
-      trace_event_internal::AddTraceEventWithThreadIdAndTimestamp(          \
-          phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,    \
-          trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),      \
-          thread_id, timestamp,                                             \
-          trace_event_flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,          \
-          trace_event_internal::kNoId, ##__VA_ARGS__);                      \
-    }                                                                       \
+#define INTERNAL_TRACE_EVENT_ADD_WITH_ID_TID_AND_TIMESTAMP(              \
+    phase, category_group, name, id, thread_id, timestamp, flags, ...)   \
+  do {                                                                   \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);              \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                 \
+      trace_event_internal::TraceID trace_event_trace_id((id));          \
+      unsigned int trace_event_flags =                                   \
+          flags | trace_event_trace_id.id_flags();                       \
+      trace_event_internal::AddTraceEventWithThreadIdAndTimestamp(       \
+          phase, INTERNAL_TRACE_EVENT_UID(category_group_enabled), name, \
+          trace_event_trace_id.scope(), trace_event_trace_id.raw_id(),   \
+          thread_id, timestamp,                                          \
+          trace_event_flags | TRACE_EVENT_FLAG_EXPLICIT_TIMESTAMP,       \
+          trace_event_internal::kNoId, ##__VA_ARGS__);                   \
+    }                                                                    \
   } while (0)
 
 // The linked ID will not be mangled.
-#define INTERNAL_TRACE_EVENT_ADD_LINK_IDS(category_group, name, id1, id2)     \
-    do {                                                                      \
-      INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
-      if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-        trace_event_internal::TraceID source_id((id1));                       \
-        unsigned int source_flags = source_id.id_flags();                     \
-        trace_event_internal::TraceID target_id((id2));                       \
-        trace_event_internal::AddTraceEvent(                                  \
-            TRACE_EVENT_PHASE_LINK_IDS,                                       \
-            INTERNAL_TRACE_EVENT_UID(category_group_enabled),                 \
-            name, source_id.scope(), source_id.raw_id(), source_flags,        \
-            trace_event_internal::kNoId,                                      \
-            "linked_id", target_id.AsConvertableToTraceFormat());             \
-      }                                                                       \
-    } while (0)
+#define INTERNAL_TRACE_EVENT_ADD_LINK_IDS(category_group, name, id1, id2) \
+  do {                                                                    \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);               \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {                  \
+      trace_event_internal::TraceID source_id((id1));                     \
+      unsigned int source_flags = source_id.id_flags();                   \
+      trace_event_internal::TraceID target_id((id2));                     \
+      trace_event_internal::AddTraceEvent(                                \
+          TRACE_EVENT_PHASE_LINK_IDS,                                     \
+          INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,         \
+          source_id.scope(), source_id.raw_id(), source_flags,            \
+          trace_event_internal::kNoId, "linked_id",                       \
+          target_id.AsConvertableToTraceFormat());                        \
+    }                                                                     \
+  } while (0)
 
 // Implementation detail: internal macro to create static category and add
 // metadata event if the category is enabled.
-#define INTERNAL_TRACE_EVENT_METADATA_ADD(category_group, name, ...)        \
-  do {                                                                      \
-    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);                 \
-    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED_FOR_RECORDING_MODE()) { \
-      TRACE_EVENT_API_ADD_METADATA_EVENT(                                   \
-          INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,           \
-          ##__VA_ARGS__);                                                   \
-    }                                                                       \
+#define INTERNAL_TRACE_EVENT_METADATA_ADD(category_group, name, ...) \
+  do {                                                               \
+    INTERNAL_TRACE_EVENT_GET_CATEGORY_INFO(category_group);          \
+    if (INTERNAL_TRACE_EVENT_CATEGORY_GROUP_ENABLED()) {             \
+      TRACE_EVENT_API_ADD_METADATA_EVENT(                            \
+          INTERNAL_TRACE_EVENT_UID(category_group_enabled), name,    \
+          ##__VA_ARGS__);                                            \
+    }                                                                \
   } while (0)
 
 // Implementation detail: internal macro to enter and leave a

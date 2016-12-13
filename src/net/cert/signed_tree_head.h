@@ -61,4 +61,4 @@ NET_EXPORT bool operator!=(const SignedTreeHead& lhs,
 
 }  // namespace net
 
-#endif
+#endif  // NET_CERT_SIGNED_TREE_HEAD_H_

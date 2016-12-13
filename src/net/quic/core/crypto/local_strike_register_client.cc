@@ -24,7 +24,7 @@ LocalStrikeRegisterClient::LocalStrikeRegisterClient(
                        startup) {}
 
 bool LocalStrikeRegisterClient::IsKnownOrbit(StringPiece orbit) const {
-  base::AutoLock lock(m_);
+  QuicWriterMutexLock lock(&m_);
   if (orbit.length() != kOrbitSize) {
     return false;
   }
@@ -39,7 +39,7 @@ void LocalStrikeRegisterClient::VerifyNonceIsValidAndUnique(
   if (nonce.length() != kNonceSize) {
     nonce_error = NONCE_INVALID_FAILURE;
   } else {
-    base::AutoLock lock(m_);
+    QuicWriterMutexLock lock(&m_);
     nonce_error =
         strike_register_.Insert(reinterpret_cast<const uint8_t*>(nonce.data()),
                                 static_cast<uint32_t>(now.ToUNIXSeconds()));

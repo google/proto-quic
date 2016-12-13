@@ -95,7 +95,7 @@ class BbrSenderTest : public ::testing::Test {
 
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
     random_.set_seed(seed);
-    LOG(INFO) << "BbrSenderTest simulator set up.  Seed: " << seed;
+    VLOG(1) << "BbrSenderTest simulator set up.  Seed: " << seed;
   }
 
   simulator::Simulator simulator_;
@@ -146,7 +146,7 @@ class BbrSenderTest : public ::testing::Test {
     EXPECT_TRUE(simulator_result)
         << "Simple transfer failed.  Bytes remaining: "
         << bbr_sender_.bytes_to_transfer();
-    LOG(INFO) << "Simple transfer state: " << sender_->ExportDebugState();
+    VLOG(1) << "Simple transfer state: " << sender_->ExportDebugState();
   }
 
   // Drive the simulator by sending enough data to enter PROBE_BW.

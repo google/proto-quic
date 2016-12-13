@@ -65,8 +65,10 @@ bool FieldTrialParamAssociator::GetFieldTrialParamsWithoutFallback(
 }
 
 void FieldTrialParamAssociator::ClearAllParamsForTesting() {
-  AutoLock scoped_lock(lock_);
-  field_trial_params_.clear();
+  {
+    AutoLock scoped_lock(lock_);
+    field_trial_params_.clear();
+  }
   FieldTrialList::ClearParamsFromSharedMemoryForTesting();
 }
 

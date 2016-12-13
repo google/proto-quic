@@ -31,6 +31,10 @@ bool GetClientCertInfoFromFile(const char* filename,
   return GetClientCertInfo(cert.get(), out_type, out_max_length);
 }
 
+size_t BitsToBytes(size_t bits) {
+  return (bits + 7) / 8;
+}
+
 }  // namespace
 
 TEST(SSLPlatformKeyUtil, GetClientCertInfo) {
@@ -43,7 +47,15 @@ TEST(SSLPlatformKeyUtil, GetClientCertInfo) {
 
   ASSERT_TRUE(GetClientCertInfoFromFile("client_4.pem", &type, &max_length));
   EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P256, type);
-  EXPECT_EQ(ECDSA_SIG_max_len(256u / 8u), max_length);
+  EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(256)), max_length);
+
+  ASSERT_TRUE(GetClientCertInfoFromFile("client_5.pem", &type, &max_length));
+  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P384, type);
+  EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(384)), max_length);
+
+  ASSERT_TRUE(GetClientCertInfoFromFile("client_6.pem", &type, &max_length));
+  EXPECT_EQ(SSLPrivateKey::Type::ECDSA_P521, type);
+  EXPECT_EQ(ECDSA_SIG_max_len(BitsToBytes(521)), max_length);
 }
 
 }  // namespace net

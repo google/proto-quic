@@ -1,12 +1,5 @@
 -ChromeServiceWorkerTest.FallbackMainResourceRequestWhenJSDisabled
 -PDFExtensionTest.PdfAccessibilityInOOPIF
--PlatformAppUrlRedirectorBrowserTest.PrerenderedClickInTabIntercepted
--PredictorBrowserTest.RendererInitiatedNavigationPreconnect
--PrerenderBrowserTest.PrerenderCrossProcessServerRedirect
--PrerenderBrowserTest.PrerenderCrossProcessServerRedirectNoHang
-# TabManagerTest.TabManagerBasics crashes sometimes
--TabManagerTest.TabManagerBasics
--ThreatDOMDetailsTest.Everything
 
 # https://crbug.com/652767: NavigationHandle::GetResponseHeaders sometimes
 # returns null for browser-side navigations

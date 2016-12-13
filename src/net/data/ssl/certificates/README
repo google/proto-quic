@@ -246,6 +246,14 @@ unit tests.
 - client_4.key
 - client_4.pk8
 - client_4_ca.pem
+- client_5.pem
+- client_5.key
+- client_5.pk8
+- client_5_ca.pem
+- client_6.pem
+- client_6.key
+- client_6.pk8
+- client_6_ca.pem
 - client_root_ca.pem
      This is a set of files used to unit test SSL client certificate
      authentication.
@@ -262,6 +270,10 @@ unit tests.
        of X509v3 extensions.  Specifically it includes two Subject
        Alternative Name fields recognized by Chrome OS.
      - client_4.pem is similar to client_2.pem but is a P-256 ECDSA key rather
+       than RSA.
+     - client_5.pem is similar to client_2.pem but is a P-384 ECDSA key rather
+       than RSA.
+     - client_6.pem is similar to client_2.pem but is a P-521 ECDSA key rather
        than RSA.
      - client_root_ca.pem is the CA certificate which signed client_*_ca.pem.
 

@@ -5,21 +5,21 @@
 // Cubic algorithm, helper class to TCP cubic.
 // For details see http://netsrv.csc.ncsu.edu/export/cubic_a_new_tcp_2008.pdf.
 
-#ifndef NET_QUIC_CONGESTION_CONTROL_CUBIC_H_
-#define NET_QUIC_CONGESTION_CONTROL_CUBIC_H_
+#ifndef NET_QUIC_CORE_CONGESTION_CONTROL_CUBIC_H_
+#define NET_QUIC_CORE_CONGESTION_CONTROL_CUBIC_H_
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE Cubic {
+class QUIC_EXPORT_PRIVATE Cubic {
  public:
   explicit Cubic(const QuicClock* clock);
 
@@ -111,4 +111,4 @@ class NET_EXPORT_PRIVATE Cubic {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CONGESTION_CONTROL_CUBIC_H_
+#endif  // NET_QUIC_CORE_CONGESTION_CONTROL_CUBIC_H_

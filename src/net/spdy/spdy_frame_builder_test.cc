@@ -27,7 +27,7 @@ TEST(SpdyFrameBuilderTest, RewriteLength) {
   // Create an empty SETTINGS frame both via framer and manually via builder.
   // The one created via builder is initially given the incorrect length, but
   // then is corrected via RewriteLength().
-  SpdyFramer framer;
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   SpdySettingsIR settings_ir;
   SpdySerializedFrame expected(framer.SerializeSettings(settings_ir));
   SpdyFrameBuilder builder(expected.size() + 1);
@@ -42,7 +42,7 @@ TEST(SpdyFrameBuilderTest, RewriteLength) {
 TEST(SpdyFrameBuilderTest, OverwriteFlags) {
   // Create a HEADERS frame both via framer and manually via builder with
   // different flags set, then make them match using OverwriteFlags().
-  SpdyFramer framer;
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   SpdyHeadersIR headers_ir(1);
   SpdySerializedFrame expected(framer.SerializeHeaders(headers_ir));
   SpdyFrameBuilder builder(expected.size());

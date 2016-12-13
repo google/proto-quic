@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_DATA_WRITER_H_
-#define NET_QUIC_QUIC_DATA_WRITER_H_
+#ifndef NET_QUIC_CORE_QUIC_DATA_WRITER_H_
+#define NET_QUIC_CORE_QUIC_DATA_WRITER_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -15,8 +15,8 @@
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/int128.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -25,7 +25,7 @@ namespace net {
 // The QuicDataWriter supports appending primitive values (int, string, etc)
 // to a frame instance.  The internal memory buffer is exposed as the "data"
 // of the QuicDataWriter.
-class NET_EXPORT_PRIVATE QuicDataWriter {
+class QUIC_EXPORT_PRIVATE QuicDataWriter {
  public:
   // Creates a QuicDataWriter where |buffer| is not owned.
   QuicDataWriter(size_t size, char* buffer);
@@ -73,4 +73,4 @@ class NET_EXPORT_PRIVATE QuicDataWriter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_DATA_WRITER_H_
+#endif  // NET_QUIC_CORE_QUIC_DATA_WRITER_H_

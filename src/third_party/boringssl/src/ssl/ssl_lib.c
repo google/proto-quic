@@ -477,6 +477,13 @@ SSL *SSL_new(SSL_CTX *ctx) {
       ssl->ctx->signed_cert_timestamps_enabled;
   ssl->ocsp_stapling_enabled = ssl->ctx->ocsp_stapling_enabled;
 
+  ssl->session_timeout = SSL_DEFAULT_SESSION_TIMEOUT;
+
+  /* If the context has a default timeout, use it over the default. */
+  if (ctx->session_timeout != 0) {
+    ssl->session_timeout = ctx->session_timeout;
+  }
+
   return ssl;
 
 err:
@@ -617,7 +624,28 @@ int SSL_do_handshake(SSL *ssl) {
     return 1;
   }
 
-  return ssl->handshake_func(ssl);
+  /* Set up a new handshake if necessary. */
+  if (ssl->state == SSL_ST_INIT && ssl->s3->hs == NULL) {
+    ssl->s3->hs = ssl_handshake_new(ssl);
+    if (ssl->s3->hs == NULL) {
+      return -1;
+    }
+  }
+
+  /* Run the handshake. */
+  assert(ssl->s3->hs != NULL);
+  int ret = ssl->handshake_func(ssl->s3->hs);
+  if (ret <= 0) {
+    return ret;
+  }
+
+  /* Destroy the handshake object if the handshake has completely finished. */
+  if (!SSL_in_init(ssl)) {
+    ssl_handshake_free(ssl->s3->hs);
+    ssl->s3->hs = NULL;
+  }
+
+  return 1;
 }
 
 int SSL_connect(SSL *ssl) {
@@ -1664,39 +1692,6 @@ int SSL_set_cipher_list(SSL *ssl, const char *str) {
   return 1;
 }
 
-STACK_OF(SSL_CIPHER) *
-    ssl_parse_client_cipher_list(const struct ssl_early_callback_ctx *ctx) {
-  CBS cipher_suites;
-  CBS_init(&cipher_suites, ctx->cipher_suites, ctx->cipher_suites_len);
-
-  STACK_OF(SSL_CIPHER) *sk = sk_SSL_CIPHER_new_null();
-  if (sk == NULL) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
-    goto err;
-  }
-
-  while (CBS_len(&cipher_suites) > 0) {
-    uint16_t cipher_suite;
-
-    if (!CBS_get_u16(&cipher_suites, &cipher_suite)) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST);
-      goto err;
-    }
-
-    const SSL_CIPHER *c = SSL_get_cipher_by_value(cipher_suite);
-    if (c != NULL && !sk_SSL_CIPHER_push(sk, c)) {
-      OPENSSL_PUT_ERROR(SSL, ERR_R_MALLOC_FAILURE);
-      goto err;
-    }
-  }
-
-  return sk;
-
-err:
-  sk_SSL_CIPHER_free(sk);
-  return NULL;
-}
-
 const char *SSL_get_servername(const SSL *ssl, const int type) {
   if (type != TLSEXT_NAMETYPE_host_name) {
     return NULL;
@@ -1942,13 +1937,21 @@ void SSL_get0_alpn_selected(const SSL *ssl, const uint8_t **out_data,
 }
 
 
+void SSL_CTX_set_tls_channel_id_enabled(SSL_CTX *ctx, int enabled) {
+  ctx->tlsext_channel_id_enabled = !!enabled;
+}
+
 int SSL_CTX_enable_tls_channel_id(SSL_CTX *ctx) {
-  ctx->tlsext_channel_id_enabled = 1;
+  SSL_CTX_set_tls_channel_id_enabled(ctx, 1);
   return 1;
 }
 
+void SSL_set_tls_channel_id_enabled(SSL *ssl, int enabled) {
+  ssl->tlsext_channel_id_enabled = !!enabled;
+}
+
 int SSL_enable_tls_channel_id(SSL *ssl) {
-  ssl->tlsext_channel_id_enabled = 1;
+  SSL_set_tls_channel_id_enabled(ssl, 1);
   return 1;
 }
 
@@ -2031,51 +2034,8 @@ size_t SSL_get0_certificate_types(SSL *ssl, const uint8_t **out_types) {
   return ssl->s3->hs->num_certificate_types;
 }
 
-void ssl_get_compatible_server_ciphers(SSL *ssl, uint32_t *out_mask_k,
-                                       uint32_t *out_mask_a) {
-  if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    *out_mask_k = SSL_kGENERIC;
-    *out_mask_a = SSL_aGENERIC;
-    return;
-  }
-
-  uint32_t mask_k = 0;
-  uint32_t mask_a = 0;
-
-  if (ssl->cert->x509_leaf != NULL && ssl_has_private_key(ssl)) {
-    int type = ssl_private_key_type(ssl);
-    if (type == NID_rsaEncryption) {
-      mask_k |= SSL_kRSA;
-      mask_a |= SSL_aRSA;
-    } else if (ssl_is_ecdsa_key_type(type)) {
-      mask_a |= SSL_aECDSA;
-    }
-  }
-
-  if (ssl->cert->dh_tmp != NULL || ssl->cert->dh_tmp_cb != NULL) {
-    mask_k |= SSL_kDHE;
-  }
-
-  /* Check for a shared group to consider ECDHE ciphers. */
-  uint16_t unused;
-  if (tls1_get_shared_group(ssl, &unused)) {
-    mask_k |= SSL_kECDHE;
-  }
-
-  /* CECPQ1 ciphers are always acceptable if supported by both sides. */
-  mask_k |= SSL_kCECPQ1;
-
-  /* PSK requires a server callback. */
-  if (ssl->psk_server_callback != NULL) {
-    mask_k |= SSL_kPSK;
-    mask_a |= SSL_aPSK;
-  }
-
-  *out_mask_k = mask_k;
-  *out_mask_a = mask_a;
-}
-
-void ssl_update_cache(SSL *ssl, int mode) {
+void ssl_update_cache(SSL_HANDSHAKE *hs, int mode) {
+  SSL *const ssl = hs->ssl;
   SSL_CTX *ctx = ssl->initial_ctx;
   /* Never cache sessions with empty session IDs. */
   if (ssl->s3->established_session->session_id_length == 0 ||
@@ -2091,7 +2051,7 @@ void ssl_update_cache(SSL *ssl, int mode) {
    * decides to renew the ticket. Once the handshake is completed, it should be
    * inserted into the cache. */
   if (ssl->s3->established_session != ssl->session ||
-      (!ssl->server && ssl->s3->hs->ticket_expected)) {
+      (!ssl->server && hs->ticket_expected)) {
     if (use_internal_cache) {
       SSL_CTX_add_session(ctx, ssl->s3->established_session);
     }
@@ -2813,13 +2773,13 @@ int SSL_is_server(const SSL *ssl) { return ssl->server; }
 
 int SSL_is_dtls(const SSL *ssl) { return ssl->method->is_dtls; }
 
-void SSL_CTX_set_select_certificate_cb(
-    SSL_CTX *ctx, int (*cb)(const struct ssl_early_callback_ctx *)) {
+void SSL_CTX_set_select_certificate_cb(SSL_CTX *ctx,
+                                       int (*cb)(const SSL_CLIENT_HELLO *)) {
   ctx->select_certificate_cb = cb;
 }
 
-void SSL_CTX_set_dos_protection_cb(
-    SSL_CTX *ctx, int (*cb)(const struct ssl_early_callback_ctx *)) {
+void SSL_CTX_set_dos_protection_cb(SSL_CTX *ctx,
+                                   int (*cb)(const SSL_CLIENT_HELLO *)) {
   ctx->dos_protection_cb = cb;
 }
 

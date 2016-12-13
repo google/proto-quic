@@ -148,7 +148,8 @@ class NET_EXPORT_PRIVATE MDnsClientImpl : public MDnsClient {
     FRIEND_TEST_ALL_PREFIXES(MDnsTest, CacheCleanupWithShortTTL);
 
     typedef std::pair<std::string, uint16_t> ListenerKey;
-    typedef std::map<ListenerKey, base::ObserverList<MDnsListenerImpl>*>
+    typedef std::map<ListenerKey,
+                     std::unique_ptr<base::ObserverList<MDnsListenerImpl>>>
         ListenerMap;
 
     // Alert listeners of an update to the cache.

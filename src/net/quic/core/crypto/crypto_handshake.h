@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_CRYPTO_HANDSHAKE_H_
-#define NET_QUIC_CRYPTO_CRYPTO_HANDSHAKE_H_
+#ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_H_
+#define NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_H_
 
 #include <stdint.h>
 
@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -91,7 +91,7 @@ enum HandshakeFailureReason {
 static_assert(MAX_FAILURE_REASON <= 32, "failure reason out of sync");
 
 // A CrypterPair contains the encrypter and decrypter for an encryption level.
-struct NET_EXPORT_PRIVATE CrypterPair {
+struct QUIC_EXPORT_PRIVATE CrypterPair {
   CrypterPair();
   ~CrypterPair();
   std::unique_ptr<QuicEncrypter> encrypter;
@@ -99,7 +99,7 @@ struct NET_EXPORT_PRIVATE CrypterPair {
 };
 
 // Parameters negotiated by the crypto handshake.
-struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
+struct QUIC_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
     : public base::RefCounted<QuicCryptoNegotiatedParameters> {
   // Initializes the members to 0 or empty values.
   QuicCryptoNegotiatedParameters();
@@ -156,7 +156,7 @@ struct NET_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
 };
 
 // QuicCryptoConfig contains common configuration between clients and servers.
-class NET_EXPORT_PRIVATE QuicCryptoConfig {
+class QUIC_EXPORT_PRIVATE QuicCryptoConfig {
  public:
   // kInitialLabel is a constant that is used when deriving the initial
   // (non-forward secure) keys for the connection in order to tie the resulting
@@ -193,4 +193,4 @@ class NET_EXPORT_PRIVATE QuicCryptoConfig {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_CRYPTO_HANDSHAKE_H_
+#endif  // NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_H_

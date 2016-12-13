@@ -240,12 +240,6 @@ if (enable_media_router) {
     "enable_media_router",
   ]
 }
-if (enable_themes) {
-  grit_defines += [
-    "-D",
-    "enable_themes",
-  ]
-}
 
 # TODO(aberent): Enable for other platforms once the build machines have
 #                Java on them (and hence can run the closure compiler).

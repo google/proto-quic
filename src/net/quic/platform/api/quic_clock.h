@@ -5,13 +5,13 @@
 #ifndef NET_QUIC_PLATFORM_API_QUIC_CLOCK_H_
 #define NET_QUIC_PLATFORM_API_QUIC_CLOCK_H_
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Interface for retreiving the current time.
-class NET_EXPORT_PRIVATE QuicClock {
+class QUIC_EXPORT_PRIVATE QuicClock {
  public:
   QuicClock();
   virtual ~QuicClock();

@@ -202,6 +202,9 @@ std::string SchemeHostPort::SerializeInternal(url::Parsed* parsed) const {
   if (IsInvalid())
     return result;
 
+  // Reserve enough space for the "normal" case of scheme://host/.
+  result.reserve(scheme_.size() + host_.size() + 4);
+
   if (!scheme_.empty()) {
     parsed->scheme = Component(0, scheme_.length());
     result.append(scheme_);

@@ -12,6 +12,9 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
+#include "base/trace_event/trace_event_argument.h"
 #include "net/dns/host_cache.h"
 #include "net/http/http_network_session.h"
 #include "net/log/net_log_with_source.h"
@@ -665,6 +668,60 @@ TEST_F(SpdySessionPoolTest, FindAvailableSession) {
           key, GURL("http://news.example.org/foo.html"), NetLogWithSource());
   EXPECT_EQ(session.get(), session2.get());
 
+  spdy_session_pool_->CloseCurrentSessions(ERR_ABORTED);
+}
+
+TEST_F(SpdySessionPoolTest, DumpMemoryStats) {
+  SpdySessionKey key(HostPortPair("https://www.example.org", 443),
+                     ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
+
+  MockRead reads[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING)};
+  StaticSocketDataProvider data(reads, arraysize(reads), nullptr, 0);
+  data.set_connect_data(MockConnect(SYNCHRONOUS, OK));
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  SSLSocketDataProvider ssl(SYNCHRONOUS, OK);
+  session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl);
+
+  CreateNetworkSession();
+
+  base::WeakPtr<SpdySession> session =
+      CreateSecureSpdySession(http_session_.get(), key, NetLogWithSource());
+
+  // Flush the SpdySession::OnReadComplete() task.
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key));
+  base::trace_event::MemoryDumpArgs dump_args = {
+      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
+      new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
+  base::trace_event::MemoryAllocatorDump* parent_dump =
+      process_memory_dump->CreateAllocatorDump("parent");
+  spdy_session_pool_->DumpMemoryStats(process_memory_dump.get(),
+                                      parent_dump->absolute_name());
+
+  // Whether SpdySession::DumpMemoryStats() is invoked.
+  bool did_dump = false;
+  const base::trace_event::ProcessMemoryDump::AllocatorDumpsMap&
+      allocator_dumps = process_memory_dump->allocator_dumps();
+  for (const auto& pair : allocator_dumps) {
+    const std::string& dump_name = pair.first;
+    if (dump_name.find("spdy_session_pool/session") == std::string::npos)
+      continue;
+    std::unique_ptr<base::Value> raw_attrs =
+        pair.second->attributes_for_testing()->ToBaseValue();
+    base::DictionaryValue* attrs;
+    ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
+    base::DictionaryValue* is_active_attrs;
+    ASSERT_TRUE(attrs->GetDictionary("active", &is_active_attrs));
+    std::string is_active;
+    ASSERT_TRUE(is_active_attrs->GetString("value", &is_active));
+    // No created stream so the session should be idle.
+    ASSERT_EQ("0", is_active);
+    did_dump = true;
+  }
+  EXPECT_TRUE(did_dump);
   spdy_session_pool_->CloseCurrentSessions(ERR_ABORTED);
 }
 

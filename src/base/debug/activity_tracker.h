@@ -26,6 +26,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/location.h"
 #include "base/metrics/persistent_memory_allocator.h"
+#include "base/strings/utf_string_conversions.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_local_storage.h"
@@ -155,6 +156,18 @@ class ActivityTrackerMemoryAllocator {
   // Returns an object to the "free" pool.
   void ReleaseObjectReference(Reference ref);
 
+  // Helper function to access an object allocated using this instance.
+  template <typename T>
+  T* GetAsObject(Reference ref) {
+    return allocator_->GetAsObject<T>(ref, object_type_);
+  }
+
+  // Similar to GetAsObject() but converts references to arrays of objects.
+  template <typename T>
+  T* GetAsArray(Reference ref, size_t count) {
+    return allocator_->GetAsArray<T>(ref, object_type_, count);
+  }
+
   // The current "used size" of the internal cache, visible for testing.
   size_t cache_used() const { return cache_used_; }
 
@@ -244,8 +257,10 @@ struct Activity {
   // enabled.
   uint64_t call_stack[kActivityCallStackSize];
 
-  // Reference to arbitrary user data within the persistent memory segment.
-  uint32_t user_data;
+  // Reference to arbitrary user data within the persistent memory segment
+  // and a unique identifier for it.
+  uint32_t user_data_ref;
+  uint32_t user_data_id;
 
   // The (enumerated) type of the activity. This defines what fields of the
   // |data| record are valid.
@@ -254,7 +269,7 @@ struct Activity {
   // Padding to ensure that the next member begins on a 64-bit boundary
   // even on 32-bit builds which ensures inter-operability between CPU
   // architectures. New fields can be taken from this space.
-  uint8_t padding[3];
+  uint8_t padding[7];
 
   // Information specific to the |activity_type|.
   ActivityData data;
@@ -266,40 +281,12 @@ struct Activity {
                        const ActivityData& data);
 };
 
-// This structure holds a copy of all the internal data at the moment the
-// "snapshot" operation is done. It is disconnected from the live tracker
-// so that continued operation of the thread will not cause changes here.
-struct BASE_EXPORT ActivitySnapshot {
-  // Explicit constructor/destructor are needed because of complex types
-  // with non-trivial default constructors and destructors.
-  ActivitySnapshot();
-  ~ActivitySnapshot();
-
-  // The name of the thread as set when it was created. The name may be
-  // truncated due to internal length limitations.
-  std::string thread_name;
-
-  // The process and thread IDs. These values have no meaning other than
-  // they uniquely identify a running process and a running thread within
-  // that process.  Thread-IDs can be re-used across different processes
-  // and both can be re-used after the process/thread exits.
-  int64_t process_id = 0;
-  int64_t thread_id = 0;
-
-  // The current stack of activities that are underway for this thread. It
-  // is limited in its maximum size with later entries being left off.
-  std::vector<Activity> activity_stack;
-
-  // The current total depth of the activity stack, including those later
-  // entries not recorded in the |activity_stack| vector.
-  uint32_t activity_stack_depth = 0;
-};
-
 // This class manages arbitrary user data that can be associated with activities
 // done by a thread by supporting key/value pairs of any type. This can provide
 // additional information during debugging. It is also used to store arbitrary
 // global data. All updates must be done from the same thread.
 class BASE_EXPORT ActivityUserData {
+ public:
   // List of known value type. REFERENCE types must immediately follow the non-
   // external types.
   enum ValueType : uint8_t {
@@ -309,13 +296,56 @@ class BASE_EXPORT ActivityUserData {
     STRING_VALUE,
     STRING_VALUE_REFERENCE,
     CHAR_VALUE,
+    BOOL_VALUE,
     SIGNED_VALUE,
     UNSIGNED_VALUE,
   };
 
- public:
+  class BASE_EXPORT TypedValue {
+   public:
+    TypedValue();
+    TypedValue(const TypedValue& other);
+    ~TypedValue();
+
+    // These methods return the extracted value in the correct format.
+    StringPiece Get() const;
+    StringPiece GetString() const;
+    bool GetBool() const;
+    char GetChar() const;
+    int64_t GetInt() const;
+    uint64_t GetUint() const;
+
+    // These methods return references to process memory as originally provided
+    // to corresponding Set calls. USE WITH CAUTION! There is no guarantee that
+    // the referenced memory is assessible or useful.  It's possible that:
+    //  - the memory was free'd and reallocated for a different purpose
+    //  - the memory has been released back to the OS
+    //  - the memory belongs to a different process's address space
+    // Dereferencing the returned StringPiece when the memory is not accessible
+    // will cause the program to SEGV!
+    StringPiece GetReference() const;
+    StringPiece GetStringReference() const;
+
+   private:
+    friend class ActivityUserData;
+
+    ValueType type;
+    uint64_t short_value;    // Used to hold copy of numbers, etc.
+    std::string long_value;  // Used to hold copy of raw/string data.
+    StringPiece ref_value;   // Used to hold reference to external data.
+  };
+
+  using Snapshot = std::map<std::string, TypedValue>;
+
   ActivityUserData(void* memory, size_t size);
   ~ActivityUserData();
+
+  // Gets the unique ID number for this user data. If this changes then the
+  // contents have been overwritten by another thread. The return value is
+  // always non-zero unless it's actually just a data "sink".
+  uint32_t id() const {
+    return memory_ ? id_->load(std::memory_order_relaxed) : 0;
+  }
 
   // Writes a |value| (as part of a key/value pair) that will be included with
   // the activity in any reports. The same |name| can be written multiple times
@@ -331,6 +361,13 @@ class BASE_EXPORT ActivityUserData {
   }
   void SetString(StringPiece name, StringPiece value) {
     Set(name, STRING_VALUE, value.data(), value.length());
+  }
+  void SetString(StringPiece name, StringPiece16 value) {
+    SetString(name, UTF16ToUTF8(value));
+  }
+  void SetBool(StringPiece name, bool value) {
+    char cvalue = value ? 1 : 0;
+    Set(name, BOOL_VALUE, &cvalue, sizeof(cvalue));
   }
   void SetChar(StringPiece name, char value) {
     Set(name, CHAR_VALUE, &value, sizeof(value));
@@ -352,6 +389,16 @@ class BASE_EXPORT ActivityUserData {
   void SetStringReference(StringPiece name, StringPiece value) {
     SetReference(name, STRING_VALUE_REFERENCE, value.data(), value.length());
   }
+
+  // Creates a snapshot of the key/value pairs contained within. The returned
+  // data will be fixed, independent of whatever changes afterward. There is
+  // protection against concurrent modification of the values but no protection
+  // against a complete overwrite of the contents; the caller must ensure that
+  // the memory segment is not going to be re-initialized while this runs.
+  bool CreateSnapshot(Snapshot* output_snapshot) const;
+
+  // Gets the base memory address used for storing data.
+  const void* GetBaseAddress();
 
  private:
   FRIEND_TEST_ALL_PREFIXES(ActivityTrackerTest, UserDataTest);
@@ -392,14 +439,29 @@ class BASE_EXPORT ActivityUserData {
                     const void* memory,
                     size_t size);
 
-  // TODO(bcwhite): Add Get() methods for Analyzer to use.
+  // Loads any data already in the memory segment. This allows for accessing
+  // records created previously.
+  void ImportExistingData() const;
 
-  std::map<StringPiece, ValueInfo> values_;
+  // A map of all the values within the memory block, keyed by name for quick
+  // updates of the values. This is "mutable" because it changes on "const"
+  // objects even when the actual data values can't change.
+  mutable std::map<StringPiece, ValueInfo> values_;
 
-  char* memory_;
-  size_t available_;
+  // Information about the memory block in which new data can be stored. These
+  // are "mutable" because they change even on "const" objects that are just
+  // skipping already set values.
+  mutable char* memory_;
+  mutable size_t available_;
+
+  // A pointer to the unique ID for this instance.
+  std::atomic<uint32_t>* const id_;
 
   base::ThreadChecker thread_checker_;
+
+  // This ID is used to create unique indentifiers for user data so that it's
+  // possible to tell if the information has been overwritten.
+  static std::atomic<uint32_t> next_id_;
 
   DISALLOW_COPY_AND_ASSIGN(ActivityUserData);
 };
@@ -415,12 +477,41 @@ class BASE_EXPORT ActivityUserData {
 // objects.
 class BASE_EXPORT ThreadActivityTracker {
  public:
+  using ActivityId = uint32_t;
+
   // This structure contains all the common information about the thread so
   // it doesn't have to be repeated in every entry on the stack. It is defined
   // and used completely within the .cc file.
   struct Header;
 
-  using ActivityId = uint32_t;
+  // This structure holds a copy of all the internal data at the moment the
+  // "snapshot" operation is done. It is disconnected from the live tracker
+  // so that continued operation of the thread will not cause changes here.
+  struct BASE_EXPORT Snapshot {
+    // Explicit constructor/destructor are needed because of complex types
+    // with non-trivial default constructors and destructors.
+    Snapshot();
+    ~Snapshot();
+
+    // The name of the thread as set when it was created. The name may be
+    // truncated due to internal length limitations.
+    std::string thread_name;
+
+    // The process and thread IDs. These values have no meaning other than
+    // they uniquely identify a running process and a running thread within
+    // that process.  Thread-IDs can be re-used across different processes
+    // and both can be re-used after the process/thread exits.
+    int64_t process_id = 0;
+    int64_t thread_id = 0;
+
+    // The current stack of activities that are underway for this thread. It
+    // is limited in its maximum size with later entries being left off.
+    std::vector<Activity> activity_stack;
+
+    // The current total depth of the activity stack, including those later
+    // entries not recorded in the |activity_stack| vector.
+    uint32_t activity_stack_depth = 0;
+  };
 
   // This is the base class for having the compiler manage an activity on the
   // tracker's stack. It does nothing but call methods on the passed |tracker|
@@ -438,19 +529,13 @@ class BASE_EXPORT ThreadActivityTracker {
     // Changes some basic metadata about the activity.
     void ChangeTypeAndData(Activity::Type type, const ActivityData& data);
 
-    // Returns an object for manipulating user data.
-    ActivityUserData& user_data();
-
-   private:
+   protected:
     // The thread tracker to which this object reports. It can be null if
     // activity tracking is not (yet) enabled.
     ThreadActivityTracker* const tracker_;
 
     // An identifier that indicates a specific activity on the stack.
     ActivityId activity_id_;
-
-    // An object that manages additional user data, created only upon request.
-    std::unique_ptr<ActivityUserData> user_data_;
 
     DISALLOW_COPY_AND_ASSIGN(ScopedActivity);
   };
@@ -495,8 +580,18 @@ class BASE_EXPORT ThreadActivityTracker {
   // Indicates that an activity has completed.
   void PopActivity(ActivityId id);
 
-  // Returns an object capable of storing arbitrary user data.
-  std::unique_ptr<ActivityUserData> GetUserData(ActivityId id);
+  // Sets the user-data information for an activity.
+  std::unique_ptr<ActivityUserData> GetUserData(
+      ActivityId id,
+      ActivityTrackerMemoryAllocator* allocator);
+
+  // Returns if there is true use-data associated with a given ActivityId since
+  // it's possible than any returned object is just a sink.
+  bool HasUserData(ActivityId id);
+
+  // Release the user-data information for an activity.
+  void ReleaseUserData(ActivityId id,
+                       ActivityTrackerMemoryAllocator* allocator);
 
   // Returns whether the current data is valid or not. It is not valid if
   // corruption has been detected in the header or other data structures.
@@ -506,7 +601,7 @@ class BASE_EXPORT ThreadActivityTracker {
   // snapshot was not possible, perhaps because the data is not valid; the
   // contents of |output_snapshot| are undefined in that case. The current
   // implementation does not support concurrent snapshot operations.
-  bool Snapshot(ActivitySnapshot* output_snapshot) const;
+  bool CreateSnapshot(Snapshot* output_snapshot) const;
 
   // Calculates the memory size required for a given stack depth, including
   // the internal header structure for the stack.
@@ -540,9 +635,9 @@ class BASE_EXPORT GlobalActivityTracker {
   // can recognize records of this type within an allocator.
   enum : uint32_t {
     kTypeIdActivityTracker = 0x5D7381AF + 3,   // SHA1(ActivityTracker) v3
-    kTypeIdUserDataRecord = 0x615EDDD7 + 1,    // SHA1(UserDataRecord) v1
-    kTypeIdGlobalDataRecord = 0xAFE61ABE + 1,  // SHA1(GlobalDataRecord) v1
+    kTypeIdUserDataRecord = 0x615EDDD7 + 2,    // SHA1(UserDataRecord) v2
     kTypeIdGlobalLogMessage = 0x4CF434F9 + 1,  // SHA1(GlobalLogMessage) v1
+    kTypeIdGlobalDataRecord = kTypeIdUserDataRecord + 1000,
 
     kTypeIdActivityTrackerFree = ~kTypeIdActivityTracker,
     kTypeIdUserDataRecordFree = ~kTypeIdUserDataRecord,
@@ -559,13 +654,11 @@ class BASE_EXPORT GlobalActivityTracker {
                          const void* origin,
                          Activity::Type type,
                          const ActivityData& data,
-                         bool lock_allowed)
-        : ThreadActivityTracker::ScopedActivity(
-              GetOrCreateTracker(lock_allowed),
-              program_counter,
-              origin,
-              type,
-              data) {}
+                         bool lock_allowed);
+    ~ScopedThreadActivity();
+
+    // Returns an object for manipulating user data.
+    ActivityUserData& user_data();
 
    private:
     // Gets (or creates) a tracker for the current thread. If locking is not
@@ -582,6 +675,9 @@ class BASE_EXPORT GlobalActivityTracker {
       else
         return global_tracker->GetTrackerForCurrentThread();
     }
+
+    // An object that manages additional user data, created only upon request.
+    std::unique_ptr<ActivityUserData> user_data_;
 
     DISALLOW_COPY_AND_ASSIGN(ScopedThreadActivity);
   };
@@ -646,14 +742,6 @@ class BASE_EXPORT GlobalActivityTracker {
   // Releases the activity-tracker for the current thread (for testing only).
   void ReleaseTrackerForCurrentThreadForTesting();
 
-  // Gets a reference to memory for holding user-defined activity data. If
-  // the reference is valid, it's memory will be returned. If not, then a
-  // new reference will be created (and stored) and that memory returned.
-  void* GetUserDataMemory(PersistentMemoryAllocator::Reference* reference);
-
-  // Releases memory for user-defined activity data.
-  void ReleaseUserDataMemory(PersistentMemoryAllocator::Reference* reference);
-
   // Records a log message. The current implementation does NOT recycle these
   // only store critical messages such as FATAL ones.
   void RecordLogMessage(StringPiece message);
@@ -662,6 +750,7 @@ class BASE_EXPORT GlobalActivityTracker {
   ActivityUserData& user_data() { return user_data_; }
 
  private:
+  friend class ScopedThreadActivity;
   friend class ActivityTrackerTest;
 
   enum : int {

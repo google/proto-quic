@@ -1326,4 +1326,47 @@ TEST(FieldTrialListTest, ClearParamsFromSharedMemory) {
   EXPECT_EQ("*Trial1/Group1/", check_string);
 }
 
+TEST(FieldTrialListTest, DumpAndFetchFromSharedMemory) {
+  std::string trial_name("Trial1");
+  std::string group_name("Group1");
+
+  // Create a field trial with some params.
+  FieldTrialList field_trial_list(nullptr);
+  FieldTrialList::CreateFieldTrial(trial_name, group_name);
+  std::map<std::string, std::string> params;
+  params["key1"] = "value1";
+  params["key2"] = "value2";
+  FieldTrialParamAssociator::GetInstance()->AssociateFieldTrialParams(
+      trial_name, group_name, params);
+
+  std::unique_ptr<base::SharedMemory> shm(new SharedMemory());
+  // 4 KiB is enough to hold the trials only created for this test.
+  shm.get()->CreateAndMapAnonymous(4 << 10);
+  // We _could_ use PersistentMemoryAllocator, this just has less params.
+  SharedPersistentMemoryAllocator allocator(std::move(shm), 1, "", false);
+
+  // Dump and subsequently retrieve the field trial to |allocator|.
+  FieldTrialList::DumpAllFieldTrialsToPersistentAllocator(&allocator);
+  std::vector<const FieldTrial::FieldTrialEntry*> entries =
+      FieldTrialList::GetAllFieldTrialsFromPersistentAllocator(allocator);
+
+  // Check that we have the entry we put in.
+  EXPECT_EQ(1u, entries.size());
+  const FieldTrial::FieldTrialEntry* entry = entries[0];
+
+  // Check that the trial and group names match.
+  StringPiece shm_trial_name;
+  StringPiece shm_group_name;
+  entry->GetTrialAndGroupName(&shm_trial_name, &shm_group_name);
+  EXPECT_EQ(trial_name, shm_trial_name);
+  EXPECT_EQ(group_name, shm_group_name);
+
+  // Check that the params match.
+  std::map<std::string, std::string> shm_params;
+  entry->GetParams(&shm_params);
+  EXPECT_EQ(2u, shm_params.size());
+  EXPECT_EQ("value1", shm_params["key1"]);
+  EXPECT_EQ("value2", shm_params["key2"]);
+}
+
 }  // namespace base

@@ -52,8 +52,8 @@ bool TwoColumnDateListingToTime(const base::string16& date,
   if (!time_exploded.HasValidValues())
     return false;
 
-  // We don't know the time zone of the server, so just use local time.
-  *result = base::Time::FromLocalExploded(time_exploded);
+  // We don't know the time zone of the server, so just use UTC.
+  *result = base::Time::FromUTCExploded(time_exploded);
   return true;
 }
 

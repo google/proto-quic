@@ -56,7 +56,7 @@ QUIC_FLAG(bool, FLAGS_quic_use_cheap_stateless_rejects, true)
 QUIC_FLAG(bool, FLAGS_quic_respect_http2_settings_frame, true)
 
 // If true, re-enables QUIC_VERSION_36.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v3, false)
+QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v3, true)
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
 QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
@@ -85,7 +85,7 @@ QUIC_FLAG(bool, FLAGS_quic_largest_sent_retransmittable, true)
 
 // If true, release QuicCryptoStream\'s read buffer when stream are less
 // frequently used.
-QUIC_FLAG(bool, FLAGS_quic_release_crypto_stream_buffer, false)
+QUIC_FLAG(bool, FLAGS_quic_release_crypto_stream_buffer, true)
 
 // Use a more conservative backoff of 2x instead of 1.5x for handshake
 // retransmissions, as well as a larger minimum.
@@ -120,7 +120,7 @@ QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)
 
 // If true, release headers stream\'s sequencer buffer when there is no active
 // stream.
-QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, false)
+QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, true)
 
 // Set the retransmission alarm only when there are unacked
 // retransmittable packets.
@@ -146,7 +146,7 @@ QUIC_FLAG(bool, FLAGS_quic_client_connection_options, true)
 QUIC_FLAG(bool, FLAGS_quic_fix_cubic_convex_mode, false)
 
 // Ensure that BBR startup pacing rate does not drop below the initial one.
-QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, false)
+QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, true)
 
 // If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
 // beginning of a connection.

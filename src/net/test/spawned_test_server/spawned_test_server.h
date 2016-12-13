@@ -24,4 +24,3 @@ typedef LocalTestServer SpawnedTestServer;
 }  // namespace net
 
 #endif  // NET_TEST_SPAWNED_TEST_SERVER_SPAWNED_TEST_SERVER_H_
-

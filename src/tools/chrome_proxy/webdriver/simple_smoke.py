@@ -2,16 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import sys
 import time
+import unittest
 
-from common import IntegrationTest
+import common
 from common import TestDriver
 
 
-class SimpleSmoke(IntegrationTest):
+class SimpleSmoke(unittest.TestCase):
 
   # Simple example integration test.
-  def TestCheckPageWithProxy(self):
+  def testCheckPageWithProxy(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
       t.SetURL('http://check.googlezip.net/test.html')
@@ -25,7 +27,7 @@ class SimpleSmoke(IntegrationTest):
           response.ResponseHasViaHeader(), response.WasXHR())
 
   # Show how to get a histogram.
-  def TestPingbackHistogram(self):
+  def testPingbackHistogram(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
       t.SetURL('http://check.googlezip.net/test.html')
@@ -34,5 +36,6 @@ class SimpleSmoke(IntegrationTest):
       print t.GetHistogram('DataReductionProxy.Pingback.Attempted')
 
 if __name__ == '__main__':
-  test = SimpleSmoke()
-  test.RunAllTests()
+  # The unittest library uses sys.argv itself and is easily confused by our
+  # command line options. Pass it a simpler argv instead.
+  unittest.main(argv=[sys.argv[0]], verbosity=2)

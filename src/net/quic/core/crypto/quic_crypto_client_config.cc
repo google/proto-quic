@@ -180,7 +180,7 @@ QuicCryptoClientConfig::CachedState::SetServerConfig(StringPiece server_config,
   if (!matches_existing) {
     server_config_ = server_config.as_string();
     SetProofInvalid();
-    scfg_.reset(new_scfg_storage.release());
+    scfg_ = std::move(new_scfg_storage);
   }
   return SERVER_CONFIG_VALID;
 }

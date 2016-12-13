@@ -449,7 +449,8 @@ void *SSL_SESSION_get_ex_data(const SSL_SESSION *session, int idx) {
   return CRYPTO_get_ex_data(&session->ex_data, idx);
 }
 
-int ssl_get_new_session(SSL *ssl, int is_server) {
+int ssl_get_new_session(SSL_HANDSHAKE *hs, int is_server) {
+  SSL *const ssl = hs->ssl;
   if (ssl->mode & SSL_MODE_NO_SESSION_CREATION) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_SESSION_MAY_NOT_BE_CREATED);
     return 0;
@@ -465,15 +466,12 @@ int ssl_get_new_session(SSL *ssl, int is_server) {
   ssl_get_current_time(ssl, &now);
   session->time = now.tv_sec;
 
-  /* If the context has a default timeout, use it over the default. */
-  if (ssl->initial_ctx->session_timeout != 0) {
-    session->timeout = ssl->initial_ctx->session_timeout;
-  }
+  session->timeout = ssl->session_timeout;
 
   session->ssl_version = ssl->version;
 
   if (is_server) {
-    if (ssl->s3->hs->ticket_expected) {
+    if (hs->ticket_expected) {
       /* Don't set session IDs for sessions resumed with tickets. This will keep
        * them out of the session cache. */
       session->session_id_length = 0;
@@ -724,7 +722,7 @@ static enum ssl_session_result_t ssl_lookup_session(
 
 enum ssl_session_result_t ssl_get_prev_session(
     SSL *ssl, SSL_SESSION **out_session, int *out_tickets_supported,
-    int *out_renew_ticket, const struct ssl_early_callback_ctx *ctx) {
+    int *out_renew_ticket, const SSL_CLIENT_HELLO *client_hello) {
   /* This is used only by servers. */
   assert(ssl->server);
   SSL_SESSION *session = NULL;
@@ -736,17 +734,18 @@ enum ssl_session_result_t ssl_get_prev_session(
   const int tickets_supported =
       !(SSL_get_options(ssl) & SSL_OP_NO_TICKET) &&
       ssl->version > SSL3_VERSION &&
-      SSL_early_callback_ctx_extension_get(ctx, TLSEXT_TYPE_session_ticket,
-                                           &ticket, &ticket_len);
+      SSL_early_callback_ctx_extension_get(
+          client_hello, TLSEXT_TYPE_session_ticket, &ticket, &ticket_len);
   if (tickets_supported && ticket_len > 0) {
     if (!tls_process_ticket(ssl, &session, &renew_ticket, ticket, ticket_len,
-                            ctx->session_id, ctx->session_id_len)) {
+                            client_hello->session_id,
+                            client_hello->session_id_len)) {
       return ssl_session_error;
     }
   } else {
     /* The client didn't send a ticket, so the session ID is a real ID. */
     enum ssl_session_result_t lookup_ret = ssl_lookup_session(
-        ssl, &session, ctx->session_id, ctx->session_id_len);
+        ssl, &session, client_hello->session_id, client_hello->session_id_len);
     if (lookup_ret != ssl_session_success) {
       return lookup_ret;
     }
@@ -873,6 +872,12 @@ long SSL_CTX_get_timeout(const SSL_CTX *ctx) {
   }
 
   return ctx->session_timeout;
+}
+
+long SSL_set_session_timeout(SSL *ssl, long timeout) {
+  long old_timeout = ssl->session_timeout;
+  ssl->session_timeout = timeout;
+  return old_timeout;
 }
 
 typedef struct timeout_param_st {

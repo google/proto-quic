@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/der/parse_values.h"
+
 #include <tuple>
 
 #include "base/logging.h"
-#include "base/numerics/safe_math.h"
-#include "net/der/parse_values.h"
 
 namespace net {
 

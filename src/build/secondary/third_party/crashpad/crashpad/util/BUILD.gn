@@ -63,6 +63,8 @@ static_library("util") {
     "mac/service_management.h",
     "mac/xattr.cc",
     "mac/xattr.h",
+    "misc/address_sanitizer.h",
+    "misc/arraysize_unsafe.h",
     "misc/clock.h",
     "misc/clock_mac.cc",
     "misc/clock_posix.cc",
@@ -229,10 +231,7 @@ static_library("util") {
   ]
 
   if (is_win) {
-    libs = [
-      "rpcrt4.lib",
-      "winhttp.lib",
-    ]
+    libs = [ "winhttp.lib" ]
     cflags = [
       "/wd4201",  # nonstandard extension used : nameless struct/union.
       "/wd4577",  # 'noexcept' used with no exception handling mode specified.

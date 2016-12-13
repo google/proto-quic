@@ -221,8 +221,10 @@ scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
 
   const CSSM_KEY* cssm_key;
   OSStatus status = SecKeyGetCSSMKey(private_key.get(), &cssm_key);
-  if (status != noErr)
+  if (status != noErr) {
+    OSSTATUS_LOG(WARNING, status);
     return nullptr;
+  }
 
   SSLPrivateKey::Type key_type;
   size_t max_length;

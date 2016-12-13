@@ -9,8 +9,8 @@
 #include <utility>
 
 #include "base/bind.h"
+#include "base/memory/ptr_util.h"
 #include "base/rand_util.h"
-#include "base/stl_util.h"
 #include "net/base/ip_address.h"
 #include "net/dns/dns_protocol.h"
 #include "net/dns/dns_socket_pool.h"
@@ -56,7 +56,7 @@ class TestClientSocketFactory : public ClientSocketFactory {
   void ClearSSLSessionCache() override { NOTIMPLEMENTED(); }
 
  private:
-  std::list<SocketDataProvider*> data_providers_;
+  std::list<std::unique_ptr<SocketDataProvider>> data_providers_;
 };
 
 struct PoolEvent {
@@ -187,14 +187,13 @@ TestClientSocketFactory::CreateDatagramClientSocket(
   // We're not actually expecting to send or receive any data, so use the
   // simplest SocketDataProvider with no data supplied.
   SocketDataProvider* data_provider = new StaticSocketDataProvider();
-  data_providers_.push_back(data_provider);
+  data_providers_.push_back(base::WrapUnique(data_provider));
   std::unique_ptr<MockUDPClientSocket> socket(
       new MockUDPClientSocket(data_provider, net_log));
   return std::move(socket);
 }
 
 TestClientSocketFactory::~TestClientSocketFactory() {
-  base::STLDeleteElements(&data_providers_);
 }
 
 TEST_F(DnsSessionTest, AllocateFree) {

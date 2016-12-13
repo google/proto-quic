@@ -50,15 +50,6 @@ bool EvictFileFromSystemCache(const FilePath& file);
 // Refer to https://msdn.microsoft.com/en-us/library/aa822867.aspx for a list of
 // possible values.
 bool DenyFilePermission(const FilePath& path, DWORD permission);
-
-// Returns true if the volume supports Alternate Data Streams.
-bool VolumeSupportsADS(const FilePath& path);
-
-// Returns true if the ZoneIdentifier is correctly set to "Internet" (3).
-// Note that this function must be called from the same process as
-// the one that set the zone identifier.  I.e. don't use it in UI/automation
-// based tests.
-bool HasInternetZoneIdentifier(const FilePath& full_path);
 #endif  // defined(OS_WIN)
 
 // For testing, make the file unreadable or unwritable.

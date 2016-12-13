@@ -5,13 +5,13 @@
 #ifndef NET_QUIC_CORE_FRAMES_QUIC_MTU_DISCOVERY_FRAME_H_
 #define NET_QUIC_CORE_FRAMES_QUIC_MTU_DISCOVERY_FRAME_H_
 
-#include "net/base/net_export.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // A path MTU discovery frame contains no payload and is serialized as a ping
 // frame.
-struct NET_EXPORT_PRIVATE QuicMtuDiscoveryFrame {};
+struct QUIC_EXPORT_PRIVATE QuicMtuDiscoveryFrame {};
 
 }  // namespace net
 

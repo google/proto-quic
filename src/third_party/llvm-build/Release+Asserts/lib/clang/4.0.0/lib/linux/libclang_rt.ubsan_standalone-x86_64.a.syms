@@ -20,6 +20,7 @@
   __sanitizer_cov_trace_switch;
   __sanitizer_cov_with_check;
   __sanitizer_get_coverage_guards;
+  __sanitizer_get_module_and_offset_for_pc;
   __sanitizer_get_number_of_counters;
   __sanitizer_get_total_unique_caller_callee_pairs;
   __sanitizer_get_total_unique_coverage;

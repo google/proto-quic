@@ -180,4 +180,3 @@ class MockGSSAPILibrary : public GSSAPILibrary {
 }  // namespace net
 
 #endif  // NET_HTTP_MOCK_GSSAPI_LIBRARY_POSIX_H_
-

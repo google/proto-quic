@@ -64,4 +64,4 @@ net::NetLogParametersCallback CreateNetLogGetAvailableRangeResultCallback(
 
 }  // namespace disk_cache
 
-#endif  // NET_DISK_CACHE_NET_LOG_CACHE_PARAMETERS_H_
+#endif  // NET_DISK_CACHE_NET_LOG_PARAMETERS_H_

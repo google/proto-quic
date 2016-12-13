@@ -4,11 +4,6 @@
 
 #include "net/quic/core/congestion_control/pacing_sender.h"
 
-#include <string>
-
-#include "net/quic/core/quic_flags.h"
-
-
 namespace net {
 namespace {
 

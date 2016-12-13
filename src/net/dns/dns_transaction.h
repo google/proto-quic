@@ -77,4 +77,3 @@ class NET_EXPORT_PRIVATE DnsTransactionFactory {
 }  // namespace net
 
 #endif  // NET_DNS_DNS_TRANSACTION_H_
-

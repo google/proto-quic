@@ -25,9 +25,9 @@
 #include "net/http/http_stream_factory_impl.h"
 #include "net/http/url_security_manager.h"
 #include "net/proxy/proxy_service.h"
+#include "net/quic/chromium/quic_crypto_client_stream_factory.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_crypto_client_stream_factory.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_utils.h"
@@ -398,6 +398,8 @@ void HttpNetworkSession::DumpMemoryStats(
   }
   http_network_session_dump = pmd->CreateAllocatorDump(name);
   normal_socket_pool_manager_->DumpMemoryStats(
+      pmd, http_network_session_dump->absolute_name());
+  spdy_session_pool_.DumpMemoryStats(
       pmd, http_network_session_dump->absolute_name());
   pmd->AddOwnershipEdge(pmd->GetAllocatorDump(parent_absolute_name)->guid(),
                         http_network_session_dump->guid());

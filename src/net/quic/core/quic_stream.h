@@ -28,12 +28,12 @@
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
 #include "net/base/iovec.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -43,7 +43,7 @@ class QuicStreamPeer;
 
 class QuicSession;
 
-class NET_EXPORT_PRIVATE QuicStream {
+class QUIC_EXPORT_PRIVATE QuicStream {
  public:
   QuicStream(QuicStreamId id, QuicSession* session);
 

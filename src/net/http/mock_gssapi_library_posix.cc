@@ -480,4 +480,3 @@ OM_uint32 MockGSSAPILibrary::inquire_context(
 }  // namespace test
 
 }  // namespace net
-

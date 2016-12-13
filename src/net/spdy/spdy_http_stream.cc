@@ -33,7 +33,8 @@ const size_t SpdyHttpStream::kRequestBodyBufferSize = 1 << 14;  // 16KB
 
 SpdyHttpStream::SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session,
                                bool direct)
-    : spdy_session_(spdy_session),
+    : MultiplexedHttpStream(MultiplexedSessionHandle(spdy_session)),
+      spdy_session_(spdy_session),
       is_reused_(spdy_session_->IsReused()),
       stream_closed_(false),
       closed_stream_status_(ERR_FAILED),
@@ -157,25 +158,12 @@ void SpdyHttpStream::Close(bool not_reusable) {
   DCHECK(!stream_.get());
 }
 
-HttpStream* SpdyHttpStream::RenewStreamForAuth() {
-  return NULL;
-}
-
 bool SpdyHttpStream::IsResponseBodyComplete() const {
   return stream_closed_;
 }
 
 bool SpdyHttpStream::IsConnectionReused() const {
   return is_reused_;
-}
-
-void SpdyHttpStream::SetConnectionReused() {
-  // SPDY doesn't need an indicator here.
-}
-
-bool SpdyHttpStream::CanReuseConnection() const {
-  // SPDY streams aren't considered reusable.
-  return false;
 }
 
 int64_t SpdyHttpStream::GetTotalReceivedBytes() const {
@@ -443,7 +431,6 @@ void SpdyHttpStream::ReadAndSendRequestBodyData() {
 
 void SpdyHttpStream::InitializeStreamHelper() {
   stream_->SetDelegate(this);
-  stream_->GetSSLInfo(&ssl_info_);
   was_alpn_negotiated_ = stream_->WasNpnNegotiated();
 }
 
@@ -574,37 +561,11 @@ void SpdyHttpStream::DoResponseCallback(int rv) {
   base::ResetAndReturn(&response_callback_).Run(rv);
 }
 
-void SpdyHttpStream::GetSSLInfo(SSLInfo* ssl_info) {
-  *ssl_info = ssl_info_;
-}
-
-void SpdyHttpStream::GetSSLCertRequestInfo(
-    SSLCertRequestInfo* cert_request_info) {
-  // A SPDY stream cannot request client certificates. Client authentication may
-  // only occur during the initial SSL handshake.
-  NOTREACHED();
-}
-
 bool SpdyHttpStream::GetRemoteEndpoint(IPEndPoint* endpoint) {
   if (!spdy_session_)
     return false;
 
   return spdy_session_->GetPeerAddress(endpoint) == OK;
-}
-
-Error SpdyHttpStream::GetTokenBindingSignature(crypto::ECPrivateKey* key,
-                                               TokenBindingType tb_type,
-                                               std::vector<uint8_t>* out) {
-  if (stream_closed_)
-    return ERR_CONNECTION_CLOSED;
-
-  return spdy_session_->GetTokenBindingSignature(key, tb_type, out);
-}
-
-void SpdyHttpStream::Drain(HttpNetworkSession* session) {
-  NOTREACHED();
-  Close(false);
-  delete this;
 }
 
 void SpdyHttpStream::PopulateNetErrorDetails(NetErrorDetails* details) {

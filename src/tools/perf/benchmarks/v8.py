@@ -232,7 +232,7 @@ class V8Adword(perf_benchmark.PerfBenchmark):
 
 
 class _Top25RuntimeStats(perf_benchmark.PerfBenchmark):
-  options = {'pageset_repeat': 1}
+  options = {'pageset_repeat': 3}
 
   def CreateTimelineBasedMeasurementOptions(self):
     # TODO(fmeawad): most of the cat_filter information is extracted from

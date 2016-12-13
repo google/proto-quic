@@ -96,6 +96,10 @@ src:*/third_party/pdfium/core/src/fpdfapi/fpdf_render/fpdf_render_text.cpp
 src:*/third_party/libwebm/source/mkvmuxer.cpp
 
 #############################################################################
+# LLVM is not UBSan vptr clean.
+src:*third_party/swiftshader/third_party/LLVM*
+
+#############################################################################
 # UBSan seems to be emit false positives when virtual base classes are
 # involved, see e.g. crbug.com/448102.
 

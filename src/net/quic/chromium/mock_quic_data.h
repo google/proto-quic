@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef NET_QUIC_CHROMIUM_MOCK_QUIC_DATA_H_
+#define NET_QUIC_CHROMIUM_MOCK_QUIC_DATA_H_
+
 #include "net/quic/core/quic_packets.h"
 #include "net/socket/socket_test_util.h"
 
@@ -62,3 +65,5 @@ class MockQuicData {
 
 }  // namespace test
 }  // namespace net
+
+#endif  // NET_QUIC_CHROMIUM_MOCK_QUIC_DATA_H_

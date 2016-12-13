@@ -105,7 +105,6 @@ class _V8MobileBrowsingBenchmark(_V8BrowsingBenchmark):
     return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
 
 
-@benchmark.Disabled('win')  # http://crbug.com/654209
 class V8DesktopBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
   PLATFORM = 'desktop'
   TEST_SUFFIX = ''
@@ -117,7 +116,6 @@ class V8MobileBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   TEST_SUFFIX = ''
 
 
-@benchmark.Disabled('win')  # http://crbug.com/654209
 class V8DesktopIgnitionBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
   PLATFORM = 'desktop'
   TEST_SUFFIX = '_ignition'

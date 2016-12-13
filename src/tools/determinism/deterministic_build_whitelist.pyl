@@ -122,7 +122,6 @@
     'mojo_js_unittests',
     'mojo_public_bindings_unittests',
     'mojo_public_system_unittests',
-    'mojo_runner_host_unittests',
     'mojo_system_unittests',
     'nacl_loader_unittests',
     'native_theme_unittests',

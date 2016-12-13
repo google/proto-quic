@@ -41,4 +41,4 @@ struct NET_EXPORT NetErrorDetails {
 
 }  // namespace net
 
-#endif
+#endif  // NET_BASE_NET_ERROR_DETAILS_H_

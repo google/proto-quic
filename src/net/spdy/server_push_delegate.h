@@ -34,4 +34,4 @@ class NET_EXPORT_PRIVATE ServerPushDelegate {
 
 }  // namespace net
 
-#endif  // NET_SPDY_PUSH_DELEGATE_H_
+#endif  // NET_SPDY_SERVER_PUSH_DELEGATE_H_

@@ -272,7 +272,7 @@ bool FtpUtil::LsDateListingToTime(const base::string16& month,
 
     // Guess the year.
     base::Time::Exploded current_exploded;
-    current_time.LocalExplode(&current_exploded);
+    current_time.UTCExplode(&current_exploded);
 
     // If it's not possible for the parsed date to be in the current year,
     // use the previous year.
@@ -285,8 +285,8 @@ bool FtpUtil::LsDateListingToTime(const base::string16& month,
     }
   }
 
-  // We don't know the time zone of the listing, so just use local time.
-  *result = base::Time::FromLocalExploded(time_exploded);
+  // We don't know the time zone of the listing, so just use UTC.
+  *result = base::Time::FromUTCExploded(time_exploded);
   return true;
 }
 
@@ -348,8 +348,8 @@ bool FtpUtil::WindowsDateListingToTime(const base::string16& date,
     }
   }
 
-  // We don't know the time zone of the server, so just use local time.
-  *result = base::Time::FromLocalExploded(time_exploded);
+  // We don't know the time zone of the server, so just use UTC.
+  *result = base::Time::FromUTCExploded(time_exploded);
   return true;
 }
 

@@ -7,8 +7,8 @@
 // a non-owning pointer to the helper so this session needs to ensure that
 // the helper outlives the connection.
 
-#ifndef NET_QUIC_QUIC_CHROMIUM_CLIENT_SESSION_H_
-#define NET_QUIC_QUIC_CHROMIUM_CLIENT_SESSION_H_
+#ifndef NET_QUIC_CHROMIUM_QUIC_CHROMIUM_CLIENT_SESSION_H_
+#define NET_QUIC_CHROMIUM_QUIC_CHROMIUM_CLIENT_SESSION_H_
 
 #include <stddef.h>
 
@@ -38,6 +38,7 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_time.h"
 #include "net/socket/socket_performance_watcher.h"
+#include "net/spdy/multiplexed_session.h"
 #include "net/spdy/server_push_delegate.h"
 
 namespace net {
@@ -61,6 +62,7 @@ class QuicChromiumClientSessionPeer;
 
 class NET_EXPORT_PRIVATE QuicChromiumClientSession
     : public QuicClientSessionBase,
+      public MultiplexedSession,
       public QuicChromiumPacketReader::Visitor,
       public QuicChromiumPacketWriter::Delegate {
  public:
@@ -202,15 +204,12 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
                 IPEndPoint local_address,
                 IPEndPoint peer_address) override;
 
-  // Gets the SSL connection information.
-  bool GetSSLInfo(SSLInfo* ssl_info) const;
-
-  // Generates the signature used in Token Binding using key |*key| and for a
-  // Token Binding of type |tb_type|, putting the signature in |*out|. Returns a
-  // net error code.
+  // MultiplexedSession methods:
+  bool GetRemoteEndpoint(IPEndPoint* endpoint) override;
+  bool GetSSLInfo(SSLInfo* ssl_info) const override;
   Error GetTokenBindingSignature(crypto::ECPrivateKey* key,
                                  TokenBindingType tb_type,
-                                 std::vector<uint8_t>* out);
+                                 std::vector<uint8_t>* out) override;
 
   // Performs a crypto handshake with the server.
   int CryptoConnect(bool require_confirmation,
@@ -418,4 +417,4 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CHROMIUM_CLIENT_SESSION_H_
+#endif  // NET_QUIC_CHROMIUM_QUIC_CHROMIUM_CLIENT_SESSION_H_

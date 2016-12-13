@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_SPDY_HPACK_HEADER_TABLE_H_
-#define NET_SPDY_HPACK_HEADER_TABLE_H_
+#ifndef NET_SPDY_HPACK_HPACK_HEADER_TABLE_H_
+#define NET_SPDY_HPACK_HPACK_HEADER_TABLE_H_
 
 #include <cstddef>
 #include <deque>
@@ -173,4 +173,4 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
 
 }  // namespace net
 
-#endif  // NET_SPDY_HPACK_HEADER_TABLE_H_
+#endif  // NET_SPDY_HPACK_HPACK_HEADER_TABLE_H_

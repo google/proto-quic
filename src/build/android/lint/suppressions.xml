@@ -216,8 +216,6 @@ Still reading?
   <issue id="Overdraw" severity="ignore"/>
   <issue id="Override">
     <!-- TODO(crbug.com/635567): Fix this properly. -->
-    <ignore regexp="org/chromium/content/browser/input/ReplicaInputConnection.class"/>
-    <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="org/chromium/content/browser/input/ThreadedInputConnection.class"/>
     <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="com/android/webview/chromium/ContentSettingsAdapter.class"/>

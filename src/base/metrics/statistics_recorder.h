@@ -25,11 +25,11 @@
 #include "base/macros.h"
 #include "base/metrics/histogram_base.h"
 #include "base/strings/string_piece.h"
+#include "base/synchronization/lock.h"
 
 namespace base {
 
 class BucketRanges;
-class Lock;
 
 class BASE_EXPORT StatisticsRecorder {
  public:
@@ -230,8 +230,11 @@ class BASE_EXPORT StatisticsRecorder {
   static CallbackMap* callbacks_;
   static RangesMap* ranges_;
 
-  // Lock protects access to above maps.
-  static base::Lock* lock_;
+  // Lock protects access to above maps. This is a LazyInstance to avoid races
+  // when the above methods are used before Initialize(). Previously each method
+  // would do |if (!lock_) return;| which would race with
+  // |lock_ = new Lock;| in StatisticsRecorder(). http://crbug.com/672852.
+  static base::LazyInstance<base::Lock>::Leaky lock_;
 
   DISALLOW_COPY_AND_ASSIGN(StatisticsRecorder);
 };

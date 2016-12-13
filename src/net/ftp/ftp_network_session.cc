@@ -12,4 +12,3 @@ FtpNetworkSession::FtpNetworkSession(HostResolver* host_resolver)
 FtpNetworkSession::~FtpNetworkSession() {}
 
 }  // namespace net
-

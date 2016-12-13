@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CERT_CT_TEST_UTIL_H_
-#define NET_CERT_CT_TEST_UTIL_H_
+#ifndef NET_TEST_CT_TEST_UTIL_H_
+#define NET_TEST_CT_TEST_UTIL_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -132,4 +132,4 @@ bool CheckForSCTOrigin(const SignedCertificateTimestampAndStatusList& scts,
 
 }  // namespace net
 
-#endif  // NET_CERT_CT_TEST_UTIL_H_
+#endif  // NET_TEST_CT_TEST_UTIL_H_

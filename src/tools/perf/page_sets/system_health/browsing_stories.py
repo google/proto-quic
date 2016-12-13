@@ -176,7 +176,6 @@ class QqMobileStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
-@decorators.Disabled('mac')  # crbug.com/662959
 class RedditDesktopStory(_NewsBrowsingStory):
   """The top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:reddit'

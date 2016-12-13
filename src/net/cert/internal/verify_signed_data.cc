@@ -6,6 +6,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
+#include "base/numerics/safe_math.h"
 #include "crypto/openssl_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/signature_algorithm.h"

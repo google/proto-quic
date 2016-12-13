@@ -15,6 +15,9 @@
 // Prefer including this file instead of directly writing the #if / #else,
 // since it avoids duplicating the platform-specific selections.
 
+#ifndef NET_BASE_SYS_ADDRINFO_H_
+#define NET_BASE_SYS_ADDRINFO_H_
+
 #include "build/build_config.h"
 
 #if defined(OS_WIN)
@@ -24,3 +27,5 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #endif
+
+#endif  // NET_BASE_SYS_ADDRINFO_H_

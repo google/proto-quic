@@ -230,9 +230,9 @@ D. Local Modifications
      windowsZones.txt
      zoneinfo64.txt
 
-  As of Nov 16, 2016, the latest version is 2016i and the above files
+  As of Dec 7, 2016, the latest version is 2016j and the above files
   are available at
-  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016i/44/
+  http://source.icu-project.org/repos/icu/data/trunk/tzdata/icunew/2016j/44/
 
 4. Build-related changes
 

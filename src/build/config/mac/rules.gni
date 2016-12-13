@@ -77,10 +77,11 @@ template("mac_xib_bundle_data") {
   _target_name = target_name
   _compile_target_name = _target_name + "_compile_ibtool"
 
-  compile_xibs(_compile_target_name) {
+  compile_ib_files(_compile_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":$_target_name" ]
     sources = invoker.sources
+    output_extension = "nib"
     ibtool_flags = [
       "--minimum-deployment-target",
       mac_deployment_target,

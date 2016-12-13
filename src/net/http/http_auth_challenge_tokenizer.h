@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_
-#define NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_
+#ifndef NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_H_
+#define NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_H_
 
 #include <string>
 
@@ -59,4 +59,4 @@ class NET_EXPORT_PRIVATE HttpAuthChallengeTokenizer {
 
 }  // namespace net
 
-#endif  // NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_
+#endif  // NET_HTTP_HTTP_AUTH_CHALLENGE_TOKENIZER_H_

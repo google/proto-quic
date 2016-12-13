@@ -148,4 +148,3 @@ class NET_EXPORT_PRIVATE DnsConfigServiceWin : public DnsConfigService {
 }  // namespace net
 
 #endif  // NET_DNS_DNS_CONFIG_SERVICE_WIN_H_
-

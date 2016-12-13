@@ -37,8 +37,10 @@ bool RemoveKeySHA256FromEntry(const std::string& key,
   File entry_file(entry_file_path, flags);
   if (!entry_file.IsValid())
     return false;
-  int file_length = entry_file.GetLength();
+  int64_t file_length = entry_file.GetLength();
   SimpleFileEOF eof_record;
+  if (file_length < static_cast<int64_t>(sizeof(eof_record)))
+    return false;
   if (entry_file.Read(file_length - sizeof(eof_record),
                       reinterpret_cast<char*>(&eof_record),
                       sizeof(eof_record)) != sizeof(eof_record)) {
@@ -73,8 +75,10 @@ bool CorruptKeySHA256FromEntry(const std::string& key,
   File entry_file(entry_file_path, flags);
   if (!entry_file.IsValid())
     return false;
-  int file_length = entry_file.GetLength();
+  int64_t file_length = entry_file.GetLength();
   SimpleFileEOF eof_record;
+  if (file_length < static_cast<int64_t>(sizeof(eof_record)))
+    return false;
   if (entry_file.Read(file_length - sizeof(eof_record),
                       reinterpret_cast<char*>(&eof_record),
                       sizeof(eof_record)) != sizeof(eof_record)) {
@@ -105,8 +109,10 @@ bool CorruptStream0LengthFromEntry(const std::string& key,
   File entry_file(entry_file_path, flags);
   if (!entry_file.IsValid())
     return false;
-  int file_length = entry_file.GetLength();
+  int64_t file_length = entry_file.GetLength();
   SimpleFileEOF eof_record;
+  if (file_length < static_cast<int64_t>(sizeof(eof_record)))
+    return false;
   if (entry_file.Read(file_length - sizeof(eof_record),
                       reinterpret_cast<char*>(&eof_record),
                       sizeof(eof_record)) != sizeof(eof_record)) {

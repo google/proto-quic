@@ -10,6 +10,9 @@
 #include "base/metrics/histogram_macros.h"
 #include "base/profiler/scoped_tracker.h"
 #include "base/stl_util.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "net/base/address_list.h"
@@ -361,6 +364,17 @@ void SpdySessionPool::OnSSLConfigChanged() {
 
 void SpdySessionPool::OnCertDBChanged(const X509Certificate* cert) {
   CloseCurrentSessions(ERR_CERT_DATABASE_CHANGED);
+}
+
+void SpdySessionPool::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_dump_absolute_name) const {
+  std::string dump_name = base::StringPrintf("%s/spdy_session_pool",
+                                             parent_dump_absolute_name.c_str());
+  pmd->CreateAllocatorDump(dump_name);
+  for (const auto& session : sessions_) {
+    session->DumpMemoryStats(pmd, dump_name);
+  }
 }
 
 bool SpdySessionPool::IsSessionAvailable(

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_QUIC_SERVER_INFO_H_
-#define NET_QUIC_CRYPTO_QUIC_SERVER_INFO_H_
+#ifndef NET_QUIC_CORE_CRYPTO_QUIC_SERVER_INFO_H_
+#define NET_QUIC_CORE_CRYPTO_QUIC_SERVER_INFO_H_
 
 #include <string>
 #include <vector>
@@ -13,8 +13,8 @@
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -22,7 +22,7 @@ namespace net {
 // This information may be stored on disk so does not include keys or other
 // sensitive information. Primarily it's intended for caching the QUIC server's
 // crypto config.
-class NET_EXPORT_PRIVATE QuicServerInfo {
+class QUIC_EXPORT_PRIVATE QuicServerInfo {
  public:
   // Enum to track number of times data read/parse/write API calls of
   // QuicServerInfo to and from disk cache is called.
@@ -161,7 +161,7 @@ class NET_EXPORT_PRIVATE QuicServerInfo {
   DISALLOW_COPY_AND_ASSIGN(QuicServerInfo);
 };
 
-class NET_EXPORT_PRIVATE QuicServerInfoFactory {
+class QUIC_EXPORT_PRIVATE QuicServerInfoFactory {
  public:
   QuicServerInfoFactory() {}
   virtual ~QuicServerInfoFactory();
@@ -176,4 +176,4 @@ class NET_EXPORT_PRIVATE QuicServerInfoFactory {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_QUIC_SERVER_INFO_H_
+#endif  // NET_QUIC_CORE_CRYPTO_QUIC_SERVER_INFO_H_

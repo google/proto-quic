@@ -32,4 +32,3 @@ class NET_EXPORT HttpUserAgentSettings {
 }  // namespace net
 
 #endif  // NET_URL_REQUEST_HTTP_USER_AGENT_SETTINGS_H_
-

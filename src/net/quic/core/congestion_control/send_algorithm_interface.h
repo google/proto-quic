@@ -4,13 +4,12 @@
 //
 // The pure virtual class for send side congestion control algorithm.
 
-#ifndef NET_QUIC_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_
-#define NET_QUIC_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_
+#ifndef NET_QUIC_CORE_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_
+#define NET_QUIC_CORE_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_
 
 #include <algorithm>
 #include <map>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_config.h"
@@ -19,6 +18,7 @@
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -27,9 +27,9 @@ class RttStats;
 
 const QuicPacketCount kDefaultMaxCongestionWindowPackets = 2000;
 
-class NET_EXPORT_PRIVATE SendAlgorithmInterface {
+class QUIC_EXPORT_PRIVATE SendAlgorithmInterface {
  public:
-  // A sorted std::vector of packets.
+  // A sorted vector of packets.
   typedef std::vector<std::pair<QuicPacketNumber, QuicPacketLength>>
       CongestionVector;
 
@@ -139,4 +139,4 @@ class NET_EXPORT_PRIVATE SendAlgorithmInterface {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_
+#endif  // NET_QUIC_CORE_CONGESTION_CONTROL_SEND_ALGORITHM_INTERFACE_H_

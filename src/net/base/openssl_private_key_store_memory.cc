@@ -71,4 +71,3 @@ bool OpenSSLPrivateKeyStore::HasPrivateKey(EVP_PKEY* pub_key) {
 }
 
 } // namespace net
-

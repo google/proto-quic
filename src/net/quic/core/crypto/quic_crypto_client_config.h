@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_
-#define NET_QUIC_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_
+#ifndef NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_
+#define NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_
 
 #include <stdint.h>
 
@@ -15,10 +15,10 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -32,12 +32,12 @@ class QuicRandom;
 // QuicCryptoClientConfig contains crypto-related configuration settings for a
 // client. Note that this object isn't thread-safe. It's designed to be used on
 // a single thread at a time.
-class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
+class QUIC_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
  public:
   // A CachedState contains the information that the client needs in order to
   // perform a 0-RTT handshake with a server. This information can be reused
   // over several connections to the same server.
-  class NET_EXPORT_PRIVATE CachedState {
+  class QUIC_EXPORT_PRIVATE CachedState {
    public:
     // Enum to track if the server config is valid or not. If it is not valid,
     // it specifies why it is invalid.
@@ -390,4 +390,4 @@ class NET_EXPORT_PRIVATE QuicCryptoClientConfig : public QuicCryptoConfig {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_
+#endif  // NET_QUIC_CORE_CRYPTO_QUIC_CRYPTO_CLIENT_CONFIG_H_

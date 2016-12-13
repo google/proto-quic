@@ -4713,7 +4713,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushCrossOriginCorrectness) {
     std::unique_ptr<TestProxyDelegate> proxy_delegate(new TestProxyDelegate());
     proxy_delegate->set_trusted_spdy_proxy(net::ProxyServer::FromURI(
         "https://123.45.67.89:443", net::ProxyServer::SCHEME_HTTP));
-    session_deps->proxy_delegate.reset(proxy_delegate.release());
+    session_deps->proxy_delegate = std::move(proxy_delegate);
     NormalSpdyTransactionHelper helper(
         request, DEFAULT_PRIORITY, NetLogWithSource(), std::move(session_deps));
     helper.RunPreTestSetup();
@@ -5374,16 +5374,19 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   SequencedSocketData data(reads.data(), reads.size(), writes.data(),
                            writes.size());
 
+  auto session_deps = base::MakeUnique<SpdySessionDependencies>();
+  session_deps->session_max_recv_window_size = session_max_recv_window_size;
+  session_deps->stream_max_recv_window_size = stream_max_recv_window_size;
+
   NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), NULL);
+                                     NetLogWithSource(),
+                                     std::move(session_deps));
   helper.AddData(&data);
   helper.RunPreTestSetup();
 
   SpdySessionPool* spdy_session_pool = helper.session()->spdy_session_pool();
   SpdySessionPoolPeer pool_peer(spdy_session_pool);
   pool_peer.SetEnableSendingInitialData(true);
-  pool_peer.SetSessionMaxRecvWindowSize(session_max_recv_window_size);
-  pool_peer.SetStreamInitialRecvWindowSize(stream_max_recv_window_size);
 
   HttpNetworkTransaction* trans = helper.trans();
   TestCompletionCallback callback;

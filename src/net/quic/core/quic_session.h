@@ -4,8 +4,8 @@
 //
 // A QuicSession, which demuxes a single connection to individual streams.
 
-#ifndef NET_QUIC_QUIC_SESSION_H_
-#define NET_QUIC_QUIC_SESSION_H_
+#ifndef NET_QUIC_CORE_QUIC_SESSION_H_
+#define NET_QUIC_CORE_QUIC_SESSION_H_
 
 #include <stddef.h>
 
@@ -20,13 +20,13 @@
 #include "base/containers/small_map.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_write_blocked_list.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -38,7 +38,7 @@ namespace test {
 class QuicSessionPeer;
 }  // namespace test
 
-class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
+class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
  public:
   // An interface from the session to the entity owning the session.
   // This lets the session notify its owner (the Dispatcher) when the connection
@@ -441,4 +441,4 @@ class NET_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SESSION_H_
+#endif  // NET_QUIC_CORE_QUIC_SESSION_H_

@@ -163,7 +163,7 @@ void QuicHttpResponseCache::ResourceFile::HandleXOriginalUrl() {
 const QuicHttpResponseCache::Response* QuicHttpResponseCache::GetResponse(
     StringPiece host,
     StringPiece path) const {
-  base::AutoLock lock(response_mutex_);
+  QuicWriterMutexLock lock(&response_mutex_);
 
   auto it = responses_.find(GetKey(host, path));
   if (it == responses_.end()) {
@@ -201,7 +201,7 @@ void QuicHttpResponseCache::AddSimpleResponseWithServerPushResources(
 }
 
 void QuicHttpResponseCache::AddDefaultResponse(Response* response) {
-  base::AutoLock lock(response_mutex_);
+  QuicWriterMutexLock lock(&response_mutex_);
   default_response_.reset(response);
 }
 
@@ -288,7 +288,7 @@ void QuicHttpResponseCache::InitializeFromDirectory(
 
 std::list<ServerPushInfo> QuicHttpResponseCache::GetServerPushResources(
     string request_url) {
-  base::AutoLock lock(response_mutex_);
+  QuicWriterMutexLock lock(&response_mutex_);
 
   std::list<ServerPushInfo> resources;
   auto resource_range = server_push_resources_.equal_range(request_url);
@@ -302,7 +302,7 @@ std::list<ServerPushInfo> QuicHttpResponseCache::GetServerPushResources(
 
 QuicHttpResponseCache::~QuicHttpResponseCache() {
   {
-    base::AutoLock lock(response_mutex_);
+    QuicWriterMutexLock lock(&response_mutex_);
     responses_.clear();
   }
 }
@@ -313,7 +313,7 @@ void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
                                             SpdyHeaderBlock response_headers,
                                             StringPiece response_body,
                                             SpdyHeaderBlock response_trailers) {
-  base::AutoLock lock(response_mutex_);
+  QuicWriterMutexLock lock(&response_mutex_);
 
   DCHECK(!host.empty()) << "Host must be populated, e.g. \"www.google.com\"";
   string key = GetKey(host, path);
@@ -349,7 +349,7 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
              << " push url " << push_resource.request_url
              << " response headers " << push_resource.headers.DebugString();
     {
-      base::AutoLock lock(response_mutex_);
+      QuicWriterMutexLock lock(&response_mutex_);
       server_push_resources_.insert(std::make_pair(request_url, push_resource));
     }
     string host = push_resource.request_url.host();
@@ -359,7 +359,7 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
     string path = push_resource.request_url.path();
     bool found_existing_response = false;
     {
-      base::AutoLock lock(response_mutex_);
+      QuicWriterMutexLock lock(&response_mutex_);
       found_existing_response =
           base::ContainsKey(responses_, GetKey(host, path));
     }
@@ -376,7 +376,7 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
 bool QuicHttpResponseCache::PushResourceExistsInCache(
     string original_request_url,
     ServerPushInfo resource) {
-  base::AutoLock lock(response_mutex_);
+  QuicWriterMutexLock lock(&response_mutex_);
   auto resource_range =
       server_push_resources_.equal_range(original_request_url);
   for (auto it = resource_range.first; it != resource_range.second; ++it) {

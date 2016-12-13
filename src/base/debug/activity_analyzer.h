@@ -16,11 +16,22 @@
 namespace base {
 namespace debug {
 
+class GlobalActivityAnalyzer;
+
 // This class provides analysis of data captured from a ThreadActivityTracker.
 // When created, it takes a snapshot of the data held by the tracker and
 // makes that information available to other code.
 class BASE_EXPORT ThreadActivityAnalyzer {
  public:
+  struct BASE_EXPORT Snapshot : ThreadActivityTracker::Snapshot {
+    Snapshot();
+    ~Snapshot();
+
+    // The user-data snapshot for an activity, matching the |activity_stack|
+    // of ThreadActivityTracker::Snapshot, if any.
+    std::vector<ActivityUserData::Snapshot> user_data_stack;
+  };
+
   // This class provides keys that uniquely identify a thread, even across
   // multiple processes.
   class ThreadKey {
@@ -59,6 +70,9 @@ class BASE_EXPORT ThreadActivityAnalyzer {
 
   ~ThreadActivityAnalyzer();
 
+  // Adds information from the global analyzer.
+  void AddGlobalInformation(GlobalActivityAnalyzer* global);
+
   // Returns true iff the contained data is valid. Results from all other
   // methods are undefined if this returns false.
   bool IsValid() { return activity_snapshot_valid_; }
@@ -74,13 +88,13 @@ class BASE_EXPORT ThreadActivityAnalyzer {
                      activity_snapshot_.thread_id);
   }
 
-  const ActivitySnapshot& activity_snapshot() { return activity_snapshot_; }
+  const Snapshot& activity_snapshot() { return activity_snapshot_; }
 
  private:
   friend class GlobalActivityAnalyzer;
 
   // The snapshot of the activity tracker taken at the moment of construction.
-  ActivitySnapshot activity_snapshot_;
+  Snapshot activity_snapshot_;
 
   // Flag indicating if the snapshot data is valid.
   bool activity_snapshot_valid_;
@@ -131,6 +145,12 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   // Gets the analyzer for a specific thread or null if there is none.
   // Ownership stays with the global analyzer object.
   ThreadActivityAnalyzer* GetAnalyzerForThread(const ThreadKey& key);
+
+  // Extract user data based on a reference and its identifier.
+  ActivityUserData::Snapshot GetUserDataSnapshot(uint32_t ref, uint32_t id);
+
+  // Extract the global user data.
+  ActivityUserData::Snapshot GetGlobalUserDataSnapshot();
 
   // Gets all log messages stored within.
   std::vector<std::string> GetLogMessages();

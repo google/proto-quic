@@ -7,11 +7,12 @@
 
 #include <string>
 
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/impl/quic_ip_address_impl.h"
 
 namespace net {
 
-class NET_EXPORT_PRIVATE QuicIpAddress {
+class QUIC_EXPORT_PRIVATE QuicIpAddress {
   // A class representing an IPv4 or IPv6 address in QUIC. The actual
   // implementation (platform dependent) of an IP address is in
   // QuicIpAddressImpl.
@@ -26,10 +27,10 @@ class NET_EXPORT_PRIVATE QuicIpAddress {
   explicit QuicIpAddress(const QuicIpAddressImpl& impl);
   QuicIpAddress& operator=(const QuicIpAddress& other) = default;
   QuicIpAddress& operator=(QuicIpAddress&& other) = default;
-  NET_EXPORT_PRIVATE friend bool operator==(QuicIpAddress lhs,
-                                            QuicIpAddress rhs);
-  NET_EXPORT_PRIVATE friend bool operator!=(QuicIpAddress lhs,
-                                            QuicIpAddress rhs);
+  QUIC_EXPORT_PRIVATE friend bool operator==(QuicIpAddress lhs,
+                                             QuicIpAddress rhs);
+  QUIC_EXPORT_PRIVATE friend bool operator!=(QuicIpAddress lhs,
+                                             QuicIpAddress rhs);
 
   bool IsInitialized() const;
   IpAddressFamily address_family() const;

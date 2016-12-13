@@ -92,4 +92,3 @@ bool IsLogDisqualified(base::StringPiece log_id,
 }  // namespace ct
 
 }  // namespace net
-

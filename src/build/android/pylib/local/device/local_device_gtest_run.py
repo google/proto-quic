@@ -426,7 +426,7 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
           result.SetTombstones(resolved_tombstones)
 
     not_run_tests = set(test).difference(set(r.GetName() for r in results))
-    return results, not_run_tests
+    return results, list(not_run_tests)
 
   #override
   def TearDown(self):

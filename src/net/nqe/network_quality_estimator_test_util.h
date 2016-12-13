@@ -37,7 +37,8 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       std::unique_ptr<net::ExternalEstimateProvider> external_estimate_provider,
       const std::map<std::string, std::string>& variation_params,
       bool allow_local_host_requests_for_tests,
-      bool allow_smaller_responses_for_tests);
+      bool allow_smaller_responses_for_tests,
+      bool add_default_platform_observations);
 
   explicit TestNetworkQualityEstimator(
       const std::map<std::string, std::string>& variation_params);

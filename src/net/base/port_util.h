@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_BASE_NET_PORT_UTIL_
-#define NET_BASE_NET_PORT_UTIL_
+#ifndef NET_BASE_PORT_UTIL_H_
+#define NET_BASE_PORT_UTIL_H_
 
 #include <stddef.h>
 
@@ -45,4 +45,4 @@ class NET_EXPORT ScopedPortException {
 
 }  // namespace net
 
-#endif  // NET_BASE_NET_PORT_UTIL_
+#endif  // NET_BASE_PORT_UTIL_H_

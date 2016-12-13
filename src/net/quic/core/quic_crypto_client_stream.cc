@@ -38,7 +38,7 @@ void QuicCryptoClientStream::ChannelIDSourceCallbackImpl::Run(
     return;
   }
 
-  stream_->channel_id_key_.reset(channel_id_key->release());
+  stream_->channel_id_key_ = std::move(*channel_id_key);
   stream_->channel_id_source_callback_run_ = true;
   stream_->channel_id_source_callback_ = nullptr;
   stream_->DoHandshakeLoop(nullptr);
@@ -68,7 +68,7 @@ void QuicCryptoClientStream::ProofVerifierCallbackImpl::Run(
 
   stream_->verify_ok_ = ok;
   stream_->verify_error_details_ = error_details;
-  stream_->verify_details_.reset(details->release());
+  stream_->verify_details_ = std::move(*details);
   stream_->proof_verify_callback_ = nullptr;
   stream_->DoHandshakeLoop(nullptr);
 

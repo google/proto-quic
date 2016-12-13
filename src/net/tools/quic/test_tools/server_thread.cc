@@ -71,7 +71,7 @@ int ServerThread::GetPort() {
 
 void ServerThread::Schedule(std::function<void()> action) {
   DCHECK(!quit_.IsSignaled());
-  base::AutoLock lock(scheduled_actions_lock_);
+  QuicWriterMutexLock lock(&scheduled_actions_lock_);
   scheduled_actions_.push_back(std::move(action));
 }
 
@@ -117,7 +117,7 @@ void ServerThread::MaybeNotifyOfHandshakeConfirmation() {
 void ServerThread::ExecuteScheduledActions() {
   std::deque<std::function<void()>> actions;
   {
-    base::AutoLock lock(scheduled_actions_lock_);
+    QuicWriterMutexLock lock(&scheduled_actions_lock_);
     actions.swap(scheduled_actions_);
   }
   while (!actions.empty()) {

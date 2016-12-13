@@ -10,11 +10,12 @@
 #include "net/quic/core/frames/quic_frame.h"
 #include "net/quic/core/quic_ack_listener_interface.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // Stores details of a single sent packet.
-struct NET_EXPORT_PRIVATE QuicTransmissionInfo {
+struct QUIC_EXPORT_PRIVATE QuicTransmissionInfo {
   // Used by STL when assigning into a map.
   QuicTransmissionInfo();
 

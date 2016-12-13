@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_STREAM_SEQUENCER_H_
-#define NET_QUIC_QUIC_STREAM_SEQUENCER_H_
+#ifndef NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_H_
+#define NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_H_
 
 #include <stddef.h>
 
 #include <map>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
@@ -25,7 +25,7 @@ class QuicStream;
 
 // Buffers frames until we have something which can be passed
 // up to the next layer.
-class NET_EXPORT_PRIVATE QuicStreamSequencer {
+class QUIC_EXPORT_PRIVATE QuicStreamSequencer {
  public:
   QuicStreamSequencer(QuicStream* quic_stream, const QuicClock* clock);
   virtual ~QuicStreamSequencer();
@@ -147,4 +147,4 @@ class NET_EXPORT_PRIVATE QuicStreamSequencer {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_STREAM_SEQUENCER_H_
+#endif  // NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_H_

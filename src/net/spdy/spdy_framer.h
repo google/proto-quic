@@ -319,6 +319,11 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     LAST_ERROR,  // Must be the last entry in the enum.
   };
 
+  enum CompressionOption {
+    ENABLE_COMPRESSION,
+    DISABLE_COMPRESSION,
+  };
+
   // Typedef for a function used to create SpdyFramerDecoderAdapter's.
   // Defined in support of evaluating an alternate HTTP/2 decoder.
   typedef std::unique_ptr<SpdyFramerDecoderAdapter> (*DecoderAdapterFactoryFn)(
@@ -338,12 +343,12 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Retrieve serialized length of SpdyHeaderBlock.
   static size_t GetSerializedLength(const SpdyHeaderBlock* headers);
 
-  SpdyFramer();
+  explicit SpdyFramer(CompressionOption option);
 
   // Used recursively from the above constructor in order to support
   // instantiating a SpdyFramerDecoderAdapter selected via flags or some other
   // means.
-  explicit SpdyFramer(DecoderAdapterFactoryFn adapter_factory);
+  SpdyFramer(DecoderAdapterFactoryFn adapter_factory, CompressionOption option);
 
   virtual ~SpdyFramer();
 
@@ -475,10 +480,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Serialize a frame of unknown type.
   SpdySerializedFrame SerializeFrame(const SpdyFrameIR& frame);
 
-  // For ease of testing and experimentation we can tweak compression on/off.
-  bool enable_compression() const { return enable_compression_; }
-  void set_enable_compression(bool value) {
-    enable_compression_ = value;
+  // Returns whether this SpdyFramer will compress header blocks using HPACK.
+  bool compression_enabled() const {
+    return compression_option_ == ENABLE_COMPRESSION;
   }
 
   void SetHpackIndexingPolicy(HpackEncoder::IndexingPolicy policy) {
@@ -552,6 +556,12 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   void SetEncoderHeaderTableDebugVisitor(
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor);
+
+  // For use in SpdyFramerDecoderAdapter implementations; returns a HPACK
+  // decoder to be used.
+  HpackDecoderInterface* GetHpackDecoderForAdapter() {
+    return GetHpackDecoder();
+  }
 
  protected:
   friend class BufferedSpdyFramer;
@@ -760,7 +770,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   uint8_t current_frame_flags_;
 
   // Determines whether HPACK compression is used.
-  bool enable_compression_;
+  const CompressionOption compression_option_;
 
   // On the first read, we check to see if the data starts with HTTP.
   // If it does, we likely have an HTTP response.   This isn't guaranteed

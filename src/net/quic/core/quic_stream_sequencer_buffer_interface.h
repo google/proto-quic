@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_
-#define NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_
+#ifndef NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_
+#define NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_
 
 #include <stddef.h>
 
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // The QuicStreamSequencer uses an implementation of this interface to store
 // received data.
-class NET_EXPORT_PRIVATE QuicStreamSequencerBufferInterface {
+class QUIC_EXPORT_PRIVATE QuicStreamSequencerBufferInterface {
  public:
   virtual ~QuicStreamSequencerBufferInterface() {}
 
@@ -74,4 +74,4 @@ class NET_EXPORT_PRIVATE QuicStreamSequencerBufferInterface {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_
+#endif  // NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_INTERFACE_H_

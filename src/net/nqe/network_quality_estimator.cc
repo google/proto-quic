@@ -221,6 +221,18 @@ NetworkQualityEstimator::NetworkQualityEstimator(
     const std::map<std::string, std::string>& variation_params,
     bool use_local_host_requests_for_tests,
     bool use_smaller_responses_for_tests)
+    : NetworkQualityEstimator(std::move(external_estimates_provider),
+                              variation_params,
+                              use_local_host_requests_for_tests,
+                              use_smaller_responses_for_tests,
+                              true) {}
+
+NetworkQualityEstimator::NetworkQualityEstimator(
+    std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
+    const std::map<std::string, std::string>& variation_params,
+    bool use_local_host_requests_for_tests,
+    bool use_smaller_responses_for_tests,
+    bool add_default_platform_observations)
     : algorithm_name_to_enum_({{"HttpRTTAndDownstreamThroughput",
                                 EffectiveConnectionTypeAlgorithm::
                                     HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
@@ -229,6 +241,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
                                     TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT}}),
       use_localhost_requests_(use_local_host_requests_for_tests),
       use_small_responses_(use_smaller_responses_for_tests),
+      add_default_platform_observations_(add_default_platform_observations),
       weight_multiplier_per_second_(
           nqe::internal::GetWeightMultiplierPerSecond(variation_params)),
       effective_connection_type_algorithm_(
@@ -323,12 +336,25 @@ void NetworkQualityEstimator::ObtainOperatingParams(
 void NetworkQualityEstimator::AddDefaultEstimates() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  if (!add_default_platform_observations_)
+    return;
+
   if (default_observations_[current_network_id_.type].http_rtt() !=
       nqe::internal::InvalidRTT()) {
     RttObservation rtt_observation(
         default_observations_[current_network_id_.type].http_rtt(),
         tick_clock_->NowTicks(),
         NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_HTTP_FROM_PLATFORM);
+    rtt_observations_.AddObservation(rtt_observation);
+    NotifyObserversOfRTT(rtt_observation);
+  }
+
+  if (default_observations_[current_network_id_.type].transport_rtt() !=
+      nqe::internal::InvalidRTT()) {
+    RttObservation rtt_observation(
+        default_observations_[current_network_id_.type].transport_rtt(),
+        tick_clock_->NowTicks(),
+        NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_TRANSPORT_FROM_PLATFORM);
     rtt_observations_.AddObservation(rtt_observation);
     NotifyObserversOfRTT(rtt_observation);
   }
@@ -832,6 +858,10 @@ void NetworkQualityEstimator::RecordMetricsOnConnectionTypeChanged() const {
         NETWORK_QUALITY_OBSERVATION_SOURCE_TCP);
     disallowed_observation_sources.push_back(
         NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC);
+    disallowed_observation_sources.push_back(
+        NETWORK_QUALITY_OBSERVATION_SOURCE_TRANSPORT_CACHED_ESTIMATE);
+    disallowed_observation_sources.push_back(
+        NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_TRANSPORT_FROM_PLATFORM);
     for (size_t i = 0; i < arraysize(kPercentiles); ++i) {
       rtt = GetRTTEstimateInternal(disallowed_observation_sources,
                                    base::TimeTicks(), kPercentiles[i]);
@@ -1196,6 +1226,10 @@ bool NetworkQualityEstimator::GetRecentHttpRTT(
       NETWORK_QUALITY_OBSERVATION_SOURCE_TCP);
   disallowed_observation_sources.push_back(
       NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC);
+  disallowed_observation_sources.push_back(
+      NETWORK_QUALITY_OBSERVATION_SOURCE_TRANSPORT_CACHED_ESTIMATE);
+  disallowed_observation_sources.push_back(
+      NETWORK_QUALITY_OBSERVATION_SOURCE_DEFAULT_TRANSPORT_FROM_PLATFORM);
   *rtt = GetRTTEstimateInternal(disallowed_observation_sources, start_time, 50);
   return (*rtt != nqe::internal::InvalidRTT());
 }

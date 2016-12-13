@@ -34,9 +34,8 @@
  * without being able to return application data. */
 static const uint8_t kMaxKeyUpdates = 32;
 
-int tls13_handshake(SSL *ssl) {
-  SSL_HANDSHAKE *hs = ssl->s3->hs;
-
+int tls13_handshake(SSL_HANDSHAKE *hs) {
+  SSL *const ssl = hs->ssl;
   for (;;) {
     /* Resolve the operation the handshake was waiting on. */
     switch (hs->wait) {
@@ -95,7 +94,7 @@ int tls13_handshake(SSL *ssl) {
     }
 
     /* Run the state machine again. */
-    hs->wait = hs->do_handshake(ssl);
+    hs->wait = hs->do_tls13_handshake(hs);
     if (hs->wait == ssl_hs_error) {
       /* Don't loop around to avoid a stray |SSL_R_SSL_HANDSHAKE_FAILURE| the
        * first time around. */
@@ -402,10 +401,11 @@ int tls13_check_message_type(SSL *ssl, int type) {
   return 1;
 }
 
-int tls13_process_finished(SSL *ssl) {
+int tls13_process_finished(SSL_HANDSHAKE *hs) {
+  SSL *const ssl = hs->ssl;
   uint8_t verify_data[EVP_MAX_MD_SIZE];
   size_t verify_data_len;
-  if (!tls13_finished_mac(ssl, verify_data, &verify_data_len, !ssl->server)) {
+  if (!tls13_finished_mac(hs, verify_data, &verify_data_len, !ssl->server)) {
     return 0;
   }
 
@@ -424,7 +424,8 @@ int tls13_process_finished(SSL *ssl) {
   return 1;
 }
 
-int tls13_prepare_certificate(SSL *ssl) {
+int tls13_prepare_certificate(SSL_HANDSHAKE *hs) {
+  SSL *const ssl = hs->ssl;
   CBB cbb, body, certificate_list;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CERTIFICATE) ||
       /* The request context is always empty in the handshake. */
@@ -451,7 +452,7 @@ int tls13_prepare_certificate(SSL *ssl) {
     goto err;
   }
 
-  if (ssl->s3->hs->scts_requested &&
+  if (hs->scts_requested &&
       ssl->ctx->signed_cert_timestamp_list_length != 0) {
     CBB contents;
     if (!CBB_add_u16(&extensions, TLSEXT_TYPE_certificate_timestamp) ||
@@ -464,7 +465,7 @@ int tls13_prepare_certificate(SSL *ssl) {
     }
   }
 
-  if (ssl->s3->hs->ocsp_stapling_requested &&
+  if (hs->ocsp_stapling_requested &&
       ssl->ctx->ocsp_response_length != 0) {
     CBB contents, ocsp_response;
     if (!CBB_add_u16(&extensions, TLSEXT_TYPE_status_request) ||
@@ -501,7 +502,8 @@ err:
 }
 
 enum ssl_private_key_result_t tls13_prepare_certificate_verify(
-    SSL *ssl, int is_first_run) {
+    SSL_HANDSHAKE *hs, int is_first_run) {
+  SSL *const ssl = hs->ssl;
   enum ssl_private_key_result_t ret = ssl_private_key_failure;
   uint8_t *msg = NULL;
   size_t msg_len;
@@ -509,7 +511,7 @@ enum ssl_private_key_result_t tls13_prepare_certificate_verify(
   CBB_zero(&cbb);
 
   uint16_t signature_algorithm;
-  if (!tls1_choose_signature_algorithm(ssl, &signature_algorithm)) {
+  if (!tls1_choose_signature_algorithm(hs, &signature_algorithm)) {
     goto err;
   }
   if (!ssl->method->init_message(ssl, &cbb, &body,
@@ -562,11 +564,12 @@ err:
   return ret;
 }
 
-int tls13_prepare_finished(SSL *ssl) {
+int tls13_prepare_finished(SSL_HANDSHAKE *hs) {
+  SSL *const ssl = hs->ssl;
   size_t verify_data_len;
   uint8_t verify_data[EVP_MAX_MD_SIZE];
 
-  if (!tls13_finished_mac(ssl, verify_data, &verify_data_len, ssl->server)) {
+  if (!tls13_finished_mac(hs, verify_data, &verify_data_len, ssl->server)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DIGEST_CHECK_FAILED);
     return 0;

@@ -129,14 +129,8 @@ func prfForVersion(version uint16, suite *cipherSuite) func(result, secret, labe
 		return prf30
 	case VersionTLS10, VersionTLS11:
 		return prf10
-	// TODO(nharper): VersionTLS13 is in the case statement below only to
-	// support Fake TLS 1.3. Real TLS 1.3 should never call this function.
-	// Once we no longer support Fake TLS 1.3, the VersionTLS13 should be
-	// removed from this case statement.
-	case VersionTLS12, VersionTLS13:
-		if version == VersionTLS12 {
-			return prf12(suite.hash().New)
-		}
+	case VersionTLS12:
+		return prf12(suite.hash().New)
 	}
 	panic("unknown version")
 }
@@ -197,6 +191,8 @@ func newFinishedHash(version uint16, cipherSuite *cipherSuite) finishedHash {
 
 		if version == VersionTLS12 {
 			ret.prf = prf12(ret.hash.New)
+		} else {
+			ret.secret = make([]byte, ret.hash.Size())
 		}
 	} else {
 		ret.hash = crypto.MD5SHA1
@@ -232,6 +228,9 @@ type finishedHash struct {
 
 	version uint16
 	prf     func(result, secret, label, seed []byte)
+
+	// secret, in TLS 1.3, is the running input secret.
+	secret []byte
 }
 
 func (h *finishedHash) Write(msg []byte) (n int, err error) {
@@ -370,10 +369,9 @@ func (h *finishedHash) zeroSecret() []byte {
 	return make([]byte, h.hash.Size())
 }
 
-// extractKey combines two secrets together with HKDF-Expand in the TLS 1.3 key
-// derivation schedule.
-func (h *finishedHash) extractKey(salt, ikm []byte) []byte {
-	return hkdfExtract(h.hash.New, salt, ikm)
+// addEntropy incorporates ikm into the running TLS 1.3 secret with HKDF-Expand.
+func (h *finishedHash) addEntropy(ikm []byte) {
+	h.secret = hkdfExtract(h.hash.New, h.secret, ikm)
 }
 
 // hkdfExpandLabel implements TLS 1.3's HKDF-Expand-Label function, as defined
@@ -420,8 +418,8 @@ var (
 
 // deriveSecret implements TLS 1.3's Derive-Secret function, as defined in
 // section 7.1 of draft ietf-tls-tls13-16.
-func (h *finishedHash) deriveSecret(secret, label []byte) []byte {
-	return hkdfExpandLabel(h.hash, secret, label, h.appendContextHashes(nil), h.hash.Size())
+func (h *finishedHash) deriveSecret(label []byte) []byte {
+	return hkdfExpandLabel(h.hash, h.secret, label, h.appendContextHashes(nil), h.hash.Size())
 }
 
 // The following are context strings for CertificateVerify in TLS 1.3.
@@ -472,8 +470,8 @@ func updateTrafficSecret(hash crypto.Hash, secret []byte) []byte {
 
 func computePSKBinder(psk, label []byte, cipherSuite *cipherSuite, transcript, truncatedHello []byte) []byte {
 	finishedHash := newFinishedHash(VersionTLS13, cipherSuite)
-	earlySecret := finishedHash.extractKey(finishedHash.zeroSecret(), psk)
-	binderKey := finishedHash.deriveSecret(earlySecret, label)
+	finishedHash.addEntropy(psk)
+	binderKey := finishedHash.deriveSecret(label)
 	finishedHash.Write(transcript)
 	finishedHash.Write(truncatedHello)
 	return finishedHash.clientSum(binderKey)

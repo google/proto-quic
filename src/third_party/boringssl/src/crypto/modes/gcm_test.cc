@@ -46,6 +46,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * ==================================================================== */
 
+/* Per C99, various stdint.h and inttypes.h macros (the latter used by
+ * internal.h) are unavailable in C++ unless some macros are defined. C++11
+ * overruled this decision, but older Android NDKs still require it. */
+#if !defined(__STDC_CONSTANT_MACROS)
+#define __STDC_CONSTANT_MACROS
+#endif
+
 #include <stdio.h>
 #include <string.h>
 
@@ -388,11 +395,21 @@ out:
   return ret;
 }
 
+static bool TestByteSwap() {
+  return CRYPTO_bswap4(0x01020304) == 0x04030201 &&
+         CRYPTO_bswap8(UINT64_C(0x0102030405060708)) ==
+             UINT64_C(0x0807060504030201);
+}
+
 int main(void) {
   int ret = 0;
   unsigned i;
 
   CRYPTO_library_init();
+
+  if (!TestByteSwap()) {
+    ret = 1;
+  }
 
   for (i = 0; i < sizeof(test_cases) / sizeof(struct test_case); i++) {
     if (!run_test_case(i, &test_cases[i])) {

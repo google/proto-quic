@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_CRYPTO_COMMON_CERT_SET_H_
-#define NET_QUIC_CRYPTO_COMMON_CERT_SET_H_
+#ifndef NET_QUIC_CORE_CRYPTO_COMMON_CERT_SET_H_
+#define NET_QUIC_CORE_CRYPTO_COMMON_CERT_SET_H_
 
 #include <cstdint>
 
 #include "base/compiler_specific.h"
 #include "base/strings/string_piece.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // CommonCertSets is an interface to an object that contains a number of common
 // certificate sets and can match against them.
-class NET_EXPORT_PRIVATE CommonCertSets {
+class QUIC_EXPORT_PRIVATE CommonCertSets {
  public:
   virtual ~CommonCertSets();
 
@@ -45,4 +45,4 @@ class NET_EXPORT_PRIVATE CommonCertSets {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CRYPTO_COMMON_CERT_SET_H_
+#endif  // NET_QUIC_CORE_CRYPTO_COMMON_CERT_SET_H_

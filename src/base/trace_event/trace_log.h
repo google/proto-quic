@@ -35,6 +35,7 @@ struct TraceCategory;
 class TraceBuffer;
 class TraceBufferChunk;
 class TraceEvent;
+class TraceEventFilter;
 class TraceEventMemoryOverhead;
 
 struct BASE_EXPORT TraceLogStatus {
@@ -278,26 +279,15 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
 
   // Exposed for unittesting:
 
+  // Testing factory for TraceEventFilter.
+  typedef std::unique_ptr<TraceEventFilter> (*FilterFactoryForTesting)(
+      const std::string& /* predicate_name */);
+  void SetFilterFactoryForTesting(FilterFactoryForTesting factory) {
+    filter_factory_for_testing_ = factory;
+  }
+
   // Allows deleting our singleton instance.
   static void DeleteForTesting();
-
-  class BASE_EXPORT TraceEventFilter {
-   public:
-    static const char* const kEventWhitelistPredicate;
-    static const char* const kHeapProfilerPredicate;
-
-    TraceEventFilter() {}
-    virtual ~TraceEventFilter() {}
-    virtual bool FilterTraceEvent(const TraceEvent& trace_event) const = 0;
-    virtual void EndEvent(const char* category_group, const char* name) {}
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(TraceEventFilter);
-  };
-  typedef std::unique_ptr<TraceEventFilter> (
-      *TraceEventFilterConstructorForTesting)(void);
-  static void SetTraceEventFilterConstructorForTesting(
-      TraceEventFilterConstructorForTesting predicate);
 
   // Allow tests to inspect TraceEvents.
   TraceEvent* GetEventByHandle(TraceEventHandle handle);
@@ -505,6 +495,8 @@ class BASE_EXPORT TraceLog : public MemoryDumpProvider {
   ArgumentFilterPredicate argument_filter_predicate_;
   subtle::AtomicWord generation_;
   bool use_worker_thread_;
+
+  FilterFactoryForTesting filter_factory_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(TraceLog);
 };

@@ -291,6 +291,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "native_theme_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "net_unittests"
       },
       {
@@ -490,21 +496,6 @@
         "test": "base_unittests"
       },
       {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests",
-          "--run-in-mash",
-          "--service-overrides=src/chrome/app/mash/mash_service_overrides.json",
-          "--test-launcher-filter-file=src/testing/buildbot/filters/mash.browser_tests.filter",
-          "--use-test-config"
-        ],
-        "hard_timeout": 60,
-        "name": "mash_browser_tests",
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "browser_tests"
-      },
-      {
         "swarming": {
           "can_use_on_swarming_builders": true,
           "shards": 5
@@ -662,15 +653,6 @@
         "test": "jingle_unittests"
       },
       {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "mash_unittests"
-      },
-      {
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -698,12 +680,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "mus_demo_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "nacl_helper_nonsfi_unittests"
       },
       {
@@ -711,6 +687,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "nacl_loader_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "native_theme_unittests"
       },
       {
         "swarming": {
@@ -804,18 +786,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "url_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "views_mus_interactive_ui_tests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "views_mus_unittests"
       },
       {
         "swarming": {
@@ -1062,6 +1032,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "native_theme_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "net_unittests"
       },
       {
@@ -1144,18 +1120,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "url_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "views_mus_interactive_ui_tests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "views_mus_unittests"
       },
       {
         "swarming": {

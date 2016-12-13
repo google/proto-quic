@@ -10,10 +10,10 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/quic_header_list.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
@@ -28,9 +28,9 @@ class QuicHeadersStreamPeer;
 // over a reserved reliable stream with the id 3.  Each endpoint
 // (client and server) will allocate an instance of QuicHeadersStream
 // to send and receive headers.
-class NET_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
+class QUIC_EXPORT_PRIVATE QuicHeadersStream : public QuicStream {
  public:
-  class NET_EXPORT_PRIVATE HpackDebugVisitor {
+  class QUIC_EXPORT_PRIVATE HpackDebugVisitor {
    public:
     HpackDebugVisitor();
 

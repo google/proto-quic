@@ -15,6 +15,7 @@
 #elif defined(OS_MACOSX) && !defined(OS_IOS)
 #include <mach/mach.h>
 #include "base/base_export.h"
+#include "base/file_descriptor_posix.h"
 #include "base/macros.h"
 #include "base/process/process_handle.h"
 #elif defined(OS_POSIX)
@@ -83,8 +84,24 @@ class BASE_EXPORT SharedMemoryHandle {
 #else
 class BASE_EXPORT SharedMemoryHandle {
  public:
+  enum Type {
+    // The SharedMemoryHandle is backed by a POSIX fd.
+    POSIX,
+    // The SharedMemoryHandle is backed by the Mach primitive "memory object".
+    MACH,
+  };
+
   // The default constructor returns an invalid SharedMemoryHandle.
   SharedMemoryHandle();
+
+  // Constructs a SharedMemoryHandle backed by the components of a
+  // FileDescriptor. The newly created instance has the same ownership semantics
+  // as base::FileDescriptor. This typically means that the SharedMemoryHandle
+  // takes ownership of the |fd| if |auto_close| is true. Unfortunately, it's
+  // common for existing code to make shallow copies of SharedMemoryHandle, and
+  // the one that is finally passed into a base::SharedMemory is the one that
+  // "consumes" the fd.
+  explicit SharedMemoryHandle(const base::FileDescriptor& file_descriptor);
 
   // Makes a Mach-based SharedMemoryHandle of the given size. On error,
   // subsequent calls to IsValid() return false.
@@ -104,7 +121,8 @@ class BASE_EXPORT SharedMemoryHandle {
   // OS primitives.
   SharedMemoryHandle& operator=(const SharedMemoryHandle& handle);
 
-  // Duplicates the underlying OS resources.
+  // Duplicates the underlying OS resources. Assumes the SharedMemoryHandle is
+  // of type MACH.
   SharedMemoryHandle Duplicate() const;
 
   // Comparison operators.
@@ -120,7 +138,7 @@ class BASE_EXPORT SharedMemoryHandle {
   mach_port_t GetMemoryObject() const;
 
   // Returns false on a failure to determine the size. On success, populates the
-  // output variable |size|. Returns 0 if the handle is invalid.
+  // output variable |size|.
   bool GetSize(size_t* size) const;
 
   // The SharedMemoryHandle must be valid.
@@ -136,24 +154,36 @@ class BASE_EXPORT SharedMemoryHandle {
   bool OwnershipPassesToIPC() const;
 
  private:
+  friend class SharedMemory;
+
   // Shared code between copy constructor and operator=.
   void CopyRelevantData(const SharedMemoryHandle& handle);
 
-  mach_port_t memory_object_ = MACH_PORT_NULL;
+  Type type_;
 
-  // The size of the shared memory region when |type_| is MACH. Only
-  // relevant if |memory_object_| is not |MACH_PORT_NULL|.
-  mach_vm_size_t size_ = 0;
+  // Each instance of a SharedMemoryHandle is backed either by a POSIX fd or a
+  // mach port. |type_| determines the backing member.
+  union {
+    FileDescriptor file_descriptor_;
 
-  // The pid of the process in which |memory_object_| is usable. Only
-  // relevant if |memory_object_| is not |MACH_PORT_NULL|.
-  base::ProcessId pid_ = 0;
+    struct {
+      mach_port_t memory_object_;
 
-  // Whether passing this object as a parameter to an IPC message passes
-  // ownership of |memory_object_| to the IPC stack. This is meant to mimic
-  // the behavior of the |auto_close| parameter of FileDescriptor.
-  // Defaults to |false|.
-  bool ownership_passes_to_ipc_ = false;
+      // The size of the shared memory region when |type_| is MACH. Only
+      // relevant if |memory_object_| is not |MACH_PORT_NULL|.
+      mach_vm_size_t size_;
+
+      // The pid of the process in which |memory_object_| is usable. Only
+      // relevant if |memory_object_| is not |MACH_PORT_NULL|.
+      base::ProcessId pid_;
+
+      // Whether passing this object as a parameter to an IPC message passes
+      // ownership of |memory_object_| to the IPC stack. This is meant to mimic
+      // the behavior of the |auto_close| parameter of FileDescriptor.
+      // Defaults to |false|.
+      bool ownership_passes_to_ipc_;
+    };
+  };
 };
 #endif
 

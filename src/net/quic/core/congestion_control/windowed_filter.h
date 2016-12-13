@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-#ifndef NET_QUIC_CONGESTION_CONTROL_WINDOWED_FILTER_H_
-#define NET_QUIC_CONGESTION_CONTROL_WINDOWED_FILTER_H_
+#ifndef NET_QUIC_CORE_CONGESTION_CONTROL_WINDOWED_FILTER_H_
+#define NET_QUIC_CORE_CONGESTION_CONTROL_WINDOWED_FILTER_H_
 
 // Implements Kathleen Nichols' algorithm for tracking the minimum (or maximum)
 // estimate of a stream of samples over some fixed time interval. (E.g.,
@@ -153,4 +153,4 @@ class WindowedFilter {
 
 }  // namespace net
 
-#endif  // NET_QUIC_CONGESTION_CONTROL_WINDOWED_FILTER_H_
+#endif  // NET_QUIC_CORE_CONGESTION_CONTROL_WINDOWED_FILTER_H_

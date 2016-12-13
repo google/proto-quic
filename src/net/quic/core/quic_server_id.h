@@ -2,22 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_SERVER_ID_H_
-#define NET_QUIC_QUIC_SERVER_ID_H_
+#ifndef NET_QUIC_CORE_QUIC_SERVER_ID_H_
+#define NET_QUIC_CORE_QUIC_SERVER_ID_H_
 
 #include <stdint.h>
 
 #include <string>
 
 #include "net/base/host_port_pair.h"
-#include "net/base/net_export.h"
 #include "net/base/privacy_mode.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
 // The id used to identify sessions. Includes the hostname, port, scheme and
 // privacy_mode.
-class NET_EXPORT_PRIVATE QuicServerId {
+class QUIC_EXPORT_PRIVATE QuicServerId {
  public:
   QuicServerId();
   QuicServerId(const HostPortPair& host_port_pair, PrivacyMode privacy_mode);
@@ -55,4 +55,4 @@ class NET_EXPORT_PRIVATE QuicServerId {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_SERVER_ID_H_
+#endif  // NET_QUIC_CORE_QUIC_SERVER_ID_H_

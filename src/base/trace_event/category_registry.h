@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BASE_TRACE_EVENT_CATEGORY_H_
-#define BASE_TRACE_EVENT_CATEGORY_H_
+#ifndef BASE_TRACE_EVENT_CATEGORY_REGISTRY_H_
+#define BASE_TRACE_EVENT_CATEGORY_REGISTRY_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -90,4 +90,4 @@ class BASE_EXPORT CategoryRegistry {
 }  // namespace trace_event
 }  // namespace base
 
-#endif  // BASE_TRACE_EVENT_CATEGORY_H_
+#endif  // BASE_TRACE_EVENT_CATEGORY_REGISTRY_H_

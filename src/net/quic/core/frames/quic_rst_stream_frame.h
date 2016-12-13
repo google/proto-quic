@@ -5,19 +5,21 @@
 #ifndef NET_QUIC_CORE_FRAMES_QUIC_RST_STREAM_FRAME_H_
 #define NET_QUIC_CORE_FRAMES_QUIC_RST_STREAM_FRAME_H_
 
-#include "net/base/net_export.h"
+#include <ostream>
+
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_types.h"
+#include "net/quic/platform/api/quic_export.h"
 
 namespace net {
 
-struct NET_EXPORT_PRIVATE QuicRstStreamFrame {
+struct QUIC_EXPORT_PRIVATE QuicRstStreamFrame {
   QuicRstStreamFrame();
   QuicRstStreamFrame(QuicStreamId stream_id,
                      QuicRstStreamErrorCode error_code,
                      QuicStreamOffset bytes_written);
 
-  friend NET_EXPORT_PRIVATE std::ostream& operator<<(
+  friend QUIC_EXPORT_PRIVATE std::ostream& operator<<(
       std::ostream& os,
       const QuicRstStreamFrame& r);
 

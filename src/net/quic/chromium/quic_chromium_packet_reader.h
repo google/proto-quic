@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 //
 
-#ifndef NET_QUIC_QUIC_CHROMIUM_PACKET_READER_H_
-#define NET_QUIC_QUIC_CHROMIUM_PACKET_READER_H_
+#ifndef NET_QUIC_CHROMIUM_QUIC_CHROMIUM_PACKET_READER_H_
+#define NET_QUIC_CHROMIUM_QUIC_CHROMIUM_PACKET_READER_H_
 
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
@@ -71,4 +71,4 @@ class NET_EXPORT_PRIVATE QuicChromiumPacketReader {
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_CHROMIUM_PACKET_READER_H_
+#endif  // NET_QUIC_CHROMIUM_QUIC_CHROMIUM_PACKET_READER_H_

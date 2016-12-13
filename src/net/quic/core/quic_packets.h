@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_QUIC_QUIC_PROTOCOL_H_
-#define NET_QUIC_QUIC_PROTOCOL_H_
+#ifndef NET_QUIC_CORE_QUIC_PACKETS_H_
+#define NET_QUIC_CORE_QUIC_PACKETS_H_
 
 #include <limits>
 #include <list>
@@ -19,7 +19,6 @@
 #include "base/strings/string_piece.h"
 #include "net/base/int128.h"
 #include "net/base/iovec.h"
-#include "net/base/net_export.h"
 #include "net/quic/core/frames/quic_frame.h"
 #include "net/quic/core/quic_ack_listener_interface.h"
 #include "net/quic/core/quic_bandwidth.h"
@@ -28,6 +27,7 @@
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/core/quic_versions.h"
+#include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -36,10 +36,10 @@ class QuicPacket;
 struct QuicPacketHeader;
 
 // Size in bytes of the data packet header.
-NET_EXPORT_PRIVATE size_t GetPacketHeaderSize(QuicVersion version,
-                                              const QuicPacketHeader& header);
+QUIC_EXPORT_PRIVATE size_t GetPacketHeaderSize(QuicVersion version,
+                                               const QuicPacketHeader& header);
 
-NET_EXPORT_PRIVATE size_t
+QUIC_EXPORT_PRIVATE size_t
 GetPacketHeaderSize(QuicVersion version,
                     QuicConnectionIdLength connection_id_length,
                     bool include_version,
@@ -48,10 +48,10 @@ GetPacketHeaderSize(QuicVersion version,
                     QuicPacketNumberLength packet_number_length);
 
 // Index of the first byte in a QUIC packet of encrypted data.
-NET_EXPORT_PRIVATE size_t
+QUIC_EXPORT_PRIVATE size_t
 GetStartOfEncryptedData(QuicVersion version, const QuicPacketHeader& header);
 
-NET_EXPORT_PRIVATE size_t
+QUIC_EXPORT_PRIVATE size_t
 GetStartOfEncryptedData(QuicVersion version,
                         QuicConnectionIdLength connection_id_length,
                         bool include_version,
@@ -59,7 +59,7 @@ GetStartOfEncryptedData(QuicVersion version,
                         bool include_diversification_nonce,
                         QuicPacketNumberLength packet_number_length);
 
-struct NET_EXPORT_PRIVATE QuicPacketPublicHeader {
+struct QUIC_EXPORT_PRIVATE QuicPacketPublicHeader {
   QuicPacketPublicHeader();
   explicit QuicPacketPublicHeader(const QuicPacketPublicHeader& other);
   ~QuicPacketPublicHeader();
@@ -79,20 +79,21 @@ struct NET_EXPORT_PRIVATE QuicPacketPublicHeader {
 };
 
 // Header for Data packets.
-struct NET_EXPORT_PRIVATE QuicPacketHeader {
+struct QUIC_EXPORT_PRIVATE QuicPacketHeader {
   QuicPacketHeader();
   explicit QuicPacketHeader(const QuicPacketPublicHeader& header);
   QuicPacketHeader(const QuicPacketHeader& other);
 
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(std::ostream& os,
-                                                     const QuicPacketHeader& s);
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(
+      std::ostream& os,
+      const QuicPacketHeader& s);
 
   QuicPacketPublicHeader public_header;
   QuicPacketNumber packet_number;
   QuicPathId path_id;
 };
 
-struct NET_EXPORT_PRIVATE QuicPublicResetPacket {
+struct QUIC_EXPORT_PRIVATE QuicPublicResetPacket {
   QuicPublicResetPacket();
   explicit QuicPublicResetPacket(const QuicPacketPublicHeader& header);
 
@@ -106,7 +107,7 @@ struct NET_EXPORT_PRIVATE QuicPublicResetPacket {
 
 typedef QuicPacketPublicHeader QuicVersionNegotiationPacket;
 
-class NET_EXPORT_PRIVATE QuicData {
+class QUIC_EXPORT_PRIVATE QuicData {
  public:
   QuicData(const char* buffer, size_t length);
   QuicData(const char* buffer, size_t length, bool owns_buffer);
@@ -127,7 +128,7 @@ class NET_EXPORT_PRIVATE QuicData {
   DISALLOW_COPY_AND_ASSIGN(QuicData);
 };
 
-class NET_EXPORT_PRIVATE QuicPacket : public QuicData {
+class QUIC_EXPORT_PRIVATE QuicPacket : public QuicData {
  public:
   // TODO(fayang): 4 fields from public header are passed in as arguments.
   // Consider to add a convenience method which directly accepts the entire
@@ -157,7 +158,7 @@ class NET_EXPORT_PRIVATE QuicPacket : public QuicData {
   DISALLOW_COPY_AND_ASSIGN(QuicPacket);
 };
 
-class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
+class QUIC_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
  public:
   QuicEncryptedPacket(const char* buffer, size_t length);
   QuicEncryptedPacket(const char* buffer, size_t length, bool owns_buffer);
@@ -169,7 +170,7 @@ class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
   // member (in the base class QuicData) causes this object to have padding
   // bytes, which causes the default gtest object printer to read
   // uninitialize memory. So we need to teach gtest how to print this object.
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(
       std::ostream& os,
       const QuicEncryptedPacket& s);
 
@@ -178,7 +179,7 @@ class NET_EXPORT_PRIVATE QuicEncryptedPacket : public QuicData {
 };
 
 // A received encrypted QUIC packet, with a recorded time of receipt.
-class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
+class QUIC_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
  public:
   QuicReceivedPacket(const char* buffer, size_t length, QuicTime receipt_time);
   QuicReceivedPacket(const char* buffer,
@@ -205,7 +206,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
   // member (in the base class QuicData) causes this object to have padding
   // bytes, which causes the default gtest object printer to read
   // uninitialize memory. So we need to teach gtest how to print this object.
-  NET_EXPORT_PRIVATE friend std::ostream& operator<<(
+  QUIC_EXPORT_PRIVATE friend std::ostream& operator<<(
       std::ostream& os,
       const QuicReceivedPacket& s);
 
@@ -216,7 +217,7 @@ class NET_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
   DISALLOW_COPY_AND_ASSIGN(QuicReceivedPacket);
 };
 
-struct NET_EXPORT_PRIVATE SerializedPacket {
+struct QUIC_EXPORT_PRIVATE SerializedPacket {
   SerializedPacket(QuicPathId path_id,
                    QuicPacketNumber packet_number,
                    QuicPacketNumberLength packet_number_length,
@@ -251,13 +252,13 @@ struct NET_EXPORT_PRIVATE SerializedPacket {
 };
 
 // Deletes and clears all the frames and the packet from serialized packet.
-NET_EXPORT_PRIVATE void ClearSerializedPacket(
+QUIC_EXPORT_PRIVATE void ClearSerializedPacket(
     SerializedPacket* serialized_packet);
 
 // Allocates a new char[] of size |packet.encrypted_length| and copies in
 // |packet.encrypted_buffer|.
-NET_EXPORT_PRIVATE char* CopyBuffer(const SerializedPacket& packet);
+QUIC_EXPORT_PRIVATE char* CopyBuffer(const SerializedPacket& packet);
 
 }  // namespace net
 
-#endif  // NET_QUIC_QUIC_PROTOCOL_H_
+#endif  // NET_QUIC_CORE_QUIC_PACKETS_H_
