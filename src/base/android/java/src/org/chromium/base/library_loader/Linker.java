@@ -195,7 +195,7 @@ public abstract class Linker {
     protected final Object mLock = new Object();
 
     // The name of a class that implements TestRunner.
-    private String mTestRunnerClassName = null;
+    private String mTestRunnerClassName;
 
     // Size of reserved Breakpad guard region. Should match the value of
     // kBreakpadGuardRegionBytes on the JNI side. Used when computing the load
@@ -216,7 +216,7 @@ public abstract class Linker {
     public static final int LINKER_IMPLEMENTATION_MODERN = 2;
 
     // Singleton.
-    private static Linker sSingleton = null;
+    private static Linker sSingleton;
     private static Object sSingletonLock = new Object();
 
     // Protected singleton constructor.

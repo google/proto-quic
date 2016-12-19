@@ -266,7 +266,9 @@ class BASE_EXPORT SharedMemory {
     SHARE_CURRENT_MODE,
   };
 
+#if defined(OS_MACOSX)
   bool Share(SharedMemoryHandle* new_handle, ShareMode share_mode);
+#endif
 
   bool ShareToProcessCommon(ProcessHandle process,
                             SharedMemoryHandle* new_handle,

@@ -4,38 +4,55 @@
 
 import sys
 import time
-import unittest
 
 import common
 from common import TestDriver
+from common import IntegrationTest
 
 
-class SimpleSmoke(unittest.TestCase):
+class SimpleSmoke(IntegrationTest):
 
   # Simple example integration test.
   def testCheckPageWithProxy(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
-      t.SetURL('http://check.googlezip.net/test.html')
-      t.LoadPage()
+      t.LoadURL('http://check.googlezip.net/test.html')
       print 'Document Title: ', t.ExecuteJavascriptStatement('document.title',
         timeout=1)
-      time.sleep(5)
       responses = t.GetHTTPResponses()
       for response in responses:
         print "URL: %s, ViaHeader: %s, XHR: %s" % (response.url,
           response.ResponseHasViaHeader(), response.WasXHR())
+        self.assertHasChromeProxyViaHeader(response)
+
+  # Simple example integration test.
+  def testCheckPageWithoutProxy(self):
+    with TestDriver() as t:
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.LoadURL('https://check.googlezip.net/test.html')
+      print 'Document Title: ', t.ExecuteJavascriptStatement('document.title',
+        timeout=1)
+      responses = t.GetHTTPResponses()
+      for response in responses:
+        print "URL: %s, ViaHeader: %s, XHR: %s" % (response.url,
+          response.ResponseHasViaHeader(), response.WasXHR())
+        self.assertNotHasChromeProxyViaHeader(response)
 
   # Show how to get a histogram.
   def testPingbackHistogram(self):
     with TestDriver() as t:
       t.AddChromeArg('--enable-spdy-proxy-auth')
-      t.SetURL('http://check.googlezip.net/test.html')
-      t.LoadPage()
-      t.LoadPage()
+      t.LoadURL('http://check.googlezip.net/test.html')
+      t.LoadURL('http://check.googlezip.net/test.html')
       print t.GetHistogram('DataReductionProxy.Pingback.Attempted')
 
+  # Show how to use WaitForJavascriptExpression
+  def testHTML5(self):
+    with TestDriver() as t:
+      t.AddChromeArg('--enable-spdy-proxy-auth')
+      t.LoadURL('http://html5test.com/')
+      t.WaitForJavascriptExpression(
+        'document.getElementsByClassName("pointsPanel")', 15)
+
 if __name__ == '__main__':
-  # The unittest library uses sys.argv itself and is easily confused by our
-  # command line options. Pass it a simpler argv instead.
-  unittest.main(argv=[sys.argv[0]], verbosity=2)
+  IntegrationTest.RunAllTests()

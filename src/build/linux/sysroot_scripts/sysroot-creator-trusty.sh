@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-SCRIPT_DIR=$(dirname $0)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 DISTRO=ubuntu
 DIST=trusty
@@ -15,10 +15,12 @@ APT_REPO_ARM=http://ports.ubuntu.com
 APT_REPO_ARM64=http://ports.ubuntu.com
 KEYRING_FILE=/usr/share/keyrings/ubuntu-archive-keyring.gpg
 
-HAS_ARCH_AMD64=1
-HAS_ARCH_I386=1
 HAS_ARCH_ARM=1
-HAS_ARCH_ARM64=1
+
+# Trusty supports these architectures but they are not needed by chrome.
+# HAS_ARCH_AMD64=1
+# HAS_ARCH_I386=1
+# HAS_ARCH_ARM64=1
 
 # Sysroot packages: these are the packages needed to build chrome.
 # NOTE: When DEBIAN_PACKAGES is modified, the packagelist files must be updated
@@ -189,4 +191,4 @@ DEBIAN_PACKAGES="\
 
 DEBIAN_PACKAGES_X86="libquadmath0"
 
-. ${SCRIPT_DIR}/sysroot-creator.sh
+. "${SCRIPT_DIR}/sysroot-creator.sh"

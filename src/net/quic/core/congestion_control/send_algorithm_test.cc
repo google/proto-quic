@@ -60,7 +60,7 @@ const QuicTime::Delta kLocalPropagationDelay =
 const QuicBandwidth kTestLinkWiredBandwidth =
     QuicBandwidth::FromKBitsPerSecond(4000);
 const QuicTime::Delta kTestLinkWiredPropagationDelay =
-    QuicTime::Delta::FromMilliseconds(30);
+    QuicTime::Delta::FromMilliseconds(50);
 const QuicTime::Delta kTestWiredTransferTime =
     kTestLinkWiredBandwidth.TransferTime(kMaxPacketSize) +
     kLocalLinkBandwidth.TransferTime(kMaxPacketSize);
@@ -77,7 +77,7 @@ const QuicByteCount kTestWiredBdp = kTestWiredRtt * kTestLinkWiredBandwidth;
 const QuicBandwidth kTestLinkLowBdpBandwidth =
     QuicBandwidth::FromKBitsPerSecond(200);
 const QuicTime::Delta kTestLinkLowBdpPropagationDelay =
-    QuicTime::Delta::FromMilliseconds(30);
+    QuicTime::Delta::FromMilliseconds(50);
 const QuicByteCount kTestPolicerQueue = kMaxPacketSize;
 
 // Satellite network settings.  In a satellite network, the bottleneck
@@ -168,13 +168,7 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
         GetParam().congestion_control_type, &random_, &stats_,
         kInitialCongestionWindowPackets);
 
-    if (FLAGS_quic_fix_cubic_convex_mode) {
-      QuicConfig client_config;
-      QuicTagVector options;
-      options.push_back(kCCVX);
-      client_config.SetInitialReceivedConnectionOptions(options);
-      sender_->SetFromConfig(client_config, Perspective::IS_SERVER);
-    }
+    SetExperimentalOptionsInServerConfig();
 
     QuicConnectionPeer::SetSendAlgorithm(quic_sender_.connection(),
                                          kDefaultPathId, sender_);
@@ -185,6 +179,30 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
     random_.set_seed(seed);
     VLOG(1) << "SendAlgorithmTest simulator set up.  Seed: " << seed;
+  }
+
+  // Sets experimental options in the server config, as if they had
+  // been sent by the client.
+  void SetExperimentalOptionsInServerConfig() {
+    QuicConfig client_config;
+    QuicTagVector options;
+    if (FLAGS_quic_fix_cubic_convex_mode) {
+      options.push_back(kCCVX);
+    }
+    if (FLAGS_quic_fix_cubic_convex_mode &&
+        FLAGS_quic_fix_cubic_bytes_quantization) {
+      options.push_back(kCCVX);
+      options.push_back(kCBQT);
+    }
+
+    if (FLAGS_quic_fix_beta_last_max) {
+      options.push_back(kBLMX);
+    }
+
+    if (!options.empty()) {
+      client_config.SetInitialReceivedConnectionOptions(options);
+      sender_->SetFromConfig(client_config, Perspective::IS_SERVER);
+    }
   }
 
   // Creates a simulated network, with default settings between the
@@ -246,8 +264,12 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
   }
 
   void PrintTransferStats() {
+    const QuicConnectionStats& stats = quic_sender_.connection()->GetStats();
     VLOG(1) << "Summary for scenario " << GetParam();
-    VLOG(1) << "Sender stats is " << quic_sender_.connection()->GetStats();
+    VLOG(1) << "Sender stats is " << stats;
+    const double rtx_rate =
+        static_cast<double>(stats.bytes_retransmitted) / stats.bytes_sent;
+    VLOG(1) << "Retransmit rate (num_rtx/num_total_sent): " << rtx_rate;
     VLOG(1) << "Connection elapsed time: "
             << (clock_->Now() - QuicSenderStartTime()).ToMilliseconds()
             << " (ms)";

@@ -537,9 +537,12 @@ TEST_F(QuicDispatcherTest, TooBigSeqNoPacketToTimeWaitListManager) {
 }
 
 TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
-  DCHECK_EQ(3u, arraysize(kSupportedQuicVersions));
+  static_assert(arraysize(kSupportedQuicVersions) == 4u,
+                "Supported versions out of sync");
   FLAGS_quic_fix_version_manager = true;
+  FLAGS_quic_disable_version_34 = false;
   FLAGS_quic_enable_version_36_v3 = true;
+  FLAGS_quic_enable_version_37 = true;
   QuicSocketAddress client_address(QuicIpAddress::Loopback4(), 1);
   server_address_ = QuicSocketAddress(QuicIpAddress::Any4(), 5);
   QuicConnectionId connection_id = 1;
@@ -600,6 +603,32 @@ TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
           Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
                                base::Unretained(this), connection_id))));
   ProcessPacket(client_address, connection_id, true, QUIC_VERSION_35,
+                SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
+                PACKET_6BYTE_PACKET_NUMBER, 1);
+
+  // Turn off version 34.
+  FLAGS_quic_disable_version_34 = true;
+  ++connection_id;
+  EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
+      .Times(0);
+  ProcessPacket(client_address, connection_id, true, QUIC_VERSION_34,
+                SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
+                PACKET_6BYTE_PACKET_NUMBER, 1);
+
+  // Turn on version 34.
+  FLAGS_quic_disable_version_34 = false;
+  ++connection_id;
+  EXPECT_CALL(*dispatcher_, CreateQuicSession(connection_id, client_address))
+      .WillOnce(testing::Return(CreateSession(
+          dispatcher_.get(), config_, connection_id, client_address,
+          &mock_helper_, &mock_alarm_factory_, &crypto_config_,
+          QuicDispatcherPeer::GetCache(dispatcher_.get()), &session1_)));
+  EXPECT_CALL(*reinterpret_cast<MockQuicConnection*>(session1_->connection()),
+              ProcessUdpPacket(_, _, _))
+      .WillOnce(testing::WithArgs<2>(
+          Invoke(CreateFunctor(&QuicDispatcherTest::ValidatePacket,
+                               base::Unretained(this), connection_id))));
+  ProcessPacket(client_address, connection_id, true, QUIC_VERSION_34,
                 SerializeCHLO(), PACKET_8BYTE_CONNECTION_ID,
                 PACKET_6BYTE_PACKET_NUMBER, 1);
 }

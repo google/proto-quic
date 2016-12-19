@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 
+#include "base/logging.h"
 #include "build/build_config.h"
 
 #if defined(COMPILER_MSVC)
@@ -44,6 +45,21 @@ inline uint64_t ByteSwap(uint64_t x) {
 #else
   return __builtin_bswap64(x);
 #endif
+}
+
+inline uintptr_t ByteSwapUintPtrT(uintptr_t x) {
+  // We do it this way because some build configurations are ILP32 even when
+  // defined(ARCH_CPU_64_BITS). Unfortunately, we can't use sizeof in #ifs. But,
+  // because these conditionals are constexprs, the irrelevant branches will
+  // likely be optimized away, so this construction should not result in code
+  // bloat.
+  if (sizeof(uintptr_t) == 4) {
+    return ByteSwap(static_cast<uint32_t>(x));
+  } else if (sizeof(uintptr_t) == 8) {
+    return ByteSwap(static_cast<uint64_t>(x));
+  } else {
+    NOTREACHED();
+  }
 }
 
 // Converts the bytes in |x| from host order (endianness) to little endian, and

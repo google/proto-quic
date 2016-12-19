@@ -44,7 +44,6 @@ const QuicTag kP256 = TAG('P', '2', '5', '6');   // ECDH, Curve P-256
 const QuicTag kC255 = TAG('C', '2', '5', '5');   // ECDH, Curve25519
 
 // AEAD algorithms
-const QuicTag kNULL = TAG('N', 'U', 'L', 'N');   // null algorithm
 const QuicTag kAESG = TAG('A', 'E', 'S', 'G');   // AES128 + GCM-12
 const QuicTag kCC20 = TAG('C', 'C', '2', '0');   // ChaCha20 + Poly1305 RFC7539
 
@@ -69,6 +68,18 @@ const QuicTag kIFW7 = TAG('I', 'F', 'W', '7');   // Set initial size
                                                  // of stream flow control
                                                  // receive window to
                                                  // 128KB. (2^7 KB).
+const QuicTag kIFW8 = TAG('I', 'F', 'W', '8');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 256KB. (2^8 KB).
+const QuicTag kIFW9 = TAG('I', 'F', 'W', '9');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 512KB. (2^9 KB).
+const QuicTag kIFWA = TAG('I', 'F', 'W', 'a');   // Set initial size
+                                                 // of stream flow control
+                                                 // receive window to
+                                                 // 1MB. (2^0xa KB).
 const QuicTag kTBBR = TAG('T', 'B', 'B', 'R');   // Reduced Buffer Bloat TCP
 const QuicTag kRENO = TAG('R', 'E', 'N', 'O');   // Reno Congestion Control
 const QuicTag kBYTE = TAG('B', 'Y', 'T', 'E');   // TCP cubic or reno in bytes
@@ -114,6 +125,8 @@ const QuicTag kSMHL = TAG('S', 'M', 'H', 'L');   // Support MAX_HEADER_LIST_SIZE
                                                  // settings frame.
 
 const QuicTag kCCVX = TAG('C', 'C', 'V', 'X');   // Fix Cubic convex bug.
+const QuicTag kCBQT = TAG('C', 'B', 'Q', 'T');   // Fix CubicBytes quantization.
+const QuicTag kBLMX = TAG('B', 'L', 'M', 'X');   // Fix Cubic BetaLastMax bug.
 
 // Optional support of truncated Connection IDs.  If sent by a peer, the value
 // is the minimum number of bytes allowed for the connection ID sent to the

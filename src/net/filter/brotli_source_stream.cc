@@ -11,7 +11,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "net/base/io_buffer.h"
-#include "third_party/brotli/dec/decode.h"
+#include "third_party/brotli/include/brotli/decode.h"
 
 namespace net {
 
@@ -32,13 +32,15 @@ class BrotliSourceStream : public FilterSourceStream {
         consumed_bytes_(0),
         produced_bytes_(0),
         gzip_header_detected_(true) {
-    brotli_state_ = BrotliCreateState(AllocateMemory, FreeMemory, this);
+    brotli_state_ =
+        BrotliDecoderCreateInstance(AllocateMemory, FreeMemory, this);
     CHECK(brotli_state_);
   }
 
   ~BrotliSourceStream() override {
-    BrotliErrorCode error_code = BrotliGetErrorCode(brotli_state_);
-    BrotliDestroyState(brotli_state_);
+    BrotliDecoderErrorCode error_code =
+        BrotliDecoderGetErrorCode(brotli_state_);
+    BrotliDecoderDestroyInstance(brotli_state_);
     brotli_state_ = nullptr;
     DCHECK_EQ(0u, used_memory_);
 
@@ -105,7 +107,6 @@ class BrotliSourceStream : public FilterSourceStream {
     size_t available_in = input_buffer_size;
     uint8_t* next_out = bit_cast<uint8_t*>(output_buffer->data());
     size_t available_out = output_buffer_size;
-    size_t total_out = 0;
     // Check if start of the input stream looks like gzip stream.
     for (size_t i = consumed_bytes_; i < sizeof(kGzipHeader); ++i) {
       if (!gzip_header_detected_)
@@ -115,9 +116,9 @@ class BrotliSourceStream : public FilterSourceStream {
         gzip_header_detected_ = false;
     }
 
-    BrotliResult result =
-        BrotliDecompressStream(&available_in, &next_in, &available_out,
-                               &next_out, &total_out, brotli_state_);
+    BrotliDecoderResult result =
+        BrotliDecoderDecompressStream(brotli_state_, &available_in, &next_in,
+                                      &available_out, &next_out, nullptr);
 
     size_t bytes_used = input_buffer_size - available_in;
     size_t bytes_written = output_buffer_size - available_out;
@@ -129,15 +130,15 @@ class BrotliSourceStream : public FilterSourceStream {
     *consumed_bytes = bytes_used;
 
     switch (result) {
-      case BROTLI_RESULT_NEEDS_MORE_OUTPUT:
+      case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT:
         return bytes_written;
-      case BROTLI_RESULT_SUCCESS:
+      case BROTLI_DECODER_RESULT_SUCCESS:
         decoding_status_ = DecodingStatus::DECODING_DONE;
         // Consume remaining bytes to avoid DCHECK in FilterSourceStream.
         // See crbug.com/659311.
         *consumed_bytes = input_buffer_size;
         return bytes_written;
-      case BROTLI_RESULT_NEEDS_MORE_INPUT:
+      case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT:
         // Decompress needs more input has consumed all existing input.
         DCHECK_EQ(*consumed_bytes, input_buffer_size);
         decoding_status_ = DecodingStatus::DECODING_IN_PROGRESS;
@@ -178,7 +179,7 @@ class BrotliSourceStream : public FilterSourceStream {
     free(&array[-1]);
   }
 
-  BrotliState* brotli_state_;
+  BrotliDecoderState* brotli_state_;
 
   DecodingStatus decoding_status_;
 

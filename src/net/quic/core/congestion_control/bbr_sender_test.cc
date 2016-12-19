@@ -81,7 +81,7 @@ class BbrSenderTest : public ::testing::Test {
     FLAGS_quic_bbr_faster_startup = true;
 
     rtt_stats_ = bbr_sender_.connection()->sent_packet_manager().GetRttStats();
-    sender_ = new BbrSender(simulator_.GetClock(), rtt_stats_,
+    sender_ = new BbrSender(rtt_stats_,
                             QuicSentPacketManagerPeer::GetUnackedPacketMap(
                                 QuicConnectionPeer::GetSentPacketManager(
                                     bbr_sender_.connection(), kDefaultPathId)),

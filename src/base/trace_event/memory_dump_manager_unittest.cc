@@ -140,6 +140,8 @@ class MockMemoryDumpProvider : public MemoryDumpProvider {
   MOCK_METHOD0(Destructor, void());
   MOCK_METHOD2(OnMemoryDump,
                bool(const MemoryDumpArgs& args, ProcessMemoryDump* pmd));
+  MOCK_METHOD1(PollFastMemoryTotal, void(uint64_t* memory_total));
+  MOCK_METHOD0(SuspendFastMemoryPolling, void());
 
   MockMemoryDumpProvider() : enable_mock_destructor(false) {
     ON_CALL(*this, OnMemoryDump(_, _))
@@ -151,6 +153,10 @@ class MockMemoryDumpProvider : public MemoryDumpProvider {
           EXPECT_TRUE(pmd->session_state().get() != nullptr);
           return true;
         }));
+
+    ON_CALL(*this, PollFastMemoryTotal(_))
+        .WillByDefault(
+            Invoke([](uint64_t* memory_total) -> void { NOTREACHED(); }));
   }
   ~MockMemoryDumpProvider() override {
     if (enable_mock_destructor)
@@ -232,6 +238,10 @@ class MemoryDumpManagerTest : public testing::Test {
     task_runner->PostTask(FROM_HERE, closure);
   }
 
+  void PollFastMemoryTotal(uint64_t* memory_total) {
+    mdm_->PollFastMemoryTotal(memory_total);
+  }
+
  protected:
   void InitializeMemoryDumpManager(bool is_coordinator) {
     mdm_->set_dumper_registrations_ignored_for_testing(true);
@@ -266,6 +276,10 @@ class MemoryDumpManagerTest : public testing::Test {
 
   int GetMaxConsecutiveFailuresCount() const {
     return MemoryDumpManager::kMaxConsecutiveFailuresCount;
+  }
+
+  scoped_refptr<SequencedTaskRunner> GetPollingTaskRunnerUnsafe() {
+    return mdm_->dump_thread_->task_runner();
   }
 
   const MemoryDumpProvider::Options kDefaultOptions;
@@ -734,6 +748,64 @@ TEST_F(MemoryDumpManagerTest, UnregisterDumperFromThreadWhileDumping) {
   ASSERT_TRUE(last_callback_success_);
 
   DisableTracing();
+}
+
+TEST_F(MemoryDumpManagerTest, TestPollingOnDumpThread) {
+  InitializeMemoryDumpManager(false /* is_coordinator */);
+  std::unique_ptr<MockMemoryDumpProvider> mdp1(new MockMemoryDumpProvider());
+  std::unique_ptr<MockMemoryDumpProvider> mdp2(new MockMemoryDumpProvider());
+  mdp1->enable_mock_destructor = true;
+  mdp2->enable_mock_destructor = true;
+
+  EXPECT_CALL(*mdp1, SuspendFastMemoryPolling()).Times(1);
+  EXPECT_CALL(*mdp2, SuspendFastMemoryPolling()).Times(1);
+  EXPECT_CALL(*mdp1, Destructor());
+  EXPECT_CALL(*mdp2, Destructor());
+
+  RunLoop run_loop;
+  scoped_refptr<SingleThreadTaskRunner> test_task_runner =
+      ThreadTaskRunnerHandle::Get();
+  auto quit_closure = run_loop.QuitClosure();
+
+  int call_count = 0;
+  EXPECT_CALL(*mdp1, PollFastMemoryTotal(_))
+      .Times(4)
+      .WillRepeatedly(Invoke([&call_count, &test_task_runner,
+                              quit_closure](uint64_t* total) -> void {
+        ++call_count;
+        if (call_count == 4)
+          test_task_runner->PostTask(FROM_HERE, quit_closure);
+      }));
+
+  // Depending on the order of PostTask calls the mdp2 might be registered after
+  // all polls or in between polls.
+  EXPECT_CALL(*mdp2, PollFastMemoryTotal(_))
+      .Times(Between(0, 4))
+      .WillRepeatedly(Return());
+
+  MemoryDumpProvider::Options options;
+  options.is_fast_polling_supported = true;
+  RegisterDumpProvider(mdp1.get(), nullptr, options);
+  EnableTracingWithTraceConfig(
+      TraceConfigMemoryTestUtil::GetTraceConfig_PeakDetectionTrigger(1));
+  scoped_refptr<SequencedTaskRunner> polling_task_runner =
+      GetPollingTaskRunnerUnsafe().get();
+  ASSERT_TRUE(polling_task_runner);
+
+  uint64_t value = 0;
+  for (int i = 0; i < 4; i++) {
+    if (i == 0)
+      RegisterDumpProvider(mdp2.get(), nullptr, options);
+    if (i == 2)
+      mdm_->UnregisterAndDeleteDumpProviderSoon(std::move(mdp2));
+    polling_task_runner->PostTask(
+        FROM_HERE, Bind(&MemoryDumpManagerTest::PollFastMemoryTotal,
+                        Unretained(this), &value));
+  }
+
+  run_loop.Run();
+  DisableTracing();
+  mdm_->UnregisterAndDeleteDumpProviderSoon(std::move(mdp1));
 }
 
 // If a thread (with a dump provider living on it) is torn down during a dump

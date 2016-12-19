@@ -235,7 +235,15 @@ def FilterTests(tests, test_filter=None, annotations=None,
       GetTestName(unqualified_class_test, sep='.'),
       GetUniqueTestName(t, sep='.')
     ]
-    return unittest_util.FilterTestNames(names, test_filter)
+
+    pattern_groups = test_filter.split('-')
+    if len(pattern_groups) > 1:
+      negative_filter = pattern_groups[1]
+      if unittest_util.FilterTestNames(names, negative_filter):
+        return []
+
+    positive_filter = pattern_groups[0]
+    return unittest_util.FilterTestNames(names, positive_filter)
 
   def annotation_filter(all_annotations):
     if not annotations:

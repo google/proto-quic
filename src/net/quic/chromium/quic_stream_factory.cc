@@ -746,6 +746,7 @@ QuicStreamFactory::QuicStreamFactory(
       host_resolver_(host_resolver),
       client_socket_factory_(client_socket_factory),
       http_server_properties_(http_server_properties),
+      push_delegate_(nullptr),
       proxy_delegate_(proxy_delegate),
       transport_security_state_(transport_security_state),
       cert_transparency_verifier_(cert_transparency_verifier),
@@ -1684,7 +1685,8 @@ int QuicStreamFactory::CreateSession(
       server_id, yield_after_packets_, yield_after_duration_, cert_verify_flags,
       config, &crypto_config_, network_connection_.GetDescription(),
       dns_resolution_start_time, dns_resolution_end_time, &push_promise_index_,
-      task_runner_, std::move(socket_performance_watcher), net_log.net_log());
+      push_delegate_, task_runner_, std::move(socket_performance_watcher),
+      net_log.net_log());
 
   all_sessions_[*session] = key;  // owning pointer
   writer->set_delegate(*session);

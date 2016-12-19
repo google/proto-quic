@@ -70,6 +70,16 @@ INTERESTING_METRICS = {
 }
 
 
+def SelectMetrics(particular_metrics):
+  if not particular_metrics:
+    return INTERESTING_METRICS
+
+  # You can only select among the predefined interesting metrics.
+  assert set(particular_metrics).issubset(INTERESTING_METRICS.keys())
+  return {key: value for key, value in INTERESTING_METRICS.iteritems()
+          if key in particular_metrics}
+
+
 def GetReportKind(report):
   if 'audioInputLevel' in report or 'audioOutputLevel' in report:
     return 'audio'
@@ -94,12 +104,12 @@ def StripAudioVideoBweDistinction(stat_name):
   return re.sub('^(audio|video|bwe)_', '', stat_name)
 
 
-def SortStatsIntoTimeSeries(report_batches):
+def SortStatsIntoTimeSeries(report_batches, selected_metrics):
   time_series = {}
   for report_batch in report_batches:
     for report in report_batch:
       for stat_name, value in report.iteritems():
-        if stat_name not in INTERESTING_METRICS:
+        if stat_name not in selected_metrics:
           continue
         if GetReportKind(report) == 'unknown':
           continue
@@ -109,12 +119,21 @@ def SortStatsIntoTimeSeries(report_batches):
   return time_series
 
 
+def PrintSpecialMarkerValue(results):
+  results.AddValue(list_of_scalar_values.ListOfScalarValues(
+      results.current_page, 'peer_connection_5_not_logging_more_conns',
+      '', [17], description=('This marker signifies we never log more '
+                             'than 5 peer connections'),
+      important=False))
+
+
 class WebRtcStatisticsMetric(Metric):
   """Makes it possible to measure stats from peer connections."""
 
-  def __init__(self):
+  def __init__(self, particular_metrics=None):
     super(WebRtcStatisticsMetric, self).__init__()
     self._all_reports = None
+    self._selected_metrics = SelectMetrics(particular_metrics)
 
   def Start(self, page, tab):
     pass
@@ -130,7 +149,13 @@ class WebRtcStatisticsMetric(Metric):
 
     reports = json.loads(self._all_reports)
     for i, report in enumerate(reports):
-      time_series = SortStatsIntoTimeSeries(report)
+      time_series = SortStatsIntoTimeSeries(report, self._selected_metrics)
+
+      # Only ever show stats for 5 peer connections, or it's going to look
+      # insane in the results.
+      if i > 5:
+        PrintSpecialMarkerValue(results)
+        return
 
       for stat_name, values in time_series.iteritems():
         stat_name_underscored = camel_case.ToUnderscore(stat_name)

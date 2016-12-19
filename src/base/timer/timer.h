@@ -100,6 +100,11 @@ class BASE_EXPORT Timer {
   // Returns the current delay for this timer.
   virtual TimeDelta GetCurrentDelay() const;
 
+  // Returns an estimated time to the timer calling the user_task_ back.
+  // Note that the time may be negative if the timer has not been started,
+  // is late to call back or has done its last call back.
+  virtual TimeDelta GetTimeToCallback() const;
+
   // Set the task runner on which the task should be scheduled. This method can
   // only be called before any tasks have been scheduled. The task runner must
   // run tasks on the same thread the timer is used on.

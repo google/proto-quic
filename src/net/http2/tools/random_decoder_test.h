@@ -65,7 +65,7 @@ class RandomDecoderTest : public ::testing::Test {
   // decoder. Note that RandomDecoderTest allows that size to be zero, though
   // some decoders can't deal with that on the first byte, hence the |first|
   // parameter.
-  typedef base::Callback<size_t(bool first, size_t offset, size_t remaining)>
+  typedef std::function<size_t(bool first, size_t offset, size_t remaining)>
       SelectSize;
 
   // Validator returns an AssertionResult so test can do:
@@ -123,29 +123,26 @@ class RandomDecoderTest : public ::testing::Test {
     VERIFY_AND_RETURN_SUCCESS(validator.Run(*original, status));
   }
 
-  // Returns a size for fast decoding, i.e. passing all that
+  // Returns a SelectSize function for fast decoding, i.e. passing all that
   // is available to the decoder.
-  static size_t SelectRemaining(bool first, size_t offset, size_t remaining) {
-    return remaining;
+  static SelectSize SelectRemaining() {
+    return [](bool first, size_t offset, size_t remaining) -> size_t {
+      return remaining;
+    };
   }
 
-  // Returns a size for decoding a single byte at a time.
-  static size_t SelectOne(bool first, size_t offset, size_t remaining) {
-    return 1;
+  // Returns a SelectSize function for decoding a single byte at a time.
+  static SelectSize SelectOne() {
+    return
+        [](bool first, size_t offset, size_t remaining) -> size_t { return 1; };
   }
 
-  // Returns a size for decoding a single byte at a time, where
+  // Returns a SelectSize function for decoding a single byte at a time, where
   // zero byte buffers are also allowed. Alternates between zero and one.
-  static size_t SelectZeroAndOne(bool* zero_next,
-                                 bool first,
-                                 size_t offset,
-                                 size_t remaining);
+  static SelectSize SelectZeroAndOne(bool return_non_zero_on_first);
 
-  // Returns a size for decoding random sized segments.
-  size_t SelectRandom(bool return_non_zero_on_first,
-                      bool first,
-                      size_t offset,
-                      size_t remaining);
+  // Returns a SelectSize function for decoding random sized segments.
+  SelectSize SelectRandom(bool return_non_zero_on_first);
 
   // Decode |original| multiple times, with different segmentations of the
   // decode buffer, validating after each decode, and confirming that they

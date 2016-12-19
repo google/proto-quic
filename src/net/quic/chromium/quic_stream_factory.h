@@ -375,6 +375,10 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   void set_quic_server_info_factory(
       QuicServerInfoFactory* quic_server_info_factory);
 
+  void set_server_push_delegate(ServerPushDelegate* push_delegate) {
+    push_delegate_ = push_delegate;
+  }
+
   bool enable_connection_racing() const { return enable_connection_racing_; }
   void set_enable_connection_racing(bool enable_connection_racing) {
     enable_connection_racing_ = enable_connection_racing;
@@ -499,6 +503,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
   HostResolver* host_resolver_;
   ClientSocketFactory* client_socket_factory_;
   HttpServerProperties* http_server_properties_;
+  ServerPushDelegate* push_delegate_;
   ProxyDelegate* proxy_delegate_;
   TransportSecurityState* transport_security_state_;
   CTVerifier* cert_transparency_verifier_;

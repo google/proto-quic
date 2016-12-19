@@ -10,7 +10,6 @@
 #include <features.h>
 #endif
 #include <string.h>
-#include <sys/epoll.h>
 
 #include "base/logging.h"
 #include "net/quic/core/quic_bug_tracker.h"
@@ -19,8 +18,6 @@
 #include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_process_packet_interface.h"
-
-#define MMSG_MORE 0
 
 #ifndef SO_RXQ_OVFL
 #define SO_RXQ_OVFL 40

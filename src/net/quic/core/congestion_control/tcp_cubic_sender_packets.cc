@@ -49,6 +49,10 @@ void TcpCubicSenderPackets::SetFromConfig(const QuicConfig& config,
       ContainsQuicTag(config.ReceivedConnectionOptions(), kCCVX)) {
     cubic_.SetFixConvexMode(true);
   }
+  if (FLAGS_quic_fix_beta_last_max && config.HasReceivedConnectionOptions() &&
+      ContainsQuicTag(config.ReceivedConnectionOptions(), kBLMX)) {
+    cubic_.SetFixBetaLastMax(true);
+  }
 }
 
 void TcpCubicSenderPackets::SetCongestionWindowFromBandwidthAndRtt(
@@ -154,7 +158,8 @@ QuicByteCount TcpCubicSenderPackets::GetSlowStartThreshold() const {
 void TcpCubicSenderPackets::MaybeIncreaseCwnd(
     QuicPacketNumber acked_packet_number,
     QuicByteCount /*acked_bytes*/,
-    QuicByteCount prior_in_flight) {
+    QuicByteCount prior_in_flight,
+    QuicTime event_time) {
   QUIC_BUG_IF(InRecovery()) << "Never increase the CWND during recovery.";
   // Do not increase the congestion window unless the sender is close to using
   // the current window.
@@ -189,8 +194,8 @@ void TcpCubicSenderPackets::MaybeIncreaseCwnd(
   } else {
     congestion_window_ =
         std::min(max_tcp_congestion_window_,
-                 cubic_.CongestionWindowAfterAck(congestion_window_,
-                                                 rtt_stats_->min_rtt()));
+                 cubic_.CongestionWindowAfterAck(
+                     congestion_window_, rtt_stats_->min_rtt(), event_time));
     DVLOG(1) << "Cubic; congestion window: " << congestion_window_
              << " slowstart threshold: " << slowstart_threshold_;
   }

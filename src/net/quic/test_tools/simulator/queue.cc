@@ -4,16 +4,19 @@
 
 #include "net/quic/test_tools/simulator/queue.h"
 
+using std::string;
+
 namespace net {
 namespace simulator {
 
 Queue::ListenerInterface::~ListenerInterface() {}
 
-Queue::Queue(Simulator* simulator, std::string name, QuicByteCount capacity)
+Queue::Queue(Simulator* simulator, string name, QuicByteCount capacity)
     : Actor(simulator, name),
       capacity_(capacity),
       bytes_queued_(0),
       listener_(nullptr) {}
+
 Queue::~Queue() {}
 
 void Queue::set_tx_port(ConstrainedPortInterface* port) {

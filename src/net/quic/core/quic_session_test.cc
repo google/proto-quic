@@ -119,8 +119,9 @@ class TestSession : public QuicSpdySession {
         crypto_stream_(this),
         writev_consumes_all_data_(false) {
     Initialize();
-    this->connection()->SetEncrypter(ENCRYPTION_FORWARD_SECURE,
-                                     new NullEncrypter());
+    this->connection()->SetEncrypter(
+        ENCRYPTION_FORWARD_SECURE,
+        new NullEncrypter(connection->perspective()));
   }
 
   ~TestSession() override { delete connection(); }
@@ -1094,6 +1095,18 @@ TEST_P(QuicSessionTestServer, InvalidSessionFlowControlWindowInHandshake) {
   EXPECT_CALL(*connection_,
               CloseConnection(QUIC_FLOW_CONTROL_INVALID_WINDOW, _, _));
   session_.OnConfigNegotiated();
+}
+
+// Test negotiation of custom server initial flow control window.
+TEST_P(QuicSessionTestServer, CustomFlowControlWindow) {
+  FLAGS_quic_large_ifw_options = true;
+  QuicTagVector copt;
+  copt.push_back(kIFW7);
+  QuicConfigPeer::SetReceivedConnectionOptions(session_.config(), copt);
+
+  session_.OnConfigNegotiated();
+  EXPECT_EQ(192 * 1024u, QuicFlowControllerPeer::ReceiveWindowSize(
+                             session_.flow_controller()));
 }
 
 TEST_P(QuicSessionTestServer, FlowControlWithInvalidFinalOffset) {

@@ -538,6 +538,14 @@ bool DomainIs(base::StringPiece canonicalized_host,
   return true;
 }
 
+bool HostIsIPAddress(base::StringPiece host) {
+  url::RawCanonOutputT<char, 128> ignored_output;
+  url::CanonHostInfo host_info;
+  url::CanonicalizeIPAddress(host.data(), Component(0, host.length()),
+                             &ignored_output, &host_info);
+  return host_info.IsIPAddress();
+}
+
 bool Canonicalize(const char* spec,
                   int spec_len,
                   bool trim_path_end,

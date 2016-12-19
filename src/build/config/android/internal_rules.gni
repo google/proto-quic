@@ -298,9 +298,15 @@ template("write_build_config") {
             rebase_path(invoker.incremental_apk_path, root_build_dir)
         _rebased_incremental_install_script_path =
             rebase_path(invoker.incremental_install_script_path, root_build_dir)
+        _incremental_allowed =
+            defined(invoker.incremental_allowed) && invoker.incremental_allowed
         args += [ "--apk-path=$_rebased_apk_path" ]
-        args += [ "--incremental-apk-path=$_rebased_incremental_apk_path" ]
         args += [ "--incremental-install-script-path=$_rebased_incremental_install_script_path" ]
+
+        assert(_rebased_incremental_apk_path != "")  # Mark as used.
+        if (_incremental_allowed) {
+          args += [ "--incremental-apk-path=$_rebased_incremental_apk_path" ]
+        }
       }
     }
 
@@ -560,6 +566,8 @@ template("test_runner_script") {
         test_runner_args += [
           "--additional-apk",
           "@FileArg($_rebased_build_config:deps_info:apk_path)",
+          "--additional-apk-incremental",
+          "@FileArg($_rebased_build_config:deps_info:incremental_apk_path)",
         ]
       }
     }

@@ -8,6 +8,8 @@
 #define NET_TOOLS_QUIC_QUIC_PACKET_READER_H_
 
 #include <netinet/in.h>
+// Include here to guarantee this header gets included (for MSG_WAITFORONE)
+// regardless of how the below transitive header include set may change.
 #include <sys/socket.h>
 
 #include "base/macros.h"

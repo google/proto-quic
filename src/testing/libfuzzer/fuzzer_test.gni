@@ -47,8 +47,6 @@ template("fuzzer_test") {
           rebase_path(invoker.seed_corpus),
           "--output",
           rebase_path(out),
-          "--fuzzer",
-          rebase_path("$root_build_dir/$target_name"),
         ]
 
         outputs = [

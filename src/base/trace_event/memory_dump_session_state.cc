@@ -7,7 +7,7 @@
 namespace base {
 namespace trace_event {
 
-MemoryDumpSessionState::MemoryDumpSessionState() {}
+MemoryDumpSessionState::MemoryDumpSessionState() : is_polling_enabled_(false) {}
 
 MemoryDumpSessionState::~MemoryDumpSessionState() {}
 
@@ -26,6 +26,10 @@ void MemoryDumpSessionState::SetTypeNameDeduplicator(
 void MemoryDumpSessionState::SetMemoryDumpConfig(
     const TraceConfig::MemoryDumpConfig& config) {
   memory_dump_config_ = config;
+  for (const auto& trigger : config.triggers) {
+    if (trigger.trigger_type == MemoryDumpType::PEAK_MEMORY_USAGE)
+      is_polling_enabled_ = true;
+  }
 }
 
 }  // namespace trace_event

@@ -15,11 +15,11 @@ namespace net {
 class SSLPrivateKey;
 class X509Certificate;
 
-// Looks up the private key from the platform key store corresponding to
-// |certificate|'s public key and returns an SSLPrivateKey backed by the
-// playform key.
+// Returns an SSLPrivateKey backed by the platform private key that corresponds
+// to |certificate|'s public key. If |keychain| is nullptr, the process's
+// default search list is used instead.
 NET_EXPORT scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    X509Certificate* certificate);
+    const X509Certificate* certificate);
 
 }  // namespace net
 

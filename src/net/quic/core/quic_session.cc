@@ -439,6 +439,27 @@ void QuicSession::OnConfigNegotiated() {
     max_streams = config_.MaxStreamsPerConnection();
   }
   set_max_open_outgoing_streams(max_streams);
+  if (FLAGS_quic_large_ifw_options && perspective() == Perspective::IS_SERVER) {
+    if (config_.HasReceivedConnectionOptions()) {
+      // The following variations change the initial receive flow control
+      // window sizes.
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW6)) {
+        AdjustInitialFlowControlWindows(64 * 1024);
+      }
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW7)) {
+        AdjustInitialFlowControlWindows(128 * 1024);
+      }
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW8)) {
+        AdjustInitialFlowControlWindows(256 * 1024);
+      }
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFW9)) {
+        AdjustInitialFlowControlWindows(512 * 1024);
+      }
+      if (ContainsQuicTag(config_.ReceivedConnectionOptions(), kIFWA)) {
+        AdjustInitialFlowControlWindows(1024 * 1024);
+      }
+    }
+  }
 
   if (version <= QUIC_VERSION_34) {
     // A small number of additional incoming streams beyond the limit should be
@@ -469,6 +490,30 @@ void QuicSession::OnConfigNegotiated() {
   if (config_.HasReceivedInitialSessionFlowControlWindowBytes()) {
     OnNewSessionFlowControlWindow(
         config_.ReceivedInitialSessionFlowControlWindowBytes());
+  }
+}
+
+void QuicSession::AdjustInitialFlowControlWindows(size_t stream_window) {
+  const float session_window_multiplier =
+      config_.GetInitialStreamFlowControlWindowToSend()
+          ? static_cast<float>(
+                config_.GetInitialSessionFlowControlWindowToSend()) /
+                config_.GetInitialStreamFlowControlWindowToSend()
+          : 1.5;
+
+  DVLOG(1) << ENDPOINT << "Set stream receive window to " << stream_window;
+  config_.SetInitialStreamFlowControlWindowToSend(stream_window);
+
+  size_t session_window = session_window_multiplier * stream_window;
+  DVLOG(1) << ENDPOINT << "Set session receive window to " << session_window;
+  config_.SetInitialSessionFlowControlWindowToSend(session_window);
+  flow_controller_.UpdateReceiveWindowSize(session_window);
+  // Inform all existing streams about the new window.
+  for (auto const& kv : static_stream_map_) {
+    kv.second->flow_controller()->UpdateReceiveWindowSize(stream_window);
+  }
+  for (auto const& kv : dynamic_stream_map_) {
+    kv.second->flow_controller()->UpdateReceiveWindowSize(stream_window);
   }
 }
 

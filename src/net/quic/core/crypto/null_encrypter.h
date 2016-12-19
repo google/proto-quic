@@ -10,6 +10,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -19,13 +20,14 @@ namespace net {
 // generate a MAC (fnv128) over both the payload and associated data.
 class QUIC_EXPORT_PRIVATE NullEncrypter : public QuicEncrypter {
  public:
-  NullEncrypter();
+  explicit NullEncrypter(Perspective perspective);
   ~NullEncrypter() override {}
 
   // QuicEncrypter implementation
   bool SetKey(base::StringPiece key) override;
   bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
-  bool EncryptPacket(QuicPathId path_id,
+  bool EncryptPacket(QuicVersion version,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      base::StringPiece associated_data,
                      base::StringPiece plaintext,
@@ -41,6 +43,8 @@ class QUIC_EXPORT_PRIVATE NullEncrypter : public QuicEncrypter {
 
  private:
   size_t GetHashLength() const;
+
+  Perspective perspective_;
 
   DISALLOW_COPY_AND_ASSIGN(NullEncrypter);
 };

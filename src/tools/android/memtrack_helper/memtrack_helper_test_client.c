@@ -35,9 +35,10 @@ int main(int argc, char** argv) {
     exit_with_failure("send");
 
   char buf[4096];
-  memset(buf, 0, sizeof(buf));
-  if (recv(sock, buf, sizeof(buf), 0) <= 0)
+  ssize_t rsize = recv(sock, buf, sizeof(buf) - 1, 0);
+  if (rsize < 0)
     exit_with_failure("recv");
+  buf[rsize] = '\0';
 
   puts(buf);
   return EXIT_SUCCESS;

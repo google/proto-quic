@@ -59,7 +59,7 @@ import java.io.IOException;
 @JNINamespace("net::android")
 public class HttpNegotiateAuthenticator {
     private static final String TAG = "net_auth";
-    private Bundle mSpnegoContext = null;
+    private Bundle mSpnegoContext;
     private final String mAccountType;
 
     /**

@@ -9,6 +9,7 @@
 import argparse
 import logging
 import os
+import random
 import sys
 import time
 
@@ -21,6 +22,7 @@ import customtabs_benchmark
 import device_setup
 
 sys.path.append(os.path.join(_SRC_PATH, 'tools', 'android', 'loading'))
+import controller
 from options import OPTIONS
 
 sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
@@ -46,10 +48,16 @@ def _CreateArgumentParser():
                       help=('File containing the predictor database, as '
                             'obtained from generate_database.py.'))
   parser.add_argument('--url', help='URL to load.')
-  parser.add_argument('--prefetch_delay_ms',
-                      help='Prefetch delay in ms. -1 to disable prefetch.')
+  parser.add_argument('--prefetch_delays_ms',
+                      help='List of prefetch delays in ms. -1 to disable '
+                      'prefetch. Runs will randomly select one delay in the '
+                      'list.')
   parser.add_argument('--output_filename',
                       help='CSV file to append the result to.')
+  parser.add_argument('--network_condition',
+                      help='Network condition for emulation.')
+  parser.add_argument('--wpr_archive', help='WPR archive path.')
+  parser.add_argument('--once', help='Only run once.', action='store_true')
   return parser
 
 
@@ -88,20 +96,36 @@ def _Setup(device, database_filename):
   device.RunShellCommand(command, as_root=True)
 
 
-def _Go(device, url, prefetch_delay_ms):
+def _RunOnce(device, database_filename, url, prefetch_delay_ms,
+             output_filename, wpr_archive, network_condition):
+  _Setup(device, database_filename)
+
   disable_prefetch = prefetch_delay_ms == -1
   # Startup tracing to ease debugging.
   chrome_args = (customtabs_benchmark.CHROME_ARGS
                  + ['--trace-startup', '--trace-startup-duration=20'])
   if not disable_prefetch:
     chrome_args.append(_EXTERNAL_PREFETCH_FLAG)
-  prefetch_mode = 'disabled' if disable_prefetch else 'speculative_prefetch'
-  result = customtabs_benchmark.RunOnce(
-      device, url, warmup=True, speculation_mode=prefetch_mode,
-      delay_to_may_launch_url=2000,
-      delay_to_launch_url=prefetch_delay_ms, cold=False,
-      chrome_args=chrome_args, reset_chrome_state=False)
-  return customtabs_benchmark.ParseResult(result)
+
+  chrome_controller = controller.RemoteChromeController(device)
+  device.ForceStop(OPTIONS.ChromePackage().package)
+  chrome_controller.AddChromeArguments(chrome_args)
+
+  with device_setup.RemoteWprHost(
+      device, wpr_archive, record=False,
+      network_condition_name=network_condition) as wpr:
+    logging.info('WPR arguments: ' +  ' '.join(wpr.chrome_args))
+    chrome_args += wpr.chrome_args
+    prefetch_mode = 'disabled' if disable_prefetch else 'speculative_prefetch'
+    result = customtabs_benchmark.RunOnce(
+        device, url, warmup=True, speculation_mode=prefetch_mode,
+        delay_to_may_launch_url=2000,
+        delay_to_launch_url=prefetch_delay_ms, cold=False,
+        chrome_args=chrome_args, reset_chrome_state=False)
+  data_point = customtabs_benchmark.ParseResult(result)
+
+  with open(output_filename, 'a') as f:
+    f.write(','.join(str(x) for x in data_point) + '\n')
 
 
 def main():
@@ -111,16 +135,27 @@ def main():
   parser = _CreateArgumentParser()
   args = parser.parse_args()
   OPTIONS.SetParsedArgs(args)
+
+  if os.path.exists(args.output_filename):
+    logging.error('Output file %s already exists.' % args.output_filename)
+    sys.exit(1)
+
   device = prefetch_predictor_common.FindDevice(args.device)
   if device is None:
     logging.error('Could not find device: %s.', args.device)
     sys.exit(1)
 
-  _Setup(device, args.database)
-  result = _Go(device, args.url, int(args.prefetch_delay_ms))
-  print result
-  with open(args.output_filename, 'a') as f:
-    f.write(','.join(str(x) for x in result) + '\n')
+  delays = [int(x) for x in args.prefetch_delays_ms.split(',')]
+
+  with open(args.output_filename, 'w') as f:
+    f.write(','.join(customtabs_benchmark.RESULT_FIELDS) + '\n')
+
+  while True:
+    delay = delays[random.randint(0, len(delays) - 1)]
+    _RunOnce(device, args.database, args.url, delay, args.output_filename,
+             args.wpr_archive, args.network_condition)
+    if args.once:
+      return
 
 
 if __name__ == '__main__':

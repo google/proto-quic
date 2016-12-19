@@ -1783,8 +1783,8 @@ SpdyFramer::SpdyHeaderFrameIterator::SpdyHeaderFrameIterator(
       debug_total_size_(0),
       is_first_frame_(true),
       has_next_frame_(true) {
-  encoder_ = framer_->GetHpackEncoder()->EncodeHeaderSet(
-      headers_ir_->header_block(), framer_->compression_enabled());
+  encoder_ =
+      framer_->GetHpackEncoder()->EncodeHeaderSet(headers_ir_->header_block());
 }
 
 SpdyFramer::SpdyHeaderFrameIterator::~SpdyHeaderFrameIterator() {}
@@ -2006,12 +2006,7 @@ SpdySerializedFrame SpdyFramer::SerializeHeaders(const SpdyHeadersIR& headers) {
   }
 
   string hpack_encoding;
-  if (compression_enabled()) {
-    GetHpackEncoder()->EncodeHeaderSet(headers.header_block(), &hpack_encoding);
-  } else {
-    GetHpackEncoder()->EncodeHeaderSetWithoutCompression(headers.header_block(),
-                                                         &hpack_encoding);
-  }
+  GetHpackEncoder()->EncodeHeaderSet(headers.header_block(), &hpack_encoding);
   size += hpack_encoding.size();
   if (size > kMaxControlFrameSize) {
     size += GetNumberRequiredContinuationFrames(size) *
@@ -2083,13 +2078,8 @@ SpdySerializedFrame SpdyFramer::SerializePushPromise(
   }
 
   string hpack_encoding;
-  if (compression_enabled()) {
-    GetHpackEncoder()->EncodeHeaderSet(push_promise.header_block(),
-                                       &hpack_encoding);
-  } else {
-    GetHpackEncoder()->EncodeHeaderSetWithoutCompression(
-        push_promise.header_block(), &hpack_encoding);
-  }
+  GetHpackEncoder()->EncodeHeaderSet(push_promise.header_block(),
+                                     &hpack_encoding);
   size += hpack_encoding.size();
   if (size > kMaxControlFrameSize) {
     size += GetNumberRequiredContinuationFrames(size) *
@@ -2367,6 +2357,9 @@ void SpdyFramer::WritePayloadWithContinuation(SpdyFrameBuilder* builder,
 HpackEncoder* SpdyFramer::GetHpackEncoder() {
   if (hpack_encoder_.get() == nullptr) {
     hpack_encoder_.reset(new HpackEncoder(ObtainHpackHuffmanTable()));
+    if (!compression_enabled()) {
+      hpack_encoder_->DisableCompression();
+    }
   }
   return hpack_encoder_.get();
 }

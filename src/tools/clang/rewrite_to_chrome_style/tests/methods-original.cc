@@ -193,6 +193,39 @@ class BitVector {
   MyRefPtr<FooBar> foobar_;
 };
 
+namespace get_prefix_vs_inheritance {
+
+// Regression test for https://crbug.com/673031:
+// 1. |frame| accessor/method should be renamed in the same way for
+//    WebFrameImplBase and WebLocalFrameImpl.
+// 2. Need to rename |frame| to |GetFrame| (not to |Frame|) to avoid
+//    a conflict with the Frame type.
+
+class Frame {};
+class LocalFrame : public Frame {};
+
+class WebFrameImplBase {
+ public:
+  virtual Frame* frame() const = 0;
+};
+
+class WebLocalFrameImpl : public WebFrameImplBase {
+ public:
+  LocalFrame* frame() const override { return nullptr; }
+};
+
+// This is also a regression test for https://crbug.com/673031
+// (which can happen in a non-virtual-method case):
+class LayoutObject {};
+class LayoutBoxModelObject : public LayoutObject {};
+class PaintLayerStackingNode {
+ public:
+  // |layoutObject| should be renamed to |GetLayoutObject|.
+  LayoutBoxModelObject* layoutObject() { return nullptr; }
+};
+
+}  // namespace get_prefix_vs_inheritance
+
 }  // namespace blink
 
 namespace WTF {

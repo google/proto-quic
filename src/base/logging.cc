@@ -13,7 +13,6 @@
 
 #if defined(OS_WIN)
 #include <io.h>
-#include <windows.h>
 typedef HANDLE FileHandle;
 typedef HANDLE MutexHandle;
 // Windows warns on using write().  It prefers _write().

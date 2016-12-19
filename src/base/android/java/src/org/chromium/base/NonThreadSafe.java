@@ -11,7 +11,7 @@ import org.chromium.base.annotations.SuppressFBWarnings;
  * class are called from the same thread.
  */
 public class NonThreadSafe {
-    private Long mThreadId = null;
+    private Long mThreadId;
 
     public NonThreadSafe() {
         ensureThreadIdAssigned();

@@ -223,7 +223,7 @@ scoped_refptr<SSLPrivateKey> WrapJavaPrivateKey(
 }
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    X509Certificate* certificate) {
+    const X509Certificate* certificate) {
   return OpenSSLClientKeyStore::GetInstance()->FetchClientCertPrivateKey(
       certificate);
 }

@@ -182,6 +182,16 @@ enum DnsResolveStatus {
 // For more details: https://www.icann.org/news/announcement-2-2014-08-01-en
 const uint8_t kIcanNameCollisionIp[] = {127, 0, 53, 53};
 
+bool ContainsIcannNameCollisionIp(const AddressList& addr_list) {
+  for (const auto& endpoint : addr_list) {
+    const IPAddress& addr = endpoint.address();
+    if (addr.IsIPv4() && IPAddressStartsWith(addr, kIcanNameCollisionIp)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void UmaAsyncDnsResolveStatus(DnsResolveStatus result) {
   UMA_HISTOGRAM_ENUMERATION("AsyncDNS.ResolveStatus",
                             result,
@@ -737,16 +747,6 @@ class HostResolverImpl::ProcTask
                                                key_.host_resolver_flags,
                                                &results,
                                                &os_error);
-
-    // Fail the resolution if the result contains 127.0.53.53. See the comment
-    // block of kIcanNameCollisionIp for details on why.
-    for (const auto& it : results) {
-      const IPAddress& cur = it.address();
-      if (cur.IsIPv4() && IPAddressStartsWith(cur, kIcanNameCollisionIp)) {
-        error = ERR_ICANN_NAME_COLLISION;
-        break;
-      }
-    }
 
     network_task_runner_->PostTask(
         FROM_HERE, base::Bind(&ProcTask::OnLookupComplete, this, results,
@@ -1457,9 +1457,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
                                   requests_.front()->info(),
                                   &addr_list)) {
       // This will destroy the Job.
-      CompleteRequests(
-          HostCache::Entry(OK, MakeAddressListForRequest(addr_list)),
-          base::TimeDelta());
+      CompleteRequests(MakeCacheEntry(OK, addr_list), base::TimeDelta());
       return true;
     }
     return false;
@@ -1497,6 +1495,25 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       --num_occupied_job_slots_;
     }
     DCHECK_EQ(1u, num_occupied_job_slots_);
+  }
+
+  // MakeCacheEntry() and MakeCacheEntryWithTTL() are helpers to build a
+  // HostCache::Entry(). The address list is omited from the cache entry
+  // for errors.
+  HostCache::Entry MakeCacheEntry(int net_error,
+                                  const AddressList& addr_list) const {
+    return HostCache::Entry(
+        net_error,
+        net_error == OK ? MakeAddressListForRequest(addr_list) : AddressList());
+  }
+
+  HostCache::Entry MakeCacheEntryWithTTL(int net_error,
+                                         const AddressList& addr_list,
+                                         base::TimeDelta ttl) const {
+    return HostCache::Entry(
+        net_error,
+        net_error == OK ? MakeAddressListForRequest(addr_list) : AddressList(),
+        ttl);
   }
 
   AddressList MakeAddressListForRequest(const AddressList& list) const {
@@ -1618,15 +1635,16 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
       }
     }
 
+    if (ContainsIcannNameCollisionIp(addr_list))
+      net_error = ERR_ICANN_NAME_COLLISION;
+
     base::TimeDelta ttl =
         base::TimeDelta::FromSeconds(kNegativeCacheEntryTTLSeconds);
     if (net_error == OK)
       ttl = base::TimeDelta::FromSeconds(kCacheEntryTTLSeconds);
 
     // Don't store the |ttl| in cache since it's not obtained from the server.
-    CompleteRequests(
-        HostCache::Entry(net_error, MakeAddressListForRequest(addr_list)),
-        ttl);
+    CompleteRequests(MakeCacheEntry(net_error, addr_list), ttl);
   }
 
   void StartDnsTask() {
@@ -1708,9 +1726,12 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
     base::TimeDelta bounded_ttl =
         std::max(ttl, base::TimeDelta::FromSeconds(kMinimumTTLSeconds));
 
-    CompleteRequests(
-        HostCache::Entry(net_error, MakeAddressListForRequest(addr_list), ttl),
-        bounded_ttl);
+    if (ContainsIcannNameCollisionIp(addr_list)) {
+      CompleteRequestsWithError(ERR_ICANN_NAME_COLLISION);
+    } else {
+      CompleteRequests(MakeCacheEntryWithTTL(net_error, addr_list, ttl),
+                       bounded_ttl);
+    }
   }
 
   void OnFirstDnsTransactionComplete() override {
@@ -1768,7 +1789,7 @@ class HostResolverImpl::Job : public PrioritizedDispatcher::Job,
 
     DCHECK(!requests_.empty());
 
-    if (entry.error() == OK) {
+    if (entry.error() == OK || entry.error() == ERR_ICANN_NAME_COLLISION) {
       // Record this histogram here, when we know the system has a valid DNS
       // configuration.
       UMA_HISTOGRAM_BOOLEAN("AsyncDNS.HaveDnsConfig",
@@ -2337,12 +2358,14 @@ HostResolverImpl::Key HostResolverImpl::GetEffectiveKeyForRequest(
 }
 
 bool HostResolverImpl::IsIPv6Reachable(const NetLogWithSource& net_log) {
-  base::TimeTicks now = base::TimeTicks::Now();
+  // Cache the result for kIPv6ProbePeriodMs (measured from after
+  // IsGloballyReachable() completes).
   bool cached = true;
-  if ((now - last_ipv6_probe_time_).InMilliseconds() > kIPv6ProbePeriodMs) {
+  if ((base::TimeTicks::Now() - last_ipv6_probe_time_).InMilliseconds() >
+      kIPv6ProbePeriodMs) {
     last_ipv6_probe_result_ =
         IsGloballyReachable(IPAddress(kIPv6ProbeAddress), net_log);
-    last_ipv6_probe_time_ = now;
+    last_ipv6_probe_time_ = base::TimeTicks::Now();
     cached = false;
   }
   net_log.AddEvent(NetLogEventType::HOST_RESOLVER_IMPL_IPV6_REACHABILITY_CHECK,

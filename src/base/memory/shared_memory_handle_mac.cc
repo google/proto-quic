@@ -67,16 +67,28 @@ SharedMemoryHandle& SharedMemoryHandle::operator=(
 }
 
 SharedMemoryHandle SharedMemoryHandle::Duplicate() const {
-  if (!IsValid())
-    return SharedMemoryHandle(MACH_PORT_NULL, 0, 0);
+  switch (type_) {
+    case POSIX: {
+      if (!IsValid())
+        return SharedMemoryHandle();
+      int duped_fd = HANDLE_EINTR(dup(file_descriptor_.fd));
+      if (duped_fd < 0)
+        return SharedMemoryHandle();
+      return SharedMemoryHandle(FileDescriptor(duped_fd, true));
+    }
+    case MACH: {
+      if (!IsValid())
+        return SharedMemoryHandle(MACH_PORT_NULL, 0, 0);
 
-  // Increment the ref count.
-  kern_return_t kr = mach_port_mod_refs(mach_task_self(), memory_object_,
-                                        MACH_PORT_RIGHT_SEND, 1);
-  DCHECK_EQ(kr, KERN_SUCCESS);
-  SharedMemoryHandle handle(*this);
-  handle.SetOwnershipPassesToIPC(true);
-  return handle;
+      // Increment the ref count.
+      kern_return_t kr = mach_port_mod_refs(mach_task_self(), memory_object_,
+                                            MACH_PORT_RIGHT_SEND, 1);
+      DCHECK_EQ(kr, KERN_SUCCESS);
+      SharedMemoryHandle handle(*this);
+      handle.SetOwnershipPassesToIPC(true);
+      return handle;
+    }
+  }
 }
 
 bool SharedMemoryHandle::operator==(const SharedMemoryHandle& handle) const {

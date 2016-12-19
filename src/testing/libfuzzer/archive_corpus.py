@@ -21,7 +21,6 @@ def main():
   parser = argparse.ArgumentParser(description="Generate fuzzer config.")
   parser.add_argument('--corpus', required=True)
   parser.add_argument('--output', required=True)
-  parser.add_argument('--fuzzer', required=True)
   args = parser.parse_args()
 
   corpus_files = []

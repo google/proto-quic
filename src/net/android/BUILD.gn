@@ -94,6 +94,9 @@ shared_library("net_java_test_native_support") {
 
 android_apk("net_test_support_apk") {
   testonly = true
+
+  # Used as an additional_apk in test scripts.
+  never_incremental = true
   deps = [
     ":net_java_test_support",
     "//base:base_java",
@@ -112,6 +115,7 @@ android_library("net_javatests") {
   testonly = true
   java_files = [
     "javatests/src/org/chromium/net/AndroidKeyStoreTestUtil.java",
+    "javatests/src/org/chromium/net/AndroidNetworkLibraryTestUtil.java",
     "javatests/src/org/chromium/net/AndroidProxySelectorTest.java",
     "javatests/src/org/chromium/net/NetErrorsTest.java",
     "javatests/src/org/chromium/net/NetworkChangeNotifierTest.java",

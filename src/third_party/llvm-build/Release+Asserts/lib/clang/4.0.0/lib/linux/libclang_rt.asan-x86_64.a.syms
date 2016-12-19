@@ -140,6 +140,12 @@
   __interceptor_getresuid;
   __interceptor_getsockname;
   __interceptor_getsockopt;
+  __interceptor_getutent;
+  __interceptor_getutid;
+  __interceptor_getutline;
+  __interceptor_getutxent;
+  __interceptor_getutxid;
+  __interceptor_getutxline;
   __interceptor_getxattr;
   __interceptor_glob;
   __interceptor_glob64;
@@ -428,6 +434,8 @@
   __sanitizer_cov_trace_pc_indir;
   __sanitizer_cov_trace_switch;
   __sanitizer_cov_with_check;
+  __sanitizer_dump_coverage;
+  __sanitizer_dump_trace_pc_guard_coverage;
   __sanitizer_finish_switch_fiber;
   __sanitizer_get_allocated_size;
   __sanitizer_get_coverage_guards;
@@ -1225,6 +1233,12 @@
   getresuid;
   getsockname;
   getsockopt;
+  getutent;
+  getutid;
+  getutline;
+  getutxent;
+  getutxid;
+  getutxline;
   getxattr;
   glob;
   glob64;

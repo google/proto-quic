@@ -274,7 +274,7 @@ bool PartialData::ResponseHeadersOK(const HttpResponseHeaders* headers) {
   }
 
   int64_t start, end, total_length;
-  if (!headers->GetContentRange(&start, &end, &total_length))
+  if (!headers->GetContentRangeFor206(&start, &end, &total_length))
     return false;
   if (total_length <= 0)
     return false;

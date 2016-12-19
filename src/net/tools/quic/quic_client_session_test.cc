@@ -308,9 +308,10 @@ TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
 
   // Verify that a decryptable packet with bad frames does close the connection.
   QuicConnectionId connection_id = session_->connection()->connection_id();
+  QuicVersionVector versions = {GetParam()};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
       connection_id, false, false, false, kDefaultPathId, 100, "data",
-      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, nullptr,
+      PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, &versions,
       Perspective::IS_SERVER));
   std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*packet, QuicTime::Zero()));

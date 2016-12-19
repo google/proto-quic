@@ -96,8 +96,8 @@ class URL_EXPORT SchemeHostPort {
   // that the host and port are canonicalized. This should only be used when
   // converting between already normalized types, and should NOT be used for
   // IPC.
-  SchemeHostPort(base::StringPiece scheme,
-                 base::StringPiece host,
+  SchemeHostPort(std::string scheme,
+                 std::string host,
                  uint16_t port,
                  ConstructPolicy policy);
 

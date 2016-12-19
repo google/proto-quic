@@ -779,13 +779,14 @@ size_t GetPacketLengthForOneStream(QuicVersion version,
                                    size_t* payload_length) {
   *payload_length = 1;
   const size_t stream_length =
-      NullEncrypter().GetCiphertextSize(*payload_length) +
+      NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(*payload_length) +
       QuicPacketCreator::StreamFramePacketOverhead(
           version, PACKET_8BYTE_CONNECTION_ID, include_version, include_path_id,
           include_diversification_nonce, packet_number_length, 0u);
   const size_t ack_length =
-      NullEncrypter().GetCiphertextSize(
-          QuicFramer::GetMinAckFrameSize(version, PACKET_1BYTE_PACKET_NUMBER)) +
+      NullEncrypter(Perspective::IS_CLIENT)
+          .GetCiphertextSize(QuicFramer::GetMinAckFrameSize(
+              version, PACKET_1BYTE_PACKET_NUMBER)) +
       GetPacketHeaderSize(version, connection_id_length, include_version,
                           include_path_id, include_diversification_nonce,
                           packet_number_length);
@@ -793,7 +794,8 @@ size_t GetPacketLengthForOneStream(QuicVersion version,
     *payload_length = 1 + ack_length - stream_length;
   }
 
-  return NullEncrypter().GetCiphertextSize(*payload_length) +
+  return NullEncrypter(Perspective::IS_CLIENT)
+             .GetCiphertextSize(*payload_length) +
          QuicPacketCreator::StreamFramePacketOverhead(
              version, connection_id_length, include_version, include_path_id,
              include_diversification_nonce, packet_number_length, 0u);

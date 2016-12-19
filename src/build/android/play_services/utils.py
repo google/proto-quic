@@ -10,13 +10,8 @@ related files.
 import argparse
 import filecmp
 import json
-import logging
 import os
 import re
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
-from devil.utils import cmd_helper
 
 
 _XML_VERSION_NUMBER_PATTERN = re.compile(
@@ -134,15 +129,6 @@ def FileEquals(expected_file, actual_file):
   return filecmp.cmp(expected_file, actual_file)
 
 
-def IsRepoDirty(repo_root):
-  '''Returns True if there are no staged or modified files, False otherwise.'''
-
-  # diff-index returns 1 if there are staged changes or modified files,
-  # 0 otherwise
-  cmd = ['git', 'diff-index', '--quiet', 'HEAD']
-  return cmd_helper.Call(cmd, cwd=repo_root) == 1
-
-
 def GetVersionNumberFromLibraryResources(version_xml):
   '''
   Extracts a Google Play services version number from its version.xml file.
@@ -156,15 +142,3 @@ def GetVersionNumberFromLibraryResources(version_xml):
     raise AttributeError('A value for google_play_services_version was not '
                          'found in ' + version_xml)
   return int(match.group(1))
-
-
-def MakeLocalCommit(repo_root, files_to_commit, message):
-  '''Makes a local git commit.'''
-
-  logging.debug('Staging files (%s) for commit.', files_to_commit)
-  if cmd_helper.Call(['git', 'add'] + files_to_commit, cwd=repo_root) != 0:
-    raise Exception('The local commit failed.')
-
-  logging.debug('Committing.')
-  if cmd_helper.Call(['git', 'commit', '-m', message], cwd=repo_root) != 0:
-    raise Exception('The local commit failed.')

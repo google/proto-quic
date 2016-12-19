@@ -41,7 +41,9 @@ CubicBytes::CubicBytes(const QuicClock* clock)
       num_connections_(kDefaultNumConnections),
       epoch_(QuicTime::Zero()),
       last_update_time_(QuicTime::Zero()),
-      fix_convex_mode_(false) {
+      fix_convex_mode_(false),
+      fix_cubic_quantization_(false),
+      fix_beta_last_max_(false) {
   Reset();
 }
 
@@ -65,6 +67,16 @@ float CubicBytes::Beta() const {
   return (num_connections_ - 1 + kBeta) / num_connections_;
 }
 
+float CubicBytes::BetaLastMax() const {
+  // BetaLastMax is the additional backoff factor after loss for our
+  // N-connection emulation, which emulates the additional backoff of
+  // an ensemble of N TCP-Reno connections on a single loss event. The
+  // effective multiplier is computed as:
+  return fix_beta_last_max_
+             ? (num_connections_ - 1 + kBetaLastMax) / num_connections_
+             : kBetaLastMax;
+}
+
 void CubicBytes::Reset() {
   epoch_ = QuicTime::Zero();             // Reset time.
   last_update_time_ = QuicTime::Zero();  // Reset time.
@@ -82,6 +94,14 @@ void CubicBytes::SetFixConvexMode(bool fix_convex_mode) {
   fix_convex_mode_ = fix_convex_mode;
 }
 
+void CubicBytes::SetFixCubicQuantization(bool fix_cubic_quantization) {
+  fix_cubic_quantization_ = fix_cubic_quantization;
+}
+
+void CubicBytes::SetFixBetaLastMax(bool fix_beta_last_max) {
+  fix_beta_last_max_ = fix_beta_last_max;
+}
+
 void CubicBytes::OnApplicationLimited() {
   // When sender is not using the available congestion window, the window does
   // not grow. But to be RTT-independent, Cubic assumes that the sender has been
@@ -96,11 +116,18 @@ void CubicBytes::OnApplicationLimited() {
 
 QuicByteCount CubicBytes::CongestionWindowAfterPacketLoss(
     QuicByteCount current_congestion_window) {
-  if (current_congestion_window < last_max_congestion_window_) {
-    // We never reached the old max, so assume we are competing with another
-    // flow. Use our extra back off factor to allow the other flow to go up.
+  // Since bytes-mode Reno mode slightly under-estimates the cwnd, we
+  // may never reach precisely the last cwnd over the course of an
+  // RTT.  Do not interpret a slight under-estimation as competing traffic.
+  const QuicByteCount last_window_delta =
+      fix_beta_last_max_ ? kDefaultTCPMSS : 0;
+  if (current_congestion_window + last_window_delta <
+      last_max_congestion_window_) {
+    // We never reached the old max, so assume we are competing with
+    // another flow. Use our extra back off factor to allow the other
+    // flow to go up.
     last_max_congestion_window_ =
-        static_cast<int>(kBetaLastMax * current_congestion_window);
+        static_cast<int>(BetaLastMax() * current_congestion_window);
   } else {
     last_max_congestion_window_ = current_congestion_window;
   }
@@ -111,9 +138,11 @@ QuicByteCount CubicBytes::CongestionWindowAfterPacketLoss(
 QuicByteCount CubicBytes::CongestionWindowAfterAck(
     QuicByteCount acked_bytes,
     QuicByteCount current_congestion_window,
-    QuicTime::Delta delay_min) {
+    QuicTime::Delta delay_min,
+    QuicTime event_time) {
   acked_bytes_count_ += acked_bytes;
-  QuicTime current_time = clock_->ApproximateNow();
+  QuicTime current_time =
+      FLAGS_quic_use_event_time ? event_time : clock_->ApproximateNow();
 
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
   if (last_congestion_window_ == current_congestion_window &&
@@ -158,8 +187,13 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
     offset = positive_offset;
   }
   QuicByteCount delta_congestion_window =
-      ((kCubeCongestionWindowScale * offset * offset * offset) >> kCubeScale) *
-      kDefaultTCPMSS;
+      fix_cubic_quantization_
+          ? (kCubeCongestionWindowScale * offset * offset * offset *
+             kDefaultTCPMSS) >>
+                kCubeScale
+          : ((kCubeCongestionWindowScale * offset * offset * offset) >>
+             kCubeScale) *
+                kDefaultTCPMSS;
 
   const bool add_delta = elapsed_time > time_to_origin_point_;
   DCHECK(add_delta ||

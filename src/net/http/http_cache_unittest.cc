@@ -501,7 +501,7 @@ void Verify206Response(const std::string& response, int start, int end) {
 
   int64_t range_start, range_end, object_size;
   ASSERT_TRUE(
-      headers->GetContentRange(&range_start, &range_end, &object_size));
+      headers->GetContentRangeFor206(&range_start, &range_end, &object_size));
   int64_t content_length = headers->GetContentLength();
 
   int length = end - start + 1;

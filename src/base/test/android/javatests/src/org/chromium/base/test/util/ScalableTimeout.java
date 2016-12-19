@@ -12,7 +12,7 @@ import org.chromium.base.annotations.SuppressFBWarnings;
  *   adb shell "echo 20.0 > /data/local/tmp/chrome_timeout_scale"
  */
 public class ScalableTimeout {
-    private static Double sTimeoutScale = null;
+    private static Double sTimeoutScale;
     public static final String PROPERTY_FILE = "/data/local/tmp/chrome_timeout_scale";
 
     @SuppressFBWarnings("DMI_HARDCODED_ABSOLUTE_FILENAME")

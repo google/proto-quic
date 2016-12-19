@@ -4,15 +4,20 @@
 
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 #include "base/at_exit.h"
 #include "base/command_line.h"
 #include "base/files/file_path.h"
+#include "base/format_macros.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/md5.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_piece.h"
+#include "base/strings/stringprintf.h"
 #include "net/base/io_buffer.h"
 #include "net/base/test_completion_callback.h"
 #include "net/disk_cache/disk_cache.h"
@@ -25,11 +30,18 @@ using disk_cache::Entry;
 
 namespace {
 
+struct EntryData {
+  std::string url;
+  std::string mime_type;
+  int size;
+};
+
 constexpr int kResponseInfoIndex = 0;
+constexpr int kResponseContentIndex = 1;
 
 const char* const kCommandNames[] = {
     "stop",          "get_size",   "list_keys",          "get_stream_for_key",
-    "delete_stream", "delete_key", "update_raw_headers",
+    "delete_stream", "delete_key", "update_raw_headers", "list_dups",
 };
 
 // Prints the command line help.
@@ -50,6 +62,8 @@ void PrintHelp() {
   std::cout << "  get_stream <key> <index>: Print a particular stream for a"
             << " given key." << std::endl;
   std::cout << "  list_keys: List all keys in the cache." << std::endl;
+  std::cout << "  list_dups: List all resources with duplicate bodies in the "
+            << "cache." << std::endl;
   std::cout << "  update_raw_headers <key>: Update stdin as the key's raw "
             << "response headers." << std::endl;
   std::cout << "  stop: Verify that the cache can be opened and return, "
@@ -64,9 +78,9 @@ void PrintHelp() {
 // Generic command input/output.
 class CommandMarshal {
  public:
-  CommandMarshal(Backend* cache_backend)
-      : command_failed_(false), cache_backend_(cache_backend){};
-  virtual ~CommandMarshal(){};
+  explicit CommandMarshal(Backend* cache_backend)
+      : command_failed_(false), cache_backend_(cache_backend) {}
+  virtual ~CommandMarshal() {}
 
   // Reads the next command's name to execute.
   virtual std::string ReadCommandName() = 0;
@@ -105,7 +119,7 @@ class CommandMarshal {
   virtual void ReturnFailure(const std::string& error_msg) = 0;
 
   // Communicates back command success.
-  virtual void ReturnSuccess() { DCHECK(!command_failed_); };
+  virtual void ReturnSuccess() { DCHECK(!command_failed_); }
 
   // Returns whether the command has failed.
   inline bool has_failed() { return command_failed_; }
@@ -199,7 +213,7 @@ class ProgramArgumentCommandMarshal final : public CommandMarshal {
 // cachetool's main loop.
 class StreamCommandMarshal final : public CommandMarshal {
  public:
-  StreamCommandMarshal(Backend* cache_backend)
+  explicit StreamCommandMarshal(Backend* cache_backend)
       : CommandMarshal(cache_backend) {}
 
   // Implements CommandMarshal.
@@ -300,6 +314,153 @@ bool ListKeys(CommandMarshal* command_marshal) {
   }
   command_marshal->ReturnString("");
   return true;
+}
+
+bool GetResponseInfoForEntry(disk_cache::Entry* entry,
+                             net::HttpResponseInfo* response_info) {
+  int size = entry->GetDataSize(kResponseInfoIndex);
+  if (size == 0)
+    return false;
+  scoped_refptr<net::IOBuffer> buffer = new net::IOBufferWithSize(size);
+  net::TestCompletionCallback cb;
+
+  int bytes_read = 0;
+  while (true) {
+    int rv = entry->ReadData(kResponseInfoIndex, bytes_read, buffer.get(), size,
+                             cb.callback());
+    rv = cb.GetResult(rv);
+    if (rv < 0) {
+      entry->Close();
+      return false;
+    }
+
+    if (rv == 0) {
+      bool truncated_response_info = false;
+      net::HttpCache::ParseResponseInfo(buffer->data(), size, response_info,
+                                        &truncated_response_info);
+      return !truncated_response_info;
+    }
+
+    bytes_read += rv;
+  }
+
+  NOTREACHED();
+  return false;
+}
+
+std::string GetMD5ForResponseBody(disk_cache::Entry* entry) {
+  if (entry->GetDataSize(kResponseContentIndex) == 0)
+    return "";
+
+  const int kInitBufferSize = 80 * 1024;
+  scoped_refptr<net::IOBuffer> buffer =
+      new net::IOBufferWithSize(kInitBufferSize);
+  net::TestCompletionCallback cb;
+
+  base::MD5Context ctx;
+  base::MD5Init(&ctx);
+
+  int bytes_read = 0;
+  while (true) {
+    int rv = entry->ReadData(kResponseContentIndex, bytes_read, buffer.get(),
+                             kInitBufferSize, cb.callback());
+    rv = cb.GetResult(rv);
+    if (rv < 0) {
+      entry->Close();
+      return "";
+    }
+
+    if (rv == 0) {
+      base::MD5Digest digest;
+      base::MD5Final(&digest, &ctx);
+      return base::MD5DigestToBase16(digest);
+    }
+
+    bytes_read += rv;
+    MD5Update(&ctx, base::StringPiece(buffer->data(), rv));
+  }
+
+  NOTREACHED();
+  return "";
+}
+
+void ListDups(CommandMarshal* command_marshal) {
+  std::unique_ptr<Backend::Iterator> entry_iterator =
+      command_marshal->cache_backend()->CreateIterator();
+  Entry* entry = nullptr;
+  net::TestCompletionCallback cb;
+  int rv = entry_iterator->OpenNextEntry(&entry, cb.callback());
+  command_marshal->ReturnSuccess();
+
+  std::unordered_map<std::string, std::vector<EntryData>> md5_entries;
+
+  int total_entries = 0;
+
+  while (cb.GetResult(rv) == net::OK) {
+    total_entries += 1;
+    net::HttpResponseInfo response_info;
+    if (!GetResponseInfoForEntry(entry, &response_info)) {
+      entry->Close();
+      entry = nullptr;
+      rv = entry_iterator->OpenNextEntry(&entry, cb.callback());
+      continue;
+    }
+
+    std::string hash = GetMD5ForResponseBody(entry);
+    if (hash.empty()) {
+      // Sparse entries and empty bodies are skipped.
+      entry->Close();
+      entry = nullptr;
+      rv = entry_iterator->OpenNextEntry(&entry, cb.callback());
+      continue;
+    }
+
+    EntryData entry_data;
+
+    entry_data.url = entry->GetKey();
+    entry_data.size = entry->GetDataSize(kResponseContentIndex);
+    if (response_info.headers)
+      response_info.headers->GetMimeType(&entry_data.mime_type);
+
+    auto iter = md5_entries.find(hash);
+    if (iter == md5_entries.end())
+      md5_entries.insert(
+          std::make_pair(hash, std::vector<EntryData>{entry_data}));
+    else
+      iter->second.push_back(entry_data);
+
+    entry->Close();
+    entry = nullptr;
+    rv = entry_iterator->OpenNextEntry(&entry, cb.callback());
+  }
+
+  // Print the duplicates and collect stats.
+  int total_duped_entries = 0;
+  int64_t total_duped_bytes = 0u;
+  for (const auto& hash_and_entries : md5_entries) {
+    if (hash_and_entries.second.size() == 1)
+      continue;
+
+    int dups = hash_and_entries.second.size() - 1;
+    total_duped_entries += dups;
+    total_duped_bytes += hash_and_entries.second[0].size * dups;
+
+    for (const auto& entry : hash_and_entries.second) {
+      std::string out = base::StringPrintf(
+          "%d, %s, %s", entry.size, entry.url.c_str(), entry.mime_type.c_str());
+      command_marshal->ReturnString(out);
+    }
+  }
+
+  // Print the stats.
+  rv = command_marshal->cache_backend()->CalculateSizeOfAllEntries(
+      cb.callback());
+  rv = cb.GetResult(rv);
+  LOG(ERROR) << "Wasted bytes = " << total_duped_bytes;
+  LOG(ERROR) << "Wasted entries = " << total_duped_entries;
+  LOG(ERROR) << "Total entries = " << total_entries;
+  LOG(ERROR) << "Cache size = " << rv;
+  LOG(ERROR) << "Percentage of cache wasted = " << total_duped_bytes * 100 / rv;
 }
 
 // Gets a key's stream to a buffer.
@@ -460,6 +621,8 @@ bool ExecuteCommands(CommandMarshal* command_marshal) {
       ListKeys(command_marshal);
     } else if (subcommand == "update_raw_headers") {
       UpdateRawResponseHeaders(command_marshal);
+    } else if (subcommand == "list_dups") {
+      ListDups(command_marshal);
     } else {
       // The wrong subcommand is originated from the command line.
       command_marshal->ReturnFailure("Unknown command.");

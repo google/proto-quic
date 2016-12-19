@@ -1399,6 +1399,7 @@ if (enable_java_templates) {
   #     default will use the build arg run_findbugs.
   #   proguard_jar_path: The path to proguard.jar you wish to use. If undefined,
   #     the proguard used will be the checked in one in //third_party/proguard.
+  #   never_incremental: If true, |incremental_apk_by_default| will be ignored.
   #
   # Example
   #   android_apk("foo_apk") {
@@ -1463,7 +1464,11 @@ if (enable_java_templates) {
       _install_script_name = invoker.install_script_name
     }
     _incremental_install_script_path =
-        "${root_out_dir}/bin/${_install_script_name}_incremental"
+        "${root_out_dir}/bin/${_install_script_name}"
+    if (!incremental_apk_by_default) {
+      _incremental_install_script_path =
+          "${_incremental_install_script_path}_incremental"
+    }
 
     _version_code = android_default_version_code
     if (defined(invoker.version_code)) {
@@ -1605,6 +1610,8 @@ if (enable_java_templates) {
     }
 
     _emma_never_instrument = defined(invoker.testonly) && invoker.testonly
+    _incremental_allowed =
+        !(defined(invoker.never_incremental) && invoker.never_incremental)
 
     build_config_target = "${_template_name}__build_config"
     write_build_config(build_config_target) {
@@ -1613,6 +1620,7 @@ if (enable_java_templates) {
       jar_path = _jar_path
       dex_path = final_dex_path
       apk_path = _final_apk_path
+      incremental_allowed = _incremental_allowed
       incremental_apk_path = "${_final_apk_path_no_ext}_incremental.apk"
       incremental_install_script_path = _incremental_install_script_path
       resources_zip = resources_zip_path
@@ -1991,6 +1999,7 @@ if (enable_java_templates) {
 
     _extra_native_libs = []
     _extra_native_libs_deps = []
+    assert(_extra_native_libs_deps == [])  # Mark as used.
     _extra_native_libs_even_when_incremental = []
     _extra_native_libs_even_when_incremental_deps = []
     assert(_extra_native_libs_even_when_incremental_deps == [])  # Mark as used.
@@ -2197,42 +2206,51 @@ if (enable_java_templates) {
     }
 
     group(target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "data",
-                               "data_deps",
-                             ])
-      public_deps = _final_deps
-
-      # Make the proguard .mapping file easy to find by putting it beside the .apk.
-      if (_proguard_enabled) {
+      if (_incremental_allowed && incremental_apk_by_default) {
         deps = [
-          ":$_copy_proguard_mapping_target",
+          ":${target_name}_incremental",
         ]
+      } else {
+        forward_variables_from(invoker,
+                               [
+                                 "data",
+                                 "data_deps",
+                               ])
+        public_deps = _final_deps
+
+        # Make the proguard .mapping file easy to find by putting it beside the .apk.
+        if (_proguard_enabled) {
+          deps = [
+            ":$_copy_proguard_mapping_target",
+          ]
+        }
       }
     }
-    group("${target_name}_incremental") {
-      forward_variables_from(invoker,
-                             [
-                               "data",
-                               "data_deps",
-                             ])
-      if (!defined(data_deps)) {
-        data_deps = []
+
+    if (_incremental_allowed) {
+      group("${target_name}_incremental") {
+        forward_variables_from(invoker,
+                               [
+                                 "data",
+                                 "data_deps",
+                               ])
+        if (!defined(data_deps)) {
+          data_deps = []
+        }
+
+        # device/commands is used by the installer script to push files via .zip.
+        data_deps += [ "//build/android/pylib/device/commands" ] +
+                     _native_libs_deps + _extra_native_libs_deps
+
+        # Since the _incremental.apk does not include use .so nor .dex from the
+        # actual target, but instead loads them at runtime, we need to explicitly
+        # depend on them here.
+        public_deps = [
+          ":${_create_incremental_script_rule_name}",
+          ":${_template_name}__create_incremental",
+          ":${java_target}",
+        ]
       }
-
-      # device/commands is used by the installer script to push files via .zip.
-      data_deps += [ "//build/android/pylib/device/commands" ] +
-                   _native_libs_deps + _extra_native_libs_deps
-
-      # Since the _incremental.apk does not include use .so nor .dex from the
-      # actual target, but instead loads them at runtime, we need to explicitly
-      # depend on them here.
-      public_deps = [
-        ":${_create_incremental_script_rule_name}",
-        ":${_template_name}__create_incremental",
-        ":${java_target}",
-      ]
     }
   }
 
@@ -2282,25 +2300,33 @@ if (enable_java_templates) {
     _install_script_name = "install_$target_name"
     _dist_ijar_path =
         "$root_build_dir/test.lib.java/" + invoker.apk_name + ".jar"
-
-    test_runner_script(_test_runner_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "additional_apks",
-                               "apk_under_test",
-                               "data",
-                               "data_deps",
-                               "deps",
-                               "ignore_all_data_deps",
-                               "public_deps",
-                             ])
-      test_name = invoker.target_name
-      test_type = "instrumentation"
-      apk_target = ":$_apk_target_name"
-      test_jar = _dist_ijar_path
+    _incremental_test_runner_target_name =
+        "${_test_runner_target_name}_incremental"
+    _incremental_test_name = "${invoker.target_name}_incremental"
+    if (incremental_apk_by_default) {
+      _incremental_test_runner_target_name = _test_runner_target_name
+      _incremental_test_name = invoker.target_name
     }
 
-    test_runner_script("${_test_runner_target_name}_incremental") {
+    if (!incremental_apk_by_default) {
+      test_runner_script(_test_runner_target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "additional_apks",
+                                 "apk_under_test",
+                                 "data",
+                                 "data_deps",
+                                 "deps",
+                                 "ignore_all_data_deps",
+                                 "public_deps",
+                               ])
+        test_name = invoker.target_name
+        test_type = "instrumentation"
+        apk_target = ":$_apk_target_name"
+        test_jar = _dist_ijar_path
+      }
+    }
+    test_runner_script(_incremental_test_runner_target_name) {
       forward_variables_from(invoker,
                              [
                                "additional_apks",
@@ -2311,7 +2337,7 @@ if (enable_java_templates) {
                                "ignore_all_data_deps",
                                "public_deps",
                              ])
-      test_name = "${invoker.target_name}_incremental"
+      test_name = _incremental_test_name
       test_type = "instrumentation"
       apk_target = ":$_apk_target_name"
       test_jar = _dist_ijar_path
@@ -2354,15 +2380,21 @@ if (enable_java_templates) {
     }
 
     group(target_name) {
-      public_deps = [
-        ":$_apk_target_name",
-        ":$_test_runner_target_name",
+      if (incremental_apk_by_default) {
+        deps = [
+          ":${target_name}_incremental",
+        ]
+      } else {
+        public_deps = [
+          ":$_apk_target_name",
+          ":$_test_runner_target_name",
 
-        # Required by test runner to enumerate test list.
-        ":${_apk_target_name}_dist_ijar",
-      ]
-      if (defined(invoker.apk_under_test)) {
-        public_deps += [ invoker.apk_under_test ]
+          # Required by test runner to enumerate test list.
+          ":${_apk_target_name}_dist_ijar",
+        ]
+        if (defined(invoker.apk_under_test)) {
+          public_deps += [ invoker.apk_under_test ]
+        }
       }
     }
 
@@ -2374,9 +2406,9 @@ if (enable_java_templates) {
     }
     group("${target_name}_incremental") {
       public_deps = [
+        ":$_incremental_test_runner_target_name",
         ":${_apk_target_name}_dist_ijar",
         ":${_apk_target_name}_incremental",
-        ":${_test_runner_target_name}_incremental",
       ]
       if (defined(invoker.apk_under_test)) {
         public_deps += [ "${invoker.apk_under_test}_incremental" ]

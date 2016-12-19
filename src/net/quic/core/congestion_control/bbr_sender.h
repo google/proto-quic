@@ -89,8 +89,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
     bool last_sample_is_app_limited;
   };
 
-  BbrSender(const QuicClock* clock,
-            const RttStats* rtt_stats,
+  BbrSender(const RttStats* rtt_stats,
             const QuicUnackedPacketMap* unacked_packets,
             QuicPacketCount initial_tcp_congestion_window,
             QuicPacketCount max_tcp_congestion_window,
@@ -190,7 +189,6 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // recovery.
   void CalculateRecoveryWindow(QuicByteCount bytes_acked);
 
-  const QuicClock* clock_;
   const RttStats* rtt_stats_;
   const QuicUnackedPacketMap* unacked_packets_;
   QuicRandom* random_;

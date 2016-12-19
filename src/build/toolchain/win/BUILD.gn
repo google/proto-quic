@@ -272,6 +272,16 @@ template("msvc_toolchain") {
         command = "cmd /c $python_path $tool_wrapper_path delete-file $pdbname && $command"
       }
 
+      if (linkrepro_root_dir != "") {
+        # Create the directory that will receive the link repro for this target
+        # if needed. Note that this will create one directory per link target
+        # even if this target doesn't generate a link repro. This is necessary
+        # because the linker doesn't generate the directory specified to the
+        # /LINKREPRO flag if it doesn't exist.
+        linkrepro_dir = "$linkrepro_root_dir\\{{target_output_name}}"
+        command = "cmd /c mkdir $linkrepro_dir && $command"
+      }
+
       default_output_extension = ".exe"
       default_output_dir = "{{root_out_dir}}"
       description = "LINK {{output}}"

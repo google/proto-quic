@@ -41,7 +41,7 @@ _INVALID_VALUE = -1
 
 
 # Command line arguments for Chrome.
-_CHROME_ARGS = [
+CHROME_ARGS = [
     # Disable backgound network requests that may pollute WPR archive, pollute
     # HTTP cache generation, and introduce noise in loading performance.
     '--disable-background-networking',
@@ -133,11 +133,10 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
     return match.group(1) if match is not None else None
 
 
-Result = collections.namedtuple('Result', ['warmup', 'speculation_mode',
-                                           'delay_to_may_launch_url',
-                                           'delay_to_launch_url',
-                                           'commit', 'plt',
-                                           'first_contentful_paint'])
+RESULT_FIELDS = ('warmup', 'speculation_mode', 'delay_to_may_launch_url',
+                 'delay_to_launch_url', 'commit', 'plt',
+                 'first_contentful_paint')
+Result = collections.namedtuple('Result', RESULT_FIELDS)
 
 
 def ParseResult(result_line):
@@ -181,7 +180,7 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
     try:
       while should_stop is None or not should_stop.is_set():
         config = configs[random.randint(0, len(configs) - 1)]
-        chrome_args = _CHROME_ARGS + wpr_attributes.chrome_args
+        chrome_args = CHROME_ARGS + wpr_attributes.chrome_args
         if config['speculation_mode'] == 'no_state_prefetch':
           # NoStatePrefetch is enabled through an experiment.
           chrome_args.extend([
@@ -218,7 +217,7 @@ def ProcessOutput(filename):
     A numpy structured array.
   """
   import numpy as np
-  data = np.genfromtxt(filename, delimiter=',')
+  data = np.genfromtxt(filename, delimiter=',', skip_header=1)
   result = np.array(np.zeros(len(data)),
                     dtype=[('warmup', bool), ('speculation_mode', np.int32),
                            ('delay_to_may_launch_url', np.int32),

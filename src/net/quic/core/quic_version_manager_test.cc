@@ -17,14 +17,36 @@ namespace {
 TEST(QuicVersionManagerTest, QuicVersionManager) {
   QuicFlagSaver flags;
   FLAGS_quic_enable_version_36_v3 = false;
+  FLAGS_quic_enable_version_37 = false;
+  FLAGS_quic_disable_version_34 = false;
   QuicVersionManager manager(AllSupportedVersions());
   EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
             manager.GetSupportedVersions());
+
   FLAGS_quic_enable_version_36_v3 = true;
   EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
             manager.GetSupportedVersions());
+  ASSERT_EQ(3u, manager.GetSupportedVersions().size());
   EXPECT_EQ(QUIC_VERSION_36, manager.GetSupportedVersions()[0]);
   EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[1]);
+  EXPECT_EQ(QUIC_VERSION_34, manager.GetSupportedVersions()[2]);
+
+  FLAGS_quic_enable_version_37 = true;
+  EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
+            manager.GetSupportedVersions());
+  ASSERT_EQ(4u, manager.GetSupportedVersions().size());
+  EXPECT_EQ(QUIC_VERSION_37, manager.GetSupportedVersions()[0]);
+  EXPECT_EQ(QUIC_VERSION_36, manager.GetSupportedVersions()[1]);
+  EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[2]);
+  EXPECT_EQ(QUIC_VERSION_34, manager.GetSupportedVersions()[3]);
+
+  FLAGS_quic_disable_version_34 = true;
+  EXPECT_EQ(FilterSupportedVersions(AllSupportedVersions()),
+            manager.GetSupportedVersions());
+  ASSERT_EQ(3u, manager.GetSupportedVersions().size());
+  EXPECT_EQ(QUIC_VERSION_37, manager.GetSupportedVersions()[0]);
+  EXPECT_EQ(QUIC_VERSION_36, manager.GetSupportedVersions()[1]);
+  EXPECT_EQ(QUIC_VERSION_35, manager.GetSupportedVersions()[2]);
 }
 
 }  // namespace

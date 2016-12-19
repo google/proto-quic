@@ -19,6 +19,7 @@ RunLoop::RunLoop()
       running_(false),
       quit_when_idle_received_(false),
       weak_factory_(this) {
+  DCHECK(loop_);
 }
 
 RunLoop::~RunLoop() {

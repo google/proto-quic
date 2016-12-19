@@ -44,9 +44,9 @@ public class ObserverList<E> implements Iterable<E> {
     }
 
     public final List<E> mObservers = new ArrayList<E>();
-    private int mIterationDepth = 0;
-    private int mCount = 0;
-    private boolean mNeedsCompact = false;
+    private int mIterationDepth;
+    private int mCount;
+    private boolean mNeedsCompact;
 
     public ObserverList() {}
 
@@ -190,8 +190,8 @@ public class ObserverList<E> implements Iterable<E> {
 
     private class ObserverListIterator implements RewindableIterator<E> {
         private int mListEndMarker;
-        private int mIndex = 0;
-        private boolean mIsExhausted = false;
+        private int mIndex;
+        private boolean mIsExhausted;
 
         private ObserverListIterator() {
             ObserverList.this.incrementIterationDepth();

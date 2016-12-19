@@ -54,6 +54,7 @@
 #include "url/gurl.h"
 #include "url/origin.h"
 #include "url/third_party/mozilla/url_parse.h"
+#include "url/url_util.h"
 
 namespace net {
 namespace registry_controlled_domains {
@@ -190,10 +191,9 @@ base::StringPiece GetDomainAndRegistryImpl(
 // TODO(pkalinnikov): Eliminate this helper by exposing StringPiece as the
 // interface type for all the APIs.
 base::StringPiece GetDomainAndRegistryAsStringPiece(
-    const GURL& gurl,
+    base::StringPiece host,
     PrivateRegistryFilter filter) {
-  base::StringPiece host = gurl.host_piece();
-  if (host.empty() || gurl.HostIsIPAddress())
+  if (host.empty() || url::HostIsIPAddress(host))
     return base::StringPiece();
   return GetDomainAndRegistryImpl(host, filter);
 }
@@ -309,11 +309,31 @@ size_t DoPermissiveGetHostRegistryLength(base::BasicStringPiece<Str> host,
   return canonical_rcd_len;
 }
 
+bool SameDomainOrHost(base::StringPiece host1,
+                      base::StringPiece host2,
+                      PrivateRegistryFilter filter) {
+  // Quickly reject cases where either host is empty.
+  if (host1.empty() || host2.empty())
+    return false;
+
+  // Check for exact host matches, which is faster than looking up the domain
+  // and registry.
+  if (host1 == host2)
+    return true;
+
+  // Check for a domain and registry match.
+  const base::StringPiece& domain1 =
+      GetDomainAndRegistryAsStringPiece(host1, filter);
+  return !domain1.empty() &&
+         (domain1 == GetDomainAndRegistryAsStringPiece(host2, filter));
+}
+
 }  // namespace
 
 std::string GetDomainAndRegistry(const GURL& gurl,
                                  PrivateRegistryFilter filter) {
-  return GetDomainAndRegistryAsStringPiece(gurl, filter).as_string();
+  return GetDomainAndRegistryAsStringPiece(gurl.host_piece(), filter)
+      .as_string();
 }
 
 std::string GetDomainAndRegistry(base::StringPiece host,
@@ -329,34 +349,20 @@ bool SameDomainOrHost(
     const GURL& gurl1,
     const GURL& gurl2,
     PrivateRegistryFilter filter) {
-  // Quickly reject cases where either host is empty.
-  if (!gurl1.has_host() || !gurl2.has_host())
-    return false;
-
-  // Check for exact host matches, which is faster than looking up the domain
-  // and registry.
-  if (gurl1.host_piece() == gurl2.host_piece())
-    return true;
-
-  // Check for a domain and registry match.
-  const base::StringPiece& domain1 =
-      GetDomainAndRegistryAsStringPiece(gurl1, filter);
-  return !domain1.empty() &&
-         (domain1 == GetDomainAndRegistryAsStringPiece(gurl2, filter));
+  return SameDomainOrHost(gurl1.host_piece(), gurl2.host_piece(), filter);
 }
 
 bool SameDomainOrHost(const url::Origin& origin1,
                       const url::Origin& origin2,
                       PrivateRegistryFilter filter) {
-  return SameDomainOrHost(origin1.GetURL(), origin2.GetURL(), filter);
+  return SameDomainOrHost(origin1.host(), origin2.host(), filter);
 }
 
 bool SameDomainOrHost(const url::Origin& origin1,
                       const base::Optional<url::Origin>& origin2,
                       PrivateRegistryFilter filter) {
-  if (!origin2.has_value())
-    return false;
-  return SameDomainOrHost(origin1, origin2.value(), filter);
+  return origin2.has_value() &&
+         SameDomainOrHost(origin1, origin2.value(), filter);
 }
 
 size_t GetRegistryLength(

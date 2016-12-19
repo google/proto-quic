@@ -115,7 +115,8 @@ bool AeadBaseDecrypter::SetDiversificationNonce(
   return true;
 }
 
-bool AeadBaseDecrypter::DecryptPacket(QuicPathId path_id,
+bool AeadBaseDecrypter::DecryptPacket(QuicVersion /*version*/,
+                                      QuicPathId path_id,
                                       QuicPacketNumber packet_number,
                                       StringPiece associated_data,
                                       StringPiece ciphertext,

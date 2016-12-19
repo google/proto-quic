@@ -199,12 +199,9 @@ def _CreateRJavaFile(package, resources_by_type, shared_resources):
   """Generates the contents of a R.java file."""
   # Keep these assignments all on one line to make diffing against regular
   # aapt-generated files easier.
-  create_id = ('{{ e.resource_type }}.{{ e.name }} = '
-               '({{ e.resource_type }}.{{ e.name }} & 0x00ffffff) |'
-               ' (packageId << 24);')
-  create_id_arr = ('{{ e.resource_type }}.{{ e.name }}[i] = '
-                   '({{ e.resource_type }}.{{ e.name }}[i] & 0x00ffffff) |'
-                   ' (packageId << 24);')
+  create_id = ('{{ e.resource_type }}.{{ e.name }} ^= packageIdTransform;')
+  create_id_arr = ('{{ e.resource_type }}.{{ e.name }}[i] ^='
+                   ' packageIdTransform;')
   # Here we diverge from what aapt does. Because we have so many
   # resources, the onResourcesLoaded method was exceeding the 64KB limit that
   # Java imposes. For this reason we split onResourcesLoaded into different
@@ -214,6 +211,7 @@ def _CreateRJavaFile(package, resources_by_type, shared_resources):
 package {{ package }};
 
 public final class R {
+    private static boolean sResourcesDidLoad;
     {% for resource_type in resource_types %}
     public static final class {{ resource_type }} {
         {% for e in resources[resource_type] %}
@@ -227,8 +225,11 @@ public final class R {
     {% endfor %}
     {% if shared_resources %}
     public static void onResourcesLoaded(int packageId) {
+        assert !sResourcesDidLoad;
+        sResourcesDidLoad = true;
+        int packageIdTransform = (packageId ^ 0x7f) << 24;
         {% for resource_type in resource_types %}
-        onResourcesLoaded{{ resource_type|title }}(packageId);
+        onResourcesLoaded{{ resource_type|title }}(packageIdTransform);
         {% for e in resources[resource_type] %}
         {% if e.java_type == 'int[]' %}
         for(int i = 0; i < {{ e.resource_type }}.{{ e.name }}.length; ++i) {
@@ -239,7 +240,8 @@ public final class R {
         {% endfor %}
     }
     {% for res_type in resource_types %}
-    private static void onResourcesLoaded{{ res_type|title }}(int packageId) {
+    private static void onResourcesLoaded{{ res_type|title }} (
+            int packageIdTransform) {
         {% for e in resources[res_type] %}
         {% if res_type != 'styleable' and e.java_type != 'int[]' %}
         """ + create_id + """

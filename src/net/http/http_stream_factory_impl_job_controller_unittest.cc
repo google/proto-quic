@@ -936,7 +936,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
   job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig(),
-                                 ProxyInfo());
+                                 job_factory_.main_job()->proxy_info());
 
   // JobController shouldn't report the status of alternative server job as
   // request is already successfully served.

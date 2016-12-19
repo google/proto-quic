@@ -167,14 +167,23 @@ static_library("options_sources") {
   configs -= [ "//build/config/sanitizers:default_sanitizer_flags" ]
 
   if (is_asan) {
+    if (!defined(asan_suppressions_file)) {
+      asan_suppressions_file = "//build/sanitizers/asan_suppressions.cc"
+    }
     sources += [ asan_suppressions_file ]
   }
 
   if (is_lsan) {
+    if (!defined(lsan_suppressions_file)) {
+      lsan_suppressions_file = "//build/sanitizers/lsan_suppressions.cc"
+    }
     sources += [ lsan_suppressions_file ]
   }
 
   if (is_tsan) {
+    if (!defined(tsan_suppressions_file)) {
+      tsan_suppressions_file = "//build/sanitizers/tsan_suppressions.cc"
+    }
     sources += [ tsan_suppressions_file ]
   }
 }
@@ -307,14 +316,18 @@ config("asan_flags") {
       ]
     }
     if (is_win) {
-      cflags += [ "-fsanitize-blacklist=" +
-                  rebase_path("//tools/memory/asan/blacklist_win.txt",
-                              root_build_dir) ]
+      if (!defined(asan_win_blacklist_path)) {
+        asan_win_blacklist_path =
+            rebase_path("//tools/memory/asan/blacklist_win.txt", root_build_dir)
+      }
+      cflags += [ "-fsanitize-blacklist=$asan_win_blacklist_path" ]
     } else {
       # TODO(rnk): Remove this as discussed in http://crbug.com/427202.
-      cflags +=
-          [ "-fsanitize-blacklist=" +
-            rebase_path("//tools/memory/asan/blacklist.txt", root_build_dir) ]
+      if (!defined(asan_blacklist_path)) {
+        asan_blacklist_path =
+            rebase_path("//tools/memory/asan/blacklist.txt", root_build_dir)
+      }
+      cflags += [ "-fsanitize-blacklist=$asan_blacklist_path" ]
     }
   }
 }
@@ -348,8 +361,10 @@ config("link_shared_library") {
 config("cfi_flags") {
   cflags = []
   if (is_cfi && !is_nacl) {
-    cfi_blacklist_path =
-        rebase_path("//tools/cfi/blacklist.txt", root_build_dir)
+    if (!defined(cfi_blacklist_path)) {
+      cfi_blacklist_path =
+          rebase_path("//tools/cfi/blacklist.txt", root_build_dir)
+    }
     cflags += [
       "-fsanitize=cfi-vcall",
       "-fsanitize-blacklist=$cfi_blacklist_path",
@@ -406,8 +421,10 @@ config("lsan_flags") {
 config("msan_flags") {
   if (is_msan) {
     assert(is_linux, "msan only supported on linux x86_64")
-    msan_blacklist_path =
-        rebase_path("//tools/msan/blacklist.txt", root_build_dir)
+    if (!defined(msan_blacklist_path)) {
+      msan_blacklist_path =
+          rebase_path("//tools/msan/blacklist.txt", root_build_dir)
+    }
     cflags = [
       "-fsanitize=memory",
       "-fsanitize-memory-track-origins=$msan_track_origins",
@@ -419,8 +436,10 @@ config("msan_flags") {
 config("tsan_flags") {
   if (is_tsan) {
     assert(is_linux, "tsan only supported on linux x86_64")
-    tsan_blacklist_path =
-        rebase_path("//tools/memory/tsan_v2/ignores.txt", root_build_dir)
+    if (!defined(tsan_blacklist_path)) {
+      tsan_blacklist_path =
+          rebase_path("//tools/memory/tsan_v2/ignores.txt", root_build_dir)
+    }
     cflags = [
       "-fsanitize=thread",
       "-fsanitize-blacklist=$tsan_blacklist_path",
@@ -434,8 +453,10 @@ config("tsan_flags") {
 config("ubsan_flags") {
   cflags = []
   if (is_ubsan) {
-    ubsan_blacklist_path =
-        rebase_path("//tools/ubsan/blacklist.txt", root_build_dir)
+    if (!defined(ubsan_blacklist_path)) {
+      ubsan_blacklist_path =
+          rebase_path("//tools/ubsan/blacklist.txt", root_build_dir)
+    }
     cflags += [
       # Yasm dies with an "Illegal instruction" error when bounds checking is
       # enabled. See http://crbug.com/489901
@@ -481,8 +502,10 @@ config("ubsan_no_recover") {
 
 config("ubsan_security_flags") {
   if (is_ubsan_security) {
-    ubsan_security_blacklist_path =
-        rebase_path("//tools/ubsan/security_blacklist.txt", root_build_dir)
+    if (!defined(ubsan_security_blacklist_path)) {
+      ubsan_security_blacklist_path =
+          rebase_path("//tools/ubsan/security_blacklist.txt", root_build_dir)
+    }
     cflags = [
       "-fsanitize=signed-integer-overflow,shift,vptr,function,vla-bound",
       "-fsanitize-blacklist=$ubsan_security_blacklist_path",
@@ -498,8 +521,10 @@ config("ubsan_null_flags") {
 
 config("ubsan_vptr_flags") {
   if (is_ubsan_vptr) {
-    ubsan_vptr_blacklist_path =
-        rebase_path("//tools/ubsan/vptr_blacklist.txt", root_build_dir)
+    if (!defined(ubsan_vptr_blacklist_path)) {
+      ubsan_vptr_blacklist_path =
+          rebase_path("//tools/ubsan/vptr_blacklist.txt", root_build_dir)
+    }
     cflags = [
       "-fsanitize=vptr",
       "-fsanitize-blacklist=$ubsan_vptr_blacklist_path",

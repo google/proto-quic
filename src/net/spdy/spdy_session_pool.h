@@ -23,6 +23,7 @@
 #include "net/cert/cert_database.h"
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_server.h"
+#include "net/spdy/server_push_delegate.h"
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -131,6 +132,10 @@ class NET_EXPORT SpdySessionPool
     return http_server_properties_;
   }
 
+  void set_server_push_delegate(ServerPushDelegate* push_delegate) {
+    push_delegate_ = push_delegate;
+  }
+
   // NetworkChangeNotifier::IPAddressObserver methods:
 
   // We flush all idle sessions and release references to the active ones so
@@ -226,6 +231,7 @@ class NET_EXPORT SpdySessionPool
   size_t session_max_recv_window_size_;
   size_t stream_max_recv_window_size_;
   TimeFunc time_func_;
+  ServerPushDelegate* push_delegate_;
 
   // Determines if a proxy is a trusted SPDY proxy, which is allowed to push
   // resources from origins that are different from those of their associated

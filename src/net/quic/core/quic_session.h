@@ -372,6 +372,10 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
                                  uint64_t previous_bytes_written,
                                  bool previous_fin_sent);
 
+  // Called in OnConfigNegotiated for Finch trials to measure performance of
+  // starting with larger flow control receive windows.
+  void AdjustInitialFlowControlWindows(size_t stream_window);
+
   // Keep track of highest received byte offset of locally closed streams, while
   // waiting for a definitive final highest offset from the peer.
   std::map<QuicStreamId, QuicStreamOffset>

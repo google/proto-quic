@@ -158,18 +158,27 @@ class DnsClient;
 class MockTransactionFactory;
 
 struct MockDnsClientRule {
-  enum Result {
+  enum ResultType {
     FAIL,     // Fail asynchronously with ERR_NAME_NOT_RESOLVED.
     TIMEOUT,  // Fail asynchronously with ERR_DNS_TIMEOUT.
     EMPTY,    // Return an empty response.
-    OK,       // Return a response with loopback address.
+    OK,       // Return an IP address (the accompanying IP is an argument in the
+              // Result structure, or understood as localhost when unspecified).
+  };
+
+  struct Result {
+    explicit Result(const IPAddress& ip) : type(OK), ip(ip) {}
+    explicit Result(ResultType type) : type(type) {}
+
+    ResultType type;
+    IPAddress ip;
   };
 
   // If |delay| is true, matching transactions will be delayed until triggered
   // by the consumer.
   MockDnsClientRule(const std::string& prefix_arg,
                     uint16_t qtype_arg,
-                    Result result_arg,
+                    const Result& result_arg,
                     bool delay)
       : result(result_arg),
         prefix(prefix_arg),

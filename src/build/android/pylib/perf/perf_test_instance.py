@@ -79,6 +79,7 @@ class PerfTestInstance(test_instance.TestInstance):
         ' '.join(args.single_step_command) if args.single_step else None)
     self._steps = args.steps
     self._test_filter = args.test_filter
+    self._trace_output = args.trace_output
     self._write_buildbot_json = args.write_buildbot_json
 
   #override
@@ -235,6 +236,10 @@ class PerfTestInstance(test_instance.TestInstance):
   @property
   def test_filter(self):
     return self._test_filter
+
+  @property
+  def trace_output(self):
+    return self._trace_output
 
 
 class PersistentDataError(base_error.BaseError):

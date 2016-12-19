@@ -68,6 +68,10 @@
 #include "net/websockets/websocket_handshake_stream_base.h"
 #include "url/origin.h"
 
+#if defined(OS_ANDROID)
+#include "net/android/network_library.h"
+#endif
+
 static const char kAvailDictionaryHeader[] = "Avail-Dictionary";
 
 namespace {
@@ -169,27 +173,6 @@ void LogChannelIDAndCookieStores(const GURL& url,
                             EPHEMERALITY_MAX);
 }
 
-net::URLRequestRedirectJob* MaybeInternallyRedirect(
-    net::URLRequest* request,
-    net::NetworkDelegate* network_delegate) {
-  const GURL& url = request->url();
-  if (url.SchemeIsCryptographic())
-    return nullptr;
-
-  net::TransportSecurityState* hsts =
-      request->context()->transport_security_state();
-  if (!hsts || !hsts->ShouldUpgradeToSSL(url.host()))
-    return nullptr;
-
-  GURL::Replacements replacements;
-  replacements.SetSchemeStr(url.SchemeIs(url::kHttpScheme) ? url::kHttpsScheme
-                                                           : url::kWssScheme);
-  return new net::URLRequestRedirectJob(
-      request, network_delegate, url.ReplaceComponents(replacements),
-      // Use status code 307 to preserve the method, so POST requests work.
-      net::URLRequestRedirectJob::REDIRECT_307_TEMPORARY_REDIRECT, "HSTS");
-}
-
 }  // namespace
 
 namespace net {
@@ -208,10 +191,34 @@ URLRequestJob* URLRequestHttpJob::Factory(URLRequest* request,
         request, network_delegate, ERR_INVALID_ARGUMENT);
   }
 
-  URLRequestRedirectJob* redirect =
-      MaybeInternallyRedirect(request, network_delegate);
-  if (redirect)
-    return redirect;
+  const GURL& url = request->url();
+
+  // Check for reasons not to return a URLRequestHttpJob. These don't apply to
+  // https and wss requests.
+  if (!url.SchemeIsCryptographic()) {
+    // Check for HSTS upgrade.
+    TransportSecurityState* hsts =
+        request->context()->transport_security_state();
+    if (hsts && hsts->ShouldUpgradeToSSL(url.host())) {
+      GURL::Replacements replacements;
+      replacements.SetSchemeStr(
+          url.SchemeIs(url::kHttpScheme) ? url::kHttpsScheme : url::kWssScheme);
+      return new URLRequestRedirectJob(
+          request, network_delegate, url.ReplaceComponents(replacements),
+          // Use status code 307 to preserve the method, so POST requests work.
+          URLRequestRedirectJob::REDIRECT_307_TEMPORARY_REDIRECT, "HSTS");
+    }
+
+#if defined(OS_ANDROID)
+    // Check whether the app allows cleartext traffic to this host, and return
+    // ERR_CLEARTEXT_NOT_PERMITTED if not.
+    if (request->context()->check_cleartext_permitted() &&
+        !android::IsCleartextPermitted(url.host())) {
+      return new URLRequestErrorJob(request, network_delegate,
+                                    ERR_CLEARTEXT_NOT_PERMITTED);
+    }
+#endif
+  }
 
   return new URLRequestHttpJob(request,
                                network_delegate,

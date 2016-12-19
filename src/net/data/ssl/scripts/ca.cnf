@@ -4,6 +4,7 @@ KEY_SIZE  = 2048
 ALGO      = sha256
 CERT_TYPE = root
 CA_NAME   = req_env_dn
+CA_COMMON_NAME = Test Root CA
 
 [ca]
 default_ca = CA_root

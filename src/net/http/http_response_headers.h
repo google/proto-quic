@@ -292,16 +292,16 @@ class NET_EXPORT HttpResponseHeaders
   // such header in the response.
   int64_t GetInt64HeaderValue(const std::string& header) const;
 
-  // Extracts the values in a Content-Range header and returns true if they are
-  // valid for a 206 response; otherwise returns false.
+  // Extracts the values in a Content-Range header and returns true if all three
+  // values are present and valid for a 206 response; otherwise returns false.
   // The following values will be outputted:
   // |*first_byte_position| = inclusive position of the first byte of the range
   // |*last_byte_position| = inclusive position of the last byte of the range
   // |*instance_length| = size in bytes of the object requested
-  // If any of the above values is unknown, its value will be -1.
-  bool GetContentRange(int64_t* first_byte_position,
-                       int64_t* last_byte_position,
-                       int64_t* instance_length) const;
+  // If this method returns false, then all of the outputs will be -1.
+  bool GetContentRangeFor206(int64_t* first_byte_position,
+                             int64_t* last_byte_position,
+                             int64_t* instance_length) const;
 
   // Returns true if the response is chunk-encoded.
   bool IsChunkEncoded() const;

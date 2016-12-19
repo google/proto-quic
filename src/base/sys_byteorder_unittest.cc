@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 
+#include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace {
@@ -38,6 +39,25 @@ TEST(ByteOrderTest, ByteSwap64) {
   EXPECT_EQ(k64BitSwappedTestData, swapped);
   uint64_t reswapped = base::ByteSwap(swapped);
   EXPECT_EQ(k64BitTestData, reswapped);
+}
+
+TEST(ByteOrderTest, ByteSwapUintPtrT) {
+#if defined(ARCH_CPU_64_BITS)
+  const uintptr_t test_data = static_cast<uintptr_t>(k64BitTestData);
+  const uintptr_t swapped_test_data =
+      static_cast<uintptr_t>(k64BitSwappedTestData);
+#elif defined(ARCH_CPU_32_BITS)
+  const uintptr_t test_data = static_cast<uintptr_t>(k32BitTestData);
+  const uintptr_t swapped_test_data =
+      static_cast<uintptr_t>(k32BitSwappedTestData);
+#else
+#error architecture not supported
+#endif
+
+  uintptr_t swapped = base::ByteSwapUintPtrT(test_data);
+  EXPECT_EQ(swapped_test_data, swapped);
+  uintptr_t reswapped = base::ByteSwapUintPtrT(swapped);
+  EXPECT_EQ(test_data, reswapped);
 }
 
 TEST(ByteOrderTest, ByteSwapToLE16) {

@@ -177,7 +177,7 @@ public class X509Util {
      * changes. Net unit tests do not load native libraries which prevent this to succeed. Moreover,
      * the system does not allow to interact with the certificate store without user interaction.
      */
-    private static boolean sDisableNativeCodeForTest = false;
+    private static boolean sDisableNativeCodeForTest;
 
     /**
      * Ensures that the trust managers and certificate factory are initialized.

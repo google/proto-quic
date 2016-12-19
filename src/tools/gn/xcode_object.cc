@@ -404,7 +404,7 @@ PBXObjectClass PBXFileReference::Class() const {
 }
 
 std::string PBXFileReference::Name() const {
-  return path_;
+  return name_;
 }
 
 void PBXFileReference::Print(std::ostream& out, unsigned indent) const {
@@ -417,16 +417,17 @@ void PBXFileReference::Print(std::ostream& out, unsigned indent) const {
     PrintProperty(out, rules, "explicitFileType", type_);
     PrintProperty(out, rules, "includeInIndex", 0u);
   } else {
-    base::StringPiece ext = FindExtension(&path_);
+    base::StringPiece ext = FindExtension(&name_);
     if (HasExplicitFileType(ext))
       PrintProperty(out, rules, "explicitFileType", GetSourceType(ext));
     else
       PrintProperty(out, rules, "lastKnownFileType", GetSourceType(ext));
   }
 
-  if (name_ != path_ && !name_.empty())
+  if (!name_.empty())
     PrintProperty(out, rules, "name", name_);
 
+  DCHECK(!path_.empty());
   PrintProperty(out, rules, "path", path_);
   PrintProperty(out, rules, "sourceTree",
                 type_.empty() ? "<group>" : "BUILT_PRODUCTS_DIR");
@@ -471,36 +472,39 @@ PBXObject* PBXGroup::AddChild(std::unique_ptr<PBXObject> child) {
   return children_.back().get();
 }
 
-PBXFileReference* PBXGroup::AddSourceFile(const std::string& source_path) {
+PBXFileReference* PBXGroup::AddSourceFile(const std::string& navigator_path,
+                                          const std::string& source_path) {
+  DCHECK(!navigator_path.empty());
   DCHECK(!source_path.empty());
-  std::string::size_type sep = source_path.find("/");
+  std::string::size_type sep = navigator_path.find("/");
   if (sep == std::string::npos) {
     children_.push_back(base::MakeUnique<PBXFileReference>(
-        std::string(), source_path, std::string()));
+        navigator_path, source_path, std::string()));
     return static_cast<PBXFileReference*>(children_.back().get());
   }
 
   PBXGroup* group = nullptr;
-  base::StringPiece component(source_path.data(), sep);
+  base::StringPiece component(navigator_path.data(), sep);
   for (const auto& child : children_) {
     if (child->Class() != PBXGroupClass)
       continue;
 
     PBXGroup* child_as_group = static_cast<PBXGroup*>(child.get());
-    if (child_as_group->path_ == component) {
+    if (child_as_group->name_ == component) {
       group = child_as_group;
       break;
     }
   }
 
   if (!group) {
-    children_.push_back(base::WrapUnique(new PBXGroup(component.as_string())));
+    children_.push_back(base::WrapUnique(
+        new PBXGroup(component.as_string(), component.as_string())));
     group = static_cast<PBXGroup*>(children_.back().get());
   }
 
   DCHECK(group);
-  DCHECK(group->path_ == component);
-  return group->AddSourceFile(source_path.substr(sep + 1));
+  DCHECK(group->name_ == component);
+  return group->AddSourceFile(navigator_path.substr(sep + 1), source_path);
 }
 
 PBXObjectClass PBXGroup::Class() const {
@@ -530,7 +534,7 @@ void PBXGroup::Print(std::ostream& out, unsigned indent) const {
   PrintProperty(out, rules, "children", children_);
   if (!name_.empty())
     PrintProperty(out, rules, "name", name_);
-  if (!path_.empty())
+  if (is_source_ && !path_.empty())
     PrintProperty(out, rules, "path", path_);
   PrintProperty(out, rules, "sourceTree", "<group>");
   out << indent_str << "};\n";
@@ -598,6 +602,7 @@ PBXProject::PBXProject(const std::string& name,
   main_group_.reset(new PBXGroup);
   sources_ = static_cast<PBXGroup*>(
       main_group_->AddChild(base::MakeUnique<PBXGroup>(source_path, "Source")));
+  sources_->set_is_source(true);
   products_ = static_cast<PBXGroup*>(main_group_->AddChild(
       base::MakeUnique<PBXGroup>(std::string(), "Product")));
   main_group_->AddChild(base::MakeUnique<PBXGroup>(std::string(), "Build"));
@@ -607,8 +612,10 @@ PBXProject::PBXProject(const std::string& name,
 
 PBXProject::~PBXProject() {}
 
-void PBXProject::AddSourceFile(const std::string& source_path) {
-  PBXFileReference* file_reference = sources_->AddSourceFile(source_path);
+void PBXProject::AddSourceFile(const std::string& navigator_path,
+                               const std::string& source_path) {
+  PBXFileReference* file_reference =
+      sources_->AddSourceFile(navigator_path, source_path);
   base::StringPiece ext = FindExtension(&source_path);
   if (!IsSourceFileForIndexing(ext))
     return;

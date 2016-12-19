@@ -63,6 +63,7 @@
 #include <string>
 #include <vector>
 
+#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/command_line.h"
 #include "base/feature_list.h"
@@ -143,8 +144,11 @@ class BASE_EXPORT FieldTrial : public RefCounted<FieldTrial> {
     static constexpr size_t kExpectedInstanceSize = 8;
 
     // Whether or not this field trial is activated. This is really just a
-    // boolean but marked as a uint32_t for portability reasons.
-    uint32_t activated;
+    // boolean but using a 32 bit value for portability reasons. It should be
+    // accessed via NoBarrier_Load()/NoBarrier_Store() to prevent the compiler
+    // from doing unexpected optimizations because it thinks that only one
+    // thread is accessing the memory location.
+    subtle::Atomic32 activated;
 
     // Size of the pickled structure, NOT the total size of this entry.
     uint32_t pickle_size;
@@ -643,8 +647,7 @@ class BASE_EXPORT FieldTrialList {
   static bool CreateTrialsFromHandleSwitch(const std::string& handle_switch);
 #endif
 
-#if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_MACOSX) && \
-    !defined(OS_ANDROID)
+#if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID)
   // On POSIX systems that use the zygote, we look up the correct fd that backs
   // the shared memory segment containing the field trials by looking it up via
   // an fd key in GlobalDescriptors. Returns true on success, false on failure.

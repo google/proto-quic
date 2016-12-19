@@ -29,7 +29,8 @@ class QUIC_EXPORT_PRIVATE AeadBaseDecrypter : public QuicDecrypter {
   bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
   bool SetPreliminaryKey(base::StringPiece key) override;
   bool SetDiversificationNonce(const DiversificationNonce& nonce) override;
-  bool DecryptPacket(QuicPathId path_id,
+  bool DecryptPacket(QuicVersion version,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      base::StringPiece associated_data,
                      base::StringPiece ciphertext,

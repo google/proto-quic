@@ -4,6 +4,7 @@
 
 import argparse
 import json
+import logging
 import os
 import re
 import socket
@@ -11,14 +12,12 @@ import shlex
 import sys
 import time
 import traceback
+import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
   os.pardir, 'third_party', 'webdriver', 'pylib'))
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-
-# TODO(robertogden): Add logging.
-
 
 def ParseFlags():
   """Parses the given command line arguments.
@@ -28,40 +27,78 @@ def ParseFlags():
     See pydoc for argparse.
   """
   parser = argparse.ArgumentParser()
-  parser.add_argument('--browser_args', nargs=1, type=str, help='Override '
-    'browser flags in code with these flags')
-  parser.add_argument('--via_header_value', metavar='via_header', nargs=1,
+  parser.add_argument('--browser_args', type=str, help='Override browser flags '
+    'in code with these flags')
+  parser.add_argument('--via_header_value',
     default='1.1 Chrome-Compression-Proxy', help='What the via should match to '
     'be considered valid')
   parser.add_argument('--android', help='If given, attempts to run the test on '
     'Android via adb. Ignores usage of --chrome_exec', action='store_true')
-  parser.add_argument('--android_package', nargs=1,
+  parser.add_argument('--android_package',
     default='com.android.chrome', help='Set the android package for Chrome')
-  parser.add_argument('--chrome_exec', nargs=1, type=str, help='The path to '
+  parser.add_argument('--chrome_exec', type=str, help='The path to '
     'the Chrome or Chromium executable')
-  parser.add_argument('chrome_driver', nargs=1, type=str, help='The path to '
+  parser.add_argument('chrome_driver', type=str, help='The path to '
     'the ChromeDriver executable. If not given, the default system chrome '
     'will be used.')
-  # TODO(robertogden): Log sys.argv here.
+  parser.add_argument('--disable_buffer', help='Causes stdout and stderr from '
+    'tests to output normally. Otherwise, the standard output and standard '
+    'error streams are buffered during the test run, and output from a '
+    'passing test is discarded. Output will always be echoed normally on test '
+    'fail or error and is added to the failure messages.', action='store_true')
+  parser.add_argument('-c', '--catch', help='Control-C during the test run '
+    'waits for the current test to end and then reports all the results so '
+    'far. A second Control-C raises the normal KeyboardInterrupt exception.',
+    action='store_true')
+  parser.add_argument('-f', '--failfast', help='Stop the test run on the first '
+    'error or failure.', action='store_true')
+  parser.add_argument('--logging_level', choices=['DEBUG', 'INFO', 'WARN',
+    'ERROR', 'CRIT'], default='ERROR', help='The logging verbosity for log '
+    'messages, printed to stderr. To see stderr logging output during a '
+    'successful test run, also pass --disable_buffer. Default=ERROR')
+  parser.add_argument('--log_file', help='If given, write logging statements '
+    'to the given file instead of stderr.')
   return parser.parse_args(sys.argv[1:])
 
-def HandleException(test_name=None):
-  """Writes the exception being handled and a stack trace to stderr.
+def GetLogger(name='common'):
+  """Creates a Logger instance with the given name and returns it.
+
+  If a logger has already been created with the same name, that instance is
+  returned instead.
 
   Args:
-    test_name: The string name of the test that led to this exception.
+    name: The name of the logger to return.
+  Returns:
+    A logger with the given name.
   """
-  sys.stderr.write("**************************************\n")
-  sys.stderr.write("**************************************\n")
-  sys.stderr.write("**                                  **\n")
-  sys.stderr.write("**       UNCAUGHT EXCEPTION         **\n")
-  sys.stderr.write("**                                  **\n")
-  sys.stderr.write("**************************************\n")
-  sys.stderr.write("**************************************\n")
-  if test_name:
-    sys.stderr.write("Failed test: %s" % test_name)
-  traceback.print_exception(*sys.exc_info())
-  sys.exit(1)
+  logger = logging.getLogger(name)
+  if hasattr(logger, "initialized"):
+    return logger
+  logging_level = ParseFlags().logging_level
+  if logging_level == 'DEBUG':
+    logger.setLevel(logging.DEBUG)
+  elif logging_level == 'INFO':
+    logger.setLevel(logging.INFO)
+  elif logging_level == 'WARN':
+    logger.setLevel(logging.WARNING)
+  elif logging_level == 'ERROR':
+    logger.setLevel(logging.ERROR)
+  elif logging_level == 'CRIT':
+    logger.setLevel(logging.CRITICAL)
+  else:
+    logger.setLevel(logging.NOTSET)
+  formatter = logging.Formatter('%(asctime)s %(funcName)s() %(levelname)s: '
+    '%(message)s')
+  if ParseFlags().log_file:
+    fh = logging.FileHandler(ParseFlags().log_file)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+  else:
+    ch = logging.StreamHandler(sys.stderr)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+  logger.initialized = True
+  return logger
 
 class TestDriver:
   """The main driver for an integration test.
@@ -83,6 +120,7 @@ class TestDriver:
     self._driver = None
     self._chrome_args = set()
     self._url = ''
+    self._logger = GetLogger(name='TestDriver')
 
   def __enter__(self):
     return self
@@ -107,11 +145,13 @@ class TestDriver:
       for arg in self._chrome_args:
           original_args[GetDictKey(arg)] = arg
       # Override flags given in code with any command line arguments.
-      for override_arg in shlex.split(self._flags.browser_args[0]):
+      for override_arg in shlex.split(self._flags.browser_args):
         arg_key = GetDictKey(override_arg)
         if arg_key in original_args:
           self._chrome_args.remove(original_args[arg_key])
+          self._logger.info('Removed Chrome flag. %s', original_args[arg_key])
         self._chrome_args.add(override_arg)
+        self._logger.info('Added Chrome flag. %s', override_arg)
     # Always add the flag that allows histograms to be queried in javascript.
     self._chrome_args.add('--enable-stats-collection-bindings')
 
@@ -131,9 +171,16 @@ class TestDriver:
       capabilities['chromeOptions'].update({
         'androidPackage': self._flags.android_package,
       })
+      self._logger.debug('Will use Chrome on Android')
     elif self._flags.chrome_exec:
       capabilities['chrome.binary'] = self._flags.chrome_exec
-    driver = webdriver.Chrome(executable_path=self._flags.chrome_driver[0],
+      self._logger.info('Using the Chrome binary at this path: %s',
+        self._flags.chrome_exec)
+    self._logger.info('Starting Chrome with these flags: %s',
+      str(self._chrome_args))
+    self._logger.debug('Starting ChromeDriver with these capabilities: %s',
+      json.dumps(capabilities))
+    driver = webdriver.Chrome(executable_path=self._flags.chrome_driver,
       desired_capabilities=capabilities)
     driver.command_executor._commands.update({
       'getAvailableLogTypes': ('GET', '/session/$sessionId/log/types'),
@@ -143,6 +190,7 @@ class TestDriver:
   def _StopDriver(self):
     """Nicely stops the ChromeDriver.
     """
+    self._logger.debug('Stopping ChromeDriver')
     self._driver.quit()
     self._driver = None
 
@@ -162,6 +210,7 @@ class TestDriver:
       arg: a string argument to pass to Chrome at start
     """
     self._chrome_args.add(arg)
+    self._logger.debug('Adding Chrome arg: %s', arg)
 
   def RemoveChromeArgs(self, args):
     """Removes multiple arguments that will no longer be passed to Chromium at
@@ -182,11 +231,13 @@ class TestDriver:
       arg: A string flag to no longer use the next time Chrome starts.
     """
     self._chrome_args.discard(arg)
+    self._logger.debug('Removing Chrome arg: %s', arg)
 
   def ClearChromeArgs(self):
     """Removes all arguments from Chromium at start.
     """
     self._chrome_args.clear()
+    self._logger.debug('Clearing all Chrome args')
 
   def ClearCache(self):
     """Clears the browser cache.
@@ -194,30 +245,27 @@ class TestDriver:
     Important note: ChromeDriver automatically starts
     a clean copy of Chrome on every instantiation.
     """
-    self.ExecuteJavascript('if(window.chrome && chrome.benchmarking && '
+    res = self.ExecuteJavascript('if(window.chrome && chrome.benchmarking && '
       'chrome.benchmarking.clearCache){chrome.benchmarking.clearCache(); '
       'chrome.benchmarking.clearPredictorCache();chrome.benchmarking.'
       'clearHostResolverCache();}')
+    self._logger.info('Cleared browser cache. Returned=%s', str(res))
 
-  def SetURL(self, url):
-    """Sets the URL that the browser will navigate to during the test.
-
-    Args:
-      url: The string URL to navigate to
-    """
-    self._url = url
-
-  def LoadPage(self, timeout=30):
+  def LoadURL(self, url, timeout=30):
     """Starts Chromium with any arguments previously given and navigates to the
     given URL.
 
     Args:
-      timeout: Page load timeout in seconds.
+      url: The URL to navigate to.
+      timeout: The time in seconds to load the page before timing out.
     """
+    self._url = url
     if not self._driver:
       self._StartDriver()
     self._driver.set_page_load_timeout(timeout)
+    self._logger.debug('Set page load timeout to %f seconds', timeout)
     self._driver.get(self._url)
+    self._logger.debug('Loaded page %s', url)
 
   def ExecuteJavascript(self, script, timeout=30):
     """Executes the given javascript in the browser's current page in an
@@ -238,8 +286,11 @@ class TestDriver:
     # crbug/672114 is fixed.
     default_timeout = socket.getdefaulttimeout()
     socket.setdefaulttimeout(timeout)
+    self._logger.debug('Set socket timeout to %f seconds', timeout)
     script_result = self._driver.execute_script(script)
+    self._logger.debug('Executed Javascript in browser: %s', script)
     socket.setdefaulttimeout(default_timeout)
+    self._logger.debug('Set socket timeout to %s', str(default_timeout))
     return script_result
 
   def ExecuteJavascriptStatement(self, script, timeout=30):
@@ -258,7 +309,33 @@ class TestDriver:
   def GetHistogram(self, histogram):
     js_query = 'statsCollectionController.getBrowserHistogram("%s")' % histogram
     string_response = self.ExecuteJavascriptStatement(js_query)
+    self._logger.debug('Got %s histogram=%s', histogram, string_response)
     return json.loads(string_response)
+
+  def WaitForJavascriptExpression(self, expression, timeout, min_poll=0.1,
+      max_poll=1):
+    """Waits for the given Javascript expression to evaluate to True within the
+    given timeout. This method polls the Javascript expression within the range
+    of |min_poll| and |max_poll|.
+
+    Args:
+      expression: The Javascript expression to poll, as a string.
+      min_poll: The most frequently to poll as a float.
+      max_poll: The least frequently to poll as a float.
+    Returns: The result of the expression.
+    """
+    poll_interval = max(min(max_poll, float(timeout) / 10.0), min_poll)
+    self._logger.debug('Poll interval=%f seconds', poll_interval)
+    result = self.ExecuteJavascriptStatement(expression)
+    total_waited_time = 0
+    while not result and total_waited_time < timeout:
+      time.sleep(poll_interval)
+      total_waited_time += poll_interval
+      result = self.ExecuteJavascriptStatement(expression)
+    if not result:
+      self._logger.error('%s not true after %f seconds' % (expression, timeout))
+      raise Exception('%s not true after %f seconds' % (expression, timeout))
+    return result
 
   def GetPerformanceLogs(self, method_filter=r'Network\.responseReceived'):
     """Returns all logged Performance events from Chrome.
@@ -273,14 +350,19 @@ class TestDriver:
     all_messages = []
     for log in self._driver.execute('getLog', {'type': 'performance'})['value']:
       message = json.loads(log['message'])['message']
+      self._logger.debug('Got Performance log: %s', log['message'])
       if re.match(method_filter, message['method']):
         all_messages.append(message)
+    self._logger.info('Got %d performance logs with filter method=%s',
+      len(all_messages), method_filter)
     return all_messages
 
   def GetHTTPResponses(self, include_favicon=False):
     """Parses the Performance Logs and returns a list of HTTPResponse objects.
 
-    This function should be called exactly once after every page load.
+    Use caution when calling this function  multiple times. Only responses
+    since the last time this function was called are returned (or since Chrome
+    started, whichever is later).
 
     Args:
       include_favicon: A bool that if True will include responses for favicons.
@@ -292,19 +374,29 @@ class TestDriver:
       params = log_dict['params']
       response_dict = params['response']
       http_response_dict = {
-        'response_headers': response_dict['headers'],
-        'request_headers': response_dict['requestHeaders'],
-        'url': response_dict['url'],
-        'status': response_dict['status'],
-        'request_type': params['type']
+        'response_headers': response_dict['headers'] if 'headers' in
+          response_dict else {},
+        'request_headers': response_dict['requestHeaders'] if 'requestHeaders'
+          in response_dict else {},
+        'url': response_dict['url'] if 'url' in response_dict else '',
+        'protocol': response_dict['protocol'] if 'protocol' in response_dict
+          else '',
+        'port': response_dict['remotePort'] if 'remotePort' in response_dict
+          else -1,
+        'status': response_dict['status'] if 'status' in response_dict else -1,
+        'request_type': params['type'] if 'type' in params else ''
       }
       return HTTPResponse(**http_response_dict)
     all_responses = []
     for message in self.GetPerformanceLogs():
       response = MakeHTTPResponse(message)
+      self._logger.debug('New HTTPResponse: %s', str(response))
       is_favicon = response.url.endswith('favicon.ico')
       if not is_favicon or include_favicon:
         all_responses.append(response)
+    self._logger.info('%d new HTTPResponse objects found in the logs %s '
+      'favicons', len(all_responses), ('including' if include_favicon else
+      'not including'))
     return all_responses
 
 class HTTPResponse:
@@ -318,25 +410,36 @@ class HTTPResponse:
     _response_headers: A dict of response headers.
     _request_headers: A dict of request headers.
     _url: the fetched url
+    _protocol: The protocol used to get the response.
+    _port: The remote port number used to get the response.
     _status: The integer status code of the response
     _request_type: What caused this request (Document, XHR, etc)
     _flags: A Namespace object from ParseFlags()
   """
 
-  def __init__(self, response_headers, request_headers, url, status,
-      request_type):
-    self._response_headers = response_headers
-    self._request_headers = request_headers
+  def __init__(self, response_headers, request_headers, url, protocol, port,
+      status, request_type):
+    self._response_headers = {}
+    self._request_headers = {}
     self._url = url
+    self._protocol = protocol
+    self._port = port
     self._status = status
     self._request_type = request_type
     self._flags = ParseFlags()
+    # Make all header names lower case.
+    for name in response_headers:
+      self._response_headers[name.lower()] = response_headers[name]
+    for name in request_headers:
+      self._request_headers[name.lower()] = request_headers[name]
 
   def __str__(self):
     self_dict = {
       'response_headers': self._response_headers,
       'request_headers': self._request_headers,
       'url': self._url,
+      'protocol': self._protocol,
+      'port': self._port,
       'status': self._status,
       'request_type': self._request_type
     }
@@ -355,6 +458,14 @@ class HTTPResponse:
     return self._url
 
   @property
+  def protocol(self):
+    return self._protocol
+
+  @property
+  def port(self):
+    return self._port
+
+  @property
   def status(self):
     return self._status
 
@@ -368,3 +479,52 @@ class HTTPResponse:
 
   def WasXHR(self):
     return self.request_type == 'XHR'
+
+  def UsedHTTP(self):
+    return self._protocol == 'http/1.1'
+
+  def UsedHTTP2(self):
+    return self._protocol == 'h2'
+
+class IntegrationTest(unittest.TestCase):
+  """This class adds ChromeProxy-specific assertions to the generic
+  unittest.TestCase class.
+  """
+
+  def assertHasChromeProxyViaHeader(self, http_response):
+    """Asserts that the Via header in the given HTTPResponse matches the
+    expected value as given on the command line.
+
+    Args:
+      http_response: The HTTPResponse object to check.
+    """
+    expected_via_header = ParseFlags().via_header_value
+    self.assertIn('via', http_response.response_headers)
+    self.assertEqual(expected_via_header, http_response.response_headers['via'])
+
+  def assertNotHasChromeProxyViaHeader(self, http_response):
+    """Asserts that the Via header in the given HTTPResponse does not match the
+    expected value as given on the command line.
+
+    Args:
+      http_response: The HTTPResponse object to check.
+    """
+    expected_via_header = ParseFlags().via_header_value
+    self.assertNotIn('via', http_response.response_headers)
+    if 'via' in http_response.response_headers:
+      self.assertNotIn(expected_via_header,
+        http_response.response_headers['via'])
+
+  @staticmethod
+  def RunAllTests():
+    """A simple helper method to run all tests using unittest.main().
+    """
+    flags = ParseFlags()
+    logger = GetLogger()
+    logger.debug('Command line args: %s', str(sys.argv))
+    logger.info('sys.argv parsed to %s', str(flags))
+    # The unittest library uses sys.argv itself and is easily confused by our
+    # command line options. Pass it a simpler argv instead, while working in the
+    # unittest command line args functionality.
+    unittest.main(argv=[sys.argv[0]], verbosity=2, failfast=flags.failfast,
+      catchbreak=flags.catch, buffer=(not flags.disable_buffer))

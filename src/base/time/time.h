@@ -130,7 +130,7 @@ class BASE_EXPORT TimeDelta {
   // Returns the maximum time delta, which should be greater than any reasonable
   // time delta we might compare it to. Adding or subtracting the maximum time
   // delta to a time or another time delta has an undefined result.
-  static TimeDelta Max();
+  static constexpr TimeDelta Max();
 
   // Returns the internal numeric value of the TimeDelta object. Please don't
   // use this and do arithmetic on it, as it is more error prone than using the
@@ -668,6 +668,11 @@ constexpr TimeDelta TimeDelta::FromMillisecondsD(double ms) {
 // static
 constexpr TimeDelta TimeDelta::FromMicroseconds(int64_t us) {
   return TimeDelta(us);
+}
+
+// static
+constexpr TimeDelta TimeDelta::Max() {
+  return TimeDelta(std::numeric_limits<int64_t>::max());
 }
 
 // static

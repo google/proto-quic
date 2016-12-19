@@ -42,56 +42,6 @@ struct IndexSequence {};
 template <size_t... Ns>
 struct MakeIndexSequenceImpl;
 
-#if defined(_PREFAST_) && defined(OS_WIN)
-
-// Work around VC++ 2013 /analyze internal compiler error:
-// https://connect.microsoft.com/VisualStudio/feedback/details/1053626
-
-template <> struct MakeIndexSequenceImpl<0> {
-  using Type = IndexSequence<>;
-};
-template <> struct MakeIndexSequenceImpl<1> {
-  using Type = IndexSequence<0>;
-};
-template <> struct MakeIndexSequenceImpl<2> {
-  using Type = IndexSequence<0,1>;
-};
-template <> struct MakeIndexSequenceImpl<3> {
-  using Type = IndexSequence<0,1,2>;
-};
-template <> struct MakeIndexSequenceImpl<4> {
-  using Type = IndexSequence<0,1,2,3>;
-};
-template <> struct MakeIndexSequenceImpl<5> {
-  using Type = IndexSequence<0,1,2,3,4>;
-};
-template <> struct MakeIndexSequenceImpl<6> {
-  using Type = IndexSequence<0,1,2,3,4,5>;
-};
-template <> struct MakeIndexSequenceImpl<7> {
-  using Type = IndexSequence<0,1,2,3,4,5,6>;
-};
-template <> struct MakeIndexSequenceImpl<8> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7>;
-};
-template <> struct MakeIndexSequenceImpl<9> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7,8>;
-};
-template <> struct MakeIndexSequenceImpl<10> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9>;
-};
-template <> struct MakeIndexSequenceImpl<11> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10>;
-};
-template <> struct MakeIndexSequenceImpl<12> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10,11>;
-};
-template <> struct MakeIndexSequenceImpl<13> {
-  using Type = IndexSequence<0,1,2,3,4,5,6,7,8,9,10,11,12>;
-};
-
-#else  // defined(OS_WIN) && defined(_PREFAST_)
-
 template <size_t... Ns>
 struct MakeIndexSequenceImpl<0, Ns...> {
   using Type = IndexSequence<Ns...>;
@@ -100,8 +50,6 @@ struct MakeIndexSequenceImpl<0, Ns...> {
 template <size_t N, size_t... Ns>
 struct MakeIndexSequenceImpl<N, Ns...>
     : MakeIndexSequenceImpl<N - 1, N - 1, Ns...> {};
-
-#endif  // defined(OS_WIN) && defined(_PREFAST_)
 
 // std::get() in <=libstdc++-4.6 returns an lvalue-reference for
 // rvalue-reference of a tuple, where an rvalue-reference is expected.

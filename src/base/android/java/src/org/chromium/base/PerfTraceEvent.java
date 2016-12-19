@@ -8,11 +8,11 @@ import android.os.Debug;
 import android.os.Debug.MemoryInfo;
 import android.util.Log;
 
-import org.chromium.base.annotations.SuppressFBWarnings;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import org.chromium.base.annotations.SuppressFBWarnings;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,7 +42,7 @@ import java.util.List;
 public class PerfTraceEvent {
     private static final int MAX_NAME_LENGTH = 40;
     private static final String MEMORY_TRACE_NAME_SUFFIX = "_BZR_PSS";
-    private static File sOutputFile = null;
+    private static File sOutputFile;
 
     /** The event types understood by the perf trace scripts. */
     private enum EventType {
@@ -63,9 +63,9 @@ public class PerfTraceEvent {
         }
     }
 
-    private static boolean sEnabled = false;
+    private static boolean sEnabled;
     private static boolean sTrackTiming = true;
-    private static boolean sTrackMemory = false;
+    private static boolean sTrackMemory;
 
     // A list of performance trace event strings.
     // Events are stored as a JSON dict much like TraceEvent.

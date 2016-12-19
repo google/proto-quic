@@ -476,6 +476,8 @@ void HttpStreamFactoryImpl::Job::OnHttpsProxyTunnelResponseCallback(
 }
 
 void HttpStreamFactoryImpl::Job::OnPreconnectsComplete() {
+  DCHECK(!new_spdy_session_);
+
   if (new_spdy_session_.get()) {
     delegate_->OnNewSpdySessionReady(this, new_spdy_session_,
                                      spdy_session_direct_);
@@ -804,6 +806,11 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   DCHECK(!connection_->is_initialized());
   DCHECK(proxy_info_.proxy_server().is_valid());
   next_state_ = STATE_INIT_CONNECTION_COMPLETE;
+
+  if (delegate_->OnInitConnection(proxy_info_)) {
+    // Return since the connection initialization can be skipped.
+    return OK;
+  }
 
   using_ssl_ = origin_url_.SchemeIs(url::kHttpsScheme) ||
                origin_url_.SchemeIs(url::kWssScheme);
