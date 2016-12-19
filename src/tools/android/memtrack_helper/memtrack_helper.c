@@ -9,11 +9,9 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -66,16 +64,16 @@ static void send_shutdown_request(struct sockaddr_un* addr) {
 static void handle_one_request(int client_sock) {
   char buf[32];
   char response[4096] = "";
-  ssize_t rsize = recv(client_sock, buf, sizeof(buf), 0);
-
+  ssize_t rsize = recv(client_sock, buf, sizeof(buf) - 1, 0);
   if (rsize < 1)
     return;
+  buf[rsize] = '\0';
 
   if (buf[0] == kShutdownRequest)
     exit(EXIT_SUCCESS);
 
   pid_t pid = -1;
-  if (sscanf(buf, "%d", &pid) != 1)
+  if (sscanf(buf, "%d", &pid) != 1 || pid < 0)
     return send_response(client_sock, "ERR invalid pid");
 
   memtrack_proc_handle handle = memtrack_proc_new();
@@ -97,12 +95,12 @@ static void handle_one_request(int client_sock) {
                             memtrack_proc_graphics_pss(handle));
   }
   if (memtrack_proc_gl_total) {
-    response_ptr +=
-        sprintf(response_ptr, "gl_total %zd\n", memtrack_proc_gl_total(handle));
+    response_ptr += sprintf(response_ptr, "gl_total %zd\n",
+                            memtrack_proc_gl_total(handle));
   }
   if (memtrack_proc_gl_pss) {
-    response_ptr +=
-        sprintf(response_ptr, "gl_pss %zd\n", memtrack_proc_gl_pss(handle));
+    response_ptr += sprintf(response_ptr, "gl_pss %zd\n",
+                            memtrack_proc_gl_pss(handle));
   }
   if (memtrack_proc_other_total) {
     response_ptr += sprintf(response_ptr, "other_total %zd\n",
@@ -124,7 +122,8 @@ static void daemonize() {
   if (pid < 0)
     exit_with_failure("fork");
   if (pid > 0) {
-    /* Terminate the main process attached to TTY once the daemon re-forks. */
+    // Main process keeps TTY while intermediate child do daemonization
+    // because adb can immediately kill a process disconnected from adb's TTY.
     int ignore;
     wait(&ignore);
     exit(EXIT_SUCCESS);
@@ -180,8 +179,7 @@ int main(int argc, char** argv) {
   memtrack_proc_other_pss =
       (memtrack_proc_other_pss_t)dlsym(libhandle, "memtrack_proc_other_pss");
 
-  if (!memtrack_init || !memtrack_proc_new || !memtrack_proc_destroy ||
-      !memtrack_proc_get) {
+  if (!memtrack_proc_new || !memtrack_proc_destroy || !memtrack_proc_get) {
     exit_with_failure("dlsym() libmemtrack.so");
   }
 
@@ -211,12 +209,18 @@ int main(int argc, char** argv) {
   if (argc > 1 && strcmp(argv[1], "-d") == 0)
     daemonize();
 
-  res = memtrack_init();
-  if (res == -ENOENT) {
-    exit_with_failure("Unable to load memtrack module in libhardware. "
-                      "Probably implementation is missing in this ROM.");
-  } else if (res != 0) {
-    exit_with_failure("memtrack_init() returned non-zero status.");
+  long pid = getpid();
+  fprintf(stderr, "pid=%ld\n", pid);
+  __android_log_print(ANDROID_LOG_INFO, kLogTag, "pid=%ld\n", pid);
+
+  if (memtrack_init) {
+    res = memtrack_init();
+    if (res == -ENOENT) {
+      exit_with_failure("Unable to load memtrack module in libhardware. "
+                        "Probably implementation is missing in this ROM.");
+    } else if (res != 0) {
+      exit_with_failure("memtrack_init() returned non-zero status.");
+    }
   }
 
   if (listen(server_fd, 128 /* max number of queued requests */))

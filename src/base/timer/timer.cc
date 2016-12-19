@@ -107,6 +107,12 @@ TimeDelta Timer::GetCurrentDelay() const {
   return delay_;
 }
 
+TimeDelta Timer::GetTimeToCallback() const {
+  if (!user_task_)
+    return TimeDelta::Max();
+  return scheduled_run_time_ - Now();
+}
+
 void Timer::SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner) {
   // Do not allow changing the task runner once something has been scheduled.
   DCHECK_EQ(thread_id_, 0);

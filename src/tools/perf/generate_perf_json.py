@@ -380,18 +380,6 @@ def get_waterfall_config():
       }
     ])
   waterfall = add_tester(
-    waterfall, 'Mac HDD Perf', 'chromium-rel-mac-hdd', 'mac',
-    swarming=[
-      {
-       'gpu': '10de:08a4',
-       'os': 'Mac-10.10',
-       'device_ids': [
-           'build24-b1', 'build25-b1',
-           'build26-b1', 'build27-b1', 'build28-b1'
-          ]
-      }
-    ])
-  waterfall = add_tester(
     waterfall, 'Mac Pro 10.11 Perf',
     'chromium-rel-mac11-pro', 'mac',
     swarming=[
@@ -609,7 +597,6 @@ BENCHMARK_NAME_BLACKLIST = [
 LEGACY_DEVICE_AFFIINITY_ALGORITHM = [
   'Win Zenbook Perf',
   'Win 10 High-DPI Perf',
-  'Mac HDD Perf',
 ]
 
 def current_benchmarks(use_whitelist):

@@ -237,6 +237,7 @@ class WashingtonPostMobileStory(_NewsBrowsingStory):
 ##############################################################################
 
 
+@decorators.Disabled('win')  # crbug.com/673775
 class GoogleDesktopStory(_NewsBrowsingStory):
   """
   A typical google search story:

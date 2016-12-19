@@ -840,6 +840,11 @@ config("default_warnings") {
     }
 
     cflags += [
+      # Assume UTF-8 by default to avoid code page dependencies.
+      "/utf-8",
+    ]
+
+    cflags += [
       # Warnings permanently disabled:
 
       # C4091: 'typedef ': ignored on left of 'X' when no variable is
@@ -1070,9 +1075,6 @@ config("default_warnings") {
 config("chromium_code") {
   if (is_win) {
     cflags = [ "/W4" ]  # Warning level 4.
-
-    # Assume UTF-8 by default to avoid code page dependencies.
-    cflags += [ "/utf-8" ]
   } else {
     cflags = [ "-Wall" ]
     if (treat_warnings_as_errors) {

@@ -116,24 +116,24 @@ bool IsValidInput(const base::StringPiece& scheme,
 SchemeHostPort::SchemeHostPort() : port_(0) {
 }
 
-SchemeHostPort::SchemeHostPort(base::StringPiece scheme,
-                               base::StringPiece host,
+SchemeHostPort::SchemeHostPort(std::string scheme,
+                               std::string host,
                                uint16_t port,
                                ConstructPolicy policy)
     : port_(0) {
   if (!IsValidInput(scheme, host, port, policy))
     return;
 
-  scheme.CopyToString(&scheme_);
-  host.CopyToString(&host_);
+  scheme_ = std::move(scheme);
+  host_ = std::move(host);
   port_ = port;
 }
 
 SchemeHostPort::SchemeHostPort(base::StringPiece scheme,
                                base::StringPiece host,
                                uint16_t port)
-    : SchemeHostPort(scheme,
-                     host,
+    : SchemeHostPort(scheme.as_string(),
+                     host.as_string(),
                      port,
                      ConstructPolicy::CHECK_CANONICALIZATION) {}
 

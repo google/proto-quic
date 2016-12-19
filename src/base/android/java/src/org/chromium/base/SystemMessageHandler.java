@@ -24,9 +24,9 @@ class SystemMessageHandler extends Handler {
     private static final int DELAYED_SCHEDULED_WORK = 2;
 
     // Native class pointer set by the constructor of the SharedClient native class.
-    private long mMessagePumpDelegateNative = 0;
-    private long mMessagePumpNative = 0;
-    private long mDelayedScheduledTimeTicks = 0;
+    private long mMessagePumpDelegateNative;
+    private long mMessagePumpNative;
+    private long mDelayedScheduledTimeTicks;
 
     protected SystemMessageHandler(long messagePumpDelegateNative, long messagePumpNative) {
         mMessagePumpDelegateNative = messagePumpDelegateNative;

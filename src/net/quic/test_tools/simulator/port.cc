@@ -4,6 +4,8 @@
 
 #include "net/quic/test_tools/simulator/port.h"
 
+using std::string;
+
 namespace net {
 namespace simulator {
 
@@ -14,7 +16,7 @@ Packet::~Packet() {}
 
 Packet::Packet(const Packet& packet) = default;
 
-Endpoint::Endpoint(Simulator* simulator, std::string name)
+Endpoint::Endpoint(Simulator* simulator, string name)
     : Actor(simulator, name) {}
 
 }  // namespace simulator

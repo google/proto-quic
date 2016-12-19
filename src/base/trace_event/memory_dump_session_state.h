@@ -46,6 +46,8 @@ class BASE_EXPORT MemoryDumpSessionState
 
   void SetMemoryDumpConfig(const TraceConfig::MemoryDumpConfig& config);
 
+  bool is_polling_enabled() { return is_polling_enabled_; }
+
  private:
   friend class RefCountedThreadSafe<MemoryDumpSessionState>;
   ~MemoryDumpSessionState();
@@ -61,6 +63,9 @@ class BASE_EXPORT MemoryDumpSessionState
   // The memory dump config, copied at the time when the tracing session was
   // started.
   TraceConfig::MemoryDumpConfig memory_dump_config_;
+
+  // True if memory polling is enabled by the config in the tracing session.
+  bool is_polling_enabled_;
 };
 
 }  // namespace trace_event

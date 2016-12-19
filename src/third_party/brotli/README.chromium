@@ -1,6 +1,6 @@
 Name: Brotli
 URL: https://github.com/google/brotli
-Version: 4836af6eaddb20d95187e571a950b68183534372
+Version: 222564a95d9ab58865a096b8d9f7324ea5f2e03e
 License: MIT
 License File: LICENSE
 Security Critical: yes
@@ -12,17 +12,10 @@ to decode WOFF 2.0 fonts.
 
 Local Modifications:
 - This only includes the enc/, dec/ and tools/ directories, the README.md and
-  the LICENSE files, removing unneeded direcories such as docs, tests, and
+  the LICENSE files, removing unneeded directories such as docs, tests, and
   tools.
-- Lines 659 of enc/hash.h and 66 of enc/cluster.h were modified to eliminate
-  build errors that appeared on Windows.
-- Lines 290 - 304 from tools/bro.cc were adjusted to remove a try/catch block,
-  which are disabled by default in Chromium.
+- Line 19 of enc/cluster_inc.h was modified to eliminate build error on Windows.
 - BUILD.gn: Added.
 - brotli.gyp: Added.
 - brotli.gni: Added.
 - bro.gypi: Added.
-- enc/static_dict_lut.h: split up into two files (enc/static_dict_lut.h,
-  enc/static_dict_lut2.h) to allow upload to codereview.
-- Line 1158 of enc/encode.cc has been modified to fix an unitialized variable
-  warning. Cherry-pick of c6d38e94cbf9ec094b1e84f6a3a675c9dc42fbed.

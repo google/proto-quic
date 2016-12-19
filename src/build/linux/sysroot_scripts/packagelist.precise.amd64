@@ -15,8 +15,8 @@ main/c/cairo/libcairo-script-interpreter2_1.10.2-6.1ubuntu3_amd64.deb
 main/c/cups/libcups2_1.5.3-0ubuntu8.7_amd64.deb
 main/c/cups/libcups2-dev_1.5.3-0ubuntu8.7_amd64.deb
 main/d/dbus-glib/libdbus-glib-1-2_0.98-1ubuntu1.1_amd64.deb
-main/d/dbus/libdbus-1-3_1.4.18-1ubuntu1.7_amd64.deb
-main/d/dbus/libdbus-1-dev_1.4.18-1ubuntu1.7_amd64.deb
+main/d/dbus/libdbus-1-3_1.4.18-1ubuntu1.8_amd64.deb
+main/d/dbus/libdbus-1-dev_1.4.18-1ubuntu1.8_amd64.deb
 main/e/e2fsprogs/comerr-dev_2.1-1.42-1ubuntu2.3_amd64.deb
 main/e/e2fsprogs/libcomerr2_1.42-1ubuntu2.3_amd64.deb
 main/e/eglibc/libc6_2.15-0ubuntu10.15_amd64.deb
@@ -125,7 +125,7 @@ main/libx/libxt/libxt-dev_1.1.1-2ubuntu0.1_amd64.deb
 main/libx/libxtst/libxtst6_1.2.0-4ubuntu0.1_amd64.deb
 main/libx/libxtst/libxtst-dev_1.2.0-4ubuntu0.1_amd64.deb
 main/libx/libxxf86vm/libxxf86vm1_1.1.1-2ubuntu0.1_amd64.deb
-main/l/linux/linux-libc-dev_3.2.0-111.153_amd64.deb
+main/l/linux/linux-libc-dev_3.2.0-118.161_amd64.deb
 main/m/mesa/libegl1-mesa_8.0.4-0ubuntu0.7_amd64.deb
 main/m/mesa/libegl1-mesa-dev_8.0.4-0ubuntu0.7_amd64.deb
 main/m/mesa/libegl1-mesa-drivers_8.0.4-0ubuntu0.7_amd64.deb

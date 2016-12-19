@@ -199,7 +199,7 @@ ASAN_OPTIONS=coverage=1 ./out/libfuzzer/my_fuzzer -runs=0 ~/tmp/my_fuzzer_corpus
 ./third_party/llvm-build/Release+Asserts/bin/sancov \
   -symbolize my_fuzzer my_fuzzer.123.sancov > my_fuzzer.symcov
 # Launch coverage report server
-curl http://llvm.org/svn/llvm-project/llvm/trunk/tools/sancov/coverage-report-server.py | python3 \
+curl https://llvm.org/svn/llvm-project/llvm/trunk/tools/sancov/coverage-report-server.py | python3 \
   --symcov my_fuzzer.symcov --srcpath path_to_chromium_sources
 # Navigate to http://localhost:8001/ to view coverage report
 ```

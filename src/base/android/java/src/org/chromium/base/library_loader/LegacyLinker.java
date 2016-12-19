@@ -38,21 +38,21 @@ class LegacyLinker extends Linker {
     private static final String TAG = "LibraryLoader";
 
     // Becomes true after linker initialization.
-    private boolean mInitialized = false;
+    private boolean mInitialized;
 
     // Set to true if this runs in the browser process. Disabled by initServiceProcess().
     private boolean mInBrowserProcess = true;
 
     // Becomes true to indicate this process needs to wait for a shared RELRO in
     // finishLibraryLoad().
-    private boolean mWaitForSharedRelros = false;
+    private boolean mWaitForSharedRelros;
 
     // Becomes true when initialization determines that the browser process can use the
     // shared RELRO.
-    private boolean mBrowserUsesSharedRelro = false;
+    private boolean mBrowserUsesSharedRelro;
 
     // The map of all RELRO sections either created or used in this process.
-    private Bundle mSharedRelros = null;
+    private Bundle mSharedRelros;
 
     // Current common random base load address. A value of -1 indicates not yet initialized.
     private long mBaseLoadAddress = -1;
@@ -62,10 +62,10 @@ class LegacyLinker extends Linker {
     private long mCurrentLoadAddress = -1;
 
     // Becomes true once prepareLibraryLoad() has been called.
-    private boolean mPrepareLibraryLoadCalled = false;
+    private boolean mPrepareLibraryLoadCalled;
 
     // The map of libraries that are currently loaded in this process.
-    private HashMap<String, LibInfo> mLoadedLibraries = null;
+    private HashMap<String, LibInfo> mLoadedLibraries;
 
     // Private singleton constructor, and singleton factory method.
     private LegacyLinker() { }

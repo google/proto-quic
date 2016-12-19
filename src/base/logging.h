@@ -466,18 +466,6 @@ class CheckOpResult {
 #define IMMEDIATE_CRASH() ((void)(*(volatile char*)0 = 0))
 #endif
 
-// Specialization of IMMEDIATE_CRASH which will raise a custom exception on
-// Windows to signal this is OOM and not a normal assert.
-#if defined(OS_WIN)
-#define OOM_CRASH()                                                     \
-  do {                                                                  \
-    ::RaiseException(0xE0000008, EXCEPTION_NONCONTINUABLE, 0, nullptr); \
-    IMMEDIATE_CRASH();                                                  \
-  } while (0)
-#else
-#define OOM_CRASH() IMMEDIATE_CRASH()
-#endif
-
 // CHECK dies with a fatal error if condition is not true.  It is *not*
 // controlled by NDEBUG, so the check will be executed regardless of
 // compilation mode.

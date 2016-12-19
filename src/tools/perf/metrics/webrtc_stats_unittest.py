@@ -107,9 +107,7 @@ class FakeResults(object):
 
 class WebRtcStatsUnittest(unittest.TestCase):
 
-  def _RunMetricOnJson(self, json_to_return):
-    stats_metric = webrtc_stats.WebRtcStatisticsMetric()
-
+  def _RunMetricOnJson(self, json_to_return, stats_metric):
     tab = simple_mock.MockObject()
     page = simple_mock.MockObject()
 
@@ -125,7 +123,8 @@ class WebRtcStatsUnittest(unittest.TestCase):
     return results
 
   def testExtractsValuesAsTimeSeries(self):
-    results = self._RunMetricOnJson(SAMPLE_JSON)
+    stats_metric = webrtc_stats.WebRtcStatisticsMetric()
+    results = self._RunMetricOnJson(SAMPLE_JSON, stats_metric)
 
     self.assertTrue(results.received_values,
                     'Expected values for googDecodeMs and others, got none.')
@@ -139,7 +138,8 @@ class WebRtcStatsUnittest(unittest.TestCase):
                      [100.0, 101.0])
 
   def testExtractsInterestingMetricsOnly(self):
-    results = self._RunMetricOnJson(SAMPLE_JSON)
+    stats_metric = webrtc_stats.WebRtcStatisticsMetric()
+    results = self._RunMetricOnJson(SAMPLE_JSON, stats_metric)
 
     self.assertTrue(len(results.received_values) > 0)
     self.assertIn('peer_connection_0', results.received_values[0].name,
@@ -159,6 +159,20 @@ class WebRtcStatsUnittest(unittest.TestCase):
                      'should not be reported since it is not interesting.')
     self.assertNotIn('peer_connection_1_audio_audio_input_level', all_names)
 
+  def testExtractsParticularMetricsOnlyIfSpecified(self):
+    only_goog_rtt_and_max_decode = ['googRtt', 'googMaxDecodeMs']
+    stats_metric = webrtc_stats.WebRtcStatisticsMetric(
+        particular_metrics=only_goog_rtt_and_max_decode)
+    results = self._RunMetricOnJson(SAMPLE_JSON, stats_metric)
+
+    received_names = [value.name for value in results.received_values]
+    expected_names = ['peer_connection_0_audio_goog_rtt',
+                      'peer_connection_0_video_goog_rtt',
+                      'peer_connection_1_video_goog_max_decode_ms',
+                      'peer_connection_1_video_goog_rtt']
+    self.assertEqual(expected_names, received_names)
+
   def testReturnsIfJsonIsEmpty(self):
-    results = self._RunMetricOnJson('[]')
+    stats_metric = webrtc_stats.WebRtcStatisticsMetric()
+    results = self._RunMetricOnJson('[]', stats_metric)
     self.assertFalse(results.received_values)

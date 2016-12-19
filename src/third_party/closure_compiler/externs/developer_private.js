@@ -322,6 +322,7 @@ chrome.developerPrivate.ExtensionInfo;
  *   appInfoDialogEnabled: boolean,
  *   canLoadUnpacked: boolean,
  *   inDeveloperMode: boolean,
+ *   isDeveloperModeControlledByPolicy: boolean,
  *   isIncognitoAvailable: boolean,
  *   isSupervised: boolean
  * }}

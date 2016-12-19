@@ -135,6 +135,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
       base::TimeTicks dns_resolution_start_time,
       base::TimeTicks dns_resolution_end_time,
       QuicClientPushPromiseIndex* push_promise_index,
+      ServerPushDelegate* push_delegate,
       base::TaskRunner* task_runner,
       std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
       NetLog* net_log);
@@ -307,10 +308,6 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
   void DeletePromised(QuicClientPromisedInfo* promised) override;
 
   void OnPushStreamTimedOut(QuicStreamId stream_id) override;
-
-  void set_push_delegate(ServerPushDelegate* push_delegate) {
-    push_delegate_ = push_delegate;
-  }
 
   // Cancels the push if the push stream for |url| has not been claimed and is
   // still active. Otherwise, no-op.

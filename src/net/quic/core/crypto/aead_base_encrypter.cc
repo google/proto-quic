@@ -104,7 +104,8 @@ bool AeadBaseEncrypter::Encrypt(StringPiece nonce,
   return true;
 }
 
-bool AeadBaseEncrypter::EncryptPacket(QuicPathId path_id,
+bool AeadBaseEncrypter::EncryptPacket(QuicVersion /*version*/,
+                                      QuicPathId path_id,
                                       QuicPacketNumber packet_number,
                                       StringPiece associated_data,
                                       StringPiece plaintext,

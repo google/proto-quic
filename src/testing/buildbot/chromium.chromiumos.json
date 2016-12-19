@@ -228,9 +228,6 @@
         "test": "jingle_unittests"
       },
       {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -405,9 +402,6 @@
         "test": "url_unittests"
       },
       {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": false
         },

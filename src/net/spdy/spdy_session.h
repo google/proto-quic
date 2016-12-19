@@ -309,6 +309,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
               size_t session_max_recv_window_size,
               size_t stream_max_recv_window_size,
               TimeFunc time_func,
+              ServerPushDelegate* push_delegate,
               ProxyDelegate* proxy_delegate,
               NetLog* net_log);
 
@@ -334,10 +335,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   int GetPushStream(const GURL& url,
                     base::WeakPtr<SpdyStream>* spdy_stream,
                     const NetLogWithSource& stream_net_log);
-
-  void set_push_delegate(ServerPushDelegate* push_delegate) {
-    push_delegate_ = push_delegate;
-  }
 
   // Called when the pushed stream should be cancelled. If the pushed stream is
   // not claimed and active, sends RST to the server to cancel the stream.

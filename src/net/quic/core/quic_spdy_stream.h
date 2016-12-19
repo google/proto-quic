@@ -200,6 +200,8 @@ class QUIC_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
       bool fin,
       QuicAckListenerInterface* ack_notifier_delegate) override;
 
+  void set_headers_decompressed(bool val) { headers_decompressed_ = val; }
+
  private:
   friend class test::QuicSpdyStreamPeer;
   friend class test::QuicStreamPeer;

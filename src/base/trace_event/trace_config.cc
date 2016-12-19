@@ -48,8 +48,10 @@ const char kSyntheticDelayCategoryFilterPrefix[] = "DELAY(";
 const char kMemoryDumpConfigParam[] = "memory_dump_config";
 const char kAllowedDumpModesParam[] = "allowed_dump_modes";
 const char kTriggersParam[] = "triggers";
-const char kPeriodicIntervalParam[] = "periodic_interval_ms";
-const char kModeParam[] = "mode";
+const char kTriggerModeParam[] = "mode";
+const char kMinTimeBetweenDumps[] = "min_time_between_dumps_ms";
+const char kTriggerTypeParam[] = "type";
+const char kPeriodicIntervalLegacyParam[] = "periodic_interval_ms";
 const char kHeapProfilerOptions[] = "heap_profiler_options";
 const char kBreakdownThresholdBytes[] = "breakdown_threshold_bytes";
 
@@ -60,11 +62,11 @@ const char kFilterArgsParam[] = "filter_args";
 
 // Default configuration of memory dumps.
 const TraceConfig::MemoryDumpConfig::Trigger kDefaultHeavyMemoryDumpTrigger = {
-    2000,  // periodic_interval_ms
-    MemoryDumpLevelOfDetail::DETAILED};
+    2000,  // min_time_between_dumps_ms
+    MemoryDumpLevelOfDetail::DETAILED, MemoryDumpType::PERIODIC_INTERVAL};
 const TraceConfig::MemoryDumpConfig::Trigger kDefaultLightMemoryDumpTrigger = {
-    250,  // periodic_interval_ms
-    MemoryDumpLevelOfDetail::LIGHT};
+    250,  // min_time_between_dumps_ms
+    MemoryDumpLevelOfDetail::LIGHT, MemoryDumpType::PERIODIC_INTERVAL};
 
 class ConvertableTraceConfigToTraceFormat
     : public base::trace_event::ConvertableToTraceFormat {
@@ -606,17 +608,26 @@ void TraceConfig::SetMemoryDumpConfigFromConfigDict(
       if (!trigger_list->GetDictionary(i, &trigger))
         continue;
 
-      int interval = 0;
-      if (!trigger->GetInteger(kPeriodicIntervalParam, &interval))
-        continue;
-
-      DCHECK_GT(interval, 0);
       MemoryDumpConfig::Trigger dump_config;
-      dump_config.periodic_interval_ms = static_cast<uint32_t>(interval);
+      int interval = 0;
+      if (!trigger->GetInteger(kMinTimeBetweenDumps, &interval)) {
+        // If "min_time_between_dumps_ms" param was not given, then the trace
+        // config uses old format where only periodic dumps are supported.
+        trigger->GetInteger(kPeriodicIntervalLegacyParam, &interval);
+        dump_config.trigger_type = MemoryDumpType::PERIODIC_INTERVAL;
+      } else {
+        std::string trigger_type_str;
+        trigger->GetString(kTriggerTypeParam, &trigger_type_str);
+        dump_config.trigger_type = StringToMemoryDumpType(trigger_type_str);
+      }
+      DCHECK_GT(interval, 0);
+      dump_config.min_time_between_dumps_ms = static_cast<uint32_t>(interval);
+
       std::string level_of_detail_str;
-      trigger->GetString(kModeParam, &level_of_detail_str);
+      trigger->GetString(kTriggerModeParam, &level_of_detail_str);
       dump_config.level_of_detail =
           StringToMemoryDumpLevelOfDetail(level_of_detail_str);
+
       memory_dump_config_.triggers.push_back(dump_config);
     }
   }
@@ -765,10 +776,14 @@ std::unique_ptr<DictionaryValue> TraceConfig::ToDict() const {
     auto triggers_list = MakeUnique<ListValue>();
     for (const auto& config : memory_dump_config_.triggers) {
       auto trigger_dict = MakeUnique<DictionaryValue>();
-      trigger_dict->SetInteger(kPeriodicIntervalParam,
-                               static_cast<int>(config.periodic_interval_ms));
+      trigger_dict->SetString(kTriggerTypeParam,
+                              MemoryDumpTypeToString(config.trigger_type));
+      trigger_dict->SetInteger(
+          kMinTimeBetweenDumps,
+          static_cast<int>(config.min_time_between_dumps_ms));
       trigger_dict->SetString(
-          kModeParam, MemoryDumpLevelOfDetailToString(config.level_of_detail));
+          kTriggerModeParam,
+          MemoryDumpLevelOfDetailToString(config.level_of_detail));
       triggers_list->Append(std::move(trigger_dict));
     }
 

@@ -47,8 +47,8 @@ DecodeStatus RandomDecoderTest::DecodeSegments(DecodeBuffer* original,
   VLOG(2) << "DecodeSegments: input size=" << original->Remaining();
   while (first || original->HasData()) {
     size_t remaining = original->Remaining();
-    size_t size = std::min(
-        remaining, select_size.Run(first, original->Offset(), remaining));
+    size_t size =
+        std::min(remaining, select_size(first, original->Offset(), remaining));
     DecodeBuffer db(original->cursor(), size);
     VLOG(2) << "Decoding " << size << " bytes of " << remaining << " remaining";
     if (first) {
@@ -96,8 +96,8 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
     // Fast decode (no stopping unless decoder does so).
     DecodeBuffer input(original->cursor(), original_remaining);
     VLOG(2) << "DecodeSegmentsAndValidate with SelectRemaining";
-    VERIFY_SUCCESS(DecodeSegmentsAndValidate(
-        &input, base::Bind(&SelectRemaining), validator))
+    VERIFY_SUCCESS(
+        DecodeSegmentsAndValidate(&input, SelectRemaining(), validator))
         << "\nFailed with SelectRemaining; input.Offset=" << input.Offset()
         << "; input.Remaining=" << input.Remaining();
     first_consumed = input.Offset();
@@ -106,8 +106,7 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
     // Decode again, one byte at a time.
     DecodeBuffer input(original->cursor(), original_remaining);
     VLOG(2) << "DecodeSegmentsAndValidate with SelectOne";
-    VERIFY_SUCCESS(
-        DecodeSegmentsAndValidate(&input, base::Bind(&SelectOne), validator))
+    VERIFY_SUCCESS(DecodeSegmentsAndValidate(&input, SelectOne(), validator))
         << "\nFailed with SelectOne; input.Offset=" << input.Offset()
         << "; input.Remaining=" << input.Remaining();
     VERIFY_EQ(first_consumed, input.Offset()) << "\nFailed with SelectOne";
@@ -116,9 +115,8 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
     // Decode again, one or zero bytes at a time.
     DecodeBuffer input(original->cursor(), original_remaining);
     VLOG(2) << "DecodeSegmentsAndValidate with SelectZeroAndOne";
-    bool zero_next = !return_non_zero_on_first;
     VERIFY_SUCCESS(DecodeSegmentsAndValidate(
-        &input, base::Bind(&SelectZeroAndOne, &zero_next), validator))
+        &input, SelectZeroAndOne(return_non_zero_on_first), validator))
         << "\nFailed with SelectZeroAndOne";
     VERIFY_EQ(first_consumed, input.Offset())
         << "\nFailed with SelectZeroAndOne; input.Offset=" << input.Offset()
@@ -129,8 +127,7 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
     DecodeBuffer input(original->cursor(), original_remaining);
     VLOG(2) << "DecodeSegmentsAndValidate with SelectRandom";
     VERIFY_SUCCESS(DecodeSegmentsAndValidate(
-        &input, base::Bind(&RandomDecoderTest::SelectRandom,
-                           base::Unretained(this), return_non_zero_on_first),
+        &input, RandomDecoderTest::SelectRandom(return_non_zero_on_first),
         validator))
         << "\nFailed with SelectRandom; input.Offset=" << input.Offset()
         << "; input.Remaining=" << input.Remaining();
@@ -143,32 +140,35 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
 }
 
 // static
-size_t RandomDecoderTest::SelectZeroAndOne(bool* zero_next,
-                                           bool first,
-                                           size_t offset,
-                                           size_t remaining) {
-  if (*zero_next) {
-    *zero_next = false;
-    return 0;
-  } else {
-    *zero_next = true;
-    return 1;
-  }
-}
-
-size_t RandomDecoderTest::SelectRandom(bool return_non_zero_on_first,
-                                       bool first,
-                                       size_t offset,
-                                       size_t remaining) {
-  uint32_t r = random_.Rand32();
-  if (first && return_non_zero_on_first) {
-    CHECK_LT(0u, remaining);
-    if (remaining == 1) {
+RandomDecoderTest::SelectSize RandomDecoderTest::SelectZeroAndOne(
+    bool return_non_zero_on_first) {
+  std::shared_ptr<bool> zero_next(new bool);
+  *zero_next = !return_non_zero_on_first;
+  return [zero_next](bool first, size_t offset, size_t remaining) -> size_t {
+    if (*zero_next) {
+      *zero_next = false;
+      return 0;
+    } else {
+      *zero_next = true;
       return 1;
     }
-    return 1 + (r % remaining);  // size in range [1, remaining).
-  }
-  return r % (remaining + 1);  // size in range [0, remaining].
+  };
+}
+
+RandomDecoderTest::SelectSize RandomDecoderTest::SelectRandom(
+    bool return_non_zero_on_first) {
+  return [this, return_non_zero_on_first](bool first, size_t offset,
+                                          size_t remaining) -> size_t {
+    uint32_t r = random_.Rand32();
+    if (first && return_non_zero_on_first) {
+      CHECK_LT(0u, remaining);
+      if (remaining == 1) {
+        return 1;
+      }
+      return 1 + (r % remaining);  // size in range [1, remaining).
+    }
+    return r % (remaining + 1);  // size in range [0, remaining].
+  };
 }
 
 uint32_t RandomDecoderTest::RandStreamId() {

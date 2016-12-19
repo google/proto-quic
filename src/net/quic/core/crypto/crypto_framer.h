@@ -5,9 +5,9 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_FRAMER_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_FRAMER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -45,7 +45,8 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
   // ParseMessage parses exactly one message from the given StringPiece. If
   // there is an error, the message is truncated, or the message has trailing
   // garbage then nullptr will be returned.
-  static CryptoHandshakeMessage* ParseMessage(base::StringPiece in);
+  static std::unique_ptr<CryptoHandshakeMessage> ParseMessage(
+      base::StringPiece in);
 
   // Set callbacks to be called from the framer.  A visitor must be set, or
   // else the framer will crash.  It is acceptable for the visitor to do

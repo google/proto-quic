@@ -26,6 +26,10 @@ from devil.android import device_utils
 from devil.utils import run_tests_helper
 from pylib import constants
 
+sys.path.insert(0, os.path.abspath(os.path.join(
+    constants.DIR_SOURCE_ROOT, 'tools', 'swarming_client')))
+from libs.logdog import bootstrap # pylint: disable=import-error
+
 
 _TZ_UTC = {'TZ': 'UTC'}
 
@@ -103,6 +107,7 @@ def _DeviceAbiToArch(device_abi):
       return arch
   raise RuntimeError('Unknown device ABI: %s' % device_abi)
 
+
 def _ResolveSymbols(tombstone_data, include_stack, device_abi):
   """Run the stack tool for given tombstone input.
 
@@ -170,6 +175,7 @@ def _ResolveTombstones(jobs, tombstones):
     resolved_tombstones.extend(tombstone)
   return resolved_tombstones
 
+
 def _GetTombstonesForDevice(device, resolve_all_tombstones,
                             include_stack_symbols,
                             wipe_tombstones):
@@ -216,6 +222,7 @@ def _GetTombstonesForDevice(device, resolve_all_tombstones,
 
   return ret
 
+
 def ClearAllTombstones(device):
   """Clear all tombstones in the device.
 
@@ -229,6 +236,7 @@ def ClearAllTombstones(device):
   for tombstone_file, _ in all_tombstones:
     _EraseTombstone(device, tombstone_file)
 
+
 def ResolveTombstones(device, resolve_all_tombstones, include_stack_symbols,
                       wipe_tombstones, jobs=4):
   """Resolve tombstones in the device.
@@ -239,12 +247,42 @@ def ResolveTombstones(device, resolve_all_tombstones, include_stack_symbols,
     include_stack_symbols: Whether to include symbols for stack data.
     wipe_tombstones: Whether to wipe tombstones.
     jobs: Number of jobs to use when processing multiple crash stacks.
+
+  Returns:
+    A list of resolved tombstones.
   """
   return _ResolveTombstones(jobs,
                             _GetTombstonesForDevice(device,
                                                     resolve_all_tombstones,
                                                     include_stack_symbols,
                                                     wipe_tombstones))
+
+
+def LogdogTombstones(resolved_tombstones, stream_name):
+  """Save resolved tombstones to logdog and return the url.
+
+  Args:
+    stream_name: The name of the logdog stream that records tombstones.
+    resolved_tombstones: Resolved tombstones (output of ResolveTombstones).
+
+  Returns:
+    A url link to the recorded tombstones.
+  """
+  try:
+    tombstones_url = ''
+    stream_client = bootstrap.ButlerBootstrap.probe().stream_client()
+    with stream_client.text(stream_name) as logdog_stream:
+      for tombstones_line in resolved_tombstones:
+        logdog_stream.write(tombstones_line + '\n')
+      tombstones_url = logdog_stream.get_viewer_url(stream_name)
+  except bootstrap.NotBootstrappedError:
+    logging.exception('Error not bootstrapped. Failed to start logdog')
+  except (KeyError, ValueError) as e:
+    logging.exception('Error when creating stream_client/stream: %s.', e)
+  except Exception as e: # pylint: disable=broad-except
+    logging.exception('Unknown Error: %s.', e)
+  return tombstones_url
+
 
 def main():
   custom_handler = logging.StreamHandler(sys.stdout)
@@ -299,6 +337,7 @@ def main():
         args.stack, args.wipe_tombstones, args.jobs)
     for line in resolved_tombstones:
       logging.info(line)
+
 
 if __name__ == '__main__':
   sys.exit(main())

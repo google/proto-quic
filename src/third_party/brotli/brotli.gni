@@ -26,6 +26,7 @@ template("compress_file_brotli") {
     ]
     args = [
       "--force",
+      "--no-copy-stat",
       "--input",
       rebase_path(invoker.input_file, root_build_dir),
       "--output",

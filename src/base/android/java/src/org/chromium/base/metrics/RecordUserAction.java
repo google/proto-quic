@@ -19,7 +19,7 @@ import org.chromium.base.annotations.JNINamespace;
  */
 @JNINamespace("base::android")
 public class RecordUserAction {
-    private static boolean sIsDisabledForTests = false;
+    private static boolean sIsDisabledForTests;
 
     /**
      * Tests may not have native initialized, so they may need to disable metrics.

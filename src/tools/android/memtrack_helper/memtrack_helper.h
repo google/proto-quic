@@ -15,9 +15,11 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+static const char* const kLogTag = "memtrack_helper";
+
 static inline void exit_with_failure(const char* reason) {
   perror(reason);
-  __android_log_write(ANDROID_LOG_ERROR, "memtrack_helper", reason);
+  __android_log_write(ANDROID_LOG_ERROR, kLogTag, reason);
   exit(EXIT_FAILURE);
 }
 

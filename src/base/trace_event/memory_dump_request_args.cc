@@ -12,17 +12,26 @@ namespace trace_event {
 // static
 const char* MemoryDumpTypeToString(const MemoryDumpType& dump_type) {
   switch (dump_type) {
-    case MemoryDumpType::TASK_BEGIN:
-      return "task_begin";
-    case MemoryDumpType::TASK_END:
-      return "task_end";
     case MemoryDumpType::PERIODIC_INTERVAL:
       return "periodic_interval";
     case MemoryDumpType::EXPLICITLY_TRIGGERED:
       return "explicitly_triggered";
+    case MemoryDumpType::PEAK_MEMORY_USAGE:
+      return "peak_memory_usage";
   }
   NOTREACHED();
   return "unknown";
+}
+
+MemoryDumpType StringToMemoryDumpType(const std::string& str) {
+  if (str == "periodic_interval")
+    return MemoryDumpType::PERIODIC_INTERVAL;
+  if (str == "explicitly_triggered")
+    return MemoryDumpType::EXPLICITLY_TRIGGERED;
+  if (str == "peak_memory_usage")
+    return MemoryDumpType::PEAK_MEMORY_USAGE;
+  NOTREACHED();
+  return MemoryDumpType::LAST;
 }
 
 const char* MemoryDumpLevelOfDetailToString(

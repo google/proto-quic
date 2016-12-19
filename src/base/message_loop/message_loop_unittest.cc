@@ -614,9 +614,6 @@ RUN_MESSAGE_LOOP_TESTS(UI, &TypeUIMessagePumpFactory);
 RUN_MESSAGE_LOOP_TESTS(IO, &TypeIOMessagePumpFactory);
 
 #if defined(OS_WIN)
-// Additional set of tests for GPU version of UI message loop.
-RUN_MESSAGE_LOOP_TESTS(GPU, &MessagePumpForGpu::CreateMessagePumpForGpu);
-
 TEST(MessageLoopTest, PostDelayedTask_SharedTimer_SubPump) {
   RunTest_PostDelayedTask_SharedTimer_SubPump();
 }

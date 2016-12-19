@@ -518,7 +518,7 @@
     "type": "windowed_test_launcher",
   },
   "ios_chrome_unittests": {
-    "label": "//ios/chrome:ios_chrome_unittests",
+    "label": "//ios/chrome/test:ios_chrome_unittests",
     "type": "raw",
     "args": [],
   },
@@ -841,6 +841,9 @@
       "--xvfb",
       "../../tools/perf/run_telemetry_tests",
       "-v",
+      # TODO(nedn, eyaich): Remove this flag once crbug.com/549140 is fixed &
+      # Telemetry no longer downloads files in parallel. (crbug.com/661434#c24)
+      "--jobs=1",
       "--chrome-root",
       "../../",
     ],

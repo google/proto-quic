@@ -34,16 +34,16 @@ class ModernLinker extends Linker {
     private static final String TAG = "LibraryLoader";
 
     // Becomes true after linker initialization.
-    private boolean mInitialized = false;
+    private boolean mInitialized;
 
     // Becomes true to indicate this process needs to wait for a shared RELRO in LibraryLoad().
-    private boolean mWaitForSharedRelros = false;
+    private boolean mWaitForSharedRelros;
 
     // The map of all RELRO sections either created or used in this process.
-    private HashMap<String, LibInfo> mSharedRelros = null;
+    private HashMap<String, LibInfo> mSharedRelros;
 
     // Cached Bundle representation of the RELRO sections map for transfer across processes.
-    private Bundle mSharedRelrosBundle = null;
+    private Bundle mSharedRelrosBundle;
 
     // Set to true if this runs in the browser process. Disabled by initServiceProcess().
     private boolean mInBrowserProcess = true;
@@ -57,10 +57,10 @@ class ModernLinker extends Linker {
     private long mCurrentLoadAddress = -1;
 
     // Becomes true once prepareLibraryLoad() has been called.
-    private boolean mPrepareLibraryLoadCalled = false;
+    private boolean mPrepareLibraryLoadCalled;
 
     // The map of libraries that are currently loaded in this process.
-    private HashMap<String, LibInfo> mLoadedLibraries = null;
+    private HashMap<String, LibInfo> mLoadedLibraries;
 
     // Private singleton constructor, and singleton factory method.
     private ModernLinker() { }

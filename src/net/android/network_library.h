@@ -45,6 +45,10 @@ bool StoreKeyPair(const uint8_t* public_key,
                   const uint8_t* private_key,
                   size_t private_len);
 
+// Returns true if cleartext traffic to |host| is allowed by the app. Always
+// true on L and older.
+bool IsCleartextPermitted(const std::string& host);
+
 // Returns true if it can determine that only loopback addresses are configured.
 // i.e. if only 127.0.0.1 and ::1 are routable.
 // Also returns false if it cannot determine this.

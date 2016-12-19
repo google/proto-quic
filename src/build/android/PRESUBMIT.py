@@ -31,6 +31,7 @@ def CommonChecks(input_api, output_api):
           J(),
           J('gyp'),
           J('buildbot'),
+          J('..', '..', 'third_party', 'catapult', 'common', 'py_trace_event'),
           J('..', '..', 'third_party', 'catapult', 'devil')
       ]))
   output.extend(input_api.canned_checks.RunPylint(

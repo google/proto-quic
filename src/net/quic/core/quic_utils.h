@@ -35,18 +35,22 @@ class QUIC_EXPORT_PRIVATE QuicUtils {
  public:
   // Returns the 64 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint64_t FNV1a_64_Hash(const char* data, int len);
+  static uint64_t FNV1a_64_Hash(base::StringPiece data);
 
-  // returns the 128 bit FNV1a hash of the data.  See
+  // Returns the 128 bit FNV1a hash of the data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint128 FNV1a_128_Hash(const char* data1, int len1);
+  static uint128 FNV1a_128_Hash(base::StringPiece data);
 
-  // returns the 128 bit FNV1a hash of the two sequences of data.  See
+  // Returns the 128 bit FNV1a hash of the two sequences of data.  See
   // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
-  static uint128 FNV1a_128_Hash_Two(const char* data1,
-                                    int len1,
-                                    const char* data2,
-                                    int len2);
+  static uint128 FNV1a_128_Hash_Two(base::StringPiece data1,
+                                    base::StringPiece data2);
+
+  // Returns the 128 bit FNV1a hash of the three sequences of data.  See
+  // http://www.isthe.com/chongo/tech/comp/fnv/index.html#FNV-param
+  static uint128 FNV1a_128_Hash_Three(base::StringPiece data1,
+                                      base::StringPiece data2,
+                                      base::StringPiece data3);
 
   // SerializeUint128 writes the first 96 bits of |v| in little-endian form
   // to |out|.

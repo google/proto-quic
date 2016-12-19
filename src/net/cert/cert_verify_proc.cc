@@ -476,30 +476,28 @@ int CertVerifyProc::Verify(X509Certificate* cert,
     verify_result->cert_status |= CERT_STATUS_SHA1_SIGNATURE_PRESENT;
 
   // Flag certificates using weak signature algorithms.
-  // The CA/Browser Forum Baseline Requirements (beginning with v1.2.1)
-  // prohibits SHA-1 certificates from being issued beginning on
-  // 1 January 2016. Ideally, all of SHA-1 in new certificates would be
-  // disabled on this date, but enterprises need more time to transition.
-  // As the risk is greatest for publicly trusted certificates, prevent
-  // those certificates from being trusted from that date forward.
-  //
-  // TODO(mattm): apply the SHA-1 deprecation check to all certs unless
-  // CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS flag is present.
+
+  // Legacy SHA-1 behaviour:
+  // - Reject all publicly trusted SHA-1 leaf certs issued after
+  //   2016-01-01.
+  bool legacy_sha1_issue = verify_result->has_sha1_leaf &&
+                           verify_result->is_issued_by_known_root &&
+                           IsPastSHA1DeprecationDate(*cert);
+
+  // Current SHA-1 behaviour:
+  // - Reject all SHA-1
+  // - ... unless it's not publicly trusted and SHA-1 is allowed
+  // - ... or SHA-1 is in the intermediate and SHA-1 intermediates are
+  //   allowed for that platform. See https://crbug.com/588789
+  bool current_sha1_issue =
+      (verify_result->is_issued_by_known_root ||
+       !(flags & CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS)) &&
+      (verify_result->has_sha1_leaf ||
+       (verify_result->has_sha1 && !AreSHA1IntermediatesAllowed()));
+
   if (verify_result->has_md5 ||
-      // Current SHA-1 behaviour:
-      // - Reject all publicly trusted SHA-1
-      // - ... unless it's in the intermediate and SHA-1 intermediates are
-      //   allowed for that platform. See https://crbug.com/588789
-      (!sha1_legacy_mode_enabled &&
-       (verify_result->is_issued_by_known_root &&
-        (verify_result->has_sha1_leaf ||
-         (verify_result->has_sha1 && !AreSHA1IntermediatesAllowed())))) ||
-      // Legacy SHA-1 behaviour:
-      // - Reject all publicly trusted SHA-1 leaf certs issued after
-      //   2016-01-01.
-      (sha1_legacy_mode_enabled && (verify_result->has_sha1_leaf &&
-                                    verify_result->is_issued_by_known_root &&
-                                    IsPastSHA1DeprecationDate(*cert)))) {
+      (sha1_legacy_mode_enabled && legacy_sha1_issue) ||
+      (!sha1_legacy_mode_enabled && current_sha1_issue)) {
     verify_result->cert_status |= CERT_STATUS_WEAK_SIGNATURE_ALGORITHM;
     // Avoid replacing a more serious error, such as an OS/library failure,
     // by ensuring that if verification failed, it failed with a certificate

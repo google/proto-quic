@@ -22,8 +22,6 @@ QuicDecrypter* QuicDecrypter::Create(QuicTag algorithm) {
       return new Aes128Gcm12Decrypter();
     case kCC20:
       return new ChaCha20Poly1305Decrypter();
-    case kNULL:
-      return new NullDecrypter();
     default:
       LOG(FATAL) << "Unsupported algorithm: " << algorithm;
       return nullptr;

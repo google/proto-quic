@@ -6191,6 +6191,60 @@ TEST_F(SpdyNetworkTransactionTest, 100Continue) {
   EXPECT_EQ("hello!", out.response_data);
 }
 
+// "A server can send a complete response prior to the client sending an entire
+// request if the response does not depend on any portion of the request that
+// has not been sent and received."  (RFC7540 Section 8.1)
+// Regression test for https://crbug.com/606990.  Server responds before POST
+// data are sent and closes connection: this must result in
+// ERR_CONNECTION_CLOSED (as opposed to ERR_SPDY_PROTOCOL_ERROR).
+TEST_F(SpdyNetworkTransactionTest, ResponseBeforePostDataSent) {
+  SpdySerializedFrame req(spdy_util_.ConstructChunkedSpdyPost(nullptr, 0));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(body, 2),
+                      MockRead(ASYNC, 0, 3)};
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  NormalSpdyTransactionHelper helper(CreateChunkedPostRequest(),
+                                     DEFAULT_PRIORITY, NetLogWithSource(),
+                                     nullptr);
+
+  helper.RunPreTestSetup();
+  helper.AddData(&data);
+  helper.StartDefaultTest();
+  EXPECT_THAT(helper.output().rv, IsError(ERR_IO_PENDING));
+  helper.WaitForCallbackToComplete();
+  EXPECT_THAT(helper.output().rv, IsError(ERR_CONNECTION_CLOSED));
+}
+
+// Regression test for https://crbug.com/606990.
+// Server responds before POST data are sent and resets stream with NO_ERROR.
+TEST_F(SpdyNetworkTransactionTest, ResponseAndRstStreamBeforePostDataSent) {
+  SpdySerializedFrame req(spdy_util_.ConstructChunkedSpdyPost(nullptr, 0));
+  MockWrite writes[] = {CreateMockWrite(req, 0)};
+
+  SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
+  SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
+  SpdySerializedFrame rst(
+      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+  MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(body, 2),
+                      CreateMockRead(rst, 3), MockRead(ASYNC, 0, 4)};
+
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  NormalSpdyTransactionHelper helper(CreateChunkedPostRequest(),
+                                     DEFAULT_PRIORITY, NetLogWithSource(),
+                                     nullptr);
+
+  helper.RunToCompletion(&data);
+
+  TransactionHelperResult out = helper.output();
+  EXPECT_THAT(out.rv, IsOk());
+  EXPECT_EQ("HTTP/1.1 200", out.status_line);
+  EXPECT_EQ("hello!", out.response_data);
+}
+
 class SpdyNetworkTransactionTLSUsageCheckTest
     : public SpdyNetworkTransactionTest {
  protected:

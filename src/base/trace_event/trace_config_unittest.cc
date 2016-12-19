@@ -37,7 +37,8 @@ const char kCustomTraceConfigString[] =
     "}"
     "],"
     "\"excluded_categories\":[\"excluded\",\"exc_pattern*\"],"
-    "\"included_categories\":[\"included\","
+    "\"included_categories\":["
+    "\"included\","
     "\"inc_pattern*\","
     "\"disabled-by-default-cc\","
     "\"disabled-by-default-memory-infra\"],"
@@ -47,8 +48,16 @@ const char kCustomTraceConfigString[] =
     "\"breakdown_threshold_bytes\":10240"
     "},"
     "\"triggers\":["
-    "{\"mode\":\"light\",\"periodic_interval_ms\":50},"
-    "{\"mode\":\"detailed\",\"periodic_interval_ms\":1000}"
+    "{"
+    "\"min_time_between_dumps_ms\":50,"
+    "\"mode\":\"light\","
+    "\"type\":\"periodic_interval\""
+    "},"
+    "{"
+    "\"min_time_between_dumps_ms\":1000,"
+    "\"mode\":\"detailed\","
+    "\"type\":\"peak_memory_usage\""
+    "}"
     "]"
     "},"
     "\"record_mode\":\"record-continuously\","
@@ -622,30 +631,47 @@ TEST(TraceConfigTest, TraceConfigFromMemoryConfigString) {
       TraceConfigMemoryTestUtil::GetTraceConfig_PeriodicTriggers(200, 2000);
   TraceConfig tc1(tc_str1);
   EXPECT_EQ(tc_str1, tc1.ToString());
+  TraceConfig tc2(
+      TraceConfigMemoryTestUtil::GetTraceConfig_LegacyPeriodicTriggers(200,
+                                                                       2000));
+  EXPECT_EQ(tc_str1, tc2.ToString());
+
   EXPECT_TRUE(tc1.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
   ASSERT_EQ(2u, tc1.memory_dump_config_.triggers.size());
 
-  EXPECT_EQ(200u, tc1.memory_dump_config_.triggers[0].periodic_interval_ms);
+  EXPECT_EQ(200u,
+            tc1.memory_dump_config_.triggers[0].min_time_between_dumps_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::LIGHT,
             tc1.memory_dump_config_.triggers[0].level_of_detail);
 
-  EXPECT_EQ(2000u, tc1.memory_dump_config_.triggers[1].periodic_interval_ms);
+  EXPECT_EQ(2000u,
+            tc1.memory_dump_config_.triggers[1].min_time_between_dumps_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
             tc1.memory_dump_config_.triggers[1].level_of_detail);
   EXPECT_EQ(
       2048u,
       tc1.memory_dump_config_.heap_profiler_options.breakdown_threshold_bytes);
 
-  std::string tc_str2 =
+  std::string tc_str3 =
       TraceConfigMemoryTestUtil::GetTraceConfig_BackgroundTrigger(
           1 /* period_ms */);
-  TraceConfig tc2(tc_str2);
-  EXPECT_EQ(tc_str2, tc2.ToString());
-  EXPECT_TRUE(tc2.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
-  ASSERT_EQ(1u, tc2.memory_dump_config_.triggers.size());
-  EXPECT_EQ(1u, tc2.memory_dump_config_.triggers[0].periodic_interval_ms);
+  TraceConfig tc3(tc_str3);
+  EXPECT_EQ(tc_str3, tc3.ToString());
+  EXPECT_TRUE(tc3.IsCategoryGroupEnabled(MemoryDumpManager::kTraceCategory));
+  ASSERT_EQ(1u, tc3.memory_dump_config_.triggers.size());
+  EXPECT_EQ(1u, tc3.memory_dump_config_.triggers[0].min_time_between_dumps_ms);
   EXPECT_EQ(MemoryDumpLevelOfDetail::BACKGROUND,
-            tc2.memory_dump_config_.triggers[0].level_of_detail);
+            tc3.memory_dump_config_.triggers[0].level_of_detail);
+
+  std::string tc_str4 =
+      TraceConfigMemoryTestUtil::GetTraceConfig_PeakDetectionTrigger(
+          1 /*heavy_period */);
+  TraceConfig tc4(tc_str4);
+  EXPECT_EQ(tc_str4, tc4.ToString());
+  ASSERT_EQ(1u, tc4.memory_dump_config_.triggers.size());
+  EXPECT_EQ(1u, tc4.memory_dump_config_.triggers[0].min_time_between_dumps_ms);
+  EXPECT_EQ(MemoryDumpLevelOfDetail::DETAILED,
+            tc4.memory_dump_config_.triggers[0].level_of_detail);
 }
 
 TEST(TraceConfigTest, EmptyMemoryDumpConfigTest) {

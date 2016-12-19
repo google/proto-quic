@@ -1486,9 +1486,9 @@ TEST_F(HostResolverImplTest, MultipleAttempts) {
 
 // If a host resolves to a list that includes 127.0.53.53, this is treated as
 // an error. 127.0.53.53 is a localhost address, however it has been given a
-// special significance by ICANN to help surfance name collision resulting from
+// special significance by ICANN to help surface name collision resulting from
 // the new gTLDs.
-TEST_F(HostResolverImplTest, NameCollision127_0_53_53) {
+TEST_F(HostResolverImplTest, NameCollisionIcann) {
   proc_->AddRuleForAllFamilies("single", "127.0.53.53");
   proc_->AddRuleForAllFamilies("multiple", "127.0.0.1,127.0.53.53");
   proc_->AddRuleForAllFamilies("ipv6", "::127.0.53.53");
@@ -1502,6 +1502,12 @@ TEST_F(HostResolverImplTest, NameCollision127_0_53_53) {
   request = CreateRequest("single");
   EXPECT_THAT(request->Resolve(), IsError(ERR_IO_PENDING));
   EXPECT_THAT(request->WaitForResult(), IsError(ERR_ICANN_NAME_COLLISION));
+
+  // ERR_ICANN_NAME_COLLISION is cached like any other error, using a
+  // fixed TTL for failed entries from proc-based resolver. That said, the
+  // fixed TTL is 0, so it will never be cached.
+  request = CreateRequest("single");
+  EXPECT_THAT(request->ResolveFromCache(), IsError(ERR_DNS_CACHE_MISS));
 
   request = CreateRequest("multiple");
   EXPECT_THAT(request->Resolve(), IsError(ERR_IO_PENDING));
@@ -1615,6 +1621,16 @@ class HostResolverImplDnsTest : public HostResolverImplTest {
                MockDnsClientRule::OK, true);
     AddDnsRule("4slow_6timeout", dns_protocol::kTypeAAAA,
                MockDnsClientRule::TIMEOUT, false);
+    AddDnsRule("4collision", dns_protocol::kTypeA, IPAddress(127, 0, 53, 53),
+               false);
+    AddDnsRule("4collision", dns_protocol::kTypeAAAA, MockDnsClientRule::EMPTY,
+               false);
+    AddDnsRule("6collision", dns_protocol::kTypeA, MockDnsClientRule::EMPTY,
+               false);
+    // This isn't the expected IP for collisions (but looks close to it).
+    AddDnsRule("6collision", dns_protocol::kTypeAAAA,
+               IPAddress(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 0, 53, 53),
+               false);
     CreateResolver();
   }
 
@@ -1631,6 +1647,22 @@ class HostResolverImplDnsTest : public HostResolverImplTest {
   }
 
   // Adds a rule to |dns_rules_|. Must be followed by |CreateResolver| to apply.
+  void AddDnsRule(const std::string& prefix,
+                  uint16_t qtype,
+                  MockDnsClientRule::ResultType result_type,
+                  bool delay) {
+    return AddDnsRule(prefix, qtype, MockDnsClientRule::Result(result_type),
+                      delay);
+  }
+
+  void AddDnsRule(const std::string& prefix,
+                  uint16_t qtype,
+                  const IPAddress& result_ip,
+                  bool delay) {
+    return AddDnsRule(prefix, qtype, MockDnsClientRule::Result(result_ip),
+                      delay);
+  }
+
   void AddDnsRule(const std::string& prefix,
                   uint16_t qtype,
                   MockDnsClientRule::Result result,
@@ -1790,6 +1822,34 @@ TEST_F(HostResolverImplDnsTest, DnsTaskUnspec) {
   EXPECT_TRUE(requests_[2]->HasAddress("::1", 80));
   EXPECT_EQ(1u, requests_[3]->NumberOfAddresses());
   EXPECT_TRUE(requests_[3]->HasAddress("192.168.1.101", 80));
+}
+
+TEST_F(HostResolverImplDnsTest, NameCollisionIcann) {
+  ChangeDnsConfig(CreateValidDnsConfig());
+
+  // When the resolver returns an A record with 127.0.53.53 it should be mapped
+  // to a special error.
+  EXPECT_THAT(CreateRequest("4collision", 80)->Resolve(),
+              IsError(ERR_IO_PENDING));
+
+  EXPECT_THAT(requests_[0]->WaitForResult(), IsError(ERR_ICANN_NAME_COLLISION));
+
+  // When the resolver returns an AAAA record with ::127.0.53.53 it should
+  // work just like any other IP. (Despite having the same suffix, it is not
+  // considered special)
+  EXPECT_THAT(CreateRequest("6collision", 80)->Resolve(),
+              IsError(ERR_IO_PENDING));
+
+  EXPECT_THAT(requests_[1]->WaitForResult(), IsError(OK));
+  EXPECT_TRUE(requests_[1]->HasAddress("::127.0.53.53", 80));
+
+  // The mock responses for 4collision (and 6collision) have a TTL of 1 day.
+  // Test whether the ERR_ICANN_NAME_COLLISION failure was cached.
+  // On the one hand caching the failure makes sense, as the error is derived
+  // from the IP in the response. However for consistency with the the proc-
+  // based implementation the TTL is unused.
+  EXPECT_THAT(CreateRequest("4collision", 80)->ResolveFromCache(),
+              IsError(ERR_DNS_CACHE_MISS));
 }
 
 TEST_F(HostResolverImplDnsTest, ServeFromHosts) {

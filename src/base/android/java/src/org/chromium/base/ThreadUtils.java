@@ -21,9 +21,9 @@ public class ThreadUtils {
 
     private static final Object sLock = new Object();
 
-    private static boolean sWillOverride = false;
+    private static boolean sWillOverride;
 
-    private static Handler sUiThreadHandler = null;
+    private static Handler sUiThreadHandler;
 
     public static void setWillOverrideUiThread() {
         synchronized (sLock) {

@@ -174,6 +174,11 @@ void HttpStreamFactoryImpl::JobController::OnStreamReady(
     const SSLConfig& used_ssl_config,
     const ProxyInfo& used_proxy_info) {
   DCHECK(job);
+  // TODO(tbansal): Remove |used_proxy_info| from the method arguments.
+  DCHECK(job->proxy_info().is_empty() == used_proxy_info.is_empty() ||
+         job->proxy_info().proxy_server() == used_proxy_info.proxy_server());
+
+  factory_->OnStreamReady(job->proxy_info());
 
   if (job_bound_ && bound_job_ != job) {
     // We have bound a job to the associated Request, |job| has been orphaned.
@@ -367,6 +372,11 @@ void HttpStreamFactoryImpl::JobController::OnNeedsProxyAuth(
                              auth_controller);
 }
 
+bool HttpStreamFactoryImpl::JobController::OnInitConnection(
+    const ProxyInfo& proxy_info) {
+  return factory_->OnInitConnection(*this, proxy_info);
+}
+
 void HttpStreamFactoryImpl::JobController::OnResolveProxyComplete(
     Job* job,
     const HttpRequestInfo& request_info,
@@ -413,6 +423,7 @@ void HttpStreamFactoryImpl::JobController::OnNewSpdySessionReady(
     bool direct) {
   DCHECK(job);
   DCHECK(job->using_spdy());
+  DCHECK(!is_preconnect_);
 
   bool is_job_orphaned = job_bound_ && bound_job_ != job;
 

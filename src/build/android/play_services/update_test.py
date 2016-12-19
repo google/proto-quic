@@ -58,7 +58,6 @@ class TestFunctions(unittest.TestCase):
     status = update.main([
         'upload',
         '--dry-run',
-        '--skip-git',
         '--bucket', self.paths.bucket,
         '--config', self.paths.config_file,
         '--sdk-root', self.paths.gms.sdk_root

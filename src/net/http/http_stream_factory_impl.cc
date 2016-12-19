@@ -8,6 +8,8 @@
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
+#include "base/metrics/field_trial.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "net/http/http_network_session.h"
@@ -16,10 +18,12 @@
 #include "net/http/http_stream_factory_impl_job_controller.h"
 #include "net/http/http_stream_factory_impl_request.h"
 #include "net/http/transport_security_state.h"
+#include "net/proxy/proxy_info.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "url/gurl.h"
+#include "url/scheme_host_port.h"
 #include "url/url_constants.h"
 
 namespace net {
@@ -84,13 +88,24 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
         alternative_proxy_server, net_log);
   }
 };
+
+// Returns true if only one preconnect to proxy servers is allowed via field
+// trial.
+bool AllowOnlyOnePreconnectToProxyServers() {
+  return base::StartsWith(base::FieldTrialList::FindFullName(
+                              "NetAllowOnlyOnePreconnectToProxyServers"),
+                          "Enabled", base::CompareCase::INSENSITIVE_ASCII);
+}
+
 }  // anonymous namespace
 
 HttpStreamFactoryImpl::HttpStreamFactoryImpl(HttpNetworkSession* session,
                                              bool for_websockets)
     : session_(session),
       job_factory_(new DefaultJobFactory()),
-      for_websockets_(for_websockets) {}
+      for_websockets_(for_websockets),
+      allow_only_one_preconnect_to_proxy_servers_(
+          AllowOnlyOnePreconnectToProxyServers()) {}
 
 HttpStreamFactoryImpl::~HttpStreamFactoryImpl() {
   DCHECK(request_map_.empty());
@@ -237,6 +252,65 @@ void HttpStreamFactoryImpl::OnJobControllerComplete(JobController* controller) {
     }
   }
   NOTREACHED();
+}
+
+bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
+                                             const ProxyInfo& proxy_info) {
+  if (!controller.is_preconnect()) {
+    // Connection initialization can be skipped only for the preconnect jobs.
+    return false;
+  }
+
+  if (!allow_only_one_preconnect_to_proxy_servers_ ||
+      !ProxyServerSupportsPriorities(proxy_info)) {
+    return false;
+  }
+
+  if (base::ContainsKey(preconnecting_proxy_servers_,
+                        proxy_info.proxy_server())) {
+    UMA_HISTOGRAM_EXACT_LINEAR("Net.PreconnectSkippedToProxyServers", 1, 2);
+    // Skip preconnect to the proxy server since we are already preconnecting
+    // (probably via some other job).
+    return true;
+  }
+
+  // Add the proxy server to the set of preconnecting proxy servers.
+  // The maximum size of |preconnecting_proxy_servers_|.
+  static const size_t kMaxPreconnectingServerSize = 3;
+  if (preconnecting_proxy_servers_.size() >= kMaxPreconnectingServerSize) {
+    // Erase the first entry. A better approach (at the cost of higher memory
+    // overhead) may be to erase the least recently used entry.
+    preconnecting_proxy_servers_.erase(preconnecting_proxy_servers_.begin());
+  }
+
+  preconnecting_proxy_servers_.insert(proxy_info.proxy_server());
+  DCHECK_GE(kMaxPreconnectingServerSize, preconnecting_proxy_servers_.size());
+  // The first preconnect should be allowed.
+  return false;
+}
+
+void HttpStreamFactoryImpl::OnStreamReady(const ProxyInfo& proxy_info) {
+  if (proxy_info.is_empty())
+    return;
+  preconnecting_proxy_servers_.erase(proxy_info.proxy_server());
+}
+
+bool HttpStreamFactoryImpl::ProxyServerSupportsPriorities(
+    const ProxyInfo& proxy_info) const {
+  if (proxy_info.is_empty() || !proxy_info.proxy_server().is_valid())
+    return false;
+
+  if (!proxy_info.proxy_server().is_https())
+    return false;
+
+  HostPortPair host_port_pair = proxy_info.proxy_server().host_port_pair();
+  DCHECK(!host_port_pair.IsEmpty());
+
+  url::SchemeHostPort scheme_host_port("https", host_port_pair.host(),
+                                       host_port_pair.port());
+
+  return session_->http_server_properties()->SupportsRequestPriority(
+      scheme_host_port);
 }
 
 }  // namespace net

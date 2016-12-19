@@ -9,12 +9,13 @@
 #include "net/quic/test_tools/simulator/switch.h"
 
 using base::StringPrintf;
+using std::string;
 
 namespace net {
 namespace simulator {
 
 Switch::Switch(Simulator* simulator,
-               std::string name,
+               string name,
                SwitchPortNumber port_count,
                QuicByteCount queue_capacity) {
   for (size_t port_number = 1; port_number <= port_count; port_number++) {
@@ -27,7 +28,7 @@ Switch::Switch(Simulator* simulator,
 Switch::~Switch() {}
 
 Switch::Port::Port(Simulator* simulator,
-                   std::string name,
+                   string name,
                    Switch* parent,
                    SwitchPortNumber port_number,
                    QuicByteCount queue_capacity)

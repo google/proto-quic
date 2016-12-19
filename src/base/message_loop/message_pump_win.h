@@ -140,39 +140,6 @@ class BASE_EXPORT MessagePumpForUI : public MessagePumpWin {
 };
 
 //-----------------------------------------------------------------------------
-// MessagePumpForGpu is a simplified version of UI message pump that is
-// optimized for the GPU process. Unlike MessagePumpForUI it doesn't have a
-// hidden window and doesn't handle a situation where a native message pump
-// might take over message processing.
-//
-class BASE_EXPORT MessagePumpForGpu : public MessagePumpWin {
- public:
-  MessagePumpForGpu();
-  ~MessagePumpForGpu() override;
-
-  // Factory methods.
-  static void InitFactory();
-  static std::unique_ptr<MessagePump> CreateMessagePumpForGpu();
-
-  // MessagePump methods:
-  void ScheduleWork() override;
-  void ScheduleDelayedWork(const TimeTicks& delayed_work_time) override;
-
- private:
-  // MessagePumpWin methods:
-  void DoRunLoop() override;
-
-  void WaitForWork();
-  bool ProcessNextMessage();
-
-  win::ScopedHandle event_;
-
-  // Used to help diagnose hangs.
-  // TODO(stanisc): crbug.com/596190: Remove these once the bug is fixed.
-  TimeTicks last_set_event_timeticks_;
-};
-
-//-----------------------------------------------------------------------------
 // MessagePumpForIO extends MessagePumpWin with methods that are particular to a
 // MessageLoop instantiated with TYPE_IO. This version of MessagePump does not
 // deal with Windows mesagges, and instead has a Run loop based on Completion

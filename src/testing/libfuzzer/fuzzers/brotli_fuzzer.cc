@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "third_party/brotli/dec/decode.h"
+#include "third_party/brotli/include/brotli/decode.h"
 
 // Entry point for LibFuzzer.
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
@@ -16,7 +16,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   const int kBufferSize = 1024;
   uint8_t* buffer = new uint8_t[kBufferSize];
-  BrotliState* state = BrotliCreateState(0, 0, 0);
+  BrotliDecoderState* state = BrotliDecoderCreateInstance(0, 0, 0);
 
   if (addend == 0)
     addend = size;
@@ -27,19 +27,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       next_i = size;
     size_t avail_in = next_i - i;
     i = next_i;
-    BrotliResult result = BROTLI_RESULT_NEEDS_MORE_OUTPUT;
-    while (result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) {
+    BrotliDecoderResult result = BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT;
+    while (result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT) {
       size_t avail_out = kBufferSize;
       uint8_t* next_out = buffer;
       size_t total_out;
-      result = BrotliDecompressStream(
-          &avail_in, &next_in, &avail_out, &next_out, &total_out, state);
+      result = BrotliDecoderDecompressStream(
+          state, &avail_in, &next_in, &avail_out, &next_out, &total_out);
     }
-    if (result != BROTLI_RESULT_NEEDS_MORE_INPUT)
+    if (result != BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT)
       break;
   }
 
-  BrotliDestroyState(state);
+  BrotliDecoderDestroyInstance(state);
   delete[] buffer;
   return 0;
 }

@@ -23,9 +23,8 @@ import org.chromium.base.annotations.MainDex;
 @JNINamespace("base::android")
 @MainDex
 public class TraceEvent {
-
-    private static volatile boolean sEnabled = false;
-    private static volatile boolean sATraceEnabled = false; // True when taking an Android systrace.
+    private static volatile boolean sEnabled;
+    private static volatile boolean sATraceEnabled; // True when taking an Android systrace.
 
     private static class BasicLooperMonitor implements Printer {
         @Override
@@ -84,14 +83,14 @@ public class TraceEvent {
                 MIN_INTERESTING_DURATION_MILLIS * 3;
 
         // Stats tracking
-        private long mLastIdleStartedAt = 0L;
-        private long mLastWorkStartedAt = 0L;
-        private int mNumTasksSeen = 0;
-        private int mNumIdlesSeen = 0;
-        private int mNumTasksSinceLastIdle = 0;
+        private long mLastIdleStartedAt;
+        private long mLastWorkStartedAt;
+        private int mNumTasksSeen;
+        private int mNumIdlesSeen;
+        private int mNumTasksSinceLastIdle;
 
         // State
-        private boolean mIdleMonitorAttached = false;
+        private boolean mIdleMonitorAttached;
 
         // Called from within the begin/end methods only.
         // This method can only execute on the looper thread, because that is

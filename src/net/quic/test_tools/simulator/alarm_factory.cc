@@ -7,6 +7,7 @@
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 
 using base::StringPrintf;
+using std::string;
 
 namespace net {
 namespace simulator {
@@ -16,7 +17,7 @@ namespace simulator {
 class Alarm : public QuicAlarm {
  public:
   Alarm(Simulator* simulator,
-        std::string name,
+        string name,
         QuicArenaScopedPtr<QuicAlarm::Delegate> delegate)
       : QuicAlarm(std::move(delegate)), adapter_(simulator, name, this) {}
   ~Alarm() override {}
@@ -34,7 +35,7 @@ class Alarm : public QuicAlarm {
   // interfaces.
   class Adapter : public Actor {
    public:
-    Adapter(Simulator* simulator, std::string name, Alarm* parent)
+    Adapter(Simulator* simulator, string name, Alarm* parent)
         : Actor(simulator, name), parent_(parent) {}
     ~Adapter() override {}
 
@@ -52,12 +53,12 @@ class Alarm : public QuicAlarm {
   Adapter adapter_;
 };
 
-AlarmFactory::AlarmFactory(Simulator* simulator, std::string name)
+AlarmFactory::AlarmFactory(Simulator* simulator, string name)
     : simulator_(simulator), name_(std::move(name)), counter_(0) {}
 
 AlarmFactory::~AlarmFactory() {}
 
-std::string AlarmFactory::GetNewAlarmName() {
+string AlarmFactory::GetNewAlarmName() {
   ++counter_;
   return StringPrintf("%s (alarm %i)", name_.c_str(), counter_);
 }

@@ -27,7 +27,6 @@ from devil.android import forwarder
 from devil.android import ports
 from devil.utils import reraiser_thread
 from devil.utils import run_tests_helper
-from devil.utils import signal_handler
 
 from pylib import constants
 from pylib.base import base_test_result
@@ -556,6 +555,10 @@ def AddPerfTestOptions(parser):
   group.add_argument(
       '--write-buildbot-json', action='store_true',
       help='Whether to output buildbot json.')
+  # TODO(rnephew): Move up to top level options when implemented on all tests.
+  group.add_argument(
+      '--trace-output', metavar='FILENAME', type=os.path.realpath,
+      help='Path to save test_runner trace data to.')
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
 
@@ -718,8 +721,7 @@ def RunTestsInPlatformMode(args):
 
     infra_error('\n'.join(msg))
 
-  sigterm_handler = signal_handler.SignalHandler(
-      signal.SIGTERM, unexpected_sigterm)
+  signal.signal(signal.SIGTERM, unexpected_sigterm)
 
   ### Set up results handling.
   # TODO(jbudorick): Rewrite results handling.
@@ -761,7 +763,7 @@ def RunTestsInPlatformMode(args):
 
   ### Run.
 
-  with sigterm_handler, json_writer, env, test_instance, test_run:
+  with json_writer, env, test_instance, test_run:
 
     repetitions = (xrange(args.repeat + 1) if args.repeat >= 0
                    else itertools.count())

@@ -11,7 +11,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -42,7 +42,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -73,7 +73,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -351,8 +351,434 @@
     ]
   },
   "Android Release (Nexus 5X)": {
-    "gtest_tests": [],
-    "isolated_scripts": []
+    "gtest_tests": [
+      {
+        "args": [
+          "--enable-xml-result-parsing"
+        ],
+        "name": "angle_deqp_gles2_gles_tests",
+        "override_isolate_target": "angle_deqp_gles2_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "angle_deqp_gles2_tests",
+        "use_xvfb": false
+      },
+      {
+        "override_isolate_target": "angle_end2end_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "angle_end2end_tests",
+        "use_xvfb": false
+      },
+      {
+        "override_isolate_target": "angle_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "angle_unittests",
+        "use_xvfb": false
+      },
+      {
+        "override_isolate_target": "gl_tests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gl_tests",
+        "use_xvfb": false
+      },
+      {
+        "override_isolate_target": "gl_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ],
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "gl_unittests",
+        "use_xvfb": false
+      }
+    ],
+    "isolated_scripts": [
+      {
+        "args": [
+          "context_lost",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "context_lost_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "depth_capture",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "depth_capture_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "gpu_process",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "gpu_process_launch_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "gpu_rasterization",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "gpu_rasterization_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "hardware_accelerated_feature",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "hardware_accelerated_feature_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "maps",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--os-type",
+          "android",
+          "--build-revision",
+          "${got_revision}",
+          "--test-machine-name",
+          "${buildername}"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "maps_pixel_test",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "pixel",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
+          "--refimg-cloud-storage-bucket",
+          "chromium-gpu-archive/reference-images",
+          "--os-type",
+          "android",
+          "--build-revision",
+          "${got_revision}",
+          "--test-machine-name",
+          "${buildername}"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "pixel_test",
+        "non_precommit_args": [
+          "--upload-refimg-to-cloud-storage"
+        ],
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "precommit_args": [
+          "--download-refimg-from-cloud-storage"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "screenshot_sync",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "screenshot_sync_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "trace_test",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_test",
+        "name": "trace_test",
+        "override_compile_targets": [
+          "telemetry_gpu_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      },
+      {
+        "args": [
+          "webgl_conformance",
+          "--show-stdout",
+          "--browser=android-chromium",
+          "-v",
+          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
+        ],
+        "isolate_name": "telemetry_gpu_integration_test",
+        "name": "webgl_conformance_tests",
+        "override_compile_targets": [
+          "telemetry_gpu_integration_test_run"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "device_os": "M",
+              "device_type": "bullhead",
+              "os": "Android"
+            }
+          ]
+        }
+      }
+    ]
   },
   "Android Release (Nexus 6)": {
     "gtest_tests": [
@@ -364,7 +790,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -395,7 +821,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -426,7 +852,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -713,7 +1139,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -744,7 +1170,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -775,7 +1201,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -806,7 +1232,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1093,7 +1519,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1124,7 +1550,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1155,7 +1581,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1442,7 +1868,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1473,7 +1899,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [
@@ -1504,7 +1930,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
             }
           ],
           "dimension_sets": [

@@ -60,20 +60,18 @@ class NET_EXPORT HttpUtil {
   static bool ParseRangeHeader(const std::string& range_specifier,
                                std::vector<HttpByteRange>* ranges);
 
-  // Extracts the values in a Content-Range header and returns true if they are
-  // valid for a 206 response; otherwise returns false.
+  // Extracts the values in a Content-Range header and returns true if all three
+  // values are present and valid for a 206 response; otherwise returns false.
   // The following values will be outputted:
   // |*first_byte_position| = inclusive position of the first byte of the range
   // |*last_byte_position| = inclusive position of the last byte of the range
   // |*instance_length| = size in bytes of the object requested
-  // If any of the above values is unknown, its value will be -1.
-  // TODO(sclittle): Change this method to only support Content-Range headers
-  // from 206 responses, since right now it only has incomplete support for
-  // Content-Range headers from 416 responses. See crbug.com/670913.
-  static bool ParseContentRangeHeader(base::StringPiece content_range_spec,
-                                      int64_t* first_byte_position,
-                                      int64_t* last_byte_position,
-                                      int64_t* instance_length);
+  // If this method returns false, then all of the outputs will be -1.
+  static bool ParseContentRangeHeaderFor206(
+      base::StringPiece content_range_spec,
+      int64_t* first_byte_position,
+      int64_t* last_byte_position,
+      int64_t* instance_length);
 
   // Parses a Retry-After header that is either an absolute date/time or a
   // number of seconds in the future. Interprets absolute times as relative to

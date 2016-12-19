@@ -1303,9 +1303,10 @@ int64_t HttpResponseHeaders::GetInt64HeaderValue(
   return result;
 }
 
-bool HttpResponseHeaders::GetContentRange(int64_t* first_byte_position,
-                                          int64_t* last_byte_position,
-                                          int64_t* instance_length) const {
+bool HttpResponseHeaders::GetContentRangeFor206(
+    int64_t* first_byte_position,
+    int64_t* last_byte_position,
+    int64_t* instance_length) const {
   size_t iter = 0;
   std::string content_range_spec;
   if (!EnumerateHeader(&iter, kContentRange, &content_range_spec)) {
@@ -1313,9 +1314,9 @@ bool HttpResponseHeaders::GetContentRange(int64_t* first_byte_position,
     return false;
   }
 
-  return HttpUtil::ParseContentRangeHeader(content_range_spec,
-                                           first_byte_position,
-                                           last_byte_position, instance_length);
+  return HttpUtil::ParseContentRangeHeaderFor206(
+      content_range_spec, first_byte_position, last_byte_position,
+      instance_length);
 }
 
 std::unique_ptr<base::Value> HttpResponseHeaders::NetLogCallback(

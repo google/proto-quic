@@ -12,7 +12,7 @@ import android.os.IBinder;
  * Authenticator service for testing SPNEGO (Kerberos) support.
  */
 public class DummySpnegoAuthenticatorService extends Service {
-    private static DummySpnegoAuthenticator sAuthenticator = null;
+    private static DummySpnegoAuthenticator sAuthenticator;
 
     @Override
     public IBinder onBind(Intent arg0) {

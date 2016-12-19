@@ -48,6 +48,19 @@
       'Android x86 Builder (dbg)': 'android_debug_static_bot_x86',
     },
 
+    'chromium.android.fyi': {
+      'NDK Next MIPS Builder':
+        'android_ndk_next_release_bot_minimal_symbols_mipsel',
+      'NDK Next arm Builder':
+        'android_ndk_next_release_bot_minimal_symbols',
+      'NDK Next arm64 Builder':
+        'android_ndk_next_release_bot_minimal_symbols_arm64',
+      'NDK Next x64 Builder':
+        'android_ndk_next_release_bot_minimal_symbols_x64',
+      'NDK Next x86 Builder':
+        'android_ndk_next_release_bot_minimal_symbols_x86',
+    },
+
     'chromium.chrome': {
       'Google Chrome ChromeOS': 'official_goma_chromeos',
       'Google Chrome Linux x64': 'official_goma',
@@ -130,6 +143,8 @@
       'CrWinGoma(dll)': 'shared_release_bot_x86',
       'ClangToTAndroidASan': 'android_clang_tot_asan',
       'ClangToTAndroid (dbg)': 'android_clang_tot_dbg',
+      'ClangToTAndroid': 'android_clang_tot_release',
+      'ClangToTAndroid64': 'android_clang_tot_release_arm64',
       'ClangToTAndroid x64': 'android_clang_tot_x64',
       'ClangToTLinux': 'clang_tot_linux_full_symbols_shared_release',
       'ClangToTLinux (dbg)': 'clang_tot_shared_debug',
@@ -311,8 +326,9 @@
 
     'chromium.perf': {
       'Android Builder': 'official_goma_minimal_symbols_android',
-      'Android Compile': 'official_goma_minimal_symbols_android',
       'Android arm64 Builder': 'official_goma_minimal_symbols_android_arm64',
+      'Android Compile': 'official_goma_minimal_symbols_android',
+      'Android arm64 Compile': 'official_goma_minimal_symbols_android_arm64',
       'Linux Builder': 'official_goma',
       'Mac Builder': 'official_goma',
       'Win Builder': 'official_goma_x86',
@@ -693,6 +709,14 @@
       'android_without_codecs', 'clang_tot', 'shared', 'debug',
     ],
 
+    'android_clang_tot_release': [
+      'android_without_codecs', 'clang_tot', 'release',
+    ],
+
+    'android_clang_tot_release_arm64': [
+      'android_without_codecs', 'clang_tot', 'release', 'arm64',
+    ],
+
     'android_clang_tot_x64': [
       'android_without_codecs', 'clang_tot', 'shared', 'x64', 'release',
       'dcheck_always_on',
@@ -824,6 +848,26 @@
 
     'android_debug_trybot_x86': [
       'android', 'debug_trybot', 'x86',
+    ],
+
+    'android_ndk_next_release_bot_minimal_symbols': [
+      'android', 'ndk_next', 'release_bot', 'minimal_symbols',
+    ],
+
+    'android_ndk_next_release_bot_minimal_symbols_arm64': [
+      'android', 'ndk_next', 'release_bot', 'minimal_symbols', 'arm64',
+    ],
+
+    'android_ndk_next_release_bot_minimal_symbols_mipsel': [
+      'android', 'ndk_next', 'release_bot', 'minimal_symbols', 'mipsel',
+    ],
+
+    'android_ndk_next_release_bot_minimal_symbols_x64': [
+      'android', 'ndk_next', 'release_bot', 'minimal_symbols', 'x64',
+    ],
+
+    'android_ndk_next_release_bot_minimal_symbols_x86': [
+      'android', 'ndk_next', 'release_bot', 'minimal_symbols', 'x86',
     ],
 
     'android_release_bot_minimal_symbols': [
@@ -1422,11 +1466,11 @@
     ],
 
     'ubsan_release_bot': [
-      'ubsan', 'ubsan_no_recover_hack', 'release_bot',
+      'ubsan', 'release_bot',
     ],
 
     'ubsan_vptr_edge_release_bot': [
-      'ubsan_vptr', 'ubsan_no_recover_hack', 'edge', 'release_bot',
+      'ubsan_vptr', 'edge', 'release_bot',
     ],
 
     'ubsan_vptr_release_bot': [
@@ -1553,7 +1597,7 @@
     'cronet': {
       'gn_args': ('disable_file_support=true disable_ftp_support=true '
                   'enable_websockets=false use_platform_icu_alternatives=true '
-                  'disable_brotli_filter=true'),
+                  'disable_brotli_filter=true use_partition_alloc=false'),
     },
 
     'cros_chrome_sdk': {
@@ -1702,6 +1746,10 @@
 
     'msan_no_origins': {
       'gn_args': 'is_msan=true msan_track_origins=0 use_prebuilt_instrumented_libraries=true',
+    },
+
+    'ndk_next': {
+      'gn_args': 'android_ndk_version="r13b" android_ndk_major_version="13"',
     },
 
     'no_pch': {

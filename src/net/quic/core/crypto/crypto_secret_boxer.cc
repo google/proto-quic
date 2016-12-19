@@ -108,10 +108,11 @@ bool CryptoSecretBoxer::Unbox(StringPiece ciphertext,
     for (const string& key : keys_) {
       if (decrypter->SetKey(key)) {
         decrypter->SetNoncePrefix(nonce_prefix);
-        if (decrypter->DecryptPacket(
-                /*path_id=*/0u, packet_number,
-                /*associated data=*/StringPiece(), ciphertext, plaintext,
-                &plaintext_length, kMaxPacketSize)) {
+        if (decrypter->DecryptPacket(QUIC_VERSION_36,
+                                     /*path_id=*/0u, packet_number,
+                                     /*associated data=*/StringPiece(),
+                                     ciphertext, plaintext, &plaintext_length,
+                                     kMaxPacketSize)) {
           ok = true;
           break;
         }

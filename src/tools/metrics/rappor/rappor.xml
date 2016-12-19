@@ -909,6 +909,30 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric
+    name="Event.Latency.ScrollUpdate.Touch.TimeToScrollUpdateSwapBegin2"
+    type="UMA_RAPPOR_TYPE">
+  <owner>nzolghadr@chromium.org</owner>
+  <owner>tdresser@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the website visited, along with a the time between the initial
+    creation of a touch event and the start of the frame swap on the GPU service
+    caused by the generated ScrollUpdate gesture event if that ScrollUpdate is
+    the first such event in a given scroll gesture event sequence. If no swap
+    was induced by the event, no recording is made.
+  </summary>
+  <string-field name="Domain">
+    <summary>
+      The domain+registry of the URL.
+    </summary>
+  </string-field>
+  <uint64-field name="Latency">
+    <summary>
+      Latency in microseconds representing Touch.TimeToScrollUpdateSwapBegin.
+    </summary>
+  </uint64-field>
+</rappor-metric>
+
 <rappor-metric name="Extensions.AffectedByIsolateExtensions"
     type="UMA_RAPPOR_TYPE">
   <owner>nick@chromium.org</owner>
@@ -2135,8 +2159,8 @@ now we are only interested in H264, VP8 and VP9.
   <owner>dominickn@chromium.org</owner>
   <owner>nparker@chromium.org</owner>
   <summary>
-    The domain+registry of a URL that triggered a safe-browsing UWS
-    interstitial.
+    **DEPRECATED as of M57. The domain+registry of a URL that triggered a
+    safe-browsing UWS interstitial.
   </summary>
   <string-field name="domain">
     <summary>
@@ -2162,8 +2186,8 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
   <string-field name="domain">
     <summary>
-      The domain+registry of a URL that triggered a safe-browsing malware
-      interstitial.
+      **DEPRECATED as of M57. The domain+registry of a URL that triggered a
+      safe-browsing malware interstitial.
     </summary>
   </string-field>
   <flags-field name="flags">
@@ -2225,8 +2249,8 @@ now we are only interested in H264, VP8 and VP9.
   <owner>dominickn@chromium.org</owner>
   <owner>nparker@chromium.org</owner>
   <summary>
-    The domain+registry of a URL that triggered a safe-browsing phishing
-    interstitial.
+    **DEPRECATED as of M57. The domain+registry of a URL that triggered a
+    safe-browsing phishing interstitial.
   </summary>
   <string-field name="domain">
     <summary>
@@ -2276,7 +2300,8 @@ now we are only interested in H264, VP8 and VP9.
   <owner>dominickn@chromium.org</owner>
   <owner>nparker@chromium.org</owner>
   <summary>
-    The domain+registry of a URL that triggered an SSL interstitial.
+    **DEPRECATED as of M57. The domain+registry of a URL that triggered an SSL
+    interstitial.
   </summary>
   <string-field name="domain">
     <summary>

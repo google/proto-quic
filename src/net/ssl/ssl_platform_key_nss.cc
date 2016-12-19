@@ -159,7 +159,7 @@ class SSLPlatformKeyNSS : public ThreadedSSLPrivateKey::Delegate {
 }  // namespace
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    X509Certificate* certificate) {
+    const X509Certificate* certificate) {
   crypto::ScopedSECKEYPrivateKey key(
       PK11_FindKeyByAnyCert(certificate->os_cert_handle(), nullptr));
   if (!key) {

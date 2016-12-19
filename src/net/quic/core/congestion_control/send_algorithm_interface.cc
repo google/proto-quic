@@ -28,7 +28,7 @@ SendAlgorithmInterface* SendAlgorithmInterface::Create(
   switch (congestion_control_type) {
     case kBBR:
       if (FLAGS_quic_allow_new_bbr) {
-        return new BbrSender(clock, rtt_stats, unacked_packets,
+        return new BbrSender(rtt_stats, unacked_packets,
                              initial_congestion_window, max_congestion_window,
                              random);
       }

@@ -146,6 +146,11 @@ if (is_android) {
     # Enables java8 language features (via retrolambda).
     # work-in-progress (http://crbug.com/642600)
     use_java8 = false
+
+    # Build incremental targets whenever possible.
+    # Ex. with this arg set to true, the chrome_public_apk target result in
+    # chrome_public_apk_incremental being built.
+    incremental_apk_by_default = false
   }
 
   # We need a second declare_args block to make sure we are using the overridden

@@ -83,8 +83,6 @@ config("icu_code") {
   }
   if (is_clang) {
     cflags += [
-      # ICU uses its own deprecated functions.
-      "-Wno-deprecated-declarations",
       # ICU has some code with the pattern:
       #   if (found = uprv_getWindowsTimeZoneInfo(...))
       "-Wno-parentheses",
@@ -92,6 +90,12 @@ config("icu_code") {
       # certain preprocessor defines are set.
       # unistr.cpp also has an unused function for non-component builds.
       "-Wno-unused-function",
+    ]
+  }
+  if (is_clang || is_linux || is_android) {
+    cflags += [
+      # ICU uses its own deprecated functions.
+      "-Wno-deprecated-declarations",
     ]
   }
 }
@@ -536,14 +540,6 @@ component("icui18n") {
 
   configs += [ ":icu_code" ]
   public_configs = [ ":icu_config" ]
-
-  cflags = []
-  if (is_android || is_linux) {
-    cflags += [
-      # ICU uses its own deprecated functions.
-      "-Wno-deprecated-declarations",
-    ]
-  }
 }
 
 component("icuuc") {

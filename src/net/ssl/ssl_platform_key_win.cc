@@ -248,7 +248,7 @@ class SSLPlatformKeyCNG : public ThreadedSSLPrivateKey::Delegate {
 }  // namespace
 
 scoped_refptr<SSLPrivateKey> FetchClientCertPrivateKey(
-    X509Certificate* certificate) {
+    const X509Certificate* certificate) {
   // Rather than query the private key for metadata, extract the public key from
   // the certificate without using Windows APIs. CAPI and CNG do not
   // consistently work depending on the system. See https://crbug.com/468345.

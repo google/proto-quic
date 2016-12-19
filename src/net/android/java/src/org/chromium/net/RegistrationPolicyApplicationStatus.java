@@ -14,7 +14,7 @@ import org.chromium.base.VisibleForTesting;
 public class RegistrationPolicyApplicationStatus
         extends NetworkChangeNotifierAutoDetect.RegistrationPolicy
         implements ApplicationStatus.ApplicationStateListener {
-    private boolean mDestroyed = false;
+    private boolean mDestroyed;
 
     @Override
     protected void init(NetworkChangeNotifierAutoDetect notifier) {

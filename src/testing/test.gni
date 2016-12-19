@@ -35,6 +35,9 @@ template("test") {
 
     assert(_use_raw_android_executable || enable_java_templates)
 
+    _incremental_apk_only =
+        incremental_apk_by_default && !_use_raw_android_executable
+
     if (_use_raw_android_executable) {
       _exec_target = "${target_name}__exec"
       _dist_target = "${target_name}__dist"
@@ -126,9 +129,16 @@ template("test") {
         ]
       }
 
-      # Incremental test targets work only for .apks.
+      _test_runner_target = "${_output_name}__test_runner_script"
+      _incremental_test_name = "${_output_name}_incremental"
       _incremental_test_runner_target =
           "${_output_name}_incremental__test_runner_script"
+      if (_incremental_apk_only) {
+        _incremental_test_name = _output_name
+        _incremental_test_runner_target = _test_runner_target
+      }
+
+      # Incremental test targets work only for .apks.
       test_runner_script(_incremental_test_runner_target) {
         forward_variables_from(invoker,
                                _wrapper_script_vars + [
@@ -138,14 +148,14 @@ template("test") {
                                      "public_deps",
                                    ])
         apk_target = ":$_apk_target"
-        test_name = "${_output_name}_incremental"
+        test_name = _incremental_test_name
         test_type = "gtest"
         test_suite = _output_name
         incremental_install = true
       }
       group("${target_name}_incremental") {
         testonly = true
-        datadeps = [
+        data_deps = [
           ":$_incremental_test_runner_target",
         ]
         deps = [
@@ -154,35 +164,42 @@ template("test") {
       }
     }
 
-    _test_runner_target = "${_output_name}__test_runner_script"
-    test_runner_script(_test_runner_target) {
-      forward_variables_from(invoker,
-                             _wrapper_script_vars + [
-                                   "data",
-                                   "data_deps",
-                                   "deps",
-                                   "public_deps",
-                                 ])
+    if (!_incremental_apk_only) {
+      test_runner_script(_test_runner_target) {
+        forward_variables_from(invoker,
+                               _wrapper_script_vars + [
+                                     "data",
+                                     "data_deps",
+                                     "deps",
+                                     "public_deps",
+                                   ])
 
-      if (_use_raw_android_executable) {
-        executable_dist_dir = "$root_out_dir/$_dist_target"
-      } else {
-        apk_target = ":$_apk_target"
+        if (_use_raw_android_executable) {
+          executable_dist_dir = "$root_out_dir/$_dist_target"
+        } else {
+          apk_target = ":$_apk_target"
+        }
+        test_name = _output_name
+        test_type = "gtest"
+        test_suite = _output_name
       }
-      test_name = _output_name
-      test_type = "gtest"
-      test_suite = _output_name
     }
 
     group(target_name) {
       testonly = true
-      deps = [
-        ":$_test_runner_target",
-      ]
-      if (_use_raw_android_executable) {
-        deps += [ ":$_dist_target" ]
+      if (_incremental_apk_only) {
+        deps = [
+          ":${target_name}_incremental",
+        ]
       } else {
-        deps += [ ":$_apk_target" ]
+        deps = [
+          ":$_test_runner_target",
+        ]
+        if (_use_raw_android_executable) {
+          deps += [ ":$_dist_target" ]
+        } else {
+          deps += [ ":$_apk_target" ]
+        }
       }
     }
 

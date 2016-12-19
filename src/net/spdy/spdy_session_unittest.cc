@@ -124,6 +124,7 @@ class SpdySessionTest : public PlatformTest {
             HttpNetworkSession::NORMAL_SOCKET_POOL)),
         old_max_pool_sockets_(ClientSocketPoolManager::max_sockets_per_pool(
             HttpNetworkSession::NORMAL_SOCKET_POOL)),
+        test_push_delegate_(nullptr),
         spdy_session_pool_(nullptr),
         test_url_(kDefaultUrl),
         test_server_(test_url_),
@@ -152,6 +153,10 @@ class SpdySessionTest : public PlatformTest {
     DCHECK(!spdy_session_pool_);
     http_session_ =
         SpdySessionDependencies::SpdyCreateSession(&session_deps_);
+    std::unique_ptr<TestServerPushDelegate> test_push_delegate(
+        new TestServerPushDelegate());
+    test_push_delegate_ = test_push_delegate.get();
+    http_session_->SetServerPushDelegate(std::move(test_push_delegate));
     spdy_session_pool_ = http_session_->spdy_session_pool();
   }
 
@@ -210,7 +215,7 @@ class SpdySessionTest : public PlatformTest {
   SpdySessionDependencies session_deps_;
   std::unique_ptr<HttpNetworkSession> http_session_;
   base::WeakPtr<SpdySession> session_;
-  TestServerPushDelegate test_push_delegate_;
+  TestServerPushDelegate* test_push_delegate_;
   SpdySessionPool* spdy_session_pool_;
   const GURL test_url_;
   const url::SchemeHostPort test_server_;
@@ -1311,7 +1316,6 @@ TEST_F(SpdySessionTest, CancelPushAfterSessionGoesAway) {
 
   CreateNetworkSession();
   CreateSecureSpdySession();
-  session_->set_push_delegate(&test_push_delegate_);
 
   // Process the principal request, and the first push stream request & body.
   base::WeakPtr<SpdyStream> spdy_stream =
@@ -1359,7 +1363,7 @@ TEST_F(SpdySessionTest, CancelPushAfterSessionGoesAway) {
   // crash.
   EXPECT_FALSE(session_);
   EXPECT_TRUE(
-      test_push_delegate_.CancelPush(GURL("https://www.example.org/a.dat")));
+      test_push_delegate_->CancelPush(GURL("https://www.example.org/a.dat")));
 
   histogram_tester.ExpectBucketCount("Net.SpdySession.PushedBytes", 6, 1);
   histogram_tester.ExpectBucketCount("Net.SpdySession.PushedAndUnclaimedBytes",
@@ -1397,7 +1401,6 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
 
   CreateNetworkSession();
   CreateSecureSpdySession();
-  session_->set_push_delegate(&test_push_delegate_);
 
   // Process the principal request, and the first push stream request & body.
   base::WeakPtr<SpdyStream> spdy_stream =
@@ -1434,7 +1437,7 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
 
   // Cancel the first push after its expiration.
   EXPECT_TRUE(
-      test_push_delegate_.CancelPush(GURL("https://www.example.org/a.dat")));
+      test_push_delegate_->CancelPush(GURL("https://www.example.org/a.dat")));
   EXPECT_EQ(1u, session_->num_unclaimed_pushed_streams());
   EXPECT_TRUE(session_);
 
@@ -1484,7 +1487,6 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
 
   CreateNetworkSession();
   CreateSecureSpdySession();
-  session_->set_push_delegate(&test_push_delegate_);
 
   // Process the principal request, and the first push stream request & body.
   base::WeakPtr<SpdyStream> spdy_stream =
@@ -1525,7 +1527,7 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
 
   EXPECT_TRUE(session_);
   // Cancel the push before it's claimed.
-  EXPECT_TRUE(test_push_delegate_.CancelPush(pushed_url));
+  EXPECT_TRUE(test_push_delegate_->CancelPush(pushed_url));
   EXPECT_EQ(0u, session_->num_unclaimed_pushed_streams());
   EXPECT_EQ(0u, session_->count_unclaimed_pushed_streams_for_url(pushed_url));
 

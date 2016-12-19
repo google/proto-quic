@@ -53,8 +53,9 @@ class BASE_EXPORT TraceConfig {
 
     // Specifies the triggers in the memory dump config.
     struct Trigger {
-      uint32_t periodic_interval_ms;
+      uint32_t min_time_between_dumps_ms;
       MemoryDumpLevelOfDetail level_of_detail;
+      MemoryDumpType trigger_type;
     };
 
     // Specifies the configuration options for the heap profiler.

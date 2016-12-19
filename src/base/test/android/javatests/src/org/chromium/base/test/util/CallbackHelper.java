@@ -127,7 +127,7 @@ public class CallbackHelper {
     public static final long WAIT_TIMEOUT_SECONDS = scaleTimeout(5);
 
     private final Object mLock = new Object();
-    private int mCallCount = 0;
+    private int mCallCount;
 
     /**
      * Gets the number of times the callback has been called.

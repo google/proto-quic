@@ -14,7 +14,8 @@ namespace net {
 
 const size_t kHashSizeShort = 12;  // size of uint128 serialized short
 
-NullEncrypter::NullEncrypter() {}
+NullEncrypter::NullEncrypter(Perspective perspective)
+    : perspective_(perspective) {}
 
 bool NullEncrypter::SetKey(StringPiece key) {
   return key.empty();
@@ -24,7 +25,8 @@ bool NullEncrypter::SetNoncePrefix(StringPiece nonce_prefix) {
   return nonce_prefix.empty();
 }
 
-bool NullEncrypter::EncryptPacket(QuicPathId /*path_id*/,
+bool NullEncrypter::EncryptPacket(QuicVersion version,
+                                  QuicPathId /*path_id*/,
                                   QuicPacketNumber /*packet_number*/,
                                   StringPiece associated_data,
                                   StringPiece plaintext,
@@ -35,9 +37,18 @@ bool NullEncrypter::EncryptPacket(QuicPathId /*path_id*/,
   if (max_output_length < len) {
     return false;
   }
-  uint128 hash = QuicUtils::FNV1a_128_Hash_Two(
-      associated_data.data(), associated_data.size(), plaintext.data(),
-      plaintext.size());
+  uint128 hash;
+  if (version > QUIC_VERSION_36) {
+    if (perspective_ == Perspective::IS_SERVER) {
+      hash =
+          QuicUtils::FNV1a_128_Hash_Three(associated_data, plaintext, "Server");
+    } else {
+      hash =
+          QuicUtils::FNV1a_128_Hash_Three(associated_data, plaintext, "Client");
+    }
+  } else {
+    hash = QuicUtils::FNV1a_128_Hash_Two(associated_data, plaintext);
+  }
   // TODO(ianswett): memmove required for in place encryption.  Placing the
   // hash at the end would allow use of memcpy, doing nothing for in place.
   memmove(output + GetHashLength(), plaintext.data(), plaintext.length());

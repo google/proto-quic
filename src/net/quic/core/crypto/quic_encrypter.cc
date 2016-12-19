@@ -18,8 +18,6 @@ QuicEncrypter* QuicEncrypter::Create(QuicTag algorithm) {
       return new Aes128Gcm12Encrypter();
     case kCC20:
       return new ChaCha20Poly1305Encrypter();
-    case kNULL:
-      return new NullEncrypter();
     default:
       LOG(FATAL) << "Unsupported algorithm: " << algorithm;
       return nullptr;

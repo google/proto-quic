@@ -121,6 +121,8 @@ void GURL::InitCanonical(base::BasicStringPiece<STR> input_spec,
     inner_url_.reset(new GURL(spec_.data(), parsed_.Length(),
                               *parsed_.inner_parsed(), true));
   }
+  // Valid URLs always have non-empty specs.
+  DCHECK(!is_valid_ || !spec_.empty());
 }
 
 void GURL::InitializeFromCanonicalSpec() {
@@ -135,6 +137,7 @@ void GURL::InitializeFromCanonicalSpec() {
   // what we would have produced. Skip checking for invalid URLs have no meaning
   // and we can't always canonicalize then reproducibly.
   if (is_valid_) {
+    DCHECK(!spec_.empty());
     url::Component scheme;
     // We can't do this check on the inner_url of a filesystem URL, as
     // canonical_spec actually points to the start of the outer URL, so we'd
@@ -440,14 +443,7 @@ std::string GURL::GetContent() const {
 }
 
 bool GURL::HostIsIPAddress() const {
-  if (!is_valid_ || spec_.empty())
-     return false;
-
-  url::RawCanonOutputT<char, 128> ignored_output;
-  url::CanonHostInfo host_info;
-  url::CanonicalizeIPAddress(spec_.c_str(), parsed_.host, &ignored_output,
-                             &host_info);
-  return host_info.IsIPAddress();
+  return is_valid_ && url::HostIsIPAddress(host_piece());
 }
 
 #ifdef WIN32

@@ -139,7 +139,7 @@ class LegacyResultsProcessor(object):
     trace_name = match_dict['TRACE'].strip()
 
     graph = self._graphs.get(graph_name, self.Graph())
-    graph.units = match_dict['UNITS'] or ''
+    graph.units = (match_dict['UNITS'] or '').strip()
     trace = graph.traces.get(trace_name, self.Trace())
     trace.value = match_dict['VALUE']
     trace.important = match_dict['IMPORTANT'] or False

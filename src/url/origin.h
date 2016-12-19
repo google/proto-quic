@@ -104,18 +104,13 @@ class URL_EXPORT Origin {
 
   // Creates an origin without sanity checking that the host is canonicalized.
   // This should only be used when converting between already normalized types,
-  // and should NOT be used for IPC.
-  static Origin CreateFromNormalizedTuple(base::StringPiece scheme,
-                                          base::StringPiece host,
-                                          uint16_t port);
-
-  // Same as CreateFromNormalizedTuple() above, but adds a suborigin component
-  // as well.
+  // and should NOT be used for IPC. Method takes std::strings for use with move
+  // operators to avoid copies.
   static Origin CreateFromNormalizedTupleWithSuborigin(
-      base::StringPiece scheme,
-      base::StringPiece host,
+      std::string scheme,
+      std::string host,
       uint16_t port,
-      base::StringPiece suborigin);
+      std::string suborigin);
 
   ~Origin();
 
@@ -172,6 +167,11 @@ class URL_EXPORT Origin {
          base::StringPiece host,
          uint16_t port,
          base::StringPiece suborigin,
+         SchemeHostPort::ConstructPolicy policy);
+  Origin(std::string scheme,
+         std::string host,
+         uint16_t port,
+         std::string suborigin,
          SchemeHostPort::ConstructPolicy policy);
 
   SchemeHostPort tuple_;

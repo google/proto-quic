@@ -312,12 +312,9 @@ Still reading?
     <ignore regexp="blimp/client/core/resources/android/java/res/*" />
     <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="chrome/android/java/res/drawable-hdpi/*"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/amex_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/bubble_white.9.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/cvc_icon_amex.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/discover_card.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/generic_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_folder_white_24dp.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/ic_settings.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_3d_blocked.png"/>
@@ -334,7 +331,6 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_restore.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_screen_share.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/infobar_subresource_filtering.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/mc_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/mir_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_bad.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/pageinfo_good.png"/>
@@ -345,7 +341,6 @@ Still reading?
     <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_incognito.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/shortcut_newtab.png"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/signin_promo_illustration.png"/>
-    <ignore regexp="chrome/android/java/res/drawable-hdpi/visa_card.png"/>
     <ignore regexp="chrome/android/java/res/drawable-nodpi/missing.png"/>
     <ignore regexp="chrome/android/java/res/values-v17/styles.xml"/>
     <!--

@@ -13,12 +13,18 @@ from metrics import webrtc_stats
 class WebRTC(legacy_page_test.LegacyPageTest):
   """Gathers WebRTC-related metrics on a page set."""
 
-  def __init__(self, use_webrtc_stats=True):
+  def __init__(self, particular_metrics=None):
+    """Create the measurement and include selected stats.
+
+    Args:
+        particular_metrics: A list of the stats to include (see webrtc_stats.py
+            for a list of valid names) or None to select all metrics.
+    """
     super(WebRTC, self).__init__()
     self._cpu_metric = None
     self._media_metric = None
     self._power_metric = None
-    self._use_webrtc_stats = use_webrtc_stats
+    self._particular_metrics = particular_metrics
     self._webrtc_stats_metric = None
 
   def WillStartBrowser(self, platform):
@@ -26,16 +32,15 @@ class WebRTC(legacy_page_test.LegacyPageTest):
 
   def DidStartBrowser(self, browser):
     self._cpu_metric = cpu.CpuMetric(browser)
-    if self._use_webrtc_stats:
-      self._webrtc_stats_metric = webrtc_stats.WebRtcStatisticsMetric()
+    self._webrtc_stats_metric = webrtc_stats.WebRtcStatisticsMetric(
+        self._particular_metrics)
 
   def DidNavigateToPage(self, page, tab):
     self._cpu_metric.Start(page, tab)
     self._media_metric = media.MediaMetric(tab)
     self._media_metric.Start(page, tab)
     self._power_metric.Start(page, tab)
-    if self._use_webrtc_stats:
-      self._webrtc_stats_metric.Start(page, tab)
+    self._webrtc_stats_metric.Start(page, tab)
 
   def CustomizeBrowserOptions(self, options):
     options.AppendExtraBrowserArgs('--use-fake-device-for-media-stream')
@@ -56,9 +61,8 @@ class WebRTC(legacy_page_test.LegacyPageTest):
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    if self._use_webrtc_stats:
-      self._webrtc_stats_metric.Stop(page, tab)
-      self._webrtc_stats_metric.AddResults(tab, results)
+    self._webrtc_stats_metric.Stop(page, tab)
+    self._webrtc_stats_metric.AddResults(tab, results)
 
   def DidRunPage(self, platform):
     del platform  # unused

@@ -284,6 +284,15 @@ void MemoryDumpManager::RegisterDumpProviderInternal(
     // path for RenderThreadImpl::Init().
     if (already_registered)
       return;
+
+    // The list of polling MDPs is populated OnTraceLogEnabled(). This code
+    // deals with the case of a MDP capable of fast polling that is registered
+    // after the OnTraceLogEnabled()
+    if (options.is_fast_polling_supported && dump_thread_) {
+      dump_thread_->task_runner()->PostTask(
+          FROM_HERE, Bind(&MemoryDumpManager::RegisterPollingMDPOnDumpThread,
+                          Unretained(this), mdpinfo));
+    }
   }
 
   if (heap_profiling_enabled_)
@@ -322,6 +331,7 @@ void MemoryDumpManager::UnregisterDumpProviderInternal(
     // - At the end of this function, if no dump is in progress.
     // - Either in SetupNextMemoryDump() or InvokeOnMemoryDump() when MDPInfo is
     //   removed from |pending_dump_providers|.
+    // - When the provider is removed from |dump_providers_for_polling_|.
     DCHECK(!(*mdp_iter)->owned_dump_provider);
     (*mdp_iter)->owned_dump_provider = std::move(owned_mdp);
   } else if (subtle::NoBarrier_Load(&memory_tracing_enabled_)) {
@@ -340,6 +350,16 @@ void MemoryDumpManager::UnregisterDumpProviderInternal(
         << "unregister itself in a racy way. Please file a crbug.";
   }
 
+  if ((*mdp_iter)->options.is_fast_polling_supported && dump_thread_) {
+    DCHECK(take_mdp_ownership_and_delete_async)
+        << "MemoryDumpProviders capable of fast polling must NOT be thread "
+           "bound and hence must be destroyed using "
+           "UnregisterAndDeleteDumpProviderSoon()";
+    dump_thread_->task_runner()->PostTask(
+        FROM_HERE, Bind(&MemoryDumpManager::UnregisterPollingMDPOnDumpThread,
+                        Unretained(this), *mdp_iter));
+  }
+
   // The MDPInfo instance can still be referenced by the
   // |ProcessMemoryDumpAsyncState.pending_dump_providers|. For this reason
   // the MDPInfo is flagged as disabled. It will cause InvokeOnMemoryDump()
@@ -347,6 +367,21 @@ void MemoryDumpManager::UnregisterDumpProviderInternal(
   // destroyed by the caller soon after this method returns.
   (*mdp_iter)->disabled = true;
   dump_providers_.erase(mdp_iter);
+}
+
+void MemoryDumpManager::RegisterPollingMDPOnDumpThread(
+    scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo> mdpinfo) {
+  DCHECK(!mdpinfo->task_runner);
+  AutoLock lock(lock_);
+  dump_providers_for_polling_.insert(mdpinfo);
+}
+
+void MemoryDumpManager::UnregisterPollingMDPOnDumpThread(
+    scoped_refptr<MemoryDumpManager::MemoryDumpProviderInfo> mdpinfo) {
+  mdpinfo->dump_provider->SuspendFastMemoryPolling();
+
+  AutoLock lock(lock_);
+  dump_providers_for_polling_.erase(mdpinfo);
 }
 
 void MemoryDumpManager::RequestGlobalDump(
@@ -602,6 +637,18 @@ void MemoryDumpManager::InvokeOnMemoryDump(
   SetupNextMemoryDump(std::move(pmd_async_state));
 }
 
+void MemoryDumpManager::PollFastMemoryTotal(uint64_t* memory_total) {
+  *memory_total = 0;
+  // Note that we call PollFastMemoryTotal() even if the dump provider is
+  // disabled (unregistered). This is to avoid taking lock while polling.
+  for (const auto& mdpinfo : dump_providers_for_polling_) {
+    uint64_t value = 0;
+    mdpinfo->dump_provider->PollFastMemoryTotal(&value);
+    *memory_total += value;
+  }
+  return;
+}
+
 // static
 void MemoryDumpManager::FinalizeDumpAndAddToTrace(
     std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state) {
@@ -715,6 +762,12 @@ void MemoryDumpManager::OnTraceLogEnabled() {
     DCHECK(!dump_thread_);
     dump_thread_ = std::move(dump_thread);
 
+    dump_providers_for_polling_.clear();
+    for (const auto& mdpinfo : dump_providers_) {
+      if (mdpinfo->options.is_fast_polling_supported)
+        dump_providers_for_polling_.insert(mdpinfo);
+    }
+
     subtle::NoBarrier_Store(&memory_tracing_enabled_, 1);
 
     // TODO(primiano): This is a temporary hack to disable periodic memory dumps
@@ -735,6 +788,8 @@ void MemoryDumpManager::OnTraceLogDisabled() {
   // There might be a memory dump in progress while this happens. Therefore,
   // ensure that the MDM state which depends on the tracing enabled / disabled
   // state is always accessed by the dumping methods holding the |lock_|.
+  if (!subtle::NoBarrier_Load(&memory_tracing_enabled_))
+    return;
   subtle::NoBarrier_Store(&memory_tracing_enabled_, 0);
   std::unique_ptr<Thread> dump_thread;
   {
@@ -748,6 +803,15 @@ void MemoryDumpManager::OnTraceLogDisabled() {
   periodic_dump_timer_.Stop();
   if (dump_thread)
     dump_thread->Stop();
+
+  // |dump_providers_for_polling_| must be cleared only after the dump thread is
+  // stopped (polling tasks are done).
+  {
+    AutoLock lock(lock_);
+    for (const auto& mdpinfo : dump_providers_for_polling_)
+      mdpinfo->dump_provider->SuspendFastMemoryPolling();
+    dump_providers_for_polling_.clear();
+  }
 }
 
 bool MemoryDumpManager::IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode) {
@@ -842,7 +906,9 @@ void MemoryDumpManager::PeriodicGlobalDumpTimer::Start(
   DCHECK_LE(triggers_list.size(), 3u);
   auto* mdm = MemoryDumpManager::GetInstance();
   for (const TraceConfig::MemoryDumpConfig::Trigger& config : triggers_list) {
-    DCHECK_NE(0u, config.periodic_interval_ms);
+    DCHECK_NE(0u, config.min_time_between_dumps_ms);
+    DCHECK_EQ(MemoryDumpType::PERIODIC_INTERVAL, config.trigger_type)
+        << "Only periodic_interval triggers are suppported";
     switch (config.level_of_detail) {
       case MemoryDumpLevelOfDetail::BACKGROUND:
         DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::BACKGROUND));
@@ -850,16 +916,16 @@ void MemoryDumpManager::PeriodicGlobalDumpTimer::Start(
       case MemoryDumpLevelOfDetail::LIGHT:
         DCHECK_EQ(0u, light_dump_period_ms);
         DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::LIGHT));
-        light_dump_period_ms = config.periodic_interval_ms;
+        light_dump_period_ms = config.min_time_between_dumps_ms;
         break;
       case MemoryDumpLevelOfDetail::DETAILED:
         DCHECK_EQ(0u, heavy_dump_period_ms);
         DCHECK(mdm->IsDumpModeAllowed(MemoryDumpLevelOfDetail::DETAILED));
-        heavy_dump_period_ms = config.periodic_interval_ms;
+        heavy_dump_period_ms = config.min_time_between_dumps_ms;
         break;
     }
     min_timer_period_ms =
-        std::min(min_timer_period_ms, config.periodic_interval_ms);
+        std::min(min_timer_period_ms, config.min_time_between_dumps_ms);
   }
 
   DCHECK_EQ(0u, light_dump_period_ms % min_timer_period_ms);

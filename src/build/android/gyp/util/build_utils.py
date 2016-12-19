@@ -406,8 +406,7 @@ def GetPythonDependencies():
   A path is assumed to be a "system" import if it is outside of chromium's
   src/. The paths will be relative to the current directory.
   """
-  module_paths = (m.__file__ for m in sys.modules.itervalues()
-                  if m is not None and hasattr(m, '__file__'))
+  module_paths = GetModulePaths()
 
   abs_module_paths = map(os.path.abspath, module_paths)
 
@@ -422,6 +421,30 @@ def GetPythonDependencies():
   non_system_module_paths = map(ConvertPycToPy, non_system_module_paths)
   non_system_module_paths = map(os.path.relpath, non_system_module_paths)
   return sorted(set(non_system_module_paths))
+
+
+def GetModulePaths():
+  """Returns the paths to all of the modules in sys.modules."""
+  ForceLazyModulesToLoad()
+  return (m.__file__ for m in sys.modules.itervalues()
+          if m is not None and hasattr(m, '__file__'))
+
+
+def ForceLazyModulesToLoad():
+  """Forces any lazily imported modules to fully load themselves.
+
+  Inspecting the modules' __file__ attribute causes lazily imported modules
+  (e.g. from email) to get fully imported and update sys.modules. Iterate
+  over the values until sys.modules stabilizes so that no modules are missed.
+  """
+  while True:
+    num_modules_before = len(sys.modules.keys())
+    for m in sys.modules.values():
+      if m is not None and hasattr(m, '__file__'):
+        _ = m.__file__
+    num_modules_after = len(sys.modules.keys())
+    if num_modules_before == num_modules_after:
+      break
 
 
 def AddDepfileOption(parser):

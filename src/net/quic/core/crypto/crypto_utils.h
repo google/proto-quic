@@ -127,7 +127,7 @@ class QUIC_EXPORT_PRIVATE CryptoUtils {
 
   // Computes the FNV-1a hash of the provided DER-encoded cert for use in the
   // XLCT tag.
-  static uint64_t ComputeLeafCertHash(const std::string& cert);
+  static uint64_t ComputeLeafCertHash(base::StringPiece cert);
 
   // Validates that |server_hello| is actually an SHLO message and that it is
   // not part of a downgrade attack.

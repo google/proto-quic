@@ -7,21 +7,15 @@
 '''Prepares the Google Play services split client libraries before usage by
 Chrome's build system.
 
-We need to preprocess Google Play services before using it in Chrome
-builds for 2 main reasons:
+We need to preprocess Google Play services before using it in Chrome builds
+mostly to remove unused resources (unsupported languages, unused drawables,
+etc.) as proper resource shrinking is not yet supported by our build system.
+(See https://crbug.com/636448)
 
-- Getting rid of unused resources: unsupported languages, unused
-drawables, etc.
-
-- Merging the differents jars so that it can be proguarded more
-easily. This is necessary since debug and test apks get very close
-to the dex limit.
-
-The script is supposed to be used with the maven repository that can be
-obtained by downloading the "extra-google-m2repository" from the Android SDK
-Manager. It also supports importing from already extracted AAR files using the
---is-extracted-repo flag. The expected directory structure in that case would
-look like:
+The script is meant to be used with an unpacked library repository. One can
+be obtained by downloading the "extra-google-m2repository" from the Android SDK
+Manager and extracting the AARs from the desired version as the following
+structure:
 
     REPOSITORY_DIR
     +-- CLIENT_1
@@ -29,23 +23,8 @@ look like:
     +-- CLIENT_2
     +-- etc.
 
-The output is a directory with the following structure:
-
-    OUT_DIR
-    +-- google-play-services.jar
-    +-- res
-    |   +-- CLIENT_1
-    |   |   +-- color
-    |   |   +-- values
-    |   |   +-- etc.
-    |   +-- CLIENT_2
-    |       +-- ...
-    +-- stub
-        +-- res/[.git-keep-directory]
-        +-- src/android/UnusedStub.java
-
-Requires the `jar` utility in the path.
-
+The output will follow the same structure, with fewer resource files, in the
+provided output directory.
 '''
 
 import argparse
@@ -58,11 +37,7 @@ import sys
 import tempfile
 import zipfile
 
-from datetime import datetime
-
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
-import devil_chromium
-from devil.utils import cmd_helper
 from play_services import utils
 from pylib.utils import argparse_utils
 
@@ -90,10 +65,6 @@ def main():
                              help='the config file path',
                              required=True,
                              metavar='FILE')
-  parser.add_argument('-x',
-                      '--is-extracted-repo',
-                      action='store_true',
-                      help='the provided repository is not made of AAR files')
   parser.add_argument('--config-help',
                       action='custom_help',
                       custom_help_text=utils.ConfigParser.__doc__,
@@ -101,29 +72,21 @@ def main():
 
   args = parser.parse_args()
 
-  devil_chromium.Initialize()
-
   return ProcessGooglePlayServices(args.repository,
                                    args.out_dir,
-                                   args.config_file,
-                                   args.is_extracted_repo)
+                                   args.config_file)
 
 
-def ProcessGooglePlayServices(repo, out_dir, config_path, is_extracted_repo):
+def ProcessGooglePlayServices(repo, out_dir, config_path):
   config = utils.ConfigParser(config_path)
 
   tmp_root = tempfile.mkdtemp()
   try:
     tmp_paths = _SetupTempDir(tmp_root)
-
-    if is_extracted_repo:
-      _ImportFromExtractedRepo(config, tmp_paths, repo)
-    else:
-      _ImportFromAars(config, tmp_paths, repo)
-
-    _GenerateCombinedJar(tmp_paths)
+    _ImportFromExtractedRepo(config, tmp_paths, repo)
     _ProcessResources(config, tmp_paths, repo)
-    _BuildOutput(config, tmp_paths, out_dir)
+    _CopyToOutput(tmp_paths, out_dir)
+    _UpdateVersionInConfig(config, tmp_paths)
   finally:
     shutil.rmtree(tmp_root)
 
@@ -143,21 +106,6 @@ def _SetupTempDir(tmp_root):
   return tmp_paths
 
 
-def _SetupOutputDir(out_dir):
-  out_paths = {
-      'root': out_dir,
-      'res': os.path.join(out_dir, 'res'),
-      'jar': os.path.join(out_dir, 'google-play-services.jar'),
-      'stub': os.path.join(out_dir, 'stub'),
-  }
-
-  shutil.rmtree(out_paths['jar'], ignore_errors=True)
-  shutil.rmtree(out_paths['res'], ignore_errors=True)
-  shutil.rmtree(out_paths['stub'], ignore_errors=True)
-
-  return out_paths
-
-
 def _MakeWritable(dir_path):
   for root, dirs, files in os.walk(dir_path):
     for path in itertools.chain(dirs, files):
@@ -170,35 +118,14 @@ def _RemovePartySuffix(client):
   return client[:-3] if client[-3:] == '_1p' else client
 
 
-def _ImportFromAars(config, tmp_paths, repo):
-  for client in config.clients:
-    client_name = _RemovePartySuffix(client)
-    aar_name = 'client_' + client + '.aar'
-    aar_path = os.path.join(repo, client_name, aar_name)
-    aar_out_path = os.path.join(tmp_paths['imported_clients'], client)
-    _ExtractAll(aar_path, aar_out_path)
-
-    client_jar_path = os.path.join(aar_out_path, 'classes.jar')
-    _ExtractAll(client_jar_path, tmp_paths['extracted_jars'])
-
-
 def _ImportFromExtractedRepo(config, tmp_paths, repo):
   # Import the clients
   try:
     for client in config.clients:
       client_out_dir = os.path.join(tmp_paths['imported_clients'], client)
       shutil.copytree(os.path.join(repo, client), client_out_dir)
-
-      client_jar_path = os.path.join(client_out_dir, 'classes.jar')
-      _ExtractAll(client_jar_path, tmp_paths['extracted_jars'])
   finally:
     _MakeWritable(tmp_paths['imported_clients'])
-
-
-def _GenerateCombinedJar(tmp_paths):
-  out_file_name = tmp_paths['combined_jar']
-  working_dir = tmp_paths['extracted_jars']
-  cmd_helper.Call(['jar', '-cf', out_file_name, '-C', working_dir, '.'])
 
 
 def _ProcessResources(config, tmp_paths, repo):
@@ -212,7 +139,13 @@ def _ProcessResources(config, tmp_paths, repo):
 
     res_path = os.path.join(tmp_paths['imported_clients'], client_dir, 'res')
     if not os.path.isdir(res_path):
+      # We declare the libraries in GN as `android_java_prebuilt` and add to
+      # each an `android_resources` target. So we need to the resources
+      # directory to exist.
+      os.makedirs(res_path)
+      open(os.path.join(res_path, '.gitkeep'), 'a').close()
       continue
+
     for res_type in os.listdir(res_path):
       res_type_path = os.path.join(res_path, res_type)
 
@@ -227,8 +160,8 @@ def _ProcessResources(config, tmp_paths, repo):
           continue
 
       if res_type.startswith('values'):
-        # Beginning with v3, resource file names are not necessarily unique, and
-        # would overwrite each other when merged at build time. Prefix each
+        # Beginning with v3, resource file names are not necessarily unique,
+        # and would overwrite each other when merged at build time. Prefix each
         # "values" resource file with its client name.
         for res_file in os.listdir(res_type_path):
           os.rename(os.path.join(res_type_path, res_file),
@@ -243,44 +176,22 @@ def _ProcessResources(config, tmp_paths, repo):
       if not os.path.exists(os.path.dirname(rebased_res)):
         os.makedirs(os.path.dirname(rebased_res))
 
-      shutil.copy(os.path.join(repo, whitelisted_file), rebased_res)
+      try:
+        shutil.copy(os.path.join(repo, whitelisted_file), rebased_res)
+      finally:
+        _MakeWritable(rebased_res)
 
 
-def _BuildOutput(config, tmp_paths, out_dir):
-  generation_date = datetime.utcnow()
+def _CopyToOutput(tmp_paths, out_dir):
+  shutil.rmtree(out_dir, ignore_errors=True)
+  shutil.copytree(tmp_paths['imported_clients'], out_dir)
+
+
+def _UpdateVersionInConfig(config, tmp_paths):
   version_xml_path = os.path.join(tmp_paths['imported_clients'],
                                   config.version_xml_path)
   play_services_full_version = utils.GetVersionNumberFromLibraryResources(
       version_xml_path)
-
-  out_paths = _SetupOutputDir(out_dir)
-
-  # Copy the resources to the output dir
-  for client in config.clients:
-    res_in_tmp_dir = os.path.join(tmp_paths['imported_clients'], client, 'res')
-    if os.path.isdir(res_in_tmp_dir) and os.listdir(res_in_tmp_dir):
-      res_in_final_dir = os.path.join(out_paths['res'], client)
-      shutil.copytree(res_in_tmp_dir, res_in_final_dir)
-
-  # Copy the jar
-  shutil.copyfile(tmp_paths['combined_jar'], out_paths['jar'])
-
-  # Write the java dummy stub. Needed for gyp to create the resource jar
-  stub_location = os.path.join(out_paths['stub'], 'src', 'android')
-  os.makedirs(stub_location)
-  with open(os.path.join(stub_location, 'UnusedStub.java'), 'w') as stub:
-    stub.write('package android;'
-               'public final class UnusedStub {'
-               '    private UnusedStub() {}'
-               '}')
-
-  # Create the main res directory. It is needed by gyp
-  stub_res_location = os.path.join(out_paths['stub'], 'res')
-  os.makedirs(stub_res_location)
-  with open(os.path.join(stub_res_location, '.res-stamp'), 'w') as stamp:
-    content_str = 'google_play_services_version: %s\nutc_date: %s\n'
-    stamp.write(content_str % (play_services_full_version, generation_date))
-
   config.UpdateVersionNumber(play_services_full_version)
 
 

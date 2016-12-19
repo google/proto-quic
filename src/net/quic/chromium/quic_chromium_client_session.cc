@@ -243,6 +243,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
     base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
     QuicClientPushPromiseIndex* push_promise_index,
+    ServerPushDelegate* push_delegate,
     base::TaskRunner* task_runner,
     std::unique_ptr<SocketPerformanceWatcher> socket_performance_watcher,
     NetLog* net_log)
@@ -263,7 +264,7 @@ QuicChromiumClientSession::QuicChromiumClientSession(
       going_away_(false),
       port_migration_detected_(false),
       token_binding_signatures_(kTokenBindingSignatureMapSize),
-      push_delegate_(nullptr),
+      push_delegate_(push_delegate),
       streams_pushed_count_(0),
       streams_pushed_and_claimed_count_(0),
       bytes_pushed_count_(0),

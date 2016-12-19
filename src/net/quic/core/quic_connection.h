@@ -742,6 +742,9 @@ class QUIC_EXPORT_PRIVATE QuicConnection
                                          const std::string& details,
                                          AckBundling ack_mode);
 
+  // Returns true if the packet should be discarded and not sent.
+  virtual bool ShouldDiscardPacket(const SerializedPacket& packet);
+
  private:
   friend class test::QuicConnectionPeer;
   friend class test::PacketSavingConnection;
@@ -788,9 +791,6 @@ class QUIC_EXPORT_PRIVATE QuicConnection
 
   // Writes as many pending retransmissions as possible.
   void WritePendingRetransmissions();
-
-  // Returns true if the packet should be discarded and not sent.
-  bool ShouldDiscardPacket(const SerializedPacket& packet);
 
   // Queues |packet| in the hopes that it can be decrypted in the
   // future, when a new key is installed.

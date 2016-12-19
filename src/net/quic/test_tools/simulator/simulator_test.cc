@@ -16,6 +16,7 @@
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using std::string;
 using testing::_;
 using testing::Return;
 using testing::StrictMock;
@@ -26,7 +27,7 @@ namespace simulator {
 // A simple counter that increments its value by 1 every specified period.
 class Counter : public Actor {
  public:
-  Counter(Simulator* simulator, std::string name, QuicTime::Delta period)
+  Counter(Simulator* simulator, string name, QuicTime::Delta period)
       : Actor(simulator, name), value_(-1), period_(period) {
     Schedule(clock_->Now());
   }
@@ -84,7 +85,7 @@ class CounterPort : public UnconstrainedPortInterface {
     per_destination_packet_counter_.clear();
   }
 
-  QuicPacketCount CountPacketsForDestination(std::string destination) const {
+  QuicPacketCount CountPacketsForDestination(string destination) const {
     auto result_it = per_destination_packet_counter_.find(destination);
     if (result_it == per_destination_packet_counter_.cend()) {
       return 0;
@@ -96,8 +97,7 @@ class CounterPort : public UnconstrainedPortInterface {
   QuicByteCount bytes_;
   QuicPacketCount packets_;
 
-  std::unordered_map<std::string, QuicPacketCount>
-      per_destination_packet_counter_;
+  std::unordered_map<string, QuicPacketCount> per_destination_packet_counter_;
 };
 
 // Sends the packet to the specified destination at the uplink rate.  Provides a
@@ -105,9 +105,9 @@ class CounterPort : public UnconstrainedPortInterface {
 class LinkSaturator : public Endpoint {
  public:
   LinkSaturator(Simulator* simulator,
-                std::string name,
+                string name,
                 QuicByteCount packet_size,
-                std::string destination)
+                string destination)
       : Endpoint(simulator, name),
         packet_size_(packet_size),
         destination_(std::move(destination)),
@@ -151,7 +151,7 @@ class LinkSaturator : public Endpoint {
 
  private:
   QuicByteCount packet_size_;
-  std::string destination_;
+  string destination_;
 
   ConstrainedPortInterface* tx_port_;
   CounterPort rx_port_;
@@ -425,7 +425,7 @@ TEST(SimulatorTest, SwitchedNetwork) {
 class AlarmToggler : public Actor {
  public:
   AlarmToggler(Simulator* simulator,
-               std::string name,
+               string name,
                QuicAlarm* alarm,
                QuicTime::Delta interval)
       : Actor(simulator, name),
@@ -571,7 +571,7 @@ TEST(SimulatorTest, RunFor) {
 
 class MockPacketFilter : public PacketFilter {
  public:
-  MockPacketFilter(Simulator* simulator, std::string name, Endpoint* endpoint)
+  MockPacketFilter(Simulator* simulator, string name, Endpoint* endpoint)
       : PacketFilter(simulator, name, endpoint) {}
   MOCK_METHOD1(FilterPacket, bool(const Packet&));
 };

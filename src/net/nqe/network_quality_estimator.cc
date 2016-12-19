@@ -45,39 +45,39 @@
 #include "net/android/network_library.h"
 #endif  // OS_ANDROID
 
+namespace net {
+
 namespace {
 
 // Returns the histogram that should be used to record the given statistic.
 // |max_limit| is the maximum value that can be stored in the histogram.
-base::HistogramBase* GetHistogram(
-    const std::string& statistic_name,
-    net::NetworkChangeNotifier::ConnectionType type,
-    int32_t max_limit) {
+base::HistogramBase* GetHistogram(const std::string& statistic_name,
+                                  NetworkChangeNotifier::ConnectionType type,
+                                  int32_t max_limit) {
   const base::LinearHistogram::Sample kLowerLimit = 1;
   DCHECK_GT(max_limit, kLowerLimit);
   const size_t kBucketCount = 50;
 
   return base::Histogram::FactoryGet(
-      "NQE." + statistic_name +
-          net::nqe::internal::GetNameForConnectionType(type),
+      "NQE." + statistic_name + nqe::internal::GetNameForConnectionType(type),
       kLowerLimit, max_limit, kBucketCount,
       base::HistogramBase::kUmaTargetedHistogramFlag);
 }
 
-net::NetworkQualityObservationSource ProtocolSourceToObservationSource(
-    net::SocketPerformanceWatcherFactory::Protocol protocol) {
+NetworkQualityObservationSource ProtocolSourceToObservationSource(
+    SocketPerformanceWatcherFactory::Protocol protocol) {
   switch (protocol) {
-    case net::SocketPerformanceWatcherFactory::PROTOCOL_TCP:
-      return net::NETWORK_QUALITY_OBSERVATION_SOURCE_TCP;
-    case net::SocketPerformanceWatcherFactory::PROTOCOL_QUIC:
-      return net::NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC;
+    case SocketPerformanceWatcherFactory::PROTOCOL_TCP:
+      return NETWORK_QUALITY_OBSERVATION_SOURCE_TCP;
+    case SocketPerformanceWatcherFactory::PROTOCOL_QUIC:
+      return NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC;
   }
   NOTREACHED();
-  return net::NETWORK_QUALITY_OBSERVATION_SOURCE_TCP;
+  return NETWORK_QUALITY_OBSERVATION_SOURCE_TCP;
 }
 
 // Returns true if the scheme of the |request| is either HTTP or HTTPS.
-bool RequestSchemeIsHTTPOrHTTPS(const net::URLRequest& request) {
+bool RequestSchemeIsHTTPOrHTTPS(const URLRequest& request) {
   return request.url().is_valid() && request.url().SchemeIsHTTPOrHTTPS();
 }
 
@@ -189,24 +189,21 @@ void RecordEffectiveConnectionTypeAccuracy(
     const char* prefix,
     int32_t metric,
     base::TimeDelta measuring_duration,
-    net::EffectiveConnectionType observed_effective_connection_type) {
-  const std::string histogram_name =
-      base::StringPrintf("%s.EstimatedObservedDiff.%s.%d.%s", prefix,
-                         metric >= 0 ? "Positive" : "Negative",
-                         static_cast<int32_t>(measuring_duration.InSeconds()),
-                         net::GetNameForEffectiveConnectionType(
-                             observed_effective_connection_type));
+    EffectiveConnectionType observed_effective_connection_type) {
+  const std::string histogram_name = base::StringPrintf(
+      "%s.EstimatedObservedDiff.%s.%d.%s", prefix,
+      metric >= 0 ? "Positive" : "Negative",
+      static_cast<int32_t>(measuring_duration.InSeconds()),
+      GetNameForEffectiveConnectionType(observed_effective_connection_type));
 
   base::HistogramBase* histogram = base::Histogram::FactoryGet(
-      histogram_name, 0, net::EFFECTIVE_CONNECTION_TYPE_LAST,
-      net::EFFECTIVE_CONNECTION_TYPE_LAST /* Number of buckets */,
+      histogram_name, 0, EFFECTIVE_CONNECTION_TYPE_LAST,
+      EFFECTIVE_CONNECTION_TYPE_LAST /* Number of buckets */,
       base::HistogramBase::kUmaTargetedHistogramFlag);
   histogram->Add(std::abs(metric));
 }
 
 }  // namespace
-
-namespace net {
 
 NetworkQualityEstimator::NetworkQualityEstimator(
     std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
@@ -246,13 +243,12 @@ NetworkQualityEstimator::NetworkQualityEstimator(
           nqe::internal::GetWeightMultiplierPerSecond(variation_params)),
       effective_connection_type_algorithm_(
           algorithm_name_to_enum_.find(
-              net::nqe::internal::GetEffectiveConnectionTypeAlgorithm(
+              nqe::internal::GetEffectiveConnectionTypeAlgorithm(
                   variation_params)) == algorithm_name_to_enum_.end()
               ? kDefaultEffectiveConnectionTypeAlgorithm
               : algorithm_name_to_enum_
-                    .find(
-                        net::nqe::internal::GetEffectiveConnectionTypeAlgorithm(
-                            variation_params))
+                    .find(nqe::internal::GetEffectiveConnectionTypeAlgorithm(
+                        variation_params))
                     ->second),
       tick_clock_(new base::DefaultTickClock()),
       last_connection_change_(tick_clock_->NowTicks()),
@@ -407,6 +403,7 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
 
   // Update |estimated_quality_at_last_main_frame_| if this is a main frame
   // request.
+  // TODO(tbansal): Refactor this to a separate method.
   if (request.load_flags() & LOAD_MAIN_FRAME_DEPRECATED) {
     last_main_frame_request_ = now;
 
@@ -774,8 +771,17 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
         "NQE.CellularSignalStrengthAvailable",
         min_signal_strength_since_connection_change_ != INT32_MAX &&
             max_signal_strength_since_connection_change_ != INT32_MIN);
+
+    if (min_signal_strength_since_connection_change_ != INT32_MAX &&
+        max_signal_strength_since_connection_change_ != INT32_MIN) {
+      UMA_HISTOGRAM_COUNTS_100(
+          "NQE.CellularSignalStrengthDifference",
+          max_signal_strength_since_connection_change_ -
+              min_signal_strength_since_connection_change_);
+    }
   }
 #endif  // OS_ANDROID
+
   min_signal_strength_since_connection_change_ = INT32_MAX;
   max_signal_strength_since_connection_change_ = INT32_MIN;
   network_quality_ = nqe::internal::NetworkQuality();

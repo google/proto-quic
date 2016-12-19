@@ -151,6 +151,7 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   bool response_complete() const;
   bool response_headers_complete() const;
   const SpdyHeaderBlock* response_headers() const;
+  const SpdyHeaderBlock* preliminary_headers() const;
   int64_t response_size() const;
   int64_t response_body_size() const;
   size_t bytes_read() const;
@@ -310,6 +311,7 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   bool response_complete_;
   bool response_headers_complete_;
   mutable SpdyHeaderBlock response_headers_;
+  mutable SpdyHeaderBlock preliminary_headers_;
 
   // Parsed response trailers (if present), copied from the stream in OnClose.
   SpdyHeaderBlock response_trailers_;

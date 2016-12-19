@@ -51,15 +51,18 @@ MemoryPressureMonitor::MemoryPressureMonitor()
       last_statistic_report_(CFAbsoluteTimeGetCurrent()),
       last_pressure_level_(MemoryPressureListener::MEMORY_PRESSURE_LEVEL_NONE),
       reporting_error_(0) {
-  dispatch_source_set_event_handler(memory_level_event_source_, ^{
-    OnMemoryPressureChanged(memory_level_event_source_.get(),
-                            dispatch_callback_);
-  });
-  dispatch_resume(memory_level_event_source_);
+  if (memory_level_event_source_.get() != nullptr) {
+    dispatch_source_set_event_handler(memory_level_event_source_, ^{
+      OnMemoryPressureChanged(memory_level_event_source_.get(),
+                              dispatch_callback_);
+    });
+    dispatch_resume(memory_level_event_source_);
+  }
 }
 
 MemoryPressureMonitor::~MemoryPressureMonitor() {
-  dispatch_source_cancel(memory_level_event_source_);
+  if (memory_level_event_source_.get() != nullptr)
+    dispatch_source_cancel(memory_level_event_source_);
 }
 
 MemoryPressureListener::MemoryPressureLevel
