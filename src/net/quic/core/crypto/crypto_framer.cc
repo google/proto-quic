@@ -34,7 +34,7 @@ class OneShotVisitor : public CryptoFramerVisitorInterface {
 
   bool error() const { return error_; }
 
-  CryptoHandshakeMessage* release() { return out_.release(); }
+  std::unique_ptr<CryptoHandshakeMessage> release() { return std::move(out_); }
 
  private:
   std::unique_ptr<CryptoHandshakeMessage> out_;
@@ -51,7 +51,8 @@ CryptoFramer::CryptoFramer()
 CryptoFramer::~CryptoFramer() {}
 
 // static
-CryptoHandshakeMessage* CryptoFramer::ParseMessage(StringPiece in) {
+std::unique_ptr<CryptoHandshakeMessage> CryptoFramer::ParseMessage(
+    StringPiece in) {
   OneShotVisitor visitor;
   CryptoFramer framer;
 

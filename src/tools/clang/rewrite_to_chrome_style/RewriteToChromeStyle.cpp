@@ -348,14 +348,19 @@ bool GetNameForDecl(const clang::FunctionDecl& decl,
 
   // Given
   //   class Foo {};
+  //   class DerivedFoo : class Foo;
   //   using Bar = Foo;
   //   Bar f1();  // <- |Bar| would be matched by hasString("Bar") below.
   //   Bar f2();  // <- |Bar| would be matched by hasName("Foo") below.
+  //   DerivedFoo f3();  // <- |DerivedFoo| matched by isDerivedFrom(...) below.
   // |type_with_same_name_as_function| matcher matches Bar and Foo return types.
   auto type_with_same_name_as_function = qualType(anyOf(
-      hasString(name),  // hasString matches the type as spelled (Bar above).
-      hasDeclaration(namedDecl(hasName(name)))));  // hasDeclaration matches
-                                                   // resolved type (Foo above).
+      // hasString matches the type as spelled (Bar above).
+      hasString(name),
+      // hasDeclaration matches resolved type (Foo or DerivedFoo above).
+      hasDeclaration(namedDecl(hasName(name))),
+      hasDeclaration(cxxRecordDecl(isDerivedFrom(namedDecl(hasName(name)))))));
+
   // |type_containing_same_name_as_function| matcher will match all of the
   // return types below:
   // - Foo foo()  // Direct application of |type_with_same_name_as_function|.

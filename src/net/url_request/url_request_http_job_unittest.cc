@@ -40,6 +40,12 @@
 #include "url/gurl.h"
 #include "url/url_constants.h"
 
+#if defined(OS_ANDROID)
+#include "base/android/build_info.h"
+#include "base/android/jni_android.h"
+#include "jni/AndroidNetworkLibraryTestUtil_jni.h"
+#endif
+
 using net::test::IsError;
 using net::test::IsOk;
 
@@ -937,6 +943,46 @@ TEST_F(URLRequestHttpJobWithBrotliSupportTest, BrotliAdvertisement) {
   EXPECT_EQ(CountReadBytes(reads, arraysize(reads)),
             request->GetTotalReceivedBytes());
 }
+
+#if defined(OS_ANDROID)
+TEST_F(URLRequestHttpJobTest, AndroidCleartextPermittedTest) {
+  context_.set_check_cleartext_permitted(true);
+
+  struct TestCase {
+    const char* url;
+    bool cleartext_permitted;
+    bool should_block;
+  } cases[] = {
+      {"http://blocked.test/", true, false},
+      {"https://blocked.test/", true, false},
+      {"http://blocked.test/", false, true},
+      {"https://blocked.test/", false, false},
+  };
+
+  for (const TestCase& test : cases) {
+    JNIEnv* env = base::android::AttachCurrentThread();
+    Java_AndroidNetworkLibraryTestUtil_setUpSecurityPolicyForTesting(
+        env, test.cleartext_permitted);
+
+    TestDelegate delegate;
+    std::unique_ptr<URLRequest> request =
+        context_.CreateRequest(GURL(test.url), DEFAULT_PRIORITY, &delegate);
+    request->Start();
+    base::RunLoop().Run();
+
+    int sdk_int = base::android::BuildInfo::GetInstance()->sdk_int();
+    bool expect_blocked = (sdk_int >= base::android::SDK_VERSION_MARSHMALLOW &&
+                           test.should_block);
+    if (expect_blocked) {
+      EXPECT_THAT(delegate.request_status(),
+                  IsError(ERR_CLEARTEXT_NOT_PERMITTED));
+    } else {
+      // Should fail since there's no test server running
+      EXPECT_THAT(delegate.request_status(), IsError(ERR_FAILED));
+    }
+  }
+}
+#endif
 
 // This base class just serves to set up some things before the TestURLRequest
 // constructor is called.

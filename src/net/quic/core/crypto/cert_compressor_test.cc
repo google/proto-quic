@@ -70,7 +70,7 @@ TEST(CertCompressor, Common) {
 TEST(CertCompressor, Cached) {
   std::vector<string> chain;
   chain.push_back("testcert");
-  uint64_t hash = QuicUtils::FNV1a_64_Hash(chain[0].data(), chain[0].size());
+  uint64_t hash = QuicUtils::FNV1a_64_Hash(chain[0]);
   StringPiece hash_bytes(reinterpret_cast<char*>(&hash), sizeof(hash));
   const string compressed =
       CertCompressor::CompressChain(chain, StringPiece(), hash_bytes, nullptr);

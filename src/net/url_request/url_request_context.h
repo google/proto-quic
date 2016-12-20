@@ -238,6 +238,15 @@ class NET_EXPORT URLRequestContext
 
   bool enable_brotli() const { return enable_brotli_; }
 
+  // Sets the |check_cleartext_permitted| flag, which controls whether to check
+  // system policy before allowing a cleartext http or ws request.
+  void set_check_cleartext_permitted(bool check_cleartext_permitted) {
+    check_cleartext_permitted_ = check_cleartext_permitted;
+  }
+
+  // Returns current value of the |check_cleartext_permitted| flag.
+  bool check_cleartext_permitted() const { return check_cleartext_permitted_; }
+
   // Sets a name for this URLRequestContext. Currently the name is used in
   // MemoryDumpProvier to annotate memory usage. The name does not need to be
   // unique.
@@ -285,6 +294,9 @@ class NET_EXPORT URLRequestContext
 
   // Enables Brotli Content-Encoding support.
   bool enable_brotli_;
+  // Enables checking system policy before allowing a cleartext http or ws
+  // request. Only used on Android.
+  bool check_cleartext_permitted_;
 
   // An optional name which can be set to describe this URLRequestContext.
   // Used in MemoryDumpProvier to annotate memory usage. The name does not need

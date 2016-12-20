@@ -173,9 +173,7 @@ QuicCryptoServerConfig::QuicCryptoServerConfig(
       {string(reinterpret_cast<char*>(key_bytes.get()), key_size)});
 }
 
-QuicCryptoServerConfig::~QuicCryptoServerConfig() {
-  primary_config_ = nullptr;
-}
+QuicCryptoServerConfig::~QuicCryptoServerConfig() {}
 
 // static
 std::unique_ptr<QuicServerConfigProtobuf>
@@ -322,7 +320,8 @@ CryptoHandshakeMessage* QuicCryptoServerConfig::AddConfig(
     configs_[config->id] = config;
     SelectNewPrimaryConfig(now);
     DCHECK(primary_config_.get());
-    DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+    DCHECK_EQ(configs_.find(primary_config_->id)->second.get(),
+              primary_config_.get());
   }
 
   return msg.release();
@@ -397,7 +396,8 @@ bool QuicCryptoServerConfig::SetConfigs(
     configs_.swap(new_configs);
     SelectNewPrimaryConfig(now);
     DCHECK(primary_config_.get());
-    DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+    DCHECK_EQ(configs_.find(primary_config_->id)->second.get(),
+              primary_config_.get());
   }
 
   return ok;
@@ -448,7 +448,8 @@ void QuicCryptoServerConfig::ValidateClientHello(
         configs_lock_.WriterLock();
         SelectNewPrimaryConfig(now);
         DCHECK(primary_config_.get());
-        DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+        DCHECK_EQ(configs_.find(primary_config_->id)->second.get(),
+                  primary_config_.get());
         configs_lock_.WriterUnlock();
         configs_lock_.ReaderLock();
       }
@@ -644,7 +645,8 @@ void QuicCryptoServerConfig::ProcessClientHello(
         configs_lock_.WriterLock();
         SelectNewPrimaryConfig(now);
         DCHECK(primary_config_.get());
-        DCHECK_EQ(configs_.find(primary_config_->id)->second, primary_config_);
+        DCHECK_EQ(configs_.find(primary_config_->id)->second.get(),
+                  primary_config_.get());
         configs_lock_.WriterUnlock();
         configs_lock_.ReaderLock();
       }
@@ -892,7 +894,7 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
     char plaintext[kMaxPacketSize];
     size_t plaintext_length = 0;
     const bool success = crypters.decrypter->DecryptPacket(
-        kDefaultPathId, 0 /* packet number */,
+        QUIC_VERSION_35, kDefaultPathId, 0 /* packet number */,
         StringPiece() /* associated data */, cetv_ciphertext, plaintext,
         &plaintext_length, kMaxPacketSize);
     if (!success) {
@@ -1058,13 +1060,13 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
 
   std::sort(configs.begin(), configs.end(), ConfigPrimaryTimeLessThan);
 
-  Config* best_candidate = configs[0].get();
+  scoped_refptr<Config> best_candidate = configs[0];
 
   for (size_t i = 0; i < configs.size(); ++i) {
     const scoped_refptr<Config> config(configs[i]);
     if (!config->primary_time.IsAfter(now)) {
       if (config->primary_time.IsAfter(best_candidate->primary_time)) {
-        best_candidate = config.get();
+        best_candidate = config;
       }
       continue;
     }
@@ -1072,7 +1074,7 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
     // This is the first config with a primary_time in the future. Thus the
     // previous Config should be the primary and this one should determine the
     // next_config_promotion_time_.
-    scoped_refptr<Config> new_primary(best_candidate);
+    scoped_refptr<Config> new_primary = best_candidate;
     if (i == 0) {
       // We need the primary_time of the next config.
       if (configs.size() > 1) {
@@ -1084,7 +1086,7 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
       next_config_promotion_time_ = config->primary_time;
     }
 
-    if (primary_config_.get()) {
+    if (primary_config_) {
       primary_config_->is_primary = false;
     }
     primary_config_ = new_primary;
@@ -1102,7 +1104,7 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
 
   // All config's primary times are in the past. We should make the most recent
   // and highest priority candidate primary.
-  scoped_refptr<Config> new_primary(best_candidate);
+  scoped_refptr<Config> new_primary = best_candidate;
   if (primary_config_.get()) {
     primary_config_->is_primary = false;
   }

@@ -97,11 +97,6 @@ unit tests.
      https://www.google.com:443.
 - unittest.originbound.key.der: matching PrivateKeyInfo.
 
-- x509_verify_results.chain.pem : A simple certificate chain used to test that
-    the correctly ordered, filtered certificate chain is returned during
-    verification, regardless of the order in which the intermediate/root CA
-    certificates are provided.
-
 - test_mail_google_com.pem : A certificate signed by the test CA for
     "mail.google.com". Because it is signed by that CA instead of the true CA
     for that host, it will fail the
@@ -143,6 +138,12 @@ unit tests.
 - root_ca_cert.pem
     These certificates are the common certificates used by the Python test
     server for simulating HTTPS connections.
+
+- intermediate_ca_cert.pem
+- ok_cert_by_intermediate.pem
+    These certificates simulate a more common chain of root (root_ca_cert.pem)
+    to intermediate (intermediate_ca_cert.pem) to leaf
+    (ok_cert_by_intermediate.pem).
 
 - wildcard_.pem
     A certificate and private key valid for *.example.org, used in various
@@ -196,6 +197,11 @@ unit tests.
 
 - tls_feature_extension.pem
   A certificate that contains the TLS Feature Extension.
+
+- x509_verify_results.chain.pem : A simple certificate chain used to test that
+    the correctly ordered, filtered certificate chain is returned during
+    verification, regardless of the order in which the intermediate/root CA
+    certificates are provided.
 
 ===== From net/data/ssl/scripts/generate-weak-test-chains.sh
 - 2048-rsa-root.pem

@@ -1,5 +1,10 @@
 -ChromeServiceWorkerTest.FallbackMainResourceRequestWhenJSDisabled
--PDFExtensionTest.PdfAccessibilityInOOPIF
+
+# NavigationHandle::IsRendererInitiated some times return differently in
+# browser side navigation tests.
+-SBNavigationObserverBrowserTest.NewTabDownload
+-SBNavigationObserverBrowserTest.NewTabDownloadWithDataURL
+-SBNavigationObserverBrowserTest.SubFrameNewTabDownload
 
 # https://crbug.com/652767: NavigationHandle::GetResponseHeaders sometimes
 # returns null for browser-side navigations

@@ -41,7 +41,8 @@ Cubic::Cubic(const QuicClock* clock)
       epoch_(QuicTime::Zero()),
       app_limited_start_time_(QuicTime::Zero()),
       last_update_time_(QuicTime::Zero()),
-      fix_convex_mode_(false) {
+      fix_convex_mode_(false),
+      fix_beta_last_max_(false) {
   Reset();
 }
 
@@ -65,6 +66,16 @@ float Cubic::Beta() const {
   return (num_connections_ - 1 + kBeta) / num_connections_;
 }
 
+float Cubic::BetaLastMax() const {
+  // BetaLastMax is the additional backoff factor after loss for our
+  // N-connection emulation, which emulates the additional backoff of
+  // an ensemble of N TCP-Reno connections on a single loss event. The
+  // effective multiplier is computed as:
+  return fix_beta_last_max_
+             ? (num_connections_ - 1 + kBetaLastMax) / num_connections_
+             : kBetaLastMax;
+}
+
 void Cubic::Reset() {
   epoch_ = QuicTime::Zero();  // Reset time.
   app_limited_start_time_ = QuicTime::Zero();
@@ -77,7 +88,6 @@ void Cubic::Reset() {
   origin_point_congestion_window_ = 0;
   time_to_origin_point_ = 0;
   last_target_congestion_window_ = 0;
-  fix_convex_mode_ = false;
 }
 
 void Cubic::OnApplicationLimited() {
@@ -90,13 +100,17 @@ void Cubic::SetFixConvexMode(bool fix_convex_mode) {
   fix_convex_mode_ = fix_convex_mode;
 }
 
+void Cubic::SetFixBetaLastMax(bool fix_beta_last_max) {
+  fix_beta_last_max_ = fix_beta_last_max;
+}
+
 QuicPacketCount Cubic::CongestionWindowAfterPacketLoss(
     QuicPacketCount current_congestion_window) {
   if (current_congestion_window < last_max_congestion_window_) {
     // We never reached the old max, so assume we are competing with another
     // flow. Use our extra back off factor to allow the other flow to go up.
     last_max_congestion_window_ =
-        static_cast<int>(kBetaLastMax * current_congestion_window);
+        static_cast<int>(BetaLastMax() * current_congestion_window);
   } else {
     last_max_congestion_window_ = current_congestion_window;
   }
@@ -106,10 +120,12 @@ QuicPacketCount Cubic::CongestionWindowAfterPacketLoss(
 
 QuicPacketCount Cubic::CongestionWindowAfterAck(
     QuicPacketCount current_congestion_window,
-    QuicTime::Delta delay_min) {
+    QuicTime::Delta delay_min,
+    QuicTime event_time) {
   acked_packets_count_ += 1;  // Packets acked.
   epoch_packets_count_ += 1;
-  QuicTime current_time = clock_->ApproximateNow();
+  QuicTime current_time =
+      FLAGS_quic_use_event_time ? event_time : clock_->ApproximateNow();
 
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
   if (last_congestion_window_ == current_congestion_window &&

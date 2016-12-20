@@ -350,7 +350,7 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
     private class MyNetworkCallback extends NetworkCallback {
         // If non-null, this indicates a VPN is in place for the current user, and no other
         // networks are accessible.
-        private Network mVpnInPlace = null;
+        private Network mVpnInPlace;
 
         // Initialize mVpnInPlace.
         void initializeVpnInPlace() {

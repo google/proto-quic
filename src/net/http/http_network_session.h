@@ -269,6 +269,8 @@ class NET_EXPORT HttpNetworkSession
 
   bool IsProtocolEnabled(NextProto protocol) const;
 
+  void SetServerPushDelegate(std::unique_ptr<ServerPushDelegate> push_delegate);
+
   // Populates |*alpn_protos| with protocols to be used with ALPN.
   void GetAlpnProtos(NextProtoVector* alpn_protos) const;
 
@@ -308,6 +310,7 @@ class NET_EXPORT HttpNetworkSession
   SSLClientAuthCache ssl_client_auth_cache_;
   std::unique_ptr<ClientSocketPoolManager> normal_socket_pool_manager_;
   std::unique_ptr<ClientSocketPoolManager> websocket_socket_pool_manager_;
+  std::unique_ptr<ServerPushDelegate> push_delegate_;
   QuicStreamFactory quic_stream_factory_;
   SpdySessionPool spdy_session_pool_;
   std::unique_ptr<HttpStreamFactory> http_stream_factory_;

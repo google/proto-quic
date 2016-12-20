@@ -54,46 +54,6 @@ inline char* string_as_array(std::string* str) {
   return str->empty() ? NULL : &*str->begin();
 }
 
-// The following functions are useful for cleaning up STL containers whose
-// elements point to allocated memory.
-
-// STLDeleteElements() deletes all the elements in an STL container and clears
-// the container.  This function is suitable for use with a vector, set,
-// hash_set, or any other STL container which defines sensible begin(), end(),
-// and clear() methods.
-//
-// If container is NULL, this function is a no-op.
-template <class T>
-void STLDeleteElements(T* container) {
-  if (!container)
-    return;
-
-  for (auto it = container->begin(); it != container->end();) {
-    auto temp = it;
-    ++it;
-    delete *temp;
-  }
-
-  container->clear();
-}
-
-// Given an STL container consisting of (key, value) pairs, STLDeleteValues
-// deletes all the "value" components and clears the container.  Does nothing
-// in the case it's given a NULL pointer.
-template <class T>
-void STLDeleteValues(T* container) {
-  if (!container)
-    return;
-
-  for (auto it = container->begin(); it != container->end();) {
-    auto temp = it;
-    ++it;
-    delete temp->second;
-  }
-
-  container->clear();
-}
-
 // Test to see if a set, map, hash_set or hash_map contains a particular key.
 // Returns true if the key is in the collection.
 template <typename Collection, typename Key>

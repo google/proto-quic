@@ -9,6 +9,7 @@
 
 import argparse
 import os
+import re
 import sys
 
 from util import build_utils
@@ -42,6 +43,14 @@ if __name__ == '__main__':
   sys.exit(main())
 """
 
+
+def _GenerateAdditionalApksErrorString(incremental_apks):
+  err_string = ('Apks that are listed as additional_apks for '
+      'another target cannot be incremental. Please add never_incremental to '
+      'the following apks: %s')
+  return err_string % ', '.join(a for a in incremental_apks)
+
+
 def main(args):
   parser = argparse.ArgumentParser()
   parser.add_argument('--script-output-path',
@@ -57,6 +66,8 @@ def main(args):
   group.add_argument('--additional-apk', action='append',
                      dest='additional_apks', default=[])
   group.add_argument('--additional-apk-list')
+  group.add_argument('--additional-apk-incremental', action='append',
+                     dest='additional_apks_incremental', default=[])
   group.add_argument('--apk-under-test')
   group.add_argument('--apk-under-test-incremental-install-script')
   group.add_argument('--executable-dist-dir')
@@ -86,6 +97,11 @@ def main(args):
     test_runner_path_args.extend(
         ('--additional-apk', RelativizePathToScript(a))
         for a in args.additional_apks)
+  if args.additional_apks_incremental:
+    bad_additional_apks = [a for a in args.additional_apks_incremental
+                           if a != 'None']
+    if bad_additional_apks:
+      raise Exception(_GenerateAdditionalApksErrorString(bad_additional_apks))
   if args.apk_under_test:
     test_runner_path_args.append(
         ('--apk-under-test', RelativizePathToScript(args.apk_under_test)))

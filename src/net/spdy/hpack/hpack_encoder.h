@@ -60,12 +60,6 @@ class NET_EXPORT_PRIVATE HpackEncoder {
   // whether or not the encoding was successful.
   bool EncodeHeaderSet(const SpdyHeaderBlock& header_set, std::string* output);
 
-  // Encodes the given header set into the given string. Only non-indexed
-  // literal representations are emitted, bypassing the header table. Huffman
-  // coding is also not used. Returns whether the encoding was successful.
-  bool EncodeHeaderSetWithoutCompression(const SpdyHeaderBlock& header_set,
-                                         std::string* output);
-
   class NET_EXPORT_PRIVATE ProgressiveEncoder {
    public:
     virtual ~ProgressiveEncoder() {}
@@ -81,8 +75,7 @@ class NET_EXPORT_PRIVATE HpackEncoder {
   // Returns a ProgressiveEncoder which must be outlived by both the given
   // SpdyHeaderBlock and this object.
   std::unique_ptr<ProgressiveEncoder> EncodeHeaderSet(
-      const SpdyHeaderBlock& header_set,
-      bool use_compression);
+      const SpdyHeaderBlock& header_set);
 
   // Called upon a change to SETTINGS_HEADER_TABLE_SIZE. Specifically, this
   // is to be called after receiving (and sending an acknowledgement for) a
@@ -105,6 +98,8 @@ class NET_EXPORT_PRIVATE HpackEncoder {
       std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
     header_table_.set_debug_visitor(std::move(visitor));
   }
+
+  void DisableCompression() { enable_compression_ = false; }
 
  private:
   friend class test::HpackEncoderPeer;
@@ -149,7 +144,7 @@ class NET_EXPORT_PRIVATE HpackEncoder {
   size_t min_table_size_setting_received_;
   HeaderListener listener_;
   IndexingPolicy should_index_;
-  bool allow_huffman_compression_;
+  bool enable_compression_;
   bool should_emit_table_size_;
 
   DISALLOW_COPY_AND_ASSIGN(HpackEncoder);

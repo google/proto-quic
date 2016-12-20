@@ -117,6 +117,8 @@ class HttpStreamFactoryImpl::JobController
                         const ProxyInfo& used_proxy_info,
                         HttpAuthController* auth_controller) override;
 
+  bool OnInitConnection(const ProxyInfo& proxy_info) override;
+
   void OnResolveProxyComplete(
       Job* job,
       const HttpRequestInfo& request_info,
@@ -166,6 +168,8 @@ class HttpStreamFactoryImpl::JobController
 
   WebSocketHandshakeStreamBase::CreateHelper*
   websocket_handshake_stream_create_helper() override;
+
+  bool is_preconnect() const { return is_preconnect_; }
 
  private:
   friend class JobControllerPeer;

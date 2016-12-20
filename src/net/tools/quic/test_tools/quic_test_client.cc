@@ -569,6 +569,13 @@ const SpdyHeaderBlock* QuicTestClient::response_headers() const {
   return &response_headers_;
 }
 
+const SpdyHeaderBlock* QuicTestClient::preliminary_headers() const {
+  if (stream_ != nullptr) {
+    preliminary_headers_ = stream_->preliminary_headers().Clone();
+  }
+  return &preliminary_headers_;
+}
+
 const SpdyHeaderBlock& QuicTestClient::response_trailers() const {
   return response_trailers_;
 }
@@ -615,6 +622,7 @@ void QuicTestClient::OnClose(QuicSpdyStream* stream) {
   response_headers_complete_ = stream_->headers_decompressed();
   response_headers_ = stream_->response_headers().Clone();
   response_trailers_ = stream_->received_trailers().Clone();
+  preliminary_headers_ = stream_->preliminary_headers().Clone();
   stream_error_ = stream_->stream_error();
   bytes_read_ = stream_->stream_bytes_read() + stream_->header_bytes_read();
   bytes_written_ =

@@ -91,7 +91,7 @@ uniform, predictable two day commitment for all triagers.
       its status should be set to Available.  Future triagers should ignore bugs
       with this status, unless investigating stale bugs.
 
-* Follow up on [Needs-Feedback issues for all components owned by the network stack team](https://bugs.chromium.org/p/chromium/issues/list?can=2&q=component%3AInternals%3ENetwork%2CUI%3EBrowser%3EDownloads+-component%3AInternals%3ENetwork%3EDataProxy+-component%3AInternals%3ENetwork%3EDataUse+-component%3AInternals%3ENetwork%3EVPN+Needs%3DFeedback&sort=-modified).
+* Follow up on [Needs-Feedback issues for all components owned by the network stack team](https://bugs.chromium.org/p/chromium/issues/list?q=component%3AInternals%3ENetwork+-component%3AInternals%3ENetwork%3EDataProxy+-component%3AInternals%3ENetwork%3EDataUse+-component%3AInternals%3ENetwork%3EVPN+Needs%3DFeedback&sort=-modified).
 
     * Remove label once feedback is provided.  Continue to investigate, if
       the previous section applies.

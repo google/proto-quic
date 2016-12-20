@@ -121,8 +121,7 @@ class BASE_EXPORT SharedMemoryHandle {
   // OS primitives.
   SharedMemoryHandle& operator=(const SharedMemoryHandle& handle);
 
-  // Duplicates the underlying OS resources. Assumes the SharedMemoryHandle is
-  // of type MACH.
+  // Duplicates the underlying OS resources.
   SharedMemoryHandle Duplicate() const;
 
   // Comparison operators.

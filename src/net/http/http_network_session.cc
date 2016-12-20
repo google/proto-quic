@@ -146,6 +146,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
       http_auth_handler_factory_(params.http_auth_handler_factory),
       proxy_service_(params.proxy_service),
       ssl_config_service_(params.ssl_config_service),
+      push_delegate_(nullptr),
       quic_stream_factory_(
           params.net_log,
           params.host_resolver,
@@ -361,6 +362,15 @@ bool HttpNetworkSession::IsProtocolEnabled(NextProto protocol) const {
   }
   NOTREACHED();
   return false;
+}
+
+void HttpNetworkSession::SetServerPushDelegate(
+    std::unique_ptr<ServerPushDelegate> push_delegate) {
+  DCHECK(!push_delegate_ && push_delegate);
+
+  push_delegate_ = std::move(push_delegate);
+  spdy_session_pool_.set_server_push_delegate(push_delegate_.get());
+  quic_stream_factory_.set_server_push_delegate(push_delegate_.get());
 }
 
 void HttpNetworkSession::GetAlpnProtos(NextProtoVector* alpn_protos) const {

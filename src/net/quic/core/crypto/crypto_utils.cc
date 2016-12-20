@@ -207,8 +207,8 @@ bool CryptoUtils::ExportKeyingMaterial(StringPiece subkey_secret,
 }
 
 // static
-uint64_t CryptoUtils::ComputeLeafCertHash(const std::string& cert) {
-  return QuicUtils::FNV1a_64_Hash(cert.data(), cert.size());
+uint64_t CryptoUtils::ComputeLeafCertHash(StringPiece cert) {
+  return QuicUtils::FNV1a_64_Hash(cert);
 }
 
 QuicErrorCode CryptoUtils::ValidateServerHello(

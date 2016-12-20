@@ -64,14 +64,12 @@ BbrSender::DebugState::DebugState(const BbrSender& sender)
 
 BbrSender::DebugState::DebugState(const DebugState& state) = default;
 
-BbrSender::BbrSender(const QuicClock* clock,
-                     const RttStats* rtt_stats,
+BbrSender::BbrSender(const RttStats* rtt_stats,
                      const QuicUnackedPacketMap* unacked_packets,
                      QuicPacketCount initial_tcp_congestion_window,
                      QuicPacketCount max_tcp_congestion_window,
                      QuicRandom* random)
-    : clock_(clock),
-      rtt_stats_(rtt_stats),
+    : rtt_stats_(rtt_stats),
       unacked_packets_(unacked_packets),
       random_(random),
       mode_(STARTUP),

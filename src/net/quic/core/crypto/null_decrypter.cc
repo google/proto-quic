@@ -15,7 +15,8 @@ using std::string;
 
 namespace net {
 
-NullDecrypter::NullDecrypter() {}
+NullDecrypter::NullDecrypter(Perspective perspective)
+    : perspective_(perspective) {}
 
 bool NullDecrypter::SetKey(StringPiece key) {
   return key.empty();
@@ -35,7 +36,8 @@ bool NullDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
   return true;
 }
 
-bool NullDecrypter::DecryptPacket(QuicPathId /*path_id*/,
+bool NullDecrypter::DecryptPacket(QuicVersion version,
+                                  QuicPathId /*path_id*/,
                                   QuicPacketNumber /*packet_number*/,
                                   StringPiece associated_data,
                                   StringPiece ciphertext,
@@ -54,7 +56,7 @@ bool NullDecrypter::DecryptPacket(QuicPathId /*path_id*/,
     QUIC_BUG << "Output buffer must be larger than the plaintext.";
     return false;
   }
-  if (hash != ComputeHash(associated_data, plaintext)) {
+  if (hash != ComputeHash(version, associated_data, plaintext)) {
     return false;
   }
   // Copy the plaintext to output.
@@ -91,11 +93,23 @@ bool NullDecrypter::ReadHash(QuicDataReader* reader, uint128* hash) {
   return true;
 }
 
-uint128 NullDecrypter::ComputeHash(const StringPiece data1,
+uint128 NullDecrypter::ComputeHash(QuicVersion version,
+                                   const StringPiece data1,
                                    const StringPiece data2) const {
-  uint128 correct_hash = QuicUtils::FNV1a_128_Hash_Two(
-      data1.data(), data1.length(), data2.data(), data2.length());
-  uint128 mask(UINT64_C(0x0), UINT64_C(0xffffffff));
+  uint128 correct_hash;
+  if (version > QUIC_VERSION_36) {
+    if (perspective_ == Perspective::IS_CLIENT) {
+      // Peer is a server.
+      correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Server");
+
+    } else {
+      // Peer is a client.
+      correct_hash = QuicUtils::FNV1a_128_Hash_Three(data1, data2, "Client");
+    }
+  } else {
+    correct_hash = QuicUtils::FNV1a_128_Hash_Two(data1, data2);
+  }
+  uint128 mask = MakeUint128(UINT64_C(0x0), UINT64_C(0xffffffff));
   mask <<= 96;
   correct_hash &= ~mask;
   return correct_hash;

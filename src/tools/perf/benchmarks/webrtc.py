@@ -60,7 +60,9 @@ class WebrtcStressTest(perf_benchmark.PerfBenchmark):
     return 'webrtc.stress'
 
   def CreatePageTest(self, options):
-    return webrtc.WebRTC(use_webrtc_stats=False)
+    # Exclude all stats.
+    return webrtc.WebRTC(particular_metrics=['googAvgEncodeMs',
+                                             'googFrameRateReceived'])
 
 
 # WebrtcRendering must be a PerfBenchmark, and not a _Webrtc, because it is a

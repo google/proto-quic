@@ -190,6 +190,14 @@ be investigated. When a test fails:
     ensure that the bug title reflects something like "Fix and re-enable
     testname".
 4.  Investigate the failure. Some tips for investigating:
+    *   When viewing buildbot step logs, **use the **<font color="blue">[stdout]</font>** link to view logs!**.
+        This will link to logdog logs which do not expire. Do not use or link
+        to the logs found through the <font color="blue">stdio</font> link
+        whenever possible as these logs will expire.
+    *   When investigating Android, look for the logcat which is uploaded to
+        Google Storage at the end of the run. logcat will contain much more
+        detailed Android device and crash info than will be found in
+        Telemetry logs.
     *   If it's a non flaky failure, indentify the first failed
         build so you can narrow down the range of CLs that causes the failure.
         You can use the

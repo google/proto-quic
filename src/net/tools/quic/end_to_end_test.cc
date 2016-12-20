@@ -373,6 +373,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   bool Initialize() {
     QuicTagVector copt;
     server_config_.SetConnectionOptionsToSend(copt);
+    copt = client_extra_copts_;
 
     // TODO(nimia): Consider setting the congestion control algorithm for the
     // client as well according to the test parameter.
@@ -380,6 +381,10 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     if (GetParam().congestion_control_tag == kQBIC &&
         FLAGS_quic_fix_cubic_convex_mode) {
       copt.push_back(kCCVX);
+    }
+    if (GetParam().congestion_control_tag == kQBIC &&
+        FLAGS_quic_fix_cubic_bytes_quantization) {
+      copt.push_back(kCBQT);
     }
     if (support_server_push_) {
       copt.push_back(kSPSH);
@@ -570,6 +575,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   QuicConfig server_config_;
   QuicVersionVector client_supported_versions_;
   QuicVersionVector server_supported_versions_;
+  QuicTagVector client_extra_copts_;
   QuicVersion negotiated_version_;
   size_t chlo_multiplier_;
   QuicTestServer::StreamFactory* stream_factory_;
@@ -588,7 +594,8 @@ TEST_P(EndToEndTest, HandshakeSuccessful) {
   QuicCryptoStream* crypto_stream =
       QuicSessionPeer::GetCryptoStream(client_->client()->session());
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(crypto_stream);
-  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer,
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
   server_thread_->Pause();
   QuicDispatcher* dispatcher =
@@ -596,7 +603,8 @@ TEST_P(EndToEndTest, HandshakeSuccessful) {
   QuicSession* server_session = dispatcher->session_map().begin()->second.get();
   crypto_stream = QuicSessionPeer::GetCryptoStream(server_session);
   sequencer = QuicStreamPeer::sequencer(crypto_stream);
-  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer,
+  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
@@ -1699,6 +1707,53 @@ TEST_P(EndToEndTest, DifferentFlowControlWindows) {
   server_thread_->Resume();
 }
 
+// Test negotiation of IFWA connection option.
+TEST_P(EndToEndTest, NegotiatedServerInitialFlowControlWindow) {
+  FLAGS_quic_large_ifw_options = true;
+
+  const uint32_t kClientStreamIFCW = 123456;
+  const uint32_t kClientSessionIFCW = 234567;
+  set_client_initial_stream_flow_control_receive_window(kClientStreamIFCW);
+  set_client_initial_session_flow_control_receive_window(kClientSessionIFCW);
+
+  uint32_t kServerStreamIFCW = 32 * 1024;
+  uint32_t kServerSessionIFCW = 48 * 1024;
+  set_server_initial_stream_flow_control_receive_window(kServerStreamIFCW);
+  set_server_initial_session_flow_control_receive_window(kServerSessionIFCW);
+
+  // Bump the window.
+  const uint32_t kExpectedStreamIFCW = 1024 * 1024;
+  const uint32_t kExpectedSessionIFCW = 1.5 * 1024 * 1024;
+  client_extra_copts_.push_back(kIFWA);
+
+  ASSERT_TRUE(Initialize());
+
+  // Values are exchanged during crypto handshake, so wait for that to finish.
+  EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
+  server_thread_->WaitForCryptoHandshakeConfirmed();
+
+  // Open a data stream to make sure the stream level flow control is updated.
+  QuicSpdyClientStream* stream = client_->GetOrCreateStream();
+  stream->WriteOrBufferBody("hello", false, nullptr);
+
+  // Client should have the right values for server's receive window.
+  EXPECT_EQ(kExpectedStreamIFCW,
+            client_->client()
+                ->session()
+                ->config()
+                ->ReceivedInitialStreamFlowControlWindowBytes());
+  EXPECT_EQ(kExpectedSessionIFCW,
+            client_->client()
+                ->session()
+                ->config()
+                ->ReceivedInitialSessionFlowControlWindowBytes());
+  EXPECT_EQ(kExpectedStreamIFCW, QuicFlowControllerPeer::SendWindowOffset(
+                                     stream->flow_controller()));
+  EXPECT_EQ(kExpectedSessionIFCW,
+            QuicFlowControllerPeer::SendWindowOffset(
+                client_->client()->session()->flow_controller()));
+}
+
 TEST_P(EndToEndTest, HeadersAndCryptoStreamsNoConnectionFlowControl) {
   // The special headers and crypto streams should be subject to per-stream flow
   // control limits, but should not be subject to connection level flow control
@@ -2636,7 +2691,8 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
     DVLOG(1) << "response body " << response_body;
     EXPECT_EQ(expected_body, response_body);
   }
-  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer,
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
@@ -2939,7 +2995,8 @@ TEST_P(EndToEndTest, ReleaseHeadersStreamBufferWhenIdle) {
   QuicHeadersStream* headers_stream =
       QuicSpdySessionPeer::GetHeadersStream(client_->client()->session());
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(headers_stream);
-  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer,
+  EXPECT_NE(FLAGS_quic_headers_stream_release_sequencer_buffer &&
+                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
             QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 

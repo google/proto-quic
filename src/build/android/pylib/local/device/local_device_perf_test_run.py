@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import collections
+import contextlib
 import io
 import json
 import logging
@@ -29,6 +30,7 @@ from pylib.base import base_test_result
 from pylib.constants import host_paths
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from py_trace_event import trace_event
 
 
 class HeartBeat(object):
@@ -94,10 +96,22 @@ class TestShard(object):
 
     self._LogTest(test, cmd, timeout)
 
+    @contextlib.contextmanager
+    def trace_if_enabled(test):
+      try:
+        if self._test_instance.trace_output:
+          trace_event.trace_begin(test)
+        yield
+      finally:
+        if self._test_instance.trace_output:
+          trace_event.trace_end(test)
+
     try:
       start_time = time.time()
-      exit_code, output = cmd_helper.GetCmdStatusAndOutputWithTimeout(
-          cmd, timeout, cwd=cwd, shell=True)
+
+      with trace_if_enabled(test):
+        exit_code, output = cmd_helper.GetCmdStatusAndOutputWithTimeout(
+            cmd, timeout, cwd=cwd, shell=True)
       end_time = time.time()
       json_output = self._test_instance.ReadChartjsonOutput(self._output_dir)
       if exit_code == 0:
@@ -110,7 +124,6 @@ class TestShard(object):
       output = e.output
       json_output = ''
       result_type = base_test_result.ResultType.TIMEOUT
-
     return self._ProcessTestResult(test, cmd, start_time, end_time, exit_code,
                                    output, json_output, result_type)
 
@@ -410,6 +423,9 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
   #override
   def RunTests(self):
     # Affinitize the tests.
+    if self._test_instance.trace_output:
+      assert not trace_event.trace_is_enabled(), 'Tracing already running.'
+      trace_event.trace_enable(self._test_instance.trace_output)
     self._SplitTestsByAffinity()
     if not self._test_buckets and not self._no_device_tests:
       raise local_device_test_run.NoTestsError()
@@ -447,6 +463,9 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
 
     host_test_results, device_test_results = reraiser_thread.RunAsync(
         [run_no_devices_tests, run_devices_tests])
+    if self._test_instance.trace_output:
+      assert trace_event.trace_is_enabled(), 'Tracing not running.'
+      trace_event.trace_disable()
     return host_test_results + device_test_results
 
   # override

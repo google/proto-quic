@@ -100,6 +100,10 @@ class HttpStreamFactoryImpl::Job {
                                   const ProxyInfo& used_proxy_info,
                                   HttpAuthController* auth_controller) = 0;
 
+    // Returns true if the connection initialization to the proxy server
+    // contained in |proxy_info| can be skipped.
+    virtual bool OnInitConnection(const ProxyInfo& proxy_info) = 0;
+
     // Invoked when |job| has completed proxy resolution. The delegate may
     // create an alternative proxy server job to fetch the request.
     virtual void OnResolveProxyComplete(

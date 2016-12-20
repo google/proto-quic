@@ -2,10 +2,9 @@
 
 This document gives the best practices on how to use histograms in code and how
 to document the histograms for the dashboards.  There are three general types
-of histograms: enumerated histograms (appropriate for enums), count histograms
-(appropriate for arbitrary numbers), and sparse histogram (appropriate for
-anything when the precision is important over a wide range is large and/or the
-range is not possible to specify a priori).
+of histograms: enumerated histograms, count histograms (for arbitrary numbers),
+and sparse histograms (for anything when the precision is important over a wide
+range and/or the range is not possible to specify a priori).
 
 [TOC]
 
@@ -54,7 +53,8 @@ please put this warning by the enum definition:
 
 Also, please explicitly set enum values `= 0`, `= 1`, `= 2`, etc.  This makes
 clearer that the actual values are important.  In addition, it helps confirm
-the values align between the enum definition and histograms.xml.
+the values align between the enum definition and
+[histograms.xml](./histograms.xml).
 
 ### Count Histograms
 
@@ -73,7 +73,8 @@ For histogram max, choose a value so that very few emission to the histogram
 will exceed the max.  If many emissions hit the max, it can be difficult to
 compute statistics such as average.  One rule of thumb is at most 1% of samples
 should be in the overflow bucket.  This allows analysis of the 99th percentile.
-Err on the side of too large a range versus too short a range.  (Remember that if you choose poorly, you'll have to wait for another release cycle to fix it.)
+Err on the side of too large a range versus too short a range.  (Remember that
+if you choose poorly, you'll have to wait for another release cycle to fix it.)
 
 For histogram min, if you care about all possible values (zero and above),
 choose a min of 1.  (All histograms have an underflow bucket; emitted zeros
@@ -115,7 +116,7 @@ large explosion in data (i.e. >100 enum entries), a [sparse histogram](#When-To-
 
 ### Testing
 
-Test your histograms using *chrome://histograms*.  Make sure they're being
+Test your histograms using `chrome://histograms`.  Make sure they're being
 emitted to when you expect and not emitted to at other times. Also check that
 the values emitted to are correct.  Finally, for count histograms, make sure
 that buckets capture enough precision for your needs over the range.
@@ -137,13 +138,14 @@ is good!  But see the note below on [Deleting Histogram Entries](#Deleting-Histo
 
 ### Add Histogram and Documentation in the Same Changelist
 
-If possible, please add the histograms.xml description in the same changelist
-in which you add the histogram-emitting code.  This has several benefits.  One,
-it sometimes happens that the histograms.xml reviewer has questions or concerns
-about the histogram description that reveal problems with interpretation of the
-data and call for a different recording strategy.  Two, it allows the histogram
-reviewer to easily review the emission code to see if it comports with these
-best practices, and to look for other errors.
+If possible, please add the [histograms.xml](./histograms.xml) description in
+the same changelist in which you add the histogram-emitting code.  This has
+several benefits.  One, it sometimes happens that the
+[histograms.xml](./histograms.xml) reviewer has questions or concerns about the
+histogram description that reveal problems with interpretation of the data and
+call for a different recording strategy.  Two, it allows the histogram reviewer
+to easily review the emission code to see if it comports with these best
+practices, and to look for other errors.
 
 ### Understandable to Everyone
 
@@ -173,17 +175,17 @@ add yourself as an owner. @chromium.org email addresses are preferred.
 
 ### Deleting Histogram Entries
 
-Do not delete histograms from histograms.xml.  Instead, mark unused histograms
-as obsolete, annotating them with the associated date or milestone in the
-obsolete tag entry.  If your histogram is being replaced by a new version, we
-suggest noting that in the previous histogram's description.
+Do not delete histograms from [histograms.xml](./histograms.xml).  Instead, mark
+unused histograms as obsolete, annotating them with the associated date or
+milestone in the obsolete tag entry.  If your histogram is being replaced by a
+new version, we suggest noting that in the previous histogram's description.
 
 Deleting histogram entries would be bad if someone to accidentally reused your
 old histogram name and thereby corrupts new data with whatever old data is still
 coming in.  It's also useful to keep obsolete histogram descriptions in
-histograms.xml--that way, if someone is searching for a histogram to answer
-a particular question, they can learn if there was a histogram at some point
-that did so even if it isn't active now.
+[histograms.xml](./histograms.xml) -- that way, if someone is searching for a
+histogram to answer a particular question, they can learn if there was a
+histogram at some point that did so even if it isn't active now.
 
 ## When To Use Sparse Histograms
 

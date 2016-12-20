@@ -1,7 +1,7 @@
 # What is GN?
 
 GN is a meta-build system that generates
-[NinjaBuild](https://chromium.googlesource.com/chromium/src/+/master/docs/ninja_build.md)
+[NinjaBuild](https://ninja-build.org)
 files so that you can build Chromium with Ninja.
 
 ## Why did you switch from GYP?
@@ -18,7 +18,7 @@ files so that you can build Chromium with Ninja.
 4. GN gives us tools for querying the build graph; you can ask
    "what does X depend on" and "who depends on Y", for example.
 
-## What's the status of the GYP->GN migration?
+## What's the status of the GYP->GN migration for Chromium?
 
 _As of Oct 2016:_
 
@@ -36,13 +36,13 @@ _As of Oct 2016:_
 
 Read these links:
 
-  * [Quick start](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/quick_start.md)
-  * [FAQ](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/faq.md)
-  * [Language and operation details](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/language.md)
-  * [Reference](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/reference.md) The built-in `gn help` documentation.
-  * [Style guide](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/style_guide.md)
-  * [Cross compiling and toolchains](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/cross_compiles.md)
-  * [Hacking on GN itself](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/hacking.md)
-  * [GNStandalone](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/standalone.md) Standalone GN projects
-  * [UpdateGNBinaries](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/update_binaries.md) Pushing new binaries
-  * [Check](https://chromium.googlesource.com/chromium/src/+/master/tools/gn/docs/check.md) `gn check` command reference
+  * [Quick start](docs/quick_start.md)
+  * [FAQ](docs/faq.md)
+  * [Language and operation details](docs/language.md)
+  * [Reference](docs/reference.md) The built-in `gn help` documentation.
+  * [Style guide](docs/style_guide.md)
+  * [Cross compiling and toolchains](docs/cross_compiles.md)
+  * [Hacking on GN itself](docs/hacking.md)
+  * [GNStandalone](docs/standalone.md) Standalone GN projects
+  * [UpdateGNBinaries](docs/update_binaries.md) Pushing new binaries
+  * [Check](docs/check.md) `gn check` command reference

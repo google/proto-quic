@@ -2,21 +2,6 @@
 
 ## Some network component caveats
 
-* **UI>Browser>Downloads**
-
-    Despite the name, this covers all issues related to downloading a file
-    except saving entire pages (which is **Blink>SavePage**), not just UI
-    issues.  Most downloads bugs will have the word "download" or "save as" in
-    the description.  Issues with the HTTP server for the Chrome binaries are
-    not downloads bugs.
-
-* **UI>Browser>SafeBrowsing**
-
-    Bugs that have to do with the process by which a URL or file is determined
-    to be dangerous based on our databases, or the resulting interstitials.
-    Determination of danger based purely on content-type or file extension
-    belongs in **UI>Browser>Downloads**, not SafeBrowsing.
-
 * **Internals>Network>SSL**
 
     This includes issues that should be also tagged as **Security>UX**
@@ -66,6 +51,21 @@
 
 Bugs in these areas often receive the **Internals>Network** component, though
 they fall largely outside the purview of the network stack team:
+
+* **UI>Browser>Downloads**
+
+    Despite the name, this covers all issues related to downloading a file
+    except saving entire pages (which is **Blink>SavePage**), not just UI
+    issues.  Most downloads bugs will have the word "download" or "save as" in
+    the description.  Issues with the HTTP server for the Chrome binaries are
+    not downloads bugs.
+
+* **UI>Browser>SafeBrowsing**
+
+    Bugs that have to do with the process by which a URL or file is determined
+    to be dangerous based on our databases, or the resulting interstitials.
+    Determination of danger based purely on content-type or file extension
+    belongs in **UI>Browser>Downloads**, not SafeBrowsing.
 
 * **Blink>Forms**
 

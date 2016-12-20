@@ -84,9 +84,6 @@ def main(raw_args):
       description=Upload.__doc__,
       formatter_class=utils.DefaultsRawHelpFormatter)
 
-  parser_upload.add_argument('--skip-git',
-                             action='store_true',
-                             help="don't commit the changes at the end")
   parser_upload.set_defaults(func=Upload)
   AddBasicArguments(parser_upload)
   AddBucketArguments(parser_upload)
@@ -286,11 +283,6 @@ def Upload(args):
                             config.clients)
   logging.debug('-- Loaded paths --\n%s\n------------------', paths)
 
-  if not args.skip_git and utils.IsRepoDirty(host_paths.DIR_SOURCE_ROOT):
-    logging.error('The repo is dirty. Please commit or stash your changes.')
-    return -1
-
-
   tmp_root = tempfile.mkdtemp()
   try:
     new_lib_zip = os.path.join(tmp_root, ZIP_FILE_NAME)
@@ -314,13 +306,7 @@ def Upload(args):
   finally:
     shutil.rmtree(tmp_root)
 
-  if not args.skip_git:
-    commit_message = ('Update the Google Play services dependency to %s\n'
-                      '\n') % config.version_number
-    utils.MakeLocalCommit(host_paths.DIR_SOURCE_ROOT,
-                          [new_lib_zip_sha1, new_license_sha1, config.path],
-                          commit_message)
-
+  logging.info('Update to version %s complete', config.version_number)
   return 0
 
 

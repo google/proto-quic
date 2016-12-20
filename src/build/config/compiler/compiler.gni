@@ -44,6 +44,20 @@ declare_args() {
   # Whether or not we should turn on incremental WPO. Only affects the VS
   # Windows build.
   use_incremental_wpo = false
+
+  # Root directory that will store the MSVC link repro. This should only be
+  # used for debugging purposes on the builders where a MSVC linker flakyness
+  # has been observed. The targets for which a link repro should be generated
+  # should add somethink like this to their configuration:
+  #   if (linkrepro_root_dir != "") {
+  #     ldflags = ["/LINKREPRO:" + linkrepro_root_dir + "/" + target_name]
+  #   }
+  #
+  # Note that doing a link repro uses a lot of disk space and slows down the
+  # build, so this shouldn't be enabled on too many targets.
+  #
+  # See crbug.com/669854.
+  linkrepro_root_dir = ""
 }
 
 declare_args() {

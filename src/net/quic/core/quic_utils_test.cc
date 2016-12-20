@@ -92,12 +92,12 @@ uint128 IncrementalHashReference(const void* data, size_t len) {
   // see http://www.isthe.com/chongo/tech/comp/fnv/
   // hash = 144066263297769815596495629667062367629
   uint128 hash =
-      uint128(UINT64_C(7809847782465536322), UINT64_C(7113472399480571277));
+      MakeUint128(UINT64_C(7809847782465536322), UINT64_C(7113472399480571277));
   // kPrime = 309485009821345068724781371
-  const uint128 kPrime(16777216, 315);
+  const uint128 kPrime = MakeUint128(16777216, 315);
   const uint8_t* octets = reinterpret_cast<const uint8_t*>(data);
   for (size_t i = 0; i < len; ++i) {
-    hash = hash ^ uint128(0, octets[i]);
+    hash = hash ^ MakeUint128(0, octets[i]);
     hash = hash * kPrime;
   }
   return hash;
@@ -109,8 +109,8 @@ TEST(QuicUtilsHashTest, ReferenceTest) {
     data[i] = i % 255;
   }
   EXPECT_EQ(IncrementalHashReference(data.data(), data.size()),
-            QuicUtils::FNV1a_128_Hash(
-                reinterpret_cast<const char*>(data.data()), data.size()));
+            QuicUtils::FNV1a_128_Hash(StringPiece(
+                reinterpret_cast<const char*>(data.data()), data.size())));
 }
 
 TEST(QuicUtilsTest, HexDump) {

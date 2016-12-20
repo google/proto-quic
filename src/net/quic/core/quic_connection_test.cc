@@ -88,7 +88,8 @@ class TaggingEncrypter : public QuicEncrypter {
 
   bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
 
-  bool EncryptPacket(QuicPathId path_id,
+  bool EncryptPacket(QuicVersion /*version*/,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      StringPiece associated_data,
                      StringPiece plaintext,
@@ -152,7 +153,8 @@ class TaggingDecrypter : public QuicDecrypter {
     return true;
   }
 
-  bool DecryptPacket(QuicPathId path_id,
+  bool DecryptPacket(QuicVersion /*version*/,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      StringPiece associated_data,
                      StringPiece ciphertext,
@@ -271,7 +273,7 @@ class TestPacketWriter : public QuicPacketWriter {
  public:
   TestPacketWriter(QuicVersion version, MockClock* clock)
       : version_(version),
-        framer_(SupportedVersions(version_)),
+        framer_(SupportedVersions(version_), Perspective::IS_SERVER),
         last_packet_size_(0),
         write_blocked_(false),
         write_should_fail_(false),
@@ -473,7 +475,7 @@ class TestConnection : public QuicConnection {
                        perspective,
                        SupportedVersions(version)) {
     writer->set_perspective(perspective);
-    SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
+    SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter(perspective));
   }
 
   void SendAck() { QuicConnectionPeer::SendAck(this); }
@@ -858,7 +860,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     std::unique_ptr<QuicPacket> packet(
         ConstructDataPacket(path_id, number, has_stop_waiting));
     char buffer[kMaxPacketSize];
-    size_t encrypted_length = framer_.EncryptPayload(
+    size_t encrypted_length = peer_framer_.EncryptPayload(
         level, path_id, number, *packet, buffer, kMaxPacketSize);
     connection_.ProcessUdpPacket(
         kSelfAddress, kPeerAddress,
@@ -872,7 +874,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   void ProcessClosePacket(QuicPathId path_id, QuicPacketNumber number) {
     std::unique_ptr<QuicPacket> packet(ConstructClosePacket(number));
     char buffer[kMaxPacketSize];
-    size_t encrypted_length = framer_.EncryptPayload(
+    size_t encrypted_length = peer_framer_.EncryptPayload(
         ENCRYPTION_NONE, path_id, number, *packet, buffer, kMaxPacketSize);
     connection_.ProcessUdpPacket(
         kSelfAddress, kPeerAddress,
@@ -1215,7 +1217,7 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSize) {
   frames.push_back(QuicFrame(padding));
   std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_length = framer_.EncryptPayload(
+  size_t encrypted_length = peer_framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
   EXPECT_EQ(kMaxPacketSize, encrypted_length);
 
@@ -1249,7 +1251,7 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSizeWhileWriterLimited) {
   frames.push_back(QuicFrame(padding));
   std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_length = framer_.EncryptPayload(
+  size_t encrypted_length = peer_framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
   EXPECT_EQ(kMaxPacketSize, encrypted_length);
 
@@ -2575,7 +2577,7 @@ TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
   use_tagging_decrypter();
 
   const uint8_t tag = 0x07;
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
 
   // Process an encrypted packet which can not yet be decrypted which should
   // result in the packet being buffered.
@@ -2608,7 +2610,7 @@ TEST_P(QuicConnectionTest, Buffer100NonDecryptablePackets) {
   use_tagging_decrypter();
 
   const uint8_t tag = 0x07;
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
 
   // Process an encrypted packet which can not yet be decrypted which should
   // result in the packet being buffered.
@@ -3503,7 +3505,7 @@ TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
 TEST_P(QuicConnectionTest, TimeoutAfter5ServerRTOs) {
   FLAGS_quic_only_5rto_client_side = true;
   connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
-  QuicConnectionPeer::SetPerspective(&connection_, Perspective::IS_SERVER);
+  set_perspective(Perspective::IS_SERVER);
   QuicFramerPeer::SetPerspective(QuicConnectionPeer::GetFramer(&connection_),
                                  Perspective::IS_SERVER);
   creator_->StopSendingVersion();
@@ -3639,7 +3641,7 @@ TEST_P(QuicConnectionTest, SendDelayedAck) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3676,7 +3678,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimation) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3728,7 +3730,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationEighthRtt) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3780,7 +3782,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3840,7 +3842,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3913,7 +3915,7 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -3975,7 +3977,7 @@ TEST_P(QuicConnectionTest,
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   const uint8_t tag = 0x07;
   connection_.SetDecrypter(ENCRYPTION_INITIAL, new StrictTaggingDecrypter(tag));
-  framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
+  peer_framer_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   // Process a packet from the non-crypto stream.
   frame1_.stream_id = 3;
 
@@ -4430,8 +4432,8 @@ TEST_P(QuicConnectionTest, ClientHandlesVersionNegotiation) {
 
   // Send a version negotiation packet.
   std::unique_ptr<QuicEncryptedPacket> encrypted(
-      framer_.BuildVersionNegotiationPacket(connection_id_,
-                                            AllSupportedVersions()));
+      peer_framer_.BuildVersionNegotiationPacket(connection_id_,
+                                                 AllSupportedVersions()));
   std::unique_ptr<QuicReceivedPacket> received(
       ConstructReceivedPacket(*encrypted, QuicTime::Zero()));
   connection_.ProcessUdpPacket(kSelfAddress, kPeerAddress, *received);
@@ -4447,7 +4449,7 @@ TEST_P(QuicConnectionTest, ClientHandlesVersionNegotiation) {
   frames.push_back(QuicFrame(&frame1_));
   std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_length = framer_.EncryptPayload(
+  size_t encrypted_length = peer_framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 12, *packet, buffer, kMaxPacketSize);
   ASSERT_NE(0u, encrypted_length);
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
@@ -4536,7 +4538,7 @@ TEST_P(QuicConnectionTest, ProcessFramesIfPacketClosedConnection) {
   std::unique_ptr<QuicPacket> packet(ConstructPacket(header, frames));
   EXPECT_TRUE(nullptr != packet.get());
   char buffer[kMaxPacketSize];
-  size_t encrypted_length = framer_.EncryptPayload(
+  size_t encrypted_length = peer_framer_.EncryptPayload(
       ENCRYPTION_NONE, kDefaultPathId, 1, *packet, buffer, kMaxPacketSize);
 
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PEER_GOING_AWAY, _,

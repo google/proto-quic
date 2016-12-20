@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CURVE25519_KEY_EXCHANGE_H_
 #define NET_QUIC_CORE_CRYPTO_CURVE25519_KEY_EXCHANGE_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <string>
 
 #include "base/compiler_specific.h"

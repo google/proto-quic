@@ -34,7 +34,7 @@ namespace {
 #endif
 
 #ifdef QUIC_UTIL_HAS_UINT128
-uint128 IncrementalHashFast(uint128 uhash, const char* data, size_t len) {
+uint128 IncrementalHashFast(uint128 uhash, StringPiece data) {
   // This code ends up faster than the naive implementation for 2 reasons:
   // 1. uint128 from base/int128.h is sufficiently complicated that the compiler
   //    cannot transform the multiplication by kPrime into a shift-multiply-add;
@@ -46,49 +46,50 @@ uint128 IncrementalHashFast(uint128 uhash, const char* data, size_t len) {
       (static_cast<__uint128_t>(16777216) << 64) + 315;
   __uint128_t xhash = (static_cast<__uint128_t>(Uint128High64(uhash)) << 64) +
                       Uint128Low64(uhash);
-  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data);
-  for (size_t i = 0; i < len; ++i) {
+  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data.data());
+  for (size_t i = 0; i < data.length(); ++i) {
     xhash = (xhash ^ octets[i]) * kPrime;
   }
-  return uint128(static_cast<uint64_t>(xhash >> 64),
-                 static_cast<uint64_t>(xhash & UINT64_C(0xFFFFFFFFFFFFFFFF)));
+  return MakeUint128(
+      static_cast<uint64_t>(xhash >> 64),
+      static_cast<uint64_t>(xhash & UINT64_C(0xFFFFFFFFFFFFFFFF)));
 }
 #endif
 
 #ifndef QUIC_UTIL_HAS_UINT128
 // Slow implementation of IncrementalHash. In practice, only used by Chromium.
-uint128 IncrementalHashSlow(uint128 hash, const char* data, size_t len) {
+uint128 IncrementalHashSlow(uint128 hash, StringPiece data) {
   // kPrime = 309485009821345068724781371
-  static const uint128 kPrime(16777216, 315);
-  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data);
-  for (size_t i = 0; i < len; ++i) {
-    hash = hash ^ uint128(0, octets[i]);
+  static const uint128 kPrime = MakeUint128(16777216, 315);
+  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data.data());
+  for (size_t i = 0; i < data.length(); ++i) {
+    hash = hash ^ MakeUint128(0, octets[i]);
     hash = hash * kPrime;
   }
   return hash;
 }
 #endif
 
-uint128 IncrementalHash(uint128 hash, const char* data, size_t len) {
+uint128 IncrementalHash(uint128 hash, StringPiece data) {
 #ifdef QUIC_UTIL_HAS_UINT128
-  return IncrementalHashFast(hash, data, len);
+  return IncrementalHashFast(hash, data);
 #else
-  return IncrementalHashSlow(hash, data, len);
+  return IncrementalHashSlow(hash, data);
 #endif
 }
 
 }  // namespace
 
 // static
-uint64_t QuicUtils::FNV1a_64_Hash(const char* data, int len) {
+uint64_t QuicUtils::FNV1a_64_Hash(StringPiece data) {
   static const uint64_t kOffset = UINT64_C(14695981039346656037);
   static const uint64_t kPrime = UINT64_C(1099511628211);
 
-  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data);
+  const uint8_t* octets = reinterpret_cast<const uint8_t*>(data.data());
 
   uint64_t hash = kOffset;
 
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < data.length(); ++i) {
     hash = hash ^ octets[i];
     hash = hash * kPrime;
   }
@@ -97,26 +98,35 @@ uint64_t QuicUtils::FNV1a_64_Hash(const char* data, int len) {
 }
 
 // static
-uint128 QuicUtils::FNV1a_128_Hash(const char* data, int len) {
-  return FNV1a_128_Hash_Two(data, len, nullptr, 0);
+uint128 QuicUtils::FNV1a_128_Hash(StringPiece data) {
+  return FNV1a_128_Hash_Three(data, StringPiece(), StringPiece());
 }
 
 // static
-uint128 QuicUtils::FNV1a_128_Hash_Two(const char* data1,
-                                      int len1,
-                                      const char* data2,
-                                      int len2) {
+uint128 QuicUtils::FNV1a_128_Hash_Two(StringPiece data1, StringPiece data2) {
+  return FNV1a_128_Hash_Three(data1, data2, StringPiece());
+}
+
+// static
+uint128 QuicUtils::FNV1a_128_Hash_Three(StringPiece data1,
+                                        StringPiece data2,
+                                        StringPiece data3) {
   // The two constants are defined as part of the hash algorithm.
   // see http://www.isthe.com/chongo/tech/comp/fnv/
   // kOffset = 144066263297769815596495629667062367629
-  const uint128 kOffset(UINT64_C(7809847782465536322),
-                        UINT64_C(7113472399480571277));
+  const uint128 kOffset =
+      MakeUint128(UINT64_C(7809847782465536322), UINT64_C(7113472399480571277));
 
-  uint128 hash = IncrementalHash(kOffset, data1, len1);
-  if (data2 == nullptr) {
+  uint128 hash = IncrementalHash(kOffset, data1);
+  if (data2.empty()) {
     return hash;
   }
-  return IncrementalHash(hash, data2, len2);
+
+  hash = IncrementalHash(hash, data2);
+  if (data3.empty()) {
+    return hash;
+  }
+  return IncrementalHash(hash, data3);
 }
 
 // static

@@ -3,14 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-SCRIPT_DIR=$(cd $(dirname $0) && pwd)
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 DISTRO=debian
 DIST=wheezy
 DIST_UPDATES=wheezy-updates
 
 APT_REPO=http://http.us.debian.org/debian
-KEYRING_FILE=${SCRIPT_DIR}/debian-archive-wheezy-stable.gpg
+KEYRING_FILE="${SCRIPT_DIR}/debian-archive-wheezy-stable.gpg"
 
 HAS_ARCH_AMD64=1
 HAS_ARCH_I386=1
@@ -203,4 +203,4 @@ DEBIAN_PACKAGES_X86="libquadmath0 libdrm-intel1"
 DEBIAN_PACKAGES_ARM="libdrm-omap1"
 DEBIAN_PACKAGES_AMD64=""
 
-. ${SCRIPT_DIR}/sysroot-creator.sh
+. "${SCRIPT_DIR}/sysroot-creator.sh"

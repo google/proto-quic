@@ -72,7 +72,7 @@ def main():
   Git(["commit", "-m", "Roll clang {}:{}.\n\n{}".format(
       clang_old_revision, clang_revision, commit_message)])
 
-  Git(["cl", "upload"])
+  Git(["cl", "upload", "-f"])
   Git(["cl", "try", "-b", "linux_upload_clang", "-r", git_revision])
   Git(["cl", "try", "-b", "mac_upload_clang", "-r", git_revision])
   Git(["cl", "try", "-b", "win_upload_clang", "-r", git_revision])

@@ -15,6 +15,7 @@
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/null_decrypter.h"
+#include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_packets.h"
@@ -111,13 +112,15 @@ class TestEncrypter : public QuicEncrypter {
   ~TestEncrypter() override {}
   bool SetKey(StringPiece key) override { return true; }
   bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
-  bool EncryptPacket(QuicPathId path_id,
+  bool EncryptPacket(QuicVersion version,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      StringPiece associated_data,
                      StringPiece plaintext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
+    version_ = version;
     path_id_ = path_id;
     packet_number_ = packet_number;
     associated_data_ = associated_data.as_string();
@@ -136,6 +139,9 @@ class TestEncrypter : public QuicEncrypter {
   }
   StringPiece GetKey() const override { return StringPiece(); }
   StringPiece GetNoncePrefix() const override { return StringPiece(); }
+
+  QuicVersion version_;
+  Perspective perspective_;
   QuicPathId path_id_;
   QuicPacketNumber packet_number_;
   string associated_data_;
@@ -154,13 +160,15 @@ class TestDecrypter : public QuicDecrypter {
   bool SetDiversificationNonce(const DiversificationNonce& key) override {
     return true;
   }
-  bool DecryptPacket(QuicPathId path_id,
+  bool DecryptPacket(QuicVersion version,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      StringPiece associated_data,
                      StringPiece ciphertext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
+    version_ = version;
     path_id_ = path_id;
     packet_number_ = packet_number;
     associated_data_ = associated_data.as_string();
@@ -174,6 +182,8 @@ class TestDecrypter : public QuicDecrypter {
   const char* cipher_name() const override { return "Test"; }
   // Use a distinct value starting with 0xFFFFFF, which is never used by TLS.
   uint32_t cipher_id() const override { return 0xFFFFFFF2; }
+  QuicVersion version_;
+  Perspective perspective_;
   QuicPathId path_id_;
   QuicPacketNumber packet_number_;
   string associated_data_;
@@ -358,6 +368,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
   bool CheckEncryption(QuicPathId path_id,
                        QuicPacketNumber packet_number,
                        QuicPacket* packet) {
+    EXPECT_EQ(version_, encrypter_->version_);
     if (packet_number != encrypter_->packet_number_) {
       LOG(ERROR) << "Encrypted incorrect packet number.  expected "
                  << packet_number << " actual: " << encrypter_->packet_number_;
@@ -383,6 +394,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
                        bool includes_version,
                        bool includes_path_id,
                        bool includes_diversification_nonce) {
+    EXPECT_EQ(version_, decrypter_->version_);
     if (visitor_.header_->packet_number != decrypter_->packet_number_) {
       LOG(ERROR) << "Decrypted incorrect packet number.  expected "
                  << visitor_.header_->packet_number
@@ -1314,7 +1326,8 @@ TEST_P(QuicFramerTest, StreamFrame) {
 
 TEST_P(QuicFramerTest, MissingDiversificationNonce) {
   QuicFramerPeer::SetPerspective(&framer_, Perspective::IS_CLIENT);
-  framer_.SetDecrypter(ENCRYPTION_NONE, new NullDecrypter());
+  framer_.SetDecrypter(ENCRYPTION_NONE,
+                       new NullDecrypter(Perspective::IS_CLIENT));
   decrypter_ = new test::TestDecrypter();
   framer_.SetAlternativeDecrypter(ENCRYPTION_INITIAL, decrypter_, false);
 
@@ -4052,8 +4065,10 @@ static bool ExpectedStreamFrame(const QuicStreamFrame& frame) {
 TEST_P(QuicFramerTest, ConstructEncryptedPacket) {
   // Since we are using ConstructEncryptedPacket, we have to set the framer's
   // crypto to be Null.
-  framer_.SetDecrypter(ENCRYPTION_NONE, QuicDecrypter::Create(kNULL));
-  framer_.SetEncrypter(ENCRYPTION_NONE, QuicEncrypter::Create(kNULL));
+  framer_.SetDecrypter(ENCRYPTION_NONE,
+                       new NullDecrypter(framer_.perspective()));
+  framer_.SetEncrypter(ENCRYPTION_NONE,
+                       new NullEncrypter(framer_.perspective()));
   QuicVersionVector versions;
   versions.push_back(framer_.version());
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
@@ -4086,14 +4101,16 @@ TEST_P(QuicFramerTest, ConstructEncryptedPacket) {
 TEST_P(QuicFramerTest, ConstructMisFramedEncryptedPacket) {
   // Since we are using ConstructEncryptedPacket, we have to set the framer's
   // crypto to be Null.
-  framer_.SetDecrypter(ENCRYPTION_NONE, QuicDecrypter::Create(kNULL));
-  framer_.SetEncrypter(ENCRYPTION_NONE, QuicEncrypter::Create(kNULL));
+  framer_.SetDecrypter(ENCRYPTION_NONE,
+                       new NullDecrypter(framer_.perspective()));
+  framer_.SetEncrypter(ENCRYPTION_NONE,
+                       new NullEncrypter(framer_.perspective()));
   QuicVersionVector versions;
   versions.push_back(framer_.version());
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
       42, false, false, false, kDefaultPathId, kTestQuicStreamId, kTestString,
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, &versions,
-      Perspective::IS_SERVER));
+      Perspective::IS_CLIENT));
 
   MockFramerVisitor visitor;
   framer_.set_visitor(&visitor);

@@ -19,6 +19,10 @@
 
 namespace net {
 
+namespace test {
+class CubicBytesTest;
+}  // namespace test
+
 class QUIC_EXPORT_PRIVATE CubicBytes {
  public:
   explicit CubicBytes(const QuicClock* clock);
@@ -39,23 +43,44 @@ class QUIC_EXPORT_PRIVATE CubicBytes {
   // loss.
   QuicByteCount CongestionWindowAfterAck(QuicByteCount acked_bytes,
                                          QuicByteCount current,
-                                         QuicTime::Delta delay_min);
+                                         QuicTime::Delta delay_min,
+                                         QuicTime event_time);
 
   // Call on ack arrival when sender is unable to use the available congestion
   // window. Resets Cubic state during quiescence.
   void OnApplicationLimited();
 
+  // If true, enable the fix for the convex-mode signing bug.  See
+  // b/32170105 for more information about the bug.
+  // TODO(jokulik):  Remove once the fix is enabled by default.
   void SetFixConvexMode(bool fix_convex_mode);
 
+  // If true, fix CubicBytes quantization bug.  See b/33273459 for
+  // more information about the bug.
+  // TODO(jokulik): Remove once the fix is enabled by default.
+  void SetFixCubicQuantization(bool fix_cubic_quantization);
+
+  // If true, enable the fix for scaling BetaLastMax for n-nonnection
+  // emulation.  See b/33272010 for more information about the bug.
+  // TODO(jokulik):  Remove once the fix is enabled by default.
+  void SetFixBetaLastMax(bool fix_beta_last_max);
+
  private:
+  friend class test::CubicBytesTest;
+
   static const QuicTime::Delta MaxCubicTimeInterval() {
     return QuicTime::Delta::FromMilliseconds(30);
   }
 
-  // Compute the TCP Cubic alpha and beta based on the current number of
-  // connections.
+  // Compute the TCP Cubic alpha, beta, and beta-last-max based on the
+  // current number of connections.
   float Alpha() const;
   float Beta() const;
+  float BetaLastMax() const;
+
+  QuicByteCount last_max_congestion_window() const {
+    return last_max_congestion_window_;
+  }
 
   const QuicClock* clock_;
 
@@ -94,6 +119,14 @@ class QUIC_EXPORT_PRIVATE CubicBytes {
   // Fix convex mode for cubic.
   // TODO(jokulik):  Remove once the cubic convex experiment is done.
   bool fix_convex_mode_;
+
+  // Fix for quantization in cubic mode.
+  // TODO(jokulik):  Remove once the experiment is done.
+  bool fix_cubic_quantization_;
+
+  // Fix beta last max for n-connection-emulation.
+  // TODO(jokulik):  Remove once the corresponding experiment is done.
+  bool fix_beta_last_max_;
 
   DISALLOW_COPY_AND_ASSIGN(CubicBytes);
 };

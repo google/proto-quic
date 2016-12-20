@@ -131,8 +131,10 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
         serialized_packet_(creator_.NoPacket()) {
     creator_.set_connection_id_length(GetParam().connection_id_length);
 
-    creator_.SetEncrypter(ENCRYPTION_INITIAL, new NullEncrypter());
-    creator_.SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
+    creator_.SetEncrypter(ENCRYPTION_INITIAL,
+                          new NullEncrypter(Perspective::IS_CLIENT));
+    creator_.SetEncrypter(ENCRYPTION_FORWARD_SECURE,
+                          new NullEncrypter(Perspective::IS_CLIENT));
     client_framer_.set_visitor(&framer_visitor_);
     server_framer_.set_visitor(&framer_visitor_);
   }

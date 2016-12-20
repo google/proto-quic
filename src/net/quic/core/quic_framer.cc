@@ -15,6 +15,8 @@
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/core/crypto/null_decrypter.h"
+#include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_bug_tracker.h"
@@ -148,8 +150,8 @@ QuicFramer::QuicFramer(const QuicVersionVector& supported_versions,
       last_timestamp_(QuicTime::Delta::Zero()) {
   DCHECK(!supported_versions.empty());
   quic_version_ = supported_versions_[0];
-  decrypter_.reset(QuicDecrypter::Create(kNULL));
-  encrypter_[ENCRYPTION_NONE].reset(QuicEncrypter::Create(kNULL));
+  decrypter_ = base::MakeUnique<NullDecrypter>(perspective);
+  encrypter_[ENCRYPTION_NONE] = base::MakeUnique<NullEncrypter>(perspective);
 }
 
 QuicFramer::~QuicFramer() {}
@@ -1566,7 +1568,7 @@ size_t QuicFramer::EncryptInPlace(EncryptionLevel level,
                                   char* buffer) {
   size_t output_length = 0;
   if (!encrypter_[level]->EncryptPacket(
-          path_id, packet_number,
+          quic_version_, path_id, packet_number,
           StringPiece(buffer, ad_len),                       // Associated data
           StringPiece(buffer + ad_len, total_len - ad_len),  // Plaintext
           buffer + ad_len,  // Destination buffer
@@ -1593,10 +1595,10 @@ size_t QuicFramer::EncryptPayload(EncryptionLevel level,
   memmove(buffer, associated_data.data(), ad_len);
   // Encrypt the plaintext into the buffer.
   size_t output_length = 0;
-  if (!encrypter_[level]->EncryptPacket(path_id, packet_number, associated_data,
-                                        packet.Plaintext(quic_version_),
-                                        buffer + ad_len, &output_length,
-                                        buffer_len - ad_len)) {
+  if (!encrypter_[level]->EncryptPacket(
+          quic_version_, path_id, packet_number, associated_data,
+          packet.Plaintext(quic_version_), buffer + ad_len, &output_length,
+          buffer_len - ad_len)) {
     RaiseError(QUIC_ENCRYPTION_FAILURE);
     return 0;
   }
@@ -1636,8 +1638,8 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
       header.public_header.packet_number_length);
 
   bool success = decrypter_->DecryptPacket(
-      header.path_id, header.packet_number, associated_data, encrypted,
-      decrypted_buffer, decrypted_length, buffer_length);
+      quic_version_, header.path_id, header.packet_number, associated_data,
+      encrypted, decrypted_buffer, decrypted_length, buffer_length);
   if (success) {
     visitor_->OnDecryptedPacket(decrypter_level_);
   } else if (alternative_decrypter_.get() != nullptr) {
@@ -1660,8 +1662,8 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
 
     if (try_alternative_decryption) {
       success = alternative_decrypter_->DecryptPacket(
-          header.path_id, header.packet_number, associated_data, encrypted,
-          decrypted_buffer, decrypted_length, buffer_length);
+          quic_version_, header.path_id, header.packet_number, associated_data,
+          encrypted, decrypted_buffer, decrypted_length, buffer_length);
     }
     if (success) {
       visitor_->OnDecryptedPacket(alternative_decrypter_level_);

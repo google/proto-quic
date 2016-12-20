@@ -116,6 +116,10 @@ NET_ERROR(BLOCKED_BY_RESPONSE, -27)
 // heuristics that point to the possiblility of a cross-site scripting attack.
 NET_ERROR(BLOCKED_BY_XSS_AUDITOR, -28)
 
+// The request was blocked by system policy disallowing some or all cleartext
+// requests. Used for NetworkSecurityPolicy on Android.
+NET_ERROR(CLEARTEXT_NOT_PERMITTED, -29)
+
 // A connection was closed (corresponding to a TCP FIN).
 NET_ERROR(CONNECTION_CLOSED, -100)
 

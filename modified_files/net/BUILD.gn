@@ -398,7 +398,7 @@ public_deps += [ ":features", "//url" ]
     # Brotli support.
     if (!disable_brotli_filter) {
       sources += [ "filter/brotli_source_stream.cc" ]
-      deps += [ "//third_party/brotli" ]
+      deps += [ "//third_party/brotli:dec" ]
     } else {
       sources += [ "filter/brotli_source_stream_disabled.cc" ]
     }

@@ -125,7 +125,8 @@ class QuicChromiumClientSessionTest
         QuicTime::Delta::FromMilliseconds(kQuicYieldAfterDurationMilliseconds),
         /*cert_verify_flags=*/0, DefaultQuicConfig(), &crypto_config_,
         "CONNECTION_UNKNOWN", base::TimeTicks::Now(), base::TimeTicks::Now(),
-        &push_promise_index_, base::ThreadTaskRunnerHandle::Get().get(),
+        &push_promise_index_, &test_push_delegate_,
+        base::ThreadTaskRunnerHandle::Get().get(),
         /*socket_performance_watcher=*/nullptr, &net_log_));
 
     scoped_refptr<X509Certificate> cert(
@@ -354,7 +355,6 @@ TEST_P(QuicChromiumClientSessionTest, CancelPushWhenPendingValidation) {
   socket_data_.reset(new SequencedSocketData(reads, arraysize(reads), writes,
                                              arraysize(writes)));
   Initialize();
-  session_->set_push_delegate(&test_push_delegate_);
 
   ProofVerifyDetailsChromium details;
   details.cert_verify_result.verified_cert =
@@ -411,7 +411,6 @@ TEST_P(QuicChromiumClientSessionTest, CancelPushBeforeReceivingResponse) {
   socket_data_.reset(new SequencedSocketData(reads, arraysize(reads), writes,
                                              arraysize(writes)));
   Initialize();
-  session_->set_push_delegate(&test_push_delegate_);
 
   ProofVerifyDetailsChromium details;
   details.cert_verify_result.verified_cert =
@@ -464,7 +463,6 @@ TEST_P(QuicChromiumClientSessionTest, CancelPushAfterReceivingResponse) {
   socket_data_.reset(new SequencedSocketData(reads, arraysize(reads), writes,
                                              arraysize(writes)));
   Initialize();
-  session_->set_push_delegate(&test_push_delegate_);
 
   ProofVerifyDetailsChromium details;
   details.cert_verify_result.verified_cert =

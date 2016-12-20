@@ -319,11 +319,10 @@ def main():
   if args.generate_compdb:
     compile_db.GenerateWithNinja(args.compile_database)
 
+  filenames = set(_GetFilesFromGit(args.path_filter))
   if args.all:
-    filenames = set(_GetFilesFromCompileDB(args.compile_database))
-    source_filenames = filenames
+    source_filenames = set(_GetFilesFromCompileDB(args.compile_database))
   else:
-    filenames = set(_GetFilesFromGit(args.path_filter))
     # Filter out files that aren't C/C++/Obj-C/Obj-C++.
     extensions = frozenset(('.c', '.cc', '.cpp', '.m', '.mm'))
     source_filenames = [f

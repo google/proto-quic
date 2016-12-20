@@ -831,6 +831,24 @@ static_assert(std::is_same<decltype(TestOverload(StrictNumeric<size_t>())),
                            size_t>::value,
               "");
 
+template <typename T>
+struct CastTest1 {
+  static constexpr T HandleNaN() { return -1; }
+  static constexpr T max() { return numeric_limits<T>::max() - 1; }
+  static constexpr T HandleOverflow() { return max(); }
+  static constexpr T lowest() { return numeric_limits<T>::lowest() + 1; }
+  static constexpr T HandleUnderflow() { return lowest(); }
+};
+
+template <typename T>
+struct CastTest2 {
+  static constexpr T HandleNaN() { return 11; }
+  static constexpr T max() { return 10; }
+  static constexpr T HandleOverflow() { return max(); }
+  static constexpr T lowest() { return 1; }
+  static constexpr T HandleUnderflow() { return lowest(); }
+};
+
 TEST(SafeNumerics, CastTests) {
 // MSVC catches and warns that we're forcing saturation in these tests.
 // Since that's intentional, we need to shut this warning off.
@@ -893,6 +911,35 @@ TEST(SafeNumerics, CastTests) {
             saturated_cast<int>(double_small_int));
   EXPECT_EQ(numeric_limits<int>::max(), saturated_cast<int>(double_large_int));
 
+  // Test the saturated cast overrides.
+  using FloatLimits = numeric_limits<float>;
+  using IntLimits = numeric_limits<int>;
+  EXPECT_EQ(-1, (saturated_cast<int, CastTest1>(FloatLimits::quiet_NaN())));
+  EXPECT_EQ(CastTest1<int>::max(),
+            (saturated_cast<int, CastTest1>(FloatLimits::infinity())));
+  EXPECT_EQ(CastTest1<int>::max(),
+            (saturated_cast<int, CastTest1>(FloatLimits::max())));
+  EXPECT_EQ(CastTest1<int>::max(),
+            (saturated_cast<int, CastTest1>(float(IntLimits::max()))));
+  EXPECT_EQ(CastTest1<int>::lowest(),
+            (saturated_cast<int, CastTest1>(-FloatLimits::infinity())));
+  EXPECT_EQ(CastTest1<int>::lowest(),
+            (saturated_cast<int, CastTest1>(FloatLimits::lowest())));
+  EXPECT_EQ(0, (saturated_cast<int, CastTest1>(0.0)));
+  EXPECT_EQ(1, (saturated_cast<int, CastTest1>(1.0)));
+  EXPECT_EQ(-1, (saturated_cast<int, CastTest1>(-1.0)));
+  EXPECT_EQ(0, (saturated_cast<int, CastTest1>(0)));
+  EXPECT_EQ(1, (saturated_cast<int, CastTest1>(1)));
+  EXPECT_EQ(-1, (saturated_cast<int, CastTest1>(-1)));
+  EXPECT_EQ(CastTest1<int>::lowest(),
+            (saturated_cast<int, CastTest1>(float(IntLimits::lowest()))));
+  EXPECT_EQ(11, (saturated_cast<int, CastTest2>(FloatLimits::quiet_NaN())));
+  EXPECT_EQ(10, (saturated_cast<int, CastTest2>(FloatLimits::infinity())));
+  EXPECT_EQ(10, (saturated_cast<int, CastTest2>(FloatLimits::max())));
+  EXPECT_EQ(1, (saturated_cast<int, CastTest2>(-FloatLimits::infinity())));
+  EXPECT_EQ(1, (saturated_cast<int, CastTest2>(FloatLimits::lowest())));
+  EXPECT_EQ(1, (saturated_cast<int, CastTest2>(0U)));
+
   float not_a_number = std::numeric_limits<float>::infinity() -
                        std::numeric_limits<float>::infinity();
   EXPECT_TRUE(std::isnan(not_a_number));
@@ -935,15 +982,6 @@ TEST(SafeNumerics, CastTests) {
   EXPECT_EQ(1, checked_cast<int>(StrictNumeric<int>(1)));
   EXPECT_EQ(1, saturated_cast<int>(StrictNumeric<int>(1)));
   EXPECT_EQ(1, strict_cast<int>(StrictNumeric<int>(1)));
-}
-
-TEST(SafeNumerics, SaturatedCastChecks) {
-  float not_a_number = std::numeric_limits<float>::infinity() -
-                       std::numeric_limits<float>::infinity();
-  EXPECT_TRUE(std::isnan(not_a_number));
-  EXPECT_DEATH_IF_SUPPORTED(
-      (saturated_cast<int, base::CheckOnFailure>(not_a_number)),
-      "");
 }
 
 TEST(SafeNumerics, IsValueInRangeForNumericType) {

@@ -9,6 +9,7 @@
 
 #include "base/rand_util.h"
 #include "net/base/arena.h"
+#include "net/spdy/hpack/hpack_huffman_table.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -41,10 +42,11 @@ class HpackEncoderPeer {
 
   explicit HpackEncoderPeer(HpackEncoder* encoder) : encoder_(encoder) {}
 
+  bool compression_enabled() const { return encoder_->enable_compression_; }
   HpackHeaderTable* table() { return &encoder_->header_table_; }
   HpackHeaderTablePeer table_peer() { return HpackHeaderTablePeer(table()); }
-  void set_allow_huffman_compression(bool allow) {
-    encoder_->allow_huffman_compression_ = allow;
+  const HpackHuffmanTable& huffman_table() const {
+    return encoder_->huffman_table_;
   }
   void EmitString(StringPiece str) { encoder_->EmitString(str); }
   void TakeString(string* out) { encoder_->output_stream_.TakeString(out); }
@@ -75,23 +77,19 @@ class HpackEncoderPeer {
   static bool EncodeHeaderSet(HpackEncoder* encoder,
                               const SpdyHeaderBlock& header_set,
                               string* output,
-                              bool use_compression,
                               bool use_incremental) {
     if (use_incremental) {
-      return EncodeIncremental(encoder, header_set, output, use_compression);
+      return EncodeIncremental(encoder, header_set, output);
     } else {
-      return use_compression ? encoder->EncodeHeaderSet(header_set, output)
-                             : encoder->EncodeHeaderSetWithoutCompression(
-                                   header_set, output);
+      return encoder->EncodeHeaderSet(header_set, output);
     }
   }
 
   static bool EncodeIncremental(HpackEncoder* encoder,
                                 const SpdyHeaderBlock& header_set,
-                                string* output,
-                                bool use_compression) {
+                                string* output) {
     std::unique_ptr<HpackEncoder::ProgressiveEncoder> encoderator =
-        encoder->EncodeHeaderSet(header_set, use_compression);
+        encoder->EncodeHeaderSet(header_set);
     string output_buffer;
     encoderator->Next(base::RandInt(0, 15), &output_buffer);
     while (encoderator->HasNext()) {
@@ -137,9 +135,6 @@ class HpackEncoderTest : public ::testing::TestWithParam<bool> {
 
     // No further insertions may occur without evictions.
     peer_.table()->SetMaxSize(peer_.table()->size());
-
-    // Disable Huffman coding by default. Most tests don't care about it.
-    peer_.set_allow_huffman_compression(false);
   }
 
   void SaveHeaders(StringPiece name, StringPiece value) {
@@ -157,29 +152,34 @@ class HpackEncoderTest : public ::testing::TestWithParam<bool> {
   void ExpectIndexedLiteral(const HpackEntry* key_entry, StringPiece value) {
     expected_.AppendPrefix(kLiteralIncrementalIndexOpcode);
     expected_.AppendUint32(IndexOf(key_entry));
-    expected_.AppendPrefix(kStringLiteralIdentityEncoded);
-    expected_.AppendUint32(value.size());
-    expected_.AppendBytes(value);
+    ExpectString(&expected_, value);
   }
   void ExpectIndexedLiteral(StringPiece name, StringPiece value) {
     expected_.AppendPrefix(kLiteralIncrementalIndexOpcode);
     expected_.AppendUint32(0);
-    expected_.AppendPrefix(kStringLiteralIdentityEncoded);
-    expected_.AppendUint32(name.size());
-    expected_.AppendBytes(name);
-    expected_.AppendPrefix(kStringLiteralIdentityEncoded);
-    expected_.AppendUint32(value.size());
-    expected_.AppendBytes(value);
+    ExpectString(&expected_, name);
+    ExpectString(&expected_, value);
   }
   void ExpectNonIndexedLiteral(StringPiece name, StringPiece value) {
     expected_.AppendPrefix(kLiteralNoIndexOpcode);
     expected_.AppendUint32(0);
-    expected_.AppendPrefix(kStringLiteralIdentityEncoded);
-    expected_.AppendUint32(name.size());
-    expected_.AppendBytes(name);
-    expected_.AppendPrefix(kStringLiteralIdentityEncoded);
-    expected_.AppendUint32(value.size());
-    expected_.AppendBytes(value);
+    ExpectString(&expected_, name);
+    ExpectString(&expected_, value);
+  }
+  void ExpectString(HpackOutputStream* stream, StringPiece str) {
+    const HpackHuffmanTable& huffman_table = peer_.huffman_table();
+    size_t encoded_size = peer_.compression_enabled()
+                              ? huffman_table.EncodedSize(str)
+                              : str.size();
+    if (encoded_size < str.size()) {
+      expected_.AppendPrefix(kStringLiteralHuffmanEncoded);
+      expected_.AppendUint32(encoded_size);
+      huffman_table.EncodeString(str, stream);
+    } else {
+      expected_.AppendPrefix(kStringLiteralIdentityEncoded);
+      expected_.AppendUint32(str.size());
+      expected_.AppendBytes(str);
+    }
   }
   void ExpectHeaderTableSizeUpdate(uint32_t size) {
     expected_.AppendPrefix(kHeaderTableSizeUpdateOpcode);
@@ -189,15 +189,7 @@ class HpackEncoderTest : public ::testing::TestWithParam<bool> {
     string expected_out, actual_out;
     expected_.TakeString(&expected_out);
     EXPECT_TRUE(test::HpackEncoderPeer::EncodeHeaderSet(
-        &encoder_, header_set, &actual_out, true, use_incremental_));
-    EXPECT_EQ(expected_out, actual_out);
-  }
-  void CompareWithExpectedEncodingWithoutCompression(
-      const SpdyHeaderBlock& header_set) {
-    string expected_out, actual_out;
-    expected_.TakeString(&expected_out);
-    EXPECT_TRUE(test::HpackEncoderPeer::EncodeHeaderSet(
-        &encoder_, header_set, &actual_out, false, use_incremental_));
+        &encoder_, header_set, &actual_out, use_incremental_));
     EXPECT_EQ(expected_out, actual_out);
   }
   size_t IndexOf(const HpackEntry* entry) {
@@ -317,8 +309,6 @@ TEST_P(HpackEncoderTest, CookieHeaderIsCrumbled) {
 }
 
 TEST_P(HpackEncoderTest, StringsDynamicallySelectHuffmanCoding) {
-  peer_.set_allow_huffman_compression(true);
-
   // Compactable string. Uses Huffman coding.
   peer_.EmitString("feedbeef");
   expected_.AppendPrefix(kStringLiteralHuffmanEncoded);
@@ -341,12 +331,11 @@ TEST_P(HpackEncoderTest, EncodingWithoutCompression) {
   encoder_.SetHeaderListener([this](StringPiece name, StringPiece value) {
     this->SaveHeaders(name, value);
   });
-
-  // Implementation should internally disable.
-  peer_.set_allow_huffman_compression(true);
+  encoder_.DisableCompression();
 
   ExpectNonIndexedLiteral(":path", "/index.html");
-  ExpectNonIndexedLiteral("cookie", "foo=bar; baz=bing");
+  ExpectNonIndexedLiteral("cookie", "foo=bar");
+  ExpectNonIndexedLiteral("cookie", "baz=bing");
   ExpectNonIndexedLiteral("hello", "goodbye");
 
   SpdyHeaderBlock headers;
@@ -354,12 +343,12 @@ TEST_P(HpackEncoderTest, EncodingWithoutCompression) {
   headers["cookie"] = "foo=bar; baz=bing";
   headers["hello"] = "goodbye";
 
-  CompareWithExpectedEncodingWithoutCompression(headers);
+  CompareWithExpectedEncoding(headers);
 
-  EXPECT_THAT(headers_observed_,
-              ElementsAre(Pair(":path", "/index.html"),
-                          Pair("cookie", "foo=bar; baz=bing"),
-                          Pair("hello", "goodbye")));
+  EXPECT_THAT(
+      headers_observed_,
+      ElementsAre(Pair(":path", "/index.html"), Pair("cookie", "foo=bar"),
+                  Pair("cookie", "baz=bing"), Pair("hello", "goodbye")));
 }
 
 TEST_P(HpackEncoderTest, MultipleEncodingPasses) {

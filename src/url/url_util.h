@@ -133,7 +133,7 @@ URL_EXPORT bool GetStandardSchemeType(const char* spec,
                                       const Component& scheme,
                                       SchemeType* type);
 
-// Domains ---------------------------------------------------------------------
+// Hosts  ----------------------------------------------------------------------
 
 // Returns true if the |canonicalized_host| matches or is in the same domain as
 // the given |lower_ascii_domain| string. For example, if the canonicalized
@@ -145,6 +145,10 @@ URL_EXPORT bool GetStandardSchemeType(const char* spec,
 // canonicalized host.
 URL_EXPORT bool DomainIs(base::StringPiece canonicalized_host,
                          base::StringPiece lower_ascii_domain);
+
+// Returns true if the hostname is an IP address. Note: this function isn't very
+// cheap, as it must re-parse the host to verify.
+URL_EXPORT bool HostIsIPAddress(base::StringPiece host);
 
 // URL library wrappers --------------------------------------------------------
 

@@ -109,7 +109,8 @@ class QuicPacketGeneratorTest : public ::testing::Test {
                 Perspective::IS_CLIENT),
         generator_(42, &framer_, &buffer_allocator_, &delegate_),
         creator_(QuicPacketGeneratorPeer::GetPacketCreator(&generator_)) {
-    creator_->SetEncrypter(ENCRYPTION_FORWARD_SECURE, new NullEncrypter());
+    creator_->SetEncrypter(ENCRYPTION_FORWARD_SECURE,
+                           new NullEncrypter(Perspective::IS_CLIENT));
     creator_->set_encryption_level(ENCRYPTION_FORWARD_SECURE);
   }
 
@@ -446,7 +447,7 @@ TEST_F(QuicPacketGeneratorTest, ConsumeData_FramesPreviouslyQueued) {
   // Set the packet size be enough for two stream frames with 0 stream offset,
   // but not enough for a stream frame of 0 offset and one with non-zero offset.
   size_t length =
-      NullEncrypter().GetCiphertextSize(0) +
+      NullEncrypter(Perspective::IS_CLIENT).GetCiphertextSize(0) +
       GetPacketHeaderSize(
           framer_.version(), creator_->connection_id_length(), kIncludeVersion,
           !kIncludePathId, !kIncludeDiversificationNonce,

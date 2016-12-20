@@ -4,9 +4,11 @@
 
 #include "net/quic/core/crypto/curve25519_key_exchange.h"
 
+#include <cstdint>
+
 #include "base/logging.h"
-#include "crypto/curve25519.h"
 #include "net/quic/core/crypto/quic_random.h"
+#include "third_party/boringssl/src/include/openssl/curve25519.h"
 
 using base::StringPiece;
 using std::string;
@@ -20,35 +22,28 @@ Curve25519KeyExchange::~Curve25519KeyExchange() {}
 // static
 Curve25519KeyExchange* Curve25519KeyExchange::New(StringPiece private_key) {
   Curve25519KeyExchange* ka;
-  // We don't want to #include the NaCl headers in the public header file, so
-  // we use literals for the sizes of private_key_ and public_key_. Here we
-  // assert that those values are equal to the values from the NaCl header.
-  static_assert(sizeof(ka->private_key_) == crypto::curve25519::kScalarBytes,
+  // We don't want to #include the BoringSSL headers in the public header file,
+  // so we use literals for the sizes of private_key_ and public_key_. Here we
+  // assert that those values are equal to the values from the BoringSSL
+  static_assert(sizeof(ka->private_key_) == X25519_PRIVATE_KEY_LEN,
                 "header out of sync");
-  static_assert(sizeof(ka->public_key_) == crypto::curve25519::kBytes,
+  static_assert(sizeof(ka->public_key_) == X25519_PUBLIC_VALUE_LEN,
                 "header out of sync");
 
-  if (private_key.size() != crypto::curve25519::kScalarBytes) {
+  if (private_key.size() != X25519_PRIVATE_KEY_LEN) {
     return nullptr;
   }
 
   ka = new Curve25519KeyExchange();
-  memcpy(ka->private_key_, private_key.data(),
-         crypto::curve25519::kScalarBytes);
-  crypto::curve25519::ScalarBaseMult(ka->private_key_, ka->public_key_);
+  memcpy(ka->private_key_, private_key.data(), X25519_PRIVATE_KEY_LEN);
+  X25519_public_from_private(ka->public_key_, ka->private_key_);
   return ka;
 }
 
 // static
 string Curve25519KeyExchange::NewPrivateKey(QuicRandom* rand) {
-  uint8_t private_key[crypto::curve25519::kScalarBytes];
+  uint8_t private_key[X25519_PRIVATE_KEY_LEN];
   rand->RandBytes(private_key, sizeof(private_key));
-
-  // This makes |private_key| a valid scalar, as specified on
-  // http://cr.yp.to/ecdh.html
-  private_key[0] &= 248;
-  private_key[31] &= 127;
-  private_key[31] |= 64;
   return string(reinterpret_cast<char*>(private_key), sizeof(private_key));
 }
 
@@ -59,18 +54,17 @@ KeyExchange* Curve25519KeyExchange::NewKeyPair(QuicRandom* rand) const {
 
 bool Curve25519KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
                                                string* out_result) const {
-  if (peer_public_value.size() != crypto::curve25519::kBytes) {
+  if (peer_public_value.size() != X25519_PUBLIC_VALUE_LEN) {
     return false;
   }
 
-  uint8_t result[crypto::curve25519::kBytes];
-  if (!crypto::curve25519::ScalarMult(
-          private_key_,
-          reinterpret_cast<const uint8_t*>(peer_public_value.data()), result)) {
+  uint8_t result[X25519_PUBLIC_VALUE_LEN];
+  if (!X25519(result, private_key_,
+              reinterpret_cast<const uint8_t*>(peer_public_value.data()))) {
     return false;
   }
+
   out_result->assign(reinterpret_cast<char*>(result), sizeof(result));
-
   return true;
 }
 

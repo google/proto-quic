@@ -58,6 +58,7 @@ SpdySessionPool::SpdySessionPool(
       session_max_recv_window_size_(session_max_recv_window_size),
       stream_max_recv_window_size_(stream_max_recv_window_size),
       time_func_(time_func),
+      push_delegate_(nullptr),
       proxy_delegate_(proxy_delegate) {
   NetworkChangeNotifier::AddIPAddressObserver(this);
   if (ssl_config_service_.get())
@@ -95,7 +96,7 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
       key, http_server_properties_, transport_security_state_,
       enable_sending_initial_data_, enable_ping_based_connection_checking_,
       session_max_recv_window_size_, stream_max_recv_window_size_, time_func_,
-      proxy_delegate_, net_log.net_log()));
+      push_delegate_, proxy_delegate_, net_log.net_log()));
 
   new_session->InitializeWithSocket(std::move(connection), this, is_secure);
 

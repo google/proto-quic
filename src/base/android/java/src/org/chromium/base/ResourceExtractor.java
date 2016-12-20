@@ -150,10 +150,14 @@ public class ResourceExtractor {
         private long getApkVersion() {
             PackageManager pm = ContextUtils.getApplicationContext().getPackageManager();
             try {
-                // More appropriate would be versionCode, but it doesn't change while developing.
+                // Use lastUpdateTime since versionCode does not change when developing locally,
+                // but also use versionCode since it is possible for Chrome to be updated without
+                // the lastUpdateTime being changed (http://crbug.org/673458).
                 PackageInfo pi =
                         pm.getPackageInfo(ContextUtils.getApplicationContext().getPackageName(), 0);
-                return pi.lastUpdateTime;
+                // Xor'ing versionCode into upper half of the long to ensure it doesn't somehow
+                // exactly offset an increase in time.
+                return pi.lastUpdateTime ^ (((long) pi.versionCode) << 32);
             } catch (PackageManager.NameNotFoundException e) {
                 throw new RuntimeException(e);
             }

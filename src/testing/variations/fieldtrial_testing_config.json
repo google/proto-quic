@@ -2032,40 +2032,6 @@
             ]
         }
     ],
-    "SiteEngagement": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "AggressiveAccumulation",
-                    "params": {
-                        "bootstrap_points": "24",
-                        "decay_period_in_hours": "2",
-                        "decay_points": "0",
-                        "decay_proportion": "0.984",
-                        "first_daily_engagement_points": "1.5",
-                        "hidden_media_playing_points": "0.01",
-                        "high_engagement_boundary": "50",
-                        "last_engagement_grace_period_in_hours": "1",
-                        "max_decays_per_score": "4",
-                        "max_points_per_day": "15",
-                        "medium_engagement_boundary": "15",
-                        "navigation_points": "1.5",
-                        "score_cleanup_threshold": "0.5",
-                        "user_input_points": "0.6",
-                        "visible_media_playing_points": "0.06",
-                        "web_app_installed_points": "5"
-                    }
-                }
-            ]
-        }
-    ],
     "SpeculativeLaunchServiceWorker": [
         {
             "platforms": [
@@ -2257,21 +2223,9 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
-                    "params": {
-                        "enable_update_menu_item": "true"
-                    }
-                },
-                {
-                    "name": "EnabledWithBadge",
+                    "name": "EnabledWithNewerVersionAvailableSummary",
                     "params": {
                         "enable_update_badge": "true",
-                        "enable_update_menu_item": "true"
-                    }
-                },
-                {
-                    "name": "EnabledWithSummary",
-                    "params": {
                         "enable_update_menu_item": "true",
                         "show_summary": "true"
                     }
@@ -2280,22 +2234,9 @@
                     "name": "EnabledWithCustomSummary",
                     "params": {
                         "custom_summary": "Custom update summary",
-                        "enable_update_menu_item": "true",
-                        "show_summary": "true"
-                    }
-                },
-                {
-                    "name": "EnabledWithSummaryAndBadge",
-                    "params": {
                         "enable_update_badge": "true",
                         "enable_update_menu_item": "true",
                         "show_summary": "true"
-                    }
-                },
-                {
-                    "name": "Default",
-                    "params": {
-                        "enable_update_menu_item": "false"
                     }
                 }
             ]

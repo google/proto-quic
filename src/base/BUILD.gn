@@ -41,6 +41,9 @@ declare_args() {
   # available, except for official builds for now.
   enable_memory_task_profiler =
       use_experimental_allocator_shim && (!is_official_build || is_syzyasan)
+
+  # Partition alloc is included by default except iOS.
+  use_partition_alloc = !is_ios
 }
 
 if (is_android) {
@@ -1234,6 +1237,19 @@ component("base") {
       "rand_util_nacl.cc",
       "synchronization/read_write_lock_nacl.cc",
     ]
+
+    if (use_partition_alloc) {
+      # Add stuff that doesn't work in NaCl.
+      sources += [
+        # PartitionAlloc uses SpinLock, which doesn't work in NaCl (see below).
+        "allocator/partition_allocator/address_space_randomization.cc",
+        "allocator/partition_allocator/address_space_randomization.h",
+        "allocator/partition_allocator/page_allocator.cc",
+        "allocator/partition_allocator/page_allocator.h",
+        "allocator/partition_allocator/partition_alloc.cc",
+        "allocator/partition_allocator/partition_alloc.h",
+      ]
+    }
   }
 
   # SpinLock uses inline assembly that doesn't work on NaCl, and for which there
@@ -2159,6 +2175,10 @@ test("base_unittests") {
     set_sources_assignment_filter(sources_assignment_filter)
 
     # TODO(GYP): dep on copy_test_data_ios action.
+  }
+
+  if (use_partition_alloc) {
+    sources += [ "allocator/partition_allocator/partition_alloc_unittest.cc" ]
   }
 
   if (is_mac) {

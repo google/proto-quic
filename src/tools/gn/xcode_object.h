@@ -218,7 +218,10 @@ class PBXGroup : public PBXObject {
   const std::string& path() const { return path_; }
 
   PBXObject* AddChild(std::unique_ptr<PBXObject> child);
-  PBXFileReference* AddSourceFile(const std::string& source_path);
+  PBXFileReference* AddSourceFile(const std::string& navigator_path,
+                                  const std::string& source_path);
+  bool is_source() { return is_source_; }
+  void set_is_source(const bool is_source) { is_source_ = is_source; }
 
   // PBXObject implementation.
   PBXObjectClass Class() const override;
@@ -230,6 +233,7 @@ class PBXGroup : public PBXObject {
   std::vector<std::unique_ptr<PBXObject>> children_;
   std::string name_;
   std::string path_;
+  bool is_source_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(PBXGroup);
 };
@@ -271,7 +275,8 @@ class PBXProject : public PBXObject {
              const PBXAttributes& attributes);
   ~PBXProject() override;
 
-  void AddSourceFile(const std::string& source_path);
+  void AddSourceFile(const std::string& navigator_path,
+                     const std::string& source_path);
   void AddAggregateTarget(const std::string& name,
                           const std::string& shell_script);
   void AddNativeTarget(const std::string& name,

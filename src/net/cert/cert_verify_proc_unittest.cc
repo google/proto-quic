@@ -893,8 +893,6 @@ TEST_F(CertVerifyProcTest, IntranetHostsRejected) {
 // that were issued after 1 January 2016, while still allowing those from
 // before that date, with SHA-1 in the intermediate, or from an enterprise
 // CA.
-//
-// TODO(rsleevi): This code should be removed in M57.
 TEST_F(CertVerifyProcTest, VerifyRejectsSHA1AfterDeprecationLegacyMode) {
   base::test::ScopedFeatureList scoped_feature_list;
   scoped_feature_list.InitAndEnableFeature(CertVerifyProc::kSHA1LegacyMode);
@@ -939,7 +937,7 @@ TEST_F(CertVerifyProcTest, VerifyRejectsSHA1AfterDeprecationLegacyMode) {
   EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_WEAK_SIGNATURE_ALGORITHM);
 
   // Enterprise issued SHA-1 leaf certificates issued on/after 1 January 2016
-  // remain accepted until SHA-1 is disabled.
+  // remain accepted.
   verify_result.Reset();
   dummy_result.Reset();
   dummy_result.is_issued_by_known_root = false;
@@ -1219,39 +1217,32 @@ TEST_F(CertVerifyProcTest, CRLSet) {
 
 TEST_F(CertVerifyProcTest, CRLSetLeafSerial) {
   CertificateList ca_cert_list =
-      CreateCertificateListFromFile(GetTestCertsDirectory(),
-                                    "quic_root.crt",
+      CreateCertificateListFromFile(GetTestCertsDirectory(), "root_ca_cert.pem",
                                     X509Certificate::FORMAT_AUTO);
   ASSERT_EQ(1U, ca_cert_list.size());
   ScopedTestRoot test_root(ca_cert_list[0].get());
 
-  CertificateList intermediate_cert_list =
-      CreateCertificateListFromFile(GetTestCertsDirectory(),
-                                    "quic_intermediate.crt",
-                                    X509Certificate::FORMAT_AUTO);
+  CertificateList intermediate_cert_list = CreateCertificateListFromFile(
+      GetTestCertsDirectory(), "intermediate_ca_cert.pem",
+      X509Certificate::FORMAT_AUTO);
   ASSERT_EQ(1U, intermediate_cert_list.size());
   X509Certificate::OSCertHandles intermediates;
   intermediates.push_back(intermediate_cert_list[0]->os_cert_handle());
 
   CertificateList cert_list = CreateCertificateListFromFile(
-      GetTestCertsDirectory(), "quic_test.example.com.crt",
+      GetTestCertsDirectory(), "ok_cert_by_intermediate.pem",
       X509Certificate::FORMAT_AUTO);
   ASSERT_EQ(1U, cert_list.size());
 
-  scoped_refptr<X509Certificate> leaf =
-      X509Certificate::CreateFromHandle(cert_list[0]->os_cert_handle(),
-                                        intermediates);
+  scoped_refptr<X509Certificate> leaf = X509Certificate::CreateFromHandle(
+      cert_list[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(leaf);
 
   int flags = 0;
   CertVerifyResult verify_result;
-  int error = Verify(leaf.get(),
-                     "test.example.com",
-                     flags,
-                     NULL,
-                     empty_cert_list_,
+  int error = Verify(leaf.get(), "127.0.0.1", flags, NULL, empty_cert_list_,
                      &verify_result);
   EXPECT_THAT(error, IsOk());
-  EXPECT_EQ(CERT_STATUS_SHA1_SIGNATURE_PRESENT, verify_result.cert_status);
 
   // Test revocation by serial number of a certificate not under the root.
   scoped_refptr<CRLSet> crl_set;
@@ -1261,12 +1252,8 @@ TEST_F(CertVerifyProcTest, CRLSetLeafSerial) {
       &crl_set_bytes));
   ASSERT_TRUE(CRLSetStorage::Parse(crl_set_bytes, &crl_set));
 
-  error = Verify(leaf.get(),
-                 "test.example.com",
-                 flags,
-                 crl_set.get(),
-                 empty_cert_list_,
-                 &verify_result);
+  error = Verify(leaf.get(), "127.0.0.1", flags, crl_set.get(),
+                 empty_cert_list_, &verify_result);
   EXPECT_THAT(error, IsError(ERR_CERT_REVOKED));
 }
 
@@ -1647,7 +1634,7 @@ TEST_F(CertVerifyProcTest, RejectsPublicSHA1IntermediatesUnlessAllowed) {
   }
 }
 
-TEST_F(CertVerifyProcTest, AcceptsPrivateSHA1) {
+TEST_F(CertVerifyProcTest, RejectsPrivateSHA1UnlessFlag) {
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "ok_cert.pem"));
   ASSERT_TRUE(cert);
@@ -1658,10 +1645,19 @@ TEST_F(CertVerifyProcTest, AcceptsPrivateSHA1) {
   result.is_issued_by_known_root = false;
   verify_proc_ = new MockCertVerifyProc(result);
 
+  // SHA-1 should be rejected by default for private roots...
   int flags = 0;
   CertVerifyResult verify_result;
   int error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
                      empty_cert_list_, &verify_result);
+  EXPECT_THAT(error, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
+  EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_SHA1_SIGNATURE_PRESENT);
+
+  // ... unless VERIFY_ENABLE_SHA1_LOCAL_ANCHORS was supplied.
+  flags = CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS;
+  verify_result.Reset();
+  error = Verify(cert.get(), "127.0.0.1", flags, nullptr /* crl_set */,
+                 empty_cert_list_, &verify_result);
   EXPECT_THAT(error, IsOk());
   EXPECT_TRUE(verify_result.cert_status & CERT_STATUS_SHA1_SIGNATURE_PRESENT);
 }
@@ -1806,7 +1802,8 @@ const WeakDigestTestData kVerifyEndEntityTestData[] = {
 // Disabled on NSS - NSS caches chains/signatures in such a way that cannot
 // be cleared until NSS is cleanly shutdown, which is not presently supported
 // in Chromium.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS)
+// OSX 10.12+ stops building the chain at the first weak digest.
+#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_MACOSX)
 #define MAYBE_VerifyEndEntity DISABLED_VerifyEndEntity
 #else
 #define MAYBE_VerifyEndEntity VerifyEndEntity
@@ -1854,7 +1851,8 @@ const WeakDigestTestData kVerifyIncompleteEETestData[] = {
 };
 // Disabled on NSS - libpkix does not return constructed chains on error,
 // preventing us from detecting/inspecting the verified chain.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS)
+// OSX 10.12+ stops building the chain at the first weak digest.
+#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_MACOSX)
 #define MAYBE_VerifyIncompleteEndEntity DISABLED_VerifyIncompleteEndEntity
 #else
 #define MAYBE_VerifyIncompleteEndEntity VerifyIncompleteEndEntity
@@ -1879,7 +1877,8 @@ const WeakDigestTestData kVerifyMixedTestData[] = {
 };
 // NSS does not support MD4 and does not enable MD2 by default, making all
 // permutations invalid.
-#if defined(USE_NSS_CERTS) || defined(OS_IOS)
+// OSX 10.12+ stops building the chain at the first weak digest.
+#if defined(USE_NSS_CERTS) || defined(OS_IOS) || defined(OS_MACOSX)
 #define MAYBE_VerifyMixed DISABLED_VerifyMixed
 #else
 #define MAYBE_VerifyMixed VerifyMixed

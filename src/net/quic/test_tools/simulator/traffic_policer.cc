@@ -6,11 +6,13 @@
 
 #include <algorithm>
 
+using std::string;
+
 namespace net {
 namespace simulator {
 
 TrafficPolicer::TrafficPolicer(Simulator* simulator,
-                               std::string name,
+                               string name,
                                QuicByteCount initial_bucket_size,
                                QuicByteCount max_bucket_size,
                                QuicBandwidth target_bandwidth,

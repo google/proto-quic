@@ -24,7 +24,7 @@ fuzzer_test("brotli_fuzzer") {
     "brotli_fuzzer.cc",
   ]
   deps = [
-    "//third_party/brotli:brotli",
+    "//third_party/brotli:dec",
   ]
   libfuzzer_options = [ "max_len=1280" ]
 }

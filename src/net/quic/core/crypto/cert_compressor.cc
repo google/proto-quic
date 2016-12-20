@@ -194,7 +194,7 @@ std::vector<CertEntry> MatchCerts(const std::vector<string>& certs,
     if (cached_valid) {
       bool cached = false;
 
-      uint64_t hash = QuicUtils::FNV1a_64_Hash(i->data(), i->size());
+      uint64_t hash = QuicUtils::FNV1a_64_Hash(*i);
       // This assumes that the machine is little-endian.
       for (size_t j = 0; j < client_cached_cert_hashes.size();
            j += sizeof(uint64_t)) {
@@ -325,7 +325,7 @@ std::vector<uint64_t> HashCerts(const std::vector<string>& certs) {
 
   for (std::vector<string>::const_iterator i = certs.begin(); i != certs.end();
        ++i) {
-    ret.push_back(QuicUtils::FNV1a_64_Hash(i->data(), i->size()));
+    ret.push_back(QuicUtils::FNV1a_64_Hash(*i));
   }
 
   return ret;

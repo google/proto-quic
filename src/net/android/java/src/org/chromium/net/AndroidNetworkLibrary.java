@@ -17,6 +17,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.security.KeyChain;
+import android.security.NetworkSecurityPolicy;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
@@ -242,5 +243,22 @@ class AndroidNetworkLibrary {
             }
         }
         return "";
+    }
+
+    /**
+     * Returns true if cleartext traffic to |host| is allowed by the current app. Always true on L
+     * and older.
+     */
+    @TargetApi(Build.VERSION_CODES.N)
+    @CalledByNative
+    private static boolean isCleartextPermitted(String host) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            NetworkSecurityPolicy policy = NetworkSecurityPolicy.getInstance();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                return policy.isCleartextTrafficPermitted(host);
+            }
+            return policy.isCleartextTrafficPermitted();
+        }
+        return true;
     }
 }

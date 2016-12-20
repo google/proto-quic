@@ -11,6 +11,7 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
+#include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -22,7 +23,7 @@ class QuicDataReader;
 // verify a hash (fnv128) over both the payload and associated data.
 class QUIC_EXPORT_PRIVATE NullDecrypter : public QuicDecrypter {
  public:
-  NullDecrypter();
+  explicit NullDecrypter(Perspective perspective);
   ~NullDecrypter() override {}
 
   // QuicDecrypter implementation
@@ -30,7 +31,8 @@ class QUIC_EXPORT_PRIVATE NullDecrypter : public QuicDecrypter {
   bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
   bool SetPreliminaryKey(base::StringPiece key) override;
   bool SetDiversificationNonce(const DiversificationNonce& nonce) override;
-  bool DecryptPacket(QuicPathId path_id,
+  bool DecryptPacket(QuicVersion version,
+                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      base::StringPiece associated_data,
                      base::StringPiece ciphertext,
@@ -45,7 +47,11 @@ class QUIC_EXPORT_PRIVATE NullDecrypter : public QuicDecrypter {
 
  private:
   bool ReadHash(QuicDataReader* reader, uint128* hash);
-  uint128 ComputeHash(base::StringPiece data1, base::StringPiece data2) const;
+  uint128 ComputeHash(QuicVersion version,
+                      base::StringPiece data1,
+                      base::StringPiece data2) const;
+
+  Perspective perspective_;
 
   DISALLOW_COPY_AND_ASSIGN(NullDecrypter);
 };

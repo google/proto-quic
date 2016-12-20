@@ -79,6 +79,12 @@ bool StoreKeyPair(const uint8_t* public_key,
   return ret;
 }
 
+bool IsCleartextPermitted(const std::string& host) {
+  JNIEnv* env = AttachCurrentThread();
+  ScopedJavaLocalRef<jstring> host_string = ConvertUTF8ToJavaString(env, host);
+  return Java_AndroidNetworkLibrary_isCleartextPermitted(env, host_string);
+}
+
 bool HaveOnlyLoopbackAddresses() {
   JNIEnv* env = AttachCurrentThread();
   return Java_AndroidNetworkLibrary_haveOnlyLoopbackAddresses(env);

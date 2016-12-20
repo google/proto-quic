@@ -65,7 +65,8 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderPackets : public TcpCubicSenderBase {
                     QuicByteCount prior_in_flight) override;
   void MaybeIncreaseCwnd(QuicPacketNumber acked_packet_number,
                          QuicByteCount acked_bytes,
-                         QuicByteCount prior_in_flight) override;
+                         QuicByteCount prior_in_flight,
+                         QuicTime event_time) override;
   void HandleRetransmissionTimeout() override;
 
  private:

@@ -36,6 +36,7 @@ QuicFlowController::QuicFlowController(QuicConnection* connection,
   receive_window_size_limit_ = (id_ == kConnectionLevelId)
                                    ? kSessionReceiveWindowLimit
                                    : kStreamReceiveWindowLimit;
+  DCHECK_LE(receive_window_size_, receive_window_size_limit_);
 
   DVLOG(1) << ENDPOINT << "Created flow controller for stream " << id_
            << ", setting initial receive window offset to: "
@@ -240,6 +241,7 @@ uint64_t QuicFlowController::SendWindowSize() const {
 }
 
 void QuicFlowController::UpdateReceiveWindowSize(QuicStreamOffset size) {
+  DCHECK_LE(size, receive_window_size_limit_);
   DVLOG(1) << ENDPOINT << "UpdateReceiveWindowSize for stream " << id_ << ": "
            << size;
   if (receive_window_size_ != receive_window_offset_) {

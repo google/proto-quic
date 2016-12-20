@@ -28,7 +28,8 @@ QuicSpdyClientStream::QuicSpdyClientStream(QuicStreamId id,
       response_code_(0),
       header_bytes_read_(0),
       header_bytes_written_(0),
-      session_(session) {}
+      session_(session),
+      has_preliminary_headers_(false) {}
 
 QuicSpdyClientStream::~QuicSpdyClientStream() {}
 
@@ -61,6 +62,15 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(
                 << response_headers_[":status"].as_string();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
     return;
+  }
+
+  if (FLAGS_quic_supports_100_continue && response_code_ == 100 &&
+      !has_preliminary_headers_) {
+    // These are preliminary 100 Continue headers, not the actual response
+    // headers.
+    set_headers_decompressed(false);
+    has_preliminary_headers_ = true;
+    preliminary_headers_ = std::move(response_headers_);
   }
 
   ConsumeHeaderList();

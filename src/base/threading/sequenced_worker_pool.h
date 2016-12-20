@@ -188,11 +188,13 @@ class BASE_EXPORT SequencedWorkerPool : public TaskRunner {
   static void EnableForProcess();
 
   // Same as EnableForProcess(), but tasks are redirected to the registered
-  // TaskScheduler. There must be a registered TaskScheduler when this is
+  // TaskScheduler. All redirections' TaskPriority will be capped to
+  // |max_task_priority|. There must be a registered TaskScheduler when this is
   // called.
   // TODO(gab): Remove this if http://crbug.com/622400 fails
   // (SequencedWorkerPool will be phased out completely otherwise).
-  static void EnableWithRedirectionToTaskSchedulerForProcess();
+  static void EnableWithRedirectionToTaskSchedulerForProcess(
+      TaskPriority max_task_priority = TaskPriority::HIGHEST);
 
   // Disables posting tasks to this process' SequencedWorkerPools. Calling this
   // while there are active SequencedWorkerPools is not supported. This is not

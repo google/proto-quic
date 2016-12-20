@@ -89,7 +89,7 @@ QUIC_FLAG(bool, FLAGS_quic_release_crypto_stream_buffer, true)
 
 // Use a more conservative backoff of 2x instead of 1.5x for handshake
 // retransmissions, as well as a larger minimum.
-QUIC_FLAG(bool, FLAGS_quic_conservative_handshake_retransmits, true)
+QUIC_FLAG(bool, FLAGS_quic_conservative_handshake_retransmits, false)
 
 // If true, buffer packets while parsing public headers instead of parsing down
 // if CHLO is already buffered.
@@ -101,7 +101,7 @@ QUIC_FLAG(bool, FLAGS_quic_buffer_packets_after_chlo, false)
 QUIC_FLAG(bool, FLAGS_quic_receive_packet_once_decrypted, false)
 
 // If true, enable the Lazy FACK style loss detection in QUIC.
-QUIC_FLAG(bool, FLAGS_quic_enable_lazy_fack, true)
+QUIC_FLAG(bool, FLAGS_quic_enable_lazy_fack, false)
 
 // If true, do not override a connection in global map if exists. Only create
 // QUIC session if it is successfully inserted to the global map. Toss the
@@ -151,3 +151,30 @@ QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, true)
 // If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
 // beginning of a connection.
 QUIC_FLAG(bool, FLAGS_quic_send_max_header_list_size, true)
+
+// If true, fix quantization of CubicBytes while performing convex increases.
+QUIC_FLAG(bool, FLAGS_quic_fix_cubic_bytes_quantization, false)
+
+// If true, QUIC cubic code will use the event time when adjusting CWND after an
+// ACK instead of the clock\'s current approximate time.
+QUIC_FLAG(bool, FLAGS_quic_use_event_time, false)
+
+// If true, lazy allocate and early release memeory used in
+// QuicStreamSequencerBuffer to buffer incoming data.
+QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
+
+// If true, Makes GFE respect the connection options for initial flow control
+// window larger than 32 KB.
+QUIC_FLAG(bool, FLAGS_quic_large_ifw_options, false)
+
+// If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
+QUIC_FLAG(bool, FLAGS_quic_fix_beta_last_max, false)
+
+// If true, enable QUIC v37.
+QUIC_FLAG(bool, FLAGS_quic_enable_version_37, false)
+
+// If true, disables QUIC v34.
+QUIC_FLAG(bool, FLAGS_quic_disable_version_34, false)
+
+// Allow quic to properly support proxying 100 Continue responses.
+QUIC_FLAG(bool, FLAGS_quic_supports_100_continue, false)

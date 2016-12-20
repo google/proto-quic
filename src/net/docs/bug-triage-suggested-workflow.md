@@ -6,12 +6,12 @@
 
 * Look at new unconfirmed bugs since noon PST on the last triager's rotation.
   [Use this issue tracker
-  query](https://code.google.com/p/chromium/issues/list?can=2&q=status%3Aunconfirmed&sort=-id&num=1000).
+  query](https://bugs.chromium.org/p/chromium/issues/list?q=status%3Aunconfirmed&sort=-id&num=1000).
 
 * Read the title of the bug.
 
-* If a bug looks like it might be network/download/safe-browsing related,
-  middle click (or command-click on OSX) to open it in a new tab.
+* If a bug looks like it might be network related, middle click (or
+  command-click on OSX) to open it in a new tab.
 
 * If a user provides a crash ID for a crasher for a bug that could be
   net-related, look at the crash stack at
@@ -184,8 +184,8 @@ For each alert that fires, determine if it's a real alert and file a bug if so.
   mark it as WontFix.
 
 * On Windows, you may want to look for weird dlls associated with the crashes.
-    This generally needs crashes from a fair number of different users to reach
-    any conclusions.
+  This generally needs crashes from a fair number of different users to reach
+  any conclusions.
     * To get a list of loaded modules in related crash dumps, select
       modules->3rd party in the left pane.  It can be difficult to distinguish
       between safe dlls and those likely to cause problems, but even if you're

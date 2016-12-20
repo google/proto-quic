@@ -95,7 +95,8 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   // window.
   virtual void MaybeIncreaseCwnd(QuicPacketNumber acked_packet_number,
                                  QuicByteCount acked_bytes,
-                                 QuicByteCount prior_in_flight) = 0;
+                                 QuicByteCount prior_in_flight,
+                                 QuicTime event_time) = 0;
 
   // Called when a retransmission has occured which resulted in packets
   // being retransmitted.
@@ -112,7 +113,8 @@ class QUIC_EXPORT_PRIVATE TcpCubicSenderBase : public SendAlgorithmInterface {
   // TODO(ianswett): Remove these and migrate to OnCongestionEvent.
   void OnPacketAcked(QuicPacketNumber acked_packet_number,
                      QuicByteCount acked_bytes,
-                     QuicByteCount prior_in_flight);
+                     QuicByteCount prior_in_flight,
+                     QuicTime event_time);
 
  protected:
   // TODO(rch): Make these private and clean up subclass access to them.

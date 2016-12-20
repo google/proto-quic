@@ -94,7 +94,8 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   // This method takes ownership of the dump provider and guarantees that:
   //  - The |mdp| will be deleted at some point in the near future.
   //  - Its deletion will not happen concurrently with the OnMemoryDump() call.
-  // Note that OnMemoryDump() calls can still happen after this method returns.
+  // Note that OnMemoryDump() and PollFastMemoryTotal() calls can still happen
+  // after this method returns.
   void UnregisterAndDeleteDumpProviderSoon(
       std::unique_ptr<MemoryDumpProvider> mdp);
 
@@ -329,6 +330,13 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   // runner.
   void InvokeOnMemoryDump(ProcessMemoryDumpAsyncState* owned_pmd_async_state);
 
+  // Records a quick total memory usage in |memory_total|. This is used to track
+  // and detect peaks in the memory usage of the process without having to
+  // record all data from dump providers. This value is approximate to trade-off
+  // speed, and not consistent with the rest of the memory-infra metrics. Must
+  // be called on the dump thread.
+  void PollFastMemoryTotal(uint64_t* memory_total);
+
   // Helper for RegierDumpProvider* functions.
   void RegisterDumpProviderInternal(
       MemoryDumpProvider* mdp,
@@ -340,9 +348,20 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   void UnregisterDumpProviderInternal(MemoryDumpProvider* mdp,
                                       bool take_mdp_ownership_and_delete_async);
 
+  // Adds / removes provider that supports polling to
+  // |dump_providers_for_polling_|.
+  void RegisterPollingMDPOnDumpThread(
+      scoped_refptr<MemoryDumpProviderInfo> mdpinfo);
+  void UnregisterPollingMDPOnDumpThread(
+      scoped_refptr<MemoryDumpProviderInfo> mdpinfo);
+
   // An ordererd set of registered MemoryDumpProviderInfo(s), sorted by task
   // runner affinity (MDPs belonging to the same task runners are adjacent).
   MemoryDumpProviderInfo::OrderedSet dump_providers_;
+
+  // A copy of mdpinfo list that support polling. It must be accessed only on
+  // the dump thread if dump thread exists.
+  MemoryDumpProviderInfo::OrderedSet dump_providers_for_polling_;
 
   // Shared among all the PMDs to keep state scoped to the tracing session.
   scoped_refptr<MemoryDumpSessionState> session_state_;

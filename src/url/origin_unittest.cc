@@ -90,19 +90,10 @@ TEST(OriginTest, ConstructFromTuple) {
                     << test_case.port;
     }
     SCOPED_TRACE(scope_message);
-
-    url::Origin origin_without_suborigin =
-        url::Origin::CreateFromNormalizedTuple(test_case.scheme, test_case.host,
-                                               test_case.port);
-
     url::Origin origin_with_suborigin =
         url::Origin::CreateFromNormalizedTupleWithSuborigin(
             test_case.scheme, test_case.host, test_case.port,
             test_case.suborigin);
-
-    EXPECT_EQ(test_case.scheme, origin_without_suborigin.scheme());
-    EXPECT_EQ(test_case.host, origin_without_suborigin.host());
-    EXPECT_EQ(test_case.port, origin_without_suborigin.port());
 
     EXPECT_EQ(test_case.scheme, origin_with_suborigin.scheme());
     EXPECT_EQ(test_case.host, origin_with_suborigin.host());

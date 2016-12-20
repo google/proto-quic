@@ -838,7 +838,14 @@ TEST(NetworkQualityEstimatorTest, DefaultHttpRTTBasedThresholds) {
 
 // Tests that |GetEffectiveConnectionType| returns correct connection type when
 // only transport RTT thresholds are specified in the variation params.
-TEST(NetworkQualityEstimatorTest, ObtainThresholdsOnlyTransportRTT) {
+#if defined(OS_IOS)
+// Flaky on iOS: crbug.com/672917.
+#define MAYBE_ObtainThresholdsOnlyTransportRTT \
+  DISABLED_ObtainThresholdsOnlyTransportRTT
+#else
+#define MAYBE_ObtainThresholdsOnlyTransportRTT ObtainThresholdsOnlyTransportRTT
+#endif
+TEST(NetworkQualityEstimatorTest, MAYBE_ObtainThresholdsOnlyTransportRTT) {
   std::map<std::string, std::string> variation_params;
   variation_params["effective_connection_type_algorithm"] =
       "TransportRTTOrDownstreamThroughput";

@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  */
 @JNINamespace("base::android")
 public class RecordHistogram {
-    private static boolean sIsDisabledForTests = false;
+    private static boolean sIsDisabledForTests;
     private static Map<String, Long> sCache =
             Collections.synchronizedMap(new HashMap<String, Long>());
 

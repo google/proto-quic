@@ -112,7 +112,7 @@ QuicCryptoClientConfig::CachedState::GetServerConfig() const {
   }
 
   if (!scfg_.get()) {
-    scfg_.reset(CryptoFramer::ParseMessage(server_config_));
+    scfg_ = CryptoFramer::ParseMessage(server_config_);
     DCHECK(scfg_.get());
   }
   return scfg_.get();
@@ -150,7 +150,7 @@ QuicCryptoClientConfig::CachedState::SetServerConfig(StringPiece server_config,
   const CryptoHandshakeMessage* new_scfg;
 
   if (!matches_existing) {
-    new_scfg_storage.reset(CryptoFramer::ParseMessage(server_config));
+    new_scfg_storage = CryptoFramer::ParseMessage(server_config);
     new_scfg = new_scfg_storage.get();
   } else {
     new_scfg = GetServerConfig();
@@ -477,7 +477,7 @@ void QuicCryptoClientConfig::FillInchoateClientHello(
     hashes.reserve(certs.size());
     for (std::vector<string>::const_iterator i = certs.begin();
          i != certs.end(); ++i) {
-      hashes.push_back(QuicUtils::FNV1a_64_Hash(i->data(), i->size()));
+      hashes.push_back(QuicUtils::FNV1a_64_Hash(*i));
     }
     out->SetVector(kCCRT, hashes);
   }
@@ -657,9 +657,10 @@ QuicErrorCode QuicCryptoClientConfig::FillClientHello(
     std::unique_ptr<char[]> output(new char[encrypted_len]);
     size_t output_size = 0;
     if (!crypters.encrypter->EncryptPacket(
-            kDefaultPathId /* path id */, 0 /* packet number */,
-            StringPiece() /* associated data */, cetv_plaintext.AsStringPiece(),
-            output.get(), &output_size, encrypted_len)) {
+            preferred_version, kDefaultPathId /* path id */,
+            0 /* packet number */, StringPiece() /* associated data */,
+            cetv_plaintext.AsStringPiece(), output.get(), &output_size,
+            encrypted_len)) {
       *error_details = "Packet encryption failed";
       return QUIC_ENCRYPTION_FAILURE;
     }

@@ -174,7 +174,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
 
     StringPiece scfg;
     ASSERT_TRUE(out_.GetStringPiece(kSCFG, &scfg));
-    server_config_.reset(CryptoFramer::ParseMessage(scfg));
+    server_config_ = CryptoFramer::ParseMessage(scfg);
 
     StringPiece scid;
     ASSERT_TRUE(server_config_->GetStringPiece(kSCID, &scid));

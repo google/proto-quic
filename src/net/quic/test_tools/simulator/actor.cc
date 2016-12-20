@@ -5,10 +5,12 @@
 #include "net/quic/test_tools/simulator/actor.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
+using std::string;
+
 namespace net {
 namespace simulator {
 
-Actor::Actor(Simulator* simulator, std::string name)
+Actor::Actor(Simulator* simulator, string name)
     : simulator_(simulator),
       clock_(simulator->GetClock()),
       name_(std::move(name)) {

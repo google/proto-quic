@@ -18,6 +18,7 @@
 # chrome's build dependencies are changed.
 
 import hashlib
+import json
 import platform
 import optparse
 import os
@@ -37,46 +38,7 @@ import gyp_environment
 URL_PREFIX = 'https://commondatastorage.googleapis.com'
 URL_PATH = 'chrome-linux-sysroot/toolchain'
 
-SYSROOTS = {
-    ('Wheezy', 'amd64'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
-        'Tarball' : 'debian_wheezy_amd64_sysroot.tgz',
-        'Sha1Sum' : 'cc43f16c817fbb8c525405363ece863347210a30',
-        'SysrootDir' : 'debian_wheezy_amd64-sysroot'
-    },
-    ('Wheezy', 'arm'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
-        'Tarball' : 'debian_wheezy_arm_sysroot.tgz',
-        'Sha1Sum' : 'c09ac9576642d81209f25cde19a64f427b5fbaf8',
-        'SysrootDir' : 'debian_wheezy_arm-sysroot'
-    },
-    ('Wheezy', 'i386'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
-        'Tarball' : 'debian_wheezy_i386_sysroot.tgz',
-        'Sha1Sum' : '1b28326d17094b9d3616579b988eb5554c3dc9f8',
-        'SysrootDir' : 'debian_wheezy_i386-sysroot'
-    },
-    ('Wheezy', 'mips'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
-        'Tarball' : 'debian_wheezy_mips_sysroot.tgz',
-        'Sha1Sum' : 'c0948a2c955588079dc31d688e8105730744ef45',
-        'SysrootDir' : 'debian_wheezy_mips-sysroot'
-    },
-    ('Jessie', 'arm64'): {
-        'Revision' : '5735a5e9605d549acb6495e1fb65384a54fe0a48',
-        'Tarball' : 'debian_jessie_arm64_sysroot.tgz',
-        'Sha1Sum' : '82ebae900d0aadd52cf76a8e7cdb6a782df6ef28',
-        'SysrootDir' : 'debian_jessie_arm64-sysroot'
-    },
-    ('Precise', 'amd64'): {
-        'Revision' : '7d200a1ddfeb50dbf9f7e2c1c4ff1080679edf02',
-        'Tarball' : 'ubuntu_precise_amd64_sysroot.tgz',
-        'Sha1Sum' : 'fdf81c55a0c6decd44f07781ebf163f97deb26cc',
-        'SysrootDir' : 'ubuntu_precise_amd64-sysroot'
-    }
-}
-
-valid_archs = ('arm', 'arm64', 'i386', 'amd64', 'mips')
+VALID_ARCHS = ('arm', 'arm64', 'i386', 'amd64', 'mips')
 
 
 class Error(Exception):
@@ -179,8 +141,8 @@ def main(args):
   parser.add_option('--running-as-hook', action='store_true',
                     default=False, help='Used when running from gclient hooks.'
                                         ' Installs default sysroot images.')
-  parser.add_option('--arch', type='choice', choices=valid_archs,
-                    help='Sysroot architecture: %s' % ', '.join(valid_archs))
+  parser.add_option('--arch', type='choice', choices=VALID_ARCHS,
+                    help='Sysroot architecture: %s' % ', '.join(VALID_ARCHS))
   options, _ = parser.parse_args(args)
   if options.running_as_hook and not sys.platform.startswith('linux'):
     return 0
@@ -215,13 +177,16 @@ def InstallDefaultSysrootForArch(target_arch):
 
 def InstallSysroot(target_platform, target_arch):
   # The sysroot directory should match the one specified in build/common.gypi.
-  # TODO(thestig) Consider putting this else where to avoid having to recreate
+  # TODO(thestig) Consider putting this elsewhere to avoid having to recreate
   # it on every build.
   linux_dir = os.path.dirname(SCRIPT_DIR)
 
-  if (target_platform, target_arch) not in SYSROOTS:
+  sysroots_file = os.path.join(SCRIPT_DIR, 'sysroots.json')
+  sysroots = json.load(open(sysroots_file))
+  sysroot_key = '%s_%s' % (target_platform.lower(), target_arch)
+  if sysroot_key not in sysroots:
     raise Error('No sysroot for: %s %s' % (target_platform, target_arch))
-  sysroot_dict = SYSROOTS[(target_platform, target_arch)]
+  sysroot_dict = sysroots[sysroot_key]
   revision = sysroot_dict['Revision']
   tarball_filename = sysroot_dict['Tarball']
   tarball_sha1sum = sysroot_dict['Sha1Sum']

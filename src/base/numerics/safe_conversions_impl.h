@@ -50,6 +50,36 @@ constexpr T BinaryComplement(T x) {
   return static_cast<T>(~x);
 }
 
+// Determines if a numeric value is negative without throwing compiler
+// warnings on: unsigned(value) < 0.
+template <typename T,
+          typename std::enable_if<std::is_signed<T>::value>::type* = nullptr>
+constexpr bool IsValueNegative(T value) {
+  static_assert(std::is_arithmetic<T>::value, "Argument must be numeric.");
+  return value < 0;
+}
+
+template <typename T,
+          typename std::enable_if<!std::is_signed<T>::value>::type* = nullptr>
+constexpr bool IsValueNegative(T) {
+  static_assert(std::is_arithmetic<T>::value, "Argument must be numeric.");
+  return false;
+}
+
+// This performs a fast negation, returning a signed value. It works on unsigned
+// arguments, but probably doesn't do what you want for any unsigned value
+// larger than max / 2 + 1 (i.e. signed min cast to unsigned).
+template <typename T>
+constexpr typename std::make_signed<T>::type ConditionalNegate(
+    T x,
+    bool is_negative) {
+  static_assert(std::is_integral<T>::value, "Type must be integral");
+  using SignedT = typename std::make_signed<T>::type;
+  using UnsignedT = typename std::make_unsigned<T>::type;
+  return static_cast<SignedT>(
+      (static_cast<UnsignedT>(x) ^ -SignedT(is_negative)) + is_negative);
+}
+
 // This performs a safe, non-branching absolute value via unsigned overflow.
 template <typename T>
 constexpr T SafeUnsignedAbsImpl(T value, T sign_mask) {
@@ -181,28 +211,44 @@ constexpr inline RangeConstraint GetRangeConstraint(bool is_in_upper_bound,
 // To fix this bug we manually truncate the maximum value when the destination
 // type is an integral of larger precision than the source floating-point type,
 // such that the resulting maximum is represented exactly as a floating point.
-template <typename Dst, typename Src>
+template <typename Dst,
+          typename Src,
+          template <typename> class Bounds = std::numeric_limits>
 struct NarrowingRange {
   using SrcLimits = typename std::numeric_limits<Src>;
   using DstLimits = typename std::numeric_limits<Dst>;
-  // The following logic avoids warnings where the max function is
-  // instantiated with invalid values for a bit shift (even though
-  // such a function can never be called).
-  static const int shift = (MaxExponent<Src>::value > MaxExponent<Dst>::value &&
-                            SrcLimits::digits < DstLimits::digits &&
-                            SrcLimits::is_iec559 &&
-                            DstLimits::is_integer)
-                               ? (DstLimits::digits - SrcLimits::digits)
-                               : 0;
 
-  static constexpr Dst max() {
-    // We use UINTMAX_C below to avoid compiler warnings about shifting floating
-    // points. Since it's a compile time calculation, it shouldn't have any
-    // performance impact.
-    return DstLimits::max() - static_cast<Dst>((UINTMAX_C(1) << shift) - 1);
+  // Computes the mask required to make an accurate comparison between types.
+  static const int kShift =
+      (MaxExponent<Src>::value > MaxExponent<Dst>::value &&
+       SrcLimits::digits < DstLimits::digits)
+          ? (DstLimits::digits - SrcLimits::digits)
+          : 0;
+  template <
+      typename T,
+      typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
+
+  // Masks out the integer bits that are beyond the precision of the
+  // intermediate type used for comparison.
+  static constexpr T Adjust(T value) {
+    static_assert(std::is_same<T, Dst>::value, "");
+    static_assert(kShift < DstLimits::digits, "");
+    return static_cast<T>(
+        ConditionalNegate(SafeUnsignedAbs(value) & ~((T(1) << kShift) - T(1)),
+                          IsValueNegative(value)));
   }
 
-  static constexpr Dst lowest() { return DstLimits::lowest(); }
+  template <typename T,
+            typename std::enable_if<std::is_floating_point<T>::value>::type* =
+                nullptr>
+  static constexpr T Adjust(T value) {
+    static_assert(std::is_same<T, Dst>::value, "");
+    static_assert(kShift == 0, "");
+    return value;
+  }
+
+  static constexpr Dst max() { return Adjust(Bounds<Dst>::max()); }
+  static constexpr Dst lowest() { return Adjust(Bounds<Dst>::lowest()); }
 };
 
 template <typename Dst,

@@ -7,6 +7,7 @@
 # to define certain environment variables: e.g.
 #  DISTRO=ubuntu
 #  DIST=trusty
+#  DIST_UPDATES=trusty-updates
 #  APT_REPO=http://archive.ubuntu.com/ubuntu
 #  KEYRING_FILE=/usr/share/keyrings/ubuntu-archive-keyring.gpg
 #  DEBIAN_PACKAGES="gcc libz libssl"
@@ -103,8 +104,10 @@ DownloadOrCopy() {
   echo "$1" | grep -qs ^http:// && HTTP=1
   if [ "$HTTP" = "1" ]; then
     SubBanner "downloading from $1 -> $2"
-    wget "$1" -O "${2}.partial"
-    mv "${2}.partial" $2
+    # Appending the "$$" shell pid is necessary here to prevent concurrent
+    # instances of sysroot-creator.sh from trying to write to the same file.
+    wget "$1" -O "${2}.partial.$$"
+    mv "${2}.partial.$$" $2
   else
     SubBanner "copying from $1"
     cp "$1" "$2"
@@ -554,7 +557,7 @@ BuildSysrootMips() {
     return
   fi
   ClearInstallDir
-  local package_file="$BUILD_DIR/package_with_sha256sum_arm"
+  local package_file="$BUILD_DIR/package_with_sha256sum_mips"
   GeneratePackageListMips "$package_file"
   local files_and_sha256sums="$(cat ${package_file})"
   StripChecksumsFromPackageList "$package_file"
@@ -813,6 +816,44 @@ UpdatePackageListsAll() {
   RunCommand UpdatePackageListsMips
 }
 
+#@
+#@ PrintArchitectures
+#@
+#@    Prints supported architectures.
+PrintArchitectures() {
+  if [ "$HAS_ARCH_AMD64" = "1" ]; then
+    echo Amd64
+  fi
+  if [ "$HAS_ARCH_I386" = "1" ]; then
+    echo I386
+  fi
+  if [ "$HAS_ARCH_ARM" = "1" ]; then
+    echo ARM
+  fi
+  if [ "$HAS_ARCH_ARM64" = "1" ]; then
+    echo ARM64
+  fi
+  if [ "$HAS_ARCH_MIPS" = "1" ]; then
+    echo Mips
+  fi
+}
+
+#@
+#@ PrintDistro
+#@
+#@    Prints distro.  eg: ubuntu
+PrintDistro() {
+  echo ${DISTRO}
+}
+
+#@
+#@ DumpRelease
+#@
+#@    Prints disto release.  eg: trusty
+PrintRelease() {
+  echo ${DIST}
+}
+
 RunCommand() {
   SetEnvironmentVariables "$1"
   SanityCheck
@@ -831,7 +872,7 @@ elif [ "$(type -t $1)" != "function" ]; then
   exit 1
 else
   ChangeDirectory
-  if echo $1 | grep -qs "All$"; then
+  if echo $1 | grep -qs --regexp='\(^Print\)\|\(All$\)'; then
     "$@"
   else
     RunCommand "$@"

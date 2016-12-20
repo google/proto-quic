@@ -6,7 +6,10 @@ from telemetry.page import page
 from telemetry.page import cache_temperature as cache_temperature_module
 from telemetry.page import shared_page_state
 
+
 _TTI_WAIT_TIME = 10
+_NAVIGATION_TIMEOUT = 180
+_WEB_CONTENTS_TIMEOUT = 180
 
 class PageCyclerStory(page.Page):
 
@@ -19,6 +22,13 @@ class PageCyclerStory(page.Page):
         cache_temperature=cache_temperature,
         **kwargs)
 
+  def RunNavigateSteps(self, action_runner):
+    url = self.file_path_url_with_scheme if self.is_file else self.url
+    action_runner.Navigate(url,
+                           self.script_to_evaluate_on_commit,
+                           timeout_in_seconds=_NAVIGATION_TIMEOUT)
+
   def RunPageInteractions(self, action_runner):
-    action_runner.tab.WaitForDocumentReadyStateToBeComplete()
+    action_runner.tab.WaitForDocumentReadyStateToBeComplete(
+        _WEB_CONTENTS_TIMEOUT)
     action_runner.Wait(_TTI_WAIT_TIME)

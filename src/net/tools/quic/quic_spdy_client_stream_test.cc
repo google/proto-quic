@@ -118,6 +118,34 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming) {
   EXPECT_EQ(body_, stream_->data());
 }
 
+TEST_F(QuicSpdyClientStreamTest, TestFraming100Continue) {
+  headers_[":status"] = "100";
+  FLAGS_quic_supports_100_continue = true;
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
+  stream_->OnStreamFrame(
+      QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
+  EXPECT_EQ("100", stream_->preliminary_headers().find(":status")->second);
+  EXPECT_EQ(0u, stream_->response_headers().size());
+  EXPECT_EQ(100, stream_->response_code());
+  EXPECT_EQ("", stream_->data());
+}
+
+TEST_F(QuicSpdyClientStreamTest, TestFraming100ContinueNoFlag) {
+  headers_[":status"] = "100";
+  FLAGS_quic_supports_100_continue = false;
+  auto headers = AsHeaderList(headers_);
+  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
+                              headers);
+  stream_->OnStreamFrame(
+      QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
+  EXPECT_EQ(0u, stream_->preliminary_headers().size());
+  EXPECT_EQ("100", stream_->response_headers().find(":status")->second);
+  EXPECT_EQ(100, stream_->response_code());
+  EXPECT_EQ(body_, stream_->data());
+}
+
 TEST_F(QuicSpdyClientStreamTest, TestFramingOnePacket) {
   auto headers = AsHeaderList(headers_);
   stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),

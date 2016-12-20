@@ -1175,7 +1175,8 @@ TEST_P(SpdyFramerTest, MultiValueHeader) {
   header_set["name"] = value;
   string buffer;
   HpackEncoder encoder(ObtainHpackHuffmanTable());
-  encoder.EncodeHeaderSetWithoutCompression(header_set, &buffer);
+  encoder.DisableCompression();
+  encoder.EncodeHeaderSet(header_set, &buffer);
   frame.WriteBytes(&buffer[0], buffer.size());
   // write the length
   frame.RewriteLength(framer);
@@ -2343,7 +2344,8 @@ TEST_P(SpdyFramerTest, CreateContinuationUncompressed) {
   header_block["foo"] = "bar";
   auto buffer = base::MakeUnique<string>();
   HpackEncoder encoder(ObtainHpackHuffmanTable());
-  encoder.EncodeHeaderSetWithoutCompression(header_block, buffer.get());
+  encoder.DisableCompression();
+  encoder.EncodeHeaderSet(header_block, buffer.get());
 
   SpdyContinuationIR continuation(42);
   continuation.take_encoding(std::move(buffer));

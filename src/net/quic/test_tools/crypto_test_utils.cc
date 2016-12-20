@@ -578,8 +578,7 @@ uint64_t CryptoTestUtils::LeafCertHashForTesting() {
     return 0;
   }
 
-  return QuicUtils::FNV1a_64_Hash(chain->certs.at(0).c_str(),
-                                  chain->certs.at(0).length());
+  return QuicUtils::FNV1a_64_Hash(chain->certs.at(0));
 }
 
 class MockCommonCertSets : public CommonCertSets {

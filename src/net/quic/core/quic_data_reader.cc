@@ -78,7 +78,7 @@ bool QuicDataReader::ReadStringPiece(StringPiece* result, size_t size) {
   }
 
   // Set result.
-  result->set(data_ + pos_, size);
+  *result = StringPiece(data_ + pos_, size);
 
   // Iterate.
   pos_ += size;
