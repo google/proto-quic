@@ -20,8 +20,6 @@ cp $PROTO_QUIC_ROOT/net/BUILD.gn \
 cp $PROTO_QUIC_ROOT/net/net.gypi $PROTO_QUIC_ROOT/../modified_files/net/net.gypi
 cp $PROTO_QUIC_ROOT/net/test/run_all_unittests.cc \
    $PROTO_QUIC_ROOT/../modified_files/net/test/run_all_unittests.cc
-cp $PROTO_QUIC_ROOT/build/config/sysroot.gni \
-   $PROTO_QUIC_ROOT/../modified_files//build/config/sysroot.gni
 cp $PROTO_QUIC_ROOT/url/BUILD.gn $PROTO_QUIC_ROOT/../modified_files/url/BUILD.gn
 
 echo "staging changes to upload"

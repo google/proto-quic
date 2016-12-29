@@ -17,9 +17,10 @@ import shutil
 import subprocess
 import sys
 
-usage = "export CHROME_ROOT=/path/to/chrome/src;export PROTO_QUIC_ROOT=/path/to/proto-quic; update.py"
+usage = "export CHROME_ROOT=/path/to/chrome/src;export PROTO_QUIC_ROOT=/path/to/proto-quic/src; update.py"
 chrome_root = os.environ.get('CHROME_ROOT')
 proto_quic_root = os.environ.get('PROTO_QUIC_ROOT')
+tools_dir = proto_quic_root + "/../proto_quic_tools"
 modified_files_dir = proto_quic_root + "/../modified_files"
 print "Running with chrome_root=", chrome_root, ", proto_quic_root=", proto_quic_root;
 if chrome_root == None or proto_quic_root == None:
@@ -113,16 +114,19 @@ def copy_modified_files():
 
 # Since proto-quic users do not use gclient sync, runs necessary parts of it.
 def sync():
-  command = "/" + proto_quic_root + "proto_quic_tools/sync.sh"
-  print "running", command;
+  command = tools_dir + "/sync.sh"
+  print "running", command
   os.system(command)
 
 def cleanup():
-  command = "/" + proto_quic_root + "proto_quic_tools/cleanup.sh"
-  print "running", command;
+  command = tools_dir + "/cleanup.sh"
+  print "running", command
   os.system(command)
 
 
+# In the functions called below, the sequence of copy, merge, copy, and cleanup attempts
+# to leave the workspace in exactly the state that someone checking out repo will see.
+# Finally sync pulls down files required for building which are not part of the repo.
 copy_directories()
 merge_net_gypi()
 copy_modified_files()
