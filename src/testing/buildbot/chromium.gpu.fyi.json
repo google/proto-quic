@@ -169,29 +169,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "0000:0000",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=android-chromium",
@@ -592,30 +569,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "device_os": "M",
-              "device_type": "bullhead",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=android-chromium",
@@ -933,29 +886,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "0000:0000",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -1328,29 +1258,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "0000:0000",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=android-chromium",
@@ -1662,29 +1569,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "0000:0000",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -2026,29 +1910,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=android-chromium",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "0000:0000",
-              "os": "Android"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=android-chromium",
@@ -2220,7 +2081,11 @@
       "All"
     ]
   },
-  "Linux ChromiumOS Ozone Builder": {},
+  "Linux ChromiumOS Ozone Builder": {
+    "additional_compile_targets": [
+      "All"
+    ]
+  },
   "Linux Debug (NVIDIA)": {
     "gtest_tests": [
       {
@@ -2379,29 +2244,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -2771,29 +2613,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=debug",
@@ -3146,29 +2965,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6779",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -3577,29 +3373,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6613",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -3993,29 +3766,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:041a",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -4394,29 +4144,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:0f02",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -4885,29 +4612,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -5312,29 +5016,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Linux"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -5756,29 +5437,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:679e",
-              "os": "Mac-10.10"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=debug",
@@ -6095,29 +5753,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -6462,29 +6097,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:679e",
-              "os": "Mac-10.10"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -6873,29 +6485,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -7262,30 +6851,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6821",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=debug",
@@ -7633,30 +7198,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6821",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -8043,30 +7584,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6821",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -8513,34 +8030,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
-            },
-            {
-              "gpu": "1002:6821",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -8942,30 +8431,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:0fe9",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=debug",
@@ -9313,30 +8778,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:0fe9",
-              "hidpi": "1",
-              "os": "Mac"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -10237,7 +9678,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10254,7 +9695,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10270,7 +9711,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10286,7 +9727,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10302,7 +9743,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10320,7 +9761,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10339,7 +9780,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10355,7 +9796,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10382,7 +9823,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10405,7 +9846,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10428,30 +9869,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10474,7 +9892,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10503,7 +9921,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10540,7 +9958,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10563,7 +9981,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10586,7 +10004,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10609,7 +10027,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10632,7 +10050,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10655,7 +10073,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10678,7 +10096,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10697,7 +10115,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10714,7 +10132,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10730,7 +10148,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10746,7 +10164,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10762,7 +10180,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10780,7 +10198,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10799,7 +10217,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10815,7 +10233,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -10842,7 +10260,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10865,7 +10283,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10888,30 +10306,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10934,7 +10329,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -10963,7 +10358,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11000,7 +10395,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11023,7 +10418,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11046,7 +10441,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11069,7 +10464,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11092,7 +10487,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11115,7 +10510,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11138,7 +10533,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11157,7 +10552,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11174,7 +10569,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11190,7 +10585,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11206,7 +10601,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11222,7 +10617,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11240,7 +10635,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11259,7 +10654,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11275,7 +10670,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11291,7 +10686,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11318,7 +10713,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11341,7 +10736,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11364,30 +10759,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11410,7 +10782,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11439,7 +10811,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11476,7 +10848,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11499,7 +10871,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11522,7 +10894,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11547,7 +10919,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ],
           "shards": 15
@@ -11571,7 +10943,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11594,7 +10966,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11617,7 +10989,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11640,7 +11012,7 @@
           "dimension_sets": [
             {
               "gpu": "10de:104a",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11659,7 +11031,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11676,7 +11048,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11692,7 +11064,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11721,7 +11093,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11737,7 +11109,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11755,7 +11127,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11774,7 +11146,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11790,7 +11162,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         },
@@ -11817,7 +11189,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11840,7 +11212,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11863,30 +11235,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11909,7 +11258,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11938,7 +11287,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11975,7 +11324,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -11998,7 +11347,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12021,7 +11370,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12046,7 +11395,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ],
           "shards": 15
@@ -12070,7 +11419,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12093,7 +11442,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12116,7 +11465,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12139,7 +11488,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0412",
-              "os": "Windows-10-10586"
+              "os": "Windows-10"
             }
           ]
         }
@@ -12341,29 +11690,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6613",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -12778,29 +12104,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -13253,29 +12556,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=debug",
@@ -13496,23 +12776,6 @@
             }
           ]
         },
-        "test": "angle_end2end_tests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6779",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        },
         "test": "angle_unittests",
         "use_xvfb": false
       },
@@ -13688,29 +12951,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6779",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -14220,29 +13460,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "1002:6613",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -14696,29 +13913,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:041a",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -15157,29 +14351,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:0f02",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -15766,29 +14937,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -16265,29 +15413,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "8086:0412",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release",
@@ -16713,29 +15838,6 @@
         ],
         "isolate_name": "telemetry_gpu_test",
         "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug_x64",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
         "override_compile_targets": [
           "telemetry_gpu_test_run"
         ],
@@ -17239,29 +16341,6 @@
       },
       {
         "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release_x64",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
           "hardware_accelerated_feature",
           "--show-stdout",
           "--browser=release_x64",
@@ -17509,968 +16588,6 @@
             {
               "gpu": "10de:104a",
               "os": "Windows-2008ServerR2-SP1"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  "Win8 Debug (NVIDIA)": {
-    "gtest_tests": [
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "angle_end2end_tests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "angle_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "audio_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gl_tests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gl_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--use-angle=d3d9"
-        ],
-        "name": "gles2_conform_d3d9_test",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--use-angle=gl",
-          "--disable-gpu-sandbox"
-        ],
-        "name": "gles2_conform_gl_test",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      }
-    ],
-    "isolated_scripts": [
-      {
-        "args": [
-          "context_lost",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "context_lost_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "depth_capture",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "depth_capture_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_process",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "hardware_accelerated_feature",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "hardware_accelerated_feature_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "maps",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
-          "--os-type",
-          "win",
-          "--build-revision",
-          "${got_revision}",
-          "--test-machine-name",
-          "${buildername}"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "maps_pixel_test",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "pixel",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
-          "--refimg-cloud-storage-bucket",
-          "chromium-gpu-archive/reference-images",
-          "--os-type",
-          "win",
-          "--build-revision",
-          "${got_revision}",
-          "--test-machine-name",
-          "${buildername}"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "pixel_test",
-        "non_precommit_args": [
-          "--upload-refimg-to-cloud-storage"
-        ],
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "precommit_args": [
-          "--download-refimg-from-cloud-storage"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "screenshot_sync",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "screenshot_sync_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "trace_test",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "trace_test",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=d3d11 --use-passthrough-cmd-decoder"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_d3d11_passthrough_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=d3d9"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_d3d9_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=gl"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_gl_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=debug",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  "Win8 Release (NVIDIA)": {
-    "gtest_tests": [
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "angle_end2end_tests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--test-launcher-retry-limit=0"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "angle_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "audio_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gl_tests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gl_unittests",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--use-angle=d3d9"
-        ],
-        "name": "gles2_conform_d3d9_test",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests",
-          "--use-angle=gl",
-          "--disable-gpu-sandbox"
-        ],
-        "name": "gles2_conform_gl_test",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      },
-      {
-        "args": [
-          "--use-gpu-in-tests"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "gles2_conform_test",
-        "use_xvfb": false
-      },
-      {
-        "override_compile_targets": [
-          "tab_capture_end2end_tests_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        },
-        "test": "tab_capture_end2end_tests",
-        "use_xvfb": false
-      }
-    ],
-    "isolated_scripts": [
-      {
-        "args": [
-          "context_lost",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "context_lost_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "depth_capture",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "depth_capture_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_process",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_process_launch_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "gpu_rasterization",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "gpu_rasterization_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "hardware_accelerated_feature",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "hardware_accelerated_feature_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "maps",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
-          "--os-type",
-          "win",
-          "--build-revision",
-          "${got_revision}",
-          "--test-machine-name",
-          "${buildername}"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "maps_pixel_test",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "pixel",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
-          "--refimg-cloud-storage-bucket",
-          "chromium-gpu-archive/reference-images",
-          "--os-type",
-          "win",
-          "--build-revision",
-          "${got_revision}",
-          "--test-machine-name",
-          "${buildername}"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "pixel_test",
-        "non_precommit_args": [
-          "--upload-refimg-to-cloud-storage"
-        ],
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "precommit_args": [
-          "--download-refimg-from-cloud-storage"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "screenshot_sync",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "screenshot_sync_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "trace_test",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_test",
-        "name": "trace_test",
-        "override_compile_targets": [
-          "telemetry_gpu_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc",
-          "--webgl-conformance-version=2.0.1",
-          "--read-abbreviated-json-results-from=../../content/test/data/gpu/webgl2_conformance_tests_output.json"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl2_conformance_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ],
-          "shards": 15
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=d3d11 --use-passthrough-cmd-decoder"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_d3d11_passthrough_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=d3d9"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_d3d9_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc --use-angle=gl"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_gl_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
-            }
-          ]
-        }
-      },
-      {
-        "args": [
-          "webgl_conformance",
-          "--show-stdout",
-          "--browser=release",
-          "-v",
-          "--extra-browser-args=--enable-logging=stderr --js-flags=--expose-gc"
-        ],
-        "isolate_name": "telemetry_gpu_integration_test",
-        "name": "webgl_conformance_tests",
-        "override_compile_targets": [
-          "telemetry_gpu_integration_test_run"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "dimension_sets": [
-            {
-              "gpu": "10de:104a",
-              "os": "Windows-10-10586"
             }
           ]
         }

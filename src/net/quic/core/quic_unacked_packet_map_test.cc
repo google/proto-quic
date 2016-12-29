@@ -4,11 +4,8 @@
 
 #include "net/quic/core/quic_unacked_packet_map.h"
 
-#include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
 
 namespace net {
 namespace test {

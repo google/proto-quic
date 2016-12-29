@@ -48,8 +48,9 @@ TEST_P(FtpDirectoryListingParserTest, Parse) {
   mock_current_time_exploded.day_of_month = 15;
   mock_current_time_exploded.hour = 12;
   mock_current_time_exploded.minute = 45;
-  base::Time mock_current_time(
-      base::Time::FromUTCExploded(mock_current_time_exploded));
+  base::Time mock_current_time;
+  EXPECT_TRUE(base::Time::FromUTCExploded(mock_current_time_exploded,
+                                          &mock_current_time));
 
   SCOPED_TRACE(base::StringPrintf("Test case: %s", param.name));
 

@@ -16,19 +16,19 @@ class D;
 
 class A : public GarbageCollectedFinalized<A> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     RefPtr<D> m_d;
 };
 
 class B : public A {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 };
 
 class C : public B {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 };
 
 class D : public RefCounted<C> {

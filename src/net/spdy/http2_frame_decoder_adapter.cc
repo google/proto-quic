@@ -51,7 +51,7 @@ bool IsPaddable(Http2FrameType type) {
 }
 
 SpdyFrameType ToSpdyFrameType(Http2FrameType type) {
-  return SpdyConstants::ParseFrameType(static_cast<int>(type));
+  return ParseFrameType(static_cast<int>(type));
 }
 
 uint64_t ToSpdyPingId(const Http2PingFields& ping) {
@@ -182,8 +182,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     }
 
     SpdyFrameType frame_type = ToSpdyFrameType(header.type);
-    if (!SpdyConstants::IsValidHTTP2FrameStreamId(header.stream_id,
-                                                  frame_type)) {
+    if (!IsValidHTTP2FrameStreamId(header.stream_id, frame_type)) {
       VLOG(1) << "The framer received an invalid streamID of "
               << header.stream_id << " for a frame of type " << header.type;
       SetSpdyErrorAndNotify(SpdyError::SPDY_INVALID_STREAM_ID);
@@ -356,8 +355,8 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
       }
       SpdyRstStreamStatus status = RST_STREAM_INTERNAL_ERROR;
       uint32_t status_raw = static_cast<int>(error_code);
-      if (SpdyConstants::IsValidRstStreamStatus(status_raw)) {
-        status = SpdyConstants::ParseRstStreamStatus(status_raw);
+      if (IsValidRstStreamStatus(status_raw)) {
+        status = ParseRstStreamStatus(status_raw);
       }
       visitor()->OnRstStream(header.stream_id, status);
     }
@@ -375,12 +374,12 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   void OnSetting(const Http2SettingFields& setting_fields) override {
     DVLOG(1) << "OnSetting: " << setting_fields;
     SpdySettingsIds setting_id;
-    if (!SpdyConstants::ParseSettingsId(
-            static_cast<int>(setting_fields.parameter), &setting_id)) {
+    if (!ParseSettingsId(static_cast<int>(setting_fields.parameter),
+                         &setting_id)) {
       DVLOG(1) << "Ignoring invalid setting id: " << setting_fields;
       return;
     }
-    visitor()->OnSetting(setting_id, 0, setting_fields.value);
+    visitor()->OnSetting(setting_id, setting_fields.value);
   }
 
   void OnSettingsEnd() override {
@@ -444,8 +443,8 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
       has_frame_header_ = true;
       uint32_t status_raw = static_cast<int>(goaway.error_code);
       SpdyGoAwayStatus status;
-      if (SpdyConstants::IsValidGoAwayStatus(status_raw)) {
-        status = SpdyConstants::ParseGoAwayStatus(status_raw);
+      if (IsValidGoAwayStatus(status_raw)) {
+        status = ParseGoAwayStatus(status_raw);
       } else {
         // Treat unrecognized status codes as INTERNAL_ERROR as
         // recommended by the HTTP/2 spec.

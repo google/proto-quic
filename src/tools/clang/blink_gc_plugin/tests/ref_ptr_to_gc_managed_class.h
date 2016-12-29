@@ -19,7 +19,7 @@ private:
 
 class HeapObject : public GarbageCollectedFinalized<HeapObject> {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     PartObject m_part;
     Vector<RefPtr<HeapObject> > m_objs;

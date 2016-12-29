@@ -4,8 +4,9 @@
 
 #include "net/quic/core/quic_multipath_received_packet_manager.h"
 
-#include "base/memory/ptr_util.h"
+#include <cstdint>
 
+#include "base/memory/ptr_util.h"
 #include "net/quic/core/quic_bug_tracker.h"
 
 namespace net {

@@ -212,13 +212,17 @@
             ],
             "experiments": [
                 {
-                    "name": "Default"
+                    "name": "Default",
+                    "params": {
+                        "RedirectSequencedWorkerPools": "true"
+                    }
                 },
                 {
                     "name": "EnableViaFlag",
                     "forcing_flag": "enable-browser-task-scheduler",
                     "params": {
                         "RedirectHistoryService": "true",
+                        "RedirectNonUINonIOBrowserThreads": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -472,6 +476,21 @@
             ]
         }
     ],
+    "DisableFirstRunAutoImport": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "DisableFirstRunAutoImport",
+                    "enable_features": [
+                        "DisableFirstRunAutoImport"
+                    ]
+                }
+            ]
+        }
+    ],
     "DisallowFetchForDocWrittenScriptsInMainFrame": [
         {
             "platforms": [
@@ -652,6 +671,26 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "EnableSyncUSSDeviceInfo": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "EnableSyncUSSDeviceInfo"
+                    ]
                 }
             ]
         }
@@ -1390,6 +1429,75 @@
             ]
         }
     ],
+    "PermissionPromptUIAndroid": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "ModalGestureEnabled",
+                    "params": {
+                        "require_gesture": "true"
+                    },
+                    "enable_features": [
+                        "ModalPermissionPrompts"
+                    ],
+                    "disable_features": [
+                        "DisplayPersistenceToggleInPermissionPrompts"
+                    ]
+                },
+                {
+                    "name": "ModalNoGestureEnabled",
+                    "params": {
+                        "require_gesture": "false"
+                    },
+                    "enable_features": [
+                        "ModalPermissionPrompts"
+                    ],
+                    "disable_features": [
+                        "DisplayPersistenceToggleInPermissionPrompts"
+                    ]
+                },
+                {
+                    "name": "ModalAndToggleEnabled",
+                    "params": {
+                        "require_gesture": "false"
+                    },
+                    "enable_features": [
+                        "DisplayPersistenceToggleInPermissionPrompts",
+                        "ModalPermissionPrompts"
+                    ]
+                },
+                {
+                    "name": "ToggleEnabled",
+                    "enable_features": [
+                        "DisplayPersistenceToggleInPermissionPrompts"
+                    ],
+                    "disable_features": [
+                        "ModalPermissionPrompts"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PermissionPromptUIViews": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "ToggleEnabled",
+                    "enable_features": [
+                        "DisplayPersistenceToggleInPermissionPrompts"
+                    ]
+                }
+            ]
+        }
+    ],
     "PersistentHistograms": [
         {
             "platforms": [
@@ -1482,6 +1590,24 @@
                     "name": "Enabled",
                     "enable_features": [
                         "PreconnectMore"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PrintPdfAsImage": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "PrintPdfAsImage"
                     ]
                 }
             ]

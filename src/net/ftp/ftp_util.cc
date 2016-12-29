@@ -286,8 +286,7 @@ bool FtpUtil::LsDateListingToTime(const base::string16& month,
   }
 
   // We don't know the time zone of the listing, so just use UTC.
-  *result = base::Time::FromUTCExploded(time_exploded);
-  return true;
+  return base::Time::FromUTCExploded(time_exploded, result);
 }
 
 // static
@@ -349,8 +348,7 @@ bool FtpUtil::WindowsDateListingToTime(const base::string16& date,
   }
 
   // We don't know the time zone of the server, so just use UTC.
-  *result = base::Time::FromUTCExploded(time_exploded);
-  return true;
+  return base::Time::FromUTCExploded(time_exploded, result);
 }
 
 // static

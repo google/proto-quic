@@ -11,7 +11,7 @@ namespace blink {
 
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
-    void trace(Visitor*) { }
+    void Trace(Visitor*) { }
     void foo() { }
 };
 
@@ -20,7 +20,7 @@ class HeapObjectEagerFinalized
 public:
     EAGERLY_FINALIZED();
     ~HeapObjectEagerFinalized();
-    void trace(Visitor*);
+    void Trace(Visitor*);
 
     void foo() { }
 
@@ -34,7 +34,7 @@ class HeapObjectEagerFinalizedAlso
 public:
     EAGERLY_FINALIZED();
     ~HeapObjectEagerFinalizedAlso();
-    void trace(Visitor*);
+    void Trace(Visitor*);
 
 private:
     Member<HeapObject> m_heapObject;

@@ -8,8 +8,8 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.os.Build;
 import android.os.SystemClock;
+import android.support.test.filters.SmallTest;
 import android.test.InstrumentationTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 
 /**
  * Test of ApiCompatibilityUtils

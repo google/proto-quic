@@ -9,19 +9,16 @@
 
 #include "base/logging.h"
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_piece.h"
-#include "base/strings/string_split.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_stream.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 
 using base::StringPiece;
-using base::StringToInt;
 using std::string;
 
 namespace net {
@@ -205,7 +202,8 @@ void QuicSimpleServerStream::SendNotFoundResponse() {
   DVLOG(1) << "Sending not found response for stream " << id();
   SpdyHeaderBlock headers;
   headers[":status"] = "404";
-  headers["content-length"] = base::IntToString(strlen(kNotFoundResponseBody));
+  headers["content-length"] =
+      QuicTextUtils::Uint64ToString(strlen(kNotFoundResponseBody));
   SendHeadersAndBody(std::move(headers), kNotFoundResponseBody);
 }
 
@@ -213,7 +211,8 @@ void QuicSimpleServerStream::SendErrorResponse() {
   DVLOG(1) << "Sending error response for stream " << id();
   SpdyHeaderBlock headers;
   headers[":status"] = "500";
-  headers["content-length"] = base::UintToString(strlen(kErrorResponseBody));
+  headers["content-length"] =
+      QuicTextUtils::Uint64ToString(strlen(kErrorResponseBody));
   SendHeadersAndBody(std::move(headers), kErrorResponseBody);
 }
 

@@ -847,10 +847,10 @@ TEST_F(HttpNetworkTransactionTest, SimpleGETNoHeadersWeirdPort) {
 
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
 
+  HttpRequestInfo request;
   std::unique_ptr<HttpTransaction> trans(
       new HttpNetworkTransaction(DEFAULT_PRIORITY, session.get()));
 
-  HttpRequestInfo request;
   request.method = "GET";
   request.url = GURL("http://www.example.com:2000/");
   TestCompletionCallback callback;
@@ -870,10 +870,10 @@ TEST_F(HttpNetworkTransactionTest, SimpleGETNoHeadersWeirdPortAllowed) {
   session_deps_.http_09_on_non_default_ports_enabled = true;
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
 
+  HttpRequestInfo request;
   std::unique_ptr<HttpTransaction> trans(
       new HttpNetworkTransaction(DEFAULT_PRIORITY, session.get()));
 
-  HttpRequestInfo request;
   request.method = "GET";
   request.url = GURL("http://www.example.com:2000/");
   TestCompletionCallback callback;
@@ -10393,8 +10393,8 @@ TEST_F(HttpNetworkTransactionTest, IdentifyQuicBroken) {
   // Mark the QUIC alternative service as broken.
   http_server_properties->MarkAlternativeServiceBroken(alternative_service);
 
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request;
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   request.method = "GET";
   request.url = GURL(origin_url);
   TestCompletionCallback callback;
@@ -10466,8 +10466,8 @@ TEST_F(HttpNetworkTransactionTest, IdentifyQuicNotBroken) {
   const AlternativeServiceVector alternative_service_vector =
       http_server_properties->GetAlternativeServices(server);
 
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request;
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   request.method = "GET";
   request.url = GURL(origin_url);
   TestCompletionCallback callback;
@@ -13818,8 +13818,8 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceNotOnHttp11) {
   http_server_properties->SetAlternativeService(server, alternative_service,
                                                 expiration);
 
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request;
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
   request.method = "GET";
   request.url = GURL("https://www.example.org:443");
   TestCompletionCallback callback;
@@ -13993,8 +13993,8 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceShouldNotPoolToHttp11) {
                                                 expiration);
 
   // First transaction to alternative to open an HTTP/1.1 socket.
-  HttpNetworkTransaction trans1(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request1;
+  HttpNetworkTransaction trans1(DEFAULT_PRIORITY, session.get());
   request1.method = "GET";
   request1.url = GURL(alternative_url);
   request1.load_flags = 0;
@@ -14017,8 +14017,8 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceShouldNotPoolToHttp11) {
   // finds one which is HTTP/1.1, and should ignore it, and should not try to
   // open other connections to alternative server.  The Job to server fails, so
   // this request fails.
-  HttpNetworkTransaction trans2(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request2;
+  HttpNetworkTransaction trans2(DEFAULT_PRIORITY, session.get());
   request2.method = "GET";
   request2.url = GURL(origin_url);
   request2.load_flags = 0;
@@ -14029,8 +14029,8 @@ TEST_F(HttpNetworkTransactionTest, AlternativeServiceShouldNotPoolToHttp11) {
 
   // Another transaction to alternative.  This is to test that the HTTP/1.1
   // socket is still open and in the pool.
-  HttpNetworkTransaction trans3(DEFAULT_PRIORITY, session.get());
   HttpRequestInfo request3;
+  HttpNetworkTransaction trans3(DEFAULT_PRIORITY, session.get());
   request3.method = "GET";
   request3.url = GURL(alternative_url);
   request3.load_flags = 0;
@@ -15140,11 +15140,11 @@ TEST_F(HttpNetworkTransactionTest, SetStreamRequestPriorityOnStart) {
   FakeStreamFactory* fake_factory = new FakeStreamFactory();
   peer.SetHttpStreamFactory(std::unique_ptr<HttpStreamFactory>(fake_factory));
 
+  HttpRequestInfo request;
   HttpNetworkTransaction trans(LOW, session.get());
 
   ASSERT_FALSE(fake_factory->last_stream_request());
 
-  HttpRequestInfo request;
   TestCompletionCallback callback;
   EXPECT_EQ(ERR_IO_PENDING,
             trans.Start(&request, callback.callback(), NetLogWithSource()));
@@ -15163,9 +15163,9 @@ TEST_F(HttpNetworkTransactionTest, SetStreamRequestPriority) {
   FakeStreamFactory* fake_factory = new FakeStreamFactory();
   peer.SetHttpStreamFactory(std::unique_ptr<HttpStreamFactory>(fake_factory));
 
+  HttpRequestInfo request;
   HttpNetworkTransaction trans(LOW, session.get());
 
-  HttpRequestInfo request;
   TestCompletionCallback callback;
   EXPECT_EQ(ERR_IO_PENDING,
             trans.Start(&request, callback.callback(), NetLogWithSource()));
@@ -15188,9 +15188,9 @@ TEST_F(HttpNetworkTransactionTest, SetStreamPriority) {
   FakeStreamFactory* fake_factory = new FakeStreamFactory();
   peer.SetHttpStreamFactory(std::unique_ptr<HttpStreamFactory>(fake_factory));
 
+  HttpRequestInfo request;
   HttpNetworkTransaction trans(LOW, session.get());
 
-  HttpRequestInfo request;
   TestCompletionCallback callback;
   EXPECT_EQ(ERR_IO_PENDING,
             trans.Start(&request, callback.callback(), NetLogWithSource()));
@@ -15220,11 +15220,11 @@ TEST_F(HttpNetworkTransactionTest, CreateWebSocketHandshakeStream) {
     peer.SetHttpStreamFactoryForWebSocket(
         std::unique_ptr<HttpStreamFactory>(fake_factory));
 
+    HttpRequestInfo request;
     HttpNetworkTransaction trans(LOW, session.get());
     trans.SetWebSocketHandshakeStreamCreateHelper(
         &websocket_stream_create_helper);
 
-    HttpRequestInfo request;
     TestCompletionCallback callback;
     request.method = "GET";
     request.url = GURL(test_cases[i]);

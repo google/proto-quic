@@ -4,11 +4,10 @@
 
 #include "net/quic/core/quic_one_block_arena.h"
 
+#include <cstdint>
+
 #include "net/quic/core/interval_set.h"
-#include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

@@ -118,6 +118,10 @@ bool Value::GetAsString(const StringValue** out_value) const {
   return false;
 }
 
+bool Value::GetAsString(StringPiece* out_value) const {
+  return false;
+}
+
 bool Value::GetAsList(ListValue** out_value) {
   return false;
 }
@@ -284,6 +288,12 @@ bool StringValue::GetAsString(string16* out_value) const {
 bool StringValue::GetAsString(const StringValue** out_value) const {
   if (out_value)
     *out_value = this;
+  return true;
+}
+
+bool StringValue::GetAsString(StringPiece* out_value) const {
+  if (out_value)
+    *out_value = value_;
   return true;
 }
 

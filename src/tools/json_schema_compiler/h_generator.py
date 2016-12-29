@@ -275,9 +275,8 @@ class _Generator(object):
           else:
             (c.Cblock(self._GenerateType(type_.additional_properties))
               .Append('std::map<std::string, %s> additional_properties;' %
-                  cpp_util.PadForGenerics(
                       self._type_helper.GetCppType(type_.additional_properties,
-                                                   is_in_container=True)))
+                                                   is_in_container=True))
             )
       (c.Eblock()
         .Append()

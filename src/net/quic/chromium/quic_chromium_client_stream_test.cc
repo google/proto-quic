@@ -22,9 +22,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gmock_mutant.h"
 
-using net::test::IsError;
-using net::test::IsOk;
-
 using testing::AnyNumber;
 using testing::CreateFunctor;
 using testing::Invoke;
@@ -79,13 +76,14 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
   MOCK_METHOD1(CreateIncomingDynamicStream, QuicSpdyStream*(QuicStreamId id));
   MOCK_METHOD1(CreateOutgoingDynamicStream,
                QuicChromiumClientStream*(SpdyPriority priority));
-  MOCK_METHOD6(WritevData,
-               QuicConsumedData(QuicStream* stream,
-                                QuicStreamId id,
-                                QuicIOVector data,
-                                QuicStreamOffset offset,
-                                bool fin,
-                                QuicAckListenerInterface*));
+  MOCK_METHOD6(
+      WritevData,
+      QuicConsumedData(QuicStream* stream,
+                       QuicStreamId id,
+                       QuicIOVector data,
+                       QuicStreamOffset offset,
+                       bool fin,
+                       QuicReferenceCountedPointer<QuicAckListenerInterface>));
   MOCK_METHOD3(SendRstStream,
                void(QuicStreamId stream_id,
                     QuicRstStreamErrorCode error,
@@ -106,20 +104,23 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
   MOCK_METHOD0(IsCryptoHandshakeConfirmed, bool());
   // Methods taking non-copyable types like SpdyHeaderBlock by value cannot be
   // mocked directly.
-  size_t WriteHeaders(
-      QuicStreamId id,
-      SpdyHeaderBlock headers,
-      bool fin,
-      SpdyPriority priority,
-      QuicAckListenerInterface* ack_notifier_delegate) override {
-    return WriteHeadersMock(id, headers, fin, priority, ack_notifier_delegate);
-  }
-  MOCK_METHOD5(WriteHeadersMock,
-               size_t(QuicStreamId id,
-                      const SpdyHeaderBlock& headers,
+  size_t WriteHeaders(QuicStreamId id,
+                      SpdyHeaderBlock headers,
                       bool fin,
                       SpdyPriority priority,
-                      QuicAckListenerInterface* ack_notifier_delegate));
+                      QuicReferenceCountedPointer<QuicAckListenerInterface>
+                          ack_listener) override {
+    return WriteHeadersMock(id, headers, fin, priority,
+                            std::move(ack_listener));
+  }
+  MOCK_METHOD5(
+      WriteHeadersMock,
+      size_t(QuicStreamId id,
+             const SpdyHeaderBlock& headers,
+             bool fin,
+             SpdyPriority priority,
+             const QuicReferenceCountedPointer<QuicAckListenerInterface>&
+                 ack_listener));
   MOCK_METHOD1(OnHeadersHeadOfLineBlocking, void(QuicTime::Delta delta));
 
   using QuicSession::ActivateStream;
@@ -131,7 +132,7 @@ class MockQuicClientSessionBase : public QuicClientSessionBase {
       const QuicIOVector& data,
       QuicStreamOffset offset,
       bool fin,
-      QuicAckListenerInterface* ack_notifier_delegate);
+      QuicAckListenerInterface* ack_listener);
 
   void OnProofValid(
       const QuicCryptoClientConfig::CachedState& cached) override {}

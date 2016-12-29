@@ -164,8 +164,8 @@ namespace test {
       DVLOG(1) << "actual doesn't contain param: " << param;
       return ::testing::AssertionFailure();
     }
-    uint32_t expected_value = entry.second.value;
-    uint32_t actual_value = actual_itr->second.value;
+    uint32_t expected_value = entry.second;
+    uint32_t actual_value = actual_itr->second;
     if (expected_value != actual_value) {
       DVLOG(1) << "Values don't match for parameter: " << param;
       return ::testing::AssertionFailure();

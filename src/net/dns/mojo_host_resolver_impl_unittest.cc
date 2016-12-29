@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/time/time.h"
 #include "mojo/public/cpp/bindings/binding.h"
@@ -162,7 +163,7 @@ class MojoHostResolverImplTest : public testing::Test {
 
 TEST_F(MojoHostResolverImplTest, Resolve) {
   interfaces::HostResolverRequestClientPtr client_ptr;
-  TestRequestClient client(mojo::GetProxy(&client_ptr));
+  TestRequestClient client(mojo::MakeRequest(&client_ptr));
 
   resolver_service_->Resolve(CreateRequest("example.com", 80, false),
                              std::move(client_ptr));
@@ -176,7 +177,7 @@ TEST_F(MojoHostResolverImplTest, Resolve) {
 
 TEST_F(MojoHostResolverImplTest, ResolveSynchronous) {
   interfaces::HostResolverRequestClientPtr client_ptr;
-  TestRequestClient client(mojo::GetProxy(&client_ptr));
+  TestRequestClient client(mojo::MakeRequest(&client_ptr));
 
   mock_host_resolver_.set_synchronous_mode(true);
 
@@ -192,9 +193,9 @@ TEST_F(MojoHostResolverImplTest, ResolveSynchronous) {
 
 TEST_F(MojoHostResolverImplTest, ResolveMultiple) {
   interfaces::HostResolverRequestClientPtr client1_ptr;
-  TestRequestClient client1(mojo::GetProxy(&client1_ptr));
+  TestRequestClient client1(mojo::MakeRequest(&client1_ptr));
   interfaces::HostResolverRequestClientPtr client2_ptr;
-  TestRequestClient client2(mojo::GetProxy(&client2_ptr));
+  TestRequestClient client2(mojo::MakeRequest(&client2_ptr));
 
   mock_host_resolver_.set_ondemand_mode(true);
 
@@ -220,9 +221,9 @@ TEST_F(MojoHostResolverImplTest, ResolveMultiple) {
 
 TEST_F(MojoHostResolverImplTest, ResolveDuplicate) {
   interfaces::HostResolverRequestClientPtr client1_ptr;
-  TestRequestClient client1(mojo::GetProxy(&client1_ptr));
+  TestRequestClient client1(mojo::MakeRequest(&client1_ptr));
   interfaces::HostResolverRequestClientPtr client2_ptr;
-  TestRequestClient client2(mojo::GetProxy(&client2_ptr));
+  TestRequestClient client2(mojo::MakeRequest(&client2_ptr));
 
   mock_host_resolver_.set_ondemand_mode(true);
 
@@ -248,7 +249,7 @@ TEST_F(MojoHostResolverImplTest, ResolveDuplicate) {
 
 TEST_F(MojoHostResolverImplTest, ResolveFailure) {
   interfaces::HostResolverRequestClientPtr client_ptr;
-  TestRequestClient client(mojo::GetProxy(&client_ptr));
+  TestRequestClient client(mojo::MakeRequest(&client_ptr));
 
   resolver_service_->Resolve(CreateRequest("failure.fail", 80, false),
                              std::move(client_ptr));
@@ -261,7 +262,7 @@ TEST_F(MojoHostResolverImplTest, ResolveFailure) {
 TEST_F(MojoHostResolverImplTest, DestroyClient) {
   interfaces::HostResolverRequestClientPtr client_ptr;
   std::unique_ptr<TestRequestClient> client(
-      new TestRequestClient(mojo::GetProxy(&client_ptr)));
+      new TestRequestClient(mojo::MakeRequest(&client_ptr)));
 
   mock_host_resolver_.set_ondemand_mode(true);
 

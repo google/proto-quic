@@ -7,10 +7,10 @@
 namespace blink {
 
 template<typename T>
-void TemplatedObject<T>::trace(Visitor* visitor)
+void TemplatedObject<T>::Trace(Visitor* visitor)
 {
-    visitor->trace(m_local);
-    visitor->trace(m_memberRef);
+    visitor->Trace(m_local);
+    visitor->Trace(m_memberRef);
 }
 
 class Test {

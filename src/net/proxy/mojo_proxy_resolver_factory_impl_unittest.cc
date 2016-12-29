@@ -101,7 +101,7 @@ class MojoProxyResolverFactoryImplTest
     mock_factory_ = new TestProxyResolverFactory(&waiter_);
     mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(
                                 base::WrapUnique(mock_factory_)),
-                            mojo::GetProxy(&factory_));
+                            mojo::MakeRequest(&factory_));
   }
 
   void OnConnectionError() { waiter_.NotifyEvent(CONNECTION_ERROR); }
@@ -135,8 +135,8 @@ TEST_F(MojoProxyResolverFactoryImplTest, DisconnectProxyResolverClient) {
   interfaces::ProxyResolverPtr proxy_resolver;
   interfaces::ProxyResolverFactoryRequestClientPtr client_ptr;
   mojo::Binding<ProxyResolverFactoryRequestClient> client_binding(
-      this, mojo::GetProxy(&client_ptr));
-  factory_->CreateResolver(kScriptData, mojo::GetProxy(&proxy_resolver),
+      this, mojo::MakeRequest(&client_ptr));
+  factory_->CreateResolver(kScriptData, mojo::MakeRequest(&proxy_resolver),
                            std::move(client_ptr));
   proxy_resolver.set_connection_error_handler(
       base::Bind(&MojoProxyResolverFactoryImplTest::OnConnectionError,
@@ -162,8 +162,8 @@ TEST_F(MojoProxyResolverFactoryImplTest, Error) {
   interfaces::ProxyResolverPtr proxy_resolver;
   interfaces::ProxyResolverFactoryRequestClientPtr client_ptr;
   mojo::Binding<ProxyResolverFactoryRequestClient> client_binding(
-      this, mojo::GetProxy(&client_ptr));
-  factory_->CreateResolver(kScriptData, mojo::GetProxy(&proxy_resolver),
+      this, mojo::MakeRequest(&client_ptr));
+  factory_->CreateResolver(kScriptData, mojo::MakeRequest(&proxy_resolver),
                            std::move(client_ptr));
   proxy_resolver.set_connection_error_handler(
       base::Bind(&MojoProxyResolverFactoryImplTest::OnConnectionError,
@@ -183,8 +183,8 @@ TEST_F(MojoProxyResolverFactoryImplTest,
   interfaces::ProxyResolverPtr proxy_resolver;
   interfaces::ProxyResolverFactoryRequestClientPtr client_ptr;
   mojo::Binding<ProxyResolverFactoryRequestClient> client_binding(
-      this, mojo::GetProxy(&client_ptr));
-  factory_->CreateResolver(kScriptData, mojo::GetProxy(&proxy_resolver),
+      this, mojo::MakeRequest(&client_ptr));
+  factory_->CreateResolver(kScriptData, mojo::MakeRequest(&proxy_resolver),
                            std::move(client_ptr));
   proxy_resolver.set_connection_error_handler(
       base::Bind(&MojoProxyResolverFactoryImplTest::OnConnectionError,
@@ -201,8 +201,8 @@ TEST_F(MojoProxyResolverFactoryImplTest,
   interfaces::ProxyResolverPtr proxy_resolver;
   interfaces::ProxyResolverFactoryRequestClientPtr client_ptr;
   mojo::Binding<ProxyResolverFactoryRequestClient> client_binding(
-      this, mojo::GetProxy(&client_ptr));
-  factory_->CreateResolver(kScriptData, mojo::GetProxy(&proxy_resolver),
+      this, mojo::MakeRequest(&client_ptr));
+  factory_->CreateResolver(kScriptData, mojo::MakeRequest(&proxy_resolver),
                            std::move(client_ptr));
   proxy_resolver.set_connection_error_handler(
       base::Bind(&MojoProxyResolverFactoryImplTest::OnConnectionError,

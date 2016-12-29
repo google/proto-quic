@@ -13,7 +13,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/sequence_checker.h"
-#include "base/single_thread_task_runner.h"
+#include "base/sequenced_task_runner.h"
 
 namespace base {
 
@@ -47,7 +47,6 @@ class BASE_EXPORT FilePathWatcher {
 
     // Stop watching. This is called from FilePathWatcher's dtor in order to
     // allow to shut down properly while the object is still alive.
-    // It can be called from any thread.
     virtual void Cancel() = 0;
 
    protected:
@@ -56,11 +55,11 @@ class BASE_EXPORT FilePathWatcher {
 
     virtual ~PlatformDelegate();
 
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner() const {
+    scoped_refptr<SequencedTaskRunner> task_runner() const {
       return task_runner_;
     }
 
-    void set_task_runner(scoped_refptr<base::SingleThreadTaskRunner> runner) {
+    void set_task_runner(scoped_refptr<SequencedTaskRunner> runner) {
       task_runner_ = std::move(runner);
     }
 
@@ -74,7 +73,7 @@ class BASE_EXPORT FilePathWatcher {
     }
 
    private:
-    scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+    scoped_refptr<SequencedTaskRunner> task_runner_;
     bool cancelled_;
   };
 
@@ -90,9 +89,9 @@ class BASE_EXPORT FilePathWatcher {
   static bool RecursiveWatchAvailable();
 
   // Invokes |callback| whenever updates to |path| are detected. This should be
-  // called at most once. Set |recursive| to true, to watch |path| and its
-  // children. The callback will be invoked on the same thread. Returns true on
-  // success.
+  // called at most once. Set |recursive| to true to watch |path| and its
+  // children. The callback will be invoked on the same sequence. Returns true
+  // on success.
   //
   // On POSIX, this must be called from a thread that supports
   // FileDescriptorWatcher.

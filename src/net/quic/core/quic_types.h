@@ -5,9 +5,8 @@
 #ifndef NET_QUIC_CORE_QUIC_TYPES_H_
 #define NET_QUIC_CORE_QUIC_TYPES_H_
 
-#include <stddef.h>
-
 #include <array>
+#include <cstddef>
 #include <map>
 #include <ostream>
 #include <vector>

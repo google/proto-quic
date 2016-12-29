@@ -8,26 +8,26 @@ namespace blink {
 
 static B* toB(A* a) { return static_cast<B*>(a); }
 
-void A::trace(Visitor* visitor)
+void A::Trace(Visitor* visitor)
 {
     switch (m_type) {
     case TB:
-        toB(this)->traceAfterDispatch(visitor);
+        toB(this)->TraceAfterDispatch(visitor);
         break;
     case TC:
-        static_cast<C*>(this)->traceAfterDispatch(visitor);
+        static_cast<C*>(this)->TraceAfterDispatch(visitor);
         break;
     case TD:
-        static_cast<D*>(this)->traceAfterDispatch(visitor);
+        static_cast<D*>(this)->TraceAfterDispatch(visitor);
         break;
     }
 }
 
-void A::traceAfterDispatch(Visitor* visitor)
+void A::TraceAfterDispatch(Visitor* visitor)
 {
 }
 
-void A::finalizeGarbageCollectedObject()
+void A::FinalizeGarbageCollectedObject()
 {
     switch (m_type) {
     case TB:
@@ -42,22 +42,22 @@ void A::finalizeGarbageCollectedObject()
     }
 }
 
-void B::traceAfterDispatch(Visitor* visitor)
+void B::TraceAfterDispatch(Visitor* visitor)
 {
-    visitor->trace(m_a);
-    A::traceAfterDispatch(visitor);
+    visitor->Trace(m_a);
+    A::TraceAfterDispatch(visitor);
 }
 
-void C::traceAfterDispatch(Visitor* visitor)
+void C::TraceAfterDispatch(Visitor* visitor)
 {
-    visitor->trace(m_a);
-    A::traceAfterDispatch(visitor);
+    visitor->Trace(m_a);
+    A::TraceAfterDispatch(visitor);
 }
 
-void D::traceAfterDispatch(Visitor* visitor)
+void D::TraceAfterDispatch(Visitor* visitor)
 {
-    visitor->trace(m_a);
-    Abstract::traceAfterDispatch(visitor);
+    visitor->Trace(m_a);
+    Abstract::TraceAfterDispatch(visitor);
 }
 
 }

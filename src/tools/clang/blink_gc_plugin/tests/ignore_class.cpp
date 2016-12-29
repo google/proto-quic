@@ -6,14 +6,14 @@
 
 namespace blink {
 
-void B::trace(Visitor* visitor)
+void B::Trace(Visitor* visitor)
 {
     // Class is ignored so no checking here.
 }
 
-void C::trace(Visitor* visitor)
+void C::Trace(Visitor* visitor)
 {
-    // Missing trace of m_obj.
+    // Missing Trace of m_obj.
     // Ignored base class B does not need tracing.
 }
 

@@ -11,6 +11,7 @@
 #include "base/callback.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_checker.h"
@@ -305,7 +306,8 @@ class ProxyResolverFactoryMojo::Job
         binding_(this),
         error_observer_(std::move(error_observer)) {
     on_delete_callback_runner_ = factory_->mojo_proxy_factory_->CreateResolver(
-        base::UTF16ToUTF8(pac_script->utf16()), mojo::GetProxy(&resolver_ptr_),
+        base::UTF16ToUTF8(pac_script->utf16()),
+        mojo::MakeRequest(&resolver_ptr_),
         binding_.CreateInterfacePtrAndBind());
     resolver_ptr_.set_connection_error_handler(
         base::Bind(&ProxyResolverFactoryMojo::Job::OnConnectionError,

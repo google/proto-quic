@@ -30,6 +30,7 @@
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/ct_verifier.h"
+#include "net/cert/do_nothing_ct_verifier.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/cert/test_root_certs.h"
@@ -113,8 +114,8 @@ class WrappedStreamSocket : public StreamSocket {
   }
   void SetOmniboxSpeculation() override { transport_->SetOmniboxSpeculation(); }
   bool WasEverUsed() const override { return transport_->WasEverUsed(); }
-  bool WasNpnNegotiated() const override {
-    return transport_->WasNpnNegotiated();
+  bool WasAlpnNegotiated() const override {
+    return transport_->WasAlpnNegotiated();
   }
   NextProto GetNegotiatedProtocol() const override {
     return transport_->GetNegotiatedProtocol();
@@ -706,11 +707,11 @@ class AsyncFailingChannelIDStore : public ChannelIDStore {
 class MockCTVerifier : public CTVerifier {
  public:
   MOCK_METHOD5(Verify,
-               int(X509Certificate*,
-                   const std::string&,
-                   const std::string&,
-                   SignedCertificateTimestampAndStatusList*,
-                   const NetLogWithSource&));
+               void(X509Certificate*,
+                    base::StringPiece,
+                    base::StringPiece,
+                    SignedCertificateTimestampAndStatusList*,
+                    const NetLogWithSource&));
   MOCK_METHOD1(SetObserver, void(CTVerifier::Observer*));
 };
 
@@ -740,7 +741,7 @@ class SSLClientSocketTest : public PlatformTest {
       : socket_factory_(ClientSocketFactory::GetDefaultFactory()),
         cert_verifier_(new MockCertVerifier),
         transport_security_state_(new TransportSecurityState),
-        ct_verifier_(new MockCTVerifier),
+        ct_verifier_(new DoNothingCTVerifier),
         ct_policy_enforcer_(new MockCTPolicyEnforcer) {
     cert_verifier_->set_default_result(OK);
     context_.cert_verifier = cert_verifier_.get();
@@ -748,8 +749,6 @@ class SSLClientSocketTest : public PlatformTest {
     context_.cert_transparency_verifier = ct_verifier_.get();
     context_.ct_policy_enforcer = ct_policy_enforcer_.get();
 
-    EXPECT_CALL(*ct_verifier_, Verify(_, _, _, _, _))
-        .WillRepeatedly(Return(OK));
     EXPECT_CALL(*ct_policy_enforcer_, DoesConformToCertPolicy(_, _, _))
         .WillRepeatedly(
             Return(ct::CertPolicyCompliance::CERT_POLICY_COMPLIES_VIA_SCTS));
@@ -847,7 +846,7 @@ class SSLClientSocketTest : public PlatformTest {
   ClientSocketFactory* socket_factory_;
   std::unique_ptr<MockCertVerifier> cert_verifier_;
   std::unique_ptr<TransportSecurityState> transport_security_state_;
-  std::unique_ptr<MockCTVerifier> ct_verifier_;
+  std::unique_ptr<DoNothingCTVerifier> ct_verifier_;
   std::unique_ptr<MockCTPolicyEnforcer> ct_policy_enforcer_;
   SSLClientSocketContext context_;
   std::unique_ptr<SSLClientSocket> sock_;
@@ -2303,10 +2302,10 @@ TEST_F(SSLClientSocketCertRequestInfoTest, CertKeyTypes) {
 
 TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledTLSExtension) {
   // Encoding of SCT List containing 'test'.
-  std::string sct_ext("\x00\x06\x00\x04test", 8);
+  base::StringPiece sct_ext("\x00\x06\x00\x04test", 8);
 
   SpawnedTestServer::SSLOptions ssl_options;
-  ssl_options.signed_cert_timestamps_tls_ext = sct_ext;
+  ssl_options.signed_cert_timestamps_tls_ext = sct_ext.as_string();
   ASSERT_TRUE(StartTestServer(ssl_options));
 
   SSLConfig ssl_config;
@@ -2315,36 +2314,17 @@ TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledTLSExtension) {
   MockCTVerifier ct_verifier;
   SetCTVerifier(&ct_verifier);
 
-  // Check that the SCT list is extracted as expected.
-  EXPECT_CALL(ct_verifier, Verify(_, "", sct_ext, _, _))
-      .WillRepeatedly(Return(ERR_CT_NO_SCTS_VERIFIED_OK));
+  // Check that the SCT list is extracted from the TLS extension as expected,
+  // while also simulating that it was an unparsable response.
+  SignedCertificateTimestampAndStatusList sct_list;
+  EXPECT_CALL(ct_verifier, Verify(_, _, sct_ext, _, _))
+      .WillOnce(testing::SetArgPointee<3>(sct_list));
 
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
   EXPECT_THAT(rv, IsOk());
 
   EXPECT_TRUE(sock_->signed_cert_timestamps_received_);
-}
-
-// Test that when an EV certificate is received, but no CT verifier
-// or certificate policy enforcer are defined, then the EV status
-// of the certificate is maintained.
-TEST_F(SSLClientSocketTest, EVCertStatusMaintainedNoCTVerifier) {
-  SpawnedTestServer::SSLOptions ssl_options;
-  ASSERT_TRUE(StartTestServer(ssl_options));
-
-  SSLConfig ssl_config;
-  AddServerCertStatusToSSLConfig(CERT_STATUS_IS_EV, &ssl_config);
-
-  // No verifier to skip CT and policy checks.
-  int rv;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
-
-  SSLInfo result;
-  ASSERT_TRUE(sock_->GetSSLInfo(&result));
-
-  EXPECT_TRUE(result.cert_status & CERT_STATUS_IS_EV);
 }
 
 // Test that when a CT verifier and a CTPolicyEnforcer are defined, and
@@ -2356,12 +2336,6 @@ TEST_F(SSLClientSocketTest, EVCertStatusMaintainedForCompliantCert) {
 
   SSLConfig ssl_config;
   AddServerCertStatusToSSLConfig(CERT_STATUS_IS_EV, &ssl_config);
-
-  // To activate the CT/EV policy enforcement non-null CTVerifier and
-  // CTPolicyEnforcer are needed.
-  MockCTVerifier ct_verifier;
-  SetCTVerifier(&ct_verifier);
-  EXPECT_CALL(ct_verifier, Verify(_, "", "", _, _)).WillRepeatedly(Return(OK));
 
   // Emulate compliance of the certificate to the policy.
   MockCTPolicyEnforcer policy_enforcer;
@@ -2393,12 +2367,6 @@ TEST_F(SSLClientSocketTest, EVCertStatusRemovedForNonCompliantCert) {
   SSLConfig ssl_config;
   AddServerCertStatusToSSLConfig(CERT_STATUS_IS_EV, &ssl_config);
 
-  // To activate the CT/EV policy enforcement non-null CTVerifier and
-  // CTPolicyEnforcer are needed.
-  MockCTVerifier ct_verifier;
-  SetCTVerifier(&ct_verifier);
-  EXPECT_CALL(ct_verifier, Verify(_, "", "", _, _)).WillRepeatedly(Return(OK));
-
   // Emulate non-compliance of the certificate to the policy.
   MockCTPolicyEnforcer policy_enforcer;
   SetCTPolicyEnforcer(&policy_enforcer);
@@ -2420,20 +2388,6 @@ TEST_F(SSLClientSocketTest, EVCertStatusRemovedForNonCompliantCert) {
   EXPECT_TRUE(result.cert_status & CERT_STATUS_CT_COMPLIANCE_FAILED);
 }
 
-namespace {
-
-bool IsValidOCSPResponse(const base::StringPiece& input) {
-  der::Parser parser((der::Input(input)));
-  der::Parser sequence;
-  return parser.ReadSequence(&sequence) && !parser.HasMore() &&
-         sequence.SkipTag(der::kEnumerated) &&
-         sequence.SkipTag(der::kTagContextSpecific | der::kTagConstructed |
-                          0) &&
-         !sequence.HasMore();
-}
-
-}  // namespace
-
 // Test that enabling Signed Certificate Timestamps enables OCSP stapling.
 TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledOCSP) {
   SpawnedTestServer::SSLOptions ssl_options;
@@ -2449,18 +2403,6 @@ TEST_F(SSLClientSocketTest, ConnectSignedCertTimestampsEnabledOCSP) {
   // Certificate Transparency verification regardless of whether the platform
   // is able to process the OCSP status itself.
   ssl_config.signed_cert_timestamps_enabled = true;
-
-  MockCTVerifier ct_verifier;
-  SetCTVerifier(&ct_verifier);
-
-  // Check that the OCSP response is extracted and well-formed. It should be the
-  // DER encoding of an OCSPResponse (RFC 2560), so check that it consists of a
-  // SEQUENCE of an ENUMERATED type and an element tagged with [0] EXPLICIT. In
-  // particular, it should not include the overall two-byte length prefix from
-  // TLS.
-  EXPECT_CALL(ct_verifier,
-              Verify(_, Truly(IsValidOCSPResponse), "", _, _)).WillRepeatedly(
-                  Return(ERR_CT_NO_SCTS_VERIFIED_OK));
 
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));

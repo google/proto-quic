@@ -40,9 +40,8 @@
 #ifndef NET_QUIC_CORE_QUIC_PACKET_GENERATOR_H_
 #define NET_QUIC_CORE_QUIC_PACKET_GENERATOR_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
 #include <list>
 
 #include "base/macros.h"
@@ -93,24 +92,27 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
   // mode, these packets will also be sent during this call.
   // |delegate| (if not nullptr) will be informed once all packets sent as a
   // result of this call are ACKed by the peer.
-  QuicConsumedData ConsumeData(QuicStreamId id,
-                               QuicIOVector iov,
-                               QuicStreamOffset offset,
-                               bool fin,
-                               QuicAckListenerInterface* listener);
+  QuicConsumedData ConsumeData(
+      QuicStreamId id,
+      QuicIOVector iov,
+      QuicStreamOffset offset,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Sends as many data only packets as allowed by the send algorithm and the
   // available iov.
   // This path does not support FEC, padding, or bundling pending frames.
-  QuicConsumedData ConsumeDataFastPath(QuicStreamId id,
-                                       const QuicIOVector& iov,
-                                       QuicStreamOffset offset,
-                                       bool fin,
-                                       QuicAckListenerInterface* listener);
+  QuicConsumedData ConsumeDataFastPath(
+      QuicStreamId id,
+      const QuicIOVector& iov,
+      QuicStreamOffset offset,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Generates an MTU discovery packet of specified size.
-  void GenerateMtuDiscoveryPacket(QuicByteCount target_mtu,
-                                  QuicAckListenerInterface* listener);
+  void GenerateMtuDiscoveryPacket(
+      QuicByteCount target_mtu,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Indicates whether batch mode is currently enabled.
   bool InBatchMode();

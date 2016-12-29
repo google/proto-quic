@@ -1,5 +1,7 @@
 phajdan.jr@chromium.org
 
+per-file scoped_task_scheduler*=file://base/task_scheduler/OWNERS
+
 # For Android-specific changes:
 per-file *android*=file://base/test/android/OWNERS
 per-file BUILD.gn=file://base/test/android/OWNERS

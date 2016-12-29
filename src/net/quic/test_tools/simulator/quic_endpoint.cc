@@ -9,6 +9,7 @@
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
 using base::StringPrintf;
@@ -23,7 +24,7 @@ const char kStreamDataContents = 'Q';
 
 // Takes a SHA-1 hash of the name and converts it into five 32-bit integers.
 static std::vector<uint32_t> HashNameIntoFive32BitIntegers(string name) {
-  const std::string hash = base::SHA1HashString(name);
+  const string hash = test::Sha1Hash(name);
 
   std::vector<uint32_t> output;
   uint32_t current_number = 0;

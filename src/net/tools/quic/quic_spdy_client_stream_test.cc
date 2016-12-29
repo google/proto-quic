@@ -7,10 +7,10 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/quic/quic_client_session.h"
@@ -18,16 +18,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::IntToString;
-using net::test::CryptoTestUtils;
-using net::test::DefaultQuicConfig;
-using net::test::MockQuicConnection;
-using net::test::MockQuicConnectionHelper;
-using net::test::SupportedVersions;
-using net::test::kClientDataStreamId1;
-using net::test::kServerDataStreamId1;
-using net::test::kInitialSessionFlowControlWindowForTest;
-using net::test::kInitialStreamFlowControlWindowForTest;
-
 using std::string;
 using testing::StrictMock;
 using testing::TestWithParam;
@@ -120,7 +110,7 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming) {
 
 TEST_F(QuicSpdyClientStreamTest, TestFraming100Continue) {
   headers_[":status"] = "100";
-  FLAGS_quic_supports_100_continue = true;
+  FLAGS_quic_restart_flag_quic_supports_100_continue = true;
   auto headers = AsHeaderList(headers_);
   stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
                               headers);
@@ -134,7 +124,7 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming100Continue) {
 
 TEST_F(QuicSpdyClientStreamTest, TestFraming100ContinueNoFlag) {
   headers_[":status"] = "100";
-  FLAGS_quic_supports_100_continue = false;
+  FLAGS_quic_restart_flag_quic_supports_100_continue = false;
   auto headers = AsHeaderList(headers_);
   stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
                               headers);
@@ -197,7 +187,8 @@ TEST_F(QuicSpdyClientStreamTest, ReceivingTrailers) {
   // promised by the final offset field.
   SpdyHeaderBlock trailer_block;
   trailer_block["trailer key"] = "trailer value";
-  trailer_block[kFinalOffsetHeaderKey] = IntToString(body_.size());
+  trailer_block[kFinalOffsetHeaderKey] =
+      QuicTextUtils::Uint64ToString(body_.size());
   auto trailers = AsHeaderList(trailer_block);
   stream_->OnStreamHeaderList(true, trailers.uncompressed_header_bytes(),
                               trailers);

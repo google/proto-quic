@@ -11,7 +11,7 @@
 
 #include "base/command_line.h"
 #include "net/quic/core/crypto/crypto_framer.h"
-#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using std::cerr;
 using std::cout;
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
   net::CryptoMessagePrinter printer;
   net::CryptoFramer framer;
   framer.set_visitor(&printer);
-  std::string input = net::QuicUtils::HexDecode(argv[1]);
+  std::string input = net::QuicTextUtils::HexDecode(argv[1]);
   if (!framer.ProcessInput(input)) {
     return 1;
   }

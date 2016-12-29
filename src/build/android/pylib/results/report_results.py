@@ -85,7 +85,7 @@ def LogFull(results, test_type, test_package, annotation=None,
     test_package: Test package name (e.g. 'ipc_tests' for gtests,
                   'ContentShellTest' for instrumentation tests)
     annotation: If instrumenation test type, this is a list of annotations
-                (e.g. ['Smoke', 'SmallTest']).
+                (e.g. ['Feature', 'SmallTest']).
     flakiness_server: If provider, upload the results to flakiness dashboard
                       with this URL.
     """

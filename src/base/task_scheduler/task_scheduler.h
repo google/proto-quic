@@ -82,10 +82,6 @@ class BASE_EXPORT TaskScheduler {
   // other threads during the call. Returns immediately when shutdown completes.
   virtual void FlushForTesting() = 0;
 
-  // Joins all threads of this scheduler. Tasks that are already running are
-  // allowed to complete their execution. This can only be called once.
-  virtual void JoinForTesting() = 0;
-
   // CreateAndSetSimpleTaskScheduler(), CreateAndSetDefaultTaskScheduler(), and
   // SetInstance() register a TaskScheduler to handle tasks posted through the
   // post_task.h API for this process. The registered TaskScheduler will only be

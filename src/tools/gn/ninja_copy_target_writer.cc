@@ -103,7 +103,7 @@ void NinjaCopyTargetWriter::WriteCopyRules(
   for (const auto& input_file : target_->sources()) {
     OutputFile output_file =
         SubstitutionWriter::ApplyPatternToSourceAsOutputFile(
-            target_->settings(), output_subst, input_file);
+            target_, target_->settings(), output_subst, input_file);
     output_files->push_back(output_file);
 
     out_ << "build ";

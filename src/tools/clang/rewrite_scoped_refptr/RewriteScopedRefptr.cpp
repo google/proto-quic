@@ -167,7 +167,9 @@ class GetRewriterCallback : public MatchFinder::MatchCallback {
 void GetRewriterCallback::run(const MatchFinder::MatchResult& result) {
   const clang::Expr* arg = result.Nodes.getNodeAs<clang::Expr>("arg");
   assert(arg && "Unexpected match! No Expr captured!");
-  replacements_->insert(RewriteImplicitToExplicitConversion(result, arg));
+  auto err =
+      replacements_->add(RewriteImplicitToExplicitConversion(result, arg));
+  assert(!err);
 }
 
 class VarRewriterCallback : public MatchFinder::MatchCallback {
@@ -199,8 +201,9 @@ void VarRewriterCallback::run(const MatchFinder::MatchResult& result) {
   // In this case, it will only rewrite the .cc definition. Oh well. This should
   // be rare enough that these cases can be manually handled, since the style
   // guide prohibits globals of non-POD type.
-  replacements_->insert(RewriteRawPtrToScopedRefptr(
+  auto err = replacements_->add(RewriteRawPtrToScopedRefptr(
       result, tsi->getTypeLoc().getBeginLoc(), tsi->getTypeLoc().getEndLoc()));
+  assert(!err);
 }
 
 class FunctionRewriterCallback : public MatchFinder::MatchCallback {
@@ -230,8 +233,9 @@ void FunctionRewriterCallback::run(const MatchFinder::MatchResult& result) {
 
   for (clang::FunctionDecl* f : function_decl->redecls()) {
     clang::SourceRange range = f->getReturnTypeSourceRange();
-    replacements_->insert(
+    auto err = replacements_->add(
         RewriteRawPtrToScopedRefptr(result, range.getBegin(), range.getEnd()));
+    assert(!err);
   }
 }
 
@@ -248,7 +252,9 @@ class MacroRewriterCallback : public MatchFinder::MatchCallback {
 void MacroRewriterCallback::run(const MatchFinder::MatchResult& result) {
   const clang::Expr* const expr = result.Nodes.getNodeAs<clang::Expr>("expr");
   assert(expr && "Unexpected match! No Expr captured!");
-  replacements_->insert(RewriteImplicitToExplicitConversion(result, expr));
+  auto err =
+      replacements_->add(RewriteImplicitToExplicitConversion(result, expr));
+  assert(!err);
 }
 
 }  // namespace
@@ -352,12 +358,12 @@ int main(int argc, const char* argv[]) {
 
   // Find temporary scoped_refptr<T>'s being unsafely assigned to a T*.
   VarRewriterCallback var_callback(&replacements);
-  auto initialized_with_temporary = ignoringImpCasts(exprWithCleanups(
-      has(cxxMemberCallExpr(base_matcher, is_unsafe_temporary_conversion))));
-  match_finder.addMatcher(id("var",
-                             varDecl(hasInitializer(initialized_with_temporary),
-                                     hasType(pointerType()))),
-                          &var_callback);
+  auto initialized_with_temporary = has(ignoringImpCasts(
+      cxxMemberCallExpr(base_matcher, is_unsafe_temporary_conversion)));
+  match_finder.addMatcher(
+      id("var", varDecl(hasInitializer(initialized_with_temporary),
+                        hasType(pointerType()))),
+      &var_callback);
   match_finder.addMatcher(
       cxxConstructorDecl(forEachConstructorInitializer(
           allOf(withInitializer(initialized_with_temporary),
@@ -380,10 +386,10 @@ int main(int argc, const char* argv[]) {
   MacroRewriterCallback macro_callback(&replacements);
   // CHECK_EQ/CHECK_NE helpers.
   match_finder.addMatcher(
-      callExpr(callee(is_logging_helper),
-               argumentCountIs(3),
-               hasAnyArgument(id("expr", expr(hasType(is_scoped_refptr)))),
-               hasAnyArgument(hasType(pointerType())),
+      callExpr(callee(is_logging_helper), argumentCountIs(3),
+               hasAnyArgument(ignoringParenImpCasts(
+                   id("expr", expr(hasType(is_scoped_refptr))))),
+               hasAnyArgument(ignoringParenImpCasts(hasType(pointerType()))),
                hasArgument(2, stringLiteral())),
       &macro_callback);
   // ASSERT_EQ/ASSERT_NE/EXPECT_EQ/EXPECT_EQ, which use the same underlying

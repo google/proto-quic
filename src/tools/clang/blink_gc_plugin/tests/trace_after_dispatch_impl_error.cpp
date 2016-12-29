@@ -7,7 +7,7 @@
 namespace blink {
 
 template <typename VisitorDispatcher>
-inline void TraceAfterDispatchInlinedBase::traceImpl(
+inline void TraceAfterDispatchInlinedBase::TraceImpl(
     VisitorDispatcher visitor) {
   // Implement a simple form of manual dispatching, because BlinkGCPlugin
   // checks if the tracing is dispatched to all derived classes.
@@ -16,58 +16,58 @@ inline void TraceAfterDispatchInlinedBase::traceImpl(
   // definition of derived classes here.
   if (tag_ == DERIVED) {
     // Missing dispatch call:
-    // static_cast<TraceAfterDispatchInlinedDerived*>(this)->traceAfterDispatch(
+    // static_cast<TraceAfterDispatchInlinedDerived*>(this)->TraceAfterDispatch(
     //     visitor);
   } else {
-    traceAfterDispatch(visitor);
+    TraceAfterDispatch(visitor);
   }
 }
 
-void TraceAfterDispatchExternBase::trace(Visitor* visitor) {
-  traceImpl(visitor);
+void TraceAfterDispatchExternBase::Trace(Visitor* visitor) {
+  TraceImpl(visitor);
 }
 
-void TraceAfterDispatchExternBase::trace(InlinedGlobalMarkingVisitor visitor) {
-  traceImpl(visitor);
+void TraceAfterDispatchExternBase::Trace(InlinedGlobalMarkingVisitor visitor) {
+  TraceImpl(visitor);
 }
 
 template <typename VisitorDispatcher>
-inline void TraceAfterDispatchExternBase::traceImpl(VisitorDispatcher visitor) {
+inline void TraceAfterDispatchExternBase::TraceImpl(VisitorDispatcher visitor) {
   if (tag_ == DERIVED) {
     // Missing dispatch call:
-    // static_cast<TraceAfterDispatchExternDerived*>(this)->traceAfterDispatch(
+    // static_cast<TraceAfterDispatchExternDerived*>(this)->TraceAfterDispatch(
     //     visitor);
   } else {
-    traceAfterDispatch(visitor);
+    TraceAfterDispatch(visitor);
   }
 }
 
-void TraceAfterDispatchExternBase::traceAfterDispatch(Visitor* visitor) {
-  traceAfterDispatchImpl(visitor);
+void TraceAfterDispatchExternBase::TraceAfterDispatch(Visitor* visitor) {
+  TraceAfterDispatchImpl(visitor);
 }
 
-void TraceAfterDispatchExternBase::traceAfterDispatch(
+void TraceAfterDispatchExternBase::TraceAfterDispatch(
     InlinedGlobalMarkingVisitor visitor) {
-  traceAfterDispatchImpl(visitor);
+  TraceAfterDispatchImpl(visitor);
 }
 
 template <typename VisitorDispatcher>
-inline void TraceAfterDispatchExternBase::traceAfterDispatchImpl(
+inline void TraceAfterDispatchExternBase::TraceAfterDispatchImpl(
     VisitorDispatcher visitor) {
-  // No trace call.
+  // No Trace call.
 }
 
-void TraceAfterDispatchExternDerived::traceAfterDispatch(Visitor* visitor) {
-  traceAfterDispatchImpl(visitor);
+void TraceAfterDispatchExternDerived::TraceAfterDispatch(Visitor* visitor) {
+  TraceAfterDispatchImpl(visitor);
 }
 
-void TraceAfterDispatchExternDerived::traceAfterDispatch(
+void TraceAfterDispatchExternDerived::TraceAfterDispatch(
     InlinedGlobalMarkingVisitor visitor) {
-  traceAfterDispatchImpl(visitor);
+  TraceAfterDispatchImpl(visitor);
 }
 
 template <typename VisitorDispatcher>
-inline void TraceAfterDispatchExternDerived::traceAfterDispatchImpl(
+inline void TraceAfterDispatchExternDerived::TraceAfterDispatchImpl(
     VisitorDispatcher visitor) {
   // Ditto.
 }

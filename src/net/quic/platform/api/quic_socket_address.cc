@@ -36,10 +36,6 @@ string QuicSocketAddress::ToString() const {
   return impl_.ToString();
 }
 
-bool QuicSocketAddress::FromString(string str) {
-  return impl_.FromString(str);
-}
-
 int QuicSocketAddress::FromSocket(int fd) {
   return impl_.FromSocket(fd);
 }

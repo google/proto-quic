@@ -165,34 +165,6 @@ void HttpUtil::ParseContentType(const std::string& content_type_str,
 }
 
 // static
-// Parse the Range header according to RFC 2616 14.35.1
-// ranges-specifier = byte-ranges-specifier
-// byte-ranges-specifier = bytes-unit "=" byte-range-set
-// byte-range-set  = 1#( byte-range-spec | suffix-byte-range-spec )
-// byte-range-spec = first-byte-pos "-" [last-byte-pos]
-// first-byte-pos  = 1*DIGIT
-// last-byte-pos   = 1*DIGIT
-bool HttpUtil::ParseRanges(const std::string& headers,
-                           std::vector<HttpByteRange>* ranges) {
-  std::string ranges_specifier;
-  HttpUtil::HeadersIterator it(headers.begin(), headers.end(), "\r\n");
-
-  while (it.GetNext()) {
-    // Look for "Range" header.
-    if (!base::LowerCaseEqualsASCII(it.name(), "range"))
-      continue;
-    ranges_specifier = it.values();
-    // We just care about the first "Range" header, so break here.
-    break;
-  }
-
-  if (ranges_specifier.empty())
-    return false;
-
-  return ParseRangeHeader(ranges_specifier, ranges);
-}
-
-// static
 bool HttpUtil::ParseRangeHeader(const std::string& ranges_specifier,
                                 std::vector<HttpByteRange>* ranges) {
   size_t equal_char_offset = ranges_specifier.find('=');
@@ -209,8 +181,9 @@ bool HttpUtil::ParseRangeHeader(const std::string& ranges_specifier,
   TrimLWS(&bytes_unit_begin, &bytes_unit_end);
   // "bytes" unit identifier is not found.
   if (!base::LowerCaseEqualsASCII(
-          base::StringPiece(bytes_unit_begin, bytes_unit_end), "bytes"))
+          base::StringPiece(bytes_unit_begin, bytes_unit_end), "bytes")) {
     return false;
+  }
 
   ValuesIterator byte_range_set_iterator(byte_range_set_begin,
                                          byte_range_set_end, ',');
@@ -419,32 +392,6 @@ bool HttpUtil::IsValidHeaderValue(const base::StringPiece& value) {
       return false;
   }
   return true;
-}
-
-// static
-std::string HttpUtil::StripHeaders(const std::string& headers,
-                                   const char* const headers_to_remove[],
-                                   size_t headers_to_remove_len) {
-  std::string stripped_headers;
-  HttpUtil::HeadersIterator it(headers.begin(), headers.end(), "\r\n");
-
-  while (it.GetNext()) {
-    bool should_remove = false;
-    for (size_t i = 0; i < headers_to_remove_len; ++i) {
-      if (base::LowerCaseEqualsASCII(
-              base::StringPiece(it.name_begin(), it.name_end()),
-              headers_to_remove[i])) {
-        should_remove = true;
-        break;
-      }
-    }
-    if (!should_remove) {
-      // Assume that name and values are on the same line.
-      stripped_headers.append(it.name_begin(), it.values_end());
-      stripped_headers.append("\r\n");
-    }
-  }
-  return stripped_headers;
 }
 
 // static

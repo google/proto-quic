@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 #include "base/compiler_specific.h"
 #include "base/logging.h"
@@ -25,6 +24,7 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_aligned.h"
 
 using base::ContainsKey;
 using base::StringPiece;
@@ -426,7 +426,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
   CryptoHandshakeMessage reset;
   reset.set_tag(kPRST);
   reset.SetValue(kRNON, packet.nonce_proof);
-  if (!FLAGS_quic_remove_packet_number_from_public_reset) {
+  if (!FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset) {
     reset.SetValue(kRSEQ, packet.rejected_packet_number);
   }
   if (packet.client_address.host().address_family() !=
@@ -448,7 +448,7 @@ std::unique_ptr<QuicEncryptedPacket> QuicFramer::BuildPublicResetPacket(
 
   uint8_t flags = static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_RST |
                                        PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID);
-  if (FLAGS_quic_use_old_public_reset_packets) {
+  if (FLAGS_quic_reloadable_flag_quic_use_old_public_reset_packets) {
     // TODO(rch): Remove this QUIC_VERSION_32 is retired.
     flags |= static_cast<uint8_t>(PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD);
   }
@@ -532,10 +532,7 @@ bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
   } else if (packet.length() <= kMaxPacketSize) {
     // The optimized decryption algorithm implementations run faster when
     // operating on aligned memory.
-    //
-    // TODO(rtenneti): Change the default 64 alignas value (used the default
-    // value from CACHELINE_SIZE).
-    ALIGNAS(64) char buffer[kMaxPacketSize];
+    QUIC_CACHELINE_ALIGNED char buffer[kMaxPacketSize];
     rv = ProcessDataPacket(&reader, public_header, packet, buffer,
                            kMaxPacketSize);
   } else {
@@ -685,7 +682,7 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
       break;
     case PACKET_8BYTE_CONNECTION_ID:
       public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID;
-      if (!FLAGS_quic_remove_v33_hacks2 &&
+      if (!FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2 &&
           perspective_ == Perspective::IS_CLIENT) {
         public_flags |= PACKET_PUBLIC_FLAGS_8BYTE_CONNECTION_ID_OLD;
       }
@@ -1980,7 +1977,7 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
       const size_t num_encoded_gaps =
           (total_gap + std::numeric_limits<uint8_t>::max() - 1) /
           std::numeric_limits<uint8_t>::max();
-      DCHECK_GT(num_encoded_gaps, 0u);
+      DCHECK_LE(0u, num_encoded_gaps);
 
       // Append empty ACK blocks because the gap is longer than a single gap.
       for (size_t i = 1;

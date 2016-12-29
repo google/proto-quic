@@ -9,6 +9,7 @@
 
 #include "base/macros.h"
 #include "base/run_loop.h"
+#include "base/test/histogram_tester.h"
 #include "base/threading/thread_checker.h"
 #include "base/values.h"
 #include "net/base/network_change_notifier.h"
@@ -40,11 +41,11 @@ class TestPrefDelegate : public NetworkQualitiesPrefsManager::PrefDelegate {
     ASSERT_EQ(value.size(), value_->size());
   }
 
-  const base::DictionaryValue& GetDictionaryValue() override {
+  std::unique_ptr<base::DictionaryValue> GetDictionaryValue() override {
     DCHECK(thread_checker_.CalledOnValidThread());
 
     read_count_++;
-    return *(value_.get());
+    return value_->CreateDeepCopy();
   }
 
   size_t write_count() const {
@@ -225,6 +226,11 @@ TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
         NOTREACHED();
     }
   }
+
+  base::HistogramTester histogram_tester;
+  estimator.OnPrefsRead(read_prefs);
+  histogram_tester.ExpectUniqueSample("NQE.Prefs.ReadSize", 3, 1);
+
   manager.ShutdownOnPrefThread();
 }
 

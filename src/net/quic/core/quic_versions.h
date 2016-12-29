@@ -30,7 +30,7 @@ enum QuicVersion {
   QUIC_VERSION_36 = 36,  // Add support to force HOL blocking.
   QUIC_VERSION_37 = 37,  // Add perspective into null encryption.
 
-  // IMPORTANT: if you are adding to this std::list, follow the instructions at
+  // IMPORTANT: if you are adding to this list, follow the instructions at
   // http://sites/quic/adding-and-removing-versions
 };
 

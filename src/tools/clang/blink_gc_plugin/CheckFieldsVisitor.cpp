@@ -47,6 +47,14 @@ void CheckFieldsVisitor::AtMember(Member* edge) {
   invalid_fields_.push_back(std::make_pair(current_, kMemberInUnmanaged));
 }
 
+void CheckFieldsVisitor::AtIterator(Iterator* edge) {
+  if (!managed_host_)
+    return;
+
+  if (edge->IsUnsafe())
+    invalid_fields_.push_back(std::make_pair(current_, kIteratorToGCManaged));
+}
+
 void CheckFieldsVisitor::AtValue(Value* edge) {
   // TODO: what should we do to check unions?
   if (edge->value()->record()->isUnion())

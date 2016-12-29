@@ -30,8 +30,7 @@ _ACTIVITY_RESULT_OK = -1
 
 _COMMAND_LINE_PARAMETER = 'cmdlinearg-parameter'
 _DEFAULT_ANNOTATIONS = [
-    'Smoke', 'SmallTest', 'MediumTest', 'LargeTest',
-    'EnormousTest', 'IntegrationTest']
+    'SmallTest', 'MediumTest', 'LargeTest', 'EnormousTest', 'IntegrationTest']
 _EXCLUDE_UNLESS_REQUESTED_ANNOTATIONS = [
     'DisabledTest', 'FlakyTest']
 _VALID_ANNOTATIONS = set(['Manual', 'PerfTest'] + _DEFAULT_ANNOTATIONS +

@@ -30,6 +30,7 @@ enum SubstitutionType {
   SUBSTITUTION_SOURCE_ROOT_RELATIVE_DIR,  // {{root_relative_dir}}
   SUBSTITUTION_SOURCE_GEN_DIR,  // {{source_gen_dir}}
   SUBSTITUTION_SOURCE_OUT_DIR,  // {{source_out_dir}}
+  SUBSTITUTION_SOURCE_TARGET_RELATIVE,  // {{source_target_relative}}
 
   // Valid for all compiler and linker tools. These depend on the target and
   // do not vary on a per-file basis.

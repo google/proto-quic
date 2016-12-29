@@ -4,8 +4,9 @@
 
 #include "net/quic/core/crypto/null_decrypter.h"
 
-#include <stdint.h>
+#include <cstdint>
 
+#include "net/base/int128.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_utils.h"
@@ -87,9 +88,7 @@ bool NullDecrypter::ReadHash(QuicDataReader* reader, uint128* hash) {
   if (!reader->ReadUInt64(&lo) || !reader->ReadUInt32(&hi)) {
     return false;
   }
-  *hash = hi;
-  *hash <<= 64;
-  *hash += lo;
+  *hash = MakeUint128(hi, lo);
   return true;
 }
 

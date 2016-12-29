@@ -6,7 +6,7 @@
 
 #include "base/bind.h"
 #include "base/logging.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 
 namespace base {
 namespace win {
@@ -32,8 +32,8 @@ bool ObjectWatcher::StopWatching() {
   if (!wait_object_)
     return false;
 
-  // Make sure ObjectWatcher is used in a single-threaded fashion.
-  DCHECK(task_runner_->BelongsToCurrentThread());
+  // Make sure ObjectWatcher is used in a sequenced fashion.
+  DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   // Blocking call to cancel the wait. Any callbacks already in progress will
   // finish before we return from this call.
@@ -70,14 +70,14 @@ bool ObjectWatcher::StartWatchingInternal(HANDLE object, Delegate* delegate,
                                           bool execute_only_once) {
   DCHECK(delegate);
   DCHECK(!wait_object_) << "Already watching an object";
-  DCHECK(ThreadTaskRunnerHandle::IsSet());
+  DCHECK(SequencedTaskRunnerHandle::IsSet());
 
-  task_runner_ = ThreadTaskRunnerHandle::Get();
+  task_runner_ = SequencedTaskRunnerHandle::Get();
 
   run_once_ = execute_only_once;
 
   // Since our job is to just notice when an object is signaled and report the
-  // result back to this thread, we can just run on a Windows wait thread.
+  // result back to this sequence, we can just run on a Windows wait thread.
   DWORD wait_flags = WT_EXECUTEINWAITTHREAD;
   if (run_once_)
     wait_flags |= WT_EXECUTEONLYONCE;

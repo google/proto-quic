@@ -10,6 +10,51 @@
 
 using namespace clang;
 
+// Legacy names to be removed after Blink rename:
+namespace legacy {
+const char kCreateName[] = "create";
+const char kTraceName[] = "trace";
+const char kTraceImplName[] = "traceImpl";
+const char kFinalizeName[] = "finalizeGarbageCollectedObject";
+const char kTraceAfterDispatchName[] = "traceAfterDispatch";
+const char kTraceAfterDispatchImplName[] = "traceAfterDispatchImpl";
+const char kRegisterWeakMembersName[] = "registerWeakMembers";
+const char kAdjustAndMarkName[] = "adjustAndMark";
+const char kIsHeapObjectAliveName[] = "isHeapObjectAlive";
+}  // namespace legacy
+
+const char kNewOperatorName[] = "operator new";
+const char* kCreateName = "Create";
+const char* kTraceName = "Trace";
+const char* kTraceImplName = "TraceImpl";
+const char* kFinalizeName = "FinalizeGarbageCollectedObject";
+const char* kTraceAfterDispatchName = "TraceAfterDispatch";
+const char* kTraceAfterDispatchImplName = "TraceAfterDispatchImpl";
+const char* kRegisterWeakMembersName = "RegisterWeakMembers";
+const char kHeapAllocatorName[] = "HeapAllocator";
+const char kTraceIfNeededName[] = "TraceIfNeeded";
+const char kVisitorDispatcherName[] = "VisitorDispatcher";
+const char kVisitorVarName[] = "visitor";
+const char* kAdjustAndMarkName = "AdjustAndMark";
+const char* kIsHeapObjectAliveName = "IsHeapObjectAlive";
+const char kIsEagerlyFinalizedName[] = "IsEagerlyFinalizedMarker";
+const char kConstIteratorName[] = "const_iterator";
+const char kIteratorName[] = "iterator";
+const char kConstReverseIteratorName[] = "const_reverse_iterator";
+const char kReverseIteratorName[] = "reverse_iterator";
+
+void Config::UseLegacyNames() {
+  kCreateName = legacy::kCreateName;
+  kTraceName = legacy::kTraceName;
+  kTraceImplName = legacy::kTraceImplName;
+  kFinalizeName = legacy::kFinalizeName;
+  kTraceAfterDispatchName = legacy::kTraceAfterDispatchName;
+  kTraceAfterDispatchImplName = legacy::kTraceAfterDispatchImplName;
+  kRegisterWeakMembersName = legacy::kRegisterWeakMembersName;
+  kAdjustAndMarkName = legacy::kAdjustAndMarkName;
+  kIsHeapObjectAliveName = legacy::kIsHeapObjectAliveName;
+}
+
 bool Config::IsTemplateInstantiation(CXXRecordDecl* record) {
   ClassTemplateSpecializationDecl* spec =
       dyn_cast<clang::ClassTemplateSpecializationDecl>(record);

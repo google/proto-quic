@@ -10,6 +10,7 @@
 
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/cert/ct_verifier.h"
 #include "net/cert/signed_certificate_timestamp.h"
@@ -34,19 +35,19 @@ class NET_EXPORT MultiLogCTVerifier : public CTVerifier {
       const std::vector<scoped_refptr<const CTLogVerifier>>& log_verifiers);
 
   // CTVerifier implementation:
-  int Verify(X509Certificate* cert,
-             const std::string& stapled_ocsp_response,
-             const std::string& sct_list_from_tls_extension,
-             SignedCertificateTimestampAndStatusList* output_scts,
-             const NetLogWithSource& net_log) override;
+  void Verify(X509Certificate* cert,
+              base::StringPiece stapled_ocsp_response,
+              base::StringPiece sct_list_from_tls_extension,
+              SignedCertificateTimestampAndStatusList* output_scts,
+              const NetLogWithSource& net_log) override;
 
   void SetObserver(Observer* observer) override;
 
  private:
   // Verify a list of SCTs from |encoded_sct_list| over |expected_entry|,
-  // placing the verification results in |result|. The SCTs in the list
+  // placing the verification results in |output_scts|. The SCTs in the list
   // come from |origin| (as will be indicated in the origin field of each SCT).
-  bool VerifySCTs(const std::string& encoded_sct_list,
+  void VerifySCTs(base::StringPiece encoded_sct_list,
                   const ct::LogEntry& expected_entry,
                   ct::SignedCertificateTimestamp::Origin origin,
                   X509Certificate* cert,

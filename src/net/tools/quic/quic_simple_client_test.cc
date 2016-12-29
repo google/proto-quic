@@ -9,13 +9,11 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using net::test::CryptoTestUtils;
-
 namespace net {
 namespace test {
 
 TEST(QuicSimpleClientTest, Initialize) {
-  IPEndPoint server_address(IPEndPoint(net::test::Loopback4(), 80));
+  QuicSocketAddress server_address(QuicIpAddress::Loopback4(), 80);
   QuicServerId server_id("hostname", server_address.port(),
                          PRIVACY_MODE_DISABLED);
   QuicVersionVector versions = AllSupportedVersions();

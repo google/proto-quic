@@ -75,8 +75,6 @@ struct TestConfig {
   bool fail_second_ddos_callback = false;
   bool fail_cert_callback = false;
   std::string cipher;
-  std::string cipher_tls10;
-  std::string cipher_tls11;
   bool handshake_never_done = false;
   int export_keying_material = 0;
   std::string export_label;
@@ -102,13 +100,12 @@ struct TestConfig {
   bool renegotiate_once = false;
   bool renegotiate_freely = false;
   bool renegotiate_ignore = false;
-  bool disable_npn = false;
   int expect_peer_signature_algorithm = 0;
   bool p384_only = false;
   bool enable_all_curves = false;
   bool use_sparse_dh_prime = false;
   int expect_curve_id = 0;
-  int expect_dhe_group_size = 0;
+  int expect_resume_curve_id = 0;
   bool use_old_client_cert_callback = false;
   int initial_timeout_duration_ms = 0;
   bool use_null_client_ca_list = false;

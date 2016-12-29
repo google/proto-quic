@@ -11,6 +11,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/ip_address.h"
 #include "net/base/test_completion_callback.h"

@@ -7,13 +7,13 @@
 #include <utility>
 
 #include "base/logging.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/base/parse_number.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using base::IntToString;
 using base::StringPiece;
@@ -61,9 +61,9 @@ void QuicSpdyStream::StopReading() {
 size_t QuicSpdyStream::WriteHeaders(
     SpdyHeaderBlock header_block,
     bool fin,
-    QuicAckListenerInterface* ack_notifier_delegate) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   size_t bytes_written = spdy_session_->WriteHeaders(
-      id(), std::move(header_block), fin, priority_, ack_notifier_delegate);
+      id(), std::move(header_block), fin, priority_, std::move(ack_listener));
   if (fin) {
     // TODO(rch): Add test to ensure fin_sent_ is set whenever a fin is sent.
     set_fin_sent(true);
@@ -75,13 +75,13 @@ size_t QuicSpdyStream::WriteHeaders(
 void QuicSpdyStream::WriteOrBufferBody(
     const string& data,
     bool fin,
-    QuicAckListenerInterface* ack_notifier_delegate) {
-  WriteOrBufferData(data, fin, ack_notifier_delegate);
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
+  WriteOrBufferData(data, fin, std::move(ack_listener));
 }
 
 size_t QuicSpdyStream::WriteTrailers(
     SpdyHeaderBlock trailer_block,
-    QuicAckListenerInterface* ack_notifier_delegate) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (fin_sent()) {
     QUIC_BUG << "Trailers cannot be sent after a FIN.";
     return 0;
@@ -91,15 +91,16 @@ size_t QuicSpdyStream::WriteTrailers(
   // trailers may be processed out of order at the peer.
   DVLOG(1) << "Inserting trailer: (" << kFinalOffsetHeaderKey << ", "
            << stream_bytes_written() + queued_data_bytes() << ")";
-  trailer_block.insert(std::make_pair(
-      kFinalOffsetHeaderKey,
-      IntToString(stream_bytes_written() + queued_data_bytes())));
+  trailer_block.insert(
+      std::make_pair(kFinalOffsetHeaderKey,
+                     QuicTextUtils::Uint64ToString(stream_bytes_written() +
+                                                   queued_data_bytes())));
 
   // Write the trailing headers with a FIN, and close stream for writing:
   // trailers are the last thing to be sent on a stream.
   const bool kFin = true;
   size_t bytes_written = spdy_session_->WriteHeaders(
-      id(), std::move(trailer_block), kFin, priority_, ack_notifier_delegate);
+      id(), std::move(trailer_block), kFin, priority_, std::move(ack_listener));
   set_fin_sent(kFin);
 
   // Trailers are the last thing to be sent on a stream, but if there is still
@@ -168,7 +169,8 @@ void QuicSpdyStream::OnStreamHeaderList(bool fin,
   // be reset.
   // TODO(rch): Use an explicit "headers too large" signal. An empty header list
   // might be acceptable if it corresponds to a trailing header frame.
-  if (FLAGS_quic_limit_uncompressed_headers && header_list.empty()) {
+  if (FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers &&
+      header_list.empty()) {
     OnHeadersTooLarge();
     if (IsDoneReading()) {
       return;
@@ -330,13 +332,13 @@ QuicConsumedData QuicSpdyStream::WritevDataInner(
     QuicIOVector iov,
     QuicStreamOffset offset,
     bool fin,
-    QuicAckListenerInterface* ack_notifier_delegate) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (spdy_session_->headers_stream() != nullptr &&
       spdy_session_->force_hol_blocking()) {
-    return spdy_session_->headers_stream()->WritevStreamData(
-        id(), iov, offset, fin, ack_notifier_delegate);
+    return spdy_session_->WritevStreamData(id(), iov, offset, fin,
+                                           std::move(ack_listener));
   }
-  return QuicStream::WritevDataInner(iov, offset, fin, ack_notifier_delegate);
+  return QuicStream::WritevDataInner(iov, offset, fin, std::move(ack_listener));
 }
 
 }  // namespace net

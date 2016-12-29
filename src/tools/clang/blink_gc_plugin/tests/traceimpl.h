@@ -11,16 +11,16 @@ namespace blink {
 
 class X : public GarbageCollected<X> {
  public:
-  virtual void trace(Visitor*) {}
+  virtual void Trace(Visitor*) {}
 };
 
 class TraceImplInlined : public GarbageCollected<TraceImplInlined> {
  public:
-  void trace(Visitor* visitor) { traceImpl(visitor); }
+  void Trace(Visitor* visitor) { TraceImpl(visitor); }
 
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
-    visitor->trace(x_);
+  void TraceImpl(VisitorDispatcher visitor) {
+    visitor->Trace(x_);
   }
 
  private:
@@ -29,9 +29,9 @@ class TraceImplInlined : public GarbageCollected<TraceImplInlined> {
 
 class TraceImplExtern : public GarbageCollected<TraceImplExtern> {
  public:
-  void trace(Visitor* visitor);
+  void Trace(Visitor* visitor);
   template <typename VisitorDispatcher>
-  inline void traceImpl(VisitorDispatcher);
+  inline void TraceImpl(VisitorDispatcher);
 
  private:
   Member<X> x_;
@@ -39,25 +39,25 @@ class TraceImplExtern : public GarbageCollected<TraceImplExtern> {
 
 class Base : public GarbageCollected<Base> {
  public:
-  virtual void trace(Visitor* visitor) {}
+  virtual void Trace(Visitor* visitor) {}
 };
 
 class TraceImplBaseInlined : public Base {
  public:
-  void trace(Visitor* visitor) override { traceImpl(visitor); }
+  void Trace(Visitor* visitor) override { TraceImpl(visitor); }
 
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
-    Base::trace(visitor);
+  void TraceImpl(VisitorDispatcher visitor) {
+    Base::Trace(visitor);
   }
 };
 
 class TraceImplBaseExtern : public Base {
  public:
-  void trace(Visitor* visitor) override;
+  void Trace(Visitor* visitor) override;
 
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher);
+  void TraceImpl(VisitorDispatcher);
 
  private:
   Member<X> x_;

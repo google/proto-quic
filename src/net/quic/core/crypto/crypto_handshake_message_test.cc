@@ -6,7 +6,7 @@
 
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/test/gtest_util.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {

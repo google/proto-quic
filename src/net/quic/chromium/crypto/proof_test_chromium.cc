@@ -93,12 +93,12 @@ class TestCallback : public ProofSource::Callback {
  public:
   explicit TestCallback(bool* called,
                         bool* ok,
-                        scoped_refptr<ProofSource::Chain>* chain,
+                        QuicReferenceCountedPointer<ProofSource::Chain>* chain,
                         QuicCryptoProof* proof)
       : called_(called), ok_(ok), chain_(chain), proof_(proof) {}
 
   void Run(bool ok,
-           const scoped_refptr<ProofSource::Chain>& chain,
+           const QuicReferenceCountedPointer<ProofSource::Chain>& chain,
            const QuicCryptoProof& proof,
            std::unique_ptr<ProofSource::Details> /* details */) override {
     *ok_ = ok;
@@ -110,7 +110,7 @@ class TestCallback : public ProofSource::Callback {
  private:
   bool* called_;
   bool* ok_;
-  scoped_refptr<ProofSource::Chain>* chain_;
+  QuicReferenceCountedPointer<ProofSource::Chain>* chain_;
   QuicCryptoProof* proof_;
 };
 
@@ -135,8 +135,8 @@ TEST_P(ProofTest, DISABLED_Verify) {
   const string second_chlo_hash = "first chlo hash bytes";
   const QuicVersion quic_version = GetParam();
 
-  scoped_refptr<ProofSource::Chain> chain;
-  scoped_refptr<ProofSource::Chain> first_chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> first_chain;
   string error_details;
   QuicCryptoProof proof, first_proof;
   QuicSocketAddress server_addr;
@@ -187,7 +187,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
   QuicSocketAddress server_addr;
 
   // Call synchronous version
-  scoped_refptr<ProofSource::Chain> expected_chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> expected_chain;
   QuicCryptoProof expected_proof;
   ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
                                quic_version, first_chlo_hash, QuicTagVector(),
@@ -196,7 +196,7 @@ TEST_P(ProofTest, VerifySourceAsync) {
   // Call asynchronous version and compare results
   bool called = false;
   bool ok;
-  scoped_refptr<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
   QuicCryptoProof proof;
   std::unique_ptr<ProofSource::Callback> cb(
       new TestCallback(&called, &ok, &chain, &proof));
@@ -216,7 +216,7 @@ TEST_P(ProofTest, UseAfterFree) {
   const string server_config = "server config bytes";
   const string hostname = "test.example.com";
   const string chlo_hash = "proof nonce bytes";
-  scoped_refptr<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
   string error_details;
   QuicCryptoProof proof;
   QuicSocketAddress server_addr;

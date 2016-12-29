@@ -93,8 +93,15 @@ Value RunProcessFileTemplate(Scope* scope,
     return Value();
   }
 
+  auto& types = subst.required_types();
+  if (std::find(types.begin(), types.end(),
+                SUBSTITUTION_SOURCE_TARGET_RELATIVE) != types.end()) {
+    *err = Err(template_arg, "Not a valid substitution type for the function.");
+    return Value();
+  }
+
   SubstitutionWriter::ApplyListToSourcesAsString(
-      scope->settings(), subst, input_files, &result_files);
+      nullptr, scope->settings(), subst, input_files, &result_files);
 
   // Convert the list of strings to the return Value.
   Value ret(function, Value::LIST);

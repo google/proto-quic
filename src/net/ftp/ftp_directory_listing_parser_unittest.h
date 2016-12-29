@@ -68,7 +68,11 @@ class FtpDirectoryListingParserTest : public testing::Test {
     mock_current_time_exploded.day_of_month = 15;
     mock_current_time_exploded.hour = 12;
     mock_current_time_exploded.minute = 45;
-    return base::Time::FromUTCExploded(mock_current_time_exploded);
+
+    base::Time out_time;
+    EXPECT_TRUE(
+        base::Time::FromUTCExploded(mock_current_time_exploded, &out_time));
+    return out_time;
   }
 };
 

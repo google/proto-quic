@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "base/macros.h"
-#include "base/strings/string_number_conversions.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 namespace net {
 
@@ -56,7 +56,7 @@ std::string QuicTagToString(QuicTag tag) {
     return std::string(chars, sizeof(chars));
   }
 
-  return base::UintToString(orig_tag);
+  return QuicTextUtils::Uint64ToString(orig_tag);
 }
 
 uint32_t MakeQuicTag(char a, char b, char c, char d) {

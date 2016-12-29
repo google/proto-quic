@@ -36,15 +36,6 @@ void AddTestRootCertificate(const uint8_t* cert, size_t len);
 // Removes all root certificates added by |AddTestRootCertificate| calls.
 void ClearTestRootCertificates();
 
-// Helper for the <keygen> handler. Passes the DER-encoded key pair via JNI to
-// the Credentials store. The public key should be a DER-encoded
-// SubjectPublicKeyInfo (X.509) and the private key a DER-encode PrivateKeyInfo
-// (PKCS#8).
-bool StoreKeyPair(const uint8_t* public_key,
-                  size_t public_len,
-                  const uint8_t* private_key,
-                  size_t private_len);
-
 // Returns true if cleartext traffic to |host| is allowed by the app. Always
 // true on L and older.
 bool IsCleartextPermitted(const std::string& host);

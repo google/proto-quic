@@ -129,6 +129,7 @@ class RecordInfo {
   bool InheritsTrace();
 
   Edge* CreateEdge(const clang::Type* type);
+  Edge* CreateEdgeFromOriginalType(const clang::Type* type);
 
   RecordCache* cache_;
   clang::CXXRecordDecl* record_;

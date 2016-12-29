@@ -11,7 +11,7 @@ namespace blink {
 
 class A : public GarbageCollected<A> {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 };
 
 class B : public A {
@@ -19,12 +19,12 @@ class B : public A {
 
 class C : public B {
 public:
-    void trace(Visitor*); // Cannot override a non-virtual trace.
+    void Trace(Visitor*); // Cannot override a non-virtual Trace.
 };
 
 class D : public B {
 public:
-    virtual void trace(Visitor*); // Cannot override a non-virtual trace.
+    virtual void Trace(Visitor*); // Cannot override a non-virtual Trace.
 };
 
 }

@@ -195,11 +195,11 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
   assert(!ssl->server);
 
   for (;;) {
-    state = ssl->state;
+    state = hs->state;
 
-    switch (ssl->state) {
+    switch (hs->state) {
       case SSL_ST_INIT:
-        ssl->state = SSL_ST_CONNECT;
+        hs->state = SSL_ST_CONNECT;
         skip = 1;
         break;
 
@@ -211,7 +211,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           goto end;
         }
 
-        ssl->state = SSL3_ST_CW_CLNT_HELLO_A;
+        hs->state = SSL3_ST_CW_CLNT_HELLO_A;
         break;
 
       case SSL3_ST_CW_CLNT_HELLO_A:
@@ -222,11 +222,11 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         }
 
         if (!SSL_is_dtls(ssl) || ssl->d1->send_cookie) {
-          ssl->s3->tmp.next_state = SSL3_ST_CR_SRVR_HELLO_A;
+          hs->next_state = SSL3_ST_CR_SRVR_HELLO_A;
         } else {
-          ssl->s3->tmp.next_state = DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A;
+          hs->next_state = DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A;
         }
-        ssl->state = SSL3_ST_CW_FLUSH;
+        hs->state = SSL3_ST_CW_FLUSH;
         break;
 
       case DTLS1_ST_CR_HELLO_VERIFY_REQUEST_A:
@@ -237,15 +237,15 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         }
         if (ssl->d1->send_cookie) {
           ssl->method->received_flight(ssl);
-          ssl->state = SSL3_ST_CW_CLNT_HELLO_A;
+          hs->state = SSL3_ST_CW_CLNT_HELLO_A;
         } else {
-          ssl->state = SSL3_ST_CR_SRVR_HELLO_A;
+          hs->state = SSL3_ST_CR_SRVR_HELLO_A;
         }
         break;
 
       case SSL3_ST_CR_SRVR_HELLO_A:
         ret = ssl3_get_server_hello(hs);
-        if (ssl->state == SSL_ST_TLS13) {
+        if (hs->state == SSL_ST_TLS13) {
           break;
         }
         if (ret <= 0) {
@@ -253,9 +253,9 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         }
 
         if (ssl->session != NULL) {
-          ssl->state = SSL3_ST_CR_SESSION_TICKET_A;
+          hs->state = SSL3_ST_CR_SESSION_TICKET_A;
         } else {
-          ssl->state = SSL3_ST_CR_CERT_A;
+          hs->state = SSL3_ST_CR_CERT_A;
         }
         break;
 
@@ -268,7 +268,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CR_CERT_STATUS_A;
+        hs->state = SSL3_ST_CR_CERT_STATUS_A;
         break;
 
       case SSL3_ST_CR_CERT_STATUS_A:
@@ -280,7 +280,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_VERIFY_SERVER_CERT;
+        hs->state = SSL3_ST_VERIFY_SERVER_CERT;
         break;
 
       case SSL3_ST_VERIFY_SERVER_CERT:
@@ -292,7 +292,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CR_KEY_EXCH_A;
+        hs->state = SSL3_ST_CR_KEY_EXCH_A;
         break;
 
       case SSL3_ST_CR_KEY_EXCH_A:
@@ -300,7 +300,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         if (ret <= 0) {
           goto end;
         }
-        ssl->state = SSL3_ST_CR_CERT_REQ_A;
+        hs->state = SSL3_ST_CR_CERT_REQ_A;
         break;
 
       case SSL3_ST_CR_CERT_REQ_A:
@@ -312,7 +312,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CR_SRVR_DONE_A;
+        hs->state = SSL3_ST_CR_SRVR_DONE_A;
         break;
 
       case SSL3_ST_CR_SRVR_DONE_A:
@@ -321,12 +321,11 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           goto end;
         }
         ssl->method->received_flight(ssl);
-        ssl->state = SSL3_ST_CW_CERT_A;
+        hs->state = SSL3_ST_CW_CERT_A;
         break;
 
       case SSL3_ST_CW_CERT_A:
       case SSL3_ST_CW_CERT_B:
-      case SSL3_ST_CW_CERT_C:
         if (hs->cert_request) {
           ret = ssl3_send_client_certificate(hs);
           if (ret <= 0) {
@@ -335,7 +334,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CW_KEY_EXCH_A;
+        hs->state = SSL3_ST_CW_KEY_EXCH_A;
         break;
 
       case SSL3_ST_CW_KEY_EXCH_A:
@@ -344,7 +343,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         if (ret <= 0) {
           goto end;
         }
-        ssl->state = SSL3_ST_CW_CERT_VRFY_A;
+        hs->state = SSL3_ST_CW_CERT_VRFY_A;
         break;
 
       case SSL3_ST_CW_CERT_VRFY_A:
@@ -358,7 +357,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CW_CHANGE;
+        hs->state = SSL3_ST_CW_CHANGE;
         break;
 
       case SSL3_ST_CW_CHANGE:
@@ -367,7 +366,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           goto end;
         }
 
-        ssl->state = SSL3_ST_CW_NEXT_PROTO_A;
+        hs->state = SSL3_ST_CW_NEXT_PROTO_A;
 
         if (!tls1_change_cipher_state(hs, SSL3_CHANGE_CIPHER_CLIENT_WRITE)) {
           ret = -1;
@@ -386,7 +385,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CW_CHANNEL_ID_A;
+        hs->state = SSL3_ST_CW_CHANNEL_ID_A;
         break;
 
       case SSL3_ST_CW_CHANNEL_ID_A:
@@ -399,7 +398,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CW_FINISHED_A;
+        hs->state = SSL3_ST_CW_FINISHED_A;
         break;
 
       case SSL3_ST_CW_FINISHED_A:
@@ -409,10 +408,10 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         if (ret <= 0) {
           goto end;
         }
-        ssl->state = SSL3_ST_CW_FLUSH;
+        hs->state = SSL3_ST_CW_FLUSH;
 
         if (ssl->session != NULL) {
-          ssl->s3->tmp.next_state = SSL_ST_OK;
+          hs->next_state = SSL_ST_OK;
         } else {
           /* This is a non-resumption handshake. If it involves ChannelID, then
            * record the handshake hashes at this point in the session so that
@@ -427,15 +426,15 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
               /* No False Start on renegotiation (would complicate the state
                * machine). */
               !ssl->s3->initial_handshake_complete) {
-            ssl->s3->tmp.next_state = SSL3_ST_FALSE_START;
+            hs->next_state = SSL3_ST_FALSE_START;
           } else {
-            ssl->s3->tmp.next_state = SSL3_ST_CR_SESSION_TICKET_A;
+            hs->next_state = SSL3_ST_CR_SESSION_TICKET_A;
           }
         }
         break;
 
       case SSL3_ST_FALSE_START:
-        ssl->state = SSL3_ST_CR_SESSION_TICKET_A;
+        hs->state = SSL3_ST_CR_SESSION_TICKET_A;
         hs->in_false_start = 1;
 
         ssl_free_wbio_buffer(ssl);
@@ -451,7 +450,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         } else {
           skip = 1;
         }
-        ssl->state = SSL3_ST_CR_CHANGE;
+        hs->state = SSL3_ST_CR_CHANGE;
         break;
 
       case SSL3_ST_CR_CHANGE:
@@ -464,7 +463,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           ret = -1;
           goto end;
         }
-        ssl->state = SSL3_ST_CR_FINISHED_A;
+        hs->state = SSL3_ST_CR_FINISHED_A;
         break;
 
       case SSL3_ST_CR_FINISHED_A:
@@ -475,9 +474,9 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         ssl->method->received_flight(ssl);
 
         if (ssl->session != NULL) {
-          ssl->state = SSL3_ST_CW_CHANGE;
+          hs->state = SSL3_ST_CW_CHANGE;
         } else {
-          ssl->state = SSL_ST_OK;
+          hs->state = SSL_ST_OK;
         }
         break;
 
@@ -487,8 +486,8 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           ret = -1;
           goto end;
         }
-        ssl->state = ssl->s3->tmp.next_state;
-        if (ssl->state != SSL_ST_OK) {
+        hs->state = hs->next_state;
+        if (hs->state != SSL_ST_OK) {
           ssl->method->expect_flight(ssl);
         }
         break;
@@ -498,7 +497,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         if (ret <= 0) {
           goto end;
         }
-        ssl->state = SSL_ST_OK;
+        hs->state = SSL_ST_OK;
         break;
 
       case SSL_ST_OK:
@@ -517,7 +516,7 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
           if (ssl->s3->established_session == NULL) {
             /* Do not stay in SSL_ST_OK, to avoid confusing |SSL_in_init|
              * callers. */
-            ssl->state = SSL_ST_ERROR;
+            hs->state = SSL_ST_ERROR;
             skip = 1;
             ret = -1;
             goto end;
@@ -553,11 +552,11 @@ int ssl3_connect(SSL_HANDSHAKE *hs) {
         goto end;
     }
 
-    if (!ssl->s3->tmp.reuse_message && !skip && ssl->state != state) {
-      int new_state = ssl->state;
-      ssl->state = state;
+    if (!ssl->s3->tmp.reuse_message && !skip && hs->state != state) {
+      int new_state = hs->state;
+      hs->state = state;
       ssl_do_info_callback(ssl, SSL_CB_CONNECT_LOOP, 1);
-      ssl->state = new_state;
+      hs->state = new_state;
     }
     skip = 0;
   }
@@ -642,7 +641,7 @@ static int ssl_write_client_cipher_list(SSL *ssl, CBB *out,
 
   /* For SSLv3, the SCSV is added. Otherwise the renegotiation extension is
    * added. */
-  if (ssl->client_version == SSL3_VERSION &&
+  if (max_version == SSL3_VERSION &&
       !ssl->s3->initial_handshake_complete) {
     if (!CBB_add_u16(&child, SSL3_CK_SCSV & 0xffff)) {
       return 0;
@@ -675,7 +674,7 @@ int ssl_write_client_hello(SSL_HANDSHAKE *hs) {
                     !ssl->s3->initial_handshake_complete;
 
   CBB child;
-  if (!CBB_add_u16(&body, ssl->client_version) ||
+  if (!CBB_add_u16(&body, hs->client_version) ||
       !CBB_add_bytes(&body, ssl->s3->client_random, SSL3_RANDOM_SIZE) ||
       !CBB_add_u8_length_prefixed(&body, &child) ||
       (has_session &&
@@ -723,7 +722,7 @@ int ssl_write_client_hello(SSL_HANDSHAKE *hs) {
 
 static int ssl3_send_client_hello(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_CLNT_HELLO_B) {
+  if (hs->state == SSL3_ST_CW_CLNT_HELLO_B) {
     return ssl->method->write_message(ssl);
   }
 
@@ -739,25 +738,26 @@ static int ssl3_send_client_hello(SSL_HANDSHAKE *hs) {
     return -1;
   }
 
-  assert(ssl->state == SSL3_ST_CW_CLNT_HELLO_A);
+  uint16_t max_wire_version = ssl->method->version_to_wire(max_version);
+  assert(hs->state == SSL3_ST_CW_CLNT_HELLO_A);
   if (!ssl->s3->have_version) {
-    ssl->version = ssl->method->version_to_wire(max_version);
-    /* Only set |ssl->client_version| on the initial handshake. Renegotiations,
-     * although locked to a version, reuse the value. When using the plain RSA
-     * key exchange, the ClientHello version is checked in the premaster secret.
-     * Some servers fail when this value changes. */
-    ssl->client_version = ssl->version;
+    ssl->version = max_wire_version;
+  }
 
-    if (max_version >= TLS1_3_VERSION) {
-      ssl->client_version = ssl->method->version_to_wire(TLS1_2_VERSION);
-    }
+  /* Always advertise the ClientHello version from the original maximum version,
+   * even on renegotiation. The static RSA key exchange uses this field, and
+   * some servers fail when it changes across handshakes. */
+  hs->client_version = max_wire_version;
+  if (max_version >= TLS1_3_VERSION) {
+    hs->client_version = ssl->method->version_to_wire(TLS1_2_VERSION);
   }
 
   /* If the configured session has expired or was created at a disabled
    * version, drop it. */
   if (ssl->session != NULL) {
     uint16_t session_version;
-    if (!ssl->method->version_from_wire(&session_version,
+    if (ssl->session->is_server ||
+        !ssl->method->version_from_wire(&session_version,
                                         ssl->session->ssl_version) ||
         (session_version < TLS1_3_VERSION &&
          ssl->session->session_id_length == 0) ||
@@ -779,7 +779,7 @@ static int ssl3_send_client_hello(SSL_HANDSHAKE *hs) {
     return -1;
   }
 
-  ssl->state = SSL3_ST_CW_CLNT_HELLO_B;
+  hs->state = SSL3_ST_CW_CLNT_HELLO_B;
   return ssl->method->write_message(ssl);
 }
 
@@ -889,7 +889,7 @@ static int ssl3_get_server_hello(SSL_HANDSHAKE *hs) {
   }
 
   if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION) {
-    ssl->state = SSL_ST_TLS13;
+    hs->state = SSL_ST_TLS13;
     hs->do_tls13_handshake = tls13_client_handshake;
     return 1;
   }
@@ -1041,39 +1041,34 @@ static int ssl3_get_server_certificate(SSL_HANDSHAKE *hs) {
 
   CBS cbs;
   CBS_init(&cbs, ssl->init_msg, ssl->init_num);
+
   uint8_t alert;
-  STACK_OF(X509) *chain = ssl_parse_cert_chain(ssl, &alert, NULL, &cbs);
-  if (chain == NULL) {
+  sk_CRYPTO_BUFFER_pop_free(ssl->s3->new_session->certs, CRYPTO_BUFFER_free);
+  EVP_PKEY_free(hs->peer_pubkey);
+  hs->peer_pubkey = NULL;
+  ssl->s3->new_session->certs = ssl_parse_cert_chain(
+      &alert, &hs->peer_pubkey, NULL, &cbs, ssl->ctx->pool);
+  if (ssl->s3->new_session->certs == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
-    goto err;
+    return -1;
   }
 
-  if (sk_X509_num(chain) == 0 || CBS_len(&cbs) != 0) {
+  if (sk_CRYPTO_BUFFER_num(ssl->s3->new_session->certs) == 0 ||
+      CBS_len(&cbs) != 0 ||
+      !ssl_session_x509_cache_objects(ssl->s3->new_session)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    goto err;
+    return -1;
   }
 
-  X509 *leaf = sk_X509_value(chain, 0);
-  if (!ssl_check_leaf_certificate(ssl, leaf)) {
+  if (!ssl_check_leaf_certificate(
+          ssl, hs->peer_pubkey,
+          sk_CRYPTO_BUFFER_value(ssl->s3->new_session->certs, 0))) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
-    goto err;
+    return -1;
   }
-
-  /* NOTE: Unlike the server half, the client's copy of |x509_chain| includes
-   * the leaf. */
-  sk_X509_pop_free(ssl->s3->new_session->x509_chain, X509_free);
-  ssl->s3->new_session->x509_chain = chain;
-
-  X509_free(ssl->s3->new_session->x509_peer);
-  X509_up_ref(leaf);
-  ssl->s3->new_session->x509_peer = leaf;
 
   return 1;
-
-err:
-  sk_X509_pop_free(chain, X509_free);
-  return -1;
 }
 
 static int ssl3_get_cert_status(SSL_HANDSHAKE *hs) {
@@ -1131,7 +1126,6 @@ static int ssl3_verify_server_cert(SSL_HANDSHAKE *hs) {
 static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   int al;
-  EVP_PKEY *pkey = NULL;
   DH *dh = NULL;
   EC_KEY *ecdh = NULL;
   EC_POINT *srvr_ecpoint = NULL;
@@ -1223,11 +1217,11 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
       goto err;
     }
 
-    ssl->s3->new_session->key_exchange_info = DH_num_bits(dh);
-    if (ssl->s3->new_session->key_exchange_info < 1024) {
+    unsigned bits = DH_num_bits(dh);
+    if (bits < 1024) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_BAD_DH_P_LENGTH);
       goto err;
-    } else if (ssl->s3->new_session->key_exchange_info > 4096) {
+    } else if (bits > 4096) {
       /* Overly large DHE groups are prohibitively expensive, so enforce a limit
        * to prevent a server from causing us to perform too expensive of a
        * computation. */
@@ -1255,7 +1249,7 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
       OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
       goto f_err;
     }
-    ssl->s3->new_session->key_exchange_info = group_id;
+    ssl->s3->new_session->group_id = group_id;
 
     /* Ensure the group is consistent with preferences. */
     if (!tls1_check_group_id(ssl, group_id)) {
@@ -1267,18 +1261,6 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
     /* Initialize ECDH and save the peer public key for later. */
     if (!SSL_ECDH_CTX_init(&hs->ecdh_ctx, group_id) ||
         !CBS_stow(&point, &hs->peer_key, &hs->peer_key_len)) {
-      goto err;
-    }
-  } else if (alg_k & SSL_kCECPQ1) {
-    SSL_ECDH_CTX_init_for_cecpq1(&hs->ecdh_ctx);
-    CBS key;
-    if (!CBS_get_u16_length_prefixed(&server_key_exchange, &key)) {
-      al = SSL_AD_DECODE_ERROR;
-      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-      goto f_err;
-    }
-
-    if (!CBS_stow(&key, &hs->peer_key, &hs->peer_key_len)) {
       goto err;
     }
   } else if (!(alg_k & SSL_kPSK)) {
@@ -1296,11 +1278,6 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
 
   /* ServerKeyExchange should be signed by the server's public key. */
   if (ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
-    pkey = X509_get_pubkey(ssl->s3->new_session->x509_peer);
-    if (pkey == NULL) {
-      goto err;
-    }
-
     uint16_t signature_algorithm = 0;
     if (ssl3_protocol_version(ssl) >= TLS1_2_VERSION) {
       if (!CBS_get_u16(&server_key_exchange, &signature_algorithm)) {
@@ -1311,10 +1288,10 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
       if (!tls12_check_peer_sigalg(ssl, &al, signature_algorithm)) {
         goto f_err;
       }
-      ssl->s3->tmp.peer_signature_algorithm = signature_algorithm;
-    } else if (pkey->type == EVP_PKEY_RSA) {
+      ssl->s3->new_session->peer_signature_algorithm = signature_algorithm;
+    } else if (hs->peer_pubkey->type == EVP_PKEY_RSA) {
       signature_algorithm = SSL_SIGN_RSA_PKCS1_MD5_SHA1;
-    } else if (pkey->type == EVP_PKEY_EC) {
+    } else if (hs->peer_pubkey->type == EVP_PKEY_EC) {
       signature_algorithm = SSL_SIGN_ECDSA_SHA1;
     } else {
       al = SSL_AD_UNSUPPORTED_CERTIFICATE;
@@ -1347,7 +1324,7 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
 
     int sig_ok = ssl_public_key_verify(
         ssl, CBS_data(&signature), CBS_len(&signature), signature_algorithm,
-        pkey, transcript_data, transcript_len);
+        hs->peer_pubkey, transcript_data, transcript_len);
     OPENSSL_free(transcript_data);
 
 #if defined(BORINGSSL_UNSAFE_FUZZER_MODE)
@@ -1370,13 +1347,11 @@ static int ssl3_get_server_key_exchange(SSL_HANDSHAKE *hs) {
       goto f_err;
     }
   }
-  EVP_PKEY_free(pkey);
   return 1;
 
 f_err:
   ssl3_send_alert(ssl, SSL3_AL_FATAL, al);
 err:
-  EVP_PKEY_free(pkey);
   DH_free(dh);
   EC_POINT_free(srvr_ecpoint);
   EC_KEY_free(ecdh);
@@ -1471,53 +1446,41 @@ static int ssl3_get_server_hello_done(SSL_HANDSHAKE *hs) {
 
 static int ssl3_send_client_certificate(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_CERT_A) {
-    /* Call cert_cb to update the certificate. */
-    if (ssl->cert->cert_cb) {
-      int ret = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
-      if (ret < 0) {
-        ssl->rwstate = SSL_X509_LOOKUP;
-        return -1;
-      }
-      if (ret == 0) {
-        OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_CB_ERROR);
-        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
-        return -1;
-      }
-    }
-
-    ssl->state = SSL3_ST_CW_CERT_B;
+  if (hs->state == SSL3_ST_CW_CERT_B) {
+    return ssl->method->write_message(ssl);
   }
+  assert(hs->state == SSL3_ST_CW_CERT_A);
 
-  if (ssl->state == SSL3_ST_CW_CERT_B) {
-    /* Call client_cert_cb to update the certificate. */
-    int should_retry;
-    if (!ssl_do_client_cert_cb(ssl, &should_retry)) {
-      if (should_retry) {
-        ssl->rwstate = SSL_X509_LOOKUP;
-      }
+  /* Call cert_cb to update the certificate. */
+  if (ssl->cert->cert_cb) {
+    int ret = ssl->cert->cert_cb(ssl, ssl->cert->cert_cb_arg);
+    if (ret < 0) {
+      ssl->rwstate = SSL_X509_LOOKUP;
       return -1;
     }
-
-    if (!ssl_has_certificate(ssl)) {
-      hs->cert_request = 0;
-      /* Without a client certificate, the handshake buffer may be released. */
-      ssl3_free_handshake_buffer(ssl);
-
-      if (ssl->version == SSL3_VERSION) {
-        /* In SSL 3.0, send no certificate by skipping both messages. */
-        ssl3_send_alert(ssl, SSL3_AL_WARNING, SSL_AD_NO_CERTIFICATE);
-        return 1;
-      }
-    }
-
-    if (!ssl3_output_cert_chain(ssl)) {
+    if (ret == 0) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_CERT_CB_ERROR);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
       return -1;
     }
-    ssl->state = SSL3_ST_CW_CERT_C;
   }
 
-  assert(ssl->state == SSL3_ST_CW_CERT_C);
+  if (!ssl_has_certificate(ssl)) {
+    hs->cert_request = 0;
+    /* Without a client certificate, the handshake buffer may be released. */
+    ssl3_free_handshake_buffer(ssl);
+
+    if (ssl->version == SSL3_VERSION) {
+      /* In SSL 3.0, send no certificate by skipping both messages. */
+      ssl3_send_alert(ssl, SSL3_AL_WARNING, SSL_AD_NO_CERTIFICATE);
+      return 1;
+    }
+  }
+
+  if (!ssl3_output_cert_chain(ssl)) {
+    return -1;
+  }
+  hs->state = SSL3_ST_CW_CERT_B;
   return ssl->method->write_message(ssl);
 }
 
@@ -1526,10 +1489,10 @@ OPENSSL_COMPILE_ASSERT(sizeof(size_t) >= sizeof(unsigned),
 
 static int ssl3_send_client_key_exchange(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_KEY_EXCH_B) {
+  if (hs->state == SSL3_ST_CW_KEY_EXCH_B) {
     return ssl->method->write_message(ssl);
   }
-  assert(ssl->state == SSL3_ST_CW_KEY_EXCH_A);
+  assert(hs->state == SSL3_ST_CW_KEY_EXCH_A);
 
   uint8_t *pms = NULL;
   size_t pms_len = 0;
@@ -1589,22 +1552,14 @@ static int ssl3_send_client_key_exchange(SSL_HANDSHAKE *hs) {
       goto err;
     }
 
-    EVP_PKEY *pkey = X509_get_pubkey(ssl->s3->new_session->x509_peer);
-    if (pkey == NULL) {
-      goto err;
-    }
-
-    RSA *rsa = EVP_PKEY_get0_RSA(pkey);
+    RSA *rsa = EVP_PKEY_get0_RSA(hs->peer_pubkey);
     if (rsa == NULL) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-      EVP_PKEY_free(pkey);
       goto err;
     }
 
-    EVP_PKEY_free(pkey);
-
-    pms[0] = ssl->client_version >> 8;
-    pms[1] = ssl->client_version & 0xff;
+    pms[0] = hs->client_version >> 8;
+    pms[1] = hs->client_version & 0xff;
     if (!RAND_bytes(&pms[2], SSL_MAX_MASTER_KEY_LENGTH - 2)) {
       goto err;
     }
@@ -1629,7 +1584,7 @@ static int ssl3_send_client_key_exchange(SSL_HANDSHAKE *hs) {
         !CBB_flush(&body)) {
       goto err;
     }
-  } else if (alg_k & (SSL_kECDHE|SSL_kDHE|SSL_kCECPQ1)) {
+  } else if (alg_k & (SSL_kECDHE|SSL_kDHE)) {
     /* Generate a keypair and serialize the public half. */
     CBB child;
     if (!SSL_ECDH_CTX_add_key(&hs->ecdh_ctx, &body, &child)) {
@@ -1697,7 +1652,7 @@ static int ssl3_send_client_key_exchange(SSL_HANDSHAKE *hs) {
   if (!ssl_complete_message(ssl, &cbb)) {
     goto err;
   }
-  ssl->state = SSL3_ST_CW_KEY_EXCH_B;
+  hs->state = SSL3_ST_CW_KEY_EXCH_B;
 
   ssl->s3->new_session->master_key_length =
       tls1_generate_master_secret(ssl, ssl->s3->new_session->master_key, pms,
@@ -1723,7 +1678,7 @@ err:
 
 static int ssl3_send_cert_verify(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_CERT_VRFY_C) {
+  if (hs->state == SSL3_ST_CW_CERT_VRFY_C) {
     return ssl->method->write_message(ssl);
   }
 
@@ -1757,7 +1712,7 @@ static int ssl3_send_cert_verify(SSL_HANDSHAKE *hs) {
 
   size_t sig_len = max_sig_len;
   enum ssl_private_key_result_t sign_result;
-  if (ssl->state == SSL3_ST_CW_CERT_VRFY_A) {
+  if (hs->state == SSL3_ST_CW_CERT_VRFY_A) {
     /* The SSL3 construction for CertificateVerify does not decompose into a
      * single final digest and signature, and must be special-cased. */
     if (ssl3_protocol_version(ssl) == SSL3_VERSION) {
@@ -1796,7 +1751,7 @@ static int ssl3_send_cert_verify(SSL_HANDSHAKE *hs) {
     /* The handshake buffer is no longer necessary. */
     ssl3_free_handshake_buffer(ssl);
   } else {
-    assert(ssl->state == SSL3_ST_CW_CERT_VRFY_B);
+    assert(hs->state == SSL3_ST_CW_CERT_VRFY_B);
     sign_result = ssl_private_key_complete(ssl, ptr, &sig_len, max_sig_len);
   }
 
@@ -1807,7 +1762,7 @@ static int ssl3_send_cert_verify(SSL_HANDSHAKE *hs) {
       goto err;
     case ssl_private_key_retry:
       ssl->rwstate = SSL_PRIVATE_KEY_OPERATION;
-      ssl->state = SSL3_ST_CW_CERT_VRFY_B;
+      hs->state = SSL3_ST_CW_CERT_VRFY_B;
       goto err;
   }
 
@@ -1816,7 +1771,7 @@ static int ssl3_send_cert_verify(SSL_HANDSHAKE *hs) {
     goto err;
   }
 
-  ssl->state = SSL3_ST_CW_CERT_VRFY_C;
+  hs->state = SSL3_ST_CW_CERT_VRFY_C;
   return ssl->method->write_message(ssl);
 
 err:
@@ -1826,11 +1781,11 @@ err:
 
 static int ssl3_send_next_proto(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_NEXT_PROTO_B) {
+  if (hs->state == SSL3_ST_CW_NEXT_PROTO_B) {
     return ssl->method->write_message(ssl);
   }
 
-  assert(ssl->state == SSL3_ST_CW_NEXT_PROTO_A);
+  assert(hs->state == SSL3_ST_CW_NEXT_PROTO_A);
 
   static const uint8_t kZero[32] = {0};
   size_t padding_len = 32 - ((ssl->s3->next_proto_negotiated_len + 2) % 32);
@@ -1848,17 +1803,17 @@ static int ssl3_send_next_proto(SSL_HANDSHAKE *hs) {
     return -1;
   }
 
-  ssl->state = SSL3_ST_CW_NEXT_PROTO_B;
+  hs->state = SSL3_ST_CW_NEXT_PROTO_B;
   return ssl->method->write_message(ssl);
 }
 
 static int ssl3_send_channel_id(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == SSL3_ST_CW_CHANNEL_ID_B) {
+  if (hs->state == SSL3_ST_CW_CHANNEL_ID_B) {
     return ssl->method->write_message(ssl);
   }
 
-  assert(ssl->state == SSL3_ST_CW_CHANNEL_ID_A);
+  assert(hs->state == SSL3_ST_CW_CHANNEL_ID_A);
 
   if (!ssl_do_channel_id_callback(ssl)) {
     return -1;
@@ -1878,7 +1833,7 @@ static int ssl3_send_channel_id(SSL_HANDSHAKE *hs) {
     return -1;
   }
 
-  ssl->state = SSL3_ST_CW_CHANNEL_ID_B;
+  hs->state = SSL3_ST_CW_CHANNEL_ID_B;
   return ssl->method->write_message(ssl);
 }
 

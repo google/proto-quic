@@ -11,34 +11,34 @@ namespace blink {
 
 class A : public GarbageCollected<A> {
  public:
-  virtual void trace(Visitor* visitor) { traceImpl(visitor); }
-  virtual void trace(InlinedGlobalMarkingVisitor visitor) {
-    traceImpl(visitor);
+  virtual void Trace(Visitor* visitor) { TraceImpl(visitor); }
+  virtual void Trace(InlinedGlobalMarkingVisitor visitor) {
+    TraceImpl(visitor);
   }
 
  private:
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {}
+  void TraceImpl(VisitorDispatcher visitor) {}
 };
 
 class B : public A {
-  // trace() isn't necessary because we've got nothing to trace here.
+  // Trace() isn't necessary because we've got nothing to trace here.
 };
 
 class C : public B {
  public:
-  void trace(Visitor* visitor) override { traceImpl(visitor); }
-  void trace(InlinedGlobalMarkingVisitor visitor) override {
-    traceImpl(visitor);
+  void Trace(Visitor* visitor) override { TraceImpl(visitor); }
+  void Trace(InlinedGlobalMarkingVisitor visitor) override {
+    TraceImpl(visitor);
   }
 
  private:
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
-    // B::trace() is actually A::trace(), and in certain cases we only get
+  void TraceImpl(VisitorDispatcher visitor) {
+    // B::Trace() is actually A::Trace(), and in certain cases we only get
     // limited information like "there is a function call that will be resolved
-    // to A::trace()". We still want to mark B as traced.
-    B::trace(visitor);
+    // to A::Trace()". We still want to mark B as Traced.
+    B::Trace(visitor);
   }
 };
 

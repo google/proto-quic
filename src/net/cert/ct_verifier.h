@@ -5,8 +5,7 @@
 #ifndef NET_CERT_CT_VERIFIER_H_
 #define NET_CERT_CT_VERIFIER_H_
 
-#include <string>
-
+#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 
@@ -44,13 +43,13 @@ class NET_EXPORT CTVerifier {
   // (embedding, TLS extension or OCSP stapling). If no stapled OCSP response
   // is available, |stapled_ocsp_response| should be an empty string. If no SCT
   // TLS extension was negotiated, |sct_list_from_tls_extension| should be an
-  // empty string. |result| will be filled with the SCTs present, divided into
-  // categories based on the verification result.
-  virtual int Verify(X509Certificate* cert,
-                     const std::string& stapled_ocsp_response,
-                     const std::string& sct_list_from_tls_extension,
-                     SignedCertificateTimestampAndStatusList* output_scts,
-                     const NetLogWithSource& net_log) = 0;
+  // empty string. |output_scts| will be cleared and filled with the SCTs
+  // present, if any, along with their verification results.
+  virtual void Verify(X509Certificate* cert,
+                      base::StringPiece stapled_ocsp_response,
+                      base::StringPiece sct_list_from_tls_extension,
+                      SignedCertificateTimestampAndStatusList* output_scts,
+                      const NetLogWithSource& net_log) = 0;
 
   // Registers |observer| to receive notifications of validated SCTs. Does not
   // take ownership of the observer as the observer may be performing

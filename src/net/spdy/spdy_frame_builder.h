@@ -60,7 +60,7 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
-    SPDY_BUG_IF(SpdyConstants::kMaxFrameSizeLimit < length_)
+    SPDY_BUG_IF(kMaxFrameSizeLimit < length_)
         << "Frame length " << length_
         << " is longer than the maximum possible allowed length.";
     SpdySerializedFrame rv(buffer_.release(), length(), true);

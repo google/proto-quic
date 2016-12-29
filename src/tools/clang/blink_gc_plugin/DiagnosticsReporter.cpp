@@ -147,6 +147,9 @@ const char kBaseClassMustDeclareVirtualTrace[] =
     "[blink-gc] Left-most base class %0 of derived class %1"
     " must define a virtual trace method.";
 
+const char kIteratorToGCManagedCollectionNote[] =
+    "[blink-gc] Iterator field %0 to a GC managed collection declared here:";
+
 } // namespace
 
 DiagnosticBuilder DiagnosticsReporter::ReportDiagnostic(
@@ -253,6 +256,8 @@ DiagnosticsReporter::DiagnosticsReporter(
       DiagnosticsEngine::Note, kOverriddenNonVirtualTraceNote);
   diag_manual_dispatch_method_note_ = diagnostic_.getCustomDiagID(
       DiagnosticsEngine::Note, kManualDispatchMethodNote);
+  diag_iterator_to_gc_managed_collection_note_ = diagnostic_.getCustomDiagID(
+      DiagnosticsEngine::Note, kIteratorToGCManagedCollectionNote);
 }
 
 bool DiagnosticsReporter::hasErrorOccurred() const
@@ -343,6 +348,8 @@ void DiagnosticsReporter::ClassContainsInvalidFields(
       note = diag_stack_allocated_field_note_;
     } else if (error.second == CheckFieldsVisitor::kGCDerivedPartObject) {
       note = diag_part_object_to_gc_derived_class_note_;
+    } else if (error.second == CheckFieldsVisitor::kIteratorToGCManaged) {
+      note = diag_iterator_to_gc_managed_collection_note_;
     } else {
       assert(false && "Unknown field error");
     }

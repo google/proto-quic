@@ -6,6 +6,7 @@
 
 // Tests of Http2FrameDecoder.
 
+#include <memory>
 #include <string>
 #include <vector>
 

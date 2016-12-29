@@ -308,9 +308,6 @@ static const uint16_t kDefaultGroups[] = {
     SSL_CURVE_X25519,
     SSL_CURVE_SECP256R1,
     SSL_CURVE_SECP384R1,
-#if defined(BORINGSSL_ANDROID_SYSTEM)
-    SSL_CURVE_SECP521R1,
-#endif
 };
 
 void tls1_get_grouplist(SSL *ssl, const uint16_t **out_group_ids,
@@ -464,8 +461,7 @@ static const uint16_t kVerifySignatureAlgorithms[] = {
 #endif
     SSL_SIGN_RSA_PKCS1_SHA384,
 
-    /* TODO(davidben): Remove this entry and SSL_CURVE_SECP521R1 from
-     * kDefaultGroups. */
+    /* TODO(davidben): Remove this. */
 #if defined(BORINGSSL_ANDROID_SYSTEM)
     SSL_SIGN_ECDSA_SECP521R1_SHA512,
 #endif
@@ -1212,7 +1208,7 @@ static int ext_ocsp_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
   SSL *const ssl = hs->ssl;
   if (ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
       !hs->ocsp_stapling_requested ||
-      ssl->ctx->ocsp_response_length == 0 ||
+      ssl->ocsp_response == NULL ||
       ssl->s3->session_reused ||
       !ssl_cipher_uses_certificate_auth(ssl->s3->tmp.new_cipher)) {
     return 1;
@@ -1233,7 +1229,7 @@ static int ext_npn_add_clienthello(SSL_HANDSHAKE *hs, CBB *out) {
   SSL *const ssl = hs->ssl;
   if (ssl->s3->initial_handshake_complete ||
       ssl->ctx->next_proto_select_cb == NULL ||
-      (ssl->options & SSL_OP_DISABLE_NPN) || SSL_is_dtls(ssl)) {
+      SSL_is_dtls(ssl)) {
     return 1;
   }
 
@@ -1262,7 +1258,6 @@ static int ext_npn_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t *out_alert,
   assert(!ssl->s3->initial_handshake_complete);
   assert(!SSL_is_dtls(ssl));
   assert(ssl->ctx->next_proto_select_cb != NULL);
-  assert(!(ssl->options & SSL_OP_DISABLE_NPN));
 
   if (ssl->s3->alpn_selected != NULL) {
     /* NPN and ALPN may not be negotiated in the same connection. */
@@ -2289,7 +2284,7 @@ int ssl_ext_key_share_parse_serverhello(SSL_HANDSHAKE *hs, uint8_t **out_secret,
     return 0;
   }
 
-  ssl->s3->new_session->key_exchange_info = group_id;
+  ssl->s3->new_session->group_id = group_id;
   SSL_ECDH_CTX_cleanup(&hs->ecdh_ctx);
   return 1;
 }
@@ -2388,7 +2383,7 @@ int ssl_ext_key_share_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
   hs->public_key = NULL;
   hs->public_key_len = 0;
 
-  ssl->s3->new_session->key_exchange_info = group_id;
+  ssl->s3->new_session->group_id = group_id;
   return 1;
 }
 
@@ -2734,8 +2729,8 @@ int SSL_extension_supported(unsigned extension_value) {
 
 int ssl_add_clienthello_tlsext(SSL_HANDSHAKE *hs, CBB *out, size_t header_len) {
   SSL *const ssl = hs->ssl;
-  /* don't add extensions for SSLv3 unless doing secure renegotiation */
-  if (ssl->client_version == SSL3_VERSION &&
+  /* Don't add extensions for SSLv3 unless doing secure renegotiation. */
+  if (hs->client_version == SSL3_VERSION &&
       !ssl->s3->send_connection_binding) {
     return 1;
   }
@@ -3570,7 +3565,8 @@ int tls1_record_handshake_hashes_for_channel_id(SSL *ssl) {
     return -1;
   }
 
-  ssl->s3->new_session->original_handshake_hash_len = digest_len;
+  assert(sizeof(ssl->s3->new_session->original_handshake_hash) < 256);
+  ssl->s3->new_session->original_handshake_hash_len = (uint8_t)digest_len;
 
   return 1;
 }

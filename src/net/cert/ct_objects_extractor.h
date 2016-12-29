@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 #include "net/cert/x509_certificate.h"
 
@@ -54,7 +55,7 @@ NET_EXPORT_PRIVATE bool GetX509LogEntry(X509Certificate::OSCertHandle leaf,
 NET_EXPORT_PRIVATE bool ExtractSCTListFromOCSPResponse(
     X509Certificate::OSCertHandle issuer,
     const std::string& cert_serial_number,
-    const std::string& ocsp_response,
+    base::StringPiece ocsp_response,
     std::string* sct_list);
 
 }  // namespace ct

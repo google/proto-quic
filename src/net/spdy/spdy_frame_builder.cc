@@ -39,14 +39,12 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
                                      SpdyFrameType type,
                                      uint8_t flags,
                                      SpdyStreamId stream_id) {
-  DCHECK(
-      SpdyConstants::IsValidFrameType(SpdyConstants::SerializeFrameType(type)));
+  DCHECK(IsValidFrameType(SerializeFrameType(type)));
   DCHECK_EQ(0u, stream_id & ~kStreamIdMask);
   bool success = true;
-  size_t frame_header_length = SpdyConstants::kFrameHeaderSize;
   if (length_ > 0) {
     // Update length field for previous frame.
-    OverwriteLength(framer, length_ - frame_header_length);
+    OverwriteLength(framer, length_ - kFrameHeaderSize);
     SPDY_BUG_IF(framer.GetFrameMaximumSize() < length_)
         << "Frame length  " << length_
         << " is longer than the maximum allowed length.";
@@ -59,8 +57,8 @@ bool SpdyFrameBuilder::BeginNewFrame(const SpdyFramer& framer,
   // the length will get overwritten when we begin the next frame.
   // Don't check for length limits here because this may be larger than the
   // actual frame length.
-  success &= WriteUInt24(capacity_ - offset_ - frame_header_length);
-  success &= WriteUInt8(SpdyConstants::SerializeFrameType(type));
+  success &= WriteUInt24(capacity_ - offset_ - kFrameHeaderSize);
+  success &= WriteUInt8(SerializeFrameType(type));
   success &= WriteUInt8(flags);
   success &= WriteUInt32(stream_id);
   DCHECK_EQ(framer.GetDataFrameMinimumSize(), length_);

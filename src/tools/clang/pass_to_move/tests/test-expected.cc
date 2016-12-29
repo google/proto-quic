@@ -54,9 +54,7 @@ void Test() {
   A a5;
   F f = std::move(F(std::move(a5)));
 
-  // Chained Pass is handled (mostly) correctly. The replacement applier dedupes
-  // the insertion of std::move, so the result is not completely correct...
-  // ... but hopefully there's very little code following this broken pattern.
+  // Chained Pass is handled correctly.
   A a6;
-  A a7 = std::move(a6));
+  A a7 = std::move(std::move(a6));
 }

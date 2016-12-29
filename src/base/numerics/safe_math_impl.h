@@ -57,6 +57,7 @@ bool CheckedAddImpl(T x, T y, T* result) {
   // Since the value of x+y is undefined if we have a signed type, we compute
   // it using the unsigned type of the same size.
   using UnsignedDst = typename std::make_unsigned<T>::type;
+  using SignedDst = typename std::make_signed<T>::type;
   UnsignedDst ux = static_cast<UnsignedDst>(x);
   UnsignedDst uy = static_cast<UnsignedDst>(y);
   UnsignedDst uresult = static_cast<UnsignedDst>(ux + uy);
@@ -64,10 +65,8 @@ bool CheckedAddImpl(T x, T y, T* result) {
   // Addition is valid if the sign of (x + y) is equal to either that of x or
   // that of y.
   return (std::is_signed<T>::value)
-             ? HasSignBit(BinaryComplement(
-                   static_cast<UnsignedDst>((uresult ^ ux) & (uresult ^ uy))))
-             : (BinaryComplement(x) >=
-                y);  // Unsigned is either valid or underflow.
+             ? static_cast<SignedDst>((uresult ^ ux) & (uresult ^ uy)) >= 0
+             : uresult >= uy;  // Unsigned is either valid or underflow.
 }
 
 template <typename T, typename U, class Enable = void>
@@ -109,6 +108,7 @@ bool CheckedSubImpl(T x, T y, T* result) {
   // Since the value of x+y is undefined if we have a signed type, we compute
   // it using the unsigned type of the same size.
   using UnsignedDst = typename std::make_unsigned<T>::type;
+  using SignedDst = typename std::make_signed<T>::type;
   UnsignedDst ux = static_cast<UnsignedDst>(x);
   UnsignedDst uy = static_cast<UnsignedDst>(y);
   UnsignedDst uresult = static_cast<UnsignedDst>(ux - uy);
@@ -116,9 +116,8 @@ bool CheckedSubImpl(T x, T y, T* result) {
   // Subtraction is valid if either x and y have same sign, or (x-y) and x have
   // the same sign.
   return (std::is_signed<T>::value)
-             ? HasSignBit(BinaryComplement(
-                   static_cast<UnsignedDst>((uresult ^ ux) & (ux ^ uy))))
-             : (x >= y);
+             ? static_cast<SignedDst>((uresult ^ ux) & (ux ^ uy)) >= 0
+             : x >= y;
 }
 
 template <typename T, typename U, class Enable = void>
@@ -180,11 +179,11 @@ bool CheckedMulImpl(T x, T y, T* result) {
   // Since the value of x*y is potentially undefined if we have a signed type,
   // we compute it using the unsigned type of the same size.
   using UnsignedDst = typename std::make_unsigned<T>::type;
-  const T is_negative = HasSignBit(x) ^ HasSignBit(y);
   const UnsignedDst ux = SafeUnsignedAbs(x);
   const UnsignedDst uy = SafeUnsignedAbs(y);
   UnsignedDst uresult = static_cast<UnsignedDst>(ux * uy);
   // This is a non-branching conditional negation.
+  const T is_negative = (x ^ y) < 0;
   *result = static_cast<T>((uresult ^ -is_negative) + is_negative);
   // This uses the unsigned overflow check on the absolute value, with a +1
   // bound for a negative result.

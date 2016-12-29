@@ -28,7 +28,8 @@ class CheckFieldsVisitor : public RecursiveEdgeVisitor {
     kMemberToGCUnmanaged,
     kMemberInUnmanaged,
     kPtrFromHeapToStack,
-    kGCDerivedPartObject
+    kGCDerivedPartObject,
+    kIteratorToGCManaged,
   };
 
   using Errors = std::vector<std::pair<FieldPoint*, Error>>;
@@ -42,6 +43,7 @@ class CheckFieldsVisitor : public RecursiveEdgeVisitor {
   void AtMember(Member* edge) override;
   void AtValue(Value* edge) override;
   void AtCollection(Collection* edge) override;
+  void AtIterator(Iterator*) override;
 
  private:
   Error InvalidSmartPtr(Edge* ptr);

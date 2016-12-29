@@ -486,29 +486,6 @@ TEST_F(TransportSecurityStateTest, MatchesCase1) {
   EXPECT_TRUE(state.ShouldUpgradeToSSL("example.com"));
 }
 
-TEST_F(TransportSecurityStateTest, Fuzz) {
-  TransportSecurityState state;
-  TransportSecurityState::STSState sts_state;
-  TransportSecurityState::PKPState pkp_state;
-
-  EnableStaticPins(&state);
-
-  for (size_t i = 0; i < 128; i++) {
-    std::string hostname;
-
-    for (;;) {
-      if (base::RandInt(0, 16) == 7) {
-        break;
-      }
-      if (i > 0 && base::RandInt(0, 7) == 7) {
-        hostname.append(1, '.');
-      }
-      hostname.append(1, 'a' + base::RandInt(0, 25));
-    }
-    state.GetStaticDomainState(hostname, &sts_state, &pkp_state);
-  }
-}
-
 TEST_F(TransportSecurityStateTest, MatchesCase2) {
   TransportSecurityState state;
   const base::Time current_time(base::Time::Now());

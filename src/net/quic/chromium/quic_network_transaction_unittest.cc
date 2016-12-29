@@ -10,6 +10,7 @@
 
 #include "base/compiler_specific.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/stl_util.h"
 #include "base/strings/stringprintf.h"
@@ -68,9 +69,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
 #include "url/gurl.h"
-
-using net::test::IsError;
-using net::test::IsOk;
 
 namespace net {
 namespace test {
@@ -2784,7 +2782,7 @@ TEST_P(QuicNetworkTransactionTest, QuicServerPush) {
 }
 
 TEST_P(QuicNetworkTransactionTest, QuicForceHolBlocking) {
-  FLAGS_quic_enable_version_36_v3 = true;
+  FLAGS_quic_reloadable_flag_quic_enable_version_36_v3 = true;
   params_.quic_force_hol_blocking = true;
   params_.origins_to_force_quic_on.insert(
       HostPortPair::FromString("mail.example.org:443"));

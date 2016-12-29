@@ -14,7 +14,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;
-using net::test::CryptoTestUtils;
 
 namespace net {
 namespace test {

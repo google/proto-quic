@@ -36,10 +36,10 @@
 #include <string>
 
 #include "base/command_line.h"
-#include "base/strings/string_number_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using std::cerr;
 using std::string;
@@ -103,7 +103,7 @@ class QuicPacketPrinter : public QuicFramerVisitorInterface {
   bool OnStreamFrame(const QuicStreamFrame& frame) override {
     cerr << "OnStreamFrame: " << frame;
     cerr << "         data: { "
-         << QuicUtils::HexEncode(frame.data_buffer, frame.data_length)
+         << QuicTextUtils::HexEncode(frame.data_buffer, frame.data_length)
          << " }\n";
     return true;
   }
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
          << " Usage: " << args[0] << " client|server <hex>\n";
     return 1;
   }
-  string hex = net::QuicUtils::HexDecode(ArgToString(args[1]));
+  string hex = net::QuicTextUtils::HexDecode(argv[2]);
   net::QuicVersionVector versions = net::AllSupportedVersions();
   // Fake a time since we're not actually generating acks.
   net::QuicTime start(net::QuicTime::Zero());

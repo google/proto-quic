@@ -78,9 +78,9 @@ enum class TaskShutdownBehavior {
 // Describes metadata for a single task or a group of tasks.
 class BASE_EXPORT TaskTraits {
  public:
-  // Constructs a default TaskTraits for tasks with
-  //     (1) no I/O,
-  //     (2) priority inherited from the calling context, and
+  // Constructs a default TaskTraits for tasks that
+  //     (1) do not make blocking calls
+  //     (2) can inherit their priority from the calling context, and
   //     (3) may block shutdown or be skipped on shutdown.
   // Tasks that require stricter guarantees and/or know the specific
   // TaskPriority appropriate for them should highlight those by requesting
@@ -90,14 +90,44 @@ class BASE_EXPORT TaskTraits {
   TaskTraits& operator=(const TaskTraits& other) = default;
   ~TaskTraits();
 
-  // Allows tasks with these traits to wait on synchronous file I/O.
-  TaskTraits& WithFileIO();
+  // Tasks with this trait may block. This includes but is not limited to tasks
+  // that wait on synchronous file I/O operations: read or write a file from
+  // disk, interact with a pipe or a socket, rename or delete a file, enumerate
+  // files in a directory, etc. This trait isn't required for the mere use of
+  // locks. For tasks that block on base/ synchronization primitives, see
+  // WithBaseSyncPrimitives().
+  TaskTraits& MayBlock();
 
-  // Allows tasks with these traits to wait on things other than file I/O. In
-  // particular, they may wait on a WaitableEvent or a ConditionVariable, join a
-  // thread or a process, or make a blocking system call that doesn't involve
-  // interactions with the file system.
-  TaskTraits& WithWait();
+  // Tasks with this trait will pass base::AssertWaitAllowed(), i.e. will be
+  // allowed on the following methods :
+  // - base::WaitableEvent::Wait
+  // - base::ConditionVariable::Wait
+  // - base::PlatformThread::Join
+  // - base::PlatformThread::Sleep
+  // - base::Process::WaitForExit
+  // - base::Process::WaitForExitWithTimeout
+  //
+  // Tasks should generally not use these methods.
+  //
+  // Instead of waiting on a WaitableEvent or a ConditionVariable, put the work
+  // that should happen after the wait in a callback and post that callback from
+  // where the WaitableEvent or ConditionVariable would have been signaled. If
+  // something needs to be scheduled after many tasks have executed, use
+  // base::BarrierClosure.
+  //
+  // Avoid creating threads. Instead, use
+  // base::Create(Sequenced|SingleTreaded)TaskRunnerWithTraits(). If a thread is
+  // really needed, make it non-joinable and add cleanup work at the end of the
+  // thread's main function (if using base::Thread, override Cleanup()).
+  //
+  // On Windows, join processes asynchronously using base::win::ObjectWatcher.
+  //
+  // MayBlock() must be specified in conjunction with this trait if and only if
+  // removing usage of methods listed above in the labeled tasks would still
+  // result in tasks that may block (per MayBlock()'s definition).
+  //
+  // In doubt, consult with base/task_scheduler/OWNERS.
+  TaskTraits& WithBaseSyncPrimitives();
 
   // Applies |priority| to tasks with these traits.
   TaskTraits& WithPriority(TaskPriority priority);
@@ -105,12 +135,15 @@ class BASE_EXPORT TaskTraits {
   // Applies |shutdown_behavior| to tasks with these traits.
   TaskTraits& WithShutdownBehavior(TaskShutdownBehavior shutdown_behavior);
 
-  // Returns true if waiting on synchronous file I/O is allowed by these traits.
-  bool with_file_io() const { return with_file_io_; }
+  // Returns true if tasks with these traits may block.
+  bool may_block() const { return may_block_; }
 
-  // Returns true if waiting on things other than file I/O is allowed by these
-  // traits.
-  bool with_wait() const { return with_wait_; }
+  // Returns true if tasks with these traits may use base/ sync primitives.
+  bool with_base_sync_primitives() const { return with_base_sync_primitives_; }
+
+  // DEPRECATED
+  // TODO(fdoray): Remove this as part of crbug.com/675660
+  bool with_file_io() const { return may_block(); }
 
   // Returns the priority of tasks with these traits.
   TaskPriority priority() const { return priority_; }
@@ -119,8 +152,8 @@ class BASE_EXPORT TaskTraits {
   TaskShutdownBehavior shutdown_behavior() const { return shutdown_behavior_; }
 
  private:
-  bool with_file_io_;
-  bool with_wait_;
+  bool may_block_;
+  bool with_base_sync_primitives_;
   TaskPriority priority_;
   TaskShutdownBehavior shutdown_behavior_;
 };

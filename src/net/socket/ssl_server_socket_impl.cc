@@ -94,7 +94,7 @@ class SSLServerSocketImpl : public SSLServerSocket,
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
-  bool WasNpnNegotiated() const override;
+  bool WasAlpnNegotiated() const override;
   NextProto GetNegotiatedProtocol() const override;
   bool GetSSLInfo(SSLInfo* ssl_info) override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
@@ -328,13 +328,13 @@ bool SSLServerSocketImpl::WasEverUsed() const {
   return transport_socket_->WasEverUsed();
 }
 
-bool SSLServerSocketImpl::WasNpnNegotiated() const {
+bool SSLServerSocketImpl::WasAlpnNegotiated() const {
   NOTIMPLEMENTED();
   return false;
 }
 
 NextProto SSLServerSocketImpl::GetNegotiatedProtocol() const {
-  // NPN is not supported by this class.
+  // ALPN is not supported by this class.
   return kProtoUnknown;
 }
 

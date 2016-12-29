@@ -489,8 +489,12 @@ class NET_EXPORT NetworkQualityEstimator
   // Virtualized for testing.
   virtual nqe::internal::NetworkID GetCurrentNetworkID() const;
 
+  // Notifies RTT observers of |observation|. May also trigger recomputation
+  // of effective connection type.
   void NotifyObserversOfRTT(const RttObservation& observation);
 
+  // Notifies throughput observers of |observation|. May also trigger
+  // recomputation of effective connection type.
   void NotifyObserversOfThroughput(const ThroughputObservation& observation);
 
   // Returns true only if the |request| can be used for RTT estimation.
@@ -578,6 +582,13 @@ class NET_EXPORT NetworkQualityEstimator
   // Forces computation of effective connection type, and notifies observers
   // if there is a change in its value.
   void ComputeEffectiveConnectionType();
+
+  // May update the network quality of the current network if |network_id|
+  // matches the ID of the current network. |cached_network_quality| is the
+  // cached network quality of the network with id |network_id|.
+  void MaybeUpdateNetworkQualityFromCache(
+      const nqe::internal::NetworkID& network_id,
+      const nqe::internal::CachedNetworkQuality& cached_network_quality);
 
   // Determines if the requests to local host can be used in estimating the
   // network quality. Set to true only for tests.
@@ -702,7 +713,12 @@ class NET_EXPORT NetworkQualityEstimator
   // |effective_connection_type_recomputation_interval_| ago).
   EffectiveConnectionType effective_connection_type_;
 
-  // Minimum and Maximum signal strength (in dbM) observed since last connection
+  // Last known value of the wireless signal strength. Set to INT32_MIN if
+  // unavailable. |signal_strength_dbm_| is reset to INT32_MIN on connection
+  // change events.
+  int32_t signal_strength_dbm_;
+
+  // Minimum and maximum signal strength (in dbM) observed since last connection
   // change. Updated on connection change and main frame requests.
   int32_t min_signal_strength_since_connection_change_;
   int32_t max_signal_strength_since_connection_change_;

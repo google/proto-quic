@@ -53,8 +53,7 @@ bool TwoColumnDateListingToTime(const base::string16& date,
     return false;
 
   // We don't know the time zone of the server, so just use UTC.
-  *result = base::Time::FromUTCExploded(time_exploded);
-  return true;
+  return base::Time::FromUTCExploded(time_exploded, result);
 }
 
 // Returns the column index of the end of the date listing and detected

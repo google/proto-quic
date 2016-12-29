@@ -78,7 +78,7 @@ class BackgroundImgurMobileStory(_BackgroundStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
-@decorators.Disabled('android')  # crbug.com.com/664505
+@decorators.Disabled('android')  # crbug.com/676336
 class BackgroundGmailMobileStory(LoadGmailMobileStory):
   NAME = 'background:tools:gmail'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY

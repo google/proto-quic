@@ -36,7 +36,7 @@ class Checked {
 };
 
 template <typename To, typename From>
-To Bitwise_cast(From from) {
+To bitwise_cast(From from) {
   static_assert(sizeof(To) == sizeof(From), "msg");
   return reinterpret_cast<To>(from);
 }
@@ -60,5 +60,5 @@ struct ArrayTraits<WTF::Checked<U, int>> {
 
 }  // namespace mojo
 
-using WTF::Bitwise_cast;
+using WTF::bitwise_cast;
 using WTF::SafeCast;

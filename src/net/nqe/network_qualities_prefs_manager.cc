@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "base/bind.h"
+#include "base/rand_util.h"
 #include "base/sequenced_task_runner.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -56,7 +57,7 @@ NetworkQualitiesPrefsManager::NetworkQualitiesPrefsManager(
     std::unique_ptr<PrefDelegate> pref_delegate)
     : pref_delegate_(std::move(pref_delegate)),
       pref_task_runner_(base::ThreadTaskRunnerHandle::Get()),
-      prefs_(pref_delegate_->GetDictionaryValue().CreateDeepCopy()),
+      prefs_(pref_delegate_->GetDictionaryValue()),
       network_quality_estimator_(nullptr),
       read_prefs_startup_(ConvertDictionaryValueToMap(prefs_.get())),
       pref_weak_ptr_factory_(this) {
@@ -132,16 +133,26 @@ void NetworkQualitiesPrefsManager::OnChangeInCachedNetworkQualityOnPrefThread(
                         cached_network_quality.effective_connection_type()));
 
   if (prefs_->size() > kMaxCacheSize) {
-    // Delete one value that has key different than |network_id|.
+    // Delete one randomly selected value that has a key that is different from
+    // |network_id|.
     DCHECK_EQ(kMaxCacheSize + 1, prefs_->size());
+    // Generate a random number between 0 and |kMaxCacheSize| -1 (both
+    // inclusive) since the number of network IDs in |prefs_| other than
+    // |network_id| is |kMaxCacheSize|.
+    int index_to_delete = base::RandInt(0, kMaxCacheSize - 1);
+
     for (base::DictionaryValue::Iterator it(*prefs_); !it.IsAtEnd();
          it.Advance()) {
-      const nqe::internal::NetworkID it_network_id =
-          nqe::internal::NetworkID::FromString(it.key());
-      if (it_network_id != network_id) {
+      // Delete the kth element in the dictionary, not including the element
+      // that represents the current network. k == |index_to_delete|.
+      if (nqe::internal::NetworkID::FromString(it.key()) == network_id)
+        continue;
+
+      if (index_to_delete == 0) {
         prefs_->RemovePath(it.key(), nullptr);
         break;
       }
+      index_to_delete--;
     }
   }
   DCHECK_GE(kMaxCacheSize, prefs_->size());
@@ -153,7 +164,7 @@ void NetworkQualitiesPrefsManager::OnChangeInCachedNetworkQualityOnPrefThread(
 ParsedPrefs NetworkQualitiesPrefsManager::ForceReadPrefsForTesting() const {
   DCHECK(pref_task_runner_->RunsTasksOnCurrentThread());
   std::unique_ptr<base::DictionaryValue> value(
-      pref_delegate_->GetDictionaryValue().CreateDeepCopy());
+      pref_delegate_->GetDictionaryValue());
   return ConvertDictionaryValueToMap(value.get());
 }
 

@@ -29,35 +29,56 @@
 namespace base {
 namespace {
 #if !defined(OS_NACL)
-const FilePath::CharType kCpusetDirectory[] =
-    FILE_PATH_LITERAL("/sys/fs/cgroup/cpuset/chrome");
+const FilePath::CharType kCgroupDirectory[] =
+    FILE_PATH_LITERAL("/sys/fs/cgroup");
 
-FilePath ThreadPriorityToCpusetDirectory(ThreadPriority priority) {
-  FilePath cpuset_filepath(kCpusetDirectory);
+FilePath ThreadPriorityToCgroupDirectory(const FilePath& cgroup_filepath,
+                                         ThreadPriority priority) {
   switch (priority) {
     case ThreadPriority::NORMAL:
-      return cpuset_filepath;
+      return cgroup_filepath;
     case ThreadPriority::BACKGROUND:
-      return cpuset_filepath.Append(FILE_PATH_LITERAL("non-urgent"));
+      return cgroup_filepath.Append(FILE_PATH_LITERAL("non-urgent"));
     case ThreadPriority::DISPLAY:
     case ThreadPriority::REALTIME_AUDIO:
-      return cpuset_filepath.Append(FILE_PATH_LITERAL("urgent"));
+      return cgroup_filepath.Append(FILE_PATH_LITERAL("urgent"));
   }
   NOTREACHED();
   return FilePath();
 }
 
-void SetThreadCpuset(PlatformThreadId thread_id,
-                     const FilePath& cpuset_directory) {
-  // Silently ignore request if cpuset directory doesn't exist.
-  if (!DirectoryExists(cpuset_directory))
-    return;
-  FilePath tasks_filepath = cpuset_directory.Append(FILE_PATH_LITERAL("tasks"));
+void SetThreadCgroup(PlatformThreadId thread_id,
+                     const FilePath& cgroup_directory) {
+  FilePath tasks_filepath = cgroup_directory.Append(FILE_PATH_LITERAL("tasks"));
   std::string tid = IntToString(thread_id);
   int bytes_written = WriteFile(tasks_filepath, tid.c_str(), tid.size());
   if (bytes_written != static_cast<int>(tid.size())) {
     DVLOG(1) << "Failed to add " << tid << " to " << tasks_filepath.value();
   }
+}
+
+void SetThreadCgroupForThreadPriority(PlatformThreadId thread_id,
+                                      const FilePath& cgroup_filepath,
+                                      ThreadPriority priority) {
+  // Append "chrome" suffix.
+  FilePath cgroup_directory = ThreadPriorityToCgroupDirectory(
+      cgroup_filepath.Append(FILE_PATH_LITERAL("chrome")), priority);
+
+  // Silently ignore request if cgroup directory doesn't exist.
+  if (!DirectoryExists(cgroup_directory))
+    return;
+
+  SetThreadCgroup(thread_id, cgroup_directory);
+}
+
+void SetThreadCgroupsForThreadPriority(PlatformThreadId thread_id,
+                                       ThreadPriority priority) {
+  FilePath cgroup_filepath(kCgroupDirectory);
+  SetThreadCgroupForThreadPriority(
+      thread_id, cgroup_filepath.Append(FILE_PATH_LITERAL("cpuset")), priority);
+  SetThreadCgroupForThreadPriority(
+      thread_id, cgroup_filepath.Append(FILE_PATH_LITERAL("schedtune")),
+      priority);
 }
 #endif
 }  // namespace
@@ -79,8 +100,7 @@ const ThreadPriorityToNiceValuePair kThreadPriorityToNiceValueMap[4] = {
 
 bool SetCurrentThreadPriorityForPlatform(ThreadPriority priority) {
 #if !defined(OS_NACL)
-  FilePath cpuset_directory = ThreadPriorityToCpusetDirectory(priority);
-  SetThreadCpuset(PlatformThread::CurrentId(), cpuset_directory);
+  SetThreadCgroupsForThreadPriority(PlatformThread::CurrentId(), priority);
   return priority == ThreadPriority::REALTIME_AUDIO &&
          pthread_setschedparam(pthread_self(), SCHED_RR, &kRealTimePrio) == 0;
 #else
@@ -139,8 +159,7 @@ void PlatformThread::SetThreadPriority(PlatformThreadId thread_id,
   // priority.
   CHECK_NE(thread_id, getpid());
 
-  FilePath cpuset_directory = ThreadPriorityToCpusetDirectory(priority);
-  SetThreadCpuset(thread_id, cpuset_directory);
+  SetThreadCgroupsForThreadPriority(thread_id, priority);
 
   const int nice_setting = internal::ThreadPriorityToNiceValue(priority);
   if (setpriority(PRIO_PROCESS, thread_id, nice_setting)) {

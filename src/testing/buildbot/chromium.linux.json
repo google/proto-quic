@@ -2812,8 +2812,7 @@
       },
       {
         "args": [
-          "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.browser_tests.filter"
+          "--enable-browser-side-navigation"
         ],
         "name": "browser_side_navigation_browser_tests",
         "swarming": {
@@ -3061,6 +3060,18 @@
           "can_use_on_swarming_builders": true
         },
         "test": "gpu_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "headless_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "headless_unittests"
       },
       {
         "swarming": {
@@ -3470,8 +3481,7 @@
       },
       {
         "args": [
-          "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.browser_tests.filter"
+          "--enable-browser-side-navigation"
         ],
         "name": "browser_side_navigation_browser_tests",
         "swarming": {

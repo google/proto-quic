@@ -61,6 +61,7 @@ class PerfTestInstance(test_instance.TestInstance):
     super(PerfTestInstance, self).__init__()
 
     self._collect_chartjson_data = args.collect_chartjson_data
+    self._collect_json_data = args.collect_json_data
     self._dry_run = args.dry_run
     self._flaky_steps = args.flaky_steps
     self._output_dir_archive_path = args.output_dir_archive_path
@@ -73,6 +74,7 @@ class PerfTestInstance(test_instance.TestInstance):
     self._min_battery_level = args.min_battery_level
     self._no_timeout = args.no_timeout
     self._output_chartjson_data = args.output_chartjson_data
+    self._output_json_data = args.output_json_data
     self._output_json_list = args.output_json_list
     self._print_step = args.print_step
     self._single_step = (
@@ -107,7 +109,7 @@ class PerfTestInstance(test_instance.TestInstance):
           data['has_archive'] = persisted_result['archive_bytes'] is not None
         step_values.append(data)
 
-      with file(self._output_json_list, 'w') as o:
+      with file(self.output_json_list, 'w') as o:
         o.write(json.dumps(step_values))
       return base_test_result.ResultType.PASS
     except KeyError:
@@ -137,13 +139,17 @@ class PerfTestInstance(test_instance.TestInstance):
           i, persisted_outputs[i])
     print output_formatted
 
-    if self._output_chartjson_data:
-      with file(self._output_chartjson_data, 'w') as f:
+    if self.output_json_data:
+      with file(self.output_json_data, 'w') as f:
+        f.write(persisted_result['json'])
+
+    if self.output_chartjson_data:
+      with file(self.output_chartjson_data, 'w') as f:
         f.write(persisted_result['chartjson'])
 
-    if self._output_dir_archive_path:
+    if self.output_dir_archive_path:
       if persisted_result['archive_bytes'] is not None:
-        with file(self._output_dir_archive_path, 'wb') as f:
+        with file(self.output_dir_archive_path, 'wb') as f:
           f.write(persisted_result['archive_bytes'])
       else:
         logging.error('The output dir was not archived.')
@@ -170,6 +176,21 @@ class PerfTestInstance(test_instance.TestInstance):
                     ' the test.')
       return ''
 
+  @staticmethod
+  def ReadJsonOutput(output_dir):
+    if not output_dir:
+      return ''
+    json_output_path = os.path.join(output_dir, 'results.json')
+    try:
+      with open(json_output_path) as f:
+        return f.read()
+    except IOError:
+      logging.exception('Exception when reading results.json.')
+      logging.error('This usually means that telemetry did not run, so it could'
+                    ' not generate the file. Please check the device running'
+                    ' the test.')
+      return ''
+
   def WriteBuildBotJson(self, output_dir):
     """Write metadata about the buildbot environment to the output dir."""
     if not output_dir or not self._write_buildbot_json:
@@ -184,6 +205,10 @@ class PerfTestInstance(test_instance.TestInstance):
   @property
   def collect_chartjson_data(self):
     return self._collect_chartjson_data
+
+  @property
+  def collect_json_data(self):
+    return self._collect_json_data
 
   @property
   def dry_run(self):
@@ -216,6 +241,10 @@ class PerfTestInstance(test_instance.TestInstance):
   @property
   def output_dir_archive_path(self):
     return self._output_dir_archive_path
+
+  @property
+  def output_json_data(self):
+    return self._output_json_data
 
   @property
   def output_json_list(self):

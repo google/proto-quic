@@ -11,6 +11,10 @@
 #include "base/base_export.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/sequence_checker.h"
+
+// TODO(gab): Removing this include causes IWYU failures in other headers,
+// remove it in a follow- up CL.
 #include "base/threading/thread_checker.h"
 
 namespace base {
@@ -26,7 +30,7 @@ class BASE_EXPORT SupportsUserData {
   // class to any class with a virtual destructor.
   class BASE_EXPORT Data {
    public:
-    virtual ~Data() {}
+    virtual ~Data() = default;
   };
 
   // The user data allows the clients to associate data with this object.
@@ -38,10 +42,10 @@ class BASE_EXPORT SupportsUserData {
   void RemoveUserData(const void* key);
 
   // SupportsUserData is not thread-safe, and on debug build will assert it is
-  // only used on one thread. Calling this method allows the caller to hand
-  // the SupportsUserData instance across threads. Use only if you are taking
-  // full control of the synchronization of that hand over.
-  void DetachUserDataThread();
+  // only used on one execution sequence. Calling this method allows the caller
+  // to hand the SupportsUserData instance across execution sequences. Use only
+  // if you are taking full control of the synchronization of that hand over.
+  void DetachFromSequence();
 
  protected:
   virtual ~SupportsUserData();
@@ -52,7 +56,7 @@ class BASE_EXPORT SupportsUserData {
   // Externally-defined data accessible by key.
   DataMap user_data_;
   // Guards usage of |user_data_|
-  ThreadChecker thread_checker_;
+  SequenceChecker sequence_checker_;
 
   DISALLOW_COPY_AND_ASSIGN(SupportsUserData);
 };

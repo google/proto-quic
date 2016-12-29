@@ -38,7 +38,7 @@ TEST(MojoGURLStructTraitsTest, Basic) {
   base::MessageLoop message_loop;
 
   mojom::UrlTestPtr proxy;
-  UrlTestImpl impl(GetProxy(&proxy));
+  UrlTestImpl impl(MakeRequest(&proxy));
 
   const char* serialize_cases[] = {
     "http://www.google.com/",
