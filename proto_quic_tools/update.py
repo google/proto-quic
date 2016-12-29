@@ -113,12 +113,18 @@ def copy_modified_files():
 
 # Since proto-quic users do not use gclient sync, runs necessary parts of it.
 def sync():
-  command = "/" + proto_quic_root + "/third_party/binutils/download.py"
+  command = "/" + proto_quic_root + "proto_quic_tools/sync.sh"
+  print "running", command;
+  os.system(command)
+
+def cleanup():
+  command = "/" + proto_quic_root + "proto_quic_tools/cleanup.sh"
   print "running", command;
   os.system(command)
 
 
-sync()
 copy_directories()
 merge_net_gypi()
 copy_modified_files()
+cleanup()
+sync()

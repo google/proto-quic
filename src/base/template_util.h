@@ -1,7 +1,6 @@
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #ifndef BASE_TEMPLATE_UTIL_H_
 #define BASE_TEMPLATE_UTIL_H_
 
@@ -167,19 +166,6 @@ using is_trivially_destructible = std::is_trivially_destructible<T>;
 
 // TODO(crbug.com/554293): Remove this when all platforms have this in the std
 // namespace and it works with gcc as needed.
-
-template <typename T>
-struct is_trivially_copyable {
-// TODO(danakj): Remove this when android builders are all using a newer version
-// of gcc, or the android ndk is updated to a newer libc++ that does this for
-// us.
-#if _GNUC_VER >= 501
-  static constexpr bool value = __is_trivially_copyable(T);
-#else
-  static constexpr bool value = __has_trivial_copy(T);
-#endif
-};
-/*
 #if defined(CR_USE_FALLBACKS_FOR_OLD_GLIBCXX) ||              \
     defined(CR_USE_FALLBACKS_FOR_OLD_EXPERIMENTAL_GLIBCXX) || \
     defined(CR_USE_FALLBACKS_FOR_GCC_WITH_LIBCXX)
@@ -198,7 +184,7 @@ struct is_trivially_copyable {
 template <class T>
 using is_trivially_copyable = std::is_trivially_copyable<T>;
 #endif
-*/
+
 }  // namespace base
 
 #undef CR_USE_FALLBACKS_FOR_OLD_GLIBCXX

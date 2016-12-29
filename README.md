@@ -27,8 +27,12 @@ Building on Linux
    export PATH=$PATH:`pwd`/depot_tools
    ./proto_quic_tools/sync.sh
    ```
+1. If you're building for the first time, install dependencies.
+   ```
+   ./src/build/install-build-deps.sh
+   ```
 
-0. Build the QUIC client, server, and tests
+2. Build the QUIC client, server, and tests
    ```
    cd src
    gn gen out/Default && ninja -C out/Default quic_client quic_server net_unittests
