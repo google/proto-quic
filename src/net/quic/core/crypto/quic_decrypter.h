@@ -5,8 +5,8 @@
 #ifndef NET_QUIC_CORE_CRYPTO_QUIC_DECRYPTER_H_
 #define NET_QUIC_CORE_CRYPTO_QUIC_DECRYPTER_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"

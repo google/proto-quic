@@ -41,7 +41,7 @@ class RunMixin<OnceCallback<R(Args...)>> {
  public:
   using PolymorphicInvoke = R(*)(internal::BindStateBase*, Args&&...);
 
-  R Run(Args... args) & {
+  R Run(Args... args) const & {
     // Note: even though this static_assert will trivially always fail, it
     // cannot be simply replaced with static_assert(false, ...) because:
     // - Per [dcl.dcl]/p4, a program is ill-formed if the constant-expression
@@ -53,8 +53,8 @@ class RunMixin<OnceCallback<R(Args...)>> {
     // to immediately reject static_assert(false, ...), even inside an
     // uninstantiated template.
     static_assert(!IsOnceCallback<CallbackType>::value,
-                  "OnceCallback::Run() may only be invoked on an rvalue, i.e. "
-                  "std::move(callback).Run().");
+                  "OnceCallback::Run() may only be invoked on a non-const "
+                  "rvalue, i.e. std::move(callback).Run().");
   }
 
   R Run(Args... args) && {

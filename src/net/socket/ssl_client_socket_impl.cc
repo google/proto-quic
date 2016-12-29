@@ -174,10 +174,7 @@ std::unique_ptr<base::Value> NetLogChannelIDLookupCompleteCallback(
   dict->SetInteger("net_error", result);
   std::string raw_key;
   if (result == OK && key && key->ExportRawPublicKey(&raw_key)) {
-    std::string key_to_log = "redacted";
-    if (capture_mode.include_cookies_and_credentials()) {
-      key_to_log = base::HexEncode(raw_key.data(), raw_key.length());
-    }
+    std::string key_to_log = base::HexEncode(raw_key.data(), raw_key.length());
     dict->SetString("key", key_to_log);
   }
   return std::move(dict);
@@ -747,7 +744,7 @@ bool SSLClientSocketImpl::WasEverUsed() const {
   return was_ever_used_;
 }
 
-bool SSLClientSocketImpl::WasNpnNegotiated() const {
+bool SSLClientSocketImpl::WasAlpnNegotiated() const {
   return negotiated_protocol_ != kProtoUnknown;
 }
 
@@ -1175,11 +1172,6 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   const uint8_t* ocsp_response_raw;
   size_t ocsp_response_len;
   SSL_get0_ocsp_response(ssl_.get(), &ocsp_response_raw, &ocsp_response_len);
-  std::string ocsp_response;
-  if (ocsp_response_len > 0) {
-    ocsp_response_.assign(reinterpret_cast<const char*>(ocsp_response_raw),
-                          ocsp_response_len);
-  }
   set_stapled_ocsp_response_received(ocsp_response_len != 0);
   UMA_HISTOGRAM_BOOLEAN("Net.OCSPResponseStapled", ocsp_response_len != 0);
 
@@ -1261,10 +1253,16 @@ int SSLClientSocketImpl::DoVerifyCert(int result) {
 
   start_cert_verification_time_ = base::TimeTicks::Now();
 
+  const uint8_t* ocsp_response_raw;
+  size_t ocsp_response_len;
+  SSL_get0_ocsp_response(ssl_.get(), &ocsp_response_raw, &ocsp_response_len);
+  base::StringPiece ocsp_response(
+      reinterpret_cast<const char*>(ocsp_response_raw), ocsp_response_len);
+
   return cert_verifier_->Verify(
       CertVerifier::RequestParams(server_cert_, host_and_port_.host(),
                                   ssl_config_.GetCertVerifyFlags(),
-                                  ocsp_response_, CertificateList()),
+                                  ocsp_response.as_string(), CertificateList()),
       // TODO(davidben): Route the CRLSet through SSLConfig so
       // SSLClientSocket doesn't depend on SSLConfigService.
       SSLConfigService::GetCRLSet().get(), &server_cert_verify_result_,
@@ -1322,8 +1320,15 @@ int SSLClientSocketImpl::DoVerifyCertComplete(int result) {
     SSLInfo ssl_info;
     bool ok = GetSSLInfo(&ssl_info);
     DCHECK(ok);
+
+    const uint8_t* ocsp_response_raw;
+    size_t ocsp_response_len;
+    SSL_get0_ocsp_response(ssl_.get(), &ocsp_response_raw, &ocsp_response_len);
+    base::StringPiece ocsp_response(
+        reinterpret_cast<const char*>(ocsp_response_raw), ocsp_response_len);
+
     transport_security_state_->CheckExpectStaple(host_and_port_, ssl_info,
-                                                 ocsp_response_);
+                                                 ocsp_response);
   }
 
   completed_connect_ = true;
@@ -1560,15 +1565,20 @@ int SSLClientSocketImpl::VerifyCT() {
   const uint8_t* sct_list_raw;
   size_t sct_list_len;
   SSL_get0_signed_cert_timestamp_list(ssl_.get(), &sct_list_raw, &sct_list_len);
-  std::string sct_list;
-  if (sct_list_len > 0)
-    sct_list.assign(reinterpret_cast<const char*>(sct_list_raw), sct_list_len);
+  base::StringPiece sct_list(reinterpret_cast<const char*>(sct_list_raw),
+                             sct_list_len);
+
+  const uint8_t* ocsp_response_raw;
+  size_t ocsp_response_len;
+  SSL_get0_ocsp_response(ssl_.get(), &ocsp_response_raw, &ocsp_response_len);
+  base::StringPiece ocsp_response(
+      reinterpret_cast<const char*>(ocsp_response_raw), ocsp_response_len);
 
   // Note that this is a completely synchronous operation: The CT Log Verifier
   // gets all the data it needs for SCT verification and does not do any
   // external communication.
   cert_transparency_verifier_->Verify(
-      server_cert_verify_result_.verified_cert.get(), ocsp_response_, sct_list,
+      server_cert_verify_result_.verified_cert.get(), ocsp_response, sct_list,
       &ct_verify_result_.scts, net_log_);
 
   ct_verify_result_.ct_policies_applied = true;

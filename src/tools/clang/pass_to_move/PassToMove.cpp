@@ -49,22 +49,22 @@ void RewriterCallback::run(const MatchFinder::MatchResult& result) {
   const char kMoveRefText[] = "std::move(";
   const char kMovePtrText[] = "std::move(*";
 
-  replacements_->emplace(*result.SourceManager,
-                         result.SourceManager->getSpellingLoc(
-                             arg->getLocStart()),
-                         0,
-                         is_arrow ? kMovePtrText : kMoveRefText);
+  auto err = replacements_->add(
+      Replacement(*result.SourceManager,
+                  result.SourceManager->getSpellingLoc(arg->getLocStart()), 0,
+                  is_arrow ? kMovePtrText : kMoveRefText));
+  assert(!err);
 
   // Delete everything but the closing parentheses from the original call to
   // Pass(): the closing parantheses is left to match up with the parantheses
   // just inserted with std::move.
-  replacements_->emplace(*result.SourceManager,
-                         clang::CharSourceRange::getCharRange(
-                             result.SourceManager->getSpellingLoc(
-                                 callee->getOperatorLoc()),
-                             result.SourceManager->getSpellingLoc(
-                                 call_expr->getRParenLoc())),
-                         "");
+  err = replacements_->add(Replacement(
+      *result.SourceManager,
+      clang::CharSourceRange::getCharRange(
+          result.SourceManager->getSpellingLoc(callee->getOperatorLoc()),
+          result.SourceManager->getSpellingLoc(call_expr->getRParenLoc())),
+      ""));
+  assert(!err);
 }
 
 }  // namespace

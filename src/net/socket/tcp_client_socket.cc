@@ -257,7 +257,7 @@ void TCPClientSocket::EnableTCPFastOpenIfSupported() {
   socket_->EnableTCPFastOpenIfSupported();
 }
 
-bool TCPClientSocket::WasNpnNegotiated() const {
+bool TCPClientSocket::WasAlpnNegotiated() const {
   return false;
 }
 

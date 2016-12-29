@@ -4,7 +4,7 @@
 
 #include "net/quic/core/crypto/common_cert_set.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "testing/gtest/include/gtest/gtest.h"
 

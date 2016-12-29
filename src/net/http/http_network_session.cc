@@ -72,6 +72,32 @@ const int32_t kSpdyStreamMaxRecvWindowSize = 6 * 1024 * 1024;    //  6 MB
 // and does not consume "too much" memory.
 const int32_t kQuicSocketReceiveBufferSize = 1024 * 1024;  // 1MB
 
+namespace {
+
+// Keep all HTTP2 parameters in |http2_settings|, even the ones that are not
+// implemented, to be sent to the server.
+// Set default values for settings that |http2_settings| does not specify.
+SettingsMap AddDefaultHttp2Settings(SettingsMap http2_settings) {
+  // Set default values only if |http2_settings| does not have
+  // a value set for given setting.
+  SettingsMap::iterator it = http2_settings.find(SETTINGS_HEADER_TABLE_SIZE);
+  if (it == http2_settings.end())
+    http2_settings[SETTINGS_HEADER_TABLE_SIZE] = kSpdyMaxHeaderTableSize;
+
+  it = http2_settings.find(SETTINGS_MAX_CONCURRENT_STREAMS);
+  if (it == http2_settings.end())
+    http2_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
+        kSpdyMaxConcurrentPushedStreams;
+
+  it = http2_settings.find(SETTINGS_INITIAL_WINDOW_SIZE);
+  if (it == http2_settings.end())
+    http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] = kSpdyStreamMaxRecvWindowSize;
+
+  return http2_settings;
+}
+
+}  // unnamed namespace
+
 HttpNetworkSession::Params::Params()
     : client_socket_factory(NULL),
       host_resolver(NULL),
@@ -93,7 +119,6 @@ HttpNetworkSession::Params::Params()
       enable_spdy_ping_based_connection_checking(true),
       enable_http2(true),
       spdy_session_max_recv_window_size(kSpdySessionMaxRecvWindowSize),
-      spdy_stream_max_recv_window_size(kSpdyStreamMaxRecvWindowSize),
       time_func(&base::TimeTicks::Now),
       enable_http2_alternative_service_with_different_host(false),
       enable_quic_alternative_service_with_different_host(true),
@@ -130,7 +155,8 @@ HttpNetworkSession::Params::Params()
       quic_do_not_fragment(false),
       proxy_delegate(NULL),
       enable_token_binding(false),
-      http_09_on_non_default_ports_enabled(false) {
+      http_09_on_non_default_ports_enabled(false),
+      restrict_to_one_preconnect_for_proxies(false) {
   quic_supported_versions.push_back(QUIC_VERSION_35);
 }
 
@@ -197,7 +223,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
                          params.transport_security_state,
                          params.enable_spdy_ping_based_connection_checking,
                          params.spdy_session_max_recv_window_size,
-                         params.spdy_stream_max_recv_window_size,
+                         AddDefaultHttp2Settings(params.http2_settings),
                          params.time_func,
                          params.proxy_delegate),
       http_stream_factory_(new HttpStreamFactoryImpl(this, false)),

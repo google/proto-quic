@@ -44,8 +44,7 @@ class CTObjectsExtractorTest : public ::testing::Test {
     std::vector<base::StringPiece> parsed_scts;
     base::StringPiece sct_list_sp(sct_list);
     // Make sure the SCT list can be decoded properly
-    EXPECT_TRUE(DecodeSCTList(&sct_list_sp, &parsed_scts));
-
+    EXPECT_TRUE(DecodeSCTList(sct_list_sp, &parsed_scts));
     EXPECT_TRUE(DecodeSignedCertificateTimestamp(&parsed_scts[0], sct));
   }
 

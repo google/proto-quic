@@ -11,23 +11,23 @@ namespace blink {
 
 class PartBase {
     DISALLOW_NEW();
-    // Missing virtual trace.
+    // Missing virtual Trace.
 };
 
 class PartDerived : public PartBase {
     DISALLOW_NEW();
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 };
 
 class HeapBase : public GarbageCollected<HeapBase> {
-    // Missing virtual trace.
+    // Missing virtual Trace.
 };
 
 
 class HeapDerived : public HeapBase {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     PartDerived m_part;
 };

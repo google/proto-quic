@@ -671,7 +671,14 @@ struct TestNumericConversion<Dst, Src, SIGN_TO_UNSIGN_NARROW> {
     TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::max());
     TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(1));
     TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, static_cast<Src>(-1));
+
+    // Additional saturation tests.
+    EXPECT_EQ(DstLimits::max(), saturated_cast<Dst>(SrcLimits::max()));
+    EXPECT_EQ(DstLimits::lowest(), saturated_cast<Dst>(SrcLimits::lowest()));
+
     if (SrcLimits::is_iec559) {
+      EXPECT_EQ(Dst(0), saturated_cast<Dst>(SrcLimits::quiet_NaN()));
+
       TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::max() * -1);
       TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::infinity());
       TEST_EXPECTED_RANGE(RANGE_UNDERFLOW, SrcLimits::infinity() * -1);
@@ -714,6 +721,10 @@ struct TestNumericConversion<Dst, Src, UNSIGN_TO_SIGN_NARROW_OR_EQUAL> {
     TEST_EXPECTED_RANGE(RANGE_VALID, SrcLimits::lowest());
     TEST_EXPECTED_RANGE(RANGE_OVERFLOW, SrcLimits::max());
     TEST_EXPECTED_RANGE(RANGE_VALID, static_cast<Src>(1));
+
+    // Additional saturation tests.
+    EXPECT_EQ(DstLimits::max(), saturated_cast<Dst>(SrcLimits::max()));
+    EXPECT_EQ(Dst(0), saturated_cast<Dst>(SrcLimits::lowest()));
   }
 };
 

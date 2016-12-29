@@ -13,7 +13,7 @@ class HeapObject : public GarbageCollected<HeapObject> { };
 
 class OffHeapObject {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj; // Must not contain Member.
     Persistent<HeapVector<Member<HeapObject> > > m_objs; // OK
@@ -30,7 +30,7 @@ private:
 class PartObject {
     DISALLOW_NEW();
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj; // OK
 };
@@ -38,7 +38,7 @@ private:
 class InlineObject {
     ALLOW_ONLY_INLINE_ALLOCATION();
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj; // OK
 };

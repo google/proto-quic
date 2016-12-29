@@ -46,17 +46,9 @@ class NET_EXPORT HttpUtil {
                                bool* had_charset,
                                std::string* boundary);
 
-  // Scans the headers and look for the first "Range" header in |headers|,
-  // if "Range" exists and the first one of it is well formatted then returns
-  // true, |ranges| will contain a list of valid ranges. If return
-  // value is false then values in |ranges| should not be used. The format of
-  // "Range" header is defined in RFC 7233 Section 2.1.
+  // Parses the value of a "Range" header as defined in RFC 7233 Section 2.1.
   // https://tools.ietf.org/html/rfc7233#section-2.1
-  static bool ParseRanges(const std::string& headers,
-                          std::vector<HttpByteRange>* ranges);
-
-  // Same thing as ParseRanges except the Range header is known and its value
-  // is directly passed in, rather than requiring searching through a string.
+  // Returns false on failure.
   static bool ParseRangeHeader(const std::string& range_specifier,
                                std::vector<HttpByteRange>* ranges);
 
@@ -97,14 +89,6 @@ class NET_EXPORT HttpUtil {
   // Returns false if |value| contains NUL or CRLF. This method does not perform
   // a fully RFC-2616-compliant header value validation.
   static bool IsValidHeaderValue(const base::StringPiece& value);
-
-  // Strips all header lines from |headers| whose name matches
-  // |headers_to_remove|. |headers_to_remove| is a list of null-terminated
-  // lower-case header names, with array length |headers_to_remove_len|.
-  // Returns the stripped header lines list, separated by "\r\n".
-  static std::string StripHeaders(const std::string& headers,
-                                  const char* const headers_to_remove[],
-                                  size_t headers_to_remove_len);
 
   // Multiple occurances of some headers cannot be coalesced into a comma-
   // separated list since their values are (or contain) unquoted HTTP-date

@@ -4,9 +4,7 @@
 
 from page_sets.system_health import system_health_story
 
-from telemetry import decorators
 
-@decorators.Disabled('win') # crbug.com/656040
 class BlankAboutBlankStory(system_health_story.SystemHealthStory):
   """Story that loads the about:blank page."""
 

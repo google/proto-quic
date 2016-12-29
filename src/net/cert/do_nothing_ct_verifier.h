@@ -50,11 +50,13 @@ class NET_EXPORT DoNothingCTVerifier : public CTVerifier {
   DoNothingCTVerifier();
   ~DoNothingCTVerifier() override;
 
-  int Verify(X509Certificate* cert,
-             const std::string& stapled_ocsp_response,
-             const std::string& sct_list_from_tls_extension,
-             SignedCertificateTimestampAndStatusList* output_scts,
-             const NetLogWithSource& net_log) override;
+  void Verify(X509Certificate* cert,
+              base::StringPiece stapled_ocsp_response,
+              base::StringPiece sct_list_from_tls_extension,
+              SignedCertificateTimestampAndStatusList* output_scts,
+              const NetLogWithSource& net_log) override;
+
+  void SetObserver(Observer* observer) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DoNothingCTVerifier);

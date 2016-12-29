@@ -22,7 +22,7 @@ from highlighters import (
     pygments_highlighter, none_highlighter, hilite_me_highlighter)
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 from cpp_namespace_environment import CppNamespaceEnvironment
-from schema_loader import SchemaLoader
+from namespace_resolver import NamespaceResolver
 
 
 class CompilerHandler(BaseHTTPRequestHandler):
@@ -188,16 +188,16 @@ updateEverything();
     (file_root, file_ext) = os.path.splitext(request_path)
     (filedir, filename) = os.path.split(file_root)
 
-    schema_loader = SchemaLoader("./",
-                                 filedir,
-                                 self.server.include_rules,
-                                 self.server.cpp_namespace_pattern)
+    namespace_resolver = NamespaceResolver("./",
+                                           filedir,
+                                           self.server.include_rules,
+                                           self.server.cpp_namespace_pattern)
     try:
       # Get main file.
-      namespace = schema_loader.ResolveNamespace(filename)
+      namespace = namespace_resolver.ResolveNamespace(filename)
       type_generator = cpp_type_generator.CppTypeGenerator(
            api_model,
-           schema_loader,
+           namespace_resolver,
            namespace)
 
       # Generate code

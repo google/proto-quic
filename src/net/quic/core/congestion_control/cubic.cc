@@ -124,8 +124,9 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     QuicTime event_time) {
   acked_packets_count_ += 1;  // Packets acked.
   epoch_packets_count_ += 1;
-  QuicTime current_time =
-      FLAGS_quic_use_event_time ? event_time : clock_->ApproximateNow();
+  QuicTime current_time = FLAGS_quic_reloadable_flag_quic_use_event_time
+                              ? event_time
+                              : clock_->ApproximateNow();
 
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
   if (last_congestion_window_ == current_congestion_window &&

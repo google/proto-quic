@@ -324,8 +324,7 @@ NET_ERROR(SSL_SERVER_CERT_CHANGED, -156)
 
 // Error -157 was removed (SSL_INAPPROPRIATE_FALLBACK).
 
-// Certificate Transparency: All Signed Certificate Timestamps failed to verify.
-NET_ERROR(CT_NO_SCTS_VERIFIED_OK, -158)
+// Error -158 was removed (CT_NO_SCTS_VERIFIED_OK).
 
 // The SSL server sent us a fatal unrecognized_name alert.
 NET_ERROR(SSL_UNRECOGNIZED_NAME_ALERT, -159)
@@ -740,11 +739,11 @@ NET_ERROR(CACHE_AUTH_FAILURE_AFTER_READ, -410)
 // The server's response was insecure (e.g. there was a cert error).
 NET_ERROR(INSECURE_RESPONSE, -501)
 
-// The server responded to a <keygen> with a generated client cert that we
-// don't have the matching private key for.
+// An attempt to import a client certificate failed, as the user's key
+// database lacked a corresponding private key.
 NET_ERROR(NO_PRIVATE_KEY_FOR_CERT, -502)
 
-// An error adding to the OS certificate database (e.g. OS X Keychain).
+// An error adding a certificate to the OS certificate database.
 NET_ERROR(ADD_USER_CERT_FAILED, -503)
 
 // *** Code -600 is reserved (was FTP_PASV_COMMAND_FAILED). ***

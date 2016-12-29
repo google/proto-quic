@@ -8,10 +8,7 @@
 #include <vector>
 
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_split.h"
-#include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_framer.h"
@@ -61,10 +58,9 @@ bool SpdyUtils::ExtractContentLengthFromHeaders(int64_t* content_length,
   } else {
     // Check whether multiple values are consistent.
     StringPiece content_length_header = it->second;
-    std::vector<string> values =
-        base::SplitString(content_length_header, base::StringPiece("\0", 1),
-                          base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
-    for (const string& value : values) {
+    std::vector<StringPiece> values =
+        QuicTextUtils::Split(content_length_header, '\0');
+    for (const StringPiece& value : values) {
       int64_t new_value;
       if (!base::StringToInt64(value, &new_value) || new_value < 0) {
         DLOG(ERROR) << "Content length was either unparseable or negative.";
@@ -110,9 +106,9 @@ bool SpdyUtils::ParseTrailers(const char* data,
 
   // Trailers must not have empty keys, and must not contain pseudo headers.
   for (const auto& trailer : *trailers) {
-    base::StringPiece key = trailer.first;
-    base::StringPiece value = trailer.second;
-    if (base::StartsWith(key, ":", base::CompareCase::INSENSITIVE_ASCII)) {
+    StringPiece key = trailer.first;
+    StringPiece value = trailer.second;
+    if (QuicTextUtils::StartsWith(key, ":")) {
       DVLOG(1) << "Trailers must not contain pseudo-header: '" << key << "','"
                << value << "'.";
       return false;
@@ -135,7 +131,7 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
       return false;
     }
 
-    if (std::any_of(name.begin(), name.end(), base::IsAsciiUpper<char>)) {
+    if (QuicTextUtils::ContainsUpperCase(name)) {
       DVLOG(1) << "Malformed header: Header name " << name
                << " contains upper-case characters.";
       return false;
@@ -176,7 +172,7 @@ bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
       return false;
     }
 
-    if (std::any_of(name.begin(), name.end(), base::IsAsciiUpper<char>)) {
+    if (QuicTextUtils::ContainsUpperCase(name)) {
       DVLOG(1) << "Malformed header: Header name " << name
                << " contains upper-case characters.";
       return false;

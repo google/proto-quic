@@ -130,7 +130,7 @@ class BASE_EXPORT TimeDelta {
   // Returns the maximum time delta, which should be greater than any reasonable
   // time delta we might compare it to. Adding or subtracting the maximum time
   // delta to a time or another time delta has an undefined result.
-  static constexpr TimeDelta Max();
+  static TimeDelta Max();
 
   // Returns the internal numeric value of the TimeDelta object. Please don't
   // use this and do arithmetic on it, as it is more error prone than using the
@@ -538,21 +538,6 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
 #endif
 
   // Converts an exploded structure representing either the local time or UTC
-  // into a Time class.
-  // TODO(maksims): Get rid of these in favor of the methods below when
-  // all the callers stop using these ones.
-  static Time FromUTCExploded(const Exploded& exploded) {
-    base::Time time;
-    ignore_result(FromUTCExploded(exploded, &time));
-    return time;
-  }
-  static Time FromLocalExploded(const Exploded& exploded) {
-    base::Time time;
-    ignore_result(FromLocalExploded(exploded, &time));
-    return time;
-  }
-
-  // Converts an exploded structure representing either the local time or UTC
   // into a Time class. Returns false on a failure when, for example, a day of
   // month is set to 31 on a 28-30 day month. Returns Time(0) on overflow.
   static bool FromUTCExploded(const Exploded& exploded,
@@ -668,11 +653,6 @@ constexpr TimeDelta TimeDelta::FromMillisecondsD(double ms) {
 // static
 constexpr TimeDelta TimeDelta::FromMicroseconds(int64_t us) {
   return TimeDelta(us);
-}
-
-// static
-constexpr TimeDelta TimeDelta::Max() {
-  return TimeDelta(std::numeric_limits<int64_t>::max());
 }
 
 // static

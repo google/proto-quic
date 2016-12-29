@@ -33,8 +33,8 @@ TEST(NetworkQualityObservationBufferTest, BoundedBuffer) {
   const base::TimeTicks now =
       base::TimeTicks() + base::TimeDelta::FromSeconds(1);
   for (int i = 1; i <= 1000; ++i) {
-    observation_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+    observation_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
     // The number of entries should be at most the maximum buffer size.
     EXPECT_GE(300u, observation_buffer.Size());
   }
@@ -56,8 +56,9 @@ TEST(NetworkQualityObservationBufferTest, GetPercentileWithWeights) {
   const base::TimeTicks now = tick_clock_ptr->NowTicks();
   for (int i = 1; i <= 100; ++i) {
     tick_clock_ptr->Advance(base::TimeDelta::FromSeconds(1));
-    observation_buffer.AddObservation(Observation<int32_t>(
-        i, tick_clock_ptr->NowTicks(), NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+    observation_buffer.AddObservation(
+        Observation<int32_t>(i, tick_clock_ptr->NowTicks(), INT32_MIN,
+                             NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
   }
   EXPECT_EQ(100U, observation_buffer.Size());
 
@@ -110,11 +111,11 @@ TEST(NetworkQualityObservationBufferTest, PercentileSameTimestamps) {
   // Insert samples from {1,2,3,..., 100}. First insert odd samples, then even
   // samples. This helps in verifying that the order of samples does not matter.
   for (int i = 1; i <= 99; i += 2) {
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
     EXPECT_TRUE(int_buffer.GetPercentile(
         base::TimeTicks(), &result, 50,
         std::vector<NetworkQualityObservationSource>()));
@@ -126,11 +127,11 @@ TEST(NetworkQualityObservationBufferTest, PercentileSameTimestamps) {
   }
 
   for (int i = 2; i <= 100; i += 2) {
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
     EXPECT_TRUE(int_buffer.GetPercentile(
         base::TimeTicks(), &result, 50,
         std::vector<NetworkQualityObservationSource>()));
@@ -201,19 +202,19 @@ TEST(NetworkQualityObservationBufferTest, PercentileDifferentTimestamps) {
   // First 50 samples have very old timestamps.
   for (int i = 1; i <= 50; ++i) {
     int_buffer.AddObservation(Observation<int32_t>(
-        i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+        i, very_old, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
     time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
-        base::TimeDelta::FromMilliseconds(i), very_old,
+        base::TimeDelta::FromMilliseconds(i), very_old, INT32_MIN,
         NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // Next 50 (i.e., from 51 to 100) have recent timestamps.
   for (int i = 51; i <= 100; ++i) {
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // Older samples have very little weight. So, all percentiles are >= 51
@@ -268,19 +269,19 @@ TEST(NetworkQualityObservationBufferTest,
   // The first 50 samples have very old timestamps.
   for (int i = 1; i <= 50; ++i) {
     time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
-        base::TimeDelta::FromMilliseconds(i), very_old,
+        base::TimeDelta::FromMilliseconds(i), very_old, INT32_MIN,
         NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
     int_buffer.AddObservation(Observation<int32_t>(
-        i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+        i, very_old, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // The next 50 (i.e., from 51 to 100) samples have recent timestamps.
   for (int i = 51; i <= 100; ++i) {
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // All samples have equal weight. So, the unweighted average is the average of
@@ -322,19 +323,19 @@ TEST(NetworkQualityObservationBufferTest, WeightedAverageDifferentTimestamps) {
   // The first 50 samples have very old timestamps.
   for (int i = 1; i <= 50; ++i) {
     time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
-        base::TimeDelta::FromMilliseconds(i), very_old,
+        base::TimeDelta::FromMilliseconds(i), very_old, INT32_MIN,
         NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
     int_buffer.AddObservation(Observation<int32_t>(
-        i, very_old, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+        i, very_old, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // The next 50 (i.e., from 51 to 100) samples have recent timestamps.
   for (int i = 51; i <= 100; ++i) {
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // The older samples have very little weight, and so the weighted average must
@@ -378,34 +379,34 @@ TEST(NetworkQualityObservationBufferTest, DisallowedObservationSources) {
   // Insert samples from {1,2,3,..., 100}. First insert odd samples, then even
   // samples. This helps in verifying that the order of samples does not matter.
   for (int i = 1; i <= 99; i += 2) {
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   // Add samples for TCP and QUIC observations which should not be taken into
   // account when computing the percentile.
   for (int i = 1; i <= 99; i += 2) {
     int_buffer.AddObservation(Observation<int32_t>(
-        10000, now, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
+        10000, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
     int_buffer.AddObservation(Observation<int32_t>(
-        10000, now, NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC));
+        10000, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC));
     time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
-        base::TimeDelta::FromMilliseconds(10000), now,
+        base::TimeDelta::FromMilliseconds(10000), now, INT32_MIN,
         NETWORK_QUALITY_OBSERVATION_SOURCE_TCP));
     time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
-        base::TimeDelta::FromMilliseconds(10000), now,
+        base::TimeDelta::FromMilliseconds(10000), now, INT32_MIN,
         NETWORK_QUALITY_OBSERVATION_SOURCE_QUIC));
   }
 
   for (int i = 2; i <= 100; i += 2) {
-    int_buffer.AddObservation(
-        Observation<int32_t>(i, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-    time_delta_buffer.AddObservation(
-        Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(i), now,
-                                     NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    int_buffer.AddObservation(Observation<int32_t>(
+        i, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+    time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+        base::TimeDelta::FromMilliseconds(i), now, INT32_MIN,
+        NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
   }
 
   std::vector<NetworkQualityObservationSource> disallowed_observation_sources;
@@ -455,17 +456,17 @@ TEST(NetworkQualityObservationBufferTest, TestGetMedianRTTSince) {
   ASSERT_NE(old, now);
 
   // First sample has very old timestamp.
-  int_buffer.AddObservation(
-      Observation<int32_t>(1, old, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-  time_delta_buffer.AddObservation(
-      Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(1), old,
-                                   NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+  int_buffer.AddObservation(Observation<int32_t>(
+      1, old, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+  time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+      base::TimeDelta::FromMilliseconds(1), old, INT32_MIN,
+      NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
 
-  int_buffer.AddObservation(
-      Observation<int32_t>(100, now, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
-  time_delta_buffer.AddObservation(
-      Observation<base::TimeDelta>(base::TimeDelta::FromMilliseconds(100), now,
-                                   NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+  int_buffer.AddObservation(Observation<int32_t>(
+      100, now, INT32_MIN, NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
+  time_delta_buffer.AddObservation(Observation<base::TimeDelta>(
+      base::TimeDelta::FromMilliseconds(100), now, INT32_MIN,
+      NETWORK_QUALITY_OBSERVATION_SOURCE_HTTP));
 
   const struct {
     base::TimeTicks start_timestamp;

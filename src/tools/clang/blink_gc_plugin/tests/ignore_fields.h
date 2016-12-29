@@ -11,7 +11,7 @@ namespace blink {
 
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
-    virtual void trace(Visitor*) { }
+    virtual void Trace(Visitor*) { }
 };
 
 // Don't warn about raw pointers to heap allocated objects.
@@ -21,7 +21,7 @@ private:
     HeapObject* m_obj;
 };
 
-// Don't require trace method when (all) GC fields are ignored.
+// Don't require Trace method when (all) GC fields are ignored.
 class B : public GarbageCollected<B> {
 private:
     GC_PLUGIN_IGNORE("http://crbug.com/12345")
@@ -31,7 +31,7 @@ private:
 // Don't require tracing an ignored field.
 class C : public GarbageCollected<C> {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_one;
     GC_PLUGIN_IGNORE("http://crbug.com/12345")

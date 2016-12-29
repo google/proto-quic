@@ -5,14 +5,11 @@
 #ifndef NET_QUIC_CORE_CRYPTO_P256_KEY_EXCHANGE_H_
 #define NET_QUIC_CORE_CRYPTO_P256_KEY_EXCHANGE_H_
 
-#include <stdint.h>
-
-#include <memory>
+#include <cstdint>
 #include <string>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "crypto/openssl_util.h"
 #include "net/quic/core/crypto/key_exchange.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "third_party/boringssl/src/include/openssl/base.h"
@@ -66,4 +63,5 @@ class QUIC_EXPORT_PRIVATE P256KeyExchange : public KeyExchange {
 };
 
 }  // namespace net
+
 #endif  // NET_QUIC_CORE_CRYPTO_P256_KEY_EXCHANGE_H_

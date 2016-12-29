@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/port_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "url/gurl.h"
 
 using std::string;
@@ -52,8 +53,8 @@ QuicServerId QuicServerId::FromString(const std::string& str) {
 }
 
 string QuicServerId::ToString() const {
-  return "https://" + host_port_pair_.ToString() +
-         (privacy_mode_ == PRIVACY_MODE_ENABLED ? "/private" : "");
+  return QuicStrCat("https://", host_port_pair_.ToString(),
+                    (privacy_mode_ == PRIVACY_MODE_ENABLED ? "/private" : ""));
 }
 
 }  // namespace net

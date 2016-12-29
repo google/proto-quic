@@ -6,6 +6,7 @@
 
 #include "base/stl_util.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_multipath_sent_packet_manager.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_received_packet_manager.h"
@@ -73,7 +74,7 @@ QuicPacketGenerator* QuicConnectionPeer::GetPacketGenerator(
 QuicSentPacketManager* QuicConnectionPeer::GetSentPacketManager(
     QuicConnection* connection,
     QuicPathId path_id) {
-  if (FLAGS_quic_enable_multipath) {
+  if (FLAGS_quic_reloadable_flag_quic_enable_multipath) {
     return static_cast<QuicSentPacketManager*>(
         static_cast<QuicMultipathSentPacketManager*>(
             connection->sent_packet_manager_.get())

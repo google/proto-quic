@@ -11,7 +11,7 @@ namespace blink {
 
 class X : public GarbageCollected<X> {
  public:
-  void trace(Visitor*) {}
+  void Trace(Visitor*) {}
 };
 
 enum ClassTag {
@@ -23,21 +23,21 @@ class TraceAfterDispatchInlinedBase
  public:
   explicit TraceAfterDispatchInlinedBase(ClassTag tag) : tag_(tag) {}
 
-  void trace(Visitor* visitor) { traceImpl(visitor); }
-  void trace(InlinedGlobalMarkingVisitor visitor) { traceImpl(visitor); }
+  void Trace(Visitor* visitor) { TraceImpl(visitor); }
+  void Trace(InlinedGlobalMarkingVisitor visitor) { TraceImpl(visitor); }
 
-  void traceAfterDispatch(Visitor* visitor) { traceAfterDispatchImpl(visitor); }
-  void traceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
-    traceAfterDispatchImpl(visitor);
+  void TraceAfterDispatch(Visitor* visitor) { TraceAfterDispatchImpl(visitor); }
+  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
+    TraceAfterDispatchImpl(visitor);
   }
 
  private:
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor);
+  void TraceImpl(VisitorDispatcher visitor);
 
   template <typename VisitorDispatcher>
-  void traceAfterDispatchImpl(VisitorDispatcher visitor) {
-    // No trace call; should get a warning.
+  void TraceAfterDispatchImpl(VisitorDispatcher visitor) {
+    // No Trace call; should get a warning.
   }
 
   ClassTag tag_;
@@ -48,15 +48,15 @@ class TraceAfterDispatchInlinedDerived : public TraceAfterDispatchInlinedBase {
  public:
   TraceAfterDispatchInlinedDerived() : TraceAfterDispatchInlinedBase(DERIVED) {}
 
-  void traceAfterDispatch(Visitor* visitor) { traceAfterDispatchImpl(visitor); }
-  void traceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
-    traceAfterDispatchImpl(visitor);
+  void TraceAfterDispatch(Visitor* visitor) { TraceAfterDispatchImpl(visitor); }
+  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
+    TraceAfterDispatchImpl(visitor);
   }
 
  private:
   template <typename VisitorDispatcher>
-  void traceAfterDispatchImpl(VisitorDispatcher visitor) {
-    // No trace call (for member and base class).
+  void TraceAfterDispatchImpl(VisitorDispatcher visitor) {
+    // No Trace call (for member and base class).
   }
 
   Member<X> x_derived_;
@@ -67,18 +67,18 @@ class TraceAfterDispatchExternBase
  public:
   explicit TraceAfterDispatchExternBase(ClassTag tag) : tag_(tag) {}
 
-  void trace(Visitor* visitor);
-  void trace(InlinedGlobalMarkingVisitor visitor);
+  void Trace(Visitor* visitor);
+  void Trace(InlinedGlobalMarkingVisitor visitor);
 
-  void traceAfterDispatch(Visitor* visitor);
-  void traceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
+  void TraceAfterDispatch(Visitor* visitor);
+  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
 
  private:
   template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor);
+  void TraceImpl(VisitorDispatcher visitor);
 
   template <typename VisitorDispatcher>
-  void traceAfterDispatchImpl(VisitorDispatcher visitor);
+  void TraceAfterDispatchImpl(VisitorDispatcher visitor);
 
   ClassTag tag_;
   Member<X> x_base_;
@@ -88,12 +88,12 @@ class TraceAfterDispatchExternDerived : public TraceAfterDispatchExternBase {
  public:
   TraceAfterDispatchExternDerived() : TraceAfterDispatchExternBase(DERIVED) {}
 
-  void traceAfterDispatch(Visitor* visitor);
-  void traceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
+  void TraceAfterDispatch(Visitor* visitor);
+  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
 
  private:
   template <typename VisitorDispatcher>
-  void traceAfterDispatchImpl(VisitorDispatcher visitor);
+  void TraceAfterDispatchImpl(VisitorDispatcher visitor);
 
   Member<X> x_derived_;
 };

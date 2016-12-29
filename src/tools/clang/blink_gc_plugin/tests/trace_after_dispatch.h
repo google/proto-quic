@@ -11,8 +11,8 @@ namespace blink {
 
 class A : public GarbageCollected<A> {
 public:
-    void trace(Visitor*);
-    void traceAfterDispatch(Visitor*);
+    void Trace(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 protected:
     enum Type { TB, TC, TD };
     A(Type type) : m_type(type) { }
@@ -23,7 +23,7 @@ private:
 class B : public A {
 public:
     B() : A(TB) { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };
@@ -31,7 +31,7 @@ private:
 class C : public A {
 public:
     C() : A(TC) { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };
@@ -45,7 +45,7 @@ protected:
 class D : public Abstract {
 public:
     D() : Abstract(TD) { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };

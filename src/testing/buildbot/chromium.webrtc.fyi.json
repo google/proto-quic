@@ -1,12 +1,17 @@
 {
-  "Android Builder (dbg)": {
+  "Android Builder": {
     "additional_compile_targets": [
       "all"
     ]
   },
+  "Android Builder (dbg)": {
+    "additional_compile_targets": [
+      "content_browsertests"
+    ]
+  },
   "Android Builder ARM64 (dbg)": {
     "additional_compile_targets": [
-      "all"
+      "content_browsertests"
     ]
   },
   "Linux Builder": {

@@ -386,7 +386,7 @@ void HttpStreamFactoryImpl::Job::OnStreamReadyCallback() {
 
   MaybeCopyConnectionAttemptsFromSocketOrHandle();
 
-  delegate_->OnStreamReady(this, server_ssl_config_, proxy_info_);
+  delegate_->OnStreamReady(this, server_ssl_config_);
   // |this| may be deleted after this call.
 }
 
@@ -1017,7 +1017,7 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionComplete(int result) {
     } else {
       SSLClientSocket* ssl_socket =
           static_cast<SSLClientSocket*>(connection_->socket());
-      if (ssl_socket->WasNpnNegotiated()) {
+      if (ssl_socket->WasAlpnNegotiated()) {
         was_alpn_negotiated_ = true;
         negotiated_protocol_ = ssl_socket->GetNegotiatedProtocol();
         net_log_.AddEvent(

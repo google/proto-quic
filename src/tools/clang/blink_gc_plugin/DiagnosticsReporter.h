@@ -135,7 +135,7 @@ class DiagnosticsReporter {
   unsigned diag_field_requires_finalization_note_;
   unsigned diag_overridden_non_virtual_trace_note_;
   unsigned diag_manual_dispatch_method_note_;
-
+  unsigned diag_iterator_to_gc_managed_collection_note_;
 };
 
 #endif // TOOLS_BLINK_GC_PLUGIN_DIAGNOSTICS_REPORTER_H_

@@ -11,7 +11,7 @@ namespace blink {
 
 class HeapObject : public GarbageCollected<HeapObject> { };
 
-// Don't require trace method on ignored class.
+// Don't require Trace method on ignored class.
 class GC_PLUGIN_IGNORE("http://crbug.com/12345") A;
 class A : public GarbageCollected<A> {
 private:
@@ -22,7 +22,7 @@ private:
 class GC_PLUGIN_IGNORE("http://crbug.com/12345") B;
 class B : public GarbageCollected<B> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj;
 };
@@ -30,7 +30,7 @@ private:
 // Don't require tracing of an ignored base class.
 class C : public B {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj;
 };

@@ -6,7 +6,7 @@
 
 namespace blink {
 
-void DoesNotNeedFinalizer::trace(Visitor* visitor)
+void DoesNotNeedFinalizer::Trace(Visitor* visitor)
 {
 }
 
@@ -14,7 +14,7 @@ DoesNotNeedFinalizer2::~DoesNotNeedFinalizer2()
 {
 }
 
-void DoesNotNeedFinalizer2::trace(Visitor* visitor)
+void DoesNotNeedFinalizer2::Trace(Visitor* visitor)
 {
 }
 

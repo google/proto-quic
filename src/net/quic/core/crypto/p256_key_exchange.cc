@@ -4,11 +4,15 @@
 
 #include "net/quic/core/crypto/p256_key_exchange.h"
 
+#include <cstdint>
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "base/logging.h"
 #include "third_party/boringssl/src/include/openssl/ec.h"
 #include "third_party/boringssl/src/include/openssl/ecdh.h"
+#include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 
 using base::StringPiece;
@@ -88,7 +92,7 @@ bool P256KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
 
   bssl::UniquePtr<EC_POINT> point(
       EC_POINT_new(EC_KEY_get0_group(private_key_.get())));
-  if (!point ||
+  if (!point.get() ||
       !EC_POINT_oct2point(/* also test if point is on curve */
                           EC_KEY_get0_group(private_key_.get()), point.get(),
                           reinterpret_cast<const uint8_t*>(

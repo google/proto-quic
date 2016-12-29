@@ -808,7 +808,7 @@ const NetLogWithSource& MockClientSocket::NetLog() const {
   return net_log_;
 }
 
-bool MockClientSocket::WasNpnNegotiated() const {
+bool MockClientSocket::WasAlpnNegotiated() const {
   return false;
 }
 
@@ -1206,7 +1206,7 @@ int MockSSLClientSocket::GetPeerAddress(IPEndPoint* address) const {
   return transport_->socket()->GetPeerAddress(address);
 }
 
-bool MockSSLClientSocket::WasNpnNegotiated() const {
+bool MockSSLClientSocket::WasAlpnNegotiated() const {
   return data_->next_proto != kProtoUnknown;
 }
 

@@ -8,6 +8,7 @@
 
 #include "net/quic/core/crypto/chacha20_poly1305_decrypter.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using base::StringPiece;
@@ -87,7 +88,7 @@ TEST(ChaCha20Poly1305EncrypterTest, EncryptThenDecrypt) {
   ChaCha20Poly1305Encrypter encrypter;
   ChaCha20Poly1305Decrypter decrypter;
 
-  string key = QuicUtils::HexDecode(test_vectors[0].key);
+  string key = QuicTextUtils::HexDecode(test_vectors[0].key);
   ASSERT_TRUE(encrypter.SetKey(key));
   ASSERT_TRUE(decrypter.SetKey(key));
   ASSERT_TRUE(encrypter.SetNoncePrefix("abcd"));
@@ -112,12 +113,12 @@ TEST(ChaCha20Poly1305EncrypterTest, EncryptThenDecrypt) {
 TEST(ChaCha20Poly1305EncrypterTest, Encrypt) {
   for (size_t i = 0; test_vectors[i].key != nullptr; i++) {
     // Decode the test vector.
-    string key = QuicUtils::HexDecode(test_vectors[i].key);
-    string pt = QuicUtils::HexDecode(test_vectors[i].pt);
-    string iv = QuicUtils::HexDecode(test_vectors[i].iv);
-    string fixed = QuicUtils::HexDecode(test_vectors[i].fixed);
-    string aad = QuicUtils::HexDecode(test_vectors[i].aad);
-    string ct = QuicUtils::HexDecode(test_vectors[i].ct);
+    string key = QuicTextUtils::HexDecode(test_vectors[i].key);
+    string pt = QuicTextUtils::HexDecode(test_vectors[i].pt);
+    string iv = QuicTextUtils::HexDecode(test_vectors[i].iv);
+    string fixed = QuicTextUtils::HexDecode(test_vectors[i].fixed);
+    string aad = QuicTextUtils::HexDecode(test_vectors[i].aad);
+    string ct = QuicTextUtils::HexDecode(test_vectors[i].ct);
 
     ChaCha20Poly1305Encrypter encrypter;
     ASSERT_TRUE(encrypter.SetKey(key));

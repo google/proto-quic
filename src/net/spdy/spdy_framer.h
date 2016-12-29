@@ -47,31 +47,6 @@ class SpdyFramerPeer;
 
 }  // namespace test
 
-// A datastructure for holding the ID and flag fields for SETTINGS.
-// Conveniently handles converstion to/from wire format.
-class NET_EXPORT_PRIVATE SettingsFlagsAndId {
- public:
-  static SettingsFlagsAndId FromWireFormat(uint32_t wire);
-
-  SettingsFlagsAndId() : flags_(0), id_(0) {}
-
-  // TODO(hkhalil): restrict to enums instead of free-form ints.
-  SettingsFlagsAndId(uint8_t flags, uint32_t id);
-
-  uint32_t GetWireFormat() const;
-
-  uint32_t id() const { return id_; }
-  uint8_t flags() const { return flags_; }
-
- private:
-  uint8_t flags_;
-  uint32_t id_;
-};
-
-// SettingsMap has unique (flags, value) pair for given SpdySettingsIds ID.
-typedef std::pair<SpdySettingsFlags, uint32_t> SettingsFlagsAndValue;
-typedef std::map<SpdySettingsIds, SettingsFlagsAndValue> SettingsMap;
-
 // SpdyFramerVisitorInterface is a set of callbacks for the SpdyFramer.
 // Implement this interface to receive event callbacks as frames are
 // decoded from the framer.
@@ -150,7 +125,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
 
   // Called when a complete setting within a SETTINGS frame has been parsed and
   // validated.
-  virtual void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) = 0;
+  virtual void OnSetting(SpdySettingsIds id, uint32_t value) = 0;
 
   // Called when a SETTINGS frame is received with the ACK flag set.
   virtual void OnSettingsAck() {}
@@ -343,6 +318,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Retrieve serialized length of SpdyHeaderBlock.
   static size_t GetSerializedLength(const SpdyHeaderBlock* headers);
 
+  // Gets the serialized flags for the given |frame|.
+  static uint8_t GetSerializedFlags(const SpdyFrameIR& frame);
+
   explicit SpdyFramer(CompressionOption option);
 
   // Used recursively from the above constructor in order to support
@@ -492,7 +470,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Returns the (minimum) size of frames (sans variable-length portions).
   size_t GetDataFrameMinimumSize() const;
   size_t GetFrameHeaderSize() const;
-  size_t GetRstStreamMinimumSize() const;
+  size_t GetRstStreamSize() const;
   size_t GetSettingsMinimumSize() const;
   size_t GetPingSize() const;
   size_t GetGoAwayMinimumSize() const;

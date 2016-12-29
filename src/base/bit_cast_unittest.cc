@@ -27,6 +27,5 @@ TEST(BitCastTest, StructureInt) {
   EXPECT_EQ(1, b);
 }
 
-
 }  // namespace
 }  // namespace base

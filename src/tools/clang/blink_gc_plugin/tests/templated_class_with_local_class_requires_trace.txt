@@ -18,7 +18,7 @@ class TemplatedObject final
         OwnPtr<HeapObject> m_object;
         ^
 ./templated_class_with_local_class_requires_trace.h:34:9: warning: [blink-gc] Class 'Local' has untraced or not traceable fields.
-        void trace(Visitor* visitor)
+        void Trace(Visitor* visitor)
         ^
 ./templated_class_with_local_class_requires_trace.h:41:9: note: [blink-gc] Untraceable field 'm_object' declared here:
         OwnPtr<HeapObject> m_object;

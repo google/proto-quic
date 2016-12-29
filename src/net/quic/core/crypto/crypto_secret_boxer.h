@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_SECRET_BOXER_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_SECRET_BOXER_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -30,6 +29,7 @@ class QUIC_EXPORT_PRIVATE CryptoSecretBoxer {
   // GetKeySize returns the number of bytes in a key.
   static size_t GetKeySize();
 
+  // SetKeys sets a list of encryption keys. The first key in the list will be
   // used by |Box|, but all supplied keys will be tried by |Unbox|, to handle
   // key skew across the fleet. This must be called before |Box| or |Unbox|.
   // Keys must be |GetKeySize()| bytes long.
@@ -38,7 +38,7 @@ class QUIC_EXPORT_PRIVATE CryptoSecretBoxer {
   // Box encrypts |plaintext| using a random nonce generated from |rand| and
   // returns the resulting ciphertext. Since an authenticator and nonce are
   // included, the result will be slightly larger than |plaintext|. The first
-  // key in the std::vector supplied to |SetKeys| will be used.
+  // key in the vector supplied to |SetKeys| will be used.
   std::string Box(QuicRandom* rand, base::StringPiece plaintext) const;
 
   // Unbox takes the result of a previous call to |Box| in |ciphertext| and

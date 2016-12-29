@@ -139,6 +139,7 @@ SSL_HANDSHAKE *ssl_handshake_new(SSL *ssl) {
   memset(hs, 0, sizeof(SSL_HANDSHAKE));
   hs->ssl = ssl;
   hs->wait = ssl_hs_ok;
+  hs->state = SSL_ST_INIT;
   return hs;
 }
 
@@ -148,6 +149,10 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs) {
   }
 
   OPENSSL_cleanse(hs->secret, sizeof(hs->secret));
+  OPENSSL_cleanse(hs->client_handshake_secret,
+                  sizeof(hs->client_handshake_secret));
+  OPENSSL_cleanse(hs->server_handshake_secret,
+                  sizeof(hs->server_handshake_secret));
   OPENSSL_cleanse(hs->client_traffic_secret_0,
                   sizeof(hs->client_traffic_secret_0));
   OPENSSL_cleanse(hs->server_traffic_secret_0,
@@ -170,6 +175,7 @@ void ssl_handshake_free(SSL_HANDSHAKE *hs) {
   }
 
   OPENSSL_free(hs->hostname);
+  EVP_PKEY_free(hs->peer_pubkey);
   OPENSSL_free(hs);
 }
 
@@ -262,7 +268,7 @@ int ssl3_write_message(SSL *ssl) {
 
 int ssl3_send_finished(SSL_HANDSHAKE *hs, int a, int b) {
   SSL *const ssl = hs->ssl;
-  if (ssl->state == b) {
+  if (hs->state == b) {
     return ssl->method->write_message(ssl);
   }
 
@@ -306,7 +312,7 @@ int ssl3_send_finished(SSL_HANDSHAKE *hs, int a, int b) {
     return -1;
   }
 
-  ssl->state = b;
+  hs->state = b;
   return ssl->method->write_message(ssl);
 }
 

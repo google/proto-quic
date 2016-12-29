@@ -182,18 +182,21 @@ const struct CertDateTestData {
      "20120101123000Z",
      true,
      {2012, 1, 0, 1, 12, 30, 0}},
+    // test 31st of April
+    {CERT_DATE_FORMAT_GENERALIZED_TIME, "20160431121000Z", false, {0}},
+    // test 31st of February
+    {CERT_DATE_FORMAT_GENERALIZED_TIME, "20160231121000Z", false, {0}},
 };
 
 // GTest pretty printer.
 void PrintTo(const CertDateTestData& data, std::ostream* os) {
+  base::Time out_time;
+  bool result = base::Time::FromUTCExploded(data.expected_result, &out_time);
   *os << " format: " << data.format
       << "; date string: " << base::StringPiece(data.date_string)
-      << "; valid: " << data.is_valid
-      << "; expected date: "
-      << (data.is_valid ?
-              base::Time::FromUTCExploded(data.expected_result)
-                  .ToInternalValue() :
-              0U);
+      << "; valid: " << data.is_valid << "; expected date: "
+      << (data.is_valid ? out_time.ToInternalValue() : 0U)
+      << "; FromUTCExploded conversion result: " << result;
 }
 
 class X509CertTypesDateTest : public testing::TestWithParam<CertDateTestData> {
@@ -202,24 +205,30 @@ class X509CertTypesDateTest : public testing::TestWithParam<CertDateTestData> {
     void SetUp() override { test_data_ = GetParam(); }
 
   protected:
-    CertDateTestData test_data_;
+   CertDateTestData test_data_;
 };
 
 TEST_P(X509CertTypesDateTest, Parse) {
   base::Time parsed_date;
   bool parsed = ParseCertificateDate(
       test_data_.date_string, test_data_.format, &parsed_date);
-  EXPECT_EQ(test_data_.is_valid, parsed);
+  if (!parsed && test_data_.is_valid &&
+      test_data_.expected_result.year >= 2038 && sizeof(time_t) == 4) {
+    // Some of the valid test data will fail on 32-bit POSIX systems
+    return;
+  }
+
   if (!test_data_.is_valid)
     return;
-  // Convert the expected value to a base::Time(). This ensures that systems
+  // Convert the expected value to a base::Time(). This ensures that
   // systems that only support 32-bit times will pass the tests, by ensuring at
-  // least that the times have the same truncating behaviour.
+  // least that the times have the same truncating behavior.
   // Note: Compared as internal values so that mismatches can be cleanly
-  // printed by GTest (eg: without PrintTo overrides).
-  EXPECT_EQ(base::Time::FromUTCExploded(test_data_.expected_result)
-                .ToInternalValue(),
-            parsed_date.ToInternalValue());
+  // printed by GTest (e.g.: without PrintTo overrides).
+  base::Time out_time;
+  EXPECT_TRUE(
+      base::Time::FromUTCExploded(test_data_.expected_result, &out_time));
+  EXPECT_EQ(out_time.ToInternalValue(), parsed_date.ToInternalValue());
 }
 INSTANTIATE_TEST_CASE_P(,
                         X509CertTypesDateTest,

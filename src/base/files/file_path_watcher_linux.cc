@@ -32,8 +32,8 @@
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
 #include "base/synchronization/lock.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/trace_event.h"
 
 namespace base {
@@ -320,7 +320,7 @@ void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
                                             bool created,
                                             bool deleted,
                                             bool is_dir) {
-  if (!task_runner()->BelongsToCurrentThread()) {
+  if (!task_runner()->RunsTasksOnCurrentThread()) {
     // Switch to task_runner() to access |watches_| safely.
     task_runner()->PostTask(FROM_HERE,
                             Bind(&FilePathWatcherImpl::OnFilePathChanged, this,
@@ -335,7 +335,7 @@ void FilePathWatcherImpl::OnFilePathChanged(InotifyReader::Watch fired_watch,
     return;
   }
 
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
   DCHECK(HasValidWatchVector());
 
   // Used below to avoid multiple recursive updates.
@@ -421,7 +421,7 @@ bool FilePathWatcherImpl::Watch(const FilePath& path,
                                 const FilePathWatcher::Callback& callback) {
   DCHECK(target_.empty());
 
-  set_task_runner(ThreadTaskRunnerHandle::Get());
+  set_task_runner(SequencedTaskRunnerHandle::Get());
   callback_ = callback;
   target_ = path;
   recursive_ = recursive;
@@ -444,7 +444,7 @@ void FilePathWatcherImpl::Cancel() {
   }
 
   // Switch to the task_runner() if necessary so we can access |watches_|.
-  if (!task_runner()->BelongsToCurrentThread()) {
+  if (!task_runner()->RunsTasksOnCurrentThread()) {
     task_runner()->PostTask(
         FROM_HERE,
         Bind(&FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor,
@@ -455,7 +455,7 @@ void FilePathWatcherImpl::Cancel() {
 }
 
 void FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor() {
-  DCHECK(in_destructor_ || task_runner()->BelongsToCurrentThread());
+  DCHECK(in_destructor_ || task_runner()->RunsTasksOnCurrentThread());
 
   if (is_cancelled())
     return;
@@ -477,7 +477,7 @@ void FilePathWatcherImpl::CancelOnMessageLoopThreadOrInDestructor() {
 void FilePathWatcherImpl::UpdateWatches() {
   // Ensure this runs on the task_runner() exclusively in order to avoid
   // concurrency issues.
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
   DCHECK(HasValidWatchVector());
 
   // Walk the list of watches and update them as we go.

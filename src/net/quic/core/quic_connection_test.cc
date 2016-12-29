@@ -12,7 +12,6 @@
 #include "base/bind.h"
 #include "base/macros.h"
 #include "base/stl_util.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/net_errors.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
@@ -23,6 +22,8 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_reference_counted.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -518,13 +519,14 @@ class TestConnection : public QuicConnection {
       StringPiece data,
       QuicStreamOffset offset,
       bool fin,
-      QuicAckListenerInterface* listener) {
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
     if (id != kCryptoStreamId && this->encryption_level() == ENCRYPTION_NONE) {
       this->SetDefaultEncryptionLevel(ENCRYPTION_FORWARD_SECURE);
     }
     struct iovec iov;
     QuicIOVector data_iov(MakeIOVector(data, &iov));
-    return QuicConnection::SendStreamData(id, data_iov, offset, fin, listener);
+    return QuicConnection::SendStreamData(id, data_iov, offset, fin,
+                                          std::move(ack_listener));
   }
 
   QuicConsumedData SendStreamData3() {
@@ -1149,8 +1151,8 @@ TEST_P(QuicConnectionTest, AllowSelfAddressChangeToMappedIpv4AddressAtServer) {
                                   kPeerAddress);
   // Cause self_address change to mapped Ipv4 address.
   QuicIpAddress host2;
-  host2.FromString(base::StringPrintf(
-      "::ffff:%s", connection_.self_address().host().ToString().c_str()));
+  host2.FromString(
+      QuicStrCat("::ffff:", connection_.self_address().host().ToString()));
   QuicSocketAddress self_address2(host2, connection_.self_address().port());
   ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), self_address2,
                                   kPeerAddress);
@@ -2044,7 +2046,7 @@ TEST_P(QuicConnectionTest, DoNotRetransmitForResetStreamOnRTO) {
 // Ensure that if the only data in flight is non-retransmittable, the
 // retransmission alarm is not set.
 TEST_P(QuicConnectionTest, CancelRetransmissionAlarmAfterResetStream) {
-  FLAGS_quic_more_conservative_retransmission_alarm = true;
+  FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm = true;
   QuicStreamId stream_id = 2;
   QuicPacketNumber last_data_packet;
   SendStreamDataToPeer(stream_id, "foo", 0, !kFin, &last_data_packet);
@@ -2289,8 +2291,9 @@ TEST_P(QuicConnectionTest, RetransmitWriteBlockedAckedOriginalThenSent) {
   writer_->SetWritable();
   connection_.OnCanWrite();
   // There is now a pending packet, but with no retransmittable frames.
-  EXPECT_EQ(FLAGS_quic_more_conservative_retransmission_alarm,
-            !connection_.GetRetransmissionAlarm()->IsSet());
+  EXPECT_EQ(
+      FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm,
+      !connection_.GetRetransmissionAlarm()->IsSet());
   EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_,
                                                             ack.path_id, 2));
 }
@@ -3503,7 +3506,7 @@ TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
 }
 
 TEST_P(QuicConnectionTest, TimeoutAfter5ServerRTOs) {
-  FLAGS_quic_only_5rto_client_side = true;
+  FLAGS_quic_reloadable_flag_quic_only_5rto_client_side = true;
   connection_.SetMaxTailLossProbes(kDefaultPathId, 2);
   set_perspective(Perspective::IS_SERVER);
   QuicFramerPeer::SetPerspective(QuicConnectionPeer::GetFramer(&connection_),
@@ -4150,7 +4153,7 @@ TEST_P(QuicConnectionTest, BundleAckForSecondCHLO) {
 }
 
 TEST_P(QuicConnectionTest, BundleAckForSecondCHLOTwoPacketReject) {
-  FLAGS_quic_receive_packet_once_decrypted = true;
+  FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted = true;
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 
@@ -4614,11 +4617,11 @@ TEST_P(QuicConnectionTest, AckNotifierTriggerCallback) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   // Create a listener which we expect to be called.
-  scoped_refptr<MockAckListener> listener(new MockAckListener);
+  QuicReferenceCountedPointer<MockAckListener> listener(new MockAckListener);
   EXPECT_CALL(*listener, OnPacketAcked(_, _)).Times(1);
 
   // Send some data, which will register the listener to be notified.
-  connection_.SendStreamDataWithString(1, "foo", 0, !kFin, listener.get());
+  connection_.SendStreamDataWithString(1, "foo", 0, !kFin, listener);
 
   // Process an ACK from the server which should trigger the callback.
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
@@ -4630,12 +4633,12 @@ TEST_P(QuicConnectionTest, AckNotifierFailToTriggerCallback) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   // Create a listener which we don't expect to be called.
-  scoped_refptr<MockAckListener> listener(new MockAckListener);
+  QuicReferenceCountedPointer<MockAckListener> listener(new MockAckListener);
   EXPECT_CALL(*listener, OnPacketAcked(_, _)).Times(0);
 
   // Send some data, which will register the listener to be notified. This will
   // not be ACKed and so the listener should never be called.
-  connection_.SendStreamDataWithString(1, "foo", 0, !kFin, listener.get());
+  connection_.SendStreamDataWithString(1, "foo", 0, !kFin, listener);
 
   // Send some other data which we will ACK.
   connection_.SendStreamDataWithString(1, "foo", 0, !kFin, nullptr);
@@ -4657,13 +4660,13 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackAfterRetransmission) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
   // Create a listener which we expect to be called.
-  scoped_refptr<MockAckListener> listener(new MockAckListener);
+  QuicReferenceCountedPointer<MockAckListener> listener(new MockAckListener);
   EXPECT_CALL(*listener, OnPacketRetransmitted(3)).Times(1);
   EXPECT_CALL(*listener, OnPacketAcked(3, _)).Times(1);
 
   // Send four packets, and register to be notified on ACK of packet 2.
   connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
-  connection_.SendStreamDataWithString(3, "bar", 0, !kFin, listener.get());
+  connection_.SendStreamDataWithString(3, "bar", 0, !kFin, listener);
   connection_.SendStreamDataWithString(3, "baz", 0, !kFin, nullptr);
   connection_.SendStreamDataWithString(3, "qux", 0, !kFin, nullptr);
 
@@ -4693,11 +4696,12 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckAfterRTO) {
   connection_.SetMaxTailLossProbes(kDefaultPathId, 0);
 
   // Create a listener which we expect to be called.
-  scoped_refptr<MockAckListener> listener(new StrictMock<MockAckListener>);
+  QuicReferenceCountedPointer<MockAckListener> listener(
+      new StrictMock<MockAckListener>);
 
   QuicTime default_retransmission_time =
       clock_.ApproximateNow() + DefaultRetransmissionTime();
-  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, listener.get());
+  connection_.SendStreamDataWithString(3, "foo", 0, !kFin, listener);
   EXPECT_EQ(1u, stop_waiting()->least_unacked);
 
   EXPECT_EQ(1u, writer_->header().packet_number);
@@ -4730,11 +4734,12 @@ TEST_P(QuicConnectionTest, AckNotifierCallbackForAckAfterRTO) {
 // packet number.
 TEST_P(QuicConnectionTest, AckNotifierCallbackForAckOfNackedPacket) {
   // Create a listener which we expect to be called.
-  scoped_refptr<MockAckListener> listener(new StrictMock<MockAckListener>);
+  QuicReferenceCountedPointer<MockAckListener> listener(
+      new StrictMock<MockAckListener>());
 
   // Send four packets, and register to be notified on ACK of packet 2.
   connection_.SendStreamDataWithString(3, "foo", 0, !kFin, nullptr);
-  connection_.SendStreamDataWithString(3, "bar", 0, !kFin, listener.get());
+  connection_.SendStreamDataWithString(3, "bar", 0, !kFin, listener);
   connection_.SendStreamDataWithString(3, "baz", 0, !kFin, nullptr);
   connection_.SendStreamDataWithString(3, "qux", 0, !kFin, nullptr);
 
@@ -4779,7 +4784,7 @@ TEST_P(QuicConnectionTest, OnPacketHeaderDebugVisitor) {
 
 TEST_P(QuicConnectionTest, Pacing) {
   // static_cast here does not work if using multipath_sent_packet_manager.
-  FLAGS_quic_enable_multipath = false;
+  FLAGS_quic_reloadable_flag_quic_enable_multipath = false;
   TestConnection server(connection_id_, kSelfAddress, helper_.get(),
                         alarm_factory_.get(), writer_.get(),
                         Perspective::IS_SERVER, version());
@@ -4827,9 +4832,9 @@ TEST_P(QuicConnectionTest, NoDataNoFin) {
   // Make sure that a call to SendStreamWithData, with no data and no FIN, does
   // not result in a QuicAckNotifier being used-after-free (fail under ASAN).
   // Regression test for b/18594622
-  scoped_refptr<MockAckListener> listener(new MockAckListener);
+  QuicReferenceCountedPointer<MockAckListener> listener(new MockAckListener);
   EXPECT_QUIC_BUG(
-      connection_.SendStreamDataWithString(3, "", 0, !kFin, listener.get()),
+      connection_.SendStreamDataWithString(3, "", 0, !kFin, listener),
       "Attempt to send empty stream frame");
 }
 
@@ -4913,7 +4918,7 @@ TEST_P(QuicConnectionTest, SendingUnencryptedStreamDataFails) {
 TEST_P(QuicConnectionTest, EnableMultipathNegotiation) {
   // Test multipath negotiation during crypto handshake. Multipath is enabled
   // when both endpoints enable multipath.
-  FLAGS_quic_enable_multipath = true;
+  FLAGS_quic_reloadable_flag_quic_enable_multipath = true;
   EXPECT_TRUE(connection_.connected());
   EXPECT_FALSE(QuicConnectionPeer::IsMultipathEnabled(&connection_));
   EXPECT_CALL(*send_algorithm_, SetFromConfig(_, _));

@@ -7,14 +7,14 @@
 namespace blink {
 
 struct HeapObject : public GarbageCollected<HeapObject> {
-    void trace(Visitor*) { }
+    void Trace(Visitor*) { }
 };
 
 template<typename T>
 class TemplateBase
     : public GarbageCollected<TemplateBase<T> > {
 public:
-    void trace(Visitor* visitor) { visitor->trace(m_obj); }
+    void Trace(Visitor* visitor) { visitor->Trace(m_obj); }
 private:
     Member<HeapObject> m_obj;
 };

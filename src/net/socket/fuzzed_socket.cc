@@ -216,7 +216,7 @@ bool FuzzedSocket::WasEverUsed() const {
 
 void FuzzedSocket::EnableTCPFastOpenIfSupported() {}
 
-bool FuzzedSocket::WasNpnNegotiated() const {
+bool FuzzedSocket::WasAlpnNegotiated() const {
   return false;
 }
 

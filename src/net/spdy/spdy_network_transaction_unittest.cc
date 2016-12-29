@@ -26,6 +26,7 @@
 #include "net/base/upload_bytes_element_reader.h"
 #include "net/base/upload_file_element_reader.h"
 #include "net/http/http_auth_scheme.h"
+#include "net/http/http_network_session.h"
 #include "net/http/http_network_session_peer.h"
 #include "net/http/http_network_transaction.h"
 #include "net/http/http_server_properties.h"
@@ -930,8 +931,7 @@ TEST_F(SpdyNetworkTransactionTest, ThreeGetsWithMaxConcurrent) {
 
   SettingsMap settings;
   const uint32_t max_concurrent_streams = 1;
-  settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  settings[SETTINGS_MAX_CONCURRENT_STREAMS] = max_concurrent_streams;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(settings));
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
@@ -1061,8 +1061,7 @@ TEST_F(SpdyNetworkTransactionTest, FourGetsWithMaxConcurrentPriority) {
 
   SettingsMap settings;
   const uint32_t max_concurrent_streams = 1;
-  settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  settings[SETTINGS_MAX_CONCURRENT_STREAMS] = max_concurrent_streams;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(settings));
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
@@ -1195,8 +1194,7 @@ TEST_F(SpdyNetworkTransactionTest, ThreeGetsWithMaxConcurrentDelete) {
 
   SettingsMap settings;
   const uint32_t max_concurrent_streams = 1;
-  settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  settings[SETTINGS_MAX_CONCURRENT_STREAMS] = max_concurrent_streams;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(settings));
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
@@ -1320,8 +1318,7 @@ TEST_F(SpdyNetworkTransactionTest, ThreeGetsWithMaxConcurrentSocketClose) {
 
   SettingsMap settings;
   const uint32_t max_concurrent_streams = 1;
-  settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  settings[SETTINGS_MAX_CONCURRENT_STREAMS] = max_concurrent_streams;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(settings));
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
@@ -3238,8 +3235,7 @@ TEST_F(SpdyNetworkTransactionTest, CorruptFrameSessionError) {
   // This is the length field that's too short.
   SpdySerializedFrame reply_wrong_length(
       spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  size_t right_size =
-      reply_wrong_length.size() - SpdyConstants::kFrameHeaderSize;
+  size_t right_size = reply_wrong_length.size() - kFrameHeaderSize;
   size_t wrong_size = right_size - 4;
   test::SetFrameLength(&reply_wrong_length, wrong_size);
 
@@ -5322,12 +5318,10 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
       stream_max_recv_window_size / 2 + kChunkSize;
 
   SettingsMap initial_settings;
-  initial_settings[SETTINGS_HEADER_TABLE_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxHeaderTableSize);
+  initial_settings[SETTINGS_HEADER_TABLE_SIZE] = kSpdyMaxHeaderTableSize;
   initial_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxConcurrentPushedStreams);
-  initial_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, stream_max_recv_window_size);
+      kSpdyMaxConcurrentPushedStreams;
+  initial_settings[SETTINGS_INITIAL_WINDOW_SIZE] = stream_max_recv_window_size;
   SpdySerializedFrame initial_settings_frame(
       spdy_util_.ConstructSpdySettings(initial_settings));
   SpdySerializedFrame initial_window_update(
@@ -5376,7 +5370,8 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
 
   auto session_deps = base::MakeUnique<SpdySessionDependencies>();
   session_deps->session_max_recv_window_size = session_max_recv_window_size;
-  session_deps->stream_max_recv_window_size = stream_max_recv_window_size;
+  session_deps->http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
+      stream_max_recv_window_size;
 
   NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
                                      NetLogWithSource(),
@@ -5722,8 +5717,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResumeAfterSettings) {
   // Construct read frame for SETTINGS that gives enough space to upload the
   // rest of the data.
   SettingsMap settings;
-  settings[SETTINGS_INITIAL_WINDOW_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, initial_window_size * 2);
+  settings[SETTINGS_INITIAL_WINDOW_SIZE] = initial_window_size * 2;
   SpdySerializedFrame settings_frame_large(
       spdy_util_.ConstructSpdySettings(settings));
 
@@ -5884,8 +5878,7 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlNegativeSendWindowSize) {
   // Construct read frame for SETTINGS that makes the send_window_size
   // negative.
   SettingsMap new_settings;
-  new_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, initial_window_size / 2);
+  new_settings[SETTINGS_INITIAL_WINDOW_SIZE] = initial_window_size / 2;
   SpdySerializedFrame settings_frame_small(
       spdy_util_.ConstructSpdySettings(new_settings));
   // Construct read frames for WINDOW_UPDATE that makes the send_window_size

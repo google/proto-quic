@@ -7,8 +7,6 @@
 #include <memory>
 
 #include "base/memory/ptr_util.h"
-#include "base/sha1.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_utils.h"
@@ -23,6 +21,7 @@
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::StringPiece;
 using std::string;
@@ -84,25 +83,32 @@ QuicPacket* BuildUnsizedDataPacket(QuicFramer* framer,
 }
 
 QuicFlagSaver::QuicFlagSaver() {
-#define QUIC_FLAG(type, flag, value)                                          \
-  CHECK_EQ(value, flag) << "Flag set to an expected value.  A prior test is " \
-                           "likely setting a flag "                           \
-                        << "without using a QuicFlagSaver";
+#define QUIC_FLAG(type, flag, value)                                 \
+  CHECK_EQ(value, base::GetFlag(flag))                               \
+      << "Flag set to an unexpected value.  A prior test is likely " \
+      << "setting a flag without using a QuicFlagSaver";
 #include "net/quic/core/quic_flags_list.h"
 #undef QUIC_FLAG
 }
 
 QuicFlagSaver::~QuicFlagSaver() {
-#define QUIC_FLAG(type, flag, value) flag = value;
+#define QUIC_FLAG(type, flag, value) base::SetFlag(&flag, value);
 #include "net/quic/core/quic_flags_list.h"
 #undef QUIC_FLAG
 }
 
+string Sha1Hash(StringPiece data) {
+  char buffer[SHA_DIGEST_LENGTH];
+  SHA1(reinterpret_cast<const uint8_t*>(data.data()), data.size(),
+       reinterpret_cast<uint8_t*>(buffer));
+  return string(buffer, arraysize(buffer));
+}
+
 uint64_t SimpleRandom::RandUint64() {
-  unsigned char hash[base::kSHA1Length];
-  base::SHA1HashBytes(reinterpret_cast<unsigned char*>(&seed_), sizeof(seed_),
-                      hash);
-  memcpy(&seed_, hash, sizeof(seed_));
+  string hash =
+      Sha1Hash(StringPiece(reinterpret_cast<char*>(&seed_), sizeof(seed_)));
+  DCHECK_EQ(static_cast<size_t>(SHA_DIGEST_LENGTH), hash.length());
+  memcpy(&seed_, hash.data(), sizeof(seed_));
   return seed_;
 }
 
@@ -376,7 +382,8 @@ QuicConsumedData MockQuicSession::ConsumeAllData(
     const QuicIOVector& data,
     QuicStreamOffset /*offset*/,
     bool fin,
-    QuicAckListenerInterface* /*ack_notifier_delegate*/) {
+    const QuicReferenceCountedPointer<
+        QuicAckListenerInterface>& /*ack_listener*/) {
   return QuicConsumedData(data.total_length, fin);
 }
 
@@ -419,9 +426,10 @@ QuicCryptoServerStreamBase*
 TestQuicSpdyServerSession::CreateQuicCryptoServerStream(
     const QuicCryptoServerConfig* crypto_config,
     QuicCompressedCertsCache* compressed_certs_cache) {
-  return new QuicCryptoServerStream(crypto_config, compressed_certs_cache,
-                                    FLAGS_enable_quic_stateless_reject_support,
-                                    this, &helper_);
+  return new QuicCryptoServerStream(
+      crypto_config, compressed_certs_cache,
+      FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support, this,
+      &helper_);
 }
 
 QuicCryptoServerStream* TestQuicSpdyServerSession::GetCryptoStream() {
@@ -724,18 +732,6 @@ void CompareCharArraysWithHexError(const string& description,
                                     max_len)
                 << "\nActual:\n"
                 << HexDumpWithMarks(actual, actual_len, marks.get(), max_len);
-}
-
-bool DecodeHexString(const base::StringPiece& hex, std::string* bytes) {
-  bytes->clear();
-  if (hex.empty())
-    return true;
-  std::vector<uint8_t> v;
-  if (!base::HexStringToBytes(hex.as_string(), &v))
-    return false;
-  if (!v.empty())
-    bytes->assign(reinterpret_cast<const char*>(&v[0]), v.size());
-  return true;
 }
 
 static QuicPacket* ConstructPacketFromHandshakeMessage(

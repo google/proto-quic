@@ -5,7 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_PACKET_WRITER_H_
 #define NET_QUIC_CORE_QUIC_PACKET_WRITER_H_
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"

@@ -352,8 +352,6 @@ void SSL_CTX_free(SSL_CTX *ctx) {
   lh_SSL_SESSION_free(ctx->sessions);
   X509_STORE_free(ctx->cert_store);
   ssl_cipher_preference_list_free(ctx->cipher_list);
-  ssl_cipher_preference_list_free(ctx->cipher_list_tls10);
-  ssl_cipher_preference_list_free(ctx->cipher_list_tls11);
   ssl_cert_free(ctx->cert);
   sk_SSL_CUSTOM_EXTENSION_pop_free(ctx->client_custom_extensions,
                                    SSL_CUSTOM_EXTENSION_free);
@@ -364,7 +362,7 @@ void SSL_CTX_free(SSL_CTX *ctx) {
   OPENSSL_free(ctx->psk_identity_hint);
   OPENSSL_free(ctx->supported_group_list);
   OPENSSL_free(ctx->alpn_client_proto_list);
-  OPENSSL_free(ctx->ocsp_response);
+  CRYPTO_BUFFER_free(ctx->ocsp_response);
   OPENSSL_free(ctx->signed_cert_timestamp_list);
   EVP_PKEY_free(ctx->tlsext_channel_id_private);
 
@@ -389,8 +387,6 @@ SSL *SSL_new(SSL_CTX *ctx) {
 
   ssl->min_version = ctx->min_version;
   ssl->max_version = ctx->max_version;
-
-  ssl->state = SSL_ST_INIT;
 
   /* RFC 6347 states that implementations SHOULD use an initial timer value of
    * 1 second. */
@@ -484,6 +480,12 @@ SSL *SSL_new(SSL_CTX *ctx) {
     ssl->session_timeout = ctx->session_timeout;
   }
 
+  /* If the context has an OCSP response, use it. */
+  if (ctx->ocsp_response != NULL) {
+    CRYPTO_BUFFER_up_ref(ctx->ocsp_response);
+    ssl->ocsp_response = ctx->ocsp_response;
+  }
+
   return ssl;
 
 err:
@@ -525,6 +527,7 @@ void SSL_free(SSL *ssl) {
   OPENSSL_free(ssl->psk_identity_hint);
   sk_X509_NAME_pop_free(ssl->client_CA, X509_NAME_free);
   sk_SRTP_PROTECTION_PROFILE_free(ssl->srtp_profiles);
+  CRYPTO_BUFFER_free(ssl->ocsp_response);
 
   if (ssl->method != NULL) {
     ssl->method->ssl_free(ssl);
@@ -624,12 +627,9 @@ int SSL_do_handshake(SSL *ssl) {
     return 1;
   }
 
-  /* Set up a new handshake if necessary. */
-  if (ssl->state == SSL_ST_INIT && ssl->s3->hs == NULL) {
-    ssl->s3->hs = ssl_handshake_new(ssl);
-    if (ssl->s3->hs == NULL) {
-      return -1;
-    }
+  if (ssl->s3->hs == NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+    return -1;
   }
 
   /* Run the handshake. */
@@ -708,8 +708,16 @@ static int ssl_do_renegotiate(SSL *ssl) {
   }
 
   /* Begin a new handshake. */
+  if (ssl->s3->hs != NULL) {
+    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
+    return 0;
+  }
+  ssl->s3->hs = ssl_handshake_new(ssl);
+  if (ssl->s3->hs == NULL) {
+    return 0;
+  }
+
   ssl->s3->total_renegotiations++;
-  ssl->state = SSL_ST_INIT;
   return 1;
 
 no_renegotiation:
@@ -870,18 +878,25 @@ int SSL_send_fatal_alert(SSL *ssl, uint8_t alert) {
   return ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
 }
 
-int SSL_get_error(const SSL *ssl, int ret_code) {
-  int reason;
-  uint32_t err;
-  BIO *bio;
+static int bio_retry_reason_to_error(int reason) {
+  switch (reason) {
+    case BIO_RR_CONNECT:
+      return SSL_ERROR_WANT_CONNECT;
+    case BIO_RR_ACCEPT:
+      return SSL_ERROR_WANT_ACCEPT;
+    default:
+      return SSL_ERROR_SYSCALL;
+  }
+}
 
+int SSL_get_error(const SSL *ssl, int ret_code) {
   if (ret_code > 0) {
     return SSL_ERROR_NONE;
   }
 
   /* Make things return SSL_ERROR_SYSCALL when doing SSL_do_handshake etc,
    * where we do encode the error */
-  err = ERR_peek_error();
+  uint32_t err = ERR_peek_error();
   if (err != 0) {
     if (ERR_GET_LIB(err) == ERR_LIB_SYS) {
       return SSL_ERROR_SYSCALL;
@@ -899,79 +914,59 @@ int SSL_get_error(const SSL *ssl, int ret_code) {
     return SSL_ERROR_SYSCALL;
   }
 
-  if (SSL_want_session(ssl)) {
-    return SSL_ERROR_PENDING_SESSION;
-  }
+  switch (ssl->rwstate) {
+    case SSL_PENDING_SESSION:
+      return SSL_ERROR_PENDING_SESSION;
 
-  if (SSL_want_certificate(ssl)) {
-    return SSL_ERROR_PENDING_CERTIFICATE;
-  }
+    case SSL_CERTIFICATE_SELECTION_PENDING:
+      return SSL_ERROR_PENDING_CERTIFICATE;
 
-  if (SSL_want_read(ssl)) {
-    bio = SSL_get_rbio(ssl);
-    if (BIO_should_read(bio)) {
-      return SSL_ERROR_WANT_READ;
-    }
-
-    if (BIO_should_write(bio)) {
-      /* This one doesn't make too much sense ... We never try to write to the
-       * rbio, and an application program where rbio and wbio are separate
-       * couldn't even know what it should wait for. However if we ever set
-       * ssl->rwstate incorrectly (so that we have SSL_want_read(ssl) instead of
-       * SSL_want_write(ssl)) and rbio and wbio *are* the same, this test works
-       * around that bug; so it might be safer to keep it. */
-      return SSL_ERROR_WANT_WRITE;
-    }
-
-    if (BIO_should_io_special(bio)) {
-      reason = BIO_get_retry_reason(bio);
-      if (reason == BIO_RR_CONNECT) {
-        return SSL_ERROR_WANT_CONNECT;
+    case SSL_READING: {
+      BIO *bio = SSL_get_rbio(ssl);
+      if (BIO_should_read(bio)) {
+        return SSL_ERROR_WANT_READ;
       }
 
-      if (reason == BIO_RR_ACCEPT) {
-        return SSL_ERROR_WANT_ACCEPT;
+      if (BIO_should_write(bio)) {
+        /* TODO(davidben): OpenSSL historically checked for writes on the read
+         * BIO. Can this be removed? */
+        return SSL_ERROR_WANT_WRITE;
       }
 
-      return SSL_ERROR_SYSCALL; /* unknown */
-    }
-  }
-
-  if (SSL_want_write(ssl)) {
-    bio = SSL_get_wbio(ssl);
-    if (BIO_should_write(bio)) {
-      return SSL_ERROR_WANT_WRITE;
-    }
-
-    if (BIO_should_read(bio)) {
-      /* See above (SSL_want_read(ssl) with BIO_should_write(bio)) */
-      return SSL_ERROR_WANT_READ;
-    }
-
-    if (BIO_should_io_special(bio)) {
-      reason = BIO_get_retry_reason(bio);
-      if (reason == BIO_RR_CONNECT) {
-        return SSL_ERROR_WANT_CONNECT;
+      if (BIO_should_io_special(bio)) {
+        return bio_retry_reason_to_error(BIO_get_retry_reason(bio));
       }
 
-      if (reason == BIO_RR_ACCEPT) {
-        return SSL_ERROR_WANT_ACCEPT;
+      break;
+    }
+
+    case SSL_WRITING: {
+      BIO *bio = SSL_get_wbio(ssl);
+      if (BIO_should_write(bio)) {
+        return SSL_ERROR_WANT_WRITE;
       }
 
-      return SSL_ERROR_SYSCALL;
+      if (BIO_should_read(bio)) {
+        /* TODO(davidben): OpenSSL historically checked for reads on the write
+         * BIO. Can this be removed? */
+        return SSL_ERROR_WANT_READ;
+      }
+
+      if (BIO_should_io_special(bio)) {
+        return bio_retry_reason_to_error(BIO_get_retry_reason(bio));
+      }
+
+      break;
     }
-  }
 
-  if (SSL_want_x509_lookup(ssl)) {
-    return SSL_ERROR_WANT_X509_LOOKUP;
-  }
+    case SSL_X509_LOOKUP:
+      return SSL_ERROR_WANT_X509_LOOKUP;
 
-  if (SSL_want_channel_id_lookup(ssl)) {
-    return SSL_ERROR_WANT_CHANNEL_ID_LOOKUP;
-  }
+    case SSL_CHANNEL_ID_LOOKUP:
+      return SSL_ERROR_WANT_CHANNEL_ID_LOOKUP;
 
-  if (SSL_want_private_key_operation(ssl)) {
-    return SSL_ERROR_WANT_PRIVATE_KEY_OPERATION;
+    case SSL_PRIVATE_KEY_OPERATION:
+      return SSL_ERROR_WANT_PRIVATE_KEY_OPERATION;
   }
 
   return SSL_ERROR_SYSCALL;
@@ -1073,6 +1068,10 @@ uint32_t SSL_clear_mode(SSL *ssl, uint32_t mode) {
 
 uint32_t SSL_get_mode(const SSL *ssl) { return ssl->mode; }
 
+void SSL_CTX_set0_buffer_pool(SSL_CTX *ctx, CRYPTO_BUFFER_POOL *pool) {
+  ctx->pool = pool;
+}
+
 X509 *SSL_get_peer_certificate(const SSL *ssl) {
   if (ssl == NULL) {
     return NULL;
@@ -1090,9 +1089,43 @@ STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
     return NULL;
   }
   SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL ||
+      session->x509_chain == NULL) {
+    return NULL;
+  }
+
+  if (!ssl->server) {
+    return session->x509_chain;
+  }
+
+  /* OpenSSL historically didn't include the leaf certificate in the returned
+   * certificate chain, but only for servers. */
+  if (session->x509_chain_without_leaf == NULL) {
+    session->x509_chain_without_leaf = sk_X509_new_null();
+    if (session->x509_chain_without_leaf == NULL) {
+      return NULL;
+    }
+
+    for (size_t i = 1; i < sk_X509_num(session->x509_chain); i++) {
+      X509 *cert = sk_X509_value(session->x509_chain, i);
+      if (!sk_X509_push(session->x509_chain_without_leaf, cert)) {
+        sk_X509_pop_free(session->x509_chain_without_leaf, X509_free);
+        session->x509_chain_without_leaf = NULL;
+        return NULL;
+      }
+      X509_up_ref(cert);
+    }
+  }
+
+  return session->x509_chain_without_leaf;
+}
+
+STACK_OF(X509) *SSL_get_peer_full_cert_chain(const SSL *ssl) {
+  SSL_SESSION *session = SSL_get_session(ssl);
   if (session == NULL) {
     return NULL;
   }
+
   return session->x509_chain;
 }
 
@@ -1134,24 +1167,28 @@ err:
 }
 
 int SSL_CTX_set_session_id_context(SSL_CTX *ctx, const uint8_t *sid_ctx,
-                                   unsigned sid_ctx_len) {
+                                   size_t sid_ctx_len) {
   if (sid_ctx_len > sizeof(ctx->sid_ctx)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_SESSION_ID_CONTEXT_TOO_LONG);
     return 0;
   }
-  ctx->sid_ctx_length = sid_ctx_len;
+
+  assert(sizeof(ctx->sid_ctx) < 256);
+  ctx->sid_ctx_length = (uint8_t)sid_ctx_len;
   memcpy(ctx->sid_ctx, sid_ctx, sid_ctx_len);
 
   return 1;
 }
 
 int SSL_set_session_id_context(SSL *ssl, const uint8_t *sid_ctx,
-                               unsigned sid_ctx_len) {
-  if (sid_ctx_len > SSL_MAX_SID_CTX_LENGTH) {
+                               size_t sid_ctx_len) {
+  if (sid_ctx_len > sizeof(ssl->sid_ctx)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_SSL_SESSION_ID_CONTEXT_TOO_LONG);
     return 0;
   }
-  ssl->sid_ctx_length = sid_ctx_len;
+
+  assert(sizeof(ssl->sid_ctx) < 256);
+  ssl->sid_ctx_length = (uint8_t)sid_ctx_len;
   memcpy(ssl->sid_ctx, sid_ctx, sid_ctx_len);
 
   return 1;
@@ -1563,14 +1600,11 @@ uint16_t SSL_get_curve_id(const SSL *ssl) {
   /* TODO(davidben): This checks the wrong session if there is a renegotiation in
    * progress. */
   SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL ||
-      session->cipher == NULL ||
-      (ssl3_protocol_version(ssl) < TLS1_3_VERSION &&
-       !SSL_CIPHER_is_ECDHE(session->cipher))) {
+  if (session == NULL) {
     return 0;
   }
 
-  return (uint16_t)session->key_exchange_info;
+  return session->group_id;
 }
 
 int SSL_CTX_set_tmp_dh(SSL_CTX *ctx, const DH *dh) {
@@ -1631,38 +1665,6 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
 int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str) {
   STACK_OF(SSL_CIPHER) *cipher_list =
       ssl_create_cipher_list(ctx->method, &ctx->cipher_list, str);
-  if (cipher_list == NULL) {
-    return 0;
-  }
-
-  /* |ssl_create_cipher_list| may succeed but return an empty cipher list. */
-  if (sk_SSL_CIPHER_num(cipher_list) == 0) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CIPHER_MATCH);
-    return 0;
-  }
-
-  return 1;
-}
-
-int SSL_CTX_set_cipher_list_tls10(SSL_CTX *ctx, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list =
-      ssl_create_cipher_list(ctx->method, &ctx->cipher_list_tls10, str);
-  if (cipher_list == NULL) {
-    return 0;
-  }
-
-  /* |ssl_create_cipher_list| may succeed but return an empty cipher list. */
-  if (sk_SSL_CIPHER_num(cipher_list) == 0) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CIPHER_MATCH);
-    return 0;
-  }
-
-  return 1;
-}
-
-int SSL_CTX_set_cipher_list_tls11(SSL_CTX *ctx, const char *str) {
-  STACK_OF(SSL_CIPHER) *cipher_list =
-      ssl_create_cipher_list(ctx->method, &ctx->cipher_list_tls11, str);
   if (cipher_list == NULL) {
     return 0;
   }
@@ -1787,16 +1789,16 @@ int SSL_CTX_set_signed_cert_timestamp_list(SSL_CTX *ctx, const uint8_t *list,
 
 int SSL_CTX_set_ocsp_response(SSL_CTX *ctx, const uint8_t *response,
                               size_t response_len) {
-  OPENSSL_free(ctx->ocsp_response);
-  ctx->ocsp_response_length = 0;
+  CRYPTO_BUFFER_free(ctx->ocsp_response);
+  ctx->ocsp_response = CRYPTO_BUFFER_new(response, response_len, NULL);
+  return ctx->ocsp_response != NULL;
+}
 
-  ctx->ocsp_response = BUF_memdup(response, response_len);
-  if (ctx->ocsp_response == NULL) {
-    return 0;
-  }
-  ctx->ocsp_response_length = response_len;
-
-  return 1;
+int SSL_set_ocsp_response(SSL *ssl, const uint8_t *response,
+                          size_t response_len) {
+  CRYPTO_BUFFER_free(ssl->ocsp_response);
+  ssl->ocsp_response = CRYPTO_BUFFER_new(response, response_len, NULL);
+  return ssl->ocsp_response != NULL;
 }
 
 int SSL_set_tlsext_host_name(SSL *ssl, const char *name) {
@@ -2014,15 +2016,6 @@ void SSL_CTX_set_verify(SSL_CTX *ctx, int mode,
 
 void SSL_CTX_set_verify_depth(SSL_CTX *ctx, int depth) {
   X509_VERIFY_PARAM_set_depth(ctx->param, depth);
-}
-
-void SSL_CTX_set_cert_cb(SSL_CTX *ctx, int (*cb)(SSL *ssl, void *arg),
-                         void *arg) {
-  ssl_cert_set_cert_cb(ctx->cert, cb, arg);
-}
-
-void SSL_set_cert_cb(SSL *ssl, int (*cb)(SSL *ssl, void *arg), void *arg) {
-  ssl_cert_set_cert_cb(ssl->cert, cb, arg);
 }
 
 size_t SSL_get0_certificate_types(SSL *ssl, const uint8_t **out_types) {
@@ -2302,7 +2295,14 @@ void (*SSL_get_info_callback(const SSL *ssl))(const SSL *ssl, int type,
   return ssl->info_callback;
 }
 
-int SSL_state(const SSL *ssl) { return ssl->state; }
+int SSL_state(const SSL *ssl) {
+  if (ssl->s3->hs == NULL) {
+    assert(ssl->s3->initial_handshake_complete);
+    return SSL_ST_OK;
+  }
+
+  return ssl->s3->hs->state;
+}
 
 void SSL_set_state(SSL *ssl, int state) { }
 
@@ -2394,19 +2394,6 @@ void SSL_CTX_set_tmp_dh_callback(SSL_CTX *ctx,
 void SSL_set_tmp_dh_callback(SSL *ssl, DH *(*callback)(SSL *ssl, int is_export,
                                                        int keylength)) {
   ssl->cert->dh_tmp_cb = callback;
-}
-
-unsigned SSL_get_dhe_group_size(const SSL *ssl) {
-  /* TODO(davidben): This checks the wrong session if there is a renegotiation in
-   * progress. */
-  SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL ||
-      session->cipher == NULL ||
-      !SSL_CIPHER_is_DHE(session->cipher)) {
-    return 0;
-  }
-
-  return session->key_exchange_info;
 }
 
 int SSL_CTX_use_psk_identity_hint(SSL_CTX *ctx, const char *identity_hint) {
@@ -2618,11 +2605,11 @@ int ssl_log_secret(const SSL *ssl, const char *label, const uint8_t *secret,
 }
 
 int SSL_is_init_finished(const SSL *ssl) {
-  return ssl->state == SSL_ST_OK;
+  return SSL_state(ssl) == SSL_ST_OK;
 }
 
 int SSL_in_init(const SSL *ssl) {
-  return (ssl->state & SSL_ST_INIT) != 0;
+  return (SSL_state(ssl) & SSL_ST_INIT) != 0;
 }
 
 int SSL_in_false_start(const SSL *ssl) {
@@ -2652,8 +2639,7 @@ int ssl3_can_false_start(const SSL *ssl) {
       (ssl->s3->alpn_selected != NULL ||
        ssl->s3->next_proto_negotiated != NULL) &&
       cipher != NULL &&
-      (cipher->algorithm_mkey == SSL_kECDHE ||
-       cipher->algorithm_mkey == SSL_kCECPQ1) &&
+      cipher->algorithm_mkey == SSL_kECDHE &&
       cipher->algorithm_mac == SSL_AEAD;
 }
 
@@ -2787,11 +2773,6 @@ void SSL_set_renegotiate_mode(SSL *ssl, enum ssl_renegotiate_mode_t mode) {
   ssl->renegotiate_mode = mode;
 }
 
-void SSL_set_reject_peer_renegotiations(SSL *ssl, int reject) {
-  SSL_set_renegotiate_mode(
-      ssl, reject ? ssl_renegotiate_never : ssl_renegotiate_freely);
-}
-
 int SSL_get_ivs(const SSL *ssl, const uint8_t **out_read_iv,
                 const uint8_t **out_write_iv, size_t *out_iv_len) {
   if (ssl->s3->aead_read_ctx == NULL || ssl->s3->aead_write_ctx == NULL) {
@@ -2837,7 +2818,14 @@ uint64_t SSL_get_write_sequence(const SSL *ssl) {
 }
 
 uint16_t SSL_get_peer_signature_algorithm(const SSL *ssl) {
-  return ssl->s3->tmp.peer_signature_algorithm;
+  /* TODO(davidben): This checks the wrong session if there is a renegotiation
+   * in progress. */
+  SSL_SESSION *session = SSL_get_session(ssl);
+  if (session == NULL) {
+    return 0;
+  }
+
+  return session->peer_signature_algorithm;
 }
 
 size_t SSL_get_client_random(const SSL *ssl, uint8_t *out, size_t max_out) {
@@ -2882,9 +2870,13 @@ void SSL_CTX_set_grease_enabled(SSL_CTX *ctx, int enabled) {
 }
 
 int SSL_clear(SSL *ssl) {
-  if (ssl->method == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_METHOD_SPECIFIED);
-    return 0;
+  /* In OpenSSL, reusing a client |SSL| with |SSL_clear| causes the previously
+   * established session to be offered the next time around. wpa_supplicant
+   * depends on this behavior, so emulate it. */
+  SSL_SESSION *session = NULL;
+  if (!ssl->server && ssl->s3->established_session != NULL) {
+    session = ssl->s3->established_session;
+    SSL_SESSION_up_ref(session);
   }
 
   /* TODO(davidben): Some state on |ssl| is reset both in |SSL_new| and
@@ -2893,7 +2885,6 @@ int SSL_clear(SSL *ssl) {
    * naturally reset at the right points between |SSL_new|, |SSL_clear|, and
    * |ssl3_new|. */
 
-  ssl->state = SSL_ST_INIT;
   ssl->rwstate = SSL_NOTHING;
 
   BUF_MEM_free(ssl->init_buf);
@@ -2912,6 +2903,7 @@ int SSL_clear(SSL *ssl) {
 
   ssl->method->ssl_free(ssl);
   if (!ssl->method->ssl_new(ssl)) {
+    SSL_SESSION_free(session);
     return 0;
   }
 
@@ -2919,7 +2911,10 @@ int SSL_clear(SSL *ssl) {
     ssl->d1->mtu = mtu;
   }
 
-  ssl->client_version = ssl->version;
+  if (session != NULL) {
+    SSL_set_session(ssl, session);
+    SSL_SESSION_free(session);
+  }
 
   return 1;
 }

@@ -4,6 +4,7 @@
 
 #include "net/spdy/buffered_spdy_framer.h"
 
+#include <algorithm>
 #include <utility>
 
 #include "base/logging.h"
@@ -16,7 +17,7 @@ namespace {
 
 class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
  public:
-  explicit TestBufferedSpdyVisitor()
+  TestBufferedSpdyVisitor()
       : buffered_spdy_framer_(),
         error_count_(0),
         setting_count_(0),
@@ -74,7 +75,7 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
 
   void OnSettings() override {}
 
-  void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override {
+  void OnSetting(SpdySettingsIds id, uint32_t value) override {
     setting_count_++;
   }
 
@@ -181,8 +182,8 @@ class BufferedSpdyFramerTest : public PlatformTest {};
 TEST_F(BufferedSpdyFramerTest, OnSetting) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   SpdySettingsIR settings_ir;
-  settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, false, false, 2);
-  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, false, false, 3);
+  settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 2);
+  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, 3);
   SpdySerializedFrame control_frame(framer.SerializeSettings(settings_ir));
   TestBufferedSpdyVisitor visitor;
 

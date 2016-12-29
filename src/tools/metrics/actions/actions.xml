@@ -11320,6 +11320,7 @@ should be able to be added at any place in this file.
   <description>
     Triggers when the default decision for using key generation is changed.
   </description>
+  <obsolete>Support for Keygen was removed.</obsolete>
 </action>
 
 <action name="Options_DefaultMIDISysExSettingChanged">

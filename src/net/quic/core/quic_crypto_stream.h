@@ -81,7 +81,8 @@ class QUIC_EXPORT_PRIVATE QuicCryptoStream
   bool encryption_established_;
   bool handshake_confirmed_;
 
-  scoped_refptr<QuicCryptoNegotiatedParameters> crypto_negotiated_params_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters>
+      crypto_negotiated_params_;
 
  private:
   CryptoFramer crypto_framer_;

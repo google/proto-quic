@@ -252,7 +252,7 @@ bool GetX509LogEntry(X509Certificate::OSCertHandle leaf, LogEntry* result) {
 
 bool ExtractSCTListFromOCSPResponse(X509Certificate::OSCertHandle issuer,
                                     const std::string& cert_serial_number,
-                                    const std::string& ocsp_response,
+                                    base::StringPiece ocsp_response,
                                     std::string* sct_list) {
   // The input is an OCSPResponse. See RFC2560, section 4.2.1. The SCT list is
   // in the extensions field of the SingleResponse which matches the input

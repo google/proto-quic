@@ -6,12 +6,24 @@
 
 #include <map>
 
+#include "net/quic/core/crypto/crypto_protocol.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
 
 namespace net {
 namespace test {
 namespace {
+
+TEST(QuicUtilsTest, ParseQuicConnectionOptions) {
+  QuicTagVector empty_options = ParseQuicConnectionOptions("");
+  EXPECT_TRUE(empty_options.empty());
+
+  QuicTagVector parsed_options = ParseQuicConnectionOptions("TIMER,TBBR,REJ");
+  QuicTagVector expected_options;
+  expected_options.push_back(kTIME);
+  expected_options.push_back(kTBBR);
+  expected_options.push_back(kREJ);
+  EXPECT_EQ(expected_options, parsed_options);
+}
 
 TEST(QuicUtilsChromiumTest, FindOrNullTest) {
   std::map<int, int> m;

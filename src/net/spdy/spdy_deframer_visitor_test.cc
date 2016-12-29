@@ -228,7 +228,7 @@ TEST_F(SpdyDeframerVisitorTest, SettingsFrame) {
   ASSERT_NE(cf0.frame_ir, nullptr);
 
   SpdySettingsIR expected_ir;
-  expected_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, true, true, 255);
+  expected_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 255);
   EXPECT_TRUE(cf0.VerifyHasFrame(expected_ir));
 
   SettingVector expected_settings;
@@ -241,7 +241,7 @@ TEST_F(SpdyDeframerVisitorTest, SettingsFrame) {
   expected_settings.push_back({SETTINGS_INITIAL_WINDOW_SIZE, 65536});
   EXPECT_FALSE(cf0.VerifyHasSettings(expected_settings));
 
-  expected_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, true, true, 65536);
+  expected_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 65536);
   EXPECT_FALSE(cf0.VerifyHasFrame(expected_ir));
 
   SpdySettingsIR unexpected_ir;

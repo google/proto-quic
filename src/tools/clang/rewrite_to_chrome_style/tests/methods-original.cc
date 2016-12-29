@@ -54,11 +54,12 @@ class Task {
 
   // These are special functions that we don't rename so that range-based
   // for loops and STL things work.
-  MyIterator begin() {}
-  my_iterator end() {}
-  my_iterator rbegin() {}
-  MyIterator rend() {}
-  // The trace() method is used by Oilpan, we shouldn't rename it.
+  MyIterator begin() { return {}; }
+  my_iterator end() { return {}; }
+  my_iterator rbegin() { return {}; }
+  MyIterator rend() { return {}; }
+  // The trace() method is used by Oilpan, but we plan to tweak the Oilpan's
+  // clang plugin, so that it recognizes the new method name.
   void trace() {}
   // These are used by std::unique_lock and std::lock_guard.
   void lock() {}
@@ -68,8 +69,8 @@ class Task {
 
 class Other {
   // Static begin/end/trace don't count, and should be renamed.
-  static MyIterator begin() {}
-  static my_iterator end() {}
+  static MyIterator begin() { return {}; }
+  static my_iterator end() { return {}; }
   static void trace() {}
   static void lock() {}
 };
@@ -176,6 +177,10 @@ class BitVector {
   class Baz {};
   class FooBar {};
 
+  // Should be renamed to GetReadyState, because of
+  // ShouldPrefixFunctionName heuristic.
+  int readyState() { return 123; }
+
   template <typename T>
   class MyRefPtr {};
 
@@ -201,30 +206,80 @@ namespace get_prefix_vs_inheritance {
 // 2. Need to rename |frame| to |GetFrame| (not to |Frame|) to avoid
 //    a conflict with the Frame type.
 
-class Frame {};
-class LocalFrame : public Frame {};
+class FrameFoo {};
+class LocalFrame : public FrameFoo {};
 
 class WebFrameImplBase {
  public:
-  virtual Frame* frame() const = 0;
+  // Using |frameFoo| to test inheritance, and NOT just the presence on the
+  // ShouldPrefixFunctionName list.
+  virtual FrameFoo* frameFoo() const = 0;
 };
 
 class WebLocalFrameImpl : public WebFrameImplBase {
  public:
-  LocalFrame* frame() const override { return nullptr; }
+  LocalFrame* frameFoo() const override { return nullptr; }
 };
 
-// This is also a regression test for https://crbug.com/673031
-// (which can happen in a non-virtual-method case):
-class LayoutObject {};
-class LayoutBoxModelObject : public LayoutObject {};
+// This is also a regression test for https://crbug.com/673031.  We should NOT
+// rewrite in a non-virtual case, because walking the inheritance chain of the
+// return type depends too much on unrelated context (i.e. walking the
+// inheritance chain might not be possible if the return type is
+// forward-declared).
+class LayoutObjectFoo {};
+class LayoutBoxModelObject : public LayoutObjectFoo {};
 class PaintLayerStackingNode {
  public:
-  // |layoutObject| should be renamed to |GetLayoutObject|.
-  LayoutBoxModelObject* layoutObject() { return nullptr; }
+  // |layoutObjectFoo| should NOT be renamed to |GetLayoutObjectFoo| (just to
+  // |LayoutObjectFoo|) - see the big comment above.  We use layoutObject*Foo*
+  // to test inheritance-related behavior and avoid testing whether method name
+  // is covered via ShouldPrefixFunctionName.
+  LayoutBoxModelObject* layoutObjectFoo() { return nullptr; }
 };
 
 }  // namespace get_prefix_vs_inheritance
+
+namespace blacklisting_of_method_and_function_names {
+
+class Foo {
+  // Expecting |swap| method to be renamed to |Swap| - we blacklist renaming of
+  // |swap| *function*, because it needs to have the same casing as std::swap,
+  // so that ADL can kick-in and pull it from another namespace depending on the
+  // bargument.  We have a choice to rename or not rename |swap| *methods* - we
+  // chose to rename to be consistent (i.e. we rename |clear| -> |Clear|) and
+  // because Google C++ Styke Guide uses "Swap" in examples.
+  void swap() {}
+  static void swap(Foo& x, Foo& y) {}
+
+  // We don't rename |begin|, so that <algorithms> and other templates that
+  // expect |begin|, |end|, etc. continue to work.  This is only necessary
+  // for instance methods - renaming static methods and funcitons is okay.
+  void begin() {}
+  static void begin(int x) {}
+
+  // https://crbug.com/677166: We blacklist renaming of |hash|, because it
+  // collides with a struct named Hash.  Blacklisting therefore should be broad
+  // and should cover both instance and static methods as well as functions.
+  int hash() const { return 123; }
+  static int hash(const Foo& x) { return x.hash(); }
+
+  // https://crbug.com672902: std-like names should not be rewritten.
+  void emplace_back(int x) {}
+  void insert(int x) {}
+  void push_back(int x) {}
+  int* back() { return nullptr; }
+  int* front() { return nullptr; }
+  void erase() {}
+  bool empty() { return true; }
+};
+
+void begin(int x) {}
+int hash(int x) {
+  return 123 * x;
+}
+void swap(Foo& x, Foo& y) {}
+
+}  // blacklisting_of_method_and_function_names
 
 }  // namespace blink
 

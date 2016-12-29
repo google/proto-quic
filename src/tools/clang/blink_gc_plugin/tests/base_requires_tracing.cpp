@@ -6,16 +6,16 @@
 
 namespace blink {
 
-void A::trace(Visitor* visitor) { }
+void A::Trace(Visitor* visitor) { }
 
-void C::trace(Visitor* visitor) {
-  visitor->trace(m_a);
+void C::Trace(Visitor* visitor) {
+  visitor->Trace(m_a);
   // Missing B::trace(visitor)
 }
 
-void D::trace(Visitor* visitor) {
-  visitor->trace(m_a);
-  C::trace(visitor);
+void D::Trace(Visitor* visitor) {
+  visitor->Trace(m_a);
+  C::Trace(visitor);
 }
 
 }

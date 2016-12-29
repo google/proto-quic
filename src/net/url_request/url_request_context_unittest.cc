@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "base/memory/ptr_util.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/url_request/url_request_context_builder.h"

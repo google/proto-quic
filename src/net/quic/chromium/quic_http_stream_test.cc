@@ -33,12 +33,12 @@
 #include "net/quic/chromium/quic_chromium_packet_reader.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
 #include "net/quic/chromium/quic_http_utils.h"
+#include "net/quic/chromium/quic_server_info.h"
 #include "net/quic/chromium/quic_test_packet_maker.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
@@ -59,9 +59,6 @@
 #include "net/test/test_data_directory.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using net::test::IsError;
-using net::test::IsOk;
 
 using std::string;
 using testing::_;

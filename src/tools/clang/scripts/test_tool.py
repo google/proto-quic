@@ -42,6 +42,60 @@ def _NumberOfTestsToString(tests):
   return '%d test%s' % (tests, 's' if tests != 1 else '')
 
 
+def _RunToolAndApplyEdits(tools_clang_scripts_directory,
+                          tool_to_test,
+                          test_directory_for_tool,
+                          actual_files):
+  try:
+    # Stage the test files in the git index. If they aren't staged, then
+    # run_tool.py will skip them when applying replacements.
+    args = ['add']
+    args.extend(actual_files)
+    _RunGit(args)
+
+    # Launch the following pipeline:
+    #     run_tool.py ... | extract_edits.py | apply_edits.py ...
+    args = ['python',
+            os.path.join(tools_clang_scripts_directory, 'run_tool.py'),
+            tool_to_test,
+            test_directory_for_tool]
+    args.extend(actual_files)
+    run_tool = subprocess.Popen(args, stdout=subprocess.PIPE)
+
+    args = ['python',
+            os.path.join(tools_clang_scripts_directory, 'extract_edits.py')]
+    extract_edits = subprocess.Popen(args, stdin=run_tool.stdout,
+                                     stdout=subprocess.PIPE)
+
+    args = ['python',
+            os.path.join(tools_clang_scripts_directory, 'apply_edits.py'),
+            test_directory_for_tool]
+    apply_edits = subprocess.Popen(args, stdin=extract_edits.stdout,
+                                   stdout=subprocess.PIPE)
+
+    # Wait for the pipeline to finish running + check exit codes.
+    stdout, _ = apply_edits.communicate()
+    for process in [run_tool, extract_edits, apply_edits]:
+      process.wait()
+      if process.returncode != 0:
+        print "Failure while running the tool."
+        return process.returncode
+
+    # Reformat the resulting edits via: git cl format.
+    args = ['cl', 'format']
+    args.extend(actual_files)
+    _RunGit(args)
+
+    return 0
+
+  finally:
+    # No matter what, unstage the git changes we made earlier to avoid polluting
+    # the index.
+    args = ['reset', '--quiet', 'HEAD']
+    args.extend(actual_files)
+    _RunGit(args)
+
+
 def main(argv):
   if len(argv) < 1:
     print 'Usage: test_tool.py <clang tool>'
@@ -76,72 +130,52 @@ def main(argv):
     print 'Tool "%s" does not have compatible test files.' % tool_to_test
     return 1
 
-  try:
-    # Set up the test environment.
-    for source, actual in zip(source_files, actual_files):
-      shutil.copyfile(source, actual)
-    # Stage the test files in the git index. If they aren't staged, then
-    # run_tools.py will skip them when applying replacements.
-    args = ['add']
-    args.extend(actual_files)
-    _RunGit(args)
-    # Generate a temporary compilation database to run the tool over.
-    with open(compile_database, 'w') as f:
-      f.write(_GenerateCompileCommands(actual_files, include_paths))
+  # Set up the test environment.
+  for source, actual in zip(source_files, actual_files):
+    shutil.copyfile(source, actual)
+  # Generate a temporary compilation database to run the tool over.
+  with open(compile_database, 'w') as f:
+    f.write(_GenerateCompileCommands(actual_files, include_paths))
 
-    args = ['python',
-            os.path.join(tools_clang_scripts_directory, 'run_tool.py'),
-            tool_to_test,
-            test_directory_for_tool]
-    args.extend(actual_files)
-    run_tool = subprocess.Popen(args, stdout=subprocess.PIPE)
-    stdout, _ = run_tool.communicate()
-    if run_tool.returncode != 0:
-      print 'run_tool failed:\n%s' % stdout
-      return 1
+  # Run the tool.
+  exitcode = _RunToolAndApplyEdits(tools_clang_scripts_directory, tool_to_test,
+                                   test_directory_for_tool, actual_files)
+  if (exitcode != 0):
+    return exitcode
 
-    args = ['cl', 'format']
-    args.extend(actual_files)
-    _RunGit(args)
+  # Compare actual-vs-expected results.
+  passed = 0
+  failed = 0
+  for expected, actual in zip(expected_files, actual_files):
+    print '[ RUN      ] %s' % os.path.relpath(actual)
+    expected_output = actual_output = None
+    with open(expected, 'r') as f:
+      expected_output = f.readlines()
+    with open(actual, 'r') as f:
+      actual_output = f.readlines()
+    if actual_output != expected_output:
+      failed += 1
+      for line in difflib.unified_diff(expected_output, actual_output,
+                                       fromfile=os.path.relpath(expected),
+                                       tofile=os.path.relpath(actual)):
+        sys.stdout.write(line)
+      print '[  FAILED  ] %s' % os.path.relpath(actual)
+      # Don't clean up the file on failure, so the results can be referenced
+      # more easily.
+      continue
+    print '[       OK ] %s' % os.path.relpath(actual)
+    passed += 1
+    os.remove(actual)
 
-    passed = 0
-    failed = 0
-    for expected, actual in zip(expected_files, actual_files):
-      print '[ RUN      ] %s' % os.path.relpath(actual)
-      expected_output = actual_output = None
-      with open(expected, 'r') as f:
-        expected_output = f.readlines()
-      with open(actual, 'r') as f:
-        actual_output = f.readlines()
-      if actual_output != expected_output:
-        failed += 1
-        for line in difflib.unified_diff(expected_output, actual_output,
-                                         fromfile=os.path.relpath(expected),
-                                         tofile=os.path.relpath(actual)):
-          sys.stdout.write(line)
-        print '[  FAILED  ] %s' % os.path.relpath(actual)
-        # Don't clean up the file on failure, so the results can be referenced
-        # more easily.
-        continue
-      print '[       OK ] %s' % os.path.relpath(actual)
-      passed += 1
-      os.remove(actual)
+  if failed == 0:
+    os.remove(compile_database)
 
-    if failed == 0:
-      os.remove(compile_database)
-
-    print '[==========] %s ran.' % _NumberOfTestsToString(len(source_files))
-    if passed > 0:
-      print '[  PASSED  ] %s.' % _NumberOfTestsToString(passed)
-    if failed > 0:
-      print '[  FAILED  ] %s.' % _NumberOfTestsToString(failed)
-      return 1
-  finally:
-    # No matter what, unstage the git changes we made earlier to avoid polluting
-    # the index.
-    args = ['reset', '--quiet', 'HEAD']
-    args.extend(actual_files)
-    _RunGit(args)
+  print '[==========] %s ran.' % _NumberOfTestsToString(len(source_files))
+  if passed > 0:
+    print '[  PASSED  ] %s.' % _NumberOfTestsToString(passed)
+  if failed > 0:
+    print '[  FAILED  ] %s.' % _NumberOfTestsToString(failed)
+    return 1
 
 
 if __name__ == '__main__':

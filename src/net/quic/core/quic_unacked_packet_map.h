@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_UNACKED_PACKET_MAP_H_
 #define NET_QUIC_CORE_QUIC_UNACKED_PACKET_MAP_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <deque>
 
 #include "base/macros.h"

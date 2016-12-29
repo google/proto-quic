@@ -9,32 +9,40 @@
 
 #include <memory>
 
-#include "base/strings/string_util.h"
+#include "base/files/file_enumerator.h"
+#include "base/files/file_util.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/test_tools/quic_client_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using net::EpollServer;
-using net::test::CryptoTestUtils;
-
 namespace net {
 namespace test {
 namespace {
 
-int NumOpenFDs() {
-  int number_of_open_fds = 0;
-  char buf[256];
-  struct dirent* dp;
+const char* kPathToFds = "/proc/self/fd";
 
-  base::snprintf(buf, arraysize(buf), "/proc/%i/fd/", getpid());
-  DIR* dir = opendir(buf);
-  while ((dp = readdir(dir)) != NULL)
-    number_of_open_fds++;
-  closedir(dir);
+// Counts the number of open sockets for the current process.
+size_t NumOpenSocketFDs() {
+  base::FileEnumerator fd_entries(
+      base::FilePath(kPathToFds), false,
+      base::FileEnumerator::FILES | base::FileEnumerator::SHOW_SYM_LINKS);
 
-  return number_of_open_fds;
+  size_t socket_count = 0;
+  for (base::FilePath entry = fd_entries.Next(); !entry.empty();
+       entry = fd_entries.Next()) {
+    base::FilePath fd_path;
+    if (!base::ReadSymbolicLink(entry, &fd_path)) {
+      continue;
+    }
+    if (QuicTextUtils::StartsWith(fd_path.value(), "socket:")) {
+      socket_count++;
+    }
+  }
+
+  return socket_count;
 }
 
 // Creates a new QuicClient and Initializes it. Caller is responsible for
@@ -53,6 +61,9 @@ QuicClient* CreateAndInitializeQuicClient(EpollServer* eps, uint16_t port) {
 }
 
 TEST(QuicClientTest, DoNotLeakFDs) {
+  // Make sure that the QuicClient doesn't leak socket FDs. Doing so could cause
+  // port exhaustion in long running processes which repeatedly create clients.
+
   // Create a ProofVerifier before counting the number of open FDs to work
   // around some ASAN weirdness.
   CryptoTestUtils::ProofVerifierForTesting().reset();
@@ -62,7 +73,7 @@ TEST(QuicClientTest, DoNotLeakFDs) {
 
   // Record initial number of FDs, after creation of EpollServer.
   EpollServer eps;
-  int number_of_open_fds = NumOpenFDs();
+  size_t number_of_open_fds = NumOpenSocketFDs();
 
   // Create a number of clients, initialize them, and verify this has resulted
   // in additional FDs being opened.
@@ -72,11 +83,11 @@ TEST(QuicClientTest, DoNotLeakFDs) {
         CreateAndInitializeQuicClient(&eps, net::test::kTestPort + i));
 
     // Initializing the client will create a new FD.
-    EXPECT_LT(number_of_open_fds, NumOpenFDs());
+    EXPECT_LT(number_of_open_fds, NumOpenSocketFDs());
   }
 
   // The FDs created by the QuicClients should now be closed.
-  EXPECT_EQ(number_of_open_fds, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds, NumOpenSocketFDs());
 }
 
 TEST(QuicClientTest, CreateAndCleanUpUDPSockets) {
@@ -85,22 +96,22 @@ TEST(QuicClientTest, CreateAndCleanUpUDPSockets) {
   CryptoTestUtils::ProofVerifierForTesting().reset();
 
   EpollServer eps;
-  int number_of_open_fds = NumOpenFDs();
+  size_t number_of_open_fds = NumOpenSocketFDs();
 
   std::unique_ptr<QuicClient> client(
       CreateAndInitializeQuicClient(&eps, net::test::kTestPort));
-  EXPECT_EQ(number_of_open_fds + 1, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds + 1, NumOpenSocketFDs());
   // Create more UDP sockets.
   EXPECT_TRUE(QuicClientPeer::CreateUDPSocketAndBind(client.get()));
-  EXPECT_EQ(number_of_open_fds + 2, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds + 2, NumOpenSocketFDs());
   EXPECT_TRUE(QuicClientPeer::CreateUDPSocketAndBind(client.get()));
-  EXPECT_EQ(number_of_open_fds + 3, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds + 3, NumOpenSocketFDs());
 
   // Clean up UDP sockets.
   QuicClientPeer::CleanUpUDPSocket(client.get(), client->GetLatestFD());
-  EXPECT_EQ(number_of_open_fds + 2, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds + 2, NumOpenSocketFDs());
   QuicClientPeer::CleanUpUDPSocket(client.get(), client->GetLatestFD());
-  EXPECT_EQ(number_of_open_fds + 1, NumOpenFDs());
+  EXPECT_EQ(number_of_open_fds + 1, NumOpenSocketFDs());
 }
 
 }  // namespace

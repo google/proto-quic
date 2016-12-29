@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_ERROR_CODES_H_
 #define NET_QUIC_CORE_QUIC_ERROR_CODES_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <limits>
 
 #include "net/quic/platform/api/quic_export.h"

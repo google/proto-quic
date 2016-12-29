@@ -940,7 +940,7 @@ class _Generator(object):
       accessor = '->'
       cpp_type = self._type_helper.GetCppType(item_type, is_in_container=True)
       c.Append('%s.reset(new std::vector<%s>);' %
-                   (dst_var, cpp_util.PadForGenerics(cpp_type)))
+                   (dst_var, cpp_type))
     (c.Sblock('for (const auto& it : *(%s)) {' % src_var)
       .Append('%s tmp;' % self._type_helper.GetCppType(item_type))
       .Concat(self._GenerateStringToEnumConversion(item_type,

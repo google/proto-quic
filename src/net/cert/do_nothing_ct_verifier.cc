@@ -11,14 +11,15 @@ namespace net {
 DoNothingCTVerifier::DoNothingCTVerifier() = default;
 DoNothingCTVerifier::~DoNothingCTVerifier() = default;
 
-int DoNothingCTVerifier::Verify(
+void DoNothingCTVerifier::Verify(
     X509Certificate* cert,
-    const std::string& stapled_ocsp_response,
-    const std::string& sct_list_from_tls_extension,
+    base::StringPiece stapled_ocsp_response,
+    base::StringPiece sct_list_from_tls_extension,
     SignedCertificateTimestampAndStatusList* output_scts,
     const NetLogWithSource& net_log) {
   output_scts->clear();
-  return ERR_CT_NO_SCTS_VERIFIED_OK;
 }
+
+void DoNothingCTVerifier::SetObserver(Observer* observer) {}
 
 }  // namespace net

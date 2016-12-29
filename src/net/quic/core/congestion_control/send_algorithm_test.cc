@@ -186,16 +186,16 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
   void SetExperimentalOptionsInServerConfig() {
     QuicConfig client_config;
     QuicTagVector options;
-    if (FLAGS_quic_fix_cubic_convex_mode) {
+    if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
       options.push_back(kCCVX);
     }
-    if (FLAGS_quic_fix_cubic_convex_mode &&
-        FLAGS_quic_fix_cubic_bytes_quantization) {
+    if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
+        FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
       options.push_back(kCCVX);
       options.push_back(kCBQT);
     }
 
-    if (FLAGS_quic_fix_beta_last_max) {
+    if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
       options.push_back(kBLMX);
     }
 

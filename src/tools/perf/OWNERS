@@ -11,8 +11,8 @@ eyaich@chromium.org
 # Simple rubberstamp-only oilpan-related changes.
 peria@chromium.org
 
-# For system health & memory-infra related changes.
-petrcermak@chromium.org
+# For system health memory benchmarks & memory-infra related changes.
+perezju@chromium.org
 
 # For page_cycler and loading benchmarks related changes.
 kouhei@chromium.org
@@ -20,5 +20,6 @@ kouhei@chromium.org
 # emeritus:
 # marja@chromium.org
 # nduca@chromium.org
+# petrcermak@chromium.org
 # qyearsley@chromium.org
 # tonyg@chromium.org

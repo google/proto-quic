@@ -27,8 +27,8 @@
 #include "net/quic/chromium/quic_chromium_connection_helper.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
 #include "net/quic/chromium/quic_crypto_client_stream_factory.h"
+#include "net/quic/chromium/quic_server_info.h"
 #include "net/quic/chromium/quic_stream_factory.h"
-#include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/socket/datagram_client_socket.h"
@@ -147,7 +147,7 @@ std::unique_ptr<base::Value> NetLogQuicPushPromiseReceivedCallback(
   return std::move(dict);
 }
 
-class HpackEncoderDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
+class HpackEncoderDebugVisitor : public QuicHpackDebugVisitor {
   void OnUseEntry(QuicTime::Delta elapsed) override {
     UMA_HISTOGRAM_TIMES(
         "Net.QuicHpackEncoder.IndexedEntryAge",
@@ -155,7 +155,7 @@ class HpackEncoderDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
   }
 };
 
-class HpackDecoderDebugVisitor : public QuicHeadersStream::HpackDebugVisitor {
+class HpackDecoderDebugVisitor : public QuicHpackDebugVisitor {
   void OnUseEntry(QuicTime::Delta elapsed) override {
     UMA_HISTOGRAM_TIMES(
         "Net.QuicHpackDecoder.IndexedEntryAge",
@@ -429,9 +429,9 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
 
 void QuicChromiumClientSession::Initialize() {
   QuicClientSessionBase::Initialize();
-  headers_stream()->SetHpackEncoderDebugVisitor(
+  SetHpackEncoderDebugVisitor(
       base::MakeUnique<HpackEncoderDebugVisitor>());
-  headers_stream()->SetHpackDecoderDebugVisitor(
+  SetHpackDecoderDebugVisitor(
       base::MakeUnique<HpackDecoderDebugVisitor>());
 }
 

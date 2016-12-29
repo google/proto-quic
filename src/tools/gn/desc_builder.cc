@@ -616,8 +616,9 @@ class TargetDescBuilder : public BaseDescBuilder {
         res->SetWithoutPathExpansion("output_patterns", std::move(patterns));
       }
       std::vector<SourceFile> output_files;
-      SubstitutionWriter::ApplyListToSources(target_->settings(), outputs,
-                                             target_->sources(), &output_files);
+      SubstitutionWriter::ApplyListToSources(target_, target_->settings(),
+                                             outputs, target_->sources(),
+                                             &output_files);
       res->SetWithoutPathExpansion(variables::kOutputs,
                                    RenderValue(output_files));
     } else {

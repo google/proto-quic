@@ -5,7 +5,7 @@
 #include "net/quic/core/quic_versions.h"
 
 #include "base/memory/ptr_util.h"
-#include "base/strings/string_number_conversions.h"
+#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_tag.h"
@@ -33,15 +33,16 @@ QuicVersionVector FilterSupportedVersions(QuicVersionVector versions) {
   filtered_versions.clear();  // Guaranteed by spec not to change capacity.
   for (QuicVersion version : versions) {
     if (version == QUIC_VERSION_37) {
-      if (FLAGS_quic_enable_version_37 && FLAGS_quic_enable_version_36_v3) {
+      if (FLAGS_quic_reloadable_flag_quic_enable_version_37 &&
+          FLAGS_quic_reloadable_flag_quic_enable_version_36_v3) {
         filtered_versions.push_back(version);
       }
     } else if (version == QUIC_VERSION_36) {
-      if (FLAGS_quic_enable_version_36_v3) {
+      if (FLAGS_quic_reloadable_flag_quic_enable_version_36_v3) {
         filtered_versions.push_back(version);
       }
     } else if (version == QUIC_VERSION_34) {
-      if (!FLAGS_quic_disable_version_34) {
+      if (!FLAGS_quic_reloadable_flag_quic_disable_version_34) {
         filtered_versions.push_back(version);
       }
     } else {

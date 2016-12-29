@@ -321,8 +321,7 @@ class NET_EXPORT_PRIVATE SpdyStream {
   bool GetSSLInfo(SSLInfo* ssl_info) const;
 
   // Returns true if ALPN was negotiated for the underlying socket.
-  // TODO(bnc): Rename to WasAlpnNegotiated().
-  bool WasNpnNegotiated() const;
+  bool WasAlpnNegotiated() const;
 
   // Returns the protocol negotiated via ALPN for the underlying socket.
   NextProto GetNegotiatedProtocol() const;

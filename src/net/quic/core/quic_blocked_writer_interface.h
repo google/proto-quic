@@ -9,7 +9,7 @@
 #ifndef NET_QUIC_CORE_QUIC_BLOCKED_WRITER_INTERFACE_H_
 #define NET_QUIC_CORE_QUIC_BLOCKED_WRITER_INTERFACE_H_
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "net/quic/platform/api/quic_export.h"
 

@@ -18,82 +18,89 @@ _DEVIL_CONFIG = os.path.abspath(
     os.path.join(os.path.dirname(__file__), 'devil_chromium.json'))
 
 _DEVIL_BUILD_PRODUCT_DEPS = {
+  'chromium_commands': [
+    {
+      'platform': 'linux2',
+      'arch': 'x86_64',
+      'path_components': ['lib.java', 'chromium_commands.dex.jar'],
+    }
+  ],
   'forwarder_device': [
     {
       'platform': 'android',
       'arch': 'armeabi-v7a',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
     {
       'platform': 'android',
       'arch': 'arm64-v8a',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
     {
       'platform': 'android',
       'arch': 'mips',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
     {
       'platform': 'android',
       'arch': 'mips64',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
     {
       'platform': 'android',
       'arch': 'x86',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
     {
       'platform': 'android',
       'arch': 'x86_64',
-      'name': 'forwarder_dist',
+      'path_components': ['forwarder_dist'],
     },
   ],
   'forwarder_host': [
     {
       'platform': 'linux2',
       'arch': 'x86_64',
-      'name': 'host_forwarder',
+      'path_components': ['host_forwarder'],
     },
   ],
   'md5sum_device': [
     {
       'platform': 'android',
       'arch': 'armeabi-v7a',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
     {
       'platform': 'android',
       'arch': 'arm64-v8a',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
     {
       'platform': 'android',
       'arch': 'mips',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
     {
       'platform': 'android',
       'arch': 'mips64',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
     {
       'platform': 'android',
       'arch': 'x86',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
     {
       'platform': 'android',
       'arch': 'x86_64',
-      'name': 'md5sum_dist',
+      'path_components': ['md5sum_dist'],
     },
   ],
   'md5sum_host': [
     {
       'platform': 'linux2',
       'arch': 'x86_64',
-      'name': 'md5sum_bin_host',
+      'path_components': ['md5sum_bin_host'],
     },
   ],
 }
@@ -137,7 +144,7 @@ def Initialize(output_directory=None, custom_deps=None, adb_path=None):
         'file_info': {
           '%s_%s' % (dep_config['platform'], dep_config['arch']): {
             'local_paths': [
-              os.path.join(output_directory, dep_config['name']),
+              os.path.join(output_directory, *dep_config['path_components']),
             ],
           }
           for dep_config in dep_configs

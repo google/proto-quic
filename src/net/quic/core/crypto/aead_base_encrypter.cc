@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
-#include <memory>
-
 #include "net/quic/core/crypto/aead_base_encrypter.h"
-#include "net/quic/core/quic_flags.h"
+
+#include <string>
+
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_aligned.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 
@@ -85,9 +84,7 @@ bool AeadBaseEncrypter::Encrypt(StringPiece nonce,
                                 StringPiece associated_data,
                                 StringPiece plaintext,
                                 unsigned char* output) {
-  if (nonce.size() != nonce_prefix_size_ + sizeof(QuicPacketNumber)) {
-    return false;
-  }
+  DCHECK_EQ(nonce.size(), nonce_prefix_size_ + sizeof(QuicPacketNumber));
 
   size_t ciphertext_len;
   if (!EVP_AEAD_CTX_seal(
@@ -119,7 +116,7 @@ bool AeadBaseEncrypter::EncryptPacket(QuicVersion /*version*/,
   // TODO(ianswett): Introduce a check to ensure that we don't encrypt with the
   // same packet number twice.
   const size_t nonce_size = nonce_prefix_size_ + sizeof(packet_number);
-  ALIGNAS(4) char nonce_buffer[kMaxNonceSize];
+  QUIC_ALIGNED(4) char nonce_buffer[kMaxNonceSize];
   memcpy(nonce_buffer, nonce_prefix_, nonce_prefix_size_);
   uint64_t path_id_packet_number =
       QuicUtils::PackPathIdAndPacketNumber(path_id, packet_number);

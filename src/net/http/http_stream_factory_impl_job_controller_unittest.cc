@@ -239,8 +239,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig(),
-                                 ProxyInfo());
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
 }
 
 // Test we cancel Jobs correctly when the Request is explicitly canceled
@@ -358,8 +357,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig(),
-                                 ProxyInfo());
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
 
   // JobController shouldn't report the status of second job as request
   // is already successfully served.
@@ -413,8 +411,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig(),
-                                 ProxyInfo());
+  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig());
   VerifyBrokenAlternateProtocolMapping(request_info, false);
 }
 
@@ -458,8 +455,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig(),
-                                 ProxyInfo());
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
 
   VerifyBrokenAlternateProtocolMapping(request_info, true);
 }
@@ -509,8 +505,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, GetLoadStateAfterMainJobFailed) {
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig(),
-                                 ProxyInfo());
+  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig());
 }
 
 TEST_F(HttpStreamFactoryImplJobControllerTest, DoNotResumeMainJobBeforeWait) {
@@ -935,8 +930,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
 
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
       .WillOnce(Invoke(DeleteHttpStreamPointer));
-  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig(),
-                                 job_factory_.main_job()->proxy_info());
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
 
   // JobController shouldn't report the status of alternative server job as
   // request is already successfully served.

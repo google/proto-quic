@@ -36,6 +36,10 @@
 #define GUARDED_BY(x)
 #endif
 
+#ifndef SHARED_LOCKS_REQUIRED
+#define SHARED_LOCKS_REQUIRED(...)
+#endif
+
 namespace net {
 
 // A class wrapping a non-reentrant mutex.

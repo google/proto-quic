@@ -30,6 +30,11 @@ if(WIN32)
   endforeach()
   set_property(TARGET clang APPEND PROPERTY SOURCES ${absolute_sources})
 
+  # TODO(https://crbug.com/675879): Clean up after the Blink rename.
+  cr_add_test(blink_gc_plugin_legacy_test
+    python tests/legacy_naming/test.py
+    ${CMAKE_BINARY_DIR}/bin/clang
+    )
   cr_add_test(blink_gc_plugin_test
     python tests/test.py
     ${CMAKE_BINARY_DIR}/bin/clang
@@ -40,6 +45,12 @@ else()
 
   cr_install(TARGETS "lib${LIBRARYNAME}" LIBRARY DESTINATION lib)
 
+  # TODO(https://crbug.com/675879): Clean up after the Blink rename.
+  cr_add_test(blink_gc_plugin_legacy_test
+    python tests/legacy_naming/test.py
+    ${CMAKE_BINARY_DIR}/bin/clang
+    $<TARGET_FILE:lib${LIBRARYNAME}>
+    )
   cr_add_test(blink_gc_plugin_test
     python tests/test.py
     ${CMAKE_BINARY_DIR}/bin/clang

@@ -116,3 +116,13 @@ class SpeedometerIgnition(Speedometer):
   @classmethod
   def Name(cls):
     return 'speedometer-ignition'
+
+
+class SpeedometerTurbo(Speedometer):
+  def SetExtraBrowserOptions(self, options):
+    super(SpeedometerTurbo, self).SetExtraBrowserOptions(options)
+    v8_helper.EnableTurbo(options)
+
+  @classmethod
+  def Name(cls):
+    return 'speedometer-turbo'

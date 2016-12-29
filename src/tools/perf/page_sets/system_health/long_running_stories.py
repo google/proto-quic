@@ -83,7 +83,7 @@ class _LongRunningGmailDesktopBase(_LongRunningGmailBase):
         'document.getElementById("loading").style.display === "none"')
 
 
-@decorators.Disabled('android')  # crbug.com.com/664505
+@decorators.Disabled('android')  # crbug.com/657433
 class LongRunningGmailMobileForegroundStory(_LongRunningGmailMobileBase):
   NAME = 'long_running:tools:gmail-foreground'
 
@@ -92,8 +92,8 @@ class LongRunningGmailDesktopForegroundStory(_LongRunningGmailDesktopBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
-@decorators.Disabled('android-webview'  # Weview does not have tabs.
-                  , 'android')  # crbug.com/664505
+@decorators.Disabled('android-webview',  # Weview does not have tabs.
+                     'android')  # crbug.com/657433
 class LongRunningGmailMobileBackgroundStory(_LongRunningGmailMobileBase):
   BACKGROUND = True
   NAME = 'long_running:tools:gmail-background'

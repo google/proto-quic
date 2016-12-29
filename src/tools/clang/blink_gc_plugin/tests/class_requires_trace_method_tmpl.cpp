@@ -6,10 +6,10 @@
 
 namespace blink {
 
-// Does not need a trace method.
+// Does not need a Trace method.
 class NoTrace : public TemplatedObject<PartObjectA> { };
 
-// Needs a trace method.
+// Needs a Trace method.
 class NeedsTrace : public TemplatedObject<PartObjectB> { };
 
 }

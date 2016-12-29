@@ -162,22 +162,20 @@
 #include "internal.h"
 
 
-int ssl3_supports_cipher(const SSL_CIPHER *cipher) {
-  return 1;
-}
-
-void ssl3_expect_flight(SSL *ssl) {}
-
-void ssl3_received_flight(SSL *ssl) {}
-
 int ssl3_new(SSL *ssl) {
   SSL3_STATE *s3;
 
   s3 = OPENSSL_malloc(sizeof *s3);
   if (s3 == NULL) {
-    goto err;
+    return 0;
   }
   memset(s3, 0, sizeof *s3);
+
+  s3->hs = ssl_handshake_new(ssl);
+  if (s3->hs == NULL) {
+    OPENSSL_free(s3);
+    return 0;
+  }
 
   EVP_MD_CTX_init(&s3->handshake_hash);
   EVP_MD_CTX_init(&s3->handshake_md5);
@@ -191,8 +189,6 @@ int ssl3_new(SSL *ssl) {
    * at the API boundary rather than in internal state. */
   ssl->version = TLS1_2_VERSION;
   return 1;
-err:
-  return 0;
 }
 
 void ssl3_free(SSL *ssl) {
@@ -225,19 +221,7 @@ const struct ssl_cipher_preference_list_st *ssl_get_cipher_preferences(
     return ssl->cipher_list;
   }
 
-  if (ssl->version >= TLS1_1_VERSION && ssl->ctx->cipher_list_tls11 != NULL) {
-    return ssl->ctx->cipher_list_tls11;
-  }
-
-  if (ssl->version >= TLS1_VERSION && ssl->ctx->cipher_list_tls10 != NULL) {
-    return ssl->ctx->cipher_list_tls10;
-  }
-
-  if (ssl->ctx->cipher_list != NULL) {
-    return ssl->ctx->cipher_list;
-  }
-
-  return NULL;
+  return ssl->ctx->cipher_list;
 }
 
 /* If we are using default SHA1+MD5 algorithms switch to new SHA256 PRF and

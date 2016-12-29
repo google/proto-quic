@@ -33,7 +33,7 @@ class CubicTest : public ::testing::TestWithParam<bool> {
         cubic_(&clock_) {
     fix_convex_mode_ = GetParam();
     cubic_.SetFixConvexMode(fix_convex_mode_);
-    cubic_.SetFixBetaLastMax(FLAGS_quic_fix_beta_last_max);
+    cubic_.SetFixBetaLastMax(FLAGS_quic_reloadable_flag_quic_fix_beta_last_max);
   }
 
   QuicByteCount LastMaxCongestionWindow() {
@@ -150,12 +150,12 @@ TEST_P(CubicTest, LossEvents) {
   current_cwnd = expected_cwnd;
   EXPECT_GT(pre_loss_cwnd, LastMaxCongestionWindow());
   QuicByteCount expected_last_max =
-      FLAGS_quic_fix_beta_last_max
+      FLAGS_quic_reloadable_flag_quic_fix_beta_last_max
           ? static_cast<QuicPacketCount>(pre_loss_cwnd *
                                          kNConnectionBetaLastMax)
           : static_cast<QuicPacketCount>(pre_loss_cwnd * kBetaLastMax);
   EXPECT_EQ(expected_last_max, LastMaxCongestionWindow());
-  if (FLAGS_quic_fix_beta_last_max) {
+  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
     EXPECT_LT(expected_cwnd, LastMaxCongestionWindow());
   } else {
     // If we don't scale kLastBetaMax, the current window is exactly
@@ -166,7 +166,7 @@ TEST_P(CubicTest, LossEvents) {
   // Simulate an increase, and check that we are below the origin.
   current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min,
                                                  clock_.ApproximateNow());
-  if (FLAGS_quic_fix_beta_last_max) {
+  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
     EXPECT_GT(LastMaxCongestionWindow(), current_cwnd);
   } else {
     // Without the bug fix, we will be at or above the origin.

@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_executable(rewrite_to_chrome_style
+  EditTracker.cpp
   RewriteToChromeStyle.cpp
   )
 

@@ -12,7 +12,7 @@
 #include "base/run_loop.h"
 #include "net/base/net_errors.h"
 #include "net/http/mock_http_cache.h"
-#include "net/quic/core/crypto/quic_server_info.h"
+#include "net/quic/chromium/quic_server_info.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"

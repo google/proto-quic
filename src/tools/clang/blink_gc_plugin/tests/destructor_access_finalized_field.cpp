@@ -20,16 +20,16 @@ HeapObject::~HeapObject()
     m_objs[0];
 }
 
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
-    visitor->trace(m_objs);
-    visitor->trace(m_part);
+    visitor->Trace(m_obj);
+    visitor->Trace(m_objs);
+    visitor->Trace(m_part);
 }
 
-void PartOther::trace(Visitor* visitor)
+void PartOther::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
+    visitor->Trace(m_obj);
 }
 
 }

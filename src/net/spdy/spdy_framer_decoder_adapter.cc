@@ -92,9 +92,8 @@ void SpdyFramerVisitorAdapter::OnRstStream(SpdyStreamId stream_id,
 }
 
 void SpdyFramerVisitorAdapter::OnSetting(SpdySettingsIds id,
-                                         uint8_t flags,
                                          uint32_t value) {
-  visitor_->OnSetting(id, flags, value);
+  visitor_->OnSetting(id, value);
 }
 
 void SpdyFramerVisitorAdapter::OnPing(SpdyPingId unique_id, bool is_ack) {

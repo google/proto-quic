@@ -12,7 +12,7 @@ namespace blink {
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
     ~HeapObject();
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<HeapObject> m_obj;
 };

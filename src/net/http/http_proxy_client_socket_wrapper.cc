@@ -234,9 +234,9 @@ bool HttpProxyClientSocketWrapper::WasEverUsed() const {
   return false;
 }
 
-bool HttpProxyClientSocketWrapper::WasNpnNegotiated() const {
+bool HttpProxyClientSocketWrapper::WasAlpnNegotiated() const {
   if (transport_socket_)
-    return transport_socket_->WasNpnNegotiated();
+    return transport_socket_->WasAlpnNegotiated();
   return false;
 }
 

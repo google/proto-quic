@@ -23,6 +23,7 @@ void RecursiveEdgeVisitor::AtWeakMember(WeakMember*) {}
 void RecursiveEdgeVisitor::AtPersistent(Persistent*) {}
 void RecursiveEdgeVisitor::AtCrossThreadPersistent(CrossThreadPersistent*) {}
 void RecursiveEdgeVisitor::AtCollection(Collection*) {}
+void RecursiveEdgeVisitor::AtIterator(Iterator*) {}
 
 void RecursiveEdgeVisitor::VisitValue(Value* e) {
   AtValue(e);
@@ -89,4 +90,8 @@ void RecursiveEdgeVisitor::VisitCollection(Collection* e) {
   Enter(e);
   e->AcceptMembers(this);
   Leave();
+}
+
+void RecursiveEdgeVisitor::VisitIterator(Iterator* e) {
+  AtIterator(e);
 }

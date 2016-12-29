@@ -13,7 +13,7 @@ class SomeObject {
 private:
     class InnerObject : public GarbageCollected<InnerObject> {
     public:
-        void trace(Visitor*);
+        void Trace(Visitor*);
     private:
         Member<InnerObject> m_obj;
     };

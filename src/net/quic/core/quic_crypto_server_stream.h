@@ -129,7 +129,8 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
 
  protected:
   virtual void ProcessClientHello(
-      scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+      QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+          result,
       std::unique_ptr<ProofSource::Details> proof_source_details,
       std::unique_ptr<ProcessClientHelloResultCallback> done_cb);
 
@@ -148,7 +149,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
     void Cancel();
 
     // From ValidateClientHelloResultCallback
-    void Run(scoped_refptr<Result> result,
+    void Run(QuicReferenceCountedPointer<Result> result,
              std::unique_ptr<ProofSource::Details> details) override;
 
    private:
@@ -179,7 +180,8 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   // the client hello is complete.  Finishes processing of the client
   // hello message and handles handshake success/failure.
   void FinishProcessingHandshakeMessage(
-      scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+      QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+          result,
       std::unique_ptr<ProofSource::Details> details);
 
   class ProcessClientHelloCallback;
@@ -215,7 +217,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
 
   // Server's certificate chain and signature of the server config, as provided
   // by ProofSource::GetProof.
-  scoped_refptr<QuicSignedServerConfig> signed_config_;
+  QuicReferenceCountedPointer<QuicSignedServerConfig> signed_config_;
 
   // Hash of the last received CHLO message which can be used for generating
   // server config update messages.

@@ -4,41 +4,50 @@
 # found in the LICENSE file.
 """Wrapper script to help run clang tools across Chromium code.
 
-How to use this tool:
-If you want to run the tool across all Chromium code:
+How to use run_tool.py:
+If you want to run a clang tool across all Chromium code:
 run_tool.py <tool> <path/to/compiledb>
 
-If you want to include all files mentioned in the compilation database:
+If you want to include all files mentioned in the compilation database
+(this will also include generated files, unlike the previous command):
 run_tool.py <tool> <path/to/compiledb> --all
 
-If you only want to run the tool across just chrome/browser and content/browser:
+If you want to run the clang tool across only chrome/browser and
+content/browser:
 run_tool.py <tool> <path/to/compiledb> chrome/browser content/browser
 
-Please see https://chromium.googlesource.com/chromium/src/+/master/docs/clang_tool_refactoring.md for more
-information, which documents the entire automated refactoring flow in Chromium.
+Please see docs/clang_tool_refactoring.md for more information, which documents
+the entire automated refactoring flow in Chromium.
 
-Why use this tool:
+Why use run_tool.py (instead of running a clang tool directly):
 The clang tool implementation doesn't take advantage of multiple cores, and if
 it fails mysteriously in the middle, all the generated replacements will be
-lost.
+lost. Additionally, if the work is simply sharded across multiple cores by
+running multiple RefactoringTools, problems arise when they attempt to rewrite a
+file at the same time.
 
-Unfortunately, if the work is simply sharded across multiple cores by running
-multiple RefactoringTools, problems arise when they attempt to rewrite a file at
-the same time. To work around that, clang tools that are run using this tool
-should output edits to stdout in the following format:
+run_tool.py will
+1) run multiple instances of clang tool in parallel
+2) gather stdout from clang tool invocations
+3) "atomically" forward #2 to stdout
 
-==== BEGIN EDITS ====
-r:<file path>:<offset>:<length>:<replacement text>
-r:<file path>:<offset>:<length>:<replacement text>
-...etc...
-==== END EDITS ====
+Output of run_tool.py can be piped into extract_edits.py and then into
+apply_edits.py. These tools will extract individual edits and apply them to the
+source files. These tools assume the clang tool emits the edits in the
+following format:
+    ...
+    ==== BEGIN EDITS ====
+    r:::<file path>:::<offset>:::<length>:::<replacement text>
+    r:::<file path>:::<offset>:::<length>:::<replacement text>
+    ...etc...
+    ==== END EDITS ====
+    ...
 
-Any generated edits are applied once the clang tool has finished running
-across Chromium, regardless of whether some instances failed or not.
+extract_edits.py extracts only lines between BEGIN/END EDITS markers
+apply_edits.py reads edit lines from stdin and applies the edits
 """
 
 import argparse
-import collections
 import functools
 import multiprocessing
 import os
@@ -51,9 +60,6 @@ tool_dir = os.path.abspath(os.path.join(script_dir, '../pylib'))
 sys.path.insert(0, tool_dir)
 
 from clang import compile_db
-
-Edit = collections.namedtuple('Edit',
-                              ('edit_type', 'offset', 'length', 'replacement'))
 
 
 def _GetFilesFromGit(paths=None):
@@ -85,68 +91,38 @@ def _GetFilesFromCompileDB(build_directory):
           for entry in compile_db.Read(build_directory)]
 
 
-def _ExtractEditsFromStdout(build_directory, stdout):
-  """Extracts generated list of edits from the tool's stdout.
-
-  The expected format is documented at the top of this file.
-
-  Args:
-    build_directory: Directory that contains the compile database. Used to
-      normalize the filenames.
-    stdout: The stdout from running the clang tool.
-
-  Returns:
-    A dictionary mapping filenames to the associated edits.
-  """
-  lines = stdout.splitlines()
-  start_index = lines.index('==== BEGIN EDITS ====')
-  end_index = lines.index('==== END EDITS ====')
-  edits = collections.defaultdict(list)
-  for line in lines[start_index + 1:end_index]:
-    try:
-      edit_type, path, offset, length, replacement = line.split(':::', 4)
-      replacement = replacement.replace('\0', '\n')
-      # Normalize the file path emitted by the clang tool.
-      path = os.path.realpath(os.path.join(build_directory, path))
-      edits[path].append(Edit(edit_type, int(offset), int(length), replacement))
-    except ValueError:
-      print 'Unable to parse edit: %s' % line
-  return edits
-
-
 def _ExecuteTool(toolname, tool_args, build_directory, filename):
-  """Executes the tool.
+  """Executes the clang tool.
 
   This is defined outside the class so it can be pickled for the multiprocessing
   module.
 
   Args:
-    toolname: Path to the tool to execute.
-    tool_args: Arguments to be passed to the tool. Can be None.
+    toolname: Name of the clang tool to execute.
+    tool_args: Arguments to be passed to the clang tool. Can be None.
     build_directory: Directory that contains the compile database.
-    filename: The file to run the tool over.
+    filename: The file to run the clang tool over.
 
   Returns:
     A dictionary that must contain the key "status" and a boolean value
     associated with it.
 
-    If status is True, then the generated edits are stored with the key "edits"
-    in the dictionary.
+    If status is True, then the generated output is stored with the key
+    "stdout_text" in the dictionary.
 
     Otherwise, the filename and the output from stderr are associated with the
-    keys "filename" and "stderr" respectively.
+    keys "filename" and "stderr_text" respectively.
   """
   args = [toolname, '-p', build_directory, filename]
   if (tool_args):
     args.extend(tool_args)
   command = subprocess.Popen(
       args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  stdout, stderr = command.communicate()
+  stdout_text, stderr_text = command.communicate()
   if command.returncode != 0:
-    return {'status': False, 'filename': filename, 'stderr': stderr}
+    return {'status': False, 'filename': filename, 'stderr_text': stderr_text}
   else:
-    return {'status': True,
-            'edits': _ExtractEditsFromStdout(build_directory, stdout)}
+    return {'status': True, 'filename': filename, 'stdout_text': stdout_text}
 
 
 class _CompilerDispatcher(object):
@@ -167,12 +143,6 @@ class _CompilerDispatcher(object):
     self.__filenames = filenames
     self.__success_count = 0
     self.__failed_count = 0
-    self.__edit_count = 0
-    self.__edits = collections.defaultdict(list)
-
-  @property
-  def edits(self):
-    return self.__edits
 
   @property
   def failed_count(self):
@@ -187,8 +157,7 @@ class _CompilerDispatcher(object):
                           self.__filenames)
     for result in result_iterator:
       self.__ProcessResult(result)
-    sys.stdout.write('\n')
-    sys.stdout.flush()
+    sys.stderr.write('\n')
 
   def __ProcessResult(self, result):
     """Handles result processing.
@@ -198,95 +167,17 @@ class _CompilerDispatcher(object):
     """
     if result['status']:
       self.__success_count += 1
-      for k, v in result['edits'].iteritems():
-        self.__edits[k].extend(v)
-        self.__edit_count += len(v)
+      sys.stdout.write(result['stdout_text'])
     else:
       self.__failed_count += 1
-      sys.stdout.write('\nFailed to process %s\n' % result['filename'])
-      sys.stdout.write(result['stderr'])
-      sys.stdout.write('\n')
-    percentage = (float(self.__success_count + self.__failed_count) /
-                  len(self.__filenames)) * 100
-    sys.stdout.write('Succeeded: %d, Failed: %d, Edits: %d [%.2f%%]\r' %
-                     (self.__success_count, self.__failed_count,
-                      self.__edit_count, percentage))
-    sys.stdout.flush()
-
-
-def _ApplyEdits(edits):
-  """Apply the generated edits.
-
-  Args:
-    edits: A dict mapping filenames to Edit instances that apply to that file.
-  """
-  edit_count = 0
-  for k, v in edits.iteritems():
-    # Sort the edits and iterate through them in reverse order. Sorting allows
-    # duplicate edits to be quickly skipped, while reversing means that
-    # subsequent edits don't need to have their offsets updated with each edit
-    # applied.
-    v.sort()
-    last_edit = None
-    with open(k, 'rb+') as f:
-      contents = bytearray(f.read())
-      for edit in reversed(v):
-        if edit == last_edit:
-          continue
-        last_edit = edit
-        contents[edit.offset:edit.offset + edit.length] = edit.replacement
-        if not edit.replacement:
-          _ExtendDeletionIfElementIsInList(contents, edit.offset)
-        edit_count += 1
-      f.seek(0)
-      f.truncate()
-      f.write(contents)
-  print 'Applied %d edits to %d files' % (edit_count, len(edits))
-
-
-_WHITESPACE_BYTES = frozenset((ord('\t'), ord('\n'), ord('\r'), ord(' ')))
-
-
-def _ExtendDeletionIfElementIsInList(contents, offset):
-  """Extends the range of a deletion if the deleted element was part of a list.
-
-  This rewriter helper makes it easy for refactoring tools to remove elements
-  from a list. Even if a matcher callback knows that it is removing an element
-  from a list, it may not have enough information to accurately remove the list
-  element; for example, another matcher callback may end up removing an adjacent
-  list element, or all the list elements may end up being removed.
-
-  With this helper, refactoring tools can simply remove the list element and not
-  worry about having to include the comma in the replacement.
-
-  Args:
-    contents: A bytearray with the deletion already applied.
-    offset: The offset in the bytearray where the deleted range used to be.
-  """
-  char_before = char_after = None
-  left_trim_count = 0
-  for byte in reversed(contents[:offset]):
-    left_trim_count += 1
-    if byte in _WHITESPACE_BYTES:
-      continue
-    if byte in (ord(','), ord(':'), ord('('), ord('{')):
-      char_before = chr(byte)
-    break
-
-  right_trim_count = 0
-  for byte in contents[offset:]:
-    right_trim_count += 1
-    if byte in _WHITESPACE_BYTES:
-      continue
-    if byte == ord(','):
-      char_after = chr(byte)
-    break
-
-  if char_before:
-    if char_after:
-      del contents[offset:offset + right_trim_count]
-    elif char_before in (',', ':'):
-      del contents[offset - left_trim_count:offset]
+      sys.stderr.write('\nFailed to process %s\n' % result['filename'])
+      sys.stderr.write(result['stderr_text'])
+      sys.stderr.write('\n')
+    done_count = self.__success_count + self.__failed_count
+    percentage = (float(done_count) / len(self.__filenames)) * 100
+    sys.stderr.write(
+        'Processed %d files with %s tool (%d failures) [%.2f%%]\r' %
+        (done_count, self.__toolname, self.__failed_count, percentage))
 
 
 def main():
@@ -319,25 +210,20 @@ def main():
   if args.generate_compdb:
     compile_db.GenerateWithNinja(args.compile_database)
 
-  filenames = set(_GetFilesFromGit(args.path_filter))
   if args.all:
     source_filenames = set(_GetFilesFromCompileDB(args.compile_database))
   else:
+    git_filenames = set(_GetFilesFromGit(args.path_filter))
     # Filter out files that aren't C/C++/Obj-C/Obj-C++.
     extensions = frozenset(('.c', '.cc', '.cpp', '.m', '.mm'))
     source_filenames = [f
-                        for f in filenames
+                        for f in git_filenames
                         if os.path.splitext(f)[1] in extensions]
+
   dispatcher = _CompilerDispatcher(args.tool, args.tool_args,
                                    args.compile_database,
                                    source_filenames)
   dispatcher.Run()
-  # Filter out edits to files that aren't in the git repository, since it's not
-  # useful to modify files that aren't under source control--typically, these
-  # are generated files or files in a git submodule that's not part of Chromium.
-  _ApplyEdits({k: v
-               for k, v in dispatcher.edits.iteritems()
-               if os.path.realpath(k) in filenames})
   return -dispatcher.failed_count
 
 

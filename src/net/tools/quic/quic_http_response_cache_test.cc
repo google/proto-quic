@@ -8,14 +8,13 @@
 #include "base/memory/singleton.h"
 #include "base/path_service.h"
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_piece.h"
+#include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::ContainsKey;
-using base::IntToString;
 using base::StringPiece;
 using net::SpdyHeaderBlock;
 using std::string;
@@ -77,7 +76,8 @@ TEST_F(QuicHttpResponseCacheTest, AddResponse) {
   SpdyHeaderBlock response_headers;
   response_headers[":version"] = "HTTP/1.1";
   response_headers[":status"] = "200";
-  response_headers["content-length"] = IntToString(kResponseBody.size());
+  response_headers["content-length"] =
+      QuicTextUtils::Uint64ToString(kResponseBody.size());
 
   SpdyHeaderBlock response_trailers;
   response_trailers["key-1"] = "value-1";
@@ -176,14 +176,15 @@ TEST_F(QuicHttpResponseCacheTest, AddSimpleResponseWithServerPushResources) {
   std::list<QuicHttpResponseCache::ServerPushInfo> push_resources;
   string scheme = "http";
   for (int i = 0; i < NumResources; ++i) {
-    string path = "/server_push_src" + base::IntToString(i);
+    string path = "/server_push_src" + QuicTextUtils::Uint64ToString(i);
     string url = scheme + "://" + request_host + path;
     GURL resource_url(url);
-    string body = "This is server push response body for " + path;
+    string body = QuicStrCat("This is server push response body for ", path);
     SpdyHeaderBlock response_headers;
     response_headers[":version"] = "HTTP/1.1";
     response_headers[":status"] = "200";
-    response_headers["content-length"] = base::UintToString(body.size());
+    response_headers["content-length"] =
+        QuicTextUtils::Uint64ToString(body.size());
     push_resources.push_back(
         ServerPushInfo(resource_url, response_headers.Clone(), i, body));
   }
@@ -211,14 +212,15 @@ TEST_F(QuicHttpResponseCacheTest, GetServerPushResourcesAndPushResponses) {
   string push_response_status[kNumResources] = {"200", "200", "301", "404"};
   std::list<QuicHttpResponseCache::ServerPushInfo> push_resources;
   for (int i = 0; i < NumResources; ++i) {
-    string path = "/server_push_src" + base::IntToString(i);
+    string path = "/server_push_src" + QuicTextUtils::Uint64ToString(i);
     string url = scheme + "://" + request_host + path;
     GURL resource_url(url);
     string body = "This is server push response body for " + path;
     SpdyHeaderBlock response_headers;
     response_headers[":version"] = "HTTP/1.1";
     response_headers[":status"] = push_response_status[i];
-    response_headers["content-length"] = base::UintToString(body.size());
+    response_headers["content-length"] =
+        QuicTextUtils::Uint64ToString(body.size());
     push_resources.push_back(
         ServerPushInfo(resource_url, response_headers.Clone(), i, body));
   }

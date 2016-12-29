@@ -11,6 +11,7 @@
 #include "base/sys_byteorder.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_time.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
@@ -83,8 +84,9 @@ TEST_F(LocalStrikeRegisterClientTest, IncorrectNonceLength) {
   string valid_nonce;
   uint32_t norder = base::HostToNet32(kCurrentTimeExternalSecs);
   valid_nonce.assign(reinterpret_cast<const char*>(&norder), sizeof(norder));
-  valid_nonce.append(string(reinterpret_cast<const char*>(kOrbit), kOrbitSize));
-  valid_nonce.append(string(20, '\x17'));  // 20 'random' bytes.
+  valid_nonce = QuicStrCat(
+      valid_nonce, string(reinterpret_cast<const char*>(kOrbit), kOrbitSize),
+      string(20, '\x17'));  // 20 'random' bytes.
 
   {
     // Validation fails if you remove a byte from the nonce.
@@ -105,8 +107,7 @@ TEST_F(LocalStrikeRegisterClientTest, IncorrectNonceLength) {
     bool called = false;
     bool is_valid = false;
     InsertStatus nonce_error = NONCE_UNKNOWN_FAILURE;
-    string long_nonce(valid_nonce);
-    long_nonce.append("a");
+    string long_nonce = QuicStrCat(valid_nonce, "a");
     strike_register_->VerifyNonceIsValidAndUnique(
         long_nonce, QuicWallTime::FromUNIXSeconds(kCurrentTimeExternalSecs),
         new RecordResultCallback(&called, &is_valid, &nonce_error));

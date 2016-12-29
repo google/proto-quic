@@ -73,7 +73,7 @@ class MockConnectClientSocket : public StreamSocket {
   void SetOmniboxSpeculation() override {}
   bool WasEverUsed() const override { return false; }
   void EnableTCPFastOpenIfSupported() override {}
-  bool WasNpnNegotiated() const override { return false; }
+  bool WasAlpnNegotiated() const override { return false; }
   NextProto GetNegotiatedProtocol() const override { return kProtoUnknown; }
   bool GetSSLInfo(SSLInfo* ssl_info) override { return false; }
   void GetConnectionAttempts(ConnectionAttempts* out) const override {
@@ -135,7 +135,7 @@ class MockFailingClientSocket : public StreamSocket {
   void SetOmniboxSpeculation() override {}
   bool WasEverUsed() const override { return false; }
   void EnableTCPFastOpenIfSupported() override {}
-  bool WasNpnNegotiated() const override { return false; }
+  bool WasAlpnNegotiated() const override { return false; }
   NextProto GetNegotiatedProtocol() const override { return kProtoUnknown; }
   bool GetSSLInfo(SSLInfo* ssl_info) override { return false; }
   void GetConnectionAttempts(ConnectionAttempts* out) const override {
@@ -261,7 +261,7 @@ class MockTriggerableClientSocket : public StreamSocket {
   void SetOmniboxSpeculation() override {}
   bool WasEverUsed() const override { return false; }
   void EnableTCPFastOpenIfSupported() override {}
-  bool WasNpnNegotiated() const override { return false; }
+  bool WasAlpnNegotiated() const override { return false; }
   NextProto GetNegotiatedProtocol() const override { return kProtoUnknown; }
   bool GetSSLInfo(SSLInfo* ssl_info) override { return false; }
   void GetConnectionAttempts(ConnectionAttempts* out) const override {

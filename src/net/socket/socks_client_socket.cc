@@ -143,9 +143,9 @@ bool SOCKSClientSocket::WasEverUsed() const {
   return was_ever_used_;
 }
 
-bool SOCKSClientSocket::WasNpnNegotiated() const {
+bool SOCKSClientSocket::WasAlpnNegotiated() const {
   if (transport_.get() && transport_->socket()) {
-    return transport_->socket()->WasNpnNegotiated();
+    return transport_->socket()->WasAlpnNegotiated();
   }
   NOTREACHED();
   return false;

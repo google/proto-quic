@@ -5,10 +5,8 @@
 #ifndef NET_QUIC_CORE_QUIC_DATA_WRITER_H_
 #define NET_QUIC_CORE_QUIC_DATA_WRITER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "base/logging.h"

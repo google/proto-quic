@@ -833,10 +833,14 @@ config("runtime_library") {
 config("default_warnings") {
   cflags = []
   cflags_cc = []
+  ldflags = []
 
   if (is_win) {
     if (treat_warnings_as_errors) {
       cflags += [ "/WX" ]
+    }
+    if (fatal_linker_warnings) {
+      ldflags += [ "/WX" ]
     }
 
     cflags += [
@@ -968,6 +972,12 @@ config("default_warnings") {
       # availability is newer than the deployment target. This is not
       # required when compiling Chrome for iOS.
       cflags += [ "-Wpartial-availability" ]
+    }
+
+    if (is_ios) {
+      # When compiling Objective-C, warns if a selector named via @selector has
+      # not been defined in any visible interface.
+      cflags += [ "-Wundeclared-selector" ]
     }
 
     # Suppress warnings about ABI changes on ARM (Clang doesn't give this
@@ -1266,9 +1276,14 @@ if (is_win) {
     ]
   }
   common_optimize_on_ldflags = []
-  if (!is_component_build) {
+
+  # /OPT:ICF is not desirable in Debug builds, since code-folding can result in
+  # misleading symbols in stack traces. It is also incompatible with
+  # incremental linking, which we enable for both Debug and component builds.
+  if (!is_debug && !is_component_build) {
     common_optimize_on_ldflags += [ "/OPT:ICF" ]  # Redundant COMDAT folding.
   }
+
   if (is_official_build) {
     common_optimize_on_ldflags += [ "/OPT:REF" ]  # Remove unreferenced data.
     if (!use_lld) {
@@ -1559,6 +1574,16 @@ config("symbols") {
       ldflags = [ "/DEBUG:FASTLINK" ]
     } else {
       ldflags = [ "/DEBUG" ]
+    }
+
+    if (is_clang) {
+      # /DEBUG:FASTLINK requires every object file to have standalone debug
+      # information.
+      if (is_win_fastlink) {
+        cflags += [ "-fstandalone-debug" ]
+      } else {
+        cflags += [ "-fno-standalone-debug" ]
+      }
     }
   } else {
     if (is_mac || is_ios) {

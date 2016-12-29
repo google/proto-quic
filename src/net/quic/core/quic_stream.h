@@ -25,7 +25,6 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/ref_counted.h"
 #include "base/strings/string_piece.h"
 #include "net/base/iovec.h"
 #include "net/quic/core/quic_flow_controller.h"
@@ -34,6 +33,7 @@
 #include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_reference_counted.h"
 
 namespace net {
 
@@ -179,24 +179,26 @@ class QUIC_EXPORT_PRIVATE QuicStream {
   // Get peer IP of the lastest packet which connection is dealing/delt with.
   virtual const QuicSocketAddress& PeerAddressOfLatestPacket() const;
 
- protected:
   // Sends as much of 'data' to the connection as the connection will consume,
   // and then buffers any remaining data in queued_data_.
   // If fin is true: if it is immediately passed on to the session,
   // write_side_closed() becomes true, otherwise fin_buffered_ becomes true.
-  void WriteOrBufferData(base::StringPiece data,
-                         bool fin,
-                         QuicAckListenerInterface* ack_listener);
+  void WriteOrBufferData(
+      base::StringPiece data,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
+ protected:
   // Sends as many bytes in the first |count| buffers of |iov| to the connection
   // as the connection will consume.
   // If |ack_listener| is provided, then it will be notified once all
   // the ACKs for this write have been received.
   // Returns the number of bytes consumed by the connection.
-  QuicConsumedData WritevData(const struct iovec* iov,
-                              int iov_count,
-                              bool fin,
-                              QuicAckListenerInterface* ack_listener);
+  QuicConsumedData WritevData(
+      const struct iovec* iov,
+      int iov_count,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Allows override of the session level writev, for the force HOL
   // blocking experiment.
@@ -204,7 +206,7 @@ class QUIC_EXPORT_PRIVATE QuicStream {
       QuicIOVector iov,
       QuicStreamOffset offset,
       bool fin,
-      QuicAckListenerInterface* ack_notifier_delegate);
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Close the write side of the socket.  Further writes will fail.
   // Can be called by the subclass or internally.
@@ -235,7 +237,9 @@ class QUIC_EXPORT_PRIVATE QuicStream {
   bool read_side_closed() const { return read_side_closed_; }
 
   struct PendingData {
-    PendingData(std::string data_in, QuicAckListenerInterface* ack_listener_in);
+    PendingData(
+        std::string data_in,
+        QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
     ~PendingData();
 
     // Pending data to be written.
@@ -244,7 +248,7 @@ class QUIC_EXPORT_PRIVATE QuicStream {
     size_t offset;
     // AckListener that should be notified when the pending data is acked.
     // Can be nullptr.
-    scoped_refptr<QuicAckListenerInterface> ack_listener;
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener;
   };
 
   // Calls MaybeSendBlocked on the stream's flow controller and the connection

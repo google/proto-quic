@@ -4,13 +4,9 @@
 
 #include "base/power_monitor/power_monitor_device_source.h"
 
-#include "base/threading/thread_task_runner_handle.h"
-
 namespace base {
 
 PowerMonitorDeviceSource::PowerMonitorDeviceSource() {
-  DCHECK(ThreadTaskRunnerHandle::IsSet());
-
 #if defined(OS_MACOSX)
   PlatformInit();
 #endif

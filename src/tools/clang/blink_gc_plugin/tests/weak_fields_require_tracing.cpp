@@ -6,23 +6,23 @@
 
 namespace blink {
 
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 {
-    // Missing visitor->trace(m_obj1);
-    // Missing visitor->trace(m_obj2);
-    // visitor->trace(m_obj3) in callback.
-    // Missing visitor->trace(m_set1);
-    visitor->trace(m_set2);
-    visitor->registerWeakMembers<HeapObject,
+    // Missing visitor->Trace(m_obj1);
+    // Missing visitor->Trace(m_obj2);
+    // visitor->Trace(m_obj3) in callback.
+    // Missing visitor->Trace(m_set1);
+    visitor->Trace(m_set2);
+    visitor->RegisterWeakMembers<HeapObject,
                                  &HeapObject::clearWeakMembers>(this);
 }
 
 void HeapObject::clearWeakMembers(Visitor* visitor)
 {
-    visitor->trace(m_obj1);  // Does not count.
-    // Missing visitor->trace(m_obj2);
-    visitor->trace(m_obj3);  // OK.
-    visitor->trace(m_set1);  // Does not count.
+    visitor->Trace(m_obj1);  // Does not count.
+    // Missing visitor->Trace(m_obj2);
+    visitor->Trace(m_obj3);  // OK.
+    visitor->Trace(m_set1);  // Does not count.
 }
 
 }

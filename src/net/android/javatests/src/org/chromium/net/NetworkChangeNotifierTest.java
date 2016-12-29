@@ -21,10 +21,10 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
+import android.support.test.filters.MediumTest;
 import android.telephony.TelephonyManager;
 import android.test.InstrumentationTestCase;
 import android.test.UiThreadTest;
-import android.test.suitebuilder.annotation.MediumTest;
 
 import org.chromium.base.ApplicationState;
 import org.chromium.base.ThreadUtils;

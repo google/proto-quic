@@ -5,14 +5,12 @@
 #ifndef NET_QUIC_CORE_QUIC_FRAMER_H_
 #define NET_QUIC_CORE_QUIC_FRAMER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
 #include "base/logging.h"
 #include "base/macros.h"

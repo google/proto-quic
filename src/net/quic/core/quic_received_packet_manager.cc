@@ -13,8 +13,6 @@
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection_stats.h"
-#include "net/quic/core/quic_flags.h"
-
 
 namespace net {
 
@@ -79,19 +77,6 @@ bool QuicReceivedPacketManager::IsAwaitingPacket(
   return ::net::IsAwaitingPacket(ack_frame_, packet_number,
                                  peer_least_packet_awaiting_ack_);
 }
-
-namespace {
-struct isTooLarge {
-  explicit isTooLarge(QuicPacketNumber n) : largest_observed_(n) {}
-  QuicPacketNumber largest_observed_;
-
-  // Return true if the packet in p is too different from largest_observed_
-  // to express.
-  bool operator()(const std::pair<QuicPacketNumber, QuicTime>& p) const {
-    return largest_observed_ - p.first >= std::numeric_limits<uint8_t>::max();
-  }
-};
-}  // namespace
 
 const QuicFrame QuicReceivedPacketManager::GetUpdatedAckFrame(
     QuicTime approximate_now) {

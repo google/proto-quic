@@ -45,7 +45,7 @@ SpdySessionPool::SpdySessionPool(
     TransportSecurityState* transport_security_state,
     bool enable_ping_based_connection_checking,
     size_t session_max_recv_window_size,
-    size_t stream_max_recv_window_size,
+    const SettingsMap& initial_settings,
     SpdySessionPool::TimeFunc time_func,
     ProxyDelegate* proxy_delegate)
     : http_server_properties_(http_server_properties),
@@ -56,7 +56,7 @@ SpdySessionPool::SpdySessionPool(
       enable_ping_based_connection_checking_(
           enable_ping_based_connection_checking),
       session_max_recv_window_size_(session_max_recv_window_size),
-      stream_max_recv_window_size_(stream_max_recv_window_size),
+      initial_settings_(initial_settings),
       time_func_(time_func),
       push_delegate_(nullptr),
       proxy_delegate_(proxy_delegate) {
@@ -92,11 +92,11 @@ base::WeakPtr<SpdySession> SpdySessionPool::CreateAvailableSessionFromSocket(
   UMA_HISTOGRAM_ENUMERATION(
       "Net.SpdySessionGet", IMPORTED_FROM_SOCKET, SPDY_SESSION_GET_MAX);
 
-  std::unique_ptr<SpdySession> new_session(new SpdySession(
+  auto new_session = base::MakeUnique<SpdySession>(
       key, http_server_properties_, transport_security_state_,
       enable_sending_initial_data_, enable_ping_based_connection_checking_,
-      session_max_recv_window_size_, stream_max_recv_window_size_, time_func_,
-      push_delegate_, proxy_delegate_, net_log.net_log()));
+      session_max_recv_window_size_, initial_settings_, time_func_,
+      push_delegate_, proxy_delegate_, net_log.net_log());
 
   new_session->InitializeWithSocket(std::move(connection), this, is_secure);
 

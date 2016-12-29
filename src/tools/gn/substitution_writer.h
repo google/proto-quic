@@ -46,6 +46,10 @@ extern const char kSourceExpansion_Help[];
 // The compiler and linker specific substitutions do NOT include the various
 // cflags, ldflags, libraries, etc. These are written by the ninja target
 // writer since they depend on traversing the dependency tree.
+//
+// The methods which take a target as an argument can accept null target
+// pointer if there is no target context, in which case the substitutions
+// requiring target context will not work.
 class SubstitutionWriter {
  public:
   enum OutputStyle {
@@ -81,15 +85,20 @@ class SubstitutionWriter {
   // expected to be a SourceFile or an OutputFile, this will CHECK if the
   // result isn't in the correct directory. The caller should validate this
   // first (see for example IsFileInOuputDir).
+  //
+  // The target can be null (see class comment above).
   static SourceFile ApplyPatternToSource(
+      const Target* target,
       const Settings* settings,
       const SubstitutionPattern& pattern,
       const SourceFile& source);
   static std::string ApplyPatternToSourceAsString(
+      const Target* target,
       const Settings* settings,
       const SubstitutionPattern& pattern,
       const SourceFile& source);
   static OutputFile ApplyPatternToSourceAsOutputFile(
+      const Target* target,
       const Settings* settings,
       const SubstitutionPattern& pattern,
       const SourceFile& source);
@@ -98,17 +107,22 @@ class SubstitutionWriter {
   // given output vector. It works this way so one can call multiple times to
   // apply to multiple files and create a list. The result can either be
   // SourceFiles or OutputFiles.
+  //
+  // The target can be null (see class comment above).
   static void ApplyListToSource(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const SourceFile& source,
       std::vector<SourceFile>* output);
   static void ApplyListToSourceAsString(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const SourceFile& source,
       std::vector<std::string>* output);
   static void ApplyListToSourceAsOutputFile(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const SourceFile& source,
@@ -116,17 +130,22 @@ class SubstitutionWriter {
 
   // Like ApplyListToSource but applies the list to all sources and replaces
   // rather than appends the output (this produces the complete output).
+  //
+  // The target can be null (see class comment above).
   static void ApplyListToSources(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const std::vector<SourceFile>& sources,
       std::vector<SourceFile>* output);
   static void ApplyListToSourcesAsString(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const std::vector<SourceFile>& sources,
       std::vector<std::string>* output);
   static void ApplyListToSourcesAsOutputFile(
+      const Target* target,
       const Settings* settings,
       const SubstitutionList& list,
       const std::vector<SourceFile>& sources,
@@ -138,7 +157,10 @@ class SubstitutionWriter {
   // Ninja files, paths will be relative to the build dir, and no definition
   // for {{source}} will be written since that maps to Ninja's implicit $in
   // variable.
+  //
+  // The target can be null (see class comment above).
   static void WriteNinjaVariablesForSource(
+      const Target* target,
       const Settings* settings,
       const SourceFile& source,
       const std::vector<SubstitutionType>& types,
@@ -149,7 +171,10 @@ class SubstitutionWriter {
   // given source file. If output_style is OUTPUT_RELATIVE, relative_to
   // indicates the directory that the relative directories should be relative
   // to, otherwise it is ignored.
+  //
+  // The target can be null (see class comment above).
   static std::string GetSourceSubstitution(
+      const Target* target,
       const Settings* settings,
       const SourceFile& source,
       SubstitutionType type,

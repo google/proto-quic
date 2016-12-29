@@ -5,7 +5,6 @@
 #include "net/quic/core/quic_alarm.h"
 
 #include "base/logging.h"
-#include "net/quic/core/quic_flags.h"
 
 namespace net {
 

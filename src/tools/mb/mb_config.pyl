@@ -392,6 +392,7 @@
     },
 
     'chromium.webrtc.fyi': {
+      'Android Builder': 'android_release_bot_minimal_symbols',
       'Android Builder (dbg)': 'android_debug_static_bot',
       'Android Builder ARM64 (dbg)': 'android_debug_static_bot_arm64',
       'Linux Builder': 'release_bot_chrome_with_codecs',
@@ -494,8 +495,11 @@
       # shared library loading is fixed.
       'android_cronet_tester': 'android_cronet_debug_static_bot_arm_no_neon',
 
+      'android_n5x_swarming_dbg': 'android_debug_trybot_arm64',
       'android_n5x_swarming_rel': 'android_release_trybot_arm64',
       'android_optional_gpu_tests_rel': 'gpu_tests_deqp_android_release_trybot_arm64',
+      'android_unswarmed_n5_rel': 'android_release_trybot',
+      'android_unswarmed_n5x_rel': 'android_release_trybot_arm64',
       'cast_shell_android': 'android_cast_debug_static_bot',
       'linux_android_dbg_ng': 'android_debug_trybot',
       'linux_android_rel_ng': 'android_release_trybot',
@@ -1749,7 +1753,9 @@
     },
 
     'ndk_next': {
-      'gn_args': 'android_ndk_version="r13b" android_ndk_major_version="13"',
+      # GCC is unsupported starting in r13.
+      'mixins': ['clang'],
+      'gn_args': 'android_ndk_version="r13b" android_ndk_major_version=13',
     },
 
     'no_pch': {

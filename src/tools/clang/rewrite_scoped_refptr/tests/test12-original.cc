@@ -12,10 +12,10 @@ struct Foo {
   int dummy;
 };
 
-typedef std::map<std::string, scoped_refptr<const Foo> > MyMap;
+typedef std::map<std::string, scoped_refptr<const Foo>> MyMap;
 
 class MyIter
-    : public std::iterator<std::input_iterator_tag, scoped_refptr<const Foo> > {
+    : public std::iterator<std::input_iterator_tag, scoped_refptr<const Foo>> {
  public:
   MyIter() {}
   MyIter(const MyIter& other) : it_(other.it_) {}

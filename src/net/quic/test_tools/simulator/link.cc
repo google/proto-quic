@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/strings/stringprintf.h"
 #include "net/quic/test_tools/simulator/link.h"
+
+#include "base/strings/stringprintf.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
 using base::StringPrintf;

@@ -1435,6 +1435,14 @@ EVENT_TYPE(HTTP2_SESSION_CLOSE)
 
 // Event when the creation of a stream is stalled because we're at
 // the maximum number of concurrent streams.
+//  {
+//
+//    "num_active_streams": <Number of active streams>,
+//    "num_created_streams": <Number of created streams>,
+//    "num_pushed_streams": <Number of pushed streams>,
+//    "max_concurrent_streams": <Maximum number of concurrent streams>,
+//    "url": <Request URL>,
+//  }
 EVENT_TYPE(HTTP2_SESSION_STALLED_MAX_STREAMS)
 
 // Received an out-of-range value for initial window size in SETTINGS

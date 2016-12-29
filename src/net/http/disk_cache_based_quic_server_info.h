@@ -15,7 +15,7 @@
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/disk_cache/disk_cache.h"
-#include "net/quic/core/crypto/quic_server_info.h"
+#include "net/quic/chromium/quic_server_info.h"
 
 namespace net {
 

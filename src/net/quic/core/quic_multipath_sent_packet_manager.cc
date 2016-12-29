@@ -6,8 +6,8 @@
 
 #include <cstdint>
 
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 
 using std::string;
 
@@ -326,8 +326,8 @@ string QuicMultipathSentPacketManager::GetDebugState() const {
     if (debug_state.empty()) {
       continue;
     }
-    debug_state_by_path =
-        debug_state_by_path + "[" + base::IntToString(i) + "]:" + debug_state;
+    debug_state_by_path = QuicStrCat(
+        debug_state_by_path, "[", i, "]:", debug_state);
   }
   return debug_state_by_path;
 }
@@ -444,8 +444,9 @@ QuicMultipathSentPacketManager::MaybeGetSentPacketManagerForPath(
     QuicPathId path_id) const {
   if (path_id >= path_managers_info_.size() ||
       path_managers_info_[path_id].manager == nullptr) {
-    QUIC_BUG << "Sent packet manager of path: (" + base::IntToString(path_id) +
-                    ") must exist but does not.";
+    QUIC_BUG << QuicStrCat("Sent packet manager of path: (",
+                           static_cast<uint32_t>(path_id),
+                           ") must exist but does not.");
     return nullptr;
   }
 
@@ -461,8 +462,9 @@ QuicMultipathSentPacketManager::MaybeGetSentPacketManagerForActivePath(
     return nullptr;
   }
   if (path_managers_info_[path_id].state != ACTIVE) {
-    QUIC_BUG << "Sent packet manager of path: (" + base::IntToString(path_id) +
-                    ") must be active but is not.";
+    QUIC_BUG << QuicStrCat("Sent packet manager of path: (",
+                           static_cast<uint32_t>(path_id),
+                           ") must be active but is not.");
     return nullptr;
   }
 
@@ -495,17 +497,17 @@ QuicPathId QuicMultipathSentPacketManager::DetermineRetransmissionTimeoutPath()
 void QuicMultipathSentPacketManager::OnUnrecoverablePathError(
     QuicPathId path_id) {
   if (MaybeGetSentPacketManagerForPath(path_id) == nullptr) {
-    const string error_details = "Sent packet manager of path: (" +
-                                 base::IntToString(path_id) +
-                                 ") must exist but does not.";
+    const string error_details = QuicStrCat("Sent packet manager of path: (",
+                                            static_cast<uint32_t>(path_id),
+                                            ") must exist but does not.");
     delegate_->OnUnrecoverableError(QUIC_MULTIPATH_PATH_DOES_NOT_EXIST,
                                     error_details,
                                     ConnectionCloseSource::FROM_SELF);
     return;
   }
-  const string error_details = "Sent packet manager of path: (" +
-                               base::IntToString(path_id) +
-                               ") must be active but is not.";
+  const string error_details = QuicStrCat("Sent packet manager of path: (",
+                                          static_cast<uint32_t>(path_id),
+                                          ") must be active but is not.");
   delegate_->OnUnrecoverableError(QUIC_MULTIPATH_PATH_NOT_ACTIVE, error_details,
                                   ConnectionCloseSource::FROM_SELF);
 }

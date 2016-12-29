@@ -10,6 +10,7 @@ cd $PROTO_QUIC_ROOT
 rm -rf build/linux/*sysroot
 rm -rf third_party/boringssl/src/fuzz/client_corpus
 rm -rf third_party/boringssl/src/fuzz/server_corpus
+rm -rf third_party/boringssl/src/fuzz/cert_corpus
 rm -rf out
 find -name .git -exec rm -rf {} \;  # don't remove .git file in parent!
 cd ..

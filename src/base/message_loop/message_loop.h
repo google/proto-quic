@@ -234,6 +234,10 @@ class BASE_EXPORT MessageLoop : public MessagePump::Delegate {
   // thread to which the message loop is bound.
   void SetTaskRunner(scoped_refptr<SingleThreadTaskRunner> task_runner);
 
+  // Clears task_runner() and the ThreadTaskRunnerHandle for the target thread.
+  // Must be called on the thread to which the message loop is bound.
+  void ClearTaskRunnerForTesting();
+
   // Enables or disables the recursive task processing. This happens in the case
   // of recursive message loops. Some unwanted message loops may occur when
   // using common controls or printer functions. By default, recursive task

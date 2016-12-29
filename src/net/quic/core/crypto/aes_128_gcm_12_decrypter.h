@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
 #define NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_DECRYPTER_H_
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstdint>
 
 #include "base/macros.h"
 #include "net/quic/core/crypto/aead_base_decrypter.h"

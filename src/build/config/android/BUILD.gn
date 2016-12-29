@@ -96,12 +96,30 @@ config("runtime_library") {
   # arm-linux-androideabi-4.4.3 toolchain (circa Gingerbread) will exhibit
   # strange errors. The include ordering here is important; change with
   # caution.
-  cflags_cc = [
-    "-isystem" +
-        rebase_path("$android_libcpp_root/libcxx/include", root_build_dir),
-    "-isystem" + rebase_path(
+  cflags_cc = []
+  if (android_ndk_major_version >= 13) {
+    libcxx_include_path =
+        rebase_path("$android_libcpp_root/include", root_build_dir)
+    libcxxabi_include_path =
+        rebase_path("$android_ndk_root/sources/cxx-stl/llvm-libc++abi/include",
+                    root_build_dir)
+
+    if (!is_clang) {
+      # Per the release notes, GCC is not supported in the NDK starting with
+      # r13. It's still present, though, and has conflicting declarations of
+      # float abs(float).
+      cflags_cc += [ "-Wno-attributes" ]
+    }
+  } else {
+    libcxx_include_path =
+        rebase_path("$android_libcpp_root/libcxx/include", root_build_dir)
+    libcxxabi_include_path = rebase_path(
             "$android_ndk_root/sources/cxx-stl/llvm-libc++abi/libcxxabi/include",
-            root_build_dir),
+            root_build_dir)
+  }
+  cflags_cc += [
+    "-isystem" + libcxx_include_path,
+    "-isystem" + libcxxabi_include_path,
     "-isystem" +
         rebase_path("$android_ndk_root/sources/android/support/include",
                     root_build_dir),

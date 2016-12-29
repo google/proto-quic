@@ -29,8 +29,8 @@ Supported sanitizer configurations are:
 | GN Argument | Description |
 |--------------|----|
 | `is_asan=true` | enables [Address Sanitizer] to catch problems like buffer overruns. |
-| `is_msan=true` | enables [Memory Sanitizer] to catch problems like uninitialed reads. |
-| `is_ubsan_security=true` | enables [Undefined Behavior Sanitizer] to catch<sup>\[[1](#Notes)\]</sup> undefined behavior like integer overflow. |
+| `is_msan=true` | enables [Memory Sanitizer] to catch problems like uninitialed reads<sup>\[[1](#note1)\]</sup>. |
+| `is_ubsan_security=true` | enables [Undefined Behavior Sanitizer] to catch<sup>\[[2](#note2)\]</sup> undefined behavior like integer overflow. |
 | | it is possible to run libfuzzer without any sanitizers; *probably not what you want*.|
 
 
@@ -137,17 +137,23 @@ performance and for optimization hints.
 
 
 ## Notes
-[1] By default UBSan doesn't crash once undefined behavior has been detected.
-To make it crash the following additional option should be provided:
 
+*[1]* {#note1}You need to [download prebuilt instrumented libraries](https://www.chromium.org/developers/testing/memorysanitizer#TOC-How-to-build-and-run)
+to use msan ([crbug/653712](https://bugs.chromium.org/p/chromium/issues/detail?id=653712)):
+```bash
+GYP_DEFINES='use_goma=1 msan=1 use_prebuilt_instrumented_libraries=1' gclient runhooks
+```
+
+*[2]* {#note2}By default UBSan doesn't crash once undefined behavior has been detected.
+To make it crash the following additional option should be provided:
 ```bash
 UBSAN_OPTIONS=halt_on_error=1 ./fuzzer <corpus_directory_or_single_testcase_path>
 ```
-
 Other useful options (used by ClusterFuzz) are:
 ```bash
 UBSAN_OPTIONS=symbolize=1:halt_on_error=1:print_stacktrace=1 ./fuzzer <corpus_directory_or_single_testcase_path>
 ```
+
 
 
 [Address Sanitizer]: http://clang.llvm.org/docs/AddressSanitizer.html

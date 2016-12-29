@@ -10,7 +10,7 @@ struct Foo {
   int dummy;
 };
 
-typedef std::vector<scoped_refptr<Foo> > FooList;
+typedef std::vector<scoped_refptr<Foo>> FooList;
 
 void TestsAScopedRefptr() {
   FooList list;

@@ -275,12 +275,10 @@ void Eviction::ReportTrimTimes(EntryImpl* entry) {
       backend_->FirstEviction();
     } else {
       // This is an old file, but we may want more reports from this user so
-      // lets save some create_time.
-      Time::Exploded old = {0};
-      old.year = 2009;
-      old.month = 3;
-      old.day_of_month = 1;
-      header_->create_time = Time::FromLocalExploded(old).ToInternalValue();
+      // lets save some create_time. Conversion cannot fail here.
+      const base::Time time_2009_3_1 =
+          base::Time::FromInternalValue(12985574400000000);
+      header_->create_time = time_2009_3_1.ToInternalValue();
     }
   }
 }

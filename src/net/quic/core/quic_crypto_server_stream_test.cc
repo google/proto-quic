@@ -67,7 +67,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         server_id_(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED),
         client_crypto_config_(CryptoTestUtils::ProofVerifierForTesting()) {
-    FLAGS_enable_quic_stateless_reject_support = false;
+    FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = false;
   }
 
   void Initialize() { InitializeServer(); }
@@ -225,7 +225,7 @@ TEST_P(QuicCryptoServerStreamTest, ForwardSecureAfterCHLO) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
-  FLAGS_enable_quic_stateless_reject_support = true;
+  FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
 
   Initialize();
 
@@ -259,7 +259,7 @@ TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
-  FLAGS_enable_quic_stateless_reject_support = true;
+  FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
 
   Initialize();
 
@@ -303,7 +303,7 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
 }
 
 TEST_P(QuicCryptoServerStreamTest, NoStatelessRejectIfNoClientSupport) {
-  FLAGS_enable_quic_stateless_reject_support = true;
+  FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
 
   Initialize();
 
@@ -421,7 +421,7 @@ TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
   // CryptoTestUtils::MovePackets stops processing parsing following packets.
   // Actually, crypto stream test should use QuicSession instead of
   // QuicSpdySession (b/32366134).
-  FLAGS_quic_send_max_header_list_size = false;
+  FLAGS_quic_reloadable_flag_quic_send_max_header_list_size = false;
   Initialize();
 
   InitializeFakeClient(/* supports_stateless_rejects= */ false);
@@ -491,7 +491,7 @@ class FailingProofSource : public ProofSource {
                 QuicVersion quic_version,
                 StringPiece chlo_hash,
                 const QuicTagVector& connection_options,
-                scoped_refptr<ProofSource::Chain>* out_chain,
+                QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
                 QuicCryptoProof* out_proof) override {
     return false;
   }

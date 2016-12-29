@@ -9,6 +9,7 @@
 
 #include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_sent_packet_manager_interface.h"
 #include "net/quic/platform/api/quic_export.h"

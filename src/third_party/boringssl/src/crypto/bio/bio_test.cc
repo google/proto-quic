@@ -135,152 +135,6 @@ static bool TestSocketConnect() {
   return true;
 }
 
-
-// BioReadZeroCopyWrapper is a wrapper around the zero-copy APIs to make
-// testing easier.
-static size_t BioReadZeroCopyWrapper(BIO *bio, uint8_t *data, size_t len) {
-  uint8_t *read_buf;
-  size_t read_buf_offset;
-  size_t available_bytes;
-  size_t len_read = 0;
-
-  do {
-    if (!BIO_zero_copy_get_read_buf(bio, &read_buf, &read_buf_offset,
-                                    &available_bytes)) {
-      return 0;
-    }
-
-    available_bytes = std::min(available_bytes, len - len_read);
-    memmove(data + len_read, read_buf + read_buf_offset, available_bytes);
-
-    BIO_zero_copy_get_read_buf_done(bio, available_bytes);
-
-    len_read += available_bytes;
-  } while (len - len_read > 0 && available_bytes > 0);
-
-  return len_read;
-}
-
-// BioWriteZeroCopyWrapper is a wrapper around the zero-copy APIs to make
-// testing easier.
-static size_t BioWriteZeroCopyWrapper(BIO *bio, const uint8_t *data,
-                                      size_t len) {
-  uint8_t *write_buf;
-  size_t write_buf_offset;
-  size_t available_bytes;
-  size_t len_written = 0;
-
-  do {
-    if (!BIO_zero_copy_get_write_buf(bio, &write_buf, &write_buf_offset,
-                                     &available_bytes)) {
-      return 0;
-    }
-
-    available_bytes = std::min(available_bytes, len - len_written);
-    memmove(write_buf + write_buf_offset, data + len_written, available_bytes);
-
-    BIO_zero_copy_get_write_buf_done(bio, available_bytes);
-
-    len_written += available_bytes;
-  } while (len - len_written > 0 && available_bytes > 0);
-
-  return len_written;
-}
-
-static bool TestZeroCopyBioPairs() {
-  // Test read and write, especially triggering the ring buffer wrap-around.
-  uint8_t bio1_application_send_buffer[1024];
-  uint8_t bio2_application_recv_buffer[1024];
-
-  const size_t kLengths[] = {254, 255, 256, 257, 510, 511, 512, 513};
-
-  // These trigger ring buffer wrap around.
-  const size_t kPartialLengths[] = {0, 1, 2, 3, 128, 255, 256, 257, 511, 512};
-
-  static const size_t kBufferSize = 512;
-
-  srand(1);
-  for (size_t i = 0; i < sizeof(bio1_application_send_buffer); i++) {
-    bio1_application_send_buffer[i] = rand() & 255;
-  }
-
-  // Transfer bytes from bio1_application_send_buffer to
-  // bio2_application_recv_buffer in various ways.
-  for (size_t i = 0; i < OPENSSL_ARRAY_SIZE(kLengths); i++) {
-    for (size_t j = 0; j < OPENSSL_ARRAY_SIZE(kPartialLengths); j++) {
-      size_t total_write = 0;
-      size_t total_read = 0;
-
-      BIO *bio1, *bio2;
-      if (!BIO_new_bio_pair(&bio1, kBufferSize, &bio2, kBufferSize)) {
-        return false;
-      }
-      bssl::UniquePtr<BIO> bio1_scoper(bio1);
-      bssl::UniquePtr<BIO> bio2_scoper(bio2);
-
-      total_write += BioWriteZeroCopyWrapper(
-          bio1, bio1_application_send_buffer, kLengths[i]);
-
-      // This tests interleaved read/write calls. Do a read between zero copy
-      // write calls.
-      uint8_t *write_buf;
-      size_t write_buf_offset;
-      size_t available_bytes;
-      if (!BIO_zero_copy_get_write_buf(bio1, &write_buf, &write_buf_offset,
-                                       &available_bytes)) {
-        return false;
-      }
-
-      // Free kPartialLengths[j] bytes in the beginning of bio1 write buffer.
-      // This enables ring buffer wrap around for the next write.
-      total_read += BIO_read(bio2, bio2_application_recv_buffer + total_read,
-                             kPartialLengths[j]);
-
-      size_t interleaved_write_len = std::min(kPartialLengths[j],
-                                              available_bytes);
-
-      // Write the data for the interleaved write call. If the buffer becomes
-      // empty after a read, the write offset is normally set to 0. Check that
-      // this does not happen for interleaved read/write and that
-      // |write_buf_offset| is still valid.
-      memcpy(write_buf + write_buf_offset,
-             bio1_application_send_buffer + total_write, interleaved_write_len);
-      if (BIO_zero_copy_get_write_buf_done(bio1, interleaved_write_len)) {
-        total_write += interleaved_write_len;
-      }
-
-      // Do another write in case |write_buf_offset| was wrapped.
-      total_write += BioWriteZeroCopyWrapper(
-          bio1, bio1_application_send_buffer + total_write,
-          kPartialLengths[j] - interleaved_write_len);
-
-      // Drain the rest.
-      size_t bytes_left = BIO_pending(bio2);
-      total_read += BioReadZeroCopyWrapper(
-          bio2, bio2_application_recv_buffer + total_read, bytes_left);
-
-      if (total_read != total_write) {
-        fprintf(stderr, "Lengths not equal in round (%u, %u)\n", (unsigned)i,
-                (unsigned)j);
-        return false;
-      }
-      if (total_read > kLengths[i] + kPartialLengths[j]) {
-        fprintf(stderr, "Bad lengths in round (%u, %u)\n", (unsigned)i,
-                (unsigned)j);
-        return false;
-      }
-      if (memcmp(bio1_application_send_buffer, bio2_application_recv_buffer,
-                 total_read) != 0) {
-        fprintf(stderr, "Buffers not equal in round (%u, %u)\n", (unsigned)i,
-                (unsigned)j);
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 static bool TestPrintf() {
   // Test a short output, a very long one, and various sizes around
   // 256 (the size of the buffer) to ensure edge cases are correct.
@@ -409,7 +263,137 @@ static bool TestASN1() {
   return true;
 }
 
-int main(void) {
+static bool TestPair() {
+  // Run through the tests twice, swapping |bio1| and |bio2|, for symmetry.
+  for (int i = 0; i < 2; i++) {
+    BIO *bio1, *bio2;
+    if (!BIO_new_bio_pair(&bio1, 10, &bio2, 10)) {
+      return false;
+    }
+    bssl::UniquePtr<BIO> free_bio1(bio1), free_bio2(bio2);
+
+    if (i == 1) {
+      std::swap(bio1, bio2);
+    }
+
+    // Check initial states.
+    if (BIO_ctrl_get_write_guarantee(bio1) != 10 ||
+        BIO_ctrl_get_read_request(bio1) != 0) {
+      return false;
+    }
+
+    // Data written in one end may be read out the other.
+    char buf[20];
+    if (BIO_write(bio1, "12345", 5) != 5 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 5 ||
+        BIO_read(bio2, buf, sizeof(buf)) != 5 ||
+        memcmp(buf, "12345", 5) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 10) {
+      return false;
+    }
+
+    // Attempting to write more than 10 bytes will write partially.
+    if (BIO_write(bio1, "1234567890___", 13) != 10 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 0 ||
+        BIO_write(bio1, "z", 1) != -1 ||
+        !BIO_should_write(bio1) ||
+        BIO_read(bio2, buf, sizeof(buf)) != 10 ||
+        memcmp(buf, "1234567890", 10) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 10) {
+      return false;
+    }
+
+    // Unsuccessful reads update the read request.
+    if (BIO_read(bio2, buf, 5) != -1 ||
+        !BIO_should_read(bio2) ||
+        BIO_ctrl_get_read_request(bio1) != 5) {
+      return false;
+    }
+
+    // The read request is clamped to the size of the buffer.
+    if (BIO_read(bio2, buf, 20) != -1 ||
+        !BIO_should_read(bio2) ||
+        BIO_ctrl_get_read_request(bio1) != 10) {
+      return false;
+    }
+
+    // Data may be written and read in chunks.
+    if (BIO_write(bio1, "12345", 5) != 5 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 5 ||
+        BIO_write(bio1, "67890___", 8) != 5 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 0 ||
+        BIO_read(bio2, buf, 3) != 3 ||
+        memcmp(buf, "123", 3) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 3 ||
+        BIO_read(bio2, buf, sizeof(buf)) != 7 ||
+        memcmp(buf, "4567890", 7) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 10) {
+      return false;
+    }
+
+    // Successful reads reset the read request.
+    if (BIO_ctrl_get_read_request(bio1) != 0) {
+      return false;
+    }
+
+    // Test writes and reads starting in the middle of the ring buffer and
+    // wrapping to front.
+    if (BIO_write(bio1, "abcdefgh", 8) != 8 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 2 ||
+        BIO_read(bio2, buf, 3) != 3 ||
+        memcmp(buf, "abc", 3) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 5 ||
+        BIO_write(bio1, "ijklm___", 8) != 5 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 0 ||
+        BIO_read(bio2, buf, sizeof(buf)) != 10 ||
+        memcmp(buf, "defghijklm", 10) != 0 ||
+        BIO_ctrl_get_write_guarantee(bio1) != 10) {
+      return false;
+    }
+
+    // Data may flow from both ends in parallel.
+    if (BIO_write(bio1, "12345", 5) != 5 ||
+        BIO_write(bio2, "67890", 5) != 5 ||
+        BIO_read(bio2, buf, sizeof(buf)) != 5 ||
+        memcmp(buf, "12345", 5) != 0 ||
+        BIO_read(bio1, buf, sizeof(buf)) != 5 ||
+        memcmp(buf, "67890", 5) != 0) {
+      return false;
+    }
+
+    // Closing the write end causes an EOF on the read half, after draining.
+    if (BIO_write(bio1, "12345", 5) != 5 ||
+        !BIO_shutdown_wr(bio1) ||
+        BIO_read(bio2, buf, sizeof(buf)) != 5 ||
+        memcmp(buf, "12345", 5) != 0 ||
+        BIO_read(bio2, buf, sizeof(buf)) != 0) {
+      return false;
+    }
+
+    // A closed write end may not be written to.
+    if (BIO_ctrl_get_write_guarantee(bio1) != 0 ||
+        BIO_write(bio1, "_____", 5) != -1) {
+      return false;
+    }
+
+    uint32_t err = ERR_get_error();
+    if (ERR_GET_LIB(err) != ERR_LIB_BIO ||
+        ERR_GET_REASON(err) != BIO_R_BROKEN_PIPE) {
+      return false;
+    }
+
+    // The other end is still functional.
+    if (BIO_write(bio2, "12345", 5) != 5 ||
+        BIO_read(bio1, buf, sizeof(buf)) != 5 ||
+        memcmp(buf, "12345", 5) != 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+int main() {
   CRYPTO_library_init();
 
 #if defined(OPENSSL_WINDOWS)
@@ -429,8 +413,8 @@ int main(void) {
 
   if (!TestSocketConnect() ||
       !TestPrintf() ||
-      !TestZeroCopyBioPairs() ||
-      !TestASN1()) {
+      !TestASN1() ||
+      !TestPair()) {
     return 1;
   }
 

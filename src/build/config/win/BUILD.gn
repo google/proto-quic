@@ -238,15 +238,11 @@ config("sdk_link") {
 # their own.
 config("common_linker_setup") {
   ldflags = [
+    "/fastfail",
     "/FIXED:NO",
     "/ignore:4199",
     "/ignore:4221",
     "/NXCOMPAT",
-  ]
-
-  ldflags += [
-    # Tell the linker to crash on failures.
-    "/fastfail",
   ]
 
   # ASLR makes debugging with windbg difficult because Chrome.exe and

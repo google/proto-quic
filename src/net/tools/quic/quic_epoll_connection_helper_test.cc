@@ -8,8 +8,6 @@
 #include "net/tools/quic/test_tools/mock_epoll_server.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using net::test::MockEpollServer;
-
 namespace net {
 namespace test {
 namespace {
