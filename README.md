@@ -20,19 +20,20 @@ Google's Ubuntu clone) but Windows and iOS should be coming soon.
 Building on Linux
 -----------------
 
-0. Clone this repository and install dependencies
+0. Clone this repository:
    ```
    git clone https://github.com/google/proto-quic.git
    cd proto-quic
    export PATH=$PATH:`pwd`/depot_tools
    ./proto_quic_tools/sync.sh
    ```
-1. If you're building for the first time, install dependencies.
+   
+1. If you're building for the first time, install dependencies:
    ```
    ./src/build/install-build-deps.sh
    ```
 
-2. Build the QUIC client, server, and tests
+2. Build the QUIC client, server, and tests:
    ```
    cd src
    gn gen out/Default && ninja -C out/Default quic_client quic_server net_unittests

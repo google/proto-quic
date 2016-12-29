@@ -10,7 +10,7 @@ if [ ! -d "$PROTO_QUIC_ROOT" ]; then
     exit 1
 fi
 
-pushd $PROTO_QUIC_ROOT
+cd $PROTO_QUIC_ROOT
 ../proto_quic_tools/cleanup.sh
 
 echo "copying working copies of build files"
@@ -30,4 +30,3 @@ git add ../modified_files
 git add ../proto_quic_tools
 git add ../CONTRIBUTING.md
 git add ../README.md
-popd
