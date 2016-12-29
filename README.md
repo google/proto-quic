@@ -27,7 +27,7 @@ Building on Linux
    export PATH=$PATH:`pwd`/depot_tools
    ./proto_quic_tools/sync.sh
    ```
-   
+
 1. If you're building for the first time, install dependencies:
    ```
    ./src/build/install-build-deps.sh
