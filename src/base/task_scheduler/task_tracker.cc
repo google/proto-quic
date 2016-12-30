@@ -225,9 +225,9 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
             task->traits.shutdown_behavior() !=
             TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN);
     const bool previous_io_allowed =
-        ThreadRestrictions::SetIOAllowed(task->traits.with_file_io());
-    const bool previous_wait_allowed =
-        ThreadRestrictions::SetWaitAllowed(task->traits.with_wait());
+        ThreadRestrictions::SetIOAllowed(task->traits.may_block());
+    const bool previous_wait_allowed = ThreadRestrictions::SetWaitAllowed(
+        task->traits.with_base_sync_primitives());
 
     {
       ScopedSetSequenceTokenForCurrentThread
@@ -288,6 +288,14 @@ bool TaskTracker::IsShutdownComplete() const {
 }
 
 void TaskTracker::SetHasShutdownStartedForTesting() {
+  AutoSchedulerLock auto_lock(shutdown_lock_);
+
+  // Create a dummy |shutdown_event_| to satisfy TaskTracker's expectation of
+  // its existence during shutdown (e.g. in OnBlockingShutdownTasksComplete()).
+  shutdown_event_.reset(
+      new WaitableEvent(WaitableEvent::ResetPolicy::MANUAL,
+                        WaitableEvent::InitialState::NOT_SIGNALED));
+
   state_->StartShutdown();
 }
 

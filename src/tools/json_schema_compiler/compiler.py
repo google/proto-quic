@@ -29,6 +29,7 @@ from js_interface_generator import JsInterfaceGenerator
 import json_schema
 from cpp_namespace_environment import CppNamespaceEnvironment
 from model import Model
+from namespace_resolver import NamespaceResolver
 from schema_loader import SchemaLoader
 
 # Names of supported code generators, as specified on the command-line.
@@ -49,12 +50,7 @@ def GenerateSchema(generator_name,
   api_defs = []
   for file_path in file_paths:
     schema = os.path.relpath(file_path, root)
-    schema_loader = SchemaLoader(
-        root,
-        os.path.dirname(schema),
-        include_rules,
-        cpp_namespace_pattern)
-    api_def = schema_loader.LoadSchema(schema)
+    api_def = SchemaLoader(root).LoadSchema(schema)
 
     # If compiling the C++ model code, delete 'nocompile' nodes.
     if generator_name == 'cpp':
@@ -96,8 +92,11 @@ def GenerateSchema(generator_name,
     filename_base, _ = os.path.splitext(filename)
 
   # Construct the type generator with all the namespaces in this model.
+  schema_dir = os.path.dirname(os.path.relpath(file_paths[0], root))
+  namespace_resolver = NamespaceResolver(root, schema_dir,
+                                         include_rules, cpp_namespace_pattern)
   type_generator = CppTypeGenerator(api_model,
-                                    schema_loader,
+                                    namespace_resolver,
                                     default_namespace)
   if generator_name in ('cpp-bundle-registration', 'cpp-bundle-schema'):
     cpp_bundle_generator = CppBundleGenerator(root,

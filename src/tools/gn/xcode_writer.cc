@@ -353,7 +353,8 @@ void XcodeWriter::CreateSourcesProject(
   for (const SourceFile& source : sources) {
     std::string source_file =
         RebasePath(source.value(), source_dir, absolute_source_path);
-    sources_for_indexing->AddSourceFile(source_file, source_file);
+    sources_for_indexing->AddSourceFileToIndexingTarget(
+        source_file, source_file, CompilerFlags::NONE);
   }
 
   projects_.push_back(std::move(sources_for_indexing));

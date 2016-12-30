@@ -62,7 +62,10 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   std::vector<const HistogramBase*> GetHistograms() const override;
   void Shutdown() override;
   void FlushForTesting() override;
-  void JoinForTesting() override;
+
+  // Joins all threads. Tasks that are already running are allowed to complete
+  // their execution. This can only be called once.
+  void JoinForTesting();
 
  private:
   explicit TaskSchedulerImpl(const WorkerPoolIndexForTraitsCallback&

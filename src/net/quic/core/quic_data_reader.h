@@ -5,10 +5,8 @@
 #ifndef NET_QUIC_CORE_QUIC_DATA_READER_H_
 #define NET_QUIC_CORE_QUIC_DATA_READER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cstddef>
+#include <cstdint>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"

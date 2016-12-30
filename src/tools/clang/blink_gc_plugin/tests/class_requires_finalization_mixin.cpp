@@ -6,32 +6,32 @@
 
 namespace blink {
 
-void MixinFinalizable::trace(Visitor* visitor)
+void MixinFinalizable::Trace(Visitor* visitor)
 {
-    visitor->trace(m_onHeap);
+    visitor->Trace(m_onHeap);
 }
 
-void MixinNotFinalizable::trace(Visitor* visitor)
+void MixinNotFinalizable::Trace(Visitor* visitor)
 {
-    visitor->trace(m_onHeap);
+    visitor->Trace(m_onHeap);
 }
 
-void NeedsFinalizer::trace(Visitor* visitor)
+void NeedsFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
-    MixinFinalizable::trace(visitor);
+    visitor->Trace(m_obj);
+    MixinFinalizable::Trace(visitor);
 }
 
-void HasFinalizer::trace(Visitor* visitor)
+void HasFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
-    MixinFinalizable::trace(visitor);
+    visitor->Trace(m_obj);
+    MixinFinalizable::Trace(visitor);
 }
 
-void NeedsNoFinalization::trace(Visitor* visitor)
+void NeedsNoFinalization::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
-    MixinNotFinalizable::trace(visitor);
+    visitor->Trace(m_obj);
+    MixinNotFinalizable::Trace(visitor);
 }
 
 }

@@ -20,7 +20,7 @@ class DerivedLeft : public Left, public Right { };
 
 class C : public GarbageCollected<C> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 };
 
 class IllFormed : public A, public C { }; // Error

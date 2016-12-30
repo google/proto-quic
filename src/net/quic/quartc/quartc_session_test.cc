@@ -58,7 +58,7 @@ class FakeProofSource : public net::ProofSource {
                 net::QuicVersion quic_version,
                 base::StringPiece chlo_hash,
                 const net::QuicTagVector& connection_options,
-                scoped_refptr<net::ProofSource::Chain>* out_certs,
+                QuicReferenceCountedPointer<net::ProofSource::Chain>* out_certs,
                 net::QuicCryptoProof* proof) override {
     if (success_) {
       std::vector<std::string> certs;

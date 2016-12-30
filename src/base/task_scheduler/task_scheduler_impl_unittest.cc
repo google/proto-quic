@@ -67,7 +67,7 @@ void VerifyTaskEnvironement(const TaskTraits& traits) {
 #if DCHECK_IS_ON()
   // The #if above is required because GetIOAllowed() always returns true when
   // !DCHECK_IS_ON(), even when |traits| don't allow file I/O.
-  EXPECT_EQ(traits.with_file_io(), GetIOAllowed());
+  EXPECT_EQ(traits.may_block(), GetIOAllowed());
 #endif
 
   // Verify that the thread the task is running on is named as expected.
@@ -77,8 +77,8 @@ void VerifyTaskEnvironement(const TaskTraits& traits) {
             current_thread_name.find(
                 traits.priority() == TaskPriority::BACKGROUND ? "Background"
                                                               : "Foreground"));
-  EXPECT_EQ(traits.with_file_io(),
-            current_thread_name.find("FileIO") != std::string::npos);
+  EXPECT_EQ(traits.may_block(),
+            current_thread_name.find("Blocking") != std::string::npos);
 }
 
 void VerifyTaskEnvironementAndSignalEvent(const TaskTraits& traits,
@@ -138,7 +138,7 @@ class ThreadPostingTasks : public SimpleThread {
 };
 
 // Returns a vector with a TraitsExecutionModePair for each valid
-// combination of {ExecutionMode, TaskPriority, WithFileIO()}.
+// combination of {ExecutionMode, TaskPriority, MayBlock()}.
 std::vector<TraitsExecutionModePair> GetTraitsExecutionModePairs() {
   std::vector<TraitsExecutionModePair> params;
 
@@ -154,7 +154,7 @@ std::vector<TraitsExecutionModePair> GetTraitsExecutionModePairs() {
       params.push_back(TraitsExecutionModePair(
           TaskTraits().WithPriority(priority), execution_mode));
       params.push_back(TraitsExecutionModePair(
-          TaskTraits().WithPriority(priority).WithFileIO(), execution_mode));
+          TaskTraits().WithPriority(priority).MayBlock(), execution_mode));
     }
   }
 
@@ -163,16 +163,16 @@ std::vector<TraitsExecutionModePair> GetTraitsExecutionModePairs() {
 
 enum WorkerPoolType {
   BACKGROUND_WORKER_POOL = 0,
-  BACKGROUND_FILE_IO_WORKER_POOL,
+  BACKGROUND_BLOCKING_WORKER_POOL,
   FOREGROUND_WORKER_POOL,
-  FOREGROUND_FILE_IO_WORKER_POOL,
+  FOREGROUND_BLOCKING_WORKER_POOL,
 };
 
 size_t GetThreadPoolIndexForTraits(const TaskTraits& traits) {
-  if (traits.with_file_io()) {
+  if (traits.may_block()) {
     return traits.priority() == TaskPriority::BACKGROUND
-               ? BACKGROUND_FILE_IO_WORKER_POOL
-               : FOREGROUND_FILE_IO_WORKER_POOL;
+               ? BACKGROUND_BLOCKING_WORKER_POOL
+               : FOREGROUND_BLOCKING_WORKER_POOL;
   }
   return traits.priority() == TaskPriority::BACKGROUND ? BACKGROUND_WORKER_POOL
                                                        : FOREGROUND_WORKER_POOL;
@@ -192,16 +192,16 @@ class TaskSchedulerImplTest
     params_vector.emplace_back("Background", ThreadPriority::BACKGROUND,
                                StandbyThreadPolicy::LAZY, 1U, TimeDelta::Max());
 
-    ASSERT_EQ(BACKGROUND_FILE_IO_WORKER_POOL, params_vector.size());
-    params_vector.emplace_back("BackgroundFileIO", ThreadPriority::BACKGROUND,
+    ASSERT_EQ(BACKGROUND_BLOCKING_WORKER_POOL, params_vector.size());
+    params_vector.emplace_back("BackgroundBlocking", ThreadPriority::BACKGROUND,
                                StandbyThreadPolicy::LAZY, 3U, TimeDelta::Max());
 
     ASSERT_EQ(FOREGROUND_WORKER_POOL, params_vector.size());
     params_vector.emplace_back("Foreground", ThreadPriority::NORMAL,
                                StandbyThreadPolicy::LAZY, 4U, TimeDelta::Max());
 
-    ASSERT_EQ(FOREGROUND_FILE_IO_WORKER_POOL, params_vector.size());
-    params_vector.emplace_back("ForegroundFileIO", ThreadPriority::NORMAL,
+    ASSERT_EQ(FOREGROUND_BLOCKING_WORKER_POOL, params_vector.size());
+    params_vector.emplace_back("ForegroundBlocking", ThreadPriority::NORMAL,
                                StandbyThreadPolicy::LAZY, 12U,
                                TimeDelta::Max());
 

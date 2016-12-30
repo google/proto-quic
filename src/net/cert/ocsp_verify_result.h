@@ -27,6 +27,9 @@ struct NET_EXPORT OCSPVerifyResult {
   bool operator==(const OCSPVerifyResult& other) const;
 
   enum ResponseStatus {
+    // OCSP verification was not checked on this connection.
+    NOT_CHECKED,
+
     // No OCSPResponse was stapled.
     MISSING,
 
@@ -56,7 +59,7 @@ struct NET_EXPORT OCSPVerifyResult {
 
   };
 
-  ResponseStatus response_status = MISSING;
+  ResponseStatus response_status = NOT_CHECKED;
 
   // The strictest CertStatus matching the certificate (REVOKED > UNKNOWN >
   // GOOD). Only valid if |response_status| = PROVIDED.

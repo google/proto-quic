@@ -99,13 +99,15 @@ def ParseGTestListTests(raw_list):
   for test in raw_list:
     if not test:
       continue
-    if test[0] != ' ':
+    if not test.startswith(' '):
       test_case = test.split()[0]
       if test_case.endswith('.'):
         current = test_case
-    elif not 'YOU HAVE' in test:
-      test_name = test.split()[0]
-      ret += [current + test_name]
+    else:
+      test = test.strip()
+      if test and not 'YOU HAVE' in test:
+        test_name = test.split()[0]
+        ret += [current + test_name]
   return ret
 
 

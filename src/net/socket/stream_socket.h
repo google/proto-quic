@@ -89,11 +89,11 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
   // Enables use of TCP FastOpen for the underlying transport socket.
   virtual void EnableTCPFastOpenIfSupported() {}
 
-  // Returns true if NPN was negotiated during the connection of this socket.
-  virtual bool WasNpnNegotiated() const = 0;
+  // Returns true if ALPN was negotiated during the connection of this socket.
+  virtual bool WasAlpnNegotiated() const = 0;
 
-  // Returns the protocol negotiated via NPN for this socket, or
-  // kProtoUnknown will be returned if NPN is not applicable.
+  // Returns the protocol negotiated via ALPN for this socket, or
+  // kProtoUnknown will be returned if ALPN is not applicable.
   virtual NextProto GetNegotiatedProtocol() const = 0;
 
   // Gets the SSL connection information of the socket.  Returns false if

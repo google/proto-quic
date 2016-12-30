@@ -6,11 +6,12 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/crypto/cert_compressor.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using base::IntToString;
 using std::string;
 
 namespace net {
@@ -30,7 +31,8 @@ class QuicCompressedCertsCacheTest : public testing::Test {
 
 TEST_F(QuicCompressedCertsCacheTest, CacheHit) {
   std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
-  scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
+  QuicReferenceCountedPointer<ProofSource::Chain> chain(
+      new ProofSource::Chain(certs));
   string common_certs = "common certs";
   string cached_certs = "cached certs";
   string compressed = "compressed cert";
@@ -45,18 +47,25 @@ TEST_F(QuicCompressedCertsCacheTest, CacheHit) {
 
 TEST_F(QuicCompressedCertsCacheTest, CacheMiss) {
   std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
-  scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
+  QuicReferenceCountedPointer<ProofSource::Chain> chain(
+      new ProofSource::Chain(certs));
+
   string common_certs = "common certs";
   string cached_certs = "cached certs";
   string compressed = "compressed cert";
 
   certs_cache_.Insert(chain, common_certs, cached_certs, compressed);
 
-  EXPECT_EQ(nullptr, certs_cache_.GetCompressedCert(
-                         chain, "mismatched common certs", cached_certs));
-  EXPECT_EQ(nullptr, certs_cache_.GetCompressedCert(chain, common_certs,
-                                                    "mismatched cached certs"));
-  scoped_refptr<ProofSource::Chain> chain2(new ProofSource::Chain(certs));
+  EXPECT_EQ(nullptr,
+            certs_cache_.GetCompressedCert(chain, "mismatched common certs",
+                                           cached_certs));
+  EXPECT_EQ(nullptr,
+            certs_cache_.GetCompressedCert(chain, common_certs,
+                                           "mismatched cached certs"));
+
+  // A different chain though with equivalent certs should get a cache miss.
+  QuicReferenceCountedPointer<ProofSource::Chain> chain2(
+      new ProofSource::Chain(certs));
   EXPECT_EQ(nullptr,
             certs_cache_.GetCompressedCert(chain2, common_certs, cached_certs));
 }
@@ -65,7 +74,8 @@ TEST_F(QuicCompressedCertsCacheTest, CacheMissDueToEviction) {
   // Test cache returns a miss when a queried uncompressed certs was cached but
   // then evicted.
   std::vector<string> certs = {"leaf cert", "intermediate cert", "root cert"};
-  scoped_refptr<ProofSource::Chain> chain(new ProofSource::Chain(certs));
+  QuicReferenceCountedPointer<ProofSource::Chain> chain(
+      new ProofSource::Chain(certs));
 
   string common_certs = "common certs";
   string cached_certs = "cached certs";
@@ -77,7 +87,8 @@ TEST_F(QuicCompressedCertsCacheTest, CacheMissDueToEviction) {
   for (unsigned int i = 0;
        i < QuicCompressedCertsCache::kQuicCompressedCertsCacheSize; i++) {
     EXPECT_EQ(certs_cache_.Size(), i + 1);
-    certs_cache_.Insert(chain, base::IntToString(i), "", base::IntToString(i));
+    certs_cache_.Insert(chain, QuicTextUtils::Uint64ToString(i), "",
+                        QuicTextUtils::Uint64ToString(i));
   }
   EXPECT_EQ(certs_cache_.MaxSize(), certs_cache_.Size());
 

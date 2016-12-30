@@ -81,6 +81,18 @@ class GtestTestInstanceTests(unittest.TestCase):
     ]
     self.assertEqual(expected, actual)
 
+  def testParseGTestListTests_emptyTestName(self):
+    raw_output = [
+      'TestCase.',
+      '  ',
+      '  nonEmptyTestName',
+    ]
+    actual = gtest_test_instance.ParseGTestListTests(raw_output)
+    expected = [
+      'TestCase.nonEmptyTestName',
+    ]
+    self.assertEqual(expected, actual)
+
   def testParseGTestOutput_pass(self):
     raw_output = [
       '[ RUN      ] FooTest.Bar',

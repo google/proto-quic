@@ -40,16 +40,10 @@ class QuicClientPeer;
 class QuicSimpleClient : public QuicClientBase,
                          public QuicChromiumPacketReader::Visitor {
  public:
-  // Create a quic client, which will have events managed by an externally owned
-  // EpollServer.
-  QuicSimpleClient(IPEndPoint server_address,
+  // Create a quic client, which will have events managed by the message loop.
+  QuicSimpleClient(QuicSocketAddress server_address,
                    const QuicServerId& server_id,
                    const QuicVersionVector& supported_versions,
-                   std::unique_ptr<ProofVerifier> proof_verifier);
-  QuicSimpleClient(IPEndPoint server_address,
-                   const QuicServerId& server_id,
-                   const QuicVersionVector& supported_versions,
-                   const QuicConfig& config,
                    std::unique_ptr<ProofVerifier> proof_verifier);
 
   ~QuicSimpleClient() override;
@@ -87,7 +81,7 @@ class QuicSimpleClient : public QuicClientBase,
   QuicChromiumClock clock_;
 
   // Address of the client if the client is connected to the server.
-  IPEndPoint client_address_;
+  QuicSocketAddress client_address_;
 
   // UDP socket connected to the server.
   std::unique_ptr<UDPClientSocket> socket_;

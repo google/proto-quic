@@ -6,31 +6,31 @@
 
 namespace blink {
 
-void ExternBase::trace(Visitor* visitor) {
-  traceImpl(visitor);
+void ExternBase::Trace(Visitor* visitor) {
+  TraceImpl(visitor);
 }
 
-void ExternBase::trace(InlinedGlobalMarkingVisitor visitor) {
-  traceImpl(visitor);
-}
-
-template <typename VisitorDispatcher>
-inline void ExternBase::traceImpl(VisitorDispatcher visitor) {
-  visitor->trace(x_base_);
-}
-
-void ExternDerived::trace(Visitor* visitor) {
-  traceImpl(visitor);
-}
-
-void ExternDerived::trace(InlinedGlobalMarkingVisitor visitor) {
-  traceImpl(visitor);
+void ExternBase::Trace(InlinedGlobalMarkingVisitor visitor) {
+  TraceImpl(visitor);
 }
 
 template <typename VisitorDispatcher>
-inline void ExternDerived::traceImpl(VisitorDispatcher visitor) {
-  visitor->trace(x_derived_);
-  ExternBase::trace(visitor);
+inline void ExternBase::TraceImpl(VisitorDispatcher visitor) {
+  visitor->Trace(x_base_);
+}
+
+void ExternDerived::Trace(Visitor* visitor) {
+  TraceImpl(visitor);
+}
+
+void ExternDerived::Trace(InlinedGlobalMarkingVisitor visitor) {
+  TraceImpl(visitor);
+}
+
+template <typename VisitorDispatcher>
+inline void ExternDerived::TraceImpl(VisitorDispatcher visitor) {
+  visitor->Trace(x_derived_);
+  ExternBase::Trace(visitor);
 }
 
 }

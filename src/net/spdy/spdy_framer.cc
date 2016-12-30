@@ -128,20 +128,6 @@ const size_t SpdyFramer::kControlFrameBufferSize = 19;
   } while (false)
 #endif
 
-SettingsFlagsAndId SettingsFlagsAndId::FromWireFormat(uint32_t wire) {
-  return SettingsFlagsAndId(base::NetToHost32(wire) >> 24,
-                            base::NetToHost32(wire) & 0x00ffffff);
-}
-
-SettingsFlagsAndId::SettingsFlagsAndId(uint8_t flags, uint32_t id)
-    : flags_(flags), id_(id & 0x00ffffff) {
-  SPDY_BUG_IF(id > (1u << 24)) << "HTTP2 setting ID too large: " << id;
-}
-
-uint32_t SettingsFlagsAndId::GetWireFormat() const {
-  return base::HostToNet32(id_ & 0x00ffffff) | base::HostToNet32(flags_ << 24);
-}
-
 bool SpdyFramerVisitorInterface::OnGoAwayFrameData(const char* goaway_data,
                                                    size_t len) {
   return true;
@@ -244,16 +230,15 @@ SpdyFramer::SpdyState SpdyFramer::state() const {
 }
 
 size_t SpdyFramer::GetDataFrameMinimumSize() const {
-  return SpdyConstants::kDataFrameMinimumSize;
+  return kDataFrameMinimumSize;
 }
 
 // Size, in bytes, of the control frame header.
 size_t SpdyFramer::GetFrameHeaderSize() const {
-  return SpdyConstants::kFrameHeaderSize;
+  return kFrameHeaderSize;
 }
 
-// TODO(jamessynge): Rename this to GetRstStreamSize as the frame is fixed size.
-size_t SpdyFramer::GetRstStreamMinimumSize() const {
+size_t SpdyFramer::GetRstStreamSize() const {
   // Size, in bytes, of a RST_STREAM frame.
   // Calculated as:
   // frame prefix + 4 (status code)
@@ -330,7 +315,7 @@ size_t SpdyFramer::GetFrameMinimumSize() const {
 }
 
 size_t SpdyFramer::GetFrameMaximumSize() const {
-  return send_frame_size_limit_ + SpdyConstants::kFrameHeaderSize;
+  return send_frame_size_limit_ + kFrameHeaderSize;
 }
 
 size_t SpdyFramer::GetDataFrameMaximumPayload() const {
@@ -663,7 +648,7 @@ void SpdyFramer::SpdySettingsScratch::Reset() {
 SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
                                               int frame_type_field,
                                               size_t payload_length_field) {
-  if (!SpdyConstants::IsValidFrameType(frame_type_field)) {
+  if (!IsValidFrameType(frame_type_field)) {
     // We ignore unknown frame types for extensibility, as long as
     // the rest of the control frame header is valid.
     // We rely on the visitor to check validity of current_frame_stream_id_.
@@ -690,10 +675,9 @@ SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
     return DATA;
   }
 
-  SpdyFrameType frame_type = SpdyConstants::ParseFrameType(frame_type_field);
+  SpdyFrameType frame_type = ParseFrameType(frame_type_field);
 
-  if (!SpdyConstants::IsValidHTTP2FrameStreamId(current_frame_stream_id_,
-                                                frame_type)) {
+  if (!IsValidHTTP2FrameStreamId(current_frame_stream_id_, frame_type)) {
     DLOG(ERROR) << "The framer received an invalid streamID of "
                 << current_frame_stream_id_ << " for a frame of type "
                 << FrameTypeToString(frame_type);
@@ -743,7 +727,7 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
                          current_frame_buffer_.len());
   bool is_control_frame = false;
 
-  int control_frame_type_field = SpdyConstants::kDataFrameType;
+  int control_frame_type_field = kDataFrameType;
   // ProcessControlFrameHeader() will set current_frame_type_ to the
   // correct value if this is a valid control frame.
   current_frame_type_ = DATA;
@@ -757,7 +741,7 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
   // We check control_frame_type_field's validity in
   // ProcessControlFrameHeader().
   control_frame_type_field = control_frame_type_field_uint8;
-  is_control_frame = control_frame_type_field != SpdyConstants::kDataFrameType;
+  is_control_frame = control_frame_type_field != kDataFrameType;
 
   current_frame_length_ = length_field + GetFrameHeaderSize();
 
@@ -826,7 +810,7 @@ void SpdyFramer::ProcessControlFrameHeader(int control_frame_type_field) {
   // Do some sanity checking on the control frame sizes and flags.
   switch (current_frame_type_) {
     case RST_STREAM:
-      if (current_frame_length_ != GetRstStreamMinimumSize()) {
+      if (current_frame_length_ != GetRstStreamSize()) {
         set_error(SPDY_INVALID_CONTROL_FRAME_SIZE);
       } else if (current_frame_flags_ != 0) {
         VLOG(1) << "Undefined frame flags for RST_STREAM frame: " << hex
@@ -1373,14 +1357,14 @@ bool SpdyFramer::ProcessSetting(const char* data) {
 
   // Validate id.
   SpdySettingsIds setting_id;
-  if (!SpdyConstants::ParseSettingsId(id_field, &setting_id)) {
+  if (!ParseSettingsId(id_field, &setting_id)) {
     DLOG(WARNING) << "Unknown SETTINGS ID: " << id_field;
     // Ignore unknown settings for extensibility.
     return true;
   }
 
   // Validation succeeded. Pass on to visitor.
-  visitor_->OnSetting(setting_id, /*flags=*/0, value);
+  visitor_->OnSetting(setting_id, value);
   return true;
 }
 
@@ -1483,8 +1467,8 @@ size_t SpdyFramer::ProcessGoAwayFramePayload(const char* data, size_t len) {
       uint32_t status_raw = GOAWAY_OK;
       successful_read = reader.ReadUInt32(&status_raw);
       DCHECK(successful_read);
-      if (SpdyConstants::IsValidGoAwayStatus(status_raw)) {
-        status = SpdyConstants::ParseGoAwayStatus(status_raw);
+      if (IsValidGoAwayStatus(status_raw)) {
+        status = ParseGoAwayStatus(status_raw);
       } else {
         // Treat unrecognized status codes as INTERNAL_ERROR as
         // recommended by the HTTP/2 spec.
@@ -1523,7 +1507,7 @@ size_t SpdyFramer::ProcessRstStreamFramePayload(const char* data, size_t len) {
 
   // Check if we had already read enough bytes to parse the fixed-length portion
   // of the RST_STREAM frame.
-  const size_t header_size = GetRstStreamMinimumSize();
+  const size_t header_size = GetRstStreamSize();
   size_t unread_header_bytes = header_size - current_frame_buffer_.len();
   bool already_parsed_header = (unread_header_bytes == 0);
   if (!already_parsed_header) {
@@ -1541,8 +1525,8 @@ size_t SpdyFramer::ProcessRstStreamFramePayload(const char* data, size_t len) {
       uint32_t status_raw = status;
       bool successful_read = reader.ReadUInt32(&status_raw);
       DCHECK(successful_read);
-      if (SpdyConstants::IsValidRstStreamStatus(status_raw)) {
-        status = SpdyConstants::ParseRstStreamStatus(status_raw);
+      if (IsValidRstStreamStatus(status_raw)) {
+        status = ParseRstStreamStatus(status_raw);
       } else {
         // Treat unrecognized status codes as INTERNAL_ERROR as
         // recommended by the HTTP/2 spec.
@@ -1888,18 +1872,12 @@ SpdySerializedFrame SpdyFramer::SerializeDataFrameHeaderWithPaddingLengthField(
 
 SpdySerializedFrame SpdyFramer::SerializeRstStream(
     const SpdyRstStreamIR& rst_stream) const {
-  // TODO(jgraettinger): For now, Chromium will support parsing RST_STREAM
-  // payloads, but will not emit them. This is used for draft HTTP/2,
-  // which doesn't currently include RST_STREAM payloads. GFE flags have been
-  // commented but left in place to simplify future patching.
-  // Compute the output buffer size, taking opaque data into account.
-  size_t expected_length = GetRstStreamMinimumSize();
+  size_t expected_length = GetRstStreamSize();
   SpdyFrameBuilder builder(expected_length);
 
   builder.BeginNewFrame(*this, RST_STREAM, 0, rst_stream.stream_id());
 
-  builder.WriteUInt32(
-      SpdyConstants::SerializeRstStreamStatus(rst_stream.status()));
+  builder.WriteUInt32(SerializeRstStreamStatus(rst_stream.status()));
 
   DCHECK_EQ(expected_length, builder.length());
   return builder.take();
@@ -1912,7 +1890,7 @@ SpdySerializedFrame SpdyFramer::SerializeSettings(
   if (settings.is_ack()) {
     flags |= SETTINGS_FLAG_ACK;
   }
-  const SpdySettingsIR::ValueMap* values = &(settings.values());
+  const SettingsMap* values = &(settings.values());
 
   int setting_size = 6;
   // Size, in bytes, of this SETTINGS frame.
@@ -1927,12 +1905,12 @@ SpdySerializedFrame SpdyFramer::SerializeSettings(
   }
 
   DCHECK_EQ(GetSettingsMinimumSize(), builder.length());
-  for (SpdySettingsIR::ValueMap::const_iterator it = values->begin();
-       it != values->end(); ++it) {
+  for (SettingsMap::const_iterator it = values->begin(); it != values->end();
+       ++it) {
     int setting_id = it->first;
     DCHECK_GE(setting_id, 0);
     builder.WriteUInt16(static_cast<uint16_t>(setting_id));
-    builder.WriteUInt32(it->second.value);
+    builder.WriteUInt32(it->second);
   }
   DCHECK_EQ(size, builder.length());
   return builder.take();
@@ -1964,7 +1942,7 @@ SpdySerializedFrame SpdyFramer::SerializeGoAway(
   builder.WriteUInt32(goaway.last_good_stream_id());
 
   // GOAWAY frames also specify the error status code.
-  builder.WriteUInt32(SpdyConstants::SerializeGoAwayStatus(goaway.status()));
+  builder.WriteUInt32(SerializeGoAwayStatus(goaway.status()));
 
   // GOAWAY frames may also specify opaque data.
   if (!goaway.description().empty()) {
@@ -2253,12 +2231,101 @@ class FrameSerializationVisitor : public SpdyFrameVisitor {
   SpdySerializedFrame frame_;
 };
 
+// TODO(diannahu): Use also in frame serialization.
+class FlagsSerializationVisitor : public SpdyFrameVisitor {
+ public:
+  void VisitData(const SpdyDataIR& data) override {
+    flags_ = DATA_FLAG_NONE;
+    if (data.fin()) {
+      flags_ |= DATA_FLAG_FIN;
+    }
+    if (data.padded()) {
+      flags_ |= DATA_FLAG_PADDED;
+    }
+  }
+
+  void VisitRstStream(const SpdyRstStreamIR& rst_stream) override {
+    flags_ = kNoFlags;
+  }
+
+  void VisitSettings(const SpdySettingsIR& settings) override {
+    flags_ = kNoFlags;
+    if (settings.is_ack()) {
+      flags_ |= SETTINGS_FLAG_ACK;
+    }
+  }
+
+  void VisitPing(const SpdyPingIR& ping) override {
+    flags_ = kNoFlags;
+    if (ping.is_ack()) {
+      flags_ |= PING_FLAG_ACK;
+    }
+  }
+
+  void VisitGoAway(const SpdyGoAwayIR& goaway) override { flags_ = kNoFlags; }
+
+  // TODO(diannahu): The END_HEADERS flag is incorrect for HEADERS that require
+  //     CONTINUATION frames.
+  void VisitHeaders(const SpdyHeadersIR& headers) override {
+    flags_ = HEADERS_FLAG_END_HEADERS;
+    if (headers.fin()) {
+      flags_ |= CONTROL_FLAG_FIN;
+    }
+    if (headers.padded()) {
+      flags_ |= HEADERS_FLAG_PADDED;
+    }
+    if (headers.has_priority()) {
+      flags_ |= HEADERS_FLAG_PRIORITY;
+    }
+  }
+
+  void VisitWindowUpdate(const SpdyWindowUpdateIR& window_update) override {
+    flags_ = kNoFlags;
+  }
+
+  void VisitBlocked(const SpdyBlockedIR& blocked) override {
+    flags_ = kNoFlags;
+  }
+
+  // TODO(diannahu): The END_PUSH_PROMISE flag is incorrect for PUSH_PROMISEs
+  //     that require CONTINUATION frames.
+  void VisitPushPromise(const SpdyPushPromiseIR& push_promise) override {
+    flags_ = PUSH_PROMISE_FLAG_END_PUSH_PROMISE;
+    if (push_promise.padded()) {
+      flags_ |= PUSH_PROMISE_FLAG_PADDED;
+    }
+  }
+
+  // TODO(diannahu): The END_HEADERS flag is incorrect for CONTINUATIONs that
+  //     require CONTINUATION frames.
+  void VisitContinuation(const SpdyContinuationIR& continuation) override {
+    flags_ = HEADERS_FLAG_END_HEADERS;
+  }
+
+  void VisitAltSvc(const SpdyAltSvcIR& altsvc) override { flags_ = kNoFlags; }
+
+  void VisitPriority(const SpdyPriorityIR& priority) override {
+    flags_ = kNoFlags;
+  }
+
+  uint8_t flags() const { return flags_; }
+
+ private:
+  uint8_t flags_ = kNoFlags;
+};
+
 }  // namespace
 
 SpdySerializedFrame SpdyFramer::SerializeFrame(const SpdyFrameIR& frame) {
   FrameSerializationVisitor visitor(this);
   frame.Visit(&visitor);
   return visitor.ReleaseSerializedFrame();
+}
+
+uint8_t SpdyFramer::GetSerializedFlags(const SpdyFrameIR& frame) {
+  FlagsSerializationVisitor visitor;
+  frame.Visit(&visitor);
+  return visitor.flags();
 }
 
 size_t SpdyFramer::GetNumberRequiredContinuationFrames(size_t size) {

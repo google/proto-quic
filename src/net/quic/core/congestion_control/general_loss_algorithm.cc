@@ -100,7 +100,7 @@ void GeneralLossAlgorithm::DetectLosses(
     // there are retransmittable packets in flight.
     // This also implements a timer-protected variant of FACK.
     if ((!it->retransmittable_frames.empty() &&
-         (FLAGS_quic_largest_sent_retransmittable
+         (FLAGS_quic_reloadable_flag_quic_largest_sent_retransmittable
               ? unacked_packets.largest_sent_retransmittable_packet()
               : unacked_packets.largest_sent_packet()) <=
              largest_newly_acked) ||

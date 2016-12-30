@@ -14,7 +14,6 @@
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/metrics/field_trial.h"
 #include "base/run_loop.h"
 #include "base/test/histogram_tester.h"
 #include "net/base/port_util.h"
@@ -1218,13 +1217,9 @@ TEST_F(HttpStreamFactoryTest, QuicDisablePreConnectIfZeroRtt) {
   }
 }
 
-// Verify that the proxy delegate can disable preconnect jobs to only the proxy
-// servers that support request priorities.
-TEST_F(HttpStreamFactoryTest, ProxyDelegateDisablesPreconnect) {
-  base::FieldTrialList field_trial_list(nullptr);
-  base::FieldTrialList::CreateFieldTrial(
-      "NetAllowOnlyOnePreconnectToProxyServers", "Enabled");
-
+// Verify that only one preconnect job succeeds to a proxy server that supports
+// request priorities.
+TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
   for (bool set_http_server_properties : {false, true}) {
     for (int num_streams = 1; num_streams < 3; ++num_streams) {
       base::HistogramTester histogram_tester;
@@ -1245,6 +1240,7 @@ TEST_F(HttpStreamFactoryTest, ProxyDelegateDisablesPreconnect) {
       params.enable_quic = true;
       params.proxy_service = proxy_service.get();
       params.http_server_properties = &http_server_properties;
+      ASSERT_TRUE(params.restrict_to_one_preconnect_for_proxies);
 
       std::unique_ptr<HttpNetworkSession> session(
           new HttpNetworkSession(params));
@@ -1610,10 +1606,6 @@ TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxy) {
 // Verifies that once a stream has been created to a proxy server (that supports
 // request priorities) the next preconnect job can again open new sockets.
 TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxyWithPreconnects) {
-  base::FieldTrialList field_trial_list(nullptr);
-  base::FieldTrialList::CreateFieldTrial(
-      "NetAllowOnlyOnePreconnectToProxyServers", "Enabled");
-
   SpdySessionDependencies session_deps(
       ProxyService::CreateFixed("https://myproxy.org:443"));
 

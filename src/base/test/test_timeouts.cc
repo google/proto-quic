@@ -46,7 +46,10 @@ void InitializeTimeout(const char* switch_name, int min_value, int* value) {
     std::string string_value(base::CommandLine::ForCurrentProcess()->
          GetSwitchValueASCII(switch_name));
     int timeout;
-    base::StringToInt(string_value, &timeout);
+    if (string_value == TestTimeouts::kNoTimeoutSwitchValue)
+      timeout = kAlmostInfiniteTimeoutMs;
+    else
+      base::StringToInt(string_value, &timeout);
     *value = std::max(*value, timeout);
   }
   *value *= kTimeoutMultiplier;
@@ -63,6 +66,9 @@ void InitializeTimeout(const char* switch_name, int* value) {
 }
 
 }  // namespace
+
+// static
+constexpr const char TestTimeouts::kNoTimeoutSwitchValue[];
 
 // static
 bool TestTimeouts::initialized_ = false;

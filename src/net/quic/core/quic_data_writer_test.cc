@@ -4,12 +4,9 @@
 
 #include "net/quic/core/quic_data_writer.h"
 
-#include <stdint.h>
-
-#include <memory>
+#include <cstdint>
 
 #include "net/quic/core/quic_data_reader.h"
-#include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {

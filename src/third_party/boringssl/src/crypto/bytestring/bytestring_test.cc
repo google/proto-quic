@@ -28,7 +28,6 @@
 #include "internal.h"
 #include "../internal.h"
 
-namespace bssl {
 
 static bool TestSkip() {
   static const uint8_t kData[] = {1, 2, 3};
@@ -317,7 +316,7 @@ static bool TestCBBBasic() {
 }
 
 static bool TestCBBFixed() {
-  ScopedCBB cbb;
+  bssl::ScopedCBB cbb;
   uint8_t buf[1];
   uint8_t *out_buf;
   size_t out_size;
@@ -401,7 +400,7 @@ static bool TestCBBPrefixed() {
 }
 
 static bool TestCBBDiscardChild() {
-  ScopedCBB cbb;
+  bssl::ScopedCBB cbb;
   CBB contents, inner_contents, inner_inner_contents;
 
   if (!CBB_init(cbb.get(), 0) ||
@@ -804,7 +803,7 @@ static bool TestCBBReserve() {
   uint8_t buf[10];
   uint8_t *ptr;
   size_t len;
-  ScopedCBB cbb;
+  bssl::ScopedCBB cbb;
   if (!CBB_init_fixed(cbb.get(), buf, sizeof(buf)) ||
       // Too large.
       CBB_reserve(cbb.get(), &ptr, 11)) {
@@ -827,7 +826,7 @@ static bool TestCBBReserve() {
 
 static bool TestStickyError() {
   // Write an input that exceeds the limit for its length prefix.
-  ScopedCBB cbb;
+  bssl::ScopedCBB cbb;
   CBB child;
   static const uint8_t kZeros[256] = {0};
   if (!CBB_init(cbb.get(), 0) ||
@@ -890,7 +889,83 @@ static bool TestStickyError() {
   return true;
 }
 
-static int Main() {
+static bool TestBitString() {
+  static const std::vector<uint8_t> kValidBitStrings[] = {
+      {0x00},                                      // 0 bits
+      {0x07, 0x80},                                // 1 bit
+      {0x04, 0xf0},                                // 4 bits
+      {0x00, 0xff},                                // 8 bits
+      {0x06, 0xff, 0xff, 0xff, 0xff, 0xff, 0xc0},  // 42 bits
+  };
+  for (const auto& test : kValidBitStrings) {
+    CBS cbs;
+    CBS_init(&cbs, test.data(), test.size());
+    if (!CBS_is_valid_asn1_bitstring(&cbs)) {
+      return false;
+    }
+  }
+
+  static const std::vector<uint8_t> kInvalidBitStrings[] = {
+      // BIT STRINGs always have a leading byte.
+      std::vector<uint8_t>{},
+      // It's not possible to take an unused bit off the empty string.
+      {0x01},
+      // There can be at most 7 unused bits.
+      {0x08, 0xff},
+      {0xff, 0xff},
+      // All unused bits must be cleared.
+      {0x06, 0xff, 0xc1},
+  };
+  for (const auto& test : kInvalidBitStrings) {
+    CBS cbs;
+    CBS_init(&cbs, test.data(), test.size());
+    if (CBS_is_valid_asn1_bitstring(&cbs)) {
+      return false;
+    }
+
+    // CBS_asn1_bitstring_has_bit returns false on invalid inputs.
+    if (CBS_asn1_bitstring_has_bit(&cbs, 0)) {
+      return false;
+    }
+  }
+
+  static const struct {
+    std::vector<uint8_t> in;
+    unsigned bit;
+    bool bit_set;
+  } kBitTests[] = {
+      // Basic tests.
+      {{0x00}, 0, false},
+      {{0x07, 0x80}, 0, true},
+      {{0x06, 0x0f, 0x40}, 0, false},
+      {{0x06, 0x0f, 0x40}, 1, false},
+      {{0x06, 0x0f, 0x40}, 2, false},
+      {{0x06, 0x0f, 0x40}, 3, false},
+      {{0x06, 0x0f, 0x40}, 4, true},
+      {{0x06, 0x0f, 0x40}, 5, true},
+      {{0x06, 0x0f, 0x40}, 6, true},
+      {{0x06, 0x0f, 0x40}, 7, true},
+      {{0x06, 0x0f, 0x40}, 8, false},
+      {{0x06, 0x0f, 0x40}, 9, true},
+      // Out-of-bounds bits return 0.
+      {{0x06, 0x0f, 0x40}, 10, false},
+      {{0x06, 0x0f, 0x40}, 15, false},
+      {{0x06, 0x0f, 0x40}, 16, false},
+      {{0x06, 0x0f, 0x40}, 1000, false},
+  };
+  for (const auto& test : kBitTests) {
+    CBS cbs;
+    CBS_init(&cbs, test.in.data(), test.in.size());
+    if (CBS_asn1_bitstring_has_bit(&cbs, test.bit) !=
+        static_cast<int>(test.bit_set)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+int main() {
   CRYPTO_library_init();
 
   if (!TestSkip() ||
@@ -911,16 +986,11 @@ static int Main() {
       !TestGetOptionalASN1Bool() ||
       !TestZero() ||
       !TestCBBReserve() ||
-      !TestStickyError()) {
+      !TestStickyError() ||
+      !TestBitString()) {
     return 1;
   }
 
   printf("PASS\n");
   return 0;
-}
-
-}  // namespace bssl
-
-int main() {
-  return bssl::Main();
 }

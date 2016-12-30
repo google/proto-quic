@@ -447,9 +447,6 @@ config("tsan_flags") {
   }
 }
 
-# UBSan is still in bring-up.  Chrome builds with is_ubsan=true, but if you
-# set is_ubsan=true is_ubsan_no_recover = true, then many tests are still
-# failing.
 config("ubsan_flags") {
   cflags = []
   if (is_ubsan) {
@@ -462,7 +459,6 @@ config("ubsan_flags") {
       # enabled. See http://crbug.com/489901
       # "-fsanitize=bounds",
       "-fsanitize=float-divide-by-zero",
-      "-fsanitize=float-cast-overflow",
       "-fsanitize=integer-divide-by-zero",
       "-fsanitize=null",
       "-fsanitize=object-size",

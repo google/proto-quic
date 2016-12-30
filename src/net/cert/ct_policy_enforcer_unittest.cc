@@ -85,11 +85,11 @@ class CTPolicyEnforcerTest : public ::testing::Test {
         sct->log_id = std::string(crypto::kSHA256Length, static_cast<char>(i));
 
       if (timestamp_past_enforcement_date) {
-        sct->timestamp =
-            base::Time::FromUTCExploded({2015, 8, 0, 15, 0, 0, 0, 0});
+        EXPECT_TRUE(base::Time::FromUTCExploded({2015, 8, 0, 15, 0, 0, 0, 0},
+                                                &sct->timestamp));
       } else {
-        sct->timestamp =
-            base::Time::FromUTCExploded({2015, 6, 0, 15, 0, 0, 0, 0});
+        EXPECT_TRUE(base::Time::FromUTCExploded({2015, 6, 0, 15, 0, 0, 0, 0},
+                                                &sct->timestamp));
       }
 
       verified_scts->push_back(sct);
@@ -111,10 +111,11 @@ class CTPolicyEnforcerTest : public ::testing::Test {
     sct->origin = desired_origin;
     sct->log_id = std::string(kCertlyLogID, crypto::kSHA256Length);
     if (timestamp_after_disqualification_date) {
-      sct->timestamp =
-          base::Time::FromUTCExploded({2016, 4, 0, 16, 0, 0, 0, 0});
+      EXPECT_TRUE(base::Time::FromUTCExploded({2016, 4, 0, 16, 0, 0, 0, 0},
+                                              &sct->timestamp));
     } else {
-      sct->timestamp = base::Time::FromUTCExploded({2016, 4, 0, 1, 0, 0, 0, 0});
+      EXPECT_TRUE(base::Time::FromUTCExploded({2016, 4, 0, 1, 0, 0, 0, 0},
+                                              &sct->timestamp));
     }
 
     verified_scts->push_back(sct);
@@ -128,6 +129,14 @@ class CTPolicyEnforcerTest : public ::testing::Test {
     desired_log_ids.push_back(google_log_id_);
     FillListWithSCTsOfOrigin(desired_origin, num_scts, desired_log_ids, true,
                              verified_scts);
+  }
+
+  base::Time CreateTime(const base::Time::Exploded& exploded) {
+    base::Time result;
+    if (!base::Time::FromUTCExploded(exploded, &result)) {
+      ADD_FAILURE() << "Failed FromUTCExploded";
+    }
+    return result;
   }
 
  protected:
@@ -450,38 +459,48 @@ TEST_F(CTPolicyEnforcerTest,
   ASSERT_TRUE(private_key);
 
   // Test multiple validity periods
+  base::Time time_2015_3_0_25_11_25_0_0 =
+      CreateTime({2015, 3, 0, 25, 11, 25, 0, 0});
+
+  base::Time time_2016_6_0_6_11_25_0_0 =
+      CreateTime({2016, 6, 0, 6, 11, 25, 0, 0});
+
+  base::Time time_2016_6_0_25_11_25_0_0 =
+      CreateTime({2016, 6, 0, 25, 11, 25, 0, 0});
+
+  base::Time time_2016_6_0_27_11_25_0_0 =
+      CreateTime({2016, 6, 0, 27, 11, 25, 0, 0});
+
+  base::Time time_2017_6_0_25_11_25_0_0 =
+      CreateTime({2017, 6, 0, 25, 11, 25, 0, 0});
+
+  base::Time time_2017_6_0_28_11_25_0_0 =
+      CreateTime({2017, 6, 0, 28, 11, 25, 0, 0});
+
+  base::Time time_2018_6_0_25_11_25_0_0 =
+      CreateTime({2018, 6, 0, 25, 11, 25, 0, 0});
+
+  base::Time time_2018_6_0_27_11_25_0_0 =
+      CreateTime({2018, 6, 0, 27, 11, 25, 0, 0});
+
   const struct TestData {
     base::Time validity_start;
     base::Time validity_end;
     size_t scts_required;
   } kTestData[] = {{// Cert valid for 14 months, needs 2 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2016, 6, 0, 6, 11, 25, 0, 0}),
-                    2},
+                    time_2015_3_0_25_11_25_0_0, time_2016_6_0_6_11_25_0_0, 2},
                    {// Cert valid for exactly 15 months, needs 3 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2016, 6, 0, 25, 11, 25, 0, 0}),
-                    3},
+                    time_2015_3_0_25_11_25_0_0, time_2016_6_0_25_11_25_0_0, 3},
                    {// Cert valid for over 15 months, needs 3 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2016, 6, 0, 27, 11, 25, 0, 0}),
-                    3},
+                    time_2015_3_0_25_11_25_0_0, time_2016_6_0_27_11_25_0_0, 3},
                    {// Cert valid for exactly 27 months, needs 3 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2017, 6, 0, 25, 11, 25, 0, 0}),
-                    3},
+                    time_2015_3_0_25_11_25_0_0, time_2017_6_0_25_11_25_0_0, 3},
                    {// Cert valid for over 27 months, needs 4 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2017, 6, 0, 28, 11, 25, 0, 0}),
-                    4},
+                    time_2015_3_0_25_11_25_0_0, time_2017_6_0_28_11_25_0_0, 4},
                    {// Cert valid for exactly 39 months, needs 4 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2018, 6, 0, 25, 11, 25, 0, 0}),
-                    4},
+                    time_2015_3_0_25_11_25_0_0, time_2018_6_0_25_11_25_0_0, 4},
                    {// Cert valid for over 39 months, needs 5 SCTs.
-                    base::Time::FromUTCExploded({2015, 3, 0, 25, 11, 25, 0, 0}),
-                    base::Time::FromUTCExploded({2018, 6, 0, 27, 11, 25, 0, 0}),
-                    5}};
+                    time_2015_3_0_25_11_25_0_0, time_2018_6_0_27_11_25_0_0, 5}};
 
   for (size_t i = 0; i < arraysize(kTestData); ++i) {
     SCOPED_TRACE(i);

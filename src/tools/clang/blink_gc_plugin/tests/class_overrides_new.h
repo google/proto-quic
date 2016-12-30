@@ -12,7 +12,7 @@ namespace blink {
 class HeapObject : public GarbageCollected<HeapObject> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    void trace(Visitor*) { }
+    void Trace(Visitor*) { }
 };
 
 }

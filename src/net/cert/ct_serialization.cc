@@ -383,15 +383,15 @@ void EncodeTreeHeadSignature(const SignedTreeHead& signed_tree_head,
       output);
 }
 
-bool DecodeSCTList(base::StringPiece* input,
+bool DecodeSCTList(base::StringPiece input,
                    std::vector<base::StringPiece>* output) {
   std::vector<base::StringPiece> result;
-  if (!ReadList(kSCTListLengthBytes, kSerializedSCTLengthBytes,
-                input, &result)) {
+  if (!ReadList(kSCTListLengthBytes, kSerializedSCTLengthBytes, &input,
+                &result)) {
     return false;
   }
 
-  if (!input->empty() || result.empty())
+  if (!input.empty() || result.empty())
     return false;
   output->swap(result);
   return true;

@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -201,7 +202,7 @@ struct SpdySessionDependencies {
   bool enable_user_alternate_protocol_ports;
   bool enable_quic;
   size_t session_max_recv_window_size;
-  size_t stream_max_recv_window_size;
+  SettingsMap http2_settings;
   SpdySession::TimeFunc time_func;
   std::unique_ptr<ProxyDelegate> proxy_delegate;
   bool enable_http2_alternative_service_with_different_host;

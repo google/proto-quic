@@ -16,7 +16,7 @@
 //
 // Note that these *are not* trust anchors for Chromium. They are only used to
 // distinguish `real' root CAs from roots that were user-installed.
-static uint8_t kKnownRootCertSHA256Hashes[][32] = {
+static const uint8_t kKnownRootCertSHA256Hashes[][32] = {
     // C=US, O=Network Solutions L.L.C., CN=Network Solutions Certificate
     // Authority
     {0x00, 0x16, 0x86, 0xCD, 0x18, 0x1F, 0x83, 0xA1, 0xB1, 0x21, 0x7D, 0x30,

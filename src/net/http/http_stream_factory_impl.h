@@ -168,10 +168,6 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
 
   const bool for_websockets_;
 
-  // True if only one preconnect is allowed to proxy servers that support
-  // request priorities.
-  const bool allow_only_one_preconnect_to_proxy_servers_;
-
   DISALLOW_COPY_AND_ASSIGN(HttpStreamFactoryImpl);
 };
 

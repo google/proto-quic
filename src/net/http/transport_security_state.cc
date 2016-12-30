@@ -645,6 +645,10 @@ bool DecodeHSTSPreload(const std::string& hostname, PreloadResult* out) {
 std::string SerializeExpectStapleResponseStatus(
     OCSPVerifyResult::ResponseStatus status) {
   switch (status) {
+    case OCSPVerifyResult::NOT_CHECKED:
+      // Reports shouldn't be sent for this response status.
+      NOTREACHED();
+      return "NOT_CHECKED";
     case OCSPVerifyResult::MISSING:
       return "MISSING";
     case OCSPVerifyResult::PROVIDED:
@@ -662,6 +666,7 @@ std::string SerializeExpectStapleResponseStatus(
     case OCSPVerifyResult::PARSE_RESPONSE_DATA_ERROR:
       return "PARSE_RESPONSE_DATA_ERROR";
   }
+  NOTREACHED();
   return std::string();
 }
 
@@ -682,7 +687,7 @@ std::string SerializeExpectStapleRevocationStatus(
 
 bool SerializeExpectStapleReport(const HostPortPair& host_port_pair,
                                  const SSLInfo& ssl_info,
-                                 const std::string& ocsp_response,
+                                 base::StringPiece ocsp_response,
                                  std::string* out_serialized_report) {
   DCHECK(ssl_info.is_issued_by_known_root);
   base::DictionaryValue report;
@@ -789,7 +794,7 @@ TransportSecurityState::PKPStatus TransportSecurityState::CheckPublicKeyPins(
 void TransportSecurityState::CheckExpectStaple(
     const HostPortPair& host_port_pair,
     const SSLInfo& ssl_info,
-    const std::string& ocsp_response) {
+    base::StringPiece ocsp_response) {
   DCHECK(CalledOnValidThread());
   if (!enable_static_expect_staple_ || !report_sender_ ||
       !ssl_info.is_issued_by_known_root) {
@@ -803,7 +808,11 @@ void TransportSecurityState::CheckExpectStaple(
   if (!GetStaticExpectStapleState(host_port_pair.host(), &expect_staple_state))
     return;
 
-  // No report needed if a stapled OCSP response was provided.
+  // No report needed if OCSP details were not checked on this connection.
+  if (ssl_info.ocsp_result.response_status == OCSPVerifyResult::NOT_CHECKED)
+    return;
+
+  // No report needed if a stapled OCSP response was provided and it was valid.
   if (ssl_info.ocsp_result.response_status == OCSPVerifyResult::PROVIDED &&
       ssl_info.ocsp_result.revocation_status == OCSPRevocationStatus::GOOD) {
     return;

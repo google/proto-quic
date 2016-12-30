@@ -12,6 +12,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/rand_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -110,7 +111,7 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamData0length) {
 }
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
-  if (FLAGS_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
+  if (FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
     EXPECT_FALSE(helper_->IsBufferAllocated());
   }
   string source(1024, 'a');
@@ -144,10 +145,10 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataInvalidSource) {
   QuicTime t = clock_.ApproximateNow();
   EXPECT_EQ(QUIC_STREAM_SEQUENCER_INVALID_STATE,
             buffer_->OnStreamData(800, source, t, &written, &error_details_));
-  EXPECT_EQ(
-      0u, error_details_.find("QuicStreamSequencerBuffer error: OnStreamData()"
-                              " dest == nullptr: false"
-                              " source == nullptr: true"));
+  EXPECT_EQ(0u, error_details_.find(QuicStrCat(
+                    "QuicStreamSequencerBuffer error: OnStreamData() "
+                    "dest == nullptr: ",
+                    false, " source == nullptr: ", true)));
 }
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithOverlap) {
@@ -471,7 +472,7 @@ TEST_F(QuicStreamSequencerBufferTest, GetReadableRegionsEmpty) {
 
 TEST_F(QuicStreamSequencerBufferTest, ReleaseWholeBuffer) {
   // Tests that buffer is not deallocated unless ReleaseWholeBuffer() is called.
-  if (!FLAGS_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
+  if (!FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time) {  // NOLINT
     // Won't release buffer when flag is off.
     return;
   }

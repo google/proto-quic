@@ -87,10 +87,7 @@ class _NewsBrowsingStory(_BrowsingStory):
         repeat_count=self.MAIN_PAGE_SCROLL_REPEAT)
 
 
-# TODO(ulan): Enable this story on mobile once it uses less memory and does not
-# crash with OOM.
-@decorators.Disabled('android',
-                     'win') # crbug.com/665465
+@decorators.Disabled('android')  # crbug.com/676338
 class CnnStory(_NewsBrowsingStory):
   """The second top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:cnn'
@@ -149,6 +146,7 @@ class HackerNewsStory(_NewsBrowsingStory):
   ITEM_SELECTOR = '.athing .title > a'
 
 
+@decorators.Disabled('android')  # crbug.com/676315
 class NytimesMobileStory(_NewsBrowsingStory):
   """The third top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:nytimes'
@@ -201,7 +199,7 @@ class TwitterMobileStory(_NewsBrowsingStory):
 
 
 @decorators.Disabled('win',  # crbug.com/662971
-                     'mac')  # crbug.com/664661, crbug.com/663025
+                     'mac')  # crbug.com/663025
 class TwitterDesktopStory(_NewsBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'

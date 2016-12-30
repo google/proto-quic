@@ -1390,5 +1390,417 @@
         "test": "vr_shell_unittests"
       }
     ]
+  },
+  "Unswarmed N5 Tests Dummy Builder": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "android_webview_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "blimp_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "breakpad_unittests_deps"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "breakpad_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "capture_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "cc_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "components_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "components_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "content_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "content_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "device_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "events_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gfx_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gl_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gl_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gpu_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ipc_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "media_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "net_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "sandbox_linux_unittests_deps"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "sandbox_linux_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "sql_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "storage_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_android_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_touch_selection_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "unit_tests"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "android_webview_test_apk"
+      },
+      {
+        "override_compile_targets": [
+          "blimp_test_apk"
+        ],
+        "test": "blimp_test_apk"
+      },
+      {
+        "test": "chrome_public_test_apk"
+      },
+      {
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "test": "content_shell_test_apk"
+      }
+    ],
+    "scripts": [
+      {
+        "name": "telemetry_perf_unittests",
+        "script": "telemetry_perf_unittests.py"
+      }
+    ]
+  },
+  "Unswarmed N5X Tests Dummy Builder": {
+    "gtest_tests": [
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "android_webview_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "blimp_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "breakpad_unittests_deps"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "breakpad_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "capture_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "cc_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "components_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "components_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "content_browsertests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "content_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "device_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "events_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gfx_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gl_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gl_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gpu_ipc_service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "gpu_unittests"
+      },
+      {
+        "args": [
+          "--shard-timeout",
+          "600"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ipc_tests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "media_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "net_unittests"
+      },
+      {
+        "override_compile_targets": [
+          "sandbox_linux_unittests_deps"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "sandbox_linux_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "sql_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "storage_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_android_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_base_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "ui_touch_selection_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": false
+        },
+        "test": "unit_tests"
+      }
+    ],
+    "instrumentation_tests": [
+      {
+        "test": "android_webview_test_apk"
+      },
+      {
+        "override_compile_targets": [
+          "blimp_test_apk"
+        ],
+        "test": "blimp_test_apk"
+      },
+      {
+        "test": "chrome_public_test_apk"
+      },
+      {
+        "test": "chrome_sync_shell_test_apk"
+      },
+      {
+        "test": "content_shell_test_apk"
+      }
+    ],
+    "scripts": [
+      {
+        "name": "telemetry_perf_unittests",
+        "script": "telemetry_perf_unittests.py"
+      }
+    ]
   }
 }

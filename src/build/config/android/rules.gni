@@ -646,6 +646,8 @@ if (enable_java_templates) {
   #     different application at runtime to access the package's resources.
   #   app_as_shared_lib: If true make a resource package that can be loaded as
   #     both shared_resources and normal application.
+  #   r_text_file: (optional) path to pre-generated R.txt to be used when
+  #     generating R.java instead of resource-based aapt-generated one.
 
   # Example:
   #   android_resources("foo_resources") {
@@ -667,7 +669,7 @@ if (enable_java_templates) {
     base_path = "$target_gen_dir/$target_name"
     zip_path = base_path + ".resources.zip"
     srcjar_path = base_path + ".srcjar"
-    r_text_path = base_path + "_R.txt"
+    r_text_out_path = base_path + "_R.txt"
     build_config = base_path + ".build_config"
 
     build_config_target_name = "${target_name}__build_config"
@@ -700,7 +702,7 @@ if (enable_java_templates) {
 
       # No package means resources override their deps.
       if (defined(custom_package) || defined(android_manifest)) {
-        r_text = r_text_path
+        r_text = r_text_out_path
       } else {
         assert(defined(invoker.deps),
                "Must specify deps when custom_package is omitted.")
@@ -729,6 +731,10 @@ if (enable_java_templates) {
       deps += [ ":$build_config_target_name" ]
       if (defined(invoker.android_manifest_dep)) {
         deps += [ invoker.android_manifest_dep ]
+      }
+
+      if (defined(invoker.r_text_file)) {
+        r_text_in_path = invoker.r_text_file
       }
 
       # Always generate R.onResourcesLoaded() method, it is required for
@@ -1675,7 +1681,7 @@ if (enable_java_templates) {
                                "shared_resources",
                              ])
       srcjar_path = "${target_gen_dir}/${target_name}.srcjar"
-      r_text_path = "${target_gen_dir}/${target_name}_R.txt"
+      r_text_out_path = "${target_gen_dir}/${target_name}_R.txt"
       android_manifest = _android_manifest
       resource_dirs = [ "//build/android/ant/empty/res" ]
       zip_path = resources_zip_path
@@ -2710,8 +2716,14 @@ if (enable_java_templates) {
         "${_output_path}/AndroidManifest.xml",
       ]
 
-      if (_scanned_files.resources != []) {
+      if (_scanned_files.has_r_text_file) {
+        # Certain packages, in particular Play Services have no R.txt even
+        # though its presence is mandated by AAR spec. Such packages cause
+        # spurious rebuilds if this output is specified unconditionally.
         outputs += [ "${_output_path}/R.txt" ]
+      }
+
+      if (_scanned_files.resources != []) {
         outputs += get_path_info(
                 rebase_path(_scanned_files.resources, "", _output_path),
                 "abspath")
@@ -2728,7 +2740,7 @@ if (enable_java_templates) {
     }
 
     # Create the android_resources target for resources.
-    if (_scanned_files.resources != []) {
+    if (_scanned_files.resources != [] || _scanned_files.has_r_text_file) {
       _res_target_name = "${target_name}__res"
       android_resources(_res_target_name) {
         forward_variables_from(invoker, [ "deps" ])
@@ -2742,6 +2754,9 @@ if (enable_java_templates) {
             rebase_path(_scanned_files.resources, "", _output_path)
         android_manifest_dep = ":$_unpack_target_name"
         android_manifest = "${_output_path}/AndroidManifest.xml"
+        if (_scanned_files.has_r_text_file) {
+          r_text_file = "${_output_path}/R.txt"
+        }
         v14_skip = true
       }
     }

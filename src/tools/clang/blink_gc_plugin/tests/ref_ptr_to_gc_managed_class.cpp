@@ -6,6 +6,6 @@
 
 namespace blink {
 
-void HeapObject::trace(Visitor*) { }
+void HeapObject::Trace(Visitor*) { }
 
 }

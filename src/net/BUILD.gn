@@ -154,9 +154,6 @@ component("net") {
     if (!use_openssl_certs) {
       sources -= [
         "base/crypto_module_openssl.cc",
-        "base/keygen_handler_openssl.cc",
-        "base/openssl_private_key_store.h",
-        "base/openssl_private_key_store_memory.cc",
         "cert/cert_database_openssl.cc",
         "cert/cert_verify_proc_openssl.cc",
         "cert/cert_verify_proc_openssl.h",
@@ -172,7 +169,6 @@ component("net") {
       if (is_android) {
         # Android doesn't use these even when using OpenSSL.
         sources -= [
-          "base/openssl_private_key_store_memory.cc",
           "cert/cert_database_openssl.cc",
           "cert/cert_verify_proc_openssl.cc",
           "cert/test_root_certs_openssl.cc",

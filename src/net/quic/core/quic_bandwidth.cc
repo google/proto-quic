@@ -4,11 +4,9 @@
 
 #include "net/quic/core/quic_bandwidth.h"
 
-#include <stdint.h>
-
+#include <cinttypes>
 #include <limits>
 
-#include "base/format_macros.h"
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_bug_tracker.h"

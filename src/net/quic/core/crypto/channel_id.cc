@@ -4,10 +4,10 @@
 
 #include "net/quic/core/crypto/channel_id.h"
 
-#include "crypto/openssl_util.h"
+#include <cstdint>
+
 #include "third_party/boringssl/src/include/openssl/bn.h"
 #include "third_party/boringssl/src/include/openssl/ec.h"
-#include "third_party/boringssl/src/include/openssl/ec_key.h"
 #include "third_party/boringssl/src/include/openssl/ecdsa.h"
 #include "third_party/boringssl/src/include/openssl/nid.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
@@ -39,7 +39,7 @@ bool ChannelIDVerifier::VerifyRaw(StringPiece key,
 
   bssl::UniquePtr<EC_GROUP> p256(
       EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1));
-  if (!p256) {
+  if (p256.get() == nullptr) {
     return false;
   }
 

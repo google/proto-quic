@@ -5,7 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
 #define NET_QUIC_CORE_CRYPTO_LOCAL_STRIKE_REGISTER_CLIENT_H_
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"

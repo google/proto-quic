@@ -28,14 +28,14 @@
 #include "net/quic/chromium/mock_crypto_client_stream_factory.h"
 #include "net/quic/chromium/mock_network_change_notifier.h"
 #include "net/quic/chromium/mock_quic_data.h"
+#include "net/quic/chromium/properties_based_quic_server_info.h"
 #include "net/quic/chromium/quic_http_utils.h"
+#include "net/quic/chromium/quic_server_info.h"
 #include "net/quic/chromium/quic_test_packet_maker.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
-#include "net/quic/core/crypto/properties_based_quic_server_info.h"
 #include "net/quic/core/crypto/quic_crypto_client_config.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -55,9 +55,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
-
-using net::test::IsError;
-using net::test::IsOk;
 
 using std::string;
 

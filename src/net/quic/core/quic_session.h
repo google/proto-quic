@@ -122,7 +122,7 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
       QuicIOVector iov,
       QuicStreamOffset offset,
       bool fin,
-      QuicAckListenerInterface* ack_notifier_delegate);
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Called by streams when they want to close the stream in both directions.
   virtual void SendRstStream(QuicStreamId id,

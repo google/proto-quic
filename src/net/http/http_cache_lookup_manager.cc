@@ -4,6 +4,7 @@
 
 #include "net/http/http_cache_lookup_manager.h"
 
+#include "base/memory/ptr_util.h"
 #include "net/base/load_flags.h"
 
 namespace net {

@@ -15,8 +15,7 @@ declare_args() {
   # The absolute path to directory containing sysroots for linux 32 and 64bit
   target_sysroot_dir = ""
 
-#  use_sysroot = true
-  use_sysroot = false
+  use_sysroot = true
 }
 
 if (is_linux && target_sysroot_dir != "") {

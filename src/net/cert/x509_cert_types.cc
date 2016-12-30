@@ -71,13 +71,9 @@ bool ParseCertificateDate(const base::StringPiece& raw_date,
   if (valid && year_length == 2)
     exploded.year += exploded.year < 50 ? 2000 : 1900;
 
-  valid &= exploded.HasValidValues();
-
   if (!valid)
     return false;
-
-  *time = base::Time::FromUTCExploded(exploded);
-  return true;
+  return base::Time::FromUTCExploded(exploded, time);
 }
 
 }  // namespace net

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern "C" void __gcov_flush();
+extern "C" void __gcov_flush(void);
 
 namespace coverage_util {
 
 void FlushCoverageDataIfNecessary() {
-#if defined(ENABLE_TEST_CODE_COVERAGE)
+#if !defined(NDEBUG) && defined(ENABLE_TEST_CODE_COVERAGE)
   __gcov_flush();
 #endif
 }

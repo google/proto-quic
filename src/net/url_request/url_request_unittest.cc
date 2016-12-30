@@ -60,7 +60,7 @@
 #include "net/base/url_util.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
-#include "net/cert/ct_verifier.h"
+#include "net/cert/do_nothing_ct_verifier.h"
 #include "net/cert/ev_root_ca_metadata.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
@@ -2752,6 +2752,23 @@ TEST_F(URLRequestTest, SameSiteCookies) {
         test_server.GetURL(kHost, "/echoheader?Cookie"), DEFAULT_PRIORITY, &d));
     req->set_first_party_for_cookies(test_server.GetURL(kHost, "/"));
     req->set_initiator(url::Origin(test_server.GetURL(kHost, "/")));
+    req->Start();
+    base::RunLoop().Run();
+
+    EXPECT_NE(std::string::npos,
+              d.data_received().find("StrictSameSiteCookie=1"));
+    EXPECT_NE(std::string::npos, d.data_received().find("LaxSameSiteCookie=1"));
+    EXPECT_EQ(0, network_delegate.blocked_get_cookies_count());
+    EXPECT_EQ(0, network_delegate.blocked_set_cookie_count());
+  }
+
+  // Verify that both cookies are sent when the request has no initiator (can
+  // happen for main frame browser-initiated navigations).
+  {
+    TestDelegate d;
+    std::unique_ptr<URLRequest> req(default_context_.CreateRequest(
+        test_server.GetURL(kHost, "/echoheader?Cookie"), DEFAULT_PRIORITY, &d));
+    req->set_first_party_for_cookies(test_server.GetURL(kHost, "/"));
     req->Start();
     base::RunLoop().Run();
 
@@ -6427,23 +6444,6 @@ class MockExpectCTReporter : public TransportSecurityState::ExpectCTReporter {
   uint32_t num_failures_;
 };
 
-// A CTVerifier that returns net::OK for every certificate.
-class MockCTVerifier : public CTVerifier {
- public:
-  MockCTVerifier() {}
-  ~MockCTVerifier() override {}
-
-  int Verify(X509Certificate* cert,
-             const std::string& stapled_ocsp_response,
-             const std::string& sct_list_from_tls_extension,
-             SignedCertificateTimestampAndStatusList* output_scts,
-             const NetLogWithSource& net_log) override {
-    return net::OK;
-  }
-
-  void SetObserver(Observer* observer) override {}
-};
-
 // A CTPolicyEnforcer that returns a default CertPolicyCompliance value
 // for every certificate.
 class MockCTPolicyEnforcer : public CTPolicyEnforcer {
@@ -6491,9 +6491,9 @@ TEST_F(URLRequestTestHTTP, ExpectCTHeader) {
   verify_result.is_issued_by_known_root = true;
   cert_verifier.AddResultForCert(cert.get(), verify_result, OK);
 
-  // Set up a MockCTVerifier and MockCTPolicyEnforcer to trigger an Expect CT
-  // violation.
-  MockCTVerifier ct_verifier;
+  // Set up a DoNothingCTVerifier and MockCTPolicyEnforcer to trigger an Expect
+  // CT violation.
+  DoNothingCTVerifier ct_verifier;
   MockCTPolicyEnforcer ct_policy_enforcer;
   ct_policy_enforcer.set_default_result(
       ct::CertPolicyCompliance::CERT_POLICY_NOT_ENOUGH_SCTS);
@@ -9619,6 +9619,65 @@ TEST_F(HTTPSOCSPTest, ExpectStapleReportSentOnMissing) {
             mock_report_sender.latest_report_uri());
 }
 
+// Tests that Expect-Staple reports are not sent for connections on which there
+// is a certificate error.
+TEST_F(HTTPSOCSPTest, ExpectStapleReportNotSentOnMissingWithCertError) {
+  EmbeddedTestServer https_test_server(net::EmbeddedTestServer::TYPE_HTTPS);
+  https_test_server.SetSSLConfig(
+      net::EmbeddedTestServer::CERT_COMMON_NAME_IS_DOMAIN);
+  https_test_server.ServeFilesFromSourceDirectory(
+      base::FilePath(kTestFilePath));
+  ASSERT_TRUE(https_test_server.Start());
+
+  // Set up a MockCertVerifier to report an error for the certificate
+  // and indicate that there was no stapled OCSP response.
+  scoped_refptr<X509Certificate> cert = https_test_server.GetCertificate();
+  ASSERT_TRUE(cert);
+  MockCertVerifier cert_verifier;
+  CertVerifyResult verify_result;
+  verify_result.cert_status = CERT_STATUS_DATE_INVALID;
+  verify_result.verified_cert = cert;
+  verify_result.is_issued_by_known_root = true;
+  verify_result.ocsp_result.response_status = OCSPVerifyResult::MISSING;
+  cert_verifier.AddResultForCert(cert.get(), verify_result,
+                                 ERR_CERT_DATE_INVALID);
+
+  // Set up a mock report sender so that the test can check that an
+  // Expect-Staple report is not sent.
+  TransportSecurityState transport_security_state;
+  MockCertificateReportSender mock_report_sender;
+  transport_security_state.SetReportSender(&mock_report_sender);
+
+  TestNetworkDelegate network_delegate;
+  TestURLRequestContext context(true);
+
+  // Force |kExpectStapleStaticHostname| to resolve to |https_test_server|.
+  MockHostResolver host_resolver;
+  context.set_host_resolver(&host_resolver);
+
+  context.set_transport_security_state(&transport_security_state);
+  context.set_network_delegate(&network_delegate);
+  context.set_cert_verifier(&cert_verifier);
+  context.Init();
+
+  // Make a connection to |kExpectStapleStaticHostname|. Because the
+  // |verify_result| used with the |cert_verifier| will indicate a certificate
+  // error, an Expect-Staple report should not be sent.
+  TestDelegate d;
+  GURL url = https_test_server.GetURL("/");
+  GURL::Replacements replace_host;
+  replace_host.SetHostStr(kExpectStapleStaticHostname);
+  url = url.ReplaceComponents(replace_host);
+  std::unique_ptr<URLRequest> violating_request(
+      context.CreateRequest(url, DEFAULT_PRIORITY, &d));
+  violating_request->Start();
+  base::RunLoop().Run();
+
+  // Confirm a report was not sent.
+  EXPECT_TRUE(mock_report_sender.latest_report().empty());
+  EXPECT_EQ(GURL(), mock_report_sender.latest_report_uri());
+}
+
 TEST_F(HTTPSOCSPTest, ExpectStapleReportNotSentOnValid) {
   EmbeddedTestServer https_test_server(net::EmbeddedTestServer::TYPE_HTTPS);
   https_test_server.SetSSLConfig(
@@ -9656,6 +9715,65 @@ TEST_F(HTTPSOCSPTest, ExpectStapleReportNotSentOnValid) {
   context.Init();
 
   // This request should not not trigger an Expect-Staple violation.
+  TestDelegate d;
+  GURL url = https_test_server.GetURL("/");
+  GURL::Replacements replace_host;
+  replace_host.SetHostStr(kExpectStapleStaticHostname);
+  url = url.ReplaceComponents(replace_host);
+  std::unique_ptr<URLRequest> ok_request(
+      context.CreateRequest(url, DEFAULT_PRIORITY, &d));
+  ok_request->Start();
+  base::RunLoop().Run();
+
+  // Check that no report was sent.
+  EXPECT_TRUE(mock_report_sender.latest_report().empty());
+  EXPECT_EQ(GURL(), mock_report_sender.latest_report_uri());
+}
+
+// Tests that an Expect-Staple report is not sent when OCSP details are not
+// checked on the connection.
+TEST_F(HTTPSOCSPTest, ExpectStapleReportNotSentOnNotChecked) {
+  EmbeddedTestServer https_test_server(net::EmbeddedTestServer::TYPE_HTTPS);
+  https_test_server.SetSSLConfig(
+      net::EmbeddedTestServer::CERT_COMMON_NAME_IS_DOMAIN);
+  https_test_server.ServeFilesFromSourceDirectory(
+      base::FilePath(kTestFilePath));
+  ASSERT_TRUE(https_test_server.Start());
+
+  // Set up a MockCertVerifier to accept the certificate that the server sends,
+  // and set |ocsp_result| to indicate that OCSP stapling details were not
+  // checked on the connection.
+  scoped_refptr<X509Certificate> cert = https_test_server.GetCertificate();
+  ASSERT_TRUE(cert);
+  MockCertVerifier cert_verifier;
+  CertVerifyResult verify_result;
+  verify_result.verified_cert = cert;
+  verify_result.is_issued_by_known_root = true;
+  verify_result.ocsp_result.response_status = OCSPVerifyResult::NOT_CHECKED;
+  cert_verifier.AddResultForCert(cert.get(), verify_result, OK);
+
+  // Set up a mock report sender so that the test can check that an
+  // Expect-Staple report is not sent.
+  TransportSecurityState transport_security_state;
+  MockCertificateReportSender mock_report_sender;
+  transport_security_state.SetReportSender(&mock_report_sender);
+
+  TestNetworkDelegate network_delegate;
+  TestURLRequestContext context(true);
+
+  // Force |kExpectStapleStaticHostname| to resolve to |https_test_server|.
+  MockHostResolver host_resolver;
+  context.set_host_resolver(&host_resolver);
+
+  context.set_transport_security_state(&transport_security_state);
+  context.set_network_delegate(&network_delegate);
+  context.set_cert_verifier(&cert_verifier);
+  context.Init();
+
+  // Make a connection to |kExpectStapleStaticHostname|. Because the
+  // |verify_result| used with the |cert_verifier| will indicate that OCSP
+  // stapling details were not checked on the connection, an Expect-Staple
+  // report should not be sent.
   TestDelegate d;
   GURL url = https_test_server.GetURL("/");
   GURL::Replacements replace_host;

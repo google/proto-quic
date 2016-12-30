@@ -4,10 +4,9 @@
 
 #include "net/quic/core/crypto/aead_base_decrypter.h"
 
-#include <memory>
+#include <cstdint>
 
 #include "net/quic/core/quic_bug_tracker.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"

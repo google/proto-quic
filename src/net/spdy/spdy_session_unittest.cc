@@ -1132,8 +1132,7 @@ TEST_F(SpdySessionTest, MaxConcurrentStreamsZero) {
 
   // Receive SETTINGS frame that sets max_concurrent_streams to zero.
   SettingsMap settings_zero;
-  settings_zero[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, 0);
+  settings_zero[SETTINGS_MAX_CONCURRENT_STREAMS] = 0;
   SpdySerializedFrame settings_frame_zero(
       spdy_util_.ConstructSpdySettings(settings_zero));
 
@@ -1142,8 +1141,7 @@ TEST_F(SpdySessionTest, MaxConcurrentStreamsZero) {
 
   // Receive SETTINGS frame that sets max_concurrent_streams to one.
   SettingsMap settings_one;
-  settings_one[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, 1);
+  settings_one[SETTINGS_MAX_CONCURRENT_STREAMS] = 1;
   SpdySerializedFrame settings_frame_one(
       spdy_util_.ConstructSpdySettings(settings_one));
 
@@ -1782,8 +1780,7 @@ TEST_F(SpdySessionTest, OnSettings) {
 
   SettingsMap new_settings;
   const uint32_t max_concurrent_streams = kInitialMaxConcurrentStreams + 1;
-  new_settings[kSpdySettingsIds] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  new_settings[kSpdySettingsIds] = max_concurrent_streams;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(new_settings));
   MockRead reads[] = {
@@ -1882,41 +1879,6 @@ TEST_F(SpdySessionTest, CancelPendingCreateStream) {
 
   // Should not crash when running the pending callback.
   base::RunLoop().RunUntilIdle();
-}
-
-TEST_F(SpdySessionTest, SendInitialDataOnNewSession) {
-  session_deps_.host_resolver->set_synchronous_mode(true);
-
-  MockRead reads[] = {
-    MockRead(SYNCHRONOUS, ERR_IO_PENDING)  // Stall forever.
-  };
-
-  SettingsMap settings;
-  settings[SETTINGS_HEADER_TABLE_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxHeaderTableSize);
-  settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, kMaxConcurrentPushedStreams);
-  SpdySerializedFrame settings_frame(
-      spdy_util_.ConstructSpdySettings(settings));
-  MockWrite writes[] = {MockWrite(ASYNC, kHttp2ConnectionHeaderPrefix,
-                                  kHttp2ConnectionHeaderPrefixSize),
-                        CreateMockWrite(settings_frame)};
-
-  StaticSocketDataProvider data(reads, arraysize(reads), writes,
-                                arraysize(writes));
-  session_deps_.socket_factory->AddSocketDataProvider(&data);
-
-  AddSSLSocketData();
-
-  CreateNetworkSession();
-
-  SpdySessionPoolPeer pool_peer(spdy_session_pool_);
-  pool_peer.SetEnableSendingInitialData(true);
-
-  CreateSecureSpdySession();
-
-  base::RunLoop().RunUntilIdle();
-  EXPECT_TRUE(data.AllWriteDataConsumed());
 }
 
 TEST_F(SpdySessionTest, Initialize) {
@@ -2619,8 +2581,7 @@ TEST_F(SpdySessionTest, CloseTwoStalledCreateStream) {
   SettingsMap new_settings;
   const SpdySettingsIds kSpdySettingsIds1 = SETTINGS_MAX_CONCURRENT_STREAMS;
   const uint32_t max_concurrent_streams = 1;
-  new_settings[kSpdySettingsIds1] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, max_concurrent_streams);
+  new_settings[kSpdySettingsIds1] = max_concurrent_streams;
 
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
   SpdySerializedFrame req1(
@@ -3659,8 +3620,7 @@ TEST_F(SpdySessionTest, UpdateStreamsSendWindowSize) {
   // gets sent.
   SettingsMap new_settings;
   int32_t window_size = 1;
-  new_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, window_size);
+  new_settings[SETTINGS_INITIAL_WINDOW_SIZE] = window_size;
 
   // Set up the socket so we read a SETTINGS frame that sets
   // INITIAL_WINDOW_SIZE.
@@ -3894,7 +3854,8 @@ TEST_F(SpdySessionTest, StreamFlowControlTooMuchData) {
 
   AddSSLSocketData();
 
-  session_deps_.stream_max_recv_window_size = stream_max_recv_window_size;
+  session_deps_.http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
+      stream_max_recv_window_size;
   CreateNetworkSession();
 
   CreateSecureSpdySession();
@@ -4031,7 +3992,8 @@ TEST_F(SpdySessionTest, StreamFlowControlTooMuchDataTwoDataFrames) {
 
   AddSSLSocketData();
 
-  session_deps_.stream_max_recv_window_size = stream_max_recv_window_size;
+  session_deps_.http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] =
+      stream_max_recv_window_size;
   CreateNetworkSession();
 
   CreateSecureSpdySession();
@@ -4880,8 +4842,7 @@ TEST_F(SpdySessionTest, GoAwayOnSessionFlowControlError) {
 // limit for a long time.
 TEST_F(SpdySessionTest, PushedStreamShouldNotCountToClientConcurrencyLimit) {
   SettingsMap new_settings;
-  new_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
-      SettingsFlagsAndValue(SETTINGS_FLAG_NONE, 2);
+  new_settings[SETTINGS_MAX_CONCURRENT_STREAMS] = 2;
   SpdySerializedFrame settings_frame(
       spdy_util_.ConstructSpdySettings(new_settings));
   SpdySerializedFrame pushed(spdy_util_.ConstructSpdyPush(
@@ -5397,6 +5358,92 @@ TEST_F(SpdySessionTest, RejectInvalidUnknownFrames) {
   EXPECT_TRUE(session_->OnUnknownFrame(2, 0));
   // Server id exceeding last accepted id.
   EXPECT_FALSE(session_->OnUnknownFrame(8, 0));
+}
+
+class SendInitialSettingsOnNewSpdySessionTest : public SpdySessionTest {
+ protected:
+  void RunInitialSettingsTest(const SettingsMap expected_settings) {
+    session_deps_.host_resolver->set_synchronous_mode(true);
+
+    MockRead reads[] = {MockRead(SYNCHRONOUS, ERR_IO_PENDING)};
+
+    SpdySerializedFrame settings_frame(
+        spdy_util_.ConstructSpdySettings(expected_settings));
+    MockWrite writes[] = {MockWrite(ASYNC, kHttp2ConnectionHeaderPrefix,
+                                    kHttp2ConnectionHeaderPrefixSize),
+                          CreateMockWrite(settings_frame)};
+
+    StaticSocketDataProvider data(reads, arraysize(reads), writes,
+                                  arraysize(writes));
+    session_deps_.socket_factory->AddSocketDataProvider(&data);
+    AddSSLSocketData();
+
+    CreateNetworkSession();
+
+    SpdySessionPoolPeer pool_peer(spdy_session_pool_);
+    pool_peer.SetEnableSendingInitialData(true);
+
+    CreateSecureSpdySession();
+
+    base::RunLoop().RunUntilIdle();
+    EXPECT_TRUE(data.AllWriteDataConsumed());
+  }
+};
+
+// Setting values when Params::http2_settings is empty.  Note that
+// SETTINGS_INITIAL_WINDOW_SIZE is sent in production, because it is set to a
+// non-default value, but it is not sent in tests, because the protocol default
+// value is used in tests.
+TEST_F(SendInitialSettingsOnNewSpdySessionTest, Empty) {
+  SettingsMap expected_settings;
+  expected_settings[SETTINGS_HEADER_TABLE_SIZE] = kSpdyMaxHeaderTableSize;
+  expected_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
+      kSpdyMaxConcurrentPushedStreams;
+  RunInitialSettingsTest(expected_settings);
+}
+
+// When a setting is set to the protocol default value,
+// no corresponding value is sent on the wire.
+TEST_F(SendInitialSettingsOnNewSpdySessionTest, ProtocolDefault) {
+  // Explicitly set protocol default values for the following settings.
+  session_deps_.http2_settings[SETTINGS_HEADER_TABLE_SIZE] = 4096;
+  session_deps_.http2_settings[SETTINGS_ENABLE_PUSH] = 1;
+  session_deps_.http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] = 64 * 1024 - 1;
+
+  SettingsMap expected_settings;
+  expected_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
+      kSpdyMaxConcurrentPushedStreams;
+  RunInitialSettingsTest(expected_settings);
+}
+
+// Values set in Params::http2_settings overwrite Chromium's default values.
+TEST_F(SendInitialSettingsOnNewSpdySessionTest, OverwriteValues) {
+  session_deps_.http2_settings[SETTINGS_HEADER_TABLE_SIZE] = 16 * 1024;
+  session_deps_.http2_settings[SETTINGS_ENABLE_PUSH] = 0;
+  session_deps_.http2_settings[SETTINGS_MAX_CONCURRENT_STREAMS] = 42;
+  session_deps_.http2_settings[SETTINGS_INITIAL_WINDOW_SIZE] = 32 * 1024;
+
+  SettingsMap expected_settings;
+  expected_settings[SETTINGS_HEADER_TABLE_SIZE] = 16 * 1024;
+  expected_settings[SETTINGS_ENABLE_PUSH] = 0;
+  expected_settings[SETTINGS_MAX_CONCURRENT_STREAMS] = 42;
+  expected_settings[SETTINGS_INITIAL_WINDOW_SIZE] = 32 * 1024;
+  RunInitialSettingsTest(expected_settings);
+}
+
+// Unknown parameters should still be sent to the server.
+TEST_F(SendInitialSettingsOnNewSpdySessionTest, UnknownSettings) {
+  // The following parameters are not defined in the HTTP/2 specification.
+  session_deps_.http2_settings[static_cast<SpdySettingsIds>(7)] = 1234;
+  session_deps_.http2_settings[static_cast<SpdySettingsIds>(25)] = 5678;
+
+  SettingsMap expected_settings;
+  expected_settings[SETTINGS_HEADER_TABLE_SIZE] = kSpdyMaxHeaderTableSize;
+  expected_settings[SETTINGS_MAX_CONCURRENT_STREAMS] =
+      kSpdyMaxConcurrentPushedStreams;
+  expected_settings[static_cast<SpdySettingsIds>(7)] = 1234;
+  expected_settings[static_cast<SpdySettingsIds>(25)] = 5678;
+  RunInitialSettingsTest(expected_settings);
 }
 
 class AltSvcFrameTest : public SpdySessionTest {

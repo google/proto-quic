@@ -18,7 +18,7 @@ class PartObjectA {
 class PartObjectB {
     DISALLOW_NEW();
 public:
-    void trace(Visitor* visitor) { visitor->trace(m_obj); }
+    void Trace(Visitor* visitor) { visitor->Trace(m_obj); }
 private:
     Member<HeapObject> m_obj;
 };

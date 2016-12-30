@@ -365,8 +365,11 @@ void PBXAggregateTarget::Print(std::ostream& out, unsigned indent) const {
 // PBXBuildFile ---------------------------------------------------------------
 
 PBXBuildFile::PBXBuildFile(const PBXFileReference* file_reference,
-                           const PBXSourcesBuildPhase* build_phase)
-    : file_reference_(file_reference), build_phase_(build_phase) {
+                           const PBXSourcesBuildPhase* build_phase,
+                           const CompilerFlags compiler_flag)
+    : file_reference_(file_reference),
+      build_phase_(build_phase),
+      compiler_flag_(compiler_flag) {
   DCHECK(file_reference_);
   DCHECK(build_phase_);
 }
@@ -387,6 +390,12 @@ void PBXBuildFile::Print(std::ostream& out, unsigned indent) const {
   out << indent_str << Reference() << " = {";
   PrintProperty(out, rules, "isa", ToString(Class()));
   PrintProperty(out, rules, "fileRef", file_reference_);
+  if (compiler_flag_ == CompilerFlags::HELP) {
+    std::map<std::string, std::string> settings = {
+        {"COMPILER_FLAGS", "--help"},
+    };
+    PrintProperty(out, rules, "settings", settings);
+  }
   out << "};\n";
 }
 
@@ -563,11 +572,11 @@ PBXNativeTarget::PBXNativeTarget(const std::string& name,
 
 PBXNativeTarget::~PBXNativeTarget() {}
 
-void PBXNativeTarget::AddFileForIndexing(
-    const PBXFileReference* file_reference) {
+void PBXNativeTarget::AddFileForIndexing(const PBXFileReference* file_reference,
+                                         const CompilerFlags compiler_flag) {
   DCHECK(file_reference);
-  source_build_phase_->AddBuildFile(
-      base::MakeUnique<PBXBuildFile>(file_reference, source_build_phase_));
+  source_build_phase_->AddBuildFile(base::MakeUnique<PBXBuildFile>(
+      file_reference, source_build_phase_, compiler_flag));
 }
 
 PBXObjectClass PBXNativeTarget::Class() const {
@@ -612,33 +621,29 @@ PBXProject::PBXProject(const std::string& name,
 
 PBXProject::~PBXProject() {}
 
+void PBXProject::AddSourceFileToIndexingTarget(
+    const std::string& navigator_path,
+    const std::string& source_path,
+    const CompilerFlags compiler_flag) {
+  if (!target_for_indexing_) {
+    AddIndexingTarget();
+  }
+  AddSourceFile(navigator_path, source_path, compiler_flag,
+                target_for_indexing_);
+}
+
 void PBXProject::AddSourceFile(const std::string& navigator_path,
-                               const std::string& source_path) {
+                               const std::string& source_path,
+                               const CompilerFlags compiler_flag,
+                               PBXNativeTarget* target) {
   PBXFileReference* file_reference =
       sources_->AddSourceFile(navigator_path, source_path);
   base::StringPiece ext = FindExtension(&source_path);
   if (!IsSourceFileForIndexing(ext))
     return;
 
-  if (!target_for_indexing_) {
-    PBXAttributes attributes;
-    attributes["EXECUTABLE_PREFIX"] = "";
-    attributes["HEADER_SEARCH_PATHS"] = sources_->path();
-    attributes["PRODUCT_NAME"] = name_;
-
-    PBXFileReference* product_reference = static_cast<PBXFileReference*>(
-        products_->AddChild(base::MakeUnique<PBXFileReference>(
-            std::string(), name_, "compiled.mach-o.executable")));
-
-    const char product_type[] = "com.apple.product-type.tool";
-    targets_.push_back(base::MakeUnique<PBXNativeTarget>(
-        name_, std::string(), config_name_, attributes, product_type, name_,
-        product_reference));
-    target_for_indexing_ = static_cast<PBXNativeTarget*>(targets_.back().get());
-  }
-
-  DCHECK(target_for_indexing_);
-  target_for_indexing_->AddFileForIndexing(file_reference);
+  DCHECK(target);
+  target->AddFileForIndexing(file_reference, compiler_flag);
 }
 
 void PBXProject::AddAggregateTarget(const std::string& name,
@@ -652,11 +657,30 @@ void PBXProject::AddAggregateTarget(const std::string& name,
       name, shell_script, config_name_, attributes));
 }
 
+void PBXProject::AddIndexingTarget() {
+  DCHECK(!target_for_indexing_);
+  PBXAttributes attributes;
+  attributes["EXECUTABLE_PREFIX"] = "";
+  attributes["HEADER_SEARCH_PATHS"] = sources_->path();
+  attributes["PRODUCT_NAME"] = name_;
+
+  PBXFileReference* product_reference = static_cast<PBXFileReference*>(
+      products_->AddChild(base::MakeUnique<PBXFileReference>(
+          std::string(), name_, "compiled.mach-o.executable")));
+
+  const char product_type[] = "com.apple.product-type.tool";
+  targets_.push_back(base::MakeUnique<PBXNativeTarget>(
+      name_, std::string(), config_name_, attributes, product_type, name_,
+      product_reference));
+  target_for_indexing_ = static_cast<PBXNativeTarget*>(targets_.back().get());
+}
+
 void PBXProject::AddNativeTarget(const std::string& name,
                                  const std::string& type,
                                  const std::string& output_name,
                                  const std::string& output_type,
-                                 const std::string& shell_script) {
+                                 const std::string& shell_script,
+                                 const PBXAttributes& extra_attributes) {
   base::StringPiece ext = FindExtension(&output_name);
   PBXFileReference* product = static_cast<PBXFileReference*>(
       products_->AddChild(base::MakeUnique<PBXFileReference>(
@@ -668,7 +692,7 @@ void PBXProject::AddNativeTarget(const std::string& name,
                                  ? output_name.substr(0, ext_offset - 1)
                                  : output_name;
 
-  PBXAttributes attributes;
+  PBXAttributes attributes = extra_attributes;
   attributes["CODE_SIGNING_REQUIRED"] = "NO";
   attributes["CONFIGURATION_BUILD_DIR"] = ".";
   attributes["PRODUCT_NAME"] = product_name;

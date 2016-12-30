@@ -169,7 +169,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                      bool end) override;
   void OnRstStream(SpdyStreamId stream_id, SpdyRstStreamStatus status) override;
   bool OnRstStreamFrameData(const char* rst_stream_data, size_t len) override;
-  void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override;
+  void OnSetting(SpdySettingsIds id, uint32_t value) override;
   void OnSettings(bool clear_persisted) override;
   void OnSettingsAck() override;
   void OnSettingsEnd() override;
@@ -636,16 +636,13 @@ bool SpdyTestDeframerImpl::OnRstStreamFrameData(const char* rst_stream_data,
 
 // Called for an individual setting. There is no negotiation, the sender is
 // stating the value that the sender is using.
-void SpdyTestDeframerImpl::OnSetting(SpdySettingsIds id,
-                                     uint8_t flags,
-                                     uint32_t value) {
-  DVLOG(1) << "OnSetting id: " << id << std::hex << "   flags: " << flags
-           << "    value: " << value;
+void SpdyTestDeframerImpl::OnSetting(SpdySettingsIds id, uint32_t value) {
+  DVLOG(1) << "OnSetting id: " << id << std::hex << "    value: " << value;
   CHECK_EQ(frame_type_, SETTINGS) << "   frame_type_="
                                   << Http2FrameTypeToString(frame_type_);
   CHECK(settings_);
   settings_->push_back(std::make_pair(id, value));
-  settings_ir_->AddSetting(id, true, true, value);
+  settings_ir_->AddSetting(id, value);
 }
 
 // Called at the start of a SETTINGS frame with setting entries, but not the

@@ -4,8 +4,6 @@
 
 #include "net/quic/core/crypto/crypto_secret_boxer.h"
 
-#include <memory>
-
 #include "net/quic/core/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

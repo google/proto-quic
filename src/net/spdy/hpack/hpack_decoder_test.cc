@@ -351,9 +351,6 @@ TEST_P(HpackDecoderTest, InvalidIndexedHeader) {
   EXPECT_FALSE(DecodeHeaderBlock(StringPiece("\xbe", 1)));
 }
 
-// Test that a header block with a pseudo-header field following a regular one
-// is treated as malformed.  (HTTP2 draft-14 8.1.2.1., HPACK draft-09 3.1.)
-
 TEST_P(HpackDecoderTest, ContextUpdateMaximumSize) {
   EXPECT_EQ(kDefaultHeaderTableSizeSetting,
             decoder_peer_.header_table()->max_size());

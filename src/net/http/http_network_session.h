@@ -28,6 +28,7 @@
 #include "net/http/http_stream_factory.h"
 #include "net/quic/chromium/quic_stream_factory.h"
 #include "net/socket/next_proto.h"
+#include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session_pool.h"
 #include "net/ssl/ssl_client_auth_cache.h"
 
@@ -65,6 +66,12 @@ class SSLConfigService;
 class TransportClientSocketPool;
 class TransportSecurityState;
 
+// Specifies the maximum HPACK dynamic table size the server is allowed to set.
+const uint32_t kSpdyMaxHeaderTableSize = 64 * 1024;
+
+// Specifies the maximum concurrent streams server could send (via push).
+const uint32_t kSpdyMaxConcurrentPushedStreams = 1000;
+
 // This class holds session objects used by HttpNetworkTransaction objects.
 class NET_EXPORT HttpNetworkSession
     : NON_EXPORTED_BASE(public base::NonThreadSafe),
@@ -98,7 +105,9 @@ class NET_EXPORT HttpNetworkSession
     bool enable_spdy_ping_based_connection_checking;
     bool enable_http2;
     size_t spdy_session_max_recv_window_size;
-    size_t spdy_stream_max_recv_window_size;
+    // HTTP/2 connection settings.
+    // Unknown settings will still be sent to the server.
+    SettingsMap http2_settings;
     // Source of time for SPDY connections.
     SpdySessionPool::TimeFunc time_func;
     // Whether to enable HTTP/2 Alt-Svc entries with hostname different than
@@ -194,6 +203,10 @@ class NET_EXPORT HttpNetworkSession
     // Enable HTTP/0.9 for HTTP/HTTPS on ports other than the default one for
     // each protocol.
     bool http_09_on_non_default_ports_enabled;
+
+    // If true, only one pending preconnect is allowed to proxies that support
+    // request priorities.
+    bool restrict_to_one_preconnect_for_proxies;
   };
 
   enum SocketPoolType {

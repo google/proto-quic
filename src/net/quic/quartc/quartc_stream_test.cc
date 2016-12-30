@@ -38,7 +38,8 @@ class MockQuicSession : public QuicSession {
       QuicIOVector iovector,
       QuicStreamOffset offset,
       bool fin,
-      QuicAckListenerInterface* ack_notifier_delegate) override {
+      QuicReferenceCountedPointer<
+          QuicAckListenerInterface> /*ack_notifier_delegate*/) override {
     if (!writable_) {
       return QuicConsumedData(0, false);
     }

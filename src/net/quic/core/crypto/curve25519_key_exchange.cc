@@ -25,6 +25,7 @@ Curve25519KeyExchange* Curve25519KeyExchange::New(StringPiece private_key) {
   // We don't want to #include the BoringSSL headers in the public header file,
   // so we use literals for the sizes of private_key_ and public_key_. Here we
   // assert that those values are equal to the values from the BoringSSL
+  // header.
   static_assert(sizeof(ka->private_key_) == X25519_PRIVATE_KEY_LEN,
                 "header out of sync");
   static_assert(sizeof(ka->public_key_) == X25519_PUBLIC_VALUE_LEN,

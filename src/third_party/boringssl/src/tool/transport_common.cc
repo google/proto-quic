@@ -242,10 +242,6 @@ void PrintConnectionInfo(const SSL *ssl) {
   if (curve != 0) {
     fprintf(stderr, "  ECDHE curve: %s\n", SSL_get_curve_name(curve));
   }
-  unsigned dhe_bits = SSL_get_dhe_group_size(ssl);
-  if (dhe_bits != 0) {
-    fprintf(stderr, "  DHE group size: %u bits\n", dhe_bits);
-  }
   uint16_t sigalg = SSL_get_peer_signature_algorithm(ssl);
   if (sigalg != 0) {
     fprintf(stderr, "  Signature algorithm: %s\n",
@@ -270,6 +266,13 @@ void PrintConnectionInfo(const SSL *ssl) {
   const char *host_name = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
   if (host_name != nullptr && SSL_is_server(ssl)) {
     fprintf(stderr, "  Client sent SNI: %s\n", host_name);
+  }
+
+  if (!SSL_is_server(ssl)) {
+    const uint8_t *ocsp_staple;
+    size_t ocsp_staple_len;
+    SSL_get0_ocsp_response(ssl, &ocsp_staple, &ocsp_staple_len);
+    fprintf(stderr, "  OCSP staple: %s\n", ocsp_staple_len > 0 ? "yes" : "no");
   }
 
   // Print the server cert subject and issuer names.

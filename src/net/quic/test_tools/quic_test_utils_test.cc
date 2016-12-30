@@ -37,5 +37,13 @@ TEST(QuicTestUtilsTest, QuicBandwidth) {
       "");
 }
 
+// Ensure that SimpleRandom does not change its output for a fixed seed.
+TEST(QuicTestUtilsTest, SimpleRandomStability) {
+  SimpleRandom rng;
+  rng.set_seed(UINT64_C(0x1234567800010001));
+  EXPECT_EQ(UINT64_C(14865409841904857791), rng.RandUint64());
+  EXPECT_EQ(UINT64_C(12139094019410129741), rng.RandUint64());
+}
+
 }  // namespace test
 }  // namespace net

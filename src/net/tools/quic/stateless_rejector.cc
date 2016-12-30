@@ -20,7 +20,7 @@ class StatelessRejector::ValidateCallback
 
   ~ValidateCallback() override {}
 
-  void Run(scoped_refptr<Result> result,
+  void Run(QuicReferenceCountedPointer<Result> result,
            std::unique_ptr<ProofSource::Details> /* proof_source_details */)
       override {
     StatelessRejector* rejector_ptr = rejector_.get();
@@ -68,8 +68,8 @@ void StatelessRejector::OnChlo(QuicVersion version,
   DCHECK_NE(connection_id, server_designated_connection_id);
   DCHECK_EQ(state_, UNKNOWN);
 
-  if (!FLAGS_enable_quic_stateless_reject_support ||
-      !FLAGS_quic_use_cheap_stateless_rejects ||
+  if (!FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support ||
+      !FLAGS_quic_reloadable_flag_quic_use_cheap_stateless_rejects ||
       !QuicCryptoServerStream::DoesPeerSupportStatelessRejects(message)) {
     state_ = UNSUPPORTED;
     return;
@@ -120,7 +120,8 @@ class StatelessRejector::ProcessClientHelloCallback
 };
 
 void StatelessRejector::ProcessClientHello(
-    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+    QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+        result,
     std::unique_ptr<StatelessRejector> rejector,
     std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb) {
   std::unique_ptr<ProcessClientHelloCallback> cb(

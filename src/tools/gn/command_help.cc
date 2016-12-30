@@ -71,7 +71,7 @@ void PrintToplevelHelp() {
       "input_conversion: Processing input from exec_script and read_file.");
   PrintShortHelp("label_pattern: Matching more than one label.");
   PrintShortHelp("labels: About labels.");
-  PrintShortHelp("ninja_rules: How Ninja build rules and named.");
+  PrintShortHelp("ninja_rules: How Ninja build rules are named.");
   PrintShortHelp("nogncheck: Annotating includes for checking.");
   PrintShortHelp("runtime_deps: How runtime dependency computation works.");
   PrintShortHelp("source_expansion: Map sources to outputs for scripts.");

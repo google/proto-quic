@@ -7,9 +7,8 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_UTILS_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_UTILS_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
+#include <cstdint>
 #include <string>
 
 #include "base/macros.h"

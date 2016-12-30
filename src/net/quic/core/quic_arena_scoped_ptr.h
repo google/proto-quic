@@ -15,7 +15,7 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_aligned.h"
 
 namespace net {
 
@@ -117,8 +117,7 @@ bool operator!=(const QuicArenaScopedPtr<T>& left, std::nullptr_t) {
 }
 
 template <typename T>
-QuicArenaScopedPtr<T>::QuicArenaScopedPtr()
-    : value_(nullptr) {}
+QuicArenaScopedPtr<T>::QuicArenaScopedPtr() : value_(nullptr) {}
 
 template <typename T>
 QuicArenaScopedPtr<T>::QuicArenaScopedPtr(T* value)

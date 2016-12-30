@@ -15,7 +15,7 @@
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
 #include "base/strings/stringprintf.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 
 namespace base {
 
@@ -86,7 +86,7 @@ bool FilePathWatcherFSEvents::Watch(const FilePath& path,
   if (!recursive)
     return false;
 
-  set_task_runner(ThreadTaskRunnerHandle::Get());
+  set_task_runner(SequencedTaskRunnerHandle::Get());
   callback_ = callback;
 
   FSEventStreamEventId start_event = FSEventsGetCurrentEventId();

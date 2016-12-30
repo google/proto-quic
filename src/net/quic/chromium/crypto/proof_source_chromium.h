@@ -39,7 +39,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 QuicVersion quic_version,
                 base::StringPiece chlo_hash,
                 const QuicTagVector& connection_options,
-                scoped_refptr<ProofSource::Chain>* out_chain,
+                QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
                 QuicCryptoProof* proof) override;
 
   void GetProof(const QuicSocketAddress& server_ip,
@@ -52,7 +52,7 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
 
  private:
   std::unique_ptr<crypto::RSAPrivateKey> private_key_;
-  scoped_refptr<ProofSource::Chain> chain_;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain_;
   std::string signed_certificate_timestamp_;
 
   DISALLOW_COPY_AND_ASSIGN(ProofSourceChromium);

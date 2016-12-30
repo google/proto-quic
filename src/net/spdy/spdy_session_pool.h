@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -24,6 +25,7 @@
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_server.h"
 #include "net/spdy/server_push_delegate.h"
+#include "net/spdy/spdy_protocol.h"
 #include "net/spdy/spdy_session_key.h"
 #include "net/ssl/ssl_config_service.h"
 
@@ -57,7 +59,7 @@ class NET_EXPORT SpdySessionPool
                   TransportSecurityState* transport_security_state,
                   bool enable_ping_based_connection_checking,
                   size_t session_max_recv_window_size,
-                  size_t stream_max_recv_window_size,
+                  const SettingsMap& initial_settings,
                   SpdySessionPool::TimeFunc time_func,
                   ProxyDelegate* proxy_delegate);
   ~SpdySessionPool() override;
@@ -228,8 +230,15 @@ class NET_EXPORT SpdySessionPool
   // Defaults to true. May be controlled via SpdySessionPoolPeer for tests.
   bool enable_sending_initial_data_;
   bool enable_ping_based_connection_checking_;
+
   size_t session_max_recv_window_size_;
-  size_t stream_max_recv_window_size_;
+
+  // Settings that are sent in the initial SETTINGS frame
+  // (if |enable_sending_initial_data_| is true),
+  // and also control SpdySession parameters like initial receive window size
+  // and maximum HPACK dynamic table size.
+  const SettingsMap initial_settings_;
+
   TimeFunc time_func_;
   ServerPushDelegate* push_delegate_;
 

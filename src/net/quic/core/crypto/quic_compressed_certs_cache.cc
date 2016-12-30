@@ -18,10 +18,11 @@ inline void hash_combine(uint64_t* seed, const uint64_t& val) {
 
 }  // namespace
 
-QuicCompressedCertsCache::UncompressedCerts::UncompressedCerts() {}
+QuicCompressedCertsCache::UncompressedCerts::UncompressedCerts()
+    : chain(nullptr) {}
 
 QuicCompressedCertsCache::UncompressedCerts::UncompressedCerts(
-    const scoped_refptr<ProofSource::Chain>& chain,
+    const QuicReferenceCountedPointer<ProofSource::Chain>& chain,
     const string* client_common_set_hashes,
     const string* client_cached_cert_hashes)
     : chain(chain),
@@ -67,7 +68,7 @@ QuicCompressedCertsCache::~QuicCompressedCertsCache() {
 }
 
 const string* QuicCompressedCertsCache::GetCompressedCert(
-    const scoped_refptr<ProofSource::Chain>& chain,
+    const QuicReferenceCountedPointer<ProofSource::Chain>& chain,
     const string& client_common_set_hashes,
     const string& client_cached_cert_hashes) {
   UncompressedCerts uncompressed_certs(chain, &client_common_set_hashes,
@@ -75,19 +76,16 @@ const string* QuicCompressedCertsCache::GetCompressedCert(
 
   uint64_t key = ComputeUncompressedCertsHash(uncompressed_certs);
 
-  auto cached_it = certs_cache_.Get(key);
-
-  if (cached_it != certs_cache_.end()) {
-    const CachedCerts& cached_value = cached_it->second;
-    if (cached_value.MatchesUncompressedCerts(uncompressed_certs)) {
-      return cached_value.compressed_cert();
-    }
+  CachedCerts* cached_value = certs_cache_.Lookup(key);
+  if (cached_value != nullptr &&
+      cached_value->MatchesUncompressedCerts(uncompressed_certs)) {
+    return cached_value->compressed_cert();
   }
   return nullptr;
 }
 
 void QuicCompressedCertsCache::Insert(
-    const scoped_refptr<ProofSource::Chain>& chain,
+    const QuicReferenceCountedPointer<ProofSource::Chain>& chain,
     const string& client_common_set_hashes,
     const string& client_cached_cert_hashes,
     const string& compressed_cert) {
@@ -97,15 +95,17 @@ void QuicCompressedCertsCache::Insert(
   uint64_t key = ComputeUncompressedCertsHash(uncompressed_certs);
 
   // Insert one unit to the cache.
-  certs_cache_.Put(key, CachedCerts(uncompressed_certs, compressed_cert));
+  std::unique_ptr<CachedCerts> cached_certs(
+      new CachedCerts(uncompressed_certs, compressed_cert));
+  certs_cache_.Insert(key, std::move(cached_certs));
 }
 
 size_t QuicCompressedCertsCache::MaxSize() {
-  return certs_cache_.max_size();
+  return certs_cache_.MaxSize();
 }
 
 size_t QuicCompressedCertsCache::Size() {
-  return certs_cache_.size();
+  return certs_cache_.Size();
 }
 
 uint64_t QuicCompressedCertsCache::ComputeUncompressedCertsHash(

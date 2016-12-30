@@ -431,7 +431,7 @@ void SpdyHttpStream::ReadAndSendRequestBodyData() {
 
 void SpdyHttpStream::InitializeStreamHelper() {
   stream_->SetDelegate(this);
-  was_alpn_negotiated_ = stream_->WasNpnNegotiated();
+  was_alpn_negotiated_ = stream_->WasAlpnNegotiated();
 }
 
 void SpdyHttpStream::ResetStreamInternal() {

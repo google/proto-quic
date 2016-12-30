@@ -17,7 +17,7 @@
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_flags.h"
-
+#include "net/quic/core/quic_pending_retransmission.h"
 
 namespace net {
 
@@ -109,9 +109,9 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   }
   // Configure congestion control.
   const bool enable_client_connection_options =
-      FLAGS_quic_client_connection_options;
+      FLAGS_quic_reloadable_flag_quic_client_connection_options;
   if (enable_client_connection_options) {
-    if (FLAGS_quic_allow_new_bbr &&
+    if (FLAGS_quic_reloadable_flag_quic_allow_new_bbr &&
         config.HasClientRequestedIndependentOption(kTBBR, perspective_)) {
       SetSendAlgorithm(kBBR);
     }
@@ -126,7 +126,8 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
       SetSendAlgorithm(kCubic);
     }
   } else {
-    if (FLAGS_quic_allow_new_bbr && config.HasReceivedConnectionOptions() &&
+    if (FLAGS_quic_reloadable_flag_quic_allow_new_bbr &&
+        config.HasReceivedConnectionOptions() &&
         ContainsQuicTag(config.ReceivedConnectionOptions(), kTBBR)) {
       SetSendAlgorithm(kBBR);
     }
@@ -167,7 +168,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     if (config.HasClientRequestedIndependentOption(kATIM, perspective_)) {
       general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
     }
-    if (FLAGS_quic_enable_lazy_fack &&
+    if (FLAGS_quic_reloadable_flag_quic_enable_lazy_fack &&
         config.HasClientRequestedIndependentOption(kLFAK, perspective_)) {
       general_loss_algorithm_.SetLossDetectionType(kLazyFack);
     }
@@ -180,7 +181,8 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
         ContainsQuicTag(config.ReceivedConnectionOptions(), kATIM)) {
       general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
     }
-    if (FLAGS_quic_enable_lazy_fack && config.HasReceivedConnectionOptions() &&
+    if (FLAGS_quic_reloadable_flag_quic_enable_lazy_fack &&
+        config.HasReceivedConnectionOptions() &&
         ContainsQuicTag(config.ReceivedConnectionOptions(), kLFAK)) {
       general_loss_algorithm_.SetLossDetectionType(kLazyFack);
     }
@@ -188,7 +190,7 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
   if (config.HasClientSentConnectionOption(kUNDO, perspective_)) {
     undo_pending_retransmits_ = true;
   }
-  if (FLAGS_quic_conservative_handshake_retransmits &&
+  if (FLAGS_quic_reloadable_flag_quic_conservative_handshake_retransmits &&
       config.HasClientSentConnectionOption(kCONH, perspective_)) {
     conservative_handshake_retransmits_ = true;
   }
@@ -759,7 +761,7 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
 
   QuicTime::Delta send_delta = ack_receive_time - transmission_info.sent_time;
   const int kMaxSendDeltaSeconds = 30;
-  if (!FLAGS_quic_allow_large_send_deltas &&
+  if (!FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas &&
       send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
     // send_delta can be very high if local clock is changed mid-connection.
     LOG(WARNING) << "Excessive send delta: " << send_delta.ToSeconds()
@@ -802,7 +804,7 @@ const QuicTime QuicSentPacketManager::GetRetransmissionTime() const {
       pending_timer_transmission_count_ > 0) {
     return QuicTime::Zero();
   }
-  if (FLAGS_quic_more_conservative_retransmission_alarm &&
+  if (FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm &&
       !unacked_packets_.HasUnackedRetransmittableFrames()) {
     return QuicTime::Zero();
   }
@@ -865,8 +867,9 @@ const QuicTime::Delta QuicSentPacketManager::GetTailLossProbeDelay() const {
                  static_cast<int64_t>(0.5 * srtt.ToMilliseconds())));
   }
   if (!unacked_packets_.HasMultipleInFlightPackets()) {
-    return std::max(2 * srtt, 1.5 * srtt + QuicTime::Delta::FromMilliseconds(
-                                               kMinRetransmissionTimeMs / 2));
+    return std::max(2 * srtt,
+                    1.5 * srtt + QuicTime::Delta::FromMilliseconds(
+                                     kMinRetransmissionTimeMs / 2));
   }
   return QuicTime::Delta::FromMilliseconds(
       std::max(kMinTailLossProbeTimeoutMs,

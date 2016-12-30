@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
 #define NET_QUIC_CORE_CRYPTO_CHACHA20_POLY1305_ENCRYPTER_H_
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "net/quic/core/crypto/aead_base_encrypter.h"
 #include "net/quic/platform/api/quic_export.h"
@@ -14,10 +12,9 @@
 namespace net {
 
 // A ChaCha20Poly1305Encrypter is a QuicEncrypter that implements the
-// AEAD_CHACHA20_POLY1305 algorithm specified in
-// draft-agl-tls-chacha20poly1305-04, except that it truncates the Poly1305
-// authenticator to 12 bytes. Create an instance by calling
-// QuicEncrypter::Create(kCC12).
+// AEAD_CHACHA20_POLY1305 algorithm specified in RFC 7539, except that
+// it truncates the Poly1305 authenticator to 12 bytes. Create an instance
+// by calling QuicEncrypter::Create(kCC12).
 //
 // It uses an authentication tag of 16 bytes (128 bits). There is no
 // fixed nonce prefix.

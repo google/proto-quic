@@ -16,12 +16,12 @@ class C;
 
 class A : public GarbageCollectedFinalized<A> {
 public:
-    virtual void trace(Visitor*) {}
+    virtual void Trace(Visitor*) {}
 };
 
 class B : public A {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     RefPtr<C> m_c;
 };

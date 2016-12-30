@@ -339,16 +339,21 @@ class LocalDeviceInstrumentationTestRun(
       device.RunShellCommand('rm -f %s' % os.path.join(coverage_directory,
           '*'))
     if self._test_instance.store_tombstones:
-      resolved_tombstones = None
+      tombstones_url = None
       for result in results:
         if result.GetType() == base_test_result.ResultType.CRASH:
-          if not resolved_tombstones:
-            resolved_tombstones = '\n'.join(tombstones.ResolveTombstones(
+          if not tombstones_url:
+            resolved_tombstones = tombstones.ResolveTombstones(
                 device,
                 resolve_all_tombstones=True,
                 include_stack_symbols=False,
-                wipe_tombstones=True))
-          result.SetTombstones(resolved_tombstones)
+                wipe_tombstones=True)
+            stream_name = 'tombstones_%s_%s' % (
+                time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+                device.serial)
+            tombstones_url = tombstones.LogdogTombstones(resolved_tombstones,
+                                                         stream_name)
+          result.SetTombstonesUrl(tombstones_url)
     return results, None
 
   #override
@@ -368,7 +373,7 @@ class LocalDeviceInstrumentationTestRun(
   @classmethod
   def _GetTimeoutScaleFromAnnotations(cls, annotations):
     try:
-      return int(annotations.get('TimeoutScale', 1))
+      return int(annotations.get('TimeoutScale', {}).get('value', 1))
     except ValueError as e:
       logging.warning("Non-integer value of TimeoutScale ignored. (%s)", str(e))
       return 1

@@ -28,14 +28,15 @@ class DummyProofSource : public net::ProofSource {
   ~DummyProofSource() override {}
 
   // ProofSource override.
-  bool GetProof(const net::QuicSocketAddress& server_addr,
-                const std::string& hostname,
-                const std::string& server_config,
-                net::QuicVersion quic_version,
-                base::StringPiece chlo_hash,
-                const net::QuicTagVector& connection_options,
-                scoped_refptr<net::ProofSource::Chain>* out_chain,
-                net::QuicCryptoProof* proof) override {
+  bool GetProof(
+      const net::QuicSocketAddress& server_addr,
+      const std::string& hostname,
+      const std::string& server_config,
+      net::QuicVersion quic_version,
+      base::StringPiece chlo_hash,
+      const net::QuicTagVector& connection_options,
+      net::QuicReferenceCountedPointer<net::ProofSource::Chain>* out_chain,
+      net::QuicCryptoProof* proof) override {
     std::vector<std::string> certs;
     certs.push_back("Dummy cert");
     *out_chain = new ProofSource::Chain(certs);

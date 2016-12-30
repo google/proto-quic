@@ -6,29 +6,29 @@
 
 namespace blink {
 
-void NeedsFinalizer::trace(Visitor* visitor)
+void NeedsFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_as);
-    A::trace(visitor);
+    visitor->Trace(m_as);
+    A::Trace(visitor);
 }
 
-void AlsoNeedsFinalizer::trace(Visitor* visitor)
+void AlsoNeedsFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_bs);
-    A::trace(visitor);
+    visitor->Trace(m_bs);
+    A::Trace(visitor);
 }
 
-void DoesNotNeedFinalizer::trace(Visitor* visitor)
+void DoesNotNeedFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_bs);
-    A::trace(visitor);
+    visitor->Trace(m_bs);
+    A::Trace(visitor);
 }
 
-void AlsoDoesNotNeedFinalizer::trace(Visitor* visitor)
+void AlsoDoesNotNeedFinalizer::Trace(Visitor* visitor)
 {
-    visitor->trace(m_as);
-    visitor->trace(m_cs);
-    A::trace(visitor);
+    visitor->Trace(m_as);
+    visitor->Trace(m_cs);
+    A::Trace(visitor);
 }
 
 }

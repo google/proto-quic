@@ -16,6 +16,7 @@ from pylib.base import base_test_result
 from pylib.base import test_run
 from pylib.base import test_collection
 from pylib.local.device import local_device_environment
+from tracing_build import trace2html
 
 
 _SIGTERM_TEST_LOG = (
@@ -202,6 +203,13 @@ class LocalDeviceTestRun(test_run.TestRun):
 
   def _ShouldShard(self):
     raise NotImplementedError
+
+  @staticmethod
+  def _JsonToTrace(json_path, html_path):
+    # First argument is call site.
+    cmd = [__file__, json_path, '--title', 'Android Test Runner Trace',
+           '--output', html_path]
+    trace2html.Main(cmd)
 
 
 class NoTestsError(Exception):

@@ -12,7 +12,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 
 // On some platforms these are not defined.
 #if !defined(EV_RECEIPT)
@@ -241,7 +241,7 @@ bool FilePathWatcherKQueue::Watch(const FilePath& path,
   callback_ = callback;
   target_ = path;
 
-  set_task_runner(ThreadTaskRunnerHandle::Get());
+  set_task_runner(SequencedTaskRunnerHandle::Get());
 
   kqueue_ = kqueue();
   if (kqueue_ == -1) {
@@ -279,7 +279,7 @@ void FilePathWatcherKQueue::Cancel() {
     return;
   }
 
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
   if (!is_cancelled()) {
     set_cancelled();
     kqueue_watch_controller_.reset();
@@ -294,7 +294,7 @@ void FilePathWatcherKQueue::Cancel() {
 }
 
 void FilePathWatcherKQueue::OnKQueueReadable() {
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
   DCHECK(events_.size());
 
   // Request the file system update notifications that have occurred and return

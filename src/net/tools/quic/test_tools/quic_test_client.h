@@ -113,9 +113,10 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // Wraps data in a quic packet and sends it.
   ssize_t SendData(const std::string& data, bool last_data);
   // As above, but |delegate| will be notified when |data| is ACKed.
-  ssize_t SendData(const std::string& data,
-                   bool last_data,
-                   QuicAckListenerInterface* delegate);
+  ssize_t SendData(
+      const std::string& data,
+      bool last_data,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   // Clears any outstanding state and sends a simple GET of 'uri' to the
   // server.  Returns 0 if the request failed and no bytes were written.
@@ -216,10 +217,11 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   // Calls GetOrCreateStream(), sends the request on the stream, and
   // stores the request in case it needs to be resent.  If |headers| is
   // null, only the body will be sent on the stream.
-  ssize_t GetOrCreateStreamAndSendRequest(const SpdyHeaderBlock* headers,
-                                          base::StringPiece body,
-                                          bool fin,
-                                          QuicAckListenerInterface* delegate);
+  ssize_t GetOrCreateStreamAndSendRequest(
+      const SpdyHeaderBlock* headers,
+      base::StringPiece body,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
   QuicRstStreamErrorCode stream_error() { return stream_error_; }
   QuicErrorCode connection_error();
@@ -276,22 +278,20 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
  private:
   class TestClientDataToResend : public QuicClient::QuicDataToResend {
    public:
-    TestClientDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
-                           base::StringPiece body,
-                           bool fin,
-                           QuicTestClient* test_client,
-                           QuicAckListenerInterface* delegate)
-        : QuicClient::QuicDataToResend(std::move(headers), body, fin),
-          test_client_(test_client),
-          delegate_(delegate) {}
+    TestClientDataToResend(
+        std::unique_ptr<SpdyHeaderBlock> headers,
+        base::StringPiece body,
+        bool fin,
+        QuicTestClient* test_client,
+        QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 
-    ~TestClientDataToResend() override {}
+    ~TestClientDataToResend() override;
 
     void Resend() override;
 
    protected:
     QuicTestClient* test_client_;
-    QuicAckListenerInterface* delegate_;
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener_;
   };
 
   // Given |uri|, populates the fields in |headers| for a simple GET

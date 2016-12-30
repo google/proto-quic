@@ -75,12 +75,6 @@ const int32_t kDefaultInitialWindowSize = 65535;
 // sends a SETTINGS frame with a different value.
 const size_t kInitialMaxConcurrentStreams = 100;
 
-// Specifies the maximum HPACK dynamic table size the server is allowed to set.
-const int kMaxHeaderTableSize = 64 * 1024;
-
-// Specifies the maximum concurrent streams server could send (via push).
-const int kMaxConcurrentPushedStreams = 1000;
-
 // If more than this many bytes have been read or more than that many
 // milliseconds have passed, return ERR_IO_PENDING from ReadLoop.
 const int kYieldAfterBytesRead = 32 * 1024;
@@ -307,7 +301,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
               bool enable_sending_initial_data,
               bool enable_ping_based_connection_checking,
               size_t session_max_recv_window_size,
-              size_t stream_max_recv_window_size,
+              const SettingsMap& initial_settings,
               TimeFunc time_func,
               ServerPushDelegate* push_delegate,
               ProxyDelegate* proxy_delegate,
@@ -422,8 +416,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                                  std::vector<uint8_t>* out) override;
 
   // Returns true if ALPN was negotiated for the underlying socket.
-  // TODO(bnc): Rename to WasAlpnNegotiated().
-  bool WasNpnNegotiated() const;
+  bool WasAlpnNegotiated() const;
 
   // Returns the protocol negotiated via ALPN for the underlying socket.
   NextProto GetNegotiatedProtocol() const;
@@ -875,7 +868,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void OnStreamEnd(SpdyStreamId stream_id) override;
   void OnStreamPadding(SpdyStreamId stream_id, size_t len) override;
   void OnSettings() override;
-  void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override;
+  void OnSetting(SpdySettingsIds id, uint32_t value) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
@@ -1095,6 +1088,12 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Initialized to OK.
   Error error_on_close_;
 
+  // Settings that are sent in the initial SETTINGS frame
+  // (if |enable_sending_initial_data_| is true),
+  // and also control SpdySession parameters like initial receive window size
+  // and maximum HPACK dynamic table size.
+  const SettingsMap initial_settings_;
+
   // Limits
   size_t max_concurrent_streams_;
   size_t max_concurrent_pushed_streams_;
@@ -1151,6 +1150,9 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // changed by an arriving SETTINGS frame. Newly created streams use
   // this value for the initial send window size.
   int32_t stream_initial_send_window_size_;
+
+  // The maximum HPACK dynamic table size the server is allowed to set.
+  uint32_t max_header_table_size_;
 
   // Initial receive window size for this session's streams. There are
   // plans to add a command line switch that would cause a SETTINGS

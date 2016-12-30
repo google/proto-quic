@@ -21,14 +21,14 @@ class E;
 
 class A : public GarbageCollected<A> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     Member<B> m_b;
 };
 
 class B : public GarbageCollectedFinalized<B> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 private:
     Member<A> m_a;
     RefPtr<C> m_c;

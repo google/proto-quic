@@ -130,10 +130,8 @@ void BufferedSpdyFramer::OnSettings(bool clear_persisted) {
   visitor_->OnSettings();
 }
 
-void BufferedSpdyFramer::OnSetting(SpdySettingsIds id,
-                                   uint8_t flags,
-                                   uint32_t value) {
-  visitor_->OnSetting(id, flags, value);
+void BufferedSpdyFramer::OnSetting(SpdySettingsIds id, uint32_t value) {
+  visitor_->OnSetting(id, value);
 }
 
 void BufferedSpdyFramer::OnSettingsAck() {
@@ -251,14 +249,9 @@ SpdySerializedFrame* BufferedSpdyFramer::CreateRstStream(
 SpdySerializedFrame* BufferedSpdyFramer::CreateSettings(
     const SettingsMap& values) const {
   SpdySettingsIR settings_ir;
-  for (SettingsMap::const_iterator it = values.begin();
-       it != values.end();
+  for (SettingsMap::const_iterator it = values.begin(); it != values.end();
        ++it) {
-    settings_ir.AddSetting(
-        it->first,
-        (it->second.first & SETTINGS_FLAG_PLEASE_PERSIST) != 0,
-        (it->second.first & SETTINGS_FLAG_PERSISTED) != 0,
-        it->second.second);
+    settings_ir.AddSetting(it->first, it->second);
   }
   return new SpdySerializedFrame(spdy_framer_.SerializeSettings(settings_ir));
 }

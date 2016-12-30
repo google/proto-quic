@@ -10,7 +10,7 @@
 #include "net/quic/test_tools/simulator/simulator.h"
 #include "net/quic/test_tools/simulator/switch.h"
 
-#include "net/test/gtest_util.h"
+#include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;

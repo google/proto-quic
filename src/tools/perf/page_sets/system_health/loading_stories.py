@@ -309,7 +309,7 @@ class LoadGmailDesktopStory(_LoadGmailBaseStory):
         'document.getElementById("loading").style.display === "none"')
 
 
-@decorators.Disabled('android')  # crbug.com.com/664505
+@decorators.Disabled('android')  # crbug.com/657433
 class LoadGmailMobileStory(_LoadGmailBaseStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 

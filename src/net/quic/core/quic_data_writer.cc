@@ -4,7 +4,6 @@
 
 #include "net/quic/core/quic_data_writer.h"
 
-#include <stdint.h>
 #include <algorithm>
 #include <limits>
 

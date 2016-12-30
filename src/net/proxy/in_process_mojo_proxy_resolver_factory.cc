@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "base/memory/singleton.h"
 #include "mojo/public/cpp/bindings/strong_binding.h"
 #include "net/proxy/mojo_proxy_resolver_factory_impl.h"
@@ -20,7 +21,7 @@ InProcessMojoProxyResolverFactory::GetInstance() {
 
 InProcessMojoProxyResolverFactory::InProcessMojoProxyResolverFactory() {
   mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(),
-                          mojo::GetProxy(&factory_));
+                          mojo::MakeRequest(&factory_));
 }
 
 InProcessMojoProxyResolverFactory::~InProcessMojoProxyResolverFactory() =

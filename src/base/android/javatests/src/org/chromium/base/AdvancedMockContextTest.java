@@ -9,8 +9,8 @@ import android.content.ComponentCallbacks;
 import android.content.ComponentCallbacks2;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.support.test.filters.SmallTest;
 import android.test.InstrumentationTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 
 import org.chromium.base.test.util.AdvancedMockContext;
 

@@ -6,17 +6,15 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/crypto/proof_verifier.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_flow_controller.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 
-using base::IntToString;
 using base::StringPiece;
 using std::string;
-using net::SpdyPriority;
 
 namespace net {
 
@@ -283,7 +281,7 @@ QuicConsumedData QuicSession::WritevData(
     QuicIOVector iov,
     QuicStreamOffset offset,
     bool fin,
-    QuicAckListenerInterface* ack_notifier_delegate) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   // This check is an attempt to deal with potential memory corruption
   // in which |id| ends up set to 1 (the crypto stream id). If this happen
   // it might end up resulting in unencrypted stream data being sent.
@@ -302,8 +300,8 @@ QuicConsumedData QuicSession::WritevData(
     // up write blocked until OnCanWrite is next called.
     return QuicConsumedData(0, false);
   }
-  QuicConsumedData data =
-      connection_->SendStreamData(id, iov, offset, fin, ack_notifier_delegate);
+  QuicConsumedData data = connection_->SendStreamData(id, iov, offset, fin,
+                                                      std::move(ack_listener));
   write_blocked_streams_.UpdateBytesForStream(id, data.bytes_consumed);
   return data;
 }
@@ -439,7 +437,8 @@ void QuicSession::OnConfigNegotiated() {
     max_streams = config_.MaxStreamsPerConnection();
   }
   set_max_open_outgoing_streams(max_streams);
-  if (FLAGS_quic_large_ifw_options && perspective() == Perspective::IS_SERVER) {
+  if (FLAGS_quic_reloadable_flag_quic_large_ifw_options &&
+      perspective() == Perspective::IS_SERVER) {
     if (config_.HasReceivedConnectionOptions()) {
       // The following variations change the initial receive flow control
       // window sizes.
@@ -676,10 +675,9 @@ bool QuicSession::MaybeIncreaseLargestPeerStreamId(
              << " streams available, which would become "
              << new_num_available_streams << ", which exceeds the limit "
              << MaxAvailableStreams() << ".";
-    string details = IntToString(new_num_available_streams) + " above " +
-                     IntToString(MaxAvailableStreams());
     connection()->CloseConnection(
-        QUIC_TOO_MANY_AVAILABLE_STREAMS, details.c_str(),
+        QUIC_TOO_MANY_AVAILABLE_STREAMS,
+        QuicStrCat(new_num_available_streams, " above ", MaxAvailableStreams()),
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return false;
   }

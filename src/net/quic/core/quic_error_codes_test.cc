@@ -4,13 +4,8 @@
 
 #include "net/quic/core/quic_error_codes.h"
 
-#include "base/strings/string_piece.h"
-#include "net/quic/core/quic_flags.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using base::StringPiece;
-using std::string;
 
 namespace net {
 namespace test {

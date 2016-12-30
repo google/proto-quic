@@ -1694,7 +1694,6 @@
       {
         "args": [
           "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.browser_tests.filter",
           "--test-launcher-retry-limit=6"
         ],
         "swarming": {
@@ -1733,14 +1732,6 @@
       }
     ],
     "scripts": [
-      {
-        "args": [
-          "browser_tests",
-          "../../testing/buildbot/filters/browser-side-navigation.linux.browser_tests.filter"
-        ],
-        "name": "count_filtered_tests_browser_tests",
-        "script": "count_filtered_tests.py"
-      },
       {
         "args": [
           "content_browsertests",

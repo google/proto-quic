@@ -11,7 +11,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/win/object_watcher.h"
 
@@ -83,7 +83,7 @@ bool FilePathWatcherImpl::Watch(const FilePath& path,
                                 const FilePathWatcher::Callback& callback) {
   DCHECK(target_.value().empty());  // Can only watch one path.
 
-  set_task_runner(ThreadTaskRunnerHandle::Get());
+  set_task_runner(SequencedTaskRunnerHandle::Get());
   callback_ = callback;
   target_ = path;
   recursive_watch_ = recursive;
@@ -109,7 +109,7 @@ void FilePathWatcherImpl::Cancel() {
     return;
   }
 
-  DCHECK(task_runner()->BelongsToCurrentThread());
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
   set_cancelled();
 
   if (handle_ != INVALID_HANDLE_VALUE)

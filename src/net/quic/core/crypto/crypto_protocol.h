@@ -5,9 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_PROTOCOL_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_PROTOCOL_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
 #include <string>
 
 #include "net/quic/core/quic_tag.h"
@@ -118,12 +116,10 @@ const QuicTag kCONH = TAG('C', 'O', 'N', 'H');   // Conservative Handshake
                                                  // Retransmissions.
 const QuicTag kLFAK = TAG('L', 'F', 'A', 'K');   // Don't invoke FACK on the
                                                  // first ack.
-
 // TODO(fayang): Remove this connection option in QUIC_VERSION_37, in which
 // MAX_HEADER_LIST_SIZE settings frame should be supported.
 const QuicTag kSMHL = TAG('S', 'M', 'H', 'L');   // Support MAX_HEADER_LIST_SIZE
                                                  // settings frame.
-
 const QuicTag kCCVX = TAG('C', 'C', 'V', 'X');   // Fix Cubic convex bug.
 const QuicTag kCBQT = TAG('C', 'B', 'Q', 'T');   // Fix CubicBytes quantization.
 const QuicTag kBLMX = TAG('B', 'L', 'M', 'X');   // Fix Cubic BetaLastMax bug.

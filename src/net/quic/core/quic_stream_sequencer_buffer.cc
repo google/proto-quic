@@ -6,12 +6,10 @@
 
 #include "base/format_macros.h"
 #include "base/logging.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -21,15 +19,6 @@ namespace {
 // number of iterations needed to find the right gap to fill when a frame
 // arrives.
 const size_t kMaxNumGapsAllowed = 2 * kMaxPacketGap;
-
-}  // namespace
-
-namespace {
-
-string RangeDebugString(QuicStreamOffset start, QuicStreamOffset end) {
-  return std::string("[") + base::Uint64ToString(start) + ", " +
-         base::Uint64ToString(end) + ") ";
-}
 
 }  // namespace
 
@@ -50,7 +39,7 @@ QuicStreamSequencerBuffer::QuicStreamSequencerBuffer(size_t max_capacity_bytes)
           ceil(static_cast<double>(max_capacity_bytes) / kBlockSizeBytes)),
       total_bytes_read_(0),
       reduce_sequencer_buffer_memory_life_time_(
-          FLAGS_quic_reduce_sequencer_buffer_memory_life_time),  // NOLINT
+          FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time),  // NOLINT
       blocks_(reduce_sequencer_buffer_memory_life_time_
                   ? nullptr
                   : new BufferBlock*[blocks_count_]()),
@@ -130,24 +119,23 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
   if (offset < current_gap->begin_offset &&
       offset + size > current_gap->begin_offset) {
     // Beginning of new data overlaps data before current gap.
+    string prefix(data.data(), data.length() < 128 ? data.length() : 128);
     *error_details =
-        string("Beginning of received data overlaps with buffered data.\n") +
-        "New frame range " + RangeDebugString(offset, offset + size) +
-        " with first 128 bytes: " +
-        string(data.data(), data.length() < 128 ? data.length() : 128) +
-        "\nCurrently received frames: " + ReceivedFramesDebugString() +
-        "\nCurrent gaps: " + GapsDebugString();
+        QuicStrCat("Beginning of received data overlaps with buffered data.\n",
+                   "New frame range [", offset, ", ", offset + size,
+                   ") with first 128 bytes: ", prefix, "\n",
+                   "Currently received frames: ", GapsDebugString(), "\n",
+                   "Current gaps: ", ReceivedFramesDebugString());
     return QUIC_OVERLAPPING_STREAM_DATA;
   }
   if (offset + size > current_gap->end_offset) {
     // End of new data overlaps with data after current gap.
-    *error_details =
-        string("End of received data overlaps with buffered data.\n") +
-        "New frame range " + RangeDebugString(offset, offset + size) +
-        " with first 128 bytes: " +
-        string(data.data(), data.length() < 128 ? data.length() : 128) +
-        "\nCurrently received frames: " + ReceivedFramesDebugString() +
-        "\nCurrent gaps: " + GapsDebugString();
+    string prefix(data.data(), data.length() < 128 ? data.length() : 128);
+    *error_details = QuicStrCat(
+        "End of received data overlaps with buffered data.\nNew frame range [",
+        offset, ", ", offset + size, ") with first 128 bytes: ", prefix, "\n",
+        "Currently received frames: ", ReceivedFramesDebugString(), "\n",
+        "Current gaps: ", GapsDebugString());
     return QUIC_OVERLAPPING_STREAM_DATA;
   }
 
@@ -194,11 +182,11 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
     }
 
     if (write_block_num >= blocks_count_) {
-      *error_details = StringPrintf(
+      *error_details = QuicStrCat(
           "QuicStreamSequencerBuffer error: OnStreamData() exceed array bounds."
-          "write offset = %" PRIu64 " write_block_num = %" PRIuS
-          " blocks_count_ = %" PRIuS,
-          offset, write_block_num, blocks_count_);
+          "write offset = ",
+          offset, " write_block_num = ", write_block_num,
+          " blocks_count_ = ", blocks_count_);
       return QUIC_STREAM_SEQUENCER_INVALID_STATE;
     }
     if (blocks_ == nullptr) {
@@ -218,18 +206,13 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
     DVLOG(1) << "Write at offset: " << offset << " length: " << bytes_to_copy;
 
     if (dest == nullptr || source == nullptr) {
-      *error_details = StringPrintf(
+      *error_details = QuicStrCat(
           "QuicStreamSequencerBuffer error: OnStreamData()"
-          " dest == nullptr: %s"
-          " source == nullptr: %s"
-          " Writing at offset %" PRIu64
-          " Gaps: %s"
-          " Remaining frames: %s"
-          " total_bytes_read_ = %" PRIu64,
-          (dest == nullptr ? "true" : "false"),
-          (source == nullptr ? "true" : "false"), offset,
-          GapsDebugString().c_str(), ReceivedFramesDebugString().c_str(),
-          total_bytes_read_);
+          " dest == nullptr: ",
+          (dest == nullptr), " source == nullptr: ", (source == nullptr),
+          " Writing at offset ", offset, " Gaps: ", GapsDebugString(),
+          " Remaining frames: ", ReceivedFramesDebugString(),
+          " total_bytes_read_ = ", total_bytes_read_);
       return QUIC_STREAM_SEQUENCER_INVALID_STATE;
     }
     memcpy(dest, source, bytes_to_copy);
@@ -300,12 +283,14 @@ QuicErrorCode QuicStreamSequencerBuffer::Readv(const iovec* dest_iov,
           std::min<size_t>(bytes_available_in_block, dest_remaining);
       DCHECK_GT(bytes_to_copy, 0UL);
       if (blocks_[block_idx] == nullptr || dest == nullptr) {
-        *error_details = StringPrintf(
+        *error_details = QuicStrCat(
             "QuicStreamSequencerBuffer error:"
-            " Readv() dest == nullptr: %s"
-            " blocks_[%" PRIuS "] == nullptr: %s",
-            (dest == nullptr ? "true" : "false"), block_idx,
-            (blocks_[block_idx] == nullptr ? "true" : "false"));
+            " Readv() dest == nullptr: ",
+            (dest == nullptr), " blocks_[", block_idx,
+            "] == nullptr: ", (blocks_[block_idx] == nullptr),
+            " Gaps: ", GapsDebugString(),
+            " Remaining frames: ", ReceivedFramesDebugString(),
+            " total_bytes_read_ = ", total_bytes_read_);
         return QUIC_STREAM_SEQUENCER_INVALID_STATE;
       }
       memcpy(dest, blocks_[block_idx]->buffer + start_offset_in_block,
@@ -323,11 +308,11 @@ QuicErrorCode QuicStreamSequencerBuffer::Readv(const iovec* dest_iov,
       if (bytes_to_copy == bytes_available_in_block) {
         bool retire_successfully = RetireBlockIfEmpty(block_idx);
         if (!retire_successfully) {
-          *error_details = StringPrintf(
-              "QuicStreamSequencerBuffer error: fail to retire block %" PRIuS
-              " as the block is already released + total_bytes_read_ = %" PRIu64
-              " Gaps: %s",
-              block_idx, total_bytes_read_, GapsDebugString().c_str());
+          *error_details = QuicStrCat(
+              "QuicStreamSequencerBuffer error: fail to retire block ",
+              block_idx,
+              " as the block is already released, total_bytes_read_ = ",
+              total_bytes_read_, " Gaps: ", GapsDebugString());
           return QUIC_STREAM_SEQUENCER_INVALID_STATE;
         }
       }
@@ -593,7 +578,8 @@ string QuicStreamSequencerBuffer::GapsDebugString() {
   for (const Gap& gap : gaps_) {
     QuicStreamOffset current_gap_begin = gap.begin_offset;
     QuicStreamOffset current_gap_end = gap.end_offset;
-    current_gaps_string += RangeDebugString(current_gap_begin, current_gap_end);
+    current_gaps_string.append(
+        QuicStrCat("[", current_gap_begin, ", ", current_gap_end, ") "));
   }
   return current_gaps_string;
 }
@@ -604,9 +590,9 @@ string QuicStreamSequencerBuffer::ReceivedFramesDebugString() {
     QuicStreamOffset current_frame_begin_offset = it.first;
     QuicStreamOffset current_frame_end_offset =
         it.second.length + current_frame_begin_offset;
-    current_frames_string = string(StringPrintf(
-        "%s[%" PRIu64 ", %" PRIu64 ") ", current_frames_string.c_str(),
-        current_frame_begin_offset, current_frame_end_offset));
+    current_frames_string.append(QuicStrCat(
+        "[", current_frame_begin_offset, ", ", current_frame_end_offset,
+        ") receiving time ", it.second.timestamp.ToDebuggingValue()));
   }
   return current_frames_string;
 }

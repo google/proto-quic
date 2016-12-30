@@ -77,6 +77,7 @@ def main():
     data['has_classes_jar'] = False
     data['has_proguard_flags'] = False
     data['has_native_libraries'] = False
+    data['has_r_text_file'] = False
     with zipfile.ZipFile(aar_file) as z:
       data['is_manifest_empty'] = (
           _IsManifestEmpty(z.read('AndroidManifest.xml')))
@@ -101,6 +102,10 @@ def main():
           data['has_classes_jar'] = True
         elif name == 'proguard.txt':
           data['has_proguard_flags'] = True
+        elif name == 'R.txt':
+          # Some AARs, e.g. gvr_controller_java, have empty R.txt. Such AARs
+          # have no resources as well. We treat empty R.txt as having no R.txt.
+          data['has_r_text_file'] = (z.read('R.txt').strip() != '')
 
     print gn_helpers.ToGNString(data)
 

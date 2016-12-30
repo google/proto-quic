@@ -9,9 +9,9 @@ class NeedsDispatch : public GarbageCollectedFinalized<NeedsDispatch> {
 class NeedsFinalizedBase : public GarbageCollected<NeedsFinalizedBase> {
 ^
 ./finalize_after_dispatch.h:30:5: note: [blink-gc] User-declared finalizer declared here:
-    void finalizeGarbageCollectedObject() { };
+    void FinalizeGarbageCollectedObject() { };
     ^
 finalize_after_dispatch.cpp:30:1: warning: [blink-gc] Missing dispatch to class 'D' in manual finalize dispatch.
-void A::finalizeGarbageCollectedObject()
+void A::FinalizeGarbageCollectedObject()
 ^
 4 warnings generated.
