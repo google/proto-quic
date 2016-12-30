@@ -6,15 +6,15 @@
 
 namespace blink {
 
-void Mixin::trace(Visitor* visitor)
+void Mixin::Trace(Visitor* visitor)
 {
-    // Missing: visitor->trace(m_self);
+    // Missing: visitor->Trace(m_self);
 }
 
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 {
-    visitor->trace(m_mix);
-    // Missing: Mixin::trace(visitor);
+    visitor->Trace(m_mix);
+    // Missing: Mixin::Trace(visitor);
 }
 
 }

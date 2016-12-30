@@ -9,7 +9,7 @@
 
 // If true, QUIC BBR congestion control may be enabled via Finch and/or via QUIC
 // connection options.
-QUIC_FLAG(bool, FLAGS_quic_allow_new_bbr, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_new_bbr, true)
 
 // Time period for which a given connection_id should live in the time-wait
 // state.
@@ -27,107 +27,146 @@ QUIC_FLAG(int64_t, FLAGS_quic_time_wait_list_seconds, 200)
 QUIC_FLAG(int64_t, FLAGS_quic_time_wait_list_max_connections, 600000)
 
 // Enables server-side support for QUIC stateless rejects.
-QUIC_FLAG(bool, FLAGS_enable_quic_stateless_reject_support, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support,
+          true)
 
 // This flag is not in use, just to keep consistency for shared code.
-QUIC_FLAG(bool, FLAGS_quic_always_log_bugs_for_tests, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_always_log_bugs_for_tests, true)
 
 // If true, multipath is enabled for the connection.
-QUIC_FLAG(bool, FLAGS_quic_enable_multipath, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_multipath, false)
 
 // If true, require handshake confirmation for QUIC connections, functionally
 // disabling 0-rtt handshakes.
 // TODO(rtenneti): Enable this flag after CryptoServerTest's are fixed.
-QUIC_FLAG(bool, FLAGS_quic_require_handshake_confirmation, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_require_handshake_confirmation,
+          false)
 
 // If true, disable pacing in QUIC.
 QUIC_FLAG(bool, FLAGS_quic_disable_pacing_for_perf_tests, false)
 
 // If true, QUIC public reset packets will have the \"pre-v33\" public header
 // flags.
-QUIC_FLAG(bool, FLAGS_quic_use_old_public_reset_packets, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_use_old_public_reset_packets,
+          true)
 
 // If true, QUIC will use cheap stateless rejects without creating a full
 // connection.
-QUIC_FLAG(bool, FLAGS_quic_use_cheap_stateless_rejects, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_use_cheap_stateless_rejects,
+          true)
 
 // If true, QUIC respect HTTP2 SETTINGS frame rather than always close the
 // connection.
-QUIC_FLAG(bool, FLAGS_quic_respect_http2_settings_frame, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_respect_http2_settings_frame,
+          true)
 
 // If true, re-enables QUIC_VERSION_36.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_36_v3, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_36_v3, true)
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
-QUIC_FLAG(bool, FLAGS_enable_async_get_proof, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_enable_async_get_proof, false)
 
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event.
-QUIC_FLAG(bool, FLAGS_quic_limit_num_new_sessions_per_epoll_loop, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop,
+          true)
 
 // Only close the connection on the 5th RTO client side when the 5RTO option
 // is enabled.
-QUIC_FLAG(bool, FLAGS_quic_only_5rto_client_side, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_only_5rto_client_side, false)
 
 // If true, QUIC server push will enabled by default.
-QUIC_FLAG(bool, FLAGS_quic_enable_server_push_by_default, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default,
+          true)
 
 // If true, export reject reasons for all rejects, i.e., rejects,
 // stateless rejects and cheap stateless rejects.
-QUIC_FLAG(bool, FLAGS_quic_export_rej_for_all_rejects, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_export_rej_for_all_rejects,
+          true)
 
 // Allow large send deltas to be used as RTT samples.
-QUIC_FLAG(bool, FLAGS_quic_allow_large_send_deltas, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas, true)
 
 // Engage early retransmit anytime the largest acked is greater than
 // or equal to the largest retransmittable packet.
-QUIC_FLAG(bool, FLAGS_quic_largest_sent_retransmittable, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_largest_sent_retransmittable,
+          true)
 
 // If true, release QuicCryptoStream\'s read buffer when stream are less
 // frequently used.
-QUIC_FLAG(bool, FLAGS_quic_release_crypto_stream_buffer, true)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_release_crypto_stream_buffer,
+          true)
 
 // Use a more conservative backoff of 2x instead of 1.5x for handshake
 // retransmissions, as well as a larger minimum.
-QUIC_FLAG(bool, FLAGS_quic_conservative_handshake_retransmits, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_conservative_handshake_retransmits,
+          false)
 
 // If true, buffer packets while parsing public headers instead of parsing down
 // if CHLO is already buffered.
-QUIC_FLAG(bool, FLAGS_quic_buffer_packets_after_chlo, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_buffer_packets_after_chlo,
+          false)
 
 // Previously QUIC didn't register a packet as received until it was fully
 // processed, but now that flow control is implemented, it can be received once
 // decrypted.
-QUIC_FLAG(bool, FLAGS_quic_receive_packet_once_decrypted, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted,
+          false)
 
 // If true, enable the Lazy FACK style loss detection in QUIC.
-QUIC_FLAG(bool, FLAGS_quic_enable_lazy_fack, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_lazy_fack, false)
 
 // If true, do not override a connection in global map if exists. Only create
 // QUIC session if it is successfully inserted to the global map. Toss the
 // packet if insertion fails.
-QUIC_FLAG(bool, FLAGS_quic_create_session_after_insertion, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_create_session_after_insertion,
+          false)
 
 // If true, rejected packet number is removed from public reset packet.
-QUIC_FLAG(bool, FLAGS_quic_remove_packet_number_from_public_reset, false)
+QUIC_FLAG(
+    bool,
+    FLAGS_quic_reloadable_flag_quic_remove_packet_number_from_public_reset,
+    false)
 
 // If true, v33 QUIC client uses 1 bit to specify 8-byte connection id in
 // public flag.
-QUIC_FLAG(bool, FLAGS_quic_remove_v33_hacks2, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2, false)
 
 // If true, limits QUIC uncompressed headers to 16K.
-QUIC_FLAG(bool, FLAGS_quic_limit_uncompressed_headers, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers,
+          false)
 
 // If true, release headers stream\'s sequencer buffer when there is no active
 // stream.
-QUIC_FLAG(bool, FLAGS_quic_headers_stream_release_sequencer_buffer, true)
+QUIC_FLAG(
+    bool,
+    FLAGS_quic_reloadable_flag_quic_headers_stream_release_sequencer_buffer,
+    true)
 
 // Set the retransmission alarm only when there are unacked
 // retransmittable packets.
-QUIC_FLAG(bool, FLAGS_quic_more_conservative_retransmission_alarm, true)
+QUIC_FLAG(
+    bool,
+    FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm,
+    true)
 
 // Enable QUIC force HOL blocking experiment.
-QUIC_FLAG(bool, FLAGS_quic_enable_force_hol_blocking, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_force_hol_blocking, true)
 
 // If true, allows packets to be buffered in anticipation of a future CHLO, and
 // allow CHLO packets to be buffered until next iteration of the event loop.
@@ -135,46 +174,51 @@ QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
 
 // If true, fix version manager bug, in which version flag does not really
 // help.
-QUIC_FLAG(bool, FLAGS_quic_fix_version_manager, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_version_manager, false)
 
 // Add a new client connection options field to QuicOptions which is only used
 // to configure client side features, such as congestion control.
-QUIC_FLAG(bool, FLAGS_quic_client_connection_options, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_client_connection_options, true)
 
 // If true, fix some casts that were causing off-by-one errors in QUIC's cubic
 // "convex" increases.
-QUIC_FLAG(bool, FLAGS_quic_fix_cubic_convex_mode, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode, false)
 
 // Ensure that BBR startup pacing rate does not drop below the initial one.
-QUIC_FLAG(bool, FLAGS_quic_bbr_faster_startup, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_bbr_faster_startup, true)
 
 // If true, GFE sends SETTINGS_MAX_HEADER_LIST_SIZE to the client at the
 // beginning of a connection.
-QUIC_FLAG(bool, FLAGS_quic_send_max_header_list_size, true)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_send_max_header_list_size, true)
 
 // If true, fix quantization of CubicBytes while performing convex increases.
-QUIC_FLAG(bool, FLAGS_quic_fix_cubic_bytes_quantization, false)
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization,
+          false)
 
 // If true, QUIC cubic code will use the event time when adjusting CWND after an
 // ACK instead of the clock\'s current approximate time.
-QUIC_FLAG(bool, FLAGS_quic_use_event_time, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_event_time, false)
 
 // If true, lazy allocate and early release memeory used in
 // QuicStreamSequencerBuffer to buffer incoming data.
-QUIC_FLAG(bool, FLAGS_quic_reduce_sequencer_buffer_memory_life_time, true)
+QUIC_FLAG(
+    bool,
+    FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time,
+    true)
 
 // If true, Makes GFE respect the connection options for initial flow control
 // window larger than 32 KB.
-QUIC_FLAG(bool, FLAGS_quic_large_ifw_options, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_large_ifw_options, false)
 
 // If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
-QUIC_FLAG(bool, FLAGS_quic_fix_beta_last_max, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, false)
 
 // If true, enable QUIC v37.
-QUIC_FLAG(bool, FLAGS_quic_enable_version_37, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_37, false)
 
 // If true, disables QUIC v34.
-QUIC_FLAG(bool, FLAGS_quic_disable_version_34, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_34, false)
 
 // Allow quic to properly support proxying 100 Continue responses.
-QUIC_FLAG(bool, FLAGS_quic_supports_100_continue, false)
+QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_supports_100_continue, false)

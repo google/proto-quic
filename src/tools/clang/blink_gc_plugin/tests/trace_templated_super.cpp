@@ -13,24 +13,24 @@ void Super<T>::clearWeakMembers(Visitor* visitor)
 }
 
 template<typename T>
-void Super<T>::trace(Visitor* visitor)
+void Super<T>::Trace(Visitor* visitor)
 {
-    visitor->registerWeakMembers<Super<T>, &Super<T>::clearWeakMembers>(this);
-    visitor->trace(m_obj);
-    Mixin::trace(visitor);
+    visitor->RegisterWeakMembers<Super<T>, &Super<T>::clearWeakMembers>(this);
+    visitor->Trace(m_obj);
+    Mixin::Trace(visitor);
 }
 
 template<typename T>
-void Sub<T>::trace(Visitor* visitor)
+void Sub<T>::Trace(Visitor* visitor)
 {
-    // Missing trace of m_obj.
-    Super<T>::trace(visitor);
+    // Missing Trace of m_obj.
+    Super<T>::Trace(visitor);
 }
 
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
-    Sub<HeapObject>::trace(visitor);
+    visitor->Trace(m_obj);
+    Sub<HeapObject>::Trace(visitor);
 }
 
 }

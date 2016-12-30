@@ -41,11 +41,11 @@ namespace base {
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //
-// To post file I/O tasks that must run in sequence and can be skipped on
+// To post tasks that may block, must run in sequence and can be skipped on
 // shutdown:
 //     scoped_refptr<SequencedTaskRunner> task_runner =
 //         CreateSequencedTaskRunnerWithTraits(
-//             TaskTraits().WithFileIO().WithShutdownBehavior(
+//             TaskTraits().MayBlock().WithShutdownBehavior(
 //                 TaskShutdownBehavior::SKIP_ON_SHUTDOWN));
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //     task_runner.PostTask(FROM_HERE, Bind(...));

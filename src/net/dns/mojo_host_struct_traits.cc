@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/memory/ptr_util.h"
 #include "net/base/address_list.h"
 
 namespace mojo {

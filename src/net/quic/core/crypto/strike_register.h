@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_H_
 #define NET_QUIC_CORE_CRYPTO_STRIKE_REGISTER_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <utility>

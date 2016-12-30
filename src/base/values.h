@@ -88,6 +88,7 @@ class BASE_EXPORT Value {
   virtual bool GetAsString(std::string* out_value) const;
   virtual bool GetAsString(string16* out_value) const;
   virtual bool GetAsString(const StringValue** out_value) const;
+  virtual bool GetAsString(StringPiece* out_value) const;
   virtual bool GetAsBinary(const BinaryValue** out_value) const;
   // ListValue::From is the equivalent for std::unique_ptr conversions.
   virtual bool GetAsList(ListValue** out_value);
@@ -166,6 +167,7 @@ class BASE_EXPORT StringValue : public Value {
   bool GetAsString(std::string* out_value) const override;
   bool GetAsString(string16* out_value) const override;
   bool GetAsString(const StringValue** out_value) const override;
+  bool GetAsString(StringPiece* out_value) const override;
   StringValue* DeepCopy() const override;
   bool Equals(const Value* other) const override;
 

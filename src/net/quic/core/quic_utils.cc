@@ -12,9 +12,6 @@
 
 #include "base/containers/adapters.h"
 #include "base/logging.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_split.h"
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_constants.h"
 #include "net/quic/core/quic_flags.h"
 
@@ -167,25 +164,6 @@ const char* QuicUtils::TransmissionTypeToString(TransmissionType type) {
   return "INVALID_TRANSMISSION_TYPE";
 }
 
-// static
-QuicTagVector QuicUtils::ParseQuicConnectionOptions(
-    const std::string& connection_options) {
-  QuicTagVector options;
-  // Tokens are expected to be no more than 4 characters long, but we
-  // handle overflow gracefully.
-  for (const base::StringPiece& token :
-       base::SplitStringPiece(connection_options, ",", base::TRIM_WHITESPACE,
-                              base::SPLIT_WANT_ALL)) {
-    uint32_t option = 0;
-    for (char token_char : base::Reversed(token)) {
-      option <<= 8;
-      option |= static_cast<unsigned char>(token_char);
-    }
-    options.push_back(option);
-  }
-  return options;
-}
-
 string QuicUtils::PeerAddressChangeTypeToString(PeerAddressChangeType type) {
   switch (type) {
     RETURN_STRING_LITERAL(NO_CHANGE);
@@ -245,58 +223,6 @@ PeerAddressChangeType QuicUtils::DetermineAddressChangeType(
   }
 
   return IPV4_TO_IPV4_CHANGE;
-}
-
-string QuicUtils::HexEncode(const char* data, size_t length) {
-  return HexEncode(StringPiece(data, length));
-}
-
-string QuicUtils::HexEncode(StringPiece data) {
-  return ::base::HexEncode(data.data(), data.size());
-}
-
-string QuicUtils::HexDecode(StringPiece data) {
-  if (data.empty())
-    return "";
-  std::vector<uint8_t> v;
-  if (!base::HexStringToBytes(data.as_string(), &v))
-    return "";
-  string out;
-  if (!v.empty())
-    out.assign(reinterpret_cast<const char*>(&v[0]), v.size());
-  return out;
-}
-
-string QuicUtils::HexDump(StringPiece binary_input) {
-  int offset = 0;
-  const int kBytesPerLine = 16;  // Max bytes dumped per line
-  const char* buf = binary_input.data();
-  int bytes_remaining = binary_input.size();
-  string s;  // our output
-  const char* p = buf;
-  while (bytes_remaining > 0) {
-    const int line_bytes = std::min(bytes_remaining, kBytesPerLine);
-    base::StringAppendF(&s, "0x%04x:  ", offset);  // Do the line header
-    for (int i = 0; i < kBytesPerLine; ++i) {
-      if (i < line_bytes) {
-        base::StringAppendF(&s, "%02x", static_cast<unsigned char>(p[i]));
-      } else {
-        s += "  ";  // two-space filler instead of two-space hex digits
-      }
-      if (i % 2)
-        s += ' ';
-    }
-    s += ' ';
-    for (int i = 0; i < line_bytes; ++i) {  // Do the ASCII dump
-      s += (p[i] > 32 && p[i] < 127) ? p[i] : '.';
-    }
-
-    bytes_remaining -= line_bytes;
-    offset += line_bytes;
-    p += line_bytes;
-    s += '\n';
-  }
-  return s;
 }
 
 }  // namespace net

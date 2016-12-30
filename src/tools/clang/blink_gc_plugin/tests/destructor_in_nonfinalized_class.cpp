@@ -12,9 +12,9 @@ HeapObject::~HeapObject()
     (void)this;
 }
 
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
+    visitor->Trace(m_obj);
 }
 
 }

@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "base/base_export.h"
+#include "base/compiler_specific.h"
 #include "base/debug/debugger.h"
 #include "base/macros.h"
 #include "base/template_util.h"
@@ -482,7 +483,7 @@ class CheckOpResult {
 // calling an out-of-line function instead of a noreturn inline macro prevents
 // compiler optimizations.
 #define CHECK(condition) \
-  !(condition) ? IMMEDIATE_CRASH() : EAT_STREAM_PARAMETERS
+  UNLIKELY(!(condition)) ? IMMEDIATE_CRASH() : EAT_STREAM_PARAMETERS
 
 #define PCHECK(condition) CHECK(condition)
 

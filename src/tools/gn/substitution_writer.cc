@@ -98,6 +98,13 @@ Placeholders
       build.gn file.
         "//foo/bar/baz.txt" => "obj/foo/bar"
 
+  {{source_target_relative}}
+      The path to the source file relative to the target's directory. This will
+      generally be used for replicating the source directory layout in the
+      output directory. This can only be used in actions and it is an error to
+      use in process_file_template where there is no "target".
+        "//foo/bar/baz.txt" => "baz.txt"
+
 (*) Note on directories
 
   Paths containing directories (except the source_root_relative_dir) will be
@@ -196,11 +203,12 @@ void SubstitutionWriter::GetListAsOutputFiles(
 
 // static
 SourceFile SubstitutionWriter::ApplyPatternToSource(
+      const Target* target,
       const Settings* settings,
       const SubstitutionPattern& pattern,
       const SourceFile& source) {
   std::string result_value = ApplyPatternToSourceAsString(
-      settings, pattern, source);
+      target, settings, pattern, source);
   CHECK(!result_value.empty() && result_value[0] == '/')
       << "The result of the pattern \""
       << pattern.AsString()
@@ -210,6 +218,7 @@ SourceFile SubstitutionWriter::ApplyPatternToSource(
 
 // static
 std::string SubstitutionWriter::ApplyPatternToSourceAsString(
+    const Target* target,
     const Settings* settings,
     const SubstitutionPattern& pattern,
     const SourceFile& source) {
@@ -219,7 +228,7 @@ std::string SubstitutionWriter::ApplyPatternToSourceAsString(
       result_value.append(subrange.literal);
     } else {
       result_value.append(
-          GetSourceSubstitution(settings, source, subrange.type,
+          GetSourceSubstitution(target, settings, source, subrange.type,
                                 OUTPUT_ABSOLUTE, SourceDir()));
     }
   }
@@ -228,78 +237,89 @@ std::string SubstitutionWriter::ApplyPatternToSourceAsString(
 
 // static
 OutputFile SubstitutionWriter::ApplyPatternToSourceAsOutputFile(
+    const Target* target,
     const Settings* settings,
     const SubstitutionPattern& pattern,
     const SourceFile& source) {
-  SourceFile result_as_source = ApplyPatternToSource(settings, pattern, source);
+  SourceFile result_as_source = ApplyPatternToSource(
+      target, settings, pattern, source);
   return OutputFile(settings->build_settings(), result_as_source);
 }
 
 // static
 void SubstitutionWriter::ApplyListToSource(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const SourceFile& source,
     std::vector<SourceFile>* output) {
   for (const auto& item : list.list())
-    output->push_back(ApplyPatternToSource(settings, item, source));
+    output->push_back(ApplyPatternToSource(target, settings, item, source));
 }
 
 // static
 void SubstitutionWriter::ApplyListToSourceAsString(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const SourceFile& source,
     std::vector<std::string>* output) {
   for (const auto& item : list.list())
-    output->push_back(ApplyPatternToSourceAsString(settings, item, source));
+    output->push_back(ApplyPatternToSourceAsString(
+        target, settings, item, source));
 }
 
 // static
 void SubstitutionWriter::ApplyListToSourceAsOutputFile(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const SourceFile& source,
     std::vector<OutputFile>* output) {
   for (const auto& item : list.list())
-    output->push_back(ApplyPatternToSourceAsOutputFile(settings, item, source));
+    output->push_back(ApplyPatternToSourceAsOutputFile(
+        target, settings, item, source));
 }
 
 // static
 void SubstitutionWriter::ApplyListToSources(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const std::vector<SourceFile>& sources,
     std::vector<SourceFile>* output) {
   output->clear();
   for (const auto& source : sources)
-    ApplyListToSource(settings, list, source, output);
+    ApplyListToSource(target, settings, list, source, output);
 }
 
 // static
 void SubstitutionWriter::ApplyListToSourcesAsString(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const std::vector<SourceFile>& sources,
     std::vector<std::string>* output) {
   output->clear();
   for (const auto& source : sources)
-    ApplyListToSourceAsString(settings, list, source, output);
+    ApplyListToSourceAsString(target, settings, list, source, output);
 }
 
 // static
 void SubstitutionWriter::ApplyListToSourcesAsOutputFile(
+    const Target* target,
     const Settings* settings,
     const SubstitutionList& list,
     const std::vector<SourceFile>& sources,
     std::vector<OutputFile>* output) {
   output->clear();
   for (const auto& source : sources)
-    ApplyListToSourceAsOutputFile(settings, list, source, output);
+    ApplyListToSourceAsOutputFile(target, settings, list, source, output);
 }
 
 // static
 void SubstitutionWriter::WriteNinjaVariablesForSource(
+    const Target* target,
     const Settings* settings,
     const SourceFile& source,
     const std::vector<SubstitutionType>& types,
@@ -314,7 +334,8 @@ void SubstitutionWriter::WriteNinjaVariablesForSource(
       out << "  " << kSubstitutionNinjaNames[type] << " = ";
         EscapeStringToStream(
             out,
-            GetSourceSubstitution(settings, source, type, OUTPUT_RELATIVE,
+            GetSourceSubstitution(target, settings, source, type,
+                                  OUTPUT_RELATIVE,
                                   settings->build_settings()->build_dir()),
             escape_options);
       out << std::endl;
@@ -324,6 +345,7 @@ void SubstitutionWriter::WriteNinjaVariablesForSource(
 
 // static
 std::string SubstitutionWriter::GetSourceSubstitution(
+    const Target* target,
     const Settings* settings,
     const SourceFile& source,
     SubstitutionType type,
@@ -365,6 +387,16 @@ std::string SubstitutionWriter::GetSourceSubstitution(
       to_rebase = DirectoryWithNoLastSlash(GetSubBuildDirAsSourceDir(
           BuildDirContext(settings), source.GetDir(), BuildDirType::OBJ));
       break;
+
+    case SUBSTITUTION_SOURCE_TARGET_RELATIVE:
+      if (target) {
+        return RebasePath(source.value(), target->label().dir(),
+            settings->build_settings()->root_path_utf8());
+      }
+      NOTREACHED()
+          << "Cannot use substitution " << kSubstitutionNames[type]
+          << " without target";
+      return std::string();
 
     default:
       NOTREACHED()
@@ -502,7 +534,7 @@ std::string SubstitutionWriter::GetCompilerSubstitution(
 
   // Fall-through to the source ones.
   return GetSourceSubstitution(
-      target->settings(), source, type, OUTPUT_RELATIVE,
+      target, target->settings(), source, type, OUTPUT_RELATIVE,
       target->settings()->build_settings()->build_dir());
 }
 

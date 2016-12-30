@@ -6,9 +6,9 @@
 
 namespace blink {
 
-void B::trace(Visitor* visitor)
+void B::Trace(Visitor* visitor)
 {
-    visitor->trace(m_a);
+    visitor->Trace(m_a);
 }
 
 }

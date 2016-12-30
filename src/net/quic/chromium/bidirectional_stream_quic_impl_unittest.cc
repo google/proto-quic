@@ -10,6 +10,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "net/base/ip_address.h"
 #include "net/base/load_timing_info.h"
@@ -26,13 +27,14 @@
 #include "net/quic/chromium/quic_chromium_packet_reader.h"
 #include "net/quic/chromium/quic_chromium_packet_writer.h"
 #include "net/quic/chromium/quic_http_utils.h"
+#include "net/quic/chromium/quic_server_info.h"
 #include "net/quic/chromium/quic_test_packet_maker.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/crypto/quic_server_info.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -43,9 +45,6 @@
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-using net::test::IsError;
-using net::test::IsOk;
 
 namespace net {
 
@@ -474,7 +473,7 @@ class BidirectionalStreamQuicImplTest
     std::unique_ptr<QuicReceivedPacket> packet(maker->MakeDataPacket(
         packet_number, stream_id_, should_include_version, fin, offset, data));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 
@@ -500,7 +499,7 @@ class BidirectionalStreamQuicImplTest
                                                    should_include_version, fin,
                                                    offset, data_writes));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 
@@ -528,7 +527,7 @@ class BidirectionalStreamQuicImplTest
             packet_number, stream_id, kIncludeVersion, fin, priority,
             std::move(request_headers_), spdy_headers_frame_length, offset));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 
@@ -548,7 +547,7 @@ class BidirectionalStreamQuicImplTest
             std::move(request_headers_), header_stream_offset,
             spdy_headers_frame_length, data));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 
@@ -604,7 +603,7 @@ class BidirectionalStreamQuicImplTest
         maker->MakeRstPacket(packet_number, !kIncludeVersion, stream_id_,
                              QUIC_STREAM_CANCELLED, bytes_written));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 
@@ -632,7 +631,7 @@ class BidirectionalStreamQuicImplTest
         packet_number, should_include_version, stream_id_, largest_received,
         least_unacked, fin, offset, data));
     DVLOG(2) << "packet(" << packet_number << "): " << std::endl
-             << QuicUtils::HexDump(packet->AsStringPiece());
+             << QuicTextUtils::HexDump(packet->AsStringPiece());
     return packet;
   }
 

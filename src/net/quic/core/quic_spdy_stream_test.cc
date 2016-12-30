@@ -8,11 +8,11 @@
 #include <utility>
 
 #include "base/memory/ptr_util.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
@@ -144,7 +144,7 @@ TEST_P(QuicSpdyStreamTest, ProcessHeaderList) {
 }
 
 TEST_P(QuicSpdyStreamTest, ProcessTooLargeHeaderList) {
-  FLAGS_quic_limit_uncompressed_headers = true;
+  FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers = true;
   Initialize(kShouldProcessData);
 
   QuicHeaderList headers;
@@ -544,9 +544,10 @@ TEST_P(QuicSpdyStreamTest, ConnectionFlowControlWindowUpdate) {
   EXPECT_CALL(*connection_, SendWindowUpdate(kClientDataStreamId1, _)).Times(0);
   EXPECT_CALL(*connection_, SendWindowUpdate(kClientDataStreamId2, _)).Times(0);
   EXPECT_CALL(*connection_,
-              SendWindowUpdate(0, QuicFlowControllerPeer::ReceiveWindowOffset(
-                                      session_->flow_controller()) +
-                                      1 + kWindow / 2));
+              SendWindowUpdate(0,
+                               QuicFlowControllerPeer::ReceiveWindowOffset(
+                                   session_->flow_controller()) +
+                                   1 + kWindow / 2));
   QuicStreamFrame frame3(kClientDataStreamId1, false, (kWindow / 4),
                          StringPiece("a"));
   stream_->OnStreamFrame(frame3);
@@ -776,7 +777,8 @@ TEST_P(QuicSpdyStreamTest, ReceivingTrailersWithOffset) {
   trailers_block["key1"] = "value1";
   trailers_block["key2"] = "value2";
   trailers_block["key3"] = "value3";
-  trailers_block[kFinalOffsetHeaderKey] = base::IntToString(body.size());
+  trailers_block[kFinalOffsetHeaderKey] =
+      QuicTextUtils::Uint64ToString(body.size());
 
   QuicHeaderList trailers = ProcessHeaders(true, trailers_block);
 
@@ -858,7 +860,8 @@ TEST_P(QuicSpdyStreamTest, WritingTrailersFinalOffset) {
   SpdyHeaderBlock trailers;
   trailers["trailer key"] = "trailer value";
   SpdyHeaderBlock trailers_with_offset(trailers.Clone());
-  trailers_with_offset[kFinalOffsetHeaderKey] = base::Uint64ToString(kBodySize);
+  trailers_with_offset[kFinalOffsetHeaderKey] =
+      QuicTextUtils::Uint64ToString(kBodySize);
   EXPECT_CALL(*session_, WriteHeadersMock(_, _, true, _, _));
   stream_->WriteTrailers(std::move(trailers), nullptr);
   EXPECT_EQ(trailers_with_offset, session_->GetWriteHeaders());

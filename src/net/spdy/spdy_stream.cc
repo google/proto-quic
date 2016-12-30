@@ -749,8 +749,8 @@ bool SpdyStream::GetSSLInfo(SSLInfo* ssl_info) const {
   return session_->GetSSLInfo(ssl_info);
 }
 
-bool SpdyStream::WasNpnNegotiated() const {
-  return session_->WasNpnNegotiated();
+bool SpdyStream::WasAlpnNegotiated() const {
+  return session_->WasAlpnNegotiated();
 }
 
 NextProto SpdyStream::GetNegotiatedProtocol() const {

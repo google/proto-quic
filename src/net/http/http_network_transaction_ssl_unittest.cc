@@ -11,6 +11,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/run_loop.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/request_priority.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/mock_cert_verifier.h"

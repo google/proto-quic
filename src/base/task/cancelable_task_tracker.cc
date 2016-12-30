@@ -8,21 +8,14 @@
 
 #include <utility>
 
-#include "base/bind.h"
 #include "base/callback_helpers.h"
-#include "base/compiler_specific.h"
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
-#include "base/single_thread_task_runner.h"
 #include "base/synchronization/cancellation_flag.h"
 #include "base/task_runner.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 
-using base::Bind;
-using base::CancellationFlag;
-using base::Closure;
-using base::hash_map;
-using base::TaskRunner;
+namespace base {
 
 namespace {
 
@@ -57,8 +50,6 @@ void RunOrPostToTaskRunner(TaskRunner* task_runner, const Closure& closure) {
 
 }  // namespace
 
-namespace base {
-
 // static
 const CancelableTaskTracker::TaskId CancelableTaskTracker::kBadTaskId = 0;
 
@@ -66,7 +57,7 @@ CancelableTaskTracker::CancelableTaskTracker()
     : next_id_(1),weak_factory_(this) {}
 
 CancelableTaskTracker::~CancelableTaskTracker() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   TryCancelAll();
 }
@@ -75,7 +66,7 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTask(
     TaskRunner* task_runner,
     const tracked_objects::Location& from_here,
     const Closure& task) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   return PostTaskAndReply(task_runner, from_here, task, Bind(&base::DoNothing));
 }
@@ -85,10 +76,10 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTaskAndReply(
     const tracked_objects::Location& from_here,
     const Closure& task,
     const Closure& reply) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
-  // We need a MessageLoop to run reply.
-  DCHECK(base::ThreadTaskRunnerHandle::IsSet());
+  // We need a SequencedTaskRunnerHandle to run |reply|.
+  DCHECK(base::SequencedTaskRunnerHandle::IsSet());
 
   // Owned by reply callback below.
   CancellationFlag* flag = new CancellationFlag();
@@ -115,8 +106,8 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTaskAndReply(
 
 CancelableTaskTracker::TaskId CancelableTaskTracker::NewTrackedTaskId(
     IsCanceledCallback* is_canceled_cb) {
-  DCHECK(thread_checker_.CalledOnValidThread());
-  DCHECK(base::ThreadTaskRunnerHandle::IsSet());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  DCHECK(base::SequencedTaskRunnerHandle::IsSet());
 
   TaskId id = next_id_;
   next_id_++;  // int64_t is big enough that we ignore the potential overflow.
@@ -129,11 +120,11 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::NewTrackedTaskId(
       Bind(&CancelableTaskTracker::Untrack, weak_factory_.GetWeakPtr(), id),
       flag);
 
-  // Will always run |untrack_and_delete_flag| on current MessageLoop.
+  // Will always run |untrack_and_delete_flag| on current sequence.
   base::ScopedClosureRunner* untrack_and_delete_flag_runner =
       new base::ScopedClosureRunner(
           Bind(&RunOrPostToTaskRunner,
-               RetainedRef(base::ThreadTaskRunnerHandle::Get()),
+               RetainedRef(base::SequencedTaskRunnerHandle::Get()),
                untrack_and_delete_flag));
 
   *is_canceled_cb =
@@ -144,7 +135,7 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::NewTrackedTaskId(
 }
 
 void CancelableTaskTracker::TryCancel(TaskId id) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   hash_map<TaskId, CancellationFlag*>::const_iterator it = task_flags_.find(id);
   if (it == task_flags_.end()) {
@@ -160,7 +151,7 @@ void CancelableTaskTracker::TryCancel(TaskId id) {
 }
 
 void CancelableTaskTracker::TryCancelAll() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   for (hash_map<TaskId, CancellationFlag*>::const_iterator it =
            task_flags_.begin();
@@ -171,19 +162,19 @@ void CancelableTaskTracker::TryCancelAll() {
 }
 
 bool CancelableTaskTracker::HasTrackedTasks() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
   return !task_flags_.empty();
 }
 
 void CancelableTaskTracker::Track(TaskId id, CancellationFlag* flag) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
 
   bool success = task_flags_.insert(std::make_pair(id, flag)).second;
   DCHECK(success);
 }
 
 void CancelableTaskTracker::Untrack(TaskId id) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK(sequence_checker_.CalledOnValidSequence());
   size_t num = task_flags_.erase(id);
   DCHECK_EQ(1u, num);
 }

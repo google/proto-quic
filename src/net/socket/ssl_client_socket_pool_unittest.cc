@@ -408,7 +408,7 @@ TEST_F(SSLClientSocketPoolTest, DirectWithNPN) {
   EXPECT_TRUE(handle.socket());
   TestLoadTimingInfo(handle);
   SSLClientSocket* ssl_socket = static_cast<SSLClientSocket*>(handle.socket());
-  EXPECT_TRUE(ssl_socket->WasNpnNegotiated());
+  EXPECT_TRUE(ssl_socket->WasAlpnNegotiated());
 }
 
 TEST_F(SSLClientSocketPoolTest, DirectNoSPDY) {
@@ -463,7 +463,7 @@ TEST_F(SSLClientSocketPoolTest, DirectGotSPDY) {
   TestLoadTimingInfo(handle);
 
   SSLClientSocket* ssl_socket = static_cast<SSLClientSocket*>(handle.socket());
-  EXPECT_TRUE(ssl_socket->WasNpnNegotiated());
+  EXPECT_TRUE(ssl_socket->WasAlpnNegotiated());
   EXPECT_EQ(kProtoHTTP2, ssl_socket->GetNegotiatedProtocol());
 }
 
@@ -493,7 +493,7 @@ TEST_F(SSLClientSocketPoolTest, DirectGotBonusSPDY) {
   TestLoadTimingInfo(handle);
 
   SSLClientSocket* ssl_socket = static_cast<SSLClientSocket*>(handle.socket());
-  EXPECT_TRUE(ssl_socket->WasNpnNegotiated());
+  EXPECT_TRUE(ssl_socket->WasAlpnNegotiated());
   EXPECT_EQ(kProtoHTTP2, ssl_socket->GetNegotiatedProtocol());
 }
 

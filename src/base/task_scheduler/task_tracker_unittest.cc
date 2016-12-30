@@ -264,7 +264,8 @@ TEST_P(TaskSchedulerTaskTrackerTest, WillPostAndRunLongTaskBeforeShutdown) {
                       WaitableEvent::InitialState::NOT_SIGNALED);
   auto blocked_task = base::MakeUnique<Task>(
       FROM_HERE, Bind(&WaitableEvent::Wait, Unretained(&event)),
-      TaskTraits().WithWait().WithShutdownBehavior(GetParam()), TimeDelta());
+      TaskTraits().WithBaseSyncPrimitives().WithShutdownBehavior(GetParam()),
+      TimeDelta());
 
   // Inform |task_tracker_| that |blocked_task| will be posted.
   EXPECT_TRUE(tracker_.WillPostTask(blocked_task.get()));
@@ -431,32 +432,32 @@ TEST_P(TaskSchedulerTaskTrackerTest, SingletonAllowed) {
   }
 }
 
-// Verify that AssertIOAllowed() succeeds only for a WithFileIO() task.
+// Verify that AssertIOAllowed() succeeds only for a MayBlock() task.
 TEST_P(TaskSchedulerTaskTrackerTest, IOAllowed) {
   TaskTracker tracker;
 
   // Unset the IO allowed bit. Expect TaskTracker to set it before running a
-  // task with the WithFileIO() trait.
+  // task with the MayBlock() trait.
   ThreadRestrictions::SetIOAllowed(false);
-  auto task_with_file_io = MakeUnique<Task>(
+  auto task_with_may_block = MakeUnique<Task>(
       FROM_HERE, Bind([]() {
         // Shouldn't fail.
         ThreadRestrictions::AssertIOAllowed();
       }),
-      TaskTraits().WithFileIO().WithShutdownBehavior(GetParam()), TimeDelta());
-  EXPECT_TRUE(tracker.WillPostTask(task_with_file_io.get()));
-  tracker.RunTask(std::move(task_with_file_io), SequenceToken::Create());
+      TaskTraits().MayBlock().WithShutdownBehavior(GetParam()), TimeDelta());
+  EXPECT_TRUE(tracker.WillPostTask(task_with_may_block.get()));
+  tracker.RunTask(std::move(task_with_may_block), SequenceToken::Create());
 
   // Set the IO allowed bit. Expect TaskTracker to unset it before running a
-  // task without the WithFileIO() trait.
+  // task without the MayBlock() trait.
   ThreadRestrictions::SetIOAllowed(true);
-  auto task_without_file_io = MakeUnique<Task>(
+  auto task_without_may_block = MakeUnique<Task>(
       FROM_HERE, Bind([]() {
         EXPECT_DCHECK_DEATH({ ThreadRestrictions::AssertIOAllowed(); });
       }),
       TaskTraits().WithShutdownBehavior(GetParam()), TimeDelta());
-  EXPECT_TRUE(tracker.WillPostTask(task_without_file_io.get()));
-  tracker.RunTask(std::move(task_without_file_io), SequenceToken::Create());
+  EXPECT_TRUE(tracker.WillPostTask(task_without_may_block.get()));
+  tracker.RunTask(std::move(task_without_may_block), SequenceToken::Create());
 }
 
 static void RunTaskRunnerHandleVerificationTask(
@@ -843,27 +844,29 @@ class WaitAllowedTestThread : public SimpleThread {
     TaskTracker tracker;
 
     // Waiting is allowed by default. Expect TaskTracker to disallow it before
-    // running a task without the WithWait() trait.
+    // running a task without the WithBaseSyncPrimitives() trait.
     ThreadRestrictions::AssertWaitAllowed();
-    auto task_without_wait = MakeUnique<Task>(
+    auto task_without_sync_primitives = MakeUnique<Task>(
         FROM_HERE, Bind([]() {
           EXPECT_DCHECK_DEATH({ ThreadRestrictions::AssertWaitAllowed(); });
         }),
         TaskTraits(), TimeDelta());
-    EXPECT_TRUE(tracker.WillPostTask(task_without_wait.get()));
-    tracker.RunTask(std::move(task_without_wait), SequenceToken::Create());
+    EXPECT_TRUE(tracker.WillPostTask(task_without_sync_primitives.get()));
+    tracker.RunTask(std::move(task_without_sync_primitives),
+                    SequenceToken::Create());
 
     // Disallow waiting. Expect TaskTracker to allow it before running a task
-    // with the WithWait() trait.
+    // with the WithBaseSyncPrimitives() trait.
     ThreadRestrictions::DisallowWaiting();
-    auto task_with_wait =
+    auto task_with_sync_primitives =
         MakeUnique<Task>(FROM_HERE, Bind([]() {
                            // Shouldn't fail.
                            ThreadRestrictions::AssertWaitAllowed();
                          }),
-                         TaskTraits().WithWait(), TimeDelta());
-    EXPECT_TRUE(tracker.WillPostTask(task_with_wait.get()));
-    tracker.RunTask(std::move(task_with_wait), SequenceToken::Create());
+                         TaskTraits().WithBaseSyncPrimitives(), TimeDelta());
+    EXPECT_TRUE(tracker.WillPostTask(task_with_sync_primitives.get()));
+    tracker.RunTask(std::move(task_with_sync_primitives),
+                    SequenceToken::Create());
   }
 
   DISALLOW_COPY_AND_ASSIGN(WaitAllowedTestThread);
@@ -871,7 +874,8 @@ class WaitAllowedTestThread : public SimpleThread {
 
 }  // namespace
 
-// Verify that AssertIOAllowed() succeeds for a WithWait() task.
+// Verify that AssertIOAllowed() succeeds only for a WithBaseSyncPrimitives()
+// task.
 TEST(TaskSchedulerTaskTrackerWaitAllowedTest, WaitAllowed) {
   // Run the test on the separate thread since it is not possible to reset the
   // "wait allowed" bit of a thread without being a friend of

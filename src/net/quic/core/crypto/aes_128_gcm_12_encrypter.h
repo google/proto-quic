@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_ENCRYPTER_H_
 #define NET_QUIC_CORE_CRYPTO_AES_128_GCM_12_ENCRYPTER_H_
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "net/quic/core/crypto/aead_base_encrypter.h"
 #include "net/quic/platform/api/quic_export.h"

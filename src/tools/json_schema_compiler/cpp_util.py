@@ -105,14 +105,6 @@ def GenerateIfndefName(file_path):
       .replace('.', '_'))
 
 
-def PadForGenerics(var):
-  """Appends a space to |var| if it ends with a >, so that it can be compiled
-  within generic types.
-  """
-  return ('%s ' % var) if var.endswith('>') else var
-
-
-
 def OpenNamespace(cpp_namespace):
   """Get opening root namespace declarations.
   """

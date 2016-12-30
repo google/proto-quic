@@ -151,7 +151,6 @@ class _SharedPywebsocketPageState(shared_page_state.SharedPageState):
     self.platform.StartLocalServer(pywebsocket_server.PywebsocketServer())
 
 
-@benchmark.Disabled('all') # http://crbug.com/670069
 class BlinkPerfBindings(_BlinkPerfBenchmark):
   tag = 'bindings'
   subdir = 'Bindings'

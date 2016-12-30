@@ -114,9 +114,9 @@ bool SOCKS5ClientSocket::WasEverUsed() const {
   return was_ever_used_;
 }
 
-bool SOCKS5ClientSocket::WasNpnNegotiated() const {
+bool SOCKS5ClientSocket::WasAlpnNegotiated() const {
   if (transport_.get() && transport_->socket()) {
-    return transport_->socket()->WasNpnNegotiated();
+    return transport_->socket()->WasAlpnNegotiated();
   }
   NOTREACHED();
   return false;

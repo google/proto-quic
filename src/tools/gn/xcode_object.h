@@ -22,6 +22,11 @@
 // See https://chromium.googlesource.com/external/gyp/+/master/pylib/gyp/xcodeproj_file.py
 // for more information on Xcode project file format.
 
+enum class CompilerFlags {
+  NONE,
+  HELP,
+};
+
 // PBXObjectClass -------------------------------------------------------------
 
 enum PBXObjectClass {
@@ -154,7 +159,8 @@ class PBXAggregateTarget : public PBXTarget {
 class PBXBuildFile : public PBXObject {
  public:
   PBXBuildFile(const PBXFileReference* file_reference,
-               const PBXSourcesBuildPhase* build_phase);
+               const PBXSourcesBuildPhase* build_phase,
+               const CompilerFlags compiler_flag);
   ~PBXBuildFile() override;
 
   // PXBObject implementation.
@@ -165,6 +171,7 @@ class PBXBuildFile : public PBXObject {
  private:
   const PBXFileReference* file_reference_;
   const PBXSourcesBuildPhase* build_phase_;
+  const CompilerFlags compiler_flag_;
 
   DISALLOW_COPY_AND_ASSIGN(PBXBuildFile);
 };
@@ -251,7 +258,8 @@ class PBXNativeTarget : public PBXTarget {
                   const PBXFileReference* product_reference);
   ~PBXNativeTarget() override;
 
-  void AddFileForIndexing(const PBXFileReference* file_reference);
+  void AddFileForIndexing(const PBXFileReference* file_reference,
+                          const CompilerFlags compiler_flag);
 
   // PBXObject implementation.
   PBXObjectClass Class() const override;
@@ -275,15 +283,22 @@ class PBXProject : public PBXObject {
              const PBXAttributes& attributes);
   ~PBXProject() override;
 
+  void AddSourceFileToIndexingTarget(const std::string& navigator_path,
+                                     const std::string& source_path,
+                                     const CompilerFlags compiler_flag);
   void AddSourceFile(const std::string& navigator_path,
-                     const std::string& source_path);
+                     const std::string& source_path,
+                     const CompilerFlags compiler_flag,
+                     PBXNativeTarget* target);
   void AddAggregateTarget(const std::string& name,
                           const std::string& shell_script);
+  void AddIndexingTarget();
   void AddNativeTarget(const std::string& name,
                        const std::string& type,
                        const std::string& output_name,
                        const std::string& output_type,
-                       const std::string& shell_script);
+                       const std::string& shell_script,
+                       const PBXAttributes& extra_attributes = PBXAttributes());
 
   void SetProjectDirPath(const std::string& project_dir_path);
   void SetProjectRoot(const std::string& project_root);

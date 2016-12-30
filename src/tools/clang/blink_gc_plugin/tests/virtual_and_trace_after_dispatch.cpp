@@ -8,23 +8,23 @@ namespace blink {
 
 static B* toB(A* a) { return static_cast<B*>(a); }
 
-void A::trace(Visitor* visitor)
+void A::Trace(Visitor* visitor)
 {
     switch (m_type) {
     case TB:
-        toB(this)->traceAfterDispatch(visitor);
+        toB(this)->TraceAfterDispatch(visitor);
         break;
     }
 }
 
-void A::traceAfterDispatch(Visitor* visitor)
+void A::TraceAfterDispatch(Visitor* visitor)
 {
 }
 
-void B::traceAfterDispatch(Visitor* visitor)
+void B::TraceAfterDispatch(Visitor* visitor)
 {
-    visitor->trace(m_a);
-    A::traceAfterDispatch(visitor);
+    visitor->Trace(m_a);
+    A::TraceAfterDispatch(visitor);
 }
 
 }

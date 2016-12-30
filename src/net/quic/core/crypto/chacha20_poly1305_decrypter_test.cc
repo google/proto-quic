@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
 using base::StringPiece;
@@ -143,14 +143,14 @@ TEST(ChaCha20Poly1305DecrypterTest, Decrypt) {
     bool has_pt = test_vectors[i].pt;
 
     // Decode the test vector.
-    string key = QuicUtils::HexDecode(test_vectors[i].key);
-    string iv = QuicUtils::HexDecode(test_vectors[i].iv);
-    string fixed = QuicUtils::HexDecode(test_vectors[i].fixed);
-    string aad = QuicUtils::HexDecode(test_vectors[i].aad);
-    string ct = QuicUtils::HexDecode(test_vectors[i].ct);
+    string key = QuicTextUtils::HexDecode(test_vectors[i].key);
+    string iv = QuicTextUtils::HexDecode(test_vectors[i].iv);
+    string fixed = QuicTextUtils::HexDecode(test_vectors[i].fixed);
+    string aad = QuicTextUtils::HexDecode(test_vectors[i].aad);
+    string ct = QuicTextUtils::HexDecode(test_vectors[i].ct);
     string pt;
     if (has_pt) {
-      pt = QuicUtils::HexDecode(test_vectors[i].pt);
+      pt = QuicTextUtils::HexDecode(test_vectors[i].pt);
     }
 
     ChaCha20Poly1305Decrypter decrypter;

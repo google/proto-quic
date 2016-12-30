@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "net/quic/test_tools/crypto_test_utils.h"
-#include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using base::StringPiece;
@@ -202,36 +201,83 @@ const TestVector test_vector[] = {
     },
     {nullptr}};
 
+// Returns true if |ch| is a lowercase hexadecimal digit.
+bool IsHexDigit(char ch) {
+  return ('0' <= ch && ch <= '9') || ('a' <= ch && ch <= 'f');
+}
+
+// Converts a lowercase hexadecimal digit to its integer value.
+int HexDigitToInt(char ch) {
+  if ('0' <= ch && ch <= '9') {
+    return ch - '0';
+  }
+  return ch - 'a' + 10;
+}
+
+// |in| is a string consisting of lowercase hexadecimal digits, where
+// every two digits represent one byte. |out| is a buffer of size |max_len|.
+// Converts |in| to bytes and stores the bytes in the |out| buffer. The
+// number of bytes converted is returned in |*out_len|. Returns true on
+// success, false on failure.
+bool DecodeHexString(const char* in,
+                     char* out,
+                     size_t* out_len,
+                     size_t max_len) {
+  if (!in) {
+    *out_len = static_cast<size_t>(-1);
+    return true;
+  }
+  *out_len = 0;
+  while (*in != '\0') {
+    if (!IsHexDigit(*in) || !IsHexDigit(*(in + 1))) {
+      return false;
+    }
+    if (*out_len >= max_len) {
+      return false;
+    }
+    out[*out_len] = HexDigitToInt(*in) * 16 + HexDigitToInt(*(in + 1));
+    (*out_len)++;
+    in += 2;
+  }
+  return true;
+}
+
 }  // namespace
 
 // A known answer test for ChannelIDVerifier.
 TEST(ChannelIDTest, VerifyKnownAnswerTest) {
-  string msg;
-  string qx;
-  string qy;
-  string r;
-  string s;
+  char msg[1024];
+  size_t msg_len;
+  char key[64];
+  size_t qx_len;
+  size_t qy_len;
+  char signature[64];
+  size_t r_len;
+  size_t s_len;
 
   for (size_t i = 0; test_vector[i].msg != nullptr; i++) {
     SCOPED_TRACE(i);
     // Decode the test vector.
-    ASSERT_TRUE(DecodeHexString(test_vector[i].msg, &msg));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].qx, &qx));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].qy, &qy));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].r, &r));
-    ASSERT_TRUE(DecodeHexString(test_vector[i].s, &s));
-
-    string key = qx + qy;
-    string signature = r + s;
+    ASSERT_TRUE(
+        DecodeHexString(test_vector[i].msg, msg, &msg_len, sizeof(msg)));
+    ASSERT_TRUE(DecodeHexString(test_vector[i].qx, key, &qx_len, sizeof(key)));
+    ASSERT_TRUE(DecodeHexString(test_vector[i].qy, key + qx_len, &qy_len,
+                                sizeof(key) - qx_len));
+    ASSERT_TRUE(DecodeHexString(test_vector[i].r, signature, &r_len,
+                                sizeof(signature)));
+    ASSERT_TRUE(DecodeHexString(test_vector[i].s, signature + r_len, &s_len,
+                                sizeof(signature) - r_len));
 
     // The test vector's lengths should look sane.
-    EXPECT_EQ(32u, qx.size());
-    EXPECT_EQ(32u, qy.size());
-    EXPECT_EQ(32u, r.size());
-    EXPECT_EQ(32u, s.size());
+    EXPECT_EQ(sizeof(key) / 2, qx_len);
+    EXPECT_EQ(sizeof(key) / 2, qy_len);
+    EXPECT_EQ(sizeof(signature) / 2, r_len);
+    EXPECT_EQ(sizeof(signature) / 2, s_len);
 
     EXPECT_EQ(test_vector[i].result,
-              ChannelIDVerifier::VerifyRaw(key, msg, signature, false));
+              ChannelIDVerifier::VerifyRaw(
+                  StringPiece(key, sizeof(key)), StringPiece(msg, msg_len),
+                  StringPiece(signature, sizeof(signature)), false));
   }
 }
 

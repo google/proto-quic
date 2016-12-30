@@ -41,14 +41,15 @@ void FakeProofSource::Activate() {
   active_ = true;
 }
 
-bool FakeProofSource::GetProof(const QuicSocketAddress& server_address,
-                               const string& hostname,
-                               const string& server_config,
-                               QuicVersion quic_version,
-                               StringPiece chlo_hash,
-                               const QuicTagVector& connection_options,
-                               scoped_refptr<ProofSource::Chain>* out_chain,
-                               QuicCryptoProof* out_proof) {
+bool FakeProofSource::GetProof(
+    const QuicSocketAddress& server_address,
+    const string& hostname,
+    const string& server_config,
+    QuicVersion quic_version,
+    StringPiece chlo_hash,
+    const QuicTagVector& connection_options,
+    QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
+    QuicCryptoProof* out_proof) {
   LOG(WARNING) << "Synchronous GetProof called";
   return delegate_->GetProof(server_address, hostname, server_config,
                              quic_version, chlo_hash, connection_options,
@@ -64,7 +65,7 @@ void FakeProofSource::GetProof(
     const QuicTagVector& connection_options,
     std::unique_ptr<ProofSource::Callback> callback) {
   if (!active_) {
-    scoped_refptr<Chain> chain;
+    QuicReferenceCountedPointer<Chain> chain;
     QuicCryptoProof proof;
     const bool ok =
         GetProof(server_address, hostname, server_config, quic_version,
@@ -88,7 +89,7 @@ void FakeProofSource::InvokePendingCallback(int n) {
 
   const Params& params = params_[n];
 
-  scoped_refptr<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
   QuicCryptoProof proof;
   const bool ok = delegate_->GetProof(
       params.server_address, params.hostname, params.server_config,

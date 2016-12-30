@@ -11,23 +11,23 @@ namespace blink {
 
 class A : public GarbageCollected<A> {
 public:
-    virtual void trace(Visitor*);
+    virtual void Trace(Visitor*);
 };
 
 class B : public A {
-    // Does not need trace
+    // Does not need Trace
 };
 
 class C : public B {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<A> m_a;
 };
 
 class D : public C {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     Member<A> m_a;
 };

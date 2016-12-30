@@ -6,14 +6,14 @@
 
 namespace blink {
 
-void IsLeftMostPolymorphic::trace(Visitor* visitor)
+void IsLeftMostPolymorphic::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
+    visitor->Trace(m_obj);
 }
 
-void IsNotLeftMostPolymorphic::trace(Visitor* visitor)
+void IsNotLeftMostPolymorphic::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
+    visitor->Trace(m_obj);
 }
 
 }

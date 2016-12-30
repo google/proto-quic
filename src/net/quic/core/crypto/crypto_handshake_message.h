@@ -5,9 +5,7 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_MESSAGE_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_MESSAGE_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>

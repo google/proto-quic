@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 

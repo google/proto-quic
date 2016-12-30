@@ -151,9 +151,7 @@ class SpdyFramerTestUtil {
                      SpdyRstStreamStatus status) override {
       LOG(FATAL);
     }
-    void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override {
-      LOG(FATAL);
-    }
+    void OnSetting(SpdySettingsIds id, uint32_t value) override { LOG(FATAL); }
     void OnPing(SpdyPingId unique_id, bool is_ack) override { LOG(FATAL); }
     void OnSettingsEnd() override { LOG(FATAL); }
     void OnGoAway(SpdyStreamId last_accepted_stream_id,
@@ -373,9 +371,8 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
     return true;
   }
 
-  void OnSetting(SpdySettingsIds id, uint8_t flags, uint32_t value) override {
-    VLOG(1) << "OnSetting(" << id << ", " << std::hex << flags << ", " << value
-            << ")";
+  void OnSetting(SpdySettingsIds id, uint32_t value) override {
+    VLOG(1) << "OnSetting(" << id << ", " << std::hex << ", " << value << ")";
     ++setting_count_;
   }
 
@@ -512,8 +509,7 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
 
   void InitHeaderStreaming(SpdyFrameType header_control_type,
                            SpdyStreamId stream_id) {
-    if (!SpdyConstants::IsValidFrameType(
-            SpdyConstants::SerializeFrameType(header_control_type))) {
+    if (!IsValidFrameType(SerializeFrameType(header_control_type))) {
       DLOG(FATAL) << "Attempted to init header streaming with "
                   << "invalid control frame type: " << header_control_type;
     }
@@ -601,7 +597,8 @@ StringPiece GetSerializedHeaders(const SpdySerializedFrame& frame,
 
   uint8_t serialized_type;
   reader.ReadUInt8(&serialized_type);
-  SpdyFrameType type = SpdyConstants::ParseFrameType(serialized_type);
+
+  SpdyFrameType type = ParseFrameType(serialized_type);
   DCHECK_EQ(HEADERS, type);
   uint8_t flags;
   reader.ReadUInt8(&flags);
@@ -1692,10 +1689,8 @@ TEST_P(SpdyFramerTest, CreateSettings) {
     uint32_t kValue = 0x0a0b0c0d;
     SpdySettingsIR settings_ir;
 
-    SpdySettingsFlags kFlags = static_cast<SpdySettingsFlags>(0x01);
     SpdySettingsIds kId = SETTINGS_INITIAL_WINDOW_SIZE;
-    settings_ir.AddSetting(kId, kFlags & SETTINGS_FLAG_PLEASE_PERSIST,
-                           kFlags & SETTINGS_FLAG_PERSISTED, kValue);
+    settings_ir.AddSetting(kId, kValue);
 
     SpdySerializedFrame frame(framer.SerializeSettings(settings_ir));
     CompareFrame(kDescription, frame, kH2FrameData, arraysize(kH2FrameData));
@@ -1722,22 +1717,10 @@ TEST_P(SpdyFramerTest, CreateSettings) {
     };
 
     SpdySettingsIR settings_ir;
-    settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE,
-                           false,  // persist
-                           false,  // persisted
-                           5);
-    settings_ir.AddSetting(SETTINGS_ENABLE_PUSH,
-                           false,  // persist
-                           false,  // persisted
-                           6);
-    settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS,
-                           false,  // persist
-                           false,  // persisted
-                           7);
-    settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE,
-                           false,  // persist
-                           false,  // persisted
-                           8);
+    settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE, 5);
+    settings_ir.AddSetting(SETTINGS_ENABLE_PUSH, 6);
+    settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, 7);
+    settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 8);
     SpdySerializedFrame frame(framer.SerializeSettings(settings_ir));
 
     CompareFrame(kDescription, frame, kH2FrameData, arraysize(kH2FrameData));
@@ -2146,8 +2129,7 @@ TEST_P(SpdyFramerTest, SerializeBlocked) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
 
   const char kDescription[] = "BLOCKED frame";
-  const unsigned char kType =
-      static_cast<unsigned char>(SpdyConstants::SerializeFrameType(BLOCKED));
+  const char kType = static_cast<unsigned char>(SerializeFrameType(BLOCKED));
   const unsigned char kFrameData[] = {
       0x00,  0x00, 0x00,        // Length: 0
       kType,                    //   Type: BLOCKED
@@ -2497,8 +2479,7 @@ TEST_P(SpdyFramerTest, CreateAltSvc) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
 
   const char kDescription[] = "ALTSVC frame";
-  const char kType =
-      static_cast<unsigned char>(SpdyConstants::SerializeFrameType(ALTSVC));
+  const char kType = static_cast<unsigned char>(SerializeFrameType(ALTSVC));
   const unsigned char kFrameData[] = {
       0x00, 0x00, 0x49, kType, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x06, 'o',
       'r',  'i',  'g',  'i',   'n',  'p',  'i',  'd',  '1',  '=',  '"',  'h',
@@ -2725,9 +2706,9 @@ TEST_P(SpdyFramerTest, ControlFrameSizesAreValidated) {
 
   // HTTP/2 GOAWAY frames are only bound by a minimal length, since they may
   // carry opaque data. Verify that minimal length is tested.
-  ASSERT_GT(framer.GetGoAwayMinimumSize(), SpdyConstants::kFrameHeaderSize);
+  ASSERT_GT(framer.GetGoAwayMinimumSize(), kFrameHeaderSize);
   const size_t less_than_min_length =
-      framer.GetGoAwayMinimumSize() - SpdyConstants::kFrameHeaderSize - 1;
+      framer.GetGoAwayMinimumSize() - kFrameHeaderSize - 1;
   ASSERT_LE(less_than_min_length, std::numeric_limits<unsigned char>::max());
   const unsigned char kH2Len = static_cast<unsigned char>(less_than_min_length);
   const unsigned char kH2FrameData[] = {
@@ -2738,8 +2719,7 @@ TEST_P(SpdyFramerTest, ControlFrameSizesAreValidated) {
       0x00, 0x00, 0x00,   0x00,  //   Last: 0
       0x00, 0x00, 0x00,          // Truncated Status Field
   };
-  const size_t pad_length =
-      length + SpdyConstants::kFrameHeaderSize - sizeof(kH2FrameData);
+  const size_t pad_length = length + kFrameHeaderSize - sizeof(kH2FrameData);
   string pad(pad_length, 'A');
   TestSpdyVisitor visitor(SpdyFramer::DISABLE_COMPRESSION);
 
@@ -2776,10 +2756,8 @@ TEST_P(SpdyFramerTest, ReadBogusLenSettingsFrame) {
   // overflow when calling SimulateInFramer() below.  These settings must be
   // distinct parameters because SpdySettingsIR has a map for settings, and will
   // collapse multiple copies of the same parameter.
-  settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, false, false,
-                         0x00000002);
-  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, false, false,
-                         0x00000002);
+  settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 0x00000002);
+  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, 0x00000002);
   SpdySerializedFrame control_frame(framer.SerializeSettings(settings_ir));
   const size_t kNewLength = 8;
   SetFrameLength(&control_frame, kNewLength);
@@ -2799,18 +2777,9 @@ TEST_P(SpdyFramerTest, ReadBogusLenSettingsFrame) {
 TEST_P(SpdyFramerTest, ReadLargeSettingsFrame) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   SpdySettingsIR settings_ir;
-  settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE,
-                         false,  // persist
-                         false,  // persisted
-                         5);
-  settings_ir.AddSetting(SETTINGS_ENABLE_PUSH,
-                         false,  // persist
-                         false,  // persisted
-                         6);
-  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS,
-                         false,  // persist
-                         false,  // persisted
-                         7);
+  settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE, 5);
+  settings_ir.AddSetting(SETTINGS_ENABLE_PUSH, 6);
+  settings_ir.AddSetting(SETTINGS_MAX_CONCURRENT_STREAMS, 7);
 
   SpdySerializedFrame control_frame(framer.SerializeSettings(settings_ir));
   EXPECT_LT(SpdyFramerPeer::ControlFrameBufferSize(), control_frame.size());
@@ -3373,10 +3342,7 @@ TEST_P(SpdyFramerTest, ReadUnknownExtensionFrame) {
   // Follow it up with a valid control frame to make sure we handle
   // subsequent frames correctly.
   SpdySettingsIR settings_ir;
-  settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE,
-                         false,  // persist
-                         false,  // persisted
-                         10);
+  settings_ir.AddSetting(SETTINGS_HEADER_TABLE_SIZE, 10);
   SpdySerializedFrame control_frame(framer.SerializeSettings(settings_ir));
   visitor.SimulateInFramer(
       reinterpret_cast<unsigned char*>(control_frame.data()),
@@ -3424,7 +3390,7 @@ TEST_P(SpdyFramerTest, SizesTest) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   EXPECT_EQ(9u, framer.GetDataFrameMinimumSize());
   EXPECT_EQ(9u, framer.GetFrameHeaderSize());
-  EXPECT_EQ(13u, framer.GetRstStreamMinimumSize());
+  EXPECT_EQ(13u, framer.GetRstStreamSize());
   EXPECT_EQ(9u, framer.GetSettingsMinimumSize());
   EXPECT_EQ(17u, framer.GetPingSize());
   EXPECT_EQ(17u, framer.GetGoAwayMinimumSize());
@@ -3623,7 +3589,7 @@ TEST_P(SpdyFramerTest, SettingsFrameFlags) {
     framer.set_visitor(&visitor);
 
     SpdySettingsIR settings_ir;
-    settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 0, 0, 16);
+    settings_ir.AddSetting(SETTINGS_INITIAL_WINDOW_SIZE, 16);
     SpdySerializedFrame frame(framer.SerializeSettings(settings_ir));
     SetFrameFlags(&frame, flags);
 
@@ -3631,7 +3597,7 @@ TEST_P(SpdyFramerTest, SettingsFrameFlags) {
       EXPECT_CALL(visitor, OnError(_));
     } else {
       EXPECT_CALL(visitor, OnSettings(flags & SETTINGS_FLAG_ACK));
-      EXPECT_CALL(visitor, OnSetting(SETTINGS_INITIAL_WINDOW_SIZE, 0, 16));
+      EXPECT_CALL(visitor, OnSetting(SETTINGS_INITIAL_WINDOW_SIZE, 16));
       EXPECT_CALL(visitor, OnSettingsEnd());
     }
 
@@ -3865,18 +3831,6 @@ TEST_P(SpdyFramerTest, ContinuationFrameFlags) {
 
 // TODO(hkhalil): Add TEST_F(SpdyFramerTest, BlockedFrameFlags)
 
-TEST_P(SpdyFramerTest, SettingsFlagsAndId) {
-  const uint32_t kId = 0x020304;
-  const uint32_t kFlags = 0x01;
-  const uint32_t kWireFormat = base::HostToNet32(0x01020304);
-
-  SettingsFlagsAndId id_and_flags =
-      SettingsFlagsAndId::FromWireFormat(kWireFormat);
-  EXPECT_EQ(kId, id_and_flags.id());
-  EXPECT_EQ(kFlags, id_and_flags.flags());
-  EXPECT_EQ(kWireFormat, id_and_flags.GetWireFormat());
-}
-
 // Test handling of a RST_STREAM with out-of-bounds status codes.
 TEST_P(SpdyFramerTest, RstStreamStatusBounds) {
   const unsigned char kH2RstStreamInvalid[] = {
@@ -4057,27 +4011,21 @@ TEST_P(SpdyFramerTest, OnAltSvcEmptyProtocolId) {
 }
 
 TEST_P(SpdyFramerTest, OnAltSvcBadLengths) {
-  const SpdyStreamId kStreamId = 1;
+  const char kType = static_cast<unsigned char>(SerializeFrameType(ALTSVC));
+  const unsigned char kFrameDataOriginLenLargerThanFrame[] = {
+      0x00, 0x00, 0x05, kType, 0x00, 0x00, 0x00,
+      0x00, 0x03, 0x42, 0x42,  'f',  'o',  'o',
+  };
 
-  testing::StrictMock<test::MockSpdyFramerVisitor> visitor;
+  TestSpdyVisitor visitor(SpdyFramer::DISABLE_COMPRESSION);
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   framer.set_visitor(&visitor);
+  visitor.SimulateInFramer(kFrameDataOriginLenLargerThanFrame,
+                           sizeof(kFrameDataOriginLenLargerThanFrame));
 
-  SpdyAltSvcWireFormat::AlternativeService altsvc(
-      "pid", "h1", 443, 10, SpdyAltSvcWireFormat::VersionVector());
-  SpdyAltSvcWireFormat::AlternativeServiceVector altsvc_vector;
-  altsvc_vector.push_back(altsvc);
-  EXPECT_CALL(visitor, OnAltSvc(kStreamId, StringPiece("o1"), altsvc_vector));
-
-  SpdyAltSvcIR altsvc_ir(1);
-  altsvc_ir.set_origin("o1");
-  altsvc_ir.add_altsvc(altsvc);
-  SpdySerializedFrame frame(framer.SerializeFrame(altsvc_ir));
-  framer.ProcessInput(frame.data(), frame.size());
-
-  EXPECT_EQ(SpdyFramer::SPDY_READY_FOR_FRAME, framer.state());
-  EXPECT_EQ(SpdyFramer::SPDY_NO_ERROR, framer.error_code())
-      << SpdyFramer::ErrorCodeToString(framer.error_code());
+  EXPECT_EQ(1, visitor.error_count_);
+  EXPECT_EQ(SpdyFramer::SPDY_INVALID_CONTROL_FRAME,
+            visitor.framer_.error_code());
 }
 
 // Tests handling of ALTSVC frames delivered in small chunks.

@@ -5,6 +5,7 @@
 #include "net/quic/core/quic_packet_creator.h"
 
 #include <algorithm>
+#include <cstdint>
 
 #include "base/logging.h"
 #include "base/macros.h"
@@ -13,6 +14,7 @@
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_aligned.h"
 
 using base::StringPiece;
 using std::string;
@@ -131,7 +133,7 @@ bool QuicPacketCreator::ConsumeData(QuicStreamId id,
       frame->stream_frame->data_length >= sizeof(kCHLO) &&
       strncmp(frame->stream_frame->data_buffer,
               reinterpret_cast<const char*>(&kCHLO), sizeof(kCHLO)) == 0) {
-    DCHECK_EQ(static_cast<size_t>(0), iov_offset);
+    DCHECK_EQ(0u, iov_offset);
     if (FLAGS_quic_enforce_single_packet_chlo &&
         frame->stream_frame->data_length < iov.iov->iov_len) {
       const string error_details = "Client hello won't fit in a single packet.";
@@ -312,9 +314,7 @@ void QuicPacketCreator::Flush() {
     return;
   }
 
-  // TODO(rtenneti): Change the default 64 alignas value (used the default
-  // value from CACHELINE_SIZE).
-  ALIGNAS(64) char seralized_packet_buffer[kMaxPacketSize];
+  QUIC_CACHELINE_ALIGNED char seralized_packet_buffer[kMaxPacketSize];
   SerializePacket(seralized_packet_buffer, kMaxPacketSize);
   OnSerializedPacket();
 }
@@ -353,13 +353,13 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
     QuicStreamOffset iov_offset,
     QuicStreamOffset stream_offset,
     bool fin,
-    QuicAckListenerInterface* listener,
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener,
     size_t* num_bytes_consumed) {
   DCHECK(queued_frames_.empty());
   // Write out the packet header
   QuicPacketHeader header;
   FillPacketHeader(&header);
-  ALIGNAS(64) char encrypted_buffer[kMaxPacketSize];
+  QUIC_CACHELINE_ALIGNED char encrypted_buffer[kMaxPacketSize];
   QuicDataWriter writer(arraysize(encrypted_buffer), encrypted_buffer);
   if (!framer_->AppendPacketHeader(header, &writer)) {
     QUIC_BUG << "AppendPacketHeader failed";
@@ -412,8 +412,8 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   packet_size_ = 0;
   packet_.encrypted_buffer = encrypted_buffer;
   packet_.encrypted_length = encrypted_length;
-  if (listener != nullptr) {
-    packet_.listeners.emplace_back(listener, bytes_consumed);
+  if (ack_listener != nullptr) {
+    packet_.listeners.emplace_back(std::move(ack_listener), bytes_consumed);
   }
   packet_.retransmittable_frames.push_back(QuicFrame(frame.release()));
   OnSerializedPacket();
@@ -464,10 +464,11 @@ bool QuicPacketCreator::AddPaddedSavedFrame(const QuicFrame& frame) {
   return false;
 }
 
-void QuicPacketCreator::AddAckListener(QuicAckListenerInterface* listener,
-                                       QuicPacketLength length) {
+void QuicPacketCreator::AddAckListener(
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener,
+    QuicPacketLength length) {
   DCHECK(!queued_frames_.empty());
-  packet_.listeners.emplace_back(listener, length);
+  packet_.listeners.emplace_back(std::move(ack_listener), length);
 }
 
 void QuicPacketCreator::SerializePacket(char* encrypted_buffer,

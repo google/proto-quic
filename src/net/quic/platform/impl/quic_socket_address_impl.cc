@@ -57,12 +57,6 @@ string QuicSocketAddressImpl::ToString() const {
   return socket_address_.ToString();
 }
 
-bool QuicSocketAddressImpl::FromString(string str) {
-  QUIC_BUG
-      << "QuicSocketAddressImpl::FromString(string str) is not implemented.";
-  return false;
-}
-
 int QuicSocketAddressImpl::FromSocket(int fd) {
   SockaddrStorage storage;
   if (getsockname(fd, storage.addr, &storage.addr_len) != 0 ||

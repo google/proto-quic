@@ -7,15 +7,12 @@
 #include <memory>
 
 #include "base/format_macros.h"
-#include "base/strings/stringprintf.h"
-#include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 using testing::_;
 
@@ -84,8 +81,7 @@ TEST_F(QuicFlowControllerTest, SendingBytes) {
               CloseConnection(QUIC_FLOW_CONTROL_SENT_TOO_MUCH_DATA, _, _));
   EXPECT_QUIC_BUG(
       flow_controller_->AddBytesSent(send_window_ * 10),
-      base::StringPrintf("Trying to send an extra %" PRIu64 " bytes",
-                         send_window_ * 10));
+      QuicStrCat("Trying to send an extra ", send_window_ * 10, " bytes"));
   EXPECT_TRUE(flow_controller_->IsBlocked());
   EXPECT_EQ(0u, flow_controller_->SendWindowSize());
 }

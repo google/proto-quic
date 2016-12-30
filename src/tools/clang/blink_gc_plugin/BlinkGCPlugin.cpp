@@ -23,19 +23,20 @@ class BlinkGCPluginAction : public PluginASTAction {
 
  protected:
   // Overridden from PluginASTAction:
-  virtual std::unique_ptr<ASTConsumer> CreateASTConsumer(
-      CompilerInstance& instance,
-      llvm::StringRef ref) {
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance& instance,
+                                                 llvm::StringRef ref) override {
     return llvm::make_unique<BlinkGCPluginConsumer>(instance, options_);
   }
 
-  virtual bool ParseArgs(const CompilerInstance&,
-                         const std::vector<std::string>& args) {
+  bool ParseArgs(const CompilerInstance&,
+                 const std::vector<std::string>& args) override {
     for (const auto& arg : args) {
       if (arg == "dump-graph") {
         options_.dump_graph = true;
       } else if (arg == "warn-unneeded-finalizer") {
         options_.warn_unneeded_finalizer = true;
+      } else if (arg == "use-chromium-style-naming") {
+        options_.use_chromium_style_naming = true;
       } else {
         llvm::errs() << "Unknown blink-gc-plugin argument: " << arg << "\n";
         return false;

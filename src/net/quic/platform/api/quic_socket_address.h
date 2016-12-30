@@ -31,7 +31,6 @@ class QUIC_EXPORT_PRIVATE QuicSocketAddress {
 
   bool IsInitialized() const;
   std::string ToString() const;
-  bool FromString(std::string str);
   int FromSocket(int fd);
   QuicSocketAddress Normalized() const;
 

@@ -7,6 +7,7 @@ import itertools
 import logging
 import os
 import posixpath
+import time
 
 from devil.android import device_errors
 from devil.android import device_temp_file
@@ -414,16 +415,21 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
                          if r.GetType() == base_test_result.ResultType.CRASH)
 
     if self._test_instance.store_tombstones:
-      resolved_tombstones = None
+      tombstones_url = None
       for result in results:
         if result.GetType() == base_test_result.ResultType.CRASH:
-          if not resolved_tombstones:
-            resolved_tombstones = '\n'.join(tombstones.ResolveTombstones(
+          if not tombstones_url:
+            resolved_tombstones = tombstones.ResolveTombstones(
                 device,
                 resolve_all_tombstones=True,
                 include_stack_symbols=False,
-                wipe_tombstones=True))
-          result.SetTombstones(resolved_tombstones)
+                wipe_tombstones=True)
+            stream_name = 'tombstones_%s_%s' % (
+                time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+                device.serial)
+            tombstones_url = tombstones.LogdogTombstones(resolved_tombstones,
+                                                         stream_name)
+          result.SetTombstonesUrl(tombstones_url)
 
     not_run_tests = set(test).difference(set(r.GetName() for r in results))
     return results, list(not_run_tests)

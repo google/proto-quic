@@ -56,7 +56,7 @@ class BaseTestResult(object):
     self._test_type = test_type
     self._duration = duration
     self._log = log
-    self._tombstones = None
+    self._tombstones_url = None
     self._logcat_url = None
 
   def __str__(self):
@@ -105,11 +105,11 @@ class BaseTestResult(object):
     """Get the test log."""
     return self._log
 
-  def SetTombstones(self, tombstones):
-    self._tombstones = tombstones
+  def SetTombstonesUrl(self, tombstones_url):
+    self._tombstones_url = tombstones_url
 
-  def GetTombstones(self):
-    return self._tombstones
+  def GetTombstonesUrl(self):
+    return self._tombstones_url
 
   def SetLogcatUrl(self, logcat_url):
     self._logcat_url = logcat_url

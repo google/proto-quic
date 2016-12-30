@@ -94,11 +94,17 @@ void EmptyStringConverter::SetupMatchers(MatchFinder* match_finder) {
                            &constructor_callback_);
   match_finder->addMatcher(cxxNewExpr(has(constructor_call)),
                            &constructor_callback_);
-  match_finder->addMatcher(cxxBindTemporaryExpr(has(constructor_call)),
-                           &temporary_callback_);
+  // The implicitly generated constructor for temporary could be wrapped by
+  // implicitCastExpr, so ignoringParenImpCasts is needed.
   match_finder->addMatcher(
-      cxxConstructorDecl(forEach(expr(has(constructor_call)))),
-      &initializer_callback_);
+      cxxBindTemporaryExpr(ignoringParenImpCasts(forEach(constructor_call))),
+      &temporary_callback_);
+  // Note that forEachConstructorInitializer is needed. The std::string
+  // constructor is wrapped by exprWithCleanups and cxxCtorInitializer.
+  // forEach() would not work.
+  match_finder->addMatcher(cxxConstructorDecl(forEachConstructorInitializer(
+                               withInitializer(expr(has(constructor_call))))),
+                           &initializer_callback_);
 }
 
 void ConstructorCallback::run(const MatchFinder::MatchResult& result) {
@@ -111,7 +117,8 @@ void ConstructorCallback::run(const MatchFinder::MatchResult& result) {
       result.Nodes.getNodeAs<clang::CXXConstructExpr>("call");
   clang::CharSourceRange range =
       clang::CharSourceRange::getTokenRange(call->getParenOrBraceRange());
-  replacements_->insert(Replacement(*result.SourceManager, range, ""));
+  auto err = replacements_->add(Replacement(*result.SourceManager, range, ""));
+  assert(!err);
 }
 
 void InitializerCallback::run(const MatchFinder::MatchResult& result) {
@@ -122,7 +129,8 @@ void InitializerCallback::run(const MatchFinder::MatchResult& result) {
 
   const clang::CXXConstructExpr* call =
       result.Nodes.getNodeAs<clang::CXXConstructExpr>("call");
-  replacements_->insert(Replacement(*result.SourceManager, call, ""));
+  auto err = replacements_->add(Replacement(*result.SourceManager, call, ""));
+  assert(!err);
 }
 
 void TemporaryCallback::run(const MatchFinder::MatchResult& result) {
@@ -139,11 +147,14 @@ void TemporaryCallback::run(const MatchFinder::MatchResult& result) {
   // for |call| in the explicit case doesn't include the closing parenthesis.
   clang::SourceRange range = call->getParenOrBraceRange();
   if (range.isValid()) {
-    replacements_->insert(Replacement(*result.SourceManager, literal, ""));
+    auto err =
+        replacements_->add(Replacement(*result.SourceManager, literal, ""));
+    assert(!err);
   } else {
-    replacements_->insert(
+    auto err = replacements_->add(
         Replacement(*result.SourceManager, call,
                     literal->isWide() ? "std::wstring()" : "std::string()"));
+    assert(!err);
   }
 }
 

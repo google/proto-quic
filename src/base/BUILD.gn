@@ -505,7 +505,7 @@ component("base") {
     "memory/raw_scoped_refptr_mismatch_checker.h",
     "memory/ref_counted.cc",
     "memory/ref_counted.h",
-    "memory/ref_counted_delete_on_message_loop.h",
+    "memory/ref_counted_delete_on_sequence.h",
     "memory/ref_counted_memory.cc",
     "memory/ref_counted_memory.h",
     "memory/scoped_policy.h",
@@ -2025,6 +2025,7 @@ test("base_unittests") {
     "template_util_unittest.cc",
     "test/histogram_tester_unittest.cc",
     "test/scoped_mock_time_message_loop_task_runner_unittest.cc",
+    "test/scoped_task_scheduler_unittest.cc",
     "test/test_pending_task_unittest.cc",
     "test/test_reg_util_win_unittest.cc",
     "test/trace_event_analyzer_unittest.cc",
@@ -2438,6 +2439,7 @@ if (is_android) {
     deps = [
       ":base_java",
       ":base_java_test_support",
+      "//third_party/android_support_test_runner:runner_java",
     ]
     java_files = [
       "android/javatests/src/org/chromium/base/AdvancedMockContextTest.java",

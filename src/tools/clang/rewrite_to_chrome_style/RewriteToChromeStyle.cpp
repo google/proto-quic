@@ -14,10 +14,9 @@
 
 #include <assert.h>
 #include <algorithm>
-#include <fstream>
 #include <memory>
+#include <set>
 #include <string>
-#include <unordered_map>
 
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -33,12 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <sys/file.h>
-#include <unistd.h>
-#endif
+#include "EditTracker.h"
 
 using namespace clang::ast_matchers;
 using clang::tooling::CommonOptionsParser;
@@ -213,25 +207,63 @@ bool IsMethodOverrideOf(const clang::CXXMethodDecl& decl,
   return false;
 }
 
-bool IsBlacklistedFunction(const clang::FunctionDecl& decl) {
-  // swap() functions should match the signature of std::swap for ADL tricks.
-  return decl.getName() == "swap";
+bool IsBlacklistedFunctionName(llvm::StringRef name) {
+  // https://crbug.com/672902: Method names with an underscore are typically
+  // mimicked after std library / are typically not originating from Blink.
+  // Do not rewrite such names (like push_back, emplace_back, etc.).
+  if (name.find('_') != llvm::StringRef::npos)
+    return true;
+
+  // https://crbug.com/677166: Have to avoid renaming |hash| -> |Hash| to avoid
+  // colliding with a struct already named |Hash|.
+  return name == "hash";
 }
 
-bool IsBlacklistedMethod(const clang::CXXMethodDecl& decl) {
-  if (decl.isStatic())
-    return false;
+bool IsBlacklistedFreeFunctionName(llvm::StringRef name) {
+  // swap() functions should match the signature of std::swap for ADL tricks.
+  return name == "swap";
+}
 
-  clang::StringRef name = decl.getName();
+bool IsBlacklistedInstanceMethodName(llvm::StringRef name) {
+  static const char* kBlacklistedNames[] = {
+      // We should avoid renaming the method names listed below, because
+      // 1. They are used in templated code (e.g. in <algorithms>)
+      // 2. They (begin+end) are used in range-based for syntax sugar
+      //    - for (auto x : foo) { ... }  // <- foo.begin() will be called.
+      "begin", "end", "rbegin", "rend", "lock", "unlock", "try_lock",
 
-  // These methods should never be renamed.
-  static const char* kBlacklistMethods[] = {"trace",  "traceImpl", "lock",
-                                            "unlock", "try_lock",  "begin",
-                                            "end",    "rbegin",    "rend"};
-  for (const auto& b : kBlacklistMethods) {
+      // https://crbug.com/672902: Should not rewrite names that mimick methods
+      // from std library.
+      "back", "empty", "erase", "front", "insert",
+  };
+  for (const auto& b : kBlacklistedNames) {
     if (name == b)
       return true;
   }
+  return false;
+}
+
+bool IsBlacklistedMethodName(llvm::StringRef name) {
+  return IsBlacklistedFunctionName(name) ||
+         IsBlacklistedInstanceMethodName(name);
+}
+
+bool IsBlacklistedFunction(const clang::FunctionDecl& decl) {
+  clang::StringRef name = decl.getName();
+  return IsBlacklistedFunctionName(name) || IsBlacklistedFreeFunctionName(name);
+}
+
+bool IsBlacklistedMethod(const clang::CXXMethodDecl& decl) {
+  clang::StringRef name = decl.getName();
+  if (IsBlacklistedFunctionName(name))
+    return true;
+
+  // Remaining cases are only applicable to instance methods.
+  if (decl.isStatic())
+    return false;
+
+  if (IsBlacklistedInstanceMethodName(name))
+    return true;
 
   // Subclasses of InspectorAgent will subclass "disable()" from both blink and
   // from gen/, which is problematic, but DevTools folks don't want to rename
@@ -240,21 +272,6 @@ bool IsBlacklistedMethod(const clang::CXXMethodDecl& decl) {
       IsMethodOverrideOf(decl, "blink::InspectorAgent"))
     return true;
 
-  return false;
-}
-
-bool IsBlacklistedFunctionOrMethodName(llvm::StringRef name) {
-  static const char* kBlacklistedNames[] = {
-      // From IsBlacklistedFunction:
-      "swap",
-      // From IsBlacklistedMethod:
-      "trace", "traceImpl", "lock", "unlock", "try_lock", "begin", "end",
-      "rbegin", "rend", "disable",
-  };
-  for (const auto& b : kBlacklistedNames) {
-    if (name == b)
-      return true;
-  }
   return false;
 }
 
@@ -340,6 +357,75 @@ AST_MATCHER_P(clang::QualType, hasString, std::string, ExpectedString) {
   return ExpectedString == Node.getAsString();
 }
 
+bool ShouldPrefixFunctionName(const std::string& old_method_name) {
+  // Methods that are named similarily to a type - they should be prefixed
+  // with a "get" prefix.
+  static const char* kConflictingMethods[] = {
+      "animationWorklet",
+      "audioWorklet",
+      "binaryType",
+      "blob",
+      "channelCountMode",
+      "color",
+      "counterDirectives",
+      "document",
+      "emptyChromeClient",
+      "emptyEditorClient",
+      "emptySpellCheckerClient",
+      "entryType",
+      "error",
+      "fileUtilities",
+      "font",
+      "frame",
+      "frameBlameContext",
+      "iconURL",
+      "inputMethodController",
+      "inputType",
+      "layout",
+      "layoutBlock",
+      "layoutObject",
+      "layoutSize",
+      "length",
+      "lineCap",
+      "lineJoin",
+      "matchedProperties",
+      "name",
+      "navigationType",
+      "node",
+      "outcome",
+      "pagePopup",
+      "paintWorklet",
+      "path",
+      "processingInstruction",
+      "readyState",
+      "response",
+      "sandboxSupport",
+      "screenInfo",
+      "scrollAnimator",
+      "settings",
+      "signalingState",
+      "state",
+      "string",
+      "text",
+      "textAlign",
+      "textBaseline",
+      "theme",
+      "timing",
+      "topLevelBlameContext",
+      "widget",
+  };
+  for (const auto& conflicting_method : kConflictingMethods) {
+    if (old_method_name == conflicting_method)
+      return true;
+  }
+
+  return false;
+}
+
+AST_MATCHER(clang::FunctionDecl, shouldPrefixFunctionName) {
+  return ShouldPrefixFunctionName(Node.getName().str());
+}
+
 bool GetNameForDecl(const clang::FunctionDecl& decl,
                     clang::ASTContext& context,
                     std::string& name) {
@@ -358,8 +444,7 @@ bool GetNameForDecl(const clang::FunctionDecl& decl,
       // hasString matches the type as spelled (Bar above).
       hasString(name),
       // hasDeclaration matches resolved type (Foo or DerivedFoo above).
-      hasDeclaration(namedDecl(hasName(name))),
-      hasDeclaration(cxxRecordDecl(isDerivedFrom(namedDecl(hasName(name)))))));
+      hasDeclaration(namedDecl(hasName(name)))));
 
   // |type_containing_same_name_as_function| matcher will match all of the
   // return types below:
@@ -371,8 +456,17 @@ bool GetNameForDecl(const clang::FunctionDecl& decl,
                      hasDescendant(type_with_same_name_as_function)));
   // https://crbug.com/582312: Prepend "Get" if method name conflicts with
   // return type.
-  auto conflict_matcher =
-      functionDecl(returns(type_containing_same_name_as_function));
+  auto conflict_matcher = functionDecl(anyOf(
+      // For functions and non-virtual or base method implementations just
+      // compare with the immediate return type.
+      functionDecl(returns(type_containing_same_name_as_function),
+                   unless(cxxMethodDecl(isOverride()))),
+      // For methods that override one or more methods, compare with the return
+      // type of the *base* methods.
+      cxxMethodDecl(isOverride(), forEachOverridden(returns(
+                                      type_containing_same_name_as_function))),
+      // And also check hardcoded list of function names to prefix with "Get".
+      shouldPrefixFunctionName()));
   if (IsMatching(conflict_matcher, decl, context))
     name = "Get" + name;
 
@@ -628,6 +722,60 @@ class RewriterBase : public MatchFinder::MatchCallback {
     return *target_node;
   }
 
+  bool GenerateReplacement(const MatchFinder::MatchResult& result,
+                           clang::SourceLocation loc,
+                           llvm::StringRef old_name,
+                           std::string new_name,
+                           Replacement* replacement) {
+    const clang::ASTContext& context = *result.Context;
+    const clang::SourceManager& source_manager = *result.SourceManager;
+
+    if (loc.isMacroID()) {
+      // Try to jump "above" the scratch buffer if |loc| is inside
+      // token##Concatenation.
+      const int kMaxJumps = 5;
+      bool verified_out_of_scratch_space = false;
+      for (int i = 0; i < kMaxJumps && !verified_out_of_scratch_space; i++) {
+        clang::SourceLocation spell = source_manager.getSpellingLoc(loc);
+        verified_out_of_scratch_space =
+            source_manager.getBufferName(spell) != "<scratch space>";
+        if (!verified_out_of_scratch_space)
+          loc = source_manager.getImmediateMacroCallerLoc(loc);
+      }
+      if (!verified_out_of_scratch_space)
+        return false;
+    }
+
+    // If the edit affects only the first character of the identifier, then
+    // narrow down the edit to only this single character.  This is important
+    // for dealing with toFooBar -> ToFooBar method renaming when the method
+    // name is built using macro token concatenation like to##macroArgument - in
+    // this case we should only rewrite "t" -> "T" and leave "o##macroArgument"
+    // untouched.
+    llvm::StringRef expected_old_text = old_name;
+    llvm::StringRef new_text = new_name;
+    if (loc.isMacroID() && expected_old_text.substr(1) == new_text.substr(1)) {
+      expected_old_text = expected_old_text.substr(0, 1);
+      new_text = new_text.substr(0, 1);
+    }
+    clang::SourceLocation spell = source_manager.getSpellingLoc(loc);
+    clang::CharSourceRange range = clang::CharSourceRange::getCharRange(
+        spell, spell.getLocWithOffset(expected_old_text.size()));
+
+    // We need to ensure that |actual_old_text| is the same as
+    // |expected_old_text| - it can be different if |actual_old_text| contains
+    // a macro argument (see DEFINE_WITH_TOKEN_CONCATENATION2 in
+    // macros-original.cc testcase).
+    StringRef actual_old_text = clang::Lexer::getSourceText(
+        range, source_manager, context.getLangOpts());
+    if (actual_old_text != expected_old_text)
+      return false;
+
+    if (replacement)
+      *replacement = Replacement(source_manager, range, new_text);
+    return true;
+  }
+
   void AddReplacement(const MatchFinder::MatchResult& result,
                       llvm::StringRef old_name,
                       std::string new_name) {
@@ -636,19 +784,20 @@ class RewriterBase : public MatchFinder::MatchCallback {
 
     clang::SourceLocation loc =
         TargetNodeTraits<TargetNode>::GetLoc(GetTargetNode(result));
-    clang::CharSourceRange range = clang::CharSourceRange::getTokenRange(loc);
-    replacements_->emplace(*result.SourceManager, range, new_name);
-    replacement_names_.emplace(old_name.str(), std::move(new_name));
+
+    Replacement replacement;
+    if (!GenerateReplacement(result, loc, old_name, new_name, &replacement))
+      return;
+
+    replacements_->insert(std::move(replacement));
+    edit_tracker_.Add(*result.SourceManager, loc, old_name, new_name);
   }
 
-  const std::unordered_map<std::string, std::string>& replacement_names()
-      const {
-    return replacement_names_;
-  }
+  const EditTracker& edit_tracker() const { return edit_tracker_; }
 
  private:
   std::set<Replacement>* const replacements_;
-  std::unordered_map<std::string, std::string> replacement_names_;
+  EditTracker edit_tracker_;
 };
 
 template <typename DeclNode, typename TargetNode>
@@ -662,26 +811,25 @@ class DeclRewriterBase : public RewriterBase<TargetNode> {
   void run(const MatchFinder::MatchResult& result) override {
     const DeclNode* decl = result.Nodes.getNodeAs<DeclNode>("decl");
     assert(decl);
-    // If false, there's no name to be renamed.
+    llvm::StringRef old_name = decl->getName();
+
+    // Return early if there's no name to be renamed.
     if (!decl->getIdentifier())
       return;
+
+    // Get the new name.
+    std::string new_name;
+    if (!GetNameForDecl(*decl, *result.Context, new_name))
+      return;  // If false, the name was not suitable for renaming.
+
+    // Check if we are able to rewrite the decl (to avoid rewriting if the
+    // decl's identifier is part of macro##Token##Concatenation).
     clang::SourceLocation decl_loc =
         TargetNodeTraits<clang::NamedDecl>::GetLoc(*decl);
-    if (decl_loc.isMacroID()) {
-      // Get the location of the spelling of the declaration. If token pasting
-      // was used this will be in "scratch space" and we don't know how to get
-      // from there back to/ the actual macro with the foo##bar text. So just
-      // don't replace in that case.
-      clang::SourceLocation spell =
-          result.SourceManager->getSpellingLoc(decl_loc);
-      if (result.SourceManager->getBufferName(spell) == "<scratch space>")
-        return;
-    }
-    clang::ASTContext* context = result.Context;
-    std::string new_name;
-    if (!GetNameForDecl(*decl, *context, new_name))
-      return;  // If false, the name was not suitable for renaming.
-    llvm::StringRef old_name = decl->getName();
+    if (!Base::GenerateReplacement(result, decl_loc, old_name, new_name,
+                                   nullptr))
+      return;
+
     Base::AddReplacement(result, old_name, std::move(new_name));
   }
 };
@@ -826,9 +974,11 @@ class UnresolvedRewriterBase : public RewriterBase<TargetNode> {
 
     // |T::myMethod(...)| -> |T::MyMethod(...)|.
     if ((old_name.find('_') == std::string::npos) && IsCallee(node, context) &&
-        !IsBlacklistedFunctionOrMethodName(old_name)) {
+        !IsBlacklistedMethodName(old_name)) {
       new_name = old_name;
       new_name[0] = clang::toUppercase(old_name[0]);
+      if (ShouldPrefixFunctionName(old_name))
+        new_name = "Get" + new_name;
       return true;
     }
 
@@ -1227,38 +1377,15 @@ int main(int argc, const char* argv[]) {
   if (result != 0)
     return result;
 
-#if defined(_WIN32)
-  HANDLE lockfd = CreateFile("rewrite-sym.lock", GENERIC_READ, FILE_SHARE_READ,
-                             NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  OVERLAPPED overlapped = {};
-  LockFileEx(lockfd, LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &overlapped);
-#else
-  int lockfd = open("rewrite-sym.lock", O_RDWR | O_CREAT, 0666);
-  while (flock(lockfd, LOCK_EX)) {  // :D
-  }
-#endif
-
-  std::ofstream replacement_db_file("rewrite-sym.txt",
-                                    std::ios_base::out | std::ios_base::app);
-  for (const auto& p : field_decl_rewriter.replacement_names())
-    replacement_db_file << "var:" << p.first << ":" << p.second << "\n";
-  for (const auto& p : var_decl_rewriter.replacement_names())
-    replacement_db_file << "var:" << p.first << ":" << p.second << "\n";
-  for (const auto& p : enum_member_decl_rewriter.replacement_names())
-    replacement_db_file << "enu:" << p.first << ":" << p.second << "\n";
-  for (const auto& p : function_decl_rewriter.replacement_names())
-    replacement_db_file << "fun:" << p.first << ":" << p.second << "\n";
-  for (const auto& p : method_decl_rewriter.replacement_names())
-    replacement_db_file << "fun:" << p.first << ":" << p.second << "\n";
-  replacement_db_file.close();
-
-#if defined(_WIN32)
-  UnlockFileEx(lockfd, 0, 1, 0, &overlapped);
-  CloseHandle(lockfd);
-#else
-  flock(lockfd, LOCK_UN);
-  close(lockfd);
-#endif
+  // Supplemental data for the Blink rename rebase helper.
+  // TODO(dcheng): There's a lot of match rewriters missing from this list.
+  llvm::outs() << "==== BEGIN TRACKED EDITS ====\n";
+  field_decl_rewriter.edit_tracker().SerializeTo("var", llvm::outs());
+  var_decl_rewriter.edit_tracker().SerializeTo("var", llvm::outs());
+  enum_member_decl_rewriter.edit_tracker().SerializeTo("enu", llvm::outs());
+  function_decl_rewriter.edit_tracker().SerializeTo("fun", llvm::outs());
+  method_decl_rewriter.edit_tracker().SerializeTo("fun", llvm::outs());
+  llvm::outs() << "==== END TRACKED EDITS ====\n";
 
   // Serialization format is documented in tools/clang/scripts/run_tool.py
   llvm::outs() << "==== BEGIN EDITS ====\n";

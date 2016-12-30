@@ -8,7 +8,6 @@
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
-#include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
@@ -89,23 +88,13 @@ class DefaultJobFactory : public HttpStreamFactoryImpl::JobFactory {
   }
 };
 
-// Returns true if only one preconnect to proxy servers is allowed via field
-// trial.
-bool AllowOnlyOnePreconnectToProxyServers() {
-  return base::StartsWith(base::FieldTrialList::FindFullName(
-                              "NetAllowOnlyOnePreconnectToProxyServers"),
-                          "Enabled", base::CompareCase::INSENSITIVE_ASCII);
-}
-
 }  // anonymous namespace
 
 HttpStreamFactoryImpl::HttpStreamFactoryImpl(HttpNetworkSession* session,
                                              bool for_websockets)
     : session_(session),
       job_factory_(new DefaultJobFactory()),
-      for_websockets_(for_websockets),
-      allow_only_one_preconnect_to_proxy_servers_(
-          AllowOnlyOnePreconnectToProxyServers()) {}
+      for_websockets_(for_websockets) {}
 
 HttpStreamFactoryImpl::~HttpStreamFactoryImpl() {
   DCHECK(request_map_.empty());
@@ -261,7 +250,7 @@ bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
     return false;
   }
 
-  if (!allow_only_one_preconnect_to_proxy_servers_ ||
+  if (!session_->params().restrict_to_one_preconnect_for_proxies ||
       !ProxyServerSupportsPriorities(proxy_info)) {
     return false;
   }

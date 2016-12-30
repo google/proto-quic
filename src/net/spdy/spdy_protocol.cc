@@ -45,7 +45,7 @@ SpdyPriority Http2WeightToSpdy3Priority(int weight) {
   return static_cast<SpdyPriority>(7.f - (weight - 1) / kSteps);
 }
 
-bool SpdyConstants::IsValidFrameType(int frame_type_field) {
+bool IsValidFrameType(int frame_type_field) {
   // Check for recognized extensions.
   if (frame_type_field == SerializeFrameType(ALTSVC) ||
       frame_type_field == SerializeFrameType(BLOCKED)) {
@@ -65,7 +65,7 @@ bool SpdyConstants::IsValidFrameType(int frame_type_field) {
   return true;
 }
 
-SpdyFrameType SpdyConstants::ParseFrameType(int frame_type_field) {
+SpdyFrameType ParseFrameType(int frame_type_field) {
   switch (frame_type_field) {
     case 0:
       return DATA;
@@ -96,7 +96,7 @@ SpdyFrameType SpdyConstants::ParseFrameType(int frame_type_field) {
   return DATA;
 }
 
-int SpdyConstants::SerializeFrameType(SpdyFrameType frame_type) {
+int SerializeFrameType(SpdyFrameType frame_type) {
   switch (frame_type) {
     case DATA:
       return kDataFrameType;
@@ -129,9 +129,8 @@ int SpdyConstants::SerializeFrameType(SpdyFrameType frame_type) {
   }
 }
 
-bool SpdyConstants::IsValidHTTP2FrameStreamId(
-    SpdyStreamId current_frame_stream_id,
-    SpdyFrameType frame_type_field) {
+bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
+                               SpdyFrameType frame_type_field) {
   if (current_frame_stream_id == 0) {
     switch (frame_type_field) {
       case DATA:
@@ -158,8 +157,7 @@ bool SpdyConstants::IsValidHTTP2FrameStreamId(
   }
 }
 
-bool SpdyConstants::ParseSettingsId(int wire_setting_id,
-                                    SpdySettingsIds* setting_id) {
+bool ParseSettingsId(int wire_setting_id, SpdySettingsIds* setting_id) {
   // HEADER_TABLE_SIZE is the first defined setting id.
   if (wire_setting_id < SETTINGS_MIN) {
     return false;
@@ -174,8 +172,7 @@ bool SpdyConstants::ParseSettingsId(int wire_setting_id,
   return true;
 }
 
-bool SpdyConstants::SettingsIdToString(SpdySettingsIds id,
-                                       const char** settings_id_string) {
+bool SettingsIdToString(SpdySettingsIds id, const char** settings_id_string) {
   switch (id) {
     case SETTINGS_HEADER_TABLE_SIZE:
       *settings_id_string = "SETTINGS_HEADER_TABLE_SIZE";
@@ -201,7 +198,7 @@ bool SpdyConstants::SettingsIdToString(SpdySettingsIds id,
   return false;
 }
 
-bool SpdyConstants::IsValidRstStreamStatus(int rst_stream_status_field) {
+bool IsValidRstStreamStatus(int rst_stream_status_field) {
   // NO_ERROR is the first valid status code.
   if (rst_stream_status_field < SerializeRstStreamStatus(RST_STREAM_NO_ERROR)) {
     return false;
@@ -227,8 +224,7 @@ bool SpdyConstants::IsValidRstStreamStatus(int rst_stream_status_field) {
   return true;
 }
 
-SpdyRstStreamStatus SpdyConstants::ParseRstStreamStatus(
-    int rst_stream_status_field) {
+SpdyRstStreamStatus ParseRstStreamStatus(int rst_stream_status_field) {
   switch (rst_stream_status_field) {
     case 0:
       return RST_STREAM_NO_ERROR;
@@ -260,8 +256,7 @@ SpdyRstStreamStatus SpdyConstants::ParseRstStreamStatus(
   return RST_STREAM_PROTOCOL_ERROR;
 }
 
-int SpdyConstants::SerializeRstStreamStatus(
-    SpdyRstStreamStatus rst_stream_status) {
+int SerializeRstStreamStatus(SpdyRstStreamStatus rst_stream_status) {
   switch (rst_stream_status) {
     case RST_STREAM_NO_ERROR:
       return 0;
@@ -293,7 +288,7 @@ int SpdyConstants::SerializeRstStreamStatus(
   }
 }
 
-bool SpdyConstants::IsValidGoAwayStatus(int goaway_status_field) {
+bool IsValidGoAwayStatus(int goaway_status_field) {
   // GOAWAY_NO_ERROR is the first valid status.
   if (goaway_status_field < SerializeGoAwayStatus(GOAWAY_NO_ERROR)) {
     return false;
@@ -307,7 +302,7 @@ bool SpdyConstants::IsValidGoAwayStatus(int goaway_status_field) {
   return true;
 }
 
-SpdyGoAwayStatus SpdyConstants::ParseGoAwayStatus(int goaway_status_field) {
+SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field) {
   switch (goaway_status_field) {
     case 0:
       return GOAWAY_NO_ERROR;
@@ -343,7 +338,7 @@ SpdyGoAwayStatus SpdyConstants::ParseGoAwayStatus(int goaway_status_field) {
   return GOAWAY_PROTOCOL_ERROR;
 }
 
-int SpdyConstants::SerializeGoAwayStatus(SpdyGoAwayStatus status) {
+int SerializeGoAwayStatus(SpdyGoAwayStatus status) {
   switch (status) {
     case GOAWAY_NO_ERROR:
       return 0;
@@ -379,24 +374,7 @@ int SpdyConstants::SerializeGoAwayStatus(SpdyGoAwayStatus status) {
   }
 }
 
-const int SpdyConstants::kDataFrameType = 0;
-
-const size_t SpdyConstants::kFrameHeaderSize = 9;
-
-const size_t SpdyConstants::kDataFrameMinimumSize = kFrameHeaderSize;
-
-const size_t SpdyConstants::kMaxFrameSizeLimit =
-    kSpdyMaxFrameSizeLimit + kFrameHeaderSize;
-
-const size_t SpdyConstants::kSizeOfSizeField = sizeof(uint32_t);
-
-const size_t SpdyConstants::kPerHeaderOverhead = 32;
-
-const int32_t SpdyConstants::kInitialStreamWindowSize = 64 * 1024 - 1;
-
-const int32_t SpdyConstants::kInitialSessionWindowSize = 64 * 1024 - 1;
-
-const char SpdyConstants::kHttp2Npn[] = "h2";
+const char* const kHttp2Npn = "h2";
 
 SpdyFrameWithHeaderBlockIR::SpdyFrameWithHeaderBlockIR(
     SpdyStreamId stream_id,
@@ -450,9 +428,7 @@ void SpdyRstStreamIR::Visit(SpdyFrameVisitor* visitor) const {
   return visitor->VisitRstStream(*this);
 }
 
-SpdySettingsIR::SpdySettingsIR()
-    : clear_settings_(false),
-      is_ack_(false) {}
+SpdySettingsIR::SpdySettingsIR() : is_ack_(false) {}
 
 SpdySettingsIR::~SpdySettingsIR() {}
 

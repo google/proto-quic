@@ -5,10 +5,6 @@
 #ifndef NET_QUIC_CORE_QUIC_RECEIVED_PACKET_MANAGER_H_
 #define NET_QUIC_CORE_QUIC_RECEIVED_PACKET_MANAGER_H_
 
-#include <stddef.h>
-
-#include <deque>
-
 #include "base/macros.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_framer.h"

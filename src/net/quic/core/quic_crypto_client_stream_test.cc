@@ -230,9 +230,10 @@ TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdate) {
       reinterpret_cast<char*>(scfg), arraysize(scfg));
 
   QuicStreamSequencer* sequencer = QuicStreamPeer::sequencer(stream());
-  EXPECT_NE(FLAGS_quic_release_crypto_stream_buffer &&
-                FLAGS_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
-            QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
+  EXPECT_NE(
+      FLAGS_quic_reloadable_flag_quic_release_crypto_stream_buffer &&
+          FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time,  // NOLINT
+      QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 }
 
 TEST_F(QuicCryptoClientStreamTest, ServerConfigUpdateWithCert) {
@@ -376,7 +377,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
     CryptoTestUtils::SetupCryptoServerConfigForTest(
         server_connection_->clock(), server_connection_->random_generator(),
         &server_crypto_config_, options);
-    FLAGS_enable_quic_stateless_reject_support = true;
+    FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
   }
 
   QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
@@ -398,7 +399,7 @@ class QuicCryptoClientStreamStatelessTest : public ::testing::Test {
 };
 
 TEST_F(QuicCryptoClientStreamStatelessTest, StatelessReject) {
-  FLAGS_enable_quic_stateless_reject_support = true;
+  FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
 
   QuicCryptoClientConfig::CachedState* client_state =
       client_crypto_config_.LookupOrCreate(server_id_);

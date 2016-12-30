@@ -25,7 +25,6 @@
 #include <openssl/pool.h>
 #include <openssl/x509.h>
 
-namespace bssl {
 
 static const char kCrossSigningRootPEM[] =
     "-----BEGIN CERTIFICATE-----\n"
@@ -451,7 +450,8 @@ static bssl::UniquePtr<STACK_OF(X509_CRL)> CRLsToStack(
 static int Verify(X509 *leaf, const std::vector<X509 *> &roots,
                    const std::vector<X509 *> &intermediates,
                    const std::vector<X509_CRL *> &crls,
-                   unsigned long flags = 0) {
+                   unsigned long flags,
+                   bool use_additional_untrusted) {
   bssl::UniquePtr<STACK_OF(X509)> roots_stack(CertsToStack(roots));
   bssl::UniquePtr<STACK_OF(X509)> intermediates_stack(
       CertsToStack(intermediates));
@@ -470,8 +470,14 @@ static int Verify(X509 *leaf, const std::vector<X509 *> &roots,
     return X509_V_ERR_UNSPECIFIED;
   }
 
-  if (!X509_STORE_CTX_init(ctx.get(), store.get(), leaf,
-                           intermediates_stack.get())) {
+  if (use_additional_untrusted) {
+    X509_STORE_set0_additional_untrusted(store.get(),
+                                         intermediates_stack.get());
+  }
+
+  if (!X509_STORE_CTX_init(
+          ctx.get(), store.get(), leaf,
+          use_additional_untrusted ? nullptr : intermediates_stack.get())) {
     return X509_V_ERR_UNSPECIFIED;
   }
 
@@ -495,6 +501,24 @@ static int Verify(X509 *leaf, const std::vector<X509 *> &roots,
   }
 
   return X509_V_OK;
+}
+
+static int Verify(X509 *leaf, const std::vector<X509 *> &roots,
+                   const std::vector<X509 *> &intermediates,
+                   const std::vector<X509_CRL *> &crls,
+                   unsigned long flags = 0) {
+  const int r1 = Verify(leaf, roots, intermediates, crls, flags, false);
+  const int r2 = Verify(leaf, roots, intermediates, crls, flags, true);
+
+  if (r1 != r2) {
+    fprintf(stderr,
+            "Verify with, and without, use_additional_untrusted gave different "
+            "results: %d vs %d.\n",
+            r1, r2);
+    return false;
+  }
+
+  return r1;
 }
 
 static bool TestVerify() {
@@ -724,7 +748,7 @@ static bool TestSignCtx() {
   }
 
   // Test PKCS#1 v1.5.
-  ScopedEVP_MD_CTX md_ctx;
+  bssl::ScopedEVP_MD_CTX md_ctx;
   if (!EVP_DigestSignInit(md_ctx.get(), NULL, EVP_sha256(), NULL, pkey.get()) ||
       !SignatureRoundTrips(md_ctx.get(), pkey.get())) {
     fprintf(stderr, "RSA PKCS#1 with SHA-256 failed\n");
@@ -941,7 +965,51 @@ static bool TestFromBufferReused() {
   return true;
 }
 
-static int Main() {
+static bool TestFailedParseFromBuffer() {
+  static const uint8_t kNonsense[] = {1, 2, 3, 4, 5};
+
+  bssl::UniquePtr<CRYPTO_BUFFER> buf(
+      CRYPTO_BUFFER_new(kNonsense, sizeof(kNonsense), nullptr));
+  if (!buf) {
+    return false;
+  }
+
+  bssl::UniquePtr<X509> cert(X509_parse_from_buffer(buf.get()));
+  if (cert) {
+    fprintf(stderr, "Nonsense somehow parsed.\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  // Test a buffer with trailing data.
+  size_t data_len;
+  bssl::UniquePtr<uint8_t> data;
+  if (!PEMToDER(&data, &data_len, kRootCAPEM)) {
+    return false;
+  }
+
+  std::unique_ptr<uint8_t[]> data_with_trailing_byte(new uint8_t[data_len + 1]);
+  memcpy(data_with_trailing_byte.get(), data.get(), data_len);
+  data_with_trailing_byte[data_len] = 0;
+
+  bssl::UniquePtr<CRYPTO_BUFFER> buf_with_trailing_byte(
+      CRYPTO_BUFFER_new(data_with_trailing_byte.get(), data_len + 1, nullptr));
+  if (!buf_with_trailing_byte) {
+    return false;
+  }
+
+  bssl::UniquePtr<X509> root(
+      X509_parse_from_buffer(buf_with_trailing_byte.get()));
+  if (root) {
+    fprintf(stderr, "Parsed buffer with trailing byte.\n");
+    return false;
+  }
+  ERR_clear_error();
+
+  return true;
+}
+
+int main() {
   CRYPTO_library_init();
 
   if (!TestVerify() ||
@@ -952,16 +1020,11 @@ static int Main() {
       !TestFromBuffer() ||
       !TestFromBufferTrailingData() ||
       !TestFromBufferModified() ||
-      !TestFromBufferReused()) {
+      !TestFromBufferReused() ||
+      !TestFailedParseFromBuffer()) {
     return 1;
   }
 
   printf("PASS\n");
   return 0;
-}
-
-}  // namespace bssl
-
-int main() {
-  return bssl::Main();
 }

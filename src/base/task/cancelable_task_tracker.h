@@ -15,24 +15,23 @@
 //
 // CancelableCallback (base/cancelable_callback.h) and WeakPtr binding are
 // preferred solutions for canceling a task. However, they don't support
-// cancelation from another thread. This is sometimes a performance critical
+// cancelation from another sequence. This is sometimes a performance critical
 // requirement. E.g. We need to cancel database lookup task on DB thread when
 // user changes inputed text. If it is performance critical to do a best effort
-// cancelation of a task, then CancelableTaskTracker is appropriate,
-// otherwise use one of the other mechanisms.
+// cancelation of a task, then CancelableTaskTracker is appropriate, otherwise
+// use one of the other mechanisms.
 //
 // THREAD-SAFETY:
 //
-// 1. CancelableTaskTracker objects are not thread safe. They must
-// be created, used, and destroyed on the originating thread that posts the
-// task. It's safe to destroy a CancelableTaskTracker while there
-// are outstanding tasks. This is commonly used to cancel all outstanding
-// tasks.
+// 1. A CancelableTaskTracker object must be created, used, and destroyed on a
+//    single sequence.
 //
-// 2. Both task and reply are deleted on the originating thread.
+// 2. It's safe to destroy a CancelableTaskTracker while there are outstanding
+//    tasks. This is commonly used to cancel all outstanding tasks.
 //
-// 3. IsCanceledCallback is thread safe and can be run or deleted on any
-// thread.
+// 3. Both task and reply are deleted on the originating sequence.
+//
+// 4. IsCanceledCallback can be run or deleted on any sequence.
 #ifndef BASE_TASK_CANCELABLE_TASK_TRACKER_H_
 #define BASE_TASK_CANCELABLE_TASK_TRACKER_H_
 
@@ -45,7 +44,7 @@
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
 #include "base/post_task_and_reply_with_result_internal.h"
-#include "base/threading/thread_checker.h"
+#include "base/sequence_checker.h"
 
 namespace tracked_objects {
 class Location;
@@ -131,7 +130,7 @@ class BASE_EXPORT CancelableTaskTracker {
   base::hash_map<TaskId, base::CancellationFlag*> task_flags_;
 
   TaskId next_id_;
-  base::ThreadChecker thread_checker_;
+  SequenceChecker sequence_checker_;
 
   base::WeakPtrFactory<CancelableTaskTracker> weak_factory_;
 

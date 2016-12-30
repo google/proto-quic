@@ -99,7 +99,8 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
       recovery_state_(NOT_IN_RECOVERY),
       end_recovery_at_(0),
       recovery_window_(max_congestion_window_),
-      enforce_startup_pacing_rate_increase_(FLAGS_quic_bbr_faster_startup) {
+      enforce_startup_pacing_rate_increase_(
+          FLAGS_quic_reloadable_flag_quic_bbr_faster_startup) {
   EnterStartupMode();
 }
 

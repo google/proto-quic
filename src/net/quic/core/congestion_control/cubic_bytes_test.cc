@@ -29,9 +29,11 @@ class CubicBytesTest : public ::testing::Test {
       : one_ms_(QuicTime::Delta::FromMilliseconds(1)),
         hundred_ms_(QuicTime::Delta::FromMilliseconds(100)),
         cubic_(&clock_) {
-    cubic_.SetFixConvexMode(FLAGS_quic_fix_cubic_convex_mode);
-    cubic_.SetFixCubicQuantization(FLAGS_quic_fix_cubic_bytes_quantization);
-    cubic_.SetFixBetaLastMax(FLAGS_quic_fix_beta_last_max);
+    cubic_.SetFixConvexMode(
+        FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode);
+    cubic_.SetFixCubicQuantization(
+        FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization);
+    cubic_.SetFixBetaLastMax(FLAGS_quic_reloadable_flag_quic_fix_beta_last_max);
   }
 
   QuicByteCount RenoCwndInBytes(QuicByteCount current_cwnd) {
@@ -52,7 +54,7 @@ class CubicBytesTest : public ::testing::Test {
     const int64_t offset =
         ((elapsed_time + rtt).ToMicroseconds() << 10) / 1000000;
     const QuicByteCount delta_congestion_window =
-        FLAGS_quic_fix_cubic_bytes_quantization
+        FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization
             ? ((410 * offset * offset * offset) * kDefaultTCPMSS >> 40)
             : ((410 * offset * offset * offset) >> 40) * kDefaultTCPMSS;
     const QuicByteCount cubic_cwnd = initial_cwnd + delta_congestion_window;
@@ -74,7 +76,7 @@ class CubicBytesTest : public ::testing::Test {
 // deploying the fix for convex mode.  Once cubic convex is deployed,
 // replace "AboveOrigin" with this test.
 TEST_F(CubicBytesTest, AboveOriginWithTighterBounds) {
-  if (!FLAGS_quic_fix_cubic_convex_mode) {
+  if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
     // Without convex mode fixed, the behavior of the algorithm is so
     // far from expected, there's no point in doing a tighter test.
     return;
@@ -97,7 +99,7 @@ TEST_F(CubicBytesTest, AboveOriginWithTighterBounds) {
   // The maximum number of expected Reno RTTs is calculated by
   // finding the point where the cubic curve and the reno curve meet.
   const int max_reno_rtts =
-      FLAGS_quic_fix_cubic_bytes_quantization
+      FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization
           ? std::sqrt(kNConnectionAlpha /
                       (.4 * rtt_min_s * rtt_min_s * rtt_min_s)) -
                 2
@@ -129,7 +131,7 @@ TEST_F(CubicBytesTest, AboveOriginWithTighterBounds) {
     clock_.AdvanceTime(hundred_ms_);
   }
 
-  if (!FLAGS_quic_fix_cubic_bytes_quantization) {
+  if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
     // Because our byte-wise Reno under-estimates the cwnd, we switch to
     // conservative increases for a few acks before switching to true
     // cubic increases.
@@ -166,8 +168,8 @@ TEST_F(CubicBytesTest, AboveOriginWithTighterBounds) {
 }
 
 TEST_F(CubicBytesTest, AboveOrigin) {
-  if (!FLAGS_quic_fix_cubic_convex_mode &&
-      FLAGS_quic_fix_cubic_bytes_quantization) {
+  if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
+      FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
     // Without convex mode fixed, the behavior of the algorithm does
     // not fit the exact pattern of this test.
     // TODO(jokulik): Once the convex mode fix becomes default, this
@@ -180,9 +182,10 @@ TEST_F(CubicBytesTest, AboveOrigin) {
   QuicByteCount current_cwnd = 10 * kDefaultTCPMSS;
   // Without the signed-integer, cubic-convex fix, we start out in the
   // wrong mode.
-  QuicPacketCount expected_cwnd = FLAGS_quic_fix_cubic_convex_mode
-                                      ? RenoCwndInBytes(current_cwnd)
-                                      : ConservativeCwndInBytes(current_cwnd);
+  QuicPacketCount expected_cwnd =
+      FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode
+          ? RenoCwndInBytes(current_cwnd)
+          : ConservativeCwndInBytes(current_cwnd);
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   ASSERT_EQ(expected_cwnd,
@@ -203,7 +206,7 @@ TEST_F(CubicBytesTest, AboveOrigin) {
     clock_.AdvanceTime(hundred_ms_);
     current_cwnd = cubic_.CongestionWindowAfterAck(
         kDefaultTCPMSS, current_cwnd, rtt_min, clock_.ApproximateNow());
-    if (FLAGS_quic_fix_cubic_convex_mode) {
+    if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
       // When we fix convex mode and the uint64 arithmetic, we
       // increase the expected_cwnd only after after the first 100ms,
       // rather than after the initial 1ms.
@@ -234,7 +237,7 @@ TEST_F(CubicBytesTest, AboveOrigin) {
       initial_cwnd / kDefaultTCPMSS +
       (elapsed_time_s * elapsed_time_s * elapsed_time_s * 410) / 1024;
   // Without the convex mode fix, the result is off by one.
-  if (!FLAGS_quic_fix_cubic_convex_mode) {
+  if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
     ++expected_cwnd;
   }
   EXPECT_EQ(expected_cwnd, current_cwnd / kDefaultTCPMSS);
@@ -250,8 +253,8 @@ TEST_F(CubicBytesTest, AboveOrigin) {
 // - Sets an artificially large initial cwnd to prevent Reno from the
 // convex increases on every ack.
 TEST_F(CubicBytesTest, AboveOriginFineGrainedCubing) {
-  if (!FLAGS_quic_fix_cubic_convex_mode ||
-      !FLAGS_quic_fix_cubic_bytes_quantization) {
+  if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode ||
+      !FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
     // Without these two fixes, this test cannot pass.
     return;
   }
@@ -296,9 +299,10 @@ TEST_F(CubicBytesTest, LossEvents) {
   QuicByteCount current_cwnd = 422 * kDefaultTCPMSS;
   // Without the signed-integer, cubic-convex fix, we mistakenly
   // increment cwnd after only one_ms_ and a single ack.
-  QuicPacketCount expected_cwnd = FLAGS_quic_fix_cubic_convex_mode
-                                      ? RenoCwndInBytes(current_cwnd)
-                                      : current_cwnd + kDefaultTCPMSS / 2;
+  QuicPacketCount expected_cwnd =
+      FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode
+          ? RenoCwndInBytes(current_cwnd)
+          : current_cwnd + kDefaultTCPMSS / 2;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd,
@@ -326,11 +330,11 @@ TEST_F(CubicBytesTest, LossEvents) {
   current_cwnd = expected_cwnd;
   EXPECT_GT(pre_loss_cwnd, LastMaxCongestionWindow());
   QuicByteCount expected_last_max =
-      FLAGS_quic_fix_beta_last_max
+      FLAGS_quic_reloadable_flag_quic_fix_beta_last_max
           ? static_cast<QuicByteCount>(pre_loss_cwnd * kNConnectionBetaLastMax)
           : static_cast<QuicByteCount>(pre_loss_cwnd * kBetaLastMax);
   EXPECT_EQ(expected_last_max, LastMaxCongestionWindow());
-  if (FLAGS_quic_fix_beta_last_max) {
+  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
     EXPECT_LT(expected_cwnd, LastMaxCongestionWindow());
   } else {
     // If we don't scale kLastBetaMax, the current window is exactly
@@ -341,7 +345,7 @@ TEST_F(CubicBytesTest, LossEvents) {
   // Simulate an increase, and check that we are below the origin.
   current_cwnd = cubic_.CongestionWindowAfterAck(
       kDefaultTCPMSS, current_cwnd, rtt_min, clock_.ApproximateNow());
-  if (FLAGS_quic_fix_beta_last_max) {
+  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
     EXPECT_GT(LastMaxCongestionWindow(), current_cwnd);
   } else {
     // Without the bug fix, we will be at or above the origin.
@@ -356,7 +360,7 @@ TEST_F(CubicBytesTest, LossEvents) {
   EXPECT_EQ(expected_cwnd,
             cubic_.CongestionWindowAfterPacketLoss(current_cwnd));
   expected_last_max =
-      FLAGS_quic_fix_beta_last_max
+      FLAGS_quic_reloadable_flag_quic_fix_beta_last_max
           ? pre_loss_cwnd
           : static_cast<QuicByteCount>(pre_loss_cwnd * kBetaLastMax);
   ASSERT_EQ(expected_last_max, LastMaxCongestionWindow());
@@ -368,9 +372,10 @@ TEST_F(CubicBytesTest, BelowOrigin) {
   QuicByteCount current_cwnd = 422 * kDefaultTCPMSS;
   // Without the signed-integer, cubic-convex fix, we mistakenly
   // increment cwnd after only one_ms_ and a single ack.
-  QuicPacketCount expected_cwnd = FLAGS_quic_fix_cubic_convex_mode
-                                      ? RenoCwndInBytes(current_cwnd)
-                                      : current_cwnd + kDefaultTCPMSS / 2;
+  QuicPacketCount expected_cwnd =
+      FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode
+          ? RenoCwndInBytes(current_cwnd)
+          : current_cwnd + kDefaultTCPMSS / 2;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd,

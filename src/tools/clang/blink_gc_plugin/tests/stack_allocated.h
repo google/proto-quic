@@ -25,7 +25,7 @@ private:
 
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     StackObject m_part; // Cannot embed a stack allocated object.
 };

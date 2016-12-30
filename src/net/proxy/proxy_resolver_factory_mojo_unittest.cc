@@ -279,7 +279,7 @@ void MockMojoProxyResolver::GetProxyForUrl(
       auto request = base::MakeUnique<HostResolver::RequestInfo>(
           HostPortPair(url.spec(), 12345));
       interfaces::HostResolverRequestClientPtr dns_client;
-      mojo::GetProxy(&dns_client);
+      mojo::MakeRequest(&dns_client);
       client->ResolveDns(std::move(request), std::move(dns_client));
       blocked_clients_.push_back(
           base::MakeUnique<interfaces::ProxyResolverRequestClientPtr>(
@@ -447,7 +447,7 @@ void MockMojoProxyResolverFactory::CreateResolver(
       auto request = base::MakeUnique<HostResolver::RequestInfo>(
           HostPortPair(pac_script, 12345));
       interfaces::HostResolverRequestClientPtr dns_client;
-      mojo::GetProxy(&dns_client);
+      mojo::MakeRequest(&dns_client);
       client->ResolveDns(std::move(request), std::move(dns_client));
       blocked_clients_.push_back(
           base::MakeUnique<interfaces::ProxyResolverFactoryRequestClientPtr>(
@@ -523,7 +523,7 @@ class ProxyResolverFactoryMojoTest : public testing::Test,
  public:
   void SetUp() override {
     mock_proxy_resolver_factory_.reset(new MockMojoProxyResolverFactory(
-        &mock_proxy_resolver_, mojo::GetProxy(&factory_ptr_)));
+        &mock_proxy_resolver_, mojo::MakeRequest(&factory_ptr_)));
     proxy_resolver_factory_mojo_.reset(new ProxyResolverFactoryMojo(
         this, &host_resolver_,
         base::Callback<std::unique_ptr<ProxyResolverErrorObserver>()>(),

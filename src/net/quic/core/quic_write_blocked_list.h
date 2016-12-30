@@ -5,13 +5,10 @@
 #ifndef NET_QUIC_CORE_QUIC_WRITE_BLOCKED_LIST_H_
 #define NET_QUIC_CORE_QUIC_WRITE_BLOCKED_LIST_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include <set>
+#include <cstddef>
+#include <cstdint>
 
 #include "base/macros.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/spdy/priority_write_scheduler.h"
@@ -123,9 +120,9 @@ class QUIC_EXPORT_PRIVATE QuicWriteBlockedList {
     }
   }
 
-  // Pushes a stream to the back of the list for its priority level *unless*
-  // it is latched for doing batched writes in which case it goes to the front
-  // of the list for its priority level.
+  // Pushes a stream to the back of the list for its priority level *unless* it
+  // is latched for doing batched writes in which case it goes to the front of
+  // the list for its priority level.
   // Headers and crypto streams are special cased to always resume first.
   void AddStream(QuicStreamId stream_id) {
     if (stream_id == kCryptoStreamId) {

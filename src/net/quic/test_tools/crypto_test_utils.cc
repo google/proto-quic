@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "base/strings/string_util.h"
 #include "crypto/openssl_util.h"
 #include "crypto/secure_hash.h"
 #include "net/quic/core/crypto/channel_id.h"
@@ -24,6 +23,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_clock.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -274,13 +274,14 @@ namespace {
 // CHLO.
 class FullChloGenerator {
  public:
-  FullChloGenerator(QuicCryptoServerConfig* crypto_config,
-                    QuicSocketAddress server_addr,
-                    QuicSocketAddress client_addr,
-                    const QuicClock* clock,
-                    scoped_refptr<QuicSignedServerConfig> signed_config,
-                    QuicCompressedCertsCache* compressed_certs_cache,
-                    CryptoHandshakeMessage* out)
+  FullChloGenerator(
+      QuicCryptoServerConfig* crypto_config,
+      QuicSocketAddress server_addr,
+      QuicSocketAddress client_addr,
+      const QuicClock* clock,
+      QuicReferenceCountedPointer<QuicSignedServerConfig> signed_config,
+      QuicCompressedCertsCache* compressed_certs_cache,
+      CryptoHandshakeMessage* out)
       : crypto_config_(crypto_config),
         server_addr_(server_addr),
         client_addr_(client_addr),
@@ -294,7 +295,8 @@ class FullChloGenerator {
    public:
     explicit ValidateClientHelloCallback(FullChloGenerator* generator)
         : generator_(generator) {}
-    void Run(scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+    void Run(QuicReferenceCountedPointer<
+                 ValidateClientHelloResultCallback::Result> result,
              std::unique_ptr<ProofSource::Details> /* details */) override {
       generator_->ValidateClientHelloDone(std::move(result));
     }
@@ -311,7 +313,8 @@ class FullChloGenerator {
 
  private:
   void ValidateClientHelloDone(
-      scoped_refptr<ValidateClientHelloResultCallback::Result> result) {
+      QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+          result) {
     result_ = result;
     crypto_config_->ProcessClientHello(
         result_, /*reject_only=*/false, /*connection_id=*/1, server_addr_,
@@ -373,12 +376,13 @@ class FullChloGenerator {
   QuicSocketAddress server_addr_;
   QuicSocketAddress client_addr_;
   const QuicClock* clock_;
-  scoped_refptr<QuicSignedServerConfig> signed_config_;
+  QuicReferenceCountedPointer<QuicSignedServerConfig> signed_config_;
   QuicCompressedCertsCache* compressed_certs_cache_;
   CryptoHandshakeMessage* out_;
 
-  scoped_refptr<QuicCryptoNegotiatedParameters> params_;
-  scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;
+  QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+      result_;
 };
 
 }  // namespace
@@ -565,7 +569,7 @@ string CryptoTestUtils::GetValueForTag(const CryptoHandshakeMessage& message,
 }
 
 uint64_t CryptoTestUtils::LeafCertHashForTesting() {
-  scoped_refptr<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
   QuicSocketAddress server_address;
   QuicCryptoProof proof;
   std::unique_ptr<ProofSource> proof_source(
@@ -988,13 +992,13 @@ string CryptoTestUtils::GenerateClientNonceHex(
       StringPiece(reinterpret_cast<const char*>(orbit.data()),
                   sizeof(orbit.size())),
       &nonce);
-  return ("#" + net::QuicUtils::HexEncode(nonce));
+  return ("#" + QuicTextUtils::HexEncode(nonce));
 }
 
 string CryptoTestUtils::GenerateClientPublicValuesHex() {
   char public_value[32];
   memset(public_value, 42, sizeof(public_value));
-  return ("#" + net::QuicUtils::HexEncode(public_value, sizeof(public_value)));
+  return ("#" + QuicTextUtils::HexEncode(public_value, sizeof(public_value)));
 }
 
 // static
@@ -1005,7 +1009,7 @@ void CryptoTestUtils::GenerateFullCHLO(
     QuicSocketAddress client_addr,
     QuicVersion version,
     const QuicClock* clock,
-    scoped_refptr<QuicSignedServerConfig> proof,
+    QuicReferenceCountedPointer<QuicSignedServerConfig> proof,
     QuicCompressedCertsCache* compressed_certs_cache,
     CryptoHandshakeMessage* out) {
   // Pass a inchoate CHLO.

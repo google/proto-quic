@@ -83,7 +83,7 @@ bool ProofSourceChromium::GetProof(
     QuicVersion quic_version,
     base::StringPiece chlo_hash,
     const QuicTagVector& /* connection_options */,
-    scoped_refptr<ProofSource::Chain>* out_chain,
+    QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
     QuicCryptoProof* proof) {
   DCHECK(proof != nullptr);
   DCHECK(private_key_.get()) << " this: " << this;
@@ -142,7 +142,7 @@ void ProofSourceChromium::GetProof(const QuicSocketAddress& server_addr,
                                    std::unique_ptr<Callback> callback) {
   // As a transitional implementation, just call the synchronous version of
   // GetProof, then invoke the callback with the results and destroy it.
-  scoped_refptr<ProofSource::Chain> chain;
+  QuicReferenceCountedPointer<ProofSource::Chain> chain;
   string signature;
   string leaf_cert_sct;
   QuicCryptoProof out_proof;

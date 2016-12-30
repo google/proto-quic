@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
-#include "base/memory/ref_counted.h"
 #include "net/quic/core/crypto/quic_crypto_proof.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
@@ -21,18 +21,17 @@ namespace net {
 // chains and signatures that prove its identity.
 class QUIC_EXPORT_PRIVATE ProofSource {
  public:
-  // Chain is a reference-counted wrapper for a std::vector of std::stringified
+  // Chain is a reference-counted wrapper for a vector of stringified
   // certificates.
-  struct QUIC_EXPORT_PRIVATE Chain : public base::RefCounted<Chain> {
+  struct QUIC_EXPORT_PRIVATE Chain : public QuicReferenceCounted {
     explicit Chain(const std::vector<std::string>& certs);
 
     const std::vector<std::string> certs;
 
+   protected:
+    ~Chain() override;
+
    private:
-    friend class base::RefCounted<Chain>;
-
-    virtual ~Chain();
-
     DISALLOW_COPY_AND_ASSIGN(Chain);
   };
 
@@ -65,7 +64,7 @@ class QUIC_EXPORT_PRIVATE ProofSource {
     // any, gathered during the operation of GetProof.  If no stats are
     // available, this will be nullptr.
     virtual void Run(bool ok,
-                     const scoped_refptr<Chain>& chain,
+                     const QuicReferenceCountedPointer<Chain>& chain,
                      const QuicCryptoProof& proof,
                      std::unique_ptr<Details> details) = 0;
 
@@ -109,7 +108,7 @@ class QUIC_EXPORT_PRIVATE ProofSource {
                         QuicVersion quic_version,
                         base::StringPiece chlo_hash,
                         const QuicTagVector& connection_options,
-                        scoped_refptr<Chain>* out_chain,
+                        QuicReferenceCountedPointer<Chain>* out_chain,
                         QuicCryptoProof* out_proof) = 0;
 
   // Async version of GetProof with identical semantics, except that the results

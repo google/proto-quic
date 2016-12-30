@@ -1,5 +1,5 @@
 weak_fields_require_tracing.cpp:9:1: warning: [blink-gc] Class 'HeapObject' has untraced fields that require tracing.
-void HeapObject::trace(Visitor* visitor)
+void HeapObject::Trace(Visitor* visitor)
 ^
 ./weak_fields_require_tracing.h:17:5: note: [blink-gc] Untraced field 'm_obj1' declared here:
     Member<HeapObject> m_obj1;

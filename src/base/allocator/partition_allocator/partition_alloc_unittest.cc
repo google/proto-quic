@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "base/bits.h"
+#include "base/sys_info.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -185,6 +186,10 @@ void CheckPageInCore(void* ptr, bool inCore) {
   EXPECT_EQ(0, mincore(ptr, kSystemPageSize, &ret));
   EXPECT_EQ(inCore, ret);
 #endif
+}
+
+bool IsLargeMemoryDevice() {
+  return base::SysInfo::AmountOfPhysicalMemory() >= 2LL * 1024 * 1024 * 1024;
 }
 
 class MockPartitionStatsDumper : public PartitionStatsDumper {
@@ -672,9 +677,13 @@ TEST(PartitionAllocTest, GenericAllocSizes) {
 
   // Can we allocate a massive (512MB) size?
   // Allocate 512MB, but +1, to test for cookie writing alignment issues.
-  ptr = partitionAllocGeneric(genericAllocator.root(), 512 * 1024 * 1024 + 1,
-                              typeName);
-  partitionFreeGeneric(genericAllocator.root(), ptr);
+  // Test this only if the device has enough memory or it might fail due
+  // to OOM.
+  if (IsLargeMemoryDevice()) {
+    ptr = partitionAllocGeneric(genericAllocator.root(), 512 * 1024 * 1024 + 1,
+                                typeName);
+    partitionFreeGeneric(genericAllocator.root(), ptr);
+  }
 
   // Check a more reasonable, but still direct mapped, size.
   // Chop a system page and a byte off to test for rounding errors.
@@ -745,15 +754,18 @@ TEST(PartitionAllocTest, GenericAllocGetSize) {
   partitionFreeGeneric(genericAllocator.root(), ptr);
 
   // Allocate something very large, and uneven.
-  requestedSize = 512 * 1024 * 1024 - 1;
-  predictedSize =
-      partitionAllocActualSize(genericAllocator.root(), requestedSize);
-  ptr = partitionAllocGeneric(genericAllocator.root(), requestedSize, typeName);
-  EXPECT_TRUE(ptr);
-  actualSize = partitionAllocGetSize(ptr);
-  EXPECT_EQ(predictedSize, actualSize);
-  EXPECT_LT(requestedSize, actualSize);
-  partitionFreeGeneric(genericAllocator.root(), ptr);
+  if (IsLargeMemoryDevice()) {
+    requestedSize = 512 * 1024 * 1024 - 1;
+    predictedSize =
+        partitionAllocActualSize(genericAllocator.root(), requestedSize);
+    ptr =
+        partitionAllocGeneric(genericAllocator.root(), requestedSize, typeName);
+    EXPECT_TRUE(ptr);
+    actualSize = partitionAllocGetSize(ptr);
+    EXPECT_EQ(predictedSize, actualSize);
+    EXPECT_LT(requestedSize, actualSize);
+    partitionFreeGeneric(genericAllocator.root(), ptr);
+  }
 
   // Too large allocation.
   requestedSize = INT_MAX;
@@ -1328,7 +1340,7 @@ TEST(PartitionAllocTest, MAYBE_RepeatedReturnNull) {
 #endif
 TEST(PartitionAllocTest, MAYBE_RepeatedReturnNullDirect) {
   // A direct-mapped allocation size.
-  DoReturnNullTest(256 * 1024 * 1024);
+  DoReturnNullTest(32 * 1024 * 1024);
 }
 
 #endif  // !defined(ARCH_CPU_64_BITS) || defined(OS_POSIX)

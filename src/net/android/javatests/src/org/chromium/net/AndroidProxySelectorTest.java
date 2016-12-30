@@ -14,8 +14,8 @@
 
 package org.chromium.net;
 
+import android.support.test.filters.SmallTest;
 import android.test.InstrumentationTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 
 import org.chromium.base.test.util.Feature;
 
@@ -40,8 +40,7 @@ public class AndroidProxySelectorTest extends InstrumentationTestCase {
     }
 
     static String toString(Proxy proxy) {
-        if (proxy == Proxy.NO_PROXY)
-            return "DIRECT";
+        if (proxy == Proxy.NO_PROXY) return "DIRECT";
         // java.net.Proxy only knows about http and socks proxies.
         Proxy.Type type = proxy.type();
         switch (type) {
@@ -61,8 +60,7 @@ public class AndroidProxySelectorTest extends InstrumentationTestCase {
     static String toString(List<Proxy> proxies) {
         StringBuilder builder = new StringBuilder();
         for (Proxy proxy : proxies) {
-            if (builder.length() > 0)
-                builder.append(';');
+            if (builder.length() > 0) builder.append(';');
             builder.append(toString(proxy));
         }
         return builder.toString();

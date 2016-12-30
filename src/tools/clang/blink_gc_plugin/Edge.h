@@ -16,6 +16,7 @@ class RecordInfo;
 class Edge;
 class Collection;
 class CrossThreadPersistent;
+class Iterator;
 class Member;
 class OwnPtr;
 class Persistent;
@@ -39,6 +40,7 @@ class EdgeVisitor {
   virtual void VisitPersistent(Persistent*) {}
   virtual void VisitCrossThreadPersistent(CrossThreadPersistent*) {}
   virtual void VisitCollection(Collection*) {}
+  virtual void VisitIterator(Iterator*) {}
 };
 
 // Recursive edge visitor. The traversed path is accessible in context.
@@ -55,6 +57,7 @@ class RecursiveEdgeVisitor : public EdgeVisitor {
   void VisitPersistent(Persistent*) override;
   void VisitCrossThreadPersistent(CrossThreadPersistent*) override;
   void VisitCollection(Collection*) override;
+  void VisitIterator(Iterator*) override;
 
  protected:
   typedef std::deque<Edge*> Context;
@@ -74,6 +77,7 @@ class RecursiveEdgeVisitor : public EdgeVisitor {
   virtual void AtPersistent(Persistent*);
   virtual void AtCrossThreadPersistent(CrossThreadPersistent*);
   virtual void AtCollection(Collection*);
+  virtual void AtIterator(Iterator*);
 
  private:
   Context context_;
@@ -279,6 +283,32 @@ class Collection : public Edge {
   Members members_;
   bool on_heap_;
   bool is_root_;
+};
+
+// An iterator edge is a direct edge to some iterator type.
+class Iterator : public Edge {
+ public:
+  Iterator(RecordInfo* info, bool on_heap, bool is_unsafe)
+      : info_(info), on_heap_(on_heap), is_unsafe_(is_unsafe) {}
+  ~Iterator() {}
+
+  void Accept(EdgeVisitor* visitor) { visitor->VisitIterator(this); }
+  LivenessKind Kind() override { return kStrong; }
+  bool NeedsFinalization() { return false; }
+  TracingStatus NeedsTracing(NeedsTracingOption) {
+    if (on_heap_)
+      return TracingStatus::Needed();
+    return TracingStatus::Unneeded();
+  }
+
+  RecordInfo* info() const { return info_; }
+
+  bool IsUnsafe() const { return is_unsafe_; }
+
+ private:
+  RecordInfo* info_;
+  bool on_heap_;
+  bool is_unsafe_;
 };
 
 #endif  // TOOLS_BLINK_GC_PLUGIN_EDGE_H_

@@ -12,9 +12,9 @@ HeapObjectEagerFinalized::~HeapObjectEagerFinalized()
     m_obj->foo();
 }
 
-void HeapObjectEagerFinalized::trace(Visitor* visitor)
+void HeapObjectEagerFinalized::Trace(Visitor* visitor)
 {
-    visitor->trace(m_obj);
+    visitor->Trace(m_obj);
 }
 
 HeapObjectEagerFinalizedAlso::~HeapObjectEagerFinalizedAlso()
@@ -27,11 +27,11 @@ HeapObjectEagerFinalizedAlso::~HeapObjectEagerFinalizedAlso()
     m_heapVector[0]->foo();
 }
 
-void HeapObjectEagerFinalizedAlso::trace(Visitor* visitor)
+void HeapObjectEagerFinalizedAlso::Trace(Visitor* visitor)
 {
-    visitor->trace(m_heapObject);
-    visitor->trace(m_heapObjectFinalized);
-    visitor->trace(m_heapVector);
+    visitor->Trace(m_heapObject);
+    visitor->Trace(m_heapObjectFinalized);
+    visitor->Trace(m_heapVector);
 }
 
 } // namespace blink

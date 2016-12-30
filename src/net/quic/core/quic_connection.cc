@@ -17,11 +17,8 @@
 #include "base/format_macros.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/ref_counted.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/stringprintf.h"
 #include "net/base/address_family.h"
 #include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
@@ -37,9 +34,10 @@
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using base::StringPiece;
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -276,11 +274,11 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
   DVLOG(1) << ENDPOINT
            << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
-  if (!FLAGS_quic_receive_packet_once_decrypted) {
+  if (!FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
     last_stop_waiting_frame_.least_unacked = 0;
   }
   stats_.connection_creation_time = clock_->ApproximateNow();
-  if (FLAGS_quic_enable_multipath) {
+  if (FLAGS_quic_reloadable_flag_quic_enable_multipath) {
     sent_packet_manager_.reset(new QuicMultipathSentPacketManager(
         sent_packet_manager_.release(), this));
   }
@@ -321,7 +319,8 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
       idle_timeout_connection_close_behavior_ =
           ConnectionCloseBehavior::SILENT_CLOSE;
     }
-    if (FLAGS_quic_enable_multipath && config.MultipathEnabled()) {
+    if (FLAGS_quic_reloadable_flag_quic_enable_multipath &&
+        config.MultipathEnabled()) {
       multipath_enabled_ = true;
     }
   } else {
@@ -362,7 +361,7 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
   }
   if (config.HasClientSentConnectionOption(k5RTO, perspective_)) {
     if (perspective_ == Perspective::IS_CLIENT ||
-        !FLAGS_quic_only_5rto_client_side) {
+        !FLAGS_quic_reloadable_flag_quic_only_5rto_client_side) {
       close_connection_after_five_rtos_ = true;
     }
   }
@@ -537,10 +536,10 @@ void QuicConnection::OnVersionNegotiationPacket(
   if (!SelectMutualVersion(packet.versions)) {
     CloseConnection(
         QUIC_INVALID_VERSION,
-        "No common version found. Supported versions: {" +
-            QuicVersionVectorToString(framer_.supported_versions()) +
-            "}, peer supported versions: {" +
-            QuicVersionVectorToString(packet.versions) + "}",
+        QuicStrCat("No common version found. Supported versions: {",
+                   QuicVersionVectorToString(framer_.supported_versions()),
+                   "}, peer supported versions: {",
+                   QuicVersionVectorToString(packet.versions), "}"),
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return;
   }
@@ -646,7 +645,7 @@ bool QuicConnection::OnPacketHeader(const QuicPacketHeader& header) {
   --stats_.packets_dropped;
   DVLOG(1) << ENDPOINT << "Received packet header: " << header;
   last_header_ = header;
-  if (FLAGS_quic_receive_packet_once_decrypted) {
+  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
     // An ack will be sent if a missing retransmittable packet was received;
     was_last_packet_missing_ =
         received_packet_manager_.IsMissing(last_header_.packet_number);
@@ -765,7 +764,7 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
     debug_visitor_->OnStopWaitingFrame(frame);
   }
 
-  if (FLAGS_quic_receive_packet_once_decrypted) {
+  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
     ProcessStopWaitingFrame(frame);
   } else {
     last_stop_waiting_frame_ = frame;
@@ -947,7 +946,7 @@ void QuicConnection::OnPacketComplete() {
   DVLOG(1) << ENDPOINT << "Got packet " << last_header_.packet_number << " for "
            << last_header_.public_header.connection_id;
 
-  if (FLAGS_quic_receive_packet_once_decrypted) {
+  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
     // An ack will be sent if a missing retransmittable packet was received;
     const bool was_missing =
         should_last_packet_instigate_acks_ && was_last_packet_missing_;
@@ -1012,9 +1011,10 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
         ack_queued_ = true;
       } else if (!ack_alarm_->IsSet()) {
         // Wait the minimum of a quarter min_rtt and the delayed ack time.
-        QuicTime::Delta ack_delay = std::min(
-            DelayedAckTime(), sent_packet_manager_->GetRttStats()->min_rtt() *
-                                  ack_decimation_delay_);
+        QuicTime::Delta ack_delay =
+            std::min(DelayedAckTime(),
+                     sent_packet_manager_->GetRttStats()->min_rtt() *
+                         ack_decimation_delay_);
         ack_alarm_->Set(clock_->ApproximateNow() + ack_delay);
       }
     } else {
@@ -1050,7 +1050,7 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
 
 void QuicConnection::ClearLastFrames() {
   should_last_packet_instigate_acks_ = false;
-  if (!FLAGS_quic_receive_packet_once_decrypted) {
+  if (!FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
     last_stop_waiting_frame_.least_unacked = 0;
   }
 }
@@ -1116,7 +1116,7 @@ QuicConsumedData QuicConnection::SendStreamData(
     QuicIOVector iov,
     QuicStreamOffset offset,
     bool fin,
-    QuicAckListenerInterface* listener) {
+    QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (!fin && iov.total_length == 0) {
     QUIC_BUG << "Attempt to send empty stream frame";
     return QuicConsumedData(0, false);
@@ -1135,9 +1135,10 @@ QuicConsumedData QuicConnection::SendStreamData(
       iov.total_length > kMaxPacketSize) {
     // Use the fast path to send full data packets.
     return packet_generator_.ConsumeDataFastPath(id, iov, offset, fin,
-                                                 listener);
+                                                 std::move(ack_listener));
   }
-  return packet_generator_.ConsumeData(id, iov, offset, fin, listener);
+  return packet_generator_.ConsumeData(id, iov, offset, fin,
+                                       std::move(ack_listener));
 }
 
 void QuicConnection::SendRstStream(QuicStreamId id,
@@ -1246,7 +1247,7 @@ void QuicConnection::ProcessUdpPacket(const QuicSocketAddress& self_address,
   ++stats_.packets_received;
 
   // Ensure the time coming from the packet reader is within a minute of now.
-  if (FLAGS_quic_allow_large_send_deltas &&
+  if (FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas &&
       std::abs((packet.receipt_time() - clock_->ApproximateNow()).ToSeconds()) >
           60) {
     QUIC_BUG << "Packet receipt time:"
@@ -1373,9 +1374,8 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
         // Packets should have the version flag till version negotiation is
         // done.
         string error_details =
-            StringPrintf("%s Packet %" PRIu64
-                         " without version flag before version negotiated.",
-                         ENDPOINT, header.packet_number);
+            QuicStrCat(ENDPOINT, "Packet ", header.packet_number,
+                       " without version flag before version negotiated.");
         DLOG(WARNING) << error_details;
         CloseConnection(QUIC_INVALID_VERSION, error_details,
                         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -1576,7 +1576,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
            << QuicUtils::EncryptionLevelToString(packet->encryption_level)
            << ", encrypted length:" << encrypted_length;
   DVLOG(2) << ENDPOINT << "packet(" << packet_number << "): " << std::endl
-           << QuicUtils::HexDump(
+           << QuicTextUtils::HexDump(
                   StringPiece(packet->encrypted_buffer, encrypted_length));
 
   // Measure the RTT from before the write begins to avoid underestimating the
@@ -1694,9 +1694,8 @@ void QuicConnection::OnWriteError(int error_code) {
   }
   write_error_occured_ = true;
 
-  const string error_details = "Write failed with error: " +
-                               base::IntToString(error_code) + " (" +
-                               ErrorToString(error_code) + ")";
+  const string error_details = QuicStrCat(
+      "Write failed with error: ", error_code, " (", strerror(error_code), ")");
   DVLOG(1) << ENDPOINT << error_details;
   // We can't send an error as the socket is presumably borked.
   switch (error_code) {

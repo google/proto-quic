@@ -1130,7 +1130,7 @@ TEST_F(QuicSentPacketManagerTest, GetTransmissionTimeCryptoHandshake) {
 
 TEST_F(QuicSentPacketManagerTest,
        GetConservativeTransmissionTimeCryptoHandshake) {
-  FLAGS_quic_conservative_handshake_retransmits = true;
+  FLAGS_quic_reloadable_flag_quic_conservative_handshake_retransmits = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kCONH);
@@ -1388,7 +1388,7 @@ TEST_F(QuicSentPacketManagerTest, NegotiateTimeLossDetectionFromOptions) {
 }
 
 TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
-  FLAGS_quic_allow_new_bbr = true;
+  FLAGS_quic_reloadable_flag_quic_allow_new_bbr = true;
   QuicConfig config;
   QuicTagVector options;
 
@@ -1426,8 +1426,8 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
 }
 
 TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
-  FLAGS_quic_allow_new_bbr = true;
-  FLAGS_quic_client_connection_options = true;
+  FLAGS_quic_reloadable_flag_quic_allow_new_bbr = true;
+  FLAGS_quic_reloadable_flag_quic_client_connection_options = true;
   QuicConfig config;
   QuicTagVector options;
 

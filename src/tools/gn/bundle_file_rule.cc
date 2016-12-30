@@ -46,7 +46,7 @@ SourceFile BundleFileRule::ApplyPatternToSource(
         break;
       default:
         output_path.append(SubstitutionWriter::GetSourceSubstitution(
-            settings, source_file, subrange.type,
+            target_, target_->settings(), source_file, subrange.type,
             SubstitutionWriter::OUTPUT_ABSOLUTE, SourceDir()));
         break;
     }

@@ -113,10 +113,10 @@ void RecordInfo::walkBases() {
   // have a "GC base name", so are to be included and considered.
   SmallVector<const CXXRecordDecl*, 8> queue;
 
-  const CXXRecordDecl *base_record = record();
+  const CXXRecordDecl* base_record = record();
   while (true) {
     for (const auto& it : base_record->bases()) {
-      const RecordType *type = it.getType()->getAs<RecordType>();
+      const RecordType* type = it.getType()->getAs<RecordType>();
       CXXRecordDecl* base;
       if (!type)
         base = GetDependentTemplatedDecl(*it.getType());
@@ -171,17 +171,19 @@ bool RecordInfo::IsGCAllocated() {
 }
 
 bool RecordInfo::IsEagerlyFinalized() {
-  if (is_eagerly_finalized_ == kNotComputed) {
-    is_eagerly_finalized_ = kFalse;
-    if (IsGCFinalized()) {
-      for (Decl* decl : record_->decls()) {
-        if (TypedefDecl* typedef_decl = dyn_cast<TypedefDecl>(decl)) {
-          if (typedef_decl->getNameAsString() == kIsEagerlyFinalizedName) {
-            is_eagerly_finalized_ = kTrue;
-            break;
-          }
-        }
-      }
+  if (is_eagerly_finalized_ != kNotComputed)
+    return is_eagerly_finalized_;
+
+  is_eagerly_finalized_ = kFalse;
+  if (!IsGCFinalized())
+    return is_eagerly_finalized_;
+
+  for (Decl* decl : record_->decls()) {
+    if (TypedefDecl* typedef_decl = dyn_cast<TypedefDecl>(decl)) {
+      if (typedef_decl->getNameAsString() != kIsEagerlyFinalizedName)
+        continue;
+      is_eagerly_finalized_ = kTrue;
+      break;
     }
   }
   return is_eagerly_finalized_;
@@ -414,7 +416,13 @@ RecordInfo::Fields* RecordInfo::CollectFields() {
     // Ignore fields annotated with the GC_PLUGIN_IGNORE macro.
     if (Config::IsIgnoreAnnotated(field))
       continue;
-    if (Edge* edge = CreateEdge(field->getType().getTypePtrOrNull())) {
+    // Check if the unexpanded type should be recorded; needed
+    // to track iterator aliases only
+    const Type* unexpandedType = field->getType().getSplitUnqualifiedType().Ty;
+    Edge* edge = CreateEdgeFromOriginalType(unexpandedType);
+    if (!edge)
+      edge = CreateEdge(field->getType().getTypePtrOrNull());
+    if (edge) {
       fields_status = fields_status.LUB(edge->NeedsTracing(Edge::kRecursive));
       fields->insert(std::make_pair(field, FieldPoint(field, edge)));
     }
@@ -565,6 +573,36 @@ static bool isInStdNamespace(clang::Sema& sema, NamespaceDecl* ns)
     ns = dyn_cast<NamespaceDecl>(ns->getParent());
   }
   return false;
+}
+
+Edge* RecordInfo::CreateEdgeFromOriginalType(const Type* type) {
+  if (!type)
+    return nullptr;
+
+  // look for "typedef ... iterator;"
+  if (!isa<ElaboratedType>(type))
+    return nullptr;
+  const ElaboratedType* elaboratedType = cast<ElaboratedType>(type);
+  if (!isa<TypedefType>(elaboratedType->getNamedType()))
+    return nullptr;
+  const TypedefType* typedefType =
+      cast<TypedefType>(elaboratedType->getNamedType());
+  std::string typeName = typedefType->getDecl()->getNameAsString();
+  if (!Config::IsIterator(typeName))
+    return nullptr;
+  RecordInfo* info =
+      cache_->Lookup(elaboratedType->getQualifier()->getAsType());
+
+  bool on_heap = false;
+  bool is_unsafe = false;
+  // Silently handle unknown types; the on-heap collection types will
+  // have to be in scope for the declaration to compile, though.
+  if (info) {
+    is_unsafe = Config::IsGCCollectionWithUnsafeIterator(info->name());
+    // Don't mark iterator as being on the heap if it is not supported.
+    on_heap = !is_unsafe && Config::IsGCCollection(info->name());
+  }
+  return new Iterator(info, on_heap, is_unsafe);
 }
 
 Edge* RecordInfo::CreateEdge(const Type* type) {

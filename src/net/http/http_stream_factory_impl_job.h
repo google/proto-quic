@@ -51,9 +51,7 @@ class HttpStreamFactoryImpl::Job {
     virtual ~Delegate() {}
 
     // Invoked when |job| has an HttpStream ready.
-    virtual void OnStreamReady(Job* job,
-                               const SSLConfig& used_ssl_config,
-                               const ProxyInfo& used_proxy_info) = 0;
+    virtual void OnStreamReady(Job* job, const SSLConfig& used_ssl_config) = 0;
 
     // Invoked when |job| has a BidirectionalStream ready.
     virtual void OnBidirectionalStreamImplReady(

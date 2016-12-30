@@ -37,8 +37,8 @@ HpackEntry::HpackEntry(const HpackEntry& other)
   } else {
     name_ = other.name_;
     value_ = other.value_;
-    name_ref_.set(name_.data(), name_.size());
-    value_ref_.set(value_.data(), value_.size());
+    name_ref_ = StringPiece(name_.data(), name_.size());
+    value_ref_ = StringPiece(value_.data(), value_.size());
   }
 }
 
@@ -52,8 +52,8 @@ HpackEntry& HpackEntry::operator=(const HpackEntry& other) {
   }
   name_ = other.name_;
   value_ = other.value_;
-  name_ref_.set(name_.data(), name_.size());
-  value_ref_.set(value_.data(), value_.size());
+  name_ref_ = StringPiece(name_.data(), name_.size());
+  value_ref_ = StringPiece(value_.data(), value_.size());
   return *this;
 }
 

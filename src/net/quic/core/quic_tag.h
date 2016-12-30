@@ -44,8 +44,7 @@ QUIC_EXPORT_PRIVATE bool FindMutualQuicTag(const QuicTagVector& our_tags,
                                            QuicTag* out_result,
                                            size_t* out_index);
 
-// A utility function that converts a tag to a std::string. It will try to
-// maintain
+// A utility function that converts a tag to a string. It will try to maintain
 // the human friendly name if possible (i.e. kABCD -> "ABCD"), or will just
 // treat it as a number if not.
 QUIC_EXPORT_PRIVATE std::string QuicTagToString(QuicTag tag);

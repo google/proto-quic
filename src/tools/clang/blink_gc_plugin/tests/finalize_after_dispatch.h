@@ -11,30 +11,30 @@ namespace blink {
 
 class NeedsFinalize : public GarbageCollectedFinalized<NeedsFinalize> {
 public:
-    void trace(Visitor*);
-    void traceAfterDispatch(Visitor*);
-    // Needs a finalizeGarbageCollectedObject method.
+    void Trace(Visitor*);
+    void TraceAfterDispatch(Visitor*);
+    // Needs a FinalizeGarbageCollectedObject method.
 };
 
 class NeedsDispatch : public GarbageCollectedFinalized<NeedsDispatch> {
 public:
-    void trace(Visitor*);
-    // Needs a traceAfterDispatch method.
-    void finalizeGarbageCollectedObject() { };
+    void Trace(Visitor*);
+    // Needs a TraceAfterDispatch method.
+    void FinalizeGarbageCollectedObject() { };
 };
 
 class NeedsFinalizedBase : public GarbageCollected<NeedsFinalizedBase> {
 public:
-    void trace(Visitor*) { };
-    void traceAfterDispatch(Visitor*) { };
-    void finalizeGarbageCollectedObject() { };
+    void Trace(Visitor*) { };
+    void TraceAfterDispatch(Visitor*) { };
+    void FinalizeGarbageCollectedObject() { };
 };
 
 class A : GarbageCollectedFinalized<A> {
 public:
-    void trace(Visitor*);
-    void traceAfterDispatch(Visitor*);
-    void finalizeGarbageCollectedObject();
+    void Trace(Visitor*);
+    void TraceAfterDispatch(Visitor*);
+    void FinalizeGarbageCollectedObject();
 protected:
     enum Type { TB, TC, TD };
     A(Type type) : m_type(type) { }
@@ -46,7 +46,7 @@ class B : public A {
 public:
     B() : A(TB) { }
     ~B() { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };
@@ -54,7 +54,7 @@ private:
 class C : public A {
 public:
     C() : A(TC) { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };
@@ -68,7 +68,7 @@ protected:
 class D : public Abstract {
 public:
     D() : Abstract(TD) { }
-    void traceAfterDispatch(Visitor*);
+    void TraceAfterDispatch(Visitor*);
 private:
     Member<A> m_a;
 };

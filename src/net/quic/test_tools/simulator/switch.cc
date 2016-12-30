@@ -4,6 +4,7 @@
 
 #include <cinttypes>
 
+#include "base/format_macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/test_tools/simulator/switch.h"
@@ -19,9 +20,9 @@ Switch::Switch(Simulator* simulator,
                SwitchPortNumber port_count,
                QuicByteCount queue_capacity) {
   for (size_t port_number = 1; port_number <= port_count; port_number++) {
-    ports_.emplace_back(
-        simulator, StringPrintf("%s (port %zu)", name.c_str(), port_number),
-        this, port_number, queue_capacity);
+    ports_.emplace_back(simulator, StringPrintf("%s (port %" PRIuS ")",
+                                                name.c_str(), port_number),
+                        this, port_number, queue_capacity);
   }
 }
 

@@ -270,9 +270,6 @@ char kTSanDefaultSuppressions[] =
 // http://crbug.com/587199
 "race:base::TimerTest_OneShotTimer_CustomTaskRunner_Test::TestBody\n"
 
-// http://crbug.com/673760
-"race:device::PollingSensorReader::StopFetchingData\n"
-
 // End of suppressions.
 ;  // Please keep this semicolon.
 

@@ -575,7 +575,7 @@ class MockClientSocket : public SSLClientSocket {
   const NetLogWithSource& NetLog() const override;
   void SetSubresourceSpeculation() override {}
   void SetOmniboxSpeculation() override {}
-  bool WasNpnNegotiated() const override;
+  bool WasAlpnNegotiated() const override;
   NextProto GetNegotiatedProtocol() const override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
   void ClearConnectionAttempts() override {}
@@ -701,7 +701,7 @@ class MockSSLClientSocket : public MockClientSocket, public AsyncSocket {
   bool IsConnectedAndIdle() const override;
   bool WasEverUsed() const override;
   int GetPeerAddress(IPEndPoint* address) const override;
-  bool WasNpnNegotiated() const override;
+  bool WasAlpnNegotiated() const override;
   NextProto GetNegotiatedProtocol() const override;
   bool GetSSLInfo(SSLInfo* ssl_info) override;
 

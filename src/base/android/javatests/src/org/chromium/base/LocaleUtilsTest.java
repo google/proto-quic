@@ -7,8 +7,8 @@ package org.chromium.base;
 import android.annotation.SuppressLint;
 import android.os.Build;
 import android.os.LocaleList;
+import android.support.test.filters.SmallTest;
 import android.test.InstrumentationTestCase;
-import android.test.suitebuilder.annotation.SmallTest;
 
 import org.chromium.base.test.util.MinAndroidSdkLevel;
 

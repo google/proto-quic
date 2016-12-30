@@ -28,8 +28,12 @@ template <typename ValueType>
 struct NET_EXPORT_PRIVATE Observation {
   Observation(const ValueType& value,
               base::TimeTicks timestamp,
+              int32_t signal_strength_dbm,
               NetworkQualityObservationSource source)
-      : value(value), timestamp(timestamp), source(source) {
+      : value(value),
+        timestamp(timestamp),
+        signal_strength_dbm(signal_strength_dbm),
+        source(source) {
     DCHECK(!timestamp.is_null());
   }
   ~Observation() {}
@@ -39,6 +43,10 @@ struct NET_EXPORT_PRIVATE Observation {
 
   // Time when the observation was taken.
   const base::TimeTicks timestamp;
+
+  // Signal strength (in dBm) when the observation was taken. Set to INT32_MIN
+  // if the signal strength is unavailable.
+  const int32_t signal_strength_dbm;
 
   // The source of the observation.
   const NetworkQualityObservationSource source;

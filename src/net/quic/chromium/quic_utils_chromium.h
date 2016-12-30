@@ -7,7 +7,11 @@
 #ifndef NET_QUIC_CHROMIUM_QUIC_UTILS_CHROMIUM_H_
 #define NET_QUIC_CHROMIUM_QUIC_UTILS_CHROMIUM_H_
 
+#include <string>
+
 #include "base/logging.h"
+#include "net/base/net_export.h"
+#include "net/quic/core/quic_tag.h"
 
 namespace net {
 
@@ -73,6 +77,11 @@ typename Collection::value_type::second_type* FindOrNull(
   }
   return &it->second;
 }
+
+// Returns the list of QUIC tags represented by the comma separated
+// string in |connection_options|.
+NET_EXPORT QuicTagVector
+ParseQuicConnectionOptions(const std::string& connection_options);
 
 }  // namespace net
 

@@ -15,6 +15,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "crypto/nss_util.h"
 #include "net/base/test_completion_callback.h"
 #include "net/http/http_response_headers.h"

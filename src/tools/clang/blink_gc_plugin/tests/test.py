@@ -20,6 +20,10 @@ class BlinkGcPluginTest(plugin_testing.ClangPluginTest):
 
   def AdjustClangArguments(self, clang_cmd):
     clang_cmd.append('-Wno-inaccessible-base')
+    clang_cmd.append('-Xclang')
+    clang_cmd.append('-plugin-arg-blink-gc-plugin')
+    clang_cmd.append('-Xclang')
+    clang_cmd.append('use-chromium-style-naming')
 
   def ProcessOneResult(self, test_name, actual):
     # Some Blink GC plugins dump a JSON representation of the object graph, and

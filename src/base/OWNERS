@@ -17,11 +17,12 @@
 # multiple consumers across the codebase, consider placing it in a new directory
 # under components/ instead.
 
+danakj@chromium.org
+dcheng@chromium.org
+gab@chromium.org
 mark@chromium.org
 thakis@chromium.org
-danakj@chromium.org
 thestig@chromium.org
-dcheng@chromium.org
 
 # For Bind/Callback:
 per-file bind*=tzik@chromium.org

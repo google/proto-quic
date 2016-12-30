@@ -13,7 +13,6 @@
 
 #include "base/logging.h"
 #include "base/run_loop.h"
-#include "base/strings/string_number_conversions.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_bug_tracker.h"
@@ -34,7 +33,6 @@
 // TODO(rtenneti): Add support for MMSG_MORE.
 #define MMSG_MORE 0
 using base::StringPiece;
-using base::StringToInt;
 using std::string;
 
 namespace net {

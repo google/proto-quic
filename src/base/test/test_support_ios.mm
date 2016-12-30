@@ -32,7 +32,7 @@ static int g_argc;
 static char** g_argv;
 
 @interface UIApplication (Testing)
-- (void) _terminateWithStatus:(int)status;
+- (void)_terminateWithStatus:(int)status;
 @end
 
 #if TARGET_IPHONE_SIMULATOR
@@ -47,8 +47,7 @@ static char** g_argv;
 #endif  // TARGET_IPHONE_SIMULATOR
 
 @interface ChromeUnitTestDelegate : NSObject {
- @private
-  base::scoped_nsobject<UIWindow> window_;
+  base::scoped_nsobject<UIWindow> _window;
 }
 - (void)runTests;
 @end
@@ -70,19 +69,19 @@ static char** g_argv;
   CGRect bounds = [[UIScreen mainScreen] bounds];
 
   // Yes, this is leaked, it's just to make what's running visible.
-  window_.reset([[UIWindow alloc] initWithFrame:bounds]);
-  [window_ setBackgroundColor:[UIColor whiteColor]];
-  [window_ makeKeyAndVisible];
+  _window.reset([[UIWindow alloc] initWithFrame:bounds]);
+  [_window setBackgroundColor:[UIColor whiteColor]];
+  [_window makeKeyAndVisible];
 
   // Add a label with the app name.
   UILabel* label = [[[UILabel alloc] initWithFrame:bounds] autorelease];
   label.text = [[NSProcessInfo processInfo] processName];
   label.textAlignment = NSTextAlignmentCenter;
-  [window_ addSubview:label];
+  [_window addSubview:label];
 
   // An NSInternalInconsistencyException is thrown if the app doesn't have a
   // root view controller. Set an empty one here.
-  [window_ setRootViewController:[[[UIViewController alloc] init] autorelease]];
+  [_window setRootViewController:[[[UIViewController alloc] init] autorelease]];
 
   if ([self shouldRedirectOutputToFile])
     [self redirectOutput];
@@ -163,7 +162,7 @@ static char** g_argv;
   // TODO(crbug.com/137010): Figure out how much time is actually needed, and
   // sleep only to make sure that much time has elapsed since launch.
   [NSThread sleepUntilDate:[NSDate dateWithTimeIntervalSinceNow:2.0]];
-  window_.reset();
+  _window.reset();
 
   // Use the hidden selector to try and cleanly take down the app (otherwise
   // things can think the app crashed even on a zero exit status).

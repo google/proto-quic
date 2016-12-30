@@ -13,6 +13,7 @@ import sys
 import time
 import traceback
 import unittest
+import urlparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
   os.pardir, 'third_party', 'webdriver', 'pylib'))
@@ -53,7 +54,7 @@ def ParseFlags():
   parser.add_argument('-f', '--failfast', help='Stop the test run on the first '
     'error or failure.', action='store_true')
   parser.add_argument('--logging_level', choices=['DEBUG', 'INFO', 'WARN',
-    'ERROR', 'CRIT'], default='ERROR', help='The logging verbosity for log '
+    'ERROR', 'CRIT'], default='WARN', help='The logging verbosity for log '
     'messages, printed to stderr. To see stderr logging output during a '
     'successful test run, also pass --disable_buffer. Default=ERROR')
   parser.add_argument('--log_file', help='If given, write logging statements '
@@ -162,26 +163,25 @@ class TestDriver:
     """
     self._OverrideChromeArgs()
     capabilities = {
-      'loggingPrefs': {'performance': 'INFO'},
-      'chromeOptions': {
-        'args': list(self._chrome_args)
-      }
+      'loggingPrefs': {'performance': 'INFO'}
     }
-    if self._flags.android:
-      capabilities['chromeOptions'].update({
-        'androidPackage': self._flags.android_package,
-      })
-      self._logger.debug('Will use Chrome on Android')
-    elif self._flags.chrome_exec:
-      capabilities['chrome.binary'] = self._flags.chrome_exec
-      self._logger.info('Using the Chrome binary at this path: %s',
-        self._flags.chrome_exec)
+    chrome_options = Options()
+    for arg in self._chrome_args:
+      chrome_options.add_argument(arg)
     self._logger.info('Starting Chrome with these flags: %s',
       str(self._chrome_args))
-    self._logger.debug('Starting ChromeDriver with these capabilities: %s',
-      json.dumps(capabilities))
+    if self._flags.android:
+      chrome_options.add_experimental_option('androidPackage',
+        self._flags.android_package)
+      self._logger.debug('Will use Chrome on Android')
+    elif self._flags.chrome_exec:
+      chrome_options.binary_location = self._flags.chrome_exec
+      self._logger.info('Using the Chrome binary at this path: %s',
+        self._flags.chrome_exec)
+    self._logger.debug('ChromeOptions will be parsed into these capabilities: '
+      '%s', json.dumps(chrome_options.to_capabilities()))
     driver = webdriver.Chrome(executable_path=self._flags.chrome_driver,
-      desired_capabilities=capabilities)
+      desired_capabilities=capabilities, chrome_options=chrome_options)
     driver.command_executor._commands.update({
       'getAvailableLogTypes': ('GET', '/session/$sessionId/log/types'),
       'getLog': ('POST', '/session/$sessionId/log')})
@@ -260,6 +260,10 @@ class TestDriver:
       timeout: The time in seconds to load the page before timing out.
     """
     self._url = url
+    if (len(urlparse.urlparse(url).netloc) == 0 and
+        len(urlparse.urlparse(url).scheme) == 0):
+      self._logger.warn('Invalid URL: "%s". Did you forget to prepend '
+        '"http://"? See RFC 1808 for more information', url)
     if not self._driver:
       self._StartDriver()
     self._driver.set_page_load_timeout(timeout)
@@ -357,7 +361,7 @@ class TestDriver:
       len(all_messages), method_filter)
     return all_messages
 
-  def GetHTTPResponses(self, include_favicon=False):
+  def GetHTTPResponses(self, include_favicon=False, skip_domainless_pages=True):
     """Parses the Performance Logs and returns a list of HTTPResponse objects.
 
     Use caution when calling this function  multiple times. Only responses
@@ -366,6 +370,8 @@ class TestDriver:
 
     Args:
       include_favicon: A bool that if True will include responses for favicons.
+      skip_domainless_pages: If True, only responses with a net_loc as in RFC
+        1808 will be included. Pages such as about:blank will be skipped.
     Returns:
       A list of HTTPResponse objects, each representing a single completed HTTP
       transaction by Chrome.
@@ -392,8 +398,13 @@ class TestDriver:
       response = MakeHTTPResponse(message)
       self._logger.debug('New HTTPResponse: %s', str(response))
       is_favicon = response.url.endswith('favicon.ico')
-      if not is_favicon or include_favicon:
+      has_domain = len(urlparse.urlparse(response.url).netloc) > 0
+      if (not is_favicon or include_favicon) and (not skip_domainless_pages or
+          has_domain):
         all_responses.append(response)
+      else:
+        self._logger.info("Skipping HTTPResponse with url=%s in returned logs.",
+          response.url)
     self._logger.info('%d new HTTPResponse objects found in the logs %s '
       'favicons', len(all_responses), ('including' if include_favicon else
       'not including'))
@@ -516,15 +527,22 @@ class IntegrationTest(unittest.TestCase):
         http_response.response_headers['via'])
 
   @staticmethod
-  def RunAllTests():
+  def RunAllTests(run_all_tests=False):
     """A simple helper method to run all tests using unittest.main().
+
+    Args:
+      run_all_tests: If True, all tests in the directory will be run, Otherwise
+        only the tests in the file given on the command line will be run.
     """
     flags = ParseFlags()
     logger = GetLogger()
     logger.debug('Command line args: %s', str(sys.argv))
     logger.info('sys.argv parsed to %s', str(flags))
-    # The unittest library uses sys.argv itself and is easily confused by our
-    # command line options. Pass it a simpler argv instead, while working in the
-    # unittest command line args functionality.
-    unittest.main(argv=[sys.argv[0]], verbosity=2, failfast=flags.failfast,
-      catchbreak=flags.catch, buffer=(not flags.disable_buffer))
+    if flags.catch:
+      unittest.installHandler()
+    pattern = '*.py' if run_all_tests else os.path.basename(sys.argv[0])
+    loader = unittest.TestLoader()
+    tests = loader.discover(os.path.dirname(__file__), pattern=pattern)
+    testRunner = unittest.runner.TextTestRunner(verbosity=2,
+      failfast=flags.failfast, buffer=(not flags.disable_buffer))
+    testRunner.run(tests)

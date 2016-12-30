@@ -641,7 +641,7 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeSettingsPacket(
     bool should_include_version,
     QuicStreamOffset* offset) {
   SpdySettingsIR settings_frame;
-  settings_frame.AddSetting(id, false, false, value);
+  settings_frame.AddSetting(id, value);
   SpdySerializedFrame spdy_frame(
       spdy_request_framer_.SerializeFrame(settings_frame));
   InitializeHeader(packet_number, should_include_version);

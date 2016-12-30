@@ -6,8 +6,7 @@
 
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/test_tools/quic_test_utils.h"
-#include "net/test/gtest_util.h"
-#include "testing/gmock/include/gmock/gmock.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;
 
@@ -25,7 +24,7 @@ TEST(QuicHeaderListTest, OnHeader) {
 
 TEST(QuicHeaderListTest, TooLarge) {
   test::QuicFlagSaver flags;
-  FLAGS_quic_limit_uncompressed_headers = true;
+  FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers = true;
   QuicHeaderList headers;
   string key = "key";
   string value(1 << 18, '1');

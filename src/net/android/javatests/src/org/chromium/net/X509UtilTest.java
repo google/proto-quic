@@ -6,8 +6,8 @@ package org.chromium.net;
 
 import static org.chromium.net.test.util.CertTestUtil.CERTS_DIRECTORY;
 
+import android.support.test.filters.MediumTest;
 import android.test.InstrumentationTestCase;
-import android.test.suitebuilder.annotation.MediumTest;
 
 import org.chromium.net.test.util.CertTestUtil;
 

@@ -69,9 +69,7 @@ class HttpStreamFactoryImpl::JobController
 
   // From HttpStreamFactoryImpl::Job::Delegate.
   // Invoked when |job| has an HttpStream ready.
-  void OnStreamReady(Job* job,
-                     const SSLConfig& used_ssl_config,
-                     const ProxyInfo& used_proxy_info) override;
+  void OnStreamReady(Job* job, const SSLConfig& used_ssl_config) override;
 
   // Invoked when |job| has a BidirectionalStream ready.
   void OnBidirectionalStreamImplReady(

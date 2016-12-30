@@ -39,6 +39,8 @@ from pylib.linker import setup as linker_setup
 from pylib.results import json_results
 from pylib.results import report_results
 
+from py_utils import contextlib_ext
+
 
 _DEVIL_STATIC_CONFIG_FILE = os.path.abspath(os.path.join(
     host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'devil_config.json'))
@@ -313,8 +315,8 @@ def ProcessJavaTestOptions(args):
   elif args.test_filter:
     args.annotations = []
   else:
-    args.annotations = ['Smoke', 'SmallTest', 'MediumTest', 'LargeTest',
-                        'EnormousTest', 'IntegrationTest']
+    args.annotations = ['SmallTest', 'MediumTest', 'LargeTest', 'EnormousTest',
+                        'IntegrationTest']
 
   if args.exclude_annotation_str:
     args.exclude_annotations = args.exclude_annotation_str.split(',')
@@ -500,15 +502,25 @@ def AddPerfTestOptions(parser):
 
   group.add_argument(
       '--output-json-list', type=os.path.realpath,
-      help='Write a simple list of names from --steps into the given file.')
+      help='Writes a JSON list of information for each --steps into the given '
+           'file. Information includes runtime and device affinity for each '
+           '--steps.')
   group.add_argument(
       '--collect-chartjson-data',
       action='store_true',
-      help='Cache the chartjson output from each step for later use.')
+      help='Cache the telemetry chartjson output from each step for later use.')
   group.add_argument(
       '--output-chartjson-data',
       type=os.path.realpath,
-      help='Write out chartjson into the given file.')
+      help='Writes telemetry chartjson formatted output into the given file.')
+  group.add_argument(
+      '--collect-json-data',
+      action='store_true',
+      help='Cache the telemetry JSON output from each step for later use.')
+  group.add_argument(
+      '--output-json-data',
+      type=os.path.realpath,
+      help='Writes telemetry JSON formatted output into the given file.')
   # TODO(rnephew): Remove this when everything moves to new option in platform
   # mode.
   group.add_argument(
@@ -739,20 +751,16 @@ def RunTestsInPlatformMode(args):
   all_iteration_results = []
 
   @contextlib.contextmanager
-  def noop():
-    yield
+  def write_json_file():
+    try:
+      yield
+    finally:
+      json_results.GenerateJsonResultsFile(
+          all_raw_results, args.json_results_file)
 
-  json_writer = noop()
-  if args.json_results_file:
-    @contextlib.contextmanager
-    def write_json_file():
-      try:
-        yield
-      finally:
-        json_results.GenerateJsonResultsFile(
-            all_raw_results, args.json_results_file)
-
-    json_writer = write_json_file()
+  json_writer = contextlib_ext.Optional(
+      write_json_file(),
+      args.json_results_file)
 
   ### Set up test objects.
 

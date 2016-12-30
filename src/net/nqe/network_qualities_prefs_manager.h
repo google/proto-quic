@@ -54,8 +54,8 @@ class NET_EXPORT NetworkQualitiesPrefsManager
     // Sets the persistent pref to the given value.
     virtual void SetDictionaryValue(const base::DictionaryValue& value) = 0;
 
-    // Returns the peristent prefs.
-    virtual const base::DictionaryValue& GetDictionaryValue() = 0;
+    // Returns a copy of the persistent prefs.
+    virtual std::unique_ptr<base::DictionaryValue> GetDictionaryValue() = 0;
   };
 
   // Creates an instance of the NetworkQualitiesPrefsManager. Ownership of

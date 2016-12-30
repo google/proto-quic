@@ -12,10 +12,11 @@
 #include "base/strings/stringprintf.h"
 
 using base::StringPrintf;
+using std::string;
 
 namespace net {
 
-std::string QuicTime::Delta::ToDebugValue() const {
+string QuicTime::Delta::ToDebugValue() const {
   const int64_t one_ms = 1000;
   const int64_t one_s = 1000 * one_ms;
 

@@ -10,11 +10,9 @@
 #include "base/files/file_util.h"
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
-#include "base/strings/string_number_conversions.h"
-#include "base/strings/string_util.h"
-#include "base/strings/stringprintf.h"
 #include "net/http/http_util.h"
 #include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_http_utils.h"
 
 using base::FilePath;
@@ -88,7 +86,7 @@ void QuicHttpResponseCache::ResourceFile::Read() {
       return;
     }
     spdy_headers_.AppendValueOrAddHeader(
-        base::ToLowerASCII(line.substr(0, pos)), line.substr(pos + 2));
+        QuicTextUtils::ToLower(line.substr(0, pos)), line.substr(pos + 2));
   }
 
   // The connection header is prohibited in HTTP/2.
@@ -144,10 +142,9 @@ void QuicHttpResponseCache::ResourceFile::SetHostPathFromBase(
 }
 
 StringPiece QuicHttpResponseCache::ResourceFile::RemoveScheme(StringPiece url) {
-  if (base::StartsWith(url, "https://", base::CompareCase::INSENSITIVE_ASCII)) {
+  if (QuicTextUtils::StartsWith(url, "https://")) {
     url.remove_prefix(8);
-  } else if (base::StartsWith(url, "http://",
-                              base::CompareCase::INSENSITIVE_ASCII)) {
+  } else if (QuicTextUtils::StartsWith(url, "http://")) {
     url.remove_prefix(7);
   }
   return url;
@@ -184,9 +181,9 @@ void QuicHttpResponseCache::AddSimpleResponse(StringPiece host,
                                               int response_code,
                                               StringPiece body) {
   SpdyHeaderBlock response_headers;
-  response_headers[":status"] = IntToString(response_code);
+  response_headers[":status"] = QuicTextUtils::Uint64ToString(response_code);
   response_headers["content-length"] =
-      IntToString(static_cast<int>(body.length()));
+      QuicTextUtils::Uint64ToString(body.length());
   AddResponse(host, path, std::move(response_headers), body);
 }
 

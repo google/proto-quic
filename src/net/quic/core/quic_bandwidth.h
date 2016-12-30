@@ -7,9 +7,8 @@
 #ifndef NET_QUIC_CORE_QUIC_BANDWIDTH_H_
 #define NET_QUIC_CORE_QUIC_BANDWIDTH_H_
 
-#include <stdint.h>
-
 #include <cmath>
+#include <cstdint>
 #include <ostream>
 
 #include "base/compiler_specific.h"

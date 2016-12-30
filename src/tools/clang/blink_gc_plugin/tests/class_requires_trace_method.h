@@ -24,7 +24,7 @@ private:
 
 class Mixin : public GarbageCollectedMixin {
 public:
-  virtual void trace(Visitor*) override;
+  virtual void Trace(Visitor*) override;
   Member<Mixin> m_self;
 };
 
@@ -34,7 +34,7 @@ class HeapObjectMixin : public GarbageCollected<HeapObjectMixin>, public Mixin {
 
 class Mixin2 : public Mixin {
 public:
-  virtual void trace(Visitor*) override;
+  virtual void Trace(Visitor*) override;
 };
 
 class HeapObjectMixin2
@@ -44,14 +44,14 @@ class HeapObjectMixin2
 
 class Mixin3 : public Mixin {
 public:
-  virtual void trace(Visitor*) override;
+  virtual void Trace(Visitor*) override;
 };
 
 class HeapObjectMixin3
     : public GarbageCollected<HeapObjectMixin3>, public Mixin {
   USING_GARBAGE_COLLECTED_MIXIN(HeapObjectMixin2);
 public:
-  virtual void trace(Visitor*) override;
+  virtual void Trace(Visitor*) override;
 };
 
 }

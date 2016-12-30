@@ -383,6 +383,12 @@ class SequencedWorkerPool::Inner {
     CLEANUP_DONE,
   };
 
+  // Clears ScheduledTasks in |tasks_to_delete| while ensuring that
+  // |this_worker| has the desired task info context during ~ScheduledTask() to
+  // allow sequence-checking.
+  void DeleteWithoutLock(std::vector<SequencedTask>* tasks_to_delete,
+                         Worker* this_worker);
+
   // Helper used by PostTask() to complete the work when redirection is on.
   // Returns true if the task may run at some point in the future and false if
   // it will definitely not run.
@@ -420,7 +426,7 @@ class SequencedWorkerPool::Inner {
   // See the implementation for a more detailed description.
   GetWorkStatus GetWork(SequencedTask* task,
                         TimeDelta* wait_time,
-                        std::vector<Closure>* delete_these_outside_lock);
+                        std::vector<SequencedTask>* delete_these_outside_lock);
 
   void HandleCleanup();
 
@@ -812,8 +818,8 @@ bool SequencedWorkerPool::Inner::PostTaskToTaskScheduler(
   const TaskShutdownBehavior task_shutdown_behavior =
       static_cast<TaskShutdownBehavior>(sequenced.shutdown_behavior);
   const TaskTraits traits = TaskTraits()
-                                .WithFileIO()
-                                .WithWait()
+                                .MayBlock()
+                                .WithBaseSyncPrimitives()
                                 .WithPriority(task_priority_)
                                 .WithShutdownBehavior(task_shutdown_behavior);
   return GetTaskSchedulerTaskRunner(sequenced.sequence_token_id, traits)
@@ -864,7 +870,8 @@ bool SequencedWorkerPool::Inner::RunsTasksOnCurrentThread() const {
   if (g_all_pools_state == AllPoolsState::REDIRECTED_TO_TASK_SCHEDULER) {
     if (!runs_tasks_on_verifier_) {
       runs_tasks_on_verifier_ = CreateTaskRunnerWithTraits(
-          TaskTraits().WithFileIO().WithWait().WithPriority(task_priority_));
+          TaskTraits().MayBlock().WithBaseSyncPrimitives().WithPriority(
+              task_priority_));
     }
     return runs_tasks_on_verifier_->RunsTasksOnCurrentThread();
   } else {
@@ -983,7 +990,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
       // See GetWork for what delete_these_outside_lock is doing.
       SequencedTask task;
       TimeDelta wait_time;
-      std::vector<Closure> delete_these_outside_lock;
+      std::vector<SequencedTask> delete_these_outside_lock;
       GetWorkStatus status =
           GetWork(&task, &wait_time, &delete_these_outside_lock);
       if (status == GET_WORK_FOUND) {
@@ -1000,7 +1007,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
           // already get a signal for each new task, but it doesn't
           // hurt.)
           SignalHasWork();
-          delete_these_outside_lock.clear();
+          DeleteWithoutLock(&delete_these_outside_lock, this_worker);
 
           // Complete thread creation outside the lock if necessary.
           if (new_thread_id)
@@ -1031,7 +1038,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
         switch (status) {
           case GET_WORK_WAIT: {
               AutoUnlock unlock(lock_);
-              delete_these_outside_lock.clear();
+              DeleteWithoutLock(&delete_these_outside_lock, this_worker);
             }
             break;
           case GET_WORK_NOT_FOUND:
@@ -1053,7 +1060,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
         // help this case.
         if (shutdown_called_ && blocking_shutdown_pending_task_count_ == 0) {
           AutoUnlock unlock(lock_);
-          delete_these_outside_lock.clear();
+          DeleteWithoutLock(&delete_these_outside_lock, this_worker);
           break;
         }
 
@@ -1061,7 +1068,7 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
         // deletion must happen outside of the lock.
         if (delete_these_outside_lock.size()) {
           AutoUnlock unlock(lock_);
-          delete_these_outside_lock.clear();
+          DeleteWithoutLock(&delete_these_outside_lock, this_worker);
 
           // Since the lock has been released, |status| may no longer be
           // accurate. It might read GET_WORK_WAIT even if there are tasks
@@ -1084,6 +1091,9 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
         }
         waiting_thread_count_--;
       }
+      // |delete_these_outside_lock| should have been cleared via
+      // DeleteWithoutLock() above already.
+      DCHECK(delete_these_outside_lock.empty());
     }
   }  // Release lock_.
 
@@ -1093,6 +1103,19 @@ void SequencedWorkerPool::Inner::ThreadLoop(Worker* this_worker) {
 
   // Possibly unblock shutdown.
   can_shutdown_cv_.Signal();
+}
+
+void SequencedWorkerPool::Inner::DeleteWithoutLock(
+    std::vector<SequencedTask>* tasks_to_delete,
+    Worker* this_worker) {
+  while (!tasks_to_delete->empty()) {
+    const SequencedTask& deleted_task = tasks_to_delete->back();
+    this_worker->set_running_task_info(
+        SequenceToken(deleted_task.sequence_token_id),
+        deleted_task.shutdown_behavior);
+    tasks_to_delete->pop_back();
+  }
+  this_worker->reset_running_task_info();
 }
 
 void SequencedWorkerPool::Inner::HandleCleanup() {
@@ -1162,7 +1185,7 @@ int64_t SequencedWorkerPool::Inner::LockedGetNextSequenceTaskNumber() {
 SequencedWorkerPool::Inner::GetWorkStatus SequencedWorkerPool::Inner::GetWork(
     SequencedTask* task,
     TimeDelta* wait_time,
-    std::vector<Closure>* delete_these_outside_lock) {
+    std::vector<SequencedTask>* delete_these_outside_lock) {
   DCHECK_EQ(AllPoolsState::USE_WORKER_POOL, g_all_pools_state);
 
   lock_.AssertAcquired();
@@ -1208,18 +1231,17 @@ SequencedWorkerPool::Inner::GetWorkStatus SequencedWorkerPool::Inner::GetWork(
       // shutdown. Delete it and get more work.
       //
       // Note that we do not want to delete unrunnable tasks. Deleting a task
-      // can have side effects (like freeing some objects) and deleting a
-      // task that's supposed to run after one that's currently running could
-      // cause an obscure crash.
+      // can have side effects (like freeing some objects) and deleting a task
+      // that's supposed to run after one that's currently running could cause
+      // an obscure crash.
       //
       // We really want to delete these tasks outside the lock in case the
-      // closures are holding refs to objects that want to post work from
-      // their destructorss (which would deadlock). The closures are
-      // internally refcounted, so we just need to keep a copy of them alive
-      // until the lock is exited. The calling code can just clear() the
-      // vector they passed to us once the lock is exited to make this
-      // happen.
-      delete_these_outside_lock->push_back(i->task);
+      // closures are holding refs to objects that want to post work from their
+      // destructors (which would deadlock). The closures are internally
+      // refcounted, so we just need to keep a copy of them alive until the lock
+      // is exited. The calling code can just clear() the vector they passed to
+      // us once the lock is exited to make this happen.
+      delete_these_outside_lock->push_back(*i);
       pending_tasks_.erase(i++);
       continue;
     }
@@ -1230,7 +1252,7 @@ SequencedWorkerPool::Inner::GetWorkStatus SequencedWorkerPool::Inner::GetWork(
       status = GET_WORK_WAIT;
       if (cleanup_state_ == CLEANUP_RUNNING) {
         // Deferred tasks are deleted when cleaning up, see Inner::ThreadLoop.
-        delete_these_outside_lock->push_back(i->task);
+        delete_these_outside_lock->push_back(*i);
         pending_tasks_.erase(i);
       }
       break;

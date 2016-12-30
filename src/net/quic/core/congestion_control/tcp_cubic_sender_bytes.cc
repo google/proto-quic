@@ -47,17 +47,18 @@ TcpCubicSenderBytes::~TcpCubicSenderBytes() {}
 void TcpCubicSenderBytes::SetFromConfig(const QuicConfig& config,
                                         Perspective perspective) {
   TcpCubicSenderBase::SetFromConfig(config, perspective);
-  if (FLAGS_quic_fix_cubic_convex_mode &&
+  if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
       config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kCCVX)) {
     cubic_.SetFixConvexMode(true);
   }
-  if (FLAGS_quic_fix_cubic_bytes_quantization &&
+  if (FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization &&
       config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kCBQT)) {
     cubic_.SetFixCubicQuantization(true);
   }
-  if (FLAGS_quic_fix_beta_last_max && config.HasReceivedConnectionOptions() &&
+  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
+      config.HasReceivedConnectionOptions() &&
       ContainsQuicTag(config.ReceivedConnectionOptions(), kBLMX)) {
     cubic_.SetFixBetaLastMax(true);
   }

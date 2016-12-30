@@ -357,10 +357,18 @@ std::string MessageLoop::GetThreadName() const {
 void MessageLoop::SetTaskRunner(
     scoped_refptr<SingleThreadTaskRunner> task_runner) {
   DCHECK_EQ(this, current());
+  DCHECK(task_runner);
   DCHECK(task_runner->BelongsToCurrentThread());
   DCHECK(!unbound_task_runner_);
   task_runner_ = std::move(task_runner);
   SetThreadTaskRunnerHandle();
+}
+
+void MessageLoop::ClearTaskRunnerForTesting() {
+  DCHECK_EQ(this, current());
+  DCHECK(!unbound_task_runner_);
+  task_runner_ = nullptr;
+  thread_task_runner_handle_.reset();
 }
 
 void MessageLoop::SetThreadTaskRunnerHandle() {

@@ -16,8 +16,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::_;
-using net::test::CryptoTestUtils;
-using net::test::MockQuicDispatcher;
 
 namespace net {
 namespace test {
@@ -105,7 +103,7 @@ class QuicServerEpollInTest : public ::testing::Test {
 // event should try to create connections for them. And set epoll mask with
 // EPOLLIN if there are still CHLOs remaining at the end of epoll event.
 TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
-  FLAGS_quic_limit_num_new_sessions_per_epoll_loop = true;
+  FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop = true;
   // Given an EPOLLIN event, try to create session for buffered CHLOs. In first
   // event, dispatcher can't create session for all of CHLOs. So listener should
   // register another EPOLLIN event by itself. Even without new packet arrival,

@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_CORE_QUIC_ALARM_H_
 #define NET_QUIC_CORE_QUIC_ALARM_H_
 
-#include <memory>
-
 #include "base/macros.h"
 #include "net/quic/core/quic_arena_scoped_ptr.h"
 #include "net/quic/core/quic_time.h"

@@ -687,7 +687,9 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
     //
     // * Include both "strict" and "lax" same-site cookies if the request's
     //   |url|, |initiator|, and |first_party_for_cookies| all have the same
-    //   registrable domain.
+    //   registrable domain. Note: this also covers the case of a request
+    //   without an initiator (only happens for browser-initiated main frame
+    //   navigations).
     //
     // * Include only "lax" same-site cookies if the request's |URL| and
     //   |first_party_for_cookies| have the same registrable domain, _and_ the
@@ -700,7 +702,7 @@ void URLRequestHttpJob::AddCookieHeaderAndStart() {
     if (registry_controlled_domains::SameDomainOrHost(
             request_->url(), request_->first_party_for_cookies(),
             registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {
-      if (request_->initiator() &&
+      if (!request_->initiator() ||
           registry_controlled_domains::SameDomainOrHost(
               request_->url(), request_->initiator().value().GetURL(),
               registry_controlled_domains::INCLUDE_PRIVATE_REGISTRIES)) {

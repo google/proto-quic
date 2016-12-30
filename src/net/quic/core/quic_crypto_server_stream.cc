@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "base/base64.h"
 #include "crypto/secure_hash.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/crypto_utils.h"
@@ -17,6 +16,7 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_text_utils.h"
 
 using base::StringPiece;
 using std::string;
@@ -28,7 +28,8 @@ class QuicCryptoServerStream::ProcessClientHelloCallback
  public:
   ProcessClientHelloCallback(
       QuicCryptoServerStream* stream,
-      const scoped_refptr<ValidateClientHelloResultCallback::Result>& result)
+      const QuicReferenceCountedPointer<
+          ValidateClientHelloResultCallback::Result>& result)
       : stream_(stream), result_(result) {}
 
   void Run(QuicErrorCode error,
@@ -57,7 +58,8 @@ class QuicCryptoServerStream::ProcessClientHelloCallback
 
  private:
   QuicCryptoServerStream* stream_;
-  scoped_refptr<ValidateClientHelloResultCallback::Result> result_;
+  QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+      result_;
 };
 
 QuicCryptoServerStreamBase::QuicCryptoServerStreamBase(QuicSession* session)
@@ -167,7 +169,8 @@ void QuicCryptoServerStream::OnHandshakeMessage(
 }
 
 void QuicCryptoServerStream::FinishProcessingHandshakeMessage(
-    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+    QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+        result,
     std::unique_ptr<ProofSource::Details> details) {
   const CryptoHandshakeMessage& message = result->client_hello;
 
@@ -280,7 +283,7 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
     return;
   }
 
-  if (FLAGS_enable_async_get_proof) {
+  if (FLAGS_quic_reloadable_flag_enable_async_get_proof) {
     if (send_server_config_update_cb_ != nullptr) {
       DVLOG(1)
           << "Skipped server config update since one is already in progress";
@@ -418,24 +421,13 @@ bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
   uint8_t digest[32];
   hash->Finish(digest, sizeof(digest));
 
-  base::Base64Encode(
-      string(reinterpret_cast<const char*>(digest), sizeof(digest)), output);
-  // Remove padding.
-  size_t len = output->size();
-  if (len >= 2) {
-    if ((*output)[len - 1] == '=') {
-      len--;
-      if ((*output)[len - 1] == '=') {
-        len--;
-      }
-      output->resize(len);
-    }
-  }
+  QuicTextUtils::Base64Encode(digest, arraysize(digest), output);
   return true;
 }
 
 void QuicCryptoServerStream::ProcessClientHello(
-    scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+    QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+        result,
     std::unique_ptr<ProofSource::Details> proof_source_details,
     std::unique_ptr<ProcessClientHelloResultCallback> done_cb) {
   const CryptoHandshakeMessage& message = result->client_hello;
@@ -485,7 +477,7 @@ void QuicCryptoServerStream::ValidateCallback::Cancel() {
 }
 
 void QuicCryptoServerStream::ValidateCallback::Run(
-    scoped_refptr<Result> result,
+    QuicReferenceCountedPointer<Result> result,
     std::unique_ptr<ProofSource::Details> details) {
   if (parent_ != nullptr) {
     parent_->FinishProcessingHandshakeMessage(std::move(result),

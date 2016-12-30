@@ -19,7 +19,7 @@ private:
 
 class HeapObject : public GarbageCollected<HeapObject> {
 public:
-    void trace(Visitor*);
+    void Trace(Visitor*);
 private:
     PartObject m_part;
     HeapVector<PartObject> m_parts;

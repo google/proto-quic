@@ -111,30 +111,29 @@ class MultiLogCTVerifierTest : public ::testing::Test {
     return true;
   }
 
-  bool VerifySinglePrecertificateChain(
-      scoped_refptr<X509Certificate> chain,
-      const NetLogWithSource& net_log,
-      SignedCertificateTimestampAndStatusList* output_scts) {
-    return verifier_->Verify(chain.get(), std::string(), std::string(),
-                             output_scts, net_log) == OK;
-  }
-
+  // Returns true is |chain| is a certificate with embedded SCTs that can be
+  // successfully extracted.
   bool VerifySinglePrecertificateChain(scoped_refptr<X509Certificate> chain) {
     SignedCertificateTimestampAndStatusList scts;
-    return verifier_->Verify(chain.get(), std::string(), std::string(), &scts,
-                             NetLogWithSource()) == OK;
+    verifier_->Verify(chain.get(), base::StringPiece(), base::StringPiece(),
+                      &scts, NetLogWithSource());
+    return !scts.empty();
   }
 
+  // Returns true if |chain| is a certificate with a single embedded SCT that
+  // can be successfully extracted and matched to the test log indicated by
+  // |kLogDescription|.
   bool CheckPrecertificateVerification(scoped_refptr<X509Certificate> chain) {
     SignedCertificateTimestampAndStatusList scts;
     TestNetLog test_net_log;
     NetLogWithSource net_log = NetLogWithSource::Make(
         &test_net_log, NetLogSourceType::SSL_CONNECT_JOB);
-    return (VerifySinglePrecertificateChain(chain, net_log, &scts) &&
-            ct::CheckForSingleVerifiedSCTInResult(scts, kLogDescription) &&
-            ct::CheckForSCTOrigin(
-                scts, ct::SignedCertificateTimestamp::SCT_EMBEDDED) &&
-            CheckForEmbeddedSCTInNetLog(test_net_log));
+    verifier_->Verify(chain.get(), base::StringPiece(), base::StringPiece(),
+                      &scts, net_log);
+    return ct::CheckForSingleVerifiedSCTInResult(scts, kLogDescription) &&
+           ct::CheckForSCTOrigin(
+               scts, ct::SignedCertificateTimestamp::SCT_EMBEDDED) &&
+           CheckForEmbeddedSCTInNetLog(test_net_log);
   }
 
   // Histogram-related helper methods
@@ -208,8 +207,8 @@ TEST_F(MultiLogCTVerifierTest, VerifiesSCTOverX509Cert) {
   std::string sct_list = ct::GetSCTListForTesting();
 
   SignedCertificateTimestampAndStatusList scts;
-  EXPECT_EQ(OK, verifier_->Verify(chain_.get(), std::string(), sct_list, &scts,
-                                  NetLogWithSource()));
+  verifier_->Verify(chain_.get(), base::StringPiece(), sct_list, &scts,
+                    NetLogWithSource());
   ASSERT_TRUE(ct::CheckForSingleVerifiedSCTInResult(scts, kLogDescription));
   ASSERT_TRUE(ct::CheckForSCTOrigin(
       scts, ct::SignedCertificateTimestamp::SCT_FROM_TLS_EXTENSION));
@@ -219,8 +218,8 @@ TEST_F(MultiLogCTVerifierTest, IdentifiesSCTFromUnknownLog) {
   std::string sct_list = ct::GetSCTListWithInvalidSCT();
   SignedCertificateTimestampAndStatusList scts;
 
-  EXPECT_NE(OK, verifier_->Verify(chain_.get(), std::string(), sct_list, &scts,
-                                  NetLogWithSource()));
+  verifier_->Verify(chain_.get(), base::StringPiece(), sct_list, &scts,
+                    NetLogWithSource());
   EXPECT_EQ(1U, scts.size());
   EXPECT_EQ("", scts[0].sct->log_description);
   EXPECT_EQ(ct::SCT_STATUS_LOG_UNKNOWN, scts[0].status);
@@ -242,8 +241,8 @@ TEST_F(MultiLogCTVerifierTest, CountsInvalidSCTsInStatusHistogram) {
   int num_invalid_scts = GetValueFromHistogram(
       "Net.CertificateTransparency.SCTStatus", ct::SCT_STATUS_LOG_UNKNOWN);
 
-  EXPECT_NE(OK, verifier_->Verify(chain_.get(), std::string(), sct_list, &scts,
-                                  NetLogWithSource()));
+  verifier_->Verify(chain_.get(), base::StringPiece(), sct_list, &scts,
+                    NetLogWithSource());
 
   ASSERT_EQ(num_valid_scts, NumValidSCTsInStatusHistogram());
   ASSERT_EQ(num_invalid_scts + 1,

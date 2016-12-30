@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import collections
-import contextlib
 import io
 import json
 import logging
@@ -31,6 +30,7 @@ from pylib.constants import host_paths
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
 from py_trace_event import trace_event
+from py_utils import contextlib_ext
 
 
 class HeartBeat(object):
@@ -81,6 +81,7 @@ class TestShard(object):
 
   def _TestSetUp(self, test):
     if (self._test_instance.collect_chartjson_data
+        or self._test_instance.collect_json_data
         or self._tests[test].get('archive_output_dir')):
       self._output_dir = tempfile.mkdtemp()
 
@@ -96,24 +97,20 @@ class TestShard(object):
 
     self._LogTest(test, cmd, timeout)
 
-    @contextlib.contextmanager
-    def trace_if_enabled(test):
-      try:
-        if self._test_instance.trace_output:
-          trace_event.trace_begin(test)
-        yield
-      finally:
-        if self._test_instance.trace_output:
-          trace_event.trace_end(test)
-
     try:
       start_time = time.time()
 
-      with trace_if_enabled(test):
+      with contextlib_ext.Optional(
+          trace_event.trace(test),
+          self._test_instance.trace_output):
         exit_code, output = cmd_helper.GetCmdStatusAndOutputWithTimeout(
             cmd, timeout, cwd=cwd, shell=True)
       end_time = time.time()
-      json_output = self._test_instance.ReadChartjsonOutput(self._output_dir)
+      chart_json_output = self._test_instance.ReadChartjsonOutput(
+          self._output_dir)
+      json_output = ''
+      if self._test_instance.collect_json_data:
+        json_output = self._test_instance.ReadJsonOutput(self._output_dir)
       if exit_code == 0:
         result_type = base_test_result.ResultType.PASS
       else:
@@ -122,10 +119,12 @@ class TestShard(object):
       end_time = time.time()
       exit_code = -1
       output = e.output
+      chart_json_output = ''
       json_output = ''
       result_type = base_test_result.ResultType.TIMEOUT
     return self._ProcessTestResult(test, cmd, start_time, end_time, exit_code,
-                                   output, json_output, result_type)
+                                   output, chart_json_output, json_output,
+                                   result_type)
 
   def _CreateCmd(self, test):
     cmd = []
@@ -134,6 +133,8 @@ class TestShard(object):
     cmd.append(self._tests[test]['cmd'])
     if self._output_dir:
       cmd.append('--output-dir=%s' % self._output_dir)
+    if self._test_instance.collect_json_data:
+      cmd.append('--output-format=json')
     return ' '.join(self._ExtendCmd(cmd))
 
   def _ExtendCmd(self, cmd): # pylint: disable=no-self-use
@@ -150,7 +151,7 @@ class TestShard(object):
     raise NotImplementedError
 
   def _ProcessTestResult(self, test, cmd, start_time, end_time, exit_code,
-                         output, json_output, result_type):
+                         output, chart_json_output, json_output, result_type):
     if exit_code is None:
       exit_code = -1
 
@@ -166,7 +167,8 @@ class TestShard(object):
     persisted_result = {
         'name': test,
         'output': [output],
-        'chartjson': json_output,
+        'chartjson': chart_json_output,
+        'json': json_output,
         'archive_bytes': archive_bytes,
         'exit_code': exit_code,
         'actual_exit_code': actual_exit_code,
@@ -425,7 +427,7 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
     # Affinitize the tests.
     if self._test_instance.trace_output:
       assert not trace_event.trace_is_enabled(), 'Tracing already running.'
-      trace_event.trace_enable(self._test_instance.trace_output)
+      trace_event.trace_enable(self._test_instance.trace_output + '.json')
     self._SplitTestsByAffinity()
     if not self._test_buckets and not self._no_device_tests:
       raise local_device_test_run.NoTestsError()
@@ -466,6 +468,9 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
     if self._test_instance.trace_output:
       assert trace_event.trace_is_enabled(), 'Tracing not running.'
       trace_event.trace_disable()
+      local_device_test_run.LocalDeviceTestRun._JsonToTrace(
+          self._test_instance.trace_output + '.json',
+          self._test_instance.trace_output)
     return host_test_results + device_test_results
 
   # override

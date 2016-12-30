@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_H_
 #define NET_QUIC_CORE_CRYPTO_CRYPTO_HANDSHAKE_H_
 
-#include <stdint.h>
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -100,7 +98,7 @@ struct QUIC_EXPORT_PRIVATE CrypterPair {
 
 // Parameters negotiated by the crypto handshake.
 struct QUIC_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
-    : public base::RefCounted<QuicCryptoNegotiatedParameters> {
+    : public QuicReferenceCounted {
   // Initializes the members to 0 or empty values.
   QuicCryptoNegotiatedParameters();
 
@@ -150,9 +148,8 @@ struct QUIC_EXPORT_PRIVATE QuicCryptoNegotiatedParameters
   // by sending CSCT tag with an empty value in client hello.
   bool sct_supported_by_client;
 
- private:
-  friend class base::RefCounted<QuicCryptoNegotiatedParameters>;
-  virtual ~QuicCryptoNegotiatedParameters();
+ protected:
+  ~QuicCryptoNegotiatedParameters() override;
 };
 
 // QuicCryptoConfig contains common configuration between clients and servers.

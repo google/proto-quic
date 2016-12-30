@@ -45,7 +45,7 @@
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/ct_policy_enforcer.h"
 #include "net/cert/ct_policy_status.h"
-#include "net/cert/ct_verifier.h"
+#include "net/cert/do_nothing_ct_verifier.h"
 #include "net/cert/mock_cert_verifier.h"
 #include "net/cert/mock_client_cert_verifier.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
@@ -85,22 +85,6 @@ const char kClientPrivateKeyFileName[] = "client_1.pk8";
 const char kWrongClientCertFileName[] = "client_2.pem";
 const char kWrongClientPrivateKeyFileName[] = "client_2.pk8";
 const char kClientCertCAFileName[] = "client_1_ca.pem";
-
-class MockCTVerifier : public CTVerifier {
- public:
-  MockCTVerifier() = default;
-  ~MockCTVerifier() override = default;
-
-  int Verify(X509Certificate* cert,
-             const std::string& stapled_ocsp_response,
-             const std::string& sct_list_from_tls_extension,
-             SignedCertificateTimestampAndStatusList* output_scts,
-             const NetLogWithSource& net_log) override {
-    return net::OK;
-  }
-
-  void SetObserver(Observer* observer) override {}
-};
 
 class MockCTPolicyEnforcer : public CTPolicyEnforcer {
  public:
@@ -298,7 +282,7 @@ class FakeSocket : public StreamSocket {
 
   bool WasEverUsed() const override { return true; }
 
-  bool WasNpnNegotiated() const override { return false; }
+  bool WasAlpnNegotiated() const override { return false; }
 
   NextProto GetNegotiatedProtocol() const override { return kProtoUnknown; }
 
@@ -374,7 +358,7 @@ class SSLServerSocketTest : public PlatformTest {
         cert_verifier_(new MockCertVerifier()),
         client_cert_verifier_(new MockClientCertVerifier()),
         transport_security_state_(new TransportSecurityState),
-        ct_verifier_(new MockCTVerifier),
+        ct_verifier_(new DoNothingCTVerifier),
         ct_policy_enforcer_(new MockCTPolicyEnforcer) {}
 
   void SetUp() override {
@@ -509,7 +493,7 @@ class SSLServerSocketTest : public PlatformTest {
   std::unique_ptr<MockCertVerifier> cert_verifier_;
   std::unique_ptr<MockClientCertVerifier> client_cert_verifier_;
   std::unique_ptr<TransportSecurityState> transport_security_state_;
-  std::unique_ptr<MockCTVerifier> ct_verifier_;
+  std::unique_ptr<DoNothingCTVerifier> ct_verifier_;
   std::unique_ptr<MockCTPolicyEnforcer> ct_policy_enforcer_;
   std::unique_ptr<SSLServerContext> server_context_;
   std::unique_ptr<crypto::RSAPrivateKey> server_private_key_;

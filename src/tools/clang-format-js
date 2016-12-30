@@ -1,0 +1,33 @@
+#!/bin/bash
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+if [[ -z "${@}" ]]; then
+  echo >&2 "Usage: `basename $0` <paths_to_clang_format...>";
+  exit 1;
+fi
+
+which clang-format >/dev/null 2>&1;
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Sorry, but you need \`clang-format\` on your \$PATH to run this script";
+  exit 1;
+fi
+
+for arg in "${@}"; do
+  dir=`readlink -f "${arg}"`
+  if [[ -d "${dir}" ]]; then
+    dir="${dir}/stripped-by-dirname-on-next-line"
+  fi
+  while dir=`dirname ${dir}`; do
+    if [[ -f "${dir}/.clang-format" ]]; then
+      echo "Using style from: ${dir}/.clang-format";
+      break;
+    elif [[ "${dir}" == "/" ]]; then
+      echo >&2 "No .clang-format file found. Make one at or above ${arg}";
+      exit 1;
+    fi
+  done
+done
+
+find "${@}" -type f -iname '*.js' | xargs clang-format -i -style=file;

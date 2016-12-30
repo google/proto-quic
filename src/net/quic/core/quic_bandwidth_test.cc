@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "net/quic/core/quic_bandwidth.h"
+#include "net/quic/core/quic_time.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -72,10 +73,10 @@ TEST_F(QuicBandwidthTest, Scale) {
 }
 
 TEST_F(QuicBandwidthTest, BytesPerPeriod) {
-  EXPECT_EQ(2000u, QuicBandwidth::FromKBytesPerSecond(2000)
-                       .ToBytesPerPeriod(QuicTime::Delta::FromMilliseconds(1)));
-  EXPECT_EQ(2u, QuicBandwidth::FromKBytesPerSecond(2000)
-                    .ToKBytesPerPeriod(QuicTime::Delta::FromMilliseconds(1)));
+  EXPECT_EQ(2000u, QuicBandwidth::FromKBytesPerSecond(2000).ToBytesPerPeriod(
+                       QuicTime::Delta::FromMilliseconds(1)));
+  EXPECT_EQ(2u, QuicBandwidth::FromKBytesPerSecond(2000).ToKBytesPerPeriod(
+                    QuicTime::Delta::FromMilliseconds(1)));
   EXPECT_EQ(200000u, QuicBandwidth::FromKBytesPerSecond(2000).ToBytesPerPeriod(
                          QuicTime::Delta::FromMilliseconds(100)));
   EXPECT_EQ(200u, QuicBandwidth::FromKBytesPerSecond(2000).ToKBytesPerPeriod(

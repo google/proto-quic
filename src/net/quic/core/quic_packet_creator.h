@@ -10,8 +10,7 @@
 #ifndef NET_QUIC_CORE_QUIC_PACKET_CREATOR_H_
 #define NET_QUIC_CORE_QUIC_PACKET_CREATOR_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -119,13 +118,14 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // QuicStreamFrame to the returned SerializedPacket.  Sets
   // |num_bytes_consumed| to the number of bytes consumed to create the
   // QuicStreamFrame.
-  void CreateAndSerializeStreamFrame(QuicStreamId id,
-                                     const QuicIOVector& iov,
-                                     QuicStreamOffset iov_offset,
-                                     QuicStreamOffset stream_offset,
-                                     bool fin,
-                                     QuicAckListenerInterface* listener,
-                                     size_t* num_bytes_consumed);
+  void CreateAndSerializeStreamFrame(
+      QuicStreamId id,
+      const QuicIOVector& iov,
+      QuicStreamOffset iov_offset,
+      QuicStreamOffset stream_offset,
+      bool fin,
+      QuicReferenceCountedPointer<QuicAckListenerInterface> listener,
+      size_t* num_bytes_consumed);
 
   // Returns true if there are frames pending to be serialized.
   bool HasPendingFrames() const;
@@ -159,10 +159,11 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // Identical to AddSavedFrame, but allows the frame to be padded.
   bool AddPaddedSavedFrame(const QuicFrame& frame);
 
-  // Adds |listener| to the next serialized packet and notifies the
-  // std::listener with |length| as the number of acked bytes.
-  void AddAckListener(QuicAckListenerInterface* listener,
-                      QuicPacketLength length);
+  // Adds |listener| to the next serialized packet and notifies the listener
+  // with |length| as the number of acked bytes.
+  void AddAckListener(
+      QuicReferenceCountedPointer<QuicAckListenerInterface> listener,
+      QuicPacketLength length);
 
   // Creates a version negotiation packet which supports |supported_versions|.
   std::unique_ptr<QuicEncryptedPacket> SerializeVersionNegotiationPacket(

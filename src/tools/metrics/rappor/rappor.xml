@@ -910,16 +910,65 @@ components/rappor/rappor_parameters.h.
 </rappor-metric>
 
 <rappor-metric
+    name="Event.Latency.ScrollBegin.Touch.TimeToScrollUpdateSwapBegin2"
+    type="UMA_RAPPOR_TYPE">
+  <owner>nzolghadr@chromium.org</owner>
+  <owner>tdresser@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the website visited, along with the time between initial
+    creation of a touch event and the start of the frame swap on the GPU service
+    caused by the generated ScrollUpdate gesture event if that ScrollUpdate is
+    the first such event in a given scroll gesture event sequence. If no swap
+    was induced by the event, no recording is made.
+  </summary>
+  <string-field name="Domain">
+    <summary>
+      The domain+registry of the URL.
+    </summary>
+  </string-field>
+  <uint64-field name="Latency">
+    <summary>
+      Latency in microseconds representing first
+      Touch.TimeToScrollUpdateSwapBegin.
+    </summary>
+  </uint64-field>
+</rappor-metric>
+
+<rappor-metric
+    name="Event.Latency.ScrollBegin.Wheel.TimeToScrollUpdateSwapBegin2"
+    type="UMA_RAPPOR_TYPE">
+  <owner>nzolghadr@chromium.org</owner>
+  <owner>tdresser@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the website visited, along with  the time between initial
+    creation of a wheel event and the start of the frame swap on the GPU service
+    caused by the generated ScrollUpdate gesture event if that ScrollUpdate is
+    the first such event in a given scroll gesture event sequence. If no swap
+    was induced by the event, no recording is made.
+  </summary>
+  <string-field name="Domain">
+    <summary>
+      The domain+registry of the URL.
+    </summary>
+  </string-field>
+  <uint64-field name="Latency">
+    <summary>
+      Latency in microseconds representing first
+      Wheel.TimeToScrollUpdateSwapBegin.
+    </summary>
+  </uint64-field>
+</rappor-metric>
+
+<rappor-metric
     name="Event.Latency.ScrollUpdate.Touch.TimeToScrollUpdateSwapBegin2"
     type="UMA_RAPPOR_TYPE">
   <owner>nzolghadr@chromium.org</owner>
   <owner>tdresser@chromium.org</owner>
   <summary>
-    The eTLD+1 of the website visited, along with a the time between the initial
+    The eTLD+1 of the website visited, along with the time between the initial
     creation of a touch event and the start of the frame swap on the GPU service
-    caused by the generated ScrollUpdate gesture event if that ScrollUpdate is
-    the first such event in a given scroll gesture event sequence. If no swap
-    was induced by the event, no recording is made.
+    caused by the generated ScrollUpdate gesture event. If no swap was induced
+    by the event, no recording is made.
   </summary>
   <string-field name="Domain">
     <summary>

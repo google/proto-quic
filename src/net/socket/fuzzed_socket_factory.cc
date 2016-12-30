@@ -73,7 +73,7 @@ class FailingSSLClientSocket : public SSLClientSocket {
 
   void EnableTCPFastOpenIfSupported() override {}
 
-  bool WasNpnNegotiated() const override { return false; }
+  bool WasAlpnNegotiated() const override { return false; }
 
   NextProto GetNegotiatedProtocol() const override { return kProtoUnknown; }
 

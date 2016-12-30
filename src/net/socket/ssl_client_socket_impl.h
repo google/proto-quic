@@ -110,7 +110,7 @@ class SSLClientSocketImpl : public SSLClientSocket,
   void SetSubresourceSpeculation() override;
   void SetOmniboxSpeculation() override;
   bool WasEverUsed() const override;
-  bool WasNpnNegotiated() const override;
+  bool WasAlpnNegotiated() const override;
   NextProto GetNegotiatedProtocol() const override;
   bool GetSSLInfo(SSLInfo* ssl_info) override;
   void GetConnectionAttempts(ConnectionAttempts* out) const override;
@@ -277,7 +277,6 @@ class SSLClientSocketImpl : public SSLClientSocket,
   std::unique_ptr<PeerCertificateChain> server_cert_chain_;
   scoped_refptr<X509Certificate> server_cert_;
   CertVerifyResult server_cert_verify_result_;
-  std::string ocsp_response_;
   bool completed_connect_;
 
   // Set when Read() or Write() successfully reads or writes data to or from the

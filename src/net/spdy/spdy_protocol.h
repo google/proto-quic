@@ -72,8 +72,6 @@ const char kHttp2ConnectionHeaderPrefix[] = {
 const int kHttp2ConnectionHeaderPrefixSize =
     arraysize(kHttp2ConnectionHeaderPrefix);
 
-const char kHttp2VersionString[] = "HTTP/1.1";
-
 // Types of HTTP2 frames.
 enum SpdyFrameType {
   DATA,
@@ -130,13 +128,6 @@ enum Http2SettingsControlFlags {
   SETTINGS_FLAG_ACK = 0x01,
 };
 
-// Flags for settings within a SETTINGS frame.
-enum SpdySettingsFlags {
-  SETTINGS_FLAG_NONE = 0x00,
-  SETTINGS_FLAG_PLEASE_PERSIST = 0x01,
-  SETTINGS_FLAG_PERSISTED = 0x02,
-};
-
 enum SpdySettingsIds {
   // HPACK header table maximum size.
   SETTINGS_HEADER_TABLE_SIZE = 0x1,
@@ -153,6 +144,8 @@ enum SpdySettingsIds {
   SETTINGS_MAX_HEADER_LIST_SIZE = 0x6,
   SETTINGS_MAX = SETTINGS_MAX_HEADER_LIST_SIZE
 };
+
+using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 
 // Status codes for RST_STREAM frames.
 enum SpdyRstStreamStatus {
@@ -238,88 +231,84 @@ const unsigned int kHttp2RootStreamId = 0;
 
 typedef uint64_t SpdyPingId;
 
-typedef std::string SpdyProtocolId;
+// Returns true if a given on-the-wire enumeration of a frame type is valid
+// for a given protocol version, false otherwise.
+NET_EXPORT_PRIVATE bool IsValidFrameType(int frame_type_field);
 
-// TODO(hkhalil): Add direct testing for this? It won't increase coverage any,
-// but is good to do anyway.
-class NET_EXPORT_PRIVATE SpdyConstants {
- public:
-  // Returns true if a given on-the-wire enumeration of a frame type is valid
-  // for a given protocol version, false otherwise.
-  static bool IsValidFrameType(int frame_type_field);
+// Parses a frame type from an on-the-wire enumeration.
+// Behavior is undefined for invalid frame type fields; consumers should first
+// use IsValidFrameType() to verify validity of frame type fields.
+NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(int frame_type_field);
 
-  // Parses a frame type from an on-the-wire enumeration.
-  // Behavior is undefined for invalid frame type fields; consumers should first
-  // use IsValidFrameType() to verify validity of frame type fields.
-  static SpdyFrameType ParseFrameType(int frame_type_field);
+// Serializes a given frame type to the on-the-wire enumeration value.
+// Returns -1 on failure (I.E. Invalid frame type).
+NET_EXPORT_PRIVATE int SerializeFrameType(SpdyFrameType frame_type);
 
-  // Serializes a given frame type to the on-the-wire enumeration value.
-  // Returns -1 on failure (I.E. Invalid frame type).
-  static int SerializeFrameType(SpdyFrameType frame_type);
+// (HTTP/2) All standard frame types except WINDOW_UPDATE are
+// (stream-specific xor connection-level). Returns false iff we know
+// the given frame type does not align with the given streamID.
+NET_EXPORT_PRIVATE bool IsValidHTTP2FrameStreamId(
+    SpdyStreamId current_frame_stream_id,
+    SpdyFrameType frame_type_field);
 
-  // (HTTP/2) All standard frame types except WINDOW_UPDATE are
-  // (stream-specific xor connection-level). Returns false iff we know
-  // the given frame type does not align with the given streamID.
-  static bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
-                                        SpdyFrameType frame_type_field);
+// If |wire_setting_id| is the on-the-wire representation of a defined SETTINGS
+// parameter, parse it to |*setting_id| and return true.
+NET_EXPORT_PRIVATE bool ParseSettingsId(int wire_setting_id,
+                                        SpdySettingsIds* setting_id);
 
-  // If |wire_setting_id| is the on-the-wire representation of a defined
-  // SETTINGS parameter, parse it to |*setting_id| and return true.
-  static bool ParseSettingsId(int wire_setting_id, SpdySettingsIds* setting_id);
+// Return if |id| corresponds to a defined setting;
+// stringify |id| to |*settings_id_string| regardless.
+NET_EXPORT_PRIVATE bool SettingsIdToString(SpdySettingsIds id,
+                                           const char** settings_id_string);
 
-  // Return if |id| corresponds to a defined setting; stringify |id| to
-  // |*settings_id_string| regardless.
-  static bool SettingsIdToString(SpdySettingsIds id,
-                                 const char** settings_id_string);
+// Returns true if a given on-the-wire enumeration of a RST_STREAM status code
+// is valid, false otherwise.
+NET_EXPORT_PRIVATE bool IsValidRstStreamStatus(int rst_stream_status_field);
 
-  // Returns true if a given on-the-wire enumeration of a RST_STREAM status code
-  // is valid, false otherwise.
-  static bool IsValidRstStreamStatus(int rst_stream_status_field);
+// Parses a RST_STREAM status code from an on-the-wire enumeration.
+// Behavior is undefined for invalid RST_STREAM status code fields; consumers
+// should first use IsValidRstStreamStatus() to verify validity of RST_STREAM
+// status code fields..
+NET_EXPORT_PRIVATE SpdyRstStreamStatus
+ParseRstStreamStatus(int rst_stream_status_field);
 
-  // Parses a RST_STREAM status code from an on-the-wire enumeration.
-  // Behavior is undefined for invalid RST_STREAM status code fields; consumers
-  // should first use IsValidRstStreamStatus() to verify validity of RST_STREAM
-  // status code fields..
-  static SpdyRstStreamStatus ParseRstStreamStatus(int rst_stream_status_field);
+// Serializes a given RST_STREAM status code to the on-the-wire enumeration
+// value.  Returns -1 on failure (I.E. Invalid RST_STREAM status code for the
+// given version).
+NET_EXPORT_PRIVATE int SerializeRstStreamStatus(
+    SpdyRstStreamStatus rst_stream_status);
 
-  // Serializes a given RST_STREAM status code to the on-the-wire enumeration
-  // value.
-  // Returns -1 on failure (I.E. Invalid RST_STREAM status code for the given
-  // version).
-  static int SerializeRstStreamStatus(SpdyRstStreamStatus rst_stream_status);
+// Returns true if a given on-the-wire enumeration of a GOAWAY status code is
+// valid, false otherwise.
+NET_EXPORT_PRIVATE bool IsValidGoAwayStatus(int goaway_status_field);
 
-  // Returns true if a given on-the-wire enumeration of a GOAWAY status code is
-  // valid, false otherwise.
-  static bool IsValidGoAwayStatus(int goaway_status_field);
+// Parses a GOAWAY status from an on-the-wire enumeration.
+// Behavior is undefined for invalid GOAWAY status fields; consumers should
+// first use IsValidGoAwayStatus() to verify validity of GOAWAY status fields.
+NET_EXPORT_PRIVATE SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field);
 
-  // Parses a GOAWAY status from an on-the-wire enumeration.
-  // Behavior is undefined for invalid GOAWAY status fields; consumers should
-  // first use IsValidGoAwayStatus() to verify validity of GOAWAY status fields.
-  static SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field);
+// Serializes a given GOAWAY status to the on-the-wire enumeration value.
+// Returns -1 on failure (I.E. Invalid GOAWAY status for the given version).
+NET_EXPORT_PRIVATE int SerializeGoAwayStatus(SpdyGoAwayStatus status);
 
-  // Serializes a given GOAWAY status to the on-the-wire enumeration value.
-  // Returns -1 on failure (I.E. Invalid GOAWAY status for the given version).
-  static int SerializeGoAwayStatus(SpdyGoAwayStatus status);
-
-  // Frame type for non-control (i.e. data) frames.
-  static const int kDataFrameType;
-  // Size, in bytes, of the data frame header.
-  static const size_t kDataFrameMinimumSize;
-  // Number of octets in the frame header.
-  static const size_t kFrameHeaderSize;
-  // Maximum possible configurable size of a frame in octets.
-  static const size_t kMaxFrameSizeLimit;
-  // Size of a header block size field. Valid only for SPDY 3.
-  static const size_t kSizeOfSizeField;
-  // Per-header overhead for block size accounting in bytes.
-  static const size_t kPerHeaderOverhead;
-  // Initial window size for a stream in bytes.
-  static const int32_t kInitialStreamWindowSize;
-  // Initial window size for a session in bytes.
-  static const int32_t kInitialSessionWindowSize;
-  // The NPN string for HTTP2, "h2".
-  static const char kHttp2Npn[];
-};
+// Frame type for non-control (i.e. data) frames.
+const int kDataFrameType = 0;
+// Number of octets in the frame header.
+const size_t kFrameHeaderSize = 9;
+// Size, in bytes, of the data frame header.
+const size_t kDataFrameMinimumSize = kFrameHeaderSize;
+// Maximum possible configurable size of a frame in octets.
+const size_t kMaxFrameSizeLimit = kSpdyMaxFrameSizeLimit + kFrameHeaderSize;
+// Size of a header block size field. Valid only for SPDY 3.
+const size_t kSizeOfSizeField = sizeof(uint32_t);
+// Per-header overhead for block size accounting in bytes.
+const size_t kPerHeaderOverhead = 32;
+// Initial window size for a stream in bytes.
+const int32_t kInitialStreamWindowSize = 64 * 1024 - 1;
+// Initial window size for a session in bytes.
+const int32_t kInitialSessionWindowSize = 64 * 1024 - 1;
+// The NPN string for HTTP2, "h2".
+extern const char* const kHttp2Npn;
 
 // Variant type (i.e. tagged union) that is either a SPDY 3.x priority value,
 // or else an HTTP/2 stream dependency tuple {parent stream ID, weight,
@@ -592,33 +581,13 @@ class NET_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameWithStreamIdIR {
 
 class NET_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
  public:
-  // Associates flags with a value.
-  struct Value {
-    Value() : persist_value(false),
-              persisted(false),
-              value(0) {}
-    bool persist_value;
-    bool persisted;
-    int32_t value;
-  };
-  typedef std::map<SpdySettingsIds, Value> ValueMap;
-
   SpdySettingsIR();
-
   ~SpdySettingsIR() override;
 
   // Overwrites as appropriate.
-  const ValueMap& values() const { return values_; }
-  void AddSetting(SpdySettingsIds id,
-                  bool persist_value,
-                  bool persisted,
-                  int32_t value) {
-    values_[id].persist_value = persist_value;
-    values_[id].persisted = persisted;
-    values_[id].value = value;
-  }
+  const SettingsMap& values() const { return values_; }
+  void AddSetting(SpdySettingsIds id, int32_t value) { values_[id] = value; }
 
-  bool clear_settings() const { return clear_settings_; }
   bool is_ack() const { return is_ack_; }
   void set_is_ack(bool is_ack) {
     is_ack_ = is_ack;
@@ -627,8 +596,7 @@ class NET_EXPORT_PRIVATE SpdySettingsIR : public SpdyFrameIR {
   void Visit(SpdyFrameVisitor* visitor) const override;
 
  private:
-  ValueMap values_;
-  bool clear_settings_;
+  SettingsMap values_;
   bool is_ack_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdySettingsIR);

@@ -75,7 +75,7 @@ NET_EXPORT_PRIVATE void EncodeTreeHeadSignature(
 // Returns true if the list could be read and decoded successfully, false
 // otherwise (note that the validity of each individual SCT should be checked
 // separately).
-NET_EXPORT_PRIVATE bool DecodeSCTList(base::StringPiece* input,
+NET_EXPORT_PRIVATE bool DecodeSCTList(base::StringPiece input,
                                       std::vector<base::StringPiece>* output);
 
 // Decodes a single SCT from |input| to |output|.

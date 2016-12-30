@@ -132,7 +132,7 @@ bool UnixDomainClientSocket::WasEverUsed() const {
   return true;  // We don't care.
 }
 
-bool UnixDomainClientSocket::WasNpnNegotiated() const {
+bool UnixDomainClientSocket::WasAlpnNegotiated() const {
   return false;
 }
 

@@ -22,7 +22,7 @@ void ActionValues::GetOutputsAsSourceFiles(
       target->output_type() == Target::ACTION_FOREACH) {
     // Copy and foreach applies the outputs to the sources.
     SubstitutionWriter::ApplyListToSources(
-        target->settings(), outputs_, target->sources(), result);
+        target, target->settings(), outputs_, target->sources(), result);
   } else {
     // Actions (and anything else that happens to specify an output) just use
     // the output list with no substitution.

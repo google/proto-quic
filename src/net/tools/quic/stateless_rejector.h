@@ -79,7 +79,8 @@ class StatelessRejector {
   friend class ProcessClientHelloCallback;
 
   void ProcessClientHello(
-      scoped_refptr<ValidateClientHelloResultCallback::Result> result,
+      QuicReferenceCountedPointer<ValidateClientHelloResultCallback::Result>
+          result,
       std::unique_ptr<StatelessRejector> rejector,
       std::unique_ptr<StatelessRejector::ProcessDoneCallback> done_cb);
 
@@ -107,8 +108,8 @@ class StatelessRejector {
   CryptoHandshakeMessage chlo_;
   std::unique_ptr<CryptoHandshakeMessage> reply_;
   CryptoFramer crypto_framer_;
-  scoped_refptr<QuicSignedServerConfig> signed_config_;
-  scoped_refptr<QuicCryptoNegotiatedParameters> params_;
+  QuicReferenceCountedPointer<QuicSignedServerConfig> signed_config_;
+  QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;
 
   DISALLOW_COPY_AND_ASSIGN(StatelessRejector);
 };

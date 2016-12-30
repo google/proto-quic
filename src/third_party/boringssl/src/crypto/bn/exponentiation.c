@@ -876,6 +876,7 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
   int powerbufLen = 0;
   unsigned char *powerbuf = NULL;
   BIGNUM tmp, am;
+  BIGNUM *new_a = NULL;
 
   if (!BN_is_odd(m)) {
     OPENSSL_PUT_ERROR(BN, BN_R_CALLED_WITH_EVEN_MODULUS);
@@ -903,6 +904,15 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
     mont = new_mont;
   }
 
+  if (a->neg || BN_ucmp(a, m) >= 0) {
+    new_a = BN_new();
+    if (new_a == NULL ||
+        !BN_nnmod(new_a, a, m, ctx)) {
+      goto err;
+    }
+    a = new_a;
+  }
+
 #ifdef RSAZ_ENABLED
   /* If the size of the operands allow it, perform the optimized
    * RSAZ exponentiation. For further information see
@@ -914,16 +924,6 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
     }
     RSAZ_1024_mod_exp_avx2(rr->d, a->d, p->d, m->d, mont->RR.d, mont->n0[0]);
     rr->top = 16;
-    rr->neg = 0;
-    bn_correct_top(rr);
-    ret = 1;
-    goto err;
-  } else if ((8 == a->top) && (8 == p->top) && (BN_num_bits(m) == 512)) {
-    if (NULL == bn_wexpand(rr, 8)) {
-      goto err;
-    }
-    RSAZ_512_mod_exp(rr->d, a->d, p->d, m->d, mont->n0[0], mont->RR.d);
-    rr->top = 8;
     rr->neg = 0;
     bn_correct_top(rr);
     ret = 1;
@@ -991,12 +991,9 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
   }
 
   /* prepare a^1 in Montgomery domain */
-  if (a->neg || BN_ucmp(a, m) >= 0) {
-    if (!BN_nnmod(&am, a, m, ctx) ||
-        !BN_to_montgomery(&am, &am, mont, ctx)) {
-      goto err;
-    }
-  } else if (!BN_to_montgomery(&am, a, mont, ctx)) {
+  assert(!a->neg);
+  assert(BN_ucmp(a, m) < 0);
+  if (!BN_to_montgomery(&am, a, mont, ctx)) {
     goto err;
   }
 
@@ -1190,6 +1187,7 @@ int BN_mod_exp_mont_consttime(BIGNUM *rr, const BIGNUM *a, const BIGNUM *p,
 
 err:
   BN_MONT_CTX_free(new_mont);
+  BN_clear_free(new_a);
   if (powerbuf != NULL) {
     OPENSSL_cleanse(powerbuf, powerbufLen);
     OPENSSL_free(powerbufFree);
