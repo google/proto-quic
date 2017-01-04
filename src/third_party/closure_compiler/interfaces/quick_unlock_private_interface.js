@@ -32,6 +32,30 @@ QuickUnlockPrivate.prototype = {
   getActiveModes: assertNotReached,
 
   /**
+   * Checks if the given credential can be used for the given unlock mode.
+   * Enterprise policy can change credential requirements.
+   * @param {!chrome.quickUnlockPrivate.QuickUnlockMode} mode The quick unlock
+   *     mode that is used.
+   * @param {string} credential The given credential.
+   * @param {function(!chrome.quickUnlockPrivate.CredentialCheck):void}
+   *     onComplete Called with a list of warnings and errors the given
+   *     |credential| has (or an empty list if there are none).
+   * @see https://developer.chrome.com/extensions/quickUnlockPrivate#method-checkCredential
+   */
+  checkCredential: assertNotReached,
+
+  /**
+   * Gets the credential requirements for the given unlock mode.
+   * @param {!chrome.quickUnlockPrivate.QuickUnlockMode} mode The quick unlock
+   *     mode that is used.
+   * @param {function(!chrome.quickUnlockPrivate.CredentialRequirements):void}
+   *     onComplete Called with the credential requirements of the given
+   *     |mode|.
+   * @see https://developer.chrome.com/extensions/quickUnlockPrivate#method-getCredentialRequirements
+   */
+  getCredentialRequirements: assertNotReached,
+
+  /**
    * Update the set of quick unlock modes that are currently active/enabled.
    * @param {string} accountPassword The password associated with the account
    *     (e.g. the GAIA password). This is required to change the quick unlock

@@ -252,7 +252,12 @@ class DeviceTestShard(TestShard):
           self._TestTearDown()
           if result_type != base_test_result.ResultType.PASS:
             try:
-              device_recovery.RecoverDevice(self._device, self._env.blacklist)
+              # TODO(rnephew): Possible problem when restarting on N7 devices.
+              # Determine if this is true. crbug.com/667470
+              if 'Nexus 7' not in self._device.product_model:
+                device_recovery.RecoverDevice(self._device, self._env.blacklist)
+              else:
+                logging.critical('Not attempting device recovery.')
             except device_errors.CommandTimeoutError:
               logging.exception(
                   'Device failed to recover after failing %s.', test)

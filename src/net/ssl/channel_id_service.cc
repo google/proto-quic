@@ -201,9 +201,6 @@ class ChannelIDServiceJob {
   bool create_if_missing_;
 };
 
-// static
-const char ChannelIDService::kEPKIPassword[] = "";
-
 ChannelIDService::Request::Request() : service_(NULL) {
 }
 

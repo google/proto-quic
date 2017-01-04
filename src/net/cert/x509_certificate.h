@@ -145,20 +145,8 @@ class NET_EXPORT X509Certificate
                                                         size_t length);
 
 #if defined(USE_NSS_CERTS)
-  // Create an X509Certificate from the DER-encoded representation.
-  // |nickname| can be NULL if an auto-generated nickname is desired.
-  // Returns NULL on failure.
-  //
-  // This function differs from CreateFromBytes in that it takes a
-  // nickname that will be used when the certificate is imported into PKCS#11.
-  static scoped_refptr<X509Certificate> CreateFromBytesWithNickname(
-      const char* data,
-      size_t length,
-      const char* nickname);
-
   // The default nickname of the certificate, based on the certificate type
-  // passed in.  If this object was created using CreateFromBytesWithNickname,
-  // then this will return the nickname specified upon creation.
+  // passed in.
   std::string GetDefaultNickname(CertType type) const;
 #endif
 
@@ -460,14 +448,6 @@ class NET_EXPORT X509Certificate
   // Untrusted intermediate certificates associated with this certificate
   // that may be needed for chain building.
   OSCertHandles intermediate_ca_certs_;
-
-#if defined(USE_NSS_CERTS)
-  // This stores any default nickname that has been set on the certificate
-  // at creation time with CreateFromBytesWithNickname.
-  // If this is empty, then GetDefaultNickname will return a generated name
-  // based on the type of the certificate.
-  std::string default_nickname_;
-#endif
 
   DISALLOW_COPY_AND_ASSIGN(X509Certificate);
 };

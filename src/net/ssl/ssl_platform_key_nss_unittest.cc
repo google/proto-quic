@@ -74,7 +74,7 @@ TEST_P(SSLPlatformKeyNSSTest, KeyMatches) {
         crypto::ECPrivateKey::CreateFromPrivateKeyInfo(pkcs8_vector);
     ASSERT_TRUE(ec_private_key);
     std::vector<uint8_t> encrypted;
-    ASSERT_TRUE(ec_private_key->ExportEncryptedPrivateKey("", 1, &encrypted));
+    ASSERT_TRUE(ec_private_key->ExportEncryptedPrivateKey(&encrypted));
 
     SECItem encrypted_item = {siBuffer, encrypted.data(),
                               static_cast<unsigned>(encrypted.size())};

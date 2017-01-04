@@ -5,7 +5,10 @@
 package org.chromium.base;
 
 import android.os.Handler;
+import android.support.annotation.IntDef;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,19 +20,22 @@ import java.util.List;
 public class Promise<T> {
     // TODO(peconn): Implement rejection handlers that can recover from rejection.
 
-    // TODO(peconn): Add an IntDef here (https://crbug.com/623012).
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({UNFULFILLED, FULFILLED, REJECTED})
+    private @interface PromiseState {}
+
     private static final int UNFULFILLED = 0;
     private static final int FULFILLED = 1;
     private static final int REJECTED = 2;
 
+    @PromiseState
     private int mState = UNFULFILLED;
 
     private T mResult;
-    private final List<Callback<T>> mFulfillCallbacks = new LinkedList<Callback<T>>();
+    private final List<Callback<T>> mFulfillCallbacks = new LinkedList<>();
 
     private Exception mRejectReason;
-    private final List<Callback<Exception>> mRejectCallbacks =
-            new LinkedList<Callback<Exception>>();
+    private final List<Callback<Exception>> mRejectCallbacks = new LinkedList<>();
 
     private final Thread mThread;
     private final Handler mHandler;
@@ -165,7 +171,7 @@ public class Promise<T> {
         checkThread();
 
         // Create a new Promise to store the result of the function.
-        final Promise<R> promise = new Promise<R>();
+        final Promise<R> promise = new Promise<>();
 
         // Once this Promise is fulfilled:
         // - Apply the given function to the result.
@@ -197,7 +203,7 @@ public class Promise<T> {
         checkThread();
 
         // Create a new Promise to be returned.
-        final Promise<R> promise = new Promise<R>();
+        final Promise<R> promise = new Promise<>();
 
         // Once this Promise is fulfilled:
         // - Apply the given function to the result (giving us an inner Promise).
@@ -295,7 +301,7 @@ public class Promise<T> {
      * Convenience method to return a Promise fulfilled with the given result.
      */
     public static <T> Promise<T> fulfilled(T result) {
-        Promise<T> promise = new Promise<T>();
+        Promise<T> promise = new Promise<>();
         promise.fulfill(result);
         return promise;
     }

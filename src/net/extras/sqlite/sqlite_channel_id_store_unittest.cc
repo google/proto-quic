@@ -65,8 +65,8 @@ class SQLiteChannelIDStoreTest : public testing::Test {
     ASSERT_TRUE(asn1::ExtractSPKIFromDERCert(*cert_data, &spki));
     std::vector<uint8_t> public_key(spki.size());
     memcpy(public_key.data(), spki.data(), spki.size());
-    *key = crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
-        ChannelIDService::kEPKIPassword, private_key, public_key);
+    *key = crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(private_key,
+                                                                   public_key);
   }
 
   static base::Time GetTestCertExpirationTime() {

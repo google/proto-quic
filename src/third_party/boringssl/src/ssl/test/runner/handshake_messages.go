@@ -167,6 +167,7 @@ type clientHelloMsg struct {
 	customExtension         string
 	hasGREASEExtension      bool
 	pskBinderFirst          bool
+	shortHeaderSupported    bool
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -212,7 +213,8 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.sctListSupported == m1.sctListSupported &&
 		m.customExtension == m1.customExtension &&
 		m.hasGREASEExtension == m1.hasGREASEExtension &&
-		m.pskBinderFirst == m1.pskBinderFirst
+		m.pskBinderFirst == m1.pskBinderFirst &&
+		m.shortHeaderSupported == m1.shortHeaderSupported
 }
 
 func (m *clientHelloMsg) marshal() []byte {
@@ -314,9 +316,7 @@ func (m *clientHelloMsg) marshal() []byte {
 		extensions.addU16(extensionSupportedPoints)
 		supportedPointsList := extensions.addU16LengthPrefixed()
 		supportedPoints := supportedPointsList.addU8LengthPrefixed()
-		for _, pointFormat := range m.supportedPoints {
-			supportedPoints.addU8(pointFormat)
-		}
+		supportedPoints.addBytes(m.supportedPoints)
 	}
 	if m.hasKeyShares {
 		extensions.addU16(extensionKeyShare)
@@ -429,6 +429,10 @@ func (m *clientHelloMsg) marshal() []byte {
 		extensions.addU16(extensionCustom)
 		customExt := extensions.addU16LengthPrefixed()
 		customExt.addBytes([]byte(m.customExtension))
+	}
+	if m.shortHeaderSupported {
+		extensions.addU16(extensionShortHeader)
+		extensions.addU16(0) // Length is always 0
 	}
 	// The PSK extension must be last (draft-ietf-tls-tls13-18 section 4.2.6).
 	if len(m.pskIdentities) > 0 && !m.pskBinderFirst {
@@ -601,8 +605,7 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			if length != l+1 {
 				return false
 			}
-			m.supportedPoints = make([]uint8, l)
-			copy(m.supportedPoints, data[1:])
+			m.supportedPoints = data[1 : 1+l]
 		case extensionSessionTicket:
 			// http://tools.ietf.org/html/rfc5077#section-3.2
 			m.ticketSupported = true
@@ -802,6 +805,11 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.sctListSupported = true
+		case extensionShortHeader:
+			if length != 0 {
+				return false
+			}
+			m.shortHeaderSupported = true
 		case extensionCustom:
 			m.customExtension = string(data[:length])
 		}
@@ -831,6 +839,7 @@ type serverHelloMsg struct {
 	compressionMethod   uint8
 	customExtension     string
 	unencryptedALPN     string
+	shortHeader         bool
 	extensions          serverExtensions
 }
 
@@ -867,6 +876,11 @@ func (m *serverHelloMsg) marshal() []byte {
 	}
 
 	extensions := hello.addU16LengthPrefixed()
+
+	if m.shortHeader {
+		extensions.addU16(extensionShortHeader)
+		extensions.addU16(0) // Length
+	}
 
 	if vers >= VersionTLS13 {
 		if m.hasKeyShare {
@@ -996,6 +1010,11 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 					return false
 				}
 				m.earlyDataIndication = true
+			case extensionShortHeader:
+				if len(d) != 0 {
+					return false
+				}
+				m.shortHeader = true
 			default:
 				// Only allow the 3 extensions that are sent in
 				// the clear in TLS 1.3.
@@ -1071,6 +1090,7 @@ type serverExtensions struct {
 	npnAfterAlpn            bool
 	hasKeyShare             bool
 	keyShare                keyShareEntry
+	supportedPoints         []uint8
 }
 
 func (m *serverExtensions) marshal(extensions *byteBuilder) {
@@ -1164,6 +1184,13 @@ func (m *serverExtensions) marshal(extensions *byteBuilder) {
 		keyShare.addU16(uint16(m.keyShare.group))
 		keyExchange := keyShare.addU16LengthPrefixed()
 		keyExchange.addBytes(m.keyShare.keyExchange)
+	}
+	if len(m.supportedPoints) > 0 {
+		// http://tools.ietf.org/html/rfc4492#section-5.1.2
+		extensions.addU16(extensionSupportedPoints)
+		supportedPointsList := extensions.addU16LengthPrefixed()
+		supportedPoints := supportedPointsList.addU8LengthPrefixed()
+		supportedPoints.addBytes(m.supportedPoints)
 	}
 }
 
@@ -1265,7 +1292,15 @@ func (m *serverExtensions) unmarshal(data []byte, version uint16) bool {
 			if version >= VersionTLS13 {
 				return false
 			}
-			// Ignore this extension from the server.
+			// http://tools.ietf.org/html/rfc4492#section-5.5.2
+			if length < 1 {
+				return false
+			}
+			l := int(data[0])
+			if length != l+1 {
+				return false
+			}
+			m.supportedPoints = data[1 : 1+l]
 		case extensionSupportedCurves:
 			// The server can only send supported_curves in TLS 1.3.
 			if version < VersionTLS13 {

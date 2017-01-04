@@ -46,6 +46,18 @@ class MockSourceStream : public SourceStream {
   // pending read.
   void CompleteNextRead();
 
+  // Affects behavior or AddReadResult.  When set to true, each character in
+  // |data| passed to AddReadResult will be read as an individual byte, instead
+  // of all at once. Default to false.
+  // Note that setting it only affects future calls to AddReadResult, not
+  // previous ones.
+  void set_read_one_byte_at_a_time(bool read_one_byte_at_a_time) {
+    read_one_byte_at_a_time_ = read_one_byte_at_a_time;
+  }
+
+  // Returns true if a read is waiting to be completed.
+  bool awaiting_completion() const { return awaiting_completion_; }
+
  private:
   struct QueuedResult {
     QueuedResult(const char* data, int len, Error error, Mode mode);
@@ -56,6 +68,7 @@ class MockSourceStream : public SourceStream {
     const Mode mode;
   };
 
+  bool read_one_byte_at_a_time_;
   std::queue<QueuedResult> results_;
   bool awaiting_completion_;
   scoped_refptr<IOBuffer> dest_buffer_;

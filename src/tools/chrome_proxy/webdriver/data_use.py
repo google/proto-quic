@@ -11,7 +11,7 @@ from common import IntegrationTest
 
 class DataUseAscription(IntegrationTest):
 
-  def testCheckPageWithProxy(self):
+  def testDataUseAscription(self):
     ext_path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
                             os.pardir, 'chrome', 'test', 'data',
                             'chromeproxy', 'extension')

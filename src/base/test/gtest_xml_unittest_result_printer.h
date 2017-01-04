@@ -32,6 +32,8 @@ class XmlUnitTestResultPrinter : public testing::EmptyTestEventListener {
   void OnTestEnd(const testing::TestInfo& test_info) override;
   void OnTestCaseEnd(const testing::TestCase& test_case) override;
 
+  void WriteTestPartResult(const testing::TestPartResult& test_part_result);
+
   FILE* output_file_;
 
   DISALLOW_COPY_AND_ASSIGN(XmlUnitTestResultPrinter);

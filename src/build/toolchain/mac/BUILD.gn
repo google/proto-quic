@@ -431,6 +431,45 @@ mac_toolchain("clang_x64") {
   }
 }
 
+mac_toolchain("clang_x86") {
+  toolchain_args = {
+    current_cpu = "x86"
+    current_os = "mac"
+  }
+}
+
+mac_toolchain("clang_x86_v8_arm") {
+  toolchain_args = {
+    current_cpu = "x86"
+    v8_current_cpu = "arm"
+    current_os = "mac"
+  }
+}
+
+mac_toolchain("clang_x86_v8_mipsel") {
+  toolchain_args = {
+    current_cpu = "x86"
+    v8_current_cpu = "mipsel"
+    current_os = "mac"
+  }
+}
+
+mac_toolchain("clang_x64_v8_arm64") {
+  toolchain_args = {
+    current_cpu = "x64"
+    v8_current_cpu = "arm64"
+    current_os = "mac"
+  }
+}
+
+mac_toolchain("clang_x64_v8_mips64el") {
+  toolchain_args = {
+    current_cpu = "x64"
+    v8_current_cpu = "mips64el"
+    current_os = "mac"
+  }
+}
+
 if (is_ios) {
   mac_toolchain("ios_clang_arm") {
     toolchain_args = {

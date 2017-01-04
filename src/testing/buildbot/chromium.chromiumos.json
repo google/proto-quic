@@ -402,12 +402,6 @@
         "test": "url_unittests"
       },
       {
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "views_aura_mus_unittests"
-      },
-      {
         "args": [
           "--override-use-gl-with-osmesa-for-tests"
         ],
@@ -417,9 +411,6 @@
         "test": "views_mus_interactive_ui_tests"
       },
       {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests"
-        ],
         "swarming": {
           "can_use_on_swarming_builders": false
         },

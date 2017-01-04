@@ -6,8 +6,10 @@
 
 #include <stdint.h>
 
+#include "base/base64.h"
 #include "base/files/file_util.h"
 #include "base/logging.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/test/gtest_util.h"
 #include "base/test/launcher/test_launcher.h"
@@ -50,6 +52,7 @@ bool ProcessGTestOutput(const base::FilePath& output_file,
     STATE_INIT,
     STATE_TESTSUITE,
     STATE_TESTCASE,
+    STATE_TEST_RESULT,
     STATE_FAILURE,
     STATE_END,
   } state = STATE_INIT;
@@ -145,6 +148,68 @@ bool ProcessGTestOutput(const base::FilePath& output_file,
           state = STATE_FAILURE;
         } else if (node_name == "testcase" && xml_reader.IsClosingElement()) {
           // Deliberately empty.
+        } else if (node_name == "x-test-result-part" &&
+                   !xml_reader.IsClosingElement()) {
+          std::string result_type;
+          if (!xml_reader.NodeAttribute("type", &result_type))
+            return false;
+
+          std::string file_name;
+          if (!xml_reader.NodeAttribute("file", &file_name))
+            return false;
+
+          std::string line_number_str;
+          if (!xml_reader.NodeAttribute("line", &line_number_str))
+            return false;
+
+          int line_number;
+          if (!StringToInt(line_number_str, &line_number))
+            return false;
+
+          TestResultPart::Type type;
+          if (!TestResultPart::TypeFromString(result_type, &type))
+            return false;
+
+          TestResultPart test_result_part;
+          test_result_part.type = type;
+          test_result_part.file_name = file_name,
+          test_result_part.line_number = line_number;
+          DCHECK(!results->empty());
+          results->back().test_result_parts.push_back(test_result_part);
+
+          state = STATE_TEST_RESULT;
+        } else {
+          return false;
+        }
+        break;
+      case STATE_TEST_RESULT:
+        if (node_name == "summary" && !xml_reader.IsClosingElement()) {
+          std::string summary;
+          if (!xml_reader.ReadElementContent(&summary))
+            return false;
+
+          if (!Base64Decode(summary, &summary))
+            return false;
+
+          DCHECK(!results->empty());
+          DCHECK(!results->back().test_result_parts.empty());
+          results->back().test_result_parts.back().summary = summary;
+        } else if (node_name == "summary" && xml_reader.IsClosingElement()) {
+        } else if (node_name == "message" && !xml_reader.IsClosingElement()) {
+          std::string message;
+          if (!xml_reader.ReadElementContent(&message))
+            return false;
+
+          if (!Base64Decode(message, &message))
+            return false;
+
+          DCHECK(!results->empty());
+          DCHECK(!results->back().test_result_parts.empty());
+          results->back().test_result_parts.back().message = message;
+        } else if (node_name == "message" && xml_reader.IsClosingElement()) {
+        } else if (node_name == "x-test-result-part" &&
+                   xml_reader.IsClosingElement()) {
+          state = STATE_TESTCASE;
         } else {
           return false;
         }

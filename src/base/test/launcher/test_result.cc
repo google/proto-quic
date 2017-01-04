@@ -10,11 +10,52 @@
 
 namespace base {
 
+TestResultPart::TestResultPart() = default;
+TestResultPart::~TestResultPart() = default;
+
+TestResultPart::TestResultPart(const TestResultPart& other) = default;
+TestResultPart::TestResultPart(TestResultPart&& other) = default;
+TestResultPart& TestResultPart::operator=(const TestResultPart& other) =
+    default;
+TestResultPart& TestResultPart::operator=(TestResultPart&& other) = default;
+
+// static
+bool TestResultPart::TypeFromString(const std::string& str, Type* type) {
+  if (str == "success")
+    *type = kSuccess;
+  else if (str == "failure")
+    *type = kNonFatalFailure;
+  else if (str == "fatal_failure")
+    *type = kFatalFailure;
+  else
+    return false;
+  return true;
+}
+
+std::string TestResultPart::TypeAsString() const {
+  switch (type) {
+    case kSuccess:
+      return "success";
+    case kNonFatalFailure:
+      return "failure";
+    case kFatalFailure:
+      return "fatal_failure";
+    default:
+      NOTREACHED();
+  }
+  return "unknown";
+}
+
 TestResult::TestResult() : status(TEST_UNKNOWN) {
 }
 
 TestResult::~TestResult() {
 }
+
+TestResult::TestResult(const TestResult& other) = default;
+TestResult::TestResult(TestResult&& other) = default;
+TestResult& TestResult::operator=(const TestResult& other) = default;
+TestResult& TestResult::operator=(TestResult&& other) = default;
 
 std::string TestResult::StatusAsString() const {
   switch (status) {

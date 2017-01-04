@@ -25,6 +25,35 @@ chrome.quickUnlockPrivate.QuickUnlockMode = {
 };
 
 /**
+ * @enum {string}
+ * @see https://developer.chrome.com/extensions/quickUnlockPrivate#type-CredentialProblem
+ */
+chrome.quickUnlockPrivate.CredentialProblem = {
+  TOO_SHORT: 'TOO_SHORT',
+  TOO_LONG: 'TOO_LONG',
+  TOO_WEAK: 'TOO_WEAK',
+  CONTAINS_NONDIGIT: 'CONTAINS_NONDIGIT',
+};
+
+/**
+ * @typedef {{
+ *   errors: !Array<!chrome.quickUnlockPrivate.CredentialProblem>,
+ *   warnings: !Array<!chrome.quickUnlockPrivate.CredentialProblem>
+ * }}
+ * @see https://developer.chrome.com/extensions/quickUnlockPrivate#type-CredentialCheck
+ */
+chrome.quickUnlockPrivate.CredentialCheck;
+
+/**
+ * @typedef {{
+ *   minLength: number,
+ *   maxLength: number
+ * }}
+ * @see https://developer.chrome.com/extensions/quickUnlockPrivate#type-CredentialRequirements
+ */
+chrome.quickUnlockPrivate.CredentialRequirements;
+
+/**
  * Returns the set of quick unlock modes that are available for the user to use.
  * Some quick unlock modes may be disabled by policy.
  * @param {function(!Array<!chrome.quickUnlockPrivate.QuickUnlockMode>):void}
@@ -41,6 +70,30 @@ chrome.quickUnlockPrivate.getAvailableModes = function(onComplete) {};
  * @see https://developer.chrome.com/extensions/quickUnlockPrivate#method-getActiveModes
  */
 chrome.quickUnlockPrivate.getActiveModes = function(onComplete) {};
+
+/**
+ * Checks if the given credential can be used for the given unlock mode.
+ * Enterprise policy can change credential requirements.
+ * @param {!chrome.quickUnlockPrivate.QuickUnlockMode} mode The quick unlock
+ *     mode that is used.
+ * @param {string} credential The given credential.
+ * @param {function(!chrome.quickUnlockPrivate.CredentialCheck):void} onComplete
+ *     Called with a list of warnings and errors the given     |credential| has
+ *     (or an empty list if there are none).
+ * @see https://developer.chrome.com/extensions/quickUnlockPrivate#method-checkCredential
+ */
+chrome.quickUnlockPrivate.checkCredential = function(mode, credential, onComplete) {};
+
+/**
+ * Gets the credential requirements for the given unlock mode.
+ * @param {!chrome.quickUnlockPrivate.QuickUnlockMode} mode The quick unlock
+ *     mode that is used.
+ * @param {function(!chrome.quickUnlockPrivate.CredentialRequirements):void}
+ *     onComplete Called with the credential requirements of the given
+ *     |mode|.
+ * @see https://developer.chrome.com/extensions/quickUnlockPrivate#method-getCredentialRequirements
+ */
+chrome.quickUnlockPrivate.getCredentialRequirements = function(mode, onComplete) {};
 
 /**
  * Update the set of quick unlock modes that are currently active/enabled.

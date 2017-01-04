@@ -34,7 +34,7 @@ class HtmlInlineUnittest(unittest.TestCase):
               href="really-long-long-long-long-long-test.css">
         </head>
         <body>
-          <include src="test.html">
+          <include src='test.html'>
           <include
               src="really-long-long-long-long-long-test-file-omg-so-long.html">
           <iron-icon src="[[icon]]"></iron-icon><!-- Should be ignored. -->
@@ -89,6 +89,9 @@ class HtmlInlineUnittest(unittest.TestCase):
       <html>
         <if expr="lang == 'fr'">
           bonjour
+        </if>
+        <if expr='lang == "de"'>
+          hallo
         </if>
         </if>
       </html>
@@ -397,6 +400,8 @@ class HtmlInlineUnittest(unittest.TestCase):
       >
       </include>
       <img src="img1.png">
+      <include src='single-double-quotes.html"></include>
+      <include src="double-single-quotes.html'></include>
       </html>
       ''',
       'style1.css': '''h1 {}''',
@@ -419,6 +424,8 @@ class HtmlInlineUnittest(unittest.TestCase):
       <h2></h2>
       <h2></h2>
       <img src="data:image/png;base64,YWJj">
+      <include src='single-double-quotes.html"></include>
+      <include src="double-single-quotes.html'></include>
       </html>
       '''
 

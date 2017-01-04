@@ -174,7 +174,6 @@ crypto_sources = [
   "src/crypto/obj/obj.c",
   "src/crypto/obj/obj_dat.h",
   "src/crypto/obj/obj_xref.c",
-  "src/crypto/obj/obj_xref.h",
   "src/crypto/pem/pem_all.c",
   "src/crypto/pem/pem_info.c",
   "src/crypto/pem/pem_lib.c",

@@ -227,8 +227,7 @@ void SQLiteChannelIDStore::Backend::LoadInBackground(
     smt.ColumnBlobAsVector(2, &public_key_from_db);
     std::unique_ptr<crypto::ECPrivateKey> key(
         crypto::ECPrivateKey::CreateFromEncryptedPrivateKeyInfo(
-            ChannelIDService::kEPKIPassword, private_key_from_db,
-            public_key_from_db));
+            private_key_from_db, public_key_from_db));
     if (!key)
       continue;
     std::unique_ptr<DefaultChannelIDStore::ChannelID> channel_id(
@@ -498,8 +497,7 @@ void SQLiteChannelIDStore::Backend::Commit() {
         add_statement.Reset(true);
         add_statement.BindString(0, po->channel_id().server_identifier());
         std::vector<uint8_t> private_key, public_key;
-        if (!po->channel_id().key()->ExportEncryptedPrivateKey(
-                ChannelIDService::kEPKIPassword, 1, &private_key))
+        if (!po->channel_id().key()->ExportEncryptedPrivateKey(&private_key))
           continue;
         if (!po->channel_id().key()->ExportPublicKey(&public_key))
           continue;

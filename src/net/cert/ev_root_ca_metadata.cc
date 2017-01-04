@@ -41,7 +41,7 @@ struct EVMetadata {
   SHA1HashValue fingerprint;
 
   // The EV policy OIDs of the root CA.
-  const char policy_oids[kMaxOIDsPerCA][kMaxOIDLength];
+  char policy_oids[kMaxOIDsPerCA][kMaxOIDLength];
 };
 
 static const EVMetadata ev_root_ca_metadata[] = {

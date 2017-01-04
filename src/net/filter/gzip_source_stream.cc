@@ -10,6 +10,7 @@
 #include "base/bind.h"
 #include "base/bit_cast.h"
 #include "base/logging.h"
+#include "base/memory/ref_counted.h"
 #include "net/base/io_buffer.h"
 #include "third_party/zlib/zlib.h"
 
@@ -20,6 +21,14 @@ namespace {
 const char kDeflate[] = "DEFLATE";
 const char kGzip[] = "GZIP";
 const char kGzipFallback[] = "GZIP_FALLBACK";
+
+// For deflate streams, if more than this many bytes have been received without
+// an error and without adding a Zlib header, assume the original stream had a
+// Zlib header. In practice, don't need nearly this much data, but since the
+// detection logic is a heuristic, best to be safe. Data is freed once it's been
+// determined whether the stream has a zlib header or not, so larger values
+// shouldn't affect memory usage, in practice.
+const int kMaxZlibHeaderSniffBytes = 1000;
 
 }  // namespace
 
@@ -42,9 +51,9 @@ std::unique_ptr<GzipSourceStream> GzipSourceStream::Create(
 GzipSourceStream::GzipSourceStream(std::unique_ptr<SourceStream> upstream,
                                    SourceStream::SourceType type)
     : FilterSourceStream(type, std::move(upstream)),
-      zlib_header_added_(false),
       gzip_footer_bytes_left_(0),
-      input_state_(STATE_START) {}
+      input_state_(STATE_START),
+      replay_state_(STATE_COMPRESSED_BODY) {}
 
 bool GzipSourceStream::Init() {
   zlib_stream_.reset(new z_stream);
@@ -81,7 +90,7 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
                                  IOBuffer* input_buffer,
                                  int input_buffer_size,
                                  int* consumed_bytes,
-                                 bool /*upstream_end_reached*/) {
+                                 bool upstream_end_reached) {
   *consumed_bytes = 0;
   char* input_data = input_buffer->data();
   int input_data_size = input_buffer_size;
@@ -92,7 +101,7 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
     switch (state) {
       case STATE_START: {
         if (type() == TYPE_DEFLATE) {
-          input_state_ = STATE_COMPRESSED_BODY;
+          input_state_ = STATE_SNIFFING_DEFLATE_HEADER;
           break;
         }
         // If this stream is not really gzipped as detected by
@@ -106,6 +115,8 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
         break;
       }
       case STATE_GZIP_HEADER: {
+        DCHECK_NE(TYPE_DEFLATE, type());
+
         const size_t kGzipFooterBytes = 8;
         const char* end = nullptr;
         GZipHeader::Status status =
@@ -125,6 +136,83 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
         }
         break;
       }
+      case STATE_SNIFFING_DEFLATE_HEADER: {
+        DCHECK_EQ(TYPE_DEFLATE, type());
+
+        zlib_stream_.get()->next_in = bit_cast<Bytef*>(input_data);
+        zlib_stream_.get()->avail_in = input_data_size;
+        zlib_stream_.get()->next_out = bit_cast<Bytef*>(output_buffer->data());
+        zlib_stream_.get()->avail_out = output_buffer_size;
+
+        int ret = inflate(zlib_stream_.get(), Z_NO_FLUSH);
+
+        // On error, try adding a zlib header and replaying the response. Note
+        // that data just received doesn't have to be replayed, since it hasn't
+        // been removed from input_data yet, only data from previous FilterData
+        // calls needs to be replayed.
+        if (ret != Z_STREAM_END && ret != Z_OK) {
+          if (!InsertZlibHeader())
+            return ERR_CONTENT_DECODING_FAILED;
+
+          input_state_ = STATE_REPLAY_DATA;
+          // |replay_state_| should still have its initial value.
+          DCHECK_EQ(STATE_COMPRESSED_BODY, replay_state_);
+          break;
+        }
+
+        int bytes_used = input_data_size - zlib_stream_.get()->avail_in;
+        bytes_out = output_buffer_size - zlib_stream_.get()->avail_out;
+        // If any bytes are output, enough total bytes have been received, or at
+        // the end of the stream, assume the response had a valid Zlib header.
+        if (bytes_out > 0 ||
+            bytes_used + replay_data_.size() >= kMaxZlibHeaderSniffBytes ||
+            ret == Z_STREAM_END) {
+          std::move(replay_data_);
+          if (ret == Z_STREAM_END) {
+            input_state_ = STATE_GZIP_FOOTER;
+          } else {
+            input_state_ = STATE_COMPRESSED_BODY;
+          }
+        } else {
+          replay_data_.append(input_data, bytes_used);
+        }
+
+        input_data_size -= bytes_used;
+        input_data += bytes_used;
+        break;
+      }
+      case STATE_REPLAY_DATA: {
+        DCHECK_EQ(TYPE_DEFLATE, type());
+
+        if (replay_data_.empty()) {
+          std::move(replay_data_);
+          input_state_ = replay_state_;
+          break;
+        }
+
+        // Call FilterData recursively, after updating |input_state_|, with
+        // |replay_data_|. This recursive call makes handling data from
+        // |replay_data_| and |input_buffer| much simpler than the alternative
+        // operations, though it's not pretty.
+        input_state_ = replay_state_;
+        int bytes_used;
+        scoped_refptr<IOBuffer> replay_buffer(
+            new WrappedIOBuffer(replay_data_.data()));
+        int result =
+            FilterData(output_buffer, output_buffer_size, replay_buffer.get(),
+                       replay_data_.size(), &bytes_used, upstream_end_reached);
+        replay_data_.erase(0, bytes_used);
+        // Back up resulting state, and return state to STATE_REPLAY_DATA.
+        replay_state_ = input_state_;
+        input_state_ = STATE_REPLAY_DATA;
+
+        // On error, or if bytes were read, just return result immediately.
+        // Could continue consuming data in the success case, but simplest not
+        // to.
+        if (result != 0)
+          return result;
+        break;
+      }
       case STATE_COMPRESSED_BODY: {
         DCHECK(!state_compressed_entered);
         DCHECK_LE(0, input_data_size);
@@ -136,25 +224,6 @@ int GzipSourceStream::FilterData(IOBuffer* output_buffer,
         zlib_stream_.get()->avail_out = output_buffer_size;
 
         int ret = inflate(zlib_stream_.get(), Z_NO_FLUSH);
-
-        // Sometimes misconfigured servers omit the zlib header, relying on
-        // clients to splice it back in.
-        if (ret < 0 && !zlib_header_added_) {
-          zlib_header_added_ = true;
-          if (!InsertZlibHeader())
-            return ERR_CONTENT_DECODING_FAILED;
-
-          zlib_stream_.get()->next_in = bit_cast<Bytef*>(input_data);
-          zlib_stream_.get()->avail_in = input_data_size;
-          zlib_stream_.get()->next_out =
-              bit_cast<Bytef*>(output_buffer->data());
-          zlib_stream_.get()->avail_out = output_buffer_size;
-
-          ret = inflate(zlib_stream_.get(), Z_NO_FLUSH);
-          // TODO(xunjieli): add a histogram to see how often this happens. The
-          // original bug for this behavior was ancient and maybe it doesn't
-          // happen in the wild any more? crbug.com/649339
-        }
         if (ret != Z_STREAM_END && ret != Z_OK)
           return ERR_CONTENT_DECODING_FAILED;
 

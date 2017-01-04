@@ -79,6 +79,57 @@ Dst GetMaxConvertibleToFloat() {
 
 namespace base {
 namespace internal {
+
+// Test corner case promotions used
+static_assert(IsIntegerArithmeticSafe<int32_t, int8_t, int8_t>::value, "");
+static_assert(IsIntegerArithmeticSafe<int32_t, int16_t, int8_t>::value, "");
+static_assert(IsIntegerArithmeticSafe<int32_t, int8_t, int16_t>::value, "");
+static_assert(!IsIntegerArithmeticSafe<int32_t, int32_t, int8_t>::value, "");
+static_assert(BigEnoughPromotion<int16_t, int8_t>::is_contained, "");
+static_assert(BigEnoughPromotion<int32_t, uint32_t>::is_contained, "");
+static_assert(BigEnoughPromotion<intmax_t, int8_t>::is_contained, "");
+static_assert(!BigEnoughPromotion<uintmax_t, int8_t>::is_contained, "");
+static_assert(
+    std::is_same<BigEnoughPromotion<int16_t, int8_t>::type, int16_t>::value,
+    "");
+static_assert(
+    std::is_same<BigEnoughPromotion<int32_t, uint32_t>::type, int64_t>::value,
+    "");
+static_assert(
+    std::is_same<BigEnoughPromotion<intmax_t, int8_t>::type, intmax_t>::value,
+    "");
+static_assert(
+    std::is_same<BigEnoughPromotion<uintmax_t, int8_t>::type, uintmax_t>::value,
+    "");
+static_assert(BigEnoughPromotion<int16_t, int8_t>::is_contained, "");
+static_assert(BigEnoughPromotion<int32_t, uint32_t>::is_contained, "");
+static_assert(BigEnoughPromotion<intmax_t, int8_t>::is_contained, "");
+static_assert(!BigEnoughPromotion<uintmax_t, int8_t>::is_contained, "");
+static_assert(
+    std::is_same<FastIntegerArithmeticPromotion<int16_t, int8_t>::type,
+                 int32_t>::value,
+    "");
+static_assert(
+    std::is_same<FastIntegerArithmeticPromotion<int32_t, uint32_t>::type,
+                 int64_t>::value,
+    "");
+static_assert(
+    std::is_same<FastIntegerArithmeticPromotion<intmax_t, int8_t>::type,
+                 intmax_t>::value,
+    "");
+static_assert(
+    std::is_same<FastIntegerArithmeticPromotion<uintmax_t, int8_t>::type,
+                 uintmax_t>::value,
+    "");
+static_assert(FastIntegerArithmeticPromotion<int16_t, int8_t>::is_contained,
+              "");
+static_assert(FastIntegerArithmeticPromotion<int32_t, uint32_t>::is_contained,
+              "");
+static_assert(!FastIntegerArithmeticPromotion<intmax_t, int8_t>::is_contained,
+              "");
+static_assert(!FastIntegerArithmeticPromotion<uintmax_t, int8_t>::is_contained,
+              "");
+
 template <typename U>
 U GetNumericValueForTest(const CheckedNumeric<U>& src) {
   return src.state_.value();
@@ -166,6 +217,14 @@ static void TestSpecializedArithmetic(
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) / -1);
   TEST_EXPECTED_VALUE(0, CheckedNumeric<Dst>(-1) / 2);
   TEST_EXPECTED_FAILURE(CheckedNumeric<Dst>(DstLimits::lowest()) * -1);
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      CheckedNumeric<Dst>(DstLimits::lowest() + 1) * Dst(-1));
+  TEST_EXPECTED_VALUE(DstLimits::max(),
+                      CheckedNumeric<Dst>(-1) * Dst(DstLimits::lowest() + 1));
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      CheckedNumeric<Dst>(DstLimits::lowest()) * Dst(1));
+  TEST_EXPECTED_VALUE(DstLimits::lowest(),
+                      CheckedNumeric<Dst>(1) * Dst(DstLimits::lowest()));
   TEST_EXPECTED_VALUE(DstLimits::lowest(),
                       MakeCheckedNum(DstLimits::lowest()).UnsignedAbs());
   TEST_EXPECTED_VALUE(DstLimits::max(),

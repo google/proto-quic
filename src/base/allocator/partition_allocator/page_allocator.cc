@@ -216,6 +216,12 @@ void decommitSystemPages(void* addr, size_t len) {
   DCHECK(!(len & kSystemPageOffsetMask));
 #if defined(OS_POSIX)
   int ret = madvise(addr, len, MADV_FREE);
+  if (ret != 0 && errno == EINVAL) {
+    // MADV_FREE only works on Linux 4.5+ . If request failed,
+    // retry with older MADV_DONTNEED . Note that MADV_FREE
+    // being defined at compile time doesn't imply runtime support.
+    ret = madvise(addr, len, MADV_DONTNEED);
+  }
   CHECK(!ret);
 #else
   setSystemPagesInaccessible(addr, len);

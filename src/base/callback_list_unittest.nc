@@ -35,7 +35,7 @@ class FooListener {
 };
 
 
-#if defined(NCTEST_MOVE_ONLY_TYPE_PARAMETER)  // [r"fatal error: call to deleted constructor"]
+#if defined(NCTEST_MOVE_ONLY_TYPE_PARAMETER)  // [r"fatal error: call to (implicitly-)?deleted( copy)? constructor"]
 
 // Callbacks run with a move-only typed parameter.
 //

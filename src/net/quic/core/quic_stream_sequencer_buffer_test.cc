@@ -11,7 +11,6 @@
 
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/rand_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
@@ -821,8 +820,8 @@ class QuicStreamSequencerBufferRandomIOTest
     bytes_to_buffer_ = 2 * max_capacity_bytes_;
     Initialize();
 
-    uint32_t seed = base::RandInt(0, std::numeric_limits<int32_t>::max());
-    LOG(INFO) << "RandomWriteAndProcessInPlace test seed is " << seed;
+    uint64_t seed = QuicRandom::GetInstance()->RandUint64();
+    VLOG(1) << "**** The current seed is " << seed << " ****";
     rng_.set_seed(seed);
   }
 

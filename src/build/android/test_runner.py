@@ -31,11 +31,9 @@ from devil.utils import run_tests_helper
 from pylib import constants
 from pylib.base import base_test_result
 from pylib.base import environment_factory
-from pylib.base import test_dispatcher
 from pylib.base import test_instance_factory
 from pylib.base import test_run_factory
 from pylib.constants import host_paths
-from pylib.linker import setup as linker_setup
 from pylib.results import json_results
 from pylib.results import report_results
 
@@ -80,6 +78,13 @@ def AddCommonOptions(parser):
                      type=int, default=2,
                      help=('Number of retries for a test before '
                            'giving up (default: %(default)s).'))
+  group.add_argument('--repeat', '--gtest_repeat', '--gtest-repeat',
+                     dest='repeat', type=int, default=0,
+                     help='Number of times to repeat the specified set of '
+                          'tests.')
+  group.add_argument('--break-on-failure', '--break_on_failure',
+                     dest='break_on_failure', action='store_true',
+                     help='Whether to break on failure.')
   group.add_argument('-v',
                      '--verbose',
                      dest='verbose_count',
@@ -220,13 +225,6 @@ def AddGTestOptions(parser):
   group.add_argument('--delete-stale-data', dest='delete_stale_data',
                      action='store_true',
                      help='Delete stale test data on the device.')
-  group.add_argument('--repeat', '--gtest_repeat', '--gtest-repeat',
-                     dest='repeat', type=int, default=0,
-                     help='Number of times to repeat the specified set of '
-                          'tests.')
-  group.add_argument('--break-on-failure', '--break_on_failure',
-                     dest='break_on_failure', action='store_true',
-                     help='Whether to break on failure.')
   group.add_argument('--extract-test-list-from-filter',
                      action='store_true',
                      help='When a test filter is specified, and the list of '
@@ -259,6 +257,8 @@ def AddLinkerTestOptions(parser):
   group = parser.add_argument_group('Linker Test Options')
   group.add_argument('-f', '--gtest-filter', dest='test_filter',
                      help='googletest-style filter string.')
+  group.add_argument('--test-apk', type=os.path.realpath,
+                     help='Path to the linker test APK.')
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
 
@@ -270,14 +270,6 @@ def AddJavaTestOptions(argument_group):
       '-f', '--test-filter', '--gtest_filter', '--gtest-filter',
       dest='test_filter',
       help=('Test filter (if not fully qualified, will run all matches).'))
-  argument_group.add_argument(
-      '--repeat', '--gtest_repeat', '--gtest-repeat', dest='repeat',
-      type=int, default=0,
-      help='Number of times to repeat the specified set of tests.')
-  argument_group.add_argument(
-      '--break-on-failure', '--break_on_failure',
-      dest='break_on_failure', action='store_true',
-      help='Whether to break on failure.')
   argument_group.add_argument(
       '-A', '--annotation', dest='annotation_str',
       help=('Comma-separated list of annotations. Run only tests with any of '
@@ -421,15 +413,6 @@ def AddJUnitTestOptions(parser):
   group.add_argument(
       '--package-filter', dest='package_filter',
       help='Filters tests by package.')
-  # TODO(mikecase): Add --repeat and --break-on-failure to common options.
-  # These options are required for platform-mode support.
-  group.add_argument(
-      '--repeat', dest='repeat', type=int, default=0,
-      help='Number of times to repeat the specified set of tests.')
-  group.add_argument(
-      '--break-on-failure', '--break_on_failure',
-      dest='break_on_failure', action='store_true',
-      help='Whether to break on failure.')
   group.add_argument(
       '--runner-filter', dest='runner_filter',
       help='Filters tests by runner class. Must be fully qualified.')
@@ -460,13 +443,6 @@ def AddMonkeyTestOptions(parser):
       '--seed', type=int,
       help='Seed value for pseudo-random generator. Same seed value generates '
            'the same sequence of events. Seed is randomized by default.')
-  group.add_argument(
-      '--repeat', dest='repeat', type=int, default=0,
-      help='Number of times to repeat the specified set of tests.')
-  group.add_argument(
-      '--break-on-failure', '--break_on_failure',
-      dest='break_on_failure', action='store_true',
-      help='Whether to break on failure.')
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
 
@@ -559,12 +535,6 @@ def AddPerfTestOptions(parser):
       'given level.')
   group.add_argument('--known-devices-file', help='Path to known device list.')
   group.add_argument(
-      '--repeat', dest='repeat', type=int, default=0,
-      help='Number of times to repeat the specified set of tests.')
-  group.add_argument(
-      '--break-on-failure', '--break_on_failure', dest='break_on_failure',
-      action='store_true', help='Whether to break on failure.')
-  group.add_argument(
       '--write-buildbot-json', action='store_true',
       help='Whether to output buildbot json.')
   # TODO(rnephew): Move up to top level options when implemented on all tests.
@@ -582,25 +552,6 @@ def AddPythonTestOptions(parser):
       choices=constants.PYTHON_UNIT_TEST_SUITES.keys(),
       help='Name of the test suite to run.')
   AddCommonOptions(parser)
-
-
-def _RunLinkerTests(args, devices):
-  """Subcommand of RunTestsCommands which runs linker tests."""
-  runner_factory, tests = linker_setup.Setup(args, devices)
-
-  results, exit_code = test_dispatcher.RunTests(
-      tests, runner_factory, devices, shard=True, test_timeout=60,
-      num_retries=args.num_retries)
-
-  report_results.LogFull(
-      results=results,
-      test_type='Linker test',
-      test_package='ChromiumLinkerTest')
-
-  if args.json_results_file:
-    json_results.GenerateJsonResultsFile([results], args.json_results_file)
-
-  return exit_code
 
 
 def _RunPythonTests(args):
@@ -653,7 +604,7 @@ def _GetAttachedDevices(blacklist_file, test_device, enable_cache, num_retries):
 
 
 _DEFAULT_PLATFORM_MODE_TESTS = ['gtest', 'instrumentation', 'junit',
-                                'monkey', 'perf']
+                                'linker', 'monkey', 'perf']
 
 
 def RunTestsCommand(args): # pylint: disable=too-many-return-statements
@@ -685,13 +636,7 @@ def RunTestsCommand(args): # pylint: disable=too-many-return-statements
     os.unlink(ports._TEST_SERVER_PORT_LOCKFILE)
   # pylint: enable=protected-access
 
-  def get_devices():
-    return _GetAttachedDevices(args.blacklist_file, args.test_device,
-                               args.enable_device_cache, args.num_retries)
-
-  if command == 'linker':
-    return _RunLinkerTests(args, get_devices())
-  elif command == 'python':
+  if command == 'python':
     return _RunPythonTests(args)
   else:
     raise Exception('Unknown test type.')
@@ -702,6 +647,7 @@ _SUPPORTED_IN_PLATFORM_MODE = [
   'gtest',
   'instrumentation',
   'junit',
+  'linker',
   'monkey',
   'perf',
 ]

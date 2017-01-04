@@ -34,7 +34,7 @@ DIST_SUBSTR = '%DISTRIBUTION%'
 
 # Matches beginning of an "if" block with trailing spaces.
 _BEGIN_IF_BLOCK = lazy_re.compile(
-    '<if [^>]*?expr="(?P<expression>[^"]*)"[^>]*?>\s*')
+    '<if [^>]*?expr=("(?P<expr1>[^">]*)"|\'(?P<expr2>[^\'>]*)\')[^>]*?>\s*')
 
 # Matches ending of an "if" block with preceding spaces.
 _END_IF_BLOCK = lazy_re.compile('\s*</if>')
@@ -44,7 +44,8 @@ _STYLESHEET_RE = lazy_re.compile(
     '<link rel="stylesheet"[^>]+?href="(?P<filename>[^"]*)".*?>(\s*</link>)?',
     re.DOTALL)
 _INCLUDE_RE = lazy_re.compile(
-    '<include[^>]+?src="(?P<filename>[^"\']*)".*?>(\s*</include>)?',
+    '<include[^>]+?src=("(?P<file1>[^">]*)"|\'(?P<file2>[^\'>]*)\').*?>' +
+    '(\s*</include>)?',
     re.DOTALL)
 _SRC_RE = lazy_re.compile(
     r'<(?!script)(?:[^>]+?\s)src=(?P<quote>")(?!\[\[|{{)(?P<filename>[^"\']*)\1',
@@ -168,7 +169,8 @@ def DoInline(
         filename_expansion_function=filename_expansion_function)
 
   def GetFilepath(src_match, base_path = input_filepath):
-    filename = src_match.group('filename')
+    matches = src_match.groupdict().iteritems()
+    filename = [v for k, v in matches if k.startswith('file') and v][0]
 
     if filename.find(':') != -1:
       # filename is probably a URL, which we don't want to bother inlining
@@ -180,8 +182,9 @@ def DoInline(
     return os.path.normpath(os.path.join(base_path, filename))
 
   def IsConditionSatisfied(src_match):
-    expression = src_match.group('expression')
-    return grd_node is None or grd_node.EvaluateCondition(expression)
+    expr1 = src_match.group('expr1') or ''
+    expr2 = src_match.group('expr2') or ''
+    return grd_node is None or grd_node.EvaluateCondition(expr1 + expr2)
 
   def CheckConditionalElements(str):
     """Helper function to conditionally inline inner elements"""

@@ -1,6 +1,7 @@
 // Copyright (c) 2011 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #ifndef BASE_TEMPLATE_UTIL_H_
 #define BASE_TEMPLATE_UTIL_H_
 
@@ -22,11 +23,14 @@
 #define CR_USE_FALLBACKS_FOR_OLD_GLIBCXX
 #endif
 
-// Some chromeos bots are using experimental 5.0 for some reason
-// which has partial support for type_traits, but misses a smaller subset
-// while removing some of the older non-standard stuff.
+// Some versions of libstdc++ have partial support for type_traits, but misses
+// a smaller subset while removing some of the older non-standard stuff.
+#define CR_GLIBCXX_4_8_4 20141219
+#define CR_GLIBCXX_4_9_2 20150426
 #define CR_GLIBCXX_5_0_0 20150123
-#if defined(__GLIBCXX__) && (__GLIBCXX__ == CR_GLIBCXX_5_0_0)
+#if defined(__GLIBCXX__) &&                                                \
+    (__GLIBCXX__ == CR_GLIBCXX_4_8_4 || __GLIBCXX__ == CR_GLIBCXX_4_9_2 || \
+     __GLIBCXX__ == CR_GLIBCXX_5_0_0)
 #define CR_USE_FALLBACKS_FOR_OLD_EXPERIMENTAL_GLIBCXX
 #endif
 

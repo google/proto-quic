@@ -137,6 +137,61 @@ TEST(Target, DependentConfigs) {
   EXPECT_EQ(&all, a_fwd.all_dependent_configs()[0].ptr);
 }
 
+// Tests that dependent configs don't propagate between toolchains.
+TEST(Target, NoDependentConfigsBetweenToolchains) {
+  TestWithScope setup;
+  Err err;
+
+  // Create another toolchain.
+  Toolchain other_toolchain(setup.settings(),
+                            Label(SourceDir("//other/"), "toolchain"));
+  TestWithScope::SetupToolchain(&other_toolchain);
+
+  // Set up a dependency chain of |a| -> |b| -> |c| where |a| has a different
+  // toolchain.
+  Target a(setup.settings(),
+           Label(SourceDir("//foo/"), "a", other_toolchain.label().dir(),
+                 other_toolchain.label().name()));
+  a.set_output_type(Target::EXECUTABLE);
+  EXPECT_TRUE(a.SetToolchain(&other_toolchain, &err));
+  TestTarget b(setup, "//foo:b", Target::EXECUTABLE);
+  TestTarget c(setup, "//foo:c", Target::SOURCE_SET);
+  a.private_deps().push_back(LabelTargetPair(&b));
+  b.private_deps().push_back(LabelTargetPair(&c));
+
+  // All dependent config.
+  Config all_dependent(setup.settings(), Label(SourceDir("//foo/"), "all"));
+  ASSERT_TRUE(all_dependent.OnResolved(&err));
+  c.all_dependent_configs().push_back(LabelConfigPair(&all_dependent));
+
+  // Public config.
+  Config public_config(setup.settings(), Label(SourceDir("//foo/"), "public"));
+  ASSERT_TRUE(public_config.OnResolved(&err));
+  c.public_configs().push_back(LabelConfigPair(&public_config));
+
+  // Another public config.
+  Config public_config2(setup.settings(),
+                        Label(SourceDir("//foo/"), "public2"));
+  ASSERT_TRUE(public_config2.OnResolved(&err));
+  b.public_configs().push_back(LabelConfigPair(&public_config2));
+
+  ASSERT_TRUE(c.OnResolved(&err));
+  ASSERT_TRUE(b.OnResolved(&err));
+  ASSERT_TRUE(a.OnResolved(&err));
+
+  // B should have gotten the configs from C.
+  ASSERT_EQ(3u, b.configs().size());
+  EXPECT_EQ(&public_config2, b.configs()[0].ptr);
+  EXPECT_EQ(&all_dependent, b.configs()[1].ptr);
+  EXPECT_EQ(&public_config, b.configs()[2].ptr);
+  ASSERT_EQ(1u, b.all_dependent_configs().size());
+  EXPECT_EQ(&all_dependent, b.all_dependent_configs()[0].ptr);
+
+  // A should not have gotten any configs from B or C.
+  ASSERT_EQ(0u, a.configs().size());
+  ASSERT_EQ(0u, a.all_dependent_configs().size());
+}
+
 TEST(Target, InheritLibs) {
   TestWithScope setup;
   Err err;

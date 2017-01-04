@@ -204,27 +204,26 @@ class CheckedNumeric {
   template <typename Src>
   CheckedNumeric& operator^=(const Src rhs);
 
-  CheckedNumeric operator-() const {
-    // Negation is always valid for floating point.
-    T value = 0;
-    bool is_valid = (std::is_floating_point<T>::value || IsValid()) &&
-                    CheckedNeg(state_.value(), &value);
-    return CheckedNumeric<T>(value, is_valid);
+  constexpr CheckedNumeric operator-() const {
+    return CheckedNumeric<T>(
+        NegateWrapper(state_.value()),
+        IsValid() &&
+            (!std::is_signed<T>::value || std::is_floating_point<T>::value ||
+             NegateWrapper(state_.value()) !=
+                 std::numeric_limits<T>::lowest()));
   }
 
-  CheckedNumeric operator~() const {
-    static_assert(!std::is_signed<T>::value, "Type must be unsigned.");
-    T value = 0;
-    bool is_valid = IsValid() && CheckedInv(state_.value(), &value);
-    return CheckedNumeric<T>(value, is_valid);
+  constexpr CheckedNumeric operator~() const {
+    return CheckedNumeric<decltype(InvertWrapper(T()))>(
+        InvertWrapper(state_.value()), IsValid());
   }
 
-  CheckedNumeric Abs() const {
-    // Absolute value is always valid for floating point.
-    T value = 0;
-    bool is_valid = (std::is_floating_point<T>::value || IsValid()) &&
-                    CheckedAbs(state_.value(), &value);
-    return CheckedNumeric<T>(value, is_valid);
+  constexpr CheckedNumeric Abs() const {
+    return CheckedNumeric<T>(
+        AbsWrapper(state_.value()),
+        IsValid() &&
+            (!std::is_signed<T>::value || std::is_floating_point<T>::value ||
+             AbsWrapper(state_.value()) != std::numeric_limits<T>::lowest()));
   }
 
   template <typename U>

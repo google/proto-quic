@@ -99,6 +99,7 @@ const (
 	extensionNextProtoNeg               uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo          uint16 = 0xff01
 	extensionChannelID                  uint16 = 30032 // not IANA assigned
+	extensionShortHeader                uint16 = 27463 // not IANA assigned
 )
 
 // TLS ticket extension numbers
@@ -126,7 +127,8 @@ const (
 // TLS Elliptic Curve Point Formats
 // http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-9
 const (
-	pointFormatUncompressed uint8 = 0
+	pointFormatUncompressed    uint8 = 0
+	pointFormatCompressedPrime uint8 = 1
 )
 
 // TLS CertificateStatusType (RFC 3546)
@@ -225,6 +227,7 @@ type ConnectionState struct {
 	SCTList                    []byte                // signed certificate timestamp list
 	PeerSignatureAlgorithm     signatureAlgorithm    // algorithm used by the peer in the handshake
 	CurveID                    CurveID               // the curve used in ECDHE
+	ShortHeader                bool                  // whether the short header extension was negotiated
 }
 
 // ClientAuthType declares the policy the server will follow for
@@ -1224,6 +1227,23 @@ type ProtocolBugs struct {
 	// NoSignedCertificateTimestamps, if true, causes the client to not
 	// request signed certificate timestamps.
 	NoSignedCertificateTimestamps bool
+
+	// EnableShortHeader, if true, causes the TLS 1.3 short header extension
+	// to be enabled.
+	EnableShortHeader bool
+
+	// AlwaysNegotiateShortHeader, if true, causes the server to always
+	// negotiate the short header extension in ServerHello.
+	AlwaysNegotiateShortHeader bool
+
+	// ClearShortHeaderBit, if true, causes the server to send short headers
+	// without the high bit set.
+	ClearShortHeaderBit bool
+
+	// SendSupportedPointFormats, if not nil, is the list of supported point
+	// formats to send in ClientHello or ServerHello. If set to a non-nil
+	// empty slice, no extension will be sent.
+	SendSupportedPointFormats []byte
 }
 
 func (c *Config) serverInit() {
