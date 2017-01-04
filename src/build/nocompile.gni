@@ -58,11 +58,12 @@
 import("//testing/test.gni")
 
 declare_args() {
-  # TODO(crbug.com/105388): Disabled until http://crbug.com/105388 is resolved.
-  enable_nocompile_tests = false
+  # TODO(crbug.com/105388): make sure no-compile test is not flaky.
+  enable_nocompile_tests = is_linux && is_clang
 }
 
 if (enable_nocompile_tests) {
+  import("//build/config/sysroot.gni")
   template("nocompile_test") {
     nocompile_target = target_name + "_run_nocompile"
 
@@ -75,11 +76,15 @@ if (enable_nocompile_tests) {
       outputs = [
         result_path,
       ]
+      sysroot_args = ""
+      if (sysroot != "") {
+        sysroot_args = " --sysroot " + rebase_path(sysroot, root_build_dir)
+      }
       args = [
         "4",  # number of compilers to invoke in parallel.
         "{{source}}",
         "-Wall -Werror -Wfatal-errors " + "-I" +
-            rebase_path("//", root_build_dir),
+            rebase_path("//", root_build_dir) + sysroot_args,
         "{{output}}",
       ]
     }

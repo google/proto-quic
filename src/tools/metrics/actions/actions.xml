@@ -13162,6 +13162,16 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="PhysicalWeb.Prefs.FromOmnibox">
+  <owner>cco3@chromium.org</owner>
+  <owner>mattreynolds@chromium.org</owner>
+  <owner>mmocny@chromium.org</owner>
+  <description>
+    The user tapped the Physical Web logo in an omnibox suggestion and navigated
+    to the Physical Web preferences page. iOS only.
+  </description>
+</action>
+
 <action name="PhysicalWeb.Prefs.LocationDenied">
   <owner>cco3@chromium.org</owner>
   <owner>mattreynolds@chromium.org</owner>

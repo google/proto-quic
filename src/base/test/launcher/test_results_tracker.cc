@@ -372,6 +372,46 @@ bool TestResultsTracker::SaveSummaryAsJSON(
         Base64Encode(test_result.output_snippet, &base64_output_snippet);
         test_result_value->SetString("output_snippet_base64",
                                      base64_output_snippet);
+
+        std::unique_ptr<ListValue> test_result_parts(new ListValue);
+        for (const TestResultPart& result_part :
+             test_result.test_result_parts) {
+          std::unique_ptr<DictionaryValue> result_part_value(
+              new DictionaryValue);
+          result_part_value->SetString("type", result_part.TypeAsString());
+          result_part_value->SetString("file", result_part.file_name);
+          result_part_value->SetInteger("line", result_part.line_number);
+
+          bool lossless_summary = IsStringUTF8(result_part.summary);
+          if (lossless_summary) {
+            result_part_value->SetString("summary", result_part.summary);
+          } else {
+            result_part_value->SetString(
+                "summary", "<non-UTF-8 snippet, see summary_base64>");
+          }
+          result_part_value->SetBoolean("lossless_summary", lossless_summary);
+
+          std::string encoded_summary;
+          Base64Encode(result_part.summary, &encoded_summary);
+          result_part_value->SetString("summary_base64", encoded_summary);
+
+          bool lossless_message = IsStringUTF8(result_part.message);
+          if (lossless_message) {
+            result_part_value->SetString("message", result_part.message);
+          } else {
+            result_part_value->SetString(
+                "message", "<non-UTF-8 snippet, see message_base64>");
+          }
+          result_part_value->SetBoolean("lossless_message", lossless_message);
+
+          std::string encoded_message;
+          Base64Encode(result_part.message, &encoded_message);
+          result_part_value->SetString("message_base64", encoded_message);
+
+          test_result_parts->Append(std::move(result_part_value));
+        }
+        test_result_value->Set("result_parts", std::move(test_result_parts));
+
         test_results->Append(std::move(test_result_value));
       }
 

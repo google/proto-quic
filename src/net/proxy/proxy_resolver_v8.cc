@@ -18,6 +18,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/synchronization/lock.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "gin/array_buffer.h"
 #include "gin/public/isolate_holder.h"
 #include "gin/v8_initializer.h"
@@ -391,7 +392,8 @@ class SharedIsolateFactory {
         has_initialized_v8_ = true;
       }
 
-      holder_.reset(new gin::IsolateHolder(gin::IsolateHolder::kUseLocker));
+      holder_.reset(new gin::IsolateHolder(base::ThreadTaskRunnerHandle::Get(),
+                                           gin::IsolateHolder::kUseLocker));
     }
 
     return holder_->isolate();

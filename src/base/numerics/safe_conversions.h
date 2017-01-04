@@ -51,8 +51,7 @@ namespace base {
 // for the destination type.
 template <typename Dst, typename Src>
 constexpr bool IsValueInRangeForNumericType(Src value) {
-  return internal::DstRangeRelationToSrcRange<Dst>(value) ==
-         internal::RANGE_VALID;
+  return internal::DstRangeRelationToSrcRange<Dst>(value).IsValid();
 }
 
 // Forces a crash, like a CHECK(false). Used for numeric boundary errors.

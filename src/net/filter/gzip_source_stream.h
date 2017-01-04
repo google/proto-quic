@@ -9,8 +9,6 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/memory/ref_counted.h"
-#include "net/base/io_buffer.h"
 #include "net/base/net_export.h"
 #include "net/filter/filter_source_stream.h"
 #include "net/filter/gzip_header.h"
@@ -44,6 +42,16 @@ class NET_EXPORT_PRIVATE GzipSourceStream : public FilterSourceStream {
     STATE_START,
     // Gzip header of the input stream is being processed.
     STATE_GZIP_HEADER,
+    // Deflate responses may or may not have a zlib header. In this state until
+    // enough has been inflated that this stream most likely has a zlib header,
+    // or until a zlib header has been added. Data is appended to |replay_data_|
+    // in case it needs to be replayed after adding a header.
+    STATE_SNIFFING_DEFLATE_HEADER,
+    // If a zlib header has to be added to the response, this state will replay
+    // data passed to inflate before it was determined that no zlib header was
+    // present.
+    // See https://crbug.com/677001
+    STATE_REPLAY_DATA,
     // The input stream is being decoded.
     STATE_COMPRESSED_BODY,
     // Gzip footer of the input stream is being processed.
@@ -84,9 +92,10 @@ class NET_EXPORT_PRIVATE GzipSourceStream : public FilterSourceStream {
   // FilterData(), with InsertZlibHeader() being the exception as a workaround.
   std::unique_ptr<z_stream> zlib_stream_;
 
-  // A flag used by FilterData() to record whether we've successfully added
-  // a zlib header to this stream.
-  bool zlib_header_added_;
+  // While in STATE_SNIFFING_DEFLATE_HEADER, it may be determined that a zlib
+  // header needs to be added, and all received data needs to be replayed. In
+  // that case, this buffer holds the data to be replayed.
+  std::string replay_data_;
 
   // Used to parse the gzip header in gzip stream.
   // It is used when the decoding mode is GZIP_SOURCE_STREAM_GZIP.
@@ -97,6 +106,9 @@ class NET_EXPORT_PRIVATE GzipSourceStream : public FilterSourceStream {
 
   // Tracks the state of the input stream.
   InputState input_state_;
+
+  // Used when replaying data.
+  InputState replay_state_;
 
   DISALLOW_COPY_AND_ASSIGN(GzipSourceStream);
 };

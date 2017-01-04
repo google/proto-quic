@@ -6,18 +6,21 @@
 
 #include "base/logging.h"
 #include "net/base/io_buffer.h"
+#include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 
 MockSourceStream::MockSourceStream()
     : SourceStream(SourceStream::TYPE_NONE),
+      read_one_byte_at_a_time_(false),
       awaiting_completion_(false),
       dest_buffer_(nullptr),
       dest_buffer_size_(0) {}
 
 MockSourceStream::~MockSourceStream() {
   DCHECK(!awaiting_completion_);
-  DCHECK(results_.empty());
+  // All data should have been consumed.
+  EXPECT_TRUE(results_.empty());
 }
 
 int MockSourceStream::Read(IOBuffer* dest_buffer,
@@ -58,10 +61,24 @@ void MockSourceStream::AddReadResult(const char* data,
                                      int len,
                                      Error error,
                                      Mode mode) {
-  // The read result must be between 0 and 32k (inclusive) because the read
-  // buffer used in FilterSourceStream is 32k.
-  DCHECK_GE(32 * 1024, len);
-  DCHECK_LE(0, len);
+  if (error != OK) {
+    // Doesn't make any sense to have both an error and data.
+    DCHECK_EQ(len, 0);
+  } else {
+    // The read result must be between 0 and 32k (inclusive) because the read
+    // buffer used in FilterSourceStream is 32k.
+    DCHECK_GE(32 * 1024, len);
+    DCHECK_LE(0, len);
+  }
+
+  if (len > 0 && read_one_byte_at_a_time_) {
+    for (int i = 0; i < len; ++i) {
+      QueuedResult result(data + i, 1, OK, mode);
+      results_.push(result);
+    }
+    return;
+  }
+
   QueuedResult result(data, len, error, mode);
   results_.push(result);
 }

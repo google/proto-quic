@@ -1,3 +1,4 @@
+# encoding: utf-8
 # Copyright 2016 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,6 +9,7 @@ from page_sets.system_health import system_health_story
 from page_sets.login_helpers import pinterest_login
 
 from telemetry import decorators
+from telemetry.util import js_template
 
 
 class _BrowsingStory(system_health_story.SystemHealthStory):
@@ -129,7 +131,6 @@ class FlipboardMobileStory(_NewsBrowsingStory):
     return possible_browser.platform.IsSvelte()  # crbug.com/668097
 
 
-@decorators.Disabled('mac') # crbug.com/663025
 class FlipboardDesktopStory(_NewsBrowsingStory):
   NAME = 'browse:news:flipboard'
   URL = 'https://flipboard.com/explore'
@@ -277,6 +278,51 @@ class GoogleDesktopStory(_NewsBrowsingStory):
     action_runner.EnterText(' delivery')
     action_runner.Wait(0.5)
     action_runner.PressKey('Return')
+
+    # Scroll down & click next search result page.
+    action_runner.Wait(2)
+    action_runner.ScrollPageToElement(selector=self._SEARCH_PAGE_2_SELECTOR)
+    action_runner.Wait(2)
+    action_runner.ClickElement(selector=self._SEARCH_PAGE_2_SELECTOR)
+    action_runner.Wait(2)
+    action_runner.ScrollPage()
+
+
+class GoogleIndiaDesktopStory(_NewsBrowsingStory):
+  """
+  A typical google search story in India:
+    1. Start at https://www.google.co.in/search?q=%E0%A4%AB%E0%A5%82%E0%A4%B2`
+    2. Scroll down the page.
+    3. Refine the query & click search box, which navigates to
+    https://www.google.co.in/search?q=%E0%A4%AB%E0%A5%82%E0%A4%B2&rct=j#q=%E0%A4%AB%E0%A5%82%E0%A4%B2+%E0%A4%B5%E0%A4%BF%E0%A4%A4%E0%A4%B0%E0%A4%A3
+    4. Scroll down the page.
+    5. Click the next page result
+    6. Scroll the search result page.
+
+  """
+  NAME = 'browse:search:google_india'
+  URL = 'https://www.google.co.in/search?q=%E0%A4%AB%E0%A5%82%E0%A4%B2'
+  _SEARCH_BOX_SELECTOR = 'input[aria-label="Search"]'
+  _SEARCH_BUTTON_SELECTOR = 'button[aria-label="Google Search"]'
+  _SEARCH_PAGE_2_SELECTOR = 'a[aria-label=\'Page 2\']'
+  SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+
+  def _DidLoadDocument(self, action_runner):
+    action_runner.Wait(2)
+    action_runner.ScrollPage()
+    action_runner.Wait(2)
+
+    action_runner.ScrollPage(direction='up')
+
+    # Refine search query in the search box.
+    # TODO(nednguyen): replace this with input text gesture to make it more
+    # realistic.
+    action_runner.ExecuteJavaScript(
+        js_template.Render(
+            'document.querySelector({{ selector }}).value += "वितरण";',
+            selector=self._SEARCH_BOX_SELECTOR))
+    action_runner.Wait(2)
+    action_runner.ClickElement(selector=self._SEARCH_BUTTON_SELECTOR)
 
     # Scroll down & click next search result page.
     action_runner.Wait(2)

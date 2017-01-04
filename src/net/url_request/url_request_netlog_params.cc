@@ -13,18 +13,26 @@
 
 namespace net {
 
+std::unique_ptr<base::Value> NetLogURLRequestConstructorCallback(
+    const GURL* url,
+    RequestPriority priority,
+    NetLogCaptureMode /* capture_mode */) {
+  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
+  dict->SetString("url", url->possibly_invalid_spec());
+  dict->SetString("priority", RequestPriorityToString(priority));
+  return std::move(dict);
+}
+
 std::unique_ptr<base::Value> NetLogURLRequestStartCallback(
     const GURL* url,
     const std::string* method,
     int load_flags,
-    RequestPriority priority,
     int64_t upload_id,
     NetLogCaptureMode /* capture_mode */) {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->SetString("url", url->possibly_invalid_spec());
   dict->SetString("method", *method);
   dict->SetInteger("load_flags", load_flags);
-  dict->SetString("priority", RequestPriorityToString(priority));
   if (upload_id > -1)
     dict->SetString("upload_id", base::Int64ToString(upload_id));
   return std::move(dict);

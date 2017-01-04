@@ -17,7 +17,6 @@ namespace net {
 class HttpResponseInfo;
 struct HttpRequestInfo;
 class HttpRequestHeaders;
-class HttpResponseHeaders;
 
 // Convert a SpdyHeaderBlock into an HttpResponseInfo.
 // |headers| input parameter with the SpdyHeaderBlock.
@@ -33,11 +32,6 @@ NET_EXPORT void CreateSpdyHeadersFromHttpRequest(
     const HttpRequestInfo& info,
     const HttpRequestHeaders& request_headers,
     bool direct,
-    SpdyHeaderBlock* headers);
-
-// Create a SpdyHeaderBlock from HttpResponseHeaders.
-NET_EXPORT void CreateSpdyHeadersFromHttpResponse(
-    const HttpResponseHeaders& response_headers,
     SpdyHeaderBlock* headers);
 
 // Create HttpRequestHeaders from SpdyHeaderBlock.

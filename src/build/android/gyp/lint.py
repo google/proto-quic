@@ -24,7 +24,8 @@ _SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__),
 def _OnStaleMd5(lint_path, config_path, processed_config_path,
                 manifest_path, result_path, product_dir, sources, jar_path,
                 cache_dir, android_sdk_version, resource_sources,
-                classpath=None, can_fail_build=False, silent=False):
+                disable=None, classpath=None, can_fail_build=False,
+                silent=False):
   def _RebasePath(path):
     """Returns relative path to top-level src dir.
 
@@ -150,6 +151,9 @@ def _OnStaleMd5(lint_path, config_path, processed_config_path,
         cmd.extend(['--sources', _RebasePath(src_dir)])
       os.symlink(os.path.abspath(src), PathInDir(src_dir, src))
 
+    if disable:
+      cmd.extend(['--disable', ','.join(disable)])
+
     project_dir = _NewTempSubdir('SRC_ROOT')
     if android_sdk_version:
       # Create dummy project.properies file in a temporary "project" directory.
@@ -260,8 +264,8 @@ def main():
                            ' if lint errors are present')
   parser.add_argument('--config-path',
                       help='Path to lint suppressions file.')
-  parser.add_argument('--enable', action='store_true',
-                      help='Run lint instead of just touching stamp.')
+  parser.add_argument('--disable',
+                      help='List of checks to disable.')
   parser.add_argument('--jar-path',
                       help='Jar file containing class files.')
   parser.add_argument('--java-sources-file',
@@ -287,79 +291,84 @@ def main():
 
   args = parser.parse_args(build_utils.ExpandFileArgs(sys.argv[1:]))
 
-  if args.enable:
-    sources = []
-    if args.src_dirs:
-      src_dirs = build_utils.ParseGnList(args.src_dirs)
-      sources = build_utils.FindInDirectories(src_dirs, '*.java')
-    elif args.java_sources_file:
-      sources.extend(build_utils.ReadSourcesList(args.java_sources_file))
+  sources = []
+  if args.src_dirs:
+    src_dirs = build_utils.ParseGnList(args.src_dirs)
+    sources = build_utils.FindInDirectories(src_dirs, '*.java')
+  elif args.java_sources_file:
+    sources.extend(build_utils.ReadSourcesList(args.java_sources_file))
 
-    if args.config_path and not args.processed_config_path:
-      parser.error('--config-path specified without --processed-config-path')
-    elif args.processed_config_path and not args.config_path:
-      parser.error('--processed-config-path specified without --config-path')
+  if args.config_path and not args.processed_config_path:
+    parser.error('--config-path specified without --processed-config-path')
+  elif args.processed_config_path and not args.config_path:
+    parser.error('--processed-config-path specified without --config-path')
 
-    input_paths = [
-        args.lint_path,
-        args.platform_xml_path,
-    ]
-    if args.config_path:
-      input_paths.append(args.config_path)
-    if args.jar_path:
-      input_paths.append(args.jar_path)
-    if args.manifest_path:
-      input_paths.append(args.manifest_path)
-    if sources:
-      input_paths.extend(sources)
-    classpath = []
-    for gyp_list in args.classpath:
-      classpath.extend(build_utils.ParseGnList(gyp_list))
-    input_paths.extend(classpath)
+  input_paths = [
+      args.lint_path,
+      args.platform_xml_path,
+  ]
+  if args.config_path:
+    input_paths.append(args.config_path)
+  if args.jar_path:
+    input_paths.append(args.jar_path)
+  if args.manifest_path:
+    input_paths.append(args.manifest_path)
+  if sources:
+    input_paths.extend(sources)
+  classpath = []
+  for gyp_list in args.classpath:
+    classpath.extend(build_utils.ParseGnList(gyp_list))
+  input_paths.extend(classpath)
 
-    resource_sources = []
-    if args.resource_dir:
-      # Backward compatibility with GYP
-      resource_sources += [ args.resource_dir ]
+  resource_sources = []
+  if args.resource_dir:
+    # Backward compatibility with GYP
+    resource_sources += [ args.resource_dir ]
 
-    for gyp_list in args.resource_sources:
-      resource_sources += build_utils.ParseGnList(gyp_list)
+  for gyp_list in args.resource_sources:
+    resource_sources += build_utils.ParseGnList(gyp_list)
 
-    for resource_source in resource_sources:
-      if os.path.isdir(resource_source):
-        input_paths.extend(build_utils.FindInDirectory(resource_source, '*'))
-      else:
-        input_paths.append(resource_source)
+  for resource_source in resource_sources:
+    if os.path.isdir(resource_source):
+      input_paths.extend(build_utils.FindInDirectory(resource_source, '*'))
+    else:
+      input_paths.append(resource_source)
 
-    input_strings = [
-      args.can_fail_build,
-      args.silent,
-    ]
-    if args.android_sdk_version:
-      input_strings.append(args.android_sdk_version)
-    if args.processed_config_path:
-      input_strings.append(args.processed_config_path)
+  input_strings = [
+    args.can_fail_build,
+    args.silent,
+  ]
+  if args.android_sdk_version:
+    input_strings.append(args.android_sdk_version)
+  if args.processed_config_path:
+    input_strings.append(args.processed_config_path)
 
-    output_paths = [ args.result_path ]
+  disable = []
+  if args.disable:
+    disable = build_utils.ParseGnList(args.disable)
+    input_strings.extend(disable)
 
-    build_utils.CallAndWriteDepfileIfStale(
-        lambda: _OnStaleMd5(args.lint_path,
-                            args.config_path,
-                            args.processed_config_path,
-                            args.manifest_path, args.result_path,
-                            args.product_dir, sources,
-                            args.jar_path,
-                            args.cache_dir,
-                            args.android_sdk_version,
-                            resource_sources,
-                            classpath=classpath,
-                            can_fail_build=args.can_fail_build,
-                            silent=args.silent),
-        args,
-        input_paths=input_paths,
-        input_strings=input_strings,
-        output_paths=output_paths,
-        depfile_deps=classpath)
+  output_paths = [ args.result_path ]
+
+  build_utils.CallAndWriteDepfileIfStale(
+      lambda: _OnStaleMd5(args.lint_path,
+                          args.config_path,
+                          args.processed_config_path,
+                          args.manifest_path, args.result_path,
+                          args.product_dir, sources,
+                          args.jar_path,
+                          args.cache_dir,
+                          args.android_sdk_version,
+                          resource_sources,
+                          disable=disable,
+                          classpath=classpath,
+                          can_fail_build=args.can_fail_build,
+                          silent=args.silent),
+      args,
+      input_paths=input_paths,
+      input_strings=input_strings,
+      output_paths=output_paths,
+      depfile_deps=classpath)
 
 
 if __name__ == '__main__':

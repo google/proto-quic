@@ -3967,7 +3967,7 @@
   This addition happens in a second phase once a target and all of its
   dependencies have been resolved. Therefore, a target will not see these
   force-added configs in their "configs" variable while the script is running,
-  and then can not be removed. As a result, this capability should generally
+  and they can not be removed. As a result, this capability should generally
   only be used to add defines and include directories necessary to compile a
   target's headers.
 
@@ -5434,7 +5434,7 @@
   This addition happens in a second phase once a target and all of its
   dependencies have been resolved. Therefore, a target will not see these
   force-added configs in their "configs" variable while the script is running,
-  and then can not be removed. As a result, this capability should generally
+  and they can not be removed. As a result, this capability should generally
   only be used to add defines and include directories necessary to compile a
   target's headers.
 

@@ -67,42 +67,13 @@ constexpr typename std::make_signed<T>::type ConditionalNegate(
       (static_cast<UnsignedT>(x) ^ -SignedT(is_negative)) + is_negative);
 }
 
-// Wrapper for the sign mask used in the absolute value function.
+// This performs a safe, absolute value via unsigned overflow.
 template <typename T>
-constexpr T SignMask(T x) {
-  using SignedT = typename std::make_signed<T>::type;
-  // Right shift on a signed number is implementation defined, but it's often
-  // implemented as arithmetic shift. If the compiler uses an arithmetic shift,
-  // then use that to avoid the extra negation.
-  return static_cast<T>(
-      (static_cast<SignedT>(-1) >> PositionOfSignBit<T>::value) ==
-              static_cast<SignedT>(-1)
-          ? (static_cast<SignedT>(x) >> PositionOfSignBit<T>::value)
-          : -static_cast<SignedT>(static_cast<SignedT>(x) < 0));
-}
-static_assert(SignMask(-2) == -1,
-              "Inconsistent handling of signed right shift.");
-static_assert(SignMask(-3L) == -1L,
-              "Inconsistent handling of signed right shift.");
-static_assert(SignMask(-4LL) == -1LL,
-              "Inconsistent handling of signed right shift.");
-
-// This performs a safe, non-branching absolute value via unsigned overflow.
-template <typename T,
-          typename std::enable_if<std::is_integral<T>::value &&
-                                  std::is_signed<T>::value>::type* = nullptr>
 constexpr typename std::make_unsigned<T>::type SafeUnsignedAbs(T value) {
+  static_assert(std::is_integral<T>::value, "Type must be integral");
   using UnsignedT = typename std::make_unsigned<T>::type;
-  return static_cast<T>(static_cast<UnsignedT>(value ^ SignMask(value)) -
-                        static_cast<UnsignedT>(SignMask(value)));
-}
-
-template <typename T,
-          typename std::enable_if<std::is_integral<T>::value &&
-                                  !std::is_signed<T>::value>::type* = nullptr>
-constexpr T SafeUnsignedAbs(T value) {
-  // T is unsigned, so |value| must already be positive.
-  return static_cast<T>(value);
+  return IsValueNegative(value) ? 0 - static_cast<UnsignedT>(value)
+                                : static_cast<UnsignedT>(value);
 }
 
 enum IntegerRepresentation {
@@ -511,16 +482,44 @@ struct BigEnoughPromotion<Lhs, Rhs, true, false> {
 // can skip the checked operations if they're not needed. So, for an integer we
 // care if the destination type preserves the sign and is twice the width of
 // the source.
-template <typename T, typename Lhs, typename Rhs>
+template <typename T, typename Lhs, typename Rhs = Lhs>
 struct IsIntegerArithmeticSafe {
   static const bool value =
       !std::is_floating_point<T>::value &&
-      StaticDstRangeRelationToSrcRange<T, Lhs>::value ==
-          NUMERIC_RANGE_CONTAINED &&
+      !std::is_floating_point<Lhs>::value &&
+      !std::is_floating_point<Rhs>::value &&
+      std::is_signed<T>::value >= std::is_signed<Lhs>::value &&
       IntegerBitsPlusSign<T>::value >= (2 * IntegerBitsPlusSign<Lhs>::value) &&
-      StaticDstRangeRelationToSrcRange<T, Rhs>::value !=
-          NUMERIC_RANGE_CONTAINED &&
+      std::is_signed<T>::value >= std::is_signed<Rhs>::value &&
       IntegerBitsPlusSign<T>::value >= (2 * IntegerBitsPlusSign<Rhs>::value);
+};
+
+// Promotes to a type that can represent any possible result of a binary
+// arithmetic operation with the source types.
+template <typename Lhs,
+          typename Rhs,
+          bool is_promotion_possible = IsIntegerArithmeticSafe<
+              typename std::conditional<std::is_signed<Lhs>::value ||
+                                            std::is_signed<Rhs>::value,
+                                        intmax_t,
+                                        uintmax_t>::type,
+              typename MaxExponentPromotion<Lhs, Rhs>::type>::value>
+struct FastIntegerArithmeticPromotion;
+
+template <typename Lhs, typename Rhs>
+struct FastIntegerArithmeticPromotion<Lhs, Rhs, true> {
+  using type =
+      typename TwiceWiderInteger<typename MaxExponentPromotion<Lhs, Rhs>::type,
+                                 std::is_signed<Lhs>::value ||
+                                     std::is_signed<Rhs>::value>::type;
+  static_assert(IsIntegerArithmeticSafe<type, Lhs, Rhs>::value, "");
+  static const bool is_contained = true;
+};
+
+template <typename Lhs, typename Rhs>
+struct FastIntegerArithmeticPromotion<Lhs, Rhs, false> {
+  using type = typename BigEnoughPromotion<Lhs, Rhs>::type;
+  static const bool is_contained = false;
 };
 
 // This hacks around libstdc++ 4.6 missing stuff in type_traits.

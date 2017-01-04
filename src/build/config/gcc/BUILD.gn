@@ -7,6 +7,17 @@ import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/sysroot.gni")
 import("//build/toolchain/toolchain.gni")
 
+declare_args() {
+  # When non empty, overrides the target rpath value. This allows a user to
+  # make a Chromium build where binaries and shared libraries are meant to be
+  # installed into separate directories, like /usr/bin/chromium and
+  # /usr/lib/chromium for instance. It is useful when a build system that
+  # generates a whole target root filesystem (like Yocto) is used on top of gn,
+  # especially when cross-compiling.
+  # Note: this gn arg is similar to gyp target_rpath generator flag.
+  gcc_target_rpath = ""
+}
+
 # This config causes functions not to be automatically exported from shared
 # libraries. By default, all symbols are exported but this means there are
 # lots of exports that slow everything down. In general we explicitly mark
@@ -61,11 +72,18 @@ config("rpath_for_built_shared_libraries") {
     } else {
       rpath_link = "."
     }
-    ldflags = [
-      # Want to pass "\$". GN will re-escape as required for ninja.
-      "-Wl,-rpath=\$ORIGIN/${rpath_link}",
-      "-Wl,-rpath-link=${rpath_link}",
-    ]
+    if (current_toolchain != default_toolchain || gcc_target_rpath == "") {
+      ldflags = [
+        # Want to pass "\$". GN will re-escape as required for ninja.
+        "-Wl,-rpath=\$ORIGIN/${rpath_link}",
+        "-Wl,-rpath-link=${rpath_link}",
+      ]
+    } else {
+      ldflags = [
+        "-Wl,-rpath=${gcc_target_rpath}",
+        "-Wl,-rpath-link=${rpath_link}",
+      ]
+    }
   }
 }
 

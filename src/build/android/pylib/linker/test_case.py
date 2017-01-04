@@ -94,7 +94,10 @@ def _StartActivityAndWaitForLinkerTestStatus(device, timeout):
     except device_errors.CommandTimeoutError:
       result = ResultType.TIMEOUT
 
-    return result, '\n'.join(device.adb.Logcat(dump=True))
+    logcat = device.adb.Logcat(dump=True)
+
+  logmon.Close()
+  return result, '\n'.join(logcat)
 
 
 class LibraryLoadMap(dict):
@@ -182,14 +185,8 @@ class LinkerTestCaseBase(object):
       result_text = 'TIMEOUT'
     print '[ %*s ] %s' % (margin, result_text, self.tagged_name)
 
-    results = base_test_result.TestRunResults()
-    results.AddResult(
-        base_test_result.BaseTestResult(
-            self.tagged_name,
-            status,
-            log=logs))
+    return base_test_result.BaseTestResult(self.tagged_name, status, log=logs)
 
-    return results
 
   def __str__(self):
     return self.tagged_name

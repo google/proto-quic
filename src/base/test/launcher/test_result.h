@@ -6,10 +6,43 @@
 #define BASE_TEST_LAUNCHER_TEST_RESULT_H_
 
 #include <string>
+#include <vector>
 
 #include "base/time/time.h"
 
 namespace base {
+
+// Structure contains result of a single EXPECT/ASSERT/SUCCESS.
+struct TestResultPart {
+  enum Type {
+    kSuccess,          // SUCCESS
+    kNonFatalFailure,  // EXPECT
+    kFatalFailure,     // ASSERT
+  };
+  Type type;
+
+  TestResultPart();
+  ~TestResultPart();
+
+  TestResultPart(const TestResultPart& other);
+  TestResultPart(TestResultPart&& other);
+  TestResultPart& operator=(const TestResultPart& other);
+  TestResultPart& operator=(TestResultPart&& other);
+
+  // Convert type to string and back.
+  static bool TypeFromString(const std::string& str, Type* type);
+  std::string TypeAsString() const;
+
+  // Filename and line of EXPECT/ASSERT.
+  std::string file_name;
+  int line_number;
+
+  // Message without stacktrace, etc.
+  std::string summary;
+
+  // Complete message.
+  std::string message;
+};
 
 // Structure containing result of a single test.
 struct TestResult {
@@ -26,6 +59,11 @@ struct TestResult {
 
   TestResult();
   ~TestResult();
+
+  TestResult(const TestResult& other);
+  TestResult(TestResult&& other);
+  TestResult& operator=(const TestResult& other);
+  TestResult& operator=(TestResult&& other);
 
   // Returns the test status as string (e.g. for display).
   std::string StatusAsString() const;
@@ -56,6 +94,9 @@ struct TestResult {
 
   // Output of just this test (optional).
   std::string output_snippet;
+
+  // Information about failed expectations.
+  std::vector<TestResultPart> test_result_parts;
 };
 
 }  // namespace base

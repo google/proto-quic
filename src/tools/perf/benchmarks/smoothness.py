@@ -140,6 +140,11 @@ class SmoothnessKeyDesktopMoveCases(_Smoothness):
   def Name(cls):
     return 'smoothness.key_desktop_move_cases'
 
+  @classmethod
+  def ShouldDisable(cls, possible_browser):  # http://crbug.com/597656
+      return (possible_browser.browser_type == 'reference' and
+              possible_browser.platform.GetOSName() == 'win')
+
 
 @benchmark.Enabled('android')
 class SmoothnessKeyMobileSites(_Smoothness):

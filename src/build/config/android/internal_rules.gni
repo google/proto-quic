@@ -553,6 +553,11 @@ template("test_runner_script") {
         "--test-suite",
         invoker.test_suite,
       ]
+    } else if (_test_type == "linker") {
+      test_runner_args += [
+        "--test-apk",
+        "@FileArg($_rebased_apk_build_config:deps_info:apk_path)",
+      ]
     } else {
       assert(false, "Invalid test type: $_test_type.")
     }
@@ -689,8 +694,11 @@ if (enable_java_templates) {
         rebase_path(_config_path, root_build_dir),
         "--result-path",
         rebase_path(_result_path, root_build_dir),
-        "--enable",
       ]
+
+      if (defined(invoker.disable)) {
+        args += [ "--disable=${invoker.disable}" ]
+      }
 
       if (defined(invoker.create_cache) && invoker.create_cache) {
         args += [
@@ -2479,6 +2487,13 @@ if (enable_java_templates) {
             java_sources_file = _java_sources_file
           }
           deps = _accumulated_deps
+          if (_emma_instrument) {
+            # Disable the NewApi lint warning when building with coverage
+            # enabled. Coverage seems to mess with how the linter detects
+            # the usages of a new API within a conditional. See
+            # crbug.com/677320 for more.
+            disable = [ "NewApi" ]
+          }
         }
 
         if (_run_findbugs) {

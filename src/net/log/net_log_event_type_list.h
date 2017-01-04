@@ -850,7 +850,7 @@ EVENT_TYPE(URL_REQUEST_DELEGATE)
 // Logged when a delegate informs the URL_REQUEST of what's currently blocking
 // the request. The parameters attached to the begin event are:
 //   {
-//     "delegate_info": <Information about what's blocking the request>,
+//     "delegate_blocked_by": <Information about what's blocking the request>,
 //   }
 EVENT_TYPE(DELEGATE_INFO)
 
@@ -3030,3 +3030,13 @@ EVENT_TYPE(UPLOAD_DATA_STREAM_INIT)
 //              the end of file. Result < 0 means an error.>
 // }
 EVENT_TYPE(UPLOAD_DATA_STREAM_READ)
+
+// -----------------------------------------------------------------------------
+// ResourceScheduler related events
+// -----------------------------------------------------------------------------
+
+// The ResourceScheduler has started a previously blocked request.  Parameters:
+// {
+//   "trigger": <Trigger for evaluation that caused request start>
+// }
+EVENT_TYPE(RESOURCE_SCHEDULER_REQUEST_STARTED)

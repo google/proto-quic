@@ -5,6 +5,7 @@
 from pylib.gtest import gtest_test_instance
 from pylib.instrumentation import instrumentation_test_instance
 from pylib.junit import junit_test_instance
+from pylib.linker import linker_test_instance
 from pylib.monkey import monkey_test_instance
 from pylib.perf import perf_test_instance
 from pylib.utils import device_dependencies
@@ -20,6 +21,8 @@ def CreateTestInstance(args, error_func):
         args, device_dependencies.GetDataDependencies, error_func)
   elif args.command == 'junit':
     return junit_test_instance.JunitTestInstance(args, error_func)
+  elif args.command == 'linker':
+    return linker_test_instance.LinkerTestInstance(args)
   elif args.command == 'monkey':
     return monkey_test_instance.MonkeyTestInstance(args, error_func)
   elif args.command == 'perf':

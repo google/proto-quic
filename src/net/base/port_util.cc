@@ -84,6 +84,7 @@ const int kRestrictedPorts[] = {
     6667,    // Standard IRC [Apple addition]
     6668,    // Alternate IRC [Apple addition]
     6669,    // Alternate IRC [Apple addition]
+    6697,    // IRC + TLS
     0xFFFF,  // Used to block all invalid port numbers (see
              // third_party/WebKit/Source/platform/weborigin/KURL.cpp,
              // KURL::port())

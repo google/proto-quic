@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "base/logging.h"
-#include "base/rand_util.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_stream.h"
@@ -400,9 +399,15 @@ class QuicSequencerRandomTest : public QuicStreamSequencerTest {
     }
   }
 
-  QuicSequencerRandomTest() { CreateFrames(); }
+  QuicSequencerRandomTest() {
+    uint64_t seed = QuicRandom::GetInstance()->RandUint64();
+    VLOG(1) << "**** The current seed is " << seed << " ****";
+    random_.set_seed(seed);
 
-  int OneToN(int n) { return base::RandInt(1, n); }
+    CreateFrames();
+  }
+
+  int OneToN(int n) { return random_.RandUint64() % n + 1; }
 
   void ReadAvailableData() {
     // Read all available data
@@ -418,6 +423,7 @@ class QuicSequencerRandomTest : public QuicStreamSequencerTest {
   string output_;
   // Data which peek at using GetReadableRegion if we back up.
   string peeked_;
+  SimpleRandom random_;
   FrameList list_;
 };
 
@@ -453,7 +459,7 @@ TEST_F(QuicSequencerRandomTest, RandomFramesNoDroppingBackup) {
   EXPECT_CALL(stream_, OnDataAvailable()).Times(AnyNumber());
 
   while (output_.size() != arraysize(kPayload) - 1) {
-    if (!list_.empty() && (base::RandUint64() % 2 == 0)) {  // Send data
+    if (!list_.empty() && OneToN(2) == 1) {  // Send data
       int index = OneToN(list_.size()) - 1;
       OnFrame(list_[index].first, list_[index].second.data());
       list_.erase(list_.begin() + index);

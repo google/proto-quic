@@ -69,11 +69,6 @@ class NET_EXPORT ChannelIDService
     ChannelIDServiceJob* job_;
   };
 
-  // Password used on EncryptedPrivateKeyInfo data stored in EC private_key
-  // values.  (This is not used to provide any security, but to workaround NSS
-  // being unable to import unencrypted PrivateKeyInfo for EC keys.)
-  static const char kEPKIPassword[];
-
   // This object owns |channel_id_store|.  |task_runner| will
   // be used to post channel ID generation worker tasks.  The tasks are
   // safe for use with WorkerPool and SequencedWorkerPool::CONTINUE_ON_SHUTDOWN.

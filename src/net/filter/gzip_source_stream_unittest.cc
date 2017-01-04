@@ -26,17 +26,31 @@ namespace {
 const int kBigBufferSize = 4096;
 const int kSmallBufferSize = 1;
 
+enum class ReadResultType {
+  // Each call to AddReadResult is a separate read from the lower layer
+  // SourceStream.
+  EVERYTHING_AT_ONCE,
+  // Whenever AddReadResult is called, each byte is actually a separate read
+  // result.
+  ONE_BYTE_AT_A_TIME,
+};
+
 // How many bytes to leave unused at the end of |source_data_|. This margin is
 // present so that tests that need to append data after the zlib EOF do not run
 // out of room in the output buffer.
 const size_t kEOFMargin = 64;
 
 struct GzipTestParam {
-  GzipTestParam(int buf_size, MockSourceStream::Mode read_mode)
-      : buffer_size(buf_size), mode(read_mode) {}
+  GzipTestParam(int buf_size,
+                MockSourceStream::Mode read_mode,
+                ReadResultType read_result_type)
+      : buffer_size(buf_size),
+        mode(read_mode),
+        read_result_type(read_result_type) {}
 
   const int buffer_size;
   const MockSourceStream::Mode mode;
+  const ReadResultType read_result_type;
 };
 
 }  // namespace
@@ -63,19 +77,23 @@ class GzipSourceStreamTest : public ::testing::TestWithParam<GzipTestParam> {
 
     output_buffer_ = new IOBuffer(output_buffer_size_);
     std::unique_ptr<MockSourceStream> source(new MockSourceStream());
+    if (GetParam().read_result_type == ReadResultType::ONE_BYTE_AT_A_TIME)
+      source->set_read_one_byte_at_a_time(true);
     source_ = source.get();
     stream_ = GzipSourceStream::Create(std::move(source), type);
   }
 
-  // If MockSourceStream::Mode is ASYNC, completes 1 read from |mock_stream| and
-  // wait for |callback| to complete. If Mode is not ASYNC, does nothing and
-  // returns |previous_result|.
-  int CompleteReadIfAsync(int previous_result,
-                          TestCompletionCallback* callback,
-                          MockSourceStream* mock_stream) {
+  // If MockSourceStream::Mode is ASYNC, completes reads from |mock_stream|
+  // until there's no pending read, and then returns |callback|'s result, once
+  // it's invoked. If Mode is not ASYNC, does nothing and returns
+  // |previous_result|.
+  int CompleteReadsIfAsync(int previous_result,
+                           TestCompletionCallback* callback,
+                           MockSourceStream* mock_stream) {
     if (GetParam().mode == MockSourceStream::ASYNC) {
       EXPECT_EQ(ERR_IO_PENDING, previous_result);
-      mock_stream->CompleteNextRead();
+      while (mock_stream->awaiting_completion())
+        mock_stream->CompleteNextRead();
       return callback->WaitForResult();
     }
     return previous_result;
@@ -104,7 +122,7 @@ class GzipSourceStreamTest : public ::testing::TestWithParam<GzipTestParam> {
       int rv = stream_->Read(output_buffer(), output_buffer_size(),
                              callback.callback());
       if (rv == ERR_IO_PENDING)
-        rv = CompleteReadIfAsync(rv, &callback, source());
+        rv = CompleteReadsIfAsync(rv, &callback, source());
       if (rv == OK)
         break;
       if (rv < OK)
@@ -133,15 +151,34 @@ class GzipSourceStreamTest : public ::testing::TestWithParam<GzipTestParam> {
 INSTANTIATE_TEST_CASE_P(
     GzipSourceStreamTests,
     GzipSourceStreamTest,
-    ::testing::Values(GzipTestParam(kBigBufferSize, MockSourceStream::SYNC),
-                      GzipTestParam(kSmallBufferSize, MockSourceStream::SYNC),
-                      GzipTestParam(kBigBufferSize, MockSourceStream::ASYNC),
+    ::testing::Values(GzipTestParam(kBigBufferSize,
+                                    MockSourceStream::SYNC,
+                                    ReadResultType::EVERYTHING_AT_ONCE),
                       GzipTestParam(kSmallBufferSize,
-                                    MockSourceStream::ASYNC)));
+                                    MockSourceStream::SYNC,
+                                    ReadResultType::EVERYTHING_AT_ONCE),
+                      GzipTestParam(kBigBufferSize,
+                                    MockSourceStream::ASYNC,
+                                    ReadResultType::EVERYTHING_AT_ONCE),
+                      GzipTestParam(kSmallBufferSize,
+                                    MockSourceStream::ASYNC,
+                                    ReadResultType::EVERYTHING_AT_ONCE),
+                      GzipTestParam(kBigBufferSize,
+                                    MockSourceStream::SYNC,
+                                    ReadResultType::ONE_BYTE_AT_A_TIME),
+                      GzipTestParam(kSmallBufferSize,
+                                    MockSourceStream::SYNC,
+                                    ReadResultType::ONE_BYTE_AT_A_TIME),
+                      GzipTestParam(kBigBufferSize,
+                                    MockSourceStream::ASYNC,
+                                    ReadResultType::ONE_BYTE_AT_A_TIME),
+                      GzipTestParam(kSmallBufferSize,
+                                    MockSourceStream::ASYNC,
+                                    ReadResultType::ONE_BYTE_AT_A_TIME)));
 
 TEST_P(GzipSourceStreamTest, EmptyStream) {
   Init(SourceStream::TYPE_DEFLATE);
-  source()->AddReadResult("", 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   TestCompletionCallback callback;
   std::string actual_output;
   int result = ReadStream(&actual_output);
@@ -153,7 +190,7 @@ TEST_P(GzipSourceStreamTest, DeflateOneBlock) {
   Init(SourceStream::TYPE_DEFLATE);
   source()->AddReadResult(encoded_data(), encoded_data_len(), OK,
                           GetParam().mode);
-  source()->AddReadResult(encoded_data(), 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
   EXPECT_EQ(static_cast<int>(source_data_len()), rv);
@@ -165,7 +202,7 @@ TEST_P(GzipSourceStreamTest, GzipOneBloc) {
   Init(SourceStream::TYPE_GZIP);
   source()->AddReadResult(encoded_data(), encoded_data_len(), OK,
                           GetParam().mode);
-  source()->AddReadResult(encoded_data(), 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
   EXPECT_EQ(static_cast<int>(source_data_len()), rv);
@@ -178,8 +215,7 @@ TEST_P(GzipSourceStreamTest, DeflateTwoReads) {
   source()->AddReadResult(encoded_data(), 10, OK, GetParam().mode);
   source()->AddReadResult(encoded_data() + 10, encoded_data_len() - 10, OK,
                           GetParam().mode);
-  source()->AddReadResult(encoded_data() + encoded_data_len(), 0, OK,
-                          GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
   EXPECT_EQ(static_cast<int>(source_data_len()), rv);
@@ -196,7 +232,7 @@ TEST_P(GzipSourceStreamTest, PassThroughAfterEOF) {
   source()->AddReadResult(encoded_data_with_trailing_data.c_str(),
                           encoded_data_len() + sizeof(test_data), OK,
                           GetParam().mode);
-  source()->AddReadResult(encoded_data(), 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   // Compressed and uncompressed data get returned as separate Read() results,
   // so this test has to call Read twice.
   std::string actual_output;
@@ -214,7 +250,7 @@ TEST_P(GzipSourceStreamTest, MissingZlibHeader) {
   source()->AddReadResult(encoded_data() + kZlibHeaderLen,
                           encoded_data_len() - kZlibHeaderLen, OK,
                           GetParam().mode);
-  source()->AddReadResult(encoded_data(), 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
   EXPECT_EQ(static_cast<int>(source_data_len()), rv);
@@ -224,9 +260,12 @@ TEST_P(GzipSourceStreamTest, MissingZlibHeader) {
 
 TEST_P(GzipSourceStreamTest, CorruptGzipHeader) {
   Init(SourceStream::TYPE_GZIP);
-  encoded_data()[0] = 0;
-  source()->AddReadResult(encoded_data(), encoded_data_len(), OK,
-                          GetParam().mode);
+  encoded_data()[1] = 0;
+  int read_len = encoded_data_len();
+  // Needed to a avoid a DCHECK that all reads were consumed.
+  if (GetParam().read_result_type == ReadResultType::ONE_BYTE_AT_A_TIME)
+    read_len = 2;
+  source()->AddReadResult(encoded_data(), read_len, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
   EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, rv);
@@ -237,7 +276,7 @@ TEST_P(GzipSourceStreamTest, GzipFallback) {
   Init(SourceStream::TYPE_GZIP_FALLBACK);
   source()->AddReadResult(source_data(), source_data_len(), OK,
                           GetParam().mode);
-  source()->AddReadResult(source_data(), 0, OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
 
   std::string actual_output;
   int rv = ReadStream(&actual_output);
@@ -250,50 +289,21 @@ TEST_P(GzipSourceStreamTest, GzipFallback) {
 // as produced by gzip(1).
 TEST_P(GzipSourceStreamTest, GzipCorrectness) {
   Init(SourceStream::TYPE_GZIP);
-  char plain_data[] = "Hello, World!";
-  unsigned char gzip_data[] = {
+  const char kDecompressedData[] = "Hello, World!";
+  const unsigned char kGzipData[] = {
       // From:
       //   echo -n 'Hello, World!' | gzip | xxd -i | sed -e 's/^/  /'
       // The footer is the last 8 bytes.
       0x1f, 0x8b, 0x08, 0x00, 0x2b, 0x02, 0x84, 0x55, 0x00, 0x03, 0xf3,
       0x48, 0xcd, 0xc9, 0xc9, 0xd7, 0x51, 0x08, 0xcf, 0x2f, 0xca, 0x49,
       0x51, 0x04, 0x00, 0xd0, 0xc3, 0x4a, 0xec, 0x0d, 0x00, 0x00, 0x00};
-  source()->AddReadResult(reinterpret_cast<char*>(gzip_data), sizeof(gzip_data),
-                          OK, GetParam().mode);
-  source()->AddReadResult(
-      reinterpret_cast<char*>(gzip_data) + sizeof(gzip_data), 0, OK,
-      GetParam().mode);
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
-  EXPECT_EQ(static_cast<int>(strlen(plain_data)), rv);
-  EXPECT_EQ(plain_data, actual_output);
-  EXPECT_EQ("GZIP", stream()->Description());
-}
-
-// Only test synchronous read because it's not straightforward to know how many
-// MockSourceStream reads to complete in order for GzipSourceStream to return.
-TEST_P(GzipSourceStreamTest, GzipCorrectnessWithSmallInputBuffer) {
-  Init(SourceStream::TYPE_GZIP);
-  char plain_data[] = "Hello, World!";
-  unsigned char gzip_data[] = {
-      // From:
-      //   echo -n 'Hello, World!' | gzip | xxd -i | sed -e 's/^/  /'
-      // The footer is the last 8 bytes.
-      0x1f, 0x8b, 0x08, 0x00, 0x2b, 0x02, 0x84, 0x55, 0x00, 0x03, 0xf3,
-      0x48, 0xcd, 0xc9, 0xc9, 0xd7, 0x51, 0x08, 0xcf, 0x2f, 0xca, 0x49,
-      0x51, 0x04, 0x00, 0xd0, 0xc3, 0x4a, 0xec, 0x0d, 0x00, 0x00, 0x00};
-  size_t gzip_data_len = sizeof(gzip_data);
-  // Add a sequence of small reads.
-  for (size_t i = 0; i < gzip_data_len; i++) {
-    source()->AddReadResult(reinterpret_cast<char*>(gzip_data) + i, 1, OK,
-                            MockSourceStream::SYNC);
-  }
-  source()->AddReadResult(reinterpret_cast<char*>(gzip_data) + gzip_data_len, 0,
-                          OK, MockSourceStream::SYNC);
-  std::string actual_output;
-  int rv = ReadStream(&actual_output);
-  EXPECT_EQ(static_cast<int>(strlen(plain_data)), rv);
-  EXPECT_EQ(plain_data, actual_output);
+  EXPECT_EQ(static_cast<int>(strlen(kDecompressedData)), rv);
+  EXPECT_EQ(kDecompressedData, actual_output);
   EXPECT_EQ("GZIP", stream()->Description());
 }
 
@@ -301,23 +311,83 @@ TEST_P(GzipSourceStreamTest, GzipCorrectnessWithSmallInputBuffer) {
 // implementation can handle missing footer.
 TEST_P(GzipSourceStreamTest, GzipCorrectnessWithoutFooter) {
   Init(SourceStream::TYPE_GZIP);
-  char plain_data[] = "Hello, World!";
-  unsigned char gzip_data[] = {
+  const char kDecompressedData[] = "Hello, World!";
+  const unsigned char kGzipData[] = {
       // From:
       //   echo -n 'Hello, World!' | gzip | xxd -i | sed -e 's/^/  /'
       // with the 8 footer bytes removed.
       0x1f, 0x8b, 0x08, 0x00, 0x2b, 0x02, 0x84, 0x55, 0x00,
       0x03, 0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0xd7, 0x51, 0x08,
       0xcf, 0x2f, 0xca, 0x49, 0x51, 0x04, 0x00};
-  source()->AddReadResult(reinterpret_cast<char*>(gzip_data), sizeof(gzip_data),
-                          OK, GetParam().mode);
-  source()->AddReadResult(reinterpret_cast<char*>(gzip_data), 0, OK,
-                          GetParam().mode);
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
   std::string actual_output;
   int rv = ReadStream(&actual_output);
-  EXPECT_EQ(static_cast<int>(strlen(plain_data)), rv);
-  EXPECT_EQ(plain_data, actual_output);
+  EXPECT_EQ(static_cast<int>(strlen(kDecompressedData)), rv);
+  EXPECT_EQ(kDecompressedData, actual_output);
   EXPECT_EQ("GZIP", stream()->Description());
+}
+
+// Test with the same compressed data as the above tests, but uses deflate with
+// header and checksum. Tests the Z_STREAM_END case in
+// STATE_SNIFFING_DEFLATE_HEADER.
+TEST_P(GzipSourceStreamTest, DeflateWithAdler32) {
+  Init(SourceStream::TYPE_DEFLATE);
+  const char kDecompressedData[] = "Hello, World!";
+  const unsigned char kGzipData[] = {0x78, 0x01, 0xf3, 0x48, 0xcd, 0xc9, 0xc9,
+                                     0xd7, 0x51, 0x08, 0xcf, 0x2f, 0xca, 0x49,
+                                     0x51, 0x04, 0x00, 0x1f, 0x9e, 0x04, 0x6a};
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
+  std::string actual_output;
+  int rv = ReadStream(&actual_output);
+  EXPECT_EQ(static_cast<int>(strlen(kDecompressedData)), rv);
+  EXPECT_EQ(kDecompressedData, actual_output);
+  EXPECT_EQ("DEFLATE", stream()->Description());
+}
+
+TEST_P(GzipSourceStreamTest, DeflateWithBadAdler32) {
+  Init(SourceStream::TYPE_DEFLATE);
+  const unsigned char kGzipData[] = {0x78, 0x01, 0xf3, 0x48, 0xcd, 0xc9, 0xc9,
+                                     0xd7, 0x51, 0x08, 0xcf, 0x2f, 0xca, 0x49,
+                                     0x51, 0x04, 0x00, 0xFF, 0xFF, 0xFF, 0xFF};
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  std::string actual_output;
+  int rv = ReadStream(&actual_output);
+  EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, rv);
+  EXPECT_EQ("DEFLATE", stream()->Description());
+}
+
+TEST_P(GzipSourceStreamTest, DeflateWithoutHeaderWithAdler32) {
+  Init(SourceStream::TYPE_DEFLATE);
+  const char kDecompressedData[] = "Hello, World!";
+  const unsigned char kGzipData[] = {0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0xd7, 0x51,
+                                     0x08, 0xcf, 0x2f, 0xca, 0x49, 0x51, 0x04,
+                                     0x00, 0x1f, 0x9e, 0x04, 0x6a};
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  source()->AddReadResult(nullptr, 0, OK, GetParam().mode);
+  std::string actual_output;
+  int rv = ReadStream(&actual_output);
+  EXPECT_EQ(static_cast<int>(strlen(kDecompressedData)), rv);
+  EXPECT_EQ(kDecompressedData, actual_output);
+  EXPECT_EQ("DEFLATE", stream()->Description());
+}
+
+TEST_P(GzipSourceStreamTest, DeflateWithoutHeaderWithBadAdler32) {
+  Init(SourceStream::TYPE_DEFLATE);
+  const unsigned char kGzipData[] = {0xf3, 0x48, 0xcd, 0xc9, 0xc9, 0xd7, 0x51,
+                                     0x08, 0xcf, 0x2f, 0xca, 0x49, 0x51, 0x04,
+                                     0x00, 0xFF, 0xFF, 0xFF, 0xFF};
+  source()->AddReadResult(reinterpret_cast<const char*>(kGzipData),
+                          sizeof(kGzipData), OK, GetParam().mode);
+  std::string actual_output;
+  int rv = ReadStream(&actual_output);
+  EXPECT_EQ(ERR_CONTENT_DECODING_FAILED, rv);
+  EXPECT_EQ("DEFLATE", stream()->Description());
 }
 
 }  // namespace net

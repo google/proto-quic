@@ -115,6 +115,9 @@
         ],
         "system_health_desktop_037.wpr": [
             "browse:search:google"
+        ],
+        "system_health_desktop_039.wpr": [
+            "browse:search:google_india"
         ]
     },
     "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
