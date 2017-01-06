@@ -24,6 +24,7 @@ Building on Linux
    ```
    git clone https://github.com/google/proto-quic.git
    cd proto-quic
+   export PROTO_QUIC_ROOT=`pwd`/src
    export PATH=$PATH:`pwd`/depot_tools
    ./proto_quic_tools/sync.sh
    ```
