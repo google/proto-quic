@@ -356,11 +356,11 @@ def get_waterfall_config():
       }
     ])
   waterfall = add_tester(
-    waterfall, 'Mac 10.10 Perf', 'chromium-rel-mac10',
+    waterfall, 'Mac 10.12 Perf', 'chromium-rel-mac12',
     'mac',
     swarming=[
       {
-       'os': 'Mac-10.10',
+       'os': 'Mac-10.12',
        'gpu': '8086:0a2e',
        'device_ids': [
            'build158-m1', 'build159-m1', 'build160-m1',

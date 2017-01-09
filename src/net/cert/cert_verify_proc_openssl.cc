@@ -108,22 +108,7 @@ void GetCertChainInfo(X509_STORE_CTX* store_ctx,
     // Only check the algorithm status for certificates that are not in the
     // trust store.
     if (i < static_cast<size_t>(store_ctx->last_untrusted)) {
-      int sig_alg = OBJ_obj2nid(cert->sig_alg->algorithm);
-      if (sig_alg == NID_md2WithRSAEncryption) {
-        verify_result->has_md2 = true;
-      } else if (sig_alg == NID_md4WithRSAEncryption) {
-        verify_result->has_md4 = true;
-      } else if (sig_alg == NID_md5WithRSAEncryption ||
-                 sig_alg == NID_md5WithRSA) {
-        verify_result->has_md5 = true;
-      } else if (sig_alg == NID_sha1WithRSAEncryption ||
-                 sig_alg == NID_dsaWithSHA || sig_alg == NID_dsaWithSHA1 ||
-                 sig_alg == NID_dsaWithSHA1_2 || sig_alg == NID_sha1WithRSA ||
-                 sig_alg == NID_ecdsa_with_SHA1) {
-        verify_result->has_sha1 = true;
-        if (i == 0)
-          verify_result->has_sha1_leaf = true;
-      }
+      FillCertVerifyResultWeakSignature(cert, i == 0, verify_result);
     }
   }
 

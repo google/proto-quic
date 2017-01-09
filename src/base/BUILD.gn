@@ -267,7 +267,6 @@ component("base") {
     "containers/hash_tables.h",
     "containers/linked_list.h",
     "containers/mru_cache.h",
-    "containers/scoped_ptr_hash_map.h",
     "containers/small_map.h",
     "containers/stack_container.h",
     "cpu.cc",
@@ -1093,7 +1092,7 @@ component("base") {
   ]
 
   # Needed for <atomic> if using newer C++ library than sysroot
-  if (!use_sysroot && (is_android || is_linux)) {
+  if (!use_sysroot && (is_android || (is_linux && !is_chromecast))) {
     libs = [ "atomic" ]
   }
 
@@ -1845,7 +1844,6 @@ test("base_unittests") {
     "containers/hash_tables_unittest.cc",
     "containers/linked_list_unittest.cc",
     "containers/mru_cache_unittest.cc",
-    "containers/scoped_ptr_hash_map_unittest.cc",
     "containers/small_map_unittest.cc",
     "containers/stack_container_unittest.cc",
     "cpu_unittest.cc",

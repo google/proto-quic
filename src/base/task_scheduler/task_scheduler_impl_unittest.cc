@@ -20,6 +20,7 @@
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/task_scheduler/test_task_factory.h"
+#include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/simple_thread.h"
 #include "base/threading/thread.h"
@@ -53,7 +54,7 @@ bool GetIOAllowed() {
 // Verify that the current thread priority and I/O restrictions are appropriate
 // to run a Task with |traits|.
 // Note: ExecutionMode is verified inside TestTaskFactory.
-void VerifyTaskEnvironement(const TaskTraits& traits) {
+void VerifyTaskEnvironment(const TaskTraits& traits) {
   const bool supports_background_priority =
       Lock::HandlesMultipleThreadPriorities() &&
       PlatformThread::CanIncreaseCurrentThreadPriority();
@@ -81,10 +82,19 @@ void VerifyTaskEnvironement(const TaskTraits& traits) {
             current_thread_name.find("Blocking") != std::string::npos);
 }
 
-void VerifyTaskEnvironementAndSignalEvent(const TaskTraits& traits,
-                                          WaitableEvent* event) {
+void VerifyTaskEnvironmentAndSignalEvent(const TaskTraits& traits,
+                                         WaitableEvent* event) {
   DCHECK(event);
-  VerifyTaskEnvironement(traits);
+  VerifyTaskEnvironment(traits);
+  event->Signal();
+}
+
+void VerifyTimeAndTaskEnvironmentAndSignalEvent(const TaskTraits& traits,
+                                                TimeTicks expected_time,
+                                                WaitableEvent* event) {
+  DCHECK(event);
+  EXPECT_LE(expected_time, TimeTicks::Now());
+  VerifyTaskEnvironment(traits);
   event->Signal();
 }
 
@@ -127,7 +137,7 @@ class ThreadPostingTasks : public SimpleThread {
     const size_t kNumTasksPerThread = 150;
     for (size_t i = 0; i < kNumTasksPerThread; ++i) {
       factory_.PostTask(test::TestTaskFactory::PostNestedTask::NO,
-                        Bind(&VerifyTaskEnvironement, traits_));
+                        Bind(&VerifyTaskEnvironment, traits_));
     }
   }
 
@@ -220,16 +230,33 @@ class TaskSchedulerImplTest
 
 }  // namespace
 
-// Verifies that a Task posted via PostTaskWithTraits with parameterized
-// TaskTraits runs on a thread with the expected priority and I/O restrictions.
-// The ExecutionMode parameter is ignored by this test.
-TEST_P(TaskSchedulerImplTest, PostTaskWithTraits) {
+// Verifies that a Task posted via PostDelayedTaskWithTraits with parameterized
+// TaskTraits and no delay runs on a thread with the expected priority and I/O
+// restrictions. The ExecutionMode parameter is ignored by this test.
+TEST_P(TaskSchedulerImplTest, PostDelayedTaskWithTraitsNoDelay) {
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
-  scheduler_->PostTaskWithTraits(
+  scheduler_->PostDelayedTaskWithTraits(
       FROM_HERE, GetParam().traits,
-      Bind(&VerifyTaskEnvironementAndSignalEvent, GetParam().traits,
-           Unretained(&task_ran)));
+      Bind(&VerifyTaskEnvironmentAndSignalEvent, GetParam().traits,
+           Unretained(&task_ran)),
+      TimeDelta());
+  task_ran.Wait();
+}
+
+// Verifies that a Task posted via PostDelayedTaskWithTraits with parameterized
+// TaskTraits and a non-zero delay runs on a thread with the expected priority
+// and I/O restrictions after the delay expires. The ExecutionMode parameter is
+// ignored by this test.
+TEST_P(TaskSchedulerImplTest, PostDelayedTaskWithTraitsWithDelay) {
+  WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
+                         WaitableEvent::InitialState::NOT_SIGNALED);
+  scheduler_->PostDelayedTaskWithTraits(
+      FROM_HERE, GetParam().traits,
+      Bind(&VerifyTimeAndTaskEnvironmentAndSignalEvent, GetParam().traits,
+           TimeTicks::Now() + TestTimeouts::tiny_timeout(),
+           Unretained(&task_ran)),
+      TestTimeouts::tiny_timeout());
   task_ran.Wait();
 }
 
@@ -246,7 +273,7 @@ TEST_P(TaskSchedulerImplTest, PostTasksViaTaskRunner) {
   const size_t kNumTasksPerTest = 150;
   for (size_t i = 0; i < kNumTasksPerTest; ++i) {
     factory.PostTask(test::TestTaskFactory::PostNestedTask::NO,
-                     Bind(&VerifyTaskEnvironement, GetParam().traits));
+                     Bind(&VerifyTaskEnvironment, GetParam().traits));
   }
 
   factory.WaitForAllTasksToRun();

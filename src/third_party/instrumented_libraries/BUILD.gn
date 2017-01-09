@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/linux/gtk/gtk.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/goma.gni")
 
@@ -122,11 +123,9 @@ if (use_locally_built_instrumented_libraries) {
       ":libfontconfig1",
       ":libgconf-2-4",
       ":libgcrypt11",
-      ":libgdk-pixbuf2.0-0",
       ":libglib2.0-0",
       ":libgnome-keyring0",
       ":libgpg-error0",
-      ":libgtk2.0-0",
       ":libnspr4",
       ":libp11-kit0",
       ":libpci3",
@@ -155,6 +154,12 @@ if (use_locally_built_instrumented_libraries) {
       ":udev",
       ":zlib1g",
     ]
+    if (!use_gtk3) {
+      deps += [
+        ":libgdk-pixbuf2.0-0",
+        ":libgtk2.0-0",
+      ]
+    }
     if (is_precise) {
       deps += [ ":libtasn1-3" ]
     }

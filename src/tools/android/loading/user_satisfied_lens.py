@@ -214,7 +214,7 @@ class FirstSignificantPaintLens(_FirstEventLens):
   def _CalculateTimes(self, trace):
     for cat in self._EVENT_CATEGORIES:
       self._CheckCategory(trace.tracing_track, cat)
-    sync_paint_times = []
+    paint_tree_times = []
     layouts = []  # (layout item count, msec).
     for e in trace.tracing_track.GetEvents():
       if ('frame' in e.args and
@@ -222,19 +222,17 @@ class FirstSignificantPaintLens(_FirstEventLens):
         continue
       # If we don't know have a frame id, we assume it applies to all events.
 
-      # TODO(mattcary): is this the right paint event? Check if synchronized
-      # paints appear at the same time as the first*Paint events, above.
-      if e.Matches('blink', 'FrameView::synchronizedPaint'):
-        sync_paint_times.append(e.start_msec)
+      if e.Matches('blink', 'FrameView::paintTree'):
+        paint_tree_times.append(e.start_msec)
       if ('counters' in e.args and
           self._FIRST_LAYOUT_COUNTER in e.args['counters']):
         layouts.append((e.args['counters'][self._FIRST_LAYOUT_COUNTER],
                         e.start_msec))
     assert layouts, 'No layout events'
-    assert sync_paint_times,'No sync paint times'
+    assert paint_tree_times,'No paintTree times'
     layouts.sort(key=operator.itemgetter(0), reverse=True)
     self._satisfied_msec = layouts[0][1]
-    self._event_msec = min(t for t in sync_paint_times
+    self._event_msec = min(t for t in paint_tree_times
                            if t > self._satisfied_msec)
 
 

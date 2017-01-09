@@ -30,6 +30,8 @@ class NET_EXPORT_PRIVATE HpackString {
   // Not sure yet whether this move ctor is required/sensible.
   HpackString(HpackString&& other) = default;
 
+  HpackString& operator=(const HpackString& other) = default;
+
   ~HpackString();
 
   size_t size() const { return str_.size(); }
@@ -50,6 +52,24 @@ NET_EXPORT_PRIVATE bool operator!=(const HpackString& a, const HpackString& b);
 NET_EXPORT_PRIVATE bool operator!=(const HpackString& a, base::StringPiece b);
 NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
                                             const HpackString& v);
+
+struct NET_EXPORT_PRIVATE HpackStringPair {
+  HpackStringPair(const HpackString& name, const HpackString& value);
+  HpackStringPair(base::StringPiece name, base::StringPiece value);
+  ~HpackStringPair();
+
+  // Returns the size of a header entry with this name and value, per the RFC:
+  // http://httpwg.org/specs/rfc7541.html#calculating.table.size
+  size_t size() const { return 32 + name.size() + value.size(); }
+
+  std::string DebugString() const;
+
+  HpackString name;
+  HpackString value;
+};
+
+NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& os,
+                                            const HpackStringPair& p);
 
 }  // namespace net
 

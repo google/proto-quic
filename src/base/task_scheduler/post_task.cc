@@ -30,7 +30,13 @@ class PostTaskAndReplyTaskRunner : public internal::PostTaskAndReplyImpl {
 }  // namespace
 
 void PostTask(const tracked_objects::Location& from_here, const Closure& task) {
-  PostTaskWithTraits(from_here, TaskTraits(), task);
+  PostDelayedTask(from_here, task, TimeDelta());
+}
+
+void PostDelayedTask(const tracked_objects::Location& from_here,
+                     const Closure& task,
+                     TimeDelta delay) {
+  PostDelayedTaskWithTraits(from_here, TaskTraits(), task, delay);
 }
 
 void PostTaskAndReply(const tracked_objects::Location& from_here,
@@ -42,7 +48,15 @@ void PostTaskAndReply(const tracked_objects::Location& from_here,
 void PostTaskWithTraits(const tracked_objects::Location& from_here,
                         const TaskTraits& traits,
                         const Closure& task) {
-  TaskScheduler::GetInstance()->PostTaskWithTraits(from_here, traits, task);
+  PostDelayedTaskWithTraits(from_here, traits, task, TimeDelta());
+}
+
+void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
+                               const TaskTraits& traits,
+                               const Closure& task,
+                               TimeDelta delay) {
+  TaskScheduler::GetInstance()->PostDelayedTaskWithTraits(from_here, traits,
+                                                          task, delay);
 }
 
 void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,

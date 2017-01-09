@@ -53,11 +53,8 @@ class BASE_EXPORT SchedulerWorker {
     // run a Task.
     virtual scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) = 0;
 
-    // Called by the SchedulerWorker after it ran a task with |task_priority|.
-    // |task_latency| is the time elapsed between when the task was posted and
-    // when it started to run.
-    virtual void DidRunTaskWithPriority(TaskPriority task_priority,
-                                        const TimeDelta& task_latency) = 0;
+    // Called by the SchedulerWorker after it ran a task.
+    virtual void DidRunTask() = 0;
 
     // Called when |sequence| isn't empty after the SchedulerWorker pops a Task
     // from it. |sequence| is the last Sequence returned by GetWork().

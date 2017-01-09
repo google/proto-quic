@@ -76,7 +76,7 @@ class TaskSchedulerWorkerPoolImplTest
     worker_pool_->JoinForTesting();
   }
 
-  void InitializeWorkerPool(const TimeDelta& suggested_reclaim_time,
+  void InitializeWorkerPool(TimeDelta suggested_reclaim_time,
                             size_t num_workers) {
     ASSERT_FALSE(worker_pool_);
     ASSERT_FALSE(delayed_task_manager_);

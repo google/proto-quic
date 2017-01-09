@@ -27,10 +27,6 @@ void TestCompletionCallbackBaseInternal::WaitForResult() {
     run_loop_->Run();
     run_loop_.reset();
     DCHECK(have_result_);
-    // A huge number of tests depend on this class running events after the
-    // result is set.
-    // TODO(mmenke):  We really should fix this.
-    base::RunLoop().RunUntilIdle();
   }
   have_result_ = false;  // Auto-reset for next callback.
 }

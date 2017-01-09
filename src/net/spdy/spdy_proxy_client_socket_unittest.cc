@@ -837,8 +837,8 @@ TEST_F(SpdyProxyClientSocketTest, ReadErrorResponseBody) {
   SpdySerializedFrame msg1(ConstructBodyFrame(kMsg1, kLen1));
   SpdySerializedFrame msg2(ConstructBodyFrame(kMsg2, kLen2));
   MockRead reads[] = {
-      CreateMockRead(resp, 1, ASYNC), CreateMockRead(msg1, 2, ASYNC),
-      CreateMockRead(msg2, 3, ASYNC), MockRead(ASYNC, 0, 4),  // EOF
+      CreateMockRead(resp, 1, ASYNC), CreateMockRead(msg1, 2, SYNCHRONOUS),
+      CreateMockRead(msg2, 3, SYNCHRONOUS), MockRead(SYNCHRONOUS, 0, 4),  // EOF
   };
 
   Initialize(reads, arraysize(reads), writes, arraysize(writes));

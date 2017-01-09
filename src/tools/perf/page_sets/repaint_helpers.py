@@ -7,7 +7,7 @@ from telemetry.page import legacy_page_test
 
 def Repaint(action_runner, mode='viewport', width=None, height=None):
   action_runner.WaitForJavaScriptCondition(
-    'document.readyState == "complete"', 90)
+    'document.readyState == "complete"', timeout_in_seconds=90)
   # Rasterize only what's visible.
   action_runner.ExecuteJavaScript(
       'chrome.gpuBenchmarking.setRasterizeOnlyVisibleContent();')

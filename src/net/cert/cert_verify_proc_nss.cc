@@ -192,29 +192,7 @@ void GetCertChainInfo(CERTCertList* cert_list,
       verified_chain.push_back(node->cert);
     }
 
-    SECAlgorithmID& signature = node->cert->signature;
-    SECOidTag oid_tag = SECOID_FindOIDTag(&signature.algorithm);
-    switch (oid_tag) {
-      case SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION:
-        verify_result->has_md5 = true;
-        break;
-      case SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION:
-        verify_result->has_md2 = true;
-        break;
-      case SEC_OID_PKCS1_MD4_WITH_RSA_ENCRYPTION:
-        verify_result->has_md4 = true;
-        break;
-      case SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION:
-      case SEC_OID_ISO_SHA1_WITH_RSA_SIGNATURE:
-      case SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST:
-      case SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE:
-        verify_result->has_sha1 = true;
-        if (i == 0)
-          verify_result->has_sha1_leaf = true;
-        break;
-      default:
-        break;
-    }
+    FillCertVerifyResultWeakSignature(node->cert, i == 0, verify_result);
   }
 
   if (root_cert)

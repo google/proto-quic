@@ -136,37 +136,32 @@ struct StaticDstRangeRelationToSrcRange<Dst,
   static const NumericRangeRepresentation value = NUMERIC_RANGE_NOT_CONTAINED;
 };
 
-enum RangeConstraint {
-  RANGE_VALID = 0x0,      // Value can be represented by the destination type.
-  RANGE_UNDERFLOW = 0x1,  // Value would underflow.
-  RANGE_OVERFLOW = 0x2,   // Value would overflow.
-  RANGE_INVALID = RANGE_UNDERFLOW | RANGE_OVERFLOW  // Invalid (i.e. NaN).
-};
-
 // This class wraps the range constraints as separate booleans so the compiler
 // can identify constants and eliminate unused code paths.
 class RangeCheck {
  public:
-  constexpr RangeCheck(bool is_in_upper_bound, bool is_in_lower_bound)
-      : is_overflow_(!is_in_upper_bound), is_underflow_(!is_in_lower_bound) {}
-  constexpr RangeCheck() : is_overflow_(0), is_underflow_(0) {}
+  constexpr RangeCheck(bool is_in_lower_bound, bool is_in_upper_bound)
+      : is_underflow_(!is_in_lower_bound), is_overflow_(!is_in_upper_bound) {}
+  constexpr RangeCheck() : is_underflow_(0), is_overflow_(0) {}
   constexpr bool IsValid() const { return !is_overflow_ && !is_underflow_; }
   constexpr bool IsInvalid() const { return is_overflow_ && is_underflow_; }
   constexpr bool IsOverflow() const { return is_overflow_ && !is_underflow_; }
   constexpr bool IsUnderflow() const { return !is_overflow_ && is_underflow_; }
-
-  // These are some wrappers to make the tests a bit cleaner.
-  constexpr operator RangeConstraint() const {
-    return static_cast<RangeConstraint>(static_cast<int>(is_overflow_) << 1 |
-                                        static_cast<int>(is_underflow_));
+  constexpr bool IsOverflowFlagSet() const { return is_overflow_; }
+  constexpr bool IsUnderflowFlagSet() const { return is_underflow_; }
+  constexpr bool operator==(const RangeCheck rhs) const {
+    return is_underflow_ == rhs.is_underflow_ &&
+           is_overflow_ == rhs.is_overflow_;
   }
-  constexpr bool operator==(const RangeConstraint rhs) const {
-    return rhs == static_cast<RangeConstraint>(*this);
+  constexpr bool operator!=(const RangeCheck rhs) const {
+    return !(*this == rhs);
   }
 
  private:
-  const bool is_overflow_;
+  // Do not change the order of these member variables. The integral conversion
+  // optimization depends on this exact order.
   const bool is_underflow_;
+  const bool is_overflow_;
 };
 
 // The following helper template addresses a corner case in range checks for
@@ -261,10 +256,10 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
     using SrcLimits = std::numeric_limits<Src>;
     using DstLimits = NarrowingRange<Dst, Src, Bounds>;
     return RangeCheck(
-        static_cast<Dst>(SrcLimits::max()) <= DstLimits::max() ||
-            static_cast<Dst>(value) <= DstLimits::max(),
         static_cast<Dst>(SrcLimits::lowest()) >= DstLimits::lowest() ||
-            static_cast<Dst>(value) >= DstLimits::lowest());
+            static_cast<Dst>(value) >= DstLimits::lowest(),
+        static_cast<Dst>(SrcLimits::max()) <= DstLimits::max() ||
+            static_cast<Dst>(value) <= DstLimits::max());
   }
 };
 
@@ -279,7 +274,7 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
                                       NUMERIC_RANGE_NOT_CONTAINED> {
   static constexpr RangeCheck Check(Src value) {
     using DstLimits = NarrowingRange<Dst, Src, Bounds>;
-    return RangeCheck(value <= DstLimits::max(), value >= DstLimits::lowest());
+    return RangeCheck(value >= DstLimits::lowest(), value <= DstLimits::max());
   }
 };
 
@@ -295,8 +290,8 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
   static constexpr RangeCheck Check(Src value) {
     using DstLimits = NarrowingRange<Dst, Src, Bounds>;
     return RangeCheck(
-        value <= DstLimits::max(),
-        DstLimits::lowest() == Dst(0) || value >= DstLimits::lowest());
+        DstLimits::lowest() == Dst(0) || value >= DstLimits::lowest(),
+        value <= DstLimits::max());
   }
 };
 
@@ -311,11 +306,11 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
   static constexpr RangeCheck Check(Src value) {
     using DstLimits = NarrowingRange<Dst, Src, Bounds>;
     using Promotion = decltype(Src() + Dst());
-    return RangeCheck(static_cast<Promotion>(value) <=
-                          static_cast<Promotion>(DstLimits::max()),
-                      DstLimits::lowest() <= Dst(0) ||
+    return RangeCheck(DstLimits::lowest() <= Dst(0) ||
                           static_cast<Promotion>(value) >=
-                              static_cast<Promotion>(DstLimits::lowest()));
+                              static_cast<Promotion>(DstLimits::lowest()),
+                      static_cast<Promotion>(value) <=
+                          static_cast<Promotion>(DstLimits::max()));
   }
 };
 
@@ -333,12 +328,12 @@ struct DstRangeRelationToSrcRangeImpl<Dst,
     using DstLimits = NarrowingRange<Dst, Src, Bounds>;
     using Promotion = decltype(Src() + Dst());
     return RangeCheck(
+        value >= Src(0) && (DstLimits::lowest() == 0 ||
+                            static_cast<Dst>(value) >= DstLimits::lowest()),
         static_cast<Promotion>(SrcLimits::max()) <=
                 static_cast<Promotion>(DstLimits::max()) ||
             static_cast<Promotion>(value) <=
-                static_cast<Promotion>(DstLimits::max()),
-        value >= Src(0) && (DstLimits::lowest() == 0 ||
-                            static_cast<Dst>(value) >= DstLimits::lowest()));
+                static_cast<Promotion>(DstLimits::max()));
   }
 };
 
@@ -611,7 +606,7 @@ constexpr bool IsLessImpl(const L lhs,
                           const R rhs,
                           const RangeCheck l_range,
                           const RangeCheck r_range) {
-  return l_range == RANGE_UNDERFLOW || r_range == RANGE_OVERFLOW ||
+  return l_range.IsUnderflow() || r_range.IsOverflow() ||
          (l_range == r_range &&
           static_cast<decltype(lhs + rhs)>(lhs) <
               static_cast<decltype(lhs + rhs)>(rhs));
@@ -632,7 +627,7 @@ constexpr bool IsLessOrEqualImpl(const L lhs,
                                  const R rhs,
                                  const RangeCheck l_range,
                                  const RangeCheck r_range) {
-  return l_range == RANGE_UNDERFLOW || r_range == RANGE_OVERFLOW ||
+  return l_range.IsUnderflow() || r_range.IsOverflow() ||
          (l_range == r_range &&
           static_cast<decltype(lhs + rhs)>(lhs) <=
               static_cast<decltype(lhs + rhs)>(rhs));
@@ -653,7 +648,7 @@ constexpr bool IsGreaterImpl(const L lhs,
                              const R rhs,
                              const RangeCheck l_range,
                              const RangeCheck r_range) {
-  return l_range == RANGE_OVERFLOW || r_range == RANGE_UNDERFLOW ||
+  return l_range.IsOverflow() || r_range.IsUnderflow() ||
          (l_range == r_range &&
           static_cast<decltype(lhs + rhs)>(lhs) >
               static_cast<decltype(lhs + rhs)>(rhs));
@@ -674,7 +669,7 @@ constexpr bool IsGreaterOrEqualImpl(const L lhs,
                                     const R rhs,
                                     const RangeCheck l_range,
                                     const RangeCheck r_range) {
-  return l_range == RANGE_OVERFLOW || r_range == RANGE_UNDERFLOW ||
+  return l_range.IsOverflow() || r_range.IsUnderflow() ||
          (l_range == r_range &&
           static_cast<decltype(lhs + rhs)>(lhs) >=
               static_cast<decltype(lhs + rhs)>(rhs));

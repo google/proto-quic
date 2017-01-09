@@ -827,6 +827,9 @@ TEST_F(ProxyResolverFactoryMojoTest, GetProxyForURL_Disconnect) {
     EXPECT_TRUE(request->results().is_empty());
   }
 
+  // Run Watcher::OnHandleReady() tasks posted by Watcher::CallOnHandleReady().
+  base::RunLoop().RunUntilIdle();
+
   {
     // Calling GetProxyForURL after a disconnect should fail.
     std::unique_ptr<Request> request(MakeRequest(GURL(kExampleUrl)));

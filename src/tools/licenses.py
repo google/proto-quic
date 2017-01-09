@@ -78,8 +78,6 @@ PRUNE_PATHS = set([
 
     # Redistribution does not require attribution in documentation.
     os.path.join('third_party','directxsdk'),
-    os.path.join('third_party','platformsdk_win2008_6_1'),
-    os.path.join('third_party','platformsdk_win7'),
 
     # For testing only, presents on some bots.
     os.path.join('isolate_deps_dir'),

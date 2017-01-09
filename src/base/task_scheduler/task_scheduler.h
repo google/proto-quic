@@ -15,6 +15,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
+#include "base/time/time.h"
 
 namespace tracked_objects {
 class Location;
@@ -39,11 +40,13 @@ class BASE_EXPORT TaskScheduler {
 
   virtual ~TaskScheduler() = default;
 
-  // Posts |task| with specific |traits|.
+  // Posts |task| with a |delay| and specific |traits|. |delay| can be zero.
   // For one off tasks that don't require a TaskRunner.
-  virtual void PostTaskWithTraits(const tracked_objects::Location& from_here,
-                                  const TaskTraits& traits,
-                                  const Closure& task) = 0;
+  virtual void PostDelayedTaskWithTraits(
+      const tracked_objects::Location& from_here,
+      const TaskTraits& traits,
+      const Closure& task,
+      TimeDelta delay) = 0;
 
   // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
   // using |traits|. Tasks may run in any order and in parallel.

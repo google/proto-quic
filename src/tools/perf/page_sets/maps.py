@@ -30,7 +30,7 @@ class MapsPage(page_module.Page):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('MapAnimation'):
       action_runner.WaitForJavaScriptCondition(
-        'window.testMetrics != undefined', 120)
+        'window.testMetrics != undefined', timeout_in_seconds=120)
 
 
 class MapsPageSet(story.StorySet):

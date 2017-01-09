@@ -65,7 +65,7 @@ class LoadingReportTestCase(unittest.TestCase):
          'args': {'frame': self._MAIN_FRAME_ID}},
         {'ts': 90 * self.MILLI_TO_MICRO, 'ph': 'I',
          'cat': 'blink', 'pid': 1, 'tid': 1,
-         'name': 'FrameView::synchronizedPaint'},
+         'name': 'FrameView::paintTree'},
         {'ts': self._SIGNIFICANT_PAINT * self.MILLI_TO_MICRO, 'ph': 'I',
          'cat': 'foobar', 'name': 'biz', 'pid': 1, 'tid': 1,
          'args': {'counters': {

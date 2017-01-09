@@ -16,6 +16,9 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
+#include "base/metrics/histogram_base.h"
+#include "base/metrics/histogram_samples.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/sequence_token.h"
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
@@ -25,6 +28,7 @@
 #include "base/task_scheduler/task.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/test/gtest_util.h"
+#include "base/test/histogram_tester.h"
 #include "base/test/test_simple_task_runner.h"
 #include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
@@ -883,6 +887,53 @@ TEST(TaskSchedulerTaskTrackerWaitAllowedTest, WaitAllowed) {
   WaitAllowedTestThread wait_allowed_test_thread;
   wait_allowed_test_thread.Start();
   wait_allowed_test_thread.Join();
+}
+
+// Verify that TaskScheduler.TaskLatency.* histograms are correctly recorded
+// when a task runs.
+TEST(TaskSchedulerTaskTrackerHistogramTest, TaskLatency) {
+  auto statistics_recorder = StatisticsRecorder::CreateTemporaryForTesting();
+
+  TaskTracker tracker;
+
+  struct {
+    const TaskTraits traits;
+    const char* const expected_histogram;
+  } tests[] = {
+      {TaskTraits().WithPriority(TaskPriority::BACKGROUND),
+       "TaskScheduler.TaskLatency.BackgroundTaskPriority"},
+      {TaskTraits().WithPriority(TaskPriority::BACKGROUND).MayBlock(),
+       "TaskScheduler.TaskLatency.BackgroundTaskPriority.MayBlock"},
+      {TaskTraits()
+           .WithPriority(TaskPriority::BACKGROUND)
+           .WithBaseSyncPrimitives(),
+       "TaskScheduler.TaskLatency.BackgroundTaskPriority.MayBlock"},
+      {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE),
+       "TaskScheduler.TaskLatency.UserVisibleTaskPriority"},
+      {TaskTraits().WithPriority(TaskPriority::USER_VISIBLE).MayBlock(),
+       "TaskScheduler.TaskLatency.UserVisibleTaskPriority.MayBlock"},
+      {TaskTraits()
+           .WithPriority(TaskPriority::USER_VISIBLE)
+           .WithBaseSyncPrimitives(),
+       "TaskScheduler.TaskLatency.UserVisibleTaskPriority.MayBlock"},
+      {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING),
+       "TaskScheduler.TaskLatency.UserBlockingTaskPriority"},
+      {TaskTraits().WithPriority(TaskPriority::USER_BLOCKING).MayBlock(),
+       "TaskScheduler.TaskLatency.UserBlockingTaskPriority.MayBlock"},
+      {TaskTraits()
+           .WithPriority(TaskPriority::USER_BLOCKING)
+           .WithBaseSyncPrimitives(),
+       "TaskScheduler.TaskLatency.UserBlockingTaskPriority.MayBlock"}};
+
+  for (const auto& test : tests) {
+    auto task =
+        MakeUnique<Task>(FROM_HERE, Bind(&DoNothing), test.traits, TimeDelta());
+    ASSERT_TRUE(tracker.WillPostTask(task.get()));
+
+    HistogramTester tester;
+    EXPECT_TRUE(tracker.RunTask(std::move(task), SequenceToken::Create()));
+    tester.ExpectTotalCount(test.expected_histogram, 1);
+  }
 }
 
 }  // namespace internal

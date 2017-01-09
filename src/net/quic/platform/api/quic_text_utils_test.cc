@@ -71,11 +71,13 @@ TEST(QuicTextUtilsText, HexEncode) {
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello World", 5));
   EXPECT_EQ("48656c6c6f", QuicTextUtils::HexEncode("Hello"));
+  EXPECT_EQ("0102779cfa", QuicTextUtils::HexEncode("\x01\x02\x77\x9c\xfa"));
 }
 
 TEST(QuicTextUtilsText, HexDecode) {
   EXPECT_EQ("Hello", QuicTextUtils::HexDecode("48656c6c6f"));
   EXPECT_EQ("", QuicTextUtils::HexDecode(""));
+  EXPECT_EQ("\x01\x02\x77\x9c\xfa", QuicTextUtils::HexDecode("0102779cfa"));
 }
 
 TEST(QuicTextUtilsText, HexDump) {

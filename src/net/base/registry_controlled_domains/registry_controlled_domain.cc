@@ -365,6 +365,12 @@ bool SameDomainOrHost(const url::Origin& origin1,
          SameDomainOrHost(origin1, origin2.value(), filter);
 }
 
+bool SameDomainOrHost(const GURL& gurl,
+                      const url::Origin& origin,
+                      PrivateRegistryFilter filter) {
+  return SameDomainOrHost(gurl.host_piece(), origin.host(), filter);
+}
+
 size_t GetRegistryLength(
     const GURL& gurl,
     UnknownRegistryFilter unknown_filter,

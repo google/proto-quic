@@ -5,6 +5,7 @@
 #include "base/task_scheduler/task_tracker.h"
 
 #include <limits>
+#include <string>
 
 #include "base/callback.h"
 #include "base/debug/task_annotator.h"
@@ -18,6 +19,7 @@
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/time.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 
@@ -70,6 +72,14 @@ const char kQueueFunctionName[] = "base::PostTask";
 // This name conveys that a Task is run by the task scheduler without revealing
 // its implementation details.
 const char kRunFunctionName[] = "TaskSchedulerRunTask";
+
+HistogramBase* GetTaskLatencyHistogram(const char* suffix) {
+  // Mimics the UMA_HISTOGRAM_TIMES macro.
+  return Histogram::FactoryTimeGet(
+      std::string("TaskScheduler.TaskLatency.") + suffix,
+      TimeDelta::FromMilliseconds(1), TimeDelta::FromSeconds(10), 50,
+      HistogramBase::kUmaTargetedHistogramFlag);
+}
 
 // Upper bound for the
 // TaskScheduler.BlockShutdownTasksPostedDuringShutdown histogram.
@@ -174,7 +184,20 @@ class TaskTracker::State {
 TaskTracker::TaskTracker()
     : state_(new State),
       flush_cv_(flush_lock_.CreateConditionVariable()),
-      shutdown_lock_(&flush_lock_) {}
+      shutdown_lock_(&flush_lock_),
+      task_latency_histograms_{
+          {GetTaskLatencyHistogram("BackgroundTaskPriority"),
+           GetTaskLatencyHistogram("BackgroundTaskPriority.MayBlock")},
+          {GetTaskLatencyHistogram("UserVisibleTaskPriority"),
+           GetTaskLatencyHistogram("UserVisibleTaskPriority.MayBlock")},
+          {GetTaskLatencyHistogram("UserBlockingTaskPriority"),
+           GetTaskLatencyHistogram("UserBlockingTaskPriority.MayBlock")}} {
+  // Confirm that all |task_latency_histograms_| have been initialized above.
+  DCHECK(*(&task_latency_histograms_[static_cast<int>(TaskPriority::HIGHEST) +
+                                     1][0] -
+           1));
+}
+
 TaskTracker::~TaskTracker() = default;
 
 void TaskTracker::Shutdown() {
@@ -220,6 +243,8 @@ bool TaskTracker::RunTask(std::unique_ptr<Task> task,
   const bool is_delayed = !task->delayed_run_time.is_null();
 
   if (can_run_task) {
+    RecordTaskLatencyHistogram(task.get());
+
     const bool previous_singleton_allowed =
         ThreadRestrictions::SetSingletonAllowed(
             task->traits.shutdown_behavior() !=
@@ -461,6 +486,16 @@ void TaskTracker::DecrementNumPendingUndelayedTasks() {
     AutoSchedulerLock auto_lock(flush_lock_);
     flush_cv_->Signal();
   }
+}
+
+void TaskTracker::RecordTaskLatencyHistogram(Task* task) {
+  const TimeDelta task_latency = TimeTicks::Now() - task->sequenced_time;
+  task_latency_histograms_[static_cast<int>(task->traits.priority())]
+                          [task->traits.may_block() ||
+                                   task->traits.with_base_sync_primitives()
+                               ? 1
+                               : 0]
+                              ->AddTime(task_latency);
 }
 
 }  // namespace internal

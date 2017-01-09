@@ -153,6 +153,13 @@ struct GenericHashTraitsBase {
   static const int kWeakHandlingFlag = TypeTrait2<T>::value ? 123 : 456;
 };
 
+template <int Format>
+struct IntermediateFormat {
+  // Some type traits have int type.  Example below is loosely based on
+  // third_party/WebKit/Source/platform/graphics/gpu/WebGLImageConversion.cpp
+  static const int value = (Format == 123) ? 456 : 789;
+};
+
 };  // namespace WTF
 
 void F() {

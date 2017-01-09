@@ -30,6 +30,12 @@ class LoadingMobile(perf_benchmark.PerfBenchmark):
     if possible_browser.browser_type == 'reference':
       return True
 
+    # crbug.com/676612
+    if ((possible_browser.platform.GetDeviceTypeName() == 'Nexus 6' or
+         possible_browser.platform.GetDeviceTypeName() == 'AOSP on Shamu') and
+        possible_browser.browser_type == 'android-webview'):
+      return True
+
     return False
 
   @classmethod

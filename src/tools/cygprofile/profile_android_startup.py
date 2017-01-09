@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # Copyright (c) 2015 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,6 +10,7 @@ support for web page replay, device forwarding, and fake certificate authority
 to make runs repeatable.
 """
 
+import argparse
 import logging
 import os
 import shutil
@@ -19,6 +21,7 @@ import time
 
 sys.path.append(os.path.join(sys.path[0], '..', '..',
     'third_party', 'catapult', 'devil'))
+from devil.android import apk_helper
 from devil.android import device_errors
 from devil.android import device_utils
 from devil.android import flag_changer
@@ -26,6 +29,7 @@ from devil.android import forwarder
 from devil.android.sdk import intent
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', 'build', 'android'))
+import devil_chromium
 from pylib import constants
 
 sys.path.append(os.path.join(sys.path[0], '..', '..', 'tools', 'perf'))
@@ -202,13 +206,14 @@ class AndroidProfileTool(object):
       constants.DIR_SOURCE_ROOT, 'tools', 'perf', 'page_sets', 'data',
       'top_10_mobile_002.wpr')
 
-
-  def __init__(self, output_directory):
+  # TODO(jbudorick): Make host_cyglog_dir mandatory after updating
+  # downstream clients. See crbug.com/639831 for context.
+  def __init__(self, output_directory, host_cyglog_dir=None):
     devices = device_utils.DeviceUtils.HealthyDevices()
     self._device = devices[0]
     self._cygprofile_tests = os.path.join(
         output_directory, 'cygprofile_unittests')
-    self._host_cyglog_dir = os.path.join(
+    self._host_cyglog_dir = host_cyglog_dir or os.path.join(
         output_directory, 'cyglog_data')
     self._SetUpDevice()
 
@@ -371,3 +376,44 @@ class AndroidProfileTool(object):
       files = os.listdir(cyglog_dir)
 
     return [os.path.join(cyglog_dir, x) for x in files]
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '--adb-path', type=os.path.realpath,
+      help='adb binary')
+  parser.add_argument(
+      '--apk-path', type=os.path.realpath, required=True,
+      help='APK to profile')
+  parser.add_argument(
+      '--output-directory', type=os.path.realpath, required=True,
+      help='Chromium output directory (e.g. out/Release)')
+  parser.add_argument(
+      '--trace-directory', type=os.path.realpath,
+      help='Directory in which cyglog traces will be stored. '
+           'Defaults to <output-directory>/cyglog_data')
+
+  args = parser.parse_args()
+
+  devil_chromium.Initialize(
+      output_directory=args.output_directory, adb_path=args.adb_path)
+
+  apk = apk_helper.ApkHelper(args.apk_path)
+  package_info = None
+  for p in constants.PACKAGE_INFO.itervalues():
+    if p.package == apk.GetPackageName():
+      package_info = p
+      break
+  else:
+    raise Exception('Unable to determine package info for %s' % args.apk_path)
+
+  profiler = AndroidProfileTool(
+      args.output_directory, host_cyglog_dir=args.trace_directory)
+  profiler.CollectProfile(args.apk_path, package_info)
+  return 0
+
+
+if __name__ == '__main__':
+  sys.exit(main())
+

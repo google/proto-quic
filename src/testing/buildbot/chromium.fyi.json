@@ -13668,12 +13668,6 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "app_list_presenter_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
-        },
         "test": "aura_unittests"
       },
       {

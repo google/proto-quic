@@ -28,7 +28,7 @@ int FillInRawName(const std::string& encoding,
                   std::vector<FtpDirectoryListingEntry>* entries) {
   for (size_t i = 0; i < entries->size(); i++) {
     if (!base::UTF16ToCodepage(entries->at(i).name, encoding.c_str(),
-                               base::OnStringConversionError::FAIL,
+                               base::OnStringConversionError::SUBSTITUTE,
                                &entries->at(i).raw_name)) {
       return ERR_ENCODING_CONVERSION_FAILED;
     }
@@ -91,7 +91,7 @@ int DecodeAndParse(const std::string& text,
 
   base::string16 converted_text;
   if (base::CodepageToUTF16(text, encoding_name,
-                            base::OnStringConversionError::FAIL,
+                            base::OnStringConversionError::SUBSTITUTE,
                             &converted_text)) {
     const char* const kNewlineSeparators[] = {"\n", "\r\n"};
 

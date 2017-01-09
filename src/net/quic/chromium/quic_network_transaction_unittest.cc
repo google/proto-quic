@@ -1231,12 +1231,12 @@ TEST_P(QuicNetworkTransactionTest, GoAwayWithConnectionMigrationOnPortsOnly) {
       1, kClientDataStreamId1, false, false, GetResponseHeaders("200 OK")));
   // Read a GoAway packet with
   // QuicErrorCode: QUIC_ERROR_MIGRATING_PORT from the peer.
-  mock_quic_data.AddRead(ConstructServerGoAwayPacket(
+  mock_quic_data.AddSynchronousRead(ConstructServerGoAwayPacket(
       2, QUIC_ERROR_MIGRATING_PORT,
       "connection migration with port change only"));
   mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1));
-  mock_quic_data.AddRead(ConstructServerDataPacket(3, kClientDataStreamId1,
-                                                   false, true, 0, "hello!"));
+  mock_quic_data.AddSynchronousRead(ConstructServerDataPacket(
+      3, kClientDataStreamId1, false, true, 0, "hello!"));
   mock_quic_data.AddWrite(ConstructClientAckAndRstPacket(
       4, kClientDataStreamId1, QUIC_STREAM_CANCELLED, 3, 3, 1));
   mock_quic_data.AddRead(ASYNC, ERR_IO_PENDING);  // No more data to read

@@ -45,9 +45,8 @@ class SchedulerWorkerDefaultDelegate : public SchedulerWorker::Delegate {
   scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
     return nullptr;
   }
-  void DidRunTaskWithPriority(TaskPriority task_priority,
-                              const TimeDelta& task_latency) override {
-    ADD_FAILURE() << "Unexpected call to DidRunTaskWithPriority()";
+  void DidRunTask() override {
+    ADD_FAILURE() << "Unexpected call to DidRunTask()";
   }
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override {
     ADD_FAILURE() << "Unexpected call to ReEnqueueSequence()";
@@ -127,14 +126,14 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
         : outer_(outer) {}
 
     ~TestSchedulerWorkerDelegate() override {
-      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskExpected());
     }
 
     // SchedulerWorker::Delegate:
     void OnMainEntry(SchedulerWorker* worker) override {
       outer_->worker_set_.Wait();
       EXPECT_EQ(outer_->worker_.get(), worker);
-      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskExpected());
 
       // Without synchronization, OnMainEntry() could be called twice without
       // generating an error.
@@ -144,7 +143,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     }
 
     scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
-      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskExpected());
       EXPECT_EQ(outer_->worker_.get(), worker);
 
       {
@@ -174,7 +173,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
         sequence->PushTask(std::move(task));
       }
 
-      ExpectCallToDidRunTaskWithPriority(sequence->PeekTaskTraits().priority());
+      ExpectCallToDidRunTask();
 
       {
         // Add the Sequence to the vector of created Sequences.
@@ -185,13 +184,10 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
       return sequence;
     }
 
-    void DidRunTaskWithPriority(TaskPriority task_priority,
-                                const TimeDelta& task_latency) override {
-      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
-      EXPECT_TRUE(expect_did_run_task_with_priority_);
-      EXPECT_EQ(expected_task_priority_, task_priority);
-      EXPECT_FALSE(task_latency.is_max());
-      expect_did_run_task_with_priority_ = false;
+    void DidRunTask() override {
+      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
+      EXPECT_TRUE(expect_did_run_task_);
+      expect_did_run_task_ = false;
     }
 
     // This override verifies that |sequence| contains the expected number of
@@ -199,7 +195,7 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     // EnqueueSequence implementation, it doesn't reinsert |sequence| into a
     // queue for further execution.
     void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override {
-      EXPECT_FALSE(IsCallToDidRunTaskWithPriorityExpected());
+      EXPECT_FALSE(IsCallToDidRunTaskExpected());
       EXPECT_GT(outer_->TasksPerSequence(), 1U);
 
       // Verify that |sequence| contains TasksPerSequence() - 1 Tasks.
@@ -216,31 +212,27 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
     }
 
    private:
-    // Expect a call to DidRunTaskWithPriority() with |task_priority| as
-    // argument before the next call to any other method of this delegate.
-    void ExpectCallToDidRunTaskWithPriority(TaskPriority task_priority) {
-      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
-      expect_did_run_task_with_priority_ = true;
-      expected_task_priority_ = task_priority;
+    // Expect a call to DidRunTask() before the next call to any other method of
+    // this delegate.
+    void ExpectCallToDidRunTask() {
+      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
+      expect_did_run_task_ = true;
     }
 
-    bool IsCallToDidRunTaskWithPriorityExpected() const {
-      AutoSchedulerLock auto_lock(expect_did_run_task_with_priority_lock_);
-      return expect_did_run_task_with_priority_;
+    bool IsCallToDidRunTaskExpected() const {
+      AutoSchedulerLock auto_lock(expect_did_run_task_lock_);
+      return expect_did_run_task_;
     }
 
     TaskSchedulerWorkerTest* outer_;
 
-    // Synchronizes access to |expect_did_run_task_with_priority_| and
-    // |expected_task_priority_|.
-    mutable SchedulerLock expect_did_run_task_with_priority_lock_;
+    // Synchronizes access to |expect_did_run_task_|.
+    mutable SchedulerLock expect_did_run_task_lock_;
 
-    // Whether the next method called on this delegate should be
-    // DidRunTaskWithPriority().
-    bool expect_did_run_task_with_priority_ = false;
+    // Whether the next method called on this delegate should be DidRunTask().
+    bool expect_did_run_task_ = false;
 
-    // Expected priority for the next call to DidRunTaskWithPriority().
-    TaskPriority expected_task_priority_ = TaskPriority::BACKGROUND;
+    DISALLOW_COPY_AND_ASSIGN(TestSchedulerWorkerDelegate);
   };
 
   void RunTaskCallback() {
@@ -390,8 +382,7 @@ class ControllableDetachDelegate : public SchedulerWorkerDefaultDelegate {
     return sequence;
   }
 
-  void DidRunTaskWithPriority(TaskPriority task,
-                              const TimeDelta& task_latency) override {}
+  void DidRunTask() override {}
 
   bool CanDetach(SchedulerWorker* worker) override {
     detach_requested_.Signal();

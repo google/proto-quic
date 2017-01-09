@@ -36,7 +36,7 @@ class BlockOncePage(page_module.Page):
       })();
     ''')
     action_runner.WaitForJavaScriptCondition(
-        "window.post_request_completed == true", 30)
+        "window.post_request_completed == true", timeout_in_seconds=30)
 
 class BlockOnceStorySet(story.StorySet):
 

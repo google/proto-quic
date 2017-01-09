@@ -32,12 +32,12 @@ DIST_DEFAULT = 'chromium'
 DIST_ENV_VAR = 'CHROMIUM_BUILD'
 DIST_SUBSTR = '%DISTRIBUTION%'
 
-# Matches beginning of an "if" block with trailing spaces.
+# Matches beginning of an "if" block.
 _BEGIN_IF_BLOCK = lazy_re.compile(
-    '<if [^>]*?expr=("(?P<expr1>[^">]*)"|\'(?P<expr2>[^\'>]*)\')[^>]*?>\s*')
+    '<if [^>]*?expr=("(?P<expr1>[^">]*)"|\'(?P<expr2>[^\'>]*)\')[^>]*?>')
 
-# Matches ending of an "if" block with preceding spaces.
-_END_IF_BLOCK = lazy_re.compile('\s*</if>')
+# Matches ending of an "if" block.
+_END_IF_BLOCK = lazy_re.compile('</if>')
 
 # Used by DoInline to replace various links with inline content.
 _STYLESHEET_RE = lazy_re.compile(

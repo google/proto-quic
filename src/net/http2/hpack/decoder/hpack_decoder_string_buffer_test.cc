@@ -174,6 +174,10 @@ TEST_F(HpackDecoderStringBufferTest, HuffmanWhole) {
   EXPECT_EQ(decoded, buf_.str());
   EXPECT_TRUE(VerifyLogHasSubstrs(
       {"{state=COMPLETE", "backing=BUFFERED", "buffer: www.example.com}"}));
+
+  string s = buf_.ReleaseString();
+  EXPECT_EQ(s, decoded);
+  EXPECT_EQ(state(), State::RESET);
 }
 
 TEST_F(HpackDecoderStringBufferTest, HuffmanSplit) {
@@ -208,6 +212,10 @@ TEST_F(HpackDecoderStringBufferTest, HuffmanSplit) {
   EXPECT_EQ(buf_.BufferedLength(), decoded.size());
   EXPECT_EQ(decoded, buf_.str());
   LOG(INFO) << buf_;
+
+  buf_.Reset();
+  EXPECT_EQ(state(), State::RESET);
+  LOG(INFO) << buf_;
 }
 
 TEST_F(HpackDecoderStringBufferTest, InvalidHuffmanOnData) {
@@ -238,6 +246,8 @@ TEST_F(HpackDecoderStringBufferTest, InvalidHuffmanOnEnd) {
   EXPECT_FALSE(buf_.OnEnd());
   LOG(INFO) << buf_;
 }
+
+// TODO(jamessynge): Add tests for ReleaseString().
 
 }  // namespace
 }  // namespace test

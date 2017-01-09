@@ -7,6 +7,7 @@
 #include "base/logging.h"
 
 using base::StringPiece;
+using std::string;
 
 namespace net {
 
@@ -40,50 +41,41 @@ std::ostream& operator<<(std::ostream& out,
   }
 }
 
-HpackDecoderStringBuffer::HpackDecoderStringBuffer() {
-  Reset();
-}
+HpackDecoderStringBuffer::HpackDecoderStringBuffer()
+    : remaining_len_(0),
+      is_huffman_encoded_(false),
+      state_(State::RESET),
+      backing_(Backing::RESET) {}
 HpackDecoderStringBuffer::~HpackDecoderStringBuffer() {}
 
-// TODO(jamessynge): Consider eliminating most of Reset (i.e. do less); in
-// particular, if a variable won't be read again until after it is next set
-// (e.g. is_huffman_encoded_ or remaining_len_), then it doesn't need to be
-// cleared here. This will be easier when not supporting both HpackDecoder2
-// (in net/spdy/hpack) and HpackWholeEntryDecoder, so we can eliminate
-// the Set() and str() methods.
 void HpackDecoderStringBuffer::Reset() {
   DVLOG(3) << "HpackDecoderStringBuffer::Reset";
-  buffer_.clear();
-  value_.clear();
-  remaining_len_ = 0;
-  is_huffman_encoded_ = false;
   state_ = State::RESET;
-  backing_ = Backing::RESET;
 }
 
 void HpackDecoderStringBuffer::Set(StringPiece value, bool is_static) {
   DVLOG(2) << "HpackDecoderStringBuffer::Set";
   DCHECK_EQ(state_, State::RESET);
-  DCHECK_EQ(backing_, Backing::RESET);
   value_ = value;
   state_ = State::COMPLETE;
   backing_ = is_static ? Backing::STATIC : Backing::UNBUFFERED;
+  // TODO(jamessynge): Determine which of these two fields must be set.
+  remaining_len_ = 0;
+  is_huffman_encoded_ = false;
 }
 
 void HpackDecoderStringBuffer::OnStart(bool huffman_encoded, size_t len) {
   DVLOG(2) << "HpackDecoderStringBuffer::OnStart";
   DCHECK_EQ(state_, State::RESET);
-  DCHECK_EQ(backing_, Backing::RESET);
-  buffer_.clear();
-  value_.clear();
 
   remaining_len_ = len;
   is_huffman_encoded_ = huffman_encoded;
-
   state_ = State::COLLECTING;
 
   if (huffman_encoded) {
+    // We don't set, clear or use value_ for buffered strings until OnEnd.
     decoder_.Reset();
+    buffer_.clear();
     backing_ = Backing::BUFFERED;
 
     // Reserve space in buffer_ for the uncompressed string, assuming the
@@ -99,6 +91,9 @@ void HpackDecoderStringBuffer::OnStart(bool huffman_encoded, size_t len) {
     // Assume for now that we won't need to use buffer_, so don't reserve space
     // in it.
     backing_ = Backing::RESET;
+    // OnData is not called for empty (zero length) strings, so make sure that
+    // value_ is cleared.
+    value_ = StringPiece();
   }
 }
 
@@ -111,19 +106,13 @@ bool HpackDecoderStringBuffer::OnData(const char* data, size_t len) {
 
   if (is_huffman_encoded_) {
     DCHECK_EQ(backing_, Backing::BUFFERED);
-    // We don't set value_ for buffered strings until OnEnd,
-    // so it should be empty.
-    DCHECK_EQ(0u, value_.size());
     return decoder_.Decode(StringPiece(data, len), &buffer_);
   }
 
   if (backing_ == Backing::RESET) {
-    // This is the first call to OnData.
-    DCHECK_EQ(0u, buffer_.size());
-    DCHECK_EQ(0u, value_.size());
-    // If data contains the entire string, don't copy the string. If we later
-    // find that the HPACK entry is split across input buffers, then we'll
-    // copy the string into buffer_.
+    // This is the first call to OnData. If data contains the entire string,
+    // don't copy the string. If we later find that the HPACK entry is split
+    // across input buffers, then we'll copy the string into buffer_.
     if (remaining_len_ == 0) {
       value_ = StringPiece(data, len);
       backing_ = Backing::UNBUFFERED;
@@ -131,7 +120,9 @@ bool HpackDecoderStringBuffer::OnData(const char* data, size_t len) {
     }
 
     // We need to buffer the string because it is split across input buffers.
+    // Reserve space in buffer_ for the entire string.
     backing_ = Backing::BUFFERED;
+    buffer_.reserve(remaining_len_ + len);
     buffer_.assign(data, len);
     return true;
   }
@@ -139,9 +130,6 @@ bool HpackDecoderStringBuffer::OnData(const char* data, size_t len) {
   // This is not the first call to OnData for this string, so it should be
   // buffered.
   DCHECK_EQ(backing_, Backing::BUFFERED);
-  // We don't set value_ for buffered strings until OnEnd, so it should be
-  // empty.
-  DCHECK_EQ(0u, value_.size());
 
   // Append to the current contents of the buffer.
   buffer_.append(data, len);
@@ -159,11 +147,11 @@ bool HpackDecoderStringBuffer::OnEnd() {
     if (!decoder_.InputProperlyTerminated()) {
       return false;  // No, it didn't.
     }
-  }
-  state_ = State::COMPLETE;
-  if (backing_ == Backing::BUFFERED) {
+    value_ = buffer_;
+  } else if (backing_ == Backing::BUFFERED) {
     value_ = buffer_;
   }
+  state_ = State::COMPLETE;
   return true;
 }
 
@@ -181,15 +169,35 @@ void HpackDecoderStringBuffer::BufferStringIfUnbuffered() {
   }
 }
 
+bool HpackDecoderStringBuffer::IsBuffered() const {
+  DVLOG(3) << "HpackDecoderStringBuffer::IsBuffered";
+  return state_ != State::RESET && backing_ == Backing::BUFFERED;
+}
+
 size_t HpackDecoderStringBuffer::BufferedLength() const {
   DVLOG(3) << "HpackDecoderStringBuffer::BufferedLength";
-  return backing_ == Backing::BUFFERED ? buffer_.size() : 0;
+  return IsBuffered() ? buffer_.size() : 0;
 }
 
 StringPiece HpackDecoderStringBuffer::str() const {
   DVLOG(3) << "HpackDecoderStringBuffer::str";
   DCHECK_EQ(state_, State::COMPLETE);
   return value_;
+}
+
+string HpackDecoderStringBuffer::ReleaseString() {
+  DVLOG(3) << "HpackDecoderStringBuffer::ReleaseString";
+  DCHECK_EQ(state_, State::COMPLETE);
+  DCHECK_EQ(backing_, Backing::BUFFERED);
+  if (state_ == State::COMPLETE) {
+    state_ = State::RESET;
+    if (backing_ == Backing::BUFFERED) {
+      return std::move(buffer_);
+    } else {
+      return value_.as_string();
+    }
+  }
+  return "";
 }
 
 void HpackDecoderStringBuffer::OutputDebugStringTo(std::ostream& out) const {

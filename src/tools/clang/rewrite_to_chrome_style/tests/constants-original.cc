@@ -42,7 +42,8 @@ class C {
   }
 };
 
-void F() {
+// |constParam| should not be renamed to |kConstParam|.
+void F(const bool constParam = true) {
   // Constant in function body.
   static const char staticString[] = "abc";
   // Constant-style naming, since it's initialized with a literal.

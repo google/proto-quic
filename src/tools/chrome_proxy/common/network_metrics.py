@@ -23,7 +23,7 @@ from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
 
-class NetworkMetricException(page_test.MeasurementFailure):
+class NetworkMetricException(legacy_page_test.MeasurementFailure):
   pass
 
 

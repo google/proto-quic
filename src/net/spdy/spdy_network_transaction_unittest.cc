@@ -148,6 +148,8 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
 
     void FinishDefaultTest() {
       output_.rv = callback_.WaitForResult();
+      // Finish async network reads/writes.
+      base::RunLoop().RunUntilIdle();
       if (output_.rv != OK) {
         session_->spdy_session_pool()->CloseCurrentSessions(ERR_ABORTED);
         return;
@@ -171,6 +173,8 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
 
     void FinishDefaultTestWithoutVerification() {
       output_.rv = callback_.WaitForResult();
+      // Finish async network reads/writes.
+      base::RunLoop().RunUntilIdle();
       if (output_.rv != OK)
         session_->spdy_session_pool()->CloseCurrentSessions(ERR_ABORTED);
     }
@@ -453,6 +457,9 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
                           NetLogWithSource());
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
     rv = callback.WaitForResult();
+
+    // Finish async network reads/writes.
+    base::RunLoop().RunUntilIdle();
 
     // Request the pushed path.
     HttpNetworkTransaction trans2(DEFAULT_PRIORITY, helper.session());
@@ -1119,6 +1126,9 @@ TEST_F(SpdyNetworkTransactionTest, FourGetsWithMaxConcurrentPriority) {
   out.rv = callback1.WaitForResult();
   ASSERT_THAT(out.rv, IsOk());
 
+  // Finish async network reads and writes associated with |trans1|.
+  base::RunLoop().RunUntilIdle();
+
   out.rv = trans2.Start(&httpreq2, callback2.callback(), log);
   ASSERT_THAT(out.rv, IsError(ERR_IO_PENDING));
   out.rv = trans3.Start(&httpreq3, callback3.callback(), log);
@@ -1750,6 +1760,9 @@ TEST_F(SpdyNetworkTransactionTest, ResponseBeforePostCompletes) {
   std::string response_body;
   EXPECT_THAT(ReadTransaction(helper.trans(), &response_body), IsOk());
   EXPECT_EQ(kUploadData, response_body);
+
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
   helper.VerifyDataConsumed();
 }
 
@@ -2005,7 +2018,8 @@ TEST_F(SpdyNetworkTransactionTest, StartTransactionOnReadCallback) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   MockWrite writes[] = {CreateMockWrite(req)};
-  MockWrite writes2[] = {CreateMockWrite(req, 0)};
+  MockWrite writes2[] = {CreateMockWrite(req, 0),
+                         MockWrite(SYNCHRONOUS, ERR_IO_PENDING, 3)};
 
   // The indicated length of this frame is longer than its actual length. When
   // the session receives an empty frame after this one, it shuts down the
@@ -2528,8 +2542,8 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushServerAborted) {
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_PROTOCOL_ERROR));
   MockRead reads[] = {
       CreateMockRead(stream1_reply, 1),
-      CreateMockRead(stream2_syn, 2),
-      CreateMockRead(stream2_rst, 3),
+      CreateMockRead(stream2_syn, 2, SYNCHRONOUS),
+      CreateMockRead(stream2_rst, 3, SYNCHRONOUS),
       CreateMockRead(stream1_body, 4, SYNCHRONOUS),
       MockRead(SYNCHRONOUS, ERR_IO_PENDING, 5),  // Force a pause
   };
@@ -2744,6 +2758,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID0) {
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
 
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
+
   // Verify that we consumed all test data.
   EXPECT_TRUE(data.AllReadDataConsumed());
   EXPECT_TRUE(data.AllWriteDataConsumed());
@@ -2790,6 +2807,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID9) {
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
+
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
 
   // Verify that we consumed all test data.
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -2840,6 +2860,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushNoURL) {
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
+
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
 
   // Verify that we consumed all test data.
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -2911,6 +2934,10 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnClosedStream) {
                         NetLogWithSource());
   rv = callback.GetResult(rv);
   EXPECT_THAT(rv, IsOk());
+
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
+
   HttpResponseInfo response = *trans->GetResponseInfo();
   EXPECT_TRUE(response.headers);
   EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
@@ -4366,7 +4393,7 @@ TEST_F(SpdyNetworkTransactionTest, SpdyBasicAuth) {
   SpdySerializedFrame body_data(spdy_util_.ConstructSpdyDataFrame(3, true));
   MockRead spdy_reads[] = {
       CreateMockRead(resp_authentication, 1),
-      CreateMockRead(body_authentication, 2),
+      CreateMockRead(body_authentication, 2, SYNCHRONOUS),
       CreateMockRead(resp_data, 4),
       CreateMockRead(body_data, 5),
       MockRead(ASYNC, 0, 6),
@@ -4724,6 +4751,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushCrossOriginCorrectness) {
     EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
     rv = callback.WaitForResult();
 
+    // Finish async network reads/writes.
+    base::RunLoop().RunUntilIdle();
+
     // Read the response body.
     std::string result;
     ReadResult(trans, &result);
@@ -4766,9 +4796,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOrigin) {
       2, kPushedData, strlen(kPushedData), true));
   MockRead reads[] = {
       CreateMockRead(reply, 1),
-      CreateMockRead(push, 2),
-      CreateMockRead(body, 3),
-      CreateMockRead(pushed_body, 4),
+      CreateMockRead(push, 2, SYNCHRONOUS),
+      CreateMockRead(body, 3, SYNCHRONOUS),
+      CreateMockRead(pushed_body, 4, SYNCHRONOUS),
       MockRead(SYNCHRONOUS, ERR_IO_PENDING, 5),
   };
 
@@ -4879,9 +4909,9 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushValidCrossOriginWithOpenSession) {
 
   MockRead reads1[] = {
       CreateMockRead(reply1, 1),
-      CreateMockRead(push, 2),
-      CreateMockRead(body1, 3),
-      CreateMockRead(pushed_body, 4),
+      CreateMockRead(push, 2, SYNCHRONOUS),
+      CreateMockRead(body1, 3, SYNCHRONOUS),
+      CreateMockRead(pushed_body, 4, SYNCHRONOUS),
       MockRead(SYNCHRONOUS, ERR_IO_PENDING, 5),
   };
 
@@ -5079,6 +5109,9 @@ TEST_F(SpdyNetworkTransactionTest, RetryAfterRefused) {
   EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
+
+  // Finish async network reads.
+  base::RunLoop().RunUntilIdle();
 
   // Verify that we consumed all test data.
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -5392,6 +5425,9 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateSent) {
   rv = callback.WaitForResult();
   EXPECT_THAT(rv, IsOk());
 
+  // Finish async network reads.
+  base::RunLoop().RunUntilIdle();
+
   SpdyHttpStream* stream =
       static_cast<SpdyHttpStream*>(trans->stream_.get());
   ASSERT_TRUE(stream);
@@ -5638,6 +5674,10 @@ TEST_F(SpdyNetworkTransactionTest, FlowControlStallResume) {
 
   data.Resume();  // Read in WINDOW_UPDATE frame.
   rv = callback.WaitForResult();
+  EXPECT_THAT(rv, IsOk());
+
+  // Finish async network reads.
+  base::RunLoop().RunUntilIdle();
   helper.VerifyDataConsumed();
 }
 

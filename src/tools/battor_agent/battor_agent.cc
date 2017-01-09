@@ -517,6 +517,7 @@ void BattOrAgent::PerformAction(Action action) {
       return;
 
     case Action::SEND_GIT_HASH_REQUEST:
+      connection_->Flush();
       SendControlMessage(
           BATTOR_CONTROL_MESSAGE_TYPE_GET_FIRMWARE_GIT_HASH, 0, 0);
       return;
@@ -545,7 +546,6 @@ void BattOrAgent::OnActionTimeout() {
       } else {
         CompleteCommand(BATTOR_ERROR_TOO_MANY_INIT_RETRIES);
       }
-
       return;
 
     // TODO(crbug.com/672631): There's currently a BattOr firmware bug that's
@@ -563,12 +563,12 @@ void BattOrAgent::OnActionTimeout() {
       } else {
         CompleteCommand(BATTOR_ERROR_TOO_MANY_START_TRACING_RETRIES);
       }
+      return;
 
     default:
       CompleteCommand(BATTOR_ERROR_TIMEOUT);
+      timeout_callback_.Cancel();
   }
-
-  timeout_callback_.Cancel();
 }
 
 void BattOrAgent::SendControlMessage(BattOrControlMessageType type,

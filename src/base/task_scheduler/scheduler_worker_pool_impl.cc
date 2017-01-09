@@ -22,10 +22,10 @@
 #include "base/task_runner.h"
 #include "base/task_scheduler/delayed_task_manager.h"
 #include "base/task_scheduler/task_tracker.h"
+#include "base/task_scheduler/task_traits.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_local.h"
 #include "base/threading/thread_restrictions.h"
-#include "base/time/time.h"
 
 namespace base {
 namespace internal {
@@ -39,7 +39,6 @@ constexpr char kNumTasksBeforeDetachHistogramPrefix[] =
     "TaskScheduler.NumTasksBeforeDetach.";
 constexpr char kNumTasksBetweenWaitsHistogramPrefix[] =
     "TaskScheduler.NumTasksBetweenWaits.";
-constexpr char kTaskLatencyHistogramPrefix[] = "TaskScheduler.TaskLatency.";
 
 // SchedulerWorkerPool that owns the current thread, if any.
 LazyInstance<ThreadLocalPointer<const SchedulerWorkerPool>>::Leaky
@@ -129,29 +128,6 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
   DISALLOW_COPY_AND_ASSIGN(SchedulerSequencedTaskRunner);
 };
 
-HistogramBase* GetTaskLatencyHistogram(const std::string& pool_name,
-                                       TaskPriority task_priority) {
-  const char* task_priority_suffix = nullptr;
-  switch (task_priority) {
-    case TaskPriority::BACKGROUND:
-      task_priority_suffix = ".BackgroundTaskPriority";
-      break;
-    case TaskPriority::USER_VISIBLE:
-      task_priority_suffix = ".UserVisibleTaskPriority";
-      break;
-    case TaskPriority::USER_BLOCKING:
-      task_priority_suffix = ".UserBlockingTaskPriority";
-      break;
-  }
-
-  // Mimics the UMA_HISTOGRAM_TIMES macro.
-  return Histogram::FactoryTimeGet(kTaskLatencyHistogramPrefix + pool_name +
-                                       kPoolNameSuffix + task_priority_suffix,
-                                   TimeDelta::FromMilliseconds(1),
-                                   TimeDelta::FromSeconds(10), 50,
-                                   HistogramBase::kUmaTargetedHistogramFlag);
-}
-
 // Only used in DCHECKs.
 bool ContainsWorker(
     const std::vector<std::unique_ptr<SchedulerWorker>>& workers,
@@ -239,8 +215,7 @@ class SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl
   // SchedulerWorker::Delegate:
   void OnMainEntry(SchedulerWorker* worker) override;
   scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override;
-  void DidRunTaskWithPriority(TaskPriority task_priority,
-                              const TimeDelta& task_latency) override;
+  void DidRunTask() override;
   void ReEnqueueSequence(scoped_refptr<Sequence> sequence) override;
   TimeDelta GetSleepTimeout() override;
   bool CanDetach(SchedulerWorker* worker) override;
@@ -600,29 +575,9 @@ SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::GetWork(
   return sequence;
 }
 
-void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
-    DidRunTaskWithPriority(TaskPriority task_priority,
-                           const TimeDelta& task_latency) {
+void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::DidRunTask() {
   ++num_tasks_since_last_wait_;
   ++num_tasks_since_last_detach_;
-
-  const int priority_index = static_cast<int>(task_priority);
-
-  // As explained in the header file, histograms are allocated on demand. It
-  // doesn't matter if an element of |task_latency_histograms_| is set multiple
-  // times since GetTaskLatencyHistogram() is idempotent. As explained in the
-  // comment at the top of histogram_macros.h, barriers are required.
-  HistogramBase* task_latency_histogram = reinterpret_cast<HistogramBase*>(
-      subtle::Acquire_Load(&outer_->task_latency_histograms_[priority_index]));
-  if (!task_latency_histogram) {
-    task_latency_histogram =
-        GetTaskLatencyHistogram(outer_->name_, task_priority);
-    subtle::Release_Store(
-        &outer_->task_latency_histograms_[priority_index],
-        reinterpret_cast<subtle::AtomicWord>(task_latency_histogram));
-  }
-
-  task_latency_histogram->AddTime(task_latency);
 }
 
 void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::
@@ -670,7 +625,7 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnDetach() {
 
 SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
     StringPiece name,
-    const TimeDelta& suggested_reclaim_time,
+    TimeDelta suggested_reclaim_time,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager)
     : name_(name.as_string()),

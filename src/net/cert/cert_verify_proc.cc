@@ -774,4 +774,32 @@ bool CertVerifyProc::HasTooLongValidity(const X509Certificate& cert) {
 const base::Feature CertVerifyProc::kSHA1LegacyMode{
     "SHA1LegacyMode", base::FEATURE_DISABLED_BY_DEFAULT};
 
+X509Certificate::SignatureHashAlgorithm FillCertVerifyResultWeakSignature(
+    X509Certificate::OSCertHandle cert,
+    bool is_leaf,
+    CertVerifyResult* verify_result) {
+  X509Certificate::SignatureHashAlgorithm hash =
+      X509Certificate::GetSignatureHashAlgorithm(cert);
+  switch (hash) {
+    case X509Certificate::kSignatureHashAlgorithmMd2:
+      verify_result->has_md2 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmMd4:
+      verify_result->has_md4 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmMd5:
+      verify_result->has_md5 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmSha1:
+      verify_result->has_sha1 = true;
+      if (is_leaf)
+        verify_result->has_sha1_leaf = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmOther:
+      break;
+  }
+
+  return hash;
+}
+
 }  // namespace net

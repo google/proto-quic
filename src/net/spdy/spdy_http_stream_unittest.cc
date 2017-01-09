@@ -304,6 +304,10 @@ TEST_F(SpdyHttpStreamTest, LoadTimingTwoRequests) {
   EXPECT_TRUE(HasSpdySession(http_session_->spdy_session_pool(), key_));
 
   EXPECT_LE(0, callback2.WaitForResult());
+
+  // Perform all async reads.
+  base::RunLoop().RunUntilIdle();
+
   TestLoadTimingReused(*http_stream2);
   EXPECT_TRUE(http_stream2->GetLoadTimingInfo(&load_timing_info2));
   EXPECT_EQ(load_timing_info1.socket_log_id, load_timing_info2.socket_log_id);
@@ -343,7 +347,7 @@ TEST_F(SpdyHttpStreamTest, SendChunkedPost) {
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
   MockRead reads[] = {
-      CreateMockRead(resp, 2), CreateMockRead(body, 3),
+      CreateMockRead(resp, 2), CreateMockRead(body, 3, SYNCHRONOUS),
       MockRead(SYNCHRONOUS, 0, 4)  // EOF
   };
 
@@ -401,7 +405,7 @@ TEST_F(SpdyHttpStreamTest, SendChunkedPostLastEmpty) {
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
   MockRead reads[] = {
-      CreateMockRead(resp, 2), CreateMockRead(chunk, 3),
+      CreateMockRead(resp, 2), CreateMockRead(chunk, 3, SYNCHRONOUS),
       MockRead(SYNCHRONOUS, 0, 4)  // EOF
   };
 
@@ -950,6 +954,9 @@ TEST_F(SpdyHttpStreamTest, DataReadErrorSynchronous) {
   int result = http_stream.SendRequest(headers, &response, callback.callback());
   EXPECT_THAT(callback.GetResult(result), IsError(ERR_FAILED));
 
+  // Run posted SpdyHttpStream::ResetStreamInternal() task.
+  base::RunLoop().RunUntilIdle();
+
   // Because the server has not closed the connection yet, there shouldn't be
   // a stream but a session in the pool
   EXPECT_FALSE(HasSpdySession(http_session_->spdy_session_pool(), key_));
@@ -1001,6 +1008,9 @@ TEST_F(SpdyHttpStreamTest, DataReadErrorAsynchronous) {
   EXPECT_THAT(result, IsError(ERR_IO_PENDING));
   EXPECT_THAT(callback.GetResult(result), IsError(ERR_FAILED));
 
+  // Run posted SpdyHttpStream::ResetStreamInternal() task.
+  base::RunLoop().RunUntilIdle();
+
   // Because the server has closed the connection, there shouldn't be a session
   // in the pool anymore.
   EXPECT_FALSE(HasSpdySession(http_session_->spdy_session_pool(), key_));
@@ -1047,6 +1057,9 @@ TEST_F(SpdyHttpStreamTest, RequestCallbackCancelsStream) {
 
   // The callback cancels |http_stream|.
   EXPECT_THAT(callback.WaitForResult(), IsOk());
+
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_FALSE(HasSpdySession(http_session_->spdy_session_pool(), key_));
 }

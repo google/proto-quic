@@ -364,26 +364,7 @@ void GetCertChainInfo(PCCERT_CHAIN_CONTEXT chain_context,
       verified_chain.push_back(cert);
     }
 
-    const char* algorithm = cert->pCertInfo->SignatureAlgorithm.pszObjId;
-    if (strcmp(algorithm, szOID_RSA_MD5RSA) == 0) {
-      // md5WithRSAEncryption: 1.2.840.113549.1.1.4
-      verify_result->has_md5 = true;
-    } else if (strcmp(algorithm, szOID_RSA_MD2RSA) == 0) {
-      // md2WithRSAEncryption: 1.2.840.113549.1.1.2
-      verify_result->has_md2 = true;
-    } else if (strcmp(algorithm, szOID_RSA_MD4RSA) == 0) {
-      // md4WithRSAEncryption: 1.2.840.113549.1.1.3
-      verify_result->has_md4 = true;
-    } else if (strcmp(algorithm, szOID_RSA_SHA1RSA) == 0 ||
-               strcmp(algorithm, szOID_X957_SHA1DSA) == 0 ||
-               strcmp(algorithm, szOID_ECDSA_SHA1) == 0) {
-      // sha1WithRSAEncryption: 1.2.840.113549.1.1.5
-      // id-dsa-with-sha1: 1.2.840.10040.4.3
-      // ecdsa-with-SHA1: 1.2.840.10045.4.1
-      verify_result->has_sha1 = true;
-      if (i == 0)
-        verify_result->has_sha1_leaf = true;
-    }
+    FillCertVerifyResultWeakSignature(cert, i == 0, verify_result);
   }
 
   if (verified_cert) {

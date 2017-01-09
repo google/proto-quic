@@ -9,10 +9,9 @@
 
 #include "base/macros.h"
 #include "base/threading/platform_thread.h"
+#include "base/time/time.h"
 
 namespace base {
-
-class TimeDelta;
 
 class BASE_EXPORT SchedulerWorkerPoolParams final {
  public:
@@ -36,7 +35,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
                             ThreadPriority priority_hint,
                             StandbyThreadPolicy standby_thread_policy,
                             int max_threads,
-                            const TimeDelta& suggested_reclaim_time);
+                            TimeDelta suggested_reclaim_time);
   SchedulerWorkerPoolParams(SchedulerWorkerPoolParams&& other);
   SchedulerWorkerPoolParams& operator=(SchedulerWorkerPoolParams&& other);
 
@@ -46,9 +45,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
     return standby_thread_policy_;
   }
   size_t max_threads() const { return max_threads_; }
-  const TimeDelta& suggested_reclaim_time() const {
-    return suggested_reclaim_time_;
-  }
+  TimeDelta suggested_reclaim_time() const { return suggested_reclaim_time_; }
 
  private:
   std::string name_;

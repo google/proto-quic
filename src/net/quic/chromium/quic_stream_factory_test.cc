@@ -506,6 +506,11 @@ class QuicStreamFactoryTestBase {
                               /*cert_verify_flags=*/0, url_, "GET", net_log_,
                               callback_.callback()));
     EXPECT_EQ(OK, callback_.WaitForResult());
+
+    // Run QuicChromiumClientSession::WriteToNewSocket()
+    // posted by QuicChromiumClientSession::MigrateToSocket().
+    base::RunLoop().RunUntilIdle();
+
     std::unique_ptr<QuicHttpStream> stream = request.CreateStream();
     EXPECT_TRUE(stream.get());
 
@@ -1028,8 +1033,8 @@ TEST_P(QuicStreamFactoryTest, PoolingWithServerMigration) {
       client_maker_.MakeSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
                                        kDefaultMaxUncompressedHeaderSize, true,
                                        nullptr));
-  MockWrite writes[] = {
-      MockWrite(ASYNC, settings_packet->data(), settings_packet->length(), 1)};
+  MockWrite writes[] = {MockWrite(SYNCHRONOUS, settings_packet->data(),
+                                  settings_packet->length(), 1)};
 
   SequencedSocketData socket_data(reads, arraysize(reads), writes,
                                   arraysize(writes));
@@ -5307,8 +5312,8 @@ TEST_P(QuicStreamFactoryWithDestinationTest, SharedCertificate) {
       client_maker_.MakeSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
                                        kDefaultMaxUncompressedHeaderSize, true,
                                        nullptr));
-  MockWrite writes[] = {
-      MockWrite(ASYNC, settings_packet->data(), settings_packet->length(), 1)};
+  MockWrite writes[] = {MockWrite(SYNCHRONOUS, settings_packet->data(),
+                                  settings_packet->length(), 1)};
   std::unique_ptr<SequencedSocketData> sequenced_socket_data(
       new SequencedSocketData(reads, 1, writes, arraysize(writes)));
   socket_factory_.AddSocketDataProvider(sequenced_socket_data.get());
@@ -5378,8 +5383,8 @@ TEST_P(QuicStreamFactoryWithDestinationTest, DifferentPrivacyMode) {
       client_maker_.MakeSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
                                        kDefaultMaxUncompressedHeaderSize, true,
                                        nullptr));
-  MockWrite writes[] = {
-      MockWrite(ASYNC, settings_packet->data(), settings_packet->length(), 1)};
+  MockWrite writes[] = {MockWrite(SYNCHRONOUS, settings_packet->data(),
+                                  settings_packet->length(), 1)};
   std::unique_ptr<SequencedSocketData> sequenced_socket_data(
       new SequencedSocketData(reads, 1, writes, arraysize(writes)));
   socket_factory_.AddSocketDataProvider(sequenced_socket_data.get());
@@ -5464,8 +5469,8 @@ TEST_P(QuicStreamFactoryWithDestinationTest, DisjointCertificate) {
       client_maker_.MakeSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
                                        kDefaultMaxUncompressedHeaderSize, true,
                                        nullptr));
-  MockWrite writes[] = {
-      MockWrite(ASYNC, settings_packet->data(), settings_packet->length(), 1)};
+  MockWrite writes[] = {MockWrite(SYNCHRONOUS, settings_packet->data(),
+                                  settings_packet->length(), 1)};
   std::unique_ptr<SequencedSocketData> sequenced_socket_data(
       new SequencedSocketData(reads, 1, writes, arraysize(writes)));
   socket_factory_.AddSocketDataProvider(sequenced_socket_data.get());

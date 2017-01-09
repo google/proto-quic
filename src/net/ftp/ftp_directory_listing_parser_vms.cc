@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "base/numerics/safe_math.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -55,6 +56,24 @@ bool ParseVmsFilename(const base::string16& raw_filename,
   return true;
 }
 
+// VMS's directory listing gives file size in blocks. The exact file size is
+// unknown both because it is measured in blocks, but also because the block
+// size is unknown (but assumed to be 512 bytes).
+bool ApproximateFilesizeFromBlockCount(int64_t num_blocks, int64_t* out_size) {
+  if (num_blocks < 0)
+    return false;
+
+  const int kBlockSize = 512;
+  base::CheckedNumeric<int64_t> num_bytes = num_blocks;
+  num_bytes *= kBlockSize;
+
+  if (!num_bytes.IsValid())
+    return false;  // Block count is too large.
+
+  *out_size = num_bytes.ValueOrDie();
+  return true;
+}
+
 bool ParseVmsFilesize(const base::string16& input, int64_t* size) {
   if (base::ContainsOnlyChars(input, base::ASCIIToUTF16("*"))) {
     // Response consisting of asterisks means unknown size.
@@ -62,17 +81,9 @@ bool ParseVmsFilesize(const base::string16& input, int64_t* size) {
     return true;
   }
 
-  // VMS's directory listing gives us file size in blocks. We assume that
-  // the block size is 512 bytes. It doesn't give accurate file size, but is the
-  // best information we have.
-  const int kBlockSize = 512;
-
-  if (base::StringToInt64(input, size)) {
-    if (*size < 0)
-      return false;
-    *size *= kBlockSize;
-    return true;
-  }
+  int64_t num_blocks;
+  if (base::StringToInt64(input, &num_blocks))
+    return ApproximateFilesizeFromBlockCount(num_blocks, size);
 
   std::vector<base::StringPiece16> parts =
       base::SplitStringPiece(input, base::ASCIIToUTF16("/"),
@@ -90,8 +101,7 @@ bool ParseVmsFilesize(const base::string16& input, int64_t* size) {
   if (blocks_used < 0 || blocks_allocated < 0)
     return false;
 
-  *size = blocks_used * kBlockSize;
-  return true;
+  return ApproximateFilesizeFromBlockCount(blocks_used, size);
 }
 
 bool LooksLikeVmsFileProtectionListingPart(const base::string16& input) {

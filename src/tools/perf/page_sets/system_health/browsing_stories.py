@@ -89,7 +89,6 @@ class _NewsBrowsingStory(_BrowsingStory):
         repeat_count=self.MAIN_PAGE_SCROLL_REPEAT)
 
 
-@decorators.Disabled('android')  # crbug.com/676338
 class CnnStory(_NewsBrowsingStory):
   """The second top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:cnn'
@@ -393,8 +392,6 @@ class YouTubeMobileStory(_MediaBrowsingStory):
   ITEM_SELECTOR_INDEX = 3
 
 
-# Failing during CQ runs. crbug.com/661775
-@decorators.Disabled('linux', 'win')
 class YouTubeDesktopStory(_MediaBrowsingStory):
   NAME = 'browse:media:youtube'
   URL = 'https://www.youtube.com/watch?v=QGfhS1hfTWw&autoplay=false'

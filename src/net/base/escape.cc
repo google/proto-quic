@@ -4,13 +4,8 @@
 
 #include "net/base/escape.h"
 
-#include <algorithm>
-#include <memory>
-
 #include "base/logging.h"
-#include "base/strings/string_piece.h"
 #include "base/strings/string_util.h"
-#include "base/strings/utf_offset_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 
 namespace net {
@@ -41,7 +36,7 @@ struct Charmap {
 // to +, otherwise, if spaces are in the charmap, they are converted to
 // %20. And if keep_escaped is true, %XX will be kept as it is, otherwise, if
 // '%' is in the charmap, it is converted to %25.
-std::string Escape(const std::string& text,
+std::string Escape(base::StringPiece text,
                    const Charmap& charmap,
                    bool use_plus,
                    bool keep_escaped = false) {
@@ -106,8 +101,8 @@ const char kUrlUnescape[128] = {
 // Attempts to unescape the sequence at |index| within |escaped_text|.  If
 // successful, sets |value| to the unescaped value.  Returns whether
 // unescaping succeeded.
-template<typename STR>
-bool UnescapeUnsignedCharAtIndex(const STR& escaped_text,
+template <typename STR>
+bool UnescapeUnsignedCharAtIndex(STR escaped_text,
                                  size_t index,
                                  unsigned char* value) {
   if ((index + 2) >= escaped_text.size())
@@ -128,8 +123,8 @@ bool UnescapeUnsignedCharAtIndex(const STR& escaped_text,
 
 // Returns true if there is an Arabic Language Mark at |index|. |first_byte|
 // is the byte at |index|.
-template<typename STR>
-bool HasArabicLanguageMarkAtIndex(const STR& escaped_text,
+template <typename STR>
+bool HasArabicLanguageMarkAtIndex(STR escaped_text,
                                   unsigned char first_byte,
                                   size_t index) {
   if (first_byte != 0xD8)
@@ -142,8 +137,8 @@ bool HasArabicLanguageMarkAtIndex(const STR& escaped_text,
 
 // Returns true if there is a BiDi control char at |index|. |first_byte| is the
 // byte at |index|.
-template<typename STR>
-bool HasThreeByteBidiControlCharAtIndex(const STR& escaped_text,
+template <typename STR>
+bool HasThreeByteBidiControlCharAtIndex(STR escaped_text,
                                         unsigned char first_byte,
                                         size_t index) {
   if (first_byte != 0xE2)
@@ -167,7 +162,7 @@ bool HasThreeByteBidiControlCharAtIndex(const STR& escaped_text,
 // Returns true if there is a four-byte banned char at |index|. |first_byte| is
 // the byte at |index|.
 template <typename STR>
-bool HasFourByteBannedCharAtIndex(const STR& escaped_text,
+bool HasFourByteBannedCharAtIndex(STR escaped_text,
                                   unsigned char first_byte,
                                   size_t index) {
   // The following characters are blacklisted for spoofability concerns.
@@ -201,16 +196,16 @@ bool HasFourByteBannedCharAtIndex(const STR& escaped_text,
 // the alterations done to the string that are not one-character-to-one-
 // character.  The resulting |adjustments| will always be sorted by increasing
 // offset.
-template<typename STR>
+template <typename STR>
 STR UnescapeURLWithAdjustmentsImpl(
-    const STR& escaped_text,
+    base::BasicStringPiece<STR> escaped_text,
     UnescapeRule::Type rules,
     base::OffsetAdjuster::Adjustments* adjustments) {
   if (adjustments)
     adjustments->clear();
   // Do not unescape anything, return the |escaped_text| text.
   if (rules == UnescapeRule::NONE)
-    return escaped_text;
+    return escaped_text.as_string();
 
   // The output of the unescaping is always smaller than the input, so we can
   // reserve the input size to make sure we have enough buffer and don't have
@@ -265,19 +260,19 @@ STR UnescapeURLWithAdjustmentsImpl(
       if (!(rules & UnescapeRule::SPOOFING_AND_CONTROL_CHARS)) {
         if (HasArabicLanguageMarkAtIndex(escaped_text, first_byte, i)) {
           // Keep Arabic Language Mark escaped.
-          result.append(escaped_text, i, 6);
+          escaped_text.substr(i, 6).AppendToString(&result);
           i += 5;
           continue;
         }
         if (HasThreeByteBidiControlCharAtIndex(escaped_text, first_byte, i)) {
           // Keep BiDi control char escaped.
-          result.append(escaped_text, i, 9);
+          escaped_text.substr(i, 9).AppendToString(&result);
           i += 8;
           continue;
         }
         if (HasFourByteBannedCharAtIndex(escaped_text, first_byte, i)) {
           // Keep banned char escaped.
-          result.append(escaped_text, i, 12);
+          escaped_text.substr(i, 12).AppendToString(&result);
           i += 11;
           continue;
         }
@@ -345,12 +340,13 @@ void AppendEscapedCharForHTMLImpl(typename str::value_type c, str* output) {
 }
 
 template <class str>
-str EscapeForHTMLImpl(const str& input) {
+str EscapeForHTMLImpl(base::BasicStringPiece<str> input) {
   str result;
   result.reserve(input.size());  // Optimize for no escaping.
 
-  for (typename str::const_iterator i = input.begin(); i != input.end(); ++i)
-    AppendEscapedCharForHTMLImpl(*i, &result);
+  for (auto c : input) {
+    AppendEscapedCharForHTMLImpl(c, &result);
+  }
 
   return result;
 }
@@ -397,29 +393,29 @@ static const Charmap kExternalHandlerCharmap = {{
 
 }  // namespace
 
-std::string EscapeQueryParamValue(const std::string& text, bool use_plus) {
+std::string EscapeQueryParamValue(base::StringPiece text, bool use_plus) {
   return Escape(text, kQueryCharmap, use_plus);
 }
 
-std::string EscapePath(const std::string& path) {
+std::string EscapePath(base::StringPiece path) {
   return Escape(path, kPathCharmap, false);
 }
 
 #if defined(OS_MACOSX)
-std::string EscapeNSURLPrecursor(const std::string& precursor) {
+std::string EscapeNSURLPrecursor(base::StringPiece precursor) {
   return Escape(precursor, kNSURLCharmap, false, true);
 }
 #endif  // defined(OS_MACOSX)
 
-std::string EscapeUrlEncodedData(const std::string& path, bool use_plus) {
+std::string EscapeUrlEncodedData(base::StringPiece path, bool use_plus) {
   return Escape(path, kUrlEscape, use_plus);
 }
 
-std::string EscapeNonASCII(const std::string& input) {
+std::string EscapeNonASCII(base::StringPiece input) {
   return Escape(input, kNonASCIICharmap, false);
 }
 
-std::string EscapeExternalHandlerValue(const std::string& text) {
+std::string EscapeExternalHandlerValue(base::StringPiece text) {
   return Escape(text, kExternalHandlerCharmap, false, true);
 }
 
@@ -427,31 +423,31 @@ void AppendEscapedCharForHTML(char c, std::string* output) {
   AppendEscapedCharForHTMLImpl(c, output);
 }
 
-std::string EscapeForHTML(const std::string& input) {
+std::string EscapeForHTML(base::StringPiece input) {
   return EscapeForHTMLImpl(input);
 }
 
-base::string16 EscapeForHTML(const base::string16& input) {
+base::string16 EscapeForHTML(base::StringPiece16 input) {
   return EscapeForHTMLImpl(input);
 }
 
-std::string UnescapeURLComponent(const std::string& escaped_text,
+std::string UnescapeURLComponent(base::StringPiece escaped_text,
                                  UnescapeRule::Type rules) {
   return UnescapeURLWithAdjustmentsImpl(escaped_text, rules, NULL);
 }
 
-base::string16 UnescapeURLComponent(const base::string16& escaped_text,
+base::string16 UnescapeURLComponent(base::StringPiece16 escaped_text,
                                     UnescapeRule::Type rules) {
   return UnescapeURLWithAdjustmentsImpl(escaped_text, rules, NULL);
 }
 
-base::string16 UnescapeAndDecodeUTF8URLComponent(const std::string& text,
+base::string16 UnescapeAndDecodeUTF8URLComponent(base::StringPiece text,
                                                  UnescapeRule::Type rules) {
   return UnescapeAndDecodeUTF8URLComponentWithAdjustments(text, rules, NULL);
 }
 
 base::string16 UnescapeAndDecodeUTF8URLComponentWithAdjustments(
-    const std::string& text,
+    base::StringPiece text,
     UnescapeRule::Type rules,
     base::OffsetAdjuster::Adjustments* adjustments) {
   base::string16 result;
@@ -472,7 +468,7 @@ base::string16 UnescapeAndDecodeUTF8URLComponentWithAdjustments(
   return base::UTF8ToUTF16WithAdjustments(text, adjustments);
 }
 
-base::string16 UnescapeForHTML(const base::string16& input) {
+base::string16 UnescapeForHTML(base::StringPiece16 input) {
   static const struct {
     const char* ampersand_code;
     const char replacement;
@@ -485,10 +481,10 @@ base::string16 UnescapeForHTML(const base::string16& input) {
   };
 
   if (input.find(base::ASCIIToUTF16("&")) == std::string::npos)
-    return input;
+    return input.as_string();
 
   base::string16 ampersand_chars[arraysize(kEscapeToChars)];
-  base::string16 text(input);
+  base::string16 text = input.as_string();
   for (base::string16::iterator iter = text.begin();
        iter != text.end(); ++iter) {
     if (*iter == '&') {

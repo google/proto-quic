@@ -24,13 +24,15 @@
 #endif
 
 // Some versions of libstdc++ have partial support for type_traits, but misses
-// a smaller subset while removing some of the older non-standard stuff.
-#define CR_GLIBCXX_4_8_4 20141219
-#define CR_GLIBCXX_4_9_2 20150426
+// a smaller subset while removing some of the older non-standard stuff. Assume
+// that all versions below 5.0 fall in this category, along with one 5.0
+// experimental release. Test for this by consulting compiler major version,
+// the only reliable option available, so theoretically this could fail should
+// you attempt to mix an earlier version of libstdc++ with >= GCC5. But
+// that's unlikely to work out, especially as GCC5 changed ABI.
 #define CR_GLIBCXX_5_0_0 20150123
-#if defined(__GLIBCXX__) &&                                                \
-    (__GLIBCXX__ == CR_GLIBCXX_4_8_4 || __GLIBCXX__ == CR_GLIBCXX_4_9_2 || \
-     __GLIBCXX__ == CR_GLIBCXX_5_0_0)
+#if (defined(__GNUC__) && __GNUC__ < 5) || \
+    (defined(__GLIBCXX__) && __GLIBCXX__ == CR_GLIBCXX_5_0_0)
 #define CR_USE_FALLBACKS_FOR_OLD_EXPERIMENTAL_GLIBCXX
 #endif
 

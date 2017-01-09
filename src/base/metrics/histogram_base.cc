@@ -125,7 +125,9 @@ void HistogramBase::WriteJSON(std::string* output) const {
 // static
 void HistogramBase::EnableActivityReportHistogram(
     const std::string& process_type) {
-  DCHECK(!report_histogram_);
+  if (report_histogram_)
+    return;
+
   size_t existing = StatisticsRecorder::GetHistogramCount();
   if (existing != 0) {
     DVLOG(1) << existing

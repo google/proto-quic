@@ -21,6 +21,7 @@ namespace {
 base::AtExitManager* g_at_exit_manager = NULL;
 const char* g_library_version_number = "";
 LibraryLoadedHook* g_registration_callback = NULL;
+NativeInitializationHook* g_native_initialization_hook = NULL;
 
 enum RendererHistogramCode {
   // Renderer load at fixed address success, fail, or not attempted.
@@ -149,6 +150,11 @@ static void RegisterLibraryPreloaderRendererHistogram(
   g_library_preloader_renderer_histogram_code_registered = true;
 }
 
+void SetNativeInitializationHook(
+    NativeInitializationHook native_initialization_hook) {
+  g_native_initialization_hook = native_initialization_hook;
+}
+
 void RecordLibraryLoaderRendererHistograms() {
   RecordChromiumAndroidLinkerRendererHistogram();
   RecordLibraryPreloaderRendereHistogram();
@@ -167,6 +173,9 @@ static void InitCommandLine(
 
 static jboolean LibraryLoaded(JNIEnv* env,
                               const JavaParamRef<jobject>& jcaller) {
+  if (g_native_initialization_hook && !g_native_initialization_hook()) {
+    return false;
+  }
   if (g_registration_callback == NULL) {
     return true;
   }

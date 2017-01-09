@@ -45,8 +45,7 @@ def build_and_upload(script_path, distro, release, arch, lock):
   run_script([script_path, 'UploadSysroot%s' % arch, revision])
 
   tarball = '%s_%s_%s_sysroot.tgz' % (distro, release, arch.lower())
-  tgz_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                          "..", "..", "..", "out", "sysroot-build",
+  tgz_path = os.path.join(script_dir, "..", "..", "..", "out", "sysroot-build",
                           release, tarball)
   sha1sum = sha1sumfile(tgz_path)
   sysroot_dir = '%s_%s_%s-sysroot' % (distro, release, arch.lower())
@@ -58,7 +57,7 @@ def build_and_upload(script_path, distro, release, arch, lock):
       'SysrootDir': sysroot_dir
   }
   with lock:
-    with open('sysroots.json', 'rw+') as f:
+    with open(os.path.join(script_dir, 'sysroots.json'), 'rw+') as f:
       sysroots = json.load(f)
       sysroots["%s_%s" % (release, arch.lower())] = sysroot_metadata
       f.seek(0)

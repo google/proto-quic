@@ -4,8 +4,6 @@
 
 #include "base/task_scheduler/scheduler_worker_pool_params.h"
 
-#include "base/time/time.h"
-
 namespace base {
 
 SchedulerWorkerPoolParams::SchedulerWorkerPoolParams(
@@ -13,7 +11,7 @@ SchedulerWorkerPoolParams::SchedulerWorkerPoolParams(
     ThreadPriority priority_hint,
     StandbyThreadPolicy standby_thread_policy,
     int max_threads,
-    const TimeDelta& suggested_reclaim_time)
+    TimeDelta suggested_reclaim_time)
     : name_(name),
       priority_hint_(priority_hint),
       standby_thread_policy_(standby_thread_policy),

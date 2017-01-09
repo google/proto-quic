@@ -13,6 +13,7 @@
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/memory_dump_manager.h"
 #include "base/trace_event/process_memory_dump.h"
+#include "net/base/sdch_manager.h"
 #include "net/cookies/cookie_store.h"
 #include "net/dns/host_resolver.h"
 #include "net/http/http_transaction_factory.h"
@@ -138,6 +139,8 @@ bool URLRequestContext::OnMemoryDump(
       network_session->DumpMemoryStats(pmd, dump->absolute_name());
   }
   SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(pmd);
+  if (sdch_manager_)
+    sdch_manager_->DumpMemoryStats(pmd, dump->absolute_name());
   return true;
 }
 

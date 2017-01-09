@@ -30,7 +30,7 @@ struct BASE_EXPORT Task : public PendingTask {
   Task(const tracked_objects::Location& posted_from,
        const Closure& task,
        const TaskTraits& traits,
-       const TimeDelta& delay);
+       TimeDelta delay);
   ~Task();
 
   // The TaskTraits of this task.

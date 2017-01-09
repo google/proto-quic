@@ -83,6 +83,17 @@ template("mac_toolchain") {
       host_toolchain = host_toolchain
     }
 
+    # Supports building with the version of clang shipped with Xcode when
+    # targetting iOS by not respecting clang_base_path.
+    if (toolchain_args.current_os == "ios" && use_xcode_clang) {
+      prefix = ""
+    } else {
+      prefix = rebase_path("$clang_base_path/bin/", root_build_dir)
+    }
+
+    _cc = "${prefix}clang"
+    _cxx = "${prefix}clang++"
+
     # When the invoker has explicitly overridden use_goma or cc_wrapper in the
     # toolchain args, use those values, otherwise default to the global one.
     # This works because the only reasonable override that toolchains might
@@ -109,13 +120,9 @@ template("mac_toolchain") {
       compiler_prefix = ""
     }
 
-    if (toolchain_args.current_os != "ios" || !use_xcode_clang) {
-      compiler_prefix += rebase_path("$clang_base_path/bin/", root_build_dir)
-    }
-
-    cc = "${compiler_prefix}clang"
-    cxx = "${compiler_prefix}clang++"
-    ld = cxx
+    cc = compiler_prefix + _cc
+    cxx = compiler_prefix + _cxx
+    ld = _cxx
 
     linker_driver =
         "TOOL_VERSION=${tool_versions.linker_driver} " +

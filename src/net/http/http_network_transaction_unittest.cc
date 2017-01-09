@@ -4792,7 +4792,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxySpdyGetWithProxyAuth) {
   SpdySerializedFrame body_data(spdy_util_.ConstructSpdyDataFrame(3, true));
   MockRead spdy_reads[] = {
       CreateMockRead(resp_authentication, 1),
-      CreateMockRead(body_authentication, 2),
+      CreateMockRead(body_authentication, 2, SYNCHRONOUS),
       CreateMockRead(resp_data, 4),
       CreateMockRead(body_data, 5),
       MockRead(ASYNC, 0, 6),
@@ -5255,9 +5255,9 @@ TEST_F(HttpNetworkTransactionTest,
   MockRead spdy_reads[] = {
       CreateMockRead(conn_resp1, 1, ASYNC),
       CreateMockRead(wrapped_get_resp1, 3, ASYNC),
-      CreateMockRead(wrapped_body1, 4, ASYNC),
+      CreateMockRead(wrapped_body1, 4, SYNCHRONOUS),
       CreateMockRead(wrapped_get_resp2, 6, ASYNC),
-      CreateMockRead(wrapped_body2, 7, ASYNC),
+      CreateMockRead(wrapped_body2, 7, SYNCHRONOUS),
       MockRead(ASYNC, 0, 8),
   };
 
