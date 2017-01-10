@@ -215,47 +215,19 @@ void GetCertChainInfo(CFArrayRef cert_chain,
       continue;
     }
 
-    x509_util::CSSMCachedCertificate cached_cert;
-    OSStatus status = cached_cert.Init(chain_cert);
-    if (status)
-      continue;
-    x509_util::CSSMFieldValue signature_field;
-    status = cached_cert.GetField(&CSSMOID_X509V1SignatureAlgorithm,
-                                  &signature_field);
-    if (status || !signature_field.field())
-      continue;
-    // Match the behaviour of OS X system tools and defensively check that
-    // sizes are appropriate. This would indicate a critical failure of the
-    // OS X certificate library, but based on history, it is best to play it
-    // safe.
-    const CSSM_X509_ALGORITHM_IDENTIFIER* sig_algorithm =
-        signature_field.GetAs<CSSM_X509_ALGORITHM_IDENTIFIER>();
-    if (!sig_algorithm)
-      continue;
-
-    const CSSM_OID* alg_oid = &sig_algorithm->algorithm;
-    if (CSSMOIDEqual(alg_oid, &CSSMOID_MD2WithRSA)) {
-      verify_result->has_md2 = true;
-      if (i == 0)
-        *leaf_is_weak = true;
-    } else if (CSSMOIDEqual(alg_oid, &CSSMOID_MD4WithRSA)) {
-      verify_result->has_md4 = true;
-      if (i == 0)
-        *leaf_is_weak = true;
-    } else if (CSSMOIDEqual(alg_oid, &CSSMOID_MD5WithRSA)) {
-      verify_result->has_md5 = true;
-      if (i == 0)
-        *leaf_is_weak = true;
-    } else if (CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA) ||
-               CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA_OIW) ||
-               CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA) ||
-               CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_CMS) ||
-               CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_JDK) ||
-               CSSMOIDEqual(alg_oid, &CSSMOID_ECDSA_WithSHA1)) {
-      verify_result->has_sha1 = true;
-      if (i == 0) {
-        verify_result->has_sha1_leaf = true;
-        *leaf_is_weak = true;
+    bool is_leaf = i == 0;
+    X509Certificate::SignatureHashAlgorithm hash_algorithm =
+        FillCertVerifyResultWeakSignature(chain_cert, is_leaf, verify_result);
+    if (is_leaf) {
+      switch (hash_algorithm) {
+        case X509Certificate::kSignatureHashAlgorithmMd2:
+        case X509Certificate::kSignatureHashAlgorithmMd4:
+        case X509Certificate::kSignatureHashAlgorithmMd5:
+        case X509Certificate::kSignatureHashAlgorithmSha1:
+          *leaf_is_weak = true;
+          break;
+        case X509Certificate::kSignatureHashAlgorithmOther:
+          break;
       }
     }
   }

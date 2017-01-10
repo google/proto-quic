@@ -308,14 +308,14 @@
 
     'chromium.memory': {
       'Linux ASan LSan Builder': 'asan_lsan_release_trybot',
-      'Mac ASan 64 Builder': 'asan_full_symbols_disable_nacl_release_bot_dcheck_always_on',
       'Linux Chromium OS ASan LSan Builder': 'asan_lsan_chromeos_release_trybot',
+      'Linux TSan Builder': 'tsan_disable_nacl_release_bot',
+      'Mac ASan 64 Builder': 'asan_full_symbols_disable_nacl_release_bot_dcheck_always_on',
     },
 
     'chromium.memory.fyi': {
       'Chromium Linux ChromeOS MSan Builder': 'chromeos_msan_release_bot',
       'Chromium Linux MSan Builder': 'msan_release_bot',
-      'Chromium Linux TSan Builder': 'tsan_disable_nacl_release_bot',
     },
 
     'chromium.memory.full': {
@@ -1786,7 +1786,7 @@
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
                   'ozone_platform_x11=true ozone_platform_gbm=true '
-                  'enable_package_mash_services=true use_ash=false'),
+                  'use_ozone=true use_ash=false'),
     },
 
     'pdf_xfa': {

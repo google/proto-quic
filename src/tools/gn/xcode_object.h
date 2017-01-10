@@ -190,6 +190,8 @@ class PBXFileReference : public PBXObject {
   std::string Name() const override;
   void Print(std::ostream& out, unsigned indent) const override;
 
+  const std::string& path() const { return path_; }
+
  private:
   std::string name_;
   std::string path_;
@@ -293,12 +295,13 @@ class PBXProject : public PBXObject {
   void AddAggregateTarget(const std::string& name,
                           const std::string& shell_script);
   void AddIndexingTarget();
-  void AddNativeTarget(const std::string& name,
-                       const std::string& type,
-                       const std::string& output_name,
-                       const std::string& output_type,
-                       const std::string& shell_script,
-                       const PBXAttributes& extra_attributes = PBXAttributes());
+  PBXNativeTarget* AddNativeTarget(
+      const std::string& name,
+      const std::string& type,
+      const std::string& output_name,
+      const std::string& output_type,
+      const std::string& shell_script,
+      const PBXAttributes& extra_attributes = PBXAttributes());
 
   void SetProjectDirPath(const std::string& project_dir_path);
   void SetProjectRoot(const std::string& project_root);

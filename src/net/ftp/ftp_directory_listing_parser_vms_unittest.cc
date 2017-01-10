@@ -21,36 +21,33 @@ typedef FtpDirectoryListingParserTest FtpDirectoryListingParserVmsTest;
 
 TEST_F(FtpDirectoryListingParserVmsTest, Good) {
   const struct SingleLineTestData good_cases[] = {
-    { "README.TXT;4  2  18-APR-2000 10:40:39.90",
-      FtpDirectoryListingEntry::FILE, "readme.txt", 1024,
-      2000, 4, 18, 10, 40 },
-    { ".WELCOME;1    2  13-FEB-2002 23:32:40.47",
-      FtpDirectoryListingEntry::FILE, ".welcome", 1024,
-      2002, 2, 13, 23, 32 },
-    { "FILE.;1    2  13-FEB-2002 23:32:40.47",
-      FtpDirectoryListingEntry::FILE, "file.", 1024,
-      2002, 2, 13, 23, 32 },
-    { "EXAMPLE.TXT;1  1   4-NOV-2009 06:02 [JOHNDOE] (RWED,RWED,,)",
-      FtpDirectoryListingEntry::FILE, "example.txt", 512,
-      2009, 11, 4, 6, 2 },
-    { "ANNOUNCE.TXT;2 1/16 12-MAR-2005 08:44:57 [SYSTEM] (RWED,RWED,RE,RE)",
-      FtpDirectoryListingEntry::FILE, "announce.txt", 512,
-      2005, 3, 12, 8, 44 },
-    { "TEST.DIR;1 1 4-MAR-1999 22:14:34 [UCX$NOBO,ANONYMOUS] (RWE,RWE,RWE,RWE)",
-      FtpDirectoryListingEntry::DIRECTORY, "test", -1,
-      1999, 3, 4, 22, 14 },
-    { "ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (,,,)",
-      FtpDirectoryListingEntry::FILE, "announce.txt", 512,
-      2005, 3, 12, 8, 44 },
-    { "ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (R,RW,RWD,RE)",
-      FtpDirectoryListingEntry::FILE, "announce.txt", 512,
-      2005, 3, 12, 8, 44 },
-    { "ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (ED,RED,WD,WED)",
-      FtpDirectoryListingEntry::FILE, "announce.txt", 512,
-      2005, 3, 12, 8, 44 },
-    { "VMS721.ISO;2 ******  6-MAY-2008 09:29 [ANONY,ANONYMOUS] (RE,RWED,RE,RE)",
-      FtpDirectoryListingEntry::FILE, "vms721.iso", -1,
-      2008, 5, 6, 9, 29 },
+      {"README.TXT;4  2  18-APR-2000 10:40:39.90",
+       FtpDirectoryListingEntry::FILE, "readme.txt", 1024, 2000, 4, 18, 10, 40},
+      {".WELCOME;1    2  13-FEB-2002 23:32:40.47",
+       FtpDirectoryListingEntry::FILE, ".welcome", 1024, 2002, 2, 13, 23, 32},
+      {"FILE.;1    2  13-FEB-2002 23:32:40.47", FtpDirectoryListingEntry::FILE,
+       "file.", 1024, 2002, 2, 13, 23, 32},
+      {"EXAMPLE.TXT;1  1   4-NOV-2009 06:02 [JOHNDOE] (RWED,RWED,,)",
+       FtpDirectoryListingEntry::FILE, "example.txt", 512, 2009, 11, 4, 6, 2},
+      {"ANNOUNCE.TXT;2 1/16 12-MAR-2005 08:44:57 [SYSTEM] (RWED,RWED,RE,RE)",
+       FtpDirectoryListingEntry::FILE, "announce.txt", 512, 2005, 3, 12, 8, 44},
+      {"TEST.DIR;1 1 4-MAR-1999 22:14:34 [UCX$NOBO,ANONYMOUS] "
+       "(RWE,RWE,RWE,RWE)",
+       FtpDirectoryListingEntry::DIRECTORY, "test", -1, 1999, 3, 4, 22, 14},
+      {"ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (,,,)",
+       FtpDirectoryListingEntry::FILE, "announce.txt", 512, 2005, 3, 12, 8, 44},
+      {"ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (R,RW,RWD,RE)",
+       FtpDirectoryListingEntry::FILE, "announce.txt", 512, 2005, 3, 12, 8, 44},
+      {"ANNOUNCE.TXT;2 1 12-MAR-2005 08:44:57 [X] (ED,RED,WD,WED)",
+       FtpDirectoryListingEntry::FILE, "announce.txt", 512, 2005, 3, 12, 8, 44},
+      {"VMS721.ISO;2 ******  6-MAY-2008 09:29 [ANONY,ANONYMOUS] "
+       "(RE,RWED,RE,RE)",
+       FtpDirectoryListingEntry::FILE, "vms721.iso", -1, 2008, 5, 6, 9, 29},
+      // This has an unusually large allocated block size (INT64_MAX), but
+      // shouldn't matter as it is not used.
+      {"ANNOUNCE.TXT;2 1/9223372036854775807 12-MAR-2005 08:44:57 [SYSTEM] "
+       "(RWED,RWED,RE,RE)",
+       FtpDirectoryListingEntry::FILE, "announce.txt", 512, 2005, 3, 12, 8, 44},
   };
   for (size_t i = 0; i < arraysize(good_cases); i++) {
     SCOPED_TRACE(base::StringPrintf("Test[%" PRIuS "]: %s", i,
@@ -76,37 +73,47 @@ TEST_F(FtpDirectoryListingParserVmsTest, Good) {
 
 TEST_F(FtpDirectoryListingParserVmsTest, Bad) {
   const char* const bad_cases[] = {
-    "garbage",
+      "garbage",
 
-    // Missing file version number.
-    "README.TXT 2 18-APR-2000 10:40:39",
+      // Missing file version number.
+      "README.TXT 2 18-APR-2000 10:40:39",
 
-    // Missing extension.
-    "README;1 2 18-APR-2000 10:40:39",
+      // Missing extension.
+      "README;1 2 18-APR-2000 10:40:39",
 
-    // Malformed file size.
-    "README.TXT;1 garbage 18-APR-2000 10:40:39",
-    "README.TXT;1 -2 18-APR-2000 10:40:39",
+      // Malformed file size.
+      "README.TXT;1 garbage 18-APR-2000 10:40:39",
+      "README.TXT;1 -2 18-APR-2000 10:40:39",
 
-    // Malformed date.
-    "README.TXT;1 2 APR-2000 10:40:39",
-    "README.TXT;1 2 -18-APR-2000 10:40:39",
-    "README.TXT;1 2 18-APR 10:40:39",
-    "README.TXT;1 2 18-APR-2000 10",
-    "README.TXT;1 2 18-APR-2000 10:40.25",
-    "README.TXT;1 2 18-APR-2000 10:40.25.25",
+      // Malformed date.
+      "README.TXT;1 2 APR-2000 10:40:39",
+      "README.TXT;1 2 -18-APR-2000 10:40:39", "README.TXT;1 2 18-APR 10:40:39",
+      "README.TXT;1 2 18-APR-2000 10", "README.TXT;1 2 18-APR-2000 10:40.25",
+      "README.TXT;1 2 18-APR-2000 10:40.25.25",
 
-    // Malformed security information.
-    "X.TXT;2 1 12-MAR-2005 08:44:57 (RWED,RWED,RE,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [SYSTEM]",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 (SYSTEM) (RWED,RWED,RE,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [SYSTEM] [RWED,RWED,RE,RE]",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWED,RE,RE,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWEDRWED,RE,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,DEWR,RE,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWED,Q,RE)",
-    "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RRWWEEDD,RE,RE)",
+      // Malformed security information.
+      "X.TXT;2 1 12-MAR-2005 08:44:57 (RWED,RWED,RE,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [SYSTEM]",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 (SYSTEM) (RWED,RWED,RE,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [SYSTEM] [RWED,RWED,RE,RE]",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWED,RE,RE,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWEDRWED,RE,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,DEWR,RE,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RWED,Q,RE)",
+      "X.TXT;2 1 12-MAR-2005 08:44:57 [X] (RWED,RRWWEEDD,RE,RE)",
+
+      // Block size (INT64_MAX) is too large -- will overflow when
+      // multiplying by 512 to calculate the file size in bytes.
+      "README.TXT;1  9223372036854775807  18-APR-2000 10:40:39.90",
+      "README.TXT;1  9223372036854775807/9223372036854775807  18-APR-2000 "
+      "10:40:39.90",
+
+      // Block size (larger than INT64_MAX) is too large -- will fail to
+      // parse to an int64_t
+      "README.TXT;1  19223372036854775807  18-APR-2000 10:40:39.90",
+      "README.TXT;1  19223372036854775807/19223372036854775807  18-APR-2000 "
+      "10:40:39.90",
   };
   for (size_t i = 0; i < arraysize(bad_cases); i++) {
     SCOPED_TRACE(base::StringPrintf("Test[%" PRIuS "]: %s", i, bad_cases[i]));

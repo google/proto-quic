@@ -22,7 +22,7 @@ fi
 lsb_release=$(lsb_release --codename --short)
 
 case $lsb_release in
-  xenial)
+  xenial|yakkety)
     java_alternative="java-1.8.0-openjdk-amd64"
     java_pkgs="openjdk-8-jre openjdk-8-jdk"
   ;;

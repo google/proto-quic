@@ -11,6 +11,7 @@
 #include "base/bind.h"
 #include "base/location.h"
 #include "base/message_loop/message_loop.h"
+#include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -568,8 +569,10 @@ int ReadTransaction(HttpTransaction* trans, std::string* result) {
   do {
     scoped_refptr<IOBuffer> buf(new IOBuffer(256));
     rv = trans->Read(buf.get(), 256, callback.callback());
-    if (rv == ERR_IO_PENDING)
+    if (rv == ERR_IO_PENDING) {
       rv = callback.WaitForResult();
+      base::RunLoop().RunUntilIdle();
+    }
 
     if (rv > 0)
       content.append(buf->data(), rv);

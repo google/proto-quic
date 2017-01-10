@@ -1213,6 +1213,11 @@ TEST_F(SpdySessionTest, MaxConcurrentStreamsZero) {
   EXPECT_THAT(delegate.WaitForClose(), IsOk());
   EXPECT_EQ("hello!", delegate.TakeReceivedData());
 
+  // Finish async network reads/writes.
+  base::RunLoop().RunUntilIdle();
+  EXPECT_TRUE(data.AllWriteDataConsumed());
+  EXPECT_TRUE(data.AllReadDataConsumed());
+
   // Session is destroyed.
   EXPECT_FALSE(session_);
 }
@@ -4362,6 +4367,10 @@ void SpdySessionTest::RunResumeAfterUnstallTest(
   EXPECT_TRUE(delegate.send_headers_completed());
   EXPECT_EQ("200", delegate.GetResponseHeaderValue(":status"));
   EXPECT_EQ(std::string(), delegate.TakeReceivedData());
+
+  // Run SpdySession::PumpWriteLoop which destroys |session_|.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_FALSE(session_);
   EXPECT_TRUE(data.AllWriteDataConsumed());
 }

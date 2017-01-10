@@ -795,14 +795,6 @@
       "../../content/test/gpu/run_gpu_integration_test.py",
     ],
   },
-  "telemetry_gpu_test": {
-    "label": "//chrome/test:telemetry_gpu_test",
-    "type": "script",
-    "script": "//testing/scripts/run_telemetry_benchmark_as_googletest.py",
-    "args": [
-      "../../content/test/gpu/run_gpu_test.py",
-    ],
-  },
   "telemetry_gpu_unittests": {
     "label": "//chrome/test:telemetry_gpu_unittests",
     "type": "script",

@@ -271,9 +271,9 @@ typedef struct {
   uint8 x_stddev;       // Standard deviation of byte2 value
   uint8 y_stddev;       // Standard deviation of byte1 value
   int so;               // Scaling offset -- add to probabilities below
-  const uint8 b1[256];  // Unigram probability for first byte of aligned bigram
-  const uint8 b2[256];  // Unigram probability for second byte of aligned bigram
-  const uint8 b12[256]; // Unigram probability for cross bytes of aligned bigram
+  uint8 b1[256];        // Unigram probability for first byte of aligned bigram
+  uint8 b2[256];        // Unigram probability for second byte of aligned bigram
+  uint8 b12[256];       // Unigram probability for cross bytes of aligned bigram
 } UnigramEntry;
 
 //typedef struct {

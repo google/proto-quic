@@ -19,6 +19,7 @@ import org.chromium.base.annotations.CalledByNative;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
  * This class provides methods to access content URI schemes.
@@ -92,7 +93,15 @@ public abstract class ContentUriUtils {
             asf = getAssetFileDescriptor(context, uriString);
             return asf != null;
         } finally {
-            StreamUtil.closeQuietly(asf);
+            // Do not use StreamUtil.closeQuietly here, as AssetFileDescriptor
+            // does not implement Closeable until KitKat.
+            if (asf != null) {
+                try {
+                    asf.close();
+                } catch (IOException e) {
+                    // Closing quietly.
+                }
+            }
         }
     }
 
@@ -132,7 +141,13 @@ public abstract class ContentUriUtils {
                     AssetFileDescriptor afd =
                             resolver.openTypedAssetFileDescriptor(uri, streamTypes[0], null);
                     if (afd.getStartOffset() != 0) {
-                        StreamUtil.closeQuietly(afd);
+                        // Do not use StreamUtil.closeQuietly here, as AssetFileDescriptor
+                        // does not implement Closeable until KitKat.
+                        try {
+                            afd.close();
+                        } catch (IOException e) {
+                            // Closing quietly.
+                        }
                         throw new SecurityException("Cannot open files with non-zero offset type.");
                     }
                     return afd;

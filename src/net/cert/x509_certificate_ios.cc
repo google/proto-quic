@@ -358,6 +358,29 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle os_cert,
   *size_bits = EVP_PKEY_bits(key);
 }
 
+// static
+X509Certificate::SignatureHashAlgorithm
+X509Certificate::GetSignatureHashAlgorithm(OSCertHandle cert_handle) {
+  bssl::UniquePtr<X509> cert = OSCertHandleToOpenSSL(cert_handle);
+  if (!cert)
+    return kSignatureHashAlgorithmOther;
+
+  // TODO(eroman): This duplicates code with x509_certificate_openssl.cc
+  int sig_alg = OBJ_obj2nid(cert->sig_alg->algorithm);
+  if (sig_alg == NID_md2WithRSAEncryption)
+    return kSignatureHashAlgorithmMd2;
+  if (sig_alg == NID_md4WithRSAEncryption)
+    return kSignatureHashAlgorithmMd4;
+  if (sig_alg == NID_md5WithRSAEncryption || sig_alg == NID_md5WithRSA)
+    return kSignatureHashAlgorithmMd5;
+  if (sig_alg == NID_sha1WithRSAEncryption || sig_alg == NID_dsaWithSHA ||
+      sig_alg == NID_dsaWithSHA1 || sig_alg == NID_dsaWithSHA1_2 ||
+      sig_alg == NID_sha1WithRSA || sig_alg == NID_ecdsa_with_SHA1) {
+    return kSignatureHashAlgorithmSha1;
+  }
+  return kSignatureHashAlgorithmOther;
+}
+
 bool X509Certificate::SupportsSSLClientAuth() const {
   return false;
 }

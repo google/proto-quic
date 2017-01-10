@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/callback.h"
 #include "base/logging.h"
@@ -28,13 +27,13 @@
 #include "base/task_scheduler/scheduler_worker_stack.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/task_scheduler/task.h"
-#include "base/task_scheduler/task_traits.h"
 #include "base/threading/platform_thread.h"
+#include "base/time/time.h"
 
 namespace base {
 
 class HistogramBase;
-class TimeDelta;
+class TaskTraits;
 
 namespace internal {
 
@@ -115,7 +114,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   class SchedulerWorkerDelegateImpl;
 
   SchedulerWorkerPoolImpl(StringPiece name,
-                          const TimeDelta& suggested_reclaim_time,
+                          TimeDelta suggested_reclaim_time,
                           TaskTracker* task_tracker,
                           DelayedTaskManager* delayed_task_manager);
 
@@ -203,14 +202,6 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
   // TaskScheduler.NumTasksBetweenWaits.[worker pool name] histogram.
   // Intentionally leaked.
   HistogramBase* const num_tasks_between_waits_histogram_;
-
-  // TaskScheduler.TaskLatency.[worker pool name].[task priority] histograms.
-  // Indexed by task priority. Histograms are allocated on demand to reduce
-  // memory usage (some task priorities might never run in this
-  // SchedulerThreadPoolImpl). Intentionally leaked.
-  subtle::AtomicWord
-      task_latency_histograms_[static_cast<int>(TaskPriority::HIGHEST) + 1] =
-          {};
 
   TaskTracker* const task_tracker_;
   DelayedTaskManager* const delayed_task_manager_;

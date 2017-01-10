@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include "base/logging.h"
+
 using base::StringPiece;
 using std::string;
 
@@ -42,6 +44,35 @@ bool operator!=(const HpackString& a, StringPiece b) {
 }
 std::ostream& operator<<(std::ostream& out, const HpackString& v) {
   return out << v.ToString();
+}
+
+HpackStringPair::HpackStringPair(const HpackString& name,
+                                 const HpackString& value)
+    : name(name), value(value) {
+  DVLOG(3) << DebugString() << " ctor";
+}
+
+HpackStringPair::HpackStringPair(StringPiece name, StringPiece value)
+    : name(name), value(value) {
+  DVLOG(3) << DebugString() << " ctor";
+}
+
+HpackStringPair::~HpackStringPair() {
+  DVLOG(3) << DebugString() << " dtor";
+}
+
+string HpackStringPair::DebugString() const {
+  string debug_string("HpackStringPair(name=");
+  debug_string.append(name.ToString());
+  debug_string.append(", value=");
+  debug_string.append(value.ToString());
+  debug_string.append(")");
+  return debug_string;
+}
+
+std::ostream& operator<<(std::ostream& os, const HpackStringPair& p) {
+  os << p.DebugString();
+  return os;
 }
 
 }  // namespace net

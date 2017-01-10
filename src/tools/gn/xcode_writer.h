@@ -60,6 +60,11 @@ class XcodeWriter {
                             std::vector<const Target*>* targets,
                             Err* err);
 
+  // Filters list of targets to only return ones that are xctest module bundles.
+  static void FilterXCTestModuleTargets(
+      const std::vector<const Target*>& targets,
+      std::vector<const Target*>* xctest_module_targets);
+
   // Generate the "products.xcodeproj" project that reference all products
   // (i.e. targets that have a build artefact usable from Xcode, mostly
   // application bundles).

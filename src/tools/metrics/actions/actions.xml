@@ -1147,6 +1147,132 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Android.HistoryPage.ClearBrowsingData">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User clicked the clear browsing data button on the native Android history
+    page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.LoadMoreOnScroll">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User scrolled to the bottom of the screen causing more items to load on the
+    native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.OpenItem">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened an item on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.OpenSelected">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened one or more selected items in new tabs on the native Android
+    history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.OpenSelectedIncognito">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened one or more selected items in new incognito tabs on the native
+    Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.RemoveItem">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User removed an item on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.RemoveSelected">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User removed one or more selected items on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User tapped the search icon on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.LoadMoreOnScroll">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User scrolled to the bottom of the screen causing more items to load while
+    searching on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.OpenItem">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened an item while searching on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.OpenSelected">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened one or more selected items in new tabs while searching on the
+    native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.OpenSelectedIncognito">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User opened one or more selected items in new incognito tabs while searching
+    on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.RemoveItem">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User removed an item while searching on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.RemoveSelected">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User removed one or more selected items while searching on the native
+    Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Search.SelectionEstablished">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User established a selection while searching on the native Android history
+    page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.SelectionEstablished">
+  <owner>twellington@chromium.org</owner>
+  <description>
+    User established a selection on the native Android history page.
+  </description>
+</action>
+
+<action name="Android.HistoryPage.Show">
+  <owner>twellington@chromium.org</owner>
+  <description>User navigated to the native Android history page.</description>
+</action>
+
 <action name="Android.InstantApps.BannerDismissed">
   <owner>mariakhomenko@chromium.org</owner>
   <description>Promo banner for an instant app has been dismissed.</description>
@@ -9916,8 +10042,33 @@ should be able to be added at any place in this file.
 </action>
 
 <action name="MobileReceivedExternalIntent">
-  <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
-  <description>Please enter the description of this user action.</description>
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    A VIEW intent was received by the tabbed mode activity.  This will combine
+    intents sent by external application as well as Chrome itself.  This does
+    not cover all intent types handled by Chrome.  Use
+    MobileTabbedModeViewIntentFromApp and MobileTabbedModeViewIntentFromChrome
+    for a complete picture.
+  </description>
+</action>
+
+<action name="MobileReceivedExternalIntent.App">
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    A VIEW intent was received by the tabbed mode activity from an external
+    application.
+  </description>
+</action>
+
+<action name="MobileReceivedExternalIntent.Chrome">
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    A VIEW intent was received by the tabbed mode activity from Chrome.  This is
+    only recorded for intent types that are also allowed from external apps.
+  </description>
 </action>
 
 <action name="MobileRendererCrashed">
@@ -10011,6 +10162,23 @@ should be able to be added at any place in this file.
 <action name="MobileTabSwitched">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="MobileTabbedModeViewIntentFromApp">
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    A VIEW intent was received by the tabbed mode activity from an external
+    application.
+  </description>
+</action>
+
+<action name="MobileTabbedModeViewIntentFromChrome">
+  <owner>mariakhomenko@chromium.org</owner>
+  <owner>tedchoc@chromium.org</owner>
+  <description>
+    A VIEW intent was received by the tabbed mode activity from Chrome.
+  </description>
 </action>
 
 <action name="MobileToolbarBack">

@@ -111,12 +111,12 @@ if ! which lsb_release > /dev/null; then
 fi
 
 lsb_release=$(lsb_release --codename --short)
-supported_releases="(precise|trusty|utopic|vivid|wily|xenial|jessie)"
+supported_releases="(precise|trusty|utopic|vivid|wily|xenial|yakkety|jessie)"
 if [ 0 -eq "${do_unsupported-0}" ] && [ 0 -eq "${do_quick_check-0}" ] ; then
   if [[ ! $lsb_release =~ $supported_releases ]]; then
     echo "ERROR: Only Ubuntu 12.04 (precise), 14.04 (trusty), " \
-      "14.10 (utopic), 15.04 (vivid), 15.10 (wily) and 16.04 (xenial), " \
-      "and Debian 8 (jessie) are currently supported" >&2
+      "14.10 (utopic), 15.04 (vivid), 15.10 (wily), 16.04 (xenial), " \
+      "16.10 (yakkety) and Debian 8 (jessie) are currently supported" >&2
     exit 1
   fi
 
@@ -163,7 +163,7 @@ chromeos_lib_list="libpulse0 libbz2-1.0"
 lib_list="libatk1.0-0 libc6 libasound2 libcairo2 libcap2 libcups2 libexpat1
           libffi6 libfontconfig1 libfreetype6 libglib2.0-0 libgnome-keyring0
           libgtk2.0-0 libpam0g libpango1.0-0 libpci3 libpcre3 libpixman-1-0
-          libpng12-0 libspeechd2 libstdc++6 libsqlite3-0 libx11-6 libx11-xcb1
+          libspeechd2 libstdc++6 libsqlite3-0 libx11-6 libx11-xcb1
           libxau6 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxdmcp6
           libxext6 libxfixes3 libxi6 libxinerama1 libxrandr2 libxrender1
           libxtst6 zlib1g $chromeos_lib_list"
@@ -236,12 +236,7 @@ case $lsb_release in
     arm_list+=" g++-4.8-multilib-arm-linux-gnueabihf
                 gcc-4.8-multilib-arm-linux-gnueabihf"
     ;;
-  wily)
-    arm_list+=" g++-5-multilib-arm-linux-gnueabihf
-                gcc-5-multilib-arm-linux-gnueabihf
-                gcc-arm-linux-gnueabihf"
-    ;;
-  xenial)
+  wily|xenial|yakkety)
     arm_list+=" g++-5-multilib-arm-linux-gnueabihf
                 gcc-5-multilib-arm-linux-gnueabihf
                 gcc-arm-linux-gnueabihf"
@@ -284,6 +279,11 @@ dev_list="${dev_list} libgbm-dev${mesa_variant}
 nacl_list="${nacl_list} libgl1-mesa-glx${mesa_variant}:i386"
 
 # Some package names have changed over time
+if package_exists libpng12-0; then
+  lib_list="${lib_list} libpng12-0"
+else
+  lib_list="${lib_list} libpng16-16"
+fi
 if package_exists libnspr4-dbg; then
   dbg_list="${dbg_list} libnspr4-dbg libnss3-dbg"
   lib_list="${lib_list} libnspr4 libnss3"

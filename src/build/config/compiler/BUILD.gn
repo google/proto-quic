@@ -78,6 +78,11 @@ declare_args() {
   # See: https://bugs.chromium.org/p/chromium/issues/detail?id=457359
   fatal_linker_warnings = true
 
+  # Build with C++ RTTI enabled. Chromium builds without RTTI by default,
+  # but some sanitizers are known to require it, like CFI diagnostics
+  # and UBsan variants.
+  use_rtti = use_cfi_diag || is_ubsan_vptr || is_ubsan_security
+
   # AFDO (Automatic Feedback Directed Optimizer) is a form of profile-guided
   # optimization that GCC supports. It used by ChromeOS in their official
   # builds. To use it, set auto_profile_path to the path to a file containing
@@ -1188,9 +1193,10 @@ config("rtti") {
     cflags_cc = [ "-frtti" ]
   }
 }
+
 config("no_rtti") {
-  # CFI diagnostics and UBsan vptr require RTTI.
-  if (!use_cfi_diag && !is_ubsan_vptr && !is_ubsan_security) {
+  # Some sanitizer configs may require RTTI to be left enabled globally
+  if (!use_rtti) {
     if (is_win) {
       cflags_cc = [ "/GR-" ]
     } else {

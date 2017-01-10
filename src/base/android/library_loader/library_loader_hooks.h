@@ -8,6 +8,7 @@
 #include <jni.h>
 
 #include "base/base_export.h"
+#include "base/callback.h"
 
 namespace base {
 namespace android {
@@ -26,6 +27,11 @@ enum LibraryProcessType {
   // Shared library is running in child process as part of webview.
   PROCESS_WEBVIEW_CHILD = 4,
 };
+
+typedef bool NativeInitializationHook();
+
+BASE_EXPORT void SetNativeInitializationHook(
+    NativeInitializationHook native_initialization_hook);
 
 // Record any pending renderer histogram value as histograms.  Pending values
 // are set by RegisterChromiumAndroidLinkerRendererHistogram and

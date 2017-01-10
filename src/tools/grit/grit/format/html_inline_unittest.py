@@ -444,5 +444,68 @@ class HtmlInlineUnittest(unittest.TestCase):
     self.failUnlessEqual(expected_inlined,
                          util.FixLineEnd(result.inlined_data, '\n'))
 
+  def testCommentedJsInclude(self):
+    '''Tests that <include> works inside a comment.'''
+
+    files = {
+      'include.js': '// <include src="other.js">',
+      'other.js': '// Copyright somebody\nalert(1);',
+    }
+
+    expected_inlined = '// // Copyright somebody\nalert(1);'
+
+    source_resources = set()
+    tmp_dir = util.TempDir(files)
+    for filename in files:
+      source_resources.add(tmp_dir.GetPath(filename))
+
+    result = html_inline.DoInline(tmp_dir.GetPath('include.js'), None)
+    resources = result.inlined_files
+    resources.add(tmp_dir.GetPath('include.js'))
+    self.failUnlessEqual(resources, source_resources)
+    self.failUnlessEqual(expected_inlined,
+                         util.FixLineEnd(result.inlined_data, '\n'))
+
+  def testCommentedJsIf(self):
+    '''Tests that <if> works inside a comment.'''
+
+    files = {
+      'if.js': '''
+      // <if expr="True">
+      yep();
+      // </if>
+
+      // <if expr="False">
+      nope();
+      // </if>
+      ''',
+    }
+
+    expected_inlined = '''
+      // 
+      yep();
+      // 
+
+      // 
+      '''
+
+    source_resources = set()
+    tmp_dir = util.TempDir(files)
+    for filename in files:
+      source_resources.add(tmp_dir.GetPath(filename))
+
+    class FakeGrdNode(object):
+      def EvaluateCondition(self, cond):
+        return eval(cond)
+
+    result = html_inline.DoInline(tmp_dir.GetPath('if.js'), FakeGrdNode())
+    resources = result.inlined_files
+
+    resources.add(tmp_dir.GetPath('if.js'))
+    self.failUnlessEqual(resources, source_resources)
+    self.failUnlessEqual(expected_inlined,
+                         util.FixLineEnd(result.inlined_data, '\n'))
+
+
 if __name__ == '__main__':
   unittest.main()

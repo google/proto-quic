@@ -487,6 +487,19 @@ PBXFileReference* PBXGroup::AddSourceFile(const std::string& navigator_path,
   DCHECK(!source_path.empty());
   std::string::size_type sep = navigator_path.find("/");
   if (sep == std::string::npos) {
+    // Prevent same file reference being created and added multiple times.
+    for (const auto& child : children_) {
+      if (child->Class() != PBXFileReferenceClass)
+        continue;
+
+      PBXFileReference* child_as_file_reference =
+          static_cast<PBXFileReference*>(child.get());
+      if (child_as_file_reference->Name() == navigator_path &&
+          child_as_file_reference->path() == source_path) {
+        return child_as_file_reference;
+      }
+    }
+
     children_.push_back(base::MakeUnique<PBXFileReference>(
         navigator_path, source_path, std::string()));
     return static_cast<PBXFileReference*>(children_.back().get());
@@ -675,12 +688,13 @@ void PBXProject::AddIndexingTarget() {
   target_for_indexing_ = static_cast<PBXNativeTarget*>(targets_.back().get());
 }
 
-void PBXProject::AddNativeTarget(const std::string& name,
-                                 const std::string& type,
-                                 const std::string& output_name,
-                                 const std::string& output_type,
-                                 const std::string& shell_script,
-                                 const PBXAttributes& extra_attributes) {
+PBXNativeTarget* PBXProject::AddNativeTarget(
+    const std::string& name,
+    const std::string& type,
+    const std::string& output_name,
+    const std::string& output_type,
+    const std::string& shell_script,
+    const PBXAttributes& extra_attributes) {
   base::StringPiece ext = FindExtension(&output_name);
   PBXFileReference* product = static_cast<PBXFileReference*>(
       products_->AddChild(base::MakeUnique<PBXFileReference>(
@@ -700,6 +714,7 @@ void PBXProject::AddNativeTarget(const std::string& name,
   targets_.push_back(base::MakeUnique<PBXNativeTarget>(
       name, shell_script, config_name_, attributes, output_type, product_name,
       product));
+  return static_cast<PBXNativeTarget*>(targets_.back().get());
 }
 
 void PBXProject::SetProjectDirPath(const std::string& project_dir_path) {

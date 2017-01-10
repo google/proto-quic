@@ -9,16 +9,15 @@
 namespace base {
 
 TEST(CharacterEncodingTest, GetCanonicalEncodingNameByAliasName) {
-  EXPECT_STREQ("Big5", GetCanonicalEncodingNameByAliasName("Big5"));
-  EXPECT_STREQ("windows-874",
-               GetCanonicalEncodingNameByAliasName("windows-874"));
-  EXPECT_STREQ("ISO-8859-8", GetCanonicalEncodingNameByAliasName("ISO-8859-8"));
+  EXPECT_EQ("Big5", GetCanonicalEncodingNameByAliasName("Big5"));
+  EXPECT_EQ("windows-874", GetCanonicalEncodingNameByAliasName("windows-874"));
+  EXPECT_EQ("ISO-8859-8", GetCanonicalEncodingNameByAliasName("ISO-8859-8"));
 
   // Non-canonical alias names should be converted to a canonical one.
-  EXPECT_STREQ("UTF-8", GetCanonicalEncodingNameByAliasName("utf8"));
-  EXPECT_STREQ("gb18030", GetCanonicalEncodingNameByAliasName("GB18030"));
-  EXPECT_STREQ("windows-874", GetCanonicalEncodingNameByAliasName("tis-620"));
-  EXPECT_STREQ("EUC-KR", GetCanonicalEncodingNameByAliasName("ks_c_5601-1987"));
+  EXPECT_EQ("UTF-8", GetCanonicalEncodingNameByAliasName("utf8"));
+  EXPECT_EQ("gb18030", GetCanonicalEncodingNameByAliasName("GB18030"));
+  EXPECT_EQ("windows-874", GetCanonicalEncodingNameByAliasName("tis-620"));
+  EXPECT_EQ("EUC-KR", GetCanonicalEncodingNameByAliasName("ks_c_5601-1987"));
 }
 
 }  // namespace base

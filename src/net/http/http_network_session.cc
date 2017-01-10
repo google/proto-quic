@@ -422,22 +422,19 @@ void HttpNetworkSession::DumpMemoryStats(
   std::string name = base::StringPrintf("net/http_network_session_%p", this);
   base::trace_event::MemoryAllocatorDump* http_network_session_dump =
       pmd->GetAllocatorDump(name);
-  // If memory dump already exists, it means that this is not the first
-  // DumpMemoryStats() invocation on this object and it is reached by another
-  // "parent." If that's the case, add an ownership edge and return early.
-  // This is needed because URLRequestContexts can share an HttpNetworkSession.
-  if (http_network_session_dump != nullptr) {
-    pmd->AddOwnershipEdge(pmd->GetAllocatorDump(parent_absolute_name)->guid(),
-                          http_network_session_dump->guid());
-
-    return;
+  if (http_network_session_dump == nullptr) {
+    http_network_session_dump = pmd->CreateAllocatorDump(name);
+    normal_socket_pool_manager_->DumpMemoryStats(
+        pmd, http_network_session_dump->absolute_name());
+    spdy_session_pool_.DumpMemoryStats(
+        pmd, http_network_session_dump->absolute_name());
   }
-  http_network_session_dump = pmd->CreateAllocatorDump(name);
-  normal_socket_pool_manager_->DumpMemoryStats(
-      pmd, http_network_session_dump->absolute_name());
-  spdy_session_pool_.DumpMemoryStats(
-      pmd, http_network_session_dump->absolute_name());
-  pmd->AddOwnershipEdge(pmd->GetAllocatorDump(parent_absolute_name)->guid(),
+  // Create an empty row under parent's dump so size can be attributed correctly
+  // if |this| is shared between URLRequestContexts.
+  base::trace_event::MemoryAllocatorDump* empty_row_dump =
+      pmd->CreateAllocatorDump(base::StringPrintf(
+          "%s/http_network_session", parent_absolute_name.c_str()));
+  pmd->AddOwnershipEdge(empty_row_dump->guid(),
                         http_network_session_dump->guid());
 }
 

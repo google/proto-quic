@@ -914,6 +914,9 @@ TEST_F(SequencedSocketDataTest, InterleavedAsyncOperations) {
   ASSERT_EQ(kLen1, read_callback_.WaitForResult());
   AssertReadBufferEquals(kMsg1, kLen1);
 
+  // Run posted OnWriteComplete().
+  base::RunLoop().RunUntilIdle();
+
   ASSERT_TRUE(write_callback_.have_result());
   ASSERT_EQ(kLen2, write_callback_.WaitForResult());
 

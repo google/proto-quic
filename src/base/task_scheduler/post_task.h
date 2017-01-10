@@ -15,6 +15,7 @@
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/task_traits.h"
+#include "base/time/time.h"
 
 namespace base {
 
@@ -58,11 +59,24 @@ namespace base {
 // If those loose requirements are sufficient for your task, use
 // PostTask[AndReply], otherwise override these with explicit traits via
 // PostTaskWithTraits[AndReply].
+//
+// Tasks posted to TaskScheduler with a delay may be coalesced (i.e. delays may
+// be adjusted to reduce the number of wakeups and hence power consumption).
 
 // Posts |task| to the TaskScheduler. Calling this is equivalent to calling
 // PostTaskWithTraits with plain TaskTraits.
 BASE_EXPORT void PostTask(const tracked_objects::Location& from_here,
                           const Closure& task);
+
+// Posts |task| to the TaskScheduler. |task| will not run before |delay|
+// expires. Calling this is equivalent to calling PostDelayedTaskWithTraits with
+// plain TaskTraits.
+//
+// Use PostDelayedTaskWithTraits to specify a BACKGROUND priority if the task
+// doesn't have to run as soon as |delay| expires.
+BASE_EXPORT void PostDelayedTask(const tracked_objects::Location& from_here,
+                                 const Closure& task,
+                                 TimeDelta delay);
 
 // Posts |task| to the TaskScheduler and posts |reply| on the caller's execution
 // context (i.e. same sequence or thread and same TaskTraits if applicable) when
@@ -89,6 +103,17 @@ void PostTaskAndReplyWithResult(const tracked_objects::Location& from_here,
 BASE_EXPORT void PostTaskWithTraits(const tracked_objects::Location& from_here,
                                     const TaskTraits& traits,
                                     const Closure& task);
+
+// Posts |task| with specific |traits| to the TaskScheduler. |task| will not run
+// before |delay| expires.
+//
+// Specify a BACKGROUND priority via |traits| if the task doesn't have to run as
+// soon as |delay| expires.
+BASE_EXPORT void PostDelayedTaskWithTraits(
+    const tracked_objects::Location& from_here,
+    const TaskTraits& traits,
+    const Closure& task,
+    TimeDelta delay);
 
 // Posts |task| with specific |traits| to the TaskScheduler and posts |reply| on
 // the caller's execution context (i.e. same sequence or thread and same
@@ -117,10 +142,6 @@ void PostTaskWithTraitsAndReplyWithResult(
       Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>, reply,
            Owned(result)));
 }
-
-// Delayed tasks posted to TaskRunners returned by the functions below may be
-// coalesced (i.e. delays may be adjusted to reduce the number of wakeups and
-// hence power consumption).
 
 // Returns a TaskRunner whose PostTask invocations result in scheduling tasks
 // using |traits|. Tasks may run in any order and in parallel.

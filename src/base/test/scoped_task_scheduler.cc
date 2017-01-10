@@ -40,9 +40,10 @@ class TestTaskScheduler : public TaskScheduler {
   ~TestTaskScheduler() override;
 
   // TaskScheduler:
-  void PostTaskWithTraits(const tracked_objects::Location& from_here,
-                          const TaskTraits& traits,
-                          const Closure& task) override;
+  void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
+                                 const TaskTraits& traits,
+                                 const Closure& task,
+                                 TimeDelta delay) override;
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
@@ -124,11 +125,12 @@ TestTaskScheduler::~TestTaskScheduler() {
   RunLoop().RunUntilIdle();
 }
 
-void TestTaskScheduler::PostTaskWithTraits(
+void TestTaskScheduler::PostDelayedTaskWithTraits(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    const Closure& task) {
-  CreateTaskRunnerWithTraits(traits)->PostTask(from_here, task);
+    const Closure& task,
+    TimeDelta delay) {
+  CreateTaskRunnerWithTraits(traits)->PostDelayedTask(from_here, task, delay);
 }
 
 scoped_refptr<TaskRunner> TestTaskScheduler::CreateTaskRunnerWithTraits(

@@ -591,6 +591,9 @@ TEST_F(SpdyStreamTest, UpperCaseHeaders) {
 
   EXPECT_THAT(delegate.WaitForClose(), IsError(ERR_SPDY_PROTOCOL_ERROR));
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -706,6 +709,9 @@ TEST_F(SpdyStreamTest, HeadersMustHaveStatus) {
 
   EXPECT_THAT(delegate.WaitForClose(), IsError(ERR_SPDY_PROTOCOL_ERROR));
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -771,6 +777,9 @@ TEST_F(SpdyStreamTest, HeadersMustHaveStatusOnPushedStream) {
   EXPECT_EQ("200", delegate.GetResponseHeaderValue(spdy_util_.GetStatusKey()));
   EXPECT_EQ(std::string(kPostBody, kPostBodyLength),
             delegate.TakeReceivedData());
+
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -875,6 +884,9 @@ TEST_F(SpdyStreamTest, HeadersMustPreceedDataOnPushedStream) {
   EXPECT_EQ(std::string(kPostBody, kPostBodyLength),
             delegate.TakeReceivedData());
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -934,6 +946,9 @@ TEST_F(SpdyStreamTest, TrailersMustNotFollowTrailers) {
 
   EXPECT_THAT(delegate.WaitForClose(), IsError(ERR_SPDY_PROTOCOL_ERROR));
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -991,6 +1006,9 @@ TEST_F(SpdyStreamTest, DataMustNotFollowTrailers) {
 
   EXPECT_THAT(delegate.WaitForClose(), IsError(ERR_SPDY_PROTOCOL_ERROR));
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -1045,6 +1063,9 @@ TEST_F(SpdyStreamTest, InformationalHeaders) {
   EXPECT_EQ(std::string(kPostBody, kPostBodyLength),
             delegate.TakeReceivedData());
 
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
+
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
 }
@@ -1091,6 +1112,9 @@ TEST_F(SpdyStreamTest, StatusMustStartWithNumber) {
   EXPECT_EQ(kDefaultUrl, stream->GetUrlFromHeaders().spec());
 
   EXPECT_THAT(delegate.WaitForClose(), IsError(ERR_SPDY_PROTOCOL_ERROR));
+
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());
@@ -1143,6 +1167,9 @@ TEST_F(SpdyStreamTest, StatusCanHaveExtraText) {
             delegate.GetResponseHeaderValue(spdy_util_.GetStatusKey()));
   EXPECT_EQ(std::string(kPostBody, kPostBodyLength),
             delegate.TakeReceivedData());
+
+  // Finish async network reads and writes.
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_TRUE(data.AllWriteDataConsumed());
   EXPECT_TRUE(data.AllReadDataConsumed());

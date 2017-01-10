@@ -23,7 +23,7 @@ SSLConfig::CertAndStatus::~CertAndStatus() = default;
 SSLConfig::SSLConfig()
     : rev_checking_enabled(false),
       rev_checking_required_local_anchors(false),
-      sha1_local_anchors_enabled(false),
+      sha1_local_anchors_enabled(true),
       version_min(kDefaultSSLVersionMin),
       version_max(kDefaultSSLVersionMax),
       deprecated_cipher_suites_enabled(false),

@@ -121,6 +121,13 @@ AST_MATCHER_P(clang::OverloadExpr,
   return true;
 }
 
+void PrintForDiagnostics(clang::raw_ostream& os,
+                         const clang::FunctionDecl& decl) {
+  decl.getLocStart().print(os, decl.getASTContext().getSourceManager());
+  os << ": ";
+  decl.getNameForDiagnostic(os, decl.getASTContext().getPrintingPolicy(), true);
+}
+
 template <typename T>
 bool MatchAllOverriddenMethods(
     const clang::CXXMethodDecl& decl,
@@ -145,13 +152,54 @@ bool MatchAllOverriddenMethods(
   // one we did not rename which creates a behaviour change. So assert and
   // demand the user to fix the code first (or add the method to our
   // blacklist T_T).
-  if (override_matches || override_not_matches)
-    assert(override_matches != override_not_matches);
+  if (override_matches && override_not_matches) {
+    // blink::InternalSettings::trace method overrides
+    // 1) blink::InternalSettingsGenerated::trace
+    //    (won't be renamed because it is in generated code)
+    // 2) blink::Supplement<blink::Page>::trace
+    //    (will be renamed).
+    // It is safe to rename blink::InternalSettings::trace, because
+    // both 1 and 2 will both be renamed (#1 via manual changes of the code
+    // generator for DOM bindings and #2 via the clang tool).
+    auto internal_settings_class_decl = cxxRecordDecl(
+        hasName("InternalSettings"),
+        hasParent(namespaceDecl(hasName("blink"),
+                                hasParent(translationUnitDecl()))));
+    auto is_method_safe_to_rename = cxxMethodDecl(
+        hasName("trace"),
+        anyOf(hasParent(internal_settings_class_decl),  // in .h file
+              has(nestedNameSpecifier(specifiesType(    // in .cpp file
+                  hasDeclaration(internal_settings_class_decl))))));
+    if (IsMatching(is_method_safe_to_rename, decl, decl.getASTContext()))
+      return true;
+
+    // For previously unknown conflicts, error out and require a human to
+    // analyse the problem (rather than falling back to a potentially unsafe /
+    // code semantics changing rename).
+    llvm::errs() << "ERROR: ";
+    PrintForDiagnostics(llvm::errs(), decl);
+    llvm::errs() << " method overrides "
+                 << "some virtual methods that will be automatically renamed "
+                 << "and some that won't be renamed.";
+    llvm::errs() << "\n";
+    for (auto it = decl.begin_overridden_methods();
+         it != decl.end_overridden_methods(); ++it) {
+      if (MatchAllOverriddenMethods(**it, inner_matcher, finder, builder))
+        llvm::errs() << "Overriden method that will be renamed: ";
+      else
+        llvm::errs() << "Overriden method that will not be renamed: ";
+      PrintForDiagnostics(llvm::errs(), **it);
+      llvm::errs() << "\n";
+    }
+    llvm::errs() << "\n";
+    assert(false);
+  }
 
   // If the method overrides something that doesn't match, so the method itself
   // doesn't match.
   if (override_not_matches)
     return false;
+
   // If the method overrides something that matches, so the method ifself
   // matches.
   if (override_matches)
@@ -214,9 +262,7 @@ bool IsBlacklistedFunctionName(llvm::StringRef name) {
   if (name.find('_') != llvm::StringRef::npos)
     return true;
 
-  // https://crbug.com/677166: Have to avoid renaming |hash| -> |Hash| to avoid
-  // colliding with a struct already named |Hash|.
-  return name == "hash";
+  return false;
 }
 
 bool IsBlacklistedFreeFunctionName(llvm::StringRef name) {
@@ -330,6 +376,11 @@ bool IsProbablyConst(const clang::VarDecl& decl,
   if (type.isVolatileQualified())
     return false;
 
+  // Parameters should not be renamed to |kFooBar| style (even if they are
+  // const and have an initializer (aka default value)).
+  if (clang::isa<clang::ParmVarDecl>(&decl))
+    return false;
+
   // http://google.github.io/styleguide/cppguide.html#Constant_Names
   // Static variables that are const-qualified should use kConstantStyle naming.
   if (decl.getStorageDuration() == clang::SD_Static)
@@ -358,8 +409,8 @@ AST_MATCHER_P(clang::QualType, hasString, std::string, ExpectedString) {
 }
 
 bool ShouldPrefixFunctionName(const std::string& old_method_name) {
-  // Methods that are named similarily to a type - they should be prefixed
-  // with a "get" prefix.
+  // Functions that are named similarily to a type - they should be prefixed
+  // with a "Get" prefix.
   static const char* kConflictingMethods[] = {
       "animationWorklet",
       "audioWorklet",
@@ -378,6 +429,9 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "font",
       "frame",
       "frameBlameContext",
+      "frontend",
+      "hash",
+      "heapObjectHeader",
       "iconURL",
       "inputMethodController",
       "inputType",
@@ -387,8 +441,12 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "layoutSize",
       "length",
       "lineCap",
+      "lineEndings",
       "lineJoin",
+      "listItems",
       "matchedProperties",
+      "midpointState",
+      "mouseEvent",
       "name",
       "navigationType",
       "node",
@@ -398,6 +456,8 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "path",
       "processingInstruction",
       "readyState",
+      "relList",
+      "resource",
       "response",
       "sandboxSupport",
       "screenInfo",
@@ -406,13 +466,18 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "signalingState",
       "state",
       "string",
+      "styleSheet",
       "text",
       "textAlign",
       "textBaseline",
       "theme",
+      "thread",
       "timing",
       "topLevelBlameContext",
+      "vector",
       "widget",
+      "wordBoundaries",
+      "wrapperTypeInfo",
   };
   for (const auto& conflicting_method : kConflictingMethods) {
     if (old_method_name == conflicting_method)
@@ -1057,8 +1122,8 @@ int main(int argc, const char* argv[]) {
   auto field_decl_matcher = id("decl", fieldDecl(in_blink_namespace));
   auto is_type_trait_value =
       varDecl(hasName("value"), hasStaticStorageDuration(), isPublic(),
-              hasType(isConstQualified()), hasType(type(anyOf(
-                  booleanType(), enumType()))),
+              hasType(isConstQualified()),
+              hasType(type(anyOf(builtinType(), enumType()))),
               unless(hasAncestor(recordDecl(
                   has(cxxMethodDecl(isUserProvided(), isInstanceMethod()))))));
   auto var_decl_matcher =

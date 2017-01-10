@@ -124,8 +124,6 @@ void GetCertChainInfo(CFArrayRef cert_chain, CertVerifyResult* verify_result) {
     std::string der_bytes;
     if (!X509Certificate::GetDEREncoded(chain_cert, &der_bytes))
       return;
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(der_bytes.data());
-    bssl::UniquePtr<X509> x509_cert(d2i_X509(NULL, &bytes, der_bytes.size()));
 
     base::StringPiece spki_bytes;
     if (!asn1::ExtractSPKIFromDERCert(der_bytes, &spki_bytes))
@@ -144,23 +142,7 @@ void GetCertChainInfo(CFArrayRef cert_chain, CertVerifyResult* verify_result) {
         i == count - 1) {
       continue;
     }
-
-    int sig_alg = OBJ_obj2nid(x509_cert->sig_alg->algorithm);
-    if (sig_alg == NID_md2WithRSAEncryption) {
-      verify_result->has_md2 = true;
-    } else if (sig_alg == NID_md4WithRSAEncryption) {
-      verify_result->has_md4 = true;
-    } else if (sig_alg == NID_md5WithRSAEncryption ||
-               sig_alg == NID_md5WithRSA) {
-      verify_result->has_md5 = true;
-    } else if (sig_alg == NID_sha1WithRSAEncryption ||
-               sig_alg == NID_dsaWithSHA || sig_alg == NID_dsaWithSHA1 ||
-               sig_alg == NID_dsaWithSHA1_2 || sig_alg == NID_sha1WithRSA ||
-               sig_alg == NID_ecdsa_with_SHA1) {
-      verify_result->has_sha1 = true;
-      if (i == 0)
-        verify_result->has_sha1_leaf = true;
-    }
+    FillCertVerifyResultWeakSignature(chain_cert, i == 0, verify_result);
   }
   if (!verified_cert) {
     NOTREACHED();

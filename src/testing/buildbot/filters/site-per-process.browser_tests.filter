@@ -24,3 +24,6 @@
 
 # crbug.com/670362: Flaky failure (expected MouseDown not found)
 -DevToolsPixelOutputTests.TestLatencyInfoInstrumentation
+
+# crbug.com/637415
+-SubresourceFilterBrowserTest.CrossSiteSubFrameActivationWithWhitelist

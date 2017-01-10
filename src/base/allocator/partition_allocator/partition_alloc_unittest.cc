@@ -1266,6 +1266,14 @@ TEST(PartitionAllocTest, LostFreePagesBug) {
 #if !defined(ARCH_CPU_64_BITS) || defined(OS_POSIX)
 
 static void DoReturnNullTest(size_t allocSize) {
+  // TODO(crbug.com/678782): Where necessary and possible, disable the
+  // platform's OOM-killing behavior. OOM-killing makes this test flaky on
+  // low-memory devices.
+  if (!IsLargeMemoryDevice()) {
+    LOG(WARNING) << "Skipping test on this device because of crbug.com/678782";
+    return;
+  }
+
   TestSetup();
 
   EXPECT_TRUE(SetAddressSpaceLimit());

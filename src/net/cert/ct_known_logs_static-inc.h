@@ -4,21 +4,21 @@
 
 struct CTLogInfo {
   // The DER-encoded SubjectPublicKeyInfo for the log.
-  const char* const log_key;
+  const char* log_key;
   // The length, in bytes, of |log_key|.
-  const size_t log_key_length;
+  size_t log_key_length;
   // The user-friendly log name.
   // Note: This will not be translated.
-  const char* const log_name;
+  const char* log_name;
   // The HTTPS API endpoint for the log.
   // Note: Trailing slashes should be included.
-  const char* const log_url;
+  const char* log_url;
   // The DNS API endpoint for the log.
   // This is used as the parent domain for all queries about the log.
   // If empty, CT DNS queries are not supported for the log. This will prevent
   // retrieval of inclusion proofs over DNS for SCTs from the log.
   // https://github.com/google/certificate-transparency-rfcs/blob/master/dns/draft-ct-over-dns.md.
-  const char* const log_dns_domain;
+  const char* log_dns_domain;
 };
 
 // The set of all presently-qualifying CT logs.

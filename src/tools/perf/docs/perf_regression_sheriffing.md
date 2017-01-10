@@ -40,7 +40,9 @@ Check the boxes next to the alerts you want to take a look at, and click the
 the alerts that have an overlapping revision range with the one you chose, and
 below it the dashboard shows graphs of all the alerts checked in that table.
 
-1. **Look at the graph**.
+1. **For alerts related to `resource_sizes`:**
+    * Refer to [apk_size_regressions.md](apk_size_regressions.md).
+2. **Look at the graph**.
     * If the alert appears to be **within the noise**, click on the red
       exclamation point icon for it in the graph and hit the "Report Invalid
       Alert" button.
@@ -55,23 +57,23 @@ below it the dashboard shows graphs of all the alerts checked in that table.
       to the bot or test might have caused the graph to jump, rather than a real
       performance regression. If **the ref build moved at the same time as the
       alert**, click on the alert and hit the "Report Invalid Alert" button.
-2. **Look at the other alerts** in the table to see if any should be grouped together.
+3. **Look at the other alerts** in the table to see if any should be grouped together.
    Note that the bisect will automatically dupe bugs if it finds they have the
    same culprit, so you don't need to be too aggressive about grouping alerts
    that might not be related. Some signs alerts should be grouped together:
     * If they're all in the same test suite
     * If they all regressed the same metric (a lot of commonality in the Test
       column)
-3. **Triage the group of alerts**. Check all the alerts you believe are related,
+4. **Triage the group of alerts**. Check all the alerts you believe are related,
   and press the triage button.
     * If one of the alerts already has a bug id, click "existing bug" and use
       that bug id.
     * Otherwise click "new bug". Be sure to cc the
       [test owner](http://go/perf-owners) on the bug.
-4. **Look at the revision range** for the regression. You can see it in the
+5. **Look at the revision range** for the regression. You can see it in the
    tooltip on the graph. If you see any likely culprits, cc the authors on the
    bug.
-5. **Optionally, kick off more bisects**. The perf dashboard will automatically
+6. **Optionally, kick off more bisects**. The perf dashboard will automatically
    kick off a bisect for each bug you file. But if you think the regression is
    much clearer on one platform, or a specific page of a page set, or you want
    to see a broader revision range feel free to click on the alert on that graph

@@ -8,9 +8,9 @@
 #include <stdint.h>
 
 #include <string>
-#include <vector>
 
 #include "base/strings/string16.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/utf_offset_string_conversions.h"
 #include "net/base/net_export.h"
 
@@ -22,44 +22,44 @@ namespace net {
 // We %XX everything except alphanumerics and -_.!~*'()
 // Spaces change to "+" unless you pass usePlus=false.
 // This is basically the same as encodeURIComponent in javascript.
-NET_EXPORT std::string EscapeQueryParamValue(const std::string& text,
+NET_EXPORT std::string EscapeQueryParamValue(base::StringPiece text,
                                              bool use_plus);
 
 // Escapes a partial or complete file/pathname.  This includes:
 // non-printable, non-7bit, and (including space)  "#%:<>?[\]^`{|}
 // For the base::string16 version, we attempt a conversion to |codepage| before
 // encoding the string.  If this conversion fails, we return false.
-NET_EXPORT std::string EscapePath(const std::string& path);
+NET_EXPORT std::string EscapePath(base::StringPiece path);
 
 #if defined(OS_MACOSX)
 // Escapes characters as per expectations of NSURL. This includes:
 // non-printable, non-7bit, and (including space)  "#%<>[\]^`{|}
-NET_EXPORT std::string EscapeNSURLPrecursor(const std::string& precursor);
+NET_EXPORT std::string EscapeNSURLPrecursor(base::StringPiece precursor);
 #endif  // defined(OS_MACOSX)
 
 // Escapes application/x-www-form-urlencoded content.  This includes:
 // non-printable, non-7bit, and (including space)  ?>=<;+'&%$#"![\]^`{|}
 // Space is escaped as + (if use_plus is true) and other special characters
 // as %XX (hex).
-NET_EXPORT std::string EscapeUrlEncodedData(const std::string& path,
+NET_EXPORT std::string EscapeUrlEncodedData(base::StringPiece path,
                                             bool use_plus);
 
 // Escapes all non-ASCII input.
-NET_EXPORT std::string EscapeNonASCII(const std::string& input);
+NET_EXPORT std::string EscapeNonASCII(base::StringPiece input);
 
 // Escapes characters in text suitable for use as an external protocol handler
 // command.
 // We %XX everything except alphanumerics and -_.!~*'() and the restricted
 // chracters (;/?:@&=+$,#[]) and a valid percent escape sequence (%XX).
-NET_EXPORT std::string EscapeExternalHandlerValue(const std::string& text);
+NET_EXPORT std::string EscapeExternalHandlerValue(base::StringPiece text);
 
 // Appends the given character to the output string, escaping the character if
 // the character would be interpretted as an HTML delimiter.
 NET_EXPORT void AppendEscapedCharForHTML(char c, std::string* output);
 
 // Escapes chars that might cause this text to be interpretted as HTML tags.
-NET_EXPORT std::string EscapeForHTML(const std::string& text);
-NET_EXPORT base::string16 EscapeForHTML(const base::string16& text);
+NET_EXPORT std::string EscapeForHTML(base::StringPiece text);
+NET_EXPORT base::string16 EscapeForHTML(base::StringPiece16 text);
 
 // Unescaping ------------------------------------------------------------------
 
@@ -125,11 +125,10 @@ class UnescapeRule {
 // which, after unescaping, is supposed to be interpreted as UTF-8, and then
 // converted into full UTF-16 chars. This function won't tell you if any
 // conversions need to take place, it only unescapes.
-NET_EXPORT std::string UnescapeURLComponent(const std::string& escaped_text,
+NET_EXPORT std::string UnescapeURLComponent(base::StringPiece escaped_text,
                                             UnescapeRule::Type rules);
-NET_EXPORT base::string16 UnescapeURLComponent(
-    const base::string16& escaped_text,
-    UnescapeRule::Type rules);
+NET_EXPORT base::string16 UnescapeURLComponent(base::StringPiece16 escaped_text,
+                                               UnescapeRule::Type rules);
 
 // Unescapes the given substring as a URL, and then tries to interpret the
 // result as being encoded as UTF-8. If the result is convertable into UTF-8, it
@@ -138,16 +137,16 @@ NET_EXPORT base::string16 UnescapeURLComponent(
 // information on how the original string was adjusted to get the string
 // returned.
 NET_EXPORT base::string16 UnescapeAndDecodeUTF8URLComponent(
-    const std::string& text,
+    base::StringPiece text,
     UnescapeRule::Type rules);
 NET_EXPORT base::string16 UnescapeAndDecodeUTF8URLComponentWithAdjustments(
-    const std::string& text,
+    base::StringPiece text,
     UnescapeRule::Type rules,
     base::OffsetAdjuster::Adjustments* adjustments);
 
 // Unescapes the following ampersand character codes from |text|:
 // &lt; &gt; &amp; &quot; &#39;
-NET_EXPORT base::string16 UnescapeForHTML(const base::string16& text);
+NET_EXPORT base::string16 UnescapeForHTML(base::StringPiece16 text);
 
 }  // namespace net
 

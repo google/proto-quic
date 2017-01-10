@@ -377,6 +377,24 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
   }
 }
 
+// static
+X509Certificate::SignatureHashAlgorithm
+X509Certificate::GetSignatureHashAlgorithm(OSCertHandle cert_handle) {
+  int sig_alg = OBJ_obj2nid(cert_handle->sig_alg->algorithm);
+  if (sig_alg == NID_md2WithRSAEncryption)
+    return kSignatureHashAlgorithmMd2;
+  if (sig_alg == NID_md4WithRSAEncryption)
+    return kSignatureHashAlgorithmMd4;
+  if (sig_alg == NID_md5WithRSAEncryption || sig_alg == NID_md5WithRSA)
+    return kSignatureHashAlgorithmMd5;
+  if (sig_alg == NID_sha1WithRSAEncryption || sig_alg == NID_dsaWithSHA ||
+      sig_alg == NID_dsaWithSHA1 || sig_alg == NID_dsaWithSHA1_2 ||
+      sig_alg == NID_sha1WithRSA || sig_alg == NID_ecdsa_with_SHA1) {
+    return kSignatureHashAlgorithmSha1;
+  }
+  return kSignatureHashAlgorithmOther;
+}
+
 bool X509Certificate::IsIssuedByEncoded(
     const std::vector<std::string>& valid_issuers) {
   if (valid_issuers.empty())

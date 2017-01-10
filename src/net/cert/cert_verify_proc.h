@@ -14,6 +14,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 #include "net/cert/x509_cert_types.h"
+#include "net/cert/x509_certificate.h"
 
 namespace net {
 
@@ -133,6 +134,21 @@ class NET_EXPORT CertVerifyProc
 
   DISALLOW_COPY_AND_ASSIGN(CertVerifyProc);
 };
+
+// Sets the weak signature hash fields of |verify_result| to true if
+// applicable for |cert|, otherwise does not modify them.
+//
+// The fields in question are: |has_md2|, |has_md4|, |has_md5|,|has_sha1| and
+// |has_sha1_leaf|.
+//
+// Returns the hash algorithm that was determined for |cert|.
+//
+// This function is intended to be used as a helper by platform-specific
+// CertVerifyProc implementations.
+X509Certificate::SignatureHashAlgorithm FillCertVerifyResultWeakSignature(
+    X509Certificate::OSCertHandle cert,
+    bool is_leaf,
+    CertVerifyResult* verify_result);
 
 }  // namespace net
 

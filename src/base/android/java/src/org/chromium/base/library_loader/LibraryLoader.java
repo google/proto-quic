@@ -324,15 +324,6 @@ public class LibraryLoader {
         } catch (UnsatisfiedLinkError e) {
             throw new ProcessInitException(LoaderErrors.LOADER_ERROR_NATIVE_LIBRARY_LOAD_FAILED, e);
         }
-        // Check that the version of the library we have loaded matches the version we expect
-        Log.i(TAG, String.format(
-                "Expected native library version number \"%s\", "
-                        + "actual native library version number \"%s\"",
-                NativeLibraries.sVersionNumber,
-                nativeGetVersionNumber()));
-        if (!NativeLibraries.sVersionNumber.equals(nativeGetVersionNumber())) {
-            throw new ProcessInitException(LoaderErrors.LOADER_ERROR_NATIVE_LIBRARY_WRONG_VERSION);
-        }
     }
 
     // The WebView requires the Command Line to be switched over before
@@ -372,6 +363,14 @@ public class LibraryLoader {
         if (!nativeLibraryLoaded()) {
             Log.e(TAG, "error calling nativeLibraryLoaded");
             throw new ProcessInitException(LoaderErrors.LOADER_ERROR_FAILED_TO_REGISTER_JNI);
+        }
+
+        // Check that the version of the library we have loaded matches the version we expect
+        Log.i(TAG, String.format("Expected native library version number \"%s\", "
+                                   + "actual native library version number \"%s\"",
+                           NativeLibraries.sVersionNumber, nativeGetVersionNumber()));
+        if (!NativeLibraries.sVersionNumber.equals(nativeGetVersionNumber())) {
+            throw new ProcessInitException(LoaderErrors.LOADER_ERROR_NATIVE_LIBRARY_WRONG_VERSION);
         }
 
         // From now on, keep tracing in sync with native.

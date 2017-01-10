@@ -50,9 +50,10 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   ~TaskSchedulerImpl() override;
 
   // TaskScheduler:
-  void PostTaskWithTraits(const tracked_objects::Location& from_here,
-                          const TaskTraits& traits,
-                          const Closure& task) override;
+  void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
+                                 const TaskTraits& traits,
+                                 const Closure& task,
+                                 TimeDelta delay) override;
   scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(

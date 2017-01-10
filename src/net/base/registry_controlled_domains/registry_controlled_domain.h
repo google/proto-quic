@@ -204,6 +204,9 @@ NET_EXPORT bool SameDomainOrHost(const url::Origin& origin1,
 NET_EXPORT bool SameDomainOrHost(const url::Origin& origin1,
                                  const base::Optional<url::Origin>& origin2,
                                  PrivateRegistryFilter filter);
+NET_EXPORT bool SameDomainOrHost(const GURL& gurl,
+                                 const url::Origin& origin,
+                                 PrivateRegistryFilter filter);
 
 // Finds the length in bytes of the registrar portion of the host in the
 // given GURL.  Returns std::string::npos if the GURL is invalid or has no

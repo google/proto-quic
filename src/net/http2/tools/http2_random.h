@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <limits>
 #include <string>
 
 namespace net {
@@ -24,8 +25,18 @@ class RandomBase {
   virtual int32_t Next() = 0;
   virtual int32_t Skewed(int max_log) = 0;
   virtual std::string RandString(int length) = 0;
+
+  // STL UniformRandomNumberGenerator implementation.
+  typedef uint32_t result_type;
+  static constexpr result_type min() { return 0; }
+  static constexpr result_type max() {
+    return std::numeric_limits<uint32_t>::max();
+  }
+  result_type operator()() { return Rand32(); }
 };
 
+// Http2Random holds no state: instances use the same base::RandGenerator
+// with a global state.
 class Http2Random : public RandomBase {
  public:
   ~Http2Random() override {}

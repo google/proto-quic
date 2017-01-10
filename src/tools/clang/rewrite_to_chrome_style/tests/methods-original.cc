@@ -257,12 +257,6 @@ class Foo {
   void begin() {}
   static void begin(int x) {}
 
-  // https://crbug.com/677166: We blacklist renaming of |hash|, because it
-  // collides with a struct named Hash.  Blacklisting therefore should be broad
-  // and should cover both instance and static methods as well as functions.
-  int hash() const { return 123; }
-  static int hash(const Foo& x) { return x.hash(); }
-
   // https://crbug.com672902: std-like names should not be rewritten.
   void emplace_back(int x) {}
   void insert(int x) {}
@@ -274,9 +268,6 @@ class Foo {
 };
 
 void begin(int x) {}
-int hash(int x) {
-  return 123 * x;
-}
 void swap(Foo& x, Foo& y) {}
 
 }  // blacklisting_of_method_and_function_names

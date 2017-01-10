@@ -33,18 +33,26 @@ TEST(URLRequestContextTest, MemoryDumpProvider) {
   bool did_dump_http_network_session = false;
   bool did_dump_ssl_client_session_cache = false;
   bool did_dump_url_request_context = false;
+  bool did_dump_url_request_context_http_network_session = false;
   for (const auto& it : allocator_dumps) {
     const std::string& dump_name = it.first;
     if (dump_name.find("net/http_network_session") != std::string::npos)
       did_dump_http_network_session = true;
     if (dump_name.find("net/ssl_session_cache") != std::string::npos)
       did_dump_ssl_client_session_cache = true;
-    if (dump_name.find("net/url_request_context") != std::string::npos)
-      did_dump_url_request_context = true;
+    if (dump_name.find("net/url_request_context") != std::string::npos) {
+      // A sub allocator dump to take into account of the sharing relationship.
+      if (dump_name.find("http_network_session") != std::string::npos) {
+        did_dump_url_request_context_http_network_session = true;
+      } else {
+        did_dump_url_request_context = true;
+      }
+    }
   }
   ASSERT_TRUE(did_dump_http_network_session);
   ASSERT_TRUE(did_dump_ssl_client_session_cache);
   ASSERT_TRUE(did_dump_url_request_context);
+  ASSERT_TRUE(did_dump_url_request_context_http_network_session);
 }
 
 // TODO(xunjieli): Add more granular tests on the MemoryDumpProvider.

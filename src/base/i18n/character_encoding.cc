@@ -24,10 +24,10 @@ const char* const kCanonicalEncodingNames[] = {
 
 }  // namespace
 
-const char* GetCanonicalEncodingNameByAliasName(const std::string& alias_name) {
+std::string GetCanonicalEncodingNameByAliasName(const std::string& alias_name) {
   for (auto& encoding_name : kCanonicalEncodingNames) {
     if (alias_name == encoding_name)
-      return encoding_name;
+      return alias_name;
   }
   static const char* kStandards[3] = {"HTML", "MIME", "IANA"};
   for (auto& standard : kStandards) {
@@ -37,6 +37,6 @@ const char* GetCanonicalEncodingNameByAliasName(const std::string& alias_name) {
     if (U_SUCCESS(error_code) && canonical_name)
       return canonical_name;
   }
-  return nullptr;
+  return std::string();
 }
 }  // namespace base

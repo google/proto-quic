@@ -53,8 +53,7 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   bool OnStreamFrame(const QuicStreamFrame& frame) override {
     // Save a copy of the data so it is valid after the packet is processed.
     string* string_data = new string();
-    StringPiece(frame.data_buffer, frame.data_length)
-        .AppendToString(string_data);
+    string_data->append(frame.data_buffer, frame.data_length);
     stream_data_.push_back(base::WrapUnique(string_data));
     // TODO(ianswett): A pointer isn't necessary with emplace_back.
     stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(

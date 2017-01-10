@@ -158,6 +158,7 @@ const FtpTestParam kTestParams[] = {
     {"dir-listing-ls-31", OK},
     {"dir-listing-ls-32", OK},  // busybox
     {"dir-listing-ls-33", OK},
+    {"dir-listing-ls-34", OK},  // Broken encoding. Should not fail.
 
     {"dir-listing-netware-1", OK},
     {"dir-listing-netware-2", OK},

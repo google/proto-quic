@@ -633,6 +633,7 @@ def UpdateClang(args):
   cc_args = base_cmake_args if sys.platform != 'win32' else cmake_args
   if cc is not None:  cc_args.append('-DCMAKE_C_COMPILER=' + cc)
   if cxx is not None: cc_args.append('-DCMAKE_CXX_COMPILER=' + cxx)
+  chrome_tools = list(set(['plugins', 'blink_gc_plugin'] + args.extra_tools))
   cmake_args += base_cmake_args + [
       '-DLLVM_BINUTILS_INCDIR=' + binutils_incdir,
       '-DCMAKE_C_FLAGS=' + ' '.join(cflags),
@@ -645,7 +646,7 @@ def UpdateClang(args):
       # explicitly, https://crbug.com/622775
       '-DENABLE_LINKER_BUILD_ID=ON',
       '-DCHROMIUM_TOOLS_SRC=%s' % os.path.join(CHROMIUM_DIR, 'tools', 'clang'),
-      '-DCHROMIUM_TOOLS=%s' % ';'.join(args.tools)]
+      '-DCHROMIUM_TOOLS=%s' % ';'.join(chrome_tools)]
 
   EnsureDirExists(LLVM_BUILD_DIR)
   os.chdir(LLVM_BUILD_DIR)
@@ -663,7 +664,7 @@ def UpdateClang(args):
 
   RunCommand(['ninja'], msvc_arch='x64')
 
-  if args.tools:
+  if chrome_tools:
     # If any Chromium tools were built, install those now.
     RunCommand(['ninja', 'cr-install'], msvc_arch='x64')
 
@@ -846,9 +847,8 @@ def main():
                       help='print current clang version (e.g. x.y.z) and exit.')
   parser.add_argument('--run-tests', action='store_true',
                       help='run tests after building; only for local builds')
-  parser.add_argument('--tools', nargs='*',
-                      help='select which chrome tools to build',
-                      default=['plugins', 'blink_gc_plugin'])
+  parser.add_argument('--extra-tools', nargs='*', default=[],
+                      help='select additional chrome tools to build')
   parser.add_argument('--without-android', action='store_false',
                       help='don\'t build Android ASan runtime (linux only)',
                       dest='with_android',

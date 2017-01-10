@@ -20,7 +20,8 @@ class IndexedDBEndurePage(page_module.Page):
                                     self._subtest + '";')
     with action_runner.CreateInteraction('Action_Test'):
       action_runner.ExecuteJavaScript('window.test();')
-      action_runner.WaitForJavaScriptCondition('window.done', 600)
+      action_runner.WaitForJavaScriptCondition(
+          'window.done', timeout_in_seconds=600)
 
 class IndexedDBEndurePageSet(story.StorySet):
   """The IndexedDB Endurance page set.

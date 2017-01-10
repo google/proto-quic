@@ -45,12 +45,12 @@ std::string FtpUtil::UnixFilePathToVMS(const std::string& unix_path) {
     // It's an absolute path.
 
     if (tokens.empty()) {
-      DCHECK_EQ(1U, unix_path.length());
+      // It's just "/" or a series of slashes, which all mean the same thing.
       return "[]";
     }
 
     if (tokens.size() == 1)
-      return unix_path.substr(1);  // Drop the leading slash.
+      return tokens.front();  // Return without leading slashes.
 
     std::string result(tokens[0] + ":[");
     if (tokens.size() == 2) {

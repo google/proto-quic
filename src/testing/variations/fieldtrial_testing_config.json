@@ -214,6 +214,7 @@
                 {
                     "name": "Default",
                     "params": {
+                        "RedirectHistoryService": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -483,7 +484,7 @@
             ],
             "experiments": [
                 {
-                    "name": "DisableFirstRunAutoImport",
+                    "name": "AutoImportDisabled",
                     "enable_features": [
                         "DisableFirstRunAutoImport"
                     ]
@@ -1250,6 +1251,21 @@
                     "name": "EnabledAsBookmarks",
                     "enable_features": [
                         "NTPOfflinePages"
+                    ]
+                }
+            ]
+        }
+    ],
+    "OfflinePagesAsyncLoading": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "OfflinePagesAsyncDownload"
                     ]
                 }
             ]
@@ -2211,6 +2227,13 @@
                     "name": "Enabled",
                     "enable_features": [
                         "NegotiateTLS13"
+                    ]
+                },
+                {
+                    "name": "EnabledWithShortRecordHeader",
+                    "enable_features": [
+                        "NegotiateTLS13",
+                        "SSLShortRecordHeader"
                     ]
                 }
             ]

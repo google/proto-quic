@@ -234,6 +234,9 @@ bool AreLegacyECDSACiphersEnabled() {
 }
 #endif
 
+const base::Feature kShortRecordHeaderFeature{
+    "SSLShortRecordHeader", base::FEATURE_DISABLED_BY_DEFAULT};
+
 }  // namespace
 
 class SSLClientSocketImpl::SSLContext {
@@ -288,6 +291,10 @@ class SSLClientSocketImpl::SSLContext {
     SSL_CTX_set_timeout(ssl_ctx_.get(), 1 * 60 * 60 /* one hour */);
 
     SSL_CTX_set_grease_enabled(ssl_ctx_.get(), 1);
+
+    if (base::FeatureList::IsEnabled(kShortRecordHeaderFeature)) {
+      SSL_CTX_set_short_header_enabled(ssl_ctx_.get(), 1);
+    }
 
     if (!SSL_CTX_add_client_custom_ext(ssl_ctx_.get(), kTbExtNum,
                                        &TokenBindingAddCallback,

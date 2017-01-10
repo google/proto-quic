@@ -518,6 +518,43 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
   }
 }
 
+X509Certificate::SignatureHashAlgorithm
+X509Certificate::GetSignatureHashAlgorithm(OSCertHandle cert_handle) {
+  x509_util::CSSMCachedCertificate cached_cert;
+  OSStatus status = cached_cert.Init(cert_handle);
+  if (status)
+    return kSignatureHashAlgorithmOther;
+
+  x509_util::CSSMFieldValue signature_field;
+  status =
+      cached_cert.GetField(&CSSMOID_X509V1SignatureAlgorithm, &signature_field);
+  if (status || !signature_field.field())
+    return kSignatureHashAlgorithmOther;
+
+  const CSSM_X509_ALGORITHM_IDENTIFIER* sig_algorithm =
+      signature_field.GetAs<CSSM_X509_ALGORITHM_IDENTIFIER>();
+  if (!sig_algorithm)
+    return kSignatureHashAlgorithmOther;
+
+  const CSSM_OID* alg_oid = &sig_algorithm->algorithm;
+  if (CSSMOIDEqual(alg_oid, &CSSMOID_MD2WithRSA))
+    return kSignatureHashAlgorithmMd2;
+  if (CSSMOIDEqual(alg_oid, &CSSMOID_MD4WithRSA))
+    return kSignatureHashAlgorithmMd4;
+  if (CSSMOIDEqual(alg_oid, &CSSMOID_MD5WithRSA))
+    return kSignatureHashAlgorithmMd5;
+  if (CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA) ||
+      CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithRSA_OIW) ||
+      CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA) ||
+      CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_CMS) ||
+      CSSMOIDEqual(alg_oid, &CSSMOID_SHA1WithDSA_JDK) ||
+      CSSMOIDEqual(alg_oid, &CSSMOID_ECDSA_WithSHA1)) {
+    return kSignatureHashAlgorithmSha1;
+  }
+
+  return kSignatureHashAlgorithmOther;
+}
+
 // static
 bool X509Certificate::IsSelfSigned(OSCertHandle cert_handle) {
   x509_util::CSSMCachedCertificate cached_cert;

@@ -35,7 +35,7 @@ class KeyMobileSitesSmoothPage(page_module.Page):
   def RunPageInteractions(self, action_runner):
     if self.action_on_load_complete:
         action_runner.WaitForJavaScriptCondition(
-            'document.readyState == "complete"', 30)
+            'document.readyState == "complete"', timeout_in_seconds=30)
     _IssueMarkerAndScroll(action_runner)
 
 

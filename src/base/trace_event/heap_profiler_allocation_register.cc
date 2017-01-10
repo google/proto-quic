@@ -60,12 +60,12 @@ size_t AllocationRegister::AddressHasher::operator () (
   // The multiplicative hashing scheme from [Knuth 1998]. The value of |a| has
   // been chosen carefully based on measurements with real-word data (addresses
   // recorded from a Chrome trace run). It is the first prime after 2^17. For
-  // |shift|, 13, 14 and 15 yield good results. These values are tuned to 2^18
-  // buckets. Microbenchmarks show that this simple scheme outperforms fancy
-  // hashes like Murmur3 by 20 to 40 percent.
+  // |shift|, 15 yield good results for both 2^18 and 2^19 bucket sizes.
+  // Microbenchmarks show that this simple scheme outperforms fancy hashes like
+  // Murmur3 by 20 to 40 percent.
   const uintptr_t key = reinterpret_cast<uintptr_t>(address);
   const uintptr_t a = 131101;
-  const uintptr_t shift = 14;
+  const uintptr_t shift = 15;
   const uintptr_t h = (key * a) >> shift;
   return h;
 }

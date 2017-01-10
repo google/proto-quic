@@ -247,9 +247,7 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
   bool OnStreamFrame(const QuicStreamFrame& frame) override {
     ++frame_count_;
     // Save a copy of the data so it is valid after the packet is processed.
-    string* string_data = new string();
-    StringPiece(frame.data_buffer, frame.data_length)
-        .AppendToString(string_data);
+    string* string_data = new string(frame.data_buffer, frame.data_length);
     stream_data_.push_back(base::WrapUnique(string_data));
     stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(
         frame.stream_id, frame.fin, frame.offset, *string_data));
