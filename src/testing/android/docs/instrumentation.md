@@ -289,3 +289,7 @@ this would run only the tests with @Feature annotations containing at least
 ```bash
 out/Debug/bin/run_chrome_public_test_apk -A Feature=Sync
 ```
+
+## Advanced
+
+ - [Creating a component for use in instrumentation tests.](/testing/android/docs/components_for_testing.md)

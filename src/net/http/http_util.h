@@ -74,11 +74,6 @@ class NET_EXPORT HttpUtil {
                                     base::Time now,
                                     base::TimeDelta* retry_after);
 
-  // Scans the '\r\n'-delimited headers for the given header name.  Returns
-  // true if a match is found.  Input is assumed to be well-formed.
-  // TODO(darin): kill this
-  static bool HasHeader(const std::string& headers, const char* name);
-
   // Returns true if it is safe to allow users and scripts to specify the header
   // named |name|.
   static bool IsSafeHeader(const std::string& name);
@@ -209,12 +204,6 @@ class NET_EXPORT HttpUtil {
   // be at the beginning of the list (see http://crbug.com/5899).
   static std::string GenerateAcceptLanguageHeader(
       const std::string& raw_language_list);
-
-  // Helper. If |*headers| already contains |header_name| do nothing,
-  // otherwise add <header_name> ": " <header_value> to the end of the list.
-  static void AppendHeaderIfMissing(const char* header_name,
-                                    const std::string& header_value,
-                                    std::string* headers);
 
   // Returns true if the parameters describe a response with a strong etag or
   // last-modified header.  See section 13.3.3 of RFC 2616.

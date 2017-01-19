@@ -2,6 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+
 # gn_isolate_map.pyl - A mapping of Ninja build target names to GN labels and
 # test type classifications for the tests that are run on the bots.
 #
@@ -161,14 +167,6 @@
   },
   "battor_agent_unittests": {
     "label": "//tools/battor_agent:battor_agent_unittests",
-    "type": "console_test_launcher",
-  },
-  "blimp_browsertests": {
-    "label": "//blimp:blimp_browsertests",
-    "type": "console_test_launcher",
-  },
-  "blimp_test_apk": {
-    "label": "//blimp/client/app:blimp_test_apk",
     "type": "console_test_launcher",
   },
   "blimp_unittests": {
@@ -586,7 +584,7 @@
   "media_router_perf_tests": {
     "label": "//chrome/test/media_router:media_router_perf_tests",
     "type": "script",
-    "script": "//chrome/test/media_router/telemetry/run_benchmark",
+    "script": "//chrome/test/media_router/telemetry/run_benchmark.py",
     "args": [
       "--browser=release",
       "--also-run-disabled-tests",
@@ -774,6 +772,11 @@
     "label": "//storage/browser:storage_unittests",
     "type": "console_test_launcher",
   },
+  "swiftshader_unittests": {
+    "label": "//third_party/swiftshader/tests/unittests:swiftshader_unittests",
+    "type": "raw",
+    "args": [],
+  },
   "sync_integration_tests": {
     "label": "//chrome/test:sync_integration_tests",
     "type": "windowed_test_launcher",
@@ -842,6 +845,14 @@
     "script": "//testing/scripts/run_gtest_perf_test.py",
     "args": [
       "cc_perftests",
+    ],
+  },
+  "media_perftests": {
+    "label": "//media:media_perftests",
+    "type": "script",
+    "script": "//testing/scripts/run_gtest_perf_test.py",
+    "args": [
+      "media_perftests",
     ],
   },
   "load_library_perf_tests": {
@@ -938,6 +949,11 @@
   "url_unittests": {
     "label": "//url:url_unittests",
     "type": "console_test_launcher",
+  },
+  "video_decode_accelerator_unittest": {
+    "label": "//media/gpu:video_decode_accelerator_unittest",
+    "type": "raw",
+    "args": [],
   },
   "views_mus_interactive_ui_tests": {
     "label": "//ui/views/mus:views_mus_interactive_ui_tests",

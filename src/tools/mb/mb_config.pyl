@@ -2,6 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This is a .pyl, or "Python Literal", file. You can treat it just like a
+# .json file, with the following exceptions:
+# * all keys must be quoted (use single quotes, please);
+# * comments are allowed, using '#' syntax; and
+# * trailing commas are allowed.
+
 {
   # This is a map of buildbot master names -> buildbot builder names ->
   # config names (where each config name is a key in the 'configs' dict,
@@ -1786,7 +1792,7 @@
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
                   'ozone_platform_x11=true ozone_platform_gbm=true '
-                  'use_ozone=true use_ash=false'),
+                  'enable_package_mash_services=true use_ash=false'),
     },
 
     'pdf_xfa': {

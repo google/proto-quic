@@ -8,9 +8,9 @@
 #include <cmath>
 #include <cstdint>
 
-#include "base/logging.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -213,7 +213,8 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     target_congestion_window = estimated_tcp_congestion_window_;
   }
 
-  DVLOG(1) << "Final target congestion_window: " << target_congestion_window;
+  QUIC_DVLOG(1) << "Final target congestion_window: "
+                << target_congestion_window;
   return target_congestion_window;
 }
 

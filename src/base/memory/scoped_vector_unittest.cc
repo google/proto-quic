@@ -322,7 +322,7 @@ TEST(ScopedVectorTest, InsertRange) {
     EXPECT_EQ(LC_CONSTRUCTED, it->life_cycle_state());
 }
 
-// Assertions for push_back(scoped_ptr).
+// Assertions for push_back(unique_ptr).
 TEST(ScopedVectorTest, PushBackScopedPtr) {
   int delete_counter = 0;
   std::unique_ptr<DeleteCounter> elem(new DeleteCounter(&delete_counter));

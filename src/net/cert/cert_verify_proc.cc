@@ -369,6 +369,69 @@ bool AreSHA1IntermediatesAllowed() {
 #endif
 };
 
+// Sets the "has_*" boolean members in |verify_result| that correspond with
+// the the presence of |hash| somewhere in the certificate chain (excluding the
+// trust anchor).
+void MapHashAlgorithmToBool(X509Certificate::SignatureHashAlgorithm hash,
+                            CertVerifyResult* verify_result) {
+  switch (hash) {
+    case X509Certificate::kSignatureHashAlgorithmMd2:
+      verify_result->has_md2 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmMd4:
+      verify_result->has_md4 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmMd5:
+      verify_result->has_md5 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmSha1:
+      verify_result->has_sha1 = true;
+      break;
+    case X509Certificate::kSignatureHashAlgorithmOther:
+      break;
+  }
+}
+
+// Sets to true the |verify_result->has_*| boolean members for the hash
+// algorithms present in the certificate chain.
+//
+// This considers the hash algorithms in all certificates except trusted
+// certificates.
+//
+// In the case of a successful verification the trust anchor is the final
+// certificate in the chain (either the final intermediate, or the leaf
+// certificate).
+//
+// Whereas if verification was uncessful, the chain may be partial, and the
+// final certificate may not be a trust anchor. This heuristic is used
+// in both successful and failed verifications, despite this ambiguity (failure
+// to tag one of the signature algorithms should only affect the final error).
+void ComputeSignatureHashAlgorithms(CertVerifyResult* verify_result) {
+  const X509Certificate::OSCertHandles& intermediates =
+      verify_result->verified_cert->GetIntermediateCertificates();
+
+  // If there are no intermediates, then the leaf is trusted or verification
+  // failed.
+  if (intermediates.empty())
+    return;
+
+  DCHECK(!verify_result->has_sha1);
+
+  // Fill in hash algorithms for the leaf certificate.
+  MapHashAlgorithmToBool(X509Certificate::GetSignatureHashAlgorithm(
+                             verify_result->verified_cert->os_cert_handle()),
+                         verify_result);
+  verify_result->has_sha1_leaf = verify_result->has_sha1;
+
+  // Fill in hash algorithms for the intermediate cerificates, excluding the
+  // final one (which is the trust anchor).
+  for (size_t i = 0; i + 1 < intermediates.size(); ++i) {
+    MapHashAlgorithmToBool(
+        X509Certificate::GetSignatureHashAlgorithm(intermediates[i]),
+        verify_result);
+  }
+}
+
 }  // namespace
 
 // static
@@ -419,6 +482,8 @@ int CertVerifyProc::Verify(X509Certificate* cert,
 
   int rv = VerifyInternal(cert, hostname, ocsp_response, flags, crl_set,
                           additional_trust_anchors, verify_result);
+
+  ComputeSignatureHashAlgorithms(verify_result);
 
   UMA_HISTOGRAM_BOOLEAN("Net.CertCommonNameFallback",
                         verify_result->common_name_fallback_used);
@@ -773,33 +838,5 @@ bool CertVerifyProc::HasTooLongValidity(const X509Certificate& cert) {
 // static
 const base::Feature CertVerifyProc::kSHA1LegacyMode{
     "SHA1LegacyMode", base::FEATURE_DISABLED_BY_DEFAULT};
-
-X509Certificate::SignatureHashAlgorithm FillCertVerifyResultWeakSignature(
-    X509Certificate::OSCertHandle cert,
-    bool is_leaf,
-    CertVerifyResult* verify_result) {
-  X509Certificate::SignatureHashAlgorithm hash =
-      X509Certificate::GetSignatureHashAlgorithm(cert);
-  switch (hash) {
-    case X509Certificate::kSignatureHashAlgorithmMd2:
-      verify_result->has_md2 = true;
-      break;
-    case X509Certificate::kSignatureHashAlgorithmMd4:
-      verify_result->has_md4 = true;
-      break;
-    case X509Certificate::kSignatureHashAlgorithmMd5:
-      verify_result->has_md5 = true;
-      break;
-    case X509Certificate::kSignatureHashAlgorithmSha1:
-      verify_result->has_sha1 = true;
-      if (is_leaf)
-        verify_result->has_sha1_leaf = true;
-      break;
-    case X509Certificate::kSignatureHashAlgorithmOther:
-      break;
-  }
-
-  return hash;
-}
 
 }  // namespace net

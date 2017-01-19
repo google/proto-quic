@@ -165,8 +165,8 @@ class FileLockingTest : public testing::Test {
   void ExitChildCleanly() {
     ASSERT_TRUE(SignalEvent(kSignalExit));
     int rv = -1;
-    ASSERT_TRUE(lock_child_.WaitForExitWithTimeout(
-        TestTimeouts::action_timeout(), &rv));
+    ASSERT_TRUE(WaitForMultiprocessTestChildExit(
+        lock_child_, TestTimeouts::action_timeout(), &rv));
     ASSERT_EQ(0, rv);
   }
 
@@ -220,7 +220,7 @@ TEST_F(FileLockingTest, UnlockOnTerminate) {
   StartChildAndSignalLock(kExitUnlock);
 
   ASSERT_NE(File::FILE_OK, lock_file_.Lock());
-  ASSERT_TRUE(lock_child_.Terminate(0, true));
+  ASSERT_TRUE(TerminateMultiProcessTestChild(lock_child_, 0, true));
   ASSERT_EQ(File::FILE_OK, lock_file_.Lock());
   ASSERT_EQ(File::FILE_OK, lock_file_.Unlock());
 }

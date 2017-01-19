@@ -312,30 +312,8 @@ bool HttpUtil::ParseRetryAfterHeader(const std::string& retry_after_string,
   return true;
 }
 
-// static
-bool HttpUtil::HasHeader(const std::string& headers, const char* name) {
-  size_t name_len = strlen(name);
-  std::string::const_iterator it =
-      std::search(headers.begin(),
-                  headers.end(),
-                  name,
-                  name + name_len,
-                  base::CaseInsensitiveCompareASCII<char>());
-  if (it == headers.end())
-    return false;
-
-  // ensure match is prefixed by newline
-  if (it != headers.begin() && it[-1] != '\n')
-    return false;
-
-  // ensure match is suffixed by colon
-  if (it + name_len >= headers.end() || it[name_len] != ':')
-    return false;
-
-  return true;
-}
-
 namespace {
+
 // A header string containing any of the following fields will cause
 // an error. The list comes from the XMLHttpRequest standard.
 // http://www.w3.org/TR/XMLHttpRequest/#the-setrequestheader-method
@@ -362,7 +340,8 @@ const char* const kForbiddenHeaderFields[] = {
   "user-agent",
   "via",
 };
-}  // anonymous namespace
+
+}  // namespace
 
 // static
 bool HttpUtil::IsSafeHeader(const std::string& name) {
@@ -779,16 +758,6 @@ std::string HttpUtil::GenerateAcceptLanguageHeader(
       qvalue10 -= kQvalueDecrement10;
   }
   return lang_list_with_q;
-}
-
-void HttpUtil::AppendHeaderIfMissing(const char* header_name,
-                                     const std::string& header_value,
-                                     std::string* headers) {
-  if (header_value.empty())
-    return;
-  if (HttpUtil::HasHeader(*headers, header_name))
-    return;
-  *headers += std::string(header_name) + ": " + header_value + "\r\n";
 }
 
 bool HttpUtil::HasStrongValidators(HttpVersion version,

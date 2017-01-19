@@ -63,6 +63,8 @@ std::vector<uint8_t> CertDataVector(const ParsedCertificate* cert) {
 // MockCertNetFetcher is an implementation of CertNetFetcher for testing.
 class MockCertNetFetcher : public CertNetFetcher {
  public:
+  MockCertNetFetcher() {}
+  MOCK_METHOD0(Shutdown, void());
   MOCK_METHOD3(FetchCaIssuers,
                std::unique_ptr<Request>(const GURL& url,
                                         int timeout_milliseconds,
@@ -76,6 +78,9 @@ class MockCertNetFetcher : public CertNetFetcher {
                std::unique_ptr<Request>(const GURL& url,
                                         int timeout_milliseconds,
                                         int max_response_bytes));
+
+ protected:
+  ~MockCertNetFetcher() override {}
 };
 
 // MockCertNetFetcherRequest gives back the indicated error and bytes.
@@ -116,8 +121,8 @@ TEST(CertIssuerSourceAiaTest, NoSyncResults) {
   ASSERT_TRUE(ReadTestCert("target_two_aia.pem", &cert));
 
   // No methods on |mock_fetcher| should be called.
-  StrictMock<MockCertNetFetcher> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   ParsedCertificateList issuers;
   aia_source.SyncGetIssuersOf(cert.get(), &issuers);
   EXPECT_EQ(0U, issuers.size());
@@ -130,8 +135,8 @@ TEST(CertIssuerSourceAiaTest, NoAia) {
   ASSERT_TRUE(ReadTestCert("target_no_aia.pem", &cert));
 
   // No methods on |mock_fetcher| should be called.
-  StrictMock<MockCertNetFetcher> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> request;
   aia_source.AsyncGetIssuersOf(cert.get(), &request);
   EXPECT_EQ(nullptr, request);
@@ -146,11 +151,11 @@ TEST(CertIssuerSourceAiaTest, FileAia) {
   scoped_refptr<ParsedCertificate> cert;
   ASSERT_TRUE(ReadTestCert("target_file_aia.pem", &cert));
 
-  StrictMock<MockCertNetFetcher> mock_fetcher;
-  EXPECT_CALL(mock_fetcher, FetchCaIssuers(GURL("file:///dev/null"), _, _))
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
+  EXPECT_CALL(*mock_fetcher, FetchCaIssuers(GURL("file:///dev/null"), _, _))
       .WillOnce(Return(ByMove(CreateMockRequest(ERR_DISALLOWED_URL_SCHEME))));
 
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(), &cert_source_request);
   ASSERT_NE(nullptr, cert_source_request);
@@ -167,8 +172,8 @@ TEST(CertIssuerSourceAiaTest, OneInvalidURL) {
   scoped_refptr<ParsedCertificate> cert;
   ASSERT_TRUE(ReadTestCert("target_invalid_url_aia.pem", &cert));
 
-  StrictMock<MockCertNetFetcher> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> request;
   aia_source.AsyncGetIssuersOf(cert.get(), &request);
   EXPECT_EQ(nullptr, request);
@@ -181,14 +186,14 @@ TEST(CertIssuerSourceAiaTest, OneAia) {
   scoped_refptr<ParsedCertificate> intermediate_cert;
   ASSERT_TRUE(ReadTestCert("i.pem", &intermediate_cert));
 
-  StrictMock<MockCertNetFetcher> mock_fetcher;
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
 
-  EXPECT_CALL(mock_fetcher,
+  EXPECT_CALL(*mock_fetcher,
               FetchCaIssuers(GURL("http://url-for-aia/I.cer"), _, _))
       .WillOnce(Return(
           ByMove(CreateMockRequest(CertDataVector(intermediate_cert.get())))));
 
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(), &cert_source_request);
   ASSERT_NE(nullptr, cert_source_request);
@@ -213,17 +218,17 @@ TEST(CertIssuerSourceAiaTest, OneFileOneHttpAia) {
   scoped_refptr<ParsedCertificate> intermediate_cert;
   ASSERT_TRUE(ReadTestCert("i2.pem", &intermediate_cert));
 
-  StrictMock<MockCertNetFetcher> mock_fetcher;
+  auto mock_fetcher = make_scoped_refptr(new StrictMock<MockCertNetFetcher>());
 
-  EXPECT_CALL(mock_fetcher, FetchCaIssuers(GURL("file:///dev/null"), _, _))
+  EXPECT_CALL(*mock_fetcher, FetchCaIssuers(GURL("file:///dev/null"), _, _))
       .WillOnce(Return(ByMove(CreateMockRequest(ERR_DISALLOWED_URL_SCHEME))));
 
-  EXPECT_CALL(mock_fetcher,
+  EXPECT_CALL(*mock_fetcher,
               FetchCaIssuers(GURL("http://url-for-aia2/I2.foo"), _, _))
       .WillOnce(Return(
           ByMove(CreateMockRequest(CertDataVector(intermediate_cert.get())))));
 
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(), &cert_source_request);
   ASSERT_NE(nullptr, cert_source_request);
@@ -247,8 +252,9 @@ TEST(CertIssuerSourceAiaTest, OneInvalidOneHttpAia) {
   ASSERT_TRUE(ReadTestCert("i2.pem", &intermediate_cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -292,8 +298,9 @@ TEST(CertIssuerSourceAiaTest, TwoAiaCompletedInSeries) {
   ASSERT_TRUE(ReadTestCert("i2.pem", &intermediate_cert2));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -368,8 +375,9 @@ TEST(CertIssuerSourceAiaTest, TwoAiaCompletedBeforeGetNext) {
   ASSERT_TRUE(ReadTestCert("i2.pem", &intermediate_cert2));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -440,8 +448,9 @@ TEST(CertIssuerSourceAiaTest, AiaRequestCompletesDuringGetNextSequence) {
   ASSERT_TRUE(ReadTestCert("i3.pem", &intermediate_cert3));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -516,8 +525,9 @@ TEST(CertIssuerSourceAiaTest, OneAiaHttpError) {
   ASSERT_TRUE(ReadTestCert("target_one_aia.pem", &cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -550,8 +560,9 @@ TEST(CertIssuerSourceAiaTest, OneAiaParseError) {
   ASSERT_TRUE(ReadTestCert("target_one_aia.pem", &cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -585,8 +596,9 @@ TEST(CertIssuerSourceAiaTest, TwoAiaCompletedInSeriesFirstFails) {
   ASSERT_TRUE(ReadTestCert("i2.pem", &intermediate_cert2));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -639,8 +651,9 @@ TEST(CertIssuerSourceAiaTest, TwoAiaCompletedInSeriesSecondFails) {
   ASSERT_TRUE(ReadTestCert("i.pem", &intermediate_cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -697,8 +710,9 @@ TEST(CertIssuerSourceAiaTest, CertSourceRequestCancelled) {
   ASSERT_TRUE(ReadTestCert("target_two_aia.pem", &cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -733,8 +747,9 @@ TEST(CertIssuerSourceAiaTest, TwoAiaOneCompletedThenRequestCancelled) {
   ASSERT_TRUE(ReadTestCert("i.pem", &intermediate_cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,
@@ -784,8 +799,9 @@ TEST(CertIssuerSourceAiaTest, MaxFetchesPerCert) {
   ASSERT_TRUE(ReadTestCert("target_six_aia.pem", &cert));
 
   StrictMock<MockIssuerCallback> mock_callback;
-  StrictMock<MockCertNetFetcherImpl> mock_fetcher;
-  CertIssuerSourceAia aia_source(&mock_fetcher);
+  scoped_refptr<StrictMock<MockCertNetFetcherImpl>> mock_fetcher(
+      new StrictMock<MockCertNetFetcherImpl>());
+  CertIssuerSourceAia aia_source(mock_fetcher);
   std::unique_ptr<CertIssuerSource::Request> cert_source_request;
   aia_source.AsyncGetIssuersOf(cert.get(),
                                base::Bind(&MockIssuerCallback::Callback,

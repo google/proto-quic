@@ -44,14 +44,19 @@ public class ApiCompatibilityUtils {
     }
 
     /**
-     * @see Long#compare(long, long)
+     * Compares two long values numerically. The value returned is identical to what would be
+     * returned by {@link Long#compare(long, long)} which is available since API level 19.
      */
     public static int compareLong(long lhs, long rhs) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            return Long.compare(lhs, rhs);
-        } else {
-            return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
-        }
+        return lhs < rhs ? -1 : (lhs == rhs ? 0 : 1);
+    }
+
+    /**
+     * Compares two boolean values. The value returned is identical to what would be returned by
+     * {@link Boolean#compare(boolean, boolean)} which is available since API level 19.
+     */
+    public static int compareBoolean(boolean lhs, boolean rhs) {
+        return lhs == rhs ? 0 : lhs ? 1 : -1;
     }
 
     /**

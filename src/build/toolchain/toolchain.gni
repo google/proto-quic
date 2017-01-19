@@ -13,9 +13,8 @@ declare_args() {
   # faster, but linking is up to 5-20x slower).
   # Note: use target_os == "linux" rather than is_linux so that it does not
   # apply to host_toolchain when target_os="android".
-  allow_posix_link_time_opt =
-      target_os == "linux" && !is_chromeos && target_cpu == "x64" &&
-      is_chrome_branded && is_official_build
+  allow_posix_link_time_opt = target_os == "linux" && !is_chromeos &&
+                              target_cpu == "x64" && is_official_build
 
   # Set to true to use lld, the LLVM linker. This flag may be used on Windows
   # with the shipped LLVM toolchain, or on Linux with a self-built top-of-tree
@@ -46,7 +45,7 @@ declare_args() {
 # The path to the hermetic install of Xcode. Only relevant when
 # use_system_xcode = false.
 hermetic_xcode_path =
-    rebase_path("//build/mac_files/Xcode.app", "", root_build_dir)
+    rebase_path("//build/${target_os}_files/Xcode.app", "", root_build_dir)
 
 declare_args() {
   if (is_clang) {

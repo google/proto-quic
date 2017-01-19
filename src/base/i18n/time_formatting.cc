@@ -153,12 +153,12 @@ string16 TimeFormatFriendlyDate(const Time& time) {
   return TimeFormat(formatter.get(), time);
 }
 
-string16 TimeDurationFormat(const TimeDelta& time,
+string16 TimeDurationFormat(const TimeDelta time,
                             const DurationFormatWidth width) {
   UErrorCode status = U_ZERO_ERROR;
   const int total_minutes = static_cast<int>(time.InSecondsF() / 60 + 0.5);
-  int hours = total_minutes / 60;
-  int minutes = total_minutes % 60;
+  const int hours = total_minutes / 60;
+  const int minutes = total_minutes % 60;
   UMeasureFormatWidth u_width = DurationWidthToMeasureWidth(width);
 
   const icu::Measure measures[] = {
@@ -168,6 +168,26 @@ string16 TimeDurationFormat(const TimeDelta& time,
   icu::UnicodeString formatted;
   icu::FieldPosition ignore(icu::FieldPosition::DONT_CARE);
   measure_format.formatMeasures(measures, 2, formatted, ignore, status);
+  return base::string16(formatted.getBuffer(), formatted.length());
+}
+
+string16 TimeDurationFormatWithSeconds(const TimeDelta time,
+                                       const DurationFormatWidth width) {
+  UErrorCode status = U_ZERO_ERROR;
+  const int64_t total_seconds = static_cast<int>(time.InSecondsF() + 0.5);
+  const int hours = total_seconds / 3600;
+  const int minutes = (total_seconds - hours * 3600) / 60;
+  const int seconds = total_seconds % 60;
+  UMeasureFormatWidth u_width = DurationWidthToMeasureWidth(width);
+
+  const icu::Measure measures[] = {
+      icu::Measure(hours, icu::MeasureUnit::createHour(status), status),
+      icu::Measure(minutes, icu::MeasureUnit::createMinute(status), status),
+      icu::Measure(seconds, icu::MeasureUnit::createSecond(status), status)};
+  icu::MeasureFormat measure_format(icu::Locale::getDefault(), u_width, status);
+  icu::UnicodeString formatted;
+  icu::FieldPosition ignore(icu::FieldPosition::DONT_CARE);
+  measure_format.formatMeasures(measures, 3, formatted, ignore, status);
   return base::string16(formatted.getBuffer(), formatted.length());
 }
 

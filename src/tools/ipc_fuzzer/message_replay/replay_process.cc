@@ -92,8 +92,9 @@ bool ReplayProcess::Initialize(int argc, const char** argv) {
              kMojoIPCChannel + base::GlobalDescriptors::kBaseDescriptor);
 #endif
 
-  mojo_ipc_support_.reset(
-      new mojo::edk::ScopedIPCSupport(io_thread_.task_runner()));
+  mojo_ipc_support_.reset(new mojo::edk::ScopedIPCSupport(
+      io_thread_.task_runner(),
+      mojo::edk::ScopedIPCSupport::ShutdownPolicy::FAST));
   InitializeMojoIPCChannel();
 
   return true;

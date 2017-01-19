@@ -69,7 +69,7 @@ class linked_ptr_internal {
   mutable linked_ptr_internal const* next_;
 };
 
-// TODO(http://crbug.com/556939): DEPRECATED: Use scoped_ptr instead (now that
+// TODO(http://crbug.com/556939): DEPRECATED: Use unique_ptr instead (now that
 // we have support for moveable types inside STL containers).
 template <typename T>
 class linked_ptr {

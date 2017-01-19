@@ -6,6 +6,7 @@
 
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_dispatcher.h"
@@ -87,7 +88,7 @@ class QuicServerEpollInTest : public ::testing::Test {
     ASSERT_TRUE(QuicServerPeer::SetSmallSocket(&server_));
 
     if (!server_.overflow_supported()) {
-      LOG(WARNING) << "Overflow not supported.  Not testing.";
+      QUIC_LOG(WARNING) << "Overflow not supported.  Not testing.";
       return;
     }
   }
@@ -133,7 +134,7 @@ TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
   int rc = sendto(fd, buf, arraysize(buf), 0,
                   reinterpret_cast<sockaddr*>(&storage), storage_size);
   if (rc < 0) {
-    DVLOG(1) << errno << " " << strerror(errno);
+    QUIC_DLOG(INFO) << errno << " " << strerror(errno);
   }
 
   while (more_chlos) {

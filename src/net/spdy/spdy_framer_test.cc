@@ -1792,7 +1792,7 @@ TEST_P(SpdyFramerTest, CreateGoAway) {
         0x00, 0x00, 0x00, 0x00,  //  Error: NO_ERROR
         0x47, 0x41,              // Description
     };
-    SpdyGoAwayIR goaway_ir(0, GOAWAY_OK, "GA");
+    SpdyGoAwayIR goaway_ir(0, GOAWAY_NO_ERROR, "GA");
     SpdySerializedFrame frame(framer.SerializeGoAway(goaway_ir));
     CompareFrame(kDescription, frame, kH2FrameData, arraysize(kH2FrameData));
   }
@@ -3477,18 +3477,29 @@ TEST_P(SpdyFramerTest, StatusCodeToStringTest) {
   EXPECT_STREQ("NO_ERROR", SpdyFramer::StatusCodeToString(RST_STREAM_NO_ERROR));
   EXPECT_STREQ("PROTOCOL_ERROR",
                SpdyFramer::StatusCodeToString(RST_STREAM_PROTOCOL_ERROR));
-  EXPECT_STREQ("INVALID_STREAM",
-               SpdyFramer::StatusCodeToString(RST_STREAM_INVALID_STREAM));
-  EXPECT_STREQ("REFUSED_STREAM",
-               SpdyFramer::StatusCodeToString(RST_STREAM_REFUSED_STREAM));
-  EXPECT_STREQ("UNSUPPORTED_VERSION",
-               SpdyFramer::StatusCodeToString(RST_STREAM_UNSUPPORTED_VERSION));
-  EXPECT_STREQ("CANCEL", SpdyFramer::StatusCodeToString(RST_STREAM_CANCEL));
   EXPECT_STREQ("INTERNAL_ERROR",
                SpdyFramer::StatusCodeToString(RST_STREAM_INTERNAL_ERROR));
   EXPECT_STREQ("FLOW_CONTROL_ERROR",
                SpdyFramer::StatusCodeToString(RST_STREAM_FLOW_CONTROL_ERROR));
-  EXPECT_STREQ("UNKNOWN_STATUS", SpdyFramer::StatusCodeToString(-1));
+  EXPECT_STREQ("SETTINGS_TIMEOUT",
+               SpdyFramer::StatusCodeToString(RST_STREAM_SETTINGS_TIMEOUT));
+  EXPECT_STREQ("STREAM_CLOSED",
+               SpdyFramer::StatusCodeToString(RST_STREAM_STREAM_CLOSED));
+  EXPECT_STREQ("FRAME_SIZE_ERROR",
+               SpdyFramer::StatusCodeToString(RST_STREAM_FRAME_SIZE_ERROR));
+  EXPECT_STREQ("REFUSED_STREAM",
+               SpdyFramer::StatusCodeToString(RST_STREAM_REFUSED_STREAM));
+  EXPECT_STREQ("CANCEL", SpdyFramer::StatusCodeToString(RST_STREAM_CANCEL));
+  EXPECT_STREQ("COMPRESSION_ERROR",
+               SpdyFramer::StatusCodeToString(RST_STREAM_COMPRESSION_ERROR));
+  EXPECT_STREQ("CONNECT_ERROR",
+               SpdyFramer::StatusCodeToString(RST_STREAM_CONNECT_ERROR));
+  EXPECT_STREQ("ENHANCE_YOUR_CALM",
+               SpdyFramer::StatusCodeToString(RST_STREAM_ENHANCE_YOUR_CALM));
+  EXPECT_STREQ("INADEQUATE_SECURITY",
+               SpdyFramer::StatusCodeToString(RST_STREAM_INADEQUATE_SECURITY));
+  EXPECT_STREQ("HTTP_1_1_REQUIRED",
+               SpdyFramer::StatusCodeToString(RST_STREAM_HTTP_1_1_REQUIRED));
 }
 
 TEST_P(SpdyFramerTest, FrameTypeToStringTest) {
@@ -3626,11 +3637,11 @@ TEST_P(SpdyFramerTest, GoawayFrameFlags) {
     SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
     framer.set_visitor(&visitor);
 
-    SpdyGoAwayIR goaway_ir(97, GOAWAY_OK, "test");
+    SpdyGoAwayIR goaway_ir(97, GOAWAY_NO_ERROR, "test");
     SpdySerializedFrame frame(framer.SerializeGoAway(goaway_ir));
     SetFrameFlags(&frame, flags);
 
-    EXPECT_CALL(visitor, OnGoAway(97, GOAWAY_OK));
+    EXPECT_CALL(visitor, OnGoAway(97, GOAWAY_NO_ERROR));
 
     framer.ProcessInput(frame.data(), frame.size());
     EXPECT_EQ(SpdyFramer::SPDY_READY_FOR_FRAME, framer.state());
@@ -3907,7 +3918,7 @@ TEST_P(SpdyFramerTest, GoAwayStreamIdBounds) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   framer.set_visitor(&visitor);
 
-  EXPECT_CALL(visitor, OnGoAway(0x7fffffff, GOAWAY_OK));
+  EXPECT_CALL(visitor, OnGoAway(0x7fffffff, GOAWAY_NO_ERROR));
   framer.ProcessInput(reinterpret_cast<const char*>(kH2FrameData),
                       arraysize(kH2FrameData));
   EXPECT_EQ(SpdyFramer::SPDY_READY_FOR_FRAME, framer.state());

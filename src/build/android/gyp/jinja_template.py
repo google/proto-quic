@@ -37,7 +37,7 @@ class JinjaProcessor(object):
   """Allows easy rendering of jinja templates with input file tracking."""
   def __init__(self, loader_base_dir, variables=None):
     self.loader_base_dir = loader_base_dir
-    self.variables = variables
+    self.variables = variables or {}
     self.loader = _RecordingFileSystemLoader(loader_base_dir)
     self.env = jinja2.Environment(loader=self.loader)
     self.env.undefined = jinja2.StrictUndefined

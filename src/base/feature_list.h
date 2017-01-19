@@ -32,6 +32,8 @@ enum FeatureState {
 // for a given feature name - generally defined as a constant global variable or
 // file static.
 struct BASE_EXPORT Feature {
+  constexpr Feature(const char* name, FeatureState default_state)
+      : name(name), default_state(default_state) {}
   // The name of the feature. This should be unique to each feature and is used
   // for enabling/disabling features via command line flags and experiments.
   const char* const name;

@@ -126,6 +126,7 @@ class DiskCacheBackendTest : public DiskCacheTestWithCache {
   void BackendDoomRecent();
   void BackendDoomBetween();
   void BackendCalculateSizeOfAllEntries();
+  void BackendCalculateSizeOfEntriesBetween();
   void BackendTransaction(const std::string& name, int num_entries, bool load);
   void BackendRecoverInsert();
   void BackendRecoverRemove();
@@ -1870,6 +1871,70 @@ TEST_F(DiskCacheBackendTest, SimpleCacheCalculateSizeOfAllEntries) {
   SetCacheType(net::APP_CACHE);
   SetSimpleCacheMode();
   BackendCalculateSizeOfAllEntries();
+}
+
+void DiskCacheBackendTest::BackendCalculateSizeOfEntriesBetween() {
+  InitCache();
+
+  EXPECT_EQ(0, CalculateSizeOfEntriesBetween(base::Time(), base::Time::Max()));
+
+  Time start = Time::Now();
+
+  disk_cache::Entry* entry;
+  ASSERT_THAT(CreateEntry("first", &entry), IsOk());
+  entry->Close();
+  FlushQueueForTest();
+
+  AddDelay();
+  Time middle = Time::Now();
+  AddDelay();
+
+  ASSERT_THAT(CreateEntry("second", &entry), IsOk());
+  entry->Close();
+  ASSERT_THAT(CreateEntry("third_entry", &entry), IsOk());
+  entry->Close();
+  FlushQueueForTest();
+
+  AddDelay();
+  Time end = Time::Now();
+
+  int size_1 = GetEntryMetadataSize("first");
+  int size_2 = GetEntryMetadataSize("second");
+  int size_3 = GetEntryMetadataSize("third_entry");
+
+  ASSERT_EQ(3, cache_->GetEntryCount());
+  ASSERT_EQ(CalculateSizeOfAllEntries(),
+            CalculateSizeOfEntriesBetween(base::Time(), base::Time::Max()));
+
+  int start_end = CalculateSizeOfEntriesBetween(start, end);
+  ASSERT_EQ(CalculateSizeOfAllEntries(), start_end);
+  ASSERT_EQ(size_1 + size_2 + size_3, start_end);
+
+  ASSERT_EQ(size_1, CalculateSizeOfEntriesBetween(start, middle));
+  ASSERT_EQ(size_2 + size_3, CalculateSizeOfEntriesBetween(middle, end));
+
+  // After dooming the entries, the size should be back to zero.
+  ASSERT_THAT(DoomAllEntries(), IsOk());
+  EXPECT_EQ(0, CalculateSizeOfEntriesBetween(base::Time(), base::Time::Max()));
+}
+
+TEST_F(DiskCacheBackendTest, CalculateSizeOfEntriesBetween) {
+  InitCache();
+  ASSERT_EQ(net::ERR_NOT_IMPLEMENTED,
+            CalculateSizeOfEntriesBetween(base::Time(), base::Time::Max()));
+}
+
+TEST_F(DiskCacheBackendTest, MemoryOnlyCalculateSizeOfEntriesBetween) {
+  SetMemoryOnlyMode();
+  BackendCalculateSizeOfEntriesBetween();
+}
+
+TEST_F(DiskCacheBackendTest, SimpleCacheCalculateSizeOfEntriesBetween) {
+  // Use net::APP_CACHE to make size estimations deterministic via
+  // non-optimistic writes.
+  SetCacheType(net::APP_CACHE);
+  SetSimpleCacheMode();
+  BackendCalculateSizeOfEntriesBetween();
 }
 
 void DiskCacheBackendTest::BackendTransaction(const std::string& name,

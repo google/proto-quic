@@ -12,12 +12,11 @@
 
 #include <stddef.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
 
-#include "base/bind.h"
-#include "base/callback.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "base/template_util.h"
@@ -71,10 +70,10 @@ class RandomDecoderTest : public ::testing::Test {
   // Validator returns an AssertionResult so test can do:
   // EXPECT_THAT(DecodeAndValidate(..., validator));
   typedef ::testing::AssertionResult AssertionResult;
-  typedef base::Callback<AssertionResult(const DecodeBuffer& input,
-                                         DecodeStatus status)>
+  typedef std::function<AssertionResult(const DecodeBuffer& input,
+                                        DecodeStatus status)>
       Validator;
-  typedef base::Callback<AssertionResult()> NoArgValidator;
+  typedef std::function<AssertionResult()> NoArgValidator;
 
   RandomDecoderTest();
 
@@ -120,7 +119,7 @@ class RandomDecoderTest : public ::testing::Test {
       const SelectSize& select_size,
       const Validator& validator) {
     DecodeStatus status = DecodeSegments(original, select_size);
-    VERIFY_AND_RETURN_SUCCESS(validator.Run(*original, status));
+    VERIFY_AND_RETURN_SUCCESS(validator(*original, status));
   }
 
   // Returns a SelectSize function for fast decoding, i.e. passing all that
@@ -152,21 +151,26 @@ class RandomDecoderTest : public ::testing::Test {
                                                bool return_non_zero_on_first,
                                                const Validator& validator);
 
-  static AssertionResult SucceedingValidator(const DecodeBuffer& input,
-                                             DecodeStatus status) {
-    return ::testing::AssertionSuccess();
+  static Validator ToValidator(std::nullptr_t) {
+    return [](const DecodeBuffer& input, DecodeStatus status) {
+      return ::testing::AssertionSuccess();
+    };
   }
 
-  static Validator ToValidator(const Validator& validator) { return validator; }
-
-  static AssertionResult RunNoArgValidator(const NoArgValidator& validator,
-                                           const DecodeBuffer& input,
-                                           DecodeStatus status) {
-    return validator.Run();
+  static Validator ToValidator(const Validator& validator) {
+    if (validator == nullptr) {
+      return ToValidator(nullptr);
+    }
+    return validator;
   }
 
   static Validator ToValidator(const NoArgValidator& validator) {
-    return base::Bind(&RunNoArgValidator, validator);
+    if (validator == nullptr) {
+      return ToValidator(nullptr);
+    }
+    return [validator](const DecodeBuffer& input, DecodeStatus status) {
+      return validator();
+    };
   }
 
   // Wraps a validator with another validator
@@ -175,29 +179,31 @@ class RandomDecoderTest : public ::testing::Test {
   // TODO(jamessynge): Replace this overload with the next, as using this method
   // usually means that the wrapped function doesn't need to be passed the
   // DecodeBuffer nor the DecodeStatus.
-  static AssertionResult ValidateDoneAndEmptyImpl(const Validator& wrapped,
-                                                  const DecodeBuffer& input,
-                                                  DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeDone);
-    VERIFY_EQ(0u, input.Remaining()) << "\nOffset=" << input.Offset();
-    return wrapped.Run(input, status);
-  }
   static Validator ValidateDoneAndEmpty(const Validator& wrapped) {
-    return base::Bind(&ValidateDoneAndEmptyImpl, wrapped);
+    return [wrapped](const DecodeBuffer& input,
+                     DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeDone);
+      VERIFY_EQ(0u, input.Remaining()) << "\nOffset=" << input.Offset();
+      if (wrapped) {
+        return wrapped(input, status);
+      }
+      return ::testing::AssertionSuccess();
+    };
   }
-  static AssertionResult ValidateDoneAndEmptyNoArgImpl(
-      const NoArgValidator& wrapped,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeDone);
-    VERIFY_EQ(0u, input.Remaining()) << "\nOffset=" << input.Offset();
-    return wrapped.Run();
-  }
-  static Validator ValidateDoneAndEmpty(const NoArgValidator& wrapped) {
-    return base::Bind(&ValidateDoneAndEmptyNoArgImpl, wrapped);
+  static Validator ValidateDoneAndEmpty(NoArgValidator wrapped) {
+    return [wrapped](const DecodeBuffer& input,
+                     DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeDone);
+      VERIFY_EQ(0u, input.Remaining()) << "\nOffset=" << input.Offset();
+      if (wrapped) {
+        return wrapped();
+      }
+      return ::testing::AssertionSuccess();
+    };
   }
   static Validator ValidateDoneAndEmpty() {
-    return ValidateDoneAndEmpty(base::Bind(&SucceedingValidator));
+    NoArgValidator validator;
+    return ValidateDoneAndEmpty(validator);
   }
 
   // Wraps a validator with another validator
@@ -206,39 +212,32 @@ class RandomDecoderTest : public ::testing::Test {
   // TODO(jamessynge): Replace this overload with the next, as using this method
   // usually means that the wrapped function doesn't need to be passed the
   // DecodeBuffer nor the DecodeStatus.
-  static AssertionResult ValidateDoneAndOffsetImpl(uint32_t offset,
-                                                   const Validator& wrapped,
-                                                   const DecodeBuffer& input,
-                                                   DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeDone);
-    VERIFY_EQ(offset, input.Offset()) << "\nRemaining=" << input.Remaining();
-    return wrapped.Run(input, status);
+  static Validator ValidateDoneAndOffset(uint32_t offset, Validator wrapped) {
+    return [wrapped, offset](const DecodeBuffer& input,
+                             DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeDone);
+      VERIFY_EQ(offset, input.Offset()) << "\nRemaining=" << input.Remaining();
+      if (wrapped) {
+        return wrapped(input, status);
+      }
+      return ::testing::AssertionSuccess();
+    };
   }
   static Validator ValidateDoneAndOffset(uint32_t offset,
-                                         const Validator& wrapped) {
-    // Make a copy of |wrapped| (by not using base::ConstRef) to avoid lifetime
-    // issues if this method is called with a temporary Validator.
-    return base::Bind(&ValidateDoneAndOffsetImpl, offset, wrapped);
-  }
-  static AssertionResult ValidateDoneAndOffsetNoArgImpl(
-      uint32_t offset,
-      const NoArgValidator& wrapped,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeDone);
-    VERIFY_EQ(offset, input.Offset()) << "\nRemaining=" << input.Remaining();
-    return wrapped.Run();
-  }
-  static Validator ValidateDoneAndOffset(uint32_t offset,
-                                         const NoArgValidator& wrapped) {
-    // Make a copy of |wrapped| (by not using base::ConstRef) to avoid lifetime
-    // issues if this method is called with a temporary Validator.
-    return base::Bind(&ValidateDoneAndOffsetNoArgImpl, offset, wrapped);
+                                         NoArgValidator wrapped) {
+    return [wrapped, offset](const DecodeBuffer& input,
+                             DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeDone);
+      VERIFY_EQ(offset, input.Offset()) << "\nRemaining=" << input.Remaining();
+      if (wrapped) {
+        return wrapped();
+      }
+      return ::testing::AssertionSuccess();
+    };
   }
   static Validator ValidateDoneAndOffset(uint32_t offset) {
-    // Make a copy of |wrapped| (by not using base::ConstRef) to avoid lifetime
-    // issues if this method is called with a temporary Validator.
-    return ValidateDoneAndOffset(offset, base::Bind(&SucceedingValidator));
+    NoArgValidator validator;
+    return ValidateDoneAndOffset(offset, validator);
   }
 
   // Expose |random_| as RandomBase so callers do not have to care about which

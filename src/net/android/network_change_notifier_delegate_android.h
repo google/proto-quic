@@ -5,6 +5,7 @@
 #ifndef NET_ANDROID_NETWORK_CHANGE_NOTIFIER_DELEGATE_ANDROID_H_
 #define NET_ANDROID_NETWORK_CHANGE_NOTIFIER_DELEGATE_ANDROID_H_
 
+#include <map>
 #include <string>
 
 #include "base/android/jni_android.h"

@@ -298,6 +298,12 @@ class NET_EXPORT HttpNetworkSession
   void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
                        const std::string& parent_absolute_name) const;
 
+  // Evaluates if QUIC is enabled for new streams.
+  bool IsQuicEnabled() const;
+
+  // Disable QUIC for new streams.
+  void DisableQuic();
+
  private:
   friend class HttpNetworkSessionPeer;
 

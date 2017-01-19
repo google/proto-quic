@@ -257,7 +257,7 @@ TEST_F(ProcessUtilTest, GetProcId) {
 }
 #endif  // defined(OS_WIN)
 
-#if !defined(OS_MACOSX)
+#if !defined(OS_MACOSX) && !defined(OS_ANDROID)
 // This test is disabled on Mac, since it's flaky due to ReportCrash
 // taking a variable amount of time to parse and load the debug and
 // symbol data for this unit test's executable before firing the
@@ -266,23 +266,14 @@ TEST_F(ProcessUtilTest, GetProcId) {
 // TODO(gspencer): turn this test process into a very small program
 // with no symbols (instead of using the multiprocess testing
 // framework) to reduce the ReportCrash overhead.
+//
+// It is disabled on Android as MultiprocessTests are started as services that
+// the framework restarts on crashes.
 const char kSignalFileCrash[] = "CrashingChildProcess.die";
 
 MULTIPROCESS_TEST_MAIN(CrashingChildProcess) {
   WaitToDie(ProcessUtilTest::GetSignalFilePath(kSignalFileCrash).c_str());
-#if defined(OS_ANDROID)
-  // Android L+ expose signal and sigaction symbols that override the system
-  // ones. There is a bug in these functions where a request to set the handler
-  // to SIG_DFL is ignored. In that case, an infinite loop is entered as the
-  // signal is repeatedly sent to the crash dump signal handler.
-  // To work around this, directly call the system's sigaction.
-  struct kernel_sigaction sa;
-  memset(&sa, 0, sizeof(sa));
-  sys_sigemptyset(&sa.sa_mask);
-  sa.sa_handler_ = SIG_DFL;
-  sa.sa_flags = SA_RESTART;
-  sys_rt_sigaction(SIGSEGV, &sa, NULL, sizeof(kernel_sigset_t));
-#elif defined(OS_POSIX)
+#if defined(OS_POSIX)
   // Have to disable to signal handler for segv so we can get a crash
   // instead of an abnormal termination through the crash dump handler.
   ::signal(SIGSEGV, SIG_DFL);
@@ -331,7 +322,7 @@ TEST_F(ProcessUtilTest, MAYBE_GetTerminationStatusCrash) {
   base::debug::EnableInProcessStackDumping();
   remove(signal_file.c_str());
 }
-#endif  // !defined(OS_MACOSX)
+#endif  // !defined(OS_MACOSX) && !defined(OS_ANDROID)
 
 MULTIPROCESS_TEST_MAIN(KilledChildProcess) {
   WaitToDie(ProcessUtilTest::GetSignalFilePath(kSignalFileKill).c_str());

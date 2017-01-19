@@ -46,54 +46,13 @@ SpdyPriority Http2WeightToSpdy3Priority(int weight) {
 }
 
 bool IsValidFrameType(int frame_type_field) {
-  // Check for recognized extensions.
-  if (frame_type_field == SerializeFrameType(ALTSVC) ||
-      frame_type_field == SerializeFrameType(BLOCKED)) {
-    return true;
-  }
-
-  // DATA is the first valid frame.
-  if (frame_type_field < SerializeFrameType(DATA)) {
-    return false;
-  }
-
-  // CONTINUATION is the last valid frame.
-  if (frame_type_field > SerializeFrameType(CONTINUATION)) {
-    return false;
-  }
-
-  return true;
+  return frame_type_field >= MIN_FRAME_TYPE &&
+         frame_type_field <= MAX_FRAME_TYPE;
 }
 
 SpdyFrameType ParseFrameType(int frame_type_field) {
-  switch (frame_type_field) {
-    case 0:
-      return DATA;
-    case 1:
-      return HEADERS;
-    case 2:
-      return PRIORITY;
-    case 3:
-      return RST_STREAM;
-    case 4:
-      return SETTINGS;
-    case 5:
-      return PUSH_PROMISE;
-    case 6:
-      return PING;
-    case 7:
-      return GOAWAY;
-    case 8:
-      return WINDOW_UPDATE;
-    case 9:
-      return CONTINUATION;
-    case 10:
-      return ALTSVC;
-    case 11:
-      return BLOCKED;
-  }
-  SPDY_BUG << "Unhandled frame type " << frame_type_field;
-  return DATA;
+  SPDY_BUG_IF(!IsValidFrameType(frame_type_field)) << "Invalid frame type.";
+  return static_cast<SpdyFrameType>(frame_type_field);
 }
 
 int SerializeFrameType(SpdyFrameType frame_type) {

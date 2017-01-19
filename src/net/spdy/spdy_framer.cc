@@ -159,6 +159,7 @@ SpdyFramer::SpdyFramer(SpdyFramer::DecoderAdapterFactoryFn adapter_factory,
   if (adapter_factory != nullptr) {
     decoder_adapter_ = adapter_factory(this);
   }
+  skip_rewritelength_ = FLAGS_chromium_http2_flag_remove_rewritelength;
 }
 
 SpdyFramer::SpdyFramer(CompressionOption option)
@@ -416,24 +417,22 @@ const char* SpdyFramer::StatusCodeToString(int status_code) {
       return "NO_ERROR";
     case RST_STREAM_PROTOCOL_ERROR:
       return "PROTOCOL_ERROR";
-    case RST_STREAM_INVALID_STREAM:
-      return "INVALID_STREAM";
-    case RST_STREAM_REFUSED_STREAM:
-      return "REFUSED_STREAM";
-    case RST_STREAM_UNSUPPORTED_VERSION:
-      return "UNSUPPORTED_VERSION";
-    case RST_STREAM_CANCEL:
-      return "CANCEL";
     case RST_STREAM_INTERNAL_ERROR:
       return "INTERNAL_ERROR";
     case RST_STREAM_FLOW_CONTROL_ERROR:
       return "FLOW_CONTROL_ERROR";
-    case RST_STREAM_STREAM_IN_USE:
-      return "STREAM_IN_USE";
-    case RST_STREAM_STREAM_ALREADY_CLOSED:
-      return "STREAM_ALREADY_CLOSED";
-    case RST_STREAM_FRAME_TOO_LARGE:
-      return "FRAME_TOO_LARGE";
+    case RST_STREAM_SETTINGS_TIMEOUT:
+      return "SETTINGS_TIMEOUT";
+    case RST_STREAM_STREAM_CLOSED:
+      return "STREAM_CLOSED";
+    case RST_STREAM_FRAME_SIZE_ERROR:
+      return "FRAME_SIZE_ERROR";
+    case RST_STREAM_REFUSED_STREAM:
+      return "REFUSED_STREAM";
+    case RST_STREAM_CANCEL:
+      return "CANCEL";
+    case RST_STREAM_COMPRESSION_ERROR:
+      return "COMPRESSION_ERROR";
     case RST_STREAM_CONNECT_ERROR:
       return "CONNECT_ERROR";
     case RST_STREAM_ENHANCE_YOUR_CALM:
@@ -1463,8 +1462,8 @@ size_t SpdyFramer::ProcessGoAwayFramePayload(const char* data, size_t len) {
       DCHECK(successful_read);
 
       // Parse status code.
-      SpdyGoAwayStatus status = GOAWAY_OK;
-      uint32_t status_raw = GOAWAY_OK;
+      SpdyGoAwayStatus status = GOAWAY_NO_ERROR;
+      uint32_t status_raw = GOAWAY_NO_ERROR;
       successful_read = reader.ReadUInt32(&status_raw);
       DCHECK(successful_read);
       if (IsValidGoAwayStatus(status_raw)) {
@@ -1860,12 +1859,21 @@ SpdySerializedFrame SpdyFramer::SerializeDataFrameHeaderWithPaddingLengthField(
   }
 
   SpdyFrameBuilder builder(frame_size);
-  builder.BeginNewFrame(*this, DATA, flags, data_ir.stream_id());
-  if (data_ir.padded()) {
-    builder.WriteUInt8(data_ir.padding_payload_len() & 0xff);
+  if (!skip_rewritelength_) {
+    builder.BeginNewFrame(*this, DATA, flags, data_ir.stream_id());
+    if (data_ir.padded()) {
+      builder.WriteUInt8(data_ir.padding_payload_len() & 0xff);
+    }
+    builder.OverwriteLength(*this, num_padding_fields + data_ir.data_len() +
+                                       data_ir.padding_payload_len());
+  } else {
+    builder.BeginNewFrame(*this, DATA, flags, data_ir.stream_id(),
+                          num_padding_fields + data_ir.data_len() +
+                              data_ir.padding_payload_len());
+    if (data_ir.padded()) {
+      builder.WriteUInt8(data_ir.padding_payload_len() & 0xff);
+    }
   }
-  builder.OverwriteLength(*this, num_padding_fields + data_ir.data_len() +
-                                     data_ir.padding_payload_len());
   DCHECK_EQ(frame_size, builder.length());
   return builder.take();
 }
@@ -1993,7 +2001,29 @@ SpdySerializedFrame SpdyFramer::SerializeHeaders(const SpdyHeadersIR& headers) {
   }
 
   SpdyFrameBuilder builder(size);
-  builder.BeginNewFrame(*this, HEADERS, flags, headers.stream_id());
+
+  if (!skip_rewritelength_) {
+    builder.BeginNewFrame(*this, HEADERS, flags, headers.stream_id());
+  } else {
+    // Compute frame length field.
+    size_t length_field = 0;
+    if (headers.padded()) {
+      length_field += 1;  // Padding length field.
+    }
+    if (headers.has_priority()) {
+      length_field += 4;  // Dependency field.
+      length_field += 1;  // Weight field.
+    }
+    length_field += headers.padding_payload_len();
+    length_field += hpack_encoding.size();
+    // If the HEADERS frame with payload would exceed the max frame size, then
+    // WritePayloadWithContinuation() will serialize CONTINUATION frames as
+    // necessary.
+    length_field =
+        std::min(length_field, kMaxControlFrameSize - GetFrameHeaderSize());
+    builder.BeginNewFrame(*this, HEADERS, flags, headers.stream_id(),
+                          length_field);
+  }
   DCHECK_EQ(GetHeadersMinimumSize(), builder.length());
 
   int padding_payload_len = 0;
@@ -2066,10 +2096,13 @@ SpdySerializedFrame SpdyFramer::SerializePushPromise(
   }
 
   SpdyFrameBuilder builder(size);
-  builder.BeginNewFrame(*this,
-                        PUSH_PROMISE,
-                        flags,
-                        push_promise.stream_id());
+  if (!skip_rewritelength_) {
+    builder.BeginNewFrame(*this, PUSH_PROMISE, flags, push_promise.stream_id());
+  } else {
+    size_t length = std::min(size, kMaxControlFrameSize) - GetFrameHeaderSize();
+    builder.BeginNewFrame(*this, PUSH_PROMISE, flags, push_promise.stream_id(),
+                          length);
+  }
   int padding_payload_len = 0;
   if (push_promise.padded()) {
     builder.WriteUInt8(push_promise.padding_payload_len());
@@ -2399,7 +2432,7 @@ void SpdyFramer::WritePayloadWithContinuation(SpdyFrameBuilder* builder,
     string padding = string(padding_payload_len, 0);
     builder->WriteBytes(padding.data(), padding.length());
   }
-  if (bytes_remaining > 0) {
+  if (bytes_remaining > 0 && !skip_rewritelength_) {
     builder->OverwriteLength(*this,
                              kMaxControlFrameSize - GetFrameHeaderSize());
   }
@@ -2412,7 +2445,12 @@ void SpdyFramer::WritePayloadWithContinuation(SpdyFrameBuilder* builder,
     if (bytes_remaining == bytes_to_write) {
       flags |= end_flag;
     }
-    builder->BeginNewFrame(*this, CONTINUATION, flags, stream_id);
+    if (!skip_rewritelength_) {
+      builder->BeginNewFrame(*this, CONTINUATION, flags, stream_id);
+    } else {
+      builder->BeginNewFrame(*this, CONTINUATION, flags, stream_id,
+                             bytes_to_write);
+    }
     // Write payload fragment.
     builder->WriteBytes(
         &hpack_encoding[hpack_encoding.size() - bytes_remaining],

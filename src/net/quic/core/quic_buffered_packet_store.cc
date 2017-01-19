@@ -5,8 +5,8 @@
 #include "net/quic/core/quic_buffered_packet_store.h"
 
 #include "base/stl_util.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 
 using base::ContainsKey;
 

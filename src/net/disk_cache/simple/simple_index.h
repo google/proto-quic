@@ -155,6 +155,12 @@ class NET_EXPORT_PRIVATE SimpleIndex
   // index has been initialized.
   uint64_t GetCacheSize() const;
 
+  // Returns the size of the cache entries accessed between |initial_time| and
+  // |end_time| in bytes. Can only be called after the index has been
+  // initialized.
+  uint64_t GetCacheSizeBetween(const base::Time initial_time,
+                               const base::Time end_time) const;
+
   // Returns whether the index has been initialized yet.
   bool initialized() const { return initialized_; }
 

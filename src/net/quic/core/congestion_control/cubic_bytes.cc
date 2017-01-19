@@ -8,9 +8,9 @@
 #include <cmath>
 #include <cstdint>
 
-#include "base/logging.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -156,7 +156,7 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
 
   if (!epoch_.IsInitialized()) {
     // First ACK after a loss event.
-    DVLOG(1) << "Start of epoch";
+    QUIC_DVLOG(1) << "Start of epoch";
     epoch_ = current_time;             // Start of epoch.
     acked_bytes_count_ = acked_bytes;  // Reset count.
     // Reset estimated_tcp_congestion_window_ to be in sync with cubic.
@@ -228,7 +228,8 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
     target_congestion_window = estimated_tcp_congestion_window_;
   }
 
-  DVLOG(1) << "Final target congestion_window: " << target_congestion_window;
+  QUIC_DVLOG(1) << "Final target congestion_window: "
+                << target_congestion_window;
   return target_congestion_window;
 }
 

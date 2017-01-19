@@ -6,7 +6,6 @@
 
 #include <cmath>
 
-#include "base/logging.h"
 #include "base/test/mock_log.h"
 #include "net/quic/test_tools/rtt_stats_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -154,7 +153,9 @@ TEST_F(RttStatsTest, UpdateRttWithBadSendDeltas) {
   for (QuicTime::Delta bad_send_delta : bad_send_deltas) {
     SCOPED_TRACE(Message() << "bad_send_delta = "
                            << bad_send_delta.ToMicroseconds());
+#ifndef NDEBUG
     EXPECT_CALL(log, Log(LOG_WARNING, _, _, _, HasSubstr("Ignoring")));
+#endif
     rtt_stats_.UpdateRtt(bad_send_delta, QuicTime::Delta::Zero(),
                          QuicTime::Zero());
     EXPECT_EQ(initial_rtt, rtt_stats_.min_rtt());

@@ -13,39 +13,37 @@
 // caller can use to cancel the fetch, or wait for it to complete
 // (blocking).
 //
+// The CertNetFetcherImpl is shared between a network thread and a
+// caller thread that waits for fetches to happen on the network thread.
+//
 // The classes are mainly organized based on their thread affinity:
-//
-// ---------------
-// Lives on caller thread
-// ---------------
-//
-// CertNetFetcherImpl (implements CertNetFetcher)
-//   * Main entry point
-//   * Provides a service to start/cancel/wait for URL fetches
-//   * Returns callers a CertNetFetcher::Request as a handle
-//   * Requests can run in parallel, however will block the current thread when
-//     reading results.
-//   * Posts tasks to network thread to coordinate actual work
-//
-// CertNetFetcherRequestImpl (implements CertNetFetcher::Request)
-//   * Wrapper for cancelling events, or waiting for a request to complete
-//   * Waits on a WaitableEvent to complete requests.
 //
 // ---------------
 // Straddles caller thread and network thread
 // ---------------
 //
-// CertNetFetcherCore
-//   * Reference-counted bridge between CertNetFetcherImpl and the dependencies
-//     on network thread.
-//   * Small wrapper to holds the state that is conceptually owned by
-//     CertNetFetcherImpl, but belongs on the network thread.
+// CertNetFetcherImpl (implements CertNetFetcher)
+//   * Main entry point. Must be created and shutdown from the network thread.
+//   * Provides a service to start/cancel/wait for URL fetches, to be
+//     used on the caller thread.
+//   * Returns callers a CertNetFetcher::Request as a handle
+//   * Requests can run in parallel, however will block the current thread when
+//     reading results.
+//   * Posts tasks to network thread to coordinate actual work
 //
 // RequestCore
 //   * Reference-counted bridge between CertNetFetcherRequestImpl and the
 //     dependencies on the network thread
 //   * Holds the result of the request, a WaitableEvent for signaling
 //     completion, and pointers for canceling work on network thread.
+//
+// ---------------
+// Lives on caller thread
+// ---------------
+//
+// CertNetFetcherRequestImpl (implements CertNetFetcher::Request)
+//   * Wrapper for cancelling events, or waiting for a request to complete
+//   * Waits on a WaitableEvent to complete requests.
 //
 // ---------------
 // Lives on network thread
@@ -69,12 +67,12 @@
 #include "base/memory/ptr_util.h"
 #include "base/numerics/safe_math.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/timer/timer.h"
 #include "net/base/load_flags.h"
 #include "net/cert/cert_net_fetcher.h"
 #include "net/url_request/redirect_info.h"
 #include "net/url_request/url_request_context.h"
-#include "net/url_request/url_request_context_getter.h"
 
 // TODO(eroman): Add support for POST parameters.
 // TODO(eroman): Add controls for bypassing the cache.
@@ -121,21 +119,22 @@ using JobSet = std::map<Job*, std::unique_ptr<Job>, JobComparator>;
 class AsyncCertNetFetcherImpl {
  public:
   // Initializes AsyncCertNetFetcherImpl using the specified URLRequestContext
-  // for issuing requests. |context| must remain valid for the entire
-  // lifetime of the AsyncCertNetFetcherImpl.
+  // for issuing requests. |context| must remain valid until Shutdown() is
+  // called or the AsyncCertNetFetcherImpl is destroyed.
   explicit AsyncCertNetFetcherImpl(URLRequestContext* context);
 
-  // Deletion implicitly cancels any outstanding requests.
+  // The AsyncCertNetFetcherImpl is expected to be kept alive until all
+  // requests have completed or Shutdown() is called.
   ~AsyncCertNetFetcherImpl();
 
   // Starts an asynchronous request to fetch the given URL. On completion
-  // |callback| will be invoked.
-  //
-  // Completion of the request will never occur synchronously. In other words it
-  // is guaranteed that |callback| will only be invoked once the Fetch*() method
-  // has returned.
+  // request->OnJobCompleted() will be invoked.
   void Fetch(std::unique_ptr<RequestParams> request_params,
-             RequestCore* request);
+             scoped_refptr<RequestCore> request);
+
+  // Cancels outstanding jobs, which stops network requests and signals the
+  // corresponding RequestCores that the requests have completed.
+  void Shutdown();
 
  private:
   friend class Job;
@@ -206,6 +205,10 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
   void AttachedToJob(Job* job) {
     DCHECK(task_runner_->RunsTasksOnCurrentThread());
     DCHECK(!job_);
+    // Requests should not be attached to jobs after they have been signalled
+    // with a cancellation error (which happens via either Cancel() or
+    // SignalImmediateError()).
+    DCHECK_NE(error_, ERR_ABORTED);
     job_ = job;
   }
 
@@ -222,8 +225,13 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
     completion_event_.Signal();
   }
 
-  // Can be called from any thread.
-  void Cancel();
+  // Detaches this request from its job (if it is attached to any) and
+  // signals completion with ERR_ABORTED. Can be called from any thread.
+  void CancelJob();
+
+  // Can be used to signal that an error was encountered before the request was
+  // attached to a job. Can be called from any thread.
+  void SignalImmediateError();
 
   // Should only be called once.
   void WaitForResult(Error* error, std::vector<uint8_t>* bytes) {
@@ -247,7 +255,10 @@ class RequestCore : public base::RefCountedThreadSafe<RequestCore> {
   // A non-owned pointer to the job that is executing the request.
   Job* job_ = nullptr;
 
-  // May be written to from network thread.
+  // May be written to from network thread, or from the caller thread only when
+  // there is no work that will be done on the network thread (e.g. when the
+  // network thread has been shutdown before the request begins). See comment in
+  // SignalImmediateError.
   Error error_;
   std::vector<uint8_t> bytes_;
 
@@ -296,10 +307,9 @@ class Job : public URLRequest::Delegate {
 
   const RequestParams& request_params() const { return *request_params_; }
 
-  // Create a request and attaches it to the job. When the job completes it will
-  // notify the request of completion through OnJobCompleted. Note that the Job
-  // does NOT own the request.
-  void AttachRequest(RequestCore* request);
+  // Creates a request and attaches it to the job. When the job completes it
+  // will notify the request of completion through OnJobCompleted.
+  void AttachRequest(scoped_refptr<RequestCore> request);
 
   // Removes |request| from the job.
   void DetachRequest(RequestCore* request);
@@ -308,6 +318,11 @@ class Job : public URLRequest::Delegate {
   // completed, OnJobCompleted() will be invoked and all the registered requests
   // notified of completion.
   void StartURLRequest(URLRequestContext* context);
+
+  // Cancels the request with an ERR_ABORTED error and invokes
+  // RequestCore::OnJobCompleted() to notify the registered requests of the
+  // cancellation. The job is *not* removed from the AsyncCertNetFetcherImpl.
+  void Cancel();
 
  private:
   // Implementation of URLRequest::Delegate
@@ -336,12 +351,16 @@ class Job : public URLRequest::Delegate {
   // method is called, the |response_body_| variable have been assigned.
   void OnJobCompleted(Error error);
 
+  // Calls r->OnJobCompleted() for each RequestCore |r| currently attached
+  // to this job, and then clears |requests_|.
+  void CompleteAndClearRequests(Error error);
+
   // Cancels a request with a specified error code and calls
   // OnUrlRequestCompleted().
   void FailRequest(Error error);
 
-  // The requests attached to this job (non-owned).
-  std::vector<RequestCore*> requests_;
+  // The requests attached to this job.
+  std::vector<scoped_refptr<RequestCore>> requests_;
 
   // The input parameters for starting a URLRequest.
   std::unique_ptr<RequestParams> request_params_;
@@ -362,9 +381,10 @@ class Job : public URLRequest::Delegate {
   DISALLOW_COPY_AND_ASSIGN(Job);
 };
 
-void RequestCore::Cancel() {
+void RequestCore::CancelJob() {
   if (!task_runner_->RunsTasksOnCurrentThread()) {
-    task_runner_->PostTask(FROM_HERE, base::Bind(&RequestCore::Cancel, this));
+    task_runner_->PostTask(FROM_HERE,
+                           base::Bind(&RequestCore::CancelJob, this));
     return;
   }
 
@@ -374,8 +394,23 @@ void RequestCore::Cancel() {
     job->DetachRequest(this);
   }
 
+  SignalImmediateError();
+}
+
+void RequestCore::SignalImmediateError() {
+  // These data members are normally only written on the network thread, but it
+  // is safe to write here from either thread. This is because
+  // SignalImmediateError is only to be called before this request is attached
+  // to a job. In particular, if called from the caller thread, no work will be
+  // done on the network thread for this request, so these variables will only
+  // be written and read on the caller thread. If called from the network
+  // thread, they will only be written to on the network thread and will not be
+  // read on the caller thread until |completion_event_| is signalled (after
+  // which it will be not be written on the network thread again).
+  DCHECK(!job_);
+  error_ = ERR_ABORTED;
   bytes_.clear();
-  error_ = ERR_UNEXPECTED;
+  completion_event_.Signal();
 }
 
 Job::Job(std::unique_ptr<RequestParams> request_params,
@@ -387,9 +422,9 @@ Job::~Job() {
   Stop();
 }
 
-void Job::AttachRequest(RequestCore* request) {
-  requests_.push_back(request);
+void Job::AttachRequest(scoped_refptr<RequestCore> request) {
   request->AttachedToJob(this);
+  requests_.push_back(std::move(request));
 }
 
 void Job::DetachRequest(RequestCore* request) {
@@ -408,10 +443,7 @@ void Job::DetachRequest(RequestCore* request) {
 void Job::StartURLRequest(URLRequestContext* context) {
   Error error = CanFetchUrl(request_params_->url);
   if (error != OK) {
-    // TODO(eroman): Don't post a task for this case.
-    timer_.Start(
-        FROM_HERE, base::TimeDelta(),
-        base::Bind(&Job::OnJobCompleted, base::Unretained(this), error));
+    OnJobCompleted(error);
     return;
   }
 
@@ -430,6 +462,13 @@ void Job::StartURLRequest(URLRequestContext* context) {
     timer_.Start(
         FROM_HERE, request_params_->timeout,
         base::Bind(&Job::FailRequest, base::Unretained(this), ERR_TIMED_OUT));
+}
+
+void Job::Cancel() {
+  // Stop the timer and clear the URLRequest.
+  Stop();
+  // Signal attached requests that they've been completed.
+  CompleteAndClearRequests(static_cast<Error>(ERR_ABORTED));
 }
 
 void Job::OnReceivedRedirect(URLRequest* request,
@@ -524,8 +563,11 @@ void Job::OnJobCompleted(Error error) {
   Stop();
 
   std::unique_ptr<Job> delete_this = parent_->RemoveJob(this);
+  CompleteAndClearRequests(error);
+}
 
-  for (auto* request : requests_) {
+void Job::CompleteAndClearRequests(Error error) {
+  for (const auto& request : requests_) {
     request->OnJobCompleted(this, error, response_body_);
   }
 
@@ -555,20 +597,32 @@ bool JobComparator::operator()(const Job* job1, const Job* job2) const {
 
 void AsyncCertNetFetcherImpl::Fetch(
     std::unique_ptr<RequestParams> request_params,
-    RequestCore* request) {
+    scoped_refptr<RequestCore> request) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
   // If there is an in-progress job that matches the request parameters use it.
   // Otherwise start a new job.
   Job* job = FindJob(*request_params);
-
-  if (!job) {
-    job = new Job(std::move(request_params), this);
-    jobs_[job] = base::WrapUnique(job);
-    job->StartURLRequest(context_);
+  if (job) {
+    job->AttachRequest(std::move(request));
+    return;
   }
 
-  return job->AttachRequest(request);
+  job = new Job(std::move(request_params), this);
+  jobs_[job] = base::WrapUnique(job);
+  // Attach the request before calling StartURLRequest; this ensures that the
+  // request will get signalled if StartURLRequest completes the job
+  // synchronously.
+  job->AttachRequest(std::move(request));
+  job->StartURLRequest(context_);
+}
+
+void AsyncCertNetFetcherImpl::Shutdown() {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  for (const auto& job : jobs_) {
+    job.first->Cancel();
+  }
+  jobs_.clear();
 }
 
 struct JobToRequestParamsComparator {
@@ -615,66 +669,26 @@ class CertNetFetcherRequestImpl : public CertNetFetcher::Request {
 
   ~CertNetFetcherRequestImpl() override {
     if (core_)
-      core_->Cancel();
+      core_->CancelJob();
   }
 
  private:
   scoped_refptr<RequestCore> core_;
 };
 
-class CertNetFetcherCore
-    : public base::RefCountedThreadSafe<CertNetFetcherCore> {
- public:
-  explicit CertNetFetcherCore(URLRequestContextGetter* context_getter)
-      : context_getter_(context_getter) {}
-
-  void Abandon() {
-    GetNetworkTaskRunner()->PostTask(
-        FROM_HERE,
-        base::Bind(&CertNetFetcherCore::DoAbandonOnNetworkThread, this));
-  }
-
-  scoped_refptr<base::SingleThreadTaskRunner> GetNetworkTaskRunner() {
-    return context_getter_->GetNetworkTaskRunner();
-  }
-
-  void DoFetchOnNetworkThread(std::unique_ptr<RequestParams> request_params,
-                              scoped_refptr<RequestCore> request) {
-    DCHECK(GetNetworkTaskRunner()->RunsTasksOnCurrentThread());
-
-    if (!impl_) {
-      impl_.reset(
-          new AsyncCertNetFetcherImpl(context_getter_->GetURLRequestContext()));
-    }
-
-    // Don't need to retain a reference to |request| because consume is
-    // expected to keep it alive.
-    impl_->Fetch(std::move(request_params), request.get());
-  }
-
- private:
-  friend class base::RefCountedThreadSafe<CertNetFetcherCore>;
-
-  void DoAbandonOnNetworkThread() {
-    DCHECK(GetNetworkTaskRunner()->RunsTasksOnCurrentThread());
-    impl_.reset();
-  }
-
-  ~CertNetFetcherCore() { DCHECK(!impl_); }
-
-  scoped_refptr<URLRequestContextGetter> context_getter_;
-
-  std::unique_ptr<AsyncCertNetFetcherImpl> impl_;
-
-  DISALLOW_COPY_AND_ASSIGN(CertNetFetcherCore);
-};
-
 class CertNetFetcherImpl : public CertNetFetcher {
  public:
-  explicit CertNetFetcherImpl(URLRequestContextGetter* context_getter)
-      : core_(new CertNetFetcherCore(context_getter)) {}
+  explicit CertNetFetcherImpl(URLRequestContext* context)
+      : task_runner_(base::ThreadTaskRunnerHandle::Get()), context_(context) {}
 
-  ~CertNetFetcherImpl() override { core_->Abandon(); }
+  void Shutdown() override {
+    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+    if (impl_) {
+      impl_->Shutdown();
+      impl_.reset();
+    }
+    context_ = nullptr;
+  }
 
   std::unique_ptr<Request> FetchCaIssuers(const GURL& url,
                                           int timeout_milliseconds,
@@ -720,28 +734,60 @@ class CertNetFetcherImpl : public CertNetFetcher {
   }
 
  private:
+  ~CertNetFetcherImpl() override {
+    // The fetcher must be shutdown (at which point |context_| will be set to
+    // null) before destruction.
+    DCHECK(!context_);
+  }
+
+  void DoFetchOnNetworkThread(std::unique_ptr<RequestParams> request_params,
+                              scoped_refptr<RequestCore> request) {
+    DCHECK(task_runner_->RunsTasksOnCurrentThread());
+
+    if (!context_) {
+      // The fetcher might have been shutdown between when this task was posted
+      // and when it is running. In this case, signal the request and do not
+      // start a network request.
+      request->SignalImmediateError();
+      return;
+    }
+
+    if (!impl_) {
+      impl_.reset(new AsyncCertNetFetcherImpl(context_));
+    }
+
+    impl_->Fetch(std::move(request_params), request);
+  }
+
   std::unique_ptr<Request> DoFetch(
       std::unique_ptr<RequestParams> request_params) {
-    auto task_runner = core_->GetNetworkTaskRunner();
-    scoped_refptr<RequestCore> request_core = new RequestCore(task_runner);
+    scoped_refptr<RequestCore> request_core = new RequestCore(task_runner_);
 
-    task_runner->PostTask(
-        FROM_HERE,
-        base::Bind(&CertNetFetcherCore::DoFetchOnNetworkThread, core_,
-                   base::Passed(&request_params), request_core));
+    // If the fetcher has already been shutdown, DoFetchOnNetworkThread will
+    // signal the request with an error. However, if the fetcher shuts down
+    // before DoFetchOnNetworkThread runs and PostTask still returns true, then
+    // the request will hang (that is, WaitForResult will not return).
+    if (!task_runner_->PostTask(
+            FROM_HERE,
+            base::Bind(&CertNetFetcherImpl::DoFetchOnNetworkThread, this,
+                       base::Passed(&request_params), request_core))) {
+      request_core->SignalImmediateError();
+    }
 
     return base::MakeUnique<CertNetFetcherRequestImpl>(std::move(request_core));
   }
 
  private:
-  scoped_refptr<CertNetFetcherCore> core_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  // Not owned. |context_| must stay valid until Shutdown() is called.
+  URLRequestContext* context_ = nullptr;
+  std::unique_ptr<AsyncCertNetFetcherImpl> impl_;
 };
 
 }  // namespace
 
-std::unique_ptr<CertNetFetcher> CreateCertNetFetcher(
-    URLRequestContextGetter* context_getter) {
-  return base::MakeUnique<CertNetFetcherImpl>(context_getter);
+scoped_refptr<CertNetFetcher> CreateCertNetFetcher(URLRequestContext* context) {
+  return make_scoped_refptr(new CertNetFetcherImpl(context));
 }
 
 }  // namespace net

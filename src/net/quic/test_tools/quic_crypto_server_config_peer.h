@@ -13,8 +13,7 @@ namespace test {
 // Peer for accessing otherwise private members of a QuicCryptoServerConfig.
 class QuicCryptoServerConfigPeer {
  public:
-  explicit QuicCryptoServerConfigPeer(
-      const QuicCryptoServerConfig* server_config)
+  explicit QuicCryptoServerConfigPeer(QuicCryptoServerConfig* server_config)
       : server_config_(server_config) {}
 
   // Returns the proof source.
@@ -30,6 +29,9 @@ class QuicCryptoServerConfigPeer {
 
   // Returns a pointer to the ProofSource object.
   ProofSource* GetProofSource() const;
+
+  // Reset the proof_source_ member.
+  void ResetProofSource(std::unique_ptr<ProofSource> proof_source);
 
   // Generates a new valid source address token.
   std::string NewSourceAddressToken(
@@ -91,7 +93,7 @@ class QuicCryptoServerConfigPeer {
   uint32_t source_address_token_lifetime_secs();
 
  private:
-  const QuicCryptoServerConfig* server_config_;
+  QuicCryptoServerConfig* server_config_;
 };
 
 }  // namespace test

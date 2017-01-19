@@ -13,6 +13,7 @@
 #include "base/callback.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/memory/ref_counted.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
@@ -556,6 +557,50 @@ TEST(TimerTest, MessageLoopShutdown) {
   EXPECT_FALSE(did_run.IsSignaled());
 }
 
+// Ref counted class which owns a Timer. The class passes a reference to itself
+// via the |user_task| parameter in Timer::Start(). |Timer::user_task_| might
+// end up holding the last reference to the class.
+class OneShotSelfOwningTimerTester
+    : public RefCounted<OneShotSelfOwningTimerTester> {
+ public:
+  OneShotSelfOwningTimerTester() = default;
+
+  void StartTimer() {
+    // Start timer with long delay in order to test the timer getting destroyed
+    // while a timer task is still pending.
+    timer_.Start(FROM_HERE, TimeDelta::FromDays(1),
+                 base::Bind(&OneShotSelfOwningTimerTester::Run, this));
+  }
+
+ private:
+  friend class RefCounted<OneShotSelfOwningTimerTester>;
+  ~OneShotSelfOwningTimerTester() = default;
+
+  void Run() {
+    ADD_FAILURE() << "Timer unexpectedly fired.";
+  }
+
+  OneShotTimer timer_;
+
+  DISALLOW_COPY_AND_ASSIGN(OneShotSelfOwningTimerTester);
+};
+
+TEST(TimerTest, MessageLoopShutdownSelfOwningTimer) {
+  // This test verifies that shutdown of the message loop does not cause crashes
+  // if there is a pending timer not yet fired and |Timer::user_task_| owns the
+  // timer. The test may only trigger exceptions if debug heap checking is
+  // enabled.
+
+  MessageLoop loop;
+  scoped_refptr<OneShotSelfOwningTimerTester> tester =
+      new OneShotSelfOwningTimerTester();
+
+  std::move(tester)->StartTimer();
+  // |Timer::user_task_| owns sole reference to |tester|.
+
+  // MessageLoop destructs by falling out of scope. SHOULD NOT CRASH.
+}
+
 void TimerTestCallback() {
 }
 
@@ -621,75 +666,6 @@ TEST(TimerTest, RetainNonRepeatIsRunning) {
   EXPECT_FALSE(timer.IsRunning());
   timer.Reset();
   EXPECT_TRUE(timer.IsRunning());
-}
-
-//-----------------------------------------------------------------------------
-
-TEST(TimerTest, RetainRepeatGetTimeToCallback) {
-  scoped_refptr<TestMockTimeTaskRunner> task_runner(
-      new TestMockTimeTaskRunner(Time::Now(), TimeTicks::Now()));
-  std::unique_ptr<TickClock> tick_clock(task_runner->GetMockTickClock());
-  MessageLoop message_loop;
-  message_loop.SetTaskRunner(task_runner);
-  Timer timer(true, true, tick_clock.get());
-  timer.Start(FROM_HERE, TimeDelta::FromSeconds(2), Bind(&TimerTestCallback));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(2));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
-  timer.Stop();
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(2));
-  EXPECT_EQ(TimeDelta::FromSeconds(0), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(2));
-  EXPECT_EQ(TimeDelta::FromSeconds(-2), timer.GetTimeToCallback());
-}
-
-TEST(TimerTest, RetainNonRepeatGetTimeToCallback) {
-  scoped_refptr<TestMockTimeTaskRunner> task_runner(
-      new TestMockTimeTaskRunner(Time::Now(), TimeTicks::Now()));
-  std::unique_ptr<TickClock> tick_clock(task_runner->GetMockTickClock());
-  MessageLoop message_loop;
-  message_loop.SetTaskRunner(task_runner);
-  Timer timer(true, false, tick_clock.get());
-  timer.Start(FROM_HERE, TimeDelta::FromSeconds(2), Bind(&TimerTestCallback));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(3));
-  EXPECT_EQ(TimeDelta::FromSeconds(-1), timer.GetTimeToCallback());
-}
-
-TEST(TimerTest, OneShotTimerWithTickClockGetTimeToCallback) {
-  scoped_refptr<TestMockTimeTaskRunner> task_runner(
-      new TestMockTimeTaskRunner(Time::Now(), TimeTicks::Now()));
-  std::unique_ptr<TickClock> tick_clock(task_runner->GetMockTickClock());
-  MessageLoop message_loop;
-  message_loop.SetTaskRunner(task_runner);
-  Receiver receiver;
-  OneShotTimer timer(tick_clock.get());
-  EXPECT_EQ(TimeDelta::Max(), timer.GetTimeToCallback());
-  timer.Start(FROM_HERE, TimeDelta::FromSeconds(2),
-              Bind(&Receiver::OnCalled, Unretained(&receiver)));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(1));
-  EXPECT_EQ(TimeDelta::FromSeconds(1), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(1));
-  EXPECT_TRUE(receiver.WasCalled());
-  EXPECT_EQ(TimeDelta::Max(), timer.GetTimeToCallback());
-}
-
-TEST(TimerTest, RepeatingTimerWithTickClockTimeToCallback) {
-  scoped_refptr<TestMockTimeTaskRunner> task_runner(
-      new TestMockTimeTaskRunner(Time::Now(), TimeTicks::Now()));
-  std::unique_ptr<TickClock> tick_clock(task_runner->GetMockTickClock());
-  MessageLoop message_loop;
-  message_loop.SetTaskRunner(task_runner);
-  Receiver receiver;
-  RepeatingTimer timer(tick_clock.get());
-  timer.Start(FROM_HERE, TimeDelta::FromSeconds(2),
-              Bind(&Receiver::OnCalled, Unretained(&receiver)));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(1));
-  EXPECT_EQ(TimeDelta::FromSeconds(1), timer.GetTimeToCallback());
-  task_runner->FastForwardBy(TimeDelta::FromSeconds(1));
-  EXPECT_EQ(TimeDelta::FromSeconds(2), timer.GetTimeToCallback());
 }
 
 namespace {

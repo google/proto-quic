@@ -418,9 +418,9 @@ class GwsExpansionPage(KeySilkCasesPage):
 
   def ScrollKnowledgeCardToTop(self, action_runner, card_id):
     # scroll until the knowledge card is at the top
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     action_runner.ExecuteJavaScript(
-        "document.getElementById('%s').scrollIntoView()" % card_id)
+        "document.getElementById({{ card_id }}).scrollIntoView()",
+        card_id=card_id)
 
   def PerformPageInteractions(self, action_runner):
     self.ExpandKnowledgeCard(action_runner)
@@ -648,20 +648,19 @@ class PolymerTopeka(KeySilkCasesPage):
     first_name = profile + 'paper-input#first /deep/ input'
     action_runner.WaitForElement(selector=first_name)
     # Input First Name:
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     action_runner.ExecuteJavaScript('''
-        var fn = document.querySelector('%s');
+        var fn = document.querySelector({{ first_name }});
         fn.value = 'Chrome';
-        fn.fire('input');''' % first_name)
+        fn.fire('input');''',
+        first_name=first_name)
     # Input Last Initial:
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     action_runner.ExecuteJavaScript('''
-        var li = document.querySelector('%s paper-input#last /deep/ input');
+        var li = document.querySelector({{ selector }});
         li.value = 'E';
-        li.fire('input');''' % profile)
+        li.fire('input');''',
+        selector='%s paper-input#last /deep/ input' % profile)
     with action_runner.CreateInteraction('animation_interaction'):
       # Click the check-mark to login:
-      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       action_runner.ExecuteJavaScript('''
           window.topeka_page_transitions = 0;
           [].forEach.call(document.querySelectorAll(
@@ -671,7 +670,8 @@ class PolymerTopeka(KeySilkCasesPage):
                           window.topeka_page_transitions++;
                       });
               });
-          document.querySelector('%s paper-fab').fire('tap')''' % profile)
+          document.querySelector({{ selector }}).fire('tap')''',
+          selector='%s paper-fab' % profile)
       # Wait for category list to animate in:
       action_runner.WaitForJavaScriptCondition('''
           window.topeka_page_transitions === 1''')

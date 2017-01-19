@@ -119,12 +119,16 @@ def main(argv):
   include_paths = []
   include_paths.append(
       os.path.realpath(os.path.join(tools_clang_directory, '../..')))
-  # Many gtest headers expect to have testing/gtest/include in the include
-  # search path.
+  # Many gtest and gmock headers expect to have testing/gtest/include and/or
+  # testing/gmock/include in the include search path.
   include_paths.append(
       os.path.realpath(os.path.join(tools_clang_directory,
                                     '../..',
                                     'testing/gtest/include')))
+  include_paths.append(
+      os.path.realpath(os.path.join(tools_clang_directory,
+                                    '../..',
+                                    'testing/gmock/include')))
 
   if len(actual_files) == 0:
     print 'Tool "%s" does not have compatible test files.' % tool_to_test

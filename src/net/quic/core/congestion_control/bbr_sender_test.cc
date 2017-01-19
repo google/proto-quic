@@ -8,10 +8,10 @@
 #include <map>
 #include <memory>
 
-#include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -95,7 +95,7 @@ class BbrSenderTest : public ::testing::Test {
 
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
     random_.set_seed(seed);
-    VLOG(1) << "BbrSenderTest simulator set up.  Seed: " << seed;
+    QUIC_LOG(INFO) << "BbrSenderTest simulator set up.  Seed: " << seed;
   }
 
   simulator::Simulator simulator_;
@@ -146,7 +146,7 @@ class BbrSenderTest : public ::testing::Test {
     EXPECT_TRUE(simulator_result)
         << "Simple transfer failed.  Bytes remaining: "
         << bbr_sender_.bytes_to_transfer();
-    VLOG(1) << "Simple transfer state: " << sender_->ExportDebugState();
+    QUIC_LOG(INFO) << "Simple transfer state: " << sender_->ExportDebugState();
   }
 
   // Drive the simulator by sending enough data to enter PROBE_BW.

@@ -22,6 +22,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
@@ -3462,7 +3463,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterReceiveNotSendWhenUnacked) {
                                            ConnectionCloseSource::FROM_SELF));
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(AnyNumber());
   for (int i = 0; i < 100 && connection_.connected(); ++i) {
-    VLOG(1) << "sending data packet";
+    QUIC_LOG(INFO) << "sending data packet";
     connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 0, !kFin,
                                          nullptr);
     connection_.GetTimeoutAlarm()->Fire();

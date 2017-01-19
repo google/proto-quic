@@ -30,7 +30,7 @@ TEST(LeakTrackerTest, NotEnabled) {
   EXPECT_EQ(-1, LeakTracker<ClassA>::NumLiveInstances());
   EXPECT_EQ(-1, LeakTracker<ClassB>::NumLiveInstances());
 
-  // Use scoped_ptr so compiler doesn't complain about unused variables.
+  // Use unique_ptr so compiler doesn't complain about unused variables.
   std::unique_ptr<ClassA> a1(new ClassA);
   std::unique_ptr<ClassB> b1(new ClassB);
   std::unique_ptr<ClassB> b2(new ClassB);

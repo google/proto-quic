@@ -70,6 +70,8 @@ def print_landmines():
     print 'Clobber to get rid of evil libsqlite3.dylib (crbug.com/526208)'
   if platform() == 'mac':
     print 'Clobber to remove libsystem.dylib. See crbug.com/620075'
+  if platform() == 'mac':
+    print 'Clobber to get past mojo gen build error (crbug.com/679607)'
 
 
 def main():

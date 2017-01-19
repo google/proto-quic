@@ -294,6 +294,10 @@ TEST_F(SpdyStreamTest, PushedStream) {
       spdy_util_.ConstructSpdyPush(nullptr, 0, 2, 1, kPushUrl));
   AddRead(push);
 
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  AddWrite(priority);
+
   AddReadPause();
 
   base::StringPiece pushed_msg("foo");
@@ -340,9 +344,9 @@ TEST_F(SpdyStreamTest, PushedStream) {
   data.RunUntilPaused();
 
   base::WeakPtr<SpdyStream> push_stream;
-  EXPECT_THAT(
-      session->GetPushStream(GURL(kPushUrl), &push_stream, NetLogWithSource()),
-      IsOk());
+  EXPECT_THAT(session->GetPushStream(GURL(kPushUrl), IDLE, &push_stream,
+                                     NetLogWithSource()),
+              IsOk());
   ASSERT_TRUE(push_stream);
   EXPECT_EQ(kPushUrl, push_stream->GetUrlFromHeaders().spec());
 
@@ -613,6 +617,10 @@ TEST_F(SpdyStreamTest, UpperCaseHeadersOnPush) {
       kExtraHeaders, arraysize(kExtraHeaders) / 2, 2, 1, kPushUrl));
   AddRead(push);
 
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  AddWrite(priority);
+
   SpdySerializedFrame rst(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_PROTOCOL_ERROR));
   AddWrite(rst);
@@ -649,9 +657,9 @@ TEST_F(SpdyStreamTest, UpperCaseHeadersOnPush) {
   data.RunUntilPaused();
 
   base::WeakPtr<SpdyStream> push_stream;
-  EXPECT_THAT(
-      session->GetPushStream(GURL(kPushUrl), &push_stream, NetLogWithSource()),
-      IsOk());
+  EXPECT_THAT(session->GetPushStream(GURL(kPushUrl), IDLE, &push_stream,
+                                     NetLogWithSource()),
+              IsOk());
   EXPECT_FALSE(push_stream);
 
   data.Resume();
@@ -727,6 +735,10 @@ TEST_F(SpdyStreamTest, HeadersMustHaveStatusOnPushedStream) {
   SpdySerializedFrame push_promise(spdy_util_.ConstructInitialSpdyPushFrame(
       spdy_util_.ConstructGetHeaderBlock(kPushUrl), 2, 1));
   AddRead(push_promise);
+
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  AddWrite(priority);
 
   // Response headers without ":status" header field: protocol error.
   SpdyHeaderBlock header_block_without_status;
@@ -839,6 +851,10 @@ TEST_F(SpdyStreamTest, HeadersMustPreceedDataOnPushedStream) {
   SpdySerializedFrame push_promise(spdy_util_.ConstructInitialSpdyPushFrame(
       spdy_util_.ConstructGetHeaderBlock(kPushUrl), 2, 1));
   AddRead(push_promise);
+
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  AddWrite(priority);
 
   SpdySerializedFrame pushed_body(
       spdy_util_.ConstructSpdyDataFrame(2, kPostBody, kPostBodyLength, true));

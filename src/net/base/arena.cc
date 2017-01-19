@@ -68,6 +68,7 @@ void UnsafeArena::Free(char* data, size_t size) {
 
 void UnsafeArena::Reset() {
   blocks_.clear();
+  status_.bytes_allocated_ = 0;
 }
 
 void UnsafeArena::Reserve(size_t additional_space) {
@@ -83,6 +84,7 @@ void UnsafeArena::Reserve(size_t additional_space) {
 
 void UnsafeArena::AllocBlock(size_t size) {
   blocks_.push_back(Block(size));
+  status_.bytes_allocated_ += size;
 }
 
 UnsafeArena::Block::Block(size_t s) : data(new char[s]), size(s), used(0) {}

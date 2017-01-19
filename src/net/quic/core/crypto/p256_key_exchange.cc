@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include "base/logging.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "third_party/boringssl/src/include/openssl/ec.h"
 #include "third_party/boringssl/src/include/openssl/ecdh.h"
 #include "third_party/boringssl/src/include/openssl/err.h"
@@ -31,7 +31,7 @@ P256KeyExchange::~P256KeyExchange() {}
 // static
 P256KeyExchange* P256KeyExchange::New(StringPiece key) {
   if (key.empty()) {
-    DVLOG(1) << "Private key is empty";
+    QUIC_DLOG(INFO) << "Private key is empty";
     return nullptr;
   }
 
@@ -39,7 +39,7 @@ P256KeyExchange* P256KeyExchange::New(StringPiece key) {
   bssl::UniquePtr<EC_KEY> private_key(
       d2i_ECPrivateKey(nullptr, &keyp, key.size()));
   if (!private_key.get() || !EC_KEY_check_key(private_key.get())) {
-    DVLOG(1) << "Private key is invalid.";
+    QUIC_DLOG(INFO) << "Private key is invalid.";
     return nullptr;
   }
 
@@ -48,7 +48,7 @@ P256KeyExchange* P256KeyExchange::New(StringPiece key) {
                          EC_KEY_get0_public_key(private_key.get()),
                          POINT_CONVERSION_UNCOMPRESSED, public_key,
                          sizeof(public_key), nullptr) != sizeof(public_key)) {
-    DVLOG(1) << "Can't get public key.";
+    QUIC_DLOG(INFO) << "Can't get public key.";
     return nullptr;
   }
 
@@ -59,19 +59,19 @@ P256KeyExchange* P256KeyExchange::New(StringPiece key) {
 string P256KeyExchange::NewPrivateKey() {
   bssl::UniquePtr<EC_KEY> key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
   if (!key.get() || !EC_KEY_generate_key(key.get())) {
-    DVLOG(1) << "Can't generate a new private key.";
+    QUIC_DLOG(INFO) << "Can't generate a new private key.";
     return string();
   }
 
   int key_len = i2d_ECPrivateKey(key.get(), nullptr);
   if (key_len <= 0) {
-    DVLOG(1) << "Can't convert private key to string";
+    QUIC_DLOG(INFO) << "Can't convert private key to string";
     return string();
   }
   std::unique_ptr<uint8_t[]> private_key(new uint8_t[key_len]);
   uint8_t* keyp = private_key.get();
   if (!i2d_ECPrivateKey(key.get(), &keyp)) {
-    DVLOG(1) << "Can't convert private key to string.";
+    QUIC_DLOG(INFO) << "Can't convert private key to string.";
     return string();
   }
   return string(reinterpret_cast<char*>(private_key.get()), key_len);
@@ -86,7 +86,7 @@ KeyExchange* P256KeyExchange::NewKeyPair(QuicRandom* /*rand*/) const {
 bool P256KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
                                          string* out_result) const {
   if (peer_public_value.size() != kUncompressedP256PointBytes) {
-    DVLOG(1) << "Peer public value is invalid";
+    QUIC_DLOG(INFO) << "Peer public value is invalid";
     return false;
   }
 
@@ -98,14 +98,14 @@ bool P256KeyExchange::CalculateSharedKey(StringPiece peer_public_value,
                           reinterpret_cast<const uint8_t*>(
                               peer_public_value.data()),
                           peer_public_value.size(), nullptr)) {
-    DVLOG(1) << "Can't convert peer public value to curve point.";
+    QUIC_DLOG(INFO) << "Can't convert peer public value to curve point.";
     return false;
   }
 
   uint8_t result[kP256FieldBytes];
   if (ECDH_compute_key(result, sizeof(result), point.get(), private_key_.get(),
                        nullptr) != sizeof(result)) {
-    DVLOG(1) << "Can't compute ECDH shared key.";
+    QUIC_DLOG(INFO) << "Can't compute ECDH shared key.";
     return false;
   }
 

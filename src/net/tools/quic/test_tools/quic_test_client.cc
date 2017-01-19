@@ -19,6 +19,7 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -406,7 +407,7 @@ string QuicTestClient::SendCustomSynchronousRequest(
     const SpdyHeaderBlock& headers,
     const string& body) {
   if (SendMessage(headers, body) == 0) {
-    DLOG(ERROR) << "Failed the request for: " << headers.DebugString();
+    QUIC_DLOG(ERROR) << "Failed the request for: " << headers.DebugString();
     // Set the response_ explicitly.  Otherwise response_ will contain the
     // response from the previously successful request.
     response_ = "";

@@ -6,11 +6,11 @@
 #include <map>
 #include <memory>
 
-#include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -110,7 +110,7 @@ const char* CongestionControlTypeToString(CongestionControlType cc_type) {
     case kBBR:
       return "BBR";
     default:
-      DLOG(FATAL) << "Unexpected CongestionControlType";
+      QUIC_DLOG(FATAL) << "Unexpected CongestionControlType";
       return nullptr;
   }
 }
@@ -178,7 +178,7 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
 
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
     random_.set_seed(seed);
-    VLOG(1) << "SendAlgorithmTest simulator set up.  Seed: " << seed;
+    QUIC_LOG(INFO) << "SendAlgorithmTest simulator set up.  Seed: " << seed;
   }
 
   // Sets experimental options in the server config, as if they had
@@ -265,14 +265,14 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
 
   void PrintTransferStats() {
     const QuicConnectionStats& stats = quic_sender_.connection()->GetStats();
-    VLOG(1) << "Summary for scenario " << GetParam();
-    VLOG(1) << "Sender stats is " << stats;
+    QUIC_LOG(INFO) << "Summary for scenario " << GetParam();
+    QUIC_LOG(INFO) << "Sender stats is " << stats;
     const double rtx_rate =
         static_cast<double>(stats.bytes_retransmitted) / stats.bytes_sent;
-    VLOG(1) << "Retransmit rate (num_rtx/num_total_sent): " << rtx_rate;
-    VLOG(1) << "Connection elapsed time: "
-            << (clock_->Now() - QuicSenderStartTime()).ToMilliseconds()
-            << " (ms)";
+    QUIC_LOG(INFO) << "Retransmit rate (num_rtx/num_total_sent): " << rtx_rate;
+    QUIC_LOG(INFO) << "Connection elapsed time: "
+                   << (clock_->Now() - QuicSenderStartTime()).ToMilliseconds()
+                   << " (ms)";
   }
 
   simulator::Simulator simulator_;

@@ -23,6 +23,22 @@ import zipfile
 from util import build_utils
 
 
+# A variation of this lists also exists in:
+# //base/android/java/src/org/chromium/base/LocaleUtils.java
+_CHROME_TO_ANDROID_LOCALE_MAP = {
+    'en-GB': 'en-rGB',
+    'en-US': 'en-rUS',
+    'es-419': 'es-rUS',
+    'fin': 'tl',
+    'he': 'iw',
+    'id': 'in',
+    'pt-PT': 'pt-rPT',
+    'pt-BR': 'pt-rBR',
+    'yi': 'ji',
+    'zh-CN': 'zh-rCN',
+    'zh-TW': 'zh-rTW',
+}
+
 # List is generated from the chrome_apk.apk_intermediates.ap_ via:
 #     unzip -l $FILE_AP_ | cut -c31- | grep res/draw | cut -d'/' -f 2 | sort \
 #     | uniq | grep -- -tvdpi- | cut -c10-
@@ -113,7 +129,12 @@ def _ParseArgs(args):
       help='Enables density splits')
   parser.add_option('--language-splits',
                     default='[]',
-                    help='GYP list of languages to create splits for')
+                    help='GN list of languages to create splits for')
+  parser.add_option('--locale-whitelist',
+                    default='[]',
+                    help='GN list of languages to include. All other language '
+                         'configs will be stripped out. List may include '
+                         'a combination of Android locales or Chrome locales.')
 
   parser.add_option('--apk-path',
                     help='Path to output (partial) apk.')
@@ -132,7 +153,24 @@ def _ParseArgs(args):
 
   options.resource_zips = build_utils.ParseGnList(options.resource_zips)
   options.language_splits = build_utils.ParseGnList(options.language_splits)
+  options.locale_whitelist = build_utils.ParseGnList(options.locale_whitelist)
   return options
+
+
+def _ToAaptLocales(locale_whitelist):
+  """Converts the list of Chrome locales to aapt config locales."""
+  ret = set()
+  for locale in locale_whitelist:
+    locale = _CHROME_TO_ANDROID_LOCALE_MAP.get(locale, locale)
+    if locale is None or ('-' in locale and '-r' not in locale):
+      raise Exception('_CHROME_TO_ANDROID_LOCALE_MAP needs updating.'
+                      ' Found: %s' % locale)
+    ret.add(locale)
+    # Always keep non-regional fall-backs.
+    language = locale.split('-')[0]
+    ret.add(language)
+
+  return sorted(ret)
 
 
 def MoveImagesToNonMdpiFolders(res_root):
@@ -256,6 +294,10 @@ def _ConstructMostAaptArgs(options):
 
   if 'Debug' in options.configuration_name:
     package_command += ['--debug-mode']
+
+  if options.locale_whitelist:
+    aapt_locales = _ToAaptLocales(options.locale_whitelist)
+    package_command += ['-c', ','.join(aapt_locales)]
 
   return package_command
 

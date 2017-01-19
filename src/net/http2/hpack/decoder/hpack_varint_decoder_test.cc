@@ -15,8 +15,6 @@
 #include <sstream>
 #include <vector>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
@@ -38,16 +36,6 @@ namespace test {
 namespace {
 
 class HpackVarintDecoderTest : public RandomDecoderTest {
- public:
-  AssertionResult ValidatorForValueTooLarge(bool* validated,
-                                            uint32_t expected_offset,
-                                            const DecodeBuffer& db,
-                                            DecodeStatus status) {
-    *validated = true;
-    VERIFY_EQ(DecodeStatus::kDecodeError, status);
-    VERIFY_EQ(expected_offset, db.Offset());
-    return AssertionSuccess();
-  }
 
  protected:
   DecodeStatus StartDecoding(DecodeBuffer* b) override {
@@ -61,24 +49,19 @@ class HpackVarintDecoderTest : public RandomDecoderTest {
     return decoder_.Resume(b);
   }
 
-  AssertionResult ValidatorForDecodeSeveralWays(uint32_t expected_value,
-                                                const DecodeBuffer& db,
-                                                DecodeStatus status) {
-    if (decoder_.value() != expected_value) {
-      return AssertionFailure()
-             << "Value doesn't match expected: " << decoder_.value()
-             << " != " << expected_value;
-    }
-    return AssertionSuccess();
-  }
-
   void DecodeSeveralWays(uint32_t expected_value, uint32_t expected_offset) {
     // The validator is called after each of the several times that the input
     // DecodeBuffer is decoded, each with a different segmentation of the input.
     // Validate that decoder_.value() matches the expected value.
-    Validator validator =
-        base::Bind(&HpackVarintDecoderTest::ValidatorForDecodeSeveralWays,
-                   base::Unretained(this), expected_value);
+    Validator validator = [expected_value, this](
+        const DecodeBuffer& db, DecodeStatus status) -> AssertionResult {
+      if (decoder_.value() != expected_value) {
+        return AssertionFailure()
+               << "Value doesn't match expected: " << decoder_.value()
+               << " != " << expected_value;
+      }
+      return AssertionSuccess();
+    };
 
     // First validate that decoding is done and that we've advanced the cursor
     // the expected amount.
@@ -375,9 +358,13 @@ TEST_F(HpackVarintDecoderTest, ValueTooLarge) {
     // DecodeBuffer is decoded, each with a different segmentation of the input.
     // Validate that decoder_.value() matches the expected value.
     bool validated = false;
-    Validator validator =
-        base::Bind(&HpackVarintDecoderTest::ValidatorForValueTooLarge,
-                   base::Unretained(this), &validated, expected_offset);
+    Validator validator = [&validated, expected_offset](
+        const DecodeBuffer& db, DecodeStatus status) -> AssertionResult {
+      validated = true;
+      VERIFY_EQ(DecodeStatus::kDecodeError, status);
+      VERIFY_EQ(expected_offset, db.Offset());
+      return AssertionSuccess();
+    };
 
     // StartDecoding, above, requires the DecodeBuffer be non-empty so that it
     // can call Start with the prefix byte.

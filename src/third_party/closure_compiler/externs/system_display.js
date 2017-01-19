@@ -123,7 +123,8 @@ chrome.system.display.DisplayLayout;
  *   bounds: !chrome.system.display.Bounds,
  *   overscan: !chrome.system.display.Insets,
  *   workArea: !chrome.system.display.Bounds,
- *   modes: !Array<!chrome.system.display.DisplayMode>
+ *   modes: !Array<!chrome.system.display.DisplayMode>,
+ *   hasTouchSupport: boolean
  * }}
  * @see https://developer.chrome.com/extensions/system.display#type-DisplayUnitInfo
  */

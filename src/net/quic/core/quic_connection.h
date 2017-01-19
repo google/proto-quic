@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/quic_decrypter.h"

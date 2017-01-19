@@ -81,8 +81,11 @@
 #include "base/macros.h"
 #include "base/metrics/bucket_ranges.h"
 #include "base/metrics/histogram_base.h"
+#if !defined(OS_MACOSX) || defined(OS_IOS)
 // TODO(asvitkine): Migrate callers to to include this directly and remove this.
+// Note: Incrementally migrating platforms as they become clean.
 #include "base/metrics/histogram_macros.h"
+#endif
 #include "base/metrics/histogram_samples.h"
 #include "base/time/time.h"
 

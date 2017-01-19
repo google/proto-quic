@@ -7,11 +7,11 @@
 
 #include <stdint.h>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 

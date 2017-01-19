@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+var errNoCertificateAlert = errors.New("tls: no certificate alert")
+
 // A Conn represents a secured connection.
 // It implements the net.Conn interface.
 type Conn struct {
@@ -895,6 +897,11 @@ Again:
 		}
 		switch data[0] {
 		case alertLevelWarning:
+			if alert(data[1]) == alertNoCertificate {
+				c.in.freeBlock(b)
+				return errNoCertificateAlert
+			}
+
 			// drop on the floor
 			c.in.freeBlock(b)
 			goto Again
@@ -963,7 +970,7 @@ func (c *Conn) sendAlertLocked(level byte, err alert) error {
 // L < c.out.Mutex.
 func (c *Conn) sendAlert(err alert) error {
 	level := byte(alertLevelError)
-	if err == alertNoRenegotiation || err == alertCloseNotify || err == alertNoCertficate {
+	if err == alertNoRenegotiation || err == alertCloseNotify || err == alertNoCertificate {
 		level = alertLevelWarning
 	}
 	return c.SendAlert(level, err)
@@ -1195,6 +1202,13 @@ func (c *Conn) doReadHandshake() ([]byte, error) {
 // c.in.Mutex < L; c.out.Mutex < L.
 func (c *Conn) readHandshake() (interface{}, error) {
 	data, err := c.doReadHandshake()
+	if err == errNoCertificateAlert {
+		if c.hand.Len() != 0 {
+			// The warning alert may not interleave with a handshake message.
+			return nil, c.in.setErrorLocked(c.sendAlert(alertUnexpectedMessage))
+		}
+		return new(ssl3NoCertificateMsg), nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1435,6 +1449,10 @@ func (c *Conn) handlePostHandshakeMessage() error {
 		if newSessionTicket, ok := msg.(*newSessionTicketMsg); ok {
 			if c.config.Bugs.ExpectGREASE && !newSessionTicket.hasGREASEExtension {
 				return errors.New("tls: no GREASE ticket extension found")
+			}
+
+			if c.config.Bugs.ExpectTicketEarlyDataInfo && newSessionTicket.earlyDataInfo == 0 {
+				return errors.New("tls: no ticket_early_data_info extension found")
 			}
 
 			if c.config.Bugs.ExpectNoNewSessionTicket {
@@ -1749,10 +1767,12 @@ func (c *Conn) SendNewSessionTicket() error {
 
 	// TODO(davidben): Allow configuring these values.
 	m := &newSessionTicketMsg{
-		version:         c.vers,
-		ticketLifetime:  uint32(24 * time.Hour / time.Second),
-		customExtension: c.config.Bugs.CustomTicketExtension,
-		ticketAgeAdd:    ticketAgeAdd,
+		version:                c.vers,
+		ticketLifetime:         uint32(24 * time.Hour / time.Second),
+		earlyDataInfo:          c.config.Bugs.SendTicketEarlyDataInfo,
+		duplicateEarlyDataInfo: c.config.Bugs.DuplicateTicketEarlyDataInfo,
+		customExtension:        c.config.Bugs.CustomTicketExtension,
+		ticketAgeAdd:           ticketAgeAdd,
 	}
 
 	state := sessionState{

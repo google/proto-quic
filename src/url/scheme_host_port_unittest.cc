@@ -42,11 +42,19 @@ TEST(SchemeHostPortTest, Invalid) {
   EXPECT_TRUE(invalid.IsInvalid());
   EXPECT_TRUE(invalid.Equals(invalid));
 
-  const char* urls[] = {"data:text/html,Hello!",
-                        "javascript:alert(1)",
-                        "file://example.com:443/etc/passwd",
-                        "blob:https://example.com/uuid-goes-here",
-                        "filesystem:https://example.com/temporary/yay.png"};
+  const char* urls[] = {
+      "data:text/html,Hello!", "javascript:alert(1)",
+      "file://example.com:443/etc/passwd",
+
+      // These schemes do not follow the generic URL syntax, so make sure we
+      // treat them as invalid (scheme, host, port) tuples (even though such
+      // URLs' _Origin_ might have a (scheme, host, port) tuple, they themselves
+      // do not). This is only *implicitly* checked in the code, by means of
+      // blob schemes not being standard, and filesystem schemes having type
+      // SCHEME_WITHOUT_AUTHORITY. If conditions change such that the implicit
+      // checks no longer hold, this policy should be made explicit.
+      "blob:https://example.com/uuid-goes-here",
+      "filesystem:https://example.com/temporary/yay.png"};
 
   for (auto* test : urls) {
     SCOPED_TRACE(test);

@@ -5,13 +5,14 @@
 #include "base/debug/activity_tracker.h"
 
 #include <algorithm>
+#include <limits>
+#include <utility>
 
 #include "base/debug/stack_trace.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
 #include "base/files/memory_mapped_file.h"
 #include "base/logging.h"
-#include "base/memory/ptr_util.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
@@ -205,43 +206,43 @@ ActivityUserData::TypedValue::TypedValue(const TypedValue& other) = default;
 ActivityUserData::TypedValue::~TypedValue() {}
 
 StringPiece ActivityUserData::TypedValue::Get() const {
-  DCHECK_EQ(RAW_VALUE, type);
-  return long_value;
+  DCHECK_EQ(RAW_VALUE, type_);
+  return long_value_;
 }
 
 StringPiece ActivityUserData::TypedValue::GetString() const {
-  DCHECK_EQ(STRING_VALUE, type);
-  return long_value;
+  DCHECK_EQ(STRING_VALUE, type_);
+  return long_value_;
 }
 
 bool ActivityUserData::TypedValue::GetBool() const {
-  DCHECK_EQ(BOOL_VALUE, type);
-  return short_value != 0;
+  DCHECK_EQ(BOOL_VALUE, type_);
+  return short_value_ != 0;
 }
 
 char ActivityUserData::TypedValue::GetChar() const {
-  DCHECK_EQ(CHAR_VALUE, type);
-  return static_cast<char>(short_value);
+  DCHECK_EQ(CHAR_VALUE, type_);
+  return static_cast<char>(short_value_);
 }
 
 int64_t ActivityUserData::TypedValue::GetInt() const {
-  DCHECK_EQ(SIGNED_VALUE, type);
-  return static_cast<int64_t>(short_value);
+  DCHECK_EQ(SIGNED_VALUE, type_);
+  return static_cast<int64_t>(short_value_);
 }
 
 uint64_t ActivityUserData::TypedValue::GetUint() const {
-  DCHECK_EQ(UNSIGNED_VALUE, type);
-  return static_cast<uint64_t>(short_value);
+  DCHECK_EQ(UNSIGNED_VALUE, type_);
+  return static_cast<uint64_t>(short_value_);
 }
 
 StringPiece ActivityUserData::TypedValue::GetReference() const {
-  DCHECK_EQ(RAW_VALUE_REFERENCE, type);
-  return ref_value;
+  DCHECK_EQ(RAW_VALUE_REFERENCE, type_);
+  return ref_value_;
 }
 
 StringPiece ActivityUserData::TypedValue::GetStringReference() const {
-  DCHECK_EQ(STRING_VALUE_REFERENCE, type);
-  return ref_value;
+  DCHECK_EQ(STRING_VALUE_REFERENCE, type_);
+  return ref_value_;
 }
 
 ActivityUserData::ValueInfo::ValueInfo() {}
@@ -429,14 +430,14 @@ bool ActivityUserData::CreateSnapshot(Snapshot* output_snapshot) const {
 
   for (const auto& entry : values_) {
     TypedValue value;
-    value.type = entry.second.type;
+    value.type_ = entry.second.type;
     DCHECK_GE(entry.second.extent,
               entry.second.size_ptr->load(std::memory_order_relaxed));
 
     switch (entry.second.type) {
       case RAW_VALUE:
       case STRING_VALUE:
-        value.long_value =
+        value.long_value_ =
             std::string(reinterpret_cast<char*>(entry.second.memory),
                         entry.second.size_ptr->load(std::memory_order_relaxed));
         break;
@@ -444,17 +445,17 @@ bool ActivityUserData::CreateSnapshot(Snapshot* output_snapshot) const {
       case STRING_VALUE_REFERENCE: {
         ReferenceRecord* ref =
             reinterpret_cast<ReferenceRecord*>(entry.second.memory);
-        value.ref_value = StringPiece(
+        value.ref_value_ = StringPiece(
             reinterpret_cast<char*>(static_cast<uintptr_t>(ref->address)),
             static_cast<size_t>(ref->size));
       } break;
       case BOOL_VALUE:
       case CHAR_VALUE:
-        value.short_value = *reinterpret_cast<char*>(entry.second.memory);
+        value.short_value_ = *reinterpret_cast<char*>(entry.second.memory);
         break;
       case SIGNED_VALUE:
       case UNSIGNED_VALUE:
-        value.short_value = *reinterpret_cast<uint64_t*>(entry.second.memory);
+        value.short_value_ = *reinterpret_cast<uint64_t*>(entry.second.memory);
         break;
       case END_OF_VALUES:  // Included for completeness purposes.
         NOTREACHED();
@@ -1021,7 +1022,7 @@ ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   // TODO(bcwhite): Review this after major compiler releases.
   DCHECK(mem_reference);
   void* mem_base;
-#if !defined(OS_WIN) && !defined(OS_ANDROID)
+#if 0  // TODO(bcwhite): Update this for new GetAsObject functionality.
   mem_base = allocator_->GetAsObject<ThreadActivityTracker::Header>(
       mem_reference, kTypeIdActivityTracker);
 #else

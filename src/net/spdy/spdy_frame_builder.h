@@ -58,6 +58,14 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
                      uint8_t flags,
                      SpdyStreamId stream_id);
 
+  // Populates this frame with a HTTP2 frame prefix with length information.
+  // The given type must be a control frame type.
+  bool BeginNewFrame(const SpdyFramer& framer,
+                     SpdyFrameType type,
+                     uint8_t flags,
+                     SpdyStreamId stream_id,
+                     size_t length);
+
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
     SPDY_BUG_IF(kMaxFrameSizeLimit < length_)

@@ -8,7 +8,6 @@
 #include "base/logging.h"
 #include "device/serial/serial.mojom.h"
 #include "device/serial/serial_device_enumerator.h"
-#include "mojo/public/cpp/bindings/array.h"
 
 namespace battor {
 
@@ -28,7 +27,7 @@ std::string BattOrFinder::FindBattOr() {
   std::unique_ptr<device::SerialDeviceEnumerator> serial_device_enumerator =
       device::SerialDeviceEnumerator::Create();
 
-  mojo::Array<device::serial::DeviceInfoPtr> devices =
+  std::vector<device::serial::DeviceInfoPtr> devices =
       serial_device_enumerator->GetDevices();
 
   std::string switch_specified_path =

@@ -4,6 +4,8 @@
 
 #include "net/http2/hpack/decoder/hpack_decoder_string_buffer.h"
 
+#include <utility>
+
 #include "base/logging.h"
 
 using base::StringPiece;

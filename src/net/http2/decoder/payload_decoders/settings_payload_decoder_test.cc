@@ -8,7 +8,6 @@
 
 #include <vector>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -78,17 +77,6 @@ class SettingsPayloadDecoderTest
     : public AbstractPayloadDecoderTest<SettingsPayloadDecoder,
                                         SettingsPayloadDecoderPeer,
                                         Listener> {
- public:
-  static bool ApproveSizeForSettingsWrongSize(size_t size) {
-    // Should get an error if size is not an integral multiple of the size
-    // of one setting.
-    return 0 != (size % Http2SettingFields::EncodedSize());
-  }
-
-  static bool ApproveSizeForSettingsAkcWrongSize(size_t size) {
-    return size != 0;
-  }
-
  protected:
   Http2SettingFields RandSettingsFields() {
     Http2SettingFields fields;
@@ -100,26 +88,27 @@ class SettingsPayloadDecoderTest
 // Confirm we get an error if the SETTINGS payload is not the correct size
 // to hold exactly zero or more whole Http2SettingFields.
 TEST_F(SettingsPayloadDecoderTest, SettingsWrongSize) {
+  auto approve_size = [](size_t size) {
+    // Should get an error if size is not an integral multiple of the size
+    // of one setting.
+    return 0 != (size % Http2SettingFields::EncodedSize());
+  };
   Http2FrameBuilder fb;
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(
-          &SettingsPayloadDecoderTest::ApproveSizeForSettingsWrongSize)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(0, fb.buffer(), approve_size));
 }
 
 // Confirm we get an error if the SETTINGS ACK payload is not empty.
 TEST_F(SettingsPayloadDecoderTest, SettingsAkcWrongSize) {
+  auto approve_size = [](size_t size) { return size != 0; };
   Http2FrameBuilder fb;
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
   fb.Append(RandSettingsFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      Http2FrameFlag::FLAG_ACK, fb.buffer(),
-      base::Bind(
-          &SettingsPayloadDecoderTest::ApproveSizeForSettingsAkcWrongSize)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(Http2FrameFlag::FLAG_ACK, fb.buffer(),
+                                          approve_size));
 }
 
 // SETTINGS must have stream_id==0, but the payload decoder doesn't check that.

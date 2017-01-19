@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -61,11 +60,6 @@ class PingPayloadDecoderTest
     : public AbstractPayloadDecoderTest<PingPayloadDecoder,
                                         PingPayloadDecoderPeer,
                                         Listener> {
- public:
-  static bool ApproveSizeForWrongSize(size_t size) {
-    return size != Http2PingFields::EncodedSize();
-  }
-
  protected:
   Http2PingFields RandPingFields() {
     Http2PingFields fields;
@@ -77,13 +71,14 @@ class PingPayloadDecoderTest
 // Confirm we get an error if the payload is not the correct size to hold
 // exactly one Http2PingFields.
 TEST_F(PingPayloadDecoderTest, WrongSize) {
+  auto approve_size = [](size_t size) {
+    return size != Http2PingFields::EncodedSize();
+  };
   Http2FrameBuilder fb;
   fb.Append(RandPingFields());
   fb.Append(RandPingFields());
   fb.Append(RandPingFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(&PingPayloadDecoderTest::ApproveSizeForWrongSize)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(0, fb.buffer(), approve_size));
 }
 
 TEST_F(PingPayloadDecoderTest, Ping) {

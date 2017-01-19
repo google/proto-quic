@@ -8,6 +8,7 @@
 
 #include <array>
 
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -63,21 +64,21 @@ class QuicSocketUtilsTest : public ::testing::Test {
         bind_addr_size = sizeof(struct sockaddr_in6);
         break;
       case IpAddressFamily::IP_UNSPEC:
-        LOG(FATAL) << "Unspecified IP address family";
+        QUIC_LOG(FATAL) << "Unspecified IP address family";
     }
 
     int rc = bind(fd, reinterpret_cast<sockaddr*>(&bind_addr_native),
                   bind_addr_size);
     if (rc != 0) {
-      LOG(ERROR) << "Failed to bind socket to " << address.ToString() << ": "
-                 << strerror(errno);
+      QUIC_LOG(ERROR) << "Failed to bind socket to " << address.ToString()
+                      << ": " << strerror(errno);
       return bound_address;
     }
 
     rc = bound_address.FromSocket(fd);
     if (rc != 0) {
-      LOG(ERROR) << "Failed to get bound socket address from fd: "
-                 << strerror(errno);
+      QUIC_LOG(ERROR) << "Failed to get bound socket address from fd: "
+                      << strerror(errno);
       bound_address = QuicSocketAddress();
     }
     return bound_address;

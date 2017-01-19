@@ -16,6 +16,16 @@ namespace net {
 // Not thread-safe.
 class NET_EXPORT_PRIVATE UnsafeArena {
  public:
+  class Status {
+   private:
+    friend class UnsafeArena;
+    size_t bytes_allocated_;
+
+   public:
+    Status() : bytes_allocated_(0) {}
+    size_t bytes_allocated() const { return bytes_allocated_; }
+  };
+
   // Blocks allocated by this arena will be at least |block_size| bytes.
   explicit UnsafeArena(size_t block_size);
   ~UnsafeArena();
@@ -39,6 +49,8 @@ class NET_EXPORT_PRIVATE UnsafeArena {
 
   void Reset();
 
+  Status status() const { return status_; }
+
  private:
   struct Block {
     std::unique_ptr<char[]> data;
@@ -57,6 +69,7 @@ class NET_EXPORT_PRIVATE UnsafeArena {
 
   size_t block_size_;
   std::vector<Block> blocks_;
+  Status status_;
 };
 
 }  // namespace net

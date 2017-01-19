@@ -117,12 +117,9 @@ TestTaskScheduler::TestTaskScheduler(MessageLoop* external_message_loop)
                                         : external_message_loop) {}
 
 TestTaskScheduler::~TestTaskScheduler() {
-  // Prevent the RunUntilIdle() call below from running SKIP_ON_SHUTDOWN and
-  // CONTINUE_ON_SHUTDOWN tasks.
-  task_tracker_.SetHasShutdownStartedForTesting();
-
-  // Run pending BLOCK_SHUTDOWN tasks.
-  RunLoop().RunUntilIdle();
+  // Shutdown if it hasn't already been done explicitly.
+  if (!task_tracker_.HasShutdownStarted())
+    Shutdown();
 }
 
 void TestTaskScheduler::PostDelayedTaskWithTraits(
@@ -159,7 +156,12 @@ std::vector<const HistogramBase*> TestTaskScheduler::GetHistograms() const {
 }
 
 void TestTaskScheduler::Shutdown() {
-  NOTREACHED();
+  // Prevent SKIP_ON_SHUTDOWN and CONTINUE_ON_SHUTDOWN tasks from running from
+  // now on.
+  task_tracker_.SetHasShutdownStartedForTesting();
+
+  // Run pending BLOCK_SHUTDOWN tasks.
+  RunLoop().RunUntilIdle();
 }
 
 void TestTaskScheduler::FlushForTesting() {

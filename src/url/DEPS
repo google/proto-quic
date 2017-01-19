@@ -11,7 +11,6 @@ specific_include_rules = {
     "+third_party/icu",
   ],
   "run_all_unittests\.cc": [
-    "+mojo/edk/embedder/embedder.h",
-    "+mojo/edk/test/scoped_ipc_support.h",
+    "+mojo/edk/embedder",
   ],
 }

@@ -9,9 +9,6 @@
 #include "base/time/time.h"
 
 namespace base {
-
-class MessageLoop;
-
 namespace test {
 namespace ios {
 
@@ -42,19 +39,6 @@ void SpinRunLoopWithMaxDelay(TimeDelta max_delay);
 // within the given minimum delay. This method returns after |min_delay|
 // elapsed.
 void SpinRunLoopWithMinDelay(TimeDelta min_delay);
-
-// Deprecated.
-// TODO(fdoray): Remove this once call have been removed from ios_internal.
-TimeDelta TimeUntilCondition(ProceduralBlock action,
-                             ConditionBlock condition,
-                             MessageLoop* message_loop,
-                             TimeDelta timeout);
-
-// Deprecated.
-// TODO(fdoray): Remove this once call have been removed from ios_internal.
-void WaitUntilCondition(ConditionBlock condition,
-                        MessageLoop* message_loop,
-                        TimeDelta timeout);
 
 }  // namespace ios
 }  // namespace test

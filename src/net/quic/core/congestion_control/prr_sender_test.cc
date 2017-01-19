@@ -6,7 +6,6 @@
 
 #include <algorithm>
 
-#include "base/logging.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_constants.h"
 #include "testing/gtest/include/gtest/gtest.h"

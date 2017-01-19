@@ -6,8 +6,6 @@
 
 #include <vector>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "net/http2/hpack/tools/hpack_block_builder.h"
 #include "net/http2/tools/failure.h"
@@ -24,19 +22,6 @@ namespace {
 const bool kReturnNonZeroOnFirst = true;
 
 class HpackEntryTypeDecoderTest : public RandomDecoderTest {
- public:
-  AssertionResult ValidatorForDynamicTableSizeUpdate(uint32_t size) {
-    VERIFY_EQ(HpackEntryType::kDynamicTableSizeUpdate, decoder_.entry_type());
-    VERIFY_EQ(size, decoder_.varint());
-    return AssertionSuccess();
-  }
-
-  AssertionResult ValidatorForHeaderWithIndex(const HpackEntryType entry_type,
-                                              uint32_t index) {
-    VERIFY_EQ(entry_type, decoder_.entry_type());
-    VERIFY_EQ(index, decoder_.varint());
-    return AssertionSuccess();
-  }
 
  protected:
   DecodeStatus StartDecoding(DecodeBuffer* b) override {
@@ -56,15 +41,17 @@ TEST_F(HpackEntryTypeDecoderTest, DynamicTableSizeUpdate) {
     HpackBlockBuilder bb;
     bb.AppendDynamicTableSizeUpdate(size);
     DecodeBuffer db(bb.buffer());
-    NoArgValidator validator = base::Bind(
-        &HpackEntryTypeDecoderTest::ValidatorForDynamicTableSizeUpdate,
-        base::Unretained(this), size);
+    NoArgValidator validator = [size, this]() -> AssertionResult {
+      VERIFY_EQ(HpackEntryType::kDynamicTableSizeUpdate, decoder_.entry_type());
+      VERIFY_EQ(size, decoder_.varint());
+      return AssertionSuccess();
+    };
     EXPECT_TRUE(DecodeAndValidateSeveralWays(&db, kReturnNonZeroOnFirst,
                                              ValidateDoneAndEmpty(validator)))
         << "\nentry_type=kDynamicTableSizeUpdate, size=" << size;
     // Run the validator again to make sure that DecodeAndValidateSeveralWays
     // did the right thing.
-    EXPECT_TRUE(validator.Run());
+    EXPECT_TRUE(validator());
   }
 }
 
@@ -80,15 +67,18 @@ TEST_F(HpackEntryTypeDecoderTest, HeaderWithIndex) {
       HpackBlockBuilder bb;
       bb.AppendEntryTypeAndVarint(entry_type, index);
       DecodeBuffer db(bb.buffer());
-      NoArgValidator validator =
-          base::Bind(&HpackEntryTypeDecoderTest::ValidatorForHeaderWithIndex,
-                     base::Unretained(this), entry_type, index);
+      NoArgValidator validator = [entry_type, index,
+                                  this]() -> AssertionResult {
+        VERIFY_EQ(entry_type, decoder_.entry_type());
+        VERIFY_EQ(index, decoder_.varint());
+        return AssertionSuccess();
+      };
       EXPECT_TRUE(DecodeAndValidateSeveralWays(&db, kReturnNonZeroOnFirst,
                                                ValidateDoneAndEmpty(validator)))
           << "\nentry_type=" << entry_type << ", index=" << index;
       // Run the validator again to make sure that DecodeAndValidateSeveralWays
       // did the right thing.
-      EXPECT_TRUE(validator.Run());
+      EXPECT_TRUE(validator());
     }
   }
 }

@@ -12,6 +12,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -54,7 +55,7 @@ class TestStream : public QuicStream {
 
   uint32_t ProcessRawData(const char* data, uint32_t data_len) {
     EXPECT_NE(0u, data_len);
-    DVLOG(1) << "ProcessData data_len: " << data_len;
+    QUIC_DVLOG(1) << "ProcessData data_len: " << data_len;
     data_ += string(data, data_len);
     return should_process_data_ ? data_len : 0;
   }

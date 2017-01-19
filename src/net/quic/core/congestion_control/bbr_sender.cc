@@ -9,8 +9,9 @@
 
 #include "base/stl_util.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -302,9 +303,9 @@ bool BbrSender::UpdateBandwidthAndMinRtt(
       !min_rtt_.IsZero() && (now > (min_rtt_timestamp_ + kMinRttExpiry));
 
   if (min_rtt_expired || sample_min_rtt < min_rtt_ || min_rtt_.IsZero()) {
-    DVLOG(2) << "Min RTT updated, old value: " << min_rtt_
-             << ", new value: " << sample_min_rtt
-             << ", current time: " << now.ToDebuggingValue();
+    QUIC_DVLOG(2) << "Min RTT updated, old value: " << min_rtt_
+                  << ", new value: " << sample_min_rtt
+                  << ", current time: " << now.ToDebuggingValue();
 
     min_rtt_ = sample_min_rtt;
     min_rtt_timestamp_ = now;
@@ -527,8 +528,8 @@ void BbrSender::OnApplicationLimited(QuicByteCount bytes_in_flight) {
   }
 
   sampler_.OnAppLimited();
-  DVLOG(2) << "Becoming application limited. Last sent packet: "
-           << last_sent_packet_ << ", CWND: " << GetCongestionWindow();
+  QUIC_DVLOG(2) << "Becoming application limited. Last sent packet: "
+                << last_sent_packet_ << ", CWND: " << GetCongestionWindow();
 }
 
 BbrSender::DebugState BbrSender::ExportDebugState() const {

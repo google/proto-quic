@@ -6,7 +6,6 @@
 
 #include <cstddef>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/singleton.h"
 #include "net/quic/core/quic_utils.h"

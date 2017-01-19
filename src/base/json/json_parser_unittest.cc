@@ -244,14 +244,14 @@ TEST_F(JSONParserTest, ErrorMessages) {
   EXPECT_EQ(JSONReader::JSON_UNEXPECTED_DATA_AFTER_ROOT, error_code);
 
   std::string nested_json;
-  for (int i = 0; i < 101; ++i) {
+  for (int i = 0; i < 201; ++i) {
     nested_json.insert(nested_json.begin(), '[');
     nested_json.append(1, ']');
   }
   root = JSONReader::ReadAndReturnError(nested_json, JSON_PARSE_RFC,
                                         &error_code, &error_message);
   EXPECT_FALSE(root.get());
-  EXPECT_EQ(JSONParser::FormatErrorMessage(1, 100, JSONReader::kTooMuchNesting),
+  EXPECT_EQ(JSONParser::FormatErrorMessage(1, 200, JSONReader::kTooMuchNesting),
             error_message);
   EXPECT_EQ(JSONReader::JSON_TOO_MUCH_NESTING, error_code);
 

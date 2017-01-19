@@ -20,6 +20,15 @@ const base::FilePath::CharType kTestFilePath[] =
 
 namespace net {
 
+TestNetworkQualityEstimator::TestNetworkQualityEstimator()
+    : TestNetworkQualityEstimator(std::map<std::string, std::string>()) {}
+
+TestNetworkQualityEstimator::TestNetworkQualityEstimator(
+    const std::map<std::string, std::string>& variation_params)
+    : TestNetworkQualityEstimator(variation_params,
+                                  std::unique_ptr<ExternalEstimateProvider>()) {
+}
+
 TestNetworkQualityEstimator::TestNetworkQualityEstimator(
     const std::map<std::string, std::string>& variation_params,
     std::unique_ptr<net::ExternalEstimateProvider> external_estimate_provider)
@@ -46,12 +55,6 @@ TestNetworkQualityEstimator::TestNetworkQualityEstimator(
       embedded_test_server_(base::FilePath(kTestFilePath)) {
   // Set up the embedded test server.
   EXPECT_TRUE(embedded_test_server_.Start());
-}
-
-TestNetworkQualityEstimator::TestNetworkQualityEstimator(
-    const std::map<std::string, std::string>& variation_params)
-    : TestNetworkQualityEstimator(variation_params,
-                                  std::unique_ptr<ExternalEstimateProvider>()) {
 }
 
 TestNetworkQualityEstimator::~TestNetworkQualityEstimator() {}

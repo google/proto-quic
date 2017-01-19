@@ -5,9 +5,9 @@
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
 
 #include "base/format_macros.h"
-#include "base/logging.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
 using std::string;
@@ -79,7 +79,7 @@ bool QuicStreamSequencerBuffer::RetireBlock(size_t idx) {
   }
   delete blocks_[idx];
   blocks_[idx] = nullptr;
-  DVLOG(1) << "Retired block with index: " << idx;
+  QUIC_DVLOG(1) << "Retired block with index: " << idx;
   return true;
 }
 
@@ -113,7 +113,8 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
   // and allow the caller of this method to handle the result.
   if (offset < current_gap->begin_offset &&
       offset + size <= current_gap->begin_offset) {
-    DVLOG(1) << "Duplicated data at offset: " << offset << " length: " << size;
+    QUIC_DVLOG(1) << "Duplicated data at offset: " << offset
+                  << " length: " << size;
     return QUIC_NO_ERROR;
   }
   if (offset < current_gap->begin_offset &&
@@ -203,7 +204,8 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
     const size_t bytes_to_copy =
         std::min<size_t>(bytes_avail, source_remaining);
     char* dest = blocks_[write_block_num]->buffer + write_block_offset;
-    DVLOG(1) << "Write at offset: " << offset << " length: " << bytes_to_copy;
+    QUIC_DVLOG(1) << "Write at offset: " << offset
+                  << " length: " << bytes_to_copy;
 
     if (dest == nullptr || source == nullptr) {
       *error_details = QuicStrCat(
@@ -348,15 +350,15 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
   if (start_block_idx == end_block_idx && ReadOffset() <= end_block_offset) {
     iov[0].iov_base = blocks_[start_block_idx]->buffer + ReadOffset();
     iov[0].iov_len = ReadableBytes();
-    DVLOG(1) << "Got only a single block with index: " << start_block_idx;
+    QUIC_DVLOG(1) << "Got only a single block with index: " << start_block_idx;
     return 1;
   }
 
   // Get first block
   iov[0].iov_base = blocks_[start_block_idx]->buffer + ReadOffset();
   iov[0].iov_len = GetBlockCapacity(start_block_idx) - ReadOffset();
-  DVLOG(1) << "Got first block " << start_block_idx << " with len "
-           << iov[0].iov_len;
+  QUIC_DVLOG(1) << "Got first block " << start_block_idx << " with len "
+                << iov[0].iov_len;
   DCHECK_GT(readable_offset_end + 1, total_bytes_read_ + iov[0].iov_len)
       << "there should be more available data";
 
@@ -369,7 +371,7 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
     DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
     iov[iov_used].iov_base = blocks_[block_idx]->buffer;
     iov[iov_used].iov_len = GetBlockCapacity(block_idx);
-    DVLOG(1) << "Got block with index: " << block_idx;
+    QUIC_DVLOG(1) << "Got block with index: " << block_idx;
     ++iov_used;
     block_idx = (start_block_idx + iov_used) % blocks_count_;
   }
@@ -379,7 +381,7 @@ int QuicStreamSequencerBuffer::GetReadableRegions(struct iovec* iov,
     DCHECK_NE(static_cast<BufferBlock*>(nullptr), blocks_[block_idx]);
     iov[iov_used].iov_base = blocks_[end_block_idx]->buffer;
     iov[iov_used].iov_len = end_block_offset + 1;
-    DVLOG(1) << "Got last block with index: " << end_block_idx;
+    QUIC_DVLOG(1) << "Got last block with index: " << end_block_idx;
     ++iov_used;
   }
   return iov_used;
@@ -402,24 +404,24 @@ bool QuicStreamSequencerBuffer::GetReadableRegion(iovec* iov,
   size_t region_len = 0;
   auto iter = frame_arrival_time_map_.begin();
   *timestamp = iter->second.timestamp;
-  DVLOG(1) << "Readable bytes in block: " << readable_bytes_in_block;
+  QUIC_DVLOG(1) << "Readable bytes in block: " << readable_bytes_in_block;
   for (; iter != frame_arrival_time_map_.end() &&
          region_len + iter->second.length <= readable_bytes_in_block;
        ++iter) {
     if (iter->second.timestamp != *timestamp) {
       // If reaches a frame arrive at another timestamp, stop expanding current
       // region.
-      DVLOG(1) << "Meet frame with different timestamp.";
+      QUIC_DVLOG(1) << "Meet frame with different timestamp.";
       break;
     }
     region_len += iter->second.length;
-    DVLOG(1) << "Added bytes to region: " << iter->second.length;
+    QUIC_DVLOG(1) << "Added bytes to region: " << iter->second.length;
   }
   if (iter == frame_arrival_time_map_.end() ||
       iter->second.timestamp == *timestamp) {
     // If encountered the end of readable bytes before reaching a different
     // timestamp.
-    DVLOG(1) << "Got all readable bytes in first block.";
+    QUIC_DVLOG(1) << "Got all readable bytes in first block.";
     region_len = readable_bytes_in_block;
   }
   iov->iov_len = region_len;
@@ -558,16 +560,16 @@ void QuicStreamSequencerBuffer::UpdateFrameArrivalMap(QuicStreamOffset offset) {
   while (iter != next_frame) {
     auto erased = *iter;
     iter = frame_arrival_time_map_.erase(iter);
-    DVLOG(1) << "Removed FrameInfo with offset: " << erased.first
-             << " and length: " << erased.second.length;
+    QUIC_DVLOG(1) << "Removed FrameInfo with offset: " << erased.first
+                  << " and length: " << erased.second.length;
     if (erased.first + erased.second.length > offset) {
       // If last frame is partially read out, update this FrameInfo and insert
       // it back.
       auto updated = std::make_pair(
           offset, FrameInfo(erased.first + erased.second.length - offset,
                             erased.second.timestamp));
-      DVLOG(1) << "Inserted FrameInfo with offset: " << updated.first
-               << " and length: " << updated.second.length;
+      QUIC_DVLOG(1) << "Inserted FrameInfo with offset: " << updated.first
+                    << " and length: " << updated.second.length;
       frame_arrival_time_map_.insert(updated);
     }
   }

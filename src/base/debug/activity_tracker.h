@@ -132,7 +132,7 @@ extern const ActivityData kNullActivityData;
 // A helper class that is used for managing memory allocations within a
 // persistent memory allocator. Instances of this class are NOT thread-safe.
 // Use from a single thread or protect access with a lock.
-class ActivityTrackerMemoryAllocator {
+class BASE_EXPORT ActivityTrackerMemoryAllocator {
  public:
   using Reference = PersistentMemoryAllocator::Reference;
 
@@ -307,6 +307,8 @@ class BASE_EXPORT ActivityUserData {
     TypedValue(const TypedValue& other);
     ~TypedValue();
 
+    ValueType type() const { return type_; }
+
     // These methods return the extracted value in the correct format.
     StringPiece Get() const;
     StringPiece GetString() const;
@@ -329,10 +331,10 @@ class BASE_EXPORT ActivityUserData {
    private:
     friend class ActivityUserData;
 
-    ValueType type;
-    uint64_t short_value;    // Used to hold copy of numbers, etc.
-    std::string long_value;  // Used to hold copy of raw/string data.
-    StringPiece ref_value;   // Used to hold reference to external data.
+    ValueType type_;
+    uint64_t short_value_;    // Used to hold copy of numbers, etc.
+    std::string long_value_;  // Used to hold copy of raw/string data.
+    StringPiece ref_value_;   // Used to hold reference to external data.
   };
 
   using Snapshot = std::map<std::string, TypedValue>;
@@ -537,6 +539,7 @@ class BASE_EXPORT ThreadActivityTracker {
     // An identifier that indicates a specific activity on the stack.
     ActivityId activity_id_;
 
+   private:
     DISALLOW_COPY_AND_ASSIGN(ScopedActivity);
   };
 

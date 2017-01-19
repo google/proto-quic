@@ -1,67 +1,67 @@
 {
     "jessie_amd64": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "cc59aa719e061602e73a4868aad0ca160844b7fe",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "bae4459dbc24b86e92fba57b42e4ae9d540dd556",
         "SysrootDir": "debian_jessie_amd64-sysroot",
         "Tarball": "debian_jessie_amd64_sysroot.tgz"
     },
     "jessie_arm": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "96f6f81439955d0c9db49419ff5e4a38d1825b90",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "35a4b9eebbe6e495c1c10c668af091e3eded072f",
         "SysrootDir": "debian_jessie_arm-sysroot",
         "Tarball": "debian_jessie_arm_sysroot.tgz"
     },
     "jessie_arm64": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "4a9d0ea988e6d816d6abc59b2674f6769b535012",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "a28b37b47654cd02c07d0f47f1748c2b5b4b9586",
         "SysrootDir": "debian_jessie_arm64-sysroot",
         "Tarball": "debian_jessie_arm64_sysroot.tgz"
     },
     "jessie_i386": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "34b122c9ca411beb957d157d5a6696c9fa93e1db",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "c188bab82a303350e8182e289ea4f229f391a8b9",
         "SysrootDir": "debian_jessie_i386-sysroot",
         "Tarball": "debian_jessie_i386_sysroot.tgz"
     },
     "jessie_mips": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "25e8df7da22f97f900765094228f77cb72bebd87",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "70618d0f516f72ecc3b3eea2ae0a7151a519c0ff",
         "SysrootDir": "debian_jessie_mips-sysroot",
         "Tarball": "debian_jessie_mips_sysroot.tgz"
     },
     "precise_amd64": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "42223d9e127dda8d1512160ee96de312ec533556",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "6ea6b7f057c8a6d931ed12b1b37a4d5b4155c18e",
         "SysrootDir": "ubuntu_precise_amd64-sysroot",
         "Tarball": "ubuntu_precise_amd64_sysroot.tgz"
     },
     "trusty_arm": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "418e471ed3a90ad731ef4c1e7a1ef76518a0f8ac",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "0c18bacd8f629d0015dc3eba08509a81b35441d9",
         "SysrootDir": "ubuntu_trusty_arm-sysroot",
         "Tarball": "ubuntu_trusty_arm_sysroot.tgz"
     },
     "wheezy_amd64": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "762e8a060f3c3f9e14f76db5ce982a232b55bcbd",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "0c2fc59cc7d4dedc66e4467f1872ad3f54789bb6",
         "SysrootDir": "debian_wheezy_amd64-sysroot",
         "Tarball": "debian_wheezy_amd64_sysroot.tgz"
     },
     "wheezy_arm": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "2d356d060bf5017cc29d10bef4e09e4e9f65b0f0",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "e9e0f4b016ef2f662a0937ee8e3a877f34274d1b",
         "SysrootDir": "debian_wheezy_arm-sysroot",
         "Tarball": "debian_wheezy_arm_sysroot.tgz"
     },
     "wheezy_i386": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "9db92d45167d1b1cc78a338f49a84929ee3b1928",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "fd53c411577759949e28905fe9c6003458dcafa0",
         "SysrootDir": "debian_wheezy_i386-sysroot",
         "Tarball": "debian_wheezy_i386_sysroot.tgz"
     },
     "wheezy_mips": {
-        "Revision": "165d7c5a152048a7ca8f55c44e0c2efae90d93dd",
-        "Sha1Sum": "1ed22cdb5b560e8c1581ab2c2b4593b4bcb620f3",
+        "Revision": "08b780f0ee9b1c60724ad8c8024bd84cc8a6d928",
+        "Sha1Sum": "e6b283b52892cb8304394a49b6528d1d309880cc",
         "SysrootDir": "debian_wheezy_mips-sysroot",
         "Tarball": "debian_wheezy_mips_sysroot.tgz"
     }

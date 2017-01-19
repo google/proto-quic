@@ -10,7 +10,7 @@
 #include <functional>
 
 #include "base/strings/string_piece.h"
-#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"

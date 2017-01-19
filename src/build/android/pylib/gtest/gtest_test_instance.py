@@ -25,7 +25,16 @@ BROWSER_TEST_SUITES = [
   'content_browsertests',
 ]
 
-RUN_IN_SUB_THREAD_TEST_SUITES = ['net_unittests']
+RUN_IN_SUB_THREAD_TEST_SUITES = [
+  # Multiprocess tests should be run outside of the main thread.
+  'base_unittests',  # file_locking_unittest.cc uses a child process.
+  'ipc_perftests',
+  'ipc_tests',
+  'mojo_message_pipe_perftests',
+  'mojo_public_bindings_perftests',
+  'mojo_system_unittests',
+  'net_unittests'
+]
 
 
 # Used for filtering large data deps at a finer grain than what's allowed in

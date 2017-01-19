@@ -330,7 +330,7 @@ double correlation_uma_logging_probability(
     const std::map<std::string, std::string>& variation_params) {
   double correlation_uma_logging_probability =
       GetDoubleValueForVariationParamWithDefaultValue(
-          variation_params, "correlation_logging_probability", 0.0);
+          variation_params, "correlation_logging_probability", 0.01);
   DCHECK_LE(0.0, correlation_uma_logging_probability);
   DCHECK_GE(1.0, correlation_uma_logging_probability);
   return correlation_uma_logging_probability;

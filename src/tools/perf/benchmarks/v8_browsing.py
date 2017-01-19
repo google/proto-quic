@@ -126,6 +126,16 @@ class V8DesktopIgnitionBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
     v8_helper.EnableIgnition(options)
 
 
+class V8DesktopTurboBrowsingBenchmark(_V8DesktopBrowsingBenchmark):
+  PLATFORM = 'desktop'
+  TEST_SUFFIX = '_turbo'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8DesktopTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
+        options)
+    v8_helper.EnableTurbo(options)
+
+
 @benchmark.Disabled('reference')  # http://crbug.com/628631
 class V8MobileIgnitionBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   PLATFORM = 'mobile'
@@ -135,3 +145,14 @@ class V8MobileIgnitionBrowsingBenchmark(_V8MobileBrowsingBenchmark):
     super(V8MobileIgnitionBrowsingBenchmark, self).SetExtraBrowserOptions(
         options)
     v8_helper.EnableIgnition(options)
+
+
+@benchmark.Disabled('reference')  # http://crbug.com/628631
+class V8MobileTurboBrowsingBenchmark(_V8MobileBrowsingBenchmark):
+  PLATFORM = 'mobile'
+  TEST_SUFFIX = '_turbo'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8MobileTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
+        options)
+    v8_helper.EnableTurbo(options)

@@ -29,6 +29,8 @@ import android.os.Build;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import org.chromium.base.ApplicationState;
+import org.chromium.base.ApplicationStatus;
 import org.chromium.base.ThreadUtils;
 import org.chromium.base.VisibleForTesting;
 import org.chromium.base.metrics.RecordHistogram;
@@ -83,6 +85,14 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
 
     /** Queries the ConnectivityManager for information about the current connection. */
     static class ConnectivityManagerDelegate {
+        private static final int NETWORK_INFO_DISCONNECTED = 0;
+        private static final int NETWORK_INFO_CONNECTED = 1;
+        private static final int NETWORK_INFO_ANDROID_API_LEVEL_TOO_OLD_FOR_UNBLOCKING = 2;
+        private static final int NETWORK_INFO_NOT_BLOCKED = 3;
+        private static final int NETWORK_INFO_APP_NOT_IN_FOREGROUND = 4;
+        private static final int NETWORK_INFO_UNBLOCKED = 5;
+        private static final int NETWORK_INFO_BOUNDARY = 6;
+
         private final ConnectivityManager mConnectivityManager;
 
         ConnectivityManagerDelegate(Context context) {
@@ -97,12 +107,65 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
         }
 
         /**
+         * @return the info of the network that is available to this app.
+         */
+        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+        private NetworkInfo getActiveNetworkInfo() {
+            final NetworkInfo networkInfo = mConnectivityManager.getActiveNetworkInfo();
+            if (networkInfo == null) {
+                recordGetActiveNetworkInfoResult(NETWORK_INFO_DISCONNECTED);
+                return null;
+            }
+
+            if (networkInfo.isConnected()) {
+                recordGetActiveNetworkInfoResult(NETWORK_INFO_CONNECTED);
+                return networkInfo;
+            }
+
+            // If |networkInfo| is BLOCKED, but the app is in the foreground, then it's likely that
+            // Android hasn't finished updating the network access permissions as BLOCKED is only
+            // meant for apps in the background.  See https://crbug.com/677365 for more details.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+                // https://crbug.com/677365 primarily affects only Lollipop and higher versions.
+                recordGetActiveNetworkInfoResult(
+                        NETWORK_INFO_ANDROID_API_LEVEL_TOO_OLD_FOR_UNBLOCKING);
+                return null;
+            }
+
+            if (networkInfo.getDetailedState() != NetworkInfo.DetailedState.BLOCKED) {
+                // Network state is not blocked which implies that network access is
+                // unavailable (not just blocked to this app).
+                recordGetActiveNetworkInfoResult(NETWORK_INFO_NOT_BLOCKED);
+                return null;
+            }
+
+            if (ApplicationStatus.getStateForApplication()
+                    != ApplicationState.HAS_RUNNING_ACTIVITIES) {
+                // The app is not in the foreground.
+                recordGetActiveNetworkInfoResult(NETWORK_INFO_APP_NOT_IN_FOREGROUND);
+                return null;
+            }
+            recordGetActiveNetworkInfoResult(NETWORK_INFO_UNBLOCKED);
+            return networkInfo;
+        }
+
+        /**
+         * Records the result of querying the network info of the current active network.
+         * @param result Result of querying the network info of the current active network.
+         */
+        private static void recordGetActiveNetworkInfoResult(int result) {
+            assert result >= 0 && result < NETWORK_INFO_BOUNDARY;
+            RecordHistogram.recordEnumeratedHistogram(
+                    "NCN.GetActiveNetworkInfoResult", result, NETWORK_INFO_BOUNDARY);
+        }
+
+        /**
          * Returns connection type and status information about the current
          * default network.
          */
         NetworkState getNetworkState(WifiManagerDelegate wifiManagerDelegate) {
-            final NetworkInfo networkInfo = mConnectivityManager.getActiveNetworkInfo();
-            if (networkInfo == null || !networkInfo.isConnected()) {
+            final NetworkInfo networkInfo = getActiveNetworkInfo();
+            if (networkInfo == null) {
                 return new NetworkState(false, -1, -1, null);
             }
             // If Wifi, then fetch SSID also

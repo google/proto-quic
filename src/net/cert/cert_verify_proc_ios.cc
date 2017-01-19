@@ -104,12 +104,6 @@ int BuildAndEvaluateSecTrustRef(CFArrayRef cert_array,
 void GetCertChainInfo(CFArrayRef cert_chain, CertVerifyResult* verify_result) {
   DCHECK_LT(0, CFArrayGetCount(cert_chain));
 
-  verify_result->has_md2 = false;
-  verify_result->has_md4 = false;
-  verify_result->has_md5 = false;
-  verify_result->has_sha1 = false;
-  verify_result->has_sha1_leaf = false;
-
   SecCertificateRef verified_cert = nullptr;
   std::vector<SecCertificateRef> verified_chain;
   for (CFIndex i = 0, count = CFArrayGetCount(cert_chain); i < count; ++i) {
@@ -142,7 +136,6 @@ void GetCertChainInfo(CFArrayRef cert_chain, CertVerifyResult* verify_result) {
         i == count - 1) {
       continue;
     }
-    FillCertVerifyResultWeakSignature(chain_cert, i == 0, verify_result);
   }
   if (!verified_cert) {
     NOTREACHED();

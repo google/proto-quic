@@ -4,8 +4,6 @@
 
 #include "net/quic/core/quic_alarm.h"
 
-#include "base/logging.h"
-
 namespace net {
 
 QuicAlarm::QuicAlarm(QuicArenaScopedPtr<Delegate> delegate)

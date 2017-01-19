@@ -11,6 +11,9 @@ class ProfileSafeUrlPage(page_module.Page):
   def __init__(self, url, page_set):
     super(ProfileSafeUrlPage, self).__init__(
         url=url,
+        # Make sure story name is not too long and has type 'str' instead of
+        # 'unicode'.
+        name=str(url[:140]),
         page_set = page_set,
         shared_page_state_class=shared_page_state.SharedDesktopPageState,
         credentials_path = 'data/credentials.json')

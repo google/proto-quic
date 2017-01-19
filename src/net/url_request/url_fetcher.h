@@ -67,8 +67,8 @@ class URLRequestStatus;
 // the URLFetcher instance. If the URLFetcher instance is destroyed before the
 // callback happens, the fetch will be canceled and no callback will occur.
 //
-// You may create the URLFetcher instance on any thread; OnURLFetchComplete()
-// will be called back on the same thread you use to create the instance.
+// You may create the URLFetcher instance on any sequence; OnURLFetchComplete()
+// will be called back on the same sequence you use to create the instance.
 //
 //
 // NOTE: By default URLFetcher requests are NOT intercepted, except when

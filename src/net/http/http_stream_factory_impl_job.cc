@@ -231,7 +231,7 @@ HttpStreamFactoryImpl::Job::Job(Delegate* delegate,
     DCHECK(origin_url_.SchemeIs(url::kHttpsScheme));
   }
   if (IsQuicAlternative()) {
-    DCHECK(session_->params().enable_quic);
+    DCHECK(session_->IsQuicEnabled());
     using_quic_ = true;
   }
 }
@@ -737,7 +737,7 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
         ProxyServer::SCHEME_HTTPS | ProxyServer::SCHEME_SOCKS4 |
         ProxyServer::SCHEME_SOCKS5;
 
-    if (session_->params().enable_quic)
+    if (session_->IsQuicEnabled())
       supported_proxies |= ProxyServer::SCHEME_QUIC;
 
     proxy_info_.RemoveProxiesWithoutScheme(supported_proxies);
@@ -768,7 +768,7 @@ int HttpStreamFactoryImpl::Job::DoResolveProxyComplete(int result) {
 }
 
 bool HttpStreamFactoryImpl::Job::ShouldForceQuic() const {
-  return session_->params().enable_quic &&
+  return session_->IsQuicEnabled() &&
          (base::ContainsKey(session_->params().origins_to_force_quic_on,
                             HostPortPair()) ||
           base::ContainsKey(session_->params().origins_to_force_quic_on,
@@ -819,11 +819,11 @@ int HttpStreamFactoryImpl::Job::DoInitConnectionImpl() {
   if (ShouldForceQuic())
     using_quic_ = true;
 
-  DCHECK(!using_quic_ || session_->params().enable_quic);
+  DCHECK(!using_quic_ || session_->IsQuicEnabled());
 
   if (proxy_info_.is_quic()) {
     using_quic_ = true;
-    DCHECK(session_->params().enable_quic);
+    DCHECK(session_->IsQuicEnabled());
   }
 
   if (proxy_info_.is_https() || proxy_info_.is_quic()) {

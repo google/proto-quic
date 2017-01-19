@@ -33,8 +33,11 @@
 #include <AvailabilityMacros.h>
 #endif
 
-#include "base/debug/debugger.h"
+#if defined(OS_LINUX)
 #include "base/debug/proc_maps_linux.h"
+#endif
+
+#include "base/debug/debugger.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"

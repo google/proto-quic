@@ -312,7 +312,6 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
     CloseAllObservers(ERR_UNEXPECTED);
 
     connection()->set_debug_visitor(nullptr);
-    net_log_.EndEvent(NetLogEventType::QUIC_SESSION);
 
     UMA_HISTOGRAM_COUNTS_1000("Net.QuicSession.AbortedPendingStreamRequests",
                               stream_requests_.size());
@@ -425,6 +424,7 @@ QuicChromiumClientSession::~QuicChromiumClientSession() {
   UMA_HISTOGRAM_COUNTS(
       "Net.QuicSession.MaxReordering",
       static_cast<base::HistogramBase::Sample>(stats.max_sequence_reordering));
+  net_log_.EndEvent(NetLogEventType::QUIC_SESSION);
 }
 
 void QuicChromiumClientSession::Initialize() {

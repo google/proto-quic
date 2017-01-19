@@ -14,7 +14,7 @@
 #include "base/sequenced_task_runner.h"
 #include "base/single_thread_task_runner.h"
 #include "base/stl_util.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/threading/sequenced_task_runner_handle.h"
 #include "base/tracked_objects.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/io_buffer.h"
@@ -79,7 +79,7 @@ URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,
       original_url_(original_url),
       request_type_(request_type),
       delegate_(d),
-      delegate_task_runner_(base::ThreadTaskRunnerHandle::Get()),
+      delegate_task_runner_(base::SequencedTaskRunnerHandle::Get()),
       load_flags_(LOAD_NORMAL),
       response_code_(URLFetcher::RESPONSE_CODE_INVALID),
       buffer_(new IOBuffer(kBufferSize)),
@@ -109,7 +109,7 @@ URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,
 }
 
 void URLFetcherCore::Start() {
-  DCHECK(delegate_task_runner_.get());
+  DCHECK(delegate_task_runner_);
   DCHECK(request_context_getter_.get()) << "We need an URLRequestContext!";
   if (network_task_runner_.get()) {
     DCHECK_EQ(network_task_runner_,
@@ -124,8 +124,8 @@ void URLFetcherCore::Start() {
 }
 
 void URLFetcherCore::Stop() {
-  if (delegate_task_runner_.get())  // May be NULL in tests.
-    DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  if (delegate_task_runner_)  // May be NULL in tests.
+    DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
 
   delegate_ = NULL;
   fetcher_ = NULL;
@@ -204,7 +204,7 @@ void URLFetcherCore::SetChunkedUpload(const std::string& content_type) {
 
 void URLFetcherCore::AppendChunkToUpload(const std::string& content,
                                          bool is_last_chunk) {
-  DCHECK(delegate_task_runner_.get());
+  DCHECK(delegate_task_runner_);
   DCHECK(network_task_runner_.get());
   DCHECK(is_chunked_upload_);
   network_task_runner_->PostTask(
@@ -289,21 +289,21 @@ void URLFetcherCore::SetAutomaticallyRetryOnNetworkChanges(int max_retries) {
 void URLFetcherCore::SaveResponseToFileAtPath(
     const base::FilePath& file_path,
     scoped_refptr<base::SequencedTaskRunner> file_task_runner) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   SaveResponseWithWriter(std::unique_ptr<URLFetcherResponseWriter>(
       new URLFetcherFileWriter(file_task_runner, file_path)));
 }
 
 void URLFetcherCore::SaveResponseToTemporaryFile(
     scoped_refptr<base::SequencedTaskRunner> file_task_runner) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   SaveResponseWithWriter(std::unique_ptr<URLFetcherResponseWriter>(
       new URLFetcherFileWriter(file_task_runner, base::FilePath())));
 }
 
 void URLFetcherCore::SaveResponseWithWriter(
     std::unique_ptr<URLFetcherResponseWriter> response_writer) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   response_writer_ = std::move(response_writer);
 }
 
@@ -351,7 +351,7 @@ int URLFetcherCore::GetResponseCode() const {
 }
 
 void URLFetcherCore::ReceivedContentWasMalformed() {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   if (network_task_runner_.get()) {
     network_task_runner_->PostTask(
         FROM_HERE, base::Bind(&URLFetcherCore::NotifyMalformedContent, this));
@@ -373,7 +373,7 @@ bool URLFetcherCore::GetResponseAsString(
 
 bool URLFetcherCore::GetResponseAsFilePath(bool take_ownership,
                                            base::FilePath* out_response_path) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
 
   URLFetcherFileWriter* file_writer =
       response_writer_ ? response_writer_->AsFileWriter() : NULL;
@@ -670,7 +670,7 @@ void URLFetcherCore::StartURLRequestWhenAppropriate() {
           original_url_throttler_entry_->ReserveSendingTimeForNextRequest(
               GetBackoffReleaseTime());
       if (delay != 0) {
-        base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        network_task_runner_->PostDelayedTask(
             FROM_HERE, base::Bind(&URLFetcherCore::StartURLRequest, this),
             base::TimeDelta::FromMilliseconds(delay));
         return;
@@ -710,7 +710,7 @@ void URLFetcherCore::CancelURLRequest(int error) {
 
 void URLFetcherCore::OnCompletedURLRequest(
     base::TimeDelta backoff_delay) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
 
   // Save the status and backoff_delay so that delegates can read it.
   if (delegate_) {
@@ -720,7 +720,7 @@ void URLFetcherCore::OnCompletedURLRequest(
 }
 
 void URLFetcherCore::InformDelegateFetchIsComplete() {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   if (delegate_)
     delegate_->OnURLFetchComplete(fetcher_);
 }
@@ -911,16 +911,16 @@ void URLFetcherCore::InformDelegateUploadProgress() {
       delegate_task_runner_->PostTask(
           FROM_HERE,
           base::Bind(
-              &URLFetcherCore::InformDelegateUploadProgressInDelegateThread,
+              &URLFetcherCore::InformDelegateUploadProgressInDelegateSequence,
               this, current, total));
     }
   }
 }
 
-void URLFetcherCore::InformDelegateUploadProgressInDelegateThread(
+void URLFetcherCore::InformDelegateUploadProgressInDelegateSequence(
     int64_t current,
     int64_t total) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   if (delegate_)
     delegate_->OnURLFetchUploadProgress(fetcher_, current, total);
 }
@@ -936,16 +936,16 @@ void URLFetcherCore::InformDelegateDownloadProgress() {
   delegate_task_runner_->PostTask(
       FROM_HERE,
       base::Bind(
-          &URLFetcherCore::InformDelegateDownloadProgressInDelegateThread, this,
-          current_response_bytes_, total_response_bytes_,
+          &URLFetcherCore::InformDelegateDownloadProgressInDelegateSequence,
+          this, current_response_bytes_, total_response_bytes_,
           request_->GetTotalReceivedBytes()));
 }
 
-void URLFetcherCore::InformDelegateDownloadProgressInDelegateThread(
+void URLFetcherCore::InformDelegateDownloadProgressInDelegateSequence(
     int64_t current,
     int64_t total,
     int64_t current_network_bytes) {
-  DCHECK(delegate_task_runner_->BelongsToCurrentThread());
+  DCHECK(delegate_task_runner_->RunsTasksOnCurrentThread());
   if (delegate_)
     delegate_->OnURLFetchDownloadProgress(fetcher_, current, total,
                                           current_network_bytes);

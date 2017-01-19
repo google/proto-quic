@@ -77,8 +77,27 @@ BASE_I18N_EXPORT string16 TimeFormatFriendlyDate(const Time& time);
 
 // Formats a time duration of hours and minutes into various formats, e.g.,
 // "3:07" or "3 hours, 7 minutes".  See DurationFormatWidth for details.
-BASE_I18N_EXPORT string16 TimeDurationFormat(const TimeDelta& time,
+//
+// Please don't use width = DURATION_WIDTH_NUMERIC when the time duration
+// can possibly be larger than 24h, as the hour value will be cut below 24
+// after formatting.
+// TODO(chengx): fix function output when width = DURATION_WIDTH_NUMERIC
+// (http://crbug.com/675791)
+BASE_I18N_EXPORT string16 TimeDurationFormat(const TimeDelta time,
                                              const DurationFormatWidth width);
+
+// Formats a time duration of hours, minutes and seconds into various formats,
+// e.g., "3:07:30" or "3 hours, 7 minutes, 30 seconds". See DurationFormatWidth
+// for details.
+//
+// Please don't use width = DURATION_WIDTH_NUMERIC when the time duration
+// can possibly be larger than 24h, as the hour value will be cut below 24
+// after formatting.
+// TODO(chengx): fix function output when width = DURATION_WIDTH_NUMERIC
+// (http://crbug.com/675791)
+BASE_I18N_EXPORT string16
+TimeDurationFormatWithSeconds(const TimeDelta time,
+                              const DurationFormatWidth width);
 
 // Gets the hour clock type of the current locale. e.g.
 // k12HourClock (en-US).

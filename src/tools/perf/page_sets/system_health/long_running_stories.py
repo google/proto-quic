@@ -88,6 +88,7 @@ class LongRunningGmailMobileForegroundStory(_LongRunningGmailMobileBase):
   NAME = 'long_running:tools:gmail-foreground'
 
 
+@decorators.Disabled('all')  # crbug.com/681839
 class LongRunningGmailDesktopForegroundStory(_LongRunningGmailDesktopBase):
   NAME = 'long_running:tools:gmail-foreground'
 

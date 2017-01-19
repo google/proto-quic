@@ -71,7 +71,7 @@ public class BuildInfo {
             PackageInfo packageInfo = packageManager.getPackageInfo("com.google.android.gms", 0);
             msg = Integer.toString(packageInfo.versionCode);
         } catch (NameNotFoundException e) {
-            Log.d(TAG, "GMS package is not found: %s", e);
+            Log.d(TAG, "GMS package is not found.", e);
         }
         return msg;
     }

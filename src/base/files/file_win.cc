@@ -273,6 +273,12 @@ File File::Duplicate() const {
   return other;
 }
 
+bool File::DeleteOnClose(bool delete_on_close) {
+  FILE_DISPOSITION_INFO disposition = {delete_on_close ? TRUE : FALSE};
+  return ::SetFileInformationByHandle(GetPlatformFile(), FileDispositionInfo,
+                                      &disposition, sizeof(disposition)) != 0;
+}
+
 // Static.
 File::Error File::OSErrorToFileError(DWORD last_error) {
   switch (last_error) {
@@ -359,6 +365,8 @@ void File::DoInitialize(const FilePath& path, uint32_t flags) {
     access |= FILE_WRITE_ATTRIBUTES;
   if (flags & FLAG_EXECUTE)
     access |= GENERIC_EXECUTE;
+  if (flags & FLAG_CAN_DELETE_ON_CLOSE)
+    access |= DELETE;
 
   DWORD sharing = (flags & FLAG_EXCLUSIVE_READ) ? 0 : FILE_SHARE_READ;
   if (!(flags & FLAG_EXCLUSIVE_WRITE))

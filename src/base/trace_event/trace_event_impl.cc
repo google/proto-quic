@@ -458,29 +458,31 @@ TraceID::AsConvertableToTraceFormat() const {
 
   if (scope_ != kGlobalScope)
     value->SetString("scope", scope_);
-  switch (id_flags_) {
-    case TRACE_EVENT_FLAG_HAS_ID:
-      value->SetString(
-          "id",
-          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
-      break;
-    case TRACE_EVENT_FLAG_HAS_GLOBAL_ID:
-      value->BeginDictionary("id2");
-      value->SetString(
-          "global",
-          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
-      value->EndDictionary();
-      break;
-    case TRACE_EVENT_FLAG_HAS_LOCAL_ID:
-      value->BeginDictionary("id2");
-      value->SetString(
-          "local",
-          base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
-      value->EndDictionary();
-      break;
-    default:
-      NOTREACHED() << "Unrecognized ID flag";
+
+  const char* id_field_name = "id";
+  if (id_flags_ == TRACE_EVENT_FLAG_HAS_GLOBAL_ID) {
+    id_field_name = "global";
+    value->BeginDictionary("id2");
+  } else if (id_flags_ == TRACE_EVENT_FLAG_HAS_LOCAL_ID) {
+    id_field_name = "local";
+    value->BeginDictionary("id2");
+  } else if (id_flags_ != TRACE_EVENT_FLAG_HAS_ID) {
+    NOTREACHED() << "Unrecognized ID flag";
   }
+
+  if (has_prefix_) {
+    value->SetString(id_field_name,
+                     base::StringPrintf("0x%" PRIx64 "/0x%" PRIx64,
+                                        static_cast<uint64_t>(prefix_),
+                                        static_cast<uint64_t>(raw_id_)));
+  } else {
+    value->SetString(
+        id_field_name,
+        base::StringPrintf("0x%" PRIx64, static_cast<uint64_t>(raw_id_)));
+  }
+
+  if (id_flags_ != TRACE_EVENT_FLAG_HAS_ID)
+    value->EndDictionary();
 
   return std::move(value);
 }

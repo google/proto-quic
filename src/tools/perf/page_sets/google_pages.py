@@ -6,6 +6,7 @@ from page_sets.login_helpers import google_login
 
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
+from telemetry.util import js_template
 
 import os
 
@@ -67,8 +68,8 @@ class AdwordCampaignDesktopPage(page_module.Page):
         page_set=page_set, name='AdwordsCampaign',
         credentials_path='data/credentials.json',
         shared_page_state_class=shared_page_state.SharedDesktopPageState)
-    self.script_to_evaluate_on_commit = (
-        'console.time("%s");' % INTERACTION_NAME)
+    self.script_to_evaluate_on_commit = js_template.Render(
+        'console.time({{ label }});', label=INTERACTION_NAME)
 
   def RunNavigateSteps(self, action_runner):
     google_login.LoginGoogleAccount(action_runner, 'google3',
@@ -77,5 +78,5 @@ class AdwordCampaignDesktopPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForElement(text='Welcome to AdWords!')
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    action_runner.ExecuteJavaScript('console.timeEnd("%s");' % INTERACTION_NAME)
+    action_runner.ExecuteJavaScript(
+        'console.timeEnd({{ label }});', label=INTERACTION_NAME)

@@ -6,8 +6,6 @@
 
 // Tests of HpackStringDecoder.
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/hpack/decoder/hpack_string_collector.h"
 #include "net/http2/hpack/decoder/hpack_string_decoder_listener.h"
@@ -74,32 +72,27 @@ class HpackStringDecoderTest
     return collector_.Collected(s, huffman_encoded);
   }
 
-  // Note that base::Bind() makes a copy of |expected_str| even though it is
-  // taken as a constant reference, so even if MakeValidator is called with a
-  // C-style string that is cast to a temporary std::string that gets destroyed
-  // after the call to MakeValidator, |expected_str| is still valid later when
-  // the Validator is run.
-  AssertionResult StringValidator(const string& expected_str,
-                                  bool expected_huffman,
-                                  const DecodeBuffer& input,
-                                  DecodeStatus status) {
-    AssertionResult result = Collected(expected_str, expected_huffman);
-    if (result) {
-      VERIFY_EQ(collector_,
-                HpackStringCollector(expected_str, expected_huffman));
-    } else {
-      VERIFY_NE(collector_,
-                HpackStringCollector(expected_str, expected_huffman));
-    }
-    VLOG(2) << collector_.ToString();
-    collector_.Clear();
-    VLOG(2) << collector_;
-    return result;
-  }
+  // expected_str is a string rather than a const string& or StringPiece so that
+  // the lambda makes a copy of the string, and thus the string to be passed to
+  // Collected outlives the call to MakeValidator.
 
   Validator MakeValidator(const string& expected_str, bool expected_huffman) {
-    return base::Bind(&HpackStringDecoderTest::StringValidator,
-                      base::Unretained(this), expected_str, expected_huffman);
+    return
+        [expected_str, expected_huffman, this](
+            const DecodeBuffer& input, DecodeStatus status) -> AssertionResult {
+          AssertionResult result = Collected(expected_str, expected_huffman);
+          if (result) {
+            VERIFY_EQ(collector_,
+                      HpackStringCollector(expected_str, expected_huffman));
+          } else {
+            VERIFY_NE(collector_,
+                      HpackStringCollector(expected_str, expected_huffman));
+          }
+          VLOG(2) << collector_.ToString();
+          collector_.Clear();
+          VLOG(2) << collector_;
+          return result;
+        };
   }
 
   const StartMethod start_method_;

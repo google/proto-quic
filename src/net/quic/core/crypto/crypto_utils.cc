@@ -14,9 +14,10 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "url/url_canon.h"
 
 using base::StringPiece;
@@ -185,13 +186,13 @@ bool CryptoUtils::ExportKeyingMaterial(StringPiece subkey_secret,
                                        string* result) {
   for (size_t i = 0; i < label.length(); i++) {
     if (label[i] == '\0') {
-      LOG(ERROR) << "ExportKeyingMaterial label may not contain NULs";
+      QUIC_LOG(ERROR) << "ExportKeyingMaterial label may not contain NULs";
       return false;
     }
   }
   // Create HKDF info input: null-terminated label + length-prefixed context
   if (context.length() >= std::numeric_limits<uint32_t>::max()) {
-    LOG(ERROR) << "Context value longer than 2^32";
+    QUIC_LOG(ERROR) << "Context value longer than 2^32";
     return false;
   }
   uint32_t context_length = static_cast<uint32_t>(context.length());

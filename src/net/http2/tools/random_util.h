@@ -33,6 +33,10 @@ std::string GenerateWebSafeString(size_t len, RandomBase* rng);
 // Generate a string with the web-safe string character set of length [lo, hi).
 std::string GenerateWebSafeString(size_t lo, size_t hi, RandomBase* rng);
 
+// Returns a random integer in the range [0, max], with a bias towards producing
+// lower numbers.
+size_t GenerateRandomSizeSkewedLow(size_t max, RandomBase* rng);
+
 }  // namespace test
 }  // namespace net
 

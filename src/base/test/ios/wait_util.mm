@@ -48,7 +48,7 @@ void WaitUntilCondition(ConditionBlock condition,
 }
 
 void WaitUntilCondition(ConditionBlock condition) {
-  WaitUntilCondition(condition, nullptr, TimeDelta());
+  WaitUntilCondition(condition, false, TimeDelta());
 }
 
 void SpinRunLoopWithMaxDelay(TimeDelta max_delay) {
@@ -63,20 +63,6 @@ void SpinRunLoopWithMinDelay(TimeDelta min_delay) {
   while (timer.Elapsed() < min_delay) {
     SpinRunLoopWithMaxDelay(TimeDelta::FromMilliseconds(10));
   }
-}
-
-TimeDelta TimeUntilCondition(ProceduralBlock action,
-                             ConditionBlock condition,
-                             MessageLoop* message_loop,
-                             TimeDelta timeout) {
-  return TimeUntilCondition(action, condition, message_loop != nullptr,
-                            timeout);
-}
-
-void WaitUntilCondition(ConditionBlock condition,
-                        MessageLoop* message_loop,
-                        TimeDelta timeout) {
-  WaitUntilCondition(condition, message_loop != nullptr, timeout);
 }
 
 }  // namespace ios

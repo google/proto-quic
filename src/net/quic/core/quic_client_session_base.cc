@@ -7,6 +7,7 @@
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using base::StringPiece;
 using std::string;
@@ -24,7 +25,7 @@ QuicClientSessionBase::QuicClientSessionBase(
 QuicClientSessionBase::~QuicClientSessionBase() {
   //  all promised streams for this session
   for (auto& it : promised_by_id_) {
-    DVLOG(1) << "erase stream " << it.first << " url " << it.second->url();
+    QUIC_DVLOG(1) << "erase stream " << it.first << " url " << it.second->url();
     push_promise_index_->promised_by_url()->erase(it.second->url());
   }
   delete connection();
@@ -86,13 +87,13 @@ bool QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
   if (IsClosedStream(id)) {
     // There was a RST on the data stream already, perhaps
     // QUIC_REFUSED_STREAM?
-    DVLOG(1) << "Promise ignored for stream " << id
-             << " that is already closed";
+    QUIC_DVLOG(1) << "Promise ignored for stream " << id
+                  << " that is already closed";
     return false;
   }
 
   if (push_promise_index_->promised_by_url()->size() >= get_max_promises()) {
-    DVLOG(1) << "Too many promises, rejecting promise for stream " << id;
+    QUIC_DVLOG(1) << "Too many promises, rejecting promise for stream " << id;
     ResetPromised(id, QUIC_REFUSED_STREAM);
     return false;
   }
@@ -100,8 +101,8 @@ bool QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
   const string url = SpdyUtils::GetUrlFromHeaderBlock(headers);
   QuicClientPromisedInfo* old_promised = GetPromisedByUrl(url);
   if (old_promised) {
-    DVLOG(1) << "Promise for stream " << id << " is duplicate URL " << url
-             << " of previous promise for stream " << old_promised->id();
+    QUIC_DVLOG(1) << "Promise for stream " << id << " is duplicate URL " << url
+                  << " of previous promise for stream " << old_promised->id();
     ResetPromised(id, QUIC_DUPLICATE_PROMISE_URL);
     return false;
   }
@@ -116,7 +117,7 @@ bool QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
   QuicClientPromisedInfo* promised = new QuicClientPromisedInfo(this, id, url);
   std::unique_ptr<QuicClientPromisedInfo> promised_owner(promised);
   promised->Init();
-  DVLOG(1) << "stream " << id << " emplace url " << url;
+  QUIC_DVLOG(1) << "stream " << id << " emplace url " << url;
   (*push_promise_index_->promised_by_url())[url] = promised;
   promised_by_id_[id] = std::move(promised_owner);
   promised->OnPromiseHeaders(headers);

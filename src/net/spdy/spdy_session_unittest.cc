@@ -1295,9 +1295,16 @@ TEST_F(SpdySessionTest, CancelPushAfterSessionGoesAway) {
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_a(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
-  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_a, 7),
+  };
 
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
@@ -1307,9 +1314,9 @@ TEST_F(SpdySessionTest, CancelPushAfterSessionGoesAway) {
   SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
   MockRead reads[] = {
-      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 3),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -1380,9 +1387,16 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_a(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
-  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_a, 7),
+  };
 
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
@@ -1392,9 +1406,9 @@ TEST_F(SpdySessionTest, CancelPushAfterExpired) {
   SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
   MockRead reads[] = {
-      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 3),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -1466,9 +1480,16 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_a(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
-  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_a, 7),
+  };
 
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
@@ -1478,9 +1499,9 @@ TEST_F(SpdySessionTest, CancelPushBeforeClaimed) {
   SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
   MockRead reads[] = {
-      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 3),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -1550,9 +1571,16 @@ TEST_F(SpdySessionTest, DeleteExpiredPushStreams) {
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_a(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
-  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_a, 7),
+  };
 
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
@@ -1562,9 +1590,9 @@ TEST_F(SpdySessionTest, DeleteExpiredPushStreams) {
   SpdySerializedFrame push_b(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 4, 1, "https://www.example.org/0.dat"));
   MockRead reads[] = {
-      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7)  // EOF
+      CreateMockRead(push_a, 1),          CreateMockRead(push_a_body, 3),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -1629,9 +1657,19 @@ TEST_F(SpdySessionTest, MetricsCollectionOnPushStreams) {
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, MEDIUM, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame priority_c(
+      spdy_util_.ConstructSpdyPriority(6, 4, IDLE, true));
+  SpdySerializedFrame rst_a(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
-  MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 5)};
+  MockWrite writes[] = {
+      CreateMockWrite(req, 0),         CreateMockWrite(priority_a, 2),
+      CreateMockWrite(priority_b, 6),  CreateMockWrite(rst_a, 7),
+      CreateMockWrite(priority_c, 10),
+  };
 
   SpdySerializedFrame push_a(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, "https://www.example.org/a.dat"));
@@ -1646,14 +1684,14 @@ TEST_F(SpdySessionTest, MetricsCollectionOnPushStreams) {
 
   MockRead reads[] = {
       CreateMockRead(push_a, 1),
-      CreateMockRead(push_a_body, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3),
-      CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6),
-      CreateMockRead(push_c, 7),
-      CreateMockRead(push_c_body, 8),
-      MockRead(ASYNC, ERR_IO_PENDING, 9),
-      MockRead(ASYNC, 0, 10)  // EOF
+      CreateMockRead(push_a_body, 3),
+      MockRead(ASYNC, ERR_IO_PENDING, 4),
+      CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8),
+      CreateMockRead(push_c, 9),
+      CreateMockRead(push_c_body, 11),
+      MockRead(ASYNC, ERR_IO_PENDING, 12),
+      MockRead(ASYNC, 0, 13)  // EOF
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -4860,15 +4898,18 @@ TEST_F(SpdySessionTest, PushedStreamShouldNotCountToClientConcurrencyLimit) {
       CreateMockRead(settings_frame, 0),
       MockRead(ASYNC, ERR_IO_PENDING, 3),
       CreateMockRead(pushed, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 5),
-      MockRead(ASYNC, 0, 6),
+      MockRead(ASYNC, ERR_IO_PENDING, 6),
+      MockRead(ASYNC, 0, 7),
   };
 
   SpdySerializedFrame settings_ack(spdy_util_.ConstructSpdySettingsAck());
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   MockWrite writes[] = {
       CreateMockWrite(settings_ack, 1), CreateMockWrite(req, 2),
+      CreateMockWrite(priority, 5),
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -4940,16 +4981,21 @@ TEST_F(SpdySessionTest, RejectPushedStreamExceedingConcurrencyLimit) {
       nullptr, 0, 4, 1, "https://www.example.org/b.dat"));
   MockRead reads[] = {
       MockRead(ASYNC, ERR_IO_PENDING, 1), CreateMockRead(push_a, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9),
   };
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_b(
       spdy_util_.ConstructSpdyRstStream(4, RST_STREAM_REFUSED_STREAM));
   MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(rst, 5),
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 3),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_b, 7),
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -5026,18 +5072,21 @@ TEST_F(SpdySessionTest, TrustedSpdyProxy) {
   MockRead reads[] = {
       MockRead(ASYNC, ERR_IO_PENDING, 1),
       CreateMockRead(cross_origin_push, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3),
-      CreateMockRead(cross_origin_https_push, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6),
-      MockRead(ASYNC, 0, 7),
+      MockRead(ASYNC, ERR_IO_PENDING, 4),
+      CreateMockRead(cross_origin_https_push, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 7),
+      MockRead(ASYNC, 0, 8),
   };
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_http(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame rst_https(
       spdy_util_.ConstructSpdyRstStream(4, RST_STREAM_REFUSED_STREAM));
   MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(rst, 5),
+      CreateMockWrite(req, 0), CreateMockWrite(priority_http, 3),
+      CreateMockWrite(rst_https, 6),
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -5175,18 +5224,23 @@ TEST_F(SpdySessionTest, IgnoreReservedRemoteStreamsCount) {
   SpdySerializedFrame headers_b(
       spdy_util_.ConstructSpdyPushHeaders(4, nullptr, 0));
   MockRead reads[] = {
-      MockRead(ASYNC, ERR_IO_PENDING, 1), CreateMockRead(push_a, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(push_b, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 5), CreateMockRead(headers_b, 6),
-      MockRead(ASYNC, ERR_IO_PENDING, 8), MockRead(ASYNC, 0, 9),
+      MockRead(ASYNC, ERR_IO_PENDING, 1),  CreateMockRead(push_a, 2),
+      MockRead(ASYNC, ERR_IO_PENDING, 4),  CreateMockRead(push_b, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 7),  CreateMockRead(headers_b, 8),
+      MockRead(ASYNC, ERR_IO_PENDING, 10), MockRead(ASYNC, 0, 11),
   };
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame rst(
+  SpdySerializedFrame priority_a(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
+  SpdySerializedFrame priority_b(
+      spdy_util_.ConstructSpdyPriority(4, 2, IDLE, true));
+  SpdySerializedFrame rst_b(
       spdy_util_.ConstructSpdyRstStream(4, RST_STREAM_REFUSED_STREAM));
   MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(rst, 7),
+      CreateMockWrite(req, 0), CreateMockWrite(priority_a, 3),
+      CreateMockWrite(priority_b, 6), CreateMockWrite(rst_b, 9),
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -5264,16 +5318,19 @@ TEST_F(SpdySessionTest, CancelReservedStreamOnHeadersReceived) {
       spdy_util_.ConstructSpdyPushHeaders(2, nullptr, 0));
   MockRead reads[] = {
       MockRead(ASYNC, ERR_IO_PENDING, 1), CreateMockRead(push_promise, 2),
-      MockRead(ASYNC, ERR_IO_PENDING, 3), CreateMockRead(headers_frame, 4),
-      MockRead(ASYNC, ERR_IO_PENDING, 6), MockRead(ASYNC, 0, 7),
+      MockRead(ASYNC, ERR_IO_PENDING, 4), CreateMockRead(headers_frame, 5),
+      MockRead(ASYNC, ERR_IO_PENDING, 7), MockRead(ASYNC, 0, 8),
   };
 
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
+  SpdySerializedFrame priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame rst(
       spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_CANCEL));
   MockWrite writes[] = {
-      CreateMockWrite(req, 0), CreateMockWrite(rst, 5),
+      CreateMockWrite(req, 0), CreateMockWrite(priority, 3),
+      CreateMockWrite(rst, 6),
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -5318,7 +5375,7 @@ TEST_F(SpdySessionTest, CancelReservedStreamOnHeadersReceived) {
   EXPECT_EQ(0u, session_->num_active_pushed_streams());
 
   base::WeakPtr<SpdyStream> pushed_stream;
-  int rv = session_->GetPushStream(GURL(kPushedUrl), &pushed_stream,
+  int rv = session_->GetPushStream(GURL(kPushedUrl), IDLE, &pushed_stream,
                                    NetLogWithSource());
   ASSERT_THAT(rv, IsOk());
   ASSERT_TRUE(pushed_stream);

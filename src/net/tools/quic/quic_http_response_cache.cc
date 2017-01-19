@@ -11,7 +11,8 @@
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "net/http/http_util.h"
-#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_http_utils.h"
 
@@ -52,8 +53,8 @@ void QuicHttpResponseCache::ResourceFile::Read() {
   while (start < file_contents_.length()) {
     size_t pos = file_contents_.find("\n", start);
     if (pos == string::npos) {
-      LOG(DFATAL) << "Headers invalid or empty, ignoring: "
-                  << file_name_.value();
+      QUIC_LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                       << file_name_.value();
       return;
     }
     size_t len = pos - start;
@@ -71,8 +72,8 @@ void QuicHttpResponseCache::ResourceFile::Read() {
     if (line.substr(0, 4) == "HTTP") {
       pos = line.find(" ");
       if (pos == string::npos) {
-        LOG(DFATAL) << "Headers invalid or empty, ignoring: "
-                    << file_name_.value();
+        QUIC_LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                         << file_name_.value();
         return;
       }
       spdy_headers_[":status"] = line.substr(pos + 1, 3);
@@ -81,8 +82,8 @@ void QuicHttpResponseCache::ResourceFile::Read() {
     // Headers are "key: value".
     pos = line.find(": ");
     if (pos == string::npos) {
-      LOG(DFATAL) << "Headers invalid or empty, ignoring: "
-                  << file_name_.value();
+      QUIC_LOG(DFATAL) << "Headers invalid or empty, ignoring: "
+                       << file_name_.value();
       return;
     }
     spdy_headers_.AppendValueOrAddHeader(
@@ -235,8 +236,9 @@ void QuicHttpResponseCache::InitializeFromDirectory(
     QUIC_BUG << "cache_directory must not be empty.";
     return;
   }
-  VLOG(1) << "Attempting to initialize QuicHttpResponseCache from directory: "
-          << cache_directory;
+  QUIC_LOG(INFO)
+      << "Attempting to initialize QuicHttpResponseCache from directory: "
+      << cache_directory;
   FilePath directory(FilePath::FromUTF8Unsafe(cache_directory));
   base::FileEnumerator file_list(directory, true, base::FileEnumerator::FILES);
   std::list<std::unique_ptr<ResourceFile>> resource_files;
@@ -292,8 +294,8 @@ std::list<ServerPushInfo> QuicHttpResponseCache::GetServerPushResources(
   for (auto it = resource_range.first; it != resource_range.second; ++it) {
     resources.push_back(it->second);
   }
-  DVLOG(1) << "Found " << resources.size() << " push resources for "
-           << request_url;
+  QUIC_DVLOG(1) << "Found " << resources.size() << " push resources for "
+                << request_url;
   return resources;
 }
 
@@ -323,7 +325,7 @@ void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
   new_response->set_headers(std::move(response_headers));
   new_response->set_body(response_body);
   new_response->set_trailers(std::move(response_trailers));
-  DVLOG(1) << "Add response with key " << key;
+  QUIC_DVLOG(1) << "Add response with key " << key;
   responses_[key] = std::move(new_response);
 }
 
@@ -342,9 +344,10 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
       continue;
     }
 
-    DVLOG(1) << "Add request-resource association: request url " << request_url
-             << " push url " << push_resource.request_url
-             << " response headers " << push_resource.headers.DebugString();
+    QUIC_DVLOG(1) << "Add request-resource association: request url "
+                  << request_url << " push url " << push_resource.request_url
+                  << " response headers "
+                  << push_resource.headers.DebugString();
     {
       QuicWriterMutexLock lock(&response_mutex_);
       server_push_resources_.insert(std::make_pair(request_url, push_resource));
@@ -363,8 +366,8 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
     if (!found_existing_response) {
       // Add a server push response to responses map, if it is not in the map.
       StringPiece body = push_resource.body;
-      DVLOG(1) << "Add response for push resource: host " << host << " path "
-               << path;
+      QUIC_DVLOG(1) << "Add response for push resource: host " << host
+                    << " path " << path;
       AddResponse(host, path, push_resource.headers.Clone(), body);
     }
   }

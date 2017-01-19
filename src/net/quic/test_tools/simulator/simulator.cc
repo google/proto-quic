@@ -4,6 +4,7 @@
 
 #include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
 namespace net {
@@ -127,8 +128,8 @@ void Simulator::HandleNextScheduledActor() {
   const auto current_event_it = schedule_.begin();
   QuicTime event_time = current_event_it->first;
   Actor* actor = current_event_it->second;
-  DVLOG(3) << "At t = " << event_time.ToDebuggingValue() << ", calling "
-           << actor->name();
+  QUIC_DVLOG(3) << "At t = " << event_time.ToDebuggingValue() << ", calling "
+                << actor->name();
 
   Unschedule(actor);
 

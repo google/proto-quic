@@ -7,6 +7,8 @@
 // Tests of HpackWholeEntryBuffer: does it buffer correctly, and does it
 // detect Huffman decoding errors and oversize string errors?
 
+#include "net/test/gtest_util.h"
+#include "testing/gmock/include/gmock/gmock-matchers.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -15,7 +17,6 @@ using ::testing::AllOf;
 using ::testing::HasSubstr;
 using ::testing::InSequence;
 using ::testing::Property;
-using ::testing::SaveArg;
 using ::testing::StrictMock;
 using ::testing::_;
 
@@ -24,6 +25,15 @@ namespace test {
 namespace {
 
 constexpr size_t kMaxStringSize = 20;
+
+// Define HasSubstr() for base::StringPiece arguments.
+// This shadows ::testing::HasSubstr(), which only works on argument types
+// that can be implicilty converted to a std::string.
+inline ::testing::PolymorphicMatcher<StringPieceHasSubstrMatcher> HasSubstr(
+    const std::string& substring) {
+  return ::testing::MakePolymorphicMatcher(
+      StringPieceHasSubstrMatcher(substring));
+}
 
 class MockHpackWholeEntryListener : public HpackWholeEntryListener {
  public:
@@ -157,21 +167,15 @@ TEST_F(HpackWholeEntryBufferTest, OnLiteralNameAndValue) {
 // Verify that a name longer than the allowed size generates an error.
 TEST_F(HpackWholeEntryBufferTest, NameTooLong) {
   entry_buffer_.OnStartLiteralHeader(HpackEntryType::kIndexedLiteralHeader, 0);
-  StringPiece error_message;
-  EXPECT_CALL(listener_, OnHpackDecodeError(_))
-      .WillOnce(SaveArg<0>(&error_message));
+  EXPECT_CALL(listener_, OnHpackDecodeError(HasSubstr("HPACK entry name")));
   entry_buffer_.OnNameStart(false, kMaxStringSize + 1);
-  EXPECT_THAT(error_message.as_string(), HasSubstr("HPACK entry name"));
 }
 
 // Verify that a name longer than the allowed size generates an error.
 TEST_F(HpackWholeEntryBufferTest, ValueTooLong) {
   entry_buffer_.OnStartLiteralHeader(HpackEntryType::kIndexedLiteralHeader, 1);
-  StringPiece error_message;
-  EXPECT_CALL(listener_, OnHpackDecodeError(_))
-      .WillOnce(SaveArg<0>(&error_message));
+  EXPECT_CALL(listener_, OnHpackDecodeError(HasSubstr("HPACK entry value")));
   entry_buffer_.OnValueStart(false, kMaxStringSize + 1);
-  EXPECT_THAT(error_message.as_string(), HasSubstr("HPACK entry value"));
 }
 
 // Verify that a Huffman encoded name with an explicit EOS generates an error
@@ -183,12 +187,9 @@ TEST_F(HpackWholeEntryBufferTest, NameHuffmanError) {
   entry_buffer_.OnNameStart(true, 4);
   entry_buffer_.OnNameData(data, 3);
 
-  StringPiece error_message;
-  EXPECT_CALL(listener_, OnHpackDecodeError(_))
-      .WillOnce(SaveArg<0>(&error_message));
+  EXPECT_CALL(listener_, OnHpackDecodeError(HasSubstr("HPACK entry name")));
 
   entry_buffer_.OnNameData(data, 1);
-  EXPECT_THAT(error_message.as_string(), HasSubstr("HPACK entry name"));
 
   // After an error is reported, the listener is not called again.
   EXPECT_CALL(listener_, OnDynamicTableSizeUpdate(8096)).Times(0);
@@ -204,12 +205,9 @@ TEST_F(HpackWholeEntryBufferTest, ValueeHuffmanError) {
   entry_buffer_.OnValueStart(true, 3);
   entry_buffer_.OnValueData(data, 3);
 
-  StringPiece error_message;
-  EXPECT_CALL(listener_, OnHpackDecodeError(_))
-      .WillOnce(SaveArg<0>(&error_message));
+  EXPECT_CALL(listener_, OnHpackDecodeError(HasSubstr("HPACK entry value")));
 
   entry_buffer_.OnValueEnd();
-  EXPECT_THAT(error_message.as_string(), HasSubstr("HPACK entry value"));
 
   // After an error is reported, the listener is not called again.
   EXPECT_CALL(listener_, OnIndexedHeader(17)).Times(0);

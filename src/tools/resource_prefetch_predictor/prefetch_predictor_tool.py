@@ -13,6 +13,7 @@ adb pull \
 
 import argparse
 import sqlite3
+import os
 
 from resource_prefetch_predictor_pb2 import (PrefetchData, ResourceData)
 
@@ -77,6 +78,15 @@ class Entry(object):
         continue
       self._PrettyPrintResource(resource)
 
+# The version of python sqlite3 library we have in Ubuntu 14.04 LTS doesn't
+# support views but command line util does.
+# TODO(alexilin): get rid of this when python sqlite3 adds view support.
+def CreateCompatibleDatabaseCopy(filename):
+  import tempfile, shutil, subprocess
+  _, tmpfile = tempfile.mkstemp()
+  shutil.copy2(filename, tmpfile)
+  subprocess.call(['sqlite3', tmpfile, 'DROP VIEW MmapStatus'])
+  return tmpfile
 
 def DatabaseStats(filename, domain):
   connection = sqlite3.connect(filename)
@@ -94,7 +104,12 @@ def main():
                       help='Path to the database')
   parser.add_argument('-d', dest='domain', default=None, help='Domain')
   args = parser.parse_args()
-  DatabaseStats(args.database_filename, args.domain)
+  try:
+    database_copy = CreateCompatibleDatabaseCopy(args.database_filename)
+    DatabaseStats(database_copy, args.domain)
+  finally:
+    if os.path.exists(database_copy):
+      os.remove(database_copy)
 
 
 if __name__ == '__main__':

@@ -22,6 +22,8 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
 
   IS_SINGLE_PAGE_APP = False
   ITEM_SELECTOR = NotImplemented
+  # Defaults to using the body element if not set.
+  CONTAINER_SELECTOR = None
   ABSTRACT_STORY = True
 
   def _WaitForNavigation(self, action_runner):
@@ -33,7 +35,9 @@ class _BrowsingStory(system_health_story.SystemHealthStory):
         self.ITEM_SELECTOR, index)
     # Only scrolls if element is not currently in viewport.
     action_runner.WaitForElement(element_function=item_selector)
-    action_runner.ScrollPageToElement(element_function=item_selector)
+    action_runner.ScrollPageToElement(
+        element_function=item_selector,
+        container_selector=self.CONTAINER_SELECTOR)
     self._ClickLink(action_runner, item_selector)
 
   def _ClickLink(self, action_runner, element_function):
@@ -138,8 +142,8 @@ class FlipboardDesktopStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
-# crbug.com/657665 for win and mac, crbug.com/665007 for linux
-@decorators.Disabled('win', 'linux', 'yosemite', 'elcapitan')
+# crbug.com/657665 for win and mac
+@decorators.Disabled('win', 'yosemite', 'elcapitan')
 class HackerNewsStory(_NewsBrowsingStory):
   NAME = 'browse:news:hackernews'
   URL = 'https://news.ycombinator.com'
@@ -195,11 +199,11 @@ class TwitterMobileStory(_NewsBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'
   ITEM_SELECTOR = '.Tweet-text'
+  CONTAINER_SELECTOR = '.NavigationSheet'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
 
 
-@decorators.Disabled('win',  # crbug.com/662971
-                     'mac')  # crbug.com/663025
+@decorators.Disabled('win')  # crbug.com/662971
 class TwitterDesktopStory(_NewsBrowsingStory):
   NAME = 'browse:social:twitter'
   URL = 'https://www.twitter.com/nasa'
@@ -222,9 +226,9 @@ class WashingtonPostMobileStory(_NewsBrowsingStory):
     # window does not have a "Close" button, instead it has only a "Send link
     # to phone" button. So on tablets we run with the popup window open. The
     # popup is transparent, so this is mostly an aesthetical issue.
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
     has_button = action_runner.EvaluateJavaScript(
-        '!!document.querySelector("%s")' % self._CLOSE_BUTTON_SELECTOR)
+        '!!document.querySelector({{ selector }})',
+        selector=self._CLOSE_BUTTON_SELECTOR)
     if has_button:
       action_runner.ClickElement(selector=self._CLOSE_BUTTON_SELECTOR)
     super(WashingtonPostMobileStory, self)._DidLoadDocument(action_runner)

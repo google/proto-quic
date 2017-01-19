@@ -26,7 +26,9 @@ namespace base {
 
 FilePathWatcherKQueue::FilePathWatcherKQueue() : kqueue_(-1) {}
 
-FilePathWatcherKQueue::~FilePathWatcherKQueue() {}
+FilePathWatcherKQueue::~FilePathWatcherKQueue() {
+  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+}
 
 void FilePathWatcherKQueue::ReleaseEvent(struct kevent& event) {
   CloseFileDescriptor(&event.ident);
@@ -265,11 +267,13 @@ bool FilePathWatcherKQueue::Watch(const FilePath& path,
     return false;
   }
 
-  // This creates an ownership cycle (|this| owns |kqueue_watch_controller_|
-  // which owns a callback which owns |this|). The cycle is broken when
-  // |kqueue_watch_controller_| is reset in Cancel().
+  // It's safe to use Unretained() because the watch is cancelled and the
+  // callback cannot be invoked after |kqueue_watch_controller_| (which is a
+  // member of |this|) has been deleted.
   kqueue_watch_controller_ = FileDescriptorWatcher::WatchReadable(
-      kqueue_, Bind(&FilePathWatcherKQueue::OnKQueueReadable, this));
+      kqueue_,
+      Bind(&FilePathWatcherKQueue::OnKQueueReadable, Unretained(this)));
+
   return true;
 }
 

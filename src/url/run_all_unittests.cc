@@ -13,7 +13,6 @@
 
 #if !defined(OS_IOS)
 #include "mojo/edk/embedder/embedder.h"  // nogncheck
-#include "mojo/edk/test/scoped_ipc_support.h"  // nogncheck
 #endif
 
 int main(int argc, char** argv) {
@@ -21,10 +20,6 @@ int main(int argc, char** argv) {
 
 #if !defined(OS_IOS)
   mojo::edk::Init();
-  base::TestIOThread test_io_thread(base::TestIOThread::kAutoStart);
-  std::unique_ptr<mojo::edk::test::ScopedIPCSupport> ipc_support;
-  ipc_support.reset(
-      new mojo::edk::test::ScopedIPCSupport(test_io_thread.task_runner()));
 #endif
 
   return base::LaunchUnitTests(

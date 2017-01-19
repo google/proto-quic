@@ -92,6 +92,8 @@ void URLRequestHangingReadJob::GetResponseInfoConst(
 }
 
 void URLRequestHangingReadJob::StartAsync() {
+  if (is_done())
+    return;
   set_expected_content_size(content_length_);
   NotifyHeadersComplete();
 }

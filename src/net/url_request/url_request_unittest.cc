@@ -5446,8 +5446,8 @@ TEST_F(URLRequestTestHTTP, URLRequestDelegateOnRedirectCancelled) {
   for (size_t test_case = 0; test_case < arraysize(kCancelStages);
        ++test_case) {
     AsyncLoggingUrlRequestDelegate request_delegate(kCancelStages[test_case]);
-    TestURLRequestContext context(true);
     TestNetLog net_log;
+    TestURLRequestContext context(true);
     context.set_network_delegate(NULL);
     context.set_net_log(&net_log);
     context.Init();

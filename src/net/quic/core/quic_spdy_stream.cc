@@ -6,13 +6,13 @@
 
 #include <utility>
 
-#include "base/logging.h"
 #include "net/base/parse_number.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
 using base::IntToString;
@@ -52,7 +52,7 @@ void QuicSpdyStream::StopReading() {
       !rst_sent()) {
     DCHECK(fin_sent());
     // Tell the peer to stop sending further data.
-    DVLOG(1) << ENDPOINT << "Send QUIC_STREAM_NO_ERROR on stream " << id();
+    QUIC_DVLOG(1) << ENDPOINT << "Send QUIC_STREAM_NO_ERROR on stream " << id();
     Reset(QUIC_STREAM_NO_ERROR);
   }
   QuicStream::StopReading();
@@ -89,8 +89,8 @@ size_t QuicSpdyStream::WriteTrailers(
 
   // The header block must contain the final offset for this stream, as the
   // trailers may be processed out of order at the peer.
-  DVLOG(1) << "Inserting trailer: (" << kFinalOffsetHeaderKey << ", "
-           << stream_bytes_written() + queued_data_bytes() << ")";
+  QUIC_DLOG(INFO) << "Inserting trailer: (" << kFinalOffsetHeaderKey << ", "
+                  << stream_bytes_written() + queued_data_bytes() << ")";
   trailer_block.insert(
       std::make_pair(kFinalOffsetHeaderKey,
                      QuicTextUtils::Uint64ToString(stream_bytes_written() +
@@ -219,14 +219,14 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
     const QuicHeaderList& header_list) {
   DCHECK(!trailers_decompressed_);
   if (fin_received()) {
-    DLOG(ERROR) << "Received Trailers after FIN, on stream: " << id();
+    QUIC_DLOG(ERROR) << "Received Trailers after FIN, on stream: " << id();
     session()->connection()->CloseConnection(
         QUIC_INVALID_HEADERS_STREAM_DATA, "Trailers after fin",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return;
   }
   if (!fin) {
-    DLOG(ERROR) << "Trailers must have FIN set, on stream: " << id();
+    QUIC_DLOG(ERROR) << "Trailers must have FIN set, on stream: " << id();
     session()->connection()->CloseConnection(
         QUIC_INVALID_HEADERS_STREAM_DATA, "Fin missing from trailers",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -236,7 +236,7 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
   size_t final_byte_offset = 0;
   if (!SpdyUtils::CopyAndValidateTrailers(header_list, &final_byte_offset,
                                           &received_trailers_)) {
-    DLOG(ERROR) << "Trailers are malformed: " << id();
+    QUIC_DLOG(ERROR) << "Trailers are malformed: " << id();
     session()->connection()->CloseConnection(
         QUIC_INVALID_HEADERS_STREAM_DATA, "Trailers are malformed",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -251,7 +251,7 @@ void QuicSpdyStream::OnStreamReset(const QuicRstStreamFrame& frame) {
     QuicStream::OnStreamReset(frame);
     return;
   }
-  DVLOG(1) << "Received QUIC_STREAM_NO_ERROR, not discarding response";
+  QUIC_DVLOG(1) << "Received QUIC_STREAM_NO_ERROR, not discarding response";
   set_rst_received(true);
   MaybeIncreaseHighestReceivedOffset(frame.byte_offset);
   set_stream_error(frame.error_code);

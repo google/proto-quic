@@ -7,21 +7,21 @@
 
 #include <memory>
 
+#include "base/memory/ref_counted.h"
 #include "net/base/net_export.h"
 
 namespace net {
 
 class CertNetFetcher;
-class URLRequestContextGetter;
+class URLRequestContext;
 
 // Creates a CertNetFetcher that issues requests through the provided
-// URLRequestContext.
-//
-// The returned CertNetFetcher is to be operated on a thread *other* than the
-// thread used for the URLRequestContext (since it gives a blocking interface
-// to URL fetching).
-NET_EXPORT std::unique_ptr<CertNetFetcher> CreateCertNetFetcher(
-    URLRequestContextGetter* context_getter);
+// URLRequestContext. The URLRequestContext must stay valid until the returned
+// CertNetFetcher's Shutdown method is called. The CertNetFetcher is to be
+// created and shutdown on the network thread. Its Fetch methods are to be used
+// on a *different* thread, since it gives a blocking interface to URL fetching.
+NET_EXPORT scoped_refptr<CertNetFetcher> CreateCertNetFetcher(
+    URLRequestContext* context);
 
 }  // namespace net
 

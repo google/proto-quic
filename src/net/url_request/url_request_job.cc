@@ -84,6 +84,9 @@ URLRequest::ReferrerPolicy ProcessReferrerPolicyHeaderOnRedirect(
       base::SplitString(referrer_policy_header, ",", base::TRIM_WHITESPACE,
                         base::SPLIT_WANT_NONEMPTY);
 
+  UMA_HISTOGRAM_BOOLEAN("Net.URLRequest.ReferrerPolicyHeaderPresentOnRedirect",
+                        !policy_tokens.empty());
+
   for (const auto& token : policy_tokens) {
     if (base::CompareCaseInsensitiveASCII(token, "no-referrer") == 0) {
       new_policy = URLRequest::NO_REFERRER;

@@ -49,20 +49,20 @@ enum PageAccessibilityConfiguration {
 // PageAccessibilityConfiguration controls the permission of the
 // allocated pages.
 // This call will return null if the allocation cannot be satisfied.
-BASE_EXPORT void* allocPages(void* addr,
+BASE_EXPORT void* AllocPages(void* address,
                              size_t len,
                              size_t align,
                              PageAccessibilityConfiguration);
 
 // Free one or more pages.
 // addr and len must match a previous call to allocPages().
-BASE_EXPORT void freePages(void* addr, size_t len);
+BASE_EXPORT void FreePages(void* address, size_t length);
 
 // Mark one or more system pages as being inaccessible.
 // Subsequently accessing any address in the range will fault, and the
 // addresses will not be re-used by future allocations.
 // len must be a multiple of kSystemPageSize bytes.
-BASE_EXPORT void setSystemPagesInaccessible(void* addr, size_t len);
+BASE_EXPORT void SetSystemPagesInaccessible(void* address, size_t length);
 
 // Mark one or more system pages as being accessible.
 // The pages will be readable and writeable.
@@ -70,8 +70,8 @@ BASE_EXPORT void setSystemPagesInaccessible(void* addr, size_t len);
 // The result bool value indicates whether the permission
 // change succeeded or not. You must check the result
 // (in most cases you need to CHECK that it is true).
-BASE_EXPORT WARN_UNUSED_RESULT bool setSystemPagesAccessible(void* addr,
-                                                             size_t len);
+BASE_EXPORT WARN_UNUSED_RESULT bool SetSystemPagesAccessible(void* address,
+                                                             size_t length);
 
 // Decommit one or more system pages. Decommitted means that the physical memory
 // is released to the system, but the virtual address space remains reserved.
@@ -83,13 +83,13 @@ BASE_EXPORT WARN_UNUSED_RESULT bool setSystemPagesAccessible(void* addr,
 // after recommitting and writing to it. In particlar note that system pages are
 // not guaranteed to be zero-filled upon re-commit. len must be a multiple of
 // kSystemPageSize bytes.
-BASE_EXPORT void decommitSystemPages(void* addr, size_t len);
+BASE_EXPORT void DecommitSystemPages(void* address, size_t length);
 
 // Recommit one or more system pages. Decommitted system pages must be
 // recommitted before they are read are written again.
 // Note that this operation may be a no-op on some platforms.
 // len must be a multiple of kSystemPageSize bytes.
-BASE_EXPORT void recommitSystemPages(void* addr, size_t len);
+BASE_EXPORT void RecommitSystemPages(void* address, size_t length);
 
 // Discard one or more system pages. Discarding is a hint to the system that
 // the page is no longer required. The hint may:
@@ -106,18 +106,18 @@ BASE_EXPORT void recommitSystemPages(void* addr, size_t len);
 // guaranteed stable once more. After being written to, the page content may be
 // based on the original page content, or a page of zeroes.
 // len must be a multiple of kSystemPageSize bytes.
-BASE_EXPORT void discardSystemPages(void* addr, size_t len);
+BASE_EXPORT void DiscardSystemPages(void* address, size_t length);
 
-ALWAYS_INLINE uintptr_t roundUpToSystemPage(uintptr_t address) {
+ALWAYS_INLINE uintptr_t RoundUpToSystemPage(uintptr_t address) {
   return (address + kSystemPageOffsetMask) & kSystemPageBaseMask;
 }
 
-ALWAYS_INLINE uintptr_t roundDownToSystemPage(uintptr_t address) {
+ALWAYS_INLINE uintptr_t RoundDownToSystemPage(uintptr_t address) {
   return address & kSystemPageBaseMask;
 }
 
 // Returns errno (or GetLastError code) when mmap (or VirtualAlloc) fails.
-BASE_EXPORT uint32_t getAllocPageErrorCode();
+BASE_EXPORT uint32_t GetAllocPageErrorCode();
 
 }  // namespace base
 

@@ -69,7 +69,7 @@ class BASE_EXPORT MessagePumpGlib : public MessagePump {
   // Dispatch() will be called.
   int wakeup_pipe_read_;
   int wakeup_pipe_write_;
-  // Use a scoped_ptr to avoid needing the definition of GPollFD in the header.
+  // Use a unique_ptr to avoid needing the definition of GPollFD in the header.
   std::unique_ptr<GPollFD> wakeup_gpollfd_;
 
   DISALLOW_COPY_AND_ASSIGN(MessagePumpGlib);

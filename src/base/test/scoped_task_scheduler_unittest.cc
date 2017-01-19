@@ -10,6 +10,7 @@
 #include "base/run_loop.h"
 #include "base/sequence_checker.h"
 #include "base/task_scheduler/post_task.h"
+#include "base/task_scheduler/task_scheduler.h"
 #include "base/task_scheduler/test_utils.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_checker.h"
@@ -221,7 +222,25 @@ TEST(ScopedTaskSchedulerTest, CreateSingleThreadTaskRunnerAndPostTask) {
   EXPECT_TRUE(second_task_ran);
 }
 
-TEST(ScopedTaskSchedulerTest, ShutdownBehavior) {
+TEST(ScopedTaskSchedulerTest, NonBlockShutdownTasksPostedAfterShutdownDontRun) {
+  ScopedTaskScheduler scoped_task_scheduler;
+  TaskScheduler::GetInstance()->Shutdown();
+  PostTaskWithTraits(FROM_HERE, TaskTraits().WithShutdownBehavior(
+                                    TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+                     Bind([]() {
+                       ADD_FAILURE()
+                           << "CONTINUE_ON_SHUTDOWN task should not run";
+                     }));
+  PostTaskWithTraits(
+      FROM_HERE,
+      TaskTraits().WithShutdownBehavior(TaskShutdownBehavior::SKIP_ON_SHUTDOWN),
+      Bind([]() { ADD_FAILURE() << "SKIP_ON_SHUTDOWN task should not run"; }));
+
+  // This should not run anything.
+  RunLoop().RunUntilIdle();
+}
+
+TEST(ScopedTaskSchedulerTest, DestructorRunsBlockShutdownTasksOnly) {
   bool block_shutdown_task_ran = false;
   {
     ScopedTaskScheduler scoped_task_scheduler;

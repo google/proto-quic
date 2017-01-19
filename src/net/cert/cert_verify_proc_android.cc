@@ -79,17 +79,6 @@ bool VerifyFromAndroidTrustManager(const std::vector<std::string>& cert_bytes,
   chain.push_back(verify_result->verified_cert->os_cert_handle());
   chain.insert(chain.end(), intermediates.begin(), intermediates.end());
 
-  // If the chain successfully verified, ignore the trust anchor (the last
-  // certificate). Otherwise, assume the chain is partial. This is not entirely
-  // correct, as a full chain may have been constructed and then failed to
-  // validate. However, if that is the case, the more serious error will
-  // override any SHA-1 considerations.
-  size_t correction_for_root =
-      (status == android::CERT_VERIFY_STATUS_ANDROID_OK) ? 1 : 0;
-  for (size_t i = 0; i < chain.size() - correction_for_root; ++i) {
-    FillCertVerifyResultWeakSignature(chain[i], i == 0, verify_result);
-  }
-
   // Extract the public key hashes.
   for (size_t i = 0; i < verified_chain.size(); i++) {
     base::StringPiece spki_bytes;

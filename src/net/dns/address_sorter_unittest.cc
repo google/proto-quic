@@ -10,6 +10,8 @@
 
 #include "base/bind.h"
 #include "base/logging.h"
+#include "base/message_loop/message_loop.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "net/base/address_list.h"
 #include "net/base/ip_address.h"
 #include "net/base/test_completion_callback.h"
@@ -38,6 +40,8 @@ void OnSortComplete(AddressList* result_buf,
 }
 
 TEST(AddressSorterTest, Sort) {
+  base::test::ScopedTaskScheduler scoped_task_scheduler(
+      base::MessageLoop::current());
   int expected_result = OK;
 #if defined(OS_WIN)
   EnsureWinsockInit();

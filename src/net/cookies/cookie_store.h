@@ -36,7 +36,14 @@ class NET_EXPORT CookieStore {
     // The cookie was inserted.
     INSERTED,
     // The cookie was changed directly by a consumer's action.
-    EXPLICIT,
+    // The following enum values all have the same meaning, but are being used
+    // to track down where a bug came from.
+    // TODO(nharper): Remove all but one of these and rename to EXPLICIT once
+    // the one of interest has been found.
+    EXPLICIT_DELETE,
+    EXPLICIT_DUPLICATE_IN_BACKING_STORE,
+    EXPLICIT_DONT_RECORD,
+    EXPLICIT_LAST_ENTRY,
     // The cookie was deleted, but no more details are known.
     UNKNOWN_DELETION,
     // The cookie was automatically removed due to an insert operation that

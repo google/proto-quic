@@ -601,7 +601,7 @@ TEST(StackSamplingProfilerTest, MAYBE_Basic) {
   ASSERT_EQ(1u, profile.samples.size());
   EXPECT_EQ(params.sampling_interval, profile.sampling_period);
   const Sample& sample = profile.samples[0];
-  EXPECT_EQ(0u, sample.process_phases);
+  EXPECT_EQ(0u, sample.process_milestones);
   for (const auto& frame : sample.frames) {
     ASSERT_GE(frame.module_index, 0u);
     ASSERT_LT(frame.module_index, profile.modules.size());
@@ -637,25 +637,25 @@ TEST(StackSamplingProfilerTest, MAYBE_Annotations) {
   params.samples_per_burst = 1;
 
   // Check that a run picks up annotations.
-  StackSamplingProfiler::SetProcessPhase(1);
+  StackSamplingProfiler::SetProcessMilestone(1);
   std::vector<CallStackProfile> profiles1;
   CaptureProfiles(params, AVeryLongTimeDelta(), &profiles1);
   ASSERT_EQ(1u, profiles1.size());
   const CallStackProfile& profile1 = profiles1[0];
   ASSERT_EQ(1u, profile1.samples.size());
   const Sample& sample1 = profile1.samples[0];
-  EXPECT_EQ(1u << 1, sample1.process_phases);
+  EXPECT_EQ(1u << 1, sample1.process_milestones);
 
   // Run it a second time but with changed annotations. These annotations
   // should appear in the first acquired sample.
-  StackSamplingProfiler::SetProcessPhase(2);
+  StackSamplingProfiler::SetProcessMilestone(2);
   std::vector<CallStackProfile> profiles2;
   CaptureProfiles(params, AVeryLongTimeDelta(), &profiles2);
   ASSERT_EQ(1u, profiles2.size());
   const CallStackProfile& profile2 = profiles2[0];
   ASSERT_EQ(1u, profile2.samples.size());
   const Sample& sample2 = profile2.samples[0];
-  EXPECT_EQ(sample1.process_phases | (1u << 2), sample2.process_phases);
+  EXPECT_EQ(sample1.process_milestones | (1u << 2), sample2.process_milestones);
 }
 
 // Checks that the profiler handles stacks containing dynamically-allocated

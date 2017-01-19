@@ -150,7 +150,7 @@ class NET_EXPORT TestRootCerts {
 class NET_EXPORT_PRIVATE ScopedTestRoot {
  public:
   ScopedTestRoot();
-  // Creates a ScopedTestRoot that will adds|cert| to the TestRootCerts store.
+  // Creates a ScopedTestRoot that will add |cert| to the TestRootCerts store.
   explicit ScopedTestRoot(X509Certificate* cert);
   ~ScopedTestRoot();
 

@@ -172,11 +172,13 @@ void URLRequestFileJob::SetExtraRequestHeaders(
         // because we need to do multipart encoding here.
         // TODO(hclam): decide whether we want to support multiple range
         // requests.
-        range_parse_result_ = net::ERR_REQUEST_RANGE_NOT_SATISFIABLE;
+        range_parse_result_ = ERR_REQUEST_RANGE_NOT_SATISFIABLE;
       }
     }
   }
 }
+
+void URLRequestFileJob::OnOpenComplete(int result) {}
 
 void URLRequestFileJob::OnSeekComplete(int64_t result) {}
 
@@ -239,20 +241,15 @@ void URLRequestFileJob::DidFetchMetaInfo(const FileMetaInfo* meta_info) {
 }
 
 void URLRequestFileJob::DidOpen(int result) {
+  OnOpenComplete(result);
   if (result != OK) {
     NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED, result));
     return;
   }
 
-  if (range_parse_result_ != net::OK) {
-    NotifyStartError(
-        URLRequestStatus(URLRequestStatus::FAILED, range_parse_result_));
-    return;
-  }
-
-  if (!byte_range_.ComputeBounds(meta_info_.file_size)) {
-    NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED,
-                                      net::ERR_REQUEST_RANGE_NOT_SATISFIABLE));
+  if (range_parse_result_ != OK ||
+      !byte_range_.ComputeBounds(meta_info_.file_size)) {
+    DidSeek(ERR_REQUEST_RANGE_NOT_SATISFIABLE);
     return;
   }
 
@@ -264,11 +261,8 @@ void URLRequestFileJob::DidOpen(int result) {
     int rv = stream_->Seek(byte_range_.first_byte_position(),
                            base::Bind(&URLRequestFileJob::DidSeek,
                                       weak_ptr_factory_.GetWeakPtr()));
-    if (rv != ERR_IO_PENDING) {
-      // stream_->Seek() failed, so pass an intentionally erroneous value
-      // into DidSeek().
-      DidSeek(-1);
-    }
+    if (rv != ERR_IO_PENDING)
+      DidSeek(ERR_REQUEST_RANGE_NOT_SATISFIABLE);
   } else {
     // We didn't need to call stream_->Seek() at all, so we pass to DidSeek()
     // the value that would mean seek success. This way we skip the code
@@ -278,8 +272,10 @@ void URLRequestFileJob::DidOpen(int result) {
 }
 
 void URLRequestFileJob::DidSeek(int64_t result) {
+  DCHECK(result < 0 || result == byte_range_.first_byte_position());
+
   OnSeekComplete(result);
-  if (result != byte_range_.first_byte_position()) {
+  if (result < 0) {
     NotifyStartError(URLRequestStatus(URLRequestStatus::FAILED,
                                       ERR_REQUEST_RANGE_NOT_SATISFIABLE));
     return;

@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "base/logging.h"
 #include "base/stl_util.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_flags.h"

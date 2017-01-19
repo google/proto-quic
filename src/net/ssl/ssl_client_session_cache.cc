@@ -98,16 +98,15 @@ void SSLClientSessionCache::DumpMemoryStats(
     return;
   cache_dump = pmd->CreateAllocatorDump(absolute_name);
   base::AutoLock lock(lock_);
-  int total_serialized_cert_size = 0;
-  int total_cert_count = 0;
+  size_t total_serialized_cert_size = 0;
+  size_t total_cert_count = 0;
   for (const auto& pair : cache_) {
-    auto entry = pair.second.get();
-    auto cert_chain = entry->x509_chain;
-    size_t cert_count = sk_X509_num(cert_chain);
+    const SSL_SESSION* session = pair.second.get();
+    size_t cert_count = sk_CRYPTO_BUFFER_num(session->certs);
     total_cert_count += cert_count;
     for (size_t i = 0; i < cert_count; ++i) {
-      X509* cert = sk_X509_value(cert_chain, i);
-      total_serialized_cert_size += i2d_X509(cert, nullptr);
+      const CRYPTO_BUFFER* cert = sk_CRYPTO_BUFFER_value(session->certs, i);
+      total_serialized_cert_size += CRYPTO_BUFFER_len(cert);
     }
   }
   // This measures the lower bound of the serialized certificate. It doesn't

@@ -291,5 +291,5 @@ class TimelineRecorder(object):
     if len(events) == 0:
       return None
     builder = trace_data.TraceDataBuilder()
-    builder.AddEventsTo(trace_data.INSPECTOR_TRACE_PART, events)
+    builder.AddTraceFor(trace_data.INSPECTOR_TRACE_PART, events)
     return model.TimelineModel(builder.AsData(), shift_world_to_zero=False)

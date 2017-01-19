@@ -1078,6 +1078,12 @@ config("default_warnings") {
         # TODO(hans): https://crbug.com/637306
         "-Wno-address-of-packed-member",
       ]
+      if (llvm_force_head_revision) {
+        cflags += [
+          # TODO(hans): https://crbug.com/681136
+          "-Wno-unused-lambda-capture",
+        ]
+      }
     }
   }
 }

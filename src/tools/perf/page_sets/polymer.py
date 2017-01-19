@@ -4,6 +4,7 @@
 from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
 from telemetry import story
+from telemetry.util import js_template
 
 
 class PolymerPage(page_module.Page):
@@ -111,9 +112,8 @@ class PolymerShadowPage(PolymerPage):
 
   def AnimateShadow(self, action_runner, eid):
     for i in range(1, 6):
-      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
       action_runner.ExecuteJavaScript(
-          'document.getElementById("{0}").z = {1}'.format(eid, i))
+          'document.getElementById({{ eid }}).z = {{ i }}', eid=eid, i=i)
       action_runner.Wait(1)
 
 
@@ -138,15 +138,13 @@ class PolymerSampler(PolymerPage):
 
   def RunNavigateSteps(self, action_runner):
     super(PolymerSampler, self).RunNavigateSteps(action_runner)
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    waitForLoadJS = """
-      window.Polymer.whenPolymerReady(function() {
-        %s.contentWindow.Polymer.whenPolymerReady(function() {
-          window.__polymer_ready = true;
-        })
-      });
-      """ % self.iframe_js
-    action_runner.ExecuteJavaScript(waitForLoadJS)
+    action_runner.ExecuteJavaScript("""
+        window.Polymer.whenPolymerReady(function() {
+          {{ @iframe }}.contentWindow.Polymer.whenPolymerReady(function() {
+            window.__polymer_ready = true;
+          })
+        });
+        """, iframe=self.iframe_js)
     action_runner.WaitForJavaScriptCondition(
         'window.__polymer_ready')
 
@@ -192,14 +190,15 @@ class PolymerSampler(PolymerPage):
   def DoActionOnWidgetType(self, action_runner, widget_type, action_function):
     # Find all widgets of this type, but skip any that are disabled or are
     # currently active as they typically don't produce animation frames.
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    element_list_query = (self.iframe_js +
-        ('.querySelectorAll("body %s:not([disabled]):'
-         'not([active])")' % widget_type))
+    element_list_query = js_template.Render(
+        '{{ @iframe }}.querySelectorAll({{ selector }})',
+        iframe=self.iframe_js,
+        selector='body %s:not([disabled]):not([active])' % widget_type)
+
     roles_count_query = element_list_query + '.length'
     for i in range(action_runner.EvaluateJavaScript(roles_count_query)):
-      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-      element_query = element_list_query + ("[%d]" % i)
+      element_query = js_template.Render(
+        '{{ @query }}[{{ i }}]', query=element_list_query, i=i)
       if action_runner.EvaluateJavaScript(
           element_query + '.offsetParent != null'):
         # Only try to tap on visible elements (offsetParent != null)

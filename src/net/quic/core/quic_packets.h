@@ -14,7 +14,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/base/iovec.h"

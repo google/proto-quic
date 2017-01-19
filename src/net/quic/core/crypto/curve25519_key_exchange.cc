@@ -6,7 +6,6 @@
 
 #include <cstdint>
 
-#include "base/logging.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "third_party/boringssl/src/include/openssl/curve25519.h"
 

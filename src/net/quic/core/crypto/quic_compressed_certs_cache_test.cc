@@ -4,7 +4,6 @@
 
 #include "net/quic/core/crypto/quic_compressed_certs_cache.h"
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "net/quic/core/crypto/cert_compressor.h"
 #include "net/quic/platform/api/quic_text_utils.h"

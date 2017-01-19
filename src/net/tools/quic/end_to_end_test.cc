@@ -30,6 +30,7 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
@@ -283,7 +284,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     server_supported_versions_ = GetParam().server_supported_versions;
     negotiated_version_ = GetParam().negotiated_version;
 
-    VLOG(1) << "Using Configuration: " << GetParam();
+    QUIC_LOG(INFO) << "Using Configuration: " << GetParam();
 
     // Use different flow control windows for client/server.
     client_config_.SetInitialStreamFlowControlWindowToSend(
@@ -338,27 +339,29 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
 
   void set_client_initial_stream_flow_control_receive_window(uint32_t window) {
     CHECK(client_.get() == nullptr);
-    DVLOG(1) << "Setting client initial stream flow control window: " << window;
+    QUIC_DLOG(INFO) << "Setting client initial stream flow control window: "
+                    << window;
     client_config_.SetInitialStreamFlowControlWindowToSend(window);
   }
 
   void set_client_initial_session_flow_control_receive_window(uint32_t window) {
     CHECK(client_.get() == nullptr);
-    DVLOG(1) << "Setting client initial session flow control window: "
-             << window;
+    QUIC_DLOG(INFO) << "Setting client initial session flow control window: "
+                    << window;
     client_config_.SetInitialSessionFlowControlWindowToSend(window);
   }
 
   void set_server_initial_stream_flow_control_receive_window(uint32_t window) {
     CHECK(server_thread_.get() == nullptr);
-    DVLOG(1) << "Setting server initial stream flow control window: " << window;
+    QUIC_DLOG(INFO) << "Setting server initial stream flow control window: "
+                    << window;
     server_config_.SetInitialStreamFlowControlWindowToSend(window);
   }
 
   void set_server_initial_session_flow_control_receive_window(uint32_t window) {
     CHECK(server_thread_.get() == nullptr);
-    DVLOG(1) << "Setting server initial session flow control window: "
-             << window;
+    QUIC_DLOG(INFO) << "Setting server initial session flow control window: "
+                    << window;
     server_config_.SetInitialSessionFlowControlWindowToSend(window);
   }
 
@@ -1344,7 +1347,7 @@ TEST_P(EndToEndTest, NegotiateCongestionControl) {
       expected_congestion_control_type = kCubicBytes;
       break;
     default:
-      DLOG(FATAL) << "Unexpected congestion control tag";
+      QUIC_DLOG(FATAL) << "Unexpected congestion control tag";
   }
 
   server_thread_->Pause();
@@ -1943,9 +1946,9 @@ class TestResponseListener : public QuicClient::ResponseListener {
   void OnCompleteResponse(QuicStreamId id,
                           const SpdyHeaderBlock& response_headers,
                           const string& response_body) override {
-    string debug_string = response_headers.DebugString();
-    DVLOG(1) << "response for stream " << id << " " << debug_string << "\n"
-             << response_body;
+    QUIC_DVLOG(1) << "response for stream " << id << " "
+                  << response_headers.DebugString() << "\n"
+                  << response_body;
   }
 };
 
@@ -2215,7 +2218,7 @@ TEST_P(EndToEndTest, BadEncryptedData) {
   // Damage the encrypted data.
   string damaged_packet(packet->data(), packet->length());
   damaged_packet[30] ^= 0x01;
-  DVLOG(1) << "Sending bad packet.";
+  QUIC_DLOG(INFO) << "Sending bad packet.";
   client_writer_->WritePacket(
       damaged_packet.data(), damaged_packet.length(),
       client_->client()->GetLatestClientAddress().host(), server_address_,
@@ -2251,7 +2254,7 @@ class ServerStreamWithErrorResponseBody : public QuicSimpleServerStream {
 
  protected:
   void SendErrorResponse() override {
-    DVLOG(1) << "Sending error response for stream " << id();
+    QUIC_DLOG(INFO) << "Sending error response for stream " << id();
     SpdyHeaderBlock headers;
     headers[":status"] = "500";
     headers["content-length"] =
@@ -2302,7 +2305,8 @@ class ServerStreamThatDropsBody : public QuicSimpleServerStream {
         // No more data to read.
         break;
       }
-      DVLOG(1) << "Processed " << iov.iov_len << " bytes for stream " << id();
+      QUIC_DVLOG(1) << "Processed " << iov.iov_len << " bytes for stream "
+                    << id();
       MarkConsumed(iov.iov_len);
     }
 
@@ -2680,7 +2684,7 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
       std::unique_ptr<QuicClientBase::ResponseListener>(
           new TestResponseListener));
 
-  DVLOG(1) << "send request for /push_example";
+  QUIC_DVLOG(1) << "send request for /push_example";
   EXPECT_EQ(kBody, client_->SendSynchronousRequest(
                        "https://example.com/push_example"));
   QuicHeadersStream* headers_stream =
@@ -2691,11 +2695,11 @@ TEST_P(EndToEndTestServerPush, ServerPush) {
   EXPECT_TRUE(QuicStreamSequencerPeer::IsUnderlyingBufferAllocated(sequencer));
 
   for (const string& url : push_urls) {
-    DVLOG(1) << "send request for pushed stream on url " << url;
+    QUIC_DVLOG(1) << "send request for pushed stream on url " << url;
     string expected_body =
         QuicStrCat("This is server push response body for ", url);
     string response_body = client_->SendSynchronousRequest(url);
-    DVLOG(1) << "response body " << response_body;
+    QUIC_DVLOG(1) << "response body " << response_body;
     EXPECT_EQ(expected_body, response_body);
   }
   EXPECT_NE(
@@ -2739,11 +2743,11 @@ TEST_P(EndToEndTestServerPush, ServerPushUnderLimit) {
   for (const string& url : push_urls) {
     // Sending subsequent requesets will not actually send anything on the wire,
     // as the responses are already in the client's cache.
-    DVLOG(1) << "send request for pushed stream on url " << url;
+    QUIC_DVLOG(1) << "send request for pushed stream on url " << url;
     string expected_body =
         QuicStrCat("This is server push response body for ", url);
     string response_body = client_->SendSynchronousRequest(url);
-    DVLOG(1) << "response body " << response_body;
+    QUIC_DVLOG(1) << "response body " << response_body;
     EXPECT_EQ(expected_body, response_body);
   }
   // Expect only original request has been sent and push responses have been
@@ -3015,7 +3019,7 @@ TEST_P(EndToEndTest, ReleaseHeadersStreamBufferWhenIdle) {
 class EndToEndBufferedPacketsTest : public EndToEndTest {
  public:
   void CreateClientWithWriter() override {
-    LOG(ERROR) << "create client with reorder_writer_ ";
+    QUIC_LOG(ERROR) << "create client with reorder_writer_ ";
     reorder_writer_ = new PacketReorderingWriter();
     client_.reset(EndToEndTest::CreateQuicClient(reorder_writer_));
   }

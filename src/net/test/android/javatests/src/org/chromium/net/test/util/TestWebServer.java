@@ -84,14 +84,16 @@ public class TestWebServer {
         final boolean mIsNotFound;
         final boolean mIsNoContent;
         final boolean mForWebSocket;
+        final boolean mIsEmptyResponse;
 
         Response(byte[] responseData, List<Pair<String, String>> responseHeaders,
                 boolean isRedirect, boolean isNotFound, boolean isNoContent, boolean forWebSocket,
-                Runnable responseAction) {
+                boolean isEmptyResponse, Runnable responseAction) {
             mIsRedirect = isRedirect;
             mIsNotFound = isNotFound;
             mIsNoContent = isNoContent;
             mForWebSocket = forWebSocket;
+            mIsEmptyResponse = isEmptyResponse;
             mResponseData = responseData;
             mResponseHeaders = responseHeaders == null
                     ? new ArrayList<Pair<String, String>>() : responseHeaders;
@@ -201,6 +203,7 @@ public class TestWebServer {
     private static final int RESPONSE_STATUS_NOT_FOUND = 2;
     private static final int RESPONSE_STATUS_NO_CONTENT = 3;
     private static final int RESPONSE_STATUS_FOR_WEBSOCKET = 4;
+    private static final int RESPONSE_STATUS_EMPTY_RESPONSE = 5;
 
     private String setResponseInternal(
             String requestPath, byte[] responseData,
@@ -210,11 +213,12 @@ public class TestWebServer {
         final boolean isNotFound = (status == RESPONSE_STATUS_NOT_FOUND);
         final boolean isNoContent = (status == RESPONSE_STATUS_NO_CONTENT);
         final boolean forWebSocket = (status == RESPONSE_STATUS_FOR_WEBSOCKET);
+        final boolean isEmptyResponse = (status == RESPONSE_STATUS_EMPTY_RESPONSE);
 
         synchronized (mLock) {
-            mResponseMap.put(
-                    requestPath, new Response(responseData, responseHeaders, isRedirect, isNotFound,
-                                         isNoContent, forWebSocket, responseAction));
+            mResponseMap.put(requestPath,
+                    new Response(responseData, responseHeaders, isRedirect, isNotFound, isNoContent,
+                            forWebSocket, isEmptyResponse, responseAction));
             mResponseCountMap.put(requestPath, Integer.valueOf(0));
             mLastRequestMap.put(requestPath, null);
         }
@@ -270,6 +274,18 @@ public class TestWebServer {
     public String setResponseWithNoContentStatus(String requestPath) {
         return setResponseInternal(
                 requestPath, "".getBytes(), null, null, RESPONSE_STATUS_NO_CONTENT);
+    }
+
+    /**
+     * Sets an empty response to be returned when a particular request path is passed in.
+     *
+     * @param requestPath The path to respond to.
+     * @return The full URL including the path that should be requested to get the expected
+     *         response.
+     */
+    public String setEmptyResponse(String requestPath) {
+        return setResponseInternal(
+                requestPath, "".getBytes(), null, null, RESPONSE_STATUS_EMPTY_RESPONSE);
     }
 
     /**
@@ -502,6 +518,10 @@ public class TestWebServer {
             servedResponseFor(path, request);
         } else if (response.mIsNoContent) {
             httpResponse = createResponse(HttpStatus.SC_NO_CONTENT);
+            httpResponse.setHeader("Content-Length", "0");
+            servedResponseFor(path, request);
+        } else if (response.mIsEmptyResponse) {
+            httpResponse = createResponse(HttpStatus.SC_FORBIDDEN); // arbitrary failure status
             httpResponse.setHeader("Content-Length", "0");
             servedResponseFor(path, request);
         } else if (response.mIsRedirect) {

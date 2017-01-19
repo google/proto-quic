@@ -28,8 +28,8 @@ class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
       self._stream_client = bootstrap.ButlerBootstrap.probe().stream_client()
       self._logdog_stream = self._stream_client.open_text(self._stream_name)
     except bootstrap.NotBootstrappedError as e:
-      logging.exception(
-          'Error not bootstrapped. Failed to start logdog: %s', e)
+      if logging.getLogger().isEnabledFor(logging.DEBUG):
+        logging.exception('Unable to enable logdog_logcat: %s.', e)
     except (KeyError, ValueError) as e:
       logging.exception('Error when creating stream_client/stream: %s.', e)
     except Exception as e: # pylint: disable=broad-except

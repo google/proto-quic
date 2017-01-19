@@ -11,9 +11,9 @@
 #endif
 #include <string.h>
 
-#include "base/logging.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_dispatcher.h"
@@ -145,7 +145,7 @@ bool QuicPacketReader::ReadAndDispatchManyPackets(
   // We may not have read all of the packets available on the socket.
   return packets_read == kNumPacketsPerReadMmsgCall;
 #else
-  LOG(FATAL) << "Unsupported";
+  QUIC_LOG(FATAL) << "Unsupported";
   return false;
 #endif
 }

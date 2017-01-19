@@ -7,9 +7,14 @@
 #ifndef NET_TEST_GTEST_UTIL_H_
 #define NET_TEST_GTEST_UTIL_H_
 
+#include <string>
+
+#include "base/macros.h"
+#include "base/strings/string_piece.h"
 #include "base/test/mock_log.h"
 #include "net/base/net_errors.h"
 #include "net/test/scoped_disable_exit_on_dfatal.h"
+#include "testing/gmock/include/gmock/gmock-matchers.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -35,6 +40,34 @@ MATCHER(IsOk,
     *result_listener << net::ErrorToString(arg);
   return arg == net::OK;
 }
+
+// A gMock matcher for base::StringPiece arguments.
+// gMock's built-in HasSubstrMatcher does not work,
+// because base::StringPiece cannot be implicitly converted to std::string.
+class StringPieceHasSubstrMatcher {
+ public:
+  explicit StringPieceHasSubstrMatcher(const std::string& substring)
+      : substring_(substring) {}
+
+  bool MatchAndExplain(base::StringPiece s,
+                       ::testing::MatchResultListener* listener) const {
+    return s.as_string().find(substring_) != std::string::npos;
+  }
+
+  // Describe what this matcher matches.
+  void DescribeTo(std::ostream* os) const {
+    *os << "has substring " << substring_;
+  }
+
+  void DescribeNegationTo(std::ostream* os) const {
+    *os << "has no substring " << substring_;
+  }
+
+ private:
+  const std::string substring_;
+
+  DISALLOW_ASSIGN(StringPieceHasSubstrMatcher);
+};
 
 // Internal implementation for the EXPECT_DFATAL and ASSERT_DFATAL
 // macros.  Do not use this directly.

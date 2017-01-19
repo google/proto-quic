@@ -35,11 +35,8 @@ const char kResultHistogram[] = "UMA.CreatePersistentHistogram.Result";
 // so that, if the structure of that object changes, stored older versions
 // will be safely ignored.
 enum : uint32_t {
-  kTypeIdHistogram = 0xF1645910 + 3,    // SHA1(Histogram)   v3
   kTypeIdRangesArray = 0xBCEA225A + 1,  // SHA1(RangesArray) v1
   kTypeIdCountsArray = 0x53215530 + 1,  // SHA1(CountsArray) v1
-
-  kTypeIdHistogramUnderConstruction = ~kTypeIdHistogram,
 };
 
 // The current globally-active persistent allocator for all new histograms.
@@ -226,6 +223,9 @@ PersistentMemoryAllocator::Reference PersistentSampleMapRecords::CreateNew(
 // This data will be held in persistent memory in order for processes to
 // locate and use histograms created elsewhere.
 struct PersistentHistogramAllocator::PersistentHistogramData {
+  // SHA1(Histogram): Increment this if structure changes!
+  static constexpr uint32_t kPersistentTypeId = 0xF1645910 + 3;
+
   // Expected size for 32/64-bit check.
   static constexpr size_t kExpectedInstanceSize =
       40 + 2 * HistogramSamples::Metadata::kExpectedInstanceSize;
@@ -254,7 +254,7 @@ PersistentHistogramAllocator::Iterator::Iterator(
 std::unique_ptr<HistogramBase>
 PersistentHistogramAllocator::Iterator::GetNextWithIgnore(Reference ignore) {
   PersistentMemoryAllocator::Reference ref;
-  while ((ref = memory_iter_.GetNextOfType(kTypeIdHistogram)) != 0) {
+  while ((ref = memory_iter_.GetNextOfType<PersistentHistogramData>()) != 0) {
     if (ref != ignore)
       return allocator_->GetHistogram(ref);
   }
@@ -277,8 +277,7 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::GetHistogram(
   // add it to the local list of known histograms (while these may be simple
   // references to histograms in other processes).
   PersistentHistogramData* histogram_data =
-      memory_allocator_->GetAsObject<PersistentHistogramData>(
-          ref, kTypeIdHistogram);
+      memory_allocator_->GetAsObject<PersistentHistogramData>(ref);
   size_t length = memory_allocator_->GetAllocSize(ref);
 
   // Check that metadata is reasonable: name is NUL terminated and non-empty,
@@ -319,13 +318,9 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
   // during the datafill doesn't leave a bad record around that could cause
   // confusion by another process trying to read it. It will be corrected
   // once histogram construction is complete.
-  PersistentMemoryAllocator::Reference histogram_ref =
-      memory_allocator_->Allocate(
-          offsetof(PersistentHistogramData, name) + name.length() + 1,
-          kTypeIdHistogramUnderConstruction);
   PersistentHistogramData* histogram_data =
-      memory_allocator_->GetAsObject<PersistentHistogramData>(
-          histogram_ref, kTypeIdHistogramUnderConstruction);
+      memory_allocator_->AllocateObject<PersistentHistogramData>(
+          offsetof(PersistentHistogramData, name) + name.length() + 1);
   if (histogram_data) {
     memcpy(histogram_data->name, name.c_str(), name.size() + 1);
     histogram_data->histogram_type = histogram_type;
@@ -384,9 +379,9 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
     DCHECK(histogram);
     DCHECK_NE(0U, histogram_data->samples_metadata.id);
     DCHECK_NE(0U, histogram_data->logged_metadata.id);
-    memory_allocator_->ChangeType(histogram_ref, kTypeIdHistogram,
-                                  kTypeIdHistogramUnderConstruction);
 
+    PersistentMemoryAllocator::Reference histogram_ref =
+        memory_allocator_->GetAsReference(histogram_data);
     if (ref_ptr != nullptr)
       *ref_ptr = histogram_ref;
 
@@ -408,22 +403,30 @@ std::unique_ptr<HistogramBase> PersistentHistogramAllocator::AllocateHistogram(
     result = CREATE_HISTOGRAM_ALLOCATOR_ERROR;
   }
   RecordCreateHistogramResult(result);
-  NOTREACHED() << "error=" << result;
+
+  // Crash for failures caused by internal bugs but not "full" which is
+  // dependent on outside code.
+  if (result != CREATE_HISTOGRAM_ALLOCATOR_FULL)
+    NOTREACHED() << memory_allocator_->Name() << ", error=" << result;
 
   return nullptr;
 }
 
 void PersistentHistogramAllocator::FinalizeHistogram(Reference ref,
                                                      bool registered) {
-  // If the created persistent histogram was registered then it needs to
-  // be marked as "iterable" in order to be found by other processes.
-  if (registered)
+  if (registered) {
+    // If the created persistent histogram was registered then it needs to
+    // be marked as "iterable" in order to be found by other processes. This
+    // happens only after the histogram is fully formed so it's impossible for
+    // code iterating through the allocator to read a partially created record.
     memory_allocator_->MakeIterable(ref);
-  // If it wasn't registered then a race condition must have caused
-  // two to be created. The allocator does not support releasing the
-  // acquired memory so just change the type to be empty.
-  else
-    memory_allocator_->ChangeType(ref, 0, kTypeIdHistogram);
+  } else {
+    // If it wasn't registered then a race condition must have caused two to
+    // be created. The allocator does not support releasing the acquired memory
+    // so just change the type to be empty.
+    memory_allocator_->ChangeType(ref, 0,
+                                  PersistentHistogramData::kPersistentTypeId);
+  }
 }
 
 void PersistentHistogramAllocator::MergeHistogramDeltaToStatisticsRecorder(
@@ -842,13 +845,9 @@ GlobalHistogramAllocator::ReleaseForTesting() {
   // Recorder forget about the histograms contained therein; otherwise,
   // some operations will try to access them and the released memory.
   PersistentMemoryAllocator::Iterator iter(memory_allocator);
-  PersistentMemoryAllocator::Reference ref;
-  while ((ref = iter.GetNextOfType(kTypeIdHistogram)) != 0) {
-    PersistentHistogramData* histogram_data =
-        memory_allocator->GetAsObject<PersistentHistogramData>(
-            ref, kTypeIdHistogram);
-    DCHECK(histogram_data);
-    StatisticsRecorder::ForgetHistogramForTesting(histogram_data->name);
+  const PersistentHistogramData* data;
+  while ((data = iter.GetNextOfObject<PersistentHistogramData>()) != nullptr) {
+    StatisticsRecorder::ForgetHistogramForTesting(data->name);
 
     // If a test breaks here then a memory region containing a histogram
     // actively used by this code is being released back to the test.
@@ -857,7 +856,7 @@ GlobalHistogramAllocator::ReleaseForTesting() {
     // the method GetCreateHistogramResultHistogram() *before* setting
     // the (temporary) memory allocator via SetGlobalAllocator() so that
     // histogram is instead allocated from the process heap.
-    DCHECK_NE(kResultHistogram, histogram_data->name);
+    DCHECK_NE(kResultHistogram, data->name);
   }
 
   g_allocator = nullptr;

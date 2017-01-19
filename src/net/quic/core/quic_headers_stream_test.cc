@@ -10,10 +10,11 @@
 #include <tuple>
 #include <utility>
 
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
@@ -200,10 +201,10 @@ struct TestParams {
         FLAGS_spdy_framer_use_new_methods4 = true;
         break;
     }
-    VLOG(1) << "TestParams: version: " << QuicVersionToString(version)
-            << ", perspective: " << perspective
-            << ", http2_decoder: " << http2_decoder
-            << ", hpack_decoder: " << hpack_decoder;
+    QUIC_LOG(INFO) << "TestParams: version: " << QuicVersionToString(version)
+                   << ", perspective: " << perspective
+                   << ", http2_decoder: " << http2_decoder
+                   << ", hpack_decoder: " << hpack_decoder;
   }
 
   QuicVersion version;
@@ -609,8 +610,8 @@ TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
       stream_frames[stream_num].offset = stream_frame_.offset;
       stream_frames[stream_num].data_buffer = frames[stream_num].data();
       stream_frames[stream_num].data_length = frames[stream_num].size();
-      DVLOG(1) << "make frame for stream " << stream_num << " offset "
-               << stream_frames[stream_num].offset;
+      QUIC_DVLOG(1) << "make frame for stream " << stream_num << " offset "
+                    << stream_frames[stream_num].offset;
       stream_frame_.offset += frames[stream_num].size();
       EXPECT_CALL(session_, OnStreamHeaderList(stream_id, fin, _, _)).Times(1);
     }
@@ -620,8 +621,8 @@ TEST_P(QuicHeadersStreamTest, NonEmptyHeaderHOLBlockedTime) {
   EXPECT_CALL(session_, OnHeadersHeadOfLineBlocking(_)).Times(9);
 
   for (int stream_num = 9; stream_num >= 0; --stream_num) {
-    DVLOG(1) << "OnStreamFrame for stream " << stream_num << " offset "
-             << stream_frames[stream_num].offset;
+    QUIC_DVLOG(1) << "OnStreamFrame for stream " << stream_num << " offset "
+                  << stream_frames[stream_num].offset;
     headers_stream_->OnStreamFrame(stream_frames[stream_num]);
     connection_->AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
   }

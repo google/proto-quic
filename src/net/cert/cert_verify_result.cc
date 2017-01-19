@@ -36,7 +36,8 @@ void CertVerifyResult::Reset() {
 }
 
 bool CertVerifyResult::operator==(const CertVerifyResult& other) const {
-  return verified_cert->Equals(other.verified_cert.get()) &&
+  return (!!verified_cert == !!other.verified_cert) &&
+         (!verified_cert || verified_cert->Equals(other.verified_cert.get())) &&
          std::tie(cert_status, has_md2, has_md4, has_md5, has_sha1,
                   has_sha1_leaf, public_key_hashes, is_issued_by_known_root,
                   is_issued_by_additional_trust_anchor,

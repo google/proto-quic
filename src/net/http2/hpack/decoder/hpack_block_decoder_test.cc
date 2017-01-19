@@ -8,8 +8,6 @@
 
 #include <sstream>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/hpack/decoder/hpack_block_collector.h"
 #include "net/http2/hpack/http2_hpack_constants.h"
@@ -29,31 +27,6 @@ namespace test {
 namespace {
 
 class HpackBlockDecoderTest : public RandomDecoderTest {
- public:
-  AssertionResult VerifyExpected(const HpackBlockCollector& expected) {
-    VERIFY_AND_RETURN_SUCCESS(collector_.VerifyEq(expected));
-  }
-
-  AssertionResult ValidateForSpecExample_C_2_1() {
-    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralNameValueHeader(
-        HpackEntryType::kIndexedLiteralHeader, false, "custom-key", false,
-        "custom-header"));
-  }
-
-  AssertionResult ValidateForSpecExample_C_2_2() {
-    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralValueHeader(
-        HpackEntryType::kUnindexedLiteralHeader, 4, false, "/sample/path"));
-  }
-
-  AssertionResult ValidateForSpecExample_C_2_3() {
-    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralNameValueHeader(
-        HpackEntryType::kNeverIndexedLiteralHeader, false, "password", false,
-        "secret"));
-  }
-
-  AssertionResult ValidateForSpecExample_C_2_4() {
-    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleIndexedHeader(2));
-  }
 
  protected:
   HpackBlockDecoderTest() : listener_(&collector_), decoder_(&listener_) {
@@ -112,9 +85,11 @@ class HpackBlockDecoderTest : public RandomDecoderTest {
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.2.1
 TEST_F(HpackBlockDecoderTest, SpecExample_C_2_1) {
-  NoArgValidator do_check =
-      base::Bind(&HpackBlockDecoderTest::ValidateForSpecExample_C_2_1,
-                 base::Unretained(this));
+  NoArgValidator do_check = [this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralNameValueHeader(
+        HpackEntryType::kIndexedLiteralHeader, false, "custom-key", false,
+        "custom-header"));
+  };
   EXPECT_TRUE(
       DecodeHpackExampleAndValidateSeveralWays(R"(
       40                                      | == Literal indexed ==
@@ -126,14 +101,15 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_1) {
                                               |   custom-header
       )",
                                                ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.2.2
 TEST_F(HpackBlockDecoderTest, SpecExample_C_2_2) {
-  NoArgValidator do_check =
-      base::Bind(&HpackBlockDecoderTest::ValidateForSpecExample_C_2_2,
-                 base::Unretained(this));
+  NoArgValidator do_check = [this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralValueHeader(
+        HpackEntryType::kUnindexedLiteralHeader, 4, false, "/sample/path"));
+  };
   EXPECT_TRUE(
       DecodeHpackExampleAndValidateSeveralWays(R"(
       04                                      | == Literal not indexed ==
@@ -144,14 +120,16 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_2) {
                                               | -> :path: /sample/path
       )",
                                                ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.2.3
 TEST_F(HpackBlockDecoderTest, SpecExample_C_2_3) {
-  NoArgValidator do_check =
-      base::Bind(&HpackBlockDecoderTest::ValidateForSpecExample_C_2_3,
-                 base::Unretained(this));
+  NoArgValidator do_check = [this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralNameValueHeader(
+        HpackEntryType::kNeverIndexedLiteralHeader, false, "password", false,
+        "secret"));
+  };
   EXPECT_TRUE(
       DecodeHpackExampleAndValidateSeveralWays(R"(
       10                                      | == Literal never indexed ==
@@ -162,14 +140,14 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_3) {
                                               | -> password: secret
       )",
                                                ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.2.4
 TEST_F(HpackBlockDecoderTest, SpecExample_C_2_4) {
-  NoArgValidator do_check =
-      base::Bind(&HpackBlockDecoderTest::ValidateForSpecExample_C_2_4,
-                 base::Unretained(this));
+  NoArgValidator do_check = [this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleIndexedHeader(2));
+  };
   EXPECT_TRUE(
       DecodeHpackExampleAndValidateSeveralWays(R"(
       82                                      | == Indexed - Add ==
@@ -177,7 +155,7 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_4) {
                                               | -> :method: GET
       )",
                                                ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.3.1
 TEST_F(HpackBlockDecoderTest, SpecExample_C_3_1) {
@@ -205,11 +183,12 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_3_1) {
   expected.ExpectIndexedHeader(4);
   expected.ExpectNameIndexAndLiteralValue(HpackEntryType::kIndexedLiteralHeader,
                                           1, false, "www.example.com");
-  NoArgValidator do_check = base::Bind(&HpackBlockDecoderTest::VerifyExpected,
-                                       base::Unretained(this), expected);
+  NoArgValidator do_check = [expected, this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.VerifyEq(expected));
+  };
   EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
       example, ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.5.1
@@ -254,11 +233,12 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_5_1) {
                                           "Mon, 21 Oct 2013 20:13:21 GMT");
   expected.ExpectNameIndexAndLiteralValue(HpackEntryType::kIndexedLiteralHeader,
                                           46, false, "https://www.example.com");
-  NoArgValidator do_check = base::Bind(&HpackBlockDecoderTest::VerifyExpected,
-                                       base::Unretained(this), expected);
+  NoArgValidator do_check = [expected, this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.VerifyEq(expected));
+  };
   EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
       example, ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 // Generate a bunch of HPACK block entries to expect, use those expectations
@@ -303,11 +283,12 @@ TEST_F(HpackBlockDecoderTest, Computed) {
   HpackBlockBuilder hbb;
   expected.AppendToHpackBlockBuilder(&hbb);
 
-  NoArgValidator do_check = base::Bind(&HpackBlockDecoderTest::VerifyExpected,
-                                       base::Unretained(this), expected);
+  NoArgValidator do_check = [expected, this]() {
+    VERIFY_AND_RETURN_SUCCESS(collector_.VerifyEq(expected));
+  };
   EXPECT_TRUE(
       DecodeAndValidateSeveralWays(hbb, ValidateDoneAndEmpty(do_check)));
-  EXPECT_TRUE(do_check.Run());
+  EXPECT_TRUE(do_check());
 }
 
 }  // namespace

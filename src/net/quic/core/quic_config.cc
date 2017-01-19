@@ -6,13 +6,13 @@
 
 #include <algorithm>
 
-#include "base/logging.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using std::string;
 
@@ -242,7 +242,7 @@ QuicErrorCode QuicFixedTagVector::ProcessPeerHello(
       *error_details = "Missing " + QuicTagToString(tag_);
       break;
     case QUIC_NO_ERROR:
-      DVLOG(1) << "Received Connection Option tags from receiver.";
+      QUIC_DVLOG(1) << "Received Connection Option tags from receiver.";
       has_receive_values_ = true;
       for (size_t i = 0; i < received_tags_length; ++i) {
         receive_values_.push_back(received_tags[i]);

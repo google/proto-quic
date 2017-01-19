@@ -22,8 +22,9 @@
 #include "net/quic/core/crypto/proof_verifier.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
 using base::ContainsKey;
@@ -275,7 +276,7 @@ bool QuicCryptoClientConfig::CachedState::Initialize(
       SetServerConfig(server_config, now, expiration_time, &error_details);
   RecordDiskCacheServerConfigState(state);
   if (state != SERVER_CONFIG_VALID) {
-    DVLOG(1) << "SetServerConfig failed with " << error_details;
+    QUIC_DVLOG(1) << "SetServerConfig failed with " << error_details;
     return false;
   }
 

@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "base/files/file_path_watcher.h"
 #include "base/files/file_path_watcher_kqueue.h"
+#include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "build/build_config.h"
 
 #if !defined(OS_IOS)
@@ -16,6 +20,9 @@ namespace {
 
 class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
  public:
+  FilePathWatcherImpl() = default;
+  ~FilePathWatcherImpl() override = default;
+
   bool Watch(const FilePath& path,
              bool recursive,
              const FilePathWatcher::Callback& callback) override {
@@ -25,10 +32,10 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
       if (!FilePathWatcher::RecursiveWatchAvailable())
         return false;
 #if !defined(OS_IOS)
-      impl_ = new FilePathWatcherFSEvents();
+      impl_ = MakeUnique<FilePathWatcherFSEvents>();
 #endif  // OS_IOS
     } else {
-      impl_ = new FilePathWatcherKQueue();
+      impl_ = MakeUnique<FilePathWatcherKQueue>();
     }
     DCHECK(impl_.get());
     return impl_->Watch(path, recursive, callback);
@@ -40,17 +47,17 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate {
     set_cancelled();
   }
 
- protected:
-  ~FilePathWatcherImpl() override {}
+ private:
+  std::unique_ptr<PlatformDelegate> impl_;
 
-  scoped_refptr<PlatformDelegate> impl_;
+  DISALLOW_COPY_AND_ASSIGN(FilePathWatcherImpl);
 };
 
 }  // namespace
 
 FilePathWatcher::FilePathWatcher() {
   sequence_checker_.DetachFromSequence();
-  impl_ = new FilePathWatcherImpl();
+  impl_ = MakeUnique<FilePathWatcherImpl>();
 }
 
 }  // namespace base

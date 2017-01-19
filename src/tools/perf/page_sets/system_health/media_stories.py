@@ -35,9 +35,8 @@ class _MediaStory(system_health_story.SystemHealthStory):
     raise NotImplementedError
 
   def _WaitForAndClickElementBySelector(self, action_runner, selector):
-    element_function = 'document.querySelector("%s")' % selector
-    action_runner.WaitForElement(element_function=element_function)
-    action_runner.ClickElement(element_function=element_function)
+    action_runner.WaitForElement(selector=selector)
+    action_runner.ClickElement(selector=selector)
 
   def _WaitForPlayTime(self, action_runner):
     action_runner.Wait(self.PLAY_DURATION)
@@ -46,10 +45,9 @@ class _MediaStory(system_health_story.SystemHealthStory):
           self.PLAY_DURATION - self._GetTimeInSeconds(action_runner))
 
   def _GetTimeInSeconds(self, action_runner):
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    time_func = (
-        'document.querySelector("%s").textContent' % self.TIME_SELECTOR)
-    minutes, seconds = action_runner.EvaluateJavaScript(time_func).split(':')
+    minutes, seconds = action_runner.EvaluateJavaScript(
+        'document.querySelector({{ selector }}).textContent',
+        selector=self.TIME_SELECTOR).split(':')
     return int(minutes * 60 + seconds)
 
 

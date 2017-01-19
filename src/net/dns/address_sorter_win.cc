@@ -13,7 +13,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/free_deleter.h"
-#include "base/threading/worker_pool.h"
+#include "base/task_scheduler/post_task.h"
 #include "net/base/address_list.h"
 #include "net/base/ip_address.h"
 #include "net/base/ip_endpoint.h"
@@ -39,7 +39,7 @@ class AddressSorterWin : public AddressSorter {
   }
 
  private:
-  // Executes the SIO_ADDRESS_LIST_SORT ioctl on the WorkerPool, and
+  // Executes the SIO_ADDRESS_LIST_SORT ioctl asynchronously, and
   // performs the necessary conversions to/from AddressList.
   class Job : public base::RefCountedThreadSafe<Job> {
    public:
@@ -73,21 +73,19 @@ class AddressSorterWin : public AddressSorter {
         input_buffer_->Address[i].iSockaddrLength = addr_len;
       }
 
-      if (!base::WorkerPool::PostTaskAndReply(
-          FROM_HERE,
-          base::Bind(&Job::Run, this),
-          base::Bind(&Job::OnComplete, this),
-          false /* task is slow */)) {
-        LOG(ERROR) << "WorkerPool::PostTaskAndReply failed";
-        OnComplete();
-      }
+      base::PostTaskWithTraitsAndReply(
+          FROM_HERE, base::TaskTraits()
+                         .WithShutdownBehavior(
+                             base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
+                         .MayBlock(),
+          base::Bind(&Job::Run, this), base::Bind(&Job::OnComplete, this));
     }
 
    private:
     friend class base::RefCountedThreadSafe<Job>;
     ~Job() {}
 
-    // Executed on the WorkerPool.
+    // Executed asynchronously in TaskScheduler.
     void Run() {
       SOCKET sock = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
       if (sock == INVALID_SOCKET)

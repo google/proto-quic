@@ -91,14 +91,6 @@
     ],
     "instrumentation_tests": [
       {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
-      },
-      {
         "test": "chrome_public_test_apk"
       },
       {
@@ -202,14 +194,6 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk"
-      },
-      {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
       },
       {
         "test": "chrome_public_test_apk"
@@ -323,13 +307,6 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk",
-        "timeout_scale": 4
-      },
-      {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
         "timeout_scale": 4
       },
       {
@@ -1575,12 +1552,6 @@
         "test": "android_webview_test_apk"
       },
       {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk"
-      },
-      {
         "test": "chrome_public_test_apk"
       },
       {
@@ -1779,12 +1750,6 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk"
-      },
-      {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk"
       },
       {
         "test": "chrome_public_test_apk"

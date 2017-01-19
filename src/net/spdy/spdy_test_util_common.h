@@ -337,6 +337,13 @@ class SpdyTestUtil {
   SpdySerializedFrame ConstructSpdyRstStream(SpdyStreamId stream_id,
                                              SpdyRstStreamStatus status);
 
+  // Construct a PRIORITY frame. The weight is derived from |request_priority|.
+  // Returns the constructed frame.  The caller takes ownership of the frame.
+  SpdySerializedFrame ConstructSpdyPriority(SpdyStreamId stream_id,
+                                            SpdyStreamId parent_stream_id,
+                                            RequestPriority request_priority,
+                                            bool exclusive);
+
   // Constructs a standard SPDY GET HEADERS frame for |url| with header
   // compression.
   // |extra_headers| are the extra header-value pairs, which typically

@@ -93,8 +93,9 @@ bool AiaRequest::AddCompletedFetchToResults(Error error,
 
 }  // namespace
 
-CertIssuerSourceAia::CertIssuerSourceAia(CertNetFetcher* cert_fetcher)
-    : cert_fetcher_(cert_fetcher) {}
+CertIssuerSourceAia::CertIssuerSourceAia(
+    scoped_refptr<CertNetFetcher> cert_fetcher)
+    : cert_fetcher_(std::move(cert_fetcher)) {}
 
 CertIssuerSourceAia::~CertIssuerSourceAia() = default;
 

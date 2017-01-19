@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "base/compiler_specific.h"
-#include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
 #include "net/quic/core/crypto/crypto_framer.h"
@@ -18,13 +17,14 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using base::ContainsKey;
 using base::StringPiece;
@@ -308,8 +308,8 @@ size_t QuicFramer::GetSerializedFrameLength(
   if (can_truncate) {
     // Truncate the frame so the packet will not exceed kMaxPacketSize.
     // Note that we may not use every byte of the writer in this case.
-    DVLOG(1) << ENDPOINT
-             << "Truncating large frame, free bytes: " << free_bytes;
+    QUIC_DLOG(INFO) << ENDPOINT
+                    << "Truncating large frame, free bytes: " << free_bytes;
     return free_bytes;
   }
   return 0;
@@ -506,8 +506,8 @@ bool QuicFramer::ProcessPacket(const QuicEncryptedPacket& packet) {
   QuicPacketPublicHeader public_header;
   if (!ProcessPublicHeader(&reader, &public_header)) {
     DCHECK_NE("", detailed_error_);
-    DVLOG(1) << ENDPOINT
-             << "Unable to process public header. Error: " << detailed_error_;
+    QUIC_DVLOG(1) << ENDPOINT << "Unable to process public header. Error: "
+                  << detailed_error_;
     DCHECK_NE("", detailed_error_);
     return RaiseError(QUIC_INVALID_PACKET_HEADER);
   }
@@ -572,9 +572,10 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
   QuicPacketHeader header(public_header);
   if (!ProcessUnauthenticatedHeader(encrypted_reader, &header)) {
     DCHECK_NE("", detailed_error_);
-    DVLOG(1) << ENDPOINT
-             << "Unable to process packet header. Stopping parsing. Error: "
-             << detailed_error_;
+    QUIC_DVLOG(1)
+        << ENDPOINT
+        << "Unable to process packet header. Stopping parsing. Error: "
+        << detailed_error_;
     return false;
   }
 
@@ -606,8 +607,8 @@ bool QuicFramer::ProcessDataPacket(QuicDataReader* encrypted_reader,
   if (!ProcessFrameData(&reader, header)) {
     DCHECK_NE(QUIC_NO_ERROR, error_);  // ProcessFrameData sets the error.
     DCHECK_NE("", detailed_error_);
-    DLOG(WARNING) << ENDPOINT
-                  << "Unable to process frame data. Error: " << detailed_error_;
+    QUIC_DLOG(WARNING) << ENDPOINT << "Unable to process frame data. Error: "
+                       << detailed_error_;
     return false;
   }
 
@@ -652,7 +653,7 @@ bool QuicFramer::ProcessPublicResetPacket(
 
 bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
                                     QuicDataWriter* writer) {
-  DVLOG(1) << ENDPOINT << "Appending header: " << header;
+  QUIC_DVLOG(1) << ENDPOINT << "Appending header: " << header;
   uint8_t public_flags = 0;
   if (header.public_header.reset_flag) {
     public_flags |= PACKET_PUBLIC_FLAGS_RST;
@@ -698,8 +699,8 @@ bool QuicFramer::AppendPacketHeader(const QuicPacketHeader& header,
     DCHECK_EQ(Perspective::IS_CLIENT, perspective_);
     QuicTag tag = QuicVersionToQuicTag(quic_version_);
     writer->WriteUInt32(tag);
-    DVLOG(1) << ENDPOINT << "version = " << quic_version_ << ", tag = '"
-             << QuicTagToString(tag) << "'";
+    QUIC_DVLOG(1) << ENDPOINT << "version = " << quic_version_ << ", tag = '"
+                  << QuicTagToString(tag) << "'";
   }
 
   if (header.public_header.multipath_flag &&
@@ -1038,7 +1039,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_STREAM_DATA);
         }
         if (!visitor_->OnStreamFrame(frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1052,7 +1054,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_ACK_DATA);
         }
         if (!visitor_->OnAckFrame(frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1062,8 +1065,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
       // This was a special frame type that did not match any
       // of the known ones. Error.
       set_detailed_error("Illegal frame type.");
-      DLOG(WARNING) << ENDPOINT
-                    << "Illegal frame type: " << static_cast<int>(frame_type);
+      QUIC_DLOG(WARNING) << ENDPOINT << "Illegal frame type: "
+                         << static_cast<int>(frame_type);
       return RaiseError(QUIC_INVALID_FRAME_DATA);
     }
 
@@ -1071,7 +1074,7 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
       case PADDING_FRAME: {
         QuicPaddingFrame frame(reader->BytesRemaining());
         if (!visitor_->OnPaddingFrame(frame)) {
-          DVLOG(1) << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << "Visitor asked to stop further processing.";
         }
         // We're done with the packet.
         return true;
@@ -1083,7 +1086,7 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_RST_STREAM_DATA);
         }
         if (!visitor_->OnRstStreamFrame(frame)) {
-          DVLOG(1) << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1097,7 +1100,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
         }
 
         if (!visitor_->OnConnectionCloseFrame(frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1110,7 +1114,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_GOAWAY_DATA);
         }
         if (!visitor_->OnGoAwayFrame(goaway_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1123,7 +1128,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_WINDOW_UPDATE_DATA);
         }
         if (!visitor_->OnWindowUpdateFrame(window_update_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1136,7 +1142,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_BLOCKED_DATA);
         }
         if (!visitor_->OnBlockedFrame(blocked_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1149,7 +1156,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_STOP_WAITING_DATA);
         }
         if (!visitor_->OnStopWaitingFrame(stop_waiting_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1159,7 +1167,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
         // Ping has no payload.
         QuicPingFrame ping_frame;
         if (!visitor_->OnPingFrame(ping_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1171,7 +1180,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
           return RaiseError(QUIC_INVALID_PATH_CLOSE_DATA);
         }
         if (!visitor_->OnPathCloseFrame(path_close_frame)) {
-          DVLOG(1) << ENDPOINT << "Visitor asked to stop further processing.";
+          QUIC_DVLOG(1) << ENDPOINT
+                        << "Visitor asked to stop further processing.";
           // Returning true since there was no parsing error.
           return true;
         }
@@ -1180,8 +1190,8 @@ bool QuicFramer::ProcessFrameData(QuicDataReader* reader,
 
       default:
         set_detailed_error("Illegal frame type.");
-        DLOG(WARNING) << ENDPOINT
-                      << "Illegal frame type: " << static_cast<int>(frame_type);
+        QUIC_DLOG(WARNING) << ENDPOINT << "Illegal frame type: "
+                           << static_cast<int>(frame_type);
         return RaiseError(QUIC_INVALID_FRAME_DATA);
     }
   }
@@ -1681,8 +1691,8 @@ bool QuicFramer::DecryptPayload(QuicDataReader* encrypted_reader,
   }
 
   if (!success) {
-    DVLOG(1) << ENDPOINT << "DecryptPacket failed for packet_number:"
-             << header.packet_number;
+    QUIC_DVLOG(1) << ENDPOINT << "DecryptPacket failed for packet_number:"
+                  << header.packet_number;
     return false;
   }
 
@@ -2199,8 +2209,8 @@ bool QuicFramer::AppendPathCloseFrame(const QuicPathCloseFrame& frame,
 }
 
 bool QuicFramer::RaiseError(QuicErrorCode error) {
-  DVLOG(1) << ENDPOINT << "Error: " << QuicErrorCodeToString(error)
-           << " detail: " << detailed_error_;
+  QUIC_DLOG(INFO) << ENDPOINT << "Error: " << QuicErrorCodeToString(error)
+                  << " detail: " << detailed_error_;
   set_error(error);
   visitor_->OnError(this);
   return false;

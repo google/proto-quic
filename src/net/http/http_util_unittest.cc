@@ -100,26 +100,6 @@ TEST(HttpUtilTest, IsSafeHeader) {
   }
 }
 
-TEST(HttpUtilTest, HasHeader) {
-  static const struct {
-    const char* const headers;
-    const char* const name;
-    bool expected_result;
-  } tests[] = {
-    { "", "foo", false },
-    { "foo\r\nbar", "foo", false },
-    { "ffoo: 1", "foo", false },
-    { "foo: 1", "foo", true },
-    { "foo: 1\r\nbar: 2", "foo", true },
-    { "fOO: 1\r\nbar: 2", "foo", true },
-    { "g: 0\r\nfoo: 1\r\nbar: 2", "foo", true },
-  };
-  for (size_t i = 0; i < arraysize(tests); ++i) {
-    bool result = HttpUtil::HasHeader(tests[i].headers, tests[i].name);
-    EXPECT_EQ(tests[i].expected_result, result);
-  }
-}
-
 TEST(HttpUtilTest, HeadersIterator) {
   std::string headers = "foo: 1\t\r\nbar: hello world\r\nbaz: 3 \r\n";
 

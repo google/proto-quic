@@ -251,7 +251,8 @@ class Top2012Q3Page(page.Page):
 
   def __init__(self, url, ps):
     super(Top2012Q3Page, self).__init__(
-        url=url, page_set=ps, credentials_path = 'data/credentials.json')
+        url=url, page_set=ps, credentials_path = 'data/credentials.json',
+        name=url[:140])  # Make sure page's name is not too long
     self.archive_data_file = 'data/2012Q3.json'
 
   def RunPageInteractions(self, action_runner):

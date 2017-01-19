@@ -8163,9 +8163,12 @@ TEST_F(HttpNetworkTransactionTest, CrossOriginSPDYProxyPush) {
 
   SpdySerializedFrame stream1_syn(
       spdy_util_.ConstructSpdyGet("http://www.example.org/", 1, LOWEST));
+  SpdySerializedFrame stream2_priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
 
   MockWrite spdy_writes[] = {
       CreateMockWrite(stream1_syn, 0, ASYNC),
+      CreateMockWrite(stream2_priority, 3, ASYNC),
   };
 
   SpdySerializedFrame stream1_reply(
@@ -8182,9 +8185,9 @@ TEST_F(HttpNetworkTransactionTest, CrossOriginSPDYProxyPush) {
   MockRead spdy_reads[] = {
       CreateMockRead(stream1_reply, 1, ASYNC),
       CreateMockRead(stream2_syn, 2, ASYNC),
-      CreateMockRead(stream1_body, 3, ASYNC),
-      CreateMockRead(stream2_body, 4, ASYNC),
-      MockRead(SYNCHRONOUS, ERR_IO_PENDING, 5),  // Force a hang
+      CreateMockRead(stream1_body, 4, ASYNC),
+      CreateMockRead(stream2_body, 5, ASYNC),
+      MockRead(SYNCHRONOUS, ERR_IO_PENDING, 6),  // Force a hang
   };
 
   SequencedSocketData spdy_data(spdy_reads, arraysize(spdy_reads), spdy_writes,
@@ -8355,9 +8358,12 @@ TEST_F(HttpNetworkTransactionTest, SameOriginProxyPushCorrectness) {
 
   SpdySerializedFrame stream1_syn(
       spdy_util_.ConstructSpdyGet("http://www.example.org/", 1, LOWEST));
+  SpdySerializedFrame stream2_priority(
+      spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
 
   MockWrite spdy_writes[] = {
       CreateMockWrite(stream1_syn, 0, ASYNC),
+      CreateMockWrite(stream2_priority, 3, ASYNC),
   };
 
   SpdySerializedFrame stream1_reply(
@@ -8376,9 +8382,9 @@ TEST_F(HttpNetworkTransactionTest, SameOriginProxyPushCorrectness) {
   MockRead spdy_reads[] = {
       CreateMockRead(stream1_reply, 1, ASYNC),
       CreateMockRead(stream2_syn, 2, ASYNC),
-      CreateMockRead(stream1_body, 3, ASYNC),
-      CreateMockRead(stream2_body, 4, ASYNC),
-      MockRead(SYNCHRONOUS, ERR_IO_PENDING, 5),  // Force a hang
+      CreateMockRead(stream1_body, 4, ASYNC),
+      CreateMockRead(stream2_body, 5, ASYNC),
+      MockRead(SYNCHRONOUS, ERR_IO_PENDING, 6),  // Force a hang
   };
 
   SequencedSocketData spdy_data(spdy_reads, arraysize(spdy_reads), spdy_writes,

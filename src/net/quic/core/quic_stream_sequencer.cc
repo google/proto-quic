@@ -10,14 +10,14 @@
 #include <utility>
 
 #include "base/format_macros.h"
-#include "base/logging.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_stream_sequencer_buffer.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
 using base::StringPiece;
@@ -59,8 +59,8 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
         "Stream ", stream_->id(), ": ", QuicErrorCodeToString(result), ": ",
         error_details, "\nPeer Address: ",
         stream_->PeerAddressOfLatestPacket().ToString());
-    DLOG(WARNING) << QuicErrorCodeToString(result);
-    DLOG(WARNING) << details;
+    QUIC_LOG_FIRST_N(WARNING, 50) << QuicErrorCodeToString(result);
+    QUIC_LOG_FIRST_N(WARNING, 50) << details;
     stream_->CloseConnectionWithDetails(result, details);
     return;
   }
@@ -104,9 +104,9 @@ bool QuicStreamSequencer::MaybeCloseStream() {
     return false;
   }
 
-  DVLOG(1) << "Passing up termination, as we've processed "
-           << buffered_frames_.BytesConsumed() << " of " << close_offset_
-           << " bytes.";
+  QUIC_DVLOG(1) << "Passing up termination, as we've processed "
+                << buffered_frames_.BytesConsumed() << " of " << close_offset_
+                << " bytes.";
   // This will cause the stream to consume the FIN.
   // Technically it's an error if |num_bytes_consumed| isn't exactly
   // equal to |close_offset|, but error handling seems silly at this point.
@@ -201,9 +201,9 @@ void QuicStreamSequencer::ReleaseBufferIfEmpty() {
 void QuicStreamSequencer::FlushBufferedFrames() {
   DCHECK(ignore_read_data_);
   size_t bytes_flushed = buffered_frames_.FlushBufferedFrames();
-  DVLOG(1) << "Flushing buffered data at offset "
-           << buffered_frames_.BytesConsumed() << " length " << bytes_flushed
-           << " for stream " << stream_->id();
+  QUIC_DVLOG(1) << "Flushing buffered data at offset "
+                << buffered_frames_.BytesConsumed() << " length "
+                << bytes_flushed << " for stream " << stream_->id();
   stream_->AddBytesConsumed(bytes_flushed);
   MaybeCloseStream();
 }

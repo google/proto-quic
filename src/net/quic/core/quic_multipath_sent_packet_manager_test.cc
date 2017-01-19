@@ -4,8 +4,8 @@
 
 #include "net/quic/core/quic_multipath_sent_packet_manager.h"
 
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_pending_retransmission.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/test_tools/quic_multipath_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"

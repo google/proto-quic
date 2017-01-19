@@ -31,6 +31,8 @@ public class LocaleUtils {
     private static final Map<String, String> LANGUAGE_MAP_FOR_ANDROID;
 
     static {
+        // A variation of this mapping also exists in:
+        // build/android/gyp/package_resources.py
         HashMap<String, String> mapForChromium = new HashMap<>();
         mapForChromium.put("iw", "he"); // Hebrew
         mapForChromium.put("ji", "yi"); // Yiddish

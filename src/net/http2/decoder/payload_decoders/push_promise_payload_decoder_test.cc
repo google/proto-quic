@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -96,10 +95,6 @@ class PushPromisePayloadDecoderTest
     : public AbstractPaddablePayloadDecoderTest<PushPromisePayloadDecoder,
                                                 PushPromisePayloadDecoderPeer,
                                                 Listener> {
- public:
-  static bool ApproveSizeForTruncated(size_t size) {
-    return size != Http2PushPromiseFields::EncodedSize();
-  }
 };
 
 INSTANTIATE_TEST_CASE_P(VariousPadLengths,
@@ -131,13 +126,14 @@ TEST_P(PushPromisePayloadDecoderTest, VariousHpackPayloadSizes) {
 // Confirm we get an error if the payload is not long enough for the required
 // portion of the payload, regardless of the amount of (valid) padding.
 TEST_P(PushPromisePayloadDecoderTest, Truncated) {
+  auto approve_size = [](size_t size) {
+    return size != Http2PushPromiseFields::EncodedSize();
+  };
   Http2PushPromiseFields push_promise{RandStreamId()};
   Http2FrameBuilder fb;
   fb.Append(push_promise);
-  EXPECT_TRUE(VerifyDetectsMultipleFrameSizeErrors(
-      0, fb.buffer(),
-      base::Bind(&PushPromisePayloadDecoderTest::ApproveSizeForTruncated),
-      total_pad_length_));
+  EXPECT_TRUE(VerifyDetectsMultipleFrameSizeErrors(0, fb.buffer(), approve_size,
+                                                   total_pad_length_));
 }
 
 // Confirm we get an error if the PADDED flag is set but the payload is not

@@ -29,11 +29,11 @@ from util import build_utils
 
 _DEFAULT_ANDROID_MANIFEST_PATH = os.path.join(
     host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'AndroidManifest.xml')
-_JINJA_TEMPLATE_PATH = os.path.join(
-    os.path.dirname(__file__), 'build.gradle.jinja')
-
+_FILE_DIR = os.path.dirname(__file__)
 _JAVA_SUBDIR = 'symlinked-java'
 _SRCJARS_SUBDIR = 'extracted-srcjars'
+_JNI_LIBS_SUBDIR = 'symlinked-libs'
+_ARMEABI_SUBDIR = 'armeabi'
 
 _DEFAULT_TARGETS = [
     # TODO(agrieve): Requires alternate android.jar to compile.
@@ -49,6 +49,11 @@ _DEFAULT_TARGETS = [
     '//content/public/android:content_junit_tests',
     '//content/shell/android:content_shell_apk',
 ]
+
+
+def _TemplatePath(name):
+  return os.path.join(_FILE_DIR, '{}.jinja'.format(name))
+
 
 def _RebasePath(path_or_list, new_cwd=None, old_cwd=None):
   """Makes the given path(s) relative to new_cwd, or absolute if not specified.
@@ -88,7 +93,7 @@ def _ReadBuildVars(output_dir):
 
 
 def _RunNinja(output_dir, args):
-  cmd = ['ninja', '-C', output_dir, '-j50']
+  cmd = ['ninja', '-C', output_dir, '-j1000']
   cmd.extend(args)
   logging.info('Running: %r', cmd)
   subprocess.check_call(cmd)
@@ -183,6 +188,13 @@ def _ComputeJavaSourceDirs(java_files):
   return list(found_roots)
 
 
+def _CreateRelativeSymlink(target_path, link_path):
+  link_dir = os.path.dirname(link_path)
+  relpath = os.path.relpath(target_path, link_dir)
+  logging.debug('Creating symlink %s -> %s', link_path, relpath)
+  os.symlink(relpath, link_path)
+
+
 def _CreateSymlinkTree(entry_output_dir, symlink_dir, desired_files,
                        parent_dirs):
   """Creates a directory tree of symlinks to the given files.
@@ -199,9 +211,7 @@ def _CreateSymlinkTree(entry_output_dir, symlink_dir, desired_files,
     symlinked_dir = os.path.dirname(symlinked_path)
     if not os.path.exists(symlinked_dir):
       os.makedirs(symlinked_dir)
-    relpath = os.path.relpath(target_path, symlinked_dir)
-    logging.debug('Creating symlink %s -> %s', symlinked_path, relpath)
-    os.symlink(relpath, symlinked_path)
+    _CreateRelativeSymlink(target_path, symlinked_path)
 
 
 def _CreateJavaSourceDir(output_dir, entry_output_dir, java_files):
@@ -239,6 +249,27 @@ def _CreateJavaSourceDir(output_dir, entry_output_dir, java_files):
   return java_dirs
 
 
+def _CreateJniLibsDir(output_dir, entry_output_dir, so_files):
+  """Creates directory with symlinked .so files if necessary.
+
+  Returns list of JNI libs directories."""
+
+  if so_files:
+    symlink_dir = os.path.join(entry_output_dir, _JNI_LIBS_SUBDIR)
+    shutil.rmtree(symlink_dir, True)
+    abi_dir = os.path.join(symlink_dir, _ARMEABI_SUBDIR)
+    if not os.path.exists(abi_dir):
+      os.makedirs(abi_dir)
+    for so_file in so_files:
+      target_path = os.path.join(output_dir, so_file)
+      symlinked_path = os.path.join(abi_dir, so_file)
+      _CreateRelativeSymlink(target_path, symlinked_path)
+
+    return [symlink_dir]
+
+  return []
+
+
 def _GenerateLocalProperties(sdk_dir):
   """Returns the data for project.properties as a string."""
   return '\n'.join([
@@ -247,8 +278,9 @@ def _GenerateLocalProperties(sdk_dir):
       ''])
 
 
-def _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
-                        use_gradle_process_resources, jinja_processor):
+def _GenerateGradleFile(build_config, build_vars, java_dirs, jni_libs,
+                        relativize, use_gradle_process_resources,
+                        jinja_processor):
   """Returns the data for a project's build.gradle."""
   deps_info = build_config['deps_info']
   gradle = build_config['gradle']
@@ -288,6 +320,7 @@ def _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
                                 _DEFAULT_ANDROID_MANIFEST_PATH)
   variables['android_manifest'] = relativize(android_manifest)
   variables['java_dirs'] = relativize(java_dirs)
+  variables['jni_libs'] = relativize(jni_libs)
   # TODO(agrieve): Add an option to use interface jars and see if that speeds
   # things up at all.
   variables['prebuilts'] = relativize(gradle['dependent_prebuilt_jars'])
@@ -299,13 +332,13 @@ def _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
           for p in gradle['dependent_java_projects']]
   variables['java_project_deps'] = [d.ProjectName() for d in deps]
 
-  return jinja_processor.Render(_JINJA_TEMPLATE_PATH, variables)
+  return jinja_processor.Render(
+      _TemplatePath(target_type.split('_')[0]), variables)
 
 
 def _GenerateRootGradle(jinja_processor):
   """Returns the data for the root project's build.gradle."""
-  variables = {'template_type': 'root'}
-  return jinja_processor.Render(_JINJA_TEMPLATE_PATH, variables)
+  return jinja_processor.Render(_TemplatePath('root'))
 
 
 def _GenerateSettingsGradle(project_entries):
@@ -417,7 +450,7 @@ def main():
   logging.info('Found %d dependent build_config targets.', len(all_entries))
 
   logging.warning('Writing .gradle files...')
-  jinja_processor = jinja_template.JinjaProcessor(host_paths.DIR_SOURCE_ROOT)
+  jinja_processor = jinja_template.JinjaProcessor(_FILE_DIR)
   build_vars = _ReadBuildVars(output_dir)
   project_entries = []
   srcjar_tuples = []
@@ -444,8 +477,15 @@ def main():
     if srcjars:
       java_dirs.append(os.path.join(entry_output_dir, _SRCJARS_SUBDIR))
 
-    data = _GenerateGradleFile(build_config, build_vars, java_dirs, relativize,
-                               args.use_gradle_process_resources,
+    native_section = build_config.get('native')
+    if native_section:
+      jni_libs = _CreateJniLibsDir(
+          output_dir, entry_output_dir, native_section.get('libraries'))
+    else:
+      jni_libs = []
+
+    data = _GenerateGradleFile(build_config, build_vars, java_dirs, jni_libs,
+                               relativize, args.use_gradle_process_resources,
                                jinja_processor)
     if data:
       project_entries.append(entry)

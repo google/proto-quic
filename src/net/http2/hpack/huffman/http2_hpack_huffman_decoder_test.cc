@@ -9,8 +9,6 @@
 #include <iostream>
 #include <string>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
@@ -202,25 +200,19 @@ class HpackHuffmanDecoderTest
     return false;
   }
 
-  AssertionResult ValidatorForHuffmanDecodeAndValidateSeveralWays(
-      StringPiece expected_plain) {
-    VERIFY_EQ(output_buffer_.size(), expected_plain.size());
-    VERIFY_EQ(output_buffer_, expected_plain);
-    return AssertionSuccess();
-  }
-
   AssertionResult HuffmanDecodeAndValidateSeveralWays(
       StringPiece encoded,
       StringPiece expected_plain) {
     input_bytes_expected_ = encoded.size();
+    NoArgValidator validator = [expected_plain, this]() -> AssertionResult {
+      VERIFY_EQ(output_buffer_.size(), expected_plain.size());
+      VERIFY_EQ(output_buffer_, expected_plain);
+      return AssertionSuccess();
+    };
     DecodeBuffer db(encoded);
     bool return_non_zero_on_first = false;
-    return DecodeAndValidateSeveralWays(
-        &db, return_non_zero_on_first,
-        ValidateDoneAndEmpty(
-            base::Bind(&HpackHuffmanDecoderTest::
-                           ValidatorForHuffmanDecodeAndValidateSeveralWays,
-                       base::Unretained(this), expected_plain)));
+    return DecodeAndValidateSeveralWays(&db, return_non_zero_on_first,
+                                        ValidateDoneAndEmpty(validator));
   }
 
   HpackHuffmanDecoder decoder_;

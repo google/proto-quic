@@ -256,6 +256,39 @@
     INTERNAL_HISTOGRAM_SPARSE_SLOWLY(name, sample)
 
 //------------------------------------------------------------------------------
+// Histogram instantiation helpers.
+
+// Support a collection of histograms, perhaps one for each entry in an
+// enumeration. This macro manages a block of pointers, adding to a specific
+// one by its index.
+//
+// A typical instantiation looks something like this:
+//  STATIC_HISTOGRAM_POINTER_GROUP(
+//      GetHistogramNameForIndex(histogram_index),
+//      histogram_index, MAXIMUM_HISTOGRAM_INDEX, Add(some_delta),
+//      base::Histogram::FactoryGet(
+//          GetHistogramNameForIndex(histogram_index),
+//          MINIMUM_SAMPLE, MAXIMUM_SAMPLE, BUCKET_COUNT,
+//          base::HistogramBase::kUmaTargetedHistogramFlag));
+//
+// Though it seems inefficient to generate the name twice, the first
+// instance will be used only for DCHECK builds and the second will
+// execute only during the first access to the given index, after which
+// the pointer is cached and the name never needed again.
+#define STATIC_HISTOGRAM_POINTER_GROUP(constant_histogram_name, index,        \
+                                       constant_maximum,                      \
+                                       histogram_add_method_invocation,       \
+                                       histogram_factory_get_invocation)      \
+  do {                                                                        \
+    static base::subtle::AtomicWord atomic_histograms[constant_maximum];      \
+    DCHECK_LE(0, index);                                                      \
+    DCHECK_LT(index, constant_maximum);                                       \
+    HISTOGRAM_POINTER_USE(&atomic_histograms[index], constant_histogram_name, \
+                          histogram_add_method_invocation,                    \
+                          histogram_factory_get_invocation);                  \
+  } while (0)
+
+//------------------------------------------------------------------------------
 // Deprecated histogram macros. Not recommended for current use.
 
 // Legacy name for UMA_HISTOGRAM_COUNTS_1M. Suggest using explicit naming

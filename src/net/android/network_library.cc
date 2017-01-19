@@ -11,6 +11,7 @@
 #include "base/android/scoped_java_ref.h"
 #include "base/logging.h"
 #include "jni/AndroidNetworkLibrary_jni.h"
+#include "net/dns/dns_protocol.h"
 
 using base::android::AttachCurrentThread;
 using base::android::ConvertJavaStringToUTF8;
@@ -144,6 +145,23 @@ std::string GetWifiSSID() {
       Java_AndroidNetworkLibrary_getWifiSSID(
           base::android::AttachCurrentThread(),
           base::android::GetApplicationContext()));
+}
+
+void GetDnsServers(std::vector<IPEndPoint>* dns_servers) {
+  JNIEnv* env = AttachCurrentThread();
+  std::vector<std::string> dns_servers_strings;
+  base::android::JavaArrayOfByteArrayToStringVector(
+      env, Java_AndroidNetworkLibrary_getDnsServers(
+               env, base::android::GetApplicationContext())
+               .obj(),
+      &dns_servers_strings);
+  for (const std::string& dns_address_string : dns_servers_strings) {
+    IPAddress dns_address(
+        reinterpret_cast<const uint8_t*>(dns_address_string.c_str()),
+        dns_address_string.size());
+    IPEndPoint dns_server(dns_address, dns_protocol::kDefaultPort);
+    dns_servers->push_back(dns_server);
+  }
 }
 
 }  // namespace android

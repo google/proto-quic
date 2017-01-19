@@ -707,18 +707,20 @@ TEST_F(SpdySessionPoolTest, DumpMemoryStats) {
       allocator_dumps = process_memory_dump->allocator_dumps();
   for (const auto& pair : allocator_dumps) {
     const std::string& dump_name = pair.first;
-    if (dump_name.find("spdy_session_pool/session") == std::string::npos)
+    if (dump_name.find("spdy_session_pool") == std::string::npos)
       continue;
     std::unique_ptr<base::Value> raw_attrs =
         pair.second->attributes_for_testing()->ToBaseValue();
     base::DictionaryValue* attrs;
     ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
-    base::DictionaryValue* is_active_attrs;
-    ASSERT_TRUE(attrs->GetDictionary("active", &is_active_attrs));
-    std::string is_active;
-    ASSERT_TRUE(is_active_attrs->GetString("value", &is_active));
+    base::DictionaryValue* active_session_count_attr;
+    ASSERT_TRUE(attrs->GetDictionary("active_session_count",
+                                     &active_session_count_attr));
+    std::string active_session_count;
+    ASSERT_TRUE(
+        active_session_count_attr->GetString("value", &active_session_count));
     // No created stream so the session should be idle.
-    ASSERT_EQ("0", is_active);
+    ASSERT_EQ("0", active_session_count);
     did_dump = true;
   }
   EXPECT_TRUE(did_dump);

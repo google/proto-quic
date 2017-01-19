@@ -99,19 +99,19 @@ SettingsMap AddDefaultHttp2Settings(SettingsMap http2_settings) {
 }  // unnamed namespace
 
 HttpNetworkSession::Params::Params()
-    : client_socket_factory(NULL),
-      host_resolver(NULL),
-      cert_verifier(NULL),
-      channel_id_service(NULL),
-      transport_security_state(NULL),
-      cert_transparency_verifier(NULL),
-      ct_policy_enforcer(NULL),
-      proxy_service(NULL),
-      ssl_config_service(NULL),
-      http_auth_handler_factory(NULL),
-      net_log(NULL),
-      host_mapping_rules(NULL),
-      socket_performance_watcher_factory(NULL),
+    : client_socket_factory(nullptr),
+      host_resolver(nullptr),
+      cert_verifier(nullptr),
+      channel_id_service(nullptr),
+      transport_security_state(nullptr),
+      cert_transparency_verifier(nullptr),
+      ct_policy_enforcer(nullptr),
+      proxy_service(nullptr),
+      ssl_config_service(nullptr),
+      http_auth_handler_factory(nullptr),
+      net_log(nullptr),
+      host_mapping_rules(nullptr),
+      socket_performance_watcher_factory(nullptr),
       ignore_certificate_errors(false),
       testing_fixed_http_port(0),
       testing_fixed_https_port(0),
@@ -134,8 +134,8 @@ HttpNetworkSession::Params::Params()
       quic_socket_receive_buffer_size(kQuicSocketReceiveBufferSize),
       quic_delay_tcp_race(true),
       quic_max_server_configs_stored_in_properties(0u),
-      quic_clock(NULL),
-      quic_random(NULL),
+      quic_clock(nullptr),
+      quic_random(nullptr),
       quic_max_packet_length(kDefaultMaxPacketSize),
       enable_user_alternate_protocol_ports(false),
       quic_crypto_client_stream_factory(
@@ -153,7 +153,7 @@ HttpNetworkSession::Params::Params()
       quic_force_hol_blocking(false),
       quic_race_cert_verification(false),
       quic_do_not_fragment(false),
-      proxy_delegate(NULL),
+      proxy_delegate(nullptr),
       enable_token_binding(false),
       http_09_on_non_default_ports_enabled(false),
       restrict_to_one_preconnect_for_proxies(false) {
@@ -318,7 +318,7 @@ std::unique_ptr<base::Value> HttpNetworkSession::SpdySessionPoolInfoToValue()
 std::unique_ptr<base::Value> HttpNetworkSession::QuicInfoToValue() const {
   std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
   dict->Set("sessions", quic_stream_factory_.QuicStreamFactoryInfoToValue());
-  dict->SetBoolean("quic_enabled", params_.enable_quic);
+  dict->SetBoolean("quic_enabled", IsQuicEnabled());
   std::unique_ptr<base::ListValue> connection_options(new base::ListValue);
   for (QuicTagVector::const_iterator it =
            params_.quic_connection_options.begin();
@@ -384,7 +384,7 @@ bool HttpNetworkSession::IsProtocolEnabled(NextProto protocol) const {
     case kProtoHTTP2:
       return params_.enable_http2;
     case kProtoQUIC:
-      return params_.enable_quic;
+      return IsQuicEnabled();
   }
   NOTREACHED();
   return false;
@@ -436,6 +436,14 @@ void HttpNetworkSession::DumpMemoryStats(
           "%s/http_network_session", parent_absolute_name.c_str()));
   pmd->AddOwnershipEdge(empty_row_dump->guid(),
                         http_network_session_dump->guid());
+}
+
+bool HttpNetworkSession::IsQuicEnabled() const {
+  return params_.enable_quic;
+}
+
+void HttpNetworkSession::DisableQuic() {
+  params_.enable_quic = false;
 }
 
 ClientSocketPoolManager* HttpNetworkSession::GetSocketPoolManager(

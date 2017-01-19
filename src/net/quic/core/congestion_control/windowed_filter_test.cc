@@ -4,7 +4,6 @@
 //
 #include "net/quic/core/congestion_control/windowed_filter.h"
 
-#include "base/logging.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_packets.h"

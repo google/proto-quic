@@ -82,6 +82,9 @@ void PersistentSampleMapIterator::SkipEmptyBuckets() {
 // memory allocator. The "id" must be unique across all maps held by an
 // allocator or they will get attached to the wrong sample map.
 struct SampleRecord {
+  // SHA1(SampleRecord): Increment this if structure changes!
+  static constexpr uint32_t kPersistentTypeId = 0x8FE6A69F + 1;
+
   // Expected size for 32/64-bit check.
   static constexpr size_t kExpectedInstanceSize = 16;
 
@@ -89,9 +92,6 @@ struct SampleRecord {
   Sample value;  // The value for which this record holds a count.
   Count count;   // The count associated with the above value.
 };
-
-// The type-id used to identify sample records inside an allocator.
-const uint32_t kTypeIdSampleRecord = 0x8FE6A69F + 1;  // SHA1(SampleRecord) v1
 
 }  // namespace
 
@@ -144,15 +144,12 @@ PersistentMemoryAllocator::Reference
 PersistentSampleMap::GetNextPersistentRecord(
     PersistentMemoryAllocator::Iterator& iterator,
     uint64_t* sample_map_id) {
-  PersistentMemoryAllocator::Reference ref =
-      iterator.GetNextOfType(kTypeIdSampleRecord);
-  const SampleRecord* record =
-      iterator.GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+  const SampleRecord* record = iterator.GetNextOfObject<SampleRecord>();
   if (!record)
     return 0;
 
   *sample_map_id = record->id;
-  return ref;
+  return iterator.GetAsReference(record);
 }
 
 // static
@@ -161,11 +158,7 @@ PersistentSampleMap::CreatePersistentRecord(
     PersistentMemoryAllocator* allocator,
     uint64_t sample_map_id,
     Sample value) {
-  PersistentMemoryAllocator::Reference ref =
-      allocator->Allocate(sizeof(SampleRecord), kTypeIdSampleRecord);
-  SampleRecord* record =
-      allocator->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
-
+  SampleRecord* record = allocator->AllocateObject<SampleRecord>();
   if (!record) {
     NOTREACHED() << "full=" << allocator->IsFull()
                  << ", corrupt=" << allocator->IsCorrupt();
@@ -175,6 +168,8 @@ PersistentSampleMap::CreatePersistentRecord(
   record->id = sample_map_id;
   record->value = value;
   record->count = 0;
+
+  PersistentMemoryAllocator::Reference ref = allocator->GetAsReference(record);
   allocator->MakeIterable(ref);
   return ref;
 }
@@ -256,8 +251,7 @@ Count* PersistentSampleMap::ImportSamples(Sample until_value,
   PersistentMemoryAllocator::Reference ref;
   PersistentSampleMapRecords* records = GetRecords();
   while ((ref = records->GetNext()) != 0) {
-    SampleRecord* record =
-        records->GetAsObject<SampleRecord>(ref, kTypeIdSampleRecord);
+    SampleRecord* record = records->GetAsObject<SampleRecord>(ref);
     if (!record)
       continue;
 

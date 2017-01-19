@@ -7,17 +7,17 @@
 #include <algorithm>
 #include <string>
 
-#include "base/logging.h"
 #include "base/stl_util.h"
 #include "net/quic/chromium/quic_utils_chromium.h"
 #include "net/quic/core/congestion_control/general_loss_algorithm.h"
 #include "net/quic/core/congestion_control/pacing_sender.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_pending_retransmission.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -342,7 +342,7 @@ void QuicSentPacketManager::HandleAckForSentPackets(
       continue;
     }
     // Packet was acked, so remove it from our unacked packet list.
-    DVLOG(1) << ENDPOINT << "Got an ack for packet " << packet_number;
+    QUIC_DVLOG(1) << ENDPOINT << "Got an ack for packet " << packet_number;
     // If data is associated with the most recent transmission of this
     // packet, then inform the caller.
     if (it->in_flight) {
@@ -656,7 +656,7 @@ bool QuicSentPacketManager::MaybeRetransmitTailLossProbe() {
     MarkForRetransmission(packet_number, TLP_RETRANSMISSION);
     return true;
   }
-  DLOG(ERROR)
+  QUIC_DLOG(ERROR)
       << "No retransmittable packets, so RetransmitOldestPacket failed.";
   return false;
 }
@@ -764,12 +764,12 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
   if (!FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas &&
       send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
     // send_delta can be very high if local clock is changed mid-connection.
-    LOG(WARNING) << "Excessive send delta: " << send_delta.ToSeconds()
-                 << ", setting to: " << kMaxSendDeltaSeconds
-                 << " largest_observed:" << ack_frame.largest_observed
-                 << " ack_receive_time:" << ack_receive_time.ToDebuggingValue()
-                 << " sent_time:"
-                 << transmission_info.sent_time.ToDebuggingValue();
+    QUIC_LOG_FIRST_N(WARNING, 10)
+        << "Excessive send delta: " << send_delta.ToSeconds()
+        << ", setting to: " << kMaxSendDeltaSeconds
+        << " largest_observed:" << ack_frame.largest_observed
+        << " ack_receive_time:" << ack_receive_time.ToDebuggingValue()
+        << " sent_time:" << transmission_info.sent_time.ToDebuggingValue();
     return false;
   }
   rtt_stats_.UpdateRtt(send_delta, ack_frame.ack_delay_time, ack_receive_time);

@@ -115,6 +115,17 @@ TEST_F(CallbackTest, Reset) {
   EXPECT_TRUE(callback_a_.Equals(null_callback_));
 }
 
+TEST_F(CallbackTest, Move) {
+  // Moving should reset the callback.
+  ASSERT_FALSE(callback_a_.is_null());
+  ASSERT_FALSE(callback_a_.Equals(null_callback_));
+
+  auto tmp = std::move(callback_a_);
+
+  EXPECT_TRUE(callback_a_.is_null());
+  EXPECT_TRUE(callback_a_.Equals(null_callback_));
+}
+
 struct TestForReentrancy {
   TestForReentrancy()
       : cb_already_run(false),

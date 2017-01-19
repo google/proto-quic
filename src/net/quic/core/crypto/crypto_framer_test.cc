@@ -8,10 +8,10 @@
 #include <memory>
 #include <vector>
 
-#include "base/logging.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
@@ -35,7 +35,7 @@ class TestCryptoVisitor : public CryptoFramerVisitorInterface {
   TestCryptoVisitor() : error_count_(0) {}
 
   void OnError(CryptoFramer* framer) override {
-    DLOG(ERROR) << "CryptoFramer Error: " << framer->error();
+    QUIC_DLOG(ERROR) << "CryptoFramer Error: " << framer->error();
     ++error_count_;
   }
 

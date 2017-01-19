@@ -36,20 +36,79 @@ class TemplatedClass {
 
 namespace blink {
 
+bool functionNotMarkedConstexpr(int a) {
+  return a == 4 || a == 10;
+}
+
+template <typename T>
+bool templatedFunctionNotMarkedConstexpr(T t) {
+  return !!t;
+}
+
+int g_globalNumber;
+
 template <typename T, int number>
 void F() {
-  // We don't assert on this, and we don't end up considering it a const for
-  // now.
+  // These are const but hacker_case so we leave them alone.
   const int maybe_a_const = sizeof(T);
   const int is_a_const = number;
+  // These are const expressions so they get a k prefix.
+  const int maybeAConstToo = sizeof(T);
+  const int isAConstToo = number;
+  // These are built from calls to functions which produces inconsistent
+  // results so they should not be considered const to be safe.
+  const bool fromAMethod = functionNotMarkedConstexpr(number);
+  const bool fromATemplatedMethod = templatedFunctionNotMarkedConstexpr(number);
+  // A complex statement of const things is const.
+  const bool complexConst = number || (number + 1);
+  // A complex statement with a non-const thing is not const.
+  const bool complexNotConst = number || (g_globalNumber + 1);
+  // A const built from other consts is a const.
+  const bool constFromAConst = complexConst || number;
 }
 
 template <int number, typename... T>
 void F() {
-  // We don't assert on this, and we don't end up considering it a const for
-  // now.
+  // These are const but hacker_case so we leave them alone.
   const int maybe_a_const = sizeof...(T);
   const int is_a_const = number;
+  // These are const expressions so they get a k prefix.
+  const int maybeAConstToo = sizeof...(T);
+  const int isAConstToo = number;
+}
+
+namespace test_member_in_template {
+
+template <typename T>
+class HasAMember {
+ public:
+  HasAMember() {}
+  HasAMember(const T&) {}
+
+  void usesMember() { const int notConst = m_i; }
+  void alsoUsesMember();
+
+ private:
+  int m_i;
+};
+
+template <typename T>
+void HasAMember<T>::alsoUsesMember() {
+  const int notConst = m_i;
+}
+
+template <typename T>
+static void basedOnSubType(const HasAMember<T>& t) {
+  const HasAMember<T> problematicNotConst(t);
+}
+
+void Run() {
+  HasAMember<int>().usesMember();
+
+  basedOnSubType<int>(HasAMember<int>());
+  enum E { A };
+  basedOnSubType<E>(HasAMember<E>());
+}
 }
 
 namespace test_template_arg_is_function {
@@ -66,6 +125,15 @@ void test() {
   h<int, f>(0);
   // Non-Blink should stay the same.
   h<int, not_blink::function>(1);
+
+  // The int one makes the methods called from F() considered as constexpr, and
+  // can be collapsed to not have template arguments before it reaches the AST.
+  F<int, 10>();
+  // The enum one makes them not constexpr, as it doesn't collapse away the
+  // template stuff as much. This can lead to conflicting decisions about
+  // the names inside F() vs the above instantiation.
+  enum E { A };
+  F<E, 11>();
 }
 
 }  // namespace test_template_arg_is_function
