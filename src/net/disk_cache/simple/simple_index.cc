@@ -220,16 +220,14 @@ std::unique_ptr<SimpleIndex::HashList> SimpleIndex::GetEntriesBetween(
     end_time = base::Time::Max();
   else
     end_time += EntryMetadata::GetUpperEpsilonForTimeComparisons();
-  const base::Time extended_end_time =
-      end_time.is_null() ? base::Time::Max() : end_time;
-  DCHECK(extended_end_time >= initial_time);
+  DCHECK(end_time >= initial_time);
+
   std::unique_ptr<HashList> ret_hashes(new HashList());
-  for (EntrySet::iterator it = entries_set_.begin(), end = entries_set_.end();
-       it != end; ++it) {
-    EntryMetadata& metadata = it->second;
+  for (const auto& entry : entries_set_) {
+    const EntryMetadata& metadata = entry.second;
     base::Time entry_time = metadata.GetLastUsedTime();
-    if (initial_time <= entry_time && entry_time < extended_end_time)
-      ret_hashes->push_back(it->first);
+    if (initial_time <= entry_time && entry_time < end_time)
+      ret_hashes->push_back(entry.first);
   }
   return ret_hashes;
 }
@@ -246,6 +244,28 @@ int32_t SimpleIndex::GetEntryCount() const {
 uint64_t SimpleIndex::GetCacheSize() const {
   DCHECK(initialized_);
   return cache_size_;
+}
+
+uint64_t SimpleIndex::GetCacheSizeBetween(base::Time initial_time,
+                                          base::Time end_time) const {
+  DCHECK_EQ(true, initialized_);
+
+  if (!initial_time.is_null())
+    initial_time -= EntryMetadata::GetLowerEpsilonForTimeComparisons();
+  if (end_time.is_null())
+    end_time = base::Time::Max();
+  else
+    end_time += EntryMetadata::GetUpperEpsilonForTimeComparisons();
+
+  DCHECK(end_time >= initial_time);
+  uint64_t size = 0;
+  for (const auto& entry : entries_set_) {
+    const EntryMetadata& metadata = entry.second;
+    base::Time entry_time = metadata.GetLastUsedTime();
+    if (initial_time <= entry_time && entry_time < end_time)
+      size += metadata.GetEntrySize();
+  }
+  return size;
 }
 
 void SimpleIndex::Insert(uint64_t entry_hash) {

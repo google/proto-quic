@@ -26,6 +26,19 @@ Process SpawnMultiProcessTestChild(
 
   return LaunchProcess(command_line, options);
 }
+
+bool WaitForMultiprocessTestChildExit(const Process& process,
+                                      TimeDelta timeout,
+                                      int* exit_code) {
+  return process.WaitForExitWithTimeout(timeout, exit_code);
+}
+
+bool TerminateMultiProcessTestChild(const Process& process,
+                                    int exit_code,
+                                    bool wait) {
+  return process.Terminate(exit_code, wait);
+}
+
 #endif  // !defined(OS_ANDROID)
 
 CommandLine GetMultiProcessTestChildBaseCommandLine() {

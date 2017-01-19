@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -70,21 +69,17 @@ struct Listener : public FramePartsCollector {
 class GoAwayPayloadDecoderTest
     : public AbstractPayloadDecoderTest<GoAwayPayloadDecoder,
                                         GoAwayPayloadDecoderPeer,
-                                        Listener> {
- public:
-  static bool ApproveSizeForTruncated(size_t size) {
-    return size != Http2GoAwayFields::EncodedSize();
-  }
-};
+                                        Listener> {};
 
 // Confirm we get an error if the payload is not long enough to hold
 // Http2GoAwayFields.
 TEST_F(GoAwayPayloadDecoderTest, Truncated) {
+  auto approve_size = [](size_t size) {
+    return size != Http2GoAwayFields::EncodedSize();
+  };
   Http2FrameBuilder fb;
   fb.Append(Http2GoAwayFields(123, Http2ErrorCode::ENHANCE_YOUR_CALM));
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(&GoAwayPayloadDecoderTest::ApproveSizeForTruncated)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(0, fb.buffer(), approve_size));
 }
 
 class GoAwayOpaqueDataLengthTests

@@ -15,9 +15,8 @@ class IndexedDBEndurePage(page_module.Page):
     self._subtest = subtest
 
   def RunPageInteractions(self, action_runner):
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    action_runner.ExecuteJavaScript('window.testFilter = "' +
-                                    self._subtest + '";')
+    action_runner.ExecuteJavaScript(
+        'window.testFilter = {{ subtest }};', subtest=self._subtest)
     with action_runner.CreateInteraction('Action_Test'):
       action_runner.ExecuteJavaScript('window.test();')
       action_runner.WaitForJavaScriptCondition(

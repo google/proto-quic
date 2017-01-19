@@ -1428,8 +1428,8 @@ OPENSSL_EXPORT void SSL_get0_ocsp_response(const SSL *ssl, const uint8_t **out,
 OPENSSL_EXPORT int SSL_get_tls_unique(const SSL *ssl, uint8_t *out,
                                       size_t *out_len, size_t max_out);
 
-/* SSL_get_extms_support returns one if the Extended Master Secret
- * extension was negotiated. Otherwise, it returns zero. */
+/* SSL_get_extms_support returns one if the Extended Master Secret extension or
+ * TLS 1.3 was negotiated. Otherwise, it returns zero. */
 OPENSSL_EXPORT int SSL_get_extms_support(const SSL *ssl);
 
 /* SSL_get_current_cipher returns the cipher used in the current outgoing
@@ -1444,7 +1444,7 @@ OPENSSL_EXPORT const SSL_CIPHER *SSL_get_current_cipher(const SSL *ssl);
 OPENSSL_EXPORT int SSL_session_reused(const SSL *ssl);
 
 /* SSL_get_secure_renegotiation_support returns one if the peer supports secure
- * renegotiation (RFC 5746) and zero otherwise. */
+ * renegotiation (RFC 5746) or TLS 1.3. Otherwise, it returns zero. */
 OPENSSL_EXPORT int SSL_get_secure_renegotiation_support(const SSL *ssl);
 
 /* SSL_export_keying_material exports a value derived from the master secret, as
@@ -2913,6 +2913,11 @@ OPENSSL_EXPORT int SSL_renegotiate_pending(SSL *ssl);
  * peformed by |ssl|. This includes the pending renegotiation, if any. */
 OPENSSL_EXPORT int SSL_total_renegotiations(const SSL *ssl);
 
+/* SSL_CTX_set_early_data_enabled sets whether early data is allowed to be used
+ * with resumptions using |ctx|. WARNING: This is experimental and may cause
+ * interop failures until fully implemented. */
+OPENSSL_EXPORT void SSL_CTX_set_early_data_enabled(SSL_CTX *ctx, int enabled);
+
 /* SSL_MAX_CERT_LIST_DEFAULT is the default maximum length, in bytes, of a peer
  * certificate chain. */
 #define SSL_MAX_CERT_LIST_DEFAULT (1024 * 100)
@@ -3758,6 +3763,10 @@ struct ssl_session_st {
 
   uint32_t ticket_age_add;
 
+  /* ticket_max_early_data is the maximum amount of data allowed to be sent as
+   * early data. If zero, 0-RTT is disallowed. */
+  uint32_t ticket_max_early_data;
+
   /* extended_master_secret is true if the master secret in this session was
    * generated using EMS and thus isn't vulnerable to the Triple Handshake
    * attack. */
@@ -4032,6 +4041,10 @@ struct ssl_ctx_st {
   /* quiet_shutdown is true if the connection should not send a close_notify on
    * shutdown. */
   unsigned quiet_shutdown:1;
+
+  /* If enable_early_data is non-zero, early data can be sent and accepted over
+   * new connections. */
+  unsigned enable_early_data:1;
 
   /* ocsp_stapling_enabled is only used by client connections and indicates
    * whether OCSP stapling will be requested. */

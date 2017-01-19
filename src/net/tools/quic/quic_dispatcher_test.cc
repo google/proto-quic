@@ -15,6 +15,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/fake_proof_source.h"
@@ -153,7 +154,7 @@ class MockServerConnection : public MockQuicConnection {
         dispatcher_(dispatcher) {}
 
   void UnregisterOnConnectionClosed() {
-    LOG(ERROR) << "Unregistering " << connection_id();
+    QUIC_LOG(ERROR) << "Unregistering " << connection_id();
     dispatcher_->OnConnectionClosed(connection_id(), QUIC_NO_ERROR,
                                     "Unregistering.");
   }
@@ -532,12 +533,13 @@ TEST_F(QuicDispatcherTest, TooBigSeqNoPacketToTimeWaitListManager) {
 }
 
 TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
-  static_assert(arraysize(kSupportedQuicVersions) == 4u,
+  static_assert(arraysize(kSupportedQuicVersions) == 5u,
                 "Supported versions out of sync");
   FLAGS_quic_reloadable_flag_quic_fix_version_manager = true;
   FLAGS_quic_reloadable_flag_quic_disable_version_34 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_36_v3 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_37 = true;
+  FLAGS_quic_enable_version_38 = true;
   QuicSocketAddress client_address(QuicIpAddress::Loopback4(), 1);
   server_address_ = QuicSocketAddress(QuicIpAddress::Any4(), 5);
   QuicConnectionId connection_id = 1;
@@ -814,8 +816,8 @@ TEST_P(QuicDispatcherStatelessRejectTest, CheapRejects) {
             &QuicDispatcherTest::ValidatePacket, base::Unretained(this), 1))));
   }
 
-  VLOG(1) << "ExpectStatelessReject: " << ExpectStatelessReject();
-  VLOG(1) << "Params: " << GetParam();
+  QUIC_LOG(INFO) << "ExpectStatelessReject: " << ExpectStatelessReject();
+  QUIC_LOG(INFO) << "Params: " << GetParam();
   // Process the first packet for the connection.
   // clang-format off
   CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
@@ -921,7 +923,7 @@ class BlockingWriter : public QuicPacketWriterWrapper {
     // It would be quite possible to actually implement this method here with
     // the fake blocked status, but it would be significantly more work in
     // Chromium, and since it's not called anyway, don't bother.
-    LOG(DFATAL) << "Not supported";
+    QUIC_LOG(DFATAL) << "Not supported";
     return WriteResult();
   }
 

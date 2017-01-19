@@ -182,6 +182,13 @@ class BASE_EXPORT FilePath {
   ~FilePath();
   FilePath& operator=(const FilePath& that);
 
+  // Constructs FilePath with the contents of |that|, which is left in valid but
+  // unspecified state.
+  FilePath(FilePath&& that);
+  // Replaces the contents with those of |that|, which is left in valid but
+  // unspecified state.
+  FilePath& operator=(FilePath&& that);
+
   bool operator==(const FilePath& that) const;
 
   bool operator!=(const FilePath& that) const;

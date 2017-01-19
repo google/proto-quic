@@ -12,7 +12,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_packets.h"

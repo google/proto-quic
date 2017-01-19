@@ -174,6 +174,9 @@ Animation.prototype.currentTime;
 /** @type {number} */
 Animation.prototype.playbackRate;
 
+/** @type {!Promise<!Animation>} */
+Animation.prototype.finished;
+
 Animation.prototype.finish = function() {};
 
 Animation.prototype.play = function() {};

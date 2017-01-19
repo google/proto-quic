@@ -19,7 +19,6 @@
 #include <stddef.h>
 
 #include <deque>
-#include <functional>
 #include <vector>
 
 #include "base/macros.h"

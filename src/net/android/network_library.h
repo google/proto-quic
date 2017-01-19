@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "net/android/cert_verify_result_android.h"
+#include "net/base/ip_endpoint.h"
 #include "net/base/mime_util.h"
 #include "net/base/net_export.h"
 
@@ -77,6 +78,10 @@ NET_EXPORT bool GetIsCaptivePortal();
 // Gets the SSID of the currently associated WiFi access point if there is one.
 // Otherwise, returns empty string.
 NET_EXPORT_PRIVATE std::string GetWifiSSID();
+
+// Gets the DNS servers and puts them in |dns_servers|.
+// Only callable on Marshmallow and newer releases.
+NET_EXPORT_PRIVATE void GetDnsServers(std::vector<IPEndPoint>* dns_servers);
 
 }  // namespace android
 }  // namespace net

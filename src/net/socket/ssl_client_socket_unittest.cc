@@ -18,9 +18,6 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
-#include "base/trace_event/memory_allocator_dump.h"
-#include "base/trace_event/process_memory_dump.h"
-#include "base/trace_event/trace_event_argument.h"
 #include "base/values.h"
 #include "net/base/address_list.h"
 #include "net/base/io_buffer.h"
@@ -47,6 +44,7 @@
 #include "net/socket/client_socket_factory.h"
 #include "net/socket/client_socket_handle.h"
 #include "net/socket/socket_test_util.h"
+#include "net/socket/stream_socket.h"
 #include "net/socket/tcp_client_socket.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
@@ -3627,15 +3625,12 @@ TEST_F(SSLClientSocketTest, DumpMemoryStats) {
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(SSLConfig(), &rv));
   EXPECT_THAT(rv, IsOk());
-
-  base::trace_event::MemoryDumpArgs dump_args = {
-      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
-  std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
-      new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
-  base::trace_event::MemoryAllocatorDump* parent_dump1 =
-      process_memory_dump->CreateAllocatorDump("parent1");
-  sock_->DumpMemoryStats(process_memory_dump.get(),
-                         parent_dump1->absolute_name());
+  StreamSocket::SocketMemoryStats stats;
+  sock_->DumpMemoryStats(&stats);
+  EXPECT_EQ(0u, stats.buffer_size);
+  EXPECT_EQ(1u, stats.cert_count);
+  EXPECT_LT(0u, stats.serialized_cert_size);
+  EXPECT_EQ(stats.serialized_cert_size, stats.total_size);
 
   // Read the response without writing a request, so the read will be pending.
   TestCompletionCallback read_callback;
@@ -3644,40 +3639,12 @@ TEST_F(SSLClientSocketTest, DumpMemoryStats) {
   EXPECT_EQ(ERR_IO_PENDING, rv);
 
   // Dump memory again and check that |buffer_size| contain the read buffer.
-  base::trace_event::MemoryAllocatorDump* parent_dump2 =
-      process_memory_dump->CreateAllocatorDump("parent2");
-  sock_->DumpMemoryStats(process_memory_dump.get(),
-                         parent_dump2->absolute_name());
-
-  const base::trace_event::ProcessMemoryDump::AllocatorDumpsMap&
-      allocator_dumps = process_memory_dump->allocator_dumps();
-  bool did_dump[] = {false, false};
-  // Checks that there are two dumps because DumpMemoryStats() is invoked twice.
-  for (const auto& pair : allocator_dumps) {
-    const std::string& dump_name = pair.first;
-    if (dump_name.find("ssl_socket") == std::string::npos)
-      continue;
-    std::unique_ptr<base::Value> raw_attrs =
-        pair.second->attributes_for_testing()->ToBaseValue();
-    base::DictionaryValue* attrs;
-    ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
-    base::DictionaryValue* buffer_size_attrs;
-    ASSERT_TRUE(attrs->GetDictionary("buffer_size", &buffer_size_attrs));
-    std::string buffer_size;
-    ASSERT_TRUE(buffer_size_attrs->GetString("value", &buffer_size));
-    ASSERT_TRUE(attrs->HasKey("serialized_cert_size"));
-    ASSERT_TRUE(attrs->HasKey("cert_count"));
-    if (dump_name.find("parent1/ssl_socket") != std::string::npos) {
-      did_dump[0] = true;
-      ASSERT_EQ("0", buffer_size);
-    }
-    if (dump_name.find("parent2/ssl_socket") != std::string::npos) {
-      did_dump[1] = true;
-      // The read buffer is not released, so |buffer_size| can't be 0.
-      ASSERT_NE("0", buffer_size);
-    }
-  }
-  EXPECT_THAT(did_dump, testing::ElementsAre(true, true));
+  StreamSocket::SocketMemoryStats stats2;
+  sock_->DumpMemoryStats(&stats2);
+  EXPECT_EQ(17 * 1024u, stats2.buffer_size);
+  EXPECT_EQ(1u, stats2.cert_count);
+  EXPECT_LT(0u, stats2.serialized_cert_size);
+  EXPECT_LT(17 * 1024u, stats2.total_size);
 }
 
 }  // namespace net

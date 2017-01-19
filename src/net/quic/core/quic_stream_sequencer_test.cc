@@ -10,11 +10,11 @@
 #include <utility>
 #include <vector>
 
-#include "base/logging.h"
 #include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -116,13 +116,13 @@ class QuicStreamSequencerTest : public ::testing::Test {
 
   bool VerifyIovec(const iovec& iovec, StringPiece expected) {
     if (iovec.iov_len != expected.length()) {
-      LOG(ERROR) << "Invalid length: " << iovec.iov_len << " vs "
-                 << expected.length();
+      QUIC_LOG(ERROR) << "Invalid length: " << iovec.iov_len << " vs "
+                      << expected.length();
       return false;
     }
     if (memcmp(iovec.iov_base, expected.data(), expected.length()) != 0) {
-      LOG(ERROR) << "Invalid data: " << static_cast<char*>(iovec.iov_base)
-                 << " vs " << expected;
+      QUIC_LOG(ERROR) << "Invalid data: " << static_cast<char*>(iovec.iov_base)
+                      << " vs " << expected;
       return false;
     }
     return true;
@@ -438,7 +438,7 @@ TEST_F(QuicSequencerRandomTest, RandomFramesNoDroppingNoBackup) {
 
   while (!list_.empty()) {
     int index = OneToN(list_.size()) - 1;
-    LOG(ERROR) << "Sending index " << index << " " << list_[index].second;
+    QUIC_LOG(ERROR) << "Sending index " << index << " " << list_[index].second;
     OnFrame(list_[index].first, list_[index].second.data());
 
     list_.erase(list_.begin() + index);

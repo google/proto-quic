@@ -260,7 +260,7 @@ void StackSamplingProfiler::SamplingThread::Stop() {
 
 // StackSamplingProfiler ------------------------------------------------------
 
-subtle::Atomic32 StackSamplingProfiler::process_phases_ = 0;
+subtle::Atomic32 StackSamplingProfiler::process_milestones_ = 0;
 
 StackSamplingProfiler::SamplingParams::SamplingParams()
     : initial_delay(TimeDelta::FromMilliseconds(0)),
@@ -323,16 +323,16 @@ void StackSamplingProfiler::Stop() {
 }
 
 // static
-void StackSamplingProfiler::SetProcessPhase(int phase) {
-  DCHECK_LE(0, phase);
-  DCHECK_GT(static_cast<int>(sizeof(process_phases_) * 8), phase);
-  DCHECK_EQ(0, subtle::NoBarrier_Load(&process_phases_) & (1 << phase));
-  ChangeAtomicFlags(&process_phases_, 1 << phase, 0);
+void StackSamplingProfiler::SetProcessMilestone(int milestone) {
+  DCHECK_LE(0, milestone);
+  DCHECK_GT(static_cast<int>(sizeof(process_milestones_) * 8), milestone);
+  DCHECK_EQ(0, subtle::NoBarrier_Load(&process_milestones_) & (1 << milestone));
+  ChangeAtomicFlags(&process_milestones_, 1 << milestone, 0);
 }
 
 // static
 void StackSamplingProfiler::ResetAnnotationsForTesting() {
-  subtle::NoBarrier_Store(&process_phases_, 0u);
+  subtle::NoBarrier_Store(&process_milestones_, 0u);
 }
 
 // static
@@ -340,7 +340,7 @@ void StackSamplingProfiler::RecordAnnotations(Sample* sample) {
   // The code inside this method must not do anything that could acquire a
   // mutex, including allocating memory (which includes LOG messages) because
   // that mutex could be held by a stopped thread, thus resulting in deadlock.
-  sample->process_phases = subtle::NoBarrier_Load(&process_phases_);
+  sample->process_milestones = subtle::NoBarrier_Load(&process_milestones_);
 }
 
 // StackSamplingProfiler::Frame global functions ------------------------------
@@ -353,7 +353,7 @@ bool operator==(const StackSamplingProfiler::Module& a,
 
 bool operator==(const StackSamplingProfiler::Sample& a,
                 const StackSamplingProfiler::Sample& b) {
-  return a.process_phases == b.process_phases && a.frames == b.frames;
+  return a.process_milestones == b.process_milestones && a.frames == b.frames;
 }
 
 bool operator!=(const StackSamplingProfiler::Sample& a,
@@ -363,9 +363,9 @@ bool operator!=(const StackSamplingProfiler::Sample& a,
 
 bool operator<(const StackSamplingProfiler::Sample& a,
                const StackSamplingProfiler::Sample& b) {
-  if (a.process_phases < b.process_phases)
+  if (a.process_milestones < b.process_milestones)
     return true;
-  if (a.process_phases > b.process_phases)
+  if (a.process_milestones > b.process_milestones)
     return false;
 
   return a.frames < b.frames;

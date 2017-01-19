@@ -56,8 +56,8 @@ class BASE_EXPORT PersistentSparseHistogramDataManager {
   // Convenience method that gets the object for a given reference so callers
   // don't have to also keep their own pointer to the appropriate allocator.
   template <typename T>
-  T* GetAsObject(PersistentMemoryAllocator::Reference ref, uint32_t type_id) {
-    return allocator_->GetAsObject<T>(ref, type_id);
+  T* GetAsObject(PersistentMemoryAllocator::Reference ref) {
+    return allocator_->GetAsObject<T>(ref);
   }
 
  private:
@@ -131,8 +131,8 @@ class BASE_EXPORT PersistentSampleMapRecords {
   // cleanliness of the interface), a template is defined that will be
   // resolved when used inside that file.
   template <typename T>
-  T* GetAsObject(PersistentMemoryAllocator::Reference ref, uint32_t type_id) {
-    return data_manager_->GetAsObject<T>(ref, type_id);
+  T* GetAsObject(PersistentMemoryAllocator::Reference ref) {
+    return data_manager_->GetAsObject<T>(ref);
   }
 
  private:

@@ -528,6 +528,8 @@ void TraceWithAllMacroVariants(WaitableEvent* task_complete_event) {
                    TRACE_ID_LOCAL(0x2000));
     TRACE_LINK_IDS("all", "TRACE_LINK_IDS to a global ID", 0x1000,
                    TRACE_ID_GLOBAL(0x2000));
+    TRACE_LINK_IDS("all", "TRACE_LINK_IDS to a composite ID", 0x1000,
+                   TRACE_ID_WITH_SCOPE("scope 1", 0x2000, 0x3000));
 
     TRACE_EVENT_ASYNC_BEGIN0("all", "async default process scope", 0x1000);
     TRACE_EVENT_ASYNC_BEGIN0("all", "async local id", TRACE_ID_LOCAL(0x2000));
@@ -1046,6 +1048,25 @@ void ValidateAllTraceMacrosCreatedData(const ListValue& trace_parsed) {
     std::string id2;
     EXPECT_TRUE((item && item->GetString("args.linked_id.id2.global", &id2)));
     EXPECT_EQ("0x2000", id2);
+  }
+
+  EXPECT_FIND_("TRACE_LINK_IDS to a composite ID");
+  {
+    std::string ph;
+    EXPECT_TRUE((item && item->GetString("ph", &ph)));
+    EXPECT_EQ("=", ph);
+
+    EXPECT_FALSE(item->HasKey("scope"));
+    std::string id1;
+    EXPECT_TRUE(item->GetString("id", &id1));
+    EXPECT_EQ("0x1000", id1);
+
+    std::string scope;
+    EXPECT_TRUE(item->GetString("args.linked_id.scope", &scope));
+    EXPECT_EQ("scope 1", scope);
+    std::string id2;
+    EXPECT_TRUE(item->GetString("args.linked_id.id", &id2));
+    EXPECT_EQ(id2, "0x2000/0x3000");
   }
 
   EXPECT_FIND_("async default process scope");

@@ -22,6 +22,7 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -513,9 +514,9 @@ void CryptoTestUtils::CommunicateHandshakeMessagesAndRunCallbacks(
   size_t client_i = 0, server_i = 0;
   while (!client->handshake_confirmed()) {
     ASSERT_GT(client_conn->encrypted_packets_.size(), client_i);
-    VLOG(1) << "Processing "
-            << client_conn->encrypted_packets_.size() - client_i
-            << " packets client->server";
+    QUIC_LOG(INFO) << "Processing "
+                   << client_conn->encrypted_packets_.size() - client_i
+                   << " packets client->server";
     MovePackets(client_conn, &client_i, server, server_conn,
                 Perspective::IS_SERVER);
     if (callback_source) {
@@ -523,9 +524,9 @@ void CryptoTestUtils::CommunicateHandshakeMessagesAndRunCallbacks(
     }
 
     ASSERT_GT(server_conn->encrypted_packets_.size(), server_i);
-    VLOG(1) << "Processing "
-            << server_conn->encrypted_packets_.size() - server_i
-            << " packets server->client";
+    QUIC_LOG(INFO) << "Processing "
+                   << server_conn->encrypted_packets_.size() - server_i
+                   << " packets server->client";
     MovePackets(server_conn, &server_i, client, client_conn,
                 Perspective::IS_CLIENT);
     if (callback_source) {
@@ -542,15 +543,17 @@ std::pair<size_t, size_t> CryptoTestUtils::AdvanceHandshake(
     PacketSavingConnection* server_conn,
     QuicCryptoStream* server,
     size_t server_i) {
-  VLOG(1) << "Processing " << client_conn->encrypted_packets_.size() - client_i
-          << " packets client->server";
+  QUIC_LOG(INFO) << "Processing "
+                 << client_conn->encrypted_packets_.size() - client_i
+                 << " packets client->server";
   MovePackets(client_conn, &client_i, server, server_conn,
               Perspective::IS_SERVER);
 
-  VLOG(1) << "Processing " << server_conn->encrypted_packets_.size() - server_i
-          << " packets server->client";
+  QUIC_LOG(INFO) << "Processing "
+                 << server_conn->encrypted_packets_.size() - server_i
+                 << " packets server->client";
   if (server_conn->encrypted_packets_.size() - server_i == 2) {
-    VLOG(1) << "here";
+    QUIC_LOG(INFO) << "here";
   }
   MovePackets(server_conn, &server_i, client, client_conn,
               Perspective::IS_CLIENT);

@@ -191,8 +191,6 @@ void GetCertChainInfo(CERTCertList* cert_list,
       }
       verified_chain.push_back(node->cert);
     }
-
-    FillCertVerifyResultWeakSignature(node->cert, i == 0, verify_result);
   }
 
   if (root_cert)

@@ -86,12 +86,6 @@ QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_enable_server_push_by_default,
           true)
 
-// If true, export reject reasons for all rejects, i.e., rejects,
-// stateless rejects and cheap stateless rejects.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_export_rej_for_all_rejects,
-          true)
-
 // Allow large send deltas to be used as RTT samples.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas, true)
 
@@ -222,3 +216,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_34, false)
 
 // Allow quic to properly support proxying 100 Continue responses.
 QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_supports_100_continue, false)
+
+// If true, enable QUIC v38.
+QUIC_FLAG(bool, FLAGS_quic_enable_version_38, false)

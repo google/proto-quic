@@ -20,6 +20,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/platform/impl/quic_epoll_clock.h"
 #include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_dispatcher.h"
@@ -66,6 +67,7 @@ QuicServer::QuicServer(
       fd_(-1),
       packets_dropped_(0),
       overflow_supported_(false),
+      silent_close_(false),
       config_(config),
       crypto_config_(kSourceAddressTokenSecret,
                      QuicRandom::GetInstance(),
@@ -117,15 +119,16 @@ bool QuicServer::CreateUDPSocketAndListen(const QuicSocketAddress& address) {
   sockaddr_storage addr = address.generic_address();
   int rc = bind(fd_, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
   if (rc < 0) {
-    LOG(ERROR) << "Bind failed: " << strerror(errno);
+    QUIC_LOG(ERROR) << "Bind failed: " << strerror(errno);
     return false;
   }
-  LOG(INFO) << "Listening on " << address.ToString();
+  QUIC_LOG(INFO) << "Listening on " << address.ToString();
   port_ = address.port();
   if (port_ == 0) {
     QuicSocketAddress address;
     if (address.FromSocket(fd_) != 0) {
-      LOG(ERROR) << "Unable to get self address.  Error: " << strerror(errno);
+      QUIC_LOG(ERROR) << "Unable to get self address.  Error: "
+                      << strerror(errno);
     }
     port_ = address.port();
   }
@@ -159,9 +162,11 @@ void QuicServer::WaitForEvents() {
 }
 
 void QuicServer::Shutdown() {
-  // Before we shut down the epoll server, give all active sessions a chance to
-  // notify clients that they're closing.
-  dispatcher_->Shutdown();
+  if (!silent_close_) {
+    // Before we shut down the epoll server, give all active sessions a chance
+    // to notify clients that they're closing.
+    dispatcher_->Shutdown();
+  }
 
   close(fd_);
   fd_ = -1;

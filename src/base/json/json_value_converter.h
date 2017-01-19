@@ -14,7 +14,7 @@
 #include "base/base_export.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/scoped_vector.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
 #include "base/values.h"
@@ -65,9 +65,9 @@
 //     }
 //   };
 //
-// For repeated field, we just assume ScopedVector for its container
-// and you can put RegisterRepeatedInt or some other types.  Use
-// RegisterRepeatedMessage for nested repeated fields.
+// For repeated field, we just assume std::vector<std::unique_ptr<ElementType>>
+// for its container and you can put RegisterRepeatedInt or some other types.
+// Use RegisterRepeatedMessage for nested repeated fields.
 //
 // Sometimes JSON format uses string representations for other types such
 // like enum, timestamp, or URL.  You can use RegisterCustomField method
@@ -247,12 +247,13 @@ class NestedValueConverter : public ValueConverter<NestedType> {
 };
 
 template <typename Element>
-class RepeatedValueConverter : public ValueConverter<ScopedVector<Element> > {
+class RepeatedValueConverter
+    : public ValueConverter<std::vector<std::unique_ptr<Element>>> {
  public:
   RepeatedValueConverter() {}
 
   bool Convert(const base::Value& value,
-               ScopedVector<Element>* field) const override {
+               std::vector<std::unique_ptr<Element>>* field) const override {
     const base::ListValue* list = NULL;
     if (!value.GetAsList(&list)) {
       // The field is not a list.
@@ -267,7 +268,7 @@ class RepeatedValueConverter : public ValueConverter<ScopedVector<Element> > {
 
       std::unique_ptr<Element> e(new Element);
       if (basic_converter_.Convert(*element, e.get())) {
-        field->push_back(e.release());
+        field->push_back(std::move(e));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
@@ -283,12 +284,12 @@ class RepeatedValueConverter : public ValueConverter<ScopedVector<Element> > {
 
 template <typename NestedType>
 class RepeatedMessageConverter
-    : public ValueConverter<ScopedVector<NestedType> > {
+    : public ValueConverter<std::vector<std::unique_ptr<NestedType>>> {
  public:
   RepeatedMessageConverter() {}
 
   bool Convert(const base::Value& value,
-               ScopedVector<NestedType>* field) const override {
+               std::vector<std::unique_ptr<NestedType>>* field) const override {
     const base::ListValue* list = NULL;
     if (!value.GetAsList(&list))
       return false;
@@ -301,7 +302,7 @@ class RepeatedMessageConverter
 
       std::unique_ptr<NestedType> nested(new NestedType);
       if (converter_.Convert(*element, nested.get())) {
-        field->push_back(nested.release());
+        field->push_back(std::move(nested));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
@@ -317,7 +318,7 @@ class RepeatedMessageConverter
 
 template <typename NestedType>
 class RepeatedCustomValueConverter
-    : public ValueConverter<ScopedVector<NestedType> > {
+    : public ValueConverter<std::vector<std::unique_ptr<NestedType>>> {
  public:
   typedef bool(*ConvertFunc)(const base::Value* value, NestedType* field);
 
@@ -325,7 +326,7 @@ class RepeatedCustomValueConverter
       : convert_func_(convert_func) {}
 
   bool Convert(const base::Value& value,
-               ScopedVector<NestedType>* field) const override {
+               std::vector<std::unique_ptr<NestedType>>* field) const override {
     const base::ListValue* list = NULL;
     if (!value.GetAsList(&list))
       return false;
@@ -338,7 +339,7 @@ class RepeatedCustomValueConverter
 
       std::unique_ptr<NestedType> nested(new NestedType);
       if ((*convert_func_)(element, nested.get())) {
-        field->push_back(nested.release());
+        field->push_back(std::move(nested));
       } else {
         DVLOG(1) << "failure at " << i << "-th element";
         return false;
@@ -364,41 +365,42 @@ class JSONValueConverter {
 
   void RegisterIntField(const std::string& field_name,
                         int StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, int>(
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, int>>(
         field_name, field, new internal::BasicValueConverter<int>));
   }
 
   void RegisterStringField(const std::string& field_name,
                            std::string StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, std::string>(
-        field_name, field, new internal::BasicValueConverter<std::string>));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType, std::string>>(
+            field_name, field, new internal::BasicValueConverter<std::string>));
   }
 
   void RegisterStringField(const std::string& field_name,
                            string16 StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, string16>(
-        field_name, field, new internal::BasicValueConverter<string16>));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType, string16>>(
+            field_name, field, new internal::BasicValueConverter<string16>));
   }
 
   void RegisterBoolField(const std::string& field_name,
                          bool StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, bool>(
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, bool>>(
         field_name, field, new internal::BasicValueConverter<bool>));
   }
 
   void RegisterDoubleField(const std::string& field_name,
                            double StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, double>(
+    fields_.push_back(MakeUnique<internal::FieldConverter<StructType, double>>(
         field_name, field, new internal::BasicValueConverter<double>));
   }
 
   template <class NestedType>
   void RegisterNestedField(
       const std::string& field_name, NestedType StructType::* field) {
-    fields_.push_back(new internal::FieldConverter<StructType, NestedType>(
-            field_name,
-            field,
-            new internal::NestedValueConverter<NestedType>));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType, NestedType>>(
+            field_name, field, new internal::NestedValueConverter<NestedType>));
   }
 
   template <typename FieldType>
@@ -406,10 +408,10 @@ class JSONValueConverter {
       const std::string& field_name,
       FieldType StructType::* field,
       bool (*convert_func)(const StringPiece&, FieldType*)) {
-    fields_.push_back(new internal::FieldConverter<StructType, FieldType>(
-        field_name,
-        field,
-        new internal::CustomFieldConverter<FieldType>(convert_func)));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType, FieldType>>(
+            field_name, field,
+            new internal::CustomFieldConverter<FieldType>(convert_func)));
   }
 
   template <typename FieldType>
@@ -417,71 +419,76 @@ class JSONValueConverter {
       const std::string& field_name,
       FieldType StructType::* field,
       bool (*convert_func)(const base::Value*, FieldType*)) {
-    fields_.push_back(new internal::FieldConverter<StructType, FieldType>(
-        field_name,
-        field,
-        new internal::ValueFieldConverter<FieldType>(convert_func)));
+    fields_.push_back(
+        MakeUnique<internal::FieldConverter<StructType, FieldType>>(
+            field_name, field,
+            new internal::ValueFieldConverter<FieldType>(convert_func)));
   }
 
-  void RegisterRepeatedInt(const std::string& field_name,
-                           ScopedVector<int> StructType::* field) {
+  void RegisterRepeatedInt(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<int>> StructType::*field) {
     fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<int> >(
+        MakeUnique<internal::FieldConverter<StructType,
+                                            std::vector<std::unique_ptr<int>>>>(
             field_name, field, new internal::RepeatedValueConverter<int>));
   }
 
-  void RegisterRepeatedString(const std::string& field_name,
-                              ScopedVector<std::string> StructType::* field) {
+  void RegisterRepeatedString(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<std::string>> StructType::*field) {
     fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<std::string> >(
-            field_name,
-            field,
+        MakeUnique<internal::FieldConverter<
+            StructType, std::vector<std::unique_ptr<std::string>>>>(
+            field_name, field,
             new internal::RepeatedValueConverter<std::string>));
   }
 
-  void RegisterRepeatedString(const std::string& field_name,
-                              ScopedVector<string16> StructType::* field) {
-    fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<string16> >(
-            field_name,
-            field,
-            new internal::RepeatedValueConverter<string16>));
+  void RegisterRepeatedString(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<string16>> StructType::*field) {
+    fields_.push_back(MakeUnique<internal::FieldConverter<
+                          StructType, std::vector<std::unique_ptr<string16>>>>(
+        field_name, field, new internal::RepeatedValueConverter<string16>));
   }
 
-  void RegisterRepeatedDouble(const std::string& field_name,
-                              ScopedVector<double> StructType::* field) {
-    fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<double> >(
-            field_name, field, new internal::RepeatedValueConverter<double>));
+  void RegisterRepeatedDouble(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<double>> StructType::*field) {
+    fields_.push_back(MakeUnique<internal::FieldConverter<
+                          StructType, std::vector<std::unique_ptr<double>>>>(
+        field_name, field, new internal::RepeatedValueConverter<double>));
   }
 
-  void RegisterRepeatedBool(const std::string& field_name,
-                            ScopedVector<bool> StructType::* field) {
-    fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<bool> >(
-            field_name, field, new internal::RepeatedValueConverter<bool>));
+  void RegisterRepeatedBool(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<bool>> StructType::*field) {
+    fields_.push_back(MakeUnique<internal::FieldConverter<
+                          StructType, std::vector<std::unique_ptr<bool>>>>(
+        field_name, field, new internal::RepeatedValueConverter<bool>));
   }
 
   template <class NestedType>
   void RegisterRepeatedCustomValue(
       const std::string& field_name,
-      ScopedVector<NestedType> StructType::* field,
+      std::vector<std::unique_ptr<NestedType>> StructType::*field,
       bool (*convert_func)(const base::Value*, NestedType*)) {
     fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<NestedType> >(
-            field_name,
-            field,
+        MakeUnique<internal::FieldConverter<
+            StructType, std::vector<std::unique_ptr<NestedType>>>>(
+            field_name, field,
             new internal::RepeatedCustomValueConverter<NestedType>(
                 convert_func)));
   }
 
   template <class NestedType>
-  void RegisterRepeatedMessage(const std::string& field_name,
-                               ScopedVector<NestedType> StructType::* field) {
+  void RegisterRepeatedMessage(
+      const std::string& field_name,
+      std::vector<std::unique_ptr<NestedType>> StructType::*field) {
     fields_.push_back(
-        new internal::FieldConverter<StructType, ScopedVector<NestedType> >(
-            field_name,
-            field,
+        MakeUnique<internal::FieldConverter<
+            StructType, std::vector<std::unique_ptr<NestedType>>>>(
+            field_name, field,
             new internal::RepeatedMessageConverter<NestedType>));
   }
 
@@ -492,7 +499,7 @@ class JSONValueConverter {
 
     for (size_t i = 0; i < fields_.size(); ++i) {
       const internal::FieldConverterBase<StructType>* field_converter =
-          fields_[i];
+          fields_[i].get();
       const base::Value* field = NULL;
       if (dictionary_value->Get(field_converter->field_path(), &field)) {
         if (!field_converter->ConvertField(*field, output)) {
@@ -505,7 +512,8 @@ class JSONValueConverter {
   }
 
  private:
-  ScopedVector<internal::FieldConverterBase<StructType> > fields_;
+  std::vector<std::unique_ptr<internal::FieldConverterBase<StructType>>>
+      fields_;
 
   DISALLOW_COPY_AND_ASSIGN(JSONValueConverter);
 };

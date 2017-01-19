@@ -9,8 +9,9 @@
 #include "net/quic/core/congestion_control/prr_sender.h"
 #include "net/quic/core/congestion_control/rtt_stats.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -106,8 +107,8 @@ void TcpCubicSenderPackets::OnPacketLost(QuicPacketNumber packet_number,
         slowstart_threshold_ = congestion_window_;
       }
     }
-    DVLOG(1) << "Ignoring loss for largest_missing:" << packet_number
-             << " because it was sent prior to the last CWND cutback.";
+    QUIC_DVLOG(1) << "Ignoring loss for largest_missing:" << packet_number
+                  << " because it was sent prior to the last CWND cutback.";
     return;
   }
   ++stats_->tcp_loss_events;
@@ -142,8 +143,8 @@ void TcpCubicSenderPackets::OnPacketLost(QuicPacketNumber packet_number,
   // reset packet count from congestion avoidance mode. We start
   // counting again when we're out of recovery.
   congestion_window_count_ = 0;
-  DVLOG(1) << "Incoming loss; congestion window: " << congestion_window_
-           << " slowstart threshold: " << slowstart_threshold_;
+  QUIC_DVLOG(1) << "Incoming loss; congestion window: " << congestion_window_
+                << " slowstart threshold: " << slowstart_threshold_;
 }
 
 QuicByteCount TcpCubicSenderPackets::GetCongestionWindow() const {
@@ -174,8 +175,8 @@ void TcpCubicSenderPackets::MaybeIncreaseCwnd(
   if (InSlowStart()) {
     // TCP slow start, exponential growth, increase by one for each ACK.
     ++congestion_window_;
-    DVLOG(1) << "Slow start; congestion window: " << congestion_window_
-             << " slowstart threshold: " << slowstart_threshold_;
+    QUIC_DVLOG(1) << "Slow start; congestion window: " << congestion_window_
+                  << " slowstart threshold: " << slowstart_threshold_;
     return;
   }
   // Congestion avoidance
@@ -189,16 +190,16 @@ void TcpCubicSenderPackets::MaybeIncreaseCwnd(
       congestion_window_count_ = 0;
     }
 
-    DVLOG(1) << "Reno; congestion window: " << congestion_window_
-             << " slowstart threshold: " << slowstart_threshold_
-             << " congestion window count: " << congestion_window_count_;
+    QUIC_DVLOG(1) << "Reno; congestion window: " << congestion_window_
+                  << " slowstart threshold: " << slowstart_threshold_
+                  << " congestion window count: " << congestion_window_count_;
   } else {
     congestion_window_ =
         std::min(max_tcp_congestion_window_,
                  cubic_.CongestionWindowAfterAck(
                      congestion_window_, rtt_stats_->min_rtt(), event_time));
-    DVLOG(1) << "Cubic; congestion window: " << congestion_window_
-             << " slowstart threshold: " << slowstart_threshold_;
+    QUIC_DVLOG(1) << "Cubic; congestion window: " << congestion_window_
+                  << " slowstart threshold: " << slowstart_threshold_;
   }
 }
 

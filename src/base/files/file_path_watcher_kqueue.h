@@ -31,15 +31,13 @@ namespace base {
 class FilePathWatcherKQueue : public FilePathWatcher::PlatformDelegate {
  public:
   FilePathWatcherKQueue();
+  ~FilePathWatcherKQueue() override;
 
   // FilePathWatcher::PlatformDelegate overrides.
   bool Watch(const FilePath& path,
              bool recursive,
              const FilePathWatcher::Callback& callback) override;
   void Cancel() override;
-
- protected:
-  ~FilePathWatcherKQueue() override;
 
  private:
   class EventData {

@@ -1012,6 +1012,15 @@ chrome.networkingPrivate.VerificationProperties;
 chrome.networkingPrivate.NetworkFilter;
 
 /**
+ * @typedef {{
+ *   AllowOnlyPolicyNetworksToAutoconnect: (boolean|undefined),
+ *   AllowOnlyPolicyNetworksToConnect: (boolean|undefined)
+ * }}
+ * @see https://developer.chrome.com/extensions/networkingPrivate#type-GlobalPolicy
+ */
+chrome.networkingPrivate.GlobalPolicy;
+
+/**
  * Gets all the properties of the network with id networkGuid. Includes all
  * properties of the network (read-only and read/write values).
  * @param {string} networkGuid The GUID of the network to get properties for.
@@ -1288,6 +1297,14 @@ chrome.networkingPrivate.unlockCellularSim = function(networkGuid, pin, puk, cal
  * @see https://developer.chrome.com/extensions/networkingPrivate#method-setCellularSimState
  */
 chrome.networkingPrivate.setCellularSimState = function(networkGuid, simState, callback) {};
+
+/**
+ * Gets the global policy properties. These properties are not expected to
+ * change during a session.
+ * @param {function(!chrome.networkingPrivate.GlobalPolicy):void} callback
+ * @see https://developer.chrome.com/extensions/networkingPrivate#method-getGlobalPolicy
+ */
+chrome.networkingPrivate.getGlobalPolicy = function(callback) {};
 
 /**
  * Fired when the properties change on any of the networks.  Sends a list of

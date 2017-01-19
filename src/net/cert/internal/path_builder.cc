@@ -82,6 +82,9 @@ class CertIssuersIter {
   void AddIssuers(ParsedCertificateList issuers);
   void DoAsyncIssuerQuery();
 
+  // Returns true if |issuers_| contains unconsumed certificates.
+  bool HasCurrentIssuer() const { return cur_issuer_ < issuers_.size(); }
+
   scoped_refptr<ParsedCertificate> cert_;
   CertIssuerSources* cert_issuer_sources_;
   const TrustStore* trust_store_;
@@ -160,7 +163,7 @@ void CertIssuersIter::GetNextIssuer(CertificateOrTrustAnchor* out) {
   }
 
   // If there aren't any issuers left, block until async results are ready.
-  if (cur_issuer_ >= issuers_.size()) {
+  if (!HasCurrentIssuer()) {
     if (!did_async_issuer_query_) {
       // Now issue request(s) for async ones (AIA, etc).
       DoAsyncIssuerQuery();
@@ -168,22 +171,21 @@ void CertIssuersIter::GetNextIssuer(CertificateOrTrustAnchor* out) {
 
     // TODO(eroman): Rather than blocking on the async requests in FIFO order,
     // consume in the order they become ready.
-    while (cur_async_request_ < pending_async_requests_.size()) {
+    while (!HasCurrentIssuer() &&
+           cur_async_request_ < pending_async_requests_.size()) {
       ParsedCertificateList new_issuers;
       pending_async_requests_[cur_async_request_]->GetNext(&new_issuers);
       if (new_issuers.empty()) {
         // Request is exhausted, no more results pending from that
         // CertIssuerSource.
         pending_async_requests_[cur_async_request_++].reset();
-        continue;
+      } else {
+        AddIssuers(std::move(new_issuers));
       }
-
-      AddIssuers(std::move(new_issuers));
-      break;
     }
   }
 
-  if (cur_issuer_ < issuers_.size()) {
+  if (HasCurrentIssuer()) {
     DVLOG(1) << "CertIssuersIter(" << CertDebugString(cert())
              << "): returning issuer " << cur_issuer_ << " of "
              << issuers_.size();

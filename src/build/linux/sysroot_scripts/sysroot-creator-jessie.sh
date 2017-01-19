@@ -109,6 +109,8 @@ DEBIAN_PACKAGES="\
   libharfbuzz-gobject0
   libharfbuzz-icu0
   libatomic1
+  libjsoncpp0
+  libjsoncpp-dev
   libk5crypto3
   libkadm5clnt-mit9
   libkadm5srv-mit9

@@ -8,7 +8,6 @@
 
 #include <memory>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/stl_util.h"
@@ -21,6 +20,7 @@
 #include "net/quic/core/quic_server_session_base.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 using base::StringPiece;
@@ -154,7 +154,7 @@ void QuicTimeWaitListManager::ProcessPacket(
     QuicPacketNumber packet_number,
     const QuicEncryptedPacket& /*packet*/) {
   DCHECK(IsConnectionIdInTimeWait(connection_id));
-  DVLOG(1) << "Processing " << connection_id << " in time wait state.";
+  QUIC_DLOG(INFO) << "Processing " << connection_id << " in time wait state.";
   // TODO(satyamshekhar): Think about handling packets from different client
   // addresses.
   ConnectionIdMap::iterator it = connection_id_map_.find(connection_id);
@@ -169,8 +169,9 @@ void QuicTimeWaitListManager::ProcessPacket(
 
   if (!connection_data->termination_packets.empty()) {
     if (connection_data->connection_rejected_statelessly) {
-      DVLOG(3) << "Time wait list sending previous stateless reject response "
-               << "for connection " << connection_id;
+      QUIC_DVLOG(3)
+          << "Time wait list sending previous stateless reject response "
+          << "for connection " << connection_id;
     }
     for (const auto& packet : connection_data->termination_packets) {
       SendOrQueuePacket(base::MakeUnique<QueuedPacket>(
@@ -248,9 +249,10 @@ bool QuicTimeWaitListManager::WriteToWire(QueuedPacket* queued_packet) {
     visitor_->OnWriteBlocked(this);
     return writer_->IsWriteBlockedDataBuffered();
   } else if (result.status == WRITE_STATUS_ERROR) {
-    LOG(WARNING) << "Received unknown error while sending reset packet to "
-                 << queued_packet->client_address().ToString() << ": "
-                 << strerror(result.error_code);
+    QUIC_LOG_FIRST_N(WARNING, 1)
+        << "Received unknown error while sending reset packet to "
+        << queued_packet->client_address().ToString() << ": "
+        << strerror(result.error_code);
   }
   return true;
 }
@@ -264,7 +266,8 @@ void QuicTimeWaitListManager::SetConnectionIdCleanUpAlarm() {
     if (now - oldest_connection_id < time_wait_period_) {
       next_alarm_interval = oldest_connection_id + time_wait_period_ - now;
     } else {
-      LOG(ERROR) << "ConnectionId lingered for longer than time_wait_period_";
+      QUIC_LOG(ERROR)
+          << "ConnectionId lingered for longer than time_wait_period_";
     }
   } else {
     // No connection_ids added so none will expire before time_wait_period_.

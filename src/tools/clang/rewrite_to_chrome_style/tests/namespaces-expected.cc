@@ -12,6 +12,11 @@ namespace nested {
 void Foo();
 }  // namespace nested
 
+// blink::protocol namespace is blacklisted.
+namespace protocol {
+void foo();
+}  // namespace protocol
+
 }  // namespace blink
 
 namespace WTF {

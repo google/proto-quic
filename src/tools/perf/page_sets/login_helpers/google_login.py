@@ -43,9 +43,8 @@ def LoginGoogleAccount(action_runner,
        'https%3A%2F%2Faccounts.google.com%2FManageAccount')
 
   # Wait until either the email or password input is visible.
-  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-  action_runner.WaitForJavaScriptCondition('%s || %s' % (
-      _EMAIL_INPUT_VISIBLE_CONDITION, _PASSWORD_INPUT_VISIBLE_CONDITION))
+  action_runner.WaitForJavaScriptCondition('{{ @a }} || {{ @b }}',
+      a=_EMAIL_INPUT_VISIBLE_CONDITION, b=_PASSWORD_INPUT_VISIBLE_CONDITION)
 
   # If the email input is visible, this is the first Google login within the
   # browser session, so we must enter both email and password. Otherwise, only

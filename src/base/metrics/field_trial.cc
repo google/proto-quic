@@ -55,7 +55,6 @@ const bool kUseSharedMemoryForFieldTrials = true;
 
 // Constants for the field trial allocator.
 const char kAllocatorName[] = "FieldTrialAllocator";
-const uint32_t kFieldTrialType = 0xABA17E13 + 2;  // SHA1(FieldTrialEntry) v2
 
 // We allocate 128 KiB to hold all the field trial data. This should be enough,
 // as most people use 3 - 25 KiB for field trials (as of 11/25/2016).
@@ -717,13 +716,9 @@ void FieldTrialList::GetInitiallyActiveFieldTrials(
 
   FieldTrialAllocator* allocator = global_->field_trial_allocator_.get();
   FieldTrialAllocator::Iterator mem_iter(allocator);
-  FieldTrial::FieldTrialRef ref;
-  while ((ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
-         SharedPersistentMemoryAllocator::kReferenceNull) {
-    const FieldTrial::FieldTrialEntry* entry =
-        allocator->GetAsObject<const FieldTrial::FieldTrialEntry>(
-            ref, kFieldTrialType);
-
+  const FieldTrial::FieldTrialEntry* entry;
+  while ((entry = mem_iter.GetNextOfObject<FieldTrial::FieldTrialEntry>()) !=
+         nullptr) {
     StringPiece trial_name;
     StringPiece group_name;
     if (subtle::NoBarrier_Load(&entry->activated) &&
@@ -1042,9 +1037,8 @@ bool FieldTrialList::GetParamsFromSharedMemory(
     return false;
 
   const FieldTrial::FieldTrialEntry* entry =
-      global_->field_trial_allocator_
-          ->GetAsObject<const FieldTrial::FieldTrialEntry>(field_trial->ref_,
-                                                           kFieldTrialType);
+      global_->field_trial_allocator_->GetAsObject<FieldTrial::FieldTrialEntry>(
+          field_trial->ref_);
 
   size_t allocated_size =
       global_->field_trial_allocator_->GetAllocSize(field_trial->ref_);
@@ -1075,12 +1069,11 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
   std::vector<FieldTrial::FieldTrialRef> new_refs;
 
   FieldTrial::FieldTrialRef prev_ref;
-  while ((prev_ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
+  while ((prev_ref = mem_iter.GetNextOfType<FieldTrial::FieldTrialEntry>()) !=
          FieldTrialAllocator::kReferenceNull) {
     // Get the existing field trial entry in shared memory.
     const FieldTrial::FieldTrialEntry* prev_entry =
-        allocator->GetAsObject<const FieldTrial::FieldTrialEntry>(
-            prev_ref, kFieldTrialType);
+        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(prev_ref);
     StringPiece trial_name;
     StringPiece group_name;
     if (!prev_entry->GetTrialAndGroupName(&trial_name, &group_name))
@@ -1091,11 +1084,8 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
     pickle.WriteString(trial_name);
     pickle.WriteString(group_name);
     size_t total_size = sizeof(FieldTrial::FieldTrialEntry) + pickle.size();
-    FieldTrial::FieldTrialRef new_ref =
-        allocator->Allocate(total_size, kFieldTrialType);
     FieldTrial::FieldTrialEntry* new_entry =
-        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(new_ref,
-                                                            kFieldTrialType);
+        allocator->AllocateObject<FieldTrial::FieldTrialEntry>(total_size);
     subtle::NoBarrier_Store(&new_entry->activated,
                             subtle::NoBarrier_Load(&prev_entry->activated));
     new_entry->pickle_size = pickle.size();
@@ -1108,12 +1098,14 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
 
     // Update the ref on the field trial and add it to the list to be made
     // iterable.
+    FieldTrial::FieldTrialRef new_ref = allocator->GetAsReference(new_entry);
     FieldTrial* trial = global_->PreLockedFind(trial_name.as_string());
     trial->ref_ = new_ref;
     new_refs.push_back(new_ref);
 
     // Mark the existing entry as unused.
-    allocator->ChangeType(prev_ref, 0, kFieldTrialType);
+    allocator->ChangeType(prev_ref, 0,
+                          FieldTrial::FieldTrialEntry::kPersistentTypeId);
   }
 
   for (const auto& ref : new_refs) {
@@ -1137,13 +1129,10 @@ std::vector<const FieldTrial::FieldTrialEntry*>
 FieldTrialList::GetAllFieldTrialsFromPersistentAllocator(
     PersistentMemoryAllocator const& allocator) {
   std::vector<const FieldTrial::FieldTrialEntry*> entries;
-  FieldTrial::FieldTrialRef ref;
   FieldTrialAllocator::Iterator iter(&allocator);
-  while ((ref = iter.GetNextOfType(kFieldTrialType)) !=
-         FieldTrialAllocator::kReferenceNull) {
-    const FieldTrial::FieldTrialEntry* entry =
-        allocator.GetAsObject<const FieldTrial::FieldTrialEntry>(
-            ref, kFieldTrialType);
+  const FieldTrial::FieldTrialEntry* entry;
+  while ((entry = iter.GetNextOfObject<FieldTrial::FieldTrialEntry>()) !=
+         nullptr) {
     entries.push_back(entry);
   }
   return entries;
@@ -1182,13 +1171,9 @@ bool FieldTrialList::CreateTrialsFromSharedMemory(
   FieldTrialAllocator* shalloc = global_->field_trial_allocator_.get();
   FieldTrialAllocator::Iterator mem_iter(shalloc);
 
-  FieldTrial::FieldTrialRef ref;
-  while ((ref = mem_iter.GetNextOfType(kFieldTrialType)) !=
-         FieldTrialAllocator::kReferenceNull) {
-    const FieldTrial::FieldTrialEntry* entry =
-        shalloc->GetAsObject<const FieldTrial::FieldTrialEntry>(
-            ref, kFieldTrialType);
-
+  const FieldTrial::FieldTrialEntry* entry;
+  while ((entry = mem_iter.GetNextOfObject<FieldTrial::FieldTrialEntry>()) !=
+         nullptr) {
     StringPiece trial_name;
     StringPiece group_name;
     if (!entry->GetTrialAndGroupName(&trial_name, &group_name))
@@ -1199,7 +1184,7 @@ bool FieldTrialList::CreateTrialsFromSharedMemory(
     FieldTrial* trial =
         CreateFieldTrial(trial_name.as_string(), group_name.as_string());
 
-    trial->ref_ = ref;
+    trial->ref_ = mem_iter.GetAsReference(entry);
     if (subtle::NoBarrier_Load(&entry->activated)) {
       // Call |group()| to mark the trial as "used" and notify observers, if
       // any. This is useful to ensure that field trials created in child
@@ -1286,15 +1271,15 @@ void FieldTrialList::AddToAllocatorWhileLocked(
   }
 
   size_t total_size = sizeof(FieldTrial::FieldTrialEntry) + pickle.size();
-  FieldTrial::FieldTrialRef ref =
-      allocator->Allocate(total_size, kFieldTrialType);
+  FieldTrial::FieldTrialRef ref = allocator->Allocate(
+      total_size, FieldTrial::FieldTrialEntry::kPersistentTypeId);
   if (ref == FieldTrialAllocator::kReferenceNull) {
     NOTREACHED();
     return;
   }
 
   FieldTrial::FieldTrialEntry* entry =
-      allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref, kFieldTrialType);
+      allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref);
   subtle::NoBarrier_Store(&entry->activated, trial_state.activated);
   entry->pickle_size = pickle.size();
 
@@ -1328,8 +1313,7 @@ void FieldTrialList::ActivateFieldTrialEntryWhileLocked(
     // the only thing that happens on a stale read here is a slight performance
     // hit from the child re-synchronizing activation state.
     FieldTrial::FieldTrialEntry* entry =
-        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref,
-                                                            kFieldTrialType);
+        allocator->GetAsObject<FieldTrial::FieldTrialEntry>(ref);
     subtle::NoBarrier_Store(&entry->activated, 1);
   }
 }

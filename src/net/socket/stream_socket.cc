@@ -98,4 +98,9 @@ void StreamSocket::UseHistory::EmitPreconnectionHistograms() const {
   UMA_HISTOGRAM_ENUMERATION("Net.PreconnectUtilization2", result, 9);
 }
 
+StreamSocket::SocketMemoryStats::SocketMemoryStats()
+    : total_size(0), buffer_size(0), cert_count(0), serialized_cert_size(0) {}
+
+StreamSocket::SocketMemoryStats::~SocketMemoryStats() {}
+
 }  // namespace net

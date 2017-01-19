@@ -19,6 +19,8 @@
 #include "net/http/http_server_properties_impl.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
 #include "net/test/gtest_util.h"
+#include "net/test/url_request/url_request_hanging_read_job.h"
+#include "net/url_request/url_request_filter.h"
 #include "net/url_request/url_request_job_factory_impl.h"
 #include "net/url_request/url_request_test_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -113,6 +115,8 @@ class CertNetFetcherImplTest : public PlatformTest {
   }
 
   ~CertNetFetcherImplTest() override {
+    if (!network_thread_)
+      return;
     network_thread_->task_runner()->PostTask(
         FROM_HERE, base::Bind(&CertNetFetcherImplTest::TeardownOnNetworkThread,
                               base::Unretained(this)));
@@ -120,11 +124,36 @@ class CertNetFetcherImplTest : public PlatformTest {
   }
 
  protected:
-  std::unique_ptr<CertNetFetcher> CreateFetcher() {
-    scoped_refptr<TrivialURLRequestContextGetter> context_getter(
-        new TrivialURLRequestContextGetter(&state_->context,
-                                           network_thread_->task_runner()));
-    return CreateCertNetFetcher(context_getter.get());
+  CertNetFetcher* fetcher() const { return fetcher_.get(); }
+
+  void CreateFetcherOnNetworkThread(base::WaitableEvent* done) {
+    fetcher_ = CreateCertNetFetcher(&state_->context);
+    done->Signal();
+  }
+
+  void CreateFetcher() {
+    base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
+                             base::WaitableEvent::InitialState::NOT_SIGNALED);
+    network_thread_->task_runner()->PostTask(
+        FROM_HERE,
+        base::Bind(&CertNetFetcherImplTest::CreateFetcherOnNetworkThread,
+                   base::Unretained(this), &done));
+    done.Wait();
+  }
+
+  void ShutDownFetcherOnNetworkThread(base::WaitableEvent* done) {
+    fetcher_->Shutdown();
+    done->Signal();
+  }
+
+  void ShutDownFetcher() {
+    base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
+                             base::WaitableEvent::InitialState::NOT_SIGNALED);
+    network_thread_->task_runner()->PostTask(
+        FROM_HERE,
+        base::Bind(&CertNetFetcherImplTest::ShutDownFetcherOnNetworkThread,
+                   base::Unretained(this), &done));
+    done.Wait();
   }
 
   int NumCreatedRequests() {
@@ -159,7 +188,26 @@ class CertNetFetcherImplTest : public PlatformTest {
     done->Signal();
   }
 
-  void TeardownOnNetworkThread() { state_.reset(); }
+  void ResetStateOnNetworkThread(base::WaitableEvent* done) {
+    state_.reset();
+    done->Signal();
+  }
+
+  void ResetState() {
+    base::WaitableEvent done(base::WaitableEvent::ResetPolicy::MANUAL,
+                             base::WaitableEvent::InitialState::NOT_SIGNALED);
+    network_thread_->task_runner()->PostTask(
+        FROM_HERE,
+        base::Bind(&CertNetFetcherImplTest::ResetStateOnNetworkThread,
+                   base::Unretained(this), &done));
+    done.Wait();
+  }
+
+  void TeardownOnNetworkThread() {
+    fetcher_->Shutdown();
+    state_.reset();
+    fetcher_ = nullptr;
+  }
 
   void CountCreatedRequests(int* count, base::WaitableEvent* done) {
     *count = state_->network_delegate.created_requests();
@@ -168,8 +216,18 @@ class CertNetFetcherImplTest : public PlatformTest {
 
   EmbeddedTestServer test_server_;
   std::unique_ptr<base::Thread> network_thread_;
+  scoped_refptr<CertNetFetcher> fetcher_;
 
   std::unique_ptr<NetworkThreadState> state_;
+};
+
+// Installs URLRequestHangingReadJob handlers and clears them on teardown.
+class CertNetFetcherImplTestWithHangingReadHandler
+    : public CertNetFetcherImplTest {
+ protected:
+  void SetUp() override { URLRequestHangingReadJob::AddUrlHandler(); }
+
+  void TearDown() override { URLRequestFilter::GetInstance()->ClearHandlers(); }
 };
 
 // Helper to start an AIA fetch using default parameters.
@@ -184,23 +242,22 @@ WARN_UNUSED_RESULT std::unique_ptr<CertNetFetcher::Request> StartRequest(
 // and Content-Type.
 TEST_F(CertNetFetcherImplTest, ParallelFetchNoDuplicates) {
   ASSERT_TRUE(test_server_.Start());
-
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   // Request a URL with Content-Type "application/pkix-cert"
   GURL url1 = test_server_.GetURL("/cert.crt");
   std::unique_ptr<CertNetFetcher::Request> request1 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   // Request a URL with Content-Type "application/pkix-crl"
   GURL url2 = test_server_.GetURL("/root.crl");
   std::unique_ptr<CertNetFetcher::Request> request2 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   // Request a URL with Content-Type "application/pkcs7-mime"
   GURL url3 = test_server_.GetURL("/certs.p7c");
   std::unique_ptr<CertNetFetcher::Request> request3 =
-      StartRequest(fetcher.get(), url3);
+      StartRequest(fetcher(), url3);
 
   // Wait for all of the requests to complete and verify the fetch results.
   VerifySuccess("-cert.crt-\n", request1.get());
@@ -216,12 +273,11 @@ TEST_F(CertNetFetcherImplTest, ParallelFetchNoDuplicates) {
 // be meaningful.
 TEST_F(CertNetFetcherImplTest, ContentTypeDoesntMatter) {
   ASSERT_TRUE(test_server_.Start());
-
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url = test_server_.GetURL("/foo.txt");
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   VerifySuccess("-foo.txt-\n", request.get());
 }
 
@@ -229,14 +285,13 @@ TEST_F(CertNetFetcherImplTest, ContentTypeDoesntMatter) {
 // failures.
 TEST_F(CertNetFetcherImplTest, HttpStatusCode) {
   ASSERT_TRUE(test_server_.Start());
-
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   // Response was HTTP status 404.
   {
     GURL url = test_server_.GetURL("/404.html");
     std::unique_ptr<CertNetFetcher::Request> request =
-        StartRequest(fetcher.get(), url);
+        StartRequest(fetcher(), url);
     VerifyFailure(ERR_FAILED, request.get());
   }
 
@@ -244,7 +299,7 @@ TEST_F(CertNetFetcherImplTest, HttpStatusCode) {
   {
     GURL url = test_server_.GetURL("/500.html");
     std::unique_ptr<CertNetFetcher::Request> request =
-        StartRequest(fetcher.get(), url);
+        StartRequest(fetcher(), url);
     VerifyFailure(ERR_FAILED, request.get());
   }
 }
@@ -252,12 +307,11 @@ TEST_F(CertNetFetcherImplTest, HttpStatusCode) {
 // Fetching a URL with a Content-Disposition header should have no effect.
 TEST_F(CertNetFetcherImplTest, ContentDisposition) {
   ASSERT_TRUE(test_server_.Start());
-
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url = test_server_.GetURL("/downloadable.js");
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   VerifySuccess("-downloadable.js-\n", request.get());
 }
 
@@ -266,13 +320,13 @@ TEST_F(CertNetFetcherImplTest, ContentDisposition) {
 TEST_F(CertNetFetcherImplTest, Cache) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   // Fetch a URL whose HTTP headers make it cacheable for 1 hour.
   GURL url(test_server_.GetURL("/cacheable_1hr.crt"));
   {
     std::unique_ptr<CertNetFetcher::Request> request =
-        StartRequest(fetcher.get(), url);
+        StartRequest(fetcher(), url);
     VerifySuccess("-cacheable_1hr.crt-\n", request.get());
   }
 
@@ -284,7 +338,7 @@ TEST_F(CertNetFetcherImplTest, Cache) {
   // Fetch again -- will fail unless served from cache.
   {
     std::unique_ptr<CertNetFetcher::Request> request =
-        StartRequest(fetcher.get(), url);
+        StartRequest(fetcher(), url);
     VerifySuccess("-cacheable_1hr.crt-\n", request.get());
   }
 
@@ -296,13 +350,13 @@ TEST_F(CertNetFetcherImplTest, Cache) {
 TEST_F(CertNetFetcherImplTest, TooLarge) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   // This file has a response body 12 bytes long. So setting the maximum to 11
   // bytes will cause it to fail.
   GURL url(test_server_.GetURL("/certs.p7c"));
   std::unique_ptr<CertNetFetcher::Request> request =
-      fetcher->FetchCaIssuers(url, CertNetFetcher::DEFAULT, 11);
+      fetcher()->FetchCaIssuers(url, CertNetFetcher::DEFAULT, 11);
 
   VerifyFailure(ERR_FILE_TOO_BIG, request.get());
 }
@@ -312,11 +366,11 @@ TEST_F(CertNetFetcherImplTest, TooLarge) {
 TEST_F(CertNetFetcherImplTest, Hang) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url(test_server_.GetURL("/slow/certs.p7c?5"));
   std::unique_ptr<CertNetFetcher::Request> request =
-      fetcher->FetchCaIssuers(url, 10, CertNetFetcher::DEFAULT);
+      fetcher()->FetchCaIssuers(url, 10, CertNetFetcher::DEFAULT);
   VerifyFailure(ERR_TIMED_OUT, request.get());
 }
 
@@ -325,11 +379,11 @@ TEST_F(CertNetFetcherImplTest, Hang) {
 TEST_F(CertNetFetcherImplTest, Gzip) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url(test_server_.GetURL("/gzipped_crl"));
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   VerifySuccess("-gzipped_crl-\n", request.get());
 }
 
@@ -337,11 +391,11 @@ TEST_F(CertNetFetcherImplTest, Gzip) {
 TEST_F(CertNetFetcherImplTest, HttpsNotAllowed) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url("https://foopy/foo.crt");
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   VerifyFailure(ERR_DISALLOWED_URL_SCHEME, request.get());
 
   // No request was created because the URL scheme was unsupported.
@@ -352,12 +406,12 @@ TEST_F(CertNetFetcherImplTest, HttpsNotAllowed) {
 TEST_F(CertNetFetcherImplTest, RedirectToHttpsNotAllowed) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url(test_server_.GetURL("/redirect_https"));
 
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   VerifyFailure(ERR_DISALLOWED_URL_SCHEME, request.get());
 
   EXPECT_EQ(1, NumCreatedRequests());
@@ -368,11 +422,11 @@ TEST_F(CertNetFetcherImplTest, RedirectToHttpsNotAllowed) {
 TEST_F(CertNetFetcherImplTest, CancelHttpsNotAllowed) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url("https://foopy/foo.crt");
   std::unique_ptr<CertNetFetcher::Request> request =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
 
   // Cancel the request (May or may not have started yet, as the request is
   // running on another thread).
@@ -384,20 +438,20 @@ TEST_F(CertNetFetcherImplTest, CancelHttpsNotAllowed) {
 TEST_F(CertNetFetcherImplTest, CancelBeforeRunningMessageLoop) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url1 = test_server_.GetURL("/cert.crt");
   std::unique_ptr<CertNetFetcher::Request> request1 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   GURL url2 = test_server_.GetURL("/root.crl");
   std::unique_ptr<CertNetFetcher::Request> request2 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   GURL url3 = test_server_.GetURL("/certs.p7c");
 
   std::unique_ptr<CertNetFetcher::Request> request3 =
-      StartRequest(fetcher.get(), url3);
+      StartRequest(fetcher(), url3);
 
   // Cancel the second request.
   request2.reset();
@@ -424,20 +478,20 @@ TEST_F(CertNetFetcherImplTest, CancelBeforeRunningMessageLoop) {
 TEST_F(CertNetFetcherImplTest, CancelAfterRunningMessageLoop) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url1 = test_server_.GetURL("/cert.crt");
 
   std::unique_ptr<CertNetFetcher::Request> request1 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   GURL url2 = test_server_.GetURL("/certs.p7c");
   std::unique_ptr<CertNetFetcher::Request> request2 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   GURL url3("ftp://www.not.supported.com/foo");
   std::unique_ptr<CertNetFetcher::Request> request3 =
-      StartRequest(fetcher.get(), url3);
+      StartRequest(fetcher(), url3);
 
   // Wait for the ftp request to complete (it should complete right away since
   // it doesn't even try to connect to the server).
@@ -455,29 +509,29 @@ TEST_F(CertNetFetcherImplTest, CancelAfterRunningMessageLoop) {
 TEST_F(CertNetFetcherImplTest, ParallelFetchDuplicates) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url1 = test_server_.GetURL("/cert.crt");
   GURL url2 = test_server_.GetURL("/root.crl");
 
   // Issue 3 requests for url1, and 3 requests for url2
   std::unique_ptr<CertNetFetcher::Request> request1 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   std::unique_ptr<CertNetFetcher::Request> request2 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   std::unique_ptr<CertNetFetcher::Request> request3 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   std::unique_ptr<CertNetFetcher::Request> request4 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   std::unique_ptr<CertNetFetcher::Request> request5 =
-      StartRequest(fetcher.get(), url2);
+      StartRequest(fetcher(), url2);
 
   std::unique_ptr<CertNetFetcher::Request> request6 =
-      StartRequest(fetcher.get(), url1);
+      StartRequest(fetcher(), url1);
 
   // Cancel all but one of the requests for url1.
   request1.reset();
@@ -498,19 +552,19 @@ TEST_F(CertNetFetcherImplTest, ParallelFetchDuplicates) {
 TEST_F(CertNetFetcherImplTest, CancelThenStart) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
 
   GURL url = test_server_.GetURL("/cert.crt");
 
   std::unique_ptr<CertNetFetcher::Request> request1 =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   request1.reset();
 
   std::unique_ptr<CertNetFetcher::Request> request2 =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
 
   std::unique_ptr<CertNetFetcher::Request> request3 =
-      StartRequest(fetcher.get(), url);
+      StartRequest(fetcher(), url);
   request3.reset();
 
   // All but |request2| were canceled.
@@ -521,13 +575,13 @@ TEST_F(CertNetFetcherImplTest, CancelThenStart) {
 TEST_F(CertNetFetcherImplTest, CancelAll) {
   ASSERT_TRUE(test_server_.Start());
 
-  auto fetcher = CreateFetcher();
+  CreateFetcher();
   std::unique_ptr<CertNetFetcher::Request> request[3];
 
   GURL url = test_server_.GetURL("/cert.crt");
 
   for (size_t i = 0; i < arraysize(request); ++i) {
-    request[i] = StartRequest(fetcher.get(), url);
+    request[i] = StartRequest(fetcher(), url);
   }
 
   // Cancel all the requests.
@@ -535,6 +589,48 @@ TEST_F(CertNetFetcherImplTest, CancelAll) {
     request[i].reset();
 
   EXPECT_EQ(1, NumCreatedRequests());
+}
+
+// Tests that Requests are signalled for completion even if they are
+// created after the CertNetFetcher has been shutdown.
+TEST_F(CertNetFetcherImplTest, RequestsAfterShutdown) {
+  ASSERT_TRUE(test_server_.Start());
+  CreateFetcher();
+  ShutDownFetcher();
+
+  GURL url = test_server_.GetURL("/cert.crt");
+  std::unique_ptr<CertNetFetcher::Request> request =
+      StartRequest(fetcher(), url);
+  VerifyFailure(ERR_ABORTED, request.get());
+  EXPECT_EQ(0, NumCreatedRequests());
+}
+
+// Tests that Requests are signalled for completion if the fetcher is
+// shutdown and the network thread stopped before the request is
+// started.
+TEST_F(CertNetFetcherImplTest, RequestAfterShutdownAndNetworkThreadStopped) {
+  ASSERT_TRUE(test_server_.Start());
+  CreateFetcher();
+  ShutDownFetcher();
+  ResetState();
+  network_thread_.reset();
+
+  GURL url = test_server_.GetURL("/cert.crt");
+  std::unique_ptr<CertNetFetcher::Request> request =
+      StartRequest(fetcher(), url);
+  VerifyFailure(ERR_ABORTED, request.get());
+}
+
+// Tests that outstanding Requests are cancelled when Shutdown is called.
+TEST_F(CertNetFetcherImplTestWithHangingReadHandler, ShutdownCancelsRequests) {
+  CreateFetcher();
+
+  GURL url = URLRequestHangingReadJob::GetMockHttpUrl();
+  std::unique_ptr<CertNetFetcher::Request> request =
+      StartRequest(fetcher(), url);
+
+  ShutDownFetcher();
+  VerifyFailure(ERR_ABORTED, request.get());
 }
 
 }  // namespace

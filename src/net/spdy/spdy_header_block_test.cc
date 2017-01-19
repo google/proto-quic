@@ -13,8 +13,10 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using base::StringPiece;
 using std::make_pair;
 using std::string;
+using std::vector;
 using ::testing::ElementsAre;
 
 namespace net {
@@ -22,13 +24,10 @@ namespace test {
 
 class ValueProxyPeer {
  public:
-  static base::StringPiece key(SpdyHeaderBlock::ValueProxy* p) {
-    return p->key_;
-  }
+  static StringPiece key(SpdyHeaderBlock::ValueProxy* p) { return p->key_; }
 };
 
-std::pair<base::StringPiece, base::StringPiece> Pair(base::StringPiece k,
-                                                     base::StringPiece v) {
+std::pair<StringPiece, StringPiece> Pair(StringPiece k, StringPiece v) {
   return make_pair(k, v);
 }
 
@@ -46,12 +45,12 @@ TEST(SpdyHeaderBlockTest, EmptyBlock) {
 
 TEST(SpdyHeaderBlockTest, KeyMemoryReclaimedOnLookup) {
   SpdyHeaderBlock block;
-  base::StringPiece copied_key1;
+  StringPiece copied_key1;
   {
     auto proxy1 = block["some key name"];
     copied_key1 = ValueProxyPeer::key(&proxy1);
   }
-  base::StringPiece copied_key2;
+  StringPiece copied_key2;
   {
     auto proxy2 = block["some other key name"];
     copied_key2 = ValueProxyPeer::key(&proxy2);
@@ -187,12 +186,40 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
   block.AppendValueOrAddHeader("h1", "h1v3");
   block.AppendValueOrAddHeader("h2", "h2v3");
   block.AppendValueOrAddHeader("h3", "h3v3");
+  block.AppendValueOrAddHeader("h4", "singleton");
 
   EXPECT_EQ("key1=value1; key2=value2; key3=value3", block["cookie"]);
   EXPECT_EQ("baz", block["foo"]);
   EXPECT_EQ(string("h1v1\0h1v2\0h1v3", 14), block["h1"]);
   EXPECT_EQ(string("h2v1\0h2v2\0h2v3", 14), block["h2"]);
   EXPECT_EQ(string("h3v2\0h3v3", 9), block["h3"]);
+  EXPECT_EQ("singleton", block["h4"]);
+}
+
+TEST(JoinTest, JoinEmpty) {
+  vector<StringPiece> empty;
+  StringPiece separator = ", ";
+  char buf[10] = "";
+  size_t written = Join(buf, empty, separator);
+  EXPECT_EQ(0u, written);
+}
+
+TEST(JoinTest, JoinOne) {
+  vector<StringPiece> v = {"one"};
+  StringPiece separator = ", ";
+  char buf[15];
+  size_t written = Join(buf, v, separator);
+  EXPECT_EQ(3u, written);
+  EXPECT_EQ("one", StringPiece(buf, written));
+}
+
+TEST(JoinTest, JoinMultiple) {
+  vector<StringPiece> v = {"one", "two", "three"};
+  StringPiece separator = ", ";
+  char buf[15];
+  size_t written = Join(buf, v, separator);
+  EXPECT_EQ(15u, written);
+  EXPECT_EQ("one, two, three", StringPiece(buf, written));
 }
 
 }  // namespace test

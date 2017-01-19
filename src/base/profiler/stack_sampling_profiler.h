@@ -121,13 +121,13 @@ class BASE_EXPORT StackSamplingProfiler {
     // The entire stack frame when the sample is taken.
     std::vector<Frame> frames;
 
-    // A bit-field indicating which process phases have passed. This can be
+    // A bit-field indicating which process milestones have passed. This can be
     // used to tell where in the process lifetime the samples are taken. Just
-    // as a "lifetime" can only move forward, these bits mark the phases of
+    // as a "lifetime" can only move forward, these bits mark the milestones of
     // the processes life as they occur. Bits can be set but never reset. The
     // actual definition of the individual bits is left to the user of this
     // module.
-    uint32_t process_phases = 0;
+    uint32_t process_milestones = 0;
   };
 
   // CallStackProfile represents a set of samples.
@@ -225,9 +225,9 @@ class BASE_EXPORT StackSamplingProfiler {
   // frame. This is thread-safe so can be called from anywhere. The parameter
   // value should be from an enumeration of the appropriate type with values
   // ranging from 0 to 31, inclusive. This sets bits within Sample field of
-  // |process_phases|. The actual meanings of these bits are defined (globally)
-  // by the caller(s).
-  static void SetProcessPhase(int phase);
+  // |process_milestones|. The actual meanings of these bits are defined
+  // (globally) by the caller(s).
+  static void SetProcessMilestone(int milestone);
   static void ResetAnnotationsForTesting();
 
  private:
@@ -280,7 +280,7 @@ class BASE_EXPORT StackSamplingProfiler {
   // this must be atomic. A PostTask to move the the updates to that thread
   // would skew the timing and a lock could result in deadlock if the thread
   // making a change was also being profiled and got stopped.
-  static subtle::Atomic32 process_phases_;
+  static subtle::Atomic32 process_milestones_;
 
   // The thread whose stack will be sampled.
   PlatformThreadId thread_id_;

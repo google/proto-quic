@@ -134,9 +134,8 @@ bool ClientSocketHandle::GetLoadTimingInfo(
 }
 
 void ClientSocketHandle::DumpMemoryStats(
-    base::trace_event::ProcessMemoryDump* pmd,
-    const std::string& parent_absolute_name) const {
-  socket_->DumpMemoryStats(pmd, parent_absolute_name);
+    StreamSocket::SocketMemoryStats* stats) const {
+  socket_->DumpMemoryStats(stats);
 }
 
 void ClientSocketHandle::SetSocket(std::unique_ptr<StreamSocket> s) {

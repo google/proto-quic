@@ -265,5 +265,54 @@ TEST(TimeFormattingTest, TimeDurationFormat) {
   EXPECT_EQ(fa_numeric, TimeDurationFormat(delta, DURATION_WIDTH_NUMERIC));
 }
 
+TEST(TimeFormattingTest, TimeDurationFormatWithSeconds) {
+  test::ScopedRestoreICUDefaultLocale restore_locale;
+
+  // US English.
+  i18n::SetICUDefaultLocale("en_US");
+
+  // Test different formats.
+  TimeDelta delta = TimeDelta::FromSeconds(15 * 3600 + 42 * 60 + 30);
+  EXPECT_EQ(ASCIIToUTF16("15 hours, 42 minutes, 30 seconds"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_WIDE));
+  EXPECT_EQ(ASCIIToUTF16("15 hr, 42 min, 30 sec"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_SHORT));
+  EXPECT_EQ(ASCIIToUTF16("15h 42m 30s"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NARROW));
+  EXPECT_EQ(ASCIIToUTF16("15:42:30"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NUMERIC));
+
+  // Test edge case when hour >= 100.
+  delta = TimeDelta::FromSeconds(125 * 3600 + 42 * 60 + 30);
+  EXPECT_EQ(ASCIIToUTF16("125 hours, 42 minutes, 30 seconds"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_WIDE));
+  EXPECT_EQ(ASCIIToUTF16("125 hr, 42 min, 30 sec"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_SHORT));
+  EXPECT_EQ(ASCIIToUTF16("125h 42m 30s"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NARROW));
+
+  // Test edge case when minute = 0.
+  delta = TimeDelta::FromSeconds(15 * 3600 + 0 * 60 + 30);
+  EXPECT_EQ(ASCIIToUTF16("15 hours, 0 minutes, 30 seconds"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_WIDE));
+  EXPECT_EQ(ASCIIToUTF16("15 hr, 0 min, 30 sec"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_SHORT));
+  EXPECT_EQ(ASCIIToUTF16("15h 0m 30s"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NARROW));
+  EXPECT_EQ(ASCIIToUTF16("15:00:30"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NUMERIC));
+
+  // Test edge case when second = 0.
+  delta = TimeDelta::FromSeconds(15 * 3600 + 42 * 60 + 0);
+  EXPECT_EQ(ASCIIToUTF16("15 hours, 42 minutes, 0 seconds"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_WIDE));
+  EXPECT_EQ(ASCIIToUTF16("15 hr, 42 min, 0 sec"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_SHORT));
+  EXPECT_EQ(ASCIIToUTF16("15h 42m 0s"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NARROW));
+  EXPECT_EQ(ASCIIToUTF16("15:42:00"),
+            TimeDurationFormatWithSeconds(delta, DURATION_WIDTH_NUMERIC));
+}
+
 }  // namespace
 }  // namespace base

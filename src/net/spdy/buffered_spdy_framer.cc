@@ -319,6 +319,17 @@ SpdySerializedFrame* BufferedSpdyFramer::CreatePushPromise(
       spdy_framer_.SerializePushPromise(push_promise_ir));
 }
 
+// TODO(jgraettinger): Eliminate uses of this method (prefer
+// SpdyPriorityIR).
+SpdySerializedFrame* BufferedSpdyFramer::CreatePriority(
+    SpdyStreamId stream_id,
+    SpdyStreamId dependency_id,
+    int weight,
+    bool exclusive) const {
+  SpdyPriorityIR priority_ir(stream_id, dependency_id, weight, exclusive);
+  return new SpdySerializedFrame(spdy_framer_.SerializePriority(priority_ir));
+}
+
 SpdyPriority BufferedSpdyFramer::GetHighestPriority() const {
   return spdy_framer_.GetHighestPriority();
 }

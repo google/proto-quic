@@ -27,6 +27,15 @@ def ParseFlags():
     A new Namespace object with class properties for each argument added below.
     See pydoc for argparse.
   """
+  def TestFilter(v):
+    try:
+      # The filtering here allows for any number of * wildcards with a required
+      # . separator between classname and methodname, but no other special
+      # characters.
+      return re.match(r'^([A-Za-z_0-9\*]+\.)?[A-Za-z_0-9\*]+$', v).group(0)
+    except:
+      raise argparse.ArgumentTypeError('Test filter "%s" is not a valid filter'
+        % v)
   parser = argparse.ArgumentParser()
   parser.add_argument('--browser_args', type=str, help='Override browser flags '
     'in code with these flags')
@@ -53,6 +62,10 @@ def ParseFlags():
     action='store_true')
   parser.add_argument('-f', '--failfast', help='Stop the test run on the first '
     'error or failure.', action='store_true')
+  parser.add_argument('--test_filter', '--gtest_filter', type=TestFilter,
+    help='The filter to use when discovering tests to run, in the form '
+    '<class name>.<method name> Wildcards (*) are accepted. Default=*',
+    default='*')
   parser.add_argument('--logging_level', choices=['DEBUG', 'INFO', 'WARN',
     'ERROR', 'CRIT'], default='WARN', help='The logging verbosity for log '
     'messages, printed to stderr. To see stderr logging output during a '
@@ -540,9 +553,22 @@ class IntegrationTest(unittest.TestCase):
     logger.info('sys.argv parsed to %s', str(flags))
     if flags.catch:
       unittest.installHandler()
+    # Use python's test discovery to locate tests files that have subclasses of
+    # unittest.TestCase and methods beginning with 'test'.
     pattern = '*.py' if run_all_tests else os.path.basename(sys.argv[0])
     loader = unittest.TestLoader()
-    tests = loader.discover(os.path.dirname(__file__), pattern=pattern)
+    test_suite_iter = loader.discover(os.path.dirname(__file__),
+      pattern=pattern)
+    # Match class and method name on the given test filter from --test_filter.
+    tests = unittest.TestSuite()
+    test_filter_re = flags.test_filter.replace('.', r'\.').replace('*', '.*')
+    for test_suite in test_suite_iter:
+      for test_case in test_suite:
+        for test in test_case:
+          # Drop the file name in the form <filename>.<classname>.<methodname>
+          test_id = test.id()[test.id().find('.') + 1:]
+          if re.match(test_filter_re, test_id):
+            tests.addTest(test)
     testRunner = unittest.runner.TextTestRunner(verbosity=2,
       failfast=flags.failfast, buffer=(not flags.disable_buffer))
     testRunner.run(tests)

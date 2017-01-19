@@ -138,7 +138,7 @@ template("create_tests") {
 
   executable("boringssl_constant_time_test") {
     sources = [
-      "src/crypto/constant_time_test.c",
+      "src/crypto/constant_time_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -210,7 +210,7 @@ template("create_tests") {
 
   executable("boringssl_dsa_test") {
     sources = [
-      "src/crypto/dsa/dsa_test.c",
+      "src/crypto/dsa/dsa_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -354,7 +354,7 @@ template("create_tests") {
 
   executable("boringssl_hkdf_test") {
     sources = [
-      "src/crypto/hkdf/hkdf_test.c",
+      "src/crypto/hkdf/hkdf_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -378,7 +378,7 @@ template("create_tests") {
 
   executable("boringssl_lhash_test") {
     sources = [
-      "src/crypto/lhash/lhash_test.c",
+      "src/crypto/lhash/lhash_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {
@@ -462,7 +462,7 @@ template("create_tests") {
 
   executable("boringssl_refcount_test") {
     sources = [
-      "src/crypto/refcount_test.c",
+      "src/crypto/refcount_test.cc",
     ]
     sources += _test_support_sources
     if (defined(invoker.configs_exclude)) {

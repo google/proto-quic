@@ -104,12 +104,6 @@ void GetCertChainInfo(X509_STORE_CTX* store_ctx,
     } else {
       verified_chain.push_back(cert);
     }
-
-    // Only check the algorithm status for certificates that are not in the
-    // trust store.
-    if (i < static_cast<size_t>(store_ctx->last_untrusted)) {
-      FillCertVerifyResultWeakSignature(cert, i == 0, verify_result);
-    }
   }
 
   // Set verify_result->verified_cert and

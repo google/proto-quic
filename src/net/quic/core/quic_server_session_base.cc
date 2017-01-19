@@ -4,13 +4,13 @@
 
 #include "net/quic/core/quic_server_session_base.h"
 
-#include "base/logging.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/core/quic_stream.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using std::string;
 
@@ -148,8 +148,8 @@ void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {
   }
 
   bandwidth_estimate_sent_to_client_ = new_bandwidth_estimate;
-  DVLOG(1) << "Server: sending new bandwidth estimate (KBytes/s): "
-           << bandwidth_estimate_sent_to_client_.ToKBytesPerSecond();
+  QUIC_DVLOG(1) << "Server: sending new bandwidth estimate (KBytes/s): "
+                << bandwidth_estimate_sent_to_client_.ToKBytesPerSecond();
 
   // Include max bandwidth in the update.
   QuicBandwidth max_bandwidth_estimate =
@@ -200,7 +200,7 @@ bool QuicServerSessionBase::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
   }
 
   if (id % 2 == 0) {
-    DVLOG(1) << "Invalid incoming even stream_id:" << id;
+    QUIC_DLOG(INFO) << "Invalid incoming even stream_id:" << id;
     connection()->CloseConnection(
         QUIC_INVALID_STREAM_ID, "Client created even numbered stream",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);

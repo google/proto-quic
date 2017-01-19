@@ -201,6 +201,10 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   SpdySerializedFrame* CreatePushPromise(SpdyStreamId stream_id,
                                          SpdyStreamId promised_stream_id,
                                          SpdyHeaderBlock headers);
+  SpdySerializedFrame* CreatePriority(SpdyStreamId stream_id,
+                                      SpdyStreamId dependency_id,
+                                      int weight,
+                                      bool exclusive) const;
 
   // Serialize a frame of unknown type.
   SpdySerializedFrame SerializeFrame(const SpdyFrameIR& frame) {

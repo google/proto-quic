@@ -656,13 +656,12 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
 
   // ValidateExpectedLeafCertificate checks the |client_hello| to see if it has
   // an XLCT tag, and if so, verifies that its value matches the hash of the
-  // server's leaf certificate. The certs field of |crypto_proof| is used to
-  // compare against the XLCT value.  This method returns true if the XLCT tag
-  // is not present, or if the XLCT tag is present and valid. It returns false
-  // otherwise.
+  // server's leaf certificate. |certs| is used to compare against the XLCT
+  // value.  This method returns true if the XLCT tag is not present, or if the
+  // XLCT tag is present and valid. It returns false otherwise.
   bool ValidateExpectedLeafCertificate(
       const CryptoHandshakeMessage& client_hello,
-      const QuicSignedServerConfig& crypto_proof) const;
+      const std::vector<std::string>& certs) const;
 
   // Returns true if the PDMD field from the client hello demands an X509
   // certificate.

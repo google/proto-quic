@@ -26,12 +26,6 @@
 #include "net/socket/connection_attempts.h"
 #include "net/socket/stream_socket.h"
 
-namespace base {
-namespace trace_event {
-class ProcessMemoryDump;
-}
-}
-
 namespace net {
 
 // A container for a StreamSocket.
@@ -128,10 +122,10 @@ class NET_EXPORT ClientSocketHandle {
   bool GetLoadTimingInfo(bool is_reused,
                          LoadTimingInfo* load_timing_info) const;
 
-  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
-  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
-  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
-                       const std::string& parent_dump_absolute_name) const;
+  // Dumps memory allocation stats into |stats|. |stats| can be assumed as being
+  // default initialized upon entry. Implementation overrides fields in
+  // |stats|.
+  void DumpMemoryStats(StreamSocket::SocketMemoryStats* stats) const;
 
   // Used by ClientSocketPool to initialize the ClientSocketHandle.
   //

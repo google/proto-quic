@@ -31,6 +31,8 @@
 
 #if defined(OS_ANDROID)
 #include <sys/system_properties.h>
+#include "base/android/build_info.h"
+#include "net/android/network_library.h"
 #include "net/base/network_change_notifier.h"
 #endif
 
@@ -170,6 +172,14 @@ ConfigParsePosixResult ReadDnsConfig(DnsConfig* config) {
 // TODO(juliatuttle): Depend on libcutils, then switch this (and other uses of
 //                    __system_property_get) to property_get.
 ConfigParsePosixResult ReadDnsConfig(DnsConfig* dns_config) {
+  if (base::android::BuildInfo::GetInstance()->sdk_int() >=
+      base::android::SDK_VERSION_MARSHMALLOW) {
+    dns_config->nameservers.clear();
+    net::android::GetDnsServers(&dns_config->nameservers);
+    if (dns_config->nameservers.empty())
+      return CONFIG_PARSE_POSIX_NO_NAMESERVERS;
+    return CONFIG_PARSE_POSIX_OK;
+  }
   char property_value[PROP_VALUE_MAX];
   __system_property_get("net.dns1", property_value);
   std::string dns1_string = property_value;

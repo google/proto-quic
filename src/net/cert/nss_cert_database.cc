@@ -176,15 +176,15 @@ void NSSCertDatabase::ListModules(CryptoModuleList* modules,
   }
 }
 
-int NSSCertDatabase::ImportFromPKCS12(CryptoModule* module,
+int NSSCertDatabase::ImportFromPKCS12(PK11SlotInfo* slot_info,
                                       const std::string& data,
                                       const base::string16& password,
                                       bool is_extractable,
                                       CertificateList* imported_certs) {
   DVLOG(1) << __func__ << " "
-           << PK11_GetModuleID(module->os_module_handle()) << ":"
-           << PK11_GetSlotID(module->os_module_handle());
-  int result = psm::nsPKCS12Blob_Import(module->os_module_handle(),
+           << PK11_GetModuleID(slot_info) << ":"
+           << PK11_GetSlotID(slot_info);
+  int result = psm::nsPKCS12Blob_Import(slot_info,
                                         data.data(), data.size(),
                                         password,
                                         is_extractable,

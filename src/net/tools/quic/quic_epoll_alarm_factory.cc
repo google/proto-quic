@@ -4,7 +4,6 @@
 
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 
-#include "base/logging.h"
 #include "net/tools/epoll_server/epoll_server.h"
 
 namespace net {

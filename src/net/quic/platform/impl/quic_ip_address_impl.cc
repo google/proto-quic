@@ -5,7 +5,7 @@
 #include "net/quic/platform/impl/quic_ip_address_impl.h"
 
 #include "net/base/address_family.h"
-#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 
 #if defined(OS_WIN)
 #include <winsock2.h>

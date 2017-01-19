@@ -41,6 +41,15 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
         chrome_trace_config.MemoryDumpConfig())
     return tbm_options
 
+  def SetExtraBrowserOptions(self, options):
+    # Just before we measure memory we flush the system caches
+    # unfortunately this doesn't immediately take effect, instead
+    # the next page run is effected. Due to this the first page run
+    # has anomalous results. This option causes us to flush caches
+    # each time before Chrome starts so we effect even the first page
+    # - avoiding the bug.
+    options.clear_sytem_cache_for_browser_and_profile_on_start = True
+
 
 # TODO(bashi): Workaround for http://crbug.com/532075.
 # @benchmark.Enabled('android') shouldn't be needed.

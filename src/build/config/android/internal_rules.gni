@@ -32,7 +32,6 @@ _java_target_whitelist = [
 
   # TODO(agrieve): Rename targets below to match above patterns.
   "*android_webview/glue:glue",
-  "//build/android/rezip:rezip",
   "//chrome/test/android/cast_emulator:cast_emulator",
 ]
 
@@ -60,7 +59,7 @@ template("write_build_config") {
   # Don't need to enforce naming scheme for these targets since we never
   # consider them in dependency chains.
   if (!_is_prebuilt_binary && type != "android_apk" && type != "java_binary" &&
-      type != "resource_rewriter") {
+      type != "resource_rewriter" && type != "dist_jar") {
     set_sources_assignment_filter(_java_target_whitelist)
     _parent_invoker = invoker.invoker
     _target_label =
@@ -87,8 +86,9 @@ template("write_build_config") {
 
     assert(type == "android_apk" || type == "java_library" ||
            type == "android_resources" || type == "deps_dex" ||
-           type == "android_assets" || type == "resource_rewriter" ||
-           type == "java_binary" || type == "group" || type == "java_prebuilt")
+           type == "dist_jar" || type == "android_assets" ||
+           type == "resource_rewriter" || type == "java_binary" ||
+           type == "group" || type == "java_prebuilt")
 
     forward_variables_from(invoker,
                            [
@@ -178,6 +178,12 @@ template("write_build_config") {
       ]
     }
 
+    if (is_java && defined(invoker.java_resources_jar)) {
+      args += [
+        "--java-resources-jar-path",
+        rebase_path(invoker.java_resources_jar, root_build_dir),
+      ]
+    }
     if (is_apk || is_deps_dex || (is_java && supports_android)) {
       args += [
         "--dex-path",
@@ -767,9 +773,9 @@ if (enable_java_templates) {
       depfile = "${target_gen_dir}/${target_name}.d"
       outputs = [
         _output_jar_path,
-        "$_output_jar_path.dump",
-        "$_output_jar_path.seeds",
+        "$_output_jar_path.flags",
         "$_output_jar_path.mapping",
+        "$_output_jar_path.seeds",
         "$_output_jar_path.usage",
       ]
       args = [
@@ -942,6 +948,14 @@ if (enable_java_templates) {
           "--main-dex-rules-path",
           rebase_path(main_dex_rules, root_build_dir),
         ]
+
+        if (defined(invoker.extra_main_dex_proguard_config)) {
+          inputs += [ invoker.extra_main_dex_proguard_config ]
+          args += [
+            "--main-dex-rules-path",
+            rebase_path(invoker.extra_main_dex_proguard_config, root_build_dir),
+          ]
+        }
 
         if (defined(invoker.args)) {
           args += invoker.args
@@ -1331,6 +1345,10 @@ if (enable_java_templates) {
           "--assets=@FileArg($_rebased_build_config:assets)",
           "--uncompressed-assets=@FileArg($_rebased_build_config:uncompressed_assets)",
         ]
+
+        # TODO(mlopatkin) We are relying on the fact that assets_build_config is
+        # an APK build_config.
+        args += [ "--java-resources=@FileArg($_rebased_build_config:java_resources_jars)" ]
       }
       if (defined(invoker.write_asset_list) && invoker.write_asset_list) {
         args += [ "--write-asset-list" ]
@@ -1372,12 +1390,6 @@ if (enable_java_templates) {
         ]
       }
 
-      if (defined(invoker.emma_instrument) && invoker.emma_instrument) {
-        _emma_device_jar = "$android_sdk_root/tools/lib/emma_device.jar"
-        _rebased_emma_device_jar = rebase_path(_emma_device_jar, root_build_dir)
-        args += [ "--emma-device-jar=$_rebased_emma_device_jar" ]
-      }
-
       if (defined(invoker.uncompress_shared_libraries) &&
           invoker.uncompress_shared_libraries) {
         args += [ "--uncompress-shared-libraries" ]
@@ -1393,7 +1405,6 @@ if (enable_java_templates) {
   #   keystore_path: Path to keystore to use for signing.
   #   keystore_name: Key alias to use.
   #   keystore_password: Keystore password.
-  #   rezip_apk: Whether to add crazy-linker alignment.
   template("finalize_apk") {
     action(target_name) {
       deps = []
@@ -1436,20 +1447,6 @@ if (enable_java_templates) {
         "--key-passwd",
         invoker.keystore_password,
       ]
-      if (defined(invoker.rezip_apk) && invoker.rezip_apk) {
-        deps += [ "//build/android/rezip" ]
-        _rezip_jar_path = "$root_build_dir/lib.java/rezip_apk.jar"
-        args += [
-          "--load-library-from-zip=1",
-          "--rezip-apk-jar-path",
-          rebase_path(_rezip_jar_path, root_build_dir),
-        ]
-      }
-
-      if (defined(invoker.page_align_shared_libraries) &&
-          invoker.page_align_shared_libraries) {
-        args += [ "--page-align-shared-libraries" ]
-      }
     }
   }
 
@@ -1608,6 +1605,9 @@ if (enable_java_templates) {
             outputs += [ "${invoker.resource_packaged_apk_path}_${_language}" ]
           }
         }
+        if (defined(invoker.aapt_locale_whitelist)) {
+          args += [ "--locale-whitelist=${invoker.aapt_locale_whitelist}" ]
+        }
         if (defined(invoker.extensions_to_not_compress)) {
           args += [
             "--no-compress",
@@ -1621,6 +1621,7 @@ if (enable_java_templates) {
     package_resources_helper(_package_resources_target_name) {
       forward_variables_from(invoker,
                              [
+                               "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
                                "extensions_to_not_compress",
@@ -1669,6 +1670,7 @@ if (enable_java_templates) {
     package_resources_helper(_incremental_package_resources_target_name) {
       forward_variables_from(invoker,
                              [
+                               "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
                                "extensions_to_not_compress",
@@ -1684,7 +1686,6 @@ if (enable_java_templates) {
       forward_variables_from(invoker,
                              [
                                "assets_build_config",
-                               "emma_instrument",
                                "native_lib_placeholders",
                                "native_libs_filearg",
                                "secondary_abi_native_libs_filearg",
@@ -1692,6 +1693,9 @@ if (enable_java_templates) {
                                "uncompress_shared_libraries",
                                "write_asset_list",
                              ])
+      if (!defined(uncompress_shared_libraries)) {
+        uncompress_shared_libraries = _load_library_from_apk
+      }
       deps = _deps + [ ":${_package_resources_target_name}" ]
       native_libs = _native_libs + _native_libs_even_when_incremental
 
@@ -1708,10 +1712,12 @@ if (enable_java_templates) {
       forward_variables_from(invoker,
                              [
                                "assets_build_config",
-                               "emma_instrument",
                                "secondary_native_libs",
                                "uncompress_shared_libraries",
                              ])
+      if (!defined(uncompress_shared_libraries)) {
+        uncompress_shared_libraries = _load_library_from_apk
+      }
       _dex_target = "//build/android/incremental_install:bootstrap_java__dex"
       deps = _incremental_deps + [
                ":${_incremental_package_resources_target_name}",
@@ -1738,14 +1744,11 @@ if (enable_java_templates) {
 
     _finalize_apk_rule_name = "${target_name}__finalize"
     finalize_apk(_finalize_apk_rule_name) {
-      forward_variables_from(invoker, [ "page_align_shared_libraries" ])
-
       input_apk_path = _packaged_apk_path
       output_apk_path = _final_apk_path
       keystore_path = _keystore_path
       keystore_name = _keystore_name
       keystore_password = _keystore_password
-      rezip_apk = _load_library_from_apk
 
       public_deps = [
         # Generator of the _packaged_apk_path this target takes as input.
@@ -1873,6 +1876,12 @@ if (enable_java_templates) {
       jar_path = _jar_path
       if (_supports_android) {
         dex_path = _dex_path
+      }
+      if (defined(invoker.include_java_resources) &&
+          invoker.include_java_resources) {
+        # Use original jar_path because _jar_path points to a library without
+        # resources.
+        java_resources_jar = invoker.jar_path
       }
     }
 
@@ -2695,6 +2704,14 @@ if (enable_java_templates) {
         args += [
           "--proguard-file",
           rebase_path(invoker.proguard_file, root_build_dir),
+        ]
+      }
+
+      if (defined(invoker.proguard_file_main_dex)) {
+        outputs += [ invoker.proguard_file_main_dex ]
+        args += [
+          "--proguard-file-main-dex",
+          rebase_path(invoker.proguard_file_main_dex, root_build_dir),
         ]
       }
 

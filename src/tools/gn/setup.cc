@@ -137,15 +137,31 @@ base::FilePath FindDotFile(const base::FilePath& current_dir) {
   return FindDotFile(up_one_dir);
 }
 
+void ForwardItemDefinedToBuilderInMainThread(
+    Builder* builder_call_on_main_thread_only,
+    std::unique_ptr<Item> item) {
+  builder_call_on_main_thread_only->ItemDefined(std::move(item));
+
+  // Pair to the Increment in ItemDefinedCallback.
+  g_scheduler->DecrementWorkCount();
+}
+
 // Called on any thread. Post the item to the builder on the main thread.
 void ItemDefinedCallback(
     scoped_refptr<base::SingleThreadTaskRunner> task_runner,
     Builder* builder_call_on_main_thread_only,
     std::unique_ptr<Item> item) {
   DCHECK(item);
+
+  // Increment the work count for the duration of defining the item with the
+  // builder. Otherwise finishing this callback will race finishing loading
+  // files. If there is no other pending work at any point in the middle of
+  // this call completing on the main thread, the 'Complete' function will
+  // be signaled and we'll stop running with an incomplete build.
+  g_scheduler->IncrementWorkCount();
   task_runner->PostTask(
       FROM_HERE,
-      base::Bind(&Builder::ItemDefined,
+      base::Bind(&ForwardItemDefinedToBuilderInMainThread,
                  base::Unretained(builder_call_on_main_thread_only),
                  base::Passed(&item)));
 }
@@ -321,11 +337,11 @@ SourceFile Setup::GetBuildArgFile() const {
 }
 
 void Setup::RunPreMessageLoop() {
-  // Load the root build file.
-  loader_->Load(root_build_file_, LocationRange(), Label());
-
   // Will be decremented with the loader is drained.
   g_scheduler->IncrementWorkCount();
+
+  // Load the root build file.
+  loader_->Load(root_build_file_, LocationRange(), Label());
 }
 
 bool Setup::RunPostMessageLoop() {

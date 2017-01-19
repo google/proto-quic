@@ -17,7 +17,6 @@ to the classpath for downstream development. See "additional_entries" below.
 {% endblock %} -->
 <classpath>
     <classpathentry kind="src" path="android_webview/glue/java/src"/>
-    <classpathentry kind="src" path="android_webview/java/generated_src"/>
     <classpathentry kind="src" path="android_webview/java/src"/>
     <classpathentry kind="src" path="android_webview/javatests/src"/>
     <classpathentry kind="src" path="android_webview/test/shell/src"/>

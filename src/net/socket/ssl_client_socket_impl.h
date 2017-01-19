@@ -117,9 +117,7 @@ class SSLClientSocketImpl : public SSLClientSocket,
   void ClearConnectionAttempts() override {}
   void AddConnectionAttempts(const ConnectionAttempts& attempts) override {}
   int64_t GetTotalReceivedBytes() const override;
-  void DumpMemoryStats(
-      base::trace_event::ProcessMemoryDump* pmd,
-      const std::string& parent_dump_absolute_name) const override;
+  void DumpMemoryStats(SocketMemoryStats* stats) const override;
 
   // Dumps memory allocation stats. |pmd| is the browser process memory dump.
   static void DumpSSLClientSessionMemoryStats(
@@ -282,13 +280,6 @@ class SSLClientSocketImpl : public SSLClientSocket,
   // Set when Read() or Write() successfully reads or writes data to or from the
   // network.
   bool was_ever_used_;
-
-  // List of DER-encoded X.509 DistinguishedName of certificate authorities
-  // allowed by the server.
-  std::vector<std::string> cert_authorities_;
-  // List of SSLClientCertType values for client certificates allowed by the
-  // server.
-  std::vector<SSLClientCertType> cert_key_types_;
 
   CertVerifier* const cert_verifier_;
   std::unique_ptr<CertVerifier::Request> cert_verifier_request_;

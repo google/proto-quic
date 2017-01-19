@@ -552,6 +552,7 @@ def main():
   try:
     return ProvisionDevices(args)
   except (device_errors.DeviceUnreachableError, device_errors.NoDevicesError):
+    logging.exception('Unable to provision local devices.')
     return exit_codes.INFRA
 
 

@@ -56,6 +56,7 @@
 
 #if defined(HAVE_SYMBOLIZE)
 
+#include <algorithm>
 #include <limits>
 
 #include "symbolize.h"
@@ -296,10 +297,12 @@ FindSymbol(uint64_t pc, const int fd, char *out, int out_size,
 
     // Read at most NUM_SYMBOLS symbols at once to save read() calls.
     ElfW(Sym) buf[NUM_SYMBOLS];
-    const ssize_t len = ReadFromOffset(fd, &buf, sizeof(buf), offset);
+    int num_symbols_to_read = std::min(NUM_SYMBOLS, num_symbols - i);
+    const ssize_t len =
+        ReadFromOffset(fd, &buf, sizeof(buf[0]) * num_symbols_to_read, offset);
     SAFE_ASSERT(len % sizeof(buf[0]) == 0);
     const ssize_t num_symbols_in_buf = len / sizeof(buf[0]);
-    SAFE_ASSERT(num_symbols_in_buf <= sizeof(buf)/sizeof(buf[0]));
+    SAFE_ASSERT(num_symbols_in_buf <= num_symbols_to_read);
     for (int j = 0; j < num_symbols_in_buf; ++j) {
       const ElfW(Sym)& symbol = buf[j];
       uint64_t start_address = symbol.st_value;

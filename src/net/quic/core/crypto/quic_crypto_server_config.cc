@@ -30,12 +30,13 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/proto/source_address_token.pb.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
@@ -300,22 +301,22 @@ CryptoHandshakeMessage* QuicCryptoServerConfig::AddConfig(
       CryptoFramer::ParseMessage(protobuf->config()));
 
   if (!msg.get()) {
-    LOG(WARNING) << "Failed to parse server config message";
+    QUIC_LOG(WARNING) << "Failed to parse server config message";
     return nullptr;
   }
 
   QuicReferenceCountedPointer<Config> config(ParseConfigProtobuf(protobuf));
   if (!config.get()) {
-    LOG(WARNING) << "Failed to parse server config message";
+    QUIC_LOG(WARNING) << "Failed to parse server config message";
     return nullptr;
   }
 
   {
     QuicWriterMutexLock locked(&configs_lock_);
     if (configs_.find(config->id) != configs_.end()) {
-      LOG(WARNING) << "Failed to add config because another with the same "
-                      "server config id already exists: "
-                   << QuicTextUtils::HexEncode(config->id);
+      QUIC_LOG(WARNING) << "Failed to add config because another with the same "
+                           "server config id already exists: "
+                        << QuicTextUtils::HexEncode(config->id);
       return nullptr;
     }
 
@@ -353,14 +354,14 @@ bool QuicCryptoServerConfig::SetConfigs(
   }
 
   if (parsed_configs.empty()) {
-    LOG(WARNING) << "New config list is empty.";
+    QUIC_LOG(WARNING) << "New config list is empty.";
     ok = false;
   }
 
   if (!ok) {
-    LOG(WARNING) << "Rejecting QUIC configs because of above errors";
+    QUIC_LOG(WARNING) << "Rejecting QUIC configs because of above errors";
   } else {
-    VLOG(1) << "Updating configs:";
+    QUIC_LOG(INFO) << "Updating configs:";
 
     QuicWriterMutexLock locked(&configs_lock_);
     ConfigMap new_configs;
@@ -372,25 +373,30 @@ bool QuicCryptoServerConfig::SetConfigs(
 
       ConfigMap::iterator it = configs_.find(config->id);
       if (it != configs_.end()) {
-        VLOG(1) << "Keeping scid: " << QuicTextUtils::HexEncode(config->id)
-                << " orbit: "
-                << QuicTextUtils::HexEncode(
-                       reinterpret_cast<const char*>(config->orbit), kOrbitSize)
-                << " new primary_time " << config->primary_time.ToUNIXSeconds()
-                << " old primary_time "
-                << it->second->primary_time.ToUNIXSeconds() << " new priority "
-                << config->priority << " old priority " << it->second->priority;
+        QUIC_LOG(INFO) << "Keeping scid: "
+                       << QuicTextUtils::HexEncode(config->id) << " orbit: "
+                       << QuicTextUtils::HexEncode(
+                              reinterpret_cast<const char*>(config->orbit),
+                              kOrbitSize)
+                       << " new primary_time "
+                       << config->primary_time.ToUNIXSeconds()
+                       << " old primary_time "
+                       << it->second->primary_time.ToUNIXSeconds()
+                       << " new priority " << config->priority
+                       << " old priority " << it->second->priority;
         // Update primary_time and priority.
         it->second->primary_time = config->primary_time;
         it->second->priority = config->priority;
         new_configs.insert(*it);
       } else {
-        VLOG(1) << "Adding scid: " << QuicTextUtils::HexEncode(config->id)
-                << " orbit: "
-                << QuicTextUtils::HexEncode(
-                       reinterpret_cast<const char*>(config->orbit), kOrbitSize)
-                << " primary_time " << config->primary_time.ToUNIXSeconds()
-                << " priority " << config->priority;
+        QUIC_LOG(INFO) << "Adding scid: "
+                       << QuicTextUtils::HexEncode(config->id) << " orbit: "
+                       << QuicTextUtils::HexEncode(
+                              reinterpret_cast<const char*>(config->orbit),
+                              kOrbitSize)
+                       << " primary_time "
+                       << config->primary_time.ToUNIXSeconds() << " priority "
+                       << config->priority;
         new_configs.insert(std::make_pair(config->id, config));
       }
     }
@@ -774,8 +780,7 @@ void QuicCryptoServerConfig::ProcessClientHelloAfterGetProof(
                    use_stateless_rejects, server_designated_connection_id, rand,
                    compressed_certs_cache, params, *signed_config,
                    total_framing_overhead, chlo_packet_size, out.get());
-    if (FLAGS_quic_reloadable_flag_quic_export_rej_for_all_rejects &&
-        rejection_observer_ != nullptr) {
+    if (rejection_observer_ != nullptr) {
       rejection_observer_->OnRejectionBuilt(info.reject_reasons, out.get());
     }
     helper.Succeed(std::move(out), std::move(out_diversification_nonce),
@@ -1097,10 +1102,10 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
     }
     primary_config_ = new_primary;
     new_primary->is_primary = true;
-    DVLOG(1) << "New primary config.  orbit: "
-             << QuicTextUtils::HexEncode(
-                    reinterpret_cast<const char*>(primary_config_->orbit),
-                    kOrbitSize);
+    QUIC_DLOG(INFO) << "New primary config.  orbit: "
+                    << QuicTextUtils::HexEncode(reinterpret_cast<const char*>(
+                                                    primary_config_->orbit),
+                                                kOrbitSize);
     if (primary_config_changed_cb_.get() != nullptr) {
       primary_config_changed_cb_->Run(primary_config_->id);
     }
@@ -1116,11 +1121,11 @@ void QuicCryptoServerConfig::SelectNewPrimaryConfig(
   }
   primary_config_ = new_primary;
   new_primary->is_primary = true;
-  DVLOG(1) << "New primary config.  orbit: "
-           << QuicTextUtils::HexEncode(
-                  reinterpret_cast<const char*>(primary_config_->orbit),
-                  kOrbitSize)
-           << " scid: " << QuicTextUtils::HexEncode(primary_config_->id);
+  QUIC_DLOG(INFO) << "New primary config.  orbit: "
+                  << QuicTextUtils::HexEncode(
+                         reinterpret_cast<const char*>(primary_config_->orbit),
+                         kOrbitSize)
+                  << " scid: " << QuicTextUtils::HexEncode(primary_config_->id);
   next_config_promotion_time_ = QuicWallTime::Zero();
   if (primary_config_changed_cb_.get() != nullptr) {
     primary_config_changed_cb_->Run(primary_config_->id);
@@ -1327,21 +1332,24 @@ void QuicCryptoServerConfig::EvaluateClientHelloAfterGetProof(
     info->reject_reasons.push_back(SERVER_CONFIG_UNKNOWN_CONFIG_FAILURE);
   }
 
-  if (!ValidateExpectedLeafCertificate(client_hello, *signed_config)) {
+  if (signed_config->chain != nullptr &&
+      !ValidateExpectedLeafCertificate(client_hello,
+                                       signed_config->chain->certs)) {
     info->reject_reasons.push_back(INVALID_EXPECTED_LEAF_CERTIFICATE);
   }
 
   if (info->client_nonce.size() != kNonceSize) {
     info->reject_reasons.push_back(CLIENT_NONCE_INVALID_FAILURE);
     // Invalid client nonce.
-    LOG(ERROR) << "Invalid client nonce: " << client_hello.DebugString();
-    DVLOG(1) << "Invalid client nonce.";
+    QUIC_LOG_FIRST_N(ERROR, 2) << "Invalid client nonce: "
+                               << client_hello.DebugString();
+    QUIC_DLOG(INFO) << "Invalid client nonce.";
   }
 
   // Server nonce is optional, and used for key derivation if present.
   client_hello.GetStringPiece(kServerNonceTag, &info->server_nonce);
 
-  DVLOG(1) << "No 0-RTT replay protection in QUIC_VERSION_33 and higher.";
+  QUIC_DVLOG(1) << "No 0-RTT replay protection in QUIC_VERSION_33 and higher.";
   // If the server nonce is empty and we're requiring handshake confirmation
   // for DoS reasons then we must reject the CHLO.
   if (FLAGS_quic_reloadable_flag_quic_require_handshake_confirmation &&
@@ -1388,7 +1396,7 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   QuicCryptoProof proof;
   if (!proof_source_->GetProof(server_address, params.sni, serialized, version,
                                chlo_hash, connection_options, &chain, &proof)) {
-    DVLOG(1) << "Server: failed to get proof.";
+    QUIC_DVLOG(1) << "Server: failed to get proof.";
     return false;
   }
 
@@ -1400,8 +1408,9 @@ bool QuicCryptoServerConfig::BuildServerConfigUpdateMessage(
   out->SetStringPiece(kPROF, proof.signature);
   if (params.sct_supported_by_client && enable_serving_sct_) {
     if (proof.leaf_cert_scts.empty()) {
-      DLOG(WARNING) << "SCT is expected but it is empty. sni: " << params.sni
-                    << " server_address: " << server_address.ToString();
+      QUIC_LOG_EVERY_N_SEC(WARNING, 60)
+          << "SCT is expected but it is empty.  sni: " << params.sni
+          << " server_address: " << server_address.ToString();
     } else {
       out->SetStringPiece(kCertificateSCTTag, proof.leaf_cert_scts);
     }
@@ -1517,7 +1526,7 @@ void QuicCryptoServerConfig::FinishBuildServerConfigUpdateMessage(
   message.SetStringPiece(kPROF, signature);
   if (sct_supported_by_client && enable_serving_sct_) {
     if (leaf_cert_sct.empty()) {
-      DLOG(WARNING) << "SCT is expected but it is empty.";
+      QUIC_LOG_EVERY_N_SEC(WARNING, 60) << "SCT is expected but it is empty.";
     } else {
       message.SetStringPiece(kCertificateSCTTag, leaf_cert_sct);
     }
@@ -1544,9 +1553,9 @@ void QuicCryptoServerConfig::BuildRejection(
     CryptoHandshakeMessage* out) const {
   if (FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support &&
       use_stateless_rejects) {
-    DVLOG(1) << "QUIC Crypto server config returning stateless reject "
-             << "with server-designated connection ID "
-             << server_designated_connection_id;
+    QUIC_DVLOG(1) << "QUIC Crypto server config returning stateless reject "
+                  << "with server-designated connection ID "
+                  << server_designated_connection_id;
     out->set_tag(kSREJ);
     out->SetValue(kRCID, server_designated_connection_id);
   } else {
@@ -1615,17 +1624,17 @@ void QuicCryptoServerConfig::BuildRejection(
     out->SetStringPiece(kPROF, signed_config.proof.signature);
     if (should_return_sct) {
       if (cert_sct.empty()) {
-        DLOG(WARNING) << "SCT is expected but it is empty.";
+        QUIC_LOG_EVERY_N_SEC(WARNING, 60) << "SCT is expected but it is empty.";
       } else {
         out->SetStringPiece(kCertificateSCTTag, cert_sct);
       }
     }
   } else {
-    DLOG(WARNING) << "Sending inchoate REJ for hostname: " << info.sni
-                  << " signature: " << signed_config.proof.signature.size()
-                  << " cert: " << compressed.size() << " sct:" << sct_size
-                  << " total: " << total_size
-                  << " max: " << max_unverified_size;
+    QUIC_LOG_EVERY_N_SEC(WARNING, 60)
+        << "Sending inchoate REJ for hostname: " << info.sni
+        << " signature: " << signed_config.proof.signature.size()
+        << " cert: " << compressed.size() << " sct:" << sct_size
+        << " total: " << total_size << " max: " << max_unverified_size;
   }
 }
 
@@ -1660,8 +1669,8 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
       CryptoFramer::ParseMessage(protobuf->config()));
 
   if (msg->tag() != kSCFG) {
-    LOG(WARNING) << "Server config message has tag " << msg->tag()
-                 << " expected " << kSCFG;
+    QUIC_LOG(WARNING) << "Server config message has tag " << msg->tag()
+                      << " expected " << kSCFG;
     return nullptr;
   }
 
@@ -1678,7 +1687,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
 
   StringPiece scid;
   if (!msg->GetStringPiece(kSCID, &scid)) {
-    LOG(WARNING) << "Server config message is missing SCID";
+    QUIC_LOG(WARNING) << "Server config message is missing SCID";
     return nullptr;
   }
   config->id = scid.as_string();
@@ -1686,7 +1695,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
   const QuicTag* aead_tags;
   size_t aead_len;
   if (msg->GetTaglist(kAEAD, &aead_tags, &aead_len) != QUIC_NO_ERROR) {
-    LOG(WARNING) << "Server config message is missing AEAD";
+    QUIC_LOG(WARNING) << "Server config message is missing AEAD";
     return nullptr;
   }
   config->aead = std::vector<QuicTag>(aead_tags, aead_tags + aead_len);
@@ -1694,7 +1703,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
   const QuicTag* kexs_tags;
   size_t kexs_len;
   if (msg->GetTaglist(kKEXS, &kexs_tags, &kexs_len) != QUIC_NO_ERROR) {
-    LOG(WARNING) << "Server config message is missing KEXS";
+    QUIC_LOG(WARNING) << "Server config message is missing KEXS";
     return nullptr;
   }
 
@@ -1704,30 +1713,30 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
   if ((err = msg->GetTaglist(kTBKP, &tbkp_tags, &tbkp_len)) !=
           QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND &&
       err != QUIC_NO_ERROR) {
-    LOG(WARNING) << "Server config message is missing or has invalid TBKP";
+    QUIC_LOG(WARNING) << "Server config message is missing or has invalid TBKP";
     return nullptr;
   }
   config->tb_key_params = std::vector<QuicTag>(tbkp_tags, tbkp_tags + tbkp_len);
 
   StringPiece orbit;
   if (!msg->GetStringPiece(kORBT, &orbit)) {
-    LOG(WARNING) << "Server config message is missing ORBT";
+    QUIC_LOG(WARNING) << "Server config message is missing ORBT";
     return nullptr;
   }
 
   if (orbit.size() != kOrbitSize) {
-    LOG(WARNING) << "Orbit value in server config is the wrong length."
-                    " Got "
-                 << orbit.size() << " want " << kOrbitSize;
+    QUIC_LOG(WARNING) << "Orbit value in server config is the wrong length."
+                         " Got "
+                      << orbit.size() << " want " << kOrbitSize;
     return nullptr;
   }
   static_assert(sizeof(config->orbit) == kOrbitSize, "incorrect orbit size");
   memcpy(config->orbit, orbit.data(), sizeof(config->orbit));
 
   if (kexs_len != protobuf->key_size()) {
-    LOG(WARNING) << "Server config has " << kexs_len
-                 << " key exchange methods configured, but "
-                 << protobuf->key_size() << " private keys";
+    QUIC_LOG(WARNING) << "Server config has " << kexs_len
+                      << " key exchange methods configured, but "
+                      << protobuf->key_size() << " private keys";
     return nullptr;
   }
 
@@ -1758,9 +1767,9 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
     }
 
     if (private_key.empty()) {
-      LOG(WARNING) << "Server config contains key exchange method without "
-                      "corresponding private key: "
-                   << tag;
+      QUIC_LOG(WARNING) << "Server config contains key exchange method without "
+                           "corresponding private key: "
+                        << tag;
       return nullptr;
     }
 
@@ -1769,29 +1778,30 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
       case kC255:
         ka.reset(Curve25519KeyExchange::New(private_key));
         if (!ka.get()) {
-          LOG(WARNING) << "Server config contained an invalid curve25519"
-                          " private key.";
+          QUIC_LOG(WARNING) << "Server config contained an invalid curve25519"
+                               " private key.";
           return nullptr;
         }
         break;
       case kP256:
         ka.reset(P256KeyExchange::New(private_key));
         if (!ka.get()) {
-          LOG(WARNING) << "Server config contained an invalid P-256"
-                          " private key.";
+          QUIC_LOG(WARNING) << "Server config contained an invalid P-256"
+                               " private key.";
           return nullptr;
         }
         break;
       default:
-        LOG(WARNING) << "Server config message contains unknown key exchange "
-                        "method: "
-                     << tag;
+        QUIC_LOG(WARNING)
+            << "Server config message contains unknown key exchange "
+               "method: "
+            << tag;
         return nullptr;
     }
 
     for (const auto& key_exchange : config->key_exchanges) {
       if (key_exchange->tag() == tag) {
-        LOG(WARNING) << "Duplicate key exchange in config: " << tag;
+        QUIC_LOG(WARNING) << "Duplicate key exchange in config: " << tag;
         return nullptr;
       }
     }
@@ -1801,7 +1811,7 @@ QuicCryptoServerConfig::ParseConfigProtobuf(
 
   uint64_t expiry_seconds;
   if (msg->GetUint64(kEXPY, &expiry_seconds) != QUIC_NO_ERROR) {
-    LOG(WARNING) << "Server config message is missing EXPY";
+    QUIC_LOG(WARNING) << "Server config message is missing EXPY";
     return nullptr;
   }
   config->expiry_time = QuicWallTime::FromUNIXSeconds(expiry_seconds);
@@ -1986,8 +1996,8 @@ string QuicCryptoServerConfig::NewServerNonce(QuicRandom* rand,
 
 bool QuicCryptoServerConfig::ValidateExpectedLeafCertificate(
     const CryptoHandshakeMessage& client_hello,
-    const QuicSignedServerConfig& signed_config) const {
-  if (signed_config.chain->certs.empty()) {
+    const std::vector<string>& certs) const {
+  if (certs.empty()) {
     return false;
   }
 
@@ -1995,8 +2005,7 @@ bool QuicCryptoServerConfig::ValidateExpectedLeafCertificate(
   if (client_hello.GetUint64(kXLCT, &hash_from_client) != QUIC_NO_ERROR) {
     return false;
   }
-  return CryptoUtils::ComputeLeafCertHash(signed_config.chain->certs.at(0)) ==
-         hash_from_client;
+  return CryptoUtils::ComputeLeafCertHash(certs.at(0)) == hash_from_client;
 }
 
 bool QuicCryptoServerConfig::ClientDemandsX509Proof(

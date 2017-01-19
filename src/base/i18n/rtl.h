@@ -31,7 +31,7 @@ enum TextDirection {
   UNKNOWN_DIRECTION = 0,
   RIGHT_TO_LEFT = 1,
   LEFT_TO_RIGHT = 2,
-  TEXT_DIRECTION_NUM_DIRECTIONS = 3,
+  TEXT_DIRECTION_MAX = LEFT_TO_RIGHT,
 };
 
 // Get the locale that the currently running process has been configured to use.

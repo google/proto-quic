@@ -82,6 +82,8 @@ def _ParseArgs(args):
 
   parser.add_option('--proguard-file',
                     help='Path to proguard.txt generated file')
+  parser.add_option('--proguard-file-main-dex',
+                    help='Path to proguard.txt generated file for main dex')
 
   parser.add_option(
       '--v14-skip',
@@ -447,6 +449,8 @@ def _OnStaleMd5(options):
 
     if options.proguard_file:
       package_command += ['-G', options.proguard_file]
+    if options.proguard_file_main_dex:
+      package_command += ['-D', options.proguard_file_main_dex]
     build_utils.CheckOutput(package_command, print_stderr=False)
 
     # When an empty res/ directory is passed, aapt does not write an R.txt.
@@ -521,6 +525,7 @@ def main(args):
     options.resource_zip_out,
     options.all_resources_zip_out,
     options.proguard_file,
+    options.proguard_file_main_dex,
     options.r_text_out,
     options.srcjar_out,
   ]

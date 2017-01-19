@@ -253,15 +253,7 @@
     "structures": [23920],
   },
 
-  "blimp/client/support/resources/blimp_support_strings.grd": {
-    "messages": [24200],
-  },
-  "blimp/client/core/resources/blimp_strings.grd": {
-    "messages": [24210],
-  },
-  "blimp/engine/app/blimp_browser_resources.grd": {
-    "includes": [24250],
-  },
+  # //blimp used to have IDs from 24200-24299, which are now free to use.
 
   "chromecast/browser/cast_browser_resources.grd": {
     "includes": [24300],

@@ -5246,6 +5246,7 @@ func addExtensionTests() {
 				RequireRenegotiationInfo: true,
 			},
 		},
+		flags: []string{"-expect-secure-renegotiation"},
 	})
 	testCases = append(testCases, testCase{
 		testType: serverTest,
@@ -5258,6 +5259,7 @@ func addExtensionTests() {
 				RequireRenegotiationInfo: true,
 			},
 		},
+		flags: []string{"-expect-secure-renegotiation"},
 	})
 
 	// Test that illegal extensions in TLS 1.3 are rejected by the client if
@@ -6015,6 +6017,7 @@ func addRenegotiationTests() {
 		flags: []string{
 			"-renegotiate-freely",
 			"-expect-total-renegotiations", "1",
+			"-expect-secure-renegotiation",
 		},
 	})
 	testCases = append(testCases, testCase{
@@ -6081,6 +6084,7 @@ func addRenegotiationTests() {
 		flags: []string{
 			"-renegotiate-freely",
 			"-expect-total-renegotiations", "1",
+			"-expect-no-secure-renegotiation",
 		},
 	})
 
@@ -6262,6 +6266,24 @@ func addRenegotiationTests() {
 		expectedLocalError: "remote error: no renegotiation",
 	})
 
+	// Renegotiation is not allowed when there is an unfinished write.
+	testCases = append(testCases, testCase{
+		name: "Renegotiate-Client-UnfinishedWrite",
+		config: Config{
+			MaxVersion: VersionTLS12,
+		},
+		renegotiate: 1,
+		flags: []string{
+			"-async",
+			"-renegotiate-freely",
+			"-read-with-unfinished-write",
+		},
+		shouldFail:    true,
+		expectedError: ":NO_RENEGOTIATION:",
+		// We do not successfully send the no_renegotiation alert in
+		// this case. https://crbug.com/boringssl/130
+	})
+
 	// Stray HelloRequests during the handshake are ignored in TLS 1.2.
 	testCases = append(testCases, testCase{
 		name: "StrayHelloRequest",
@@ -6328,6 +6350,22 @@ func addRenegotiationTests() {
 		},
 		shouldFail:    true,
 		expectedError: ":UNEXPECTED_MESSAGE:",
+	})
+
+	// The renegotiation_info extension is not sent in TLS 1.3, but TLS 1.3
+	// always reads as supporting it, regardless of whether it was
+	// negotiated.
+	testCases = append(testCases, testCase{
+		name: "AlwaysReportRenegotiationInfo-TLS13",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				NoRenegotiationInfo: true,
+			},
+		},
+		flags: []string{
+			"-expect-secure-renegotiation",
+		},
 	})
 }
 
@@ -8361,6 +8399,48 @@ func addSessionTicketTests() {
 		expectedLocalError: "tls: invalid ticket age",
 	})
 
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "TLS13-SendTicketEarlyDataInfo",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendTicketEarlyDataInfo: 16384,
+			},
+		},
+		flags: []string{
+			"-expect-early-data-info",
+		},
+	})
+
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "TLS13-DuplicateTicketEarlyDataInfo",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendTicketEarlyDataInfo:      16384,
+				DuplicateTicketEarlyDataInfo: true,
+			},
+		},
+		shouldFail:         true,
+		expectedError:      ":DUPLICATE_EXTENSION:",
+		expectedLocalError: "remote error: illegal parameter",
+	})
+
+	testCases = append(testCases, testCase{
+		testType: serverTest,
+		name:     "TLS13-ExpectTicketEarlyDataInfo",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				ExpectTicketEarlyDataInfo: true,
+			},
+		},
+		flags: []string{
+			"-enable-early-data",
+		},
+	})
 }
 
 func addChangeCipherSpecTests() {

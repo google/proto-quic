@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -60,10 +59,6 @@ class WindowUpdatePayloadDecoderTest
     : public AbstractPayloadDecoderTest<WindowUpdatePayloadDecoder,
                                         WindowUpdatePayloadDecoderPeer,
                                         Listener> {
- public:
-  static bool ApproveSizeForWrongSize(size_t size) {
-    return size != Http2WindowUpdateFields::EncodedSize();
-  }
 
  protected:
   Http2WindowUpdateFields RandWindowUpdateFields() {
@@ -77,13 +72,14 @@ class WindowUpdatePayloadDecoderTest
 // Confirm we get an error if the payload is not the correct size to hold
 // exactly one Http2WindowUpdateFields.
 TEST_F(WindowUpdatePayloadDecoderTest, WrongSize) {
+  auto approve_size = [](size_t size) {
+    return size != Http2WindowUpdateFields::EncodedSize();
+  };
   Http2FrameBuilder fb;
   fb.Append(RandWindowUpdateFields());
   fb.Append(RandWindowUpdateFields());
   fb.Append(RandWindowUpdateFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(&WindowUpdatePayloadDecoderTest::ApproveSizeForWrongSize)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(0, fb.buffer(), approve_size));
 }
 
 TEST_F(WindowUpdatePayloadDecoderTest, VariousPayloads) {

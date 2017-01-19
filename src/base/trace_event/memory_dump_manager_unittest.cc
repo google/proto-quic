@@ -1266,5 +1266,22 @@ TEST_F(MemoryDumpManagerTest, TestBackgroundTracingSetup) {
   DisableTracing();
 }
 
+TEST_F(MemoryDumpManagerTest, TestBlacklistedUnsafeUnregistration) {
+  InitializeMemoryDumpManager(false /* is_coordinator */);
+  MockMemoryDumpProvider mdp1;
+  RegisterDumpProvider(&mdp1, nullptr, kDefaultOptions,
+                       "BlacklistTestDumpProvider");
+  // Not calling UnregisterAndDeleteDumpProviderSoon() should not crash.
+  mdm_->UnregisterDumpProvider(&mdp1);
+
+  Thread thread("test thread");
+  thread.Start();
+  RegisterDumpProvider(&mdp1, thread.task_runner(), kDefaultOptions,
+                       "BlacklistTestDumpProvider");
+  // Unregistering on wrong thread should not crash.
+  mdm_->UnregisterDumpProvider(&mdp1);
+  thread.Stop();
+}
+
 }  // namespace trace_event
 }  // namespace base

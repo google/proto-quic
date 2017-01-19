@@ -27,7 +27,7 @@ class HistogramSamples;
 // getting logged as intended.
 class HistogramTester {
  public:
-  using CountsMap = std::map<std::string, base::HistogramBase::Count>;
+  using CountsMap = std::map<std::string, HistogramBase::Count>;
 
   // The constructor will call StatisticsRecorder::Initialize() for you. Also,
   // this takes a snapshot of all current histograms counts.
@@ -38,27 +38,27 @@ class HistogramTester {
   // should have samples. Measures the diff from the snapshot taken when this
   // object was constructed.
   void ExpectUniqueSample(const std::string& name,
-                          base::HistogramBase::Sample sample,
-                          base::HistogramBase::Count expected_count) const;
+                          HistogramBase::Sample sample,
+                          HistogramBase::Count expected_count) const;
 
   // We know the exact number of samples in a bucket, but other buckets may
   // have samples as well. Measures the diff from the snapshot taken when this
   // object was constructed.
   void ExpectBucketCount(const std::string& name,
-                         base::HistogramBase::Sample sample,
-                         base::HistogramBase::Count expected_count) const;
+                         HistogramBase::Sample sample,
+                         HistogramBase::Count expected_count) const;
 
   // We don't know the values of the samples, but we know how many there are.
   // This measures the diff from the snapshot taken when this object was
   // constructed.
   void ExpectTotalCount(const std::string& name,
-                        base::HistogramBase::Count count) const;
+                        HistogramBase::Count count) const;
 
   // We know exact number of samples for buckets corresponding to a time
   // interval. Other intervals may have samples too.
   void ExpectTimeBucketCount(const std::string& name,
-                             base::TimeDelta sample,
-                             base::HistogramBase::Count count) const;
+                             TimeDelta sample,
+                             HistogramBase::Count count) const;
 
   // Returns a list of all of the buckets recorded since creation of this
   // object, as vector<Bucket>, where the Bucket represents the min boundary of
@@ -78,7 +78,7 @@ class HistogramTester {
   //             histogram_tester.GetAllSamples("HistogramName"));
   std::vector<Bucket> GetAllSamples(const std::string& name) const;
 
-  // Finds histograms whose names start with |query|, and returns them along
+  // Finds histograms whose names start with |prefix|, and returns them along
   // with the counts of any samples added since the creation of this object.
   // Histograms that are unchanged are omitted from the result. The return value
   // is a map whose keys are the histogram name, and whose values are the sample
@@ -96,7 +96,7 @@ class HistogramTester {
   //   expected_counts["MyMetric.B"] = 1;
   //   EXPECT_THAT(histogram_tester.GetTotalCountsForPrefix("MyMetric."),
   //               testing::ContainerEq(expected_counts));
-  CountsMap GetTotalCountsForPrefix(const std::string& query) const;
+  CountsMap GetTotalCountsForPrefix(const std::string& prefix) const;
 
   // Access a modified HistogramSamples containing only what has been logged
   // to the histogram since the creation of this object.
@@ -108,16 +108,16 @@ class HistogramTester {
   // |expected_count|. The bucket's current value is determined from |samples|
   // and is modified based on the snapshot stored for histogram |name|.
   void CheckBucketCount(const std::string& name,
-                        base::HistogramBase::Sample sample,
-                        base::Histogram::Count expected_count,
-                        const base::HistogramSamples& samples) const;
+                        HistogramBase::Sample sample,
+                        Histogram::Count expected_count,
+                        const HistogramSamples& samples) const;
 
   // Verifies that the total number of values recorded for the histogram |name|
   // is |expected_count|. This is checked against |samples| minus the snapshot
   // that was taken for |name|.
   void CheckTotalCount(const std::string& name,
-                       base::Histogram::Count expected_count,
-                       const base::HistogramSamples& samples) const;
+                       Histogram::Count expected_count,
+                       const HistogramSamples& samples) const;
 
   // Used to determine the histogram changes made during this instance's
   // lifecycle.
@@ -127,13 +127,13 @@ class HistogramTester {
 };
 
 struct Bucket {
-  Bucket(base::HistogramBase::Sample min, base::HistogramBase::Count count)
+  Bucket(HistogramBase::Sample min, HistogramBase::Count count)
       : min(min), count(count) {}
 
   bool operator==(const Bucket& other) const;
 
-  base::HistogramBase::Sample min;
-  base::HistogramBase::Count count;
+  HistogramBase::Sample min;
+  HistogramBase::Count count;
 };
 
 void PrintTo(const Bucket& value, std::ostream* os);

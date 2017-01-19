@@ -28,12 +28,12 @@ FeatureList* g_instance = nullptr;
 // Tracks whether the FeatureList instance was initialized via an accessor.
 bool g_initialized_from_accessor = false;
 
-const uint32_t kFeatureType = 0x06567CA6 + 1;  // SHA1(FeatureEntry) v1
-
 // An allocator entry for a feature in shared memory. The FeatureEntry is
 // followed by a base::Pickle object that contains the feature and trial name.
-// Any changes to this structure requires a bump in kFeatureType defined above.
 struct FeatureEntry {
+  // SHA1(FeatureEntry): Increment this if structure changes!
+  static constexpr uint32_t kPersistentTypeId = 0x06567CA6 + 1;
+
   // Expected size for 32/64-bit check.
   static constexpr size_t kExpectedInstanceSize = 8;
 
@@ -98,13 +98,8 @@ void FeatureList::InitializeFromSharedMemory(
   DCHECK(!initialized_);
 
   PersistentMemoryAllocator::Iterator iter(allocator);
-
-  PersistentMemoryAllocator::Reference ref;
-  while ((ref = iter.GetNextOfType(kFeatureType)) !=
-         PersistentMemoryAllocator::kReferenceNull) {
-    const FeatureEntry* entry =
-        allocator->GetAsObject<const FeatureEntry>(ref, kFeatureType);
-
+  const FeatureEntry* entry;
+  while ((entry = iter.GetNextOfObject<FeatureEntry>()) != nullptr) {
     OverrideState override_state =
         static_cast<OverrideState>(entry->override_state);
 
@@ -170,20 +165,17 @@ void FeatureList::AddFeaturesToAllocator(PersistentMemoryAllocator* allocator) {
       pickle.WriteString(override.second.field_trial->trial_name());
 
     size_t total_size = sizeof(FeatureEntry) + pickle.size();
-    PersistentMemoryAllocator::Reference ref =
-        allocator->Allocate(total_size, kFeatureType);
-    if (!ref)
+    FeatureEntry* entry = allocator->AllocateObject<FeatureEntry>(total_size);
+    if (!entry)
       return;
 
-    FeatureEntry* entry =
-        allocator->GetAsObject<FeatureEntry>(ref, kFeatureType);
     entry->override_state = override.second.overridden_state;
     entry->pickle_size = pickle.size();
 
     char* dst = reinterpret_cast<char*>(entry) + sizeof(FeatureEntry);
     memcpy(dst, pickle.data(), pickle.size());
 
-    allocator->MakeIterable(ref);
+    allocator->MakeIterable(entry);
   }
 }
 

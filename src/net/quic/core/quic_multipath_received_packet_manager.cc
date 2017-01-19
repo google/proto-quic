@@ -7,7 +7,7 @@
 #include <cstdint>
 
 #include "base/memory/ptr_util.h"
-#include "net/quic/core/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 
 namespace net {
 

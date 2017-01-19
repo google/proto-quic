@@ -21,7 +21,7 @@
 // Owned() transfers ownership of an object to the Callback resulting from
 // bind; the object will be deleted when the Callback is deleted.
 //
-// Passed() is for transferring movable-but-not-copyable types (eg. scoped_ptr)
+// Passed() is for transferring movable-but-not-copyable types (eg. unique_ptr)
 // through a Callback. Logically, this signifies a destructive transfer of
 // the state of the argument into the target function.  Invoking
 // Callback::Run() twice on a Callback that was created with a Passed()

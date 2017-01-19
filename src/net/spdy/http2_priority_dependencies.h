@@ -21,20 +21,31 @@ class NET_EXPORT_PRIVATE Http2PriorityDependencies {
   Http2PriorityDependencies();
   ~Http2PriorityDependencies();
 
-  // Called when a stream SYN is sent to the server.  Note that in the
-  // case of server push, a stream may be created without this routine
-  // being called.  In such cases, the client ignores the stream's priority
-  // (as the server is effectively overriding the client's notions of
-  // priority anyway).
+  // Called when a stream is created. This is used for both client-initiated
+  // and server-initiated (pushed) streams.
   // On return, |*dependent_stream_id| is set to the stream id that
   // this stream should be made dependent on, and |*exclusive| set to
   // whether that dependency should be exclusive.
-  void OnStreamSynSent(SpdyStreamId id,
-                       SpdyPriority priority,
-                       SpdyStreamId* dependent_stream_id,
-                       bool* exclusive);
+  void OnStreamCreation(SpdyStreamId id,
+                        SpdyPriority priority,
+                        SpdyStreamId* dependent_stream_id,
+                        bool* exclusive);
 
+  // Called when a stream is destroyed.
   void OnStreamDestruction(SpdyStreamId id);
+
+  struct DependencyUpdate {
+    SpdyStreamId id;
+    SpdyStreamId dependent_stream_id;
+    bool exclusive;
+  };
+
+  // Called when a stream's priority has changed. Returns a list of
+  // dependency updates that should be sent to the server to describe
+  // the requested priority change. The updates should be sent in the
+  // given order.
+  std::vector<DependencyUpdate> OnStreamUpdate(SpdyStreamId id,
+                                               SpdyPriority new_priority);
 
  private:
   // The requirements for the internal data structure for this class are:
@@ -54,6 +65,21 @@ class NET_EXPORT_PRIVATE Http2PriorityDependencies {
   // Iterators to list elements remain valid until those particular elements
   // are erased.
   EntryMap entry_by_stream_id_;
+
+  // Finds the lowest-priority stream that has a priority >= |priority|.
+  // Returns false if there are no such streams.
+  // Otherwise, returns true and sets |*bound|.
+  bool PriorityLowerBound(SpdyPriority priority, IdList::iterator* bound);
+
+  // Finds the stream just above |id| in the total order.
+  // Returns false if there are no streams with a higher priority.
+  // Otherwise, returns true and sets |*parent|.
+  bool ParentOfStream(SpdyStreamId id, IdList::iterator* parent);
+
+  // Finds the stream just below |id| in the total order.
+  // Returns false if there are no streams with a lower priority.
+  // Otherwise, returns true and sets |*child|.
+  bool ChildOfStream(SpdyStreamId id, IdList::iterator* child);
 };
 
 }  // namespace net

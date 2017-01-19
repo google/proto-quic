@@ -11,9 +11,6 @@
 
 #include <string>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
-#include "base/callback.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
@@ -123,15 +120,13 @@ template <class Decoder,
           class Listener,
           bool SupportedFrameType = true>
 class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
- public:
-  static bool SucceedingApproveSize(size_t size) { return true; }
 
  protected:
   // An ApproveSize function returns true to approve decoding the specified
   // size of payload, else false to skip that size. Typically used for negative
   // tests; for example, decoding a SETTINGS frame at all sizes except for
   // multiples of 6.
-  typedef base::Callback<bool(size_t size)> ApproveSize;
+  typedef std::function<bool(size_t size)> ApproveSize;
 
   AbstractPayloadDecoderTest() {}
 
@@ -196,14 +191,6 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
     return payload_decoder_.ResumeDecodingPayload(mutable_state(), db);
   }
 
-  // Wrap |validator| in another one which will check that we've reached the
-  // expected state of kDecodeError with OnFrameSizeError having been called by
-  AssertionResult ValidatorForDecodePayloadAndValidateSeveralWays(
-      const FrameParts& expected) {
-    VERIFY_FALSE(listener_.IsInProgress());
-    VERIFY_EQ(1u, listener_.size());
-    VERIFY_AND_RETURN_SUCCESS(expected.VerifyEquals(*listener_.frame(0)));
-  }
 
   // Decode one frame's payload and confirm that the listener recorded the
   // expected FrameParts instance, and only FrameParts instance. The payload
@@ -212,33 +199,13 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   AssertionResult DecodePayloadAndValidateSeveralWays(
       base::StringPiece payload,
       const FrameParts& expected) {
+    NoArgValidator validator = [&expected, this]() -> AssertionResult {
+      VERIFY_FALSE(listener_.IsInProgress());
+      VERIFY_EQ(1u, listener_.size());
+      VERIFY_AND_RETURN_SUCCESS(expected.VerifyEquals(*listener_.frame(0)));
+    };
     return PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(
-        payload, this->ValidateDoneAndEmpty(base::Bind(
-                     &AbstractPayloadDecoderTest::
-                         ValidatorForDecodePayloadAndValidateSeveralWays,
-                     base::Unretained(this), base::ConstRef(expected))));
-  }
-
-  // Wrap |validator| in another one which will check that we've reached the
-  // expected state of kDecodeError with OnFrameSizeError having been called by
-  // the payload decoder.
-  AssertionResult ValidatorForVerifyDetectsFrameSizeError(
-      const Http2FrameHeader& header,
-      const Validator& validator,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    DVLOG(2) << "VerifyDetectsFrameSizeError validator; status=" << status
-             << "; input.Remaining=" << input.Remaining();
-    VERIFY_EQ(DecodeStatus::kDecodeError, status);
-    VERIFY_FALSE(listener_.IsInProgress());
-    VERIFY_EQ(1u, listener_.size());
-    const FrameParts* frame = listener_.frame(0);
-    VERIFY_EQ(header, frame->frame_header);
-    VERIFY_TRUE(frame->has_frame_size_error);
-    // Verify did not get OnPaddingTooLong, as we should only ever produce
-    // one of these two errors for a single frame.
-    VERIFY_FALSE(frame->opt_missing_length);
-    return validator.Run(input, status);
+        payload, ValidateDoneAndEmpty(validator));
   }
 
   // Decode one frame's payload, expecting that the final status will be
@@ -254,13 +221,29 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
       WrappedValidator wrapped_validator) {
     set_frame_header(header);
     // If wrapped_validator is not a RandomDecoderTest::Validator, make it so.
-    Validator validator = this->ToValidator(wrapped_validator);
+    Validator validator = ToValidator(wrapped_validator);
+    // And wrap that validator in another which will check that we've reached
+    // the expected state of kDecodeError with OnFrameSizeError having been
+    // called by the payload decoder.
+    validator = [header, validator, this](
+        const DecodeBuffer& input,
+        DecodeStatus status) -> ::testing::AssertionResult {
+      DVLOG(2) << "VerifyDetectsFrameSizeError validator; status=" << status
+               << "; input.Remaining=" << input.Remaining();
+      VERIFY_EQ(DecodeStatus::kDecodeError, status);
+      VERIFY_FALSE(listener_.IsInProgress());
+      VERIFY_EQ(1u, listener_.size());
+      const FrameParts* frame = listener_.frame(0);
+      VERIFY_EQ(header, frame->frame_header);
+      VERIFY_TRUE(frame->has_frame_size_error);
+      // Verify did not get OnPaddingTooLong, as we should only ever produce
+      // one of these two errors for a single frame.
+      VERIFY_FALSE(frame->opt_missing_length);
+      return validator(input, status);
+    };
     VERIFY_AND_RETURN_SUCCESS(
-        PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(
-            payload, base::Bind(&AbstractPayloadDecoderTest::
-                                    ValidatorForVerifyDetectsFrameSizeError,
-                                base::Unretained(this), base::ConstRef(header),
-                                base::ConstRef(validator))));
+        PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(payload,
+                                                                    validator));
   }
 
   // Confirm that we get OnFrameSizeError when trying to decode unpadded_payload
@@ -299,7 +282,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
     bool validated = false;
     for (size_t real_payload_size = 0;
          real_payload_size <= unpadded_payload.size(); ++real_payload_size) {
-      if (!approve_size.Run(real_payload_size)) {
+      if (approve_size != nullptr && !approve_size(real_payload_size)) {
         continue;
       }
       VLOG(1) << "real_payload_size=" << real_payload_size;
@@ -320,8 +303,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
       // checking stream ids.
       uint32_t stream_id = RandStreamId();
       Http2FrameHeader header(fb.size(), frame_type, flags, stream_id);
-      VERIFY_SUCCESS(VerifyDetectsFrameSizeError(
-          fb.buffer(), header, base::Bind(&SucceedingValidator)));
+      VERIFY_SUCCESS(VerifyDetectsFrameSizeError(fb.buffer(), header, nullptr));
       validated = true;
     }
     VERIFY_TRUE(validated);
@@ -406,23 +388,6 @@ class AbstractPaddablePayloadDecoderTest
     return flags;
   }
 
-  static ::testing::AssertionResult ValidatorForVerifyDetectsPaddingTooLong(
-      const Http2FrameHeader& header,
-      int expected_missing_length,
-      const Listener& listener,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    VERIFY_EQ(DecodeStatus::kDecodeError, status);
-    VERIFY_FALSE(listener.IsInProgress());
-    VERIFY_EQ(1u, listener.size());
-    const FrameParts* frame = listener.frame(0);
-    VERIFY_EQ(header, frame->frame_header);
-    VERIFY_TRUE(frame->opt_missing_length);
-    VERIFY_EQ(expected_missing_length, frame->opt_missing_length.value());
-    // Verify did not get OnFrameSizeError.
-    VERIFY_FALSE(frame->has_frame_size_error);
-    return ::testing::AssertionSuccess();
-  }
 
   // Verify that we get OnPaddingTooLong when decoding payload, and that the
   // amount of missing padding is as specified. header.IsPadded must be true,
@@ -433,12 +398,23 @@ class AbstractPaddablePayloadDecoderTest
       int expected_missing_length) {
     set_frame_header(header);
     auto& listener = listener_;
+    Validator validator = [header, expected_missing_length, &listener](
+        const DecodeBuffer& input,
+        DecodeStatus status) -> ::testing::AssertionResult {
+      VERIFY_EQ(DecodeStatus::kDecodeError, status);
+      VERIFY_FALSE(listener.IsInProgress());
+      VERIFY_EQ(1u, listener.size());
+      const FrameParts* frame = listener.frame(0);
+      VERIFY_EQ(header, frame->frame_header);
+      VERIFY_TRUE(frame->opt_missing_length);
+      VERIFY_EQ(expected_missing_length, frame->opt_missing_length.value());
+      // Verify did not get OnFrameSizeError.
+      VERIFY_FALSE(frame->has_frame_size_error);
+      return ::testing::AssertionSuccess();
+    };
     VERIFY_AND_RETURN_SUCCESS(
-        PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(
-            payload, base::Bind(&AbstractPaddablePayloadDecoderTest::
-                                    ValidatorForVerifyDetectsPaddingTooLong,
-                                header, expected_missing_length,
-                                base::ConstRef(listener))));
+        PayloadDecoderBaseTest::DecodePayloadAndValidateSeveralWays(payload,
+                                                                    validator));
   }
 
   // Verifies that we get OnPaddingTooLong for a padded frame payload whose

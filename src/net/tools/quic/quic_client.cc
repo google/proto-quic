@@ -11,17 +11,17 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "base/logging.h"
 #include "base/run_loop.h"
 #include "net/base/sockaddr_storage.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_data_reader.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/platform/impl/quic_socket_utils.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
@@ -104,12 +104,13 @@ bool QuicClient::CreateUDPSocketAndBind(QuicSocketAddress server_address,
   sockaddr_storage addr = client_address.generic_address();
   int rc = bind(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
   if (rc < 0) {
-    LOG(ERROR) << "Bind failed: " << strerror(errno);
+    QUIC_LOG(ERROR) << "Bind failed: " << strerror(errno);
     return false;
   }
 
   if (client_address.FromSocket(fd) != 0) {
-    LOG(ERROR) << "Unable to get self address.  Error: " << strerror(errno);
+    QUIC_LOG(ERROR) << "Unable to get self address.  Error: "
+                    << strerror(errno);
   }
 
   fd_address_map_[fd] = client_address;
@@ -160,7 +161,7 @@ void QuicClient::OnEvent(int fd, EpollEvent* event) {
     session()->connection()->OnCanWrite();
   }
   if (event->in_events & EPOLLERR) {
-    DVLOG(1) << "Epollerr";
+    QUIC_DLOG(INFO) << "Epollerr";
   }
 }
 

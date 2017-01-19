@@ -758,7 +758,7 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway() {
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway(
     SpdyStreamId last_good_stream_id) {
-  SpdyGoAwayIR go_ir(last_good_stream_id, GOAWAY_OK, "go away");
+  SpdyGoAwayIR go_ir(last_good_stream_id, GOAWAY_NO_ERROR, "go away");
   return SpdySerializedFrame(headerless_spdy_framer_.SerializeFrame(go_ir));
 }
 
@@ -785,6 +785,19 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyRstStream(
   SpdyRstStreamIR rst_ir(stream_id, status);
   return SpdySerializedFrame(
       headerless_spdy_framer_.SerializeRstStream(rst_ir));
+}
+
+// TODO(jgraettinger): Eliminate uses of this method in tests (prefer
+// SpdyPriorityIR).
+SpdySerializedFrame SpdyTestUtil::ConstructSpdyPriority(
+    SpdyStreamId stream_id,
+    SpdyStreamId parent_stream_id,
+    RequestPriority request_priority,
+    bool exclusive) {
+  int weight = Spdy3PriorityToHttp2Weight(
+      ConvertRequestPriorityToSpdyPriority(request_priority));
+  SpdyPriorityIR ir(stream_id, parent_stream_id, weight, exclusive);
+  return SpdySerializedFrame(headerless_spdy_framer_.SerializePriority(ir));
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGet(

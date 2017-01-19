@@ -5,6 +5,7 @@
 #include "net/quic/test_tools/simulator/simulator.h"
 
 #include "base/memory/ptr_util.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 #include "net/quic/test_tools/simulator/link.h"
@@ -12,7 +13,6 @@
 #include "net/quic/test_tools/simulator/queue.h"
 #include "net/quic/test_tools/simulator/switch.h"
 #include "net/quic/test_tools/simulator/traffic_policer.h"
-
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -37,8 +37,8 @@ class Counter : public Actor {
 
   void Act() override {
     ++value_;
-    DVLOG(1) << name_ << " has value " << value_ << " at time "
-             << clock_->Now().ToDebuggingValue();
+    QUIC_DVLOG(1) << name_ << " has value " << value_ << " at time "
+                  << clock_->Now().ToDebuggingValue();
     Schedule(clock_->Now() + period_);
   }
 

@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -88,9 +87,8 @@ TEST_F(AltSvcPayloadDecoderTest, Truncated) {
   Http2FrameBuilder fb;
   fb.Append(Http2AltSvcFields{0xffff});  // The longest possible origin length.
   fb.Append("Too little origin!");
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(&AbstractPayloadDecoderTest::SucceedingApproveSize)));
+  EXPECT_TRUE(
+      VerifyDetectsFrameSizeError(0, fb.buffer(), /*approve_size*/ nullptr));
 }
 
 class AltSvcPayloadLengthTests : public AltSvcPayloadDecoderTest,

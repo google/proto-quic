@@ -52,18 +52,7 @@ class BASE_EXPORT GlobalDescriptors {
 
   // Often we want a canonical descriptor for a given Key. In this case, we add
   // the following constant to the key value:
-#if !defined(OS_ANDROID)
   static const int kBaseDescriptor = 3;  // 0, 1, 2 are already taken.
-#else
-  // 3 used by __android_log_write().
-  // 4 used by... something important on Android M.
-  // 5 used by... something important on Android L... on low-end devices.
-  // TODO(amistry): An Android, this mechanism is only used for tests since the
-  // content child launcher spawns a process by creating a new Activity using
-  // the Android APIs. For tests, come up with a way that doesn't require using
-  // a pre-defined fd.
-  static const int kBaseDescriptor = 6;
-#endif
 
   // Return the singleton instance of GlobalDescriptors.
   static GlobalDescriptors* GetInstance();

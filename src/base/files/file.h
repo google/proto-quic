@@ -63,28 +63,31 @@ class BASE_EXPORT File {
   // FLAG_EXCLUSIVE_(READ|WRITE) only grant exclusive access to the file on
   // creation on POSIX; for existing files, consider using Lock().
   enum Flags {
-    FLAG_OPEN = 1 << 0,             // Opens a file, only if it exists.
-    FLAG_CREATE = 1 << 1,           // Creates a new file, only if it does not
-                                    // already exist.
-    FLAG_OPEN_ALWAYS = 1 << 2,      // May create a new file.
-    FLAG_CREATE_ALWAYS = 1 << 3,    // May overwrite an old file.
-    FLAG_OPEN_TRUNCATED = 1 << 4,   // Opens a file and truncates it, only if it
-                                    // exists.
+    FLAG_OPEN = 1 << 0,            // Opens a file, only if it exists.
+    FLAG_CREATE = 1 << 1,          // Creates a new file, only if it does not
+                                   // already exist.
+    FLAG_OPEN_ALWAYS = 1 << 2,     // May create a new file.
+    FLAG_CREATE_ALWAYS = 1 << 3,   // May overwrite an old file.
+    FLAG_OPEN_TRUNCATED = 1 << 4,  // Opens a file and truncates it, only if it
+                                   // exists.
     FLAG_READ = 1 << 5,
     FLAG_WRITE = 1 << 6,
     FLAG_APPEND = 1 << 7,
-    FLAG_EXCLUSIVE_READ = 1 << 8,   // EXCLUSIVE is opposite of Windows SHARE.
+    FLAG_EXCLUSIVE_READ = 1 << 8,  // EXCLUSIVE is opposite of Windows SHARE.
     FLAG_EXCLUSIVE_WRITE = 1 << 9,
     FLAG_ASYNC = 1 << 10,
-    FLAG_TEMPORARY = 1 << 11,       // Used on Windows only.
-    FLAG_HIDDEN = 1 << 12,          // Used on Windows only.
+    FLAG_TEMPORARY = 1 << 11,  // Used on Windows only.
+    FLAG_HIDDEN = 1 << 12,     // Used on Windows only.
     FLAG_DELETE_ON_CLOSE = 1 << 13,
-    FLAG_WRITE_ATTRIBUTES = 1 << 14,  // Used on Windows only.
-    FLAG_SHARE_DELETE = 1 << 15,      // Used on Windows only.
-    FLAG_TERMINAL_DEVICE = 1 << 16,   // Serial port flags.
-    FLAG_BACKUP_SEMANTICS = 1 << 17,  // Used on Windows only.
-    FLAG_EXECUTE = 1 << 18,           // Used on Windows only.
-    FLAG_SEQUENTIAL_SCAN = 1 << 19,   // Used on Windows only.
+    FLAG_WRITE_ATTRIBUTES = 1 << 14,     // Used on Windows only.
+    FLAG_SHARE_DELETE = 1 << 15,         // Used on Windows only.
+    FLAG_TERMINAL_DEVICE = 1 << 16,      // Serial port flags.
+    FLAG_BACKUP_SEMANTICS = 1 << 17,     // Used on Windows only.
+    FLAG_EXECUTE = 1 << 18,              // Used on Windows only.
+    FLAG_SEQUENTIAL_SCAN = 1 << 19,      // Used on Windows only.
+    FLAG_CAN_DELETE_ON_CLOSE = 1 << 20,  // Requests permission to delete a file
+                                         // via DeleteOnClose() (Windows only).
+                                         // See DeleteOnClose() for details.
   };
 
   // This enum has been recorded in multiple histograms. If the order of the
@@ -303,6 +306,36 @@ class BASE_EXPORT File {
   File Duplicate() const;
 
   bool async() const { return async_; }
+
+#if defined(OS_WIN)
+  // Sets or clears the DeleteFile disposition on the handle. Returns true if
+  // the disposition was set or cleared, as indicated by |delete_on_close|.
+  //
+  // Microsoft Windows deletes a file only when the last handle to the
+  // underlying kernel object is closed when the DeleteFile disposition has been
+  // set by any handle holder. This disposition is be set by:
+  // - Calling the Win32 DeleteFile function with the path to a file.
+  // - Opening/creating a file with FLAG_DELETE_ON_CLOSE.
+  // - Opening/creating a file with FLAG_CAN_DELETE_ON_CLOSE and subsequently
+  //   calling DeleteOnClose(true).
+  //
+  // In all cases, all pre-existing handles to the file must have been opened
+  // with FLAG_SHARE_DELETE.
+  //
+  // So:
+  // - Use FLAG_SHARE_DELETE when creating/opening a file to allow another
+  //   entity on the system to cause it to be deleted when it is closed. (Note:
+  //   another entity can delete the file the moment after it is closed, so not
+  //   using this permission doesn't provide any protections.)
+  // - Use FLAG_DELETE_ON_CLOSE for any file that is to be deleted after use.
+  //   The OS will ensure it is deleted even in the face of process termination.
+  // - Use FLAG_CAN_DELETE_ON_CLOSE in conjunction with DeleteOnClose() to alter
+  //   the DeleteFile disposition on an open handle. This fine-grained control
+  //   allows for marking a file for deletion during processing so that it is
+  //   deleted in the event of untimely process termination, and then clearing
+  //   this state once the file is suitable for persistence.
+  bool DeleteOnClose(bool delete_on_close);
+#endif
 
 #if defined(OS_WIN)
   static Error OSErrorToFileError(DWORD last_error);

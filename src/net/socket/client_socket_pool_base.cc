@@ -704,23 +704,43 @@ ClientSocketPoolBaseHelper::GetInfoAsValue(const std::string& name,
 void ClientSocketPoolBaseHelper::DumpMemoryStats(
     base::trace_event::ProcessMemoryDump* pmd,
     const std::string& parent_dump_absolute_name) const {
-  base::trace_event::MemoryAllocatorDump* socket_pool_dump = nullptr;
   size_t socket_count = 0;
+  size_t total_size = 0;
+  size_t buffer_size = 0;
+  size_t cert_count = 0;
+  size_t serialized_cert_size = 0;
   for (const auto& kv : group_map_) {
     for (const auto& socket : kv.second->idle_sockets()) {
-      // Only create a MemoryAllocatorDump if there is at least one idle socket
-      if (!socket_pool_dump) {
-        socket_pool_dump = pmd->CreateAllocatorDump(base::StringPrintf(
-            "%s/socket_pool", parent_dump_absolute_name.c_str()));
-      }
-      socket.socket->DumpMemoryStats(pmd, socket_pool_dump->absolute_name());
+      StreamSocket::SocketMemoryStats stats;
+      socket.socket->DumpMemoryStats(&stats);
+      total_size += stats.total_size;
+      buffer_size += stats.buffer_size;
+      cert_count += stats.cert_count;
+      serialized_cert_size += stats.serialized_cert_size;
       ++socket_count;
     }
   }
-  if (socket_pool_dump) {
+  // Only create a MemoryAllocatorDump if there is at least one idle socket
+  if (socket_count > 0) {
+    base::trace_event::MemoryAllocatorDump* socket_pool_dump =
+        pmd->CreateAllocatorDump(base::StringPrintf(
+            "%s/socket_pool", parent_dump_absolute_name.c_str()));
+    socket_pool_dump->AddScalar(
+        base::trace_event::MemoryAllocatorDump::kNameSize,
+        base::trace_event::MemoryAllocatorDump::kUnitsBytes, total_size);
     socket_pool_dump->AddScalar(
         base::trace_event::MemoryAllocatorDump::kNameObjectCount,
         base::trace_event::MemoryAllocatorDump::kUnitsObjects, socket_count);
+    socket_pool_dump->AddScalar(
+        "buffer_size", base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+        buffer_size);
+    socket_pool_dump->AddScalar(
+        "cert_count", base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+        cert_count);
+    socket_pool_dump->AddScalar(
+        "serialized_cert_size",
+        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+        serialized_cert_size);
   }
 }
 

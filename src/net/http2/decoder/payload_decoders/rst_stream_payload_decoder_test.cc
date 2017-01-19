@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -58,11 +57,6 @@ class RstStreamPayloadDecoderTest
     : public AbstractPayloadDecoderTest<RstStreamPayloadDecoder,
                                         RstStreamPayloadDecoderPeer,
                                         Listener> {
- public:
-  static bool ApproveSizeForWrongSize(size_t size) {
-    return size != Http2RstStreamFields::EncodedSize();
-  }
-
  protected:
   Http2RstStreamFields RandRstStreamFields() {
     Http2RstStreamFields fields;
@@ -74,13 +68,14 @@ class RstStreamPayloadDecoderTest
 // Confirm we get an error if the payload is not the correct size to hold
 // exactly one Http2RstStreamFields.
 TEST_F(RstStreamPayloadDecoderTest, WrongSize) {
+  auto approve_size = [](size_t size) {
+    return size != Http2RstStreamFields::EncodedSize();
+  };
   Http2FrameBuilder fb;
   fb.Append(RandRstStreamFields());
   fb.Append(RandRstStreamFields());
   fb.Append(RandRstStreamFields());
-  EXPECT_TRUE(VerifyDetectsFrameSizeError(
-      0, fb.buffer(),
-      base::Bind(&RstStreamPayloadDecoderTest::ApproveSizeForWrongSize)));
+  EXPECT_TRUE(VerifyDetectsFrameSizeError(0, fb.buffer(), approve_size));
 }
 
 TEST_F(RstStreamPayloadDecoderTest, AllErrors) {

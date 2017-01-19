@@ -31,7 +31,6 @@
 // turn is replaced by the third best. The newest sample replaces the third
 // best.
 
-#include "base/logging.h"
 #include "net/quic/core/quic_time.h"
 
 namespace net {

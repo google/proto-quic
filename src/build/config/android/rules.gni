@@ -1195,6 +1195,86 @@ if (enable_java_templates) {
     }
   }
 
+  # Combines all dependent .jar files into a single .jar file.
+  #
+  # Variables:
+  #   output: Path to the output jar.
+  #   override_build_config: Use a pre-existing .build_config. Must be of type
+  #     "apk".
+  #   use_interface_jars: Use all dependent interface .jars rather than
+  #     implementation .jars.
+  #   direct_deps_only: Do not recurse on deps.
+  #   data, deps, testonly, visibility: Usual meaning.
+  #
+  # Example
+  #   dist_jar("lib_fatjar") {
+  #     deps = [ ":my_java_lib" ]
+  #   }
+  template("dist_jar") {
+    if (defined(invoker.override_build_config)) {
+      _build_config = invoker.override_build_config
+    } else {
+      _build_config = "$target_gen_dir/$target_name.build_config"
+      _build_config_target_name = "${target_name}__build_config"
+
+      write_build_config(_build_config_target_name) {
+        forward_variables_from(invoker, [ "testonly" ])
+        type = "dist_jar"
+        if (defined(invoker.deps)) {
+          possible_config_deps = invoker.deps
+        }
+        build_config = _build_config
+      }
+    }
+
+    action(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "data",
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      script = "//build/android/gyp/create_dist_jar.py"
+      depfile = "$target_gen_dir/$target_name.d"
+
+      inputs = [
+        _build_config,
+      ]
+
+      outputs = [
+        invoker.output,
+      ]
+
+      if (defined(_build_config_target_name)) {
+        deps += [ ":$_build_config_target_name" ]
+      }
+
+      args = [
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
+        "--output",
+        rebase_path(invoker.output, root_build_dir),
+      ]
+
+      _rebased_build_config = rebase_path(_build_config, root_build_dir)
+      if (defined(invoker.direct_deps_only) && invoker.direct_deps_only) {
+        if (defined(invoker.use_interface_jars) && invoker.use_interface_jars) {
+          args += [ "--inputs=@FileArg($_rebased_build_config:javac:interface_classpath)" ]
+        } else {
+          args +=
+              [ "--inputs=@FileArg($_rebased_build_config:javac:classpath)" ]
+        }
+      } else {
+        if (defined(invoker.use_interface_jars) && invoker.use_interface_jars) {
+          args += [ "--inputs=@FileArg($_rebased_build_config:dist_jar:all_interface_jars)" ]
+        } else {
+          args += [ "--inputs=@FileArg($_rebased_build_config:dist_jar:dependency_jars)" ]
+        }
+      }
+    }
+  }
+
   # Declare an Android library target
   #
   # This target creates an Android library containing java code and Android
@@ -1406,6 +1486,8 @@ if (enable_java_templates) {
   #   proguard_jar_path: The path to proguard.jar you wish to use. If undefined,
   #     the proguard used will be the checked in one in //third_party/proguard.
   #   never_incremental: If true, |incremental_apk_by_default| will be ignored.
+  #   aapt_locale_whitelist: If set, all locales not in this list will be
+  #     stripped from resources.arsc.
   #
   # Example
   #   android_apk("foo_apk") {
@@ -1669,6 +1751,10 @@ if (enable_java_templates) {
 
     _final_deps = []
 
+    if (enable_multidex) {
+      _generated_proguard_main_dex_config =
+          "$base_path.resources.main-dex-proguard.txt"
+    }
     _generated_proguard_config = "$base_path.resources.proguard.txt"
     process_resources_target = "${_template_name}__process_resources"
     process_resources(process_resources_target) {
@@ -1688,6 +1774,9 @@ if (enable_java_templates) {
       all_resources_zip_path = _all_resources_zip_path
       generate_constant_ids = true
       proguard_file = _generated_proguard_config
+      if (enable_multidex) {
+        proguard_file_main_dex = _generated_proguard_main_dex_config
+      }
 
       build_config = _build_config
       deps = _android_manifest_deps + [ ":$build_config_target" ]
@@ -1823,28 +1912,16 @@ if (enable_java_templates) {
     # able to just do that calculation at build time instead.
     if (defined(invoker.dist_ijar_path)) {
       _dist_ijar_path = invoker.dist_ijar_path
-      action("${_template_name}_dist_ijar") {
-        script = "//build/android/gyp/create_dist_jar.py"
-        depfile = "$target_gen_dir/$target_name.d"
-        inputs = [
-          _build_config,
-        ]
-        outputs = [
-          "${_dist_ijar_path}",
-        ]
+      dist_jar("${_template_name}_dist_ijar") {
+        override_build_config = _build_config
+        output = _dist_ijar_path
         data = [
           _dist_ijar_path,
         ]
-        args = [
-          "--depfile",
-          rebase_path(depfile, root_build_dir),
-          "--output",
-          rebase_path("${_dist_ijar_path}", root_build_dir),
-          "--inputs=@FileArg($_rebased_build_config:dist_jar:all_interface_jars)",
-        ]
+        use_interface_jars = true
         deps = [
-          ":$build_config_target",  # Generates the build config file.
-          ":$java_target",  # Generates the jar file.
+          ":$build_config_target",
+          ":$java_target",
         ]
       }
     }
@@ -1934,6 +2011,8 @@ if (enable_java_templates) {
       if (!_proguard_enabled) {
         if (enable_multidex) {
           _dex_arg_key = "${_rebased_build_config}:dist_jar:dependency_jars"
+          extra_main_dex_proguard_config = _generated_proguard_main_dex_config
+          deps += [ ":$process_resources_target" ]
         } else {
           _dex_arg_key =
               "${_rebased_build_config}:final_dex:dependency_dex_files"
@@ -2007,15 +2086,7 @@ if (enable_java_templates) {
     _extra_native_libs_deps = []
     assert(_extra_native_libs_deps == [])  # Mark as used.
     _extra_native_libs_even_when_incremental = []
-    _extra_native_libs_even_when_incremental_deps = []
-    assert(_extra_native_libs_even_when_incremental_deps == [])  # Mark as used.
     if (_native_libs_deps != []) {
-      # zipalign can't align gdb_server, don't pack gdbserver temporarily.
-      if (is_debug && (!defined(invoker.page_align_shared_libraries) ||
-                       !invoker.page_align_shared_libraries)) {
-        _extra_native_libs_even_when_incremental = [ android_gdbserver ]
-      }
-
       if (_use_chromium_linker) {
         _extra_native_libs =
             [ "$root_shlib_dir/libchromium_android_linker$shlib_extension" ]
@@ -2031,13 +2102,13 @@ if (enable_java_templates) {
     create_apk("${_template_name}__create") {
       forward_variables_from(invoker,
                              [
+                               "aapt_locale_whitelist",
                                "alternative_android_sdk_jar",
                                "android_aapt_path",
                                "app_as_shared_lib",
                                "deps",
                                "extensions_to_not_compress",
                                "language_splits",
-                               "page_align_shared_libraries",
                                "public_deps",
                                "secondary_native_libs",
                                "shared_resources",
@@ -2054,7 +2125,6 @@ if (enable_java_templates) {
       dex_path = final_dex_path
       load_library_from_apk = _load_library_from_apk
       create_density_splits = _create_density_splits
-      emma_instrument = emma_coverage && !_emma_never_instrument
 
       if (!defined(extensions_to_not_compress)) {
         # Allow icu data, v8 snapshots, and pak files to be loaded directly from
@@ -2087,7 +2157,6 @@ if (enable_java_templates) {
            _extra_native_libs_even_when_incremental != []) &&
           !_create_abi_split) {
         deps += _native_libs_deps + _extra_native_libs_deps +
-                _extra_native_libs_even_when_incremental_deps +
                 [ _native_libs_file_arg_dep ]
         native_libs_filearg = _native_libs_file_arg
         native_libs = _extra_native_libs
@@ -2148,9 +2217,7 @@ if (enable_java_templates) {
                                  "public_deps",
                                ])
 
-        incremental_deps =
-            deps + _extra_native_libs_even_when_incremental_deps +
-            [ ":$_manifest_rule" ]
+        incremental_deps = deps + [ ":$_manifest_rule" ]
         deps = []
         deps = incremental_deps + _native_libs_deps + _extra_native_libs_deps +
                [ _native_libs_file_arg_dep ]

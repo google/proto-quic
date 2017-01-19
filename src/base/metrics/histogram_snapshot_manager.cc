@@ -62,7 +62,7 @@ void HistogramSnapshotManager::PrepareSamples(
     CHECK(false);  // Crash for the bucket order corruption.
     // Ensure that compiler keeps around pointers to |histogram| and its
     // internal |bucket_ranges_| for any minidumps.
-    base::debug::Alias(ranges_ptr);
+    base::debug::Alias(&ranges_ptr);
     base::debug::Alias(&ranges_checksum);
     base::debug::Alias(&ranges_calc_checksum);
     base::debug::Alias(&histogram_name);

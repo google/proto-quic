@@ -141,10 +141,6 @@ class BASE_EXPORT TaskTraits {
   // Returns true if tasks with these traits may use base/ sync primitives.
   bool with_base_sync_primitives() const { return with_base_sync_primitives_; }
 
-  // DEPRECATED
-  // TODO(fdoray): Remove this as part of crbug.com/675660
-  bool with_file_io() const { return may_block(); }
-
   // Returns the priority of tasks with these traits.
   TaskPriority priority() const { return priority_; }
 

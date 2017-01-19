@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "base/files/file_util.h"
+#include "base/files/memory_mapped_file.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
@@ -516,5 +517,159 @@ TEST(FileTest, GetInfoForDirectory) {
   EXPECT_TRUE(info.is_directory);
   EXPECT_FALSE(info.is_symbolic_link);
   EXPECT_EQ(0, info.size);
+}
+
+TEST(FileTest, DeleteNoop) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // Creating and closing a file with DELETE perms should do nothing special.
+  File file(file_path,
+            (base::File::FLAG_CREATE | base::File::FLAG_READ |
+             base::File::FLAG_WRITE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+  file.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
+}
+
+TEST(FileTest, Delete) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // Creating a file with DELETE and then marking for delete on close should
+  // delete it.
+  File file(file_path,
+            (base::File::FLAG_CREATE | base::File::FLAG_READ |
+             base::File::FLAG_WRITE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+  ASSERT_TRUE(file.DeleteOnClose(true));
+  file.Close();
+  ASSERT_FALSE(base::PathExists(file_path));
+}
+
+TEST(FileTest, DeleteThenRevoke) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // Creating a file with DELETE, marking it for delete, then clearing delete on
+  // close should not delete it.
+  File file(file_path,
+            (base::File::FLAG_CREATE | base::File::FLAG_READ |
+             base::File::FLAG_WRITE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+  ASSERT_TRUE(file.DeleteOnClose(true));
+  ASSERT_TRUE(file.DeleteOnClose(false));
+  file.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
+}
+
+TEST(FileTest, IrrevokableDeleteOnClose) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // DELETE_ON_CLOSE cannot be revoked by this opener.
+  File file(
+      file_path,
+      (base::File::FLAG_CREATE | base::File::FLAG_READ |
+       base::File::FLAG_WRITE | base::File::FLAG_DELETE_ON_CLOSE |
+       base::File::FLAG_SHARE_DELETE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+  // https://msdn.microsoft.com/library/windows/desktop/aa364221.aspx says that
+  // setting the dispositon has no effect if the handle was opened with
+  // FLAG_DELETE_ON_CLOSE. Do not make the test's success dependent on whether
+  // or not SetFileInformationByHandle indicates success or failure. (It happens
+  // to indicate success on Windows 10.)
+  file.DeleteOnClose(false);
+  file.Close();
+  ASSERT_FALSE(base::PathExists(file_path));
+}
+
+TEST(FileTest, IrrevokableDeleteOnCloseOther) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // DELETE_ON_CLOSE cannot be revoked by another opener.
+  File file(
+      file_path,
+      (base::File::FLAG_CREATE | base::File::FLAG_READ |
+       base::File::FLAG_WRITE | base::File::FLAG_DELETE_ON_CLOSE |
+       base::File::FLAG_SHARE_DELETE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+
+  File file2(
+      file_path,
+      (base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE |
+       base::File::FLAG_SHARE_DELETE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file2.IsValid());
+
+  file2.DeleteOnClose(false);
+  file2.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
+  file.Close();
+  ASSERT_FALSE(base::PathExists(file_path));
+}
+
+TEST(FileTest, DeleteWithoutPermission) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // It should not be possible to mark a file for deletion when it was not
+  // created/opened with DELETE.
+  File file(file_path, (base::File::FLAG_CREATE | base::File::FLAG_READ |
+                        base::File::FLAG_WRITE));
+  ASSERT_TRUE(file.IsValid());
+  ASSERT_FALSE(file.DeleteOnClose(true));
+  file.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
+}
+
+TEST(FileTest, UnsharedDeleteOnClose) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // Opening with DELETE_ON_CLOSE when a previous opener hasn't enabled sharing
+  // will fail.
+  File file(file_path, (base::File::FLAG_CREATE | base::File::FLAG_READ |
+                        base::File::FLAG_WRITE));
+  ASSERT_TRUE(file.IsValid());
+  File file2(
+      file_path,
+      (base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE |
+       base::File::FLAG_DELETE_ON_CLOSE | base::File::FLAG_SHARE_DELETE));
+  ASSERT_FALSE(file2.IsValid());
+
+  file.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
+}
+
+TEST(FileTest, NoDeleteOnCloseWithMappedFile) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+  FilePath file_path = temp_dir.GetPath().AppendASCII("file");
+
+  // Mapping a file into memory blocks DeleteOnClose.
+  File file(file_path,
+            (base::File::FLAG_CREATE | base::File::FLAG_READ |
+             base::File::FLAG_WRITE | base::File::FLAG_CAN_DELETE_ON_CLOSE));
+  ASSERT_TRUE(file.IsValid());
+  ASSERT_EQ(5, file.WriteAtCurrentPos("12345", 5));
+
+  {
+    base::MemoryMappedFile mapping;
+    ASSERT_TRUE(mapping.Initialize(file.Duplicate()));
+    ASSERT_EQ(5U, mapping.length());
+
+    EXPECT_FALSE(file.DeleteOnClose(true));
+  }
+
+  file.Close();
+  ASSERT_TRUE(base::PathExists(file_path));
 }
 #endif  // defined(OS_WIN)

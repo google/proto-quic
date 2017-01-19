@@ -16,10 +16,10 @@ class CertNetFetcher;
 class NET_EXPORT CertIssuerSourceAia : public CertIssuerSource {
  public:
   // Creates CertIssuerSource that will use |cert_fetcher| to retrieve issuers
-  // using AuthorityInfoAccess URIs. |cert_fetcher| must outlive the
-  // CertIssuerSourceAia.  CertIssuerSourceAia must be created and used only on
-  // a single thread, which is the thread |cert_fetcher| will be operated from.
-  explicit CertIssuerSourceAia(CertNetFetcher* cert_fetcher);
+  // using AuthorityInfoAccess URIs. CertIssuerSourceAia must be created and
+  // used only on a single thread, which is the thread |cert_fetcher| will be
+  // operated from.
+  explicit CertIssuerSourceAia(scoped_refptr<CertNetFetcher> cert_fetcher);
   ~CertIssuerSourceAia() override;
 
   // CertIssuerSource implementation:
@@ -29,7 +29,7 @@ class NET_EXPORT CertIssuerSourceAia : public CertIssuerSource {
                          std::unique_ptr<Request>* out_req) override;
 
  private:
-  CertNetFetcher* cert_fetcher_;
+  scoped_refptr<CertNetFetcher> cert_fetcher_;
 
   DISALLOW_COPY_AND_ASSIGN(CertIssuerSourceAia);
 };

@@ -249,6 +249,7 @@ Still reading?
     <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="StringFormatCount" severity="Error">
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values/android_chrome_strings.xml"/>
   </issue>
@@ -256,6 +257,7 @@ Still reading?
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-cs/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-da/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pl/android_chrome_strings.xml"/>
+    <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-pt-rBR/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-sv/android_chrome_strings.xml"/>
     <ignore regexp="gen/chrome/android/chrome_strings_grd.resources.zip/values-tl/android_chrome_strings.xml"/>
   </issue>

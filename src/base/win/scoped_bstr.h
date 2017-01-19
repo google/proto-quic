@@ -18,7 +18,7 @@ namespace base {
 namespace win {
 
 // Manages a BSTR string pointer.
-// The class interface is based on scoped_ptr.
+// The class interface is based on unique_ptr.
 class BASE_EXPORT ScopedBstr {
  public:
   ScopedBstr() : bstr_(NULL) {

@@ -50,6 +50,7 @@ HpackDecoderDynamicTable::HpackDecoderDynamicTable() {}
 HpackDecoderDynamicTable::~HpackDecoderDynamicTable() {}
 
 void HpackDecoderDynamicTable::DynamicTableSizeUpdate(size_t size_limit) {
+  DVLOG(3) << "HpackDecoderDynamicTable::DynamicTableSizeUpdate " << size_limit;
   EnsureSizeNoMoreThan(size_limit);
   DCHECK_LE(current_size_, size_limit);
   size_limit_ = size_limit;

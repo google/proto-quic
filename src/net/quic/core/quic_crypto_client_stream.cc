@@ -16,6 +16,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
 using std::string;
@@ -100,6 +101,7 @@ QuicCryptoClientStream::QuicCryptoClientStream(
       verify_context_(verify_context),
       proof_verify_callback_(nullptr),
       proof_handler_(proof_handler),
+      verify_ok_(false),
       stateless_reject_received_(false),
       num_scup_messages_received_(0) {
   DCHECK_EQ(Perspective::IS_CLIENT, session->connection()->perspective());
@@ -305,14 +307,14 @@ void QuicCryptoClientStream::DoSendCHLO(
     const QuicByteCount max_packet_size =
         session()->connection()->max_packet_length();
     if (max_packet_size <= kFramingOverhead) {
-      DLOG(DFATAL) << "max_packet_length (" << max_packet_size
-                   << ") has no room for framing overhead.";
+      QUIC_DLOG(DFATAL) << "max_packet_length (" << max_packet_size
+                        << ") has no room for framing overhead.";
       CloseConnectionWithDetails(QUIC_INTERNAL_ERROR,
                                  "max_packet_size too smalll");
       return;
     }
     if (kClientHelloMinimumSize > max_packet_size - kFramingOverhead) {
-      DLOG(DFATAL) << "Client hello won't fit in a single packet.";
+      QUIC_DLOG(DFATAL) << "Client hello won't fit in a single packet.";
       CloseConnectionWithDetails(QUIC_INTERNAL_ERROR, "CHLO too large");
       return;
     }
@@ -465,7 +467,7 @@ QuicAsyncStatus QuicCryptoClientStream::DoVerifyProof(
   switch (status) {
     case QUIC_PENDING:
       proof_verify_callback_ = proof_verify_callback;
-      DVLOG(1) << "Doing VerifyProof";
+      QUIC_DVLOG(1) << "Doing VerifyProof";
       break;
     case QUIC_FAILURE:
       break;
@@ -532,7 +534,7 @@ QuicAsyncStatus QuicCryptoClientStream::DoGetChannelID(
   switch (status) {
     case QUIC_PENDING:
       channel_id_source_callback_ = channel_id_source_callback;
-      DVLOG(1) << "Looking up channel ID";
+      QUIC_DVLOG(1) << "Looking up channel ID";
       break;
     case QUIC_FAILURE:
       next_state_ = STATE_NONE;

@@ -25,6 +25,8 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/waitable_event.h"
+#include "base/task_scheduler/post_task.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread.h"
@@ -513,6 +515,33 @@ TEST_F(URLFetcherTest, DifferentThreadsTest) {
   std::string data;
   ASSERT_TRUE(delegate.fetcher()->GetResponseAsString(&data));
   EXPECT_EQ(kDefaultResponseBody, data);
+}
+
+// Create the fetcher from a sequenced (not single-threaded) task. Verify that
+// the expected response is received.
+TEST_F(URLFetcherTest, SequencedTaskTest) {
+  base::test::ScopedTaskScheduler scoped_task_scheduler(
+      base::MessageLoop::current());
+  auto sequenced_task_runner =
+      base::CreateSequencedTaskRunnerWithTraits(base::TaskTraits());
+
+  auto delegate = base::MakeUnique<WaitingURLFetcherDelegate>();
+  sequenced_task_runner->PostTask(
+      FROM_HERE, base::Bind(&WaitingURLFetcherDelegate::CreateFetcher,
+                            base::Unretained(delegate.get()),
+                            test_server_->GetURL(kDefaultResponsePath),
+                            URLFetcher::GET, CreateCrossThreadContextGetter()));
+  base::RunLoop().RunUntilIdle();
+  delegate->StartFetcherAndWait();
+
+  EXPECT_TRUE(delegate->fetcher()->GetStatus().is_success());
+  EXPECT_EQ(200, delegate->fetcher()->GetResponseCode());
+  std::string data;
+  ASSERT_TRUE(delegate->fetcher()->GetResponseAsString(&data));
+  EXPECT_EQ(kDefaultResponseBody, data);
+
+  sequenced_task_runner->DeleteSoon(FROM_HERE, delegate.release());
+  base::RunLoop().RunUntilIdle();
 }
 
 // Tests to make sure CancelAll() will successfully cancel existing URLFetchers.

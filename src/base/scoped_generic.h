@@ -14,7 +14,7 @@
 
 namespace base {
 
-// This class acts like ScopedPtr with a custom deleter (although is slightly
+// This class acts like unique_ptr with a custom deleter (although is slightly
 // less fancy in some of the more escoteric respects) except that it keeps a
 // copy of the object rather than a pointer, and we require that the contained
 // object has some kind of "invalid" value.
@@ -22,12 +22,12 @@ namespace base {
 // Defining a scoper based on this class allows you to get a scoper for
 // non-pointer types without having to write custom code for set, reset, and
 // move, etc. and get almost identical semantics that people are used to from
-// scoped_ptr.
+// unique_ptr.
 //
 // It is intended that you will typedef this class with an appropriate deleter
 // to implement clean up tasks for objects that act like pointers from a
 // resource management standpoint but aren't, such as file descriptors and
-// various types of operating system handles. Using scoped_ptr for these
+// various types of operating system handles. Using unique_ptr for these
 // things requires that you keep a pointer to the handle valid for the lifetime
 // of the scoper (which is easy to mess up).
 //
@@ -97,7 +97,7 @@ class ScopedGeneric {
   }
 
   // Frees the currently owned object, if any. Then takes ownership of a new
-  // object, if given. Self-resets are not allowd as on scoped_ptr. See
+  // object, if given. Self-resets are not allowd as on unique_ptr. See
   // http://crbug.com/162971
   void reset(const element_type& value = traits_type::InvalidValue()) {
     if (data_.generic != traits_type::InvalidValue() && data_.generic == value)

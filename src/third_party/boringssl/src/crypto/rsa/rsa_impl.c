@@ -65,6 +65,7 @@
 #include <openssl/thread.h>
 
 #include "internal.h"
+#include "../bn/internal.h"
 #include "../internal.h"
 
 
@@ -768,8 +769,6 @@ err:
 int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
                                    BIGNUM *e_value, BN_GENCB *cb) {
   BIGNUM *r0 = NULL, *r1 = NULL, *r2 = NULL, *r3 = NULL, *tmp;
-  BIGNUM local_r0, local_p;
-  BIGNUM *pr0, *p;
   int prime_bits, ok = -1, n = 0, i, j;
   BN_CTX *ctx = NULL;
   STACK_OF(RSA_additional_prime) *additional_primes = NULL;
@@ -998,9 +997,7 @@ int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
       goto err;
     }
   }
-  pr0 = &local_r0;
-  BN_with_flags(pr0, r0, BN_FLG_CONSTTIME);
-  if (!BN_mod_inverse(rsa->d, rsa->e, pr0, ctx)) {
+  if (!BN_mod_inverse(rsa->d, rsa->e, r0, ctx)) {
     goto err; /* d */
   }
 
@@ -1014,10 +1011,13 @@ int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
     goto err;
   }
 
-  /* calculate inverse of q mod p */
-  p = &local_p;
-  BN_with_flags(p, rsa->p, BN_FLG_CONSTTIME);
-  if (!BN_mod_inverse(rsa->iqmp, rsa->q, p, ctx)) {
+  /* Calculate inverse of q mod p. Note that although RSA key generation is far
+   * from constant-time, |bn_mod_inverse_secret_prime| uses the same modular
+   * exponentation logic as in RSA private key operations and, if the RSAZ-1024
+   * code is enabled, will be optimized for common RSA prime sizes. */
+  if (!BN_MONT_CTX_set_locked(&rsa->mont_p, &rsa->lock, rsa->p, ctx) ||
+      !bn_mod_inverse_secret_prime(rsa->iqmp, rsa->q, rsa->p, ctx,
+                                   rsa->mont_p)) {
     goto err;
   }
 
@@ -1026,7 +1026,9 @@ int rsa_default_multi_prime_keygen(RSA *rsa, int bits, int num_primes,
         sk_RSA_additional_prime_value(additional_primes, i - 2);
     if (!BN_sub(ap->exp, ap->prime, BN_value_one()) ||
         !BN_mod(ap->exp, rsa->d, ap->exp, ctx) ||
-        !BN_mod_inverse(ap->coeff, ap->r, ap->prime, ctx)) {
+        !BN_MONT_CTX_set_locked(&ap->mont, &rsa->lock, ap->prime, ctx) ||
+        !bn_mod_inverse_secret_prime(ap->coeff, ap->r, ap->prime, ctx,
+                                     ap->mont)) {
       goto err;
     }
   }

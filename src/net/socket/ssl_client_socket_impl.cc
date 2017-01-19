@@ -25,7 +25,6 @@
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_local.h"
-#include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
@@ -565,9 +564,36 @@ void SSLClientSocketImpl::SetSSLKeyLogFile(
 
 void SSLClientSocketImpl::GetSSLCertRequestInfo(
     SSLCertRequestInfo* cert_request_info) {
+  if (!ssl_) {
+    NOTREACHED();
+    return;
+  }
+
   cert_request_info->host_and_port = host_and_port_;
-  cert_request_info->cert_authorities = cert_authorities_;
-  cert_request_info->cert_key_types = cert_key_types_;
+
+  cert_request_info->cert_authorities.clear();
+  STACK_OF(X509_NAME)* authorities = SSL_get_client_CA_list(ssl_.get());
+  for (size_t i = 0; i < sk_X509_NAME_num(authorities); i++) {
+    X509_NAME* ca_name = sk_X509_NAME_value(authorities, i);
+    uint8_t* str = nullptr;
+    int length = i2d_X509_NAME(ca_name, &str);
+    if (length > 0) {
+      cert_request_info->cert_authorities.push_back(std::string(
+          reinterpret_cast<const char*>(str), static_cast<size_t>(length)));
+    } else {
+      NOTREACHED();  // Error serializing |ca_name|.
+    }
+    OPENSSL_free(str);
+  }
+
+  cert_request_info->cert_key_types.clear();
+  const uint8_t* client_cert_types;
+  size_t num_client_cert_types =
+      SSL_get0_certificate_types(ssl_.get(), &client_cert_types);
+  for (size_t i = 0; i < num_client_cert_types; i++) {
+    cert_request_info->cert_key_types.push_back(
+        static_cast<SSLClientCertType>(client_cert_types[i]));
+  }
 }
 
 ChannelIDService* SSLClientSocketImpl::GetChannelIDService() const {
@@ -793,9 +819,6 @@ bool SSLClientSocketImpl::GetSSLInfo(SSLInfo* ssl_info) {
   SSLConnectionStatusSetVersion(GetNetSSLVersion(ssl_.get()),
                                 &ssl_info->connection_status);
 
-  if (!SSL_get_secure_renegotiation_support(ssl_.get()))
-    ssl_info->connection_status |= SSL_CONNECTION_NO_RENEGOTIATION_EXTENSION;
-
   ssl_info->handshake_type = SSL_session_reused(ssl_.get())
                                  ? SSLInfo::HANDSHAKE_RESUME
                                  : SSLInfo::HANDSHAKE_FULL;
@@ -811,42 +834,20 @@ int64_t SSLClientSocketImpl::GetTotalReceivedBytes() const {
   return transport_->socket()->GetTotalReceivedBytes();
 }
 
-void SSLClientSocketImpl::DumpMemoryStats(
-    base::trace_event::ProcessMemoryDump* pmd,
-    const std::string& parent_dump_absolute_name) const {
-  size_t total_size = 0;
-  base::trace_event::MemoryAllocatorDump* socket_dump =
-      pmd->CreateAllocatorDump(base::StringPrintf(
-          "%s/ssl_socket_%p", parent_dump_absolute_name.c_str(), this));
-  if (transport_adapter_) {
-    size_t bio_buffers_size = transport_adapter_->GetAllocationSize();
-    socket_dump->AddScalar("buffer_size",
-                           base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                           bio_buffers_size);
-    total_size += bio_buffers_size;
-  }
-  size_t total_cert_size = 0;
-  size_t certs_count = 0;
+void SSLClientSocketImpl::DumpMemoryStats(SocketMemoryStats* stats) const {
+  if (transport_adapter_)
+    stats->buffer_size = transport_adapter_->GetAllocationSize();
   if (server_cert_chain_) {
-    certs_count = server_cert_chain_->size();
-    for (size_t i = 0; i < certs_count; ++i) {
+    for (size_t i = 0; i < server_cert_chain_->size(); ++i) {
       X509* cert = server_cert_chain_->Get(i);
-      total_cert_size += i2d_X509(cert, nullptr);
+      // This measures the lower bound of the serialized certificate. It doesn't
+      // measure the actual memory used, which is 4x this amount (see
+      // crbug.com/671420 for more details).
+      stats->serialized_cert_size += i2d_X509(cert, nullptr);
     }
+    stats->cert_count = server_cert_chain_->size();
   }
-  total_size += total_cert_size;
-  // This measures the lower bound of the serialized certificate. It doesn't
-  // measure the actual memory used, which is 4x this amount (see
-  // crbug.com/671420 for more details).
-  socket_dump->AddScalar("serialized_cert_size",
-                         base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                         total_cert_size);
-  socket_dump->AddScalar("cert_count",
-                         base::trace_event::MemoryAllocatorDump::kUnitsObjects,
-                         certs_count);
-  socket_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
-                         base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                         total_size);
+  stats->total_size = stats->buffer_size + stats->serialized_cert_size;
 }
 
 // static
@@ -1649,26 +1650,8 @@ int SSLClientSocketImpl::ClientCertRequestCallback(SSL* ssl) {
 #else   // !defined(OS_IOS)
   if (!ssl_config_.send_client_cert) {
     // First pass: we know that a client certificate is needed, but we do not
-    // have one at hand.
-    STACK_OF(X509_NAME)* authorities = SSL_get_client_CA_list(ssl);
-    for (size_t i = 0; i < sk_X509_NAME_num(authorities); i++) {
-      X509_NAME* ca_name = (X509_NAME*)sk_X509_NAME_value(authorities, i);
-      unsigned char* str = NULL;
-      int length = i2d_X509_NAME(ca_name, &str);
-      cert_authorities_.push_back(std::string(
-          reinterpret_cast<const char*>(str), static_cast<size_t>(length)));
-      OPENSSL_free(str);
-    }
-
-    const unsigned char* client_cert_types;
-    size_t num_client_cert_types =
-        SSL_get0_certificate_types(ssl, &client_cert_types);
-    for (size_t i = 0; i < num_client_cert_types; i++) {
-      cert_key_types_.push_back(
-          static_cast<SSLClientCertType>(client_cert_types[i]));
-    }
-
-    // Suspends handshake. SSL_get_error will return SSL_ERROR_WANT_X509_LOOKUP.
+    // have one at hand. Suspend the handshake. SSL_get_error will return
+    // SSL_ERROR_WANT_X509_LOOKUP.
     return -1;
   }
 

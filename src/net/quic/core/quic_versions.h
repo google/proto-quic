@@ -29,6 +29,8 @@ enum QuicVersion {
   QUIC_VERSION_35 = 35,  // Allows endpoints to independently set stream limit.
   QUIC_VERSION_36 = 36,  // Add support to force HOL blocking.
   QUIC_VERSION_37 = 37,  // Add perspective into null encryption.
+  QUIC_VERSION_38 = 38,  // Experimental support for HTTP stream pairs
+                         // and HPACK HoL avoidance.
 
   // IMPORTANT: if you are adding to this list, follow the instructions at
   // http://sites/quic/adding-and-removing-versions
@@ -42,7 +44,8 @@ enum QuicVersion {
 // IMPORTANT: if you are adding to this list, follow the instructions at
 // http://sites/quic/adding-and-removing-versions
 static const QuicVersion kSupportedQuicVersions[] = {
-    QUIC_VERSION_37, QUIC_VERSION_36, QUIC_VERSION_35, QUIC_VERSION_34};
+    QUIC_VERSION_38, QUIC_VERSION_37, QUIC_VERSION_36, QUIC_VERSION_35,
+    QUIC_VERSION_34};
 
 typedef std::vector<QuicVersion> QuicVersionVector;
 

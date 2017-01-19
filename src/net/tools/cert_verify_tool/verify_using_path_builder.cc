@@ -281,6 +281,9 @@ bool VerifyUsingPathBuilder(
 
   // Initialize an AIA fetcher, that uses a separate thread for running the
   // networking message loop.
+// TODO(estark): update this code to use the new CertNetFetcher
+// interface that takes a URLRequestContext*.
+#if 0
   base::Thread::Options options(base::MessageLoop::TYPE_IO, 0);
   base::Thread thread("network_thread");
   CHECK(thread.StartWithOptions(options));
@@ -290,13 +293,16 @@ bool VerifyUsingPathBuilder(
       CreateCertNetFetcher(url_request_context_getter.get());
   net::CertIssuerSourceAia aia_cert_issuer_source(cert_net_fetcher.get());
   path_builder.AddCertIssuerSource(&aia_cert_issuer_source);
+#endif
 
   // Run the path builder.
   path_builder.Run();
 
+#if 0
   // Stop the temporary network thread..
   url_request_context_getter->ShutDown();
   thread.Stop();
+#endif
 
   // TODO(crbug.com/634443): Display any errors/warnings associated with path
   //                         building that were not part of a particular

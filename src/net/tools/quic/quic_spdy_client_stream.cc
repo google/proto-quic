@@ -6,11 +6,11 @@
 
 #include <utility>
 
-#include "base/logging.h"
 #include "base/stl_util.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_client_promised_info.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/tools/quic/quic_client_session.h"
 
@@ -33,8 +33,8 @@ QuicSpdyClientStream::~QuicSpdyClientStream() {}
 
 void QuicSpdyClientStream::OnStreamFrame(const QuicStreamFrame& frame) {
   if (!allow_bidirectional_data() && !write_side_closed()) {
-    DVLOG(1) << "Got a response before the request was complete.  "
-             << "Aborting request.";
+    QUIC_DLOG(INFO) << "Got a response before the request was complete.  "
+                    << "Aborting request.";
     CloseWriteSide();
   }
   QuicSpdyStream::OnStreamFrame(frame);
@@ -50,14 +50,15 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(
   header_bytes_read_ += frame_len;
   if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length_,
                                          &response_headers_)) {
-    DLOG(ERROR) << "Failed to parse header list: " << header_list.DebugString();
+    QUIC_DLOG(ERROR) << "Failed to parse header list: "
+                     << header_list.DebugString();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
     return;
   }
 
   if (!ParseHeaderStatusCode(response_headers_, &response_code_)) {
-    DLOG(ERROR) << "Received invalid response code: "
-                << response_headers_[":status"].as_string();
+    QUIC_DLOG(ERROR) << "Received invalid response code: "
+                     << response_headers_[":status"].as_string();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
     return;
   }
@@ -72,7 +73,7 @@ void QuicSpdyClientStream::OnInitialHeadersComplete(
   }
 
   ConsumeHeaderList();
-  DVLOG(1) << "headers complete for stream " << id();
+  QUIC_DVLOG(1) << "headers complete for stream " << id();
 
   session_->OnInitialHeadersComplete(id(), response_headers_);
 }
@@ -94,8 +95,8 @@ void QuicSpdyClientStream::OnPromiseHeaderList(
   SpdyHeaderBlock promise_headers;
   if (!SpdyUtils::CopyAndValidateHeaders(header_list, &content_length,
                                          &promise_headers)) {
-    DLOG(ERROR) << "Failed to parse promise headers: "
-                << header_list.DebugString();
+    QUIC_DLOG(ERROR) << "Failed to parse promise headers: "
+                     << header_list.DebugString();
     Reset(QUIC_BAD_APPLICATION_PAYLOAD);
     return;
   }
@@ -118,14 +119,14 @@ void QuicSpdyClientStream::OnDataAvailable() {
       // No more data to read.
       break;
     }
-    DVLOG(1) << "Client processed " << iov.iov_len << " bytes for stream "
-             << id();
+    QUIC_DVLOG(1) << "Client processed " << iov.iov_len << " bytes for stream "
+                  << id();
     data_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
 
     if (content_length_ >= 0 &&
         data_.size() > static_cast<uint64_t>(content_length_)) {
-      DLOG(ERROR) << "Invalid content length (" << content_length_
-                  << ") with data of size " << data_.size();
+      QUIC_DLOG(ERROR) << "Invalid content length (" << content_length_
+                       << ") with data of size " << data_.size();
       Reset(QUIC_BAD_APPLICATION_PAYLOAD);
       return;
     }

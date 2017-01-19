@@ -983,7 +983,6 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     SSL_CTX_set_alpn_select_cb(ssl_ctx.get(), AlpnSelectCallback, NULL);
   }
 
-  SSL_CTX_set_tls_channel_id_enabled(ssl_ctx.get(), 1);
   SSL_CTX_set_channel_id_cb(ssl_ctx.get(), ChannelIdCallback);
 
   SSL_CTX_set_current_time_cb(ssl_ctx.get(), CurrentTimeCallback);
@@ -1044,6 +1043,10 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
 
   if (config->enable_short_header) {
     SSL_CTX_set_short_header_enabled(ssl_ctx.get(), 1);
+  }
+
+  if (config->enable_early_data) {
+    SSL_CTX_set_early_data_enabled(ssl_ctx.get(), 1);
   }
 
   return ssl_ctx;
@@ -1302,11 +1305,22 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
     }
   }
 
-  if (config->expect_extended_master_secret) {
-    if (!SSL_get_extms_support(ssl)) {
-      fprintf(stderr, "No EMS for connection when expected");
-      return false;
-    }
+  if (config->expect_extended_master_secret && !SSL_get_extms_support(ssl)) {
+    fprintf(stderr, "No EMS for connection when expected\n");
+    return false;
+  }
+
+  if (config->expect_secure_renegotiation &&
+      !SSL_get_secure_renegotiation_support(ssl)) {
+    fprintf(stderr, "No secure renegotiation for connection when expected\n");
+    return false;
+  }
+
+  if (config->expect_no_secure_renegotiation &&
+      SSL_get_secure_renegotiation_support(ssl)) {
+    fprintf(stderr,
+            "Secure renegotiation unexpectedly negotiated for connection\n");
+    return false;
   }
 
   if (!config->expected_ocsp_response.empty()) {
@@ -1761,6 +1775,19 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
       }
     }
   } else {
+    if (config->read_with_unfinished_write) {
+      if (!config->async) {
+        fprintf(stderr, "-read-with-unfinished-write requires -async.\n");
+        return false;
+      }
+
+      int write_ret = SSL_write(ssl.get(),
+                          reinterpret_cast<const uint8_t *>("unfinished"), 10);
+      if (SSL_get_error(ssl.get(), write_ret) != SSL_ERROR_WANT_WRITE) {
+        fprintf(stderr, "Failed to leave unfinished write.\n");
+        return false;
+      }
+    }
     if (config->shim_writes_first) {
       if (WriteAll(ssl.get(), reinterpret_cast<const uint8_t *>("hello"),
                    5) < 0) {
@@ -1831,6 +1858,19 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
               "new session was%s cached, but we expected the opposite\n",
               GetTestState(ssl.get())->got_new_session ? "" : " not");
       return false;
+    }
+
+    if (expect_new_session) {
+      bool got_early_data_info =
+          GetTestState(ssl.get())->new_session->ticket_max_early_data != 0;
+      if (config->expect_early_data_info != got_early_data_info) {
+        fprintf(
+            stderr,
+            "new session did%s include ticket_early_data_info, but we expected "
+            "the opposite\n",
+            got_early_data_info ? "" : " not");
+        return false;
+      }
     }
   }
 

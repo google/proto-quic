@@ -59,12 +59,6 @@ bool IsValidInput(const base::StringPiece& scheme,
   if (!is_standard)
     return false;
 
-  // These schemes do not follow the generic URL syntax, so we treat them as
-  // invalid (scheme, host, port) tuples (even though such URLs' _Origin_ might
-  // have a (scheme, host, port) tuple, they themselves do not).
-  if (scheme == kFileSystemScheme || scheme == kBlobScheme)
-    return false;
-
   switch (scheme_type) {
     case SCHEME_WITH_PORT:
       // A URL with |scheme| is required to have the host and port (may be

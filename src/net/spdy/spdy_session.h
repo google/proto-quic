@@ -47,12 +47,6 @@
 #include "url/gurl.h"
 #include "url/scheme_host_port.h"
 
-namespace base {
-namespace trace_event {
-class ProcessMemoryDump;
-}
-}
-
 namespace net {
 
 namespace test {
@@ -117,20 +111,22 @@ enum SpdyProtocolErrorDetails {
   // SpdyRstStreamStatus mappings.
   STATUS_CODE_NO_ERROR = 41,
   STATUS_CODE_PROTOCOL_ERROR = 11,
-  STATUS_CODE_INVALID_STREAM = 12,
-  STATUS_CODE_REFUSED_STREAM = 13,
-  STATUS_CODE_UNSUPPORTED_VERSION = 14,
-  STATUS_CODE_CANCEL = 15,
   STATUS_CODE_INTERNAL_ERROR = 16,
   STATUS_CODE_FLOW_CONTROL_ERROR = 17,
-  STATUS_CODE_STREAM_IN_USE = 18,
-  STATUS_CODE_STREAM_ALREADY_CLOSED = 19,
-  STATUS_CODE_FRAME_SIZE_ERROR = 21,
   STATUS_CODE_SETTINGS_TIMEOUT = 32,
+  STATUS_CODE_STREAM_CLOSED = 12,
+  STATUS_CODE_FRAME_SIZE_ERROR = 21,
+  STATUS_CODE_REFUSED_STREAM = 13,
+  STATUS_CODE_CANCEL = 15,
+  STATUS_CODE_COMPRESSION_ERROR = 42,
   STATUS_CODE_CONNECT_ERROR = 33,
   STATUS_CODE_ENHANCE_YOUR_CALM = 34,
   STATUS_CODE_INADEQUATE_SECURITY = 35,
   STATUS_CODE_HTTP_1_1_REQUIRED = 36,
+  // Deprecated SpdyRstStrreamStatus mappings.
+  STATUS_CODE_UNSUPPORTED_VERSION = 14,
+  STATUS_CODE_STREAM_IN_USE = 18,
+  STATUS_CODE_STREAM_ALREADY_CLOSED = 19,
 
   // SpdySession errors
   PROTOCOL_ERROR_UNEXPECTED_PING = 22,
@@ -142,7 +138,7 @@ enum SpdyProtocolErrorDetails {
   PROTOCOL_ERROR_RECEIVE_WINDOW_VIOLATION = 28,
 
   // Next free value.
-  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 42,
+  NUM_SPDY_PROTOCOL_ERROR_DETAILS = 43,
 };
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
     MapFramerErrorToProtocolError(SpdyFramer::SpdyError error);
@@ -155,7 +151,7 @@ SpdyGoAwayStatus NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
 // to be updated with new values, as do the mapping functions above.
 static_assert(17 == SpdyFramer::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
-static_assert(17 == RST_STREAM_NUM_STATUS_CODES,
+static_assert(14 == RST_STREAM_NUM_STATUS_CODES,
               "SpdyProtocolErrorDetails / RstStreamStatus mismatch");
 
 // A helper class used to manage a request to create a stream.
@@ -326,7 +322,11 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // okay to create a new stream (in which case |spdy_stream| is
   // reset).  Returns an error (not ERR_IO_PENDING) otherwise, and
   // resets |spdy_stream|.
+  //
+  // If a stream was found and the stream is still open, the priority
+  // of that stream is updated to match |priority|.
   int GetPushStream(const GURL& url,
+                    RequestPriority priority,
                     base::WeakPtr<SpdyStream>* spdy_stream,
                     const NetLogWithSource& stream_net_log);
 
@@ -560,10 +560,12 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // HigherLayeredPool implementation:
   bool CloseOneIdleConnection() override;
 
-  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
-  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
-  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
-                       const std::string& parent_dump_absolute_name) const;
+  // Dumps memory allocation stats to |stats|. Sets |*is_session_active| to
+  // indicate whether session is active.
+  // |stats| can be assumed as being default initialized upon entry.
+  // Implementation overrides fields in |stats|.
+  void DumpMemoryStats(StreamSocket::SocketMemoryStats* stats,
+                       bool* is_session_active) const;
 
  private:
   friend class test::SpdyStreamTest;
@@ -674,7 +676,6 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
 
   void TryCreatePushStream(SpdyStreamId stream_id,
                            SpdyStreamId associated_stream_id,
-                           SpdyPriority priority,
                            SpdyHeaderBlock headers);
 
   // Close the stream pointed to by the given iterator. Note that that
@@ -694,12 +695,16 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Send a RST_STREAM frame with the given parameters. There should
   // either be no active stream with the given ID, or that active
   // stream should be closed shortly after this function is called.
-  //
-  // TODO(akalin): Rename this to EnqueueResetStreamFrame().
   void EnqueueResetStreamFrame(SpdyStreamId stream_id,
                                RequestPriority priority,
                                SpdyRstStreamStatus status,
                                const std::string& description);
+
+  // Send a PRIORITY frame with the given parameters.
+  void EnqueuePriorityFrame(SpdyStreamId stream_id,
+                            SpdyStreamId dependency_id,
+                            int weight,
+                            bool exclusive);
 
   // Calls DoReadLoop. Use this function instead of DoReadLoop when
   // posting a task to pump the read loop.

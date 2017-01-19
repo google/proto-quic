@@ -183,7 +183,6 @@ crypto_sources = [
   "src/crypto/pem/pem_x509.c",
   "src/crypto/pem/pem_xaux.c",
   "src/crypto/pkcs8/internal.h",
-  "src/crypto/pkcs8/p5_pbe.c",
   "src/crypto/pkcs8/p5_pbev2.c",
   "src/crypto/pkcs8/p8_pkey.c",
   "src/crypto/pkcs8/pkcs8.c",

@@ -51,6 +51,10 @@ class NET_EXPORT_PRIVATE HpackBlockDecoder {
   // OnHpackFragment method.
   DecodeStatus Decode(DecodeBuffer* db);
 
+  // Is the decoding process between entries (i.e. would the next byte be the
+  // first byte of a new HPACK entry)?
+  bool before_entry() const { return before_entry_; }
+
   std::string DebugString() const;
 
  private:

@@ -42,7 +42,6 @@
 
 #include "base/at_exit.h"
 #include "base/command_line.h"
-#include "base/logging.h"
 #include "base/message_loop/message_loop.h"
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"

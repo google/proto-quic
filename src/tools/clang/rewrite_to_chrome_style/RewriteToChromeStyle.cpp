@@ -24,8 +24,12 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
@@ -44,6 +48,7 @@ namespace {
 const char kBlinkFieldPrefix[] = "m_";
 const char kBlinkStaticMemberPrefix[] = "s_";
 const char kGeneratedFileRegex[] = "^gen/|/gen/";
+const char kGMockMethodNamePrefix[] = "gmock_";
 
 template <typename MatcherType, typename NodeType>
 bool IsMatching(const MatcherType& matcher,
@@ -77,6 +82,41 @@ AST_MATCHER_P(clang::FunctionTemplateDecl,
               clang::ast_matchers::internal::Matcher<clang::FunctionDecl>,
               InnerMatcher) {
   return InnerMatcher.matches(*Node.getTemplatedDecl(), Finder, Builder);
+}
+
+// Matches a CXXMethodDecl of a method declared via MOCK_METHODx macro if such
+// method mocks a method matched by the InnerMatcher.  For example if "foo"
+// matcher matches "interfaceMethod", then mocksMethod(foo()) will match
+// "gmock_interfaceMethod" declared by MOCK_METHOD_x(interfaceMethod).
+AST_MATCHER_P(clang::CXXMethodDecl,
+              mocksMethod,
+              clang::ast_matchers::internal::Matcher<clang::CXXMethodDecl>,
+              InnerMatcher) {
+  if (!Node.getDeclName().isIdentifier())
+    return false;
+
+  llvm::StringRef method_name = Node.getName();
+  if (!method_name.startswith(kGMockMethodNamePrefix))
+    return false;
+
+  llvm::StringRef mocked_method_name =
+      method_name.substr(strlen(kGMockMethodNamePrefix));
+  for (const auto& potentially_mocked_method : Node.getParent()->methods()) {
+    if (!potentially_mocked_method->isVirtual())
+      continue;
+
+    clang::DeclarationName decl_name = potentially_mocked_method->getDeclName();
+    if (!decl_name.isIdentifier() ||
+        potentially_mocked_method->getName() != mocked_method_name)
+      continue;
+    if (potentially_mocked_method->getNumParams() != Node.getNumParams())
+      continue;
+
+    if (InnerMatcher.matches(*potentially_mocked_method, Finder, Builder))
+      return true;
+  }
+
+  return false;
 }
 
 // If |InnerMatcher| matches |top|, then the returned matcher will match:
@@ -367,6 +407,65 @@ std::string CamelCaseToUnderscoreCase(StringRef input) {
   return output;
 }
 
+bool CanBeEvaluatedAtCompileTime(const clang::Stmt* stmt,
+                                 const clang::ASTContext& context) {
+  auto* expr = clang::dyn_cast<clang::Expr>(stmt);
+  if (!expr) {
+    // If the statement is not an expression then it's a constant.
+    return true;
+  }
+
+  // Function calls create non-consistent behaviour. For some template
+  // instantiations they can be constexpr while for others they are not, which
+  // changes the output of isEvaluatable().
+  if (expr->hasNonTrivialCall(context))
+    return false;
+
+  // Recurse on children. If they are all const (or are uses of template
+  // input) then the statement can be considered const. For whatever reason the
+  // below checks can give different-and-less-consistent responses if we call
+  // them on a complex expression than if we call them on the most primitive
+  // pieces (some pieces would say false but the whole thing says true).
+  for (auto* child : expr->children()) {
+    if (!CanBeEvaluatedAtCompileTime(child, context))
+      return false;
+  }
+
+  // If the expression depends on template input, we can not call
+  // isEvaluatable() on it as it will do bad things/crash.
+  if (!expr->isInstantiationDependent()) {
+    // If the expression can be evaluated at compile time, then it should have a
+    // kFoo style name. Otherwise, not.
+    return expr->isEvaluatable(context);
+  }
+
+  // We do our best to figure out special cases as we come across them here, for
+  // template dependent situations. Some cases in code are only considered
+  // instantiation dependent for some template instantiations! Which is
+  // terrible! So most importantly we try to match isEvaluatable in those cases.
+  switch (expr->getStmtClass()) {
+    case clang::Stmt::CXXThisExprClass:
+      return false;
+    case clang::Stmt::DeclRefExprClass: {
+      auto* declref = clang::dyn_cast<clang::DeclRefExpr>(expr);
+      auto* decl = declref->getDecl();
+      if (auto* vardecl = clang::dyn_cast<clang::VarDecl>(decl)) {
+        if (auto* initializer = vardecl->getInit())
+          return CanBeEvaluatedAtCompileTime(initializer, context);
+        return false;
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  // Otherwise, we consider depending on template parameters to not interfere
+  // with being const.. with exceptions hopefully covered above.
+  return true;
+}
+
 bool IsProbablyConst(const clang::VarDecl& decl,
                      const clang::ASTContext& context) {
   clang::QualType type = decl.getType();
@@ -375,6 +474,9 @@ bool IsProbablyConst(const clang::VarDecl& decl,
 
   if (type.isVolatileQualified())
     return false;
+
+  if (decl.isConstexpr())
+    return true;
 
   // Parameters should not be renamed to |kFooBar| style (even if they are
   // const and have an initializer (aka default value)).
@@ -390,18 +492,7 @@ bool IsProbablyConst(const clang::VarDecl& decl,
   if (!initializer)
     return false;
 
-  // If the expression is dependent on a template input, then we are not
-  // sure if it can be compile-time generated as calling isEvaluatable() is
-  // not valid on |initializer|.
-  // TODO(crbug.com/581218): We could probably look at each compiled
-  // instantiation of the template and see if they are all compile-time
-  // isEvaluable().
-  if (initializer->isInstantiationDependent())
-    return false;
-
-  // If the expression can be evaluated at compile time, then it should have a
-  // kFoo style name. Otherwise, not.
-  return initializer->isEvaluatable(context);
+  return CanBeEvaluatedAtCompileTime(initializer, context);
 }
 
 AST_MATCHER_P(clang::QualType, hasString, std::string, ExpectedString) {
@@ -627,6 +718,12 @@ bool GetNameForDecl(const clang::VarDecl& decl,
     if (original_name.size() >= 2 && original_name[0] == 'k' &&
         clang::isUppercase(original_name[1]))
       return false;
+    // Or names are spelt with underscore casing. While they are actually
+    // compile consts, the author wrote it explicitly as a variable not as
+    // a constant (they would have used kFormat otherwise here), so preserve
+    // it rather than try to mangle a kFormat out of it.
+    if (original_name.find('_') != StringRef::npos)
+      return false;
 
     name = 'k';
     name.append(original_name.data(), original_name.size());
@@ -841,14 +938,20 @@ class RewriterBase : public MatchFinder::MatchCallback {
     return true;
   }
 
+  virtual clang::SourceLocation GetTargetLoc(
+      const MatchFinder::MatchResult& result) {
+    return TargetNodeTraits<TargetNode>::GetLoc(GetTargetNode(result));
+  }
+
   void AddReplacement(const MatchFinder::MatchResult& result,
                       llvm::StringRef old_name,
                       std::string new_name) {
     if (old_name == new_name)
       return;
 
-    clang::SourceLocation loc =
-        TargetNodeTraits<TargetNode>::GetLoc(GetTargetNode(result));
+    clang::SourceLocation loc = GetTargetLoc(result);
+    if (loc.isInvalid())
+      return;
 
     Replacement replacement;
     if (!GenerateReplacement(result, loc, old_name, new_name, &replacement))
@@ -930,6 +1033,78 @@ using UnresolvedMemberRewriter =
     DeclRewriterBase<clang::NamedDecl, clang::UnresolvedMemberExpr>;
 
 using UsingDeclRewriter = DeclRewriterBase<clang::UsingDecl, clang::NamedDecl>;
+
+class GMockMemberRewriter
+    : public DeclRewriterBase<clang::CXXMethodDecl, clang::MemberExpr> {
+ public:
+  using Base = DeclRewriterBase<clang::CXXMethodDecl, clang::MemberExpr>;
+
+  explicit GMockMemberRewriter(std::set<Replacement>* replacements)
+      : Base(replacements) {}
+
+  std::unique_ptr<clang::PPCallbacks> CreatePreprocessorCallbacks() {
+    return llvm::make_unique<GMockMemberRewriter::PPCallbacks>(this);
+  }
+
+  clang::SourceLocation GetTargetLoc(
+      const MatchFinder::MatchResult& result) override {
+    // Find location of the gmock_##MockedMethod identifier.
+    clang::SourceLocation target_loc = Base::GetTargetLoc(result);
+
+    // Find location of EXPECT_CALL macro invocation.
+    clang::SourceLocation macro_call_loc =
+        result.SourceManager->getExpansionLoc(target_loc);
+
+    // Map |macro_call_loc| to argument location (location of the method name
+    // that needs renaming).
+    auto it = expect_call_to_2nd_arg.find(macro_call_loc);
+    if (it == expect_call_to_2nd_arg.end())
+      return clang::SourceLocation();
+    return it->second;
+  }
+
+ private:
+  std::map<clang::SourceLocation, clang::SourceLocation> expect_call_to_2nd_arg;
+
+  // Called from PPCallbacks with the locations of EXPECT_CALL macro invocation:
+  // Example:
+  //   EXPECT_CALL(my_mock, myMethod(123, 456));
+  //   ^- expansion_loc     ^- actual_arg_loc
+  void RecordExpectCallMacroInvocation(clang::SourceLocation expansion_loc,
+                                       clang::SourceLocation second_arg_loc) {
+    expect_call_to_2nd_arg[expansion_loc] = second_arg_loc;
+  }
+
+  class PPCallbacks : public clang::PPCallbacks {
+   public:
+    explicit PPCallbacks(GMockMemberRewriter* rewriter) : rewriter_(rewriter) {}
+    ~PPCallbacks() override {}
+    void MacroExpands(const clang::Token& name,
+                      const clang::MacroDefinition& def,
+                      clang::SourceRange range,
+                      const clang::MacroArgs* args) override {
+      clang::IdentifierInfo* id = name.getIdentifierInfo();
+      if (!id)
+        return;
+
+      if (id->getName() != "EXPECT_CALL")
+        return;
+
+      if (def.getMacroInfo()->getNumArgs() != 2)
+        return;
+
+      // TODO(lukasza): Should check if def.getMacroInfo()->getDefinitionLoc()
+      // is in testing/gmock/include/gmock/gmock-spec-builders.h but I don't
+      // know how to get clang::SourceManager to call getFileName.
+
+      rewriter_->RecordExpectCallMacroInvocation(
+          name.getLocation(), args->getUnexpArgument(1)->getLocation());
+    }
+
+   private:
+    GMockMemberRewriter* rewriter_;
+  };
+};
 
 clang::DeclarationName GetUnresolvedName(
     const clang::UnresolvedMemberExpr& expr) {
@@ -1068,6 +1243,27 @@ using DependentScopeDeclRefExprRewriter =
 using CXXDependentScopeMemberExprRewriter =
     UnresolvedRewriterBase<clang::CXXDependentScopeMemberExpr>;
 
+class SourceFileCallbacks : public clang::tooling::SourceFileCallbacks {
+ public:
+  explicit SourceFileCallbacks(GMockMemberRewriter* gmock_member_rewriter)
+      : gmock_member_rewriter_(gmock_member_rewriter) {
+    assert(gmock_member_rewriter);
+  }
+
+  ~SourceFileCallbacks() override {}
+
+  // clang::tooling::SourceFileCallbacks override:
+  bool handleBeginSource(clang::CompilerInstance& compiler,
+                         llvm::StringRef Filename) override {
+    compiler.getPreprocessor().addPPCallbacks(
+        gmock_member_rewriter_->CreatePreprocessorCallbacks());
+    return true;
+  }
+
+ private:
+  GMockMemberRewriter* gmock_member_rewriter_;
+};
+
 }  // namespace
 
 static llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
@@ -1090,13 +1286,19 @@ int main(int argc, const char* argv[]) {
   auto blink_namespace_decl =
       namespaceDecl(anyOf(hasName("blink"), hasName("WTF")),
                     hasParent(translationUnitDecl()));
+  auto protocol_namespace_decl =
+      namespaceDecl(hasName("protocol"),
+                    hasParent(namespaceDecl(hasName("blink"),
+                                            hasParent(translationUnitDecl()))));
 
   // Given top-level compilation unit:
   //   namespace WTF {
   //     void foo() {}
   //   }
   // matches |foo|.
-  auto decl_under_blink_namespace = decl(hasAncestor(blink_namespace_decl));
+  auto decl_under_blink_namespace =
+      decl(hasAncestor(blink_namespace_decl),
+           unless(hasAncestor(protocol_namespace_decl)));
 
   // Given top-level compilation unit:
   //   void WTF::function() {}
@@ -1253,7 +1455,7 @@ int main(int argc, const char* argv[]) {
   //   S s;
   //   s.g();
   //   void (S::*p)() = &S::g;
-  // matches |&S::g| but not |s.g()|.
+  // matches |&S::g| but not |s.g|.
   auto method_ref_matcher = id(
       "expr", declRefExpr(to(method_decl_matcher),
                           // Ignore template substitutions.
@@ -1267,7 +1469,7 @@ int main(int argc, const char* argv[]) {
   //   S s;
   //   s.g();
   //   void (S::*p)() = &S::g;
-  // matches |s.g()| but not |&S::g|.
+  // matches |s.g| but not |&S::g|.
   auto method_member_matcher =
       id("expr", memberExpr(member(method_decl_matcher)));
 
@@ -1436,8 +1638,22 @@ int main(int argc, const char* argv[]) {
   match_finder.addMatcher(cxx_dependent_scope_member_expr_matcher,
                           &cxx_dependent_scope_member_expr_rewriter);
 
+  // GMock calls lookup ========
+  // Given
+  //   EXPECT_CALL(obj, myMethod(...))
+  // will match obj.gmock_myMethod(...) call generated by the macro
+  // (but only if it mocks a Blink method).
+  auto gmock_member_matcher =
+      id("expr", memberExpr(hasDeclaration(
+                     decl(cxxMethodDecl(mocksMethod(method_decl_matcher))))));
+  GMockMemberRewriter gmock_member_rewriter(&replacements);
+  match_finder.addMatcher(gmock_member_matcher, &gmock_member_rewriter);
+
+  // Prepare and run the tool.
+  SourceFileCallbacks source_file_callbacks(&gmock_member_rewriter);
   std::unique_ptr<clang::tooling::FrontendActionFactory> factory =
-      clang::tooling::newFrontendActionFactory(&match_finder);
+      clang::tooling::newFrontendActionFactory(&match_finder,
+                                               &source_file_callbacks);
   int result = tool.run(factory.get());
   if (result != 0)
     return result;

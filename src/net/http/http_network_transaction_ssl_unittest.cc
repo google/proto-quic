@@ -201,13 +201,13 @@ TEST_F(HttpNetworkTransactionSSLTest, TokenBindingAsync) {
   StaticSocketDataProvider data(reads, arraysize(reads), nullptr, 0);
   mock_socket_factory_.AddSocketDataProvider(&data);
 
-  HttpNetworkSession session(session_params_);
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, &session);
-
   HttpRequestInfo request_info;
   request_info.url = GURL("https://www.example.com/");
   request_info.method = "GET";
   request_info.token_binding_referrer = "encrypted.example.com";
+
+  HttpNetworkSession session(session_params_);
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, &session);
 
   TestCompletionCallback callback;
   int rv = trans.Start(&request_info, callback.callback(), NetLogWithSource());

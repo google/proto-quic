@@ -779,6 +779,11 @@ int ssl_add_cert_to_cbb(CBB *cbb, X509 *x509);
  * empty certificate list. It returns one on success and zero on error. */
 int ssl_add_cert_chain(SSL *ssl, CBB *cbb);
 
+/* ssl_auto_chain_if_needed runs the deprecated auto-chaining logic if
+ * necessary. On success, it updates |ssl|'s certificate configuration as needed
+ * and returns one. Otherwise, it returns zero. */
+int ssl_auto_chain_if_needed(SSL *ssl);
+
 /* ssl_cert_check_digital_signature_key_usage parses the DER-encoded, X.509
  * certificate in |in| and returns one if doesn't specify a key usage or, if it
  * does, if it includes digitalSignature. Otherwise it pushes to the error
@@ -1143,10 +1148,10 @@ typedef struct {
  * it. It writes the parsed extensions to pointers denoted by |ext_types|. On
  * success, it fills in the |out_present| and |out_data| fields and returns one.
  * Otherwise, it sets |*out_alert| to an alert to send and returns zero. Unknown
- * extensions are rejected. */
+ * extensions are rejected unless |ignore_unknown| is 1. */
 int ssl_parse_extensions(const CBS *cbs, uint8_t *out_alert,
                          const SSL_EXTENSION_TYPE *ext_types,
-                         size_t num_ext_types);
+                         size_t num_ext_types, int ignore_unknown);
 
 
 /* SSLKEYLOGFILE functions. */
@@ -1940,6 +1945,9 @@ uint32_t ssl_get_algorithm_prf(const SSL *ssl);
 void ssl_set_client_disabled(SSL *ssl);
 
 void ssl_get_current_time(const SSL *ssl, struct timeval *out_clock);
+
+/* ssl_reset_error_state resets state for |SSL_get_error|. */
+void ssl_reset_error_state(SSL *ssl);
 
 
 #if defined(__cplusplus)

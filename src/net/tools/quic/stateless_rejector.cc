@@ -4,9 +4,9 @@
 
 #include "net/tools/quic/stateless_rejector.h"
 
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 
 namespace net {
 

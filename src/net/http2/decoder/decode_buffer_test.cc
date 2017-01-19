@@ -6,9 +6,6 @@
 
 #include <string>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
-#include "base/callback.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/tools/http2_random.h"
@@ -68,7 +65,7 @@ class DecodeBufferTest : public ::testing::Test {
   bool SlowDecodeField(DecodeBuffer* b,
                        size_t field_size,
                        size_t field_offset,
-                       const base::Callback<bool(DecodeBuffer*)>& fn,
+                       std::function<bool(DecodeBuffer*)> fn,
                        T* f) {
     VLOG(2) << "Remaining: " << b->Remaining();
     VLOG(2) << "field_size: " << field_size;
@@ -80,7 +77,7 @@ class DecodeBufferTest : public ::testing::Test {
     uint32_t old = static_cast<uint32_t>(*f);
     VLOG(2) << "old: " << old;
     size_t old_decode_offset = decode_offset_;
-    bool done = fn.Run(b);
+    bool done = fn(b);
     VLOG(2) << "done: " << done;
     if (old_decode_offset == decode_offset_) {
       // Didn't do any decoding (may have no input, or may have already
@@ -106,35 +103,35 @@ class DecodeBufferTest : public ::testing::Test {
     return done;
   }
 
-  bool decode_f1(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeUInt8(kF1Offset, &decode_offset_, &p->f1);
-  }
-  bool decode_f2(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeUInt16(kF2Offset, &decode_offset_, &p->f2);
-  }
-  bool decode_f3(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeUInt24(kF3Offset, &decode_offset_, &p->f3);
-  }
-  bool decode_f4(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeUInt32(kF4Offset, &decode_offset_, &p->f4);
-  }
-  bool decode_f5(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeUInt31(kF5Offset, &decode_offset_, &p->f5);
-  }
-  bool decode_f6(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeEnum(4, kF6Offset, &decode_offset_, &p->f6);
-  }
-  bool decode_f7(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeEnum(1, kF7Offset, &decode_offset_, &p->f7);
-  }
-  bool decode_f8(TestStruct* p, DecodeBuffer* db) {
-    return db->SlowDecodeEnum(1, kF8Offset, &decode_offset_, &p->f8);
-  }
 
   void SlowDecodeTestStruct(StringPiece input, TestStruct* p) {
     VLOG(2) << "############################################################";
     EXPECT_LE(10u, input.size());
     decode_offset_ = 0;
+    auto decode_f1 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeUInt8(kF1Offset, &decode_offset_, &p->f1);
+    };
+    auto decode_f2 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeUInt16(kF2Offset, &decode_offset_, &p->f2);
+    };
+    auto decode_f3 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeUInt24(kF3Offset, &decode_offset_, &p->f3);
+    };
+    auto decode_f4 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeUInt32(kF4Offset, &decode_offset_, &p->f4);
+    };
+    auto decode_f5 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeUInt31(kF5Offset, &decode_offset_, &p->f5);
+    };
+    auto decode_f6 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeEnum(4, kF6Offset, &decode_offset_, &p->f6);
+    };
+    auto decode_f7 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeEnum(1, kF7Offset, &decode_offset_, &p->f7);
+    };
+    auto decode_f8 = [this, p](DecodeBuffer* db) {
+      return db->SlowDecodeEnum(1, kF8Offset, &decode_offset_, &p->f8);
+    };
     while (input.size() > 0) {
       size_t size = input.size();
       // Sometimes check that zero length input is OK.
@@ -148,38 +145,14 @@ class DecodeBufferTest : public ::testing::Test {
       VLOG(2) << "================= input size " << size;
       DecodeBuffer b(input.data(), size);
       size_t old_decode_offset = decode_offset_;
-      if (SlowDecodeField(&b, 1, kF1Offset,
-                          base::Bind(&DecodeBufferTest::decode_f1,
-                                     base::Unretained(this), p),
-                          &p->f1) &&
-          SlowDecodeField(&b, 2, kF2Offset,
-                          base::Bind(&DecodeBufferTest::decode_f2,
-                                     base::Unretained(this), p),
-                          &p->f2) &&
-          SlowDecodeField(&b, 3, kF3Offset,
-                          base::Bind(&DecodeBufferTest::decode_f3,
-                                     base::Unretained(this), p),
-                          &p->f3) &&
-          SlowDecodeField(&b, 4, kF4Offset,
-                          base::Bind(&DecodeBufferTest::decode_f4,
-                                     base::Unretained(this), p),
-                          &p->f4) &&
-          SlowDecodeField(&b, 4, kF5Offset,
-                          base::Bind(&DecodeBufferTest::decode_f5,
-                                     base::Unretained(this), p),
-                          &p->f5) &&
-          SlowDecodeField(&b, 4, kF6Offset,
-                          base::Bind(&DecodeBufferTest::decode_f6,
-                                     base::Unretained(this), p),
-                          &p->f6) &&
-          SlowDecodeField(&b, 1, kF7Offset,
-                          base::Bind(&DecodeBufferTest::decode_f7,
-                                     base::Unretained(this), p),
-                          &p->f7) &&
-          SlowDecodeField(&b, 1, kF8Offset,
-                          base::Bind(&DecodeBufferTest::decode_f8,
-                                     base::Unretained(this), p),
-                          &p->f8)) {
+      if (SlowDecodeField(&b, 1, kF1Offset, decode_f1, &p->f1) &&
+          SlowDecodeField(&b, 2, kF2Offset, decode_f2, &p->f2) &&
+          SlowDecodeField(&b, 3, kF3Offset, decode_f3, &p->f3) &&
+          SlowDecodeField(&b, 4, kF4Offset, decode_f4, &p->f4) &&
+          SlowDecodeField(&b, 4, kF5Offset, decode_f5, &p->f5) &&
+          SlowDecodeField(&b, 4, kF6Offset, decode_f6, &p->f6) &&
+          SlowDecodeField(&b, 1, kF7Offset, decode_f7, &p->f7) &&
+          SlowDecodeField(&b, 1, kF8Offset, decode_f8, &p->f8)) {
         EXPECT_TRUE(b.Empty());
         EXPECT_EQ(size, input.size());
         EXPECT_EQ(input.size(), b.Offset());  // All input consumed.
@@ -245,7 +218,6 @@ TEST_F(DecodeBufferTest, SlowDecodeTestStruct) {
     ts.f2 = random_.Rand16();
     ts.f3 = random_.Rand32();
     ts.f4 = random_.Rand32();
-    // Ensure high-bit is set.
     ts.f5 = 0x80000000 | random_.Rand32();  // Ensure high-bit is set.
     ts.f6 = static_cast<TestEnumClass32>(random_.Rand32());
     ts.f7 = static_cast<TestEnumClass8>(random_.Rand8());

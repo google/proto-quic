@@ -5,6 +5,7 @@
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
 
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/test/gtest_util.h"
 
 typedef net::QuicStreamSequencerBuffer::BufferBlock BufferBlock;
@@ -67,29 +68,29 @@ bool QuicStreamSequencerBufferPeer::CheckBufferInvariants() {
   bool capacity_sane = data_span <= buffer_->max_buffer_capacity_bytes_ &&
                        data_span >= buffer_->num_bytes_buffered_;
   if (!capacity_sane) {
-    LOG(ERROR) << "data span is larger than capacity.";
-    LOG(ERROR) << "total read: " << buffer_->total_bytes_read_
-               << " last byte: " << buffer_->gaps_.back().begin_offset;
+    QUIC_LOG(ERROR) << "data span is larger than capacity.";
+    QUIC_LOG(ERROR) << "total read: " << buffer_->total_bytes_read_
+                    << " last byte: " << buffer_->gaps_.back().begin_offset;
   }
   bool total_read_sane =
       buffer_->gaps_.front().begin_offset >= buffer_->total_bytes_read_;
   if (!total_read_sane) {
-    LOG(ERROR) << "read across 1st gap.";
+    QUIC_LOG(ERROR) << "read across 1st gap.";
   }
   bool read_offset_sane = buffer_->ReadOffset() < kBlockSizeBytes;
   if (!capacity_sane) {
-    LOG(ERROR) << "read offset go beyond 1st block";
+    QUIC_LOG(ERROR) << "read offset go beyond 1st block";
   }
   bool block_match_capacity = (buffer_->max_buffer_capacity_bytes_ <=
                                buffer_->blocks_count_ * kBlockSizeBytes) &&
                               (buffer_->max_buffer_capacity_bytes_ >
                                (buffer_->blocks_count_ - 1) * kBlockSizeBytes);
   if (!capacity_sane) {
-    LOG(ERROR) << "block number not match capcaity.";
+    QUIC_LOG(ERROR) << "block number not match capcaity.";
   }
   bool block_retired_when_empty = CheckEmptyInvariants();
   if (!block_retired_when_empty) {
-    LOG(ERROR) << "block is not retired after use.";
+    QUIC_LOG(ERROR) << "block is not retired after use.";
   }
   return capacity_sane && total_read_sane && read_offset_sane &&
          block_match_capacity && block_retired_when_empty;

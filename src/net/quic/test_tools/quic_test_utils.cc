@@ -17,6 +17,7 @@
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/spdy/spdy_frame_builder.h"
@@ -444,7 +445,7 @@ bool TestPushPromiseDelegate::CheckVary(
     const SpdyHeaderBlock& client_request,
     const SpdyHeaderBlock& promise_request,
     const SpdyHeaderBlock& promise_response) {
-  DVLOG(1) << "match " << match_;
+  QUIC_DVLOG(1) << "match " << match_;
   return match_;
 }
 
@@ -509,7 +510,7 @@ string HexDumpWithMarks(const char* data,
 
   const int kSizeLimit = 1024;
   if (length > kSizeLimit || mark_length > kSizeLimit) {
-    LOG(ERROR) << "Only dumping first " << kSizeLimit << " bytes.";
+    QUIC_LOG(ERROR) << "Only dumping first " << kSizeLimit << " bytes.";
     length = std::min(length, kSizeLimit);
     mark_length = std::min(mark_length, kSizeLimit);
   }

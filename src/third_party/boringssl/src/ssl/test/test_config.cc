@@ -81,8 +81,10 @@ const Flag<bool> kBoolFlags[] = {
   { "-tls-unique", &TestConfig::tls_unique },
   { "-expect-ticket-renewal", &TestConfig::expect_ticket_renewal },
   { "-expect-no-session", &TestConfig::expect_no_session },
+  { "-expect-early-data-info", &TestConfig::expect_early_data_info },
   { "-use-ticket-callback", &TestConfig::use_ticket_callback },
   { "-renew-ticket", &TestConfig::renew_ticket },
+  { "-enable-early-data", &TestConfig::enable_early_data },
   { "-enable-client-custom-extension",
     &TestConfig::enable_client_custom_extension },
   { "-enable-server-custom-extension",
@@ -116,6 +118,11 @@ const Flag<bool> kBoolFlags[] = {
   { "-expect-sha256-client-cert-resume",
     &TestConfig::expect_sha256_client_cert_resume },
   { "-enable-short-header", &TestConfig::enable_short_header },
+  { "-read-with-unfinished-write", &TestConfig::read_with_unfinished_write },
+  { "-expect-secure-renegotiation",
+    &TestConfig::expect_secure_renegotiation },
+  { "-expect-no-secure-renegotiation",
+    &TestConfig::expect_no_secure_renegotiation },
 };
 
 const Flag<std::string> kStringFlags[] = {

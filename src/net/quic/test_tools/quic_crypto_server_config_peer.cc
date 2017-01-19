@@ -42,6 +42,11 @@ ProofSource* QuicCryptoServerConfigPeer::GetProofSource() const {
   return server_config_->proof_source_.get();
 }
 
+void QuicCryptoServerConfigPeer::ResetProofSource(
+    std::unique_ptr<ProofSource> proof_source) {
+  server_config_->proof_source_ = std::move(proof_source);
+}
+
 string QuicCryptoServerConfigPeer::NewSourceAddressToken(
     string config_id,
     SourceAddressTokens previous_tokens,

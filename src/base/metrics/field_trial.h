@@ -137,9 +137,11 @@ class BASE_EXPORT FieldTrial : public RefCounted<FieldTrial> {
 
   // We create one FieldTrialEntry per field trial in shared memory, via
   // AddToAllocatorWhileLocked. The FieldTrialEntry is followed by a
-  // base::Pickle object that we unpickle and read from. Any changes to this
-  // structure requires a bump in kFieldTrialType id defined in the .cc file.
+  // base::Pickle object that we unpickle and read from.
   struct BASE_EXPORT FieldTrialEntry {
+    // SHA1(FieldTrialEntry): Increment this if structure changes!
+    static constexpr uint32_t kPersistentTypeId = 0xABA17E13 + 2;
+
     // Expected size for 32/64-bit check.
     static constexpr size_t kExpectedInstanceSize = 8;
 

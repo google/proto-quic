@@ -21,8 +21,6 @@
 #include <stddef.h>
 #include <string>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
@@ -102,12 +100,6 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
     }
   }
 
-  AssertionResult ValidatorForDecodeLeadingStructure(const S* expected,
-                                                     const DecodeBuffer& db,
-                                                     DecodeStatus status) {
-    VERIFY_EQ(*expected, structure_);
-    return AssertionSuccess();
-  }
 
   // Fully decodes the Structure at the start of data, and confirms it matches
   // *expected (if provided).
@@ -118,17 +110,18 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
     // The validator is called after each of the several times that the input
     // DecodeBuffer is decoded, each with a different segmentation of the input.
     // Validate that structure_ matches the expected value, if provided.
-    Validator validator =
-        (expected == nullptr)
-            ? base::Bind(&SucceedingValidator)
-            : base::Bind(&Http2StructureDecoderTest::
-                             ValidatorForDecodeLeadingStructure,
-                         base::Unretained(this), expected);
+    Validator validator;
+    if (expected != nullptr) {
+      validator = [expected, this](const DecodeBuffer& db,
+                                   DecodeStatus status) -> AssertionResult {
+        VERIFY_EQ(*expected, structure_);
+        return AssertionSuccess();
+      };
+    }
 
     // Before that, validate that decoding is done and that we've advanced
     // the cursor the expected amount.
-    Validator wrapped_validator =
-        ValidateDoneAndOffset(S::EncodedSize(), validator);
+    validator = ValidateDoneAndOffset(S::EncodedSize(), validator);
 
     // Decode several times, with several segmentations of the input buffer.
     fast_decode_count_ = 0;
@@ -136,7 +129,7 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
     incomplete_start_count_ = 0;
     incomplete_resume_count_ = 0;
     VERIFY_SUCCESS(DecodeAndValidateSeveralWays(
-        &original, kMayReturnZeroOnFirst, wrapped_validator));
+        &original, kMayReturnZeroOnFirst, validator));
     VERIFY_FALSE(HasFailure());
     VERIFY_EQ(S::EncodedSize(), structure_decoder_.offset());
     VERIFY_EQ(S::EncodedSize(), original.Offset());

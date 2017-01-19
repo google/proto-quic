@@ -7,6 +7,8 @@ import("//build/config/android/rules.gni")
 source_set("native_test_support") {
   testonly = true
   sources = [
+    "main_runner.cc",
+    "main_runner.h",
     "native_test_launcher.cc",
     "native_test_launcher.h",
     "native_test_util.cc",
@@ -33,9 +35,18 @@ source_set("native_test_native_code") {
   ]
 }
 
+android_library("native_main_runner_java") {
+  testonly = true
+  java_files = [ "java/src/org/chromium/native_test/MainRunner.java" ]
+  deps = [
+    "//base:base_java",
+  ]
+}
+
 android_library("native_test_java") {
   testonly = true
   deps = [
+    ":native_main_runner_java",
     "//base:base_java",
     "//base:base_java_test_support",
     "//testing/android/appurify_support:appurify_support_java",
@@ -53,6 +64,7 @@ android_library("native_test_java") {
 
 generate_jni("native_test_jni_headers") {
   sources = [
+    "java/src/org/chromium/native_test/MainRunner.java",
     "java/src/org/chromium/native_test/NativeTest.java",
   ]
   jni_package = "testing"

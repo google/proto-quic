@@ -13,6 +13,7 @@
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using std::string;
 using base::StringPiece;
@@ -48,13 +49,13 @@ QuicByteCount QuicCryptoStream::CryptoMessageFramingOverhead(
 }
 
 void QuicCryptoStream::OnError(CryptoFramer* framer) {
-  DLOG(WARNING) << "Error processing crypto data: "
-                << QuicErrorCodeToString(framer->error());
+  QUIC_DLOG(WARNING) << "Error processing crypto data: "
+                     << QuicErrorCodeToString(framer->error());
 }
 
 void QuicCryptoStream::OnHandshakeMessage(
     const CryptoHandshakeMessage& message) {
-  DVLOG(1) << ENDPOINT << "Received " << message.DebugString();
+  QUIC_DVLOG(1) << ENDPOINT << "Received " << message.DebugString();
   session()->OnCryptoHandshakeMessageReceived(message);
 }
 
@@ -84,7 +85,7 @@ void QuicCryptoStream::OnDataAvailable() {
 
 void QuicCryptoStream::SendHandshakeMessage(
     const CryptoHandshakeMessage& message) {
-  DVLOG(1) << ENDPOINT << "Sending " << message.DebugString();
+  QUIC_DVLOG(1) << ENDPOINT << "Sending " << message.DebugString();
   session()->connection()->NeuterUnencryptedPackets();
   session()->OnCryptoHandshakeMessageSent(message);
   const QuicData& data = message.GetSerialized();
@@ -96,8 +97,8 @@ bool QuicCryptoStream::ExportKeyingMaterial(StringPiece label,
                                             size_t result_len,
                                             string* result) const {
   if (!handshake_confirmed()) {
-    DLOG(ERROR) << "ExportKeyingMaterial was called before forward-secure"
-                << "encryption was established.";
+    QUIC_DLOG(ERROR) << "ExportKeyingMaterial was called before forward-secure"
+                     << "encryption was established.";
     return false;
   }
   return CryptoUtils::ExportKeyingMaterial(

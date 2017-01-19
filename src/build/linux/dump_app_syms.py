@@ -21,7 +21,7 @@ outfile = sys.argv[4]
 
 # Dump only when the output file is out-of-date.
 if not os.path.isfile(outfile) or \
-   os.stat(outfile).st_mtime > os.stat(infile).st_mtime:
+   os.stat(outfile).st_mtime < os.stat(infile).st_mtime:
   with open(outfile, 'w') as outfileobj:
     subprocess.check_call([dumpsyms, infile], stdout=outfileobj)
 

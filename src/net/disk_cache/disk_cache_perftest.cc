@@ -62,7 +62,7 @@ class DiskCachePerfTest : public DiskCacheTestWithCache {
 
   ~DiskCachePerfTest() override {
     if (saved_fd_limit_ < kFdLimitForCacheTests)
-      MaybeSetFdLimit(kFdLimitForCacheTests);
+      MaybeSetFdLimit(saved_fd_limit_);
   }
 
  protected:

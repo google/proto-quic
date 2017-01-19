@@ -25,9 +25,8 @@ class BlobCreateThenRead(page_module.Page):
     for size_bytes in self._blob_sizes:
       with action_runner.CreateInteraction('Action_CreateAndReadBlob',
                                            repeatable=True):
-        # TODO(catapult:#3028): Fix interpolation of JavaScript values.
         action_runner.ExecuteJavaScript(
-            'createAndRead(' + str(size_bytes) + ');')
+            'createAndRead({{ size }});', size=size_bytes)
         action_runner.WaitForJavaScriptCondition(
             'doneReading === true || errors', timeout_in_seconds=60)
 
@@ -51,8 +50,8 @@ class BlobMassCreate(page_module.Page):
     for size_bytes in self._blob_sizes:
       with action_runner.CreateInteraction('Action_CreateBlob',
                                            repeatable=True):
-        # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-        action_runner.ExecuteJavaScript('createBlob(' + str(size_bytes) + ');')
+        action_runner.ExecuteJavaScript(
+            'createBlob({{ size }});', size=size_bytes)
 
     # Read blobs
     for _ in range(0, NUM_BLOB_MASS_CREATE_READS):

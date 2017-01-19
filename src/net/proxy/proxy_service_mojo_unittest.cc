@@ -11,8 +11,10 @@
 
 #include "base/callback_helpers.h"
 #include "base/memory/ptr_util.h"
+#include "base/memory/singleton.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/values.h"
+#include "mojo/public/cpp/bindings/strong_binding.h"
 #include "net/base/network_delegate_impl.h"
 #include "net/base/test_completion_callback.h"
 #include "net/dns/mock_host_resolver.h"
@@ -21,9 +23,9 @@
 #include "net/log/test_net_log.h"
 #include "net/log/test_net_log_entry.h"
 #include "net/proxy/dhcp_proxy_script_fetcher.h"
-#include "net/proxy/in_process_mojo_proxy_resolver_factory.h"
 #include "net/proxy/mock_proxy_script_fetcher.h"
 #include "net/proxy/mojo_proxy_resolver_factory.h"
+#include "net/proxy/mojo_proxy_resolver_factory_impl.h"
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/proxy/proxy_service.h"
 #include "net/test/event_waiter.h"
@@ -120,6 +122,34 @@ class LoggingMockHostResolver : public MockHostResolver {
     return MockHostResolver::Resolve(info, priority, addresses, callback,
                                      out_req, net_log);
   }
+};
+
+class InProcessMojoProxyResolverFactory : public MojoProxyResolverFactory {
+ public:
+  static InProcessMojoProxyResolverFactory* GetInstance() {
+    return base::Singleton<InProcessMojoProxyResolverFactory>::get();
+  }
+
+  // Overridden from MojoProxyResolverFactory:
+  std::unique_ptr<base::ScopedClosureRunner> CreateResolver(
+      const std::string& pac_script,
+      mojo::InterfaceRequest<interfaces::ProxyResolver> req,
+      interfaces::ProxyResolverFactoryRequestClientPtr client) override {
+    factory_->CreateResolver(pac_script, std::move(req), std::move(client));
+    return nullptr;
+  }
+
+ private:
+  InProcessMojoProxyResolverFactory() {
+    mojo::MakeStrongBinding(base::MakeUnique<MojoProxyResolverFactoryImpl>(),
+                            mojo::MakeRequest(&factory_));
+  }
+  ~InProcessMojoProxyResolverFactory() override = default;
+  friend struct base::DefaultSingletonTraits<InProcessMojoProxyResolverFactory>;
+
+  interfaces::ProxyResolverFactoryPtr factory_;
+
+  DISALLOW_COPY_AND_ASSIGN(InProcessMojoProxyResolverFactory);
 };
 
 }  // namespace

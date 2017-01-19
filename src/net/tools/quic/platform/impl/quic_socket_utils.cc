@@ -12,10 +12,10 @@
 #include <sys/uio.h>
 #include <string>
 
-#include "base/logging.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 #ifndef SO_RXQ_OVFL
@@ -277,7 +277,7 @@ int QuicSocketUtils::CreateUDPSocket(const QuicSocketAddress& address,
   int address_family = address.host().AddressFamilyToInt();
   int fd = socket(address_family, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   if (fd < 0) {
-    LOG(ERROR) << "socket() failed: " << strerror(errno);
+    QUIC_LOG(ERROR) << "socket() failed: " << strerror(errno);
     return -1;
   }
 
@@ -285,7 +285,7 @@ int QuicSocketUtils::CreateUDPSocket(const QuicSocketAddress& address,
   int rc = setsockopt(fd, SOL_SOCKET, SO_RXQ_OVFL, &get_overflow,
                       sizeof(get_overflow));
   if (rc < 0) {
-    DLOG(WARNING) << "Socket overflow detection not supported";
+    QUIC_DLOG(WARNING) << "Socket overflow detection not supported";
   } else {
     *overflow_supported = true;
   }
@@ -306,8 +306,8 @@ int QuicSocketUtils::CreateUDPSocket(const QuicSocketAddress& address,
 
   rc = SetGetSoftwareReceiveTimestamp(fd);
   if (rc < 0) {
-    LOG(WARNING) << "SO_TIMESTAMPING not supported; using fallback: "
-                 << strerror(errno);
+    QUIC_LOG(WARNING) << "SO_TIMESTAMPING not supported; using fallback: "
+                      << strerror(errno);
   }
 
   return fd;

@@ -206,14 +206,6 @@ be investigated. When a test fails:
     ensure that the bug title reflects something like "Fix and re-enable
     testname".
 4.  Investigate the failure. Some tips for investigating:
-    *   When viewing buildbot step logs, **use the **<font color="blue">[stdout]</font>** link to view logs!**.
-        This will link to logdog logs which do not expire. Do not use or link
-        to the logs found through the <font color="blue">stdio</font> link
-        whenever possible as these logs will expire.
-    *   When investigating Android, look for the logcat which is uploaded to
-        Google Storage at the end of the run. logcat will contain much more
-        detailed Android device and crash info than will be found in
-        Telemetry logs.
     *   If it's a non flaky failure, indentify the first failed
         build so you can narrow down the range of CLs that causes the failure.
         You can use the
@@ -237,6 +229,170 @@ be investigated. When a test fails:
         Often this will immediately reveal failure causes that are opaque from
         the logs alone. On other platforms, Devtools will produce tab
         screenshots as long as the tab did not crash.
+
+### Useful Logs and Debugging Info
+
+1. **Telemetry test runner logs**
+
+    **_Useful Content:_** Best place to start. These logs contain all of the
+    python logging information from the telemetry test runner scripts.
+
+    **_Where to find:_** These logs can be found from the buildbot build page.
+    Click the _"[stdout]"_ link under any of the telemetry test buildbot steps
+    to view the logs. Do not use the "stdio" link which will show similiar
+    information but will expire earilier and be slower to load.
+
+2. **Android Logcat (Android)**
+
+    **_Useful Content:_** This file contains all Android device logs. All
+    Android apps and the Android system will log information to logcat. Good
+    place to look if you believe an issue is device related
+    (Android out-of-memory problem for example). Additionally, often information
+    about native crashes will be logged to here.
+
+    **_Where to find:_** These logs can be found from the buildbot status page.
+    Click the _"logcat dump"_ link under one of the _"gsutil upload"_ steps.
+
+3. **Test Trace (Android)**
+
+    **_Useful Content:_** These logs graphically depict the start/end times for
+    all telemetry tests on all of the devices. This can help determine if test
+    failures were caused by an environmental issue.
+    (see [Cross-Device Failures](#Android-Cross-Device-Failures))
+
+    **_Where to find:_** These logs can be found from the buildbot status page.
+    Click the _"Test Trace"_ link under one of the
+    _"gsutil Upload Test Trace"_ steps.
+
+4. **Symbolized Stack Traces (Android)**
+
+    **_Useful Content:_** Contains symbolized stack traces of any Chrome or
+    Android crashes.
+
+    **_Where to find_:** These logs can be found from the buildbot status page.
+    The symbolized stack traces can be found under several steps. Click link
+    under _"symbolized breakpad crashes"_ step to see symbolized Chrome crashes.
+    Click link under _"stack tool with logcat dump"_ to see symbolized Android
+    crashes.
+
+## Swarming Bots
+As of Q4 2016 all desktop bots have been moved to the swarming pool with a goal
+of moving all android bots to swarming in early 2017.  There is now one machine
+on the chromium.perf waterfall for each desktop configuration that is triggering
+test tasks on 5 corresponding swarming bots.  All of our swarming bots exists in
+the [chrome-perf swarming pool](https://chromium-swarm.appspot.com/botlist?c=id&c=os&c=task&c=status&f=pool%3AChrome-perf&l=100&s=id%3Aasc)
+
+1.  Buildbot status page FYIs
+    *   Every test that is run now has 2-3 recipe steps on the buildbot status
+        page associated with it
+        1.  '[trigger] <test_name>' step (you can mostly ignore this)
+        2.  '<test_name>' This is the test that was run on the swarming bot,
+            'shard #0' link on the step takes you to the swarming task page
+        3.  '<test_name> Dashboard Upload' This is the upload of the perf tests
+            results to the perf dashboard.  This will not be present if the test
+            was disabled.
+    *   We now run all benchmark tests even if they are disabled, but disabled
+        tests will always return success and you can ignore them.  You can
+        identify these by the 'DISABLED_BENCHMARK' link under the step and the
+        fact that they don’t have an upload step after them
+2.  Debugging Expiring Jobs on the waterfall
+    *   You can tell a job is expiring in one of two ways:
+        1.  Click on the 'shard #0' link of the failed test and you will see
+            EXPIRED on the swarming task page
+        2.  If there is a 'no_results_exc' and an 'invalid_results_exc' link on
+            the buildbot failing test step with the dashboard upload step
+            failing (Note: this could be an EXPIRED job or a TIMEOUT.  An
+            Expired job means the task never got scheduled within the 5 hour
+            swarming timeout and TIMEOUT means it started running but couldn’t
+            finish before the 5 hour swarming timeout)
+    *   You can quickly see what bots the jobs are expiring/timing out on with
+        the ‘Bot id’ annotation on the failing test step
+    *   Troubleshooting why they are expiring
+        1.  Bot might be down, check the chrome-perf pool for that bot-id and
+            file a ticket with go/bugatrooper if the bot is down.
+            *   Can also identify a down bot through [viceroy](https://viceroy.corp.google.com/chrome_infra/Machines/per_machine)
+                Search for a bot id and if the graph stops it tells you the bot
+                is down
+        2.  Otherwise check the bots swarming page task list for each bot that
+            has failing jobs and examine what might be going on  (good [video](https://youtu.be/gRa0LvICthk)
+            from maruel@ on the swarming ui and how to filter and search bot
+            task lists.  For example you can filter on bot-id and name to
+            examine the last n runs of a test).
+            *   A test might be timing out on a bot that is causing subsequent
+                tests to expire even though they would pass normally but never
+                get scheduled due to that timing out test.  Debug the timing out
+                test.
+            *   A test might be taking a longer time than normal but still
+                passing, but the extra execution time causes other unrelated
+                tests to fail.  Examine the last passing run to the first
+                failing run and see if you can see a test that is taking a
+                significantly longer time and debug that issue.
+3.  Reproducing swarming task runs
+    *   Reproduce on local machine using same inputs as bot
+        1.  Note that the local machines spec must roughly match that of the
+            swarming bot
+        2.  See 'Reproducing the task locally' on swarming task page
+        3.  First run the command under
+            'Download input files into directory foo'
+        4.  cd into foo/out/Release if those downloaded inputs
+        5.  Execute test from this directory.  Command you are looking for
+            should be at the top of the logs, you just need to update the
+            `--isolated-script-test-output=/b/s/w/ioFB73Qz/output.json` and
+            `--isolated-script-test-chartjson-output=/b/s/w/ioFB73Qz/chartjson-output.json`
+            flags to be a local path
+        6.  Example with tmp as locally created dir:
+            `/usr/bin/python ../../testing/scripts/run_telemetry_benchmark_as_googletest.py ../../tools/perf/run_benchmark indexeddb_perf -v --upload-results --output-format=chartjson --browser=release --isolated-script-test-output=tmp/output.json --isolated-script-test-chartjson-output=tmp/chartjson-output.json`
+    *   ssh into swarming bot and run test on that machine
+        1.  NOTE: this should be a last resort since it will cause a fifth of
+            the benchmarks to continuously fail on the waterfall
+        2   First you need to decommission the swarming bot so other jobs don’t
+            interfere, file a ticket with go/bugatrooper
+        3.  See [remote access to bots](https://sites.google.com/a/google.com/chrome-infrastructure/golo/remote-access?pli=1)
+            on how to ssh into the bot and then run the test.
+            Rough overview for build161-m1
+            *   prodaccess --chromegolo_ssh
+            *   Ssh build161-m1.golo
+            *   Password is in valentine
+                "Chrome Golo, Perf, GPU bots - chrome-bot"
+            *   File a bug to reboot the machine to get it online in the
+                swarming pool again
+4. Running local changes on swarming bot
+    *   Using sunspider as example benchmark since it is a quick one
+    *   First, run test locally to make sure there is no issue with the binary
+        or the script running the test on the swarming bot.  Make sure dir foo
+        exists:
+        `python testing/scripts/run_telemetry_benchmark_as_googletest.py tools/perf/run_benchmark sunspider -v --output-format=chartjson --upload-results --browser=reference --output-trace-tag=_ref --isolated-script-test-output=foo/output.json --isolated-script-test-chartjson-output=foo/chart-output.json`
+    *   Build any dependencies needed in isolate:
+        1.  ninja -C out/Release chrome/test:telemetry_perf_tests
+        2.  This target should be enough if you are running a benchmark,
+            otherwise build any targets that they say are missing when building
+            the isolate in step #2.
+        3.   Make sure [compiler proxy is running](https://sites.google.com/a/google.com/goma/how-to-use-goma/how-to-use-goma-for-chrome-team?pli=1)
+            *   ./goma_ctl.py ensure_start from goma directory
+    *   Build the isolate
+        1. `python tools/mb/mb.py isolate //out/Release -m chromium.perf -b "Linux Builder" telemetry_perf_tests`
+            *   -m is the master
+            *   -b is the builder name from mb_config.pyl that corresponds to
+                the platform you are running this command on
+            *   telemetry_perf_tests is the isolate name
+            *   Might run into internal source deps when building the isolate,
+                depending on the isolate.  Might need to update the entry in
+                mb_config.pyl for this builder to not be an official built so
+                src/internal isn’t required
+    *   Archive and create the isolate hash
+        1.  `python tools/swarming_client/isolate.py archive -I isolateserver.appspot.com -i out/Release/telemetry_perf_tests.isolate -s out/Release/telemetry_perf_tests.isolated`
+    *   Run the test with the has from step #3
+        1.  Run hash locally
+            *   Note output paths are local
+            *   `./tools/swarming_client/run_isolated.py -I https://isolateserver.appspot.com -s <insert_hash_here> -- sunspider -v --upload-results --output-format=chartjson --browser=reference --output-trace-tag=_ref --isolated-script-test-output=/usr/local/google/home/eyaich/projects/chromium/src/tmp/output.json`
+        2.  Trigger on swarming bot
+            *   Note paths are using swarming output dir environment variable
+                ISOLATED_OUTDIR and dimensions are based on the bot and os you
+                are triggering the job on
+            *   `python tools/swarming_client/swarming.py trigger -v --isolate-server isolateserver.appspot.com -S chromium-swarm.appspot.com -d id build150-m1 -d pool Chrome-perf -d os Linux -s <insert_hash_here> -- sunspider -v --upload-results --output-format=chartjson --browser=reference --output-trace-tag=_ref -isolated-script-test-output='${ISOLATED_OUTDIR}/output.json' --isolated-script-test-chartjson-output='${ISOLATED_OUTDIR}/chart-output.json'`
+            *   All args after the '--' are for the swarming task and not for
+                the trigger command.  The output dirs must be in quotes when
+                triggering on swarming bot
 
 ### Disabling Telemetry Tests
 

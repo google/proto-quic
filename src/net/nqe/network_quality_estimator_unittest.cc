@@ -165,8 +165,7 @@ class TestThroughputObserver
 TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   base::HistogramTester histogram_tester;
   // Enable requests to local host to be used for network quality estimation.
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN, "test");
@@ -303,8 +302,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
 // from the cache store correctly.
 TEST(NetworkQualityEstimatorTest, Caching) {
   base::HistogramTester histogram_tester;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test");
@@ -376,8 +374,7 @@ TEST(NetworkQualityEstimatorTest, Caching) {
 }
 
 TEST(NetworkQualityEstimatorTest, StoreObservations) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   base::TimeDelta rtt;
   int32_t kbps;
@@ -414,8 +411,7 @@ TEST(NetworkQualityEstimatorTest, StoreObservations) {
 // throughput and RTT percentiles are checked for correctness by doing simple
 // verifications.
 TEST(NetworkQualityEstimatorTest, ComputedPercentiles) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   std::vector<NetworkQualityObservationSource> disallowed_observation_sources;
   disallowed_observation_sources.push_back(
@@ -669,8 +665,7 @@ TEST(NetworkQualityEstimatorTest, ObtainAlgorithmToUseFromParams) {
 // Tests that |GetEffectiveConnectionType| returns
 // EFFECTIVE_CONNECTION_TYPE_OFFLINE when the device is currently offline.
 TEST(NetworkQualityEstimatorTest, Offline) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   const struct {
     NetworkChangeNotifier::ConnectionType connection_type;
@@ -1332,8 +1327,7 @@ TEST(NetworkQualityEstimatorTest, TestExternalEstimateProvider) {
           external_estimate_provider_downstream_throughput);
   std::unique_ptr<ExternalEstimateProvider> external_estimate_provider(
       test_external_estimate_provider);
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params,
+  TestNetworkQualityEstimator estimator(std::map<std::string, std::string>(),
                                         std::move(external_estimate_provider));
   estimator.SimulateNetworkChange(net::NetworkChangeNotifier::CONNECTION_WIFI,
                                   "test");
@@ -1502,8 +1496,7 @@ TEST(NetworkQualityEstimatorTest, MAYBE_TestEffectiveConnectionTypeObserver) {
   base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
 
   TestEffectiveConnectionTypeObserver observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.AddEffectiveConnectionTypeObserver(&observer);
   estimator.SetTickClockForTesting(std::move(tick_clock));
 
@@ -1581,8 +1574,7 @@ TEST(NetworkQualityEstimatorTest, TestRTTAndThroughputEstimatesObserver) {
   base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
 
   TestRTTAndThroughputEstimatesObserver observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.AddRTTAndThroughputEstimatesObserver(&observer);
   estimator.SetTickClockForTesting(std::move(tick_clock));
 
@@ -1680,8 +1672,7 @@ TEST(NetworkQualityEstimatorTest, UnknownEffectiveConnectionType) {
   base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
 
   TestEffectiveConnectionTypeObserver observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.SetTickClockForTesting(std::move(tick_clock));
   estimator.AddEffectiveConnectionTypeObserver(&observer);
   tick_clock_ptr->Advance(base::TimeDelta::FromMinutes(60));
@@ -1727,8 +1718,7 @@ TEST(NetworkQualityEstimatorTest,
   base::SimpleTestTickClock* tick_clock_ptr = tick_clock.get();
 
   TestEffectiveConnectionTypeObserver observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.SetTickClockForTesting(std::move(tick_clock));
   estimator.SimulateNetworkChange(NetworkChangeNotifier::CONNECTION_WIFI,
                                   "test");
@@ -1811,8 +1801,7 @@ TEST(NetworkQualityEstimatorTest,
 TEST(NetworkQualityEstimatorTest, TestRttThroughputObservers) {
   TestRTTObserver rtt_observer;
   TestThroughputObserver throughput_observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.AddRTTObserver(&rtt_observer);
   estimator.AddThroughputObserver(&throughput_observer);
 
@@ -1901,8 +1890,7 @@ TEST(NetworkQualityEstimatorTest, TestRttThroughputObservers) {
 TEST(NetworkQualityEstimatorTest, MAYBE_TestTCPSocketRTT) {
   base::HistogramTester histogram_tester;
   TestRTTObserver rtt_observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
   estimator.AddRTTObserver(&rtt_observer);
 
   TestDelegate test_delegate;
@@ -2180,8 +2168,7 @@ TEST(NetworkQualityEstimatorTest, MAYBE_RecordAccuracy) {
 
 TEST(NetworkQualityEstimatorTest, TestRecordNetworkIDAvailability) {
   base::HistogramTester histogram_tester;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   // The NetworkID is recorded as available on Wi-Fi connection.
   estimator.SimulateNetworkChange(
@@ -2400,8 +2387,7 @@ class TestNetworkQualitiesCacheObserver
 
 TEST(NetworkQualityEstimatorTest, CacheObserver) {
   TestNetworkQualitiesCacheObserver observer;
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params);
+  TestNetworkQualityEstimator estimator;
 
   // Add |observer| as a persistent caching observer.
   estimator.AddNetworkQualitiesCacheObserver(&observer);

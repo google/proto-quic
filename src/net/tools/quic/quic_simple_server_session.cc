@@ -6,12 +6,12 @@
 
 #include <utility>
 
-#include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_session.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 #include "url/gurl.h"
 
@@ -59,7 +59,7 @@ void QuicSimpleServerSession::StreamDraining(QuicStreamId id) {
 
 void QuicSimpleServerSession::OnStreamFrame(const QuicStreamFrame& frame) {
   if (!IsIncomingStream(frame.stream_id)) {
-    LOG(WARNING) << "Client shouldn't send data on server push stream";
+    QUIC_LOG(WARNING) << "Client shouldn't send data on server push stream";
     connection()->CloseConnection(
         QUIC_INVALID_STREAM_ID, "Client sent data on server push stream",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
@@ -177,8 +177,9 @@ SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
 void QuicSimpleServerSession::SendPushPromise(QuicStreamId original_stream_id,
                                               QuicStreamId promised_stream_id,
                                               SpdyHeaderBlock headers) {
-  DVLOG(1) << "stream " << original_stream_id
-             << " send PUSH_PROMISE for promised stream " << promised_stream_id;
+  QUIC_DLOG(INFO) << "stream " << original_stream_id
+                  << " send PUSH_PROMISE for promised stream "
+                  << promised_stream_id;
   WritePushPromise(original_stream_id, promised_stream_id, std::move(headers));
 }
 
@@ -199,7 +200,7 @@ void QuicSimpleServerSession::HandlePromisedPushRequests() {
             CreateOutgoingDynamicStream(promised_info.priority));
     DCHECK(promised_stream != nullptr);
     DCHECK_EQ(promised_info.stream_id, promised_stream->id());
-    DVLOG(1) << "created server push stream " << promised_stream->id();
+    QUIC_DLOG(INFO) << "created server push stream " << promised_stream->id();
 
     SpdyHeaderBlock request_headers(std::move(promised_info.request_headers));
 

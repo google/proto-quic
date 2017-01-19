@@ -6,6 +6,12 @@
 # TEST SETUP
 # ==============================================================================
 
+if (is_android) {
+  import("//build/config/android/config.gni")
+  import("//build/config/android/rules.gni")
+  import("//build/config/sanitizers/sanitizers.gni")
+}
+
 # Define a test as an executable (or apk on Android) with the "testonly" flag
 # set.
 # Variable:
@@ -13,10 +19,6 @@
 #   use_native_activity: Test implements ANativeActivity_onCreate().
 template("test") {
   if (is_android) {
-    import("//build/config/android/config.gni")
-    import("//build/config/android/rules.gni")
-    import("//build/config/sanitizers/sanitizers.gni")
-
     _use_raw_android_executable = defined(invoker.use_raw_android_executable) &&
                                   invoker.use_raw_android_executable
 
@@ -117,6 +119,9 @@ template("test") {
           apk_name = invoker.output_name
           install_script_name = "install_${invoker.output_name}"
         }
+
+        # Add the Java classes so that each target does not have to do it.
+        deps += [ "//base/test:test_support_java" ]
 
         # TODO(agrieve): Remove this data_dep once bots don't build the _apk
         #     target (post-GYP).

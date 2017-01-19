@@ -160,9 +160,6 @@ void InitPathProvider(int key) {
 namespace base {
 
 void InitAndroidTestLogging() {
-  if (base::AndroidIsChildProcess())
-    return;
-
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   logging::InitLogging(settings);

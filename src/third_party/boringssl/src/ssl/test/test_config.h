@@ -83,8 +83,10 @@ struct TestConfig {
   bool tls_unique = false;
   bool expect_ticket_renewal = false;
   bool expect_no_session = false;
+  bool expect_early_data_info = false;
   bool use_ticket_callback = false;
   bool renew_ticket = false;
+  bool enable_early_data = false;
   bool enable_client_custom_extension = false;
   bool enable_server_custom_extension = false;
   bool custom_extension_skip = false;
@@ -124,6 +126,9 @@ struct TestConfig {
   bool expect_sha256_client_cert_initial = false;
   bool expect_sha256_client_cert_resume = false;
   bool enable_short_header = false;
+  bool read_with_unfinished_write = false;
+  bool expect_secure_renegotiation = false;
+  bool expect_no_secure_renegotiation = false;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

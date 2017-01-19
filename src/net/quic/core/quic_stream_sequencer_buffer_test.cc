@@ -9,8 +9,8 @@
 #include <string>
 #include <utility>
 
-#include "base/logging.h"
 #include "base/macros.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_stream_sequencer_buffer_peer.h"
@@ -323,7 +323,7 @@ TEST_F(QuicStreamSequencerBufferTest, Readv100Bytes) {
   iovec iovecs[3]{iovec{dest, 40}, iovec{dest + 40, 40}, iovec{dest + 80, 40}};
   size_t read;
   EXPECT_EQ(QUIC_NO_ERROR, buffer_->Readv(iovecs, 3, &read, &error_details_));
-  LOG(ERROR) << error_details_;
+  QUIC_LOG(ERROR) << error_details_;
   EXPECT_EQ(100u, read);
   EXPECT_EQ(100u, buffer_->BytesConsumed());
   EXPECT_EQ(source, string(dest, read));
@@ -821,7 +821,7 @@ class QuicStreamSequencerBufferRandomIOTest
     Initialize();
 
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
-    VLOG(1) << "**** The current seed is " << seed << " ****";
+    QUIC_LOG(INFO) << "**** The current seed is " << seed << " ****";
     rng_.set_seed(seed);
   }
 
@@ -852,8 +852,8 @@ class QuicStreamSequencerBufferRandomIOTest
     // out-of-order array of OffsetSizePairs.
     for (int i = chunk_num - 1; i >= 0; --i) {
       size_t random_idx = rng_.RandUint64() % (i + 1);
-      DVLOG(1) << "chunk offset " << chopped_stream[random_idx].first
-               << " size " << chopped_stream[random_idx].second;
+      QUIC_DVLOG(1) << "chunk offset " << chopped_stream[random_idx].first
+                    << " size " << chopped_stream[random_idx].second;
       shuffled_buf_.push_front(chopped_stream[random_idx]);
       chopped_stream[random_idx] = chopped_stream[i];
     }
@@ -884,9 +884,10 @@ class QuicStreamSequencerBufferRandomIOTest
       shuffled_buf_.push_back(chunk);
       shuffled_buf_.pop_front();
     }
-    DVLOG(1) << " write at offset: " << offset
-             << " len to write: " << num_to_write << " write result: " << result
-             << " left over: " << shuffled_buf_.size();
+    QUIC_DVLOG(1) << " write at offset: " << offset
+                  << " len to write: " << num_to_write
+                  << " write result: " << result
+                  << " left over: " << shuffled_buf_.size();
   }
 
  protected:
@@ -915,7 +916,7 @@ TEST_F(QuicStreamSequencerBufferRandomIOTest, RandomWriteAndReadv) {
          iterations <= 2 * bytes_to_buffer_) {
     uint8_t next_action =
         shuffled_buf_.empty() ? uint8_t{1} : rng_.RandUint64() % 2;
-    DVLOG(1) << "iteration: " << iterations;
+    QUIC_DVLOG(1) << "iteration: " << iterations;
     switch (next_action) {
       case 0: {  // write
         WriteNextChunkToBuffer();
@@ -938,9 +939,9 @@ TEST_F(QuicStreamSequencerBufferRandomIOTest, RandomWriteAndReadv) {
                   buffer_->Readv(dest_iov, kNumReads, &actually_read,
                                  &error_details_));
         ASSERT_LE(actually_read, num_to_read);
-        DVLOG(1) << " read from offset: " << total_bytes_read_
-                 << " size: " << num_to_read
-                 << " actual read: " << actually_read;
+        QUIC_DVLOG(1) << " read from offset: " << total_bytes_read_
+                      << " size: " << num_to_read
+                      << " actual read: " << actually_read;
         for (size_t i = 0; i < actually_read; ++i) {
           char ch = (i + total_bytes_read_) % 256;
           ASSERT_EQ(ch, GetCharFromIOVecs(i, dest_iov, kNumReads))
@@ -976,7 +977,7 @@ TEST_F(QuicStreamSequencerBufferRandomIOTest, RandomWriteAndConsumeInPlace) {
          iterations <= 2 * bytes_to_buffer_) {
     uint8_t next_action =
         shuffled_buf_.empty() ? uint8_t{1} : rng_.RandUint64() % 2;
-    DVLOG(1) << "iteration: " << iterations;
+    QUIC_DVLOG(1) << "iteration: " << iterations;
     switch (next_action) {
       case 0: {  // write
         WriteNextChunkToBuffer();
@@ -1016,10 +1017,11 @@ TEST_F(QuicStreamSequencerBufferRandomIOTest, RandomWriteAndConsumeInPlace) {
 
         buffer_->MarkConsumed(bytes_processed);
 
-        DVLOG(1) << "iteration " << iterations << ": try to get " << num_read
-                 << " readable regions, actually get " << actually_num_read
-                 << " from offset: " << total_bytes_read_
-                 << "\nprocesse bytes: " << bytes_processed;
+        QUIC_DVLOG(1) << "iteration " << iterations << ": try to get "
+                      << num_read << " readable regions, actually get "
+                      << actually_num_read
+                      << " from offset: " << total_bytes_read_
+                      << "\nprocesse bytes: " << bytes_processed;
         total_bytes_read_ += bytes_processed;
         ASSERT_EQ(total_bytes_read_, buffer_->BytesConsumed());
         ASSERT_TRUE(helper_->CheckBufferInvariants());

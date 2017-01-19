@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "base/logging.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 

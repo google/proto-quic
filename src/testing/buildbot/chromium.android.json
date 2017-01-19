@@ -104,41 +104,6 @@
         "test": "base_unittests"
       },
       {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "override_isolate_target": "blimp_test_apk",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "cipd_packages": [
-            {
-              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
-              "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
-            }
-          ],
-          "dimension_sets": [
-            {
-              "android_devices": "4",
-              "device_os": "MMB29Q",
-              "device_type": "bullhead"
-            }
-          ],
-          "hard_timeout": 960,
-          "output_links": [
-            {
-              "link": [
-                "https://luci-logdog.appspot.com/v/?s",
-                "=android%2Fswarming%2Flogcats%2F",
-                "${TASK_ID}%2F%2B%2Funified_logcats"
-              ],
-              "name": "shard #${SHARD_INDEX} logcats"
-            }
-          ]
-        },
-        "test": "blimp_test_apk"
-      },
-      {
         "override_isolate_target": "blimp_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -1179,6 +1144,38 @@
           ]
         },
         "test": "unit_tests"
+      },
+      {
+        "override_isolate_target": "vr_shell_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:3ff24775a900b675866fbcacf2a8f98a18b2a16a"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "android_devices": "4",
+              "device_os": "MMB29Q",
+              "device_type": "bullhead"
+            }
+          ],
+          "hard_timeout": 960,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "vr_shell_unittests"
       }
     ],
     "isolated_scripts": [
@@ -1303,14 +1300,6 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk"
-      },
-      {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
       },
       {
         "test": "chrome_public_test_apk"
@@ -2293,42 +2282,6 @@
       },
       {
         "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "override_isolate_target": "blimp_test_apk",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "cipd_packages": [
-            {
-              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
-              "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
-            }
-          ],
-          "dimension_sets": [
-            {
-              "android_devices": "4",
-              "device_os": "LMY48I",
-              "device_type": "hammerhead"
-            }
-          ],
-          "expiration": 10800,
-          "hard_timeout": 960,
-          "output_links": [
-            {
-              "link": [
-                "https://luci-logdog.appspot.com/v/?s",
-                "=android%2Fswarming%2Flogcats%2F",
-                "${TASK_ID}%2F%2B%2Funified_logcats"
-              ],
-              "name": "shard #${SHARD_INDEX} logcats"
-            }
-          ]
-        },
-        "test": "blimp_test_apk"
-      },
-      {
-        "override_compile_targets": [
           "chrome_public_test_apk"
         ],
         "override_isolate_target": "chrome_public_test_apk",
@@ -2343,13 +2296,13 @@
           ],
           "dimension_sets": [
             {
-              "android_devices": "4",
+              "android_devices": "6",
               "device_os": "LMY48I",
               "device_type": "hammerhead"
             }
           ],
           "expiration": 10800,
-          "hard_timeout": 960,
+          "hard_timeout": 1800,
           "output_links": [
             {
               "link": [
@@ -2535,14 +2488,6 @@
         "test": "android_webview_test_apk"
       },
       {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
-      },
-      {
         "test": "chrome_public_test_apk"
       },
       {
@@ -2652,40 +2597,6 @@
         "test": "base_unittests"
       },
       {
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "override_isolate_target": "blimp_test_apk",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "cipd_packages": [
-            {
-              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
-              "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
-            }
-          ],
-          "dimension_sets": [
-            {
-              "device_os": "MMB29Q",
-              "device_type": "bullhead"
-            }
-          ],
-          "hard_timeout": 600,
-          "output_links": [
-            {
-              "link": [
-                "https://luci-logdog.appspot.com/v/?s",
-                "=android%2Fswarming%2Flogcats%2F",
-                "${TASK_ID}%2F%2B%2Funified_logcats"
-              ],
-              "name": "shard #${SHARD_INDEX} logcats"
-            }
-          ]
-        },
-        "test": "blimp_test_apk"
-      },
-      {
         "override_isolate_target": "blimp_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -2746,37 +2657,6 @@
           ]
         },
         "test": "blink_heap_unittests"
-      },
-      {
-        "override_isolate_target": "blink_platform_unittests",
-        "swarming": {
-          "can_use_on_swarming_builders": true,
-          "cipd_packages": [
-            {
-              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
-              "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
-            }
-          ],
-          "dimension_sets": [
-            {
-              "device_os": "MMB29Q",
-              "device_type": "bullhead"
-            }
-          ],
-          "hard_timeout": 960,
-          "output_links": [
-            {
-              "link": [
-                "https://luci-logdog.appspot.com/v/?s",
-                "=android%2Fswarming%2Flogcats%2F",
-                "${TASK_ID}%2F%2B%2Funified_logcats"
-              ],
-              "name": "shard #${SHARD_INDEX} logcats"
-            }
-          ]
-        },
-        "test": "blink_platform_unittests"
       },
       {
         "override_compile_targets": [
@@ -2879,6 +2759,7 @@
           "chrome_public_test_apk"
         ],
         "override_isolate_target": "chrome_public_test_apk",
+        "render_results_dir": "chrome/test/data/android/render_tests",
         "swarming": {
           "can_use_on_swarming_builders": true,
           "cipd_packages": [
@@ -3759,14 +3640,6 @@
     "instrumentation_tests": [
       {
         "test": "android_webview_test_apk"
-      },
-      {
-        "apk_under_test": "Blimp.apk",
-        "override_compile_targets": [
-          "blimp_test_apk"
-        ],
-        "test": "blimp_test_apk",
-        "test_apk": "BlimpTest.apk"
       },
       {
         "test": "chrome_public_test_apk"

@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/test_tools/simulator/actor.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 

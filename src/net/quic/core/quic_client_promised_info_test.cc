@@ -8,6 +8,7 @@
 
 #include "base/macros.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_client_promised_info_peer.h"
@@ -82,7 +83,7 @@ class QuicClientPromisedInfoTest : public ::testing::Test {
 
   class StreamVisitor : public QuicSpdyClientStream::Visitor {
     void OnClose(QuicSpdyStream* stream) override {
-      DVLOG(1) << "stream " << stream->id();
+      QUIC_DVLOG(1) << "stream " << stream->id();
     }
   };
 

@@ -170,18 +170,18 @@ void SearchXCTestFiles(const Target* target,
   }
 
   // Call recursively on public and private deps.
-  for (const auto& target : target->public_deps()) {
-    SearchXCTestFiles(target.ptr, xctest_files_per_target);
+  for (const auto& t : target->public_deps()) {
+    SearchXCTestFiles(t.ptr, xctest_files_per_target);
     const Target::FileList& deps_xctest_files =
-        (*xctest_files_per_target)[target.ptr];
+        (*xctest_files_per_target)[t.ptr];
     xctest_files.insert(xctest_files.end(), deps_xctest_files.begin(),
                         deps_xctest_files.end());
   }
 
-  for (const auto& target : target->private_deps()) {
-    SearchXCTestFiles(target.ptr, xctest_files_per_target);
+  for (const auto& t : target->private_deps()) {
+    SearchXCTestFiles(t.ptr, xctest_files_per_target);
     const Target::FileList& deps_xctest_files =
-        (*xctest_files_per_target)[target.ptr];
+        (*xctest_files_per_target)[t.ptr];
     xctest_files.insert(xctest_files.end(), deps_xctest_files.begin(),
                         deps_xctest_files.end());
   }

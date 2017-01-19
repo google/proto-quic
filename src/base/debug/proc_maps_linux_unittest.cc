@@ -227,8 +227,12 @@ void CheckProcMapsRegions(const std::vector<MappedMemoryRegion> &regions) {
     // ignore checking for the stack and address when running under Valgrind.
     // See http://crbug.com/431702 for more details.
     if (!RunningOnValgrind() && regions[i].path == "[stack]") {
+// On Android the test is run on a background thread, since [stack] is for
+// the main thread, we cannot test this.
+#if !defined(OS_ANDROID)
       EXPECT_GE(address, regions[i].start);
       EXPECT_LT(address, regions[i].end);
+#endif
       EXPECT_TRUE(regions[i].permissions & MappedMemoryRegion::READ);
       EXPECT_TRUE(regions[i].permissions & MappedMemoryRegion::WRITE);
       EXPECT_FALSE(regions[i].permissions & MappedMemoryRegion::EXECUTE);

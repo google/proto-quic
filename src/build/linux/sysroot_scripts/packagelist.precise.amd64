@@ -125,7 +125,7 @@ main/libx/libxt/libxt-dev_1.1.1-2ubuntu0.1_amd64.deb
 main/libx/libxtst/libxtst6_1.2.0-4ubuntu0.1_amd64.deb
 main/libx/libxtst/libxtst-dev_1.2.0-4ubuntu0.1_amd64.deb
 main/libx/libxxf86vm/libxxf86vm1_1.1.1-2ubuntu0.1_amd64.deb
-main/l/linux/linux-libc-dev_3.2.0-119.162_amd64.deb
+main/l/linux/linux-libc-dev_3.2.0-120.163_amd64.deb
 main/m/mesa/libegl1-mesa_8.0.4-0ubuntu0.7_amd64.deb
 main/m/mesa/libegl1-mesa-dev_8.0.4-0ubuntu0.7_amd64.deb
 main/m/mesa/libegl1-mesa-drivers_8.0.4-0ubuntu0.7_amd64.deb
@@ -135,8 +135,8 @@ main/m/mesa/libglapi-mesa_8.0.4-0ubuntu0.7_amd64.deb
 main/m/mesa/mesa-common-dev_8.0.4-0ubuntu0.7_amd64.deb
 main/n/nspr/libnspr4_4.12-0ubuntu0.12.04.1_amd64.deb
 main/n/nspr/libnspr4-dev_4.12-0ubuntu0.12.04.1_amd64.deb
-main/n/nss/libnss3_3.23-0ubuntu0.12.04.1_amd64.deb
-main/n/nss/libnss3-dev_3.23-0ubuntu0.12.04.1_amd64.deb
+main/n/nss/libnss3_3.26.2-0ubuntu0.12.04.1_amd64.deb
+main/n/nss/libnss3-dev_3.26.2-0ubuntu0.12.04.1_amd64.deb
 main/o/openssl/libssl1.0.0_1.0.1-4ubuntu5.38_amd64.deb
 main/o/openssl/libssl-dev_1.0.1-4ubuntu5.38_amd64.deb
 main/o/orbit2/liborbit2_2.14.19-0.1ubuntu1_amd64.deb

@@ -51,7 +51,7 @@ class ScopedComPtr : public scoped_refptr<Interface> {
   // Explicit Release() of the held object.  Useful for reuse of the
   // ScopedComPtr instance.
   // Note that this function equates to IUnknown::Release and should not
-  // be confused with e.g. scoped_ptr::release().
+  // be confused with e.g. unique_ptr::release().
   void Release() {
     if (this->ptr_ != NULL) {
       this->ptr_->Release();

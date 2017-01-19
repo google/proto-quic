@@ -1535,6 +1535,15 @@ EVENT_TYPE(HTTP2_STREAM_UPDATE_RECV_WINDOW)
 //   }
 EVENT_TYPE(HTTP2_STREAM_ERROR)
 
+// A PRIORITY update is sent to the server.
+//   {
+//     "stream_id":        <The stream id>,
+//     "parent_stream_id": <The stream's new parent stream>,
+//     "weight":           <The stream's new weight>,
+//     "exclusive":        <Whether the new dependency is exclusive>,
+//   }
+EVENT_TYPE(HTTP2_STREAM_SEND_PRIORITY)
+
 // ------------------------------------------------------------------------
 // SpdyProxyClientSocket
 // ------------------------------------------------------------------------
@@ -2088,6 +2097,13 @@ EVENT_TYPE(SERVICE_WORKER_START_WORKER)
 //   "status": The ServiceWorkerStatusCode as a string. Only present on failure.
 // }
 EVENT_TYPE(SERVICE_WORKER_FETCH_EVENT)
+
+// This event is emitted when a request for a service worker script or its
+// imported scripts could not be handled.
+// {
+//   "error": The error reason as a string.
+// }
+EVENT_TYPE(SERVICE_WORKER_SCRIPT_LOAD_UNHANDLED_REQUEST_ERROR)
 
 // ------------------------------------------------------------------------
 // Global events

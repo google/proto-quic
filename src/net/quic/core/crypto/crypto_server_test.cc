@@ -23,6 +23,7 @@
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/delayed_verify_strike_register_client.h"
+#include "net/quic/test_tools/failing_proof_source.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
@@ -107,6 +108,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
         config_(QuicCryptoServerConfig::TESTING,
                 rand_,
                 CryptoTestUtils::ProofSourceForTesting()),
+        peer_(&config_),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         params_(new QuicCryptoNegotiatedParameters),
@@ -399,6 +401,7 @@ class CryptoServerTest : public ::testing::TestWithParam<TestParams> {
   QuicVersion client_version_;
   string client_version_string_;
   QuicCryptoServerConfig config_;
+  QuicCryptoServerConfigPeer peer_;
   QuicCompressedCertsCache compressed_certs_cache_;
   QuicCryptoServerConfig::ConfigOptions config_options_;
   QuicReferenceCountedPointer<QuicCryptoNegotiatedParameters> params_;
@@ -994,6 +997,28 @@ TEST_P(CryptoServerTest, NonceInSHLO) {
 
   StringPiece nonce;
   EXPECT_TRUE(out_.GetStringPiece(kServerNonceTag, &nonce));
+}
+
+TEST_P(CryptoServerTest, ProofSourceFailure) {
+  // Install a ProofSource which will unconditionally fail
+  peer_.ResetProofSource(std::unique_ptr<ProofSource>(new FailingProofSource));
+
+  // clang-format off
+  CryptoHandshakeMessage msg = CryptoTestUtils::Message(
+      "CHLO",
+      "AEAD", "AESG",
+      "KEXS", "C255",
+      "SCID", scid_hex_.c_str(),
+      "PUBS", pub_hex_.c_str(),
+      "NONC", nonce_hex_.c_str(),
+      "PDMD", "X509",
+      "VER\0", client_version_string_.c_str(),
+      "$padding", static_cast<int>(kClientHelloMinimumSize),
+      nullptr);
+  // clang-format on
+
+  // Just ensure that we don't crash as occurred in b/33916924.
+  ShouldFailMentioning("", msg);
 }
 
 TEST(CryptoServerConfigGenerationTest, Determinism) {

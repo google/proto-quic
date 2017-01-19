@@ -24,7 +24,9 @@ namespace internal {
 
 namespace {
 
-const int kStackMaxDepth = 100;
+// Chosen to support 99.9% of documents found in the wild late 2016.
+// http://crbug.com/673263
+const int kStackMaxDepth = 200;
 
 const int32_t kExtendedASCIIStart = 0x80;
 

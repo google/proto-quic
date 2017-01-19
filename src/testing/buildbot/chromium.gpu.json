@@ -599,7 +599,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -615,7 +615,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -631,7 +631,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -658,7 +658,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -681,7 +681,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -704,7 +704,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -727,7 +727,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -756,7 +756,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -793,7 +793,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -816,7 +816,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -839,7 +839,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -862,7 +862,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -881,7 +881,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -897,7 +897,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -913,7 +913,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -929,7 +929,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         },
@@ -956,7 +956,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -979,7 +979,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1002,7 +1002,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1025,7 +1025,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1054,7 +1054,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1091,7 +1091,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1114,7 +1114,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1137,7 +1137,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1160,7 +1160,7 @@
           "dimension_sets": [
             {
               "gpu": "8086:0a2e",
-              "os": "Mac-10.10"
+              "os": "Mac-10.12"
             }
           ]
         }
@@ -1822,6 +1822,22 @@
         },
         "test": "gl_unittests",
         "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-test-data-path"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        },
+        "test": "video_decode_accelerator_unittest",
+        "use_xvfb": false
       }
     ],
     "isolated_scripts": [
@@ -2119,6 +2135,22 @@
           ]
         },
         "test": "tab_capture_end2end_tests",
+        "use_xvfb": false
+      },
+      {
+        "args": [
+          "--use-test-data-path"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "gpu": "10de:104a",
+              "os": "Windows-2008ServerR2-SP1"
+            }
+          ]
+        },
+        "test": "video_decode_accelerator_unittest",
         "use_xvfb": false
       }
     ],

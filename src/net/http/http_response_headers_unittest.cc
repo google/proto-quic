@@ -780,9 +780,12 @@ TEST_P(RequiresValidationTest, RequiresValidation) {
   const RequiresValidationTestData test = GetParam();
 
   base::Time request_time, response_time, current_time;
-  base::Time::FromString("Wed, 28 Nov 2007 00:40:09 GMT", &request_time);
-  base::Time::FromString("Wed, 28 Nov 2007 00:40:12 GMT", &response_time);
-  base::Time::FromString("Wed, 28 Nov 2007 00:45:20 GMT", &current_time);
+  ASSERT_TRUE(
+      base::Time::FromString("Wed, 28 Nov 2007 00:40:09 GMT", &request_time));
+  ASSERT_TRUE(
+      base::Time::FromString("Wed, 28 Nov 2007 00:40:12 GMT", &response_time));
+  ASSERT_TRUE(
+      base::Time::FromString("Wed, 28 Nov 2007 00:45:20 GMT", &current_time));
 
   std::string headers(test.headers);
   HeadersToRaw(&headers);

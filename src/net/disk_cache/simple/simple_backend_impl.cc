@@ -458,6 +458,15 @@ int SimpleBackendImpl::CalculateSizeOfAllEntries(
       &SimpleBackendImpl::IndexReadyForSizeCalculation, AsWeakPtr(), callback));
 }
 
+int SimpleBackendImpl::CalculateSizeOfEntriesBetween(
+    base::Time initial_time,
+    base::Time end_time,
+    const CompletionCallback& callback) {
+  return index_->ExecuteWhenReady(
+      base::Bind(&SimpleBackendImpl::IndexReadyForSizeBetweenCalculation,
+                 AsWeakPtr(), initial_time, end_time, callback));
+}
+
 class SimpleBackendImpl::SimpleIterator final : public Iterator {
  public:
   explicit SimpleIterator(base::WeakPtr<SimpleBackendImpl> backend)
@@ -570,6 +579,18 @@ void SimpleBackendImpl::IndexReadyForSizeCalculation(
     int result) {
   if (result == net::OK)
     result = static_cast<int>(index_->GetCacheSize());
+  callback.Run(result);
+}
+
+void SimpleBackendImpl::IndexReadyForSizeBetweenCalculation(
+    base::Time initial_time,
+    base::Time end_time,
+    const CompletionCallback& callback,
+    int result) {
+  if (result == net::OK) {
+    result =
+        static_cast<int>(index_->GetCacheSizeBetween(initial_time, end_time));
+  }
   callback.Run(result);
 }
 

@@ -13,9 +13,9 @@
 
 #include <cstdint>  // for uintptr_t
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "net/quic/platform/api/quic_aligned.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 

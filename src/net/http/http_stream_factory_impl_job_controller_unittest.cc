@@ -371,6 +371,122 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
 }
 
+// Tests that if alt job succeeds and main job is blocked, main job should be
+// cancelled immediately. |request_| completion will clean up the JobController.
+// Regression test for crbug.com/678768.
+TEST_F(HttpStreamFactoryImplJobControllerTest,
+       AltJobSucceedsMainJobBlockedControllerDestroyed) {
+  ProxyConfig proxy_config;
+  proxy_config.set_auto_detect(true);
+  MockAsyncProxyResolverFactory* proxy_resolver_factory =
+      new MockAsyncProxyResolverFactory(false);
+  session_deps_.proxy_service.reset(
+      new ProxyService(base::MakeUnique<ProxyConfigServiceFixed>(proxy_config),
+                       base::WrapUnique(proxy_resolver_factory), nullptr));
+  Initialize(false);
+
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("https://www.google.com");
+
+  url::SchemeHostPort server(request_info.url);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
+  SetAlternativeService(request_info, alternative_service);
+  request_.reset(
+      job_controller_->Start(request_info, &request_delegate_, nullptr,
+                             NetLogWithSource(), HttpStreamRequest::HTTP_STREAM,
+                             DEFAULT_PRIORITY, SSLConfig(), SSLConfig()));
+  EXPECT_TRUE(job_controller_->main_job());
+  EXPECT_TRUE(job_controller_->alternative_job());
+  EXPECT_TRUE(JobControllerPeer::main_job_is_blocked(job_controller_));
+
+  // |alternative_job| succeeds and should report status to Request.
+  HttpStream* http_stream =
+      new HttpBasicStream(base::MakeUnique<ClientSocketHandle>(), false, false);
+  job_factory_.alternative_job()->SetStream(http_stream);
+  EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
+      .WillOnce(Invoke(DeleteHttpStreamPointer));
+  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig());
+
+  EXPECT_FALSE(job_controller_->main_job());
+  EXPECT_TRUE(job_controller_->alternative_job());
+
+  // Invoke OnRequestComplete() which should delete |job_controller_| from
+  // |factory_|.
+  request_.reset();
+  VerifyBrokenAlternateProtocolMapping(request_info, false);
+  // This fails without the fix for crbug.com/678768.
+  EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
+}
+
+// Tests that if an orphaned job completes after |request_| is gone,
+// JobController will be cleaned up.
+TEST_F(HttpStreamFactoryImplJobControllerTest,
+       OrphanedJobCompletesControllerDestroyed) {
+  ProxyConfig proxy_config;
+  proxy_config.set_auto_detect(true);
+  MockAsyncProxyResolverFactory* proxy_resolver_factory =
+      new MockAsyncProxyResolverFactory(false);
+  session_deps_.proxy_service.reset(
+      new ProxyService(base::MakeUnique<ProxyConfigServiceFixed>(proxy_config),
+                       base::WrapUnique(proxy_resolver_factory), nullptr));
+  Initialize(false);
+
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("https://www.google.com");
+
+  url::SchemeHostPort server(request_info.url);
+  AlternativeService alternative_service(kProtoQUIC, server.host(), 443);
+  SetAlternativeService(request_info, alternative_service);
+  // Hack to use different URL for the main job to help differentiate the proxy
+  // requests.
+  job_factory_.UseDifferentURLForMainJob(GURL("http://www.google.com"));
+  request_.reset(
+      job_controller_->Start(request_info, &request_delegate_, nullptr,
+                             NetLogWithSource(), HttpStreamRequest::HTTP_STREAM,
+                             DEFAULT_PRIORITY, SSLConfig(), SSLConfig()));
+  EXPECT_TRUE(job_controller_->main_job());
+  EXPECT_TRUE(job_controller_->alternative_job());
+  EXPECT_TRUE(JobControllerPeer::main_job_is_blocked(job_controller_));
+
+  // Complete main job now.
+  MockAsyncProxyResolver resolver;
+  proxy_resolver_factory->pending_requests()[0]->CompleteNowWithForwarder(
+      net::OK, &resolver);
+  int main_job_request_id =
+      resolver.pending_jobs()[0]->url().SchemeIs("http") ? 0 : 1;
+
+  resolver.pending_jobs()[main_job_request_id]->results()->UseNamedProxy(
+      "result1:80");
+  resolver.pending_jobs()[main_job_request_id]->CompleteNow(net::OK);
+
+  HttpStream* http_stream =
+      new HttpBasicStream(base::MakeUnique<ClientSocketHandle>(), false, false);
+  job_factory_.main_job()->SetStream(http_stream);
+
+  EXPECT_CALL(request_delegate_, OnStreamReady(_, _, http_stream))
+      .WillOnce(Invoke(DeleteHttpStreamPointer));
+  job_controller_->OnStreamReady(job_factory_.main_job(), SSLConfig());
+  // Invoke OnRequestComplete() which should not delete |job_controller_| from
+  // |factory_| because alt job is yet to finish.
+  request_.reset();
+  ASSERT_FALSE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
+  EXPECT_FALSE(job_controller_->main_job());
+  EXPECT_TRUE(job_controller_->alternative_job());
+
+  // Make |alternative_job| succeed.
+  resolver.pending_jobs()[0]->results()->UseNamedProxy("result1:80");
+  resolver.pending_jobs()[0]->CompleteNow(net::OK);
+  HttpStream* http_stream2 =
+      new HttpBasicStream(base::MakeUnique<ClientSocketHandle>(), false, false);
+  job_factory_.alternative_job()->SetStream(http_stream2);
+  // This should not call request_delegate_::OnStreamReady.
+  job_controller_->OnStreamReady(job_factory_.alternative_job(), SSLConfig());
+  // Make sure that controller does not leak.
+  EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
+}
+
 TEST_F(HttpStreamFactoryImplJobControllerTest,
        AltJobSucceedsAfterMainJobFailed) {
   ProxyConfig proxy_config;

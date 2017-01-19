@@ -62,7 +62,7 @@ class TaskSchedulerSequenceTest : public testing::Test {
   std::unique_ptr<Task> task_e_owned_;
 
   // Raw pointers to those same tasks for verification. This is needed because
-  // the scoped_ptrs above no longer point to the tasks once they have been
+  // the unique_ptrs above no longer point to the tasks once they have been
   // moved into a Sequence.
   const Task* task_a_;
   const Task* task_b_;

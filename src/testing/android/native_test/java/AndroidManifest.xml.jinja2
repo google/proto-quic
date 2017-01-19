@@ -47,6 +47,18 @@ found in the LICENSE file.
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- If you change the number below, make sure to add/remove actual service classes
+             org/chromium/base/MultiprocessTestClientService*.java -->
+        {% set num_test_client_services = 5 %}
+        <meta-data android:name="org.chromium.native_test.NUM_TEST_CLIENT_SERVICES"
+                   android:value="{{ num_test_client_services }}"/>
+        {% for i in range(num_test_client_services) %}
+        <service android:name="org.chromium.base.MultiprocessTestClientService{{ i }}"
+                 android:process=":test_client_process{{ i }}"
+                 android:isolatedProcess="false"
+                 android:exported="false" />
+        {% endfor %}
     </application>
 
     <instrumentation android:name="org.chromium.native_test.NativeTestInstrumentationTestRunner"

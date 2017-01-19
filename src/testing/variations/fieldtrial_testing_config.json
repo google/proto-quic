@@ -1,16 +1,4 @@
 {
-    "AndroidSessionNotifications": [
-        {
-            "platforms": [
-                "android"
-            ],
-            "experiments": [
-                {
-                    "name": "Disabled"
-                }
-            ]
-        }
-    ],
     "AndroidSpellChecker": [
         {
             "platforms": [
@@ -897,6 +885,18 @@
             ]
         }
     ],
+    "InstantApps": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "InstantAppsEnabled"
+                }
+            ]
+        }
+    ],
     "IntelligentSessionRestore": [
         {
             "platforms": [
@@ -951,6 +951,21 @@
                     "params": {
                         "lowPriorityIframes": "true"
                     }
+                }
+            ]
+        }
+    ],
+    "MacAllowBackgroundingProcesses": [
+        {
+            "platforms": [
+                "mac"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "MacAllowBackgroundingProcesses"
+                    ]
                 }
             ]
         }
@@ -1178,24 +1193,6 @@
                     "name": "NetworkTimeQueriesEnabled",
                     "enable_features": [
                         "NetworkTimeServiceQuerying"
-                    ]
-                }
-            ]
-        }
-    ],
-    "NewAudioRenderingMixingStrategy": [
-        {
-            "platforms": [
-                "android",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "enable_features": [
-                        "NewAudioRenderingMixingStrategy"
                     ]
                 }
             ]
@@ -1587,7 +1584,10 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled"
+                    "name": "EnabledGlobalMedium2",
+                    "params": {
+                        "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_gm"
+                    }
                 }
             ]
         }
@@ -1615,9 +1615,7 @@
         {
             "platforms": [
                 "chromeos",
-                "linux",
-                "mac",
-                "win"
+                "linux"
             ],
             "experiments": [
                 {
@@ -2061,6 +2059,21 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "SearchGeolocationDisclosure": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "EnableNewShow3Each1Day",
+                    "enable_features": [
+                        "ConsistentOmniboxGeolocation"
+                    ]
                 }
             ]
         }

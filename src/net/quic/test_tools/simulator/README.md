@@ -30,7 +30,7 @@ class LogClock : public Actor {
   ~LogClock() override {}
 
   void Act() override {
-    VLOG(1) << "The current time is " << clock_->Now().ToDebuggingValue();
+    QUIC_LOG(INFO) << "The current time is " << clock_->Now().ToDebuggingValue();
     Schedule(clock_->Now() + QuicTime::Delta::FromMilliseconds(100));
   }
 };

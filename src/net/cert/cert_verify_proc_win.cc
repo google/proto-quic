@@ -363,8 +363,6 @@ void GetCertChainInfo(PCCERT_CHAIN_CONTEXT chain_context,
     } else {
       verified_chain.push_back(cert);
     }
-
-    FillCertVerifyResultWeakSignature(cert, i == 0, verify_result);
   }
 
   if (verified_cert) {

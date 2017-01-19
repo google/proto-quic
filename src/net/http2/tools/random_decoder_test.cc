@@ -127,8 +127,7 @@ AssertionResult RandomDecoderTest::DecodeAndValidateSeveralWays(
     DecodeBuffer input(original->cursor(), original_remaining);
     VLOG(2) << "DecodeSegmentsAndValidate with SelectRandom";
     VERIFY_SUCCESS(DecodeSegmentsAndValidate(
-        &input, RandomDecoderTest::SelectRandom(return_non_zero_on_first),
-        validator))
+        &input, SelectRandom(return_non_zero_on_first), validator))
         << "\nFailed with SelectRandom; input.Offset=" << input.Offset()
         << "; input.Remaining=" << input.Remaining();
     VERIFY_EQ(first_consumed, input.Offset()) << "\nFailed with SelectRandom";

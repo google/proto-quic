@@ -366,6 +366,11 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   // Shared among all the PMDs to keep state scoped to the tracing session.
   scoped_refptr<MemoryDumpSessionState> session_state_;
 
+  // The list of names of dump providers that are blacklisted from strict thread
+  // affinity check on unregistration.
+  std::unordered_set<StringPiece, StringPieceHash>
+      strict_thread_check_blacklist_;
+
   MemoryDumpManagerDelegate* delegate_;  // Not owned.
 
   // When true, this instance is in charge of coordinating periodic dumps.

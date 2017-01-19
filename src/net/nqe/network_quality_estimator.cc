@@ -140,6 +140,7 @@ static_assert(32 >= kBitsPerMetric * 4,
 int32_t FitInKBitsPerMetricBits(int32_t metric) {
   // Remove the last kTrimBits. This will allow the metric to fit within
   // kBitsPerMetric while losing only the least significant bits.
+  DCHECK_LE(0, metric);
   metric = metric >> kTrimBits;
 
   // kLargestValuePossible is the largest value that can be recorded using
@@ -149,7 +150,7 @@ int32_t FitInKBitsPerMetricBits(int32_t metric) {
     // Fit |metric| in kBitsPerMetric by clamping it down.
     metric = kLargestValuePossible;
   }
-  DCHECK_EQ(0, metric >> kBitsPerMetric);
+  DCHECK_EQ(0, metric >> kBitsPerMetric) << metric;
   return metric;
 }
 
@@ -606,7 +607,10 @@ void NetworkQualityEstimator::RecordCorrelationMetric(const URLRequest& request,
   if (load_timing_info.receive_headers_end < last_main_frame_request_)
     return;
 
-  const base::TimeTicks now = tick_clock_->NowTicks();
+  // Use the system clock instead of |tick_clock_| to compare the current
+  // timestamp with the |load_timing_info| timestamp since the latter is set by
+  // the system clock, and may be different from |tick_clock_| in tests.
+  const base::TimeTicks now = base::TimeTicks::Now();
   // Record UMA only for requests that started recently.
   if (now - last_main_frame_request_ > base::TimeDelta::FromSeconds(15))
     return;

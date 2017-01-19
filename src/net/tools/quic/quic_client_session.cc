@@ -4,13 +4,13 @@
 
 #include "net/tools/quic/quic_client_session.h"
 
-#include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "net/log/net_log_with_source.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
 using std::string;
@@ -43,17 +43,17 @@ void QuicClientSession::OnProofVerifyDetailsAvailable(
 
 bool QuicClientSession::ShouldCreateOutgoingDynamicStream() {
   if (!crypto_stream_->encryption_established()) {
-    DVLOG(1) << "Encryption not active so no outgoing stream created.";
+    QUIC_DLOG(INFO) << "Encryption not active so no outgoing stream created.";
     return false;
   }
   if (GetNumOpenOutgoingStreams() >= max_open_outgoing_streams()) {
-    DVLOG(1) << "Failed to create a new outgoing stream. "
-             << "Already " << GetNumOpenOutgoingStreams() << " open.";
+    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
+                    << "Already " << GetNumOpenOutgoingStreams() << " open.";
     return false;
   }
   if (goaway_received() && respect_goaway_) {
-    DVLOG(1) << "Failed to create a new outgoing stream. "
-             << "Already received goaway.";
+    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
+                    << "Already received goaway.";
     return false;
   }
   return true;
@@ -99,12 +99,12 @@ bool QuicClientSession::ShouldCreateIncomingDynamicStream(QuicStreamId id) {
     return false;
   }
   if (goaway_received() && respect_goaway_) {
-    DVLOG(1) << "Failed to create a new outgoing stream. "
-             << "Already received goaway.";
+    QUIC_DLOG(INFO) << "Failed to create a new outgoing stream. "
+                    << "Already received goaway.";
     return false;
   }
   if (id % 2 != 0) {
-    LOG(WARNING) << "Received invalid push stream id " << id;
+    QUIC_LOG(WARNING) << "Received invalid push stream id " << id;
     connection()->CloseConnection(
         QUIC_INVALID_STREAM_ID, "Server created odd numbered stream",
         ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);

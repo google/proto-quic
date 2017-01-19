@@ -14,8 +14,6 @@
 #include <stddef.h>
 #include <string>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "net/http2/decoder/decode_buffer.h"
@@ -110,17 +108,6 @@ class StructureDecoderTest : public RandomDecoderTest {
   // Set the fields of |*p| to random values.
   void Randomize(S* p) { ::net::test::Randomize(p, RandomPtr()); }
 
-  AssertionResult ValidatorForDecodeLeadingStructure(const S* expected,
-                                                     const DecodeBuffer& db,
-                                                     DecodeStatus status) {
-    if (expected != nullptr && *expected != structure_) {
-      return AssertionFailure()
-             << "Expected structs to be equal\nExpected: " << *expected
-             << "\n  Actual: " << structure_;
-    }
-    return AssertionSuccess();
-  }
-
   // Fully decodes the Structure at the start of data, and confirms it matches
   // *expected (if provided).
   void DecodeLeadingStructure(const S* expected, StringPiece data) {
@@ -130,20 +117,25 @@ class StructureDecoderTest : public RandomDecoderTest {
     // The validator is called after each of the several times that the input
     // DecodeBuffer is decoded, each with a different segmentation of the input.
     // Validate that structure_ matches the expected value, if provided.
-    Validator validator =
-        base::Bind(&StructureDecoderTest::ValidatorForDecodeLeadingStructure,
-                   base::Unretained(this), expected);
+    Validator validator = [expected, this](
+        const DecodeBuffer& db, DecodeStatus status) -> AssertionResult {
+      if (expected != nullptr && *expected != structure_) {
+        return AssertionFailure()
+               << "Expected structs to be equal\nExpected: " << *expected
+               << "\n  Actual: " << structure_;
+      }
+      return AssertionSuccess();
+    };
 
     // First validate that decoding is done and that we've advanced the cursor
     // the expected amount.
-    Validator wrapped_validator =
-        ValidateDoneAndOffset(S::EncodedSize(), validator);
+    validator = ValidateDoneAndOffset(S::EncodedSize(), validator);
 
     // Decode several times, with several segmentations of the input buffer.
     fast_decode_count_ = 0;
     slow_decode_count_ = 0;
     EXPECT_TRUE(DecodeAndValidateSeveralWays(
-        &original, false /*return_non_zero_on_first*/, wrapped_validator));
+        &original, false /*return_non_zero_on_first*/, validator));
 
     if (!HasFailure()) {
       EXPECT_EQ(S::EncodedSize(), decode_offset_);

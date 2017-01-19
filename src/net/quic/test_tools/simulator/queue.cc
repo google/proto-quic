@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/simulator/queue.h"
 
 using std::string;
@@ -25,11 +26,11 @@ void Queue::set_tx_port(ConstrainedPortInterface* port) {
 
 void Queue::AcceptPacket(std::unique_ptr<Packet> packet) {
   if (packet->size + bytes_queued_ > capacity_) {
-    DVLOG(1) << "Queue [" << name() << "] has received a packet from ["
-             << packet->source << "] to [" << packet->destination
-             << "] which is over capacity.  Dropping it.";
-    DVLOG(1) << "Queue size: " << bytes_queued_ << " out of " << capacity_
-             << ".  Packet size: " << packet->size;
+    QUIC_DVLOG(1) << "Queue [" << name() << "] has received a packet from ["
+                  << packet->source << "] to [" << packet->destination
+                  << "] which is over capacity.  Dropping it.";
+    QUIC_DVLOG(1) << "Queue size: " << bytes_queued_ << " out of " << capacity_
+                  << ".  Packet size: " << packet->size;
     return;
   }
 

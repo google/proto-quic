@@ -26,9 +26,10 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
           chrome.gpuBenchmarking.runMicroBenchmark(
               "invalidation_benchmark",
               function(value) {},
-              """ + str(args) + """
+              {{ args }}
           );
-  """)
+      """,
+      args=args)
 
   micro_benchmark_id = action_runner.EvaluateJavaScript(
       'window.benchmark_results.id')
@@ -39,14 +40,14 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
   with action_runner.CreateInteraction('Repaint'):
     action_runner.RepaintContinuously(seconds=5)
 
-  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.ExecuteJavaScript("""
       window.benchmark_results.message_handled =
           chrome.gpuBenchmarking.sendMessageToMicroBenchmark(
-              """ + str(micro_benchmark_id) + """, {
-                "notify_done": true
-              });
-  """)
+                {{ micro_benchmark_id }}, {
+                  "notify_done": true
+                });
+      """,
+      micro_benchmark_id=micro_benchmark_id)
 
 
 def WaitThenRepaint(action_runner):

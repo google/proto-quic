@@ -179,7 +179,14 @@ def get_fyi_waterfall_config():
            'build245-m4--device1', 'build245-m4--device2',
            'build245-m4--device3', 'build245-m4--device4',
            'build245-m4--device5', 'build245-m4--device6',
-           'build245-m4--device7'
+           'build245-m4--device7', 'build248-m4--device1',
+           'build248-m4--device2', 'build248-m4--device3',
+           'build248-m4--device4', 'build248-m4--device5',
+           'build248-m4--device6', 'build248-m4--device7',
+           'build249-m4--device1', 'build249-m4--device2',
+           'build249-m4--device3', 'build249-m4--device4',
+           'build249-m4--device5', 'build249-m4--device6',
+           'build249-m4--device7'
         ]
       }
     ])
@@ -419,7 +426,8 @@ def get_waterfall_config():
        'perf_tests': [
          ('cc_perftests', 2),
          ('load_library_perf_tests', 2),
-         ('tracing_perftests', 2)]
+         ('tracing_perftests', 2),
+         ('media_perftests', 3)]
       }
     ])
 
@@ -427,7 +435,8 @@ def get_waterfall_config():
 
 
 def generate_isolate_script_entry(swarming_dimensions, test_args,
-  isolate_name, step_name, override_compile_targets=None):
+    isolate_name, step_name, override_compile_targets=None,
+    swarming_timeout=None):
   result = {
     'args': test_args,
     'isolate_name': isolate_name,
@@ -441,7 +450,7 @@ def generate_isolate_script_entry(swarming_dimensions, test_args,
       # supports swarming. It doesn't hurt.
       'can_use_on_swarming_builders': True,
       'expiration': 21600,
-      'hard_timeout': 7200,
+      'hard_timeout': swarming_timeout if swarming_timeout else 7200,
       'io_timeout': 3600,
       'dimension_sets': swarming_dimensions,
     }
@@ -471,7 +480,8 @@ def generate_telemetry_test(swarming_dimensions, benchmark_name, browser):
 
   return generate_isolate_script_entry(
     swarming_dimensions, test_args, 'telemetry_perf_tests',
-    step_name, ['telemetry_perf_tests'])
+    step_name, ['telemetry_perf_tests'],
+    swarming_timeout=BENCHMARK_SWARMING_TIMEOUTS.get(benchmark_name))
 
 
 def script_test_enabled_on_tester(master, test, tester_name, shard):
@@ -591,6 +601,11 @@ BENCHMARK_NAME_BLACKLIST = [
     'skpicture_printer_ct',
 ]
 
+# Overrides the default 2 hour timeout for swarming tasks.
+BENCHMARK_SWARMING_TIMEOUTS = {
+    'loading.mobile': 14400,
+}
+
 # Certain swarming bots are not sharding correctly with the new device affinity
 # algorithm.  Reverting to legacy algorithm to try and get them to complete.
 # See crbug.com/670284
@@ -683,7 +698,7 @@ def generate_all_tests(waterfall):
   benchmark_sharding_map['22'] = shard_benchmarks(22, all_benchmarks)
   benchmark_sharding_map['5'] = shard_benchmarks(5, all_benchmarks)
   benchmark_sharding_map['1'] = shard_benchmarks(1, all_benchmarks)
-  benchmark_sharding_map['7'] = shard_benchmarks(7, all_benchmarks)
+  benchmark_sharding_map['21'] = shard_benchmarks(21, all_benchmarks)
 
   for name, config in waterfall['testers'].iteritems():
     use_whitelist = config['use_whitelist']

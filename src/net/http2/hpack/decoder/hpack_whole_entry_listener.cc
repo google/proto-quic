@@ -4,8 +4,6 @@
 
 #include "net/http2/hpack/decoder/hpack_whole_entry_listener.h"
 
-#include "base/logging.h"
-
 using base::StringPiece;
 
 namespace net {

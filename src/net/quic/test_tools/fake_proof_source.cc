@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/test_tools/fake_proof_source.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 
@@ -50,7 +51,7 @@ bool FakeProofSource::GetProof(
     const QuicTagVector& connection_options,
     QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
     QuicCryptoProof* out_proof) {
-  LOG(WARNING) << "Synchronous GetProof called";
+  QUIC_LOG(WARNING) << "Synchronous GetProof called";
   return delegate_->GetProof(server_address, hostname, server_config,
                              quic_version, chlo_hash, connection_options,
                              out_chain, out_proof);
@@ -74,7 +75,7 @@ void FakeProofSource::GetProof(
     return;
   }
 
-  LOG(WARNING) << "Asynchronous GetProof called";
+  QUIC_LOG(WARNING) << "Asynchronous GetProof called";
   params_.push_back(Params{server_address, hostname, server_config,
                            quic_version, chlo_hash.as_string(),
                            connection_options, std::move(callback)});

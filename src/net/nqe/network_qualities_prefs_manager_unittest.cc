@@ -72,8 +72,7 @@ class TestPrefDelegate : public NetworkQualitiesPrefsManager::PrefDelegate {
 };
 
 TEST(NetworkQualitiesPrefManager, Write) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params, nullptr);
+  TestNetworkQualityEstimator estimator;
 
   std::unique_ptr<TestPrefDelegate> prefs_delegate(new TestPrefDelegate());
   TestPrefDelegate* prefs_delegate_ptr = prefs_delegate.get();
@@ -111,8 +110,7 @@ TEST(NetworkQualitiesPrefManager, Write) {
 
 // Verify that the pref is not written if the network ID contains a period.
 TEST(NetworkQualitiesPrefManager, WriteWithPeriodInNetworkID) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params, nullptr);
+  TestNetworkQualityEstimator estimator;
 
   std::unique_ptr<TestPrefDelegate> prefs_delegate(new TestPrefDelegate());
   TestPrefDelegate* prefs_delegate_ptr = prefs_delegate.get();
@@ -138,8 +136,7 @@ TEST(NetworkQualitiesPrefManager, WriteWithPeriodInNetworkID) {
 }
 
 TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params, nullptr);
+  TestNetworkQualityEstimator estimator;
 
   std::unique_ptr<TestPrefDelegate> prefs_delegate(new TestPrefDelegate());
 
@@ -236,8 +233,7 @@ TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
 
 // Verifies that the prefs are cleared correctly.
 TEST(NetworkQualitiesPrefManager, ClearPrefs) {
-  std::map<std::string, std::string> variation_params;
-  TestNetworkQualityEstimator estimator(variation_params, nullptr);
+  TestNetworkQualityEstimator estimator;
 
   std::unique_ptr<TestPrefDelegate> prefs_delegate(new TestPrefDelegate());
 

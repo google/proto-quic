@@ -119,17 +119,6 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
     print log
 
 
-class _BlinkPerfMeasurementSlimmingPaintInvalidation(_BlinkPerfMeasurement):
-  """Measures blink perf with the new paint invalidation system (see:
-  https://goo.gl/eQczQW). The benchmarks using this measurement should be
-  removed when slimming paint invalidation ships."""
-  def CustomizeBrowserOptions(self, options):
-    _BlinkPerfMeasurement.CustomizeBrowserOptions(self, options)
-    options.AppendExtraBrowserArgs([
-        '--enable-blink-features=SlimmingPaintInvalidation'
-    ])
-
-
 class _BlinkPerfBenchmark(perf_benchmark.PerfBenchmark):
   test = _BlinkPerfMeasurement
 
@@ -229,11 +218,6 @@ class BlinkPerfPaint(_BlinkPerfBenchmark):
     return cls.IsSvelte(possible_browser)  # http://crbug.com/574483
 
 
-class BlinkPerfPaintSlimmingPaintInvalidation(BlinkPerfPaint):
-  tag = 'paint_slimmingpaintinvalidation'
-  test = _BlinkPerfMeasurementSlimmingPaintInvalidation
-
-
 @benchmark.Disabled('win')  # crbug.com/488493
 class BlinkPerfParser(_BlinkPerfBenchmark):
   tag = 'parser'
@@ -243,11 +227,6 @@ class BlinkPerfParser(_BlinkPerfBenchmark):
 class BlinkPerfSVG(_BlinkPerfBenchmark):
   tag = 'svg'
   subdir = 'SVG'
-
-
-class BlinkPerfSVGSlimmingPaintInvalidation(BlinkPerfSVG):
-  tag = 'svg_slimmingpaintinvalidation'
-  test = _BlinkPerfMeasurementSlimmingPaintInvalidation
 
 
 class BlinkPerfShadowDOM(_BlinkPerfBenchmark):

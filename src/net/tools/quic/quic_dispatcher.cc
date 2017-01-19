@@ -7,14 +7,13 @@
 #include <utility>
 
 #include "base/debug/stack_trace.h"
-#include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
-
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 #include "net/tools/quic/chlo_extractor.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_session.h"
@@ -377,8 +376,8 @@ void QuicDispatcher::ProcessUnauthenticatedHeaderFate(
           !time_wait_list_manager_->IsConnectionIdInTimeWait(connection_id)) {
         // Add this connection_id to the time-wait state, to safely reject
         // future packets.
-        DVLOG(1) << "Adding connection ID " << connection_id
-                 << "to time-wait list.";
+        QUIC_DLOG(INFO) << "Adding connection ID " << connection_id
+                        << "to time-wait list.";
         time_wait_list_manager_->AddConnectionIdToTimeWait(
             connection_id, framer_.version(),
             /*connection_rejected_statelessly=*/false, nullptr);
@@ -425,8 +424,9 @@ QuicDispatcher::QuicPacketFate QuicDispatcher::ValidityChecks(
   // set.  Since this may be a client continuing a connection we lost track of
   // via server restart, send a rejection to fast-fail the connection.
   if (!header.public_header.version_flag) {
-    DVLOG(1) << "Packet without version arrived for unknown connection ID "
-             << header.public_header.connection_id;
+    QUIC_DLOG(INFO)
+        << "Packet without version arrived for unknown connection ID "
+        << header.public_header.connection_id;
     return kFateTimeWait;
   }
 
@@ -532,7 +532,8 @@ void QuicDispatcher::OnWriteBlocked(
 
 void QuicDispatcher::OnConnectionAddedToTimeWaitList(
     QuicConnectionId connection_id) {
-  DVLOG(1) << "Connection " << connection_id << " added to time wait list.";
+  QUIC_DLOG(INFO) << "Connection " << connection_id
+                  << " added to time wait list.";
 }
 
 void QuicDispatcher::OnPacket() {}
@@ -540,7 +541,7 @@ void QuicDispatcher::OnPacket() {}
 void QuicDispatcher::OnError(QuicFramer* framer) {
   QuicErrorCode error = framer->error();
   SetLastError(error);
-  DVLOG(1) << QuicErrorCodeToString(error);
+  QUIC_DLOG(INFO) << QuicErrorCodeToString(error);
 }
 
 bool QuicDispatcher::ShouldCreateSessionForUnknownVersion(QuicTag version_tag) {
@@ -660,7 +661,7 @@ void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
     }
     QuicSession* session =
         CreateQuicSession(connection_id, packets.front().client_address);
-    DVLOG(1) << "Created new session for " << connection_id;
+    QUIC_DLOG(INFO) << "Created new session for " << connection_id;
     session_map_.insert(
         std::make_pair(connection_id, base::WrapUnique(session)));
     DeliverPacketsToSession(packets, session);
@@ -684,8 +685,8 @@ bool QuicDispatcher::HasBufferedPackets(QuicConnectionId connection_id) {
 
 void QuicDispatcher::OnBufferPacketFailure(EnqueuePacketResult result,
                                            QuicConnectionId connection_id) {
-  DVLOG(1) << "Fail to buffer packet on connection " << connection_id
-           << " because of " << result;
+  QUIC_DLOG(INFO) << "Fail to buffer packet on connection " << connection_id
+                  << " because of " << result;
 }
 
 void QuicDispatcher::OnConnectionRejectedStatelessly() {}
@@ -752,7 +753,7 @@ void QuicDispatcher::ProcessChlo() {
   // Creates a new session and process all buffered packets for this connection.
   QuicSession* session =
       CreateQuicSession(current_connection_id_, current_client_address_);
-  DVLOG(1) << "Created new session for " << current_connection_id_;
+  QUIC_DLOG(INFO) << "Created new session for " << current_connection_id_;
   session_map_.insert(
       std::make_pair(current_connection_id_, base::WrapUnique(session)));
   std::list<BufferedPacket> packets =

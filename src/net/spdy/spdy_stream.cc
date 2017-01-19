@@ -589,6 +589,11 @@ void SpdyStream::OnPaddingConsumed(size_t len) {
 
 void SpdyStream::OnFrameWriteComplete(SpdyFrameType frame_type,
                                       size_t frame_size) {
+  // PRIORITY writes are allowed at any time and do not trigger a state update.
+  if (frame_type == PRIORITY) {
+    return;
+  }
+
   DCHECK_NE(type_, SPDY_PUSH_STREAM);
   CHECK(frame_type == HEADERS || frame_type == DATA) << frame_type;
 

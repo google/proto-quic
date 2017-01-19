@@ -9,7 +9,7 @@ namespace base {
 
 // Calculates a random preferred mapping address. In calculating an address, we
 // balance good ASLR against not fragmenting the address space too badly.
-void* getRandomPageBase();
+void* GetRandomPageBase();
 
 }  // namespace base
 

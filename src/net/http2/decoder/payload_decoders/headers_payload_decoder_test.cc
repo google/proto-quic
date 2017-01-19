@@ -8,7 +8,6 @@
 
 #include <string>
 
-#include "base/bind.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector.h"
@@ -103,12 +102,7 @@ struct Listener : public FramePartsCollector {
 class HeadersPayloadDecoderTest
     : public AbstractPaddablePayloadDecoderTest<HeadersPayloadDecoder,
                                                 HeadersPayloadDecoderPeer,
-                                                Listener> {
- public:
-  static bool ApproveSizeForTruncated(size_t size) {
-    return size != Http2PriorityFields::EncodedSize();
-  }
-};
+                                                Listener> {};
 
 INSTANTIATE_TEST_CASE_P(VariousPadLengths,
                         HeadersPayloadDecoderTest,
@@ -153,12 +147,14 @@ TEST_P(HeadersPayloadDecoderTest, VariousHpackPayloadSizes) {
 // Confirm we get an error if the PRIORITY flag is set but the payload is
 // not long enough, regardless of the amount of (valid) padding.
 TEST_P(HeadersPayloadDecoderTest, Truncated) {
+  auto approve_size = [](size_t size) {
+    return size != Http2PriorityFields::EncodedSize();
+  };
   Http2FrameBuilder fb;
   fb.Append(Http2PriorityFields(RandStreamId(), 1 + Random().Rand8(),
                                 Random().OneIn(2)));
   EXPECT_TRUE(VerifyDetectsMultipleFrameSizeErrors(
-      Http2FrameFlag::FLAG_PRIORITY, fb.buffer(),
-      base::Bind(&HeadersPayloadDecoderTest::ApproveSizeForTruncated),
+      Http2FrameFlag::FLAG_PRIORITY, fb.buffer(), approve_size,
       total_pad_length_));
 }
 

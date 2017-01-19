@@ -22,12 +22,7 @@ enum {
   SSL_CONNECTION_COMPRESSION_MASK = 3,
 
   // 1 << 18 was previously used for SSL_CONNECTION_VERSION_FALLBACK.
-
-  // The server doesn't support the renegotiation_info extension. If this bit
-  // is not set then either the extension isn't supported, or we don't have any
-  // knowledge either way. (The latter case will occur when we use an SSL
-  // library that doesn't report it, like SChannel.)
-  SSL_CONNECTION_NO_RENEGOTIATION_EXTENSION = 1 << 19,
+  // 1 << 19 was previously used for SSL_CONNECTION_NO_RENEGOTIATION_EXTENSION.
 
   // The next three bits are reserved for the SSL version.
   SSL_CONNECTION_VERSION_SHIFT = 20,

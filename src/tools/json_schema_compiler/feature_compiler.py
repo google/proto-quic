@@ -201,6 +201,7 @@ FEATURE_GRAMMAR = (
         'enum_map': {
           'regular': 'FeatureSessionType::REGULAR',
           'kiosk': 'FeatureSessionType::KIOSK',
+          'kiosk.autolaunched': 'FeatureSessionType::AUTOLAUNCHED_KIOSK',
         }
       }
     },

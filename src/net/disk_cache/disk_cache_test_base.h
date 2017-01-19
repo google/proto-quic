@@ -12,6 +12,7 @@
 #include "base/files/file_path.h"
 #include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
+#include "base/test/scoped_async_task_scheduler.h"
 #include "base/threading/thread.h"
 #include "net/base/cache_type.h"
 #include "net/disk_cache/disk_cache.h"
@@ -56,6 +57,12 @@ class DiskCacheTest : public PlatformTest {
  private:
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<base::MessageLoop> message_loop_;
+
+  // Use a ScopedAsyncTaskScheduler instead of a ScopedTaskScheduler to allow
+  // disk_cache::InFlightIO::WaitForPendingIO to wait for TaskScheduler tasks
+  // from the main thread using WaitableEvents (this wouldn't work if
+  // TaskScheduler tasks ran on the main thread).
+  base::test::ScopedAsyncTaskScheduler scoped_async_task_scheduler_;
 };
 
 // Provides basic support for cache related tests.
@@ -131,6 +138,8 @@ class DiskCacheTestWithCache : public DiskCacheTest {
   int DoomEntriesBetween(const base::Time initial_time,
                          const base::Time end_time);
   int CalculateSizeOfAllEntries();
+  int CalculateSizeOfEntriesBetween(const base::Time initial_time,
+                                    const base::Time end_time);
   int DoomEntriesSince(const base::Time initial_time);
   std::unique_ptr<TestIterator> CreateIterator();
   void FlushQueueForTest();

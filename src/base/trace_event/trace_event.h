@@ -43,9 +43,21 @@
     trace_event_internal::TraceID::DontMangle(id)
 
 // By default, trace IDs are eventually converted to a single 64-bit number. Use
-// this macro to add a scope string.
-#define TRACE_ID_WITH_SCOPE(scope, id) \
-    trace_event_internal::TraceID::WithScope(scope, id)
+// this macro to add a scope string. For example,
+//
+// TRACE_EVENT_NESTABLE_ASYNC_BEGIN0(
+//     "network", "ResourceLoad",
+//     TRACE_ID_WITH_SCOPE("BlinkResourceID", resourceID));
+//
+// Also, it is possible to prepend the ID with another number, like the process
+// ID. This is useful in creatin IDs that are unique among all processes. To do
+// that, pass two numbers after the scope string instead of one. For example,
+//
+// TRACE_EVENT_NESTABLE_ASYNC_BEGIN0(
+//     "network", "ResourceLoad",
+//     TRACE_ID_WITH_SCOPE("BlinkResourceID", pid, resourceID));
+#define TRACE_ID_WITH_SCOPE(scope, ...) \
+  trace_event_internal::TraceID::WithScope(scope, ##__VA_ARGS__)
 
 #define TRACE_ID_GLOBAL(id) trace_event_internal::TraceID::GlobalId(id)
 #define TRACE_ID_LOCAL(id) trace_event_internal::TraceID::LocalId(id)
@@ -430,11 +442,27 @@ class BASE_EXPORT TraceID {
         : scope_(scope), raw_id_(global_id.raw_id()) {
       id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
     }
+    WithScope(const char* scope,
+              unsigned long long prefix,
+              unsigned long long raw_id)
+        : scope_(scope), has_prefix_(true), prefix_(prefix), raw_id_(raw_id) {}
+    WithScope(const char* scope, unsigned long long prefix, GlobalId global_id)
+        : scope_(scope),
+          has_prefix_(true),
+          prefix_(prefix),
+          raw_id_(global_id.raw_id()) {
+      id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
+    }
     unsigned long long raw_id() const { return raw_id_; }
     const char* scope() const { return scope_; }
+    bool has_prefix() const { return has_prefix_; }
+    unsigned long long prefix() const { return prefix_; }
     unsigned int id_flags() const { return id_flags_; }
+
    private:
     const char* scope_ = nullptr;
+    bool has_prefix_ = false;
+    unsigned long long prefix_;
     unsigned long long raw_id_;
     unsigned int id_flags_ = TRACE_EVENT_FLAG_HAS_ID;
   };
@@ -517,11 +545,17 @@ class BASE_EXPORT TraceID {
   TraceID(GlobalId raw_id) : raw_id_(raw_id.raw_id()) {
     id_flags_ = TRACE_EVENT_FLAG_HAS_GLOBAL_ID;
   }
-  TraceID(WithScope scoped_id) : scope_(scoped_id.scope()),
-      raw_id_(scoped_id.raw_id()), id_flags_(scoped_id.id_flags()) {}
+  TraceID(WithScope scoped_id)
+      : scope_(scoped_id.scope()),
+        has_prefix_(scoped_id.has_prefix()),
+        prefix_(scoped_id.prefix()),
+        raw_id_(scoped_id.raw_id()),
+        id_flags_(scoped_id.id_flags()) {}
 
   unsigned long long raw_id() const { return raw_id_; }
   const char* scope() const { return scope_; }
+  bool has_prefix() const { return has_prefix_; }
+  unsigned long long prefix() const { return prefix_; }
   unsigned int id_flags() const { return id_flags_; }
 
   std::unique_ptr<base::trace_event::ConvertableToTraceFormat>
@@ -529,6 +563,8 @@ class BASE_EXPORT TraceID {
 
  private:
   const char* scope_ = nullptr;
+  bool has_prefix_ = false;
+  unsigned long long prefix_;
   unsigned long long raw_id_;
   unsigned int id_flags_ = TRACE_EVENT_FLAG_HAS_ID;
 };

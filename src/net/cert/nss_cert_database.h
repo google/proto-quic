@@ -168,7 +168,7 @@ class NET_EXPORT NSSCertDatabase {
   // Returns OK or a network error code such as ERR_PKCS12_IMPORT_BAD_PASSWORD
   // or ERR_PKCS12_IMPORT_ERROR. |imported_certs|, if non-NULL, returns a list
   // of certs that were imported.
-  int ImportFromPKCS12(CryptoModule* module,
+  int ImportFromPKCS12(PK11SlotInfo* slot_info,
                        const std::string& data,
                        const base::string16& password,
                        bool is_extractable,

@@ -399,10 +399,6 @@ err:
 
 BIGNUM *BN_mod_inverse(BIGNUM *out, const BIGNUM *a, const BIGNUM *n,
                        BN_CTX *ctx) {
-  int no_inverse;
-
-  BIGNUM *a_reduced = NULL;
-
   BIGNUM *new_out = NULL;
   if (out == NULL) {
     new_out = BN_new();
@@ -414,10 +410,7 @@ BIGNUM *BN_mod_inverse(BIGNUM *out, const BIGNUM *a, const BIGNUM *n,
   }
 
   int ok = 0;
-
-  int no_branch =
-      (a->flags & BN_FLG_CONSTTIME) != 0 || (n->flags & BN_FLG_CONSTTIME) != 0;
-
+  BIGNUM *a_reduced = NULL;
   if (a->neg || BN_ucmp(a, n) >= 0) {
     a_reduced = BN_dup(a);
     if (a_reduced == NULL) {
@@ -429,7 +422,8 @@ BIGNUM *BN_mod_inverse(BIGNUM *out, const BIGNUM *a, const BIGNUM *n,
     a = a_reduced;
   }
 
-  if (no_branch || !BN_is_odd(n)) {
+  int no_inverse;
+  if (!BN_is_odd(n)) {
     if (!bn_mod_inverse_general(out, &no_inverse, a, n, ctx)) {
       goto err;
     }
@@ -614,4 +608,28 @@ static int bn_mod_inverse_general(BIGNUM *out, int *out_no_inverse,
 err:
   BN_CTX_end(ctx);
   return ret;
+}
+
+int bn_mod_inverse_prime(BIGNUM *out, const BIGNUM *a, const BIGNUM *p,
+                         BN_CTX *ctx, const BN_MONT_CTX *mont_p) {
+  BN_CTX_start(ctx);
+  BIGNUM *p_minus_2 = BN_CTX_get(ctx);
+  int ok = p_minus_2 != NULL &&
+           BN_copy(p_minus_2, p) &&
+           BN_sub_word(p_minus_2, 2) &&
+           BN_mod_exp_mont(out, a, p_minus_2, p, ctx, mont_p);
+  BN_CTX_end(ctx);
+  return ok;
+}
+
+int bn_mod_inverse_secret_prime(BIGNUM *out, const BIGNUM *a, const BIGNUM *p,
+                                BN_CTX *ctx, const BN_MONT_CTX *mont_p) {
+  BN_CTX_start(ctx);
+  BIGNUM *p_minus_2 = BN_CTX_get(ctx);
+  int ok = p_minus_2 != NULL &&
+           BN_copy(p_minus_2, p) &&
+           BN_sub_word(p_minus_2, 2) &&
+           BN_mod_exp_mont_consttime(out, a, p_minus_2, p, ctx, mont_p);
+  BN_CTX_end(ctx);
+  return ok;
 }

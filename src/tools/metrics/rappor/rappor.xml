@@ -881,6 +881,15 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="CustomTabs.ServiceClient.PackageNameThirdParty"
+    type="UMA_RAPPOR_TYPE">
+  <owner>yusufo@chromium.org</owner>
+  <summary>
+    The package name for a client that has connected through the custom tabs
+    service excluding Google Search App.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="DeviceSensors.DeviceMotion" type="ETLD_PLUS_ONE">
   <owner>timvolodine@chromium.org</owner>
   <summary>

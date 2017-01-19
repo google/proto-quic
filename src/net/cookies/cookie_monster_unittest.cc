@@ -3430,7 +3430,7 @@ TEST_F(CookieMonsterNotificationTest, NotifyOnDelete) {
 
   EXPECT_EQ("abc", cookies[1].Name());
   EXPECT_EQ("def", cookies[1].Value());
-  EXPECT_EQ(CookieStore::ChangeCause::EXPLICIT, causes[1]);
+  EXPECT_EQ(CookieStore::ChangeCause::EXPLICIT_DELETE, causes[1]);
 }
 
 TEST_F(CookieMonsterNotificationTest, NotifyOnUpdate) {

@@ -274,7 +274,7 @@ typedef struct ChangeCausePair_struct {
 } ChangeCausePair;
 const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_EXPLICIT
-    {CookieStore::ChangeCause::EXPLICIT, true},
+    {CookieStore::ChangeCause::EXPLICIT_DELETE, true},
     // DELETE_COOKIE_OVERWRITE
     {CookieStore::ChangeCause::OVERWRITE, true},
     // DELETE_COOKIE_EXPIRED
@@ -282,9 +282,9 @@ const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_EVICTED
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_DUPLICATE_IN_BACKING_STORE
-    {CookieStore::ChangeCause::EXPLICIT, false},
+    {CookieStore::ChangeCause::EXPLICIT_DUPLICATE_IN_BACKING_STORE, false},
     // DELETE_COOKIE_DONT_RECORD
-    {CookieStore::ChangeCause::EXPLICIT, false},
+    {CookieStore::ChangeCause::EXPLICIT_DONT_RECORD, false},
     // DELETE_COOKIE_EVICTED_DOMAIN
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EVICTED_GLOBAL
@@ -300,7 +300,7 @@ const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_NON_SECURE
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_LAST_ENTRY
-    {CookieStore::ChangeCause::EXPLICIT, false}};
+    {CookieStore::ChangeCause::EXPLICIT_LAST_ENTRY, false}};
 
 void RunAsync(scoped_refptr<base::TaskRunner> proxy,
               const CookieStore::CookieChangedCallback& callback,

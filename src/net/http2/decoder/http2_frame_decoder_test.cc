@@ -10,8 +10,6 @@
 #include <string>
 #include <vector>
 
-#include "base/bind.h"
-#include "base/bind_helpers.h"
 #include "base/logging.h"
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector_listener.h"
@@ -38,24 +36,6 @@ class Http2FrameDecoderPeer {
 namespace {
 
 class Http2FrameDecoderTest : public RandomDecoderTest {
- public:
-  AssertionResult ValidatorForDecodePayloadExpectingError(
-      const FrameParts& expected,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeError);
-    VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
-  }
-
-  AssertionResult ValidatorForBeyondMaximum(const FrameParts& expected,
-                                            const DecodeBuffer& input,
-                                            DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeError);
-    // The decoder detects this error after decoding the header, and without
-    // trying to decode the payload.
-    VERIFY_EQ(input.Offset(), Http2FrameHeader::EncodedSize());
-    VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
-  }
 
  protected:
   void SetUp() override {
@@ -152,13 +132,6 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
                                         validator);
   }
 
-  AssertionResult ValidatorForDecodePayloadAndValidateSeveralWays(
-      const FrameParts& expected,
-      const DecodeBuffer& input,
-      DecodeStatus status) {
-    VERIFY_EQ(status, DecodeStatus::kDecodeDone);
-    VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
-  }
 
   // Decode one frame's payload and confirm that the listener recorded the
   // expected FrameParts instance, and only one FrameParts instance. The
@@ -167,9 +140,11 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
   AssertionResult DecodePayloadAndValidateSeveralWays(
       StringPiece payload,
       const FrameParts& expected) {
-    Validator validator = base::Bind(
-        &Http2FrameDecoderTest::ValidatorForDecodePayloadAndValidateSeveralWays,
-        base::Unretained(this), base::ConstRef(expected));
+    Validator validator = [&expected, this](
+        const DecodeBuffer& input, DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeDone);
+      VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
+    };
     ResetDecodeSpeedCounters();
     VERIFY_SUCCESS(DecodePayloadAndValidateSeveralWays(
         payload, ValidateDoneAndEmpty(validator)));
@@ -209,12 +184,14 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
   template <size_t N>
   AssertionResult DecodePayloadExpectingError(const char (&buf)[N],
                                               const FrameParts& expected) {
+    auto validator = [&expected, this](const DecodeBuffer& input,
+                                       DecodeStatus status) -> AssertionResult {
+      VERIFY_EQ(status, DecodeStatus::kDecodeError);
+      VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
+    };
     ResetDecodeSpeedCounters();
-    EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(
-        ToStringPiece(buf),
-        base::Bind(
-            &Http2FrameDecoderTest::ValidatorForDecodePayloadExpectingError,
-            base::Unretained(this), expected)));
+    EXPECT_TRUE(
+        DecodePayloadAndValidateSeveralWays(ToStringPiece(buf), validator));
     EXPECT_GT(fast_decode_count_, 0u);
     EXPECT_GT(slow_decode_count_, 0u);
     return AssertionSuccess();
@@ -865,11 +842,17 @@ TEST_F(Http2FrameDecoderTest, BeyondMaximum) {
       Http2FrameFlag::FLAG_END_STREAM | Http2FrameFlag::FLAG_PADDED, 2);
   FrameParts expected(header);
   expected.has_frame_size_error = true;
+  auto validator = [&expected, this](const DecodeBuffer& input,
+                                     DecodeStatus status) -> AssertionResult {
+    VERIFY_EQ(status, DecodeStatus::kDecodeError);
+    // The decoder detects this error after decoding the header, and without
+    // trying to decode the payload.
+    VERIFY_EQ(input.Offset(), Http2FrameHeader::EncodedSize());
+    VERIFY_AND_RETURN_SUCCESS(VerifyCollected(expected));
+  };
   ResetDecodeSpeedCounters();
-  EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(
-      ToStringPiece(kFrameData),
-      base::Bind(&Http2FrameDecoderTest::ValidatorForBeyondMaximum,
-                 base::Unretained(this), expected)));
+  EXPECT_TRUE(DecodePayloadAndValidateSeveralWays(ToStringPiece(kFrameData),
+                                                  validator));
   EXPECT_GT(fast_decode_count_, 0u);
   EXPECT_GT(slow_decode_count_, 0u);
 }

@@ -7,14 +7,14 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "base/logging.h"
 #include "base/macros.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
-#include "net/quic/core/quic_bug_tracker.h"
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_aligned.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_logging.h"
 
 using base::StringPiece;
 using std::string;
@@ -383,7 +383,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   CopyToBuffer(iov, iov_offset, bytes_consumed, stream_buffer.get());
   std::unique_ptr<QuicStreamFrame> frame(new QuicStreamFrame(
       id, set_fin, stream_offset, bytes_consumed, std::move(stream_buffer)));
-  DVLOG(1) << "Adding frame: " << *frame;
+  QUIC_DVLOG(1) << "Adding frame: " << *frame;
 
   // TODO(ianswett): AppendTypeByte and AppendStreamFrame could be optimized
   // into one method that takes a QuicStreamFrame, if warranted.
@@ -567,7 +567,7 @@ bool QuicPacketCreator::ShouldRetransmit(const QuicFrame& frame) {
 
 bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
                                  bool save_retransmittable_frames) {
-  DVLOG(1) << "Adding frame: " << frame;
+  QUIC_DVLOG(1) << "Adding frame: " << frame;
   if (frame.type == STREAM_FRAME &&
       frame.stream_frame->stream_id != kCryptoStreamId &&
       packet_.encryption_level == ENCRYPTION_NONE) {

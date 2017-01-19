@@ -21,9 +21,6 @@ namespace base {
 
 // This is the preferred interface to post tasks to the TaskScheduler.
 //
-// Note: The TaskScheduler is still in an experimental phase in Chrome. Please
-// refrain from using this API unless you know what you are doing.
-//
 // TaskScheduler must have been registered for the current process via
 // TaskScheduler::SetInstance() before the functions below are valid.
 //
@@ -52,8 +49,8 @@ namespace base {
 //     task_runner.PostTask(FROM_HERE, Bind(...));
 //
 // The default TaskTraits apply to tasks that:
-//     (1) don't need to do I/O,
-//     (2) don't affect user interaction and/or visible elements, and
+//     (1) don't block (ref. MayBlock() and WithBaseSyncPrimitives()),
+//     (2) prefer inheriting the current priority to specifying their own, and
 //     (3) can either block shutdown or be skipped on shutdown
 //         (barring current TaskScheduler default).
 // If those loose requirements are sufficient for your task, use

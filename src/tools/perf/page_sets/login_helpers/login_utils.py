@@ -45,10 +45,9 @@ def InputWithSelector(action_runner, input_text, input_selector):
       possible exceptions.
   """
   action_runner.WaitForElement(selector=input_selector)
-  # TODO(catapult:#3028): Fix interpolation of JavaScript values.
   action_runner.ExecuteJavaScript(
-      'document.querySelector("%s").value = "%s";' %
-      (input_selector, input_text))
+      'document.querySelector({{ selector }}).value = {{ value }};',
+      selector=input_selector, value=input_text)
 
 def InputForm(action_runner, input_text, input_id, form_id=None):
   """Sets the text value of an input field in a form on the page.

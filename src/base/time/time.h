@@ -557,10 +557,12 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   // specified in RFC822) is treated as if the timezone is not specified.
   // TODO(iyengar) Move the FromString/FromTimeT/ToTimeT/FromFileTime to
   // a new time converter class.
-  static bool FromString(const char* time_string, Time* parsed_time) {
+  static bool FromString(const char* time_string,
+                         Time* parsed_time) WARN_UNUSED_RESULT {
     return FromStringInternal(time_string, true, parsed_time);
   }
-  static bool FromUTCString(const char* time_string, Time* parsed_time) {
+  static bool FromUTCString(const char* time_string,
+                            Time* parsed_time) WARN_UNUSED_RESULT {
     return FromStringInternal(time_string, false, parsed_time);
   }
 
@@ -603,10 +605,11 @@ class BASE_EXPORT Time : public time_internal::TimeBase<Time> {
   // timezone is not specified.
   static bool FromStringInternal(const char* time_string,
                                  bool is_local,
-                                 Time* parsed_time);
+                                 Time* parsed_time) WARN_UNUSED_RESULT;
 
   // Comparison does not consider |day_of_week| when doing the operation.
-  static bool ExplodedMostlyEquals(const Exploded& lhs, const Exploded& rhs);
+  static bool ExplodedMostlyEquals(const Exploded& lhs,
+                                   const Exploded& rhs) WARN_UNUSED_RESULT;
 };
 
 // static
@@ -713,14 +716,14 @@ class BASE_EXPORT TimeTicks : public time_internal::TimeBase<TimeTicks> {
   // Now() will return high resolution values. Note that, on systems where the
   // high resolution clock works but is deemed inefficient, the low resolution
   // clock will be used instead.
-  static bool IsHighResolution();
+  static bool IsHighResolution() WARN_UNUSED_RESULT;
 
   // Returns true if TimeTicks is consistent across processes, meaning that
   // timestamps taken on different processes can be safely compared with one
   // another. (Note that, even on platforms where this returns true, time values
   // from different threads that are within one tick of each other must be
   // considered to have an ambiguous ordering.)
-  static bool IsConsistentAcrossProcesses();
+  static bool IsConsistentAcrossProcesses() WARN_UNUSED_RESULT;
 
 #if defined(OS_WIN)
   // Translates an absolute QPC timestamp into a TimeTicks value. The returned
@@ -781,7 +784,7 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
   }
 
   // Returns true if ThreadTicks::Now() is supported on this system.
-  static bool IsSupported() {
+  static bool IsSupported() WARN_UNUSED_RESULT {
 #if (defined(_POSIX_THREAD_CPUTIME) && (_POSIX_THREAD_CPUTIME >= 0)) || \
     (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_ANDROID)
     return true;
@@ -832,7 +835,7 @@ class BASE_EXPORT ThreadTicks : public time_internal::TimeBase<ThreadTicks> {
   // allow testing.
   static double TSCTicksPerSecond();
 
-  static bool IsSupportedWin();
+  static bool IsSupportedWin() WARN_UNUSED_RESULT;
   static void WaitUntilInitializedWin();
 #endif
 };

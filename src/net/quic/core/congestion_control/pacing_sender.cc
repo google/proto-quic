@@ -4,6 +4,8 @@
 
 #include "net/quic/core/congestion_control/pacing_sender.h"
 
+#include "net/quic/platform/api/quic_logging.h"
+
 namespace net {
 namespace {
 
@@ -126,13 +128,13 @@ QuicTime::Delta PacingSender::TimeUntilSend(
 
   // If the next send time is within the alarm granularity, send immediately.
   if (ideal_next_packet_send_time_ > now + kAlarmGranularity) {
-    DVLOG(1) << "Delaying packet: "
-             << (ideal_next_packet_send_time_ - now).ToMicroseconds();
+    QUIC_DVLOG(1) << "Delaying packet: "
+                  << (ideal_next_packet_send_time_ - now).ToMicroseconds();
     was_last_send_delayed_ = true;
     return ideal_next_packet_send_time_ - now;
   }
 
-  DVLOG(1) << "Sending packet now";
+  QUIC_DVLOG(1) << "Sending packet now";
   return QuicTime::Delta::Zero();
 }
 

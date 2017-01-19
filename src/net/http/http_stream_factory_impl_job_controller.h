@@ -214,7 +214,8 @@ class HttpStreamFactoryImpl::JobController
 
   void MaybeNotifyFactoryOfCompletion();
 
-  // Called to resume the main job with delay.
+  // Called to resume the main job with delay. Main job is resumed only when
+  // |alternative_job_| has failed or |main_job_wait_time_| elapsed.
   void MaybeResumeMainJob(Job* job, const base::TimeDelta& delay);
 
   void ResumeMainJob();
@@ -251,6 +252,9 @@ class HttpStreamFactoryImpl::JobController
 
   // Starts the |alternative_job_|.
   void StartAlternativeProxyServerJob();
+
+  // Returns whether |job| is an orphaned job.
+  bool IsJobOrphaned(Job* job) const;
 
   HttpStreamFactoryImpl* factory_;
   HttpNetworkSession* session_;

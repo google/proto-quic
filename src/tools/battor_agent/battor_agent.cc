@@ -198,7 +198,8 @@ void BattOrAgent::OnConnectionOpened(bool success) {
       PerformAction(Action::SEND_CURRENT_SAMPLE_REQUEST);
       return;
     case Command::GET_FIRMWARE_GIT_HASH:
-      PerformAction(Action::SEND_GIT_HASH_REQUEST);
+      num_init_attempts_ = 1;
+      PerformAction(Action::SEND_INIT);
       return;
     case Command::INVALID:
       NOTREACHED();
@@ -317,8 +318,17 @@ void BattOrAgent::OnMessageRead(bool success,
         return;
       }
 
-      PerformAction(Action::SEND_SET_GAIN);
-      return;
+      switch (command_) {
+        case Command::START_TRACING:
+          PerformAction(Action::SEND_SET_GAIN);
+          return;
+        case Command::GET_FIRMWARE_GIT_HASH:
+          PerformAction(Action::SEND_GIT_HASH_REQUEST);
+          return;
+        default:
+          CompleteCommand(BATTOR_ERROR_UNEXPECTED_MESSAGE);
+          return;
+      }
 
     case Action::READ_SET_GAIN_ACK:
       if (!IsAckOfControlCommand(type, BATTOR_CONTROL_MESSAGE_TYPE_SET_GAIN,

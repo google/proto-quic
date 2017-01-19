@@ -13,12 +13,6 @@
 #include "net/socket/next_proto.h"
 #include "net/socket/socket.h"
 
-namespace base {
-namespace trace_event {
-class ProcessMemoryDump;
-}
-}
-
 namespace net {
 
 class IPEndPoint;
@@ -27,6 +21,25 @@ class SSLInfo;
 
 class NET_EXPORT_PRIVATE StreamSocket : public Socket {
  public:
+  // This is used in DumpMemoryStats() to track the estimate of memory usage of
+  // a socket.
+  struct NET_EXPORT_PRIVATE SocketMemoryStats {
+   public:
+    SocketMemoryStats();
+    ~SocketMemoryStats();
+    // Estimated total memory usage of this socket in bytes.
+    size_t total_size;
+    // Size of all buffers used by this socket in bytes.
+    size_t buffer_size;
+    // Number of certs used by this socket.
+    size_t cert_count;
+    // Total size of certs used by this socket in bytes.
+    size_t serialized_cert_size;
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(SocketMemoryStats);
+  };
+
   ~StreamSocket() override {}
 
   // Called to establish a connection.  Returns OK if the connection could be
@@ -116,12 +129,10 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
   // Disconnect() is called.
   virtual int64_t GetTotalReceivedBytes() const = 0;
 
-  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
-  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
-  // Default implementation does nothing.
-  virtual void DumpMemoryStats(
-      base::trace_event::ProcessMemoryDump* pmd,
-      const std::string& parent_dump_absolute_name) const {};
+  // Dumps memory allocation stats into |stats|. |stats| can be assumed as being
+  // default initialized upon entry. Implementations should override fields in
+  // |stats|. Default implementation does nothing.
+  virtual void DumpMemoryStats(SocketMemoryStats* stats) const {}
 
  protected:
   // The following class is only used to gather statistics about the history of

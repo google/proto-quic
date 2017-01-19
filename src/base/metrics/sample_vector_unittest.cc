@@ -116,7 +116,6 @@ TEST(SampleVectorTest, AddSubtractTest) {
   EXPECT_EQ(samples1.redundant_count(), samples1.TotalCount());
 }
 
-#if (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)) && GTEST_HAS_DEATH_TEST
 TEST(SampleVectorDeathTest, BucketIndexTest) {
   // 8 buckets with exponential layout:
   // [0, 1) [1, 2) [2, 4) [4, 8) [8, 16) [16, 32) [32, 64) [64, INT_MAX)
@@ -133,9 +132,9 @@ TEST(SampleVectorDeathTest, BucketIndexTest) {
   EXPECT_EQ(3, samples.GetCount(65));
 
   // Extreme case.
-  EXPECT_DEATH(samples.Accumulate(INT_MIN, 100), "");
-  EXPECT_DEATH(samples.Accumulate(-1, 100), "");
-  EXPECT_DEATH(samples.Accumulate(INT_MAX, 100), "");
+  EXPECT_DCHECK_DEATH(samples.Accumulate(INT_MIN, 100));
+  EXPECT_DCHECK_DEATH(samples.Accumulate(-1, 100));
+  EXPECT_DCHECK_DEATH(samples.Accumulate(INT_MAX, 100));
 
   // Custom buckets: [1, 5) [5, 10)
   // Note, this is not a valid BucketRanges for Histogram because it does not
@@ -155,8 +154,8 @@ TEST(SampleVectorDeathTest, BucketIndexTest) {
   EXPECT_EQ(4, samples2.GetCount(5));
 
   // Extreme case.
-  EXPECT_DEATH(samples2.Accumulate(0, 100), "");
-  EXPECT_DEATH(samples2.Accumulate(10, 100), "");
+  EXPECT_DCHECK_DEATH(samples2.Accumulate(0, 100));
+  EXPECT_DCHECK_DEATH(samples2.Accumulate(10, 100));
 }
 
 TEST(SampleVectorDeathTest, AddSubtractBucketNotMatchTest) {
@@ -182,24 +181,21 @@ TEST(SampleVectorDeathTest, AddSubtractBucketNotMatchTest) {
 
   // Extra bucket in the beginning.
   samples2.Accumulate(0, 100);
-  EXPECT_DEATH(samples1.Add(samples2), "");
-  EXPECT_DEATH(samples1.Subtract(samples2), "");
+  EXPECT_DCHECK_DEATH(samples1.Add(samples2));
+  EXPECT_DCHECK_DEATH(samples1.Subtract(samples2));
 
   // Extra bucket in the end.
   samples2.Accumulate(0, -100);
   samples2.Accumulate(6, 100);
-  EXPECT_DEATH(samples1.Add(samples2), "");
-  EXPECT_DEATH(samples1.Subtract(samples2), "");
+  EXPECT_DCHECK_DEATH(samples1.Add(samples2));
+  EXPECT_DCHECK_DEATH(samples1.Subtract(samples2));
 
   // Bucket not match: [3, 5) VS [3, 6)
   samples2.Accumulate(6, -100);
   samples2.Accumulate(3, 100);
-  EXPECT_DEATH(samples1.Add(samples2), "");
-  EXPECT_DEATH(samples1.Subtract(samples2), "");
+  EXPECT_DCHECK_DEATH(samples1.Add(samples2));
+  EXPECT_DCHECK_DEATH(samples1.Subtract(samples2));
 }
-
-#endif
-// (!defined(NDEBUG) || defined(DCHECK_ALWAYS_ON)) && GTEST_HAS_DEATH_TEST
 
 TEST(SampleVectorIteratorTest, IterateTest) {
   BucketRanges ranges(5);

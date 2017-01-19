@@ -179,6 +179,15 @@ int DiskCacheTestWithCache::CalculateSizeOfAllEntries() {
   return cb.GetResult(rv);
 }
 
+int DiskCacheTestWithCache::CalculateSizeOfEntriesBetween(
+    const base::Time initial_time,
+    const base::Time end_time) {
+  net::TestCompletionCallback cb;
+  int rv = cache_->CalculateSizeOfEntriesBetween(initial_time, end_time,
+                                                 cb.callback());
+  return cb.GetResult(rv);
+}
+
 std::unique_ptr<DiskCacheTestWithCache::TestIterator>
 DiskCacheTestWithCache::CreateIterator() {
   return std::unique_ptr<TestIterator>(

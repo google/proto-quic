@@ -10,7 +10,7 @@
 #include "base/files/file_util.h"
 #include "base/logging.h"
 #include "base/macros.h"
-#include "base/memory/ref_counted.h"
+#include "base/memory/ptr_util.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/win/object_watcher.h"
@@ -25,6 +25,7 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
   FilePathWatcherImpl()
       : handle_(INVALID_HANDLE_VALUE),
         recursive_watch_(false) {}
+  ~FilePathWatcherImpl() override;
 
   // FilePathWatcher::PlatformDelegate:
   bool Watch(const FilePath& path,
@@ -36,8 +37,6 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
   void OnObjectSignaled(HANDLE object) override;
 
  private:
-  ~FilePathWatcherImpl() override {}
-
   // Setup a watch handle for directory |dir|. Set |recursive| to true to watch
   // the directory sub trees. Returns true if no fatal error occurs. |handle|
   // will receive the handle value if |dir| is watchable, otherwise
@@ -58,6 +57,9 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
   // Path we're supposed to watch (passed to callback).
   FilePath target_;
 
+  // Set to true in the destructor.
+  bool* was_deleted_ptr_ = nullptr;
+
   // Handle for FindFirstChangeNotification.
   HANDLE handle_;
 
@@ -77,6 +79,12 @@ class FilePathWatcherImpl : public FilePathWatcher::PlatformDelegate,
 
   DISALLOW_COPY_AND_ASSIGN(FilePathWatcherImpl);
 };
+
+FilePathWatcherImpl::~FilePathWatcherImpl() {
+  DCHECK(!task_runner() || task_runner()->RunsTasksOnCurrentThread());
+  if (was_deleted_ptr_)
+    *was_deleted_ptr_ = true;
+}
 
 bool FilePathWatcherImpl::Watch(const FilePath& path,
                                 bool recursive,
@@ -119,9 +127,12 @@ void FilePathWatcherImpl::Cancel() {
 }
 
 void FilePathWatcherImpl::OnObjectSignaled(HANDLE object) {
-  DCHECK(object == handle_);
-  // Make sure we stay alive through the body of this function.
-  scoped_refptr<FilePathWatcherImpl> keep_alive(this);
+  DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  DCHECK_EQ(object, handle_);
+  DCHECK(!was_deleted_ptr_);
+
+  bool was_deleted = false;
+  was_deleted_ptr_ = &was_deleted;
 
   if (!UpdateWatch()) {
     callback_.Run(target_, true /* error */);
@@ -171,8 +182,10 @@ void FilePathWatcherImpl::OnObjectSignaled(HANDLE object) {
   }
 
   // The watch may have been cancelled by the callback.
-  if (handle_ != INVALID_HANDLE_VALUE)
+  if (!was_deleted) {
     watcher_.StartWatchingOnce(handle_, this);
+    was_deleted_ptr_ = nullptr;
+  }
 }
 
 // static
@@ -269,7 +282,7 @@ void FilePathWatcherImpl::DestroyWatch() {
 
 FilePathWatcher::FilePathWatcher() {
   sequence_checker_.DetachFromSequence();
-  impl_ = new FilePathWatcherImpl();
+  impl_ = MakeUnique<FilePathWatcherImpl>();
 }
 
 }  // namespace base

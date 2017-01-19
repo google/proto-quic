@@ -17,8 +17,7 @@
 #include "base/macros.h"
 #include "base/process/memory.h"
 #include "base/process/process_iterator.h"
-#include "base/threading/thread_task_runner_handle.h"
-#include "base/win/object_watcher.h"
+#include "base/task_scheduler/post_task.h"
 
 namespace base {
 
@@ -37,62 +36,6 @@ const DWORD kDebuggerTerminatedExitCode = 0x40010004;
 // indication that the task manager has killed something if the
 // process goes away.
 const DWORD kProcessKilledExitCode = 1;
-
-// Maximum amount of time (in milliseconds) to wait for the process to exit.
-static const int kWaitInterval = 2000;
-
-class TimerExpiredTask : public win::ObjectWatcher::Delegate {
- public:
-  explicit TimerExpiredTask(Process process);
-  ~TimerExpiredTask() override;
-
-  void TimedOut();
-
-  // win::ObjectWatcher::Delegate implementation.
-  void OnObjectSignaled(HANDLE object) override;
-
- private:
-  void KillProcess();
-
-  // The process that we are watching.
-  Process process_;
-
-  win::ObjectWatcher watcher_;
-
-  DISALLOW_COPY_AND_ASSIGN(TimerExpiredTask);
-};
-
-TimerExpiredTask::TimerExpiredTask(Process process)
-    : process_(std::move(process)) {
-  watcher_.StartWatchingOnce(process_.Handle(), this);
-}
-
-TimerExpiredTask::~TimerExpiredTask() {
-  TimedOut();
-}
-
-void TimerExpiredTask::TimedOut() {
-  if (process_.IsValid())
-    KillProcess();
-}
-
-void TimerExpiredTask::OnObjectSignaled(HANDLE object) {
-  process_.Close();
-}
-
-void TimerExpiredTask::KillProcess() {
-  // Stop watching the process handle since we're killing it.
-  watcher_.StopWatching();
-
-  // OK, time to get frisky.  We don't actually care when the process
-  // terminates.  We just care that it eventually terminates, and that's what
-  // TerminateProcess should do for us. Don't check for the result code since
-  // it fails quite often. This should be investigated eventually.
-  process_.Terminate(kProcessKilledExitCode, false);
-
-  // Now, just cleanup as if the process exited normally.
-  OnObjectSignaled(process_.Handle());
-}
 
 }  // namespace
 
@@ -196,14 +139,22 @@ void EnsureProcessTerminated(Process process) {
   DCHECK(!process.is_current());
 
   // If already signaled, then we are done!
-  if (WaitForSingleObject(process.Handle(), 0) == WAIT_OBJECT_0) {
+  if (WaitForSingleObject(process.Handle(), 0) == WAIT_OBJECT_0)
     return;
-  }
 
-  ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, Bind(&TimerExpiredTask::TimedOut,
-                      Owned(new TimerExpiredTask(std::move(process)))),
-      TimeDelta::FromMilliseconds(kWaitInterval));
+  PostDelayedTaskWithTraits(
+      FROM_HERE,
+      TaskTraits()
+          .WithPriority(TaskPriority::BACKGROUND)
+          .WithShutdownBehavior(TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      Bind(
+          [](Process process) {
+            if (WaitForSingleObject(process.Handle(), 0) == WAIT_OBJECT_0)
+              return;
+            process.Terminate(kProcessKilledExitCode, false);
+          },
+          Passed(&process)),
+      TimeDelta::FromSeconds(2));
 }
 
 }  // namespace base
