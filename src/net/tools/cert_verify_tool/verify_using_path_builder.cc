@@ -9,6 +9,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/synchronization/waitable_event.h"
 #include "base/threading/thread.h"
 #include "crypto/sha2.h"
 #include "net/cert/cert_net_fetcher.h"
@@ -170,56 +171,34 @@ scoped_refptr<net::ParsedCertificate> ParseCertificate(const CertInput& input) {
   return cert;
 }
 
-class URLRequestContextGetterForAia : public net::URLRequestContextGetter {
- public:
-  URLRequestContextGetterForAia(
-      scoped_refptr<base::SingleThreadTaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {}
-
-  net::URLRequestContext* GetURLRequestContext() override {
-    DCHECK(task_runner_->BelongsToCurrentThread());
-
-    if (!context_) {
-      // TODO(mattm): add command line flags to configure using
-      // CertIssuerSourceAia
-      // (similar to VERIFY_CERT_IO_ENABLED flag for CertVerifyProc).
-      net::URLRequestContextBuilder url_request_context_builder;
-      url_request_context_builder.set_user_agent(GetUserAgent());
+void SetUpOnNetworkThread(std::unique_ptr<net::URLRequestContext>* context,
+                          scoped_refptr<net::CertNetFetcher>* fetcher,
+                          base::WaitableEvent* initialization_complete_event) {
+  // TODO(mattm): add command line flags to configure using
+  // CertIssuerSourceAia
+  // (similar to VERIFY_CERT_IO_ENABLED flag for CertVerifyProc).
+  net::URLRequestContextBuilder url_request_context_builder;
+  url_request_context_builder.set_user_agent(GetUserAgent());
 #if defined(OS_LINUX)
-      // On Linux, use a fixed ProxyConfigService, since the default one
-      // depends on glib.
-      //
-      // TODO(akalin): Remove this once http://crbug.com/146421 is fixed.
-      url_request_context_builder.set_proxy_config_service(
-          base::MakeUnique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
+  // On Linux, use a fixed ProxyConfigService, since the default one
+  // depends on glib.
+  //
+  // TODO(akalin): Remove this once http://crbug.com/146421 is fixed.
+  url_request_context_builder.set_proxy_config_service(
+      base::MakeUnique<net::ProxyConfigServiceFixed>(net::ProxyConfig()));
 #endif
-      context_ = url_request_context_builder.Build();
-    }
+  *context = url_request_context_builder.Build();
 
-    return context_.get();
-  }
+  *fetcher = net::CreateCertNetFetcher(context->get());
+  initialization_complete_event->Signal();
+}
 
-  void ShutDown() {
-    GetNetworkTaskRunner()->PostTask(
-        FROM_HERE,
-        base::Bind(&URLRequestContextGetterForAia::ShutdownOnNetworkThread,
-                   this));
-  }
-
-  scoped_refptr<base::SingleThreadTaskRunner> GetNetworkTaskRunner()
-      const override {
-    return task_runner_;
-  }
-
- private:
-  ~URLRequestContextGetterForAia() override { DCHECK(!context_); }
-
-  void ShutdownOnNetworkThread() { context_.release(); }
-
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
-
-  std::unique_ptr<net::URLRequestContext> context_;
-};
+void ShutdownOnNetworkThread(
+    std::unique_ptr<net::URLRequestContext>* context,
+    const scoped_refptr<net::CertNetFetcher>& cert_net_fetcher) {
+  cert_net_fetcher->Shutdown();
+  context->reset();
+}
 
 }  // namespace
 
@@ -279,30 +258,37 @@ bool VerifyUsingPathBuilder(
   path_builder.AddCertIssuerSource(&cert_issuer_source_nss);
 #endif
 
-  // Initialize an AIA fetcher, that uses a separate thread for running the
-  // networking message loop.
-// TODO(estark): update this code to use the new CertNetFetcher
-// interface that takes a URLRequestContext*.
-#if 0
+  // Create a network thread to be used for AIA fetches, and wait for a
+  // CertNetFetcher to be constructed on that thread.
   base::Thread::Options options(base::MessageLoop::TYPE_IO, 0);
   base::Thread thread("network_thread");
   CHECK(thread.StartWithOptions(options));
-  scoped_refptr<URLRequestContextGetterForAia> url_request_context_getter(
-      new URLRequestContextGetterForAia(thread.task_runner()));
-  auto cert_net_fetcher =
-      CreateCertNetFetcher(url_request_context_getter.get());
+  // Owned by this thread, but initialized, used, and shutdown on the network
+  // thread.
+  std::unique_ptr<net::URLRequestContext> context;
+  scoped_refptr<net::CertNetFetcher> cert_net_fetcher;
+  base::WaitableEvent initialization_complete_event(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
+  thread.task_runner()->PostTask(
+      FROM_HERE, base::Bind(&SetUpOnNetworkThread, &context, &cert_net_fetcher,
+                            &initialization_complete_event));
+  initialization_complete_event.Wait();
+
+  // Now that the CertNetFetcher has been created on the network thread,
+  // use it to create a CertIssuerSourceAia.
   net::CertIssuerSourceAia aia_cert_issuer_source(cert_net_fetcher.get());
   path_builder.AddCertIssuerSource(&aia_cert_issuer_source);
-#endif
 
   // Run the path builder.
   path_builder.Run();
 
-#if 0
-  // Stop the temporary network thread..
-  url_request_context_getter->ShutDown();
+  // Clean up on the network thread and stop it (which waits for the clean up
+  // task to run).
+  thread.task_runner()->PostTask(
+      FROM_HERE,
+      base::Bind(&ShutdownOnNetworkThread, &context, cert_net_fetcher));
   thread.Stop();
-#endif
 
   // TODO(crbug.com/634443): Display any errors/warnings associated with path
   //                         building that were not part of a particular

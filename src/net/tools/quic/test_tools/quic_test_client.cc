@@ -20,6 +20,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_stack_trace.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -547,7 +548,8 @@ bool QuicTestClient::WaitUntil(int timeout_ms, std::function<bool()> trigger) {
     epoll_server()->set_timeout_in_us(old_timeout_us);
   }
   if (trigger && !trigger()) {
-    VLOG(1) << "Client WaitUntil returning with trigger returning false.";
+    VLOG(1) << "Client WaitUntil returning with trigger returning false."
+            << QuicStackTrace();
     return false;
   }
   return true;

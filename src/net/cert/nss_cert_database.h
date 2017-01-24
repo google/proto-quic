@@ -145,18 +145,6 @@ class NET_EXPORT NSSCertDatabase {
   // Can return NULL.
   crypto::ScopedPK11Slot GetPrivateSlot() const;
 
-  // Get the default module for public key data.
-  // The returned pointer must be stored in a scoped_refptr<CryptoModule>.
-  // DEPRECATED: use GetPublicSlot instead.
-  // TODO(mattm): remove usage of this method and remove it.
-  CryptoModule* GetPublicModule() const;
-
-  // Get the default module for private key or mixed private/public key data.
-  // The returned pointer must be stored in a scoped_refptr<CryptoModule>.
-  // DEPRECATED: use GetPrivateSlot instead.
-  // TODO(mattm): remove usage of this method and remove it.
-  CryptoModule* GetPrivateModule() const;
-
   // Get all modules.
   // If |need_rw| is true, only writable modules will be returned.
   // TODO(mattm): come up with better alternative to CryptoModuleList.

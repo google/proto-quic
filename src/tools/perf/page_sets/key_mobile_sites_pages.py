@@ -7,11 +7,11 @@ from telemetry.page import shared_page_state
 
 class KeyMobileSitesPage(page_module.Page):
 
-  def __init__(self, url, page_set, name='', labels=None):
+  def __init__(self, url, page_set, name='', tags=None):
     super(KeyMobileSitesPage, self).__init__(
         url=url, page_set=page_set, name=name,
         shared_page_state_class=shared_page_state.SharedMobilePageState,
-        credentials_path='data/credentials.json', labels=labels)
+        credentials_path='data/credentials.json', tags=tags)
     self.archive_data_file = 'data/key_mobile_sites.json'
 
 

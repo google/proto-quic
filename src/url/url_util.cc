@@ -6,12 +6,13 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <vector>
 
 #include "base/debug/leak_annotations.h"
 #include "base/logging.h"
 #include "base/strings/string_util.h"
+#include "url/gurl.h"
 #include "url/url_canon_internal.h"
+#include "url/url_constants.h"
 #include "url/url_file.h"
 #include "url/url_util_internal.h"
 
@@ -26,8 +27,7 @@ enum WhitespaceRemovalPolicy {
   DO_NOT_REMOVE_WHITESPACE,
 };
 
-const int kNumStandardURLSchemes = 10;
-const SchemeWithType kStandardURLSchemes[kNumStandardURLSchemes] = {
+const SchemeWithType kStandardURLSchemes[] = {
     {kHttpScheme, SCHEME_WITH_PORT},
     {kHttpsScheme, SCHEME_WITH_PORT},
     // Yes, file URLs can have a hostname, so file URLs should be handled as
@@ -43,20 +43,49 @@ const SchemeWithType kStandardURLSchemes[kNumStandardURLSchemes] = {
     {kHttpsSuboriginScheme, SCHEME_WITH_PORT},
 };
 
-const int kNumReferrerURLSchemes = 4;
-const SchemeWithType kReferrerURLSchemes[kNumReferrerURLSchemes] = {
+const SchemeWithType kReferrerURLSchemes[] = {
     {kHttpScheme, SCHEME_WITH_PORT},
     {kHttpsScheme, SCHEME_WITH_PORT},
     {kHttpSuboriginScheme, SCHEME_WITH_PORT},
     {kHttpsSuboriginScheme, SCHEME_WITH_PORT},
 };
 
+const char* kSecureSchemes[] = {
+  kHttpsScheme,
+  kAboutScheme,
+  kDataScheme,
+  kWssScheme,
+};
+
+const char* kLocalSchemes[] = {
+  kFileScheme,
+};
+
+const char* kNoAccessSchemes[] = {
+  kAboutScheme,
+  kJavaScriptScheme,
+  kDataScheme,
+};
+
+const char* kCORSEnabledSchemes[] = {
+  kHttpScheme,
+  kHttpsScheme,
+  kDataScheme,
+};
+
+bool initialized = false;
+
 // Lists of the currently installed standard and referrer schemes. These lists
-// are lazily initialized by InitStandardSchemes and InitReferrerSchemes and are
-// leaked on shutdown to prevent any destructors from being called that will
-// slow us down or cause problems.
+// are lazily initialized by Initialize and are leaked on shutdown to prevent
+// any destructors from being called that will slow us down or cause problems.
 std::vector<SchemeWithType>* standard_schemes = nullptr;
 std::vector<SchemeWithType>* referrer_schemes = nullptr;
+
+// Similar to above, initialized by the Init*Schemes methods.
+std::vector<std::string>* secure_schemes = nullptr;
+std::vector<std::string>* local_schemes = nullptr;
+std::vector<std::string>* no_access_schemes = nullptr;
+std::vector<std::string>* cors_enabled_schemes = nullptr;
 
 // See the LockSchemeRegistries declaration in the header.
 bool scheme_registries_locked = false;
@@ -72,27 +101,22 @@ template<> struct CharToStringPiece<base::char16> {
   typedef base::StringPiece16 Piece;
 };
 
-void InitSchemes(std::vector<SchemeWithType>** schemes,
-                 const SchemeWithType* initial_schemes,
+void InitSchemes(std::vector<std::string>** schemes,
+                 const char** initial_schemes,
                  size_t size) {
-  if (*schemes)
-    return;
-  *schemes = new std::vector<SchemeWithType>(size);
+  *schemes = new std::vector<std::string>(size);
   for (size_t i = 0; i < size; i++) {
-    (*schemes)->push_back(initial_schemes[i]);
+    (*(*schemes))[i] = initial_schemes[i];
   }
 }
 
-// Ensures that the standard_schemes list is initialized, does nothing if
-// it already has values.
-void InitStandardSchemes() {
-  InitSchemes(&standard_schemes, kStandardURLSchemes, kNumStandardURLSchemes);
-}
-
-// Ensures that the referrer_schemes list is initialized, does nothing if
-// it already has values.
-void InitReferrerSchemes() {
-  InitSchemes(&referrer_schemes, kReferrerURLSchemes, kNumReferrerURLSchemes);
+void InitSchemesWithType(std::vector<SchemeWithType>** schemes,
+                         const SchemeWithType* initial_schemes,
+                         size_t size) {
+  *schemes = new std::vector<SchemeWithType>(size);
+  for (size_t i = 0; i < size; i++) {
+    (*(*schemes))[i] = initial_schemes[i];
+  }
 }
 
 // Given a string and a range inside the string, compares it to the given
@@ -132,7 +156,7 @@ bool DoIsInSchemes(const CHAR* spec,
 
 template<typename CHAR>
 bool DoIsStandard(const CHAR* spec, const Component& scheme, SchemeType* type) {
-  InitStandardSchemes();
+  Initialize();
   return DoIsInSchemes(spec, scheme, type, *standard_schemes);
 }
 
@@ -169,11 +193,20 @@ bool DoCanonicalize(const CHAR* spec,
                     CharsetConverter* charset_converter,
                     CanonOutput* output,
                     Parsed* output_parsed) {
+  // Reserve enough room in the output for the input, plus some extra so that
+  // we have room if we have to escape a few things without reallocating.
+  output->ReserveSizeIfNeeded(spec_len + 8);
+
   // Remove any whitespace from the middle of the relative URL if necessary.
   // Possibly this will result in copying to the new buffer.
   RawCanonOutputT<CHAR> whitespace_buffer;
-  if (whitespace_policy == REMOVE_WHITESPACE)
-    spec = RemoveURLWhitespace(spec, spec_len, &whitespace_buffer, &spec_len);
+  if (whitespace_policy == REMOVE_WHITESPACE) {
+    int original_len = spec_len;
+    spec =
+        RemoveURLWhitespace(spec, original_len, &whitespace_buffer, &spec_len);
+    if (spec_len != original_len)
+      output_parsed->whitespace_removed = true;
+  }
 
   Parsed parsed_input;
 #ifdef WIN32
@@ -253,6 +286,9 @@ bool DoResolveRelative(const char* base_spec,
   const CHAR* relative = RemoveURLWhitespace(in_relative, in_relative_length,
                                              &whitespace_buffer,
                                              &relative_length);
+  if (in_relative_length != relative_length)
+    output_parsed->whitespace_removed = true;
+
   bool base_is_authority_based = false;
   bool base_is_hierarchical = false;
   if (base_spec &&
@@ -277,6 +313,9 @@ bool DoResolveRelative(const char* base_spec,
     // Error resolving.
     return false;
   }
+
+  // Don't reserve buffer space here. Instead, reserve in DoCanonicalize and
+  // ReserveRelativeURL, to enable more accurate buffer sizes.
 
   // Pretend for a moment that |base_spec| is a standard URL. Normally
   // non-standard URLs are treated as PathURLs, but if the base has an
@@ -380,6 +419,12 @@ bool DoReplaceComponents(const char* spec,
                                charset_converter, output, out_parsed);
   }
 
+  // TODO(csharrison): We could be smarter about size to reserve if this is done
+  // in callers below, and the code checks to see which components are being
+  // replaced, and with what length. If this ends up being a hot spot it should
+  // be changed.
+  output->ReserveSizeIfNeeded(spec_len + 8);
+
   // If we get here, then we know the scheme doesn't need to be replaced, so can
   // just key off the scheme in the spec to know how to do the replacements.
   if (DoCompareSchemeComponent(spec, parsed.scheme, url::kFileScheme)) {
@@ -403,9 +448,7 @@ bool DoReplaceComponents(const char* spec,
   return ReplacePathURL(spec, parsed, replacements, output, out_parsed);
 }
 
-void DoAddScheme(const char* new_scheme,
-                 SchemeType type,
-                 std::vector<SchemeWithType>* schemes) {
+void DoAddScheme(const char* new_scheme, std::vector<std::string>* schemes) {
   DCHECK(schemes);
   // If this assert triggers, it means you've called Add*Scheme after
   // LockSchemeRegistries has been called (see the header file for
@@ -421,6 +464,29 @@ void DoAddScheme(const char* new_scheme,
   if (scheme_len == 0)
     return;
 
+  DCHECK_EQ(base::ToLowerASCII(new_scheme), new_scheme);
+  schemes->push_back(std::string(new_scheme));
+}
+
+void DoAddSchemeWithType(const char* new_scheme,
+                         SchemeType type,
+                         std::vector<SchemeWithType>* schemes) {
+  DCHECK(schemes);
+  // If this assert triggers, it means you've called Add*Scheme after
+  // LockSchemeRegistries has been called (see the header file for
+  // LockSchemeRegistries for more).
+  //
+  // This normally means you're trying to set up a new scheme too late in your
+  // application's init process. Locate where your app does this initialization
+  // and calls LockSchemeRegistries, and add your new scheme there.
+  DCHECK(!scheme_registries_locked)
+      << "Trying to add a scheme after the lists have been locked.";
+
+  size_t scheme_len = strlen(new_scheme);
+  if (scheme_len == 0)
+    return;
+
+  DCHECK_EQ(base::ToLowerASCII(new_scheme), new_scheme);
   // Duplicate the scheme into a new buffer and add it to the list of standard
   // schemes. This pointer will be leaked on shutdown.
   char* dup_scheme = new char[scheme_len + 1];
@@ -436,29 +502,85 @@ void DoAddScheme(const char* new_scheme,
 }  // namespace
 
 void Initialize() {
-  InitStandardSchemes();
-  InitReferrerSchemes();
+  if (initialized)
+    return;
+  InitSchemesWithType(&standard_schemes, kStandardURLSchemes,
+                      arraysize(kStandardURLSchemes));
+  InitSchemesWithType(&referrer_schemes, kReferrerURLSchemes,
+                      arraysize(kReferrerURLSchemes));
+  InitSchemes(&secure_schemes, kSecureSchemes, arraysize(kSecureSchemes));
+  InitSchemes(&local_schemes, kLocalSchemes, arraysize(kLocalSchemes));
+  InitSchemes(&no_access_schemes, kNoAccessSchemes,
+              arraysize(kNoAccessSchemes));
+  InitSchemes(&cors_enabled_schemes, kCORSEnabledSchemes,
+              arraysize(kCORSEnabledSchemes));
+  initialized = true;
 }
 
 void Shutdown() {
-  if (standard_schemes) {
-    delete standard_schemes;
-    standard_schemes = NULL;
-  }
-  if (referrer_schemes) {
-    delete referrer_schemes;
-    referrer_schemes = NULL;
-  }
+  initialized = false;
+  delete standard_schemes;
+  standard_schemes = nullptr;
+  delete referrer_schemes;
+  referrer_schemes = nullptr;
+  delete secure_schemes;
+  secure_schemes = nullptr;
+  delete local_schemes;
+  local_schemes = nullptr;
+  delete no_access_schemes;
+  no_access_schemes = nullptr;
+  delete cors_enabled_schemes;
+  cors_enabled_schemes = nullptr;
 }
 
 void AddStandardScheme(const char* new_scheme, SchemeType type) {
-  InitStandardSchemes();
-  DoAddScheme(new_scheme, type, standard_schemes);
+  Initialize();
+  DoAddSchemeWithType(new_scheme, type, standard_schemes);
 }
 
 void AddReferrerScheme(const char* new_scheme, SchemeType type) {
-  InitReferrerSchemes();
-  DoAddScheme(new_scheme, type, referrer_schemes);
+  Initialize();
+  DoAddSchemeWithType(new_scheme, type, referrer_schemes);
+}
+
+void AddSecureScheme(const char* new_scheme) {
+  Initialize();
+  DoAddScheme(new_scheme, secure_schemes);
+}
+
+const std::vector<std::string>& GetSecureSchemes() {
+  Initialize();
+  return *secure_schemes;
+}
+
+void AddLocalScheme(const char* new_scheme) {
+  Initialize();
+  DoAddScheme(new_scheme, local_schemes);
+}
+
+const std::vector<std::string>& GetLocalSchemes() {
+  Initialize();
+  return *local_schemes;
+}
+
+void AddNoAccessScheme(const char* new_scheme) {
+  Initialize();
+  DoAddScheme(new_scheme, no_access_schemes);
+}
+
+const std::vector<std::string>& GetNoAccessSchemes() {
+  Initialize();
+  return *no_access_schemes;
+}
+
+void AddCORSEnabledScheme(const char* new_scheme) {
+  Initialize();
+  DoAddScheme(new_scheme, cors_enabled_schemes);
+}
+
+const std::vector<std::string>& GetCORSEnabledSchemes() {
+  Initialize();
+  return *cors_enabled_schemes;
 }
 
 void LockSchemeRegistries() {
@@ -482,9 +604,24 @@ bool IsStandard(const base::char16* spec, const Component& scheme) {
 }
 
 bool IsReferrerScheme(const char* spec, const Component& scheme) {
-  InitReferrerSchemes();
+  Initialize();
   SchemeType unused_scheme_type;
   return DoIsInSchemes(spec, scheme, &unused_scheme_type, *referrer_schemes);
+}
+
+bool IsAboutBlank(const GURL& url) {
+  if (!url.SchemeIs(url::kAboutScheme))
+    return false;
+
+  if (url.has_host() || url.has_username() || url.has_password() ||
+      url.has_port()) {
+    return false;
+  }
+
+  if (url.path() != kAboutBlankPath && url.path() != kAboutBlankWithHashPath)
+    return false;
+
+  return true;
 }
 
 bool FindAndCompareScheme(const char* str,

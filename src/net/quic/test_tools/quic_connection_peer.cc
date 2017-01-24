@@ -7,7 +7,6 @@
 #include "base/stl_util.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_multipath_sent_packet_manager.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_received_packet_manager.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
@@ -25,17 +24,15 @@ void QuicConnectionPeer::SendAck(QuicConnection* connection) {
 // static
 void QuicConnectionPeer::SetSendAlgorithm(
     QuicConnection* connection,
-    QuicPathId path_id,
     SendAlgorithmInterface* send_algorithm) {
-  GetSentPacketManager(connection, path_id)->SetSendAlgorithm(send_algorithm);
+  GetSentPacketManager(connection)->SetSendAlgorithm(send_algorithm);
 }
 
 // static
 void QuicConnectionPeer::SetLossAlgorithm(
     QuicConnection* connection,
-    QuicPathId path_id,
     LossDetectionInterface* loss_algorithm) {
-  GetSentPacketManager(connection, path_id)->loss_algorithm_ = loss_algorithm;
+  GetSentPacketManager(connection)->loss_algorithm_ = loss_algorithm;
 }
 
 // static
@@ -72,16 +69,8 @@ QuicPacketGenerator* QuicConnectionPeer::GetPacketGenerator(
 
 // static
 QuicSentPacketManager* QuicConnectionPeer::GetSentPacketManager(
-    QuicConnection* connection,
-    QuicPathId path_id) {
-  if (FLAGS_quic_reloadable_flag_quic_enable_multipath) {
-    return static_cast<QuicSentPacketManager*>(
-        static_cast<QuicMultipathSentPacketManager*>(
-            connection->sent_packet_manager_.get())
-            ->MaybeGetSentPacketManagerForPath(path_id));
-  }
-  return static_cast<QuicSentPacketManager*>(
-      connection->sent_packet_manager_.get());
+    QuicConnection* connection) {
+  return &connection->sent_packet_manager_;
 }
 
 // static
@@ -274,7 +263,7 @@ bool QuicConnectionPeer::HasRetransmittableFrames(
     QuicPathId path_id,
     QuicPacketNumber packet_number) {
   return QuicSentPacketManagerPeer::HasRetransmittableFrames(
-      GetSentPacketManager(connection, path_id), packet_number);
+      GetSentPacketManager(connection), packet_number);
 }
 
 }  // namespace test

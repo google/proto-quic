@@ -155,53 +155,130 @@ TEST_F(PersistentHistogramAllocatorTest, CreateWithFileTest) {
   GlobalHistogramAllocator::ReleaseForTesting();
 }
 
-TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderTest) {
-  size_t starting_sr_count = StatisticsRecorder::GetHistogramCount();
+TEST_F(PersistentHistogramAllocatorTest, StatisticsRecorderMergeTest) {
+  const char LinearHistogramName[] = "SRTLinearHistogram";
+  const char SparseHistogramName[] = "SRTSparseHistogram";
+  const size_t starting_sr_count = StatisticsRecorder::GetHistogramCount();
 
   // Create a local StatisticsRecorder in which the newly created histogram
-  // will be recorded.
+  // will be recorded. The global allocator must be replaced after because the
+  // act of releasing will cause the active SR to forget about all histograms
+  // in the relased memory.
   std::unique_ptr<StatisticsRecorder> local_sr =
       StatisticsRecorder::CreateTemporaryForTesting();
   EXPECT_EQ(0U, StatisticsRecorder::GetHistogramCount());
+  std::unique_ptr<GlobalHistogramAllocator> old_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
+  GlobalHistogramAllocator::CreateWithLocalMemory(kAllocatorMemorySize, 0, "");
+  ASSERT_TRUE(GlobalHistogramAllocator::Get());
 
-  HistogramBase* histogram = LinearHistogram::FactoryGet(
-      "TestHistogram", 1, 10, 10, HistogramBase::kIsPersistent);
-  EXPECT_TRUE(histogram);
+  // Create a linear histogram for merge testing.
+  HistogramBase* histogram1 =
+      LinearHistogram::FactoryGet(LinearHistogramName, 1, 10, 10, 0);
+  ASSERT_TRUE(histogram1);
   EXPECT_EQ(1U, StatisticsRecorder::GetHistogramCount());
-  histogram->Add(3);
-  histogram->Add(1);
-  histogram->Add(4);
-  histogram->Add(1);
-  histogram->Add(6);
+  histogram1->Add(3);
+  histogram1->Add(1);
+  histogram1->Add(4);
+  histogram1->AddCount(1, 4);
+  histogram1->Add(6);
 
-  // Destroy the local SR and ensure that we're back to the initial state.
+  // Create a sparse histogram for merge testing.
+  HistogramBase* histogram2 =
+      SparseHistogram::FactoryGet(SparseHistogramName, 0);
+  ASSERT_TRUE(histogram2);
+  EXPECT_EQ(2U, StatisticsRecorder::GetHistogramCount());
+  histogram2->Add(3);
+  histogram2->Add(1);
+  histogram2->Add(4);
+  histogram2->AddCount(1, 4);
+  histogram2->Add(6);
+
+  // Destroy the local SR and ensure that we're back to the initial state and
+  // restore the global allocator. Histograms created in the local SR will
+  // become unmanaged.
+  std::unique_ptr<GlobalHistogramAllocator> new_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
   local_sr.reset();
   EXPECT_EQ(starting_sr_count, StatisticsRecorder::GetHistogramCount());
+  GlobalHistogramAllocator::Set(std::move(old_allocator));
 
-  // Create a second allocator and have it access the memory of the first.
+  // Create a "recovery" allocator using the same memory as the local one.
+  PersistentHistogramAllocator recovery1(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(new_allocator->memory_allocator()->data()),
+      new_allocator->memory_allocator()->size(), 0, 0, "", false));
+  PersistentHistogramAllocator::Iterator histogram_iter1(&recovery1);
+
+  // Get the histograms that were created locally (and forgotten) and merge
+  // them into the global SR. New objects will be created.
   std::unique_ptr<HistogramBase> recovered;
-  PersistentHistogramAllocator recovery(MakeUnique<PersistentMemoryAllocator>(
-      allocator_memory_.get(), kAllocatorMemorySize, 0, 0, "", false));
-  PersistentHistogramAllocator::Iterator histogram_iter(&recovery);
+  while (true) {
+    recovered = histogram_iter1.GetNext();
+    if (!recovered)
+      break;
 
-  recovered = histogram_iter.GetNext();
-  ASSERT_TRUE(recovered);
+    recovery1.MergeHistogramDeltaToStatisticsRecorder(recovered.get());
+    HistogramBase* found =
+        StatisticsRecorder::FindHistogram(recovered->histogram_name());
+    EXPECT_NE(recovered.get(), found);
+  };
+  EXPECT_EQ(starting_sr_count + 2, StatisticsRecorder::GetHistogramCount());
 
-  // Merge the recovered histogram to the SR. It will always be a new object.
-  recovery.MergeHistogramDeltaToStatisticsRecorder(recovered.get());
-  EXPECT_EQ(starting_sr_count + 1, StatisticsRecorder::GetHistogramCount());
-  HistogramBase* found =
-      StatisticsRecorder::FindHistogram(recovered->histogram_name());
+  // Check the merged histograms for accuracy.
+  HistogramBase* found = StatisticsRecorder::FindHistogram(LinearHistogramName);
   ASSERT_TRUE(found);
-  EXPECT_NE(recovered.get(), found);
-
-  // Ensure that the data got merged, too.
   std::unique_ptr<HistogramSamples> snapshot = found->SnapshotSamples();
-  EXPECT_EQ(recovered->SnapshotSamples()->TotalCount(), snapshot->TotalCount());
+  EXPECT_EQ(found->SnapshotSamples()->TotalCount(), snapshot->TotalCount());
   EXPECT_EQ(1, snapshot->GetCount(3));
-  EXPECT_EQ(2, snapshot->GetCount(1));
+  EXPECT_EQ(5, snapshot->GetCount(1));
   EXPECT_EQ(1, snapshot->GetCount(4));
   EXPECT_EQ(1, snapshot->GetCount(6));
+
+  found = StatisticsRecorder::FindHistogram(SparseHistogramName);
+  ASSERT_TRUE(found);
+  snapshot = found->SnapshotSamples();
+  EXPECT_EQ(found->SnapshotSamples()->TotalCount(), snapshot->TotalCount());
+  EXPECT_EQ(1, snapshot->GetCount(3));
+  EXPECT_EQ(5, snapshot->GetCount(1));
+  EXPECT_EQ(1, snapshot->GetCount(4));
+  EXPECT_EQ(1, snapshot->GetCount(6));
+
+  // Perform additional histogram increments.
+  histogram1->AddCount(1, 3);
+  histogram1->Add(6);
+  histogram2->AddCount(1, 3);
+  histogram2->Add(7);
+
+  // Do another merge.
+  PersistentHistogramAllocator recovery2(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(new_allocator->memory_allocator()->data()),
+      new_allocator->memory_allocator()->size(), 0, 0, "", false));
+  PersistentHistogramAllocator::Iterator histogram_iter2(&recovery2);
+  while (true) {
+    recovered = histogram_iter2.GetNext();
+    if (!recovered)
+      break;
+    recovery2.MergeHistogramDeltaToStatisticsRecorder(recovered.get());
+  };
+  EXPECT_EQ(starting_sr_count + 2, StatisticsRecorder::GetHistogramCount());
+
+  // And verify.
+  found = StatisticsRecorder::FindHistogram(LinearHistogramName);
+  snapshot = found->SnapshotSamples();
+  EXPECT_EQ(found->SnapshotSamples()->TotalCount(), snapshot->TotalCount());
+  EXPECT_EQ(1, snapshot->GetCount(3));
+  EXPECT_EQ(8, snapshot->GetCount(1));
+  EXPECT_EQ(1, snapshot->GetCount(4));
+  EXPECT_EQ(2, snapshot->GetCount(6));
+
+  found = StatisticsRecorder::FindHistogram(SparseHistogramName);
+  snapshot = found->SnapshotSamples();
+  EXPECT_EQ(found->SnapshotSamples()->TotalCount(), snapshot->TotalCount());
+  EXPECT_EQ(1, snapshot->GetCount(3));
+  EXPECT_EQ(8, snapshot->GetCount(1));
+  EXPECT_EQ(1, snapshot->GetCount(4));
+  EXPECT_EQ(1, snapshot->GetCount(6));
+  EXPECT_EQ(1, snapshot->GetCount(7));
 }
 
 }  // namespace base

@@ -834,14 +834,14 @@ bool SpdySession::VerifyDomainAuthentication(const std::string& domain) {
 
 int SpdySession::GetPushStream(const GURL& url,
                                RequestPriority priority,
-                               base::WeakPtr<SpdyStream>* stream,
+                               SpdyStream** stream,
                                const NetLogWithSource& stream_net_log) {
   CHECK(!in_io_loop_);
 
-  stream->reset();
-
-  if (availability_state_ == STATE_DRAINING)
+  if (availability_state_ == STATE_DRAINING) {
+    *stream = nullptr;
     return ERR_CONNECTION_CLOSED;
+  }
 
   *stream = GetActivePushStream(url);
   if (*stream) {
@@ -1985,11 +1985,11 @@ SpdyStreamId SpdySession::GetStreamIdForPush(const GURL& url) {
   return unclaimed_it->second.stream_id;
 }
 
-base::WeakPtr<SpdyStream> SpdySession::GetActivePushStream(const GURL& url) {
+SpdyStream* SpdySession::GetActivePushStream(const GURL& url) {
   UnclaimedPushedStreamContainer::const_iterator unclaimed_it =
       unclaimed_pushed_streams_.find(url);
   if (unclaimed_it == unclaimed_pushed_streams_.end())
-    return base::WeakPtr<SpdyStream>();
+    return nullptr;
 
   SpdyStreamId stream_id = unclaimed_it->second.stream_id;
   unclaimed_pushed_streams_.erase(unclaimed_it);
@@ -1997,13 +1997,13 @@ base::WeakPtr<SpdyStream> SpdySession::GetActivePushStream(const GURL& url) {
   ActiveStreamMap::iterator active_it = active_streams_.find(stream_id);
   if (active_it == active_streams_.end()) {
     NOTREACHED();
-    return base::WeakPtr<SpdyStream>();
+    return nullptr;
   }
 
   net_log_.AddEvent(NetLogEventType::HTTP2_STREAM_ADOPTED_PUSH_STREAM,
                     base::Bind(&NetLogSpdyAdoptedPushStreamCallback,
                                active_it->second->stream_id(), &url));
-  return active_it->second->GetWeakPtr();
+  return active_it->second;
 }
 
 url::SchemeHostPort SpdySession::GetServer() {

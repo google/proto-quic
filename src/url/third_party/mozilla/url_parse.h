@@ -177,6 +177,9 @@ struct URL_EXPORT Parsed {
   // the string with the scheme stripped off.
   Component GetContent() const;
 
+  // True if whitespace was removed from the URL during parsing.
+  bool whitespace_removed;
+
   // This is used for nested URL types, currently only filesystem.  If you
   // parse a filesystem URL, the resulting Parsed will have a nested
   // inner_parsed_ to hold the parsed inner URL's component information.

@@ -327,7 +327,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // of that stream is updated to match |priority|.
   int GetPushStream(const GURL& url,
                     RequestPriority priority,
-                    base::WeakPtr<SpdyStream>* spdy_stream,
+                    SpdyStream** spdy_stream,
                     const NetLogWithSource& stream_net_log);
 
   // Called when the pushed stream should be cancelled. If the pushed stream is
@@ -818,7 +818,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Check if we have a pending pushed-stream for this url
   // Returns the stream if found (and returns it from the pending
   // list). Returns NULL otherwise.
-  base::WeakPtr<SpdyStream> GetActivePushStream(const GURL& url);
+  SpdyStream* GetActivePushStream(const GURL& url);
 
   void RecordPingRTTHistogram(base::TimeDelta duration);
   void RecordHistograms();

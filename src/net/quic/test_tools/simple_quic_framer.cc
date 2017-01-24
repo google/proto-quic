@@ -7,9 +7,9 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 
 using base::StringPiece;
 using std::string;
@@ -53,9 +53,9 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
   bool OnStreamFrame(const QuicStreamFrame& frame) override {
     // Save a copy of the data so it is valid after the packet is processed.
     string* string_data = new string(frame.data_buffer, frame.data_length);
-    stream_data_.push_back(base::WrapUnique(string_data));
+    stream_data_.push_back(QuicWrapUnique(string_data));
     // TODO(ianswett): A pointer isn't necessary with emplace_back.
-    stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(
+    stream_frames_.push_back(QuicMakeUnique<QuicStreamFrame>(
         frame.stream_id, frame.fin, frame.offset, StringPiece(*string_data)));
     return true;
   }

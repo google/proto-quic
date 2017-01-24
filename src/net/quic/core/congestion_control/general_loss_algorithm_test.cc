@@ -192,7 +192,6 @@ TEST_F(GeneralLossAlgorithmTest, DontEarlyRetransmitNeuteredPacket) {
 }
 
 TEST_F(GeneralLossAlgorithmTest, EarlyRetransmitWithLargerUnackablePackets) {
-  FLAGS_quic_reloadable_flag_quic_largest_sent_retransmittable = true;
   // Transmit 2 data packets and one ack.
   SendDataPacket(1);
   SendDataPacket(2);

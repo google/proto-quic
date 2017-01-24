@@ -17,10 +17,12 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/quic/quartc/quartc_alarm_factory.h"
 #include "net/quic/quartc/quartc_packet_writer.h"
+#include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -450,6 +452,7 @@ class QuartcSessionTest : public ::testing::Test,
   std::unique_ptr<QuicAlarmFactory> alarm_factory_;
   SimpleBufferAllocator buffer_allocator_;
   QuicChromiumClock clock_;
+  QuicFlagSaver flags_;  // Save/restore all QUIC flag values.
 
   std::unique_ptr<FakeTransportChannel> client_channel_;
   std::unique_ptr<FakeTransportChannel> server_channel_;
@@ -462,12 +465,14 @@ class QuartcSessionTest : public ::testing::Test,
 };
 
 TEST_F(QuartcSessionTest, StreamConnection) {
+  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
   CreateClientAndServerSessions();
   StartHandshake();
   TestStreamConnection();
 }
 
 TEST_F(QuartcSessionTest, ClientRejection) {
+  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
   CreateClientAndServerSessions(false /*client_handshake_success*/,
                                 true /*server_handshake_success*/);
   StartHandshake();
@@ -475,6 +480,7 @@ TEST_F(QuartcSessionTest, ClientRejection) {
 }
 
 TEST_F(QuartcSessionTest, ServerRejection) {
+  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
   CreateClientAndServerSessions(true /*client_handshake_success*/,
                                 false /*server_handshake_success*/);
   StartHandshake();
@@ -489,6 +495,7 @@ TEST_F(QuartcSessionTest, CannotCreateDataStreamBeforeHandshake) {
 }
 
 TEST_F(QuartcSessionTest, CloseQuartcStream) {
+  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
   CreateClientAndServerSessions();
   StartHandshake();
   ASSERT_TRUE(client_peer_->IsCryptoHandshakeConfirmed() &&

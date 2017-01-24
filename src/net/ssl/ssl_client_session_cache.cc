@@ -37,7 +37,8 @@ size_t SSLClientSessionCache::size() const {
 }
 
 bssl::UniquePtr<SSL_SESSION> SSLClientSessionCache::Lookup(
-    const std::string& cache_key) {
+    const std::string& cache_key,
+    int* count) {
   base::AutoLock lock(lock_);
 
   // Expire stale sessions.
@@ -47,18 +48,39 @@ bssl::UniquePtr<SSL_SESSION> SSLClientSessionCache::Lookup(
     FlushExpiredSessions();
   }
 
+  // Set count to 0 if there's no session in the cache.
+  if (count != nullptr)
+    *count = 0;
+
   auto iter = cache_.Get(cache_key);
   if (iter == cache_.end())
     return nullptr;
 
-  SSL_SESSION* session = iter->second.get();
+  SSL_SESSION* session = iter->second.session.get();
   if (IsExpired(session, clock_->Now().ToTimeT())) {
     cache_.Erase(iter);
     return nullptr;
   }
 
+  iter->second.lookups++;
+  if (count != nullptr) {
+    *count = iter->second.lookups;
+  }
+
   SSL_SESSION_up_ref(session);
   return bssl::UniquePtr<SSL_SESSION>(session);
+}
+
+void SSLClientSessionCache::ResetLookupCount(const std::string& cache_key) {
+  base::AutoLock lock(lock_);
+
+  // It's possible that the cached session for this key was deleted after the
+  // Lookup. If that's the case, don't do anything.
+  auto iter = cache_.Get(cache_key);
+  if (iter == cache_.end())
+    return;
+
+  iter->second.lookups = 0;
 }
 
 void SSLClientSessionCache::Insert(const std::string& cache_key,
@@ -66,7 +88,9 @@ void SSLClientSessionCache::Insert(const std::string& cache_key,
   base::AutoLock lock(lock_);
 
   SSL_SESSION_up_ref(session);
-  cache_.Put(cache_key, bssl::UniquePtr<SSL_SESSION>(session));
+  Entry entry;
+  entry.session = bssl::UniquePtr<SSL_SESSION>(session);
+  cache_.Put(cache_key, std::move(entry));
 }
 
 void SSLClientSessionCache::Flush() {
@@ -101,7 +125,7 @@ void SSLClientSessionCache::DumpMemoryStats(
   size_t total_serialized_cert_size = 0;
   size_t total_cert_count = 0;
   for (const auto& pair : cache_) {
-    const SSL_SESSION* session = pair.second.get();
+    const SSL_SESSION* session = pair.second.session.get();
     size_t cert_count = sk_CRYPTO_BUFFER_num(session->certs);
     total_cert_count += cert_count;
     for (size_t i = 0; i < cert_count; ++i) {
@@ -123,11 +147,15 @@ void SSLClientSessionCache::DumpMemoryStats(
                         total_serialized_cert_size);
 }
 
+SSLClientSessionCache::Entry::Entry() : lookups(0) {}
+SSLClientSessionCache::Entry::Entry(Entry&&) = default;
+SSLClientSessionCache::Entry::~Entry() = default;
+
 void SSLClientSessionCache::FlushExpiredSessions() {
   time_t now = clock_->Now().ToTimeT();
   auto iter = cache_.begin();
   while (iter != cache_.end()) {
-    if (IsExpired(iter->second.get(), now)) {
+    if (IsExpired(iter->second.session.get(), now)) {
       iter = cache_.Erase(iter);
     } else {
       ++iter;

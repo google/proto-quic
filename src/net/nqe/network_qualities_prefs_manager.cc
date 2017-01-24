@@ -62,6 +62,7 @@ NetworkQualitiesPrefsManager::NetworkQualitiesPrefsManager(
       read_prefs_startup_(ConvertDictionaryValueToMap(prefs_.get())),
       pref_weak_ptr_factory_(this) {
   DCHECK(pref_delegate_);
+  DCHECK(pref_task_runner_);
   DCHECK_GE(kMaxCacheSize, prefs_->size());
 
   pref_weak_ptr_ = pref_weak_ptr_factory_.GetWeakPtr();

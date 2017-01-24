@@ -33,14 +33,10 @@ class QuicConnectionPeer {
  public:
   static void SendAck(QuicConnection* connection);
 
-  // Sets send algorithm of |path_id|.
   static void SetSendAlgorithm(QuicConnection* connection,
-                               QuicPathId path_id,
                                SendAlgorithmInterface* send_algorithm);
 
-  // Sets loss algorithm of |path_id|.
   static void SetLossAlgorithm(QuicConnection* connection,
-                               QuicPathId path_id,
                                LossDetectionInterface* loss_algorithm);
 
   static const QuicFrame GetUpdatedAckFrame(QuicConnection* connection);
@@ -54,9 +50,8 @@ class QuicConnectionPeer {
 
   static QuicPacketGenerator* GetPacketGenerator(QuicConnection* connection);
 
-  // Returns sent packet manager of |path_id|.
-  static QuicSentPacketManager* GetSentPacketManager(QuicConnection* connection,
-                                                     QuicPathId path_id);
+  static QuicSentPacketManager* GetSentPacketManager(
+      QuicConnection* connection);
 
   static QuicTime::Delta GetNetworkTimeout(QuicConnection* connection);
 

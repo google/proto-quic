@@ -17,6 +17,7 @@
 #include "base/run_loop.h"
 #include "base/test/histogram_tester.h"
 #include "net/base/port_util.h"
+#include "net/base/privacy_mode.h"
 #include "net/base/test_completion_callback.h"
 #include "net/base/test_proxy_delegate.h"
 #include "net/cert/ct_policy_enforcer.h"
@@ -387,6 +388,9 @@ class CapturePreconnectsSocketPool : public ParentPool {
   int last_num_streams() const {
     return last_num_streams_;
   }
+
+  // Resets |last_num_streams_| to its default value.
+  void reset_last_num_streams() { last_num_streams_ = -1; }
 
   int RequestSocket(const std::string& group_name,
                     const void* socket_params,
@@ -1307,6 +1311,87 @@ TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
       }
     }
   }
+}
+
+// Verify that preconnect to a HTTP2 proxy server with a privacy mode different
+// than that of the in-flight preconnect job succeeds.
+TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
+  int num_streams = 1;
+  base::HistogramTester histogram_tester;
+  GURL url = GURL("http://www.google.com");
+  std::unique_ptr<ProxyService> proxy_service =
+      ProxyService::CreateFixedFromPacResult("HTTPS myproxy.org:443");
+
+  // Set up the proxy server as a server that supports request priorities.
+  HttpServerPropertiesImpl http_server_properties;
+
+  url::SchemeHostPort spdy_server("https", "myproxy.org", 443);
+  http_server_properties.SetSupportsSpdy(spdy_server, true);
+
+  SpdySessionDependencies session_deps;
+  HttpNetworkSession::Params params =
+      SpdySessionDependencies::CreateSessionParams(&session_deps);
+  params.enable_quic = true;
+  params.proxy_service = proxy_service.get();
+  params.http_server_properties = &http_server_properties;
+  ASSERT_TRUE(params.restrict_to_one_preconnect_for_proxies);
+
+  std::unique_ptr<HttpNetworkSession> session(new HttpNetworkSession(params));
+
+  HttpNetworkSessionPeer peer(session.get());
+  HostPortPair proxy_host("myproxy.org", 443);
+
+  CapturePreconnectsHttpProxySocketPool* http_proxy_pool =
+      new CapturePreconnectsHttpProxySocketPool(
+          session_deps.host_resolver.get(), session_deps.cert_verifier.get(),
+          session_deps.transport_security_state.get(),
+          session_deps.cert_transparency_verifier.get(),
+          session_deps.ct_policy_enforcer.get());
+  CapturePreconnectsSSLSocketPool* ssl_conn_pool =
+      new CapturePreconnectsSSLSocketPool(
+          session_deps.host_resolver.get(), session_deps.cert_verifier.get(),
+          session_deps.transport_security_state.get(),
+          session_deps.cert_transparency_verifier.get(),
+          session_deps.ct_policy_enforcer.get());
+
+  std::unique_ptr<MockClientSocketPoolManager> mock_pool_manager(
+      new MockClientSocketPoolManager);
+  mock_pool_manager->SetSocketPoolForHTTPProxy(
+      proxy_host, base::WrapUnique(http_proxy_pool));
+  mock_pool_manager->SetSocketPoolForSSLWithProxy(
+      proxy_host, base::WrapUnique(ssl_conn_pool));
+  peer.SetClientSocketPoolManager(std::move(mock_pool_manager));
+
+  HttpRequestInfo request_privacy_mode_disabled;
+  request_privacy_mode_disabled.method = "GET";
+  request_privacy_mode_disabled.url = url;
+  request_privacy_mode_disabled.load_flags = 0;
+
+  // First preconnect job should succeed.
+  session->http_stream_factory()->PreconnectStreams(
+      num_streams, request_privacy_mode_disabled);
+  EXPECT_EQ(-1, ssl_conn_pool->last_num_streams());
+  EXPECT_EQ(num_streams, http_proxy_pool->last_num_streams());
+  http_proxy_pool->reset_last_num_streams();
+
+  // Second preconnect job with same privacy mode should not succeed.
+  session->http_stream_factory()->PreconnectStreams(
+      num_streams + 1, request_privacy_mode_disabled);
+  EXPECT_EQ(-1, ssl_conn_pool->last_num_streams());
+  EXPECT_EQ(-1, http_proxy_pool->last_num_streams());
+
+  // Next request with a different privacy mode should succeed.
+  HttpRequestInfo request_privacy_mode_enabled;
+  request_privacy_mode_enabled.method = "GET";
+  request_privacy_mode_enabled.url = url;
+  request_privacy_mode_enabled.load_flags = 0;
+  request_privacy_mode_enabled.privacy_mode = PRIVACY_MODE_ENABLED;
+
+  // Request with a different privacy mode should succeed.
+  session->http_stream_factory()->PreconnectStreams(
+      num_streams, request_privacy_mode_enabled);
+  EXPECT_EQ(-1, ssl_conn_pool->last_num_streams());
+  EXPECT_EQ(num_streams, http_proxy_pool->last_num_streams());
 }
 
 namespace {

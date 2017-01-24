@@ -40,7 +40,6 @@ using testing::WithArgs;
 
 // TODO(bnc): Merge these correctly.
 bool FLAGS_use_http2_frame_decoder_adapter;
-bool FLAGS_spdy_use_hpack_decoder2;
 bool FLAGS_spdy_framer_use_new_methods4;
 
 namespace net {
@@ -153,13 +152,15 @@ std::ostream& operator<<(std::ostream& os, Http2DecoderChoice v) {
   return os;
 }
 
-enum HpackDecoderChoice { HPACK_DECODER_SPDY, HPACK_DECODER_NEW };
+enum HpackDecoderChoice { HPACK_DECODER_SPDY, HPACK_DECODER2, HPACK_DECODER3 };
 std::ostream& operator<<(std::ostream& os, HpackDecoderChoice v) {
   switch (v) {
     case HPACK_DECODER_SPDY:
       return os << "SPDY";
-    case HPACK_DECODER_NEW:
-      return os << "NEW";
+    case HPACK_DECODER2:
+      return os << "HPACK_DECODER2";
+    case HPACK_DECODER3:
+      return os << "HPACK_DECODER3";
   }
   return os;
 }
@@ -193,12 +194,16 @@ struct TestParams {
     }
     switch (hpack_decoder) {
       case HPACK_DECODER_SPDY:
-        FLAGS_spdy_use_hpack_decoder2 = false;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
         break;
-      case HPACK_DECODER_NEW:
-        FLAGS_spdy_use_hpack_decoder2 = true;
-        // Needs new header methods to be used.
-        FLAGS_spdy_framer_use_new_methods4 = true;
+      case HPACK_DECODER2:
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = true;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
+        break;
+      case HPACK_DECODER3:
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
         break;
     }
     QUIC_LOG(INFO) << "TestParams: version: " << QuicVersionToString(version)
@@ -415,7 +420,7 @@ INSTANTIATE_TEST_CASE_P(
         ::testing::Values(HTTP2_DECODER_SPDY,
                           HTTP2_DECODER_NESTED_SPDY,
                           HTTP2_DECODER_NEW),
-        ::testing::Values(HPACK_DECODER_SPDY, HPACK_DECODER_NEW)));
+        ::testing::Values(HPACK_DECODER_SPDY, HPACK_DECODER2, HPACK_DECODER3)));
 
 TEST_P(QuicHeadersStreamTest, StreamId) {
   EXPECT_EQ(3u, headers_stream_->id());

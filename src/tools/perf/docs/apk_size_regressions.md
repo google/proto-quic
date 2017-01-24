@@ -1,4 +1,6 @@
-# How to Deal with Apk Size Alerts
+# How to Deal with Android Size Alerts
+
+*Most alerts should not have a bug created for them. Please read on...*
 
 ### If the alert is for "other lib size" or "Unknown files size":
  * File a bug against agrieve@ to fix
@@ -9,7 +11,7 @@
 ### If the alert is a downstream size alert (aka, for Monochrome.apk):
  * The regression most likely already occurred in the upstream
    MonochromePublic.apk target. Look at the
-   [upstream graphs](https://chromeperf.appspot.com/report?sid=5cfed2a07b55702fc64255a316cdb78531e916da4e933677645bbf1fe78cf2e0&num_points=1500)
+   [upstream graphs](https://chromeperf.appspot.com/report?sid=cfc29eed1238fd38fb5e6cf83bdba6c619be621b606e03e5dfc2e99db14c418b&num_points=1500)
    to find the culprit & de-dupe with upstream alerts.
  * If no upstream regression was found, look through the downstream commits
    within the given date range to find the culprit.
@@ -18,6 +20,7 @@
 
 ### If the alert is for a roll:
  * Use a bisect to try and determine a more precise commit.
+    * Except don't. Bisects for these alerts [are currently broken](https://bugs.chromium.org/p/chromium/issues/detail?id=678338).
 
 ### What to do once the commit is identified:
  * If the code seems to justify the size increase:
@@ -26,41 +29,62 @@
        > (unless you can think of an obvious way to reduce the overhead).
        >
        > Link to size graph:
-[https://chromeperf.appspot.com/report?sid=6468aba6ff8d28723690042144ee893d2dd3ded7fb414a916520b90659b8410f&rev=**440074**](https://chromeperf.appspot.com/report?sid=6468aba6ff8d28723690042144ee893d2dd3ded7fb414a916520b90659b8410f&rev=440074)
+[https://chromeperf.appspot.com/report?sid=cfc29eed1238fd38fb5e6cf83bdba6c619be621b606e03e5dfc2e99db14c418b&rev=**440074**](https://chromeperf.appspot.com/report?sid=cfc29eed1238fd38fb5e6cf83bdba6c619be621b606e03e5dfc2e99db14c418b&rev=440074)
     2. Add an entry to
       [this spreadsheet](https://docs.google.com/spreadsheets/d/1GrRkszV7Oy5pVsaMb5Eb6s8izW9t4dElBxIH3iGq93o/edit#gid=1894856744)
       to document the increase (also Update the "Themes / Thoughts" tab if
       applicable).
  * If the code might not justify the size increase:
-    1. File a bug and assign to the author to follow-up (and link them to this
-       doc).
+    1. File a bug and assign to the author to follow-up (and link them to
+       [Debugging Apk Size Increase](https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase)).
     2. Add an entry to
       [this spreadsheet](https://docs.google.com/spreadsheets/d/1GrRkszV7Oy5pVsaMb5Eb6s8izW9t4dElBxIH3iGq93o/edit#gid=1894856744)
       to document the increase.
 
 # Debugging Apk Size Increase
 
-### How to debug apk size increase
+## Step 1: Identify where the extra bytes came from
 
-1. Figure out which file within the .apk increased by looking at the size
-   graphs showing the breakdowns.
-    * Refer to the chromeperf link that should have been posted to your code review
-      (see above).
-    * Alternatively, refer to "Apk Size" section here:
-      [https://goto.google.com/clank/dashboards](https://goto.google.com/clank/dashboards) (*googler only*).
-1. If it's libchrome.so, build before & after and use
-   [tools/binary_size/](https://cs.chromium.org/chromium/src/tools/binary_size/).
-    * This is somewhat hand-wavy. Some notes on how this tool works at
-      [crbug/482401](https://bugs.chromium.org/p/chromium/issues/detail?id=482401).
-1. If it's classes.dex, build before & after and use:
-   [tools/android/dexdiffer/dexdiffer.py](https://cs.chromium.org/chromium/src/tools/android/dexdiffer/dexdiffer.py).
-    * This currently just shows a list of symbols added / removed rather than
-      taking into account method body sizes.
-    * Enhancements to this tool tracked at
-      [crbug/678044](https://bugs.chromium.org/p/chromium/issues/detail?id=678044).
-1. If it's images, ensure they are optimized:
+Figure out which file within the .apk increased by looking at the size graphs
+showing the breakdowns.
+
+ * Refer to the chromeperf link that should have been posted to your code
+   review (see above).
+ * Alternatively, refer to "Apk Size" section here:
+   [https://goto.google.com/clank/dashboards](https://goto.google.com/clank/dashboards) (*googler only*).
+
+## Step 2: Reproduce build results locally
+
+### Option 1: Build Locally
+ 1. Follow the normal [Android build instructions](https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md).
+ 1. Ensure you're using the same GN args as the bots by looking at the `generate_build_files` step of the build:
+    * https://luci-logdog.appspot.com/v/?s=chrome%2Fbb%2Fchromium.perf%2FAndroid_Builder%2F**134505**%2F%2B%2Frecipes%2Fsteps%2Fgenerate_build_files%2F0%2Fstdout
+ 3. Save artifacts you'll need for diffing:
+
+```shell
+    mv out/Release/lib.unstripped out/Release/lib.unstripped.withchange
+    mv out/Release/apks out/Release/apks.withchange
+```
+
+### Option 2: Download artifacts from perf jobs (Googlers only)**
+ 1. Replace the bolded part of the following URL with your build number:
+  [https://luci-milo.appspot.com/buildbot/chromium.perf/Android%20Builder/**131325**](https://luci-milo.appspot.com/buildbot/chromium.perf/Android%20Builder/131325)
+ 2. Click the **gsutil.upload** link in the **gsutil upload_build_product** step
+
+## Step 3: Analyze
+
+ * If the growth is from native code:
+    * Refer to techniques used in [crbug.com/681991](https://bugs.chromium.org/p/chromium/issues/detail?id=681991)
+      and [crbug.com/680973](https://bugs.chromium.org/p/chromium/issues/detail?id=680973).
+ * If the growth is from java code:
+    * Use [tools/android/dexdiffer/dexdiffer.py](https://cs.chromium.org/chromium/src/tools/android/dexdiffer/dexdiffer.py).
+        * This currently just shows a list of symbols added / removed rather than
+          taking into account method body sizes.
+        * Enhancements to this tool tracked at
+          [crbug/678044](https://bugs.chromium.org/p/chromium/issues/detail?id=678044).
+ * If the growth is from images, ensure they are optimized:
     * Would it be smaller as a VectorDrawable?
     * If it's lossy, consider using webp.
     * Ensure you've optimized with
       [tools/resources/optimize-png-files.sh](https://cs.chromium.org/chromium/src/tools/resources/optimize-png-files.sh).
-
+    * There is some [Googler-specific guidance](https://goto.google.com/clank/engineering/best-practices/adding-image-assets) as well.

@@ -31,7 +31,37 @@ namespace test {
 class HpackDecoderTablesPeer;
 }  // namespace test
 
+// TODO(jamessynge): Move to hpack_constants.h
 const size_t kFirstDynamicTableIndex = 62;
+
+// HpackDecoderTablesDebugListener supports a QUIC experiment, enabling
+// the gathering of information about the time-line of use of HPACK
+// dynamic table entries.
+class NET_EXPORT_PRIVATE HpackDecoderTablesDebugListener {
+ public:
+  HpackDecoderTablesDebugListener();
+  virtual ~HpackDecoderTablesDebugListener();
+
+  // The entry has been inserted into the dynamic table. insert_count starts at
+  // 62 because 61 is the last index in the static table; insert_count increases
+  // by 1 with each insert into the dynamic table; it is not incremented when
+  // when a entry is too large to fit into the dynamic table at all (which has
+  // the effect of emptying the dynamic table).
+  // Returns a value that can be used as time_added in OnUseEntry.
+  virtual int64_t OnEntryInserted(const HpackStringPair& entry,
+                                  size_t insert_count) = 0;
+
+  // The entry has been used, either for the name or for the name and value.
+  // insert_count is the same as passed to OnEntryInserted when entry was
+  // inserted to the dynamic table, and time_added is the value that was
+  // returned by OnEntryInserted.
+  virtual void OnUseEntry(const HpackStringPair& entry,
+                          size_t insert_count,
+                          int64_t time_added) = 0;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(HpackDecoderTablesDebugListener);
+};
 
 // See http://httpwg.org/specs/rfc7541.html#static.table.definition for the
 // contents, and http://httpwg.org/specs/rfc7541.html#index.address.space for
@@ -61,6 +91,13 @@ class NET_EXPORT_PRIVATE HpackDecoderDynamicTable {
   HpackDecoderDynamicTable();
   ~HpackDecoderDynamicTable();
 
+  // Set the listener to be notified of insertions into this table, and later
+  // uses of those entries. Added for evaluation of changes to QUIC's use
+  // of HPACK.
+  void set_debug_listener(HpackDecoderTablesDebugListener* debug_listener) {
+    debug_listener_ = debug_listener;
+  }
+
   // Sets a new size limit, received from the peer; performs evictions if
   // necessary to ensure that the current size does not exceed the new limit.
   // The caller needs to have validated that size_limit does not
@@ -80,6 +117,10 @@ class NET_EXPORT_PRIVATE HpackDecoderDynamicTable {
 
  private:
   friend class test::HpackDecoderTablesPeer;
+  struct HpackDecoderTableEntry : public HpackStringPair {
+    HpackDecoderTableEntry(const HpackString& name, const HpackString& value);
+    int64_t time_added;
+  };
 
   // Drop older entries to ensure the size is not greater than limit.
   void EnsureSizeNoMoreThan(size_t limit);
@@ -87,13 +128,18 @@ class NET_EXPORT_PRIVATE HpackDecoderDynamicTable {
   // Removes the oldest dynamic table entry.
   void RemoveLastEntry();
 
+  std::deque<HpackDecoderTableEntry> table_;
+
   // The last received DynamicTableSizeUpdate value, initialized to
   // SETTINGS_HEADER_TABLE_SIZE.
   size_t size_limit_ = Http2SettingsInfo::DefaultHeaderTableSize();
 
   size_t current_size_ = 0;
 
-  std::deque<HpackStringPair> table_;
+  // insert_count_ and debug_listener_ are used by a QUIC experiment; remove
+  // when the experiment is done.
+  size_t insert_count_;
+  HpackDecoderTablesDebugListener* debug_listener_;
 
   DISALLOW_COPY_AND_ASSIGN(HpackDecoderDynamicTable);
 };
@@ -102,6 +148,11 @@ class NET_EXPORT_PRIVATE HpackDecoderTables {
  public:
   HpackDecoderTables();
   ~HpackDecoderTables();
+
+  // Set the listener to be notified of insertions into the dynamic table, and
+  // later uses of those entries. Added for evaluation of changes to QUIC's use
+  // of HPACK.
+  void set_debug_listener(HpackDecoderTablesDebugListener* debug_listener);
 
   // Sets a new size limit, received from the peer; performs evictions if
   // necessary to ensure that the current size does not exceed the new limit.
@@ -121,13 +172,7 @@ class NET_EXPORT_PRIVATE HpackDecoderTables {
 
   // If index is valid, returns a pointer to the entry, otherwise returns
   // nullptr.
-  const HpackStringPair* Lookup(size_t index) const {
-    if (index < kFirstDynamicTableIndex) {
-      return static_table_.Lookup(index);
-    } else {
-      return dynamic_table_.Lookup(index - kFirstDynamicTableIndex);
-    }
-  }
+  const HpackStringPair* Lookup(size_t index) const;
 
   // The size limit that the peer (the HPACK encoder) has told the decoder it is
   // currently operating with. Defaults to SETTINGS_HEADER_TABLE_SIZE, 4096.

@@ -306,6 +306,41 @@ class InternalClass {
 
 }  // namespace internal
 
+// Tests for --method-blocklist cmdline parameter.
+class IdlTestClass {
+ public:
+  static int idlTestMethodNoParams(char x) { return 123; }
+  static int idlTestMethodOneParam(char x) { return 123; }
+
+  int idlTestMethodNoParams() { return 123; }
+  int idlTestMethodNoParams(int x) { return 123; }
+
+  int idlTestMethodOneParam() { return 123; }
+  int idlTestMethodOneParam(int x) { return 123; }
+
+  int idlTestMethodTwoOrThreeParams() { return 123; }
+  int idlTestMethodTwoOrThreeParams(int x, int y) { return 123; }
+  int idlTestMethodTwoOrThreeParams(int x, int y, int z) { return 123; }
+
+  int idlOptionalArgsPass(int x = 0) { return x; }
+  int idlOptionalArgsStillTooMany(int x, int y = 0) { return x + y; }
+  int idlOptionalArgsTooLittle(int x = 0) { return x; }
+
+  template <typename T>
+  int idlTemplateMethod(T x) {
+    return 123;
+  }
+
+  int path() { return 123; }
+  int path(int x) { return 123; }
+};
+
+template <typename T>
+class IdlTemplateClass {
+ public:
+  int idlTestMethod(T x) { return 123; }
+};
+
 }  // namespace blink
 
 // https://crbug.com/640688 - need to rewrite method name below.

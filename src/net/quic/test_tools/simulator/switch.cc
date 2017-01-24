@@ -5,8 +5,8 @@
 #include <cinttypes>
 
 #include "base/format_macros.h"
-#include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/simulator/switch.h"
 
 using base::StringPrintf;
@@ -81,7 +81,7 @@ void Switch::DispatchPacket(SwitchPortNumber port_number,
     if (!egress_port.connected()) {
       continue;
     }
-    egress_port.EnqueuePacket(base::MakeUnique<Packet>(*packet));
+    egress_port.EnqueuePacket(QuicMakeUnique<Packet>(*packet));
   }
 }
 

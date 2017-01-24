@@ -37,6 +37,8 @@ def extract_gn_build_commands(build_ninja_file):
 
 
 def delete_dir(build_dir):
+  if os.path.islink(build_dir):
+    return
   # For unknown reasons (anti-virus?) rmtree of Chromium build directories
   # often fails on Windows.
   if sys.platform.startswith('win'):

@@ -8,7 +8,7 @@
 #
 # Otherwise, the given flags are used to REPLACE (not modify) the cast shell
 # flags. For example:
-#   apk_command_line --enable-media-thread-for-media-playback
+#   adb_cast_shell_command_line --enable-media-thread-for-media-playback
 #
 # If multiple devices are connected, use the --device argument to specify the
 # device ID. You can use
@@ -16,7 +16,6 @@
 # ... to find the device's ID.
 #
 # To remove all content shell flags, pass an empty string for the flags:
-#   apk_command_line ""
+#   adb_cast_shell_command_line ""
 
-exec $(dirname $0)/../../build/android/adb_command_line.py -e cast_shell \
-  --device-path /data/local/tmp/castshell-command-line "$@"
+exec $(dirname $0)/adb_command_line.py --name castshell-command-line "$@"

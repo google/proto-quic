@@ -568,8 +568,10 @@ default_shared_library_configs = default_compiler_configs + [
 if (is_android) {
   # Strip native JNI exports from shared libraries by default. Binaries that
   # want this can remove this config.
-  default_shared_library_configs +=
-      [ "//build/config/android:hide_native_jni_exports" ]
+  default_shared_library_configs += [
+    "//build/config/android:hide_native_jni_exports",
+    "//build/config/android:hide_all_but_jni_onload",
+  ]
 }
 set_defaults("shared_library") {
   configs = default_shared_library_configs
@@ -647,7 +649,10 @@ set_defaults("component") {
   if (is_component_build) {
     configs = default_shared_library_configs
     if (is_android) {
-      configs -= [ "//build/config/android:hide_native_jni_exports" ]
+      configs -= [
+        "//build/config/android:hide_native_jni_exports",
+        "//build/config/android:hide_all_but_jni_onload",
+      ]
     }
   } else {
     configs = default_compiler_configs

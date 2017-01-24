@@ -6,13 +6,13 @@
 
 #include <memory>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
@@ -117,7 +117,7 @@ class QuicStreamTest : public ::testing::TestWithParam<bool> {
     stream_ = new TestStream(kTestStreamId, session_.get(),
                              stream_should_process_data);
     // session_ now owns stream_.
-    session_->ActivateStream(base::WrapUnique(stream_));
+    session_->ActivateStream(QuicWrapUnique(stream_));
     // Ignore resetting when session_ is terminated.
     EXPECT_CALL(*session_, SendRstStream(kTestStreamId, _, _))
         .Times(AnyNumber());

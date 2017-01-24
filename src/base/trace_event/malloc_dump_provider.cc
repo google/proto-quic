@@ -297,7 +297,10 @@ void MallocDumpProvider::InsertAllocation(void* address, size_t size) {
   auto* tracker = AllocationContextTracker::GetInstanceForCurrentThread();
   if (!tracker)
     return;
-  AllocationContext context = tracker->GetContextSnapshot();
+
+  AllocationContext context;
+  if (!tracker->GetContextSnapshot(&context))
+    return;
 
   AutoLock lock(allocation_register_lock_);
   if (!allocation_register_)

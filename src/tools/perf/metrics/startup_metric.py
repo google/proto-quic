@@ -21,7 +21,7 @@ class StartupMetric(Metric):
 
   HISTOGRAMS_TO_RECORD = {
       'messageloop_start_time': (
-          'Startup.BrowserMessageLoopStartTimeFromMainEntry'),
+          'Startup.BrowserMessageLoopStartTimeFromMainEntry2'),
       'window_display_time': 'Startup.BrowserWindowDisplay',
       'open_tabs_time': 'Startup.BrowserOpenTabs',
       'first_non_empty_paint_time': 'Startup.FirstWebContents.NonEmptyPaint2',

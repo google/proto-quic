@@ -98,7 +98,6 @@ QuicTime QuicSentPacketManagerPeer::GetSentTime(
 // static
 bool QuicSentPacketManagerPeer::IsRetransmission(
     QuicSentPacketManager* sent_packet_manager,
-    QuicPathId path_id,
     QuicPacketNumber packet_number) {
   DCHECK(HasRetransmittableFrames(sent_packet_manager, packet_number));
   if (!HasRetransmittableFrames(sent_packet_manager, packet_number)) {
@@ -115,7 +114,6 @@ bool QuicSentPacketManagerPeer::IsRetransmission(
 // static
 void QuicSentPacketManagerPeer::MarkForRetransmission(
     QuicSentPacketManager* sent_packet_manager,
-    QuicPathId path_id,
     QuicPacketNumber packet_number,
     TransmissionType transmission_type) {
   sent_packet_manager->MarkForRetransmission(packet_number, transmission_type);
@@ -154,7 +152,7 @@ QuicByteCount QuicSentPacketManagerPeer::GetBytesInFlight(
 }
 
 // static
-QuicSentPacketManagerInterface::NetworkChangeVisitor*
+QuicSentPacketManager::NetworkChangeVisitor*
 QuicSentPacketManagerPeer::GetNetworkChangeVisitor(
     const QuicSentPacketManager* sent_packet_manager) {
   return sent_packet_manager->network_change_visitor_;

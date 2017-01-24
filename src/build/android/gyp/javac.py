@@ -382,10 +382,11 @@ def main(argv):
       # Chromium only allows UTF8 source files.  Being explicit avoids
       # javac pulling a default encoding from the user's environment.
       '-encoding', 'UTF-8',
-      '-classpath', ':'.join(options.classpath),
+      # Make sure we do not pass an empty string to -classpath and -sourcepath.
+      '-classpath', ':'.join(options.classpath) or ':',
       # Prevent compiler from compiling .java files not listed as inputs.
       # See: http://blog.ltgt.net/most-build-tools-misuse-javac/
-      '-sourcepath', ''
+      '-sourcepath', ':',
   ))
 
   if options.bootclasspath:

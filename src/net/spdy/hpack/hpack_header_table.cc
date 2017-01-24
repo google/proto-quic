@@ -241,6 +241,10 @@ const HpackEntry* HpackHeaderTable::TryAddEntry(StringPiece name,
     // Call |debug_visitor_->OnNewEntry()| to get the current time.
     HpackEntry& entry = dynamic_entries_.front();
     entry.set_time_added(debug_visitor_->OnNewEntry(entry));
+    DVLOG(2) << "HpackHeaderTable::OnNewEntry: name=" << entry.name()
+             << ",  value=" << entry.value()
+             << ",  insert_index=" << entry.InsertionIndex()
+             << ",  time_added=" << entry.time_added();
   }
 
   return &dynamic_entries_.front();

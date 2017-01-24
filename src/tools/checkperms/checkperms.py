@@ -182,7 +182,6 @@ IGNORED_PATHS = (
       '__init__.py',
   'out/',
   # TODO(maruel): Fix these.
-  'third_party/bintrees/',
   'third_party/devscripts/licensecheck.pl.vanilla',
   'third_party/hyphen/',
   'third_party/lcov-1.9/contrib/galaxy/conglomerate_functions.pl',

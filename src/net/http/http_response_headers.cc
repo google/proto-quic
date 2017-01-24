@@ -307,6 +307,19 @@ void HttpResponseHeaders::RemoveHeader(const std::string& name) {
   MergeWithHeaders(new_raw_headers, to_remove);
 }
 
+void HttpResponseHeaders::RemoveHeaders(
+    const std::unordered_set<std::string>& header_names) {
+  // Copy up to the null byte.  This just copies the status line.
+  std::string new_raw_headers(raw_headers_.c_str());
+  new_raw_headers.push_back('\0');
+
+  HeaderSet to_remove;
+  for (const auto& header_name : header_names) {
+    to_remove.insert(base::ToLowerASCII(header_name));
+  }
+  MergeWithHeaders(new_raw_headers, to_remove);
+}
+
 void HttpResponseHeaders::RemoveHeaderLine(const std::string& name,
                                            const std::string& value) {
   std::string name_lowercase = base::ToLowerASCII(name);

@@ -45,4 +45,3 @@ Read these links:
   * [Hacking on GN itself](docs/hacking.md)
   * [GNStandalone](docs/standalone.md) Standalone GN projects
   * [UpdateGNBinaries](docs/update_binaries.md) Pushing new binaries
-  * [Check](docs/check.md) `gn check` command reference

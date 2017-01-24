@@ -13,11 +13,4 @@
 # To remove all Chrome flags, pass an empty string for the flags:
 #   adb_chrome_public_command_line ""
 
-# The command line arguments file is transitioning from
-# /data/local/chrome-command-line to /data/local/tmp/chrome-command-line
-# (https://crbug.com/593720). To support both old and new builds of
-# Chrome, we currently write the same flags to both places.
-$(dirname $0)/adb_command_line.py --device-path \
-    /data/local/tmp/chrome-command-line "$@" &&
-exec $(dirname $0)/adb_command_line.py --device-path \
-    /data/local/chrome-command-line "$@"
+exec $(dirname $0)/adb_command_line.py --name chrome-command-line "$@"

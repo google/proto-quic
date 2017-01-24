@@ -204,10 +204,9 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
       int num_padding_bytes,
       EncryptionLevel encryption_level,
       QuicPacketNumberLength packet_number_length) {
-    return QuicPendingRetransmission(1u, 1u, NOT_RETRANSMISSION,
-                                     retransmittable_frames,
-                                     has_crypto_handshake, num_padding_bytes,
-                                     encryption_level, packet_number_length);
+    return QuicPendingRetransmission(
+        1u, NOT_RETRANSMISSION, retransmittable_frames, has_crypto_handshake,
+        num_padding_bytes, encryption_level, packet_number_length);
   }
 
   static const QuicStreamOffset kOffset = 1u;

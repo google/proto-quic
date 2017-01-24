@@ -148,9 +148,13 @@ class WebSocketStreamRequestImpl : public WebSocketStreamRequest {
 
     timer_->Stop();
 
+    std::unique_ptr<URLRequest> url_request = std::move(url_request_);
     WebSocketHandshakeStreamBase* handshake_stream = handshake_stream_;
     handshake_stream_ = nullptr;
     connect_delegate_->OnSuccess(handshake_stream->Upgrade());
+
+    // This is safe even if |this| has already been deleted.
+    url_request->CancelWithError(ERR_WS_UPGRADE);
   }
 
   std::string FailureMessageFromNetError(int net_error) {

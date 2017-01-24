@@ -34,7 +34,13 @@ from benchmarks import text_selection
 from benchmarks import v8_browsing
 
 
-def SmokeTestGenerator(benchmark):
+def SmokeTestGenerator(benchmark, num_pages=1):
+  """Generates a benchmark that includes first N pages from pageset.
+
+  Args:
+    benchmark: benchmark object to make smoke test.
+    num_pages: use the first N pages to run smoke test.
+  """
   # NOTE TO SHERIFFS: DO NOT DISABLE THIS TEST.
   #
   # This smoke test dynamically tests all benchmarks. So disabling it for one
@@ -53,9 +59,10 @@ def SmokeTestGenerator(benchmark):
       def CreateStorySet(self, options):
         # pylint: disable=super-on-old-class
         story_set = super(SinglePageBenchmark, self).CreateStorySet(options)
+
         # Only smoke test the first story since smoke testing everything takes
         # too long.
-        for s in story_set.stories[1:]:
+        for s in story_set.stories[num_pages:]:
           story_set.RemoveStory(s)
         return story_set
 
@@ -135,7 +142,11 @@ def load_tests(loader, standard_tests, pattern):
     class BenchmarkSmokeTest(unittest.TestCase):
       pass
 
-    method = SmokeTestGenerator(benchmark)
+    # tab_switching needs more than one page to test correctly.
+    if 'tab_switching' in benchmark.Name():
+      method = SmokeTestGenerator(benchmark, num_pages=2)
+    else:
+      method = SmokeTestGenerator(benchmark)
 
     # Make sure any decorators are propagated from the original declaration.
     # (access to protected members) pylint: disable=protected-access

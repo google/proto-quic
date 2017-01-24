@@ -306,6 +306,7 @@ class SSLClientSocketImpl : public SSLClientSocket,
   // session cache. i.e. sessions created with one value will not attempt to
   // resume on the socket with a different value.
   const std::string ssl_session_cache_shard_;
+  int ssl_session_cache_lookup_count_;
 
   enum State {
     STATE_NONE,

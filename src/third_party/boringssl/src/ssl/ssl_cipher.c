@@ -678,7 +678,6 @@ static const CIPHER_ALIAS kCipherAliases[] = {
      0},
 
     /* MAC aliases */
-    {"MD5", ~0u, ~0u, ~0u, SSL_MD5, 0},
     {"SHA1", ~0u, ~0u, ~SSL_eNULL, SSL_SHA1, 0},
     {"SHA", ~0u, ~0u, ~SSL_eNULL, SSL_SHA1, 0},
     {"SHA256", ~0u, ~0u, ~0u, SSL_SHA256, 0},
@@ -1473,7 +1472,7 @@ int SSL_CIPHER_is_AES(const SSL_CIPHER *cipher) {
 }
 
 int SSL_CIPHER_has_MD5_HMAC(const SSL_CIPHER *cipher) {
-  return (cipher->algorithm_mac & SSL_MD5) != 0;
+  return 0;
 }
 
 int SSL_CIPHER_has_SHA1_HMAC(const SSL_CIPHER *cipher) {
@@ -1482,6 +1481,10 @@ int SSL_CIPHER_has_SHA1_HMAC(const SSL_CIPHER *cipher) {
 
 int SSL_CIPHER_has_SHA256_HMAC(const SSL_CIPHER *cipher) {
   return (cipher->algorithm_mac & SSL_SHA256) != 0;
+}
+
+int SSL_CIPHER_is_AEAD(const SSL_CIPHER *cipher) {
+  return (cipher->algorithm_mac & SSL_AEAD) != 0;
 }
 
 int SSL_CIPHER_is_AESGCM(const SSL_CIPHER *cipher) {
@@ -1524,6 +1527,10 @@ int SSL_CIPHER_is_DHE(const SSL_CIPHER *cipher) {
 
 int SSL_CIPHER_is_ECDHE(const SSL_CIPHER *cipher) {
   return (cipher->algorithm_mkey & SSL_kECDHE) != 0;
+}
+
+int SSL_CIPHER_is_static_RSA(const SSL_CIPHER *cipher) {
+  return (cipher->algorithm_mkey & SSL_kRSA) != 0;
 }
 
 uint16_t SSL_CIPHER_get_min_version(const SSL_CIPHER *cipher) {
@@ -1627,15 +1634,10 @@ static const char *ssl_cipher_get_enc_name(const SSL_CIPHER *cipher) {
 static const char *ssl_cipher_get_prf_name(const SSL_CIPHER *cipher) {
   switch (cipher->algorithm_prf) {
     case SSL_HANDSHAKE_MAC_DEFAULT:
-      /* Before TLS 1.2, the PRF component is the hash used in the HMAC, which is
-       * only ever MD5 or SHA-1. */
-      switch (cipher->algorithm_mac) {
-        case SSL_MD5:
-          return "MD5";
-        case SSL_SHA1:
-          return "SHA";
-      }
-      break;
+      /* Before TLS 1.2, the PRF component is the hash used in the HMAC, which
+       * is SHA-1 for all supported ciphers. */
+      assert(cipher->algorithm_mac == SSL_SHA1);
+      return "SHA";
     case SSL_HANDSHAKE_MAC_SHA256:
       return "SHA256";
     case SSL_HANDSHAKE_MAC_SHA384:
@@ -1824,10 +1826,6 @@ const char *SSL_CIPHER_description(const SSL_CIPHER *cipher, char *buf,
   }
 
   switch (alg_mac) {
-    case SSL_MD5:
-      mac = "MD5";
-      break;
-
     case SSL_SHA1:
       mac = "SHA1";
       break;
@@ -1917,19 +1915,9 @@ size_t ssl_cipher_get_record_split_len(const SSL_CIPHER *cipher) {
       return 0;
   }
 
-  size_t mac_len;
-  switch (cipher->algorithm_mac) {
-    case SSL_MD5:
-      mac_len = MD5_DIGEST_LENGTH;
-      break;
-    case SSL_SHA1:
-      mac_len = SHA_DIGEST_LENGTH;
-      break;
-    default:
-      return 0;
-  }
-
-  size_t ret = 1 + mac_len;
+  /* All supported TLS 1.0 ciphers use SHA-1. */
+  assert(cipher->algorithm_mac == SSL_SHA1);
+  size_t ret = 1 + SHA_DIGEST_LENGTH;
   ret += block_size - (ret % block_size);
   return ret;
 }

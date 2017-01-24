@@ -69,7 +69,7 @@ QUIC_FLAG(bool,
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_36_v3, true)
 
 // If true, use async codepaths to invoke ProofSource::GetProof.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_enable_async_get_proof, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_enable_async_get_proof, true)
 
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event.
@@ -88,12 +88,6 @@ QUIC_FLAG(bool,
 
 // Allow large send deltas to be used as RTT samples.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas, true)
-
-// Engage early retransmit anytime the largest acked is greater than
-// or equal to the largest retransmittable packet.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_largest_sent_retransmittable,
-          true)
 
 // If true, release QuicCryptoStream\'s read buffer when stream are less
 // frequently used.
@@ -219,3 +213,7 @@ QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_supports_100_continue, false)
 
 // If true, enable QUIC v38.
 QUIC_FLAG(bool, FLAGS_quic_enable_version_38, false)
+
+// Log information about whether the connection is application-limited
+// into QUIC BBR traces.
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_log_app_limited, false)

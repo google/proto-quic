@@ -97,6 +97,14 @@ double GetWeightMultiplierPerSecond(
   return pow(0.5, 1.0 / half_life_seconds);
 }
 
+double GetWeightMultiplierPerDbm(
+    const std::map<std::string, std::string>& variation_params) {
+  // The default weight is set to 1.0, so by default, RSSI has no effect on the
+  // observation's weight.
+  return GetDoubleValueForVariationParamWithDefaultValue(
+      variation_params, "rssi_weight_per_dbm", 1.0);
+}
+
 const char* GetNameForConnectionType(
     net::NetworkChangeNotifier::ConnectionType connection_type) {
   switch (connection_type) {

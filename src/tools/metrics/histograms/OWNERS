@@ -9,3 +9,5 @@ per-file histograms.xml=mkwst@chromium.org
 # APAC-based reviewers for UseCounter histogram changes only.
 per-file histograms.xml=ericwilligers@chromium.org
 per-file histograms.xml=haraken@chromium.org
+
+# COMPONENT: Internals>Metrics

@@ -608,7 +608,7 @@ StringPiece GetSerializedHeaders(const SpdySerializedFrame& frame,
 }
 
 enum DecoderChoice { DECODER_SELF, DECODER_NESTED, DECODER_HTTP2 };
-enum HpackChoice { HPACK_DECODER_1, HPACK_DECODER_2 };
+enum HpackChoice { HPACK_DECODER_1, HPACK_DECODER_2, HPACK_DECODER_3 };
 
 class SpdyFramerTest
     : public ::testing::TestWithParam<std::tuple<DecoderChoice, HpackChoice>> {
@@ -632,9 +632,15 @@ class SpdyFramerTest
     switch (std::get<1>(param)) {
       case HPACK_DECODER_1:
         FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
         break;
       case HPACK_DECODER_2:
         FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = true;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
+        break;
+      case HPACK_DECODER_3:
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
+        FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
         break;
     }
   }
@@ -661,13 +667,12 @@ class SpdyFramerTest
   }
 };
 
-INSTANTIATE_TEST_CASE_P(SpdyFramerTests,
-                        SpdyFramerTest,
-                        ::testing::Combine(::testing::Values(DECODER_SELF,
-                                                             DECODER_NESTED,
-                                                             DECODER_HTTP2),
-                                           ::testing::Values(HPACK_DECODER_1,
-                                                             HPACK_DECODER_2)));
+INSTANTIATE_TEST_CASE_P(
+    SpdyFramerTests,
+    SpdyFramerTest,
+    ::testing::Combine(
+        ::testing::Values(DECODER_SELF, DECODER_NESTED, DECODER_HTTP2),
+        ::testing::Values(HPACK_DECODER_1, HPACK_DECODER_2, HPACK_DECODER_3)));
 
 // Test that we can encode and decode a SpdyHeaderBlock in serialized form.
 TEST_P(SpdyFramerTest, HeaderBlockInBuffer) {

@@ -119,10 +119,10 @@ class LoadingMobileStorySet(story.StorySet):
       'http://www.mlsmatrix.com'
     ], cache_temperatures, traffic_settings)
 
-  def AddStories(self, labels, urls, cache_temperatures, traffic_settings):
+  def AddStories(self, tags, urls, cache_temperatures, traffic_settings):
     for url in urls:
       for temp in cache_temperatures:
         for traffic in traffic_settings:
           self.AddStory(page_cycler_story.PageCyclerStory(url, self,
               shared_page_state_class=shared_page_state.SharedMobilePageState,
-              cache_temperature=temp, traffic_setting=traffic, labels=labels))
+              cache_temperature=temp, traffic_setting=traffic, tags=tags))

@@ -168,7 +168,8 @@ class TraceBufferVector : public TraceBuffer {
     // have to add the metadata events and flush thread-local buffers even if
     // the buffer is full.
     *index = chunks_.size();
-    chunks_.push_back(NULL);  // Put NULL in the slot of a in-flight chunk.
+    // Put nullptr in the slot of a in-flight chunk.
+    chunks_.push_back(nullptr);
     ++in_flight_chunk_count_;
     // + 1 because zero chunk_seq is not allowed.
     return std::unique_ptr<TraceBufferChunk>(
@@ -181,7 +182,7 @@ class TraceBufferVector : public TraceBuffer {
     DCHECK_LT(index, chunks_.size());
     DCHECK(!chunks_[index]);
     --in_flight_chunk_count_;
-    chunks_[index] = chunk.release();
+    chunks_[index] = std::move(chunk);
   }
 
   bool IsFull() const override { return chunks_.size() >= max_chunks_; }
@@ -198,7 +199,7 @@ class TraceBufferVector : public TraceBuffer {
   TraceEvent* GetEventByHandle(TraceEventHandle handle) override {
     if (handle.chunk_index >= chunks_.size())
       return NULL;
-    TraceBufferChunk* chunk = chunks_[handle.chunk_index];
+    TraceBufferChunk* chunk = chunks_[handle.chunk_index].get();
     if (!chunk || chunk->seq() != handle.chunk_seq)
       return NULL;
     return chunk->GetEventAt(handle.event_index);
@@ -207,7 +208,7 @@ class TraceBufferVector : public TraceBuffer {
   const TraceBufferChunk* NextChunk() override {
     while (current_iteration_index_ < chunks_.size()) {
       // Skip in-flight chunks.
-      const TraceBufferChunk* chunk = chunks_[current_iteration_index_++];
+      const TraceBufferChunk* chunk = chunks_[current_iteration_index_++].get();
       if (chunk)
         return chunk;
     }
@@ -223,7 +224,7 @@ class TraceBufferVector : public TraceBuffer {
     overhead->Add("TraceBufferVector", chunks_ptr_vector_allocated_size,
                   chunks_ptr_vector_resident_size);
     for (size_t i = 0; i < chunks_.size(); ++i) {
-      TraceBufferChunk* chunk = chunks_[i];
+      TraceBufferChunk* chunk = chunks_[i].get();
       // Skip the in-flight (nullptr) chunks. They will be accounted by the
       // per-thread-local dumpers, see ThreadLocalEventBuffer::OnMemoryDump.
       if (chunk)
@@ -235,7 +236,7 @@ class TraceBufferVector : public TraceBuffer {
   size_t in_flight_chunk_count_;
   size_t current_iteration_index_;
   size_t max_chunks_;
-  ScopedVector<TraceBufferChunk> chunks_;
+  std::vector<std::unique_ptr<TraceBufferChunk>> chunks_;
 
   DISALLOW_COPY_AND_ASSIGN(TraceBufferVector);
 };

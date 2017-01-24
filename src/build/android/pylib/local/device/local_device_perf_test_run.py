@@ -102,7 +102,7 @@ class TestShard(object):
 
       with contextlib_ext.Optional(
           trace_event.trace(test),
-          self._test_instance.trace_output):
+          self._env.trace_output):
         exit_code, output = cmd_helper.GetCmdStatusAndOutputWithTimeout(
             cmd, timeout, cwd=cwd, shell=True)
       end_time = time.time()
@@ -424,14 +424,6 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
 
   #override
   def RunTests(self):
-    # Affinitize the tests.
-    if self._test_instance.trace_output:
-      assert not trace_event.trace_is_enabled(), 'Tracing already running.'
-      trace_event.trace_enable(self._test_instance.trace_output + '.json')
-    self._SplitTestsByAffinity()
-    if not self._test_buckets and not self._no_device_tests:
-      raise local_device_test_run.NoTestsError()
-
     def run_no_devices_tests():
       if not self._no_device_tests:
         return []
@@ -463,14 +455,17 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
           device_shard_helper)
       return [x for x in shards.pGet(self._timeout) if x is not None]
 
-    host_test_results, device_test_results = reraiser_thread.RunAsync(
-        [run_no_devices_tests, run_devices_tests])
-    if self._test_instance.trace_output:
-      assert trace_event.trace_is_enabled(), 'Tracing not running.'
-      trace_event.trace_disable()
-      local_device_test_run.LocalDeviceTestRun._JsonToTrace(
-          self._test_instance.trace_output + '.json',
-          self._test_instance.trace_output)
+    # Run the tests.
+    with contextlib_ext.Optional(
+        self._env.Tracing(),
+        self._env.trace_output):
+      # Affinitize the tests.
+      self._SplitTestsByAffinity()
+      if not self._test_buckets and not self._no_device_tests:
+        raise local_device_test_run.NoTestsError()
+      host_test_results, device_test_results = reraiser_thread.RunAsync(
+          [run_no_devices_tests, run_devices_tests])
+
     return host_test_results + device_test_results
 
   # override

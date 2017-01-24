@@ -33,6 +33,7 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_status_code.h"
+#include "net/nqe/event_creator.h"
 #include "net/nqe/network_quality_estimator_params.h"
 #include "net/nqe/socket_watcher_factory.h"
 #include "net/nqe/throughput_analyzer.h"
@@ -208,29 +209,37 @@ void RecordEffectiveConnectionTypeAccuracy(
 
 NetworkQualityEstimator::NetworkQualityEstimator(
     std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
-    const std::map<std::string, std::string>& variation_params)
+    const std::map<std::string, std::string>& variation_params,
+    NetLog* net_log)
     : NetworkQualityEstimator(std::move(external_estimates_provider),
                               variation_params,
                               false,
-                              false) {}
-
-NetworkQualityEstimator::NetworkQualityEstimator(
-    std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
-    const std::map<std::string, std::string>& variation_params,
-    bool use_local_host_requests_for_tests,
-    bool use_smaller_responses_for_tests)
-    : NetworkQualityEstimator(std::move(external_estimates_provider),
-                              variation_params,
-                              use_local_host_requests_for_tests,
-                              use_smaller_responses_for_tests,
-                              true) {}
+                              false,
+                              net_log) {}
 
 NetworkQualityEstimator::NetworkQualityEstimator(
     std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
     const std::map<std::string, std::string>& variation_params,
     bool use_local_host_requests_for_tests,
     bool use_smaller_responses_for_tests,
-    bool add_default_platform_observations)
+    NetLog* net_log)
+    : NetworkQualityEstimator(
+          std::move(external_estimates_provider),
+          variation_params,
+          use_local_host_requests_for_tests,
+          use_smaller_responses_for_tests,
+          true,
+          NetLogWithSource::Make(
+              net_log,
+              net::NetLogSourceType::NETWORK_QUALITY_ESTIMATOR)) {}
+
+NetworkQualityEstimator::NetworkQualityEstimator(
+    std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
+    const std::map<std::string, std::string>& variation_params,
+    bool use_local_host_requests_for_tests,
+    bool use_smaller_responses_for_tests,
+    bool add_default_platform_observations,
+    const NetLogWithSource& net_log)
     : algorithm_name_to_enum_({{"HttpRTTAndDownstreamThroughput",
                                 EffectiveConnectionTypeAlgorithm::
                                     HTTP_RTT_AND_DOWNSTREAM_THROUGHOUT},
@@ -239,9 +248,12 @@ NetworkQualityEstimator::NetworkQualityEstimator(
                                     TRANSPORT_RTT_OR_DOWNSTREAM_THROUGHOUT}}),
       use_localhost_requests_(use_local_host_requests_for_tests),
       use_small_responses_(use_smaller_responses_for_tests),
+      disable_offline_check_(false),
       add_default_platform_observations_(add_default_platform_observations),
       weight_multiplier_per_second_(
           nqe::internal::GetWeightMultiplierPerSecond(variation_params)),
+      weight_multiplier_per_dbm_(
+          nqe::internal::GetWeightMultiplierPerDbm(variation_params)),
       effective_connection_type_algorithm_(
           algorithm_name_to_enum_.find(
               nqe::internal::GetEffectiveConnectionTypeAlgorithm(
@@ -256,8 +268,10 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       current_network_id_(nqe::internal::NetworkID(
           NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN,
           std::string())),
-      downstream_throughput_kbps_observations_(weight_multiplier_per_second_),
-      rtt_observations_(weight_multiplier_per_second_),
+      downstream_throughput_kbps_observations_(weight_multiplier_per_second_,
+                                               weight_multiplier_per_dbm_),
+      rtt_observations_(weight_multiplier_per_second_,
+                        weight_multiplier_per_dbm_),
       effective_connection_type_at_last_main_frame_(
           EFFECTIVE_CONNECTION_TYPE_UNKNOWN),
       external_estimate_provider_(std::move(external_estimates_provider)),
@@ -276,6 +290,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
               variation_params)),
       forced_effective_connection_type_(
           nqe::internal::forced_effective_connection_type(variation_params)),
+      net_log_(net_log),
       weak_ptr_factory_(this) {
   // None of the algorithms can have an empty name.
   DCHECK(algorithm_name_to_enum_.end() ==
@@ -313,12 +328,10 @@ NetworkQualityEstimator::NetworkQualityEstimator(
       base::Bind(&NetworkQualityEstimator::OnUpdatedRTTAvailable,
                  base::Unretained(this))));
 
-  // Record accuracy at 3 different intervals. The values used here must remain
-  // in sync with the suffixes specified in
+  // Record accuracy after a 15 second interval. The values used here must
+  // remain in sync with the suffixes specified in
   // tools/metrics/histograms/histograms.xml.
   accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(15));
-  accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(30));
-  accuracy_recording_intervals_.push_back(base::TimeDelta::FromSeconds(60));
 }
 
 void NetworkQualityEstimator::ObtainOperatingParams(
@@ -723,9 +736,24 @@ void NetworkQualityEstimator::SetUseSmallResponsesForTesting(
   throughput_analyzer_->SetUseSmallResponsesForTesting(use_small_responses_);
 }
 
+void NetworkQualityEstimator::DisableOfflineCheckForTesting(
+    bool disable_offline_check) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+  disable_offline_check_ = disable_offline_check;
+  network_quality_store_->DisableOfflineCheckForTesting(disable_offline_check_);
+}
+
 void NetworkQualityEstimator::ReportEffectiveConnectionTypeForTesting(
     EffectiveConnectionType effective_connection_type) {
   DCHECK(thread_checker_.CalledOnValidThread());
+
+  nqe::internal::AddEffectiveConnectionTypeChangedEventToNetLog(
+      net_log_, typical_network_quality_[effective_connection_type].http_rtt(),
+      typical_network_quality_[effective_connection_type].transport_rtt(),
+      typical_network_quality_[effective_connection_type]
+          .downstream_throughput_kbps(),
+      effective_connection_type);
+
   for (auto& observer : effective_connection_type_observer_list_)
     observer.OnEffectiveConnectionTypeChanged(effective_connection_type);
 
@@ -1111,8 +1139,11 @@ NetworkQualityEstimator::GetRecentEffectiveConnectionTypeUsingMetrics(
 
   // If the device is currently offline, then return
   // EFFECTIVE_CONNECTION_TYPE_OFFLINE.
-  if (current_network_id_.type == NetworkChangeNotifier::CONNECTION_NONE)
+
+  if (current_network_id_.type == NetworkChangeNotifier::CONNECTION_NONE &&
+      !disable_offline_check_) {
     return EFFECTIVE_CONNECTION_TYPE_OFFLINE;
+  }
 
   if (!GetRecentHttpRTT(start_time, http_rtt))
     *http_rtt = nqe::internal::InvalidRTT();
@@ -1284,7 +1315,8 @@ base::TimeDelta NetworkQualityEstimator::GetRTTEstimateInternal(
   // RTT observations are sorted by duration from shortest to longest, thus
   // a higher percentile RTT will have a longer RTT than a lower percentile.
   base::TimeDelta rtt = nqe::internal::InvalidRTT();
-  if (!rtt_observations_.GetPercentile(start_time, &rtt, percentile,
+  if (!rtt_observations_.GetPercentile(start_time, signal_strength_dbm_, &rtt,
+                                       percentile,
                                        disallowed_observation_sources)) {
     return nqe::internal::InvalidRTT();
   }
@@ -1300,7 +1332,7 @@ int32_t NetworkQualityEstimator::GetDownlinkThroughputKbpsEstimateInternal(
   // thus a higher percentile throughput will be faster than a lower one.
   int32_t kbps = nqe::internal::kInvalidThroughput;
   if (!downstream_throughput_kbps_observations_.GetPercentile(
-          start_time, &kbps, 100 - percentile,
+          start_time, signal_strength_dbm_, &kbps, 100 - percentile,
           std::vector<NetworkQualityObservationSource>())) {
     return nqe::internal::kInvalidThroughput;
   }
@@ -1554,6 +1586,11 @@ void NetworkQualityEstimator::
     NotifyObserversOfEffectiveConnectionTypeChanged() {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_NE(EFFECTIVE_CONNECTION_TYPE_LAST, effective_connection_type_);
+
+  nqe::internal::AddEffectiveConnectionTypeChangedEventToNetLog(
+      net_log_, network_quality_.http_rtt(), network_quality_.transport_rtt(),
+      network_quality_.downstream_throughput_kbps(),
+      effective_connection_type_);
 
   // TODO(tbansal): Add hysteresis in the notification.
   for (auto& observer : effective_connection_type_observer_list_)

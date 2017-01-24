@@ -35,6 +35,9 @@ declare_args() {
 
   # Enables proprietary codecs and demuxers; e.g. H264, AAC, MP3, and MP4.
   # We always build Google Chrome and Chromecast with proprietary codecs.
+  #
+  # Note: this flag is used by WebRTC which is DEPSed into Chrome. Moving it
+  # out of //build will require using the build_overrides directory.
   proprietary_codecs = is_chrome_branded || is_chromecast
 
   # Variable safe_browsing is used to control the build time configuration for

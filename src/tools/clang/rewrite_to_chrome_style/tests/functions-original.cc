@@ -51,6 +51,11 @@ void F() {
 
 void bug640688(int);  // Declaration within blink namespace.
 
+// Tests for --method-blocklist cmdline parameter.
+namespace IdlFunctions {
+void foo();
+}  // namespace IdlFunctions
+
 }  // namespace blink
 
 // Definition outside of blink namespace.

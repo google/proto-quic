@@ -117,15 +117,32 @@ bool ActionTargetGenerator::FillScript() {
 bool ActionTargetGenerator::FillScriptArgs() {
   const Value* value = scope_->GetValue(variables::kArgs, true);
   if (!value)
-    return true;
-  return target_->action_values().args().Parse(*value, err_);
+    return true;  // Nothing to do.
+
+  if (!target_->action_values().args().Parse(*value, err_))
+    return false;
+  if (!EnsureValidSubstitutions(
+           target_->action_values().args().required_types(),
+           &IsValidScriptArgsSubstitution,
+           value->origin(), err_))
+    return false;
+
+  return true;
 }
 
 bool ActionTargetGenerator::FillResponseFileContents() {
   const Value* value = scope_->GetValue(variables::kResponseFileContents, true);
   if (!value)
-    return true;
-  return target_->action_values().rsp_file_contents().Parse(*value, err_);
+    return true;  // Nothing to do.
+
+  if (!target_->action_values().rsp_file_contents().Parse(*value, err_))
+    return false;
+  if (!EnsureValidSubstitutions(
+           target_->action_values().rsp_file_contents().required_types(),
+           &IsValidSourceSubstitution, value->origin(), err_))
+    return false;
+
+  return true;
 }
 
 bool ActionTargetGenerator::FillDepfile() {

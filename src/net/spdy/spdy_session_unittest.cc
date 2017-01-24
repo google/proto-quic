@@ -5374,12 +5374,12 @@ TEST_F(SpdySessionTest, CancelReservedStreamOnHeadersReceived) {
   EXPECT_EQ(1u, session_->num_pushed_streams());
   EXPECT_EQ(0u, session_->num_active_pushed_streams());
 
-  base::WeakPtr<SpdyStream> pushed_stream;
+  SpdyStream* pushed_stream;
   int rv = session_->GetPushStream(GURL(kPushedUrl), IDLE, &pushed_stream,
                                    NetLogWithSource());
   ASSERT_THAT(rv, IsOk());
   ASSERT_TRUE(pushed_stream);
-  test::StreamDelegateCloseOnHeaders delegate2(pushed_stream);
+  test::StreamDelegateCloseOnHeaders delegate2(pushed_stream->GetWeakPtr());
   pushed_stream->SetDelegate(&delegate2);
 
   // Receive headers for pushed stream. Delegate will cancel the stream, ensure

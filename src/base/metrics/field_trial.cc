@@ -19,14 +19,8 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 
-// On systems that use the zygote process to spawn child processes, we must
-// retrieve the correct fd using the mapping in GlobalDescriptors.
-#if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_MACOSX) && \
-    !defined(OS_ANDROID)
-#define POSIX_WITH_ZYGOTE 1
-#endif
-
-#if defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
+// On POSIX, the fd is shared using the mapping in GlobalDescriptors.
+#if defined(OS_POSIX) && !defined(OS_NACL)
 #include "base/posix/global_descriptors.h"
 #endif
 
@@ -63,9 +57,7 @@ const char kAllocatorName[] = "FieldTrialAllocator";
 // trials does get larger than 128 KiB, then we will drop some field trials in
 // child processes, leading to an inconsistent view between browser and child
 // processes and possibly causing crashes (see crbug.com/661617).
-#if !defined(OS_NACL)
 const size_t kFieldTrialAllocationSize = 128 << 10;  // 128 KiB
-#endif
 
 // Writes out string1 and then string2 to pickle.
 bool WriteStringPair(Pickle* pickle,
@@ -218,7 +210,7 @@ HANDLE CreateReadOnlyHandle(FieldTrialList::FieldTrialAllocator* allocator) {
 }
 #endif
 
-#if defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
+#if defined(OS_POSIX) && !defined(OS_NACL)
 int CreateReadOnlyHandle(FieldTrialList::FieldTrialAllocator* allocator) {
   SharedMemoryHandle new_handle;
   allocator->shared_memory()->ShareReadOnlyToProcess(GetCurrentProcessHandle(),
@@ -226,6 +218,14 @@ int CreateReadOnlyHandle(FieldTrialList::FieldTrialAllocator* allocator) {
   return SharedMemory::GetFdFromSharedMemoryHandle(new_handle);
 }
 #endif
+
+void OnOutOfMemory(size_t size) {
+#if defined(OS_NACL)
+  NOTREACHED();
+#else
+  TerminateBecauseOutOfMemory(size);
+#endif
+}
 
 }  // namespace
 
@@ -779,7 +779,7 @@ void FieldTrialList::CreateTrialsFromCommandLine(
   }
 #endif
 
-#if defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
+#if defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX, we check if the handle is valid by seeing if the browser process
   // sent over the switch (we don't care about the value). Invalid handles
   // occur in some browser tests which don't initialize the allocator.
@@ -814,31 +814,6 @@ void FieldTrialList::CreateFeaturesFromCommandLine(
   feature_list->InitializeFromSharedMemory(
       global_->field_trial_allocator_.get());
 }
-
-#if defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
-// static
-bool FieldTrialList::CreateTrialsFromDescriptor(int fd_key) {
-  if (!kUseSharedMemoryForFieldTrials)
-    return false;
-
-  if (fd_key == -1)
-    return false;
-
-  int fd = GlobalDescriptors::GetInstance()->MaybeGet(fd_key);
-  if (fd == -1)
-    return false;
-
-#if defined(POSIX_WITH_ZYGOTE)
-  SharedMemoryHandle shm_handle(fd, true);
-#elif defined(OS_MACOSX)
-  SharedMemoryHandle shm_handle(FileDescriptor(fd, true));
-#endif
-
-  bool result = FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm_handle);
-  DCHECK(result);
-  return true;
-}
-#endif
 
 #if defined(OS_WIN)
 // static
@@ -883,7 +858,6 @@ void FieldTrialList::CopyFieldTrialStateToFlags(
     return;
   }
 
-#if defined(OS_WIN) || defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
   // Use shared memory to pass the state if the feature is enabled, otherwise
   // fallback to passing it via the command line as a string.
   if (kUseSharedMemoryForFieldTrials) {
@@ -911,17 +885,18 @@ void FieldTrialList::CopyFieldTrialStateToFlags(
         reinterpret_cast<uintptr_t>(global_->readonly_allocator_handle_);
     std::string field_trial_handle = std::to_string(uintptr_handle);
     cmd_line->AppendSwitchASCII(field_trial_handle_switch, field_trial_handle);
-#elif defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
+#elif defined(OS_POSIX)
     // On POSIX, we dup the fd into a fixed fd kFieldTrialDescriptor, so we
     // don't have to pass over the handle (it's not even the right handle
     // anyways). But some browser tests don't create the allocator, so we need
     // to be able to distinguish valid and invalid handles. We do that by just
     // checking that the flag is set with a dummy value.
     cmd_line->AppendSwitchASCII(field_trial_handle_switch, "1");
+#else
+#error Unsupported OS
 #endif
     return;
   }
-#endif
 
   AddFeatureAndFieldTrialFlags(enable_features_switch, disable_features_switch,
                                cmd_line);
@@ -1149,7 +1124,31 @@ bool FieldTrialList::CreateTrialsFromHandleSwitch(
 }
 #endif
 
-#if !defined(OS_NACL)
+#if defined(OS_POSIX) && !defined(OS_NACL)
+// static
+bool FieldTrialList::CreateTrialsFromDescriptor(int fd_key) {
+  if (!kUseSharedMemoryForFieldTrials)
+    return false;
+
+  if (fd_key == -1)
+    return false;
+
+  int fd = GlobalDescriptors::GetInstance()->MaybeGet(fd_key);
+  if (fd == -1)
+    return false;
+
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+  SharedMemoryHandle shm_handle(FileDescriptor(fd, true));
+#else
+  SharedMemoryHandle shm_handle(fd, true);
+#endif
+
+  bool result = FieldTrialList::CreateTrialsFromSharedMemoryHandle(shm_handle);
+  DCHECK(result);
+  return true;
+}
+#endif
+
 // static
 bool FieldTrialList::CreateTrialsFromSharedMemoryHandle(
     SharedMemoryHandle shm_handle) {
@@ -1157,11 +1156,10 @@ bool FieldTrialList::CreateTrialsFromSharedMemoryHandle(
   // it only for the duration of this method.
   std::unique_ptr<SharedMemory> shm(new SharedMemory(shm_handle, true));
   if (!shm.get()->Map(kFieldTrialAllocationSize))
-    TerminateBecauseOutOfMemory(kFieldTrialAllocationSize);
+    OnOutOfMemory(kFieldTrialAllocationSize);
 
   return FieldTrialList::CreateTrialsFromSharedMemory(std::move(shm));
 }
-#endif
 
 // static
 bool FieldTrialList::CreateTrialsFromSharedMemory(
@@ -1195,7 +1193,6 @@ bool FieldTrialList::CreateTrialsFromSharedMemory(
   return true;
 }
 
-#if !defined(OS_NACL)
 // static
 void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
   if (!global_)
@@ -1214,10 +1211,10 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
 
   std::unique_ptr<SharedMemory> shm(new SharedMemory());
   if (!shm->Create(options))
-    TerminateBecauseOutOfMemory(kFieldTrialAllocationSize);
+    OnOutOfMemory(kFieldTrialAllocationSize);
 
   if (!shm->Map(kFieldTrialAllocationSize))
-    TerminateBecauseOutOfMemory(kFieldTrialAllocationSize);
+    OnOutOfMemory(kFieldTrialAllocationSize);
 
   global_->field_trial_allocator_.reset(
       new FieldTrialAllocator(std::move(shm), 0, kAllocatorName, false));
@@ -1233,14 +1230,13 @@ void FieldTrialList::InstantiateFieldTrialAllocatorIfNeeded() {
   FeatureList::GetInstance()->AddFeaturesToAllocator(
       global_->field_trial_allocator_.get());
 
-#if defined(OS_WIN) || defined(POSIX_WITH_ZYGOTE) || defined(OS_MACOSX)
+#if !defined(OS_NACL)
   // Set |readonly_allocator_handle_| so we can pass it to be inherited and
   // via the command line.
   global_->readonly_allocator_handle_ =
       CreateReadOnlyHandle(global_->field_trial_allocator_.get());
 #endif
 }
-#endif
 
 // static
 void FieldTrialList::AddToAllocatorWhileLocked(

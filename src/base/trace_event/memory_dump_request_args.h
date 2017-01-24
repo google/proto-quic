@@ -18,7 +18,9 @@ namespace base {
 namespace trace_event {
 
 // Captures the reason why a memory dump is being requested. This is to allow
-// selective enabling of dumps, filtering and post-processing.
+// selective enabling of dumps, filtering and post-processing. Important: this
+// must be kept consistent with
+// services/memory_infra/public/cpp/memory_infra_traits.cc.
 enum class MemoryDumpType {
   PERIODIC_INTERVAL,     // Dumping memory at periodic intervals.
   EXPLICITLY_TRIGGERED,  // Non maskable dump request.
@@ -27,6 +29,8 @@ enum class MemoryDumpType {
 };
 
 // Tells the MemoryDumpProvider(s) how much detailed their dumps should be.
+// Important: this must be kept consistent with
+// services/memory_infra/public/cpp/memory_infra_traits.cc.
 enum class MemoryDumpLevelOfDetail : uint32_t {
   FIRST,
 
@@ -49,7 +53,8 @@ enum class MemoryDumpLevelOfDetail : uint32_t {
 };
 
 // Initial request arguments for a global memory dump. (see
-// MemoryDumpManager::RequestGlobalMemoryDump()).
+// MemoryDumpManager::RequestGlobalMemoryDump()). Important: this must be kept
+// consistent with services/memory_infra/public/cpp/memory_infra_traits.cc.
 struct BASE_EXPORT MemoryDumpRequestArgs {
   // Globally unique identifier. In multi-process dumps, all processes issue a
   // local dump with the same guid. This allows the trace importers to

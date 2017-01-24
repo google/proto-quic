@@ -13,8 +13,8 @@ main/c/cairo/libcairo-script-interpreter2_1.13.0~20140204-0ubuntu1.1_armhf.deb
 main/c/cups/libcups2_1.7.2-0ubuntu1.7_armhf.deb
 main/c/cups/libcups2-dev_1.7.2-0ubuntu1.7_armhf.deb
 main/d/dbus-glib/libdbus-glib-1-2_0.100.2-1_armhf.deb
-main/d/dbus/libdbus-1-3_1.6.18-0ubuntu4.4_armhf.deb
-main/d/dbus/libdbus-1-dev_1.6.18-0ubuntu4.4_armhf.deb
+main/d/dbus/libdbus-1-3_1.6.18-0ubuntu4.5_armhf.deb
+main/d/dbus/libdbus-1-dev_1.6.18-0ubuntu4.5_armhf.deb
 main/e/e2fsprogs/comerr-dev_2.1-1.42.9-3ubuntu1.3_armhf.deb
 main/e/e2fsprogs/libcomerr2_1.42.9-3ubuntu1.3_armhf.deb
 main/e/eglibc/libc6_2.19-0ubuntu6.9_armhf.deb

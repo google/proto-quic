@@ -127,8 +127,13 @@ def _LoadToolchainEnv(cpu, sdk_dir):
                                        os.environ['GYP_MSVS_OVERRIDE_PATH'],
                                        'VC/vcvarsall.bat'))
     if not os.path.exists(script_path):
-      raise Exception('%s is missing - make sure VC++ tools are installed.' %
-                      script_path)
+      other_path = os.path.normpath(os.path.join(
+                                        os.environ['GYP_MSVS_OVERRIDE_PATH'],
+                                        'VC/Auxiliary/Build/vcvarsall.bat'))
+      if not os.path.exists(other_path):
+        raise Exception('%s is missing - make sure VC++ tools are installed.' %
+                        script_path)
+      script_path = other_path
     args = [script_path, 'amd64_x86' if cpu == 'x86' else 'amd64']
     variables = _LoadEnvFromBat(args)
   return _ExtractImportantEnvironment(variables)

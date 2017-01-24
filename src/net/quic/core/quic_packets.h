@@ -242,7 +242,6 @@ struct QUIC_EXPORT_PRIVATE SerializedPacket {
   bool has_ack;
   bool has_stop_waiting;
   TransmissionType transmission_type;
-  QuicPathId original_path_id;
   QuicPacketNumber original_packet_number;
 
   // Optional notifiers which will be informed when this packet has been ACKed.

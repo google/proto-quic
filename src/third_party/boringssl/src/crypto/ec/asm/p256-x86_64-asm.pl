@@ -78,56 +78,11 @@ $code.=<<___;
 ___
 
 {
-################################################################################
-# void ecp_nistz256_mul_by_2(uint64_t res[4], uint64_t a[4]);
-
 my ($a0,$a1,$a2,$a3)=map("%r$_",(8..11));
 my ($t0,$t1,$t2,$t3,$t4)=("%rax","%rdx","%rcx","%r12","%r13");
 my ($r_ptr,$a_ptr,$b_ptr)=("%rdi","%rsi","%rdx");
 
 $code.=<<___;
-
-.type	ecp_nistz256_mul_by_2,\@function,2
-.align	64
-ecp_nistz256_mul_by_2:
-	push	%r12
-	push	%r13
-
-	mov	8*0($a_ptr), $a0
-	xor	$t4,$t4
-	mov	8*1($a_ptr), $a1
-	add	$a0, $a0		# a0:a3+a0:a3
-	mov	8*2($a_ptr), $a2
-	adc	$a1, $a1
-	mov	8*3($a_ptr), $a3
-	lea	.Lpoly(%rip), $a_ptr
-	 mov	$a0, $t0
-	adc	$a2, $a2
-	adc	$a3, $a3
-	 mov	$a1, $t1
-	adc	\$0, $t4
-
-	sub	8*0($a_ptr), $a0
-	 mov	$a2, $t2
-	sbb	8*1($a_ptr), $a1
-	sbb	8*2($a_ptr), $a2
-	 mov	$a3, $t3
-	sbb	8*3($a_ptr), $a3
-	sbb	\$0, $t4
-
-	cmovc	$t0, $a0
-	cmovc	$t1, $a1
-	mov	$a0, 8*0($r_ptr)
-	cmovc	$t2, $a2
-	mov	$a1, 8*1($r_ptr)
-	cmovc	$t3, $a3
-	mov	$a2, 8*2($r_ptr)
-	mov	$a3, 8*3($r_ptr)
-
-	pop	%r13
-	pop	%r12
-	ret
-.size	ecp_nistz256_mul_by_2,.-ecp_nistz256_mul_by_2
 
 ################################################################################
 # void ecp_nistz256_neg(uint64_t res[4], uint64_t a[4]);
@@ -988,110 +943,6 @@ __ecp_nistz256_sqr_montx:
 .size	__ecp_nistz256_sqr_montx,.-__ecp_nistz256_sqr_montx
 ___
 }
-}
-{
-my ($r_ptr,$in_ptr)=("%rdi","%rsi");
-my ($acc0,$acc1,$acc2,$acc3)=map("%r$_",(8..11));
-my ($t0,$t1,$t2)=("%rcx","%r12","%r13");
-
-$code.=<<___;
-################################################################################
-# void ecp_nistz256_from_mont(
-#   uint64_t res[4],
-#   uint64_t in[4]);
-# This one performs Montgomery multiplication by 1, so we only need the reduction
-
-.globl	ecp_nistz256_from_mont
-.type	ecp_nistz256_from_mont,\@function,2
-.align	32
-ecp_nistz256_from_mont:
-	push	%r12
-	push	%r13
-
-	mov	8*0($in_ptr), %rax
-	mov	.Lpoly+8*3(%rip), $t2
-	mov	8*1($in_ptr), $acc1
-	mov	8*2($in_ptr), $acc2
-	mov	8*3($in_ptr), $acc3
-	mov	%rax, $acc0
-	mov	.Lpoly+8*1(%rip), $t1
-
-	#########################################
-	# First iteration
-	mov	%rax, $t0
-	shl	\$32, $acc0
-	mulq	$t2
-	shr	\$32, $t0
-	add	$acc0, $acc1
-	adc	$t0, $acc2
-	adc	%rax, $acc3
-	 mov	$acc1, %rax
-	adc	\$0, %rdx
-
-	#########################################
-	# Second iteration
-	mov	$acc1, $t0
-	shl	\$32, $acc1
-	mov	%rdx, $acc0
-	mulq	$t2
-	shr	\$32, $t0
-	add	$acc1, $acc2
-	adc	$t0, $acc3
-	adc	%rax, $acc0
-	 mov	$acc2, %rax
-	adc	\$0, %rdx
-
-	##########################################
-	# Third iteration
-	mov	$acc2, $t0
-	shl	\$32, $acc2
-	mov	%rdx, $acc1
-	mulq	$t2
-	shr	\$32, $t0
-	add	$acc2, $acc3
-	adc	$t0, $acc0
-	adc	%rax, $acc1
-	 mov	$acc3, %rax
-	adc	\$0, %rdx
-
-	###########################################
-	# Last iteration
-	mov	$acc3, $t0
-	shl	\$32, $acc3
-	mov	%rdx, $acc2
-	mulq	$t2
-	shr	\$32, $t0
-	add	$acc3, $acc0
-	adc	$t0, $acc1
-	 mov	$acc0, $t0
-	adc	%rax, $acc2
-	 mov	$acc1, $in_ptr
-	adc	\$0, %rdx
-
-	###########################################
-	# Branch-less conditional subtraction
-	sub	\$-1, $acc0
-	 mov	$acc2, %rax
-	sbb	$t1, $acc1
-	sbb	\$0, $acc2
-	 mov	%rdx, $acc3
-	sbb	$t2, %rdx
-	sbb	$t2, $t2
-
-	cmovnz	$t0, $acc0
-	cmovnz	$in_ptr, $acc1
-	mov	$acc0, 8*0($r_ptr)
-	cmovnz	%rax, $acc2
-	mov	$acc1, 8*1($r_ptr)
-	cmovz	%rdx, $acc3
-	mov	$acc2, 8*2($r_ptr)
-	mov	$acc3, 8*3($r_ptr)
-
-	pop	%r13
-	pop	%r12
-	ret
-.size	ecp_nistz256_from_mont,.-ecp_nistz256_from_mont
-___
 }
 {
 my ($val,$in_t,$index)=$win64?("%rcx","%rdx","%r8d"):("%rdi","%rsi","%edx");

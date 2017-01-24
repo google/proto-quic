@@ -96,35 +96,45 @@ SystemDisplay.prototype = {
   overscanCalibrationComplete: assertNotReached,
 
   /**
-   * Starts touch calibration for a display. This will show an overlay on the
-   * screen and initialize the UX for touch calibration. If touch calibration
-   * for display |id| is in progress this will reset calibration.
+   * Starts native touch calibration for a display. This will show an overlay on
+   * the screen and initialize the UX for touch calibration. If another native
+   * touch calibration is already in progress this will throw an error.
    * @param {string} id The display's unique identifier.
-   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationStart
+   * @see https://developer.chrome.com/extensions/system.display#method-showNativeTouchCalibration
    */
-  touchCalibrationStart: assertNotReached,
+  showNativeTouchCalibration: assertNotReached,
+
+  /**
+   * Starts custom touch calibration for a display. This should be called when
+   * using a custom UX for collecting calibration data. If another touch
+   * calibration is already in progress this will throw an error.
+   * @param {string} id The display's unique identifier.
+   * @see https://developer.chrome.com/extensions/system.display#method-startCustomTouchCalibration
+   */
+  startCustomTouchCalibration: assertNotReached,
 
   /**
    * Sets the touch calibration pairs for a display. These |pairs| would be used
-   * to calibrate the touch screen for display |id|. If touch calibration for
-   * display |id| is in progress this will do nothing.
-   * @param {string} id The display's unique identifier.
+   * to calibrate the touch screen for display with |id| called in
+   * startCustomTouchCalibration(). Always call |startCustomTouchCalibration|
+   * before calling this method. If another touch calibration is already in
+   * progress this will throw an error.
    * @param {!chrome.system.display.TouchCalibrationPairQuad} pairs The pairs of
    *     point used to calibrate the display.
    * @param {!chrome.system.display.Bounds} bounds Bounds of the display when
-   *     the touch calibration was performed. |bounds.left| and |bounds.top|
-   *     values are no-op.
-   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationSet
+   *     the touch calibration was performed.     |bounds.left| and |bounds.top|
+   *     values are ignored.
+   * @see https://developer.chrome.com/extensions/system.display#method-completeCustomTouchCalibration
    */
-  touchCalibrationSet: assertNotReached,
+  completeCustomTouchCalibration: assertNotReached,
 
   /**
    * Resets the touch calibration for the display and removes the saved
    * calibration data.
    * @param {string} id The display's unique identifier.
-   * @see https://developer.chrome.com/extensions/system.display#method-touchCalibrationReset
+   * @see https://developer.chrome.com/extensions/system.display#method-clearTouchCalibration
    */
-  touchCalibrationReset: assertNotReached,
+  clearTouchCalibration: assertNotReached,
 };
 
 /**

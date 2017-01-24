@@ -173,3 +173,5 @@ main/x/x11proto-scrnsaver/x11proto-scrnsaver-dev_1.2.1-2_all.deb
 main/x/x11proto-xext/x11proto-xext-dev_7.3.0-1~precise2_all.deb
 main/z/zlib/zlib1g_1.2.3.4.dfsg-3ubuntu4_amd64.deb
 main/z/zlib/zlib1g-dev_1.2.3.4.dfsg-3ubuntu4_amd64.deb
+universe/libx/libxkbcommon/libxkbcommon0_0.1.0~1-0ubuntu1_amd64.deb
+universe/libx/libxkbcommon/libxkbcommon-dev_0.1.0~1-0ubuntu1_amd64.deb

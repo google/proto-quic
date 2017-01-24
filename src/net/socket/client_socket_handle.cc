@@ -135,6 +135,8 @@ bool ClientSocketHandle::GetLoadTimingInfo(
 
 void ClientSocketHandle::DumpMemoryStats(
     StreamSocket::SocketMemoryStats* stats) const {
+  if (!socket_)
+    return;
   socket_->DumpMemoryStats(stats);
 }
 

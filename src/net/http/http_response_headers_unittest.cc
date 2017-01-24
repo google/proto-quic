@@ -10,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <unordered_set>
 
 #include "base/pickle.h"
 #include "base/time/time.h"
@@ -1765,6 +1766,70 @@ const RemoveHeaderTestData remove_header_tests[] = {
 INSTANTIATE_TEST_CASE_P(HttpResponseHeaders,
                         RemoveHeaderTest,
                         testing::ValuesIn(remove_header_tests));
+
+struct RemoveHeadersTestData {
+  const char* orig_headers;
+  const char* to_remove[2];
+  const char* expected_headers;
+};
+
+class RemoveHeadersTest
+    : public HttpResponseHeadersTest,
+      public ::testing::WithParamInterface<RemoveHeadersTestData> {};
+
+TEST_P(RemoveHeadersTest, RemoveHeaders) {
+  const RemoveHeadersTestData test = GetParam();
+
+  std::string orig_headers(test.orig_headers);
+  HeadersToRaw(&orig_headers);
+  scoped_refptr<HttpResponseHeaders> parsed(
+      new HttpResponseHeaders(orig_headers));
+
+  std::unordered_set<std::string> to_remove;
+  for (const auto& header : test.to_remove) {
+    if (header)
+      to_remove.insert(header);
+  }
+  parsed->RemoveHeaders(to_remove);
+
+  std::string resulting_headers;
+  parsed->GetNormalizedHeaders(&resulting_headers);
+  EXPECT_EQ(std::string(test.expected_headers), resulting_headers);
+}
+
+const RemoveHeadersTestData remove_headers_tests[] = {
+    {"HTTP/1.1 200 OK\n"
+     "connection: keep-alive\n"
+     "Cache-control: max-age=10000\n"
+     "Content-Length: 450\n",
+
+     {"Content-Length", "CACHE-control"},
+
+     "HTTP/1.1 200 OK\n"
+     "connection: keep-alive\n"},
+
+    {"HTTP/1.1 200 OK\n"
+     "connection: keep-alive\n"
+     "Content-Length: 450\n",
+
+     {"foo", "bar"},
+
+     "HTTP/1.1 200 OK\n"
+     "connection: keep-alive\n"
+     "Content-Length: 450\n"},
+
+    {"HTTP/1.1 404 Kinda not OK\n"
+     "connection: keep-alive  \n",
+
+     {},
+
+     "HTTP/1.1 404 Kinda not OK\n"
+     "connection: keep-alive\n"},
+};
+
+INSTANTIATE_TEST_CASE_P(HttpResponseHeaders,
+                        RemoveHeadersTest,
+                        testing::ValuesIn(remove_headers_tests));
 
 struct RemoveIndividualHeaderTestData {
   const char* orig_headers;

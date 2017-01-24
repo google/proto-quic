@@ -93,6 +93,11 @@ class HttpStreamFactoryImplJobPeer {
     job->stream_type_ = stream_type;
     job->StartInternal();
   }
+
+  // Returns |num_streams_| of |job|. It should be 0 for non-preconnect Jobs.
+  static int GetNumStreams(const HttpStreamFactoryImpl::Job* job) {
+    return job->num_streams_;
+  }
 };
 
 class JobControllerPeer {
@@ -1061,6 +1066,36 @@ TEST_F(HttpStreamFactoryImplJobControllerTest,
   histogram_tester.ExpectUniqueSample("Net.QuicAlternativeProxy.Usage",
                                       2 /* ALTERNATIVE_PROXY_USAGE_LOST_RACE */,
                                       1);
+}
+
+// When preconnect to a H2 supported server, only 1 connection is opened.
+TEST_F(HttpStreamFactoryImplJobControllerTest,
+       PreconnectMultipleStreamsToH2Server) {
+  MockRead reads[] = {MockRead(ASYNC, OK)};
+  SequencedSocketData data(reads, arraysize(reads), nullptr, 0);
+  session_deps_.socket_factory->AddSocketDataProvider(&data);
+
+  Initialize(false);
+  HttpRequestInfo request_info;
+  request_info.method = "GET";
+  request_info.url = GURL("http://www.example.com");
+
+  url::SchemeHostPort server(request_info.url);
+
+  // Sets server support Http/2.
+  session_->http_server_properties()->SetSupportsSpdy(server, true);
+
+  job_controller_->Preconnect(/*num_streams=*/5, request_info, SSLConfig(),
+                              SSLConfig());
+  // Only one job is started.
+  EXPECT_TRUE(job_controller_->main_job());
+  EXPECT_FALSE(job_controller_->alternative_job());
+  // There is only 1 connect even though multiple streams were requested.
+  EXPECT_EQ(1, HttpStreamFactoryImplJobPeer::GetNumStreams(
+                   job_controller_->main_job()));
+
+  base::RunLoop().RunUntilIdle();
+  EXPECT_TRUE(HttpStreamFactoryImplPeer::IsJobControllerDeleted(factory_));
 }
 
 }  // namespace net

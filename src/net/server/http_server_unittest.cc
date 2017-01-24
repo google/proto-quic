@@ -133,6 +133,17 @@ class TestHttpClient {
     return true;
   }
 
+  void ExpectUsedThenDisconnectedWithNoData() {
+    // Check that the socket was opened...
+    ASSERT_TRUE(socket_->WasEverUsed());
+
+    // ...then closed when the server disconnected. Verify that the socket was
+    // closed by checking that a Read() fails.
+    std::string response;
+    ASSERT_FALSE(Read(&response, 1u));
+    ASSERT_TRUE(response.empty());
+  }
+
   TCPClientSocket& socket() { return *socket_; }
 
  private:
@@ -191,7 +202,8 @@ class TestHttpClient {
 class HttpServerTest : public testing::Test,
                        public HttpServer::Delegate {
  public:
-  HttpServerTest() : quit_after_request_count_(0) {}
+  HttpServerTest()
+      : quit_after_request_count_(0), quit_on_close_connection_(-1) {}
 
   void SetUp() override {
     std::unique_ptr<ServerSocket> server_socket(
@@ -199,6 +211,12 @@ class HttpServerTest : public testing::Test,
     server_socket->ListenWithAddressAndPort("127.0.0.1", 0, 1);
     server_.reset(new HttpServer(std::move(server_socket), this));
     ASSERT_THAT(server_->GetLocalAddress(&server_address_), IsOk());
+  }
+
+  void TearDown() override {
+    // Run the event loop some to make sure that the memory handed over to
+    // DeleteSoon gets fully freed.
+    base::RunLoop().RunUntilIdle();
   }
 
   void OnConnect(int connection_id) override {
@@ -225,6 +243,8 @@ class HttpServerTest : public testing::Test,
   void OnClose(int connection_id) override {
     DCHECK(connection_map_.find(connection_id) != connection_map_.end());
     connection_map_[connection_id] = false;
+    if (connection_id == quit_on_close_connection_)
+      run_loop_quit_func_.Run();
   }
 
   bool RunUntilRequestsReceived(size_t count) {
@@ -239,9 +259,26 @@ class HttpServerTest : public testing::Test,
     return success;
   }
 
+  bool RunUntilConnectionIdClosed(int connection_id) {
+    quit_on_close_connection_ = connection_id;
+    auto iter = connection_map_.find(connection_id);
+    if (iter != connection_map_.end() && !iter->second) {
+      // Already disconnected.
+      return true;
+    }
+
+    base::RunLoop run_loop;
+    run_loop_quit_func_ = run_loop.QuitClosure();
+    bool success = RunLoopWithTimeout(&run_loop);
+    run_loop_quit_func_.Reset();
+    return success;
+  }
+
   HttpServerRequestInfo GetRequest(size_t request_index) {
     return requests_[request_index].first;
   }
+
+  size_t num_requests() const { return requests_.size(); }
 
   int GetConnectionId(size_t request_index) {
     return requests_[request_index].second;
@@ -264,6 +301,7 @@ class HttpServerTest : public testing::Test,
 
  private:
   size_t quit_after_request_count_;
+  int quit_on_close_connection_;
 };
 
 namespace {
@@ -294,6 +332,15 @@ TEST_F(HttpServerTest, Request) {
   ASSERT_EQ(0u, GetRequest(0).headers.size());
   ASSERT_TRUE(base::StartsWith(GetRequest(0).peer.ToString(), "127.0.0.1",
                                base::CompareCase::SENSITIVE));
+}
+
+TEST_F(HttpServerTest, RequestBrokenTermination) {
+  TestHttpClient client;
+  ASSERT_THAT(client.ConnectAndWait(server_address_), IsOk());
+  client.Send("GET /test HTTP/1.1\r\n\r)");
+  ASSERT_TRUE(RunUntilConnectionIdClosed(1));
+  EXPECT_EQ(0u, num_requests());
+  client.ExpectUsedThenDisconnectedWithNoData();
 }
 
 TEST_F(HttpServerTest, RequestWithHeaders) {
@@ -421,6 +468,20 @@ TEST_F(WebSocketTest, RequestWebSocket) {
   ASSERT_TRUE(RunUntilRequestsReceived(1));
 }
 
+TEST_F(WebSocketTest, RequestWebSocketTrailingJunk) {
+  TestHttpClient client;
+  ASSERT_THAT(client.ConnectAndWait(server_address_), IsOk());
+  client.Send(
+      "GET /test HTTP/1.1\r\n"
+      "Upgrade: WebSocket\r\n"
+      "Connection: SomethingElse, Upgrade\r\n"
+      "Sec-WebSocket-Version: 8\r\n"
+      "Sec-WebSocket-Key: key\r\n"
+      "\r\nHello? Anyone");
+  ASSERT_TRUE(RunUntilConnectionIdClosed(1));
+  client.ExpectUsedThenDisconnectedWithNoData();
+}
+
 TEST_F(HttpServerTest, RequestWithTooLargeBody) {
   class TestURLFetcherDelegate : public URLFetcherDelegate {
    public:
@@ -503,14 +564,7 @@ TEST_F(HttpServerTest, WrongProtocolRequest) {
     ASSERT_EQ(1u, connection_map().size());
     ASSERT_FALSE(connection_map().begin()->second);
 
-    // Assert that the socket was opened...
-    ASSERT_TRUE(client.socket().WasEverUsed());
-
-    // ...then closed when the server disconnected. Verify that the socket was
-    // closed by checking that a Read() fails.
-    std::string response;
-    ASSERT_FALSE(client.Read(&response, 1u));
-    ASSERT_EQ(std::string(), response);
+    client.ExpectUsedThenDisconnectedWithNoData();
 
     // Reset the state of the connection map.
     connection_map().clear();

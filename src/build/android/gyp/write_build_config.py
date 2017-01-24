@@ -380,12 +380,6 @@ def main(argv):
   # overrides are done correctly.
   all_resources_deps.reverse()
 
-  if options.type == 'android_apk' and options.tested_apk_config:
-    tested_apk_deps = Deps([options.tested_apk_config])
-    tested_apk_resources_deps = tested_apk_deps.All('android_resources')
-    all_resources_deps = [
-        d for d in all_resources_deps if not d in tested_apk_resources_deps]
-
   # Initialize some common config.
   # Any value that needs to be queryable by dependents must go within deps_info.
   config = {
@@ -400,6 +394,14 @@ def main(argv):
   }
   deps_info = config['deps_info']
   gradle = config['gradle']
+
+  if options.type == 'android_apk' and options.tested_apk_config:
+    tested_apk_deps = Deps([options.tested_apk_config])
+    tested_apk_name = tested_apk_deps.Direct()[0]['name']
+    tested_apk_resources_deps = tested_apk_deps.All('android_resources')
+    gradle['apk_under_test'] = tested_apk_name
+    all_resources_deps = [
+        d for d in all_resources_deps if not d in tested_apk_resources_deps]
 
   # Required for generating gradle files.
   if options.type == 'java_library':

@@ -1,0 +1,19 @@
+# Test input file for --method-blocklist parameter.
+
+# Blank line below:
+
+# Line with whitespace only below:
+    
+IdlTestClass:::idlTestMethodNoParams:::0
+IdlTestClass:::idlTestMethodOneParam:::1
+IdlTestClass:::idlTestMethodTwoOrThreeParams:::2
+IdlTestClass:::idlTestMethodTwoOrThreeParams:::3
+IdlTestClass:::idlTemplateMethod:::1
+IdlTestClass:::path:::0
+IdlTestClass:::idlOptionalArgsPass:::0
+IdlTestClass:::idlOptionalArgsStillTooMany:::0
+IdlTestClass:::idlOptionalArgsTooLittle:::2
+IdlTemplateClass:::idlTestMethod:::1
+
+# Test for free functions:
+IdlFunctions:::foo:::0

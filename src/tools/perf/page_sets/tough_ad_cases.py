@@ -189,8 +189,9 @@ class ToughAdCasesPageSet(story.StorySet):
         self, scroll=scroll))
     self.AddStory(AdPage('http://androidcentral.com', self, scroll=scroll,
         wait_for_interactive_or_better=True))
-    self.AddStory(AdPage('http://mashable.com', self, scroll=scroll,
-        y_scroll_distance_multiplier=0.25))
+    # Disabled: crbug.com/682349
+    #self.AddStory(AdPage('http://mashable.com', self, scroll=scroll,
+    #    y_scroll_distance_multiplier=0.25))
     self.AddStory(AdPage('http://www.androidauthority.com/'
         'reduce-data-use-turn-on-data-compression-in-chrome-630064/', self,
         scroll=scroll))

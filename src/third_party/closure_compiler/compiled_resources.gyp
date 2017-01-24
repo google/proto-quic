@@ -31,7 +31,6 @@
         '../../ui/file_manager/file_manager/background/js/compiled_resources.gyp:*',
         '../../ui/file_manager/file_manager/foreground/js/compiled_resources.gyp:*',
         '../../ui/file_manager/gallery/js/compiled_resources.gyp:*',
-        '../../ui/file_manager/image_loader/compiled_resources.gyp:*',
         '../../ui/file_manager/video_player/js/compiled_resources.gyp:*',
       ],
     },

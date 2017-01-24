@@ -61,7 +61,8 @@ BbrSender::DebugState::DebugState(const BbrSender& sender)
       min_rtt_timestamp(sender.min_rtt_timestamp_),
       recovery_state(sender.recovery_state_),
       recovery_window(sender.recovery_window_),
-      last_sample_is_app_limited(sender.last_sample_is_app_limited_) {}
+      last_sample_is_app_limited(sender.last_sample_is_app_limited_),
+      end_of_app_limited_phase(sender.sampler_.end_of_app_limited_phase()) {}
 
 BbrSender::DebugState::DebugState(const DebugState& state) = default;
 

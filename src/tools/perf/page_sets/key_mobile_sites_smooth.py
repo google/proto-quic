@@ -23,11 +23,11 @@ def _CreatePageClassWithSmoothInteractions(page_cls):
 
 class KeyMobileSitesSmoothPage(page_module.Page):
 
-  def __init__(self, url, page_set, name='', labels=None,
+  def __init__(self, url, page_set, name='', tags=None,
                action_on_load_complete=False):
     super(KeyMobileSitesSmoothPage, self).__init__(
         url=url, page_set=page_set, name=name,
-        credentials_path='data/credentials.json', labels=labels,
+        credentials_path='data/credentials.json', tags=tags,
         shared_page_state_class=shared_page_state.SharedMobilePageState)
     self.archive_data_file = 'data/key_mobile_sites.json'
     self.action_on_load_complete = action_on_load_complete
@@ -176,15 +176,15 @@ class KeyMobileSitesSmoothPageSet(story.StorySet):
     # self.AddStory(AmazonNicolasCageSmoothPage(self))
     self.AddStory(CNNArticleSmoothPage(self))
 
-    # Add pages with custom labels.
+    # Add pages with custom tags.
 
     # Why: Top news site.
     self.AddStory(KeyMobileSitesSmoothPage(
-      url='http://nytimes.com/', page_set=self, labels=['fastpath']))
+      url='http://nytimes.com/', page_set=self, tags=['fastpath']))
 
     # Why: Image-heavy site.
     self.AddStory(KeyMobileSitesSmoothPage(
-      url='http://cuteoverload.com', page_set=self, labels=['fastpath']))
+      url='http://cuteoverload.com', page_set=self, tags=['fastpath']))
 
     # Why: #11 (Alexa global), google property; some blogger layouts
     # have infinite scroll but more interesting.
@@ -232,19 +232,19 @@ class KeyMobileSitesSmoothPageSet(story.StorySet):
     #                 url='http://forecast.io', page_set=self))
     # Why: crbug.com/169827
     self.AddStory(KeyMobileSitesSmoothPage(
-      url='http://slashdot.org/', page_set=self, labels=['fastpath']))
+      url='http://slashdot.org/', page_set=self, tags=['fastpath']))
 
     # Why: #5 Alexa news """
 
     self.AddStory(KeyMobileSitesSmoothPage(
       url='http://www.reddit.com/r/programming/comments/1g96ve',
-      page_set=self, labels=['fastpath']))
+      page_set=self, tags=['fastpath']))
 
     # Why: Problematic use of fixed position elements """
     self.AddStory(KeyMobileSitesSmoothPage(
-      url='http://www.boingboing.net', page_set=self, labels=['fastpath']))
+      url='http://www.boingboing.net', page_set=self, tags=['fastpath']))
 
-    # Add simple pages with no custom navigation logic or labels.
+    # Add simple pages with no custom navigation logic or tags.
     urls_list = [
       # Why: Social; top Google property; Public profile; infinite scrolls.
       'https://plus.google.com/app/basic/110031535020051778989/posts?source=apppromo',

@@ -6,12 +6,12 @@
 
 #include <utility>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
 #include "url/gurl.h"
 
@@ -99,7 +99,7 @@ QuicSpdyStream* QuicSimpleServerSession::CreateIncomingDynamicStream(
 
   QuicSpdyStream* stream =
       new QuicSimpleServerStream(id, this, response_cache_);
-  ActivateStream(base::WrapUnique(stream));
+  ActivateStream(QuicWrapUnique(stream));
   return stream;
 }
 
@@ -112,7 +112,7 @@ QuicSimpleServerStream* QuicSimpleServerSession::CreateOutgoingDynamicStream(
   QuicSimpleServerStream* stream = new QuicSimpleServerStream(
       GetNextOutgoingStreamId(), this, response_cache_);
   stream->SetPriority(priority);
-  ActivateStream(base::WrapUnique(stream));
+  ActivateStream(QuicWrapUnique(stream));
   return stream;
 }
 

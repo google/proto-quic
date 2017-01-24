@@ -118,6 +118,8 @@ bool SubstitutionIsInBundleDir(SubstitutionType type);
 // Returns true if the given substitution is valid for the named purpose.
 bool IsValidBundleDataSubstitution(SubstitutionType type);
 bool IsValidSourceSubstitution(SubstitutionType type);
+bool IsValidScriptArgsSubstitution(SubstitutionType type);
+
 // Both compiler and linker tools.
 bool IsValidToolSubstitution(SubstitutionType type);
 bool IsValidCompilerSubstitution(SubstitutionType type);
@@ -128,10 +130,12 @@ bool IsValidALinkSubstitution(SubstitutionType type);
 bool IsValidCopySubstitution(SubstitutionType type);
 bool IsValidCompileXCassetsSubstitution(SubstitutionType type);
 
-// Like the "IsValid..." version above but checks a list of types and sets a
-// an error blaming the given source if the test fails.
-bool EnsureValidSourcesSubstitutions(
+// Validates that each substitution type in the vector passes the given
+// is_valid_subst predicate. Returns true on success. On failure, fills in the
+// error object with an appropriate message and returns false.
+bool EnsureValidSubstitutions(
     const std::vector<SubstitutionType>& types,
+    bool (*is_valid_subst)(SubstitutionType),
     const ParseNode* origin,
     Err* err);
 

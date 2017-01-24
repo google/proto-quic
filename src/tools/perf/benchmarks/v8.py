@@ -220,6 +220,20 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
               possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
 
 
+class V8MobileInfiniteScrollTurbo(V8MobileInfiniteScroll):
+  """Measures V8 GC metrics and memory usage while scrolling the top mobile
+  web pages and running Ignition+TurboFan.
+  http://www.chromium.org/developers/design-documents/rendering-benchmarks"""
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8MobileInfiniteScrollTurbo, self).SetExtraBrowserOptions(options)
+    v8_helper.EnableTurbo(options)
+
+  @classmethod
+  def Name(cls):
+    return 'v8.mobile_infinite_scroll-turbo_tbmv2'
+
+
 class V8Adword(perf_benchmark.PerfBenchmark):
   """Measures V8 Execution metrics on the Adword page."""
 

@@ -675,16 +675,16 @@ void PBXProject::AddIndexingTarget() {
   PBXAttributes attributes;
   attributes["EXECUTABLE_PREFIX"] = "";
   attributes["HEADER_SEARCH_PATHS"] = sources_->path();
-  attributes["PRODUCT_NAME"] = name_;
+  attributes["PRODUCT_NAME"] = "sources";
 
   PBXFileReference* product_reference = static_cast<PBXFileReference*>(
       products_->AddChild(base::MakeUnique<PBXFileReference>(
-          std::string(), name_, "compiled.mach-o.executable")));
+          std::string(), "sources", "compiled.mach-o.executable")));
 
   const char product_type[] = "com.apple.product-type.tool";
   targets_.push_back(base::MakeUnique<PBXNativeTarget>(
-      name_, std::string(), config_name_, attributes, product_type, name_,
-      product_reference));
+      "sources", std::string(), config_name_, attributes, product_type,
+      "sources", product_reference));
   target_for_indexing_ = static_cast<PBXNativeTarget*>(targets_.back().get());
 }
 

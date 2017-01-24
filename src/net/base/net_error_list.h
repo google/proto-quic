@@ -382,6 +382,10 @@ NET_ERROR(CT_CONSISTENCY_PROOF_PARSING_FAILED, -171)
 // fallback will be removed.
 NET_ERROR(SSL_OBSOLETE_CIPHER, -172)
 
+// When a WebSocket handshake is done successfully and the connection has been
+// upgraded, the URLRequest is cancelled with this error code.
+NET_ERROR(WS_UPGRADE, -173)
+
 // Certificate error codes
 //
 // The values of certificate error codes must be consecutive.

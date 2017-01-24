@@ -1060,14 +1060,14 @@ class MetaBuildWrapper(object):
 
     android = 'target_os="android"' in vals['gn_args']
     ozone = 'use_ozone=true' in vals['gn_args']
-    ozone_x11 = (ozone and 'args' in isolate_map[target] and
-                 '--ozone-platform=x11' in isolate_map[target]['args'])
+    chromeos = 'target_os="chromeos"' in vals['gn_args']
 
-    # This needs to mirror the settings in //build/config/ui.gni:
-    # use_x11 = is_linux && !use_ozone || use_ozone && --ozone-platform=x11
-    use_x11 = (self.platform == 'linux2' and
+    # This should be true if tests with type='windowed_test_launcher' are
+    # expected to run using xvfb. For example, Linux Desktop, X11 CrOS and
+    # Ozone CrOS builds.
+    use_xvfb = (self.platform == 'linux2' and
                not android and
-               (ozone_x11 or not ozone))
+               ((not ozone) or (ozone and chromeos)))
 
     asan = 'is_asan=true' in vals['gn_args']
     msan = 'is_msan=true' in vals['gn_args']
@@ -1103,7 +1103,7 @@ class MetaBuildWrapper(object):
       ]
       cmdline = (['./../../build/android/test_wrapper/logdog_wrapper.py']
                  + logdog_command + test_cmdline)
-    elif use_x11 and test_type == 'windowed_test_launcher':
+    elif use_xvfb and test_type == 'windowed_test_launcher':
       extra_files = [
           '../../testing/test_env.py',
           '../../testing/xvfb.py',

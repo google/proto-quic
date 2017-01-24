@@ -149,6 +149,9 @@ class QUIC_EXPORT_PRIVATE BandwidthSampler {
 
   QuicByteCount total_bytes_acked() const { return total_bytes_acked_; }
   bool is_app_limited() const { return is_app_limited_; }
+  QuicPacketNumber end_of_app_limited_phase() const {
+    return end_of_app_limited_phase_;
+  }
 
  private:
   friend class test::BandwidthSamplerPeer;

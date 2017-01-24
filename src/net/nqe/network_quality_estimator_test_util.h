@@ -15,6 +15,7 @@
 #include "base/optional.h"
 #include "base/time/time.h"
 #include "net/base/network_change_notifier.h"
+#include "net/log/net_log.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/network_quality_estimator.h"
 #include "net/test/embedded_test_server/embedded_test_server.h"
@@ -23,6 +24,7 @@
 
 namespace net {
 
+class BoundTestNetLog;
 class ExternalEstimateProvider;
 
 // Helps in setting the current network type and id.
@@ -43,7 +45,8 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
       const std::map<std::string, std::string>& variation_params,
       bool allow_local_host_requests_for_tests,
       bool allow_smaller_responses_for_tests,
-      bool add_default_platform_observations);
+      bool add_default_platform_observations,
+      std::unique_ptr<BoundTestNetLog> net_log);
 
   ~TestNetworkQualityEstimator() override;
 
@@ -175,6 +178,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
 
   double RandDouble() const override;
 
+  // Returns the number of entries in |net_log_| that have type set to |type|.
+  int GetEntriesCount(NetLogEventType type) const;
+
   using NetworkQualityEstimator::SetTickClockForTesting;
   using NetworkQualityEstimator::OnConnectionTypeChanged;
 
@@ -222,6 +228,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   double rand_double_;
 
   LocalHttpTestServer embedded_test_server_;
+
+  // Net log provided to network quality estimator.
+  std::unique_ptr<net::BoundTestNetLog> net_log_;
 
   DISALLOW_COPY_AND_ASSIGN(TestNetworkQualityEstimator);
 };

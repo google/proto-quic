@@ -4,13 +4,13 @@
 
 #include "net/tools/quic/quic_client_session.h"
 
-#include "base/memory/ptr_util.h"
 #include "net/log/net_log_with_source.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 
 using std::string;
@@ -72,8 +72,7 @@ QuicSpdyClientStream* QuicClientSession::CreateOutgoingDynamicStream(
 }
 
 std::unique_ptr<QuicSpdyClientStream> QuicClientSession::CreateClientStream() {
-  return base::MakeUnique<QuicSpdyClientStream>(GetNextOutgoingStreamId(),
-                                                this);
+  return QuicMakeUnique<QuicSpdyClientStream>(GetNextOutgoingStreamId(), this);
 }
 
 QuicCryptoClientStreamBase* QuicClientSession::GetCryptoStream() {
@@ -120,13 +119,13 @@ QuicSpdyStream* QuicClientSession::CreateIncomingDynamicStream(
   }
   QuicSpdyStream* stream = new QuicSpdyClientStream(id, this);
   stream->CloseWriteSide();
-  ActivateStream(base::WrapUnique(stream));
+  ActivateStream(QuicWrapUnique(stream));
   return stream;
 }
 
 std::unique_ptr<QuicCryptoClientStreamBase>
 QuicClientSession::CreateQuicCryptoStream() {
-  return base::MakeUnique<QuicCryptoClientStream>(
+  return QuicMakeUnique<QuicCryptoClientStream>(
       server_id_, this, new ProofVerifyContextChromium(0, NetLogWithSource()),
       crypto_config_, this);
 }

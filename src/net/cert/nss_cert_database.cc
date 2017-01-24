@@ -143,16 +143,6 @@ crypto::ScopedPK11Slot NSSCertDatabase::GetPrivateSlot() const {
   return crypto::ScopedPK11Slot(PK11_ReferenceSlot(private_slot_.get()));
 }
 
-CryptoModule* NSSCertDatabase::GetPublicModule() const {
-  crypto::ScopedPK11Slot slot(GetPublicSlot());
-  return CryptoModule::CreateFromHandle(slot.get());
-}
-
-CryptoModule* NSSCertDatabase::GetPrivateModule() const {
-  crypto::ScopedPK11Slot slot(GetPrivateSlot());
-  return CryptoModule::CreateFromHandle(slot.get());
-}
-
 void NSSCertDatabase::ListModules(CryptoModuleList* modules,
                                   bool need_rw) const {
   modules->clear();

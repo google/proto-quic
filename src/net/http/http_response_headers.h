@@ -88,6 +88,9 @@ class NET_EXPORT HttpResponseHeaders
   // Removes all instances of a particular header.
   void RemoveHeader(const std::string& name);
 
+  // Removes all instances of particular headers.
+  void RemoveHeaders(const std::unordered_set<std::string>& header_names);
+
   // Removes a particular header line. The header name is compared
   // case-insensitively.
   void RemoveHeaderLine(const std::string& name, const std::string& value);

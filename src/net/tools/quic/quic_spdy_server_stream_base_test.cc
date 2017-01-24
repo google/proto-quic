@@ -4,7 +4,7 @@
 
 #include "net/tools/quic/quic_spdy_server_stream_base.h"
 
-#include "base/memory/ptr_util.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -30,7 +30,7 @@ class QuicSpdyServerStreamBaseTest : public ::testing::Test {
                                         &alarm_factory_,
                                         Perspective::IS_SERVER)) {
     stream_ = new TestQuicSpdyServerStream(kClientDataStreamId1, &session_);
-    session_.ActivateStream(base::WrapUnique(stream_));
+    session_.ActivateStream(QuicWrapUnique(stream_));
   }
 
   QuicSpdyServerStreamBase* stream_ = nullptr;

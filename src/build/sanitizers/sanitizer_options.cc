@@ -101,7 +101,7 @@ SANITIZER_HOOK_ATTRIBUTE const char *__asan_default_options() {
   return kAsanDefaultOptions;
 }
 
-extern "C" char kASanDefaultSuppressions[];
+extern char kASanDefaultSuppressions[];
 
 SANITIZER_HOOK_ATTRIBUTE const char *__asan_default_suppressions() {
   return kASanDefaultSuppressions;
@@ -131,7 +131,7 @@ SANITIZER_HOOK_ATTRIBUTE const char *__tsan_default_options() {
   return kTsanDefaultOptions;
 }
 
-extern "C" char kTSanDefaultSuppressions[];
+extern char kTSanDefaultSuppressions[];
 
 SANITIZER_HOOK_ATTRIBUTE const char *__tsan_default_suppressions() {
   return kTSanDefaultSuppressions;
@@ -166,7 +166,7 @@ SANITIZER_HOOK_ATTRIBUTE const char *__lsan_default_options() {
   return kLsanDefaultOptions;
 }
 
-extern "C" char kLSanDefaultSuppressions[];
+extern char kLSanDefaultSuppressions[];
 
 SANITIZER_HOOK_ATTRIBUTE const char *__lsan_default_suppressions() {
   return kLSanDefaultSuppressions;

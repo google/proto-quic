@@ -55,7 +55,7 @@ enum SpdySendStatus {
   NO_MORE_DATA_TO_SEND
 };
 
-// The SpdyStream is used by the SpdySession to represent each stream known
+// SpdyStream is owned by SpdySession and is used to represent each stream known
 // on the SpdySession.  This class provides interfaces for SpdySession to use.
 // Streams can be created either by the client or by the server.  When they
 // are initiated by the client, both the SpdySession and client object (such as
@@ -280,7 +280,8 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // Called by the SpdySession when the request is finished.  This callback
   // will always be called at the end of the request and signals to the
   // stream that the stream has no more network events.  No further callbacks
-  // to the stream will be made after this call.
+  // to the stream will be made after this call.  Must be called before
+  // SpdyStream is destroyed.
   // |status| is an error code or OK.
   void OnClose(int status);
 

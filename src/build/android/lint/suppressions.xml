@@ -39,7 +39,6 @@ Still reading?
     <ignore regexp="third_party/cacheinvalidation/src/java/com/google/ipc/invalidation/ticl/android2/channel/AndroidChannelPreferences.java"/>
   </issue>
   <issue id="ContentDescription" severity="Error">
-    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml"/>
     <ignore regexp="chromecast/internal"/>
   </issue>
   <issue id="DefaultLocale">
@@ -177,8 +176,6 @@ Still reading?
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/widget/selection/SelectionToolbar.java"/>
   </issue>
   <issue id="MissingTranslation">
-    <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml"/>
-    <ignore regexp="blimp/client/core/resources/android/java/res/values/arrays.xml" />
     <!-- http://crbug.com/450548 -->
     <ignore regexp="chromecast/internal"/>
     <ignore regexp="restriction_values.xml.*"/>
@@ -295,23 +292,6 @@ Still reading?
     <ignore regexp="android_webview/test/shell/res/raw/resource_file.html"/>
     <ignore regexp="android_webview/test/shell/res/raw/resource_icon.png"/>
     <ignore regexp="android_webview/tools/automated_ui_tests/java/res/"/>
-    <ignore regexp="blimp/client/app/android/java/res/drawable/dotted_line.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_menu.png"/>
-    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/btn_reload.png"/>
-    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/textbox.9.png"/>
-    <ignore regexp="blimp/client/app/android/java/res/drawable-hdpi/web_input_background.9.png"/>
-    <ignore regexp="blimp/client/app/android/java/res/layout/blimp_main.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/layout/debug_stats_overlay.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/layout/text_input_popup.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/layout/toolbar_popup_item.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/layout/web_input_bottom_panel.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/mipmap-hdpi/app_icon.png"/>
-    <ignore regexp="blimp/client/app/android/java/res/values/arrays.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/values/colors.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/values/dimens.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/xml/about_blimp_preferences.xml"/>
-    <ignore regexp="blimp/client/app/android/java/res/xml/blimp_preferences.xml"/>
-    <ignore regexp="blimp/client/core/resources/android/java/res/*" />
     <!-- TODO(crbug.com/635567): Fix this properly. -->
     <ignore regexp="chrome/android/java/res/drawable-hdpi/*"/>
     <ignore regexp="chrome/android/java/res/drawable-hdpi/bubble_white.9.png"/>
@@ -357,8 +337,6 @@ Still reading?
     <ignore regexp="content/shell/android/java/res/mipmap-hdpi/app_icon.png"/>
     <ignore regexp="gen/android_webview/locale_paks.resources.zip/*"/>
     <ignore regexp="gen/android_webview/strings_grd.resources.zip/values/android_webview_strings.xml"/>
-    <ignore regexp="gen/blimp/client/app/blimp_strings_grd.resources.zip/values/android_blimp_strings.xml" />
-    <ignore regexp="gen/blimp/client/core/resources/strings_grd.resources.zip/values/blimp_strings.xml" />
     <ignore regexp="gen/components/strings/components_strings_grd.resources.zip/values.*/components_strings.xml"/>
     <ignore regexp="gen/remoting/resources/strings_java.resources.zip/values/remoting_strings.xml"/>
     <ignore regexp="remoting/android/java/res/drawable-hdpi/ic_backspace.png"/>
@@ -465,8 +443,6 @@ Still reading?
     <ignore regexp="AndroidManifest.xml"/>
   </issue>
   <issue id="ValidFragment" severity="Error">
-    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/BlimpPreferencesTest.java"/>
-    <ignore regexp="blimp/client/app/android/javatests/src/org/chromium/blimp/core/settings/MockPreferences.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/BaseMediaRouteDialogManager.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteChooserDialogManager.java"/>
     <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/media/router/MediaRouteControllerDialogManager.java"/>

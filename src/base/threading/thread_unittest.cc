@@ -12,6 +12,7 @@
 #include "base/bind.h"
 #include "base/debug/leak_annotations.h"
 #include "base/macros.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
@@ -231,19 +232,19 @@ TEST_F(ThreadTest, DestroyWhileRunningIsSafe) {
 
 // TODO(gab): Enable this test when destroying a non-joinable Thread instance
 // is supported (proposal @ https://crbug.com/629139#c14).
-// TEST_F(ThreadTest, DestroyWhileRunningNonJoinableIsSafe) {
-//   {
-//     Thread a("DestroyWhileRunningNonJoinableIsSafe");
-//     Thread::Options options;
-//     options.joinable = false;
-//     EXPECT_TRUE(a.StartWithOptions(options));
-//     EXPECT_TRUE(a.WaitUntilThreadStarted());
-//   }
-//
-//   // Attempt to catch use-after-frees from the non-joinable thread in the
-//   // scope of this test if any.
-//   base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(20));
-// }
+TEST_F(ThreadTest, DISABLED_DestroyWhileRunningNonJoinableIsSafe) {
+  {
+    Thread a("DestroyWhileRunningNonJoinableIsSafe");
+    Thread::Options options;
+    options.joinable = false;
+    EXPECT_TRUE(a.StartWithOptions(options));
+    EXPECT_TRUE(a.WaitUntilThreadStarted());
+  }
+
+  // Attempt to catch use-after-frees from the non-joinable thread in the
+  // scope of this test if any.
+  base::PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(20));
+}
 
 TEST_F(ThreadTest, StopSoon) {
   Thread a("StopSoon");
@@ -272,6 +273,49 @@ TEST_F(ThreadTest, StopTwiceNop) {
   // Calling them when not running should also nop.
   a.StopSoon();
   a.Stop();
+}
+
+// TODO(gab): Enable this test in conjunction with re-enabling the sequence
+// check in Thread::Stop() as part of http://crbug.com/629139.
+TEST_F(ThreadTest, DISABLED_StopOnNonOwningThreadIsDeath) {
+  Thread a("StopOnNonOwningThreadDeath");
+  EXPECT_TRUE(a.StartAndWaitForTesting());
+
+  Thread b("NonOwningThread");
+  b.Start();
+  EXPECT_DCHECK_DEATH({
+    // Stopping |a| on |b| isn't allowed.
+    b.task_runner()->PostTask(FROM_HERE,
+                              base::Bind(&Thread::Stop, base::Unretained(&a)));
+    // Block here so the DCHECK on |b| always happens in this scope.
+    base::PlatformThread::Sleep(base::TimeDelta::Max());
+  });
+}
+
+TEST_F(ThreadTest, TransferOwnershipAndStop) {
+  std::unique_ptr<Thread> a =
+      base::MakeUnique<Thread>("TransferOwnershipAndStop");
+  EXPECT_TRUE(a->StartAndWaitForTesting());
+  EXPECT_TRUE(a->IsRunning());
+
+  Thread b("TakingOwnershipThread");
+  b.Start();
+
+  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
+                            base::WaitableEvent::InitialState::NOT_SIGNALED);
+
+  // a->DetachFromSequence() should allow |b| to use |a|'s Thread API.
+  a->DetachFromSequence();
+  b.task_runner()->PostTask(
+      FROM_HERE, base::Bind(
+                     [](std::unique_ptr<Thread> thread_to_stop,
+                        base::WaitableEvent* event_to_signal) -> void {
+                       thread_to_stop->Stop();
+                       event_to_signal->Signal();
+                     },
+                     base::Passed(&a), base::Unretained(&event)));
+
+  event.Wait();
 }
 
 TEST_F(ThreadTest, StartTwice) {

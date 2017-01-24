@@ -4,11 +4,9 @@
 
 #include "net/quic/core/quic_buffered_packet_store.h"
 
-#include "base/stl_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
-
-using base::ContainsKey;
+#include "net/quic/platform/api/quic_map_util.h"
 
 namespace net {
 
@@ -85,19 +83,19 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     bool is_chlo) {
   QUIC_BUG_IF(!FLAGS_quic_allow_chlo_buffering)
       << "Shouldn't buffer packets if disabled via flag.";
-  QUIC_BUG_IF(is_chlo && ContainsKey(connections_with_chlo_, connection_id))
+  QUIC_BUG_IF(is_chlo && QuicContainsKey(connections_with_chlo_, connection_id))
       << "Shouldn't buffer duplicated CHLO on connection " << connection_id;
 
-  if (!ContainsKey(undecryptable_packets_, connection_id) &&
+  if (!QuicContainsKey(undecryptable_packets_, connection_id) &&
       ShouldBufferPacket(is_chlo)) {
     // Drop the packet if the upper limit of undecryptable packets has been
     // reached or the whole capacity of the store has been reached.
     return TOO_MANY_CONNECTIONS;
-  } else if (!ContainsKey(undecryptable_packets_, connection_id)) {
+  } else if (!QuicContainsKey(undecryptable_packets_, connection_id)) {
     undecryptable_packets_.emplace(
         std::make_pair(connection_id, BufferedPacketList()));
   }
-  CHECK(ContainsKey(undecryptable_packets_, connection_id));
+  CHECK(QuicContainsKey(undecryptable_packets_, connection_id));
   BufferedPacketList& queue =
       undecryptable_packets_.find(connection_id)->second;
 
@@ -105,7 +103,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
     // If current packet is not CHLO, it might not be buffered because store
     // only buffers certain number of undecryptable packets per connection.
     size_t num_non_chlo_packets =
-        ContainsKey(connections_with_chlo_, connection_id)
+        QuicContainsKey(connections_with_chlo_, connection_id)
             ? (queue.buffered_packets.size() - 1)
             : queue.buffered_packets.size();
     if (num_non_chlo_packets >= kDefaultMaxUndecryptablePackets) {
@@ -138,7 +136,7 @@ EnqueuePacketResult QuicBufferedPacketStore::EnqueuePacket(
 
 bool QuicBufferedPacketStore::HasBufferedPackets(
     QuicConnectionId connection_id) const {
-  return ContainsKey(undecryptable_packets_, connection_id);
+  return QuicContainsKey(undecryptable_packets_, connection_id);
 }
 
 bool QuicBufferedPacketStore::HasChlosBuffered() const {
@@ -218,7 +216,7 @@ QuicBufferedPacketStore::DeliverPacketsForNextConnection(
 
 bool QuicBufferedPacketStore::HasChloForConnection(
     QuicConnectionId connection_id) {
-  return ContainsKey(connections_with_chlo_, connection_id);
+  return QuicContainsKey(connections_with_chlo_, connection_id);
 }
 
 }  // namespace net

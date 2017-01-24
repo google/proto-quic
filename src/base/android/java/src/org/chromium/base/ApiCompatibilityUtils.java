@@ -7,6 +7,7 @@ package org.chromium.base;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -21,6 +22,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.os.Process;
@@ -31,8 +33,11 @@ import android.view.View;
 import android.view.ViewGroup.MarginLayoutParams;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodSubtype;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 
+import java.io.File;
 import java.lang.reflect.Method;
 
 /**
@@ -599,6 +604,75 @@ public class ApiCompatibilityUtils {
             // just swallow the exception and treat it as the permission is denied.
             // crbug.com/639099
             return PackageManager.PERMISSION_DENIED;
+        }
+    }
+
+    /**
+     * @see android.app.Notification.Builder#setContent(RemoteViews)
+     */
+    @SuppressWarnings("deprecation")
+    public static void setContentViewForNotificationBuilder(
+            Notification.Builder builder, RemoteViews views) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder.setCustomContentView(views);
+        } else {
+            builder.setContent(views);
+        }
+    }
+
+    /**
+     * @see android.app.Notification#bigContentView
+     */
+    @SuppressWarnings("deprecation")
+    public static Notification notificationWithBigContentView(
+            Notification.Builder builder, RemoteViews view) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return builder.setCustomBigContentView(view).build();
+        } else {
+            Notification notification = builder.build();
+            notification.bigContentView = view;
+            return notification;
+        }
+    }
+
+    /**
+     * @see android.view.inputmethod.InputMethodSubType#getLocate()
+     */
+    @SuppressWarnings("deprecation")
+    public static String getLocale(InputMethodSubtype inputMethodSubType) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return inputMethodSubType.getLanguageTag();
+        } else {
+            return inputMethodSubType.getLocale();
+        }
+    }
+
+    /**
+     * Get a URI for |file| which has the image capture. This function assumes that path of |file|
+     * is based on the result of UiUtils.getDirectoryForImageCapture().
+     *
+     * @param context The application context.
+     * @param file image capture file.
+     * @return URI for |file|.
+     */
+    public static Uri getUriForImageCaptureFile(Context context, File file) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
+                ? ContentUriUtils.getContentUriFromFile(context, file)
+                : Uri.fromFile(file);
+    }
+
+    /**
+     * @see android.view.Window#FEATURE_INDETERMINATE_PROGRESS
+     */
+    public static void setWindowIndeterminateProgress(Window window) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            @SuppressWarnings("deprecation")
+            int featureNumber = Window.FEATURE_INDETERMINATE_PROGRESS;
+
+            @SuppressWarnings("deprecation")
+            int featureValue = Window.PROGRESS_VISIBILITY_OFF;
+
+            window.setFeatureInt(featureNumber, featureValue);
         }
     }
 }
