@@ -7,11 +7,11 @@
 #include <memory>
 #include <utility>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"
 #include "net/quic/test_tools/quic_session_peer.h"
@@ -103,10 +103,10 @@ class QuicSpdyStreamTest : public ::testing::TestWithParam<QuicVersion> {
     session_.reset(new testing::StrictMock<MockQuicSpdySession>(connection_));
     stream_ = new TestStream(kClientDataStreamId1, session_.get(),
                              stream_should_process_data);
-    session_->ActivateStream(base::WrapUnique(stream_));
+    session_->ActivateStream(QuicWrapUnique(stream_));
     stream2_ = new TestStream(kClientDataStreamId2, session_.get(),
                               stream_should_process_data);
-    session_->ActivateStream(base::WrapUnique(stream2_));
+    session_->ActivateStream(QuicWrapUnique(stream2_));
   }
 
   QuicHeaderList ProcessHeaders(bool fin, const SpdyHeaderBlock& headers) {

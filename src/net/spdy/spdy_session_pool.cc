@@ -371,10 +371,8 @@ void SpdySessionPool::OnCertDBChanged(const X509Certificate* cert) {
 void SpdySessionPool::DumpMemoryStats(
     base::trace_event::ProcessMemoryDump* pmd,
     const std::string& parent_dump_absolute_name) const {
-  std::string dump_name = base::StringPrintf("%s/spdy_session_pool",
-                                             parent_dump_absolute_name.c_str());
-  base::trace_event::MemoryAllocatorDump* dump =
-      pmd->CreateAllocatorDump(dump_name);
+  if (sessions_.empty())
+    return;
   size_t total_size = 0;
   size_t buffer_size = 0;
   size_t cert_count = 0;
@@ -391,6 +389,9 @@ void SpdySessionPool::DumpMemoryStats(
     if (is_session_active)
       num_active_sessions++;
   }
+  base::trace_event::MemoryAllocatorDump* dump =
+      pmd->CreateAllocatorDump(base::StringPrintf(
+          "%s/spdy_session_pool", parent_dump_absolute_name.c_str()));
   dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                   base::trace_event::MemoryAllocatorDump::kUnitsBytes,
                   total_size);

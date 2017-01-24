@@ -85,7 +85,7 @@ if (enable_nocompile_tests) {
         "{{source}}",
         "-Wall -Werror -Wfatal-errors " + "-I" +
             rebase_path("//", root_build_dir) + sysroot_args,
-        "{{output}}",
+        rebase_path(result_path, root_build_dir),
       ]
     }
 

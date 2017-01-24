@@ -136,9 +136,6 @@ config("feature_flags") {
   if (enable_wayland_server) {
     defines += [ "ENABLE_WAYLAND_SERVER=1" ]
   }
-  if (proprietary_codecs) {
-    defines += [ "USE_PROPRIETARY_CODECS" ]
-  }
   if (safe_browsing_mode == 1) {
     defines += [ "FULL_SAFE_BROWSING" ]
     defines += [ "SAFE_BROWSING_CSD" ]

@@ -31,6 +31,12 @@ std::string GetEffectiveConnectionTypeAlgorithm(
 double GetWeightMultiplierPerSecond(
     const std::map<std::string, std::string>& variation_params);
 
+// Returns the factor by which the weight of an observation reduces for every
+// dBm difference between the current signal strength (in dBm), and the signal
+// strength at the time when the observation was taken.
+double GetWeightMultiplierPerDbm(
+    const std::map<std::string, std::string>& variation_params);
+
 // Returns a descriptive name corresponding to |connection_type|.
 const char* GetNameForConnectionType(
     net::NetworkChangeNotifier::ConnectionType connection_type);

@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/null_decrypter.h"
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
@@ -20,6 +19,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_framer_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -248,33 +248,32 @@ class TestQuicVisitor : public QuicFramerVisitorInterface {
     ++frame_count_;
     // Save a copy of the data so it is valid after the packet is processed.
     string* string_data = new string(frame.data_buffer, frame.data_length);
-    stream_data_.push_back(base::WrapUnique(string_data));
-    stream_frames_.push_back(base::MakeUnique<QuicStreamFrame>(
+    stream_data_.push_back(QuicWrapUnique(string_data));
+    stream_frames_.push_back(QuicMakeUnique<QuicStreamFrame>(
         frame.stream_id, frame.fin, frame.offset, *string_data));
     return true;
   }
 
   bool OnAckFrame(const QuicAckFrame& frame) override {
     ++frame_count_;
-    ack_frames_.push_back(base::MakeUnique<QuicAckFrame>(frame));
+    ack_frames_.push_back(QuicMakeUnique<QuicAckFrame>(frame));
     return true;
   }
 
   bool OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override {
     ++frame_count_;
-    stop_waiting_frames_.push_back(
-        base::MakeUnique<QuicStopWaitingFrame>(frame));
+    stop_waiting_frames_.push_back(QuicMakeUnique<QuicStopWaitingFrame>(frame));
     return true;
   }
 
   bool OnPaddingFrame(const QuicPaddingFrame& frame) override {
-    padding_frames_.push_back(base::MakeUnique<QuicPaddingFrame>(frame));
+    padding_frames_.push_back(QuicMakeUnique<QuicPaddingFrame>(frame));
     return true;
   }
 
   bool OnPingFrame(const QuicPingFrame& frame) override {
     ++frame_count_;
-    ping_frames_.push_back(base::MakeUnique<QuicPingFrame>(frame));
+    ping_frames_.push_back(QuicMakeUnique<QuicPingFrame>(frame));
     return true;
   }
 

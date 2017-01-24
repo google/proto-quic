@@ -7,12 +7,12 @@
 #include <list>
 #include <utility>
 
-#include "base/stl_util.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_spdy_stream.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_protocol.h"
 #include "net/tools/quic/quic_http_response_cache.h"
@@ -121,8 +121,8 @@ void QuicSimpleServerStream::SendResponse() {
     return;
   }
 
-  if (!base::ContainsKey(request_headers_, ":authority") ||
-      !base::ContainsKey(request_headers_, ":path")) {
+  if (!QuicContainsKey(request_headers_, ":authority") ||
+      !QuicContainsKey(request_headers_, ":path")) {
     QUIC_DVLOG(1) << "Request headers do not contain :authority or :path.";
     SendErrorResponse();
     return;

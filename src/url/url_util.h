@@ -6,6 +6,7 @@
 #define URL_URL_UTIL_H_
 
 #include <string>
+#include <vector>
 
 #include "base/strings/string16.h"
 #include "base/strings/string_piece.h"
@@ -13,6 +14,8 @@
 #include "url/url_canon.h"
 #include "url/url_constants.h"
 #include "url/url_export.h"
+
+class GURL;
 
 namespace url {
 
@@ -57,24 +60,43 @@ struct URL_EXPORT SchemeWithType {
   SchemeType type;
 };
 
+// The following Add*Scheme method are not threadsafe and can not be called
+// concurrently with any other url_util function. They will assert if the lists
+// of schemes have been locked (see LockSchemeRegistries).
+
 // Adds an application-defined scheme to the internal list of "standard-format"
 // URL schemes. A standard-format scheme adheres to what RFC 3986 calls "generic
 // URI syntax" (https://tools.ietf.org/html/rfc3986#section-3).
-//
-// This function is not threadsafe and can not be called concurrently with any
-// other url_util function. It will assert if the lists of schemes have
-// been locked (see LockSchemeRegistries).
+
 URL_EXPORT void AddStandardScheme(const char* new_scheme,
                                   SchemeType scheme_type);
 
 // Adds an application-defined scheme to the internal list of schemes allowed
 // for referrers.
-//
-// This function is not threadsafe and can not be called concurrently with any
-// other url_util function. It will assert if the lists of schemes have
-// been locked (see LockSchemeRegistries).
 URL_EXPORT void AddReferrerScheme(const char* new_scheme,
                                   SchemeType scheme_type);
+
+// Adds an application-defined scheme to the list of schemes that do not trigger
+// mixed content warnings.
+URL_EXPORT void AddSecureScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetSecureSchemes();
+
+// Adds an application-defined scheme to the list of schemes that normal pages
+// cannot link to or access (i.e., with the same security rules as those applied
+// to "file" URLs).
+URL_EXPORT void AddLocalScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetLocalSchemes();
+
+// Adds an application-defined scheme to the list of schemes that cause pages
+// loaded with them to not have access to pages loaded with any other URL
+// scheme.
+URL_EXPORT void AddNoAccessScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetNoAccessSchemes();
+
+// Adds an application-defined scheme to the list of schemes that can be sent
+// CORS requests.
+URL_EXPORT void AddCORSEnabledScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetCORSEnabledSchemes();
 
 // Sets a flag to prevent future calls to Add*Scheme from succeeding.
 //
@@ -132,6 +154,10 @@ URL_EXPORT bool IsReferrerScheme(const char* spec, const Component& scheme);
 URL_EXPORT bool GetStandardSchemeType(const char* spec,
                                       const Component& scheme,
                                       SchemeType* type);
+
+// Check whether the url is of the form about:blank, about:blank?foo or
+// about:blank/#foo.
+URL_EXPORT bool IsAboutBlank(const GURL& url);
 
 // Hosts  ----------------------------------------------------------------------
 

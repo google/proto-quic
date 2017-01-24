@@ -213,6 +213,11 @@ void Thread::StopSoon() {
       FROM_HERE, base::Bind(&Thread::ThreadQuitHelper, Unretained(this)));
 }
 
+void Thread::DetachFromSequence() {
+  DCHECK(owning_sequence_checker_.CalledOnValidSequence());
+  owning_sequence_checker_.DetachFromSequence();
+}
+
 PlatformThreadId Thread::GetThreadId() const {
   // If the thread is created but not started yet, wait for |id_| being ready.
   base::ThreadRestrictions::ScopedAllowWait allow_wait;
@@ -277,7 +282,7 @@ void Thread::ThreadMain() {
   // any place in the following thread initialization code.
   DCHECK(!id_event_.IsSignaled());
   // Note: this read of |id_| while |id_event_| isn't signaled is exceptionally
-  // okay because ThreadMain has an happens-after relationship with the other
+  // okay because ThreadMain has a happens-after relationship with the other
   // write in StartWithOptions().
   DCHECK_EQ(kInvalidThreadId, id_);
   id_ = PlatformThread::CurrentId();

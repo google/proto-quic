@@ -7,7 +7,8 @@
 # to define certain environment variables: e.g.
 #  DISTRO=ubuntu
 #  DIST=trusty
-#  DIST_UPDATES=trusty-updates
+#  DIST_UPDATES=trusty-updates  # optional
+#  REPO_EXTRA="universe restricted multiverse"  # optional
 #  APT_REPO=http://archive.ubuntu.com/ubuntu
 #  KEYRING_FILE=/usr/share/keyrings/ubuntu-archive-keyring.gpg
 #  DEBIAN_PACKAGES="gcc libz libssl"
@@ -194,13 +195,14 @@ ExtractPackageBz2() {
 
 GeneratePackageListDist() {
   local arch="$1"
-  local apt_repo="$2"
+  local apt_url="$2"
   local dist="$3"
+  local repo_name="$4"
 
-  TMP_PACKAGE_LIST="${BUILD_DIR}/Packages.${dist}_${arch}"
-  local repo_basedir="${apt_repo}/dists/${dist}"
-  local package_list="${BUILD_DIR}/Packages.${dist}_${arch}.${PACKAGES_EXT}"
-  local package_file_arch="main/binary-${arch}/Packages.${PACKAGES_EXT}"
+  TMP_PACKAGE_LIST="${BUILD_DIR}/Packages.${dist}_${repo_name}_${arch}"
+  local repo_basedir="${apt_url}/dists/${dist}"
+  local package_list="${BUILD_DIR}/Packages.${dist}_${repo_name}_${arch}.${PACKAGES_EXT}"
+  local package_file_arch="${repo_name}/binary-${arch}/Packages.${PACKAGES_EXT}"
   local package_list_arch="${repo_basedir}/${package_file_arch}"
 
   DownloadOrCopy "${package_list_arch}" "${package_list}"
@@ -209,14 +211,23 @@ GeneratePackageListDist() {
 }
 
 GeneratePackageListCommon() {
-  GeneratePackageListDist "$2" "$3" ${DIST}
   local output_file="$1"
+  local arch="$2"
+  local apt_url="$3"
   local packages="$4"
-  local list_base="${TMP_PACKAGE_LIST}"
-  if [ ! -z ${DIST_UPDATES:-} ]; then
-      GeneratePackageListDist "$2" "$3" ${DIST_UPDATES}
+
+  local dists="${DIST} ${DIST_UPDATES:-}"
+  local repos="main ${REPO_EXTRA:-}"
+
+  local list_base="${BUILD_DIR}/Packages.${DIST}_${arch}"
+  > "${list_base}"
+  for dist in ${dists}; do
+    for repo in ${repos}; do
+      GeneratePackageListDist "${arch}" "${apt_url}" "${dist}" "${repo}"
       cat "${TMP_PACKAGE_LIST}" | ./merge-package-lists.py "${list_base}"
-  fi
+    done
+  done
+
   GeneratePackageList "${list_base}" "${output_file}" "${packages}"
 }
 

@@ -8,7 +8,6 @@
 #include <memory>
 #include <utility>
 
-#include "base/memory/ptr_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_connection.h"
@@ -16,6 +15,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
@@ -213,7 +213,7 @@ class QuicSimpleServerStreamTest
     stream_ = new QuicSimpleServerStreamPeer(::net::test::kClientDataStreamId1,
                                              &session_, &response_cache_);
     // Register stream_ in dynamic_stream_map_ and pass ownership to session_.
-    session_.ActivateStream(base::WrapUnique(stream_));
+    session_.ActivateStream(QuicWrapUnique(stream_));
   }
 
   const string& StreamBody() {
@@ -373,7 +373,7 @@ TEST_P(QuicSimpleServerStreamTest, SendPushResponseWith404Response) {
   // Create a new promised stream with even id().
   QuicSimpleServerStreamPeer* promised_stream =
       new QuicSimpleServerStreamPeer(2, &session_, &response_cache_);
-  session_.ActivateStream(base::WrapUnique(promised_stream));
+  session_.ActivateStream(QuicWrapUnique(promised_stream));
 
   // Send a push response with response status 404, which will be regarded as
   // invalid server push response.
@@ -478,7 +478,7 @@ TEST_P(QuicSimpleServerStreamTest, PushResponseOnServerInitiatedStream) {
   QuicSimpleServerStreamPeer* server_initiated_stream =
       new QuicSimpleServerStreamPeer(kServerInitiatedStreamId, &session_,
                                      &response_cache_);
-  session_.ActivateStream(base::WrapUnique(server_initiated_stream));
+  session_.ActivateStream(QuicWrapUnique(server_initiated_stream));
 
   const string kHost = "www.foo.com";
   const string kPath = "/bar";

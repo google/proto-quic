@@ -16,6 +16,7 @@
 #include "base/memory/ref_counted.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_export.h"
+#include "net/base/privacy_mode.h"
 #include "net/base/request_priority.h"
 #include "net/http/http_stream_factory.h"
 #include "net/proxy/proxy_server.h"
@@ -68,6 +69,8 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
 
   void PreconnectStreams(int num_streams, const HttpRequestInfo& info) override;
   const HostMappingRules* GetHostMappingRules() const override;
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_absolute_name) const override;
 
   enum JobType {
     MAIN,
@@ -84,6 +87,20 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   typedef std::set<Request*> RequestSet;
   typedef std::map<SpdySessionKey, RequestSet> SpdySessionRequestMap;
   typedef std::set<std::unique_ptr<JobController>> JobControllerSet;
+
+  // |PreconnectingProxyServer| holds information of a connection to a single
+  // proxy server.
+  struct PreconnectingProxyServer {
+    PreconnectingProxyServer(ProxyServer proxy_server,
+                             PrivacyMode privacy_mode);
+
+    // Needed to be an element of std::set.
+    bool operator<(const PreconnectingProxyServer& other) const;
+    bool operator==(const PreconnectingProxyServer& other) const;
+
+    const ProxyServer proxy_server;
+    const PrivacyMode privacy_mode;
+  };
 
   // Values must not be changed or reused.  Keep in sync with identically named
   // enum in histograms.xml.
@@ -131,13 +148,15 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
   void OnJobControllerComplete(JobController* controller);
 
   // Returns true if a connection to the proxy server contained in |proxy_info|
-  // can be skipped by a job controlled by |controller|.
+  // that has privacy mode |privacy_mode| can be skipped by a job controlled by
+  // |controller|.
   bool OnInitConnection(const JobController& controller,
-                        const ProxyInfo& proxy_info);
+                        const ProxyInfo& proxy_info,
+                        PrivacyMode privacy_mode);
 
   // Notifies |this| that a stream to the proxy server contained in |proxy_info|
-  // is ready.
-  void OnStreamReady(const ProxyInfo& proxy_info);
+  // with privacy mode |privacy_mode| is ready.
+  void OnStreamReady(const ProxyInfo& proxy_info, PrivacyMode privacy_mode);
 
   // Returns true if |proxy_info| contains a proxy server that supports request
   // priorities.
@@ -162,7 +181,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
 
   // Set of proxy servers that support request priorities to which subsequent
   // preconnects should be skipped.
-  std::set<ProxyServer> preconnecting_proxy_servers_;
+  std::set<PreconnectingProxyServer> preconnecting_proxy_servers_;
 
   SpdySessionRequestMap spdy_session_request_map_;
 

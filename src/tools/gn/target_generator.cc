@@ -312,8 +312,9 @@ bool TargetGenerator::FillOutputs(bool allow_substitutions) {
   }
 
   // Check the substitutions used are valid for this purpose.
-  if (!EnsureValidSourcesSubstitutions(outputs.required_types(),
-                                       value->origin(), err_))
+  if (!EnsureValidSubstitutions(outputs.required_types(),
+                                &IsValidSourceSubstitution,
+                                value->origin(), err_))
     return false;
 
   // Validate that outputs are in the output dir.

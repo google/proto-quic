@@ -67,7 +67,6 @@ class PersistentMemoryAllocatorTest : public testing::Test {
     allocator_.reset(new PersistentMemoryAllocator(
         mem_segment_.get(), TEST_MEMORY_SIZE, TEST_MEMORY_PAGE,
         TEST_ID, TEST_NAME, false));
-    allocator_->CreateTrackingHistograms(allocator_->Name());
   }
 
   void TearDown() override {
@@ -94,6 +93,8 @@ class PersistentMemoryAllocatorTest : public testing::Test {
 };
 
 TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
+  allocator_->CreateTrackingHistograms(allocator_->Name());
+
   std::string base_name(TEST_NAME);
   EXPECT_EQ(TEST_ID, allocator_->Id());
   EXPECT_TRUE(allocator_->used_histogram_);

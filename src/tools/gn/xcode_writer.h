@@ -16,7 +16,6 @@
 class Builder;
 class BuildSettings;
 class Err;
-class SourceDir;
 class Target;
 
 using PBXAttributes = std::map<std::string, std::string>;
@@ -69,6 +68,7 @@ class XcodeWriter {
   // (i.e. targets that have a build artefact usable from Xcode, mostly
   // application bundles).
   void CreateProductsProject(const std::vector<const Target*>& targets,
+                             const std::vector<const Target*>& all_targets,
                              const PBXAttributes& attributes,
                              const std::string& source_path,
                              const std::string& config_name,
@@ -76,16 +76,6 @@ class XcodeWriter {
                              const std::string& ninja_extra_args,
                              const BuildSettings* build_settings,
                              TargetOsType target_os);
-
-  // Generates the "sources.xcodeproj" project that reference all source
-  // files to allow Xcode to index them.
-  void CreateSourcesProject(const std::vector<const Target*>& targets,
-                            const SourceDir& root_build_dir,
-                            const PBXAttributes& attributes,
-                            const std::string& source_path,
-                            const std::string& absolute_source_path,
-                            const std::string& config_name,
-                            TargetOsType target_os);
 
   bool WriteFiles(const BuildSettings* build_settings, Err* err);
   bool WriteProjectFile(const BuildSettings* build_settings,

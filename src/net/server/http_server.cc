@@ -449,8 +449,8 @@ bool HttpServer::ParseHeaders(const char* data,
           buffer.append(&ch, 1);
           break;
         case ST_DONE:
-          DCHECK(input == INPUT_LF);
-          return true;
+          // We got CR to get this far, also need the LF
+          return (input == INPUT_LF);
         case ST_ERR:
           return false;
       }

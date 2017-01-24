@@ -22,12 +22,12 @@ namespace base {
 
 namespace {
 
-const char kFeatureOnByDefaultName[] = "OnByDefault";
+constexpr char kFeatureOnByDefaultName[] = "OnByDefault";
 struct Feature kFeatureOnByDefault {
   kFeatureOnByDefaultName, FEATURE_ENABLED_BY_DEFAULT
 };
 
-const char kFeatureOffByDefaultName[] = "OffByDefault";
+constexpr char kFeatureOffByDefaultName[] = "OffByDefault";
 struct Feature kFeatureOffByDefault {
   kFeatureOffByDefaultName, FEATURE_DISABLED_BY_DEFAULT
 };

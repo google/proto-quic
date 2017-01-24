@@ -7,11 +7,11 @@
 #include <memory>
 #include <vector>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/proof_source.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
@@ -81,7 +81,7 @@ class StatelessRejectorTest : public ::testing::TestWithParam<TestParams> {
         config_peer_(&config_),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
-        rejector_(base::MakeUnique<StatelessRejector>(
+        rejector_(QuicMakeUnique<StatelessRejector>(
             GetParam().version,
             AllSupportedVersions(),
             &config_,
@@ -187,7 +187,7 @@ TEST_P(StatelessRejectorTest, InvalidChlo) {
   // The StatelessRejector is undecided - proceed with async processing
   ASSERT_EQ(StatelessRejector::UNKNOWN, rejector_->state());
   StatelessRejector::Process(std::move(rejector_),
-                             base::MakeUnique<ProcessDoneCallback>(this));
+                             QuicMakeUnique<ProcessDoneCallback>(this));
 
   EXPECT_EQ(StatelessRejector::FAILED, rejector_->state());
   EXPECT_EQ(QUIC_INVALID_CRYPTO_MESSAGE_PARAMETER, rejector_->error());
@@ -239,7 +239,7 @@ TEST_P(StatelessRejectorTest, RejectChlo) {
   // The StatelessRejector is undecided - proceed with async processing
   ASSERT_EQ(StatelessRejector::UNKNOWN, rejector_->state());
   StatelessRejector::Process(std::move(rejector_),
-                             base::MakeUnique<ProcessDoneCallback>(this));
+                             QuicMakeUnique<ProcessDoneCallback>(this));
 
   ASSERT_EQ(StatelessRejector::REJECTED, rejector_->state());
   const CryptoHandshakeMessage& reply = rejector_->reply();
@@ -285,7 +285,7 @@ TEST_P(StatelessRejectorTest, AcceptChlo) {
   // The StatelessRejector is undecided - proceed with async processing
   ASSERT_EQ(StatelessRejector::UNKNOWN, rejector_->state());
   StatelessRejector::Process(std::move(rejector_),
-                             base::MakeUnique<ProcessDoneCallback>(this));
+                             QuicMakeUnique<ProcessDoneCallback>(this));
 
   EXPECT_EQ(StatelessRejector::ACCEPTED, rejector_->state());
 }

@@ -70,8 +70,8 @@ class BASE_EXPORT AllocationContextTracker {
   static void SetCurrentThreadName(const char* name);
 
   // Starts and ends a new ignore scope between which the allocations are
-  // ignored in the heap profiler. A dummy context that short circuits to
-  // "tracing_overhead" is returned for these allocations.
+  // ignored by the heap profiler. GetContextSnapshot() returns false when
+  // allocations are ignored.
   void begin_ignore_scope() { ignore_scope_depth_++; }
   void end_ignore_scope() {
     if (ignore_scope_depth_)
@@ -89,8 +89,9 @@ class BASE_EXPORT AllocationContextTracker {
   void PushCurrentTaskContext(const char* context);
   void PopCurrentTaskContext(const char* context);
 
-  // Returns a snapshot of the current thread-local context.
-  AllocationContext GetContextSnapshot();
+  // Fills a snapshot of the current thread-local context. Doesn't fill and
+  // returns false if allocations are being ignored.
+  bool GetContextSnapshot(AllocationContext* snapshot);
 
   ~AllocationContextTracker();
 

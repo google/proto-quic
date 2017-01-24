@@ -150,6 +150,10 @@ class Setup {
   std::vector<Token> dotfile_tokens_;
   std::unique_ptr<ParseNode> dotfile_root_;
 
+  // Default overrides, specified in the dotfile.
+  // Owned by the Value (if it exists) in the dotfile_scope_.
+  const Scope* default_args_;
+
   // Set to true when we should populate the build arguments from the command
   // line or build argument file. See setter above.
   bool fill_arguments_;

@@ -21,6 +21,7 @@
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
+#include "net/log/net_log_with_source.h"
 #include "net/nqe/cached_network_quality.h"
 #include "net/nqe/effective_connection_type.h"
 #include "net/nqe/external_estimate_provider.h"
@@ -37,6 +38,8 @@ class TickClock;
 }  // namespace base
 
 namespace net {
+
+class NetLog;
 
 namespace nqe {
 namespace internal {
@@ -176,10 +179,12 @@ class NET_EXPORT NetworkQualityEstimator
   // Creates a new NetworkQualityEstimator.
   // |variation_params| is the map containing all field trial parameters
   // related to NetworkQualityEstimator field trial.
-  // |external_estimates_provider| may be NULL.
+  // |external_estimates_provider| may be NULL. The caller must guarantee that
+  // |net_log| outlives |this|.
   NetworkQualityEstimator(
       std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
-      const std::map<std::string, std::string>& variation_params);
+      const std::map<std::string, std::string>& variation_params,
+      NetLog* net_log);
 
   // Construct a NetworkQualityEstimator instance allowing for test
   // configuration. Registers for network type change notifications so estimates
@@ -192,12 +197,14 @@ class NET_EXPORT NetworkQualityEstimator
   // used for network quality estimation.
   // |use_smaller_responses_for_tests| should only be true when testing.
   // Allows the responses smaller than |kMinTransferSizeInBits| to be used for
-  // network quality estimation.
+  // network quality estimation. The caller must guarantee that |net_log|
+  // outlives |this|.
   NetworkQualityEstimator(
       std::unique_ptr<ExternalEstimateProvider> external_estimates_provider,
       const std::map<std::string, std::string>& variation_params,
       bool use_local_host_requests_for_tests,
-      bool use_smaller_responses_for_tests);
+      bool use_smaller_responses_for_tests,
+      NetLog* net_log);
 
   ~NetworkQualityEstimator() override;
 
@@ -278,6 +285,11 @@ class NET_EXPORT NetworkQualityEstimator
   // network quality estimation.
   void SetUseSmallResponsesForTesting(bool use_small_responses);
 
+  // If |disable_offline_check| is set to true, then the device offline check is
+  // disabled when computing the effective connection type or when writing the
+  // prefs.
+  void DisableOfflineCheckForTesting(bool disable_offline_check);
+
   // Reports |effective_connection_type| to all
   // EffectiveConnectionTypeObservers.
   void ReportEffectiveConnectionTypeForTesting(
@@ -305,7 +317,8 @@ class NET_EXPORT NetworkQualityEstimator
       const std::map<std::string, std::string>& variation_params,
       bool use_local_host_requests_for_tests,
       bool use_smaller_responses_for_tests,
-      bool add_default_platform_observations);
+      bool add_default_platform_observations,
+      const NetLogWithSource& net_log);
 
   // NetworkChangeNotifier::ConnectionTypeObserver implementation:
   void OnConnectionTypeChanged(
@@ -599,11 +612,20 @@ class NET_EXPORT NetworkQualityEstimator
   // network quality. Set to true only for tests.
   bool use_small_responses_;
 
+  // When set to true, the device offline check is disabled when computing the
+  // effective connection type or when writing the prefs.
+  bool disable_offline_check_;
+
   // If true, default values provided by the platform are used for estimation.
   const bool add_default_platform_observations_;
 
   // The factor by which the weight of an observation reduces every second.
   const double weight_multiplier_per_second_;
+
+  // The factor by which the weight of an observation reduces for every dBm
+  // difference between the current signal strength (in dBm), and the signal
+  // strength at the time when the observation was taken.
+  const double weight_multiplier_per_dbm_;
 
   // Algorithm to use for computing effective connection type. The value is
   // obtained from field trial parameters. If the value from field trial
@@ -718,7 +740,7 @@ class NET_EXPORT NetworkQualityEstimator
   // change events.
   int32_t signal_strength_dbm_;
 
-  // Minimum and maximum signal strength (in dbM) observed since last connection
+  // Minimum and maximum signal strength (in dBm) observed since last connection
   // change. Updated on connection change and main frame requests.
   int32_t min_signal_strength_since_connection_change_;
   int32_t max_signal_strength_since_connection_change_;
@@ -740,6 +762,8 @@ class NET_EXPORT NetworkQualityEstimator
   const EffectiveConnectionType forced_effective_connection_type_;
 
   base::ThreadChecker thread_checker_;
+
+  NetLogWithSource net_log_;
 
   base::WeakPtrFactory<NetworkQualityEstimator> weak_ptr_factory_;
 

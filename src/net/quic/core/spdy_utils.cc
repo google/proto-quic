@@ -7,8 +7,8 @@
 #include <memory>
 #include <vector>
 
-#include "base/stl_util.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_frame_builder.h"
@@ -43,7 +43,7 @@ bool SpdyUtils::ParseHeaders(const char* data,
     return false;  // Headers were invalid.
   }
 
-  if (!ContainsKey(*headers, "content-length")) {
+  if (!QuicContainsKey(*headers, "content-length")) {
     return true;
   }
 
@@ -144,7 +144,7 @@ bool SpdyUtils::CopyAndValidateHeaders(const QuicHeaderList& header_list,
     headers->AppendValueOrAddHeader(name, p.second);
   }
 
-  if (ContainsKey(*headers, "content-length") &&
+  if (QuicContainsKey(*headers, "content-length") &&
       !ExtractContentLengthFromHeaders(content_length, headers)) {
     return false;
   }

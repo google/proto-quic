@@ -8,13 +8,13 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_utils.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/fake_proof_source.h"
@@ -86,7 +86,7 @@ class TestServerSession : public QuicServerSessionBase {
     }
     QuicSpdyStream* stream =
         new QuicSimpleServerStream(id, this, response_cache_);
-    ActivateStream(base::WrapUnique(stream));
+    ActivateStream(QuicWrapUnique(stream));
     return stream;
   }
 
@@ -98,7 +98,7 @@ class TestServerSession : public QuicServerSessionBase {
     QuicSpdyStream* stream = new QuicSimpleServerStream(
         GetNextOutgoingStreamId(), this, response_cache_);
     stream->SetPriority(priority);
-    ActivateStream(base::WrapUnique(stream));
+    ActivateStream(QuicWrapUnique(stream));
     return stream;
   }
 
@@ -431,8 +431,7 @@ TEST_P(QuicServerSessionBaseTest, BandwidthEstimates) {
 
   // Set some initial bandwidth values.
   QuicSentPacketManager* sent_packet_manager =
-      QuicConnectionPeer::GetSentPacketManager(session_->connection(),
-                                               kDefaultPathId);
+      QuicConnectionPeer::GetSentPacketManager(session_->connection());
   QuicSustainedBandwidthRecorder& bandwidth_recorder =
       QuicSentPacketManagerPeer::GetBandwidthRecorder(sent_packet_manager);
   // Seed an rtt measurement equal to the initial default rtt.

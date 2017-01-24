@@ -241,7 +241,8 @@ const base::Feature kShortRecordHeaderFeature{
 class SSLClientSocketImpl::SSLContext {
  public:
   static SSLContext* GetInstance() {
-    return base::Singleton<SSLContext>::get();
+    return base::Singleton<SSLContext,
+                           base::LeakySingletonTraits<SSLContext>>::get();
   }
   SSL_CTX* ssl_ctx() { return ssl_ctx_.get(); }
   SSLClientSessionCache* session_cache() { return &session_cache_; }
@@ -945,8 +946,8 @@ int SSLClientSocketImpl::Init() {
     return ERR_UNEXPECTED;
   }
 
-  bssl::UniquePtr<SSL_SESSION> session =
-      context->session_cache()->Lookup(GetSessionCacheKey());
+  bssl::UniquePtr<SSL_SESSION> session = context->session_cache()->Lookup(
+      GetSessionCacheKey(), &ssl_session_cache_lookup_count_);
   if (session)
     SSL_set_session(ssl_.get(), session.get());
 
@@ -1146,6 +1147,19 @@ int SSLClientSocketImpl::DoHandshake() {
 int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   if (result < 0)
     return result;
+
+  SSLContext::GetInstance()->session_cache()->ResetLookupCount(
+      GetSessionCacheKey());
+  // If we got a session from the session cache, log how many concurrent
+  // handshakes that session was used in before we finished our handshake. This
+  // is only recorded if the session from the cache was actually used, and only
+  // if the ALPN protocol is h2 (under the assumption that TLS 1.3 servers will
+  // be speaking h2). See https://crbug.com/631988.
+  if (ssl_session_cache_lookup_count_ && negotiated_protocol_ == kProtoHTTP2 &&
+      SSL_session_reused(ssl_.get())) {
+    UMA_HISTOGRAM_EXACT_LINEAR("Net.SSLSessionConcurrentLookupCount",
+                               ssl_session_cache_lookup_count_, 20);
+  }
 
   // DHE is offered on the deprecated cipher fallback and then rejected
   // afterwards. This is to aid in diagnosing connection failures because a

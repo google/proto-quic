@@ -179,10 +179,13 @@
         "test": "gl_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
-        "test": "gl_unittests_ozonex"
+        "test": "gl_unittests_ozone"
       },
       {
         "swarming": {

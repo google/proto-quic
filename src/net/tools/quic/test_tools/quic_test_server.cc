@@ -5,7 +5,6 @@
 #include "net/tools/quic/test_tools/quic_test_server.h"
 
 #include "base/logging.h"
-#include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -18,6 +17,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
@@ -57,7 +57,7 @@ class CustomStreamSession : public QuicSimpleServerSession {
     if (stream_factory_) {
       QuicSpdyStream* stream =
           stream_factory_->CreateStream(id, this, response_cache());
-      ActivateStream(base::WrapUnique(stream));
+      ActivateStream(QuicWrapUnique(stream));
       return stream;
     }
     return QuicSimpleServerSession::CreateIncomingDynamicStream(id);

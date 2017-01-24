@@ -36,8 +36,9 @@ class IntlKoThViPageSet(story.StorySet):
       # Why: #18 site in Vietnam
       'http://vietnamnet.vn/',
       # Why: #5 site in Vietnam
+      # Disabled, see crbug.com/682351.
       # pylint: disable=line-too-long
-      'http://news.zing.vn/the-gioi/ba-dam-thep-margaret-thatcher-qua-doi/a312895.html#home_noibat1',
+      #'http://news.zing.vn/the-gioi/ba-dam-thep-margaret-thatcher-qua-doi/a312895.html#home_noibat1',
       'http://kenh14.vn/home.chn',
       # Why: #5 site in Korea
       'http://www.naver.com/',

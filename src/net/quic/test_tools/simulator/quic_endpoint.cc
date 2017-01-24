@@ -4,11 +4,11 @@
 
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 
-#include "base/memory/ptr_util.h"
 #include "base/sha1.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
@@ -190,7 +190,7 @@ WriteResult QuicEndpoint::Writer::WritePacket(
     return WriteResult(WRITE_STATUS_BLOCKED, 0);
   }
 
-  auto packet = base::MakeUnique<Packet>();
+  auto packet = QuicMakeUnique<Packet>();
   packet->source = endpoint_->name();
   packet->destination = endpoint_->peer_name_;
   packet->tx_timestamp = endpoint_->clock_->Now();

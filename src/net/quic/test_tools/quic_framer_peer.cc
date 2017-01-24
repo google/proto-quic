@@ -4,9 +4,9 @@
 
 #include "net/quic/test_tools/quic_framer_peer.h"
 
-#include "base/stl_util.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_map_util.h"
 
 namespace net {
 namespace test {
@@ -84,7 +84,7 @@ QuicPathId QuicFramerPeer::GetLastPathId(QuicFramer* framer) {
 
 // static
 bool QuicFramerPeer::IsPathClosed(QuicFramer* framer, QuicPathId path_id) {
-  return base::ContainsKey(framer->closed_paths_, path_id);
+  return QuicContainsKey(framer->closed_paths_, path_id);
 }
 
 }  // namespace test

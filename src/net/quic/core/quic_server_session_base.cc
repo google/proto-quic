@@ -107,7 +107,7 @@ void QuicServerSessionBase::OnCongestionWindowChange(QuicTime now) {
 
   // If not enough time has passed since the last time we sent an update to the
   // client, or not enough packets have been sent, then return early.
-  const QuicSentPacketManagerInterface& sent_packet_manager =
+  const QuicSentPacketManager& sent_packet_manager =
       connection()->sent_packet_manager();
   int64_t srtt_ms =
       sent_packet_manager.GetRttStats()->smoothed_rtt().ToMilliseconds();

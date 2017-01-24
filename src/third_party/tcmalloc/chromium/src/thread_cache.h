@@ -268,7 +268,11 @@ class ThreadCache {
   // for instrumentation (-fprofile-generate).
   // For all non-instrumentation builds, this define will not be set and the
   // performance benefit of "intial-exec" will be achieved.
-#if defined(HAVE___ATTRIBUTE__) && !defined(PGO_GENERATE)
+  //
+  // gcc has a problem with this tls model on arm.
+  // See https://bugs.chromium.org/p/chromium/issues/detail?id=650137
+#if defined(HAVE___ATTRIBUTE__) && !defined(PGO_GENERATE) && \
+    !(!defined(__clang__) && defined(OS_CHROMEOS) && defined(__arm__))
    __attribute__ ((tls_model ("initial-exec")))
 # endif
    ;

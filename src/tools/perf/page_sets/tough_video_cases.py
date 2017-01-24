@@ -7,9 +7,9 @@ from telemetry import story
 
 class ToughVideoCasesPage(page_module.Page):
 
-  def __init__(self, url, page_set, labels=None):
+  def __init__(self, url, page_set, tags=None):
     super(ToughVideoCasesPage, self).__init__(
-        url=url, page_set=page_set, labels=labels)
+        url=url, page_set=page_set, tags=tags)
 
   def LoopMixedAudio(self, action_runner):
     action_runner.PlayMedia(selector='#background_audio',
@@ -85,7 +85,7 @@ class Page4(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page4, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd1080.webm',
-      page_set=page_set, labels=['is_50fps'])
+      page_set=page_set, tags=['is_50fps'])
 
     self.add_browser_metrics = True
 
@@ -98,7 +98,7 @@ class Page5(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page5, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd2160.ogv',
-      page_set=page_set, labels=['is_4k', 'is_50fps'])
+      page_set=page_set, tags=['is_4k', 'is_50fps'])
 
     self.add_browser_metrics = True
 
@@ -111,7 +111,7 @@ class Page6(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page6, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd2160.webm',
-      page_set=page_set, labels=['is_4k', 'is_50fps'])
+      page_set=page_set, tags=['is_4k', 'is_50fps'])
 
     self.add_browser_metrics = True
 
@@ -176,7 +176,7 @@ class Page11(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page11, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd1080.mp4',
-      page_set=page_set, labels=['is_50fps'])
+      page_set=page_set, tags=['is_50fps'])
 
     self.add_browser_metrics = True
 
@@ -189,7 +189,7 @@ class Page12(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page12, self).__init__(
       url='file://tough_video_cases/video.html?src=crowd2160.mp4',
-      page_set=page_set, labels=['is_4k', 'is_50fps'])
+      page_set=page_set, tags=['is_4k', 'is_50fps'])
 
     self.add_browser_metrics = True
 
@@ -241,7 +241,7 @@ class Page16(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page16, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.webm',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.add_browser_metrics = True
 
@@ -254,7 +254,7 @@ class Page17(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page17, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.mp4',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.add_browser_metrics = True
 
@@ -267,7 +267,7 @@ class Page18(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page18, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.ogv',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.add_browser_metrics = True
 
@@ -358,7 +358,7 @@ class Page25(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page25, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.webm',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.skip_basic_metrics = True
 
@@ -371,7 +371,7 @@ class Page26(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page26, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.mp4',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.skip_basic_metrics = True
 
@@ -384,7 +384,7 @@ class Page27(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page27, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.ogv',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.skip_basic_metrics = True
 
@@ -532,7 +532,7 @@ class Page39(ToughVideoCasesPage):
   def __init__(self, page_set):
     super(Page39, self).__init__(
       url='file://tough_video_cases/video.html?src=garden2_10s.webm&canvas=true',
-      page_set=page_set, labels=['is_4k'])
+      page_set=page_set, tags=['is_4k'])
 
     self.add_browser_metrics = True
 

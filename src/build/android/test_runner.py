@@ -110,6 +110,10 @@ def AddCommonOptions(parser):
                      dest='json_results_file', type=os.path.realpath,
                      help='If set, will dump results in JSON form '
                           'to specified file.')
+  group.add_argument('--trace-output', metavar='FILENAME',
+                     type=os.path.realpath,
+                     help='Path to save test_runner trace data to. This option '
+                          'has been implemented for gtest and perf test.')
 
   logcat_output_group = group.add_mutually_exclusive_group()
   logcat_output_group.add_argument(
@@ -537,10 +541,6 @@ def AddPerfTestOptions(parser):
   group.add_argument(
       '--write-buildbot-json', action='store_true',
       help='Whether to output buildbot json.')
-  # TODO(rnephew): Move up to top level options when implemented on all tests.
-  group.add_argument(
-      '--trace-output', metavar='FILENAME', type=os.path.realpath,
-      help='Path to save test_runner trace data to.')
   AddCommonOptions(parser)
   AddDeviceOptions(parser)
 

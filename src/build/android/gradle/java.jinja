@@ -11,7 +11,7 @@ apply plugin: "application"
 sourceSets {
     main {
         java.srcDirs = [
-{% for path in java_dirs %}
+{% for path in main.java_dirs %}
             "{{ path }}",
 {% endfor %}
         ]

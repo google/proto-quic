@@ -37,6 +37,15 @@ enum DurationFormatWidth {
   DURATION_WIDTH_NUMERIC  // "3:07"
 };
 
+// Date formats from third_party/icu/source/i18n/unicode/udat.h. Add more as
+// necessary.
+enum DateFormat {
+  // November 2007
+  DATE_FORMAT_YEAR_MONTH,
+  // Tuesday, 7 November
+  DATE_FORMAT_MONTH_WEEKDAY_DAY,
+};
+
 // Returns the time of day, e.g., "3:07 PM".
 BASE_I18N_EXPORT string16 TimeFormatTimeOfDay(const Time& time);
 
@@ -61,6 +70,9 @@ BASE_I18N_EXPORT string16 TimeFormatShortDateNumeric(const Time& time);
 
 // Returns a numeric date and time such as "12/13/52 2:44:30 PM".
 BASE_I18N_EXPORT string16 TimeFormatShortDateAndTime(const Time& time);
+
+// Returns a month and year, e.g. "November 2007"
+BASE_I18N_EXPORT string16 TimeFormatMonthAndYear(const Time& time);
 
 // Returns a numeric date and time with time zone such as
 // "12/13/52 2:44:30 PM PST".
@@ -98,6 +110,12 @@ BASE_I18N_EXPORT string16 TimeDurationFormat(const TimeDelta time,
 BASE_I18N_EXPORT string16
 TimeDurationFormatWithSeconds(const TimeDelta time,
                               const DurationFormatWidth width);
+
+// Formats a date interval into various formats, e.g. "2 December - 4 December"
+// or "March 2016 - December 2016". See DateFormat for details.
+BASE_I18N_EXPORT string16 DateIntervalFormat(const Time& begin_time,
+                                             const Time& end_time,
+                                             DateFormat format);
 
 // Gets the hour clock type of the current locale. e.g.
 // k12HourClock (en-US).

@@ -15,7 +15,6 @@ For more info, see:
 
 import StringIO
 import ast
-import locale
 import os
 import re
 import select
@@ -66,15 +65,13 @@ RESULT_FILE_HEADER = """
 """
 
 
-# The GUnit test function to output on a successful test completion.
-SUCCESS_GUNIT_TEMPLATE = """
-TEST(%s, %s) {
-  LOG(INFO) << "Took %f secs. Started at %f, ended at %f";
-}
+# The log message on a test completion.
+LOG_TEMPLATE = """
+TEST(%s, %s) took %f secs. Started at %f, ended at %f.
 """
 
-# The GUnit test function to output for a disabled test.
-DISABLED_GUNIT_TEMPLATE = """
+# The GUnit test function to output for a successful or disabled test.
+GUNIT_TEMPLATE = """
 TEST(%s, %s) { }
 """
 
@@ -241,24 +238,25 @@ def StartTest(sourcefile_path, cflags, config):
           'expectations': expectations}
 
 
-def PassTest(resultfile, test):
+def PassTest(resultfile, resultlog, test):
   """Logs the result of a test started by StartTest(), or a disabled test
   configuration.
 
   Args:
     resultfile: File object for .cc file that results are written to.
+    resultlog: File object for the log file.
     test: An instance of the dictionary returned by StartTest(), a
           configuration from ExtractTestConfigs().
   """
+  resultfile.write(GUNIT_TEMPLATE % (
+      test['suite_name'], test['name']))
+
   # The 'started_at' key is only added if a test has been started.
   if 'started_at' in test:
-    resultfile.write(SUCCESS_GUNIT_TEMPLATE % (
+    resultlog.write(LOG_TEMPLATE % (
         test['suite_name'], test['name'],
         test['finished_at'] - test['started_at'],
         test['started_at'], test['finished_at']))
-  else:
-    resultfile.write(DISABLED_GUNIT_TEMPLATE % (
-        test['suite_name'], test['name']))
 
 
 def FailTest(resultfile, test, error, stdout=None, stderr=None):
@@ -285,31 +283,32 @@ def FailTest(resultfile, test, error, stdout=None, stderr=None):
   resultfile.write('\n')
 
 
-def WriteStats(resultfile, suite_name, timings):
-  """Logs the peformance timings for each stage of the script into a fake test.
+def WriteStats(resultlog, suite_name, timings):
+  """Logs the peformance timings for each stage of the script.
 
   Args:
-    resultfile: File object for .cc file that results are written to.
+    resultlog: File object for the log file.
     suite_name: The name of the GUnit suite this test belongs to.
     timings: Dictionary with timestamps for each stage of the script run.
   """
-  stats_template = ("Started %f, Ended %f, Total %fs, Extract %fs, "
-                    "Compile %fs, Process %fs")
+  stats_template = """
+TEST(%s): Started %f, Ended %f, Total %fs, Extract %fs, Compile %fs, Process %fs
+"""
   total_secs = timings['results_processed'] - timings['started']
   extract_secs = timings['extract_done'] - timings['started']
   compile_secs = timings['compile_done'] - timings['extract_done']
   process_secs = timings['results_processed'] - timings['compile_done']
-  resultfile.write('TEST(%s, Stats) { LOG(INFO) << "%s"; }\n' % (
-      suite_name, stats_template % (
-          timings['started'], timings['results_processed'], total_secs,
-          extract_secs, compile_secs, process_secs)))
+  resultlog.write(stats_template % (
+      suite_name, timings['started'], timings['results_processed'], total_secs,
+      extract_secs, compile_secs, process_secs))
 
 
-def ProcessTestResult(resultfile, test):
+def ProcessTestResult(resultfile, resultlog, test):
   """Interprets and logs the result of a test started by StartTest()
 
   Args:
     resultfile: File object for .cc file that results are written to.
+    resultlog: File object for the log file.
     test: The dictionary from StartTest() to process.
   """
   # Snap a copy of stdout and stderr into the test dictionary immediately
@@ -333,14 +332,14 @@ def ProcessTestResult(resultfile, test):
     # Check the output has the right expectations.  If there are no
     # expectations, then we just consider the output "matched" by default.
     if len(test['expectations']) == 0:
-      PassTest(resultfile, test)
+      PassTest(resultfile, resultlog, test)
       return
 
     # Otherwise test against all expectations.
     for regexp in test['expectations']:
       if (regexp.search(stdout) is not None or
           regexp.search(stderr) is not None):
-        PassTest(resultfile, test)
+        PassTest(resultfile, resultlog, test)
         return
     expectation_str = ', '.join(
         ["r'%s'" % regexp.pattern for regexp in test['expectations']])
@@ -350,7 +349,7 @@ def ProcessTestResult(resultfile, test):
     return
 
 
-def CompleteAtLeastOneTest(resultfile, executing_tests):
+def CompleteAtLeastOneTest(executing_tests):
   """Blocks until at least one task is removed from executing_tests.
 
   This function removes completed tests from executing_tests, logging failures
@@ -375,7 +374,7 @@ def CompleteAtLeastOneTest(resultfile, executing_tests):
     read_set = []
     for test in executing_tests.values():
       read_set.extend([test['proc'].stderr, test['proc'].stdout])
-    result = select.select(read_set, [], read_set, NCTEST_TERMINATE_TIMEOUT_SEC)
+    select.select(read_set, [], read_set, NCTEST_TERMINATE_TIMEOUT_SEC)
 
     # Now attempt to process results.
     now = time.time()
@@ -425,6 +424,7 @@ def main():
   timings['extract_done'] = time.time()
 
   resultfile = StringIO.StringIO()
+  resultlog = StringIO.StringIO()
   resultfile.write(RESULT_FILE_HEADER % sourcefile_path)
 
   # Run the no-compile tests, but ensure we do not run more than |parallelism|
@@ -447,10 +447,10 @@ def main():
     # acts as a semaphore.  We cannot use threads + a real semaphore because
     # subprocess forks, which can cause all sorts of hilarity with threads.
     if len(executing_tests) >= parallelism:
-      finished_tests.extend(CompleteAtLeastOneTest(resultfile, executing_tests))
+      finished_tests.extend(CompleteAtLeastOneTest(executing_tests))
 
     if config['name'].startswith('DISABLED_'):
-      PassTest(resultfile, config)
+      PassTest(resultfile, resultlog, config)
     else:
       test = StartTest(sourcefile_path, cflags, config)
       assert test['name'] not in executing_tests
@@ -459,7 +459,7 @@ def main():
   # If there are no more test to start, we still need to drain the running
   # ones.
   while len(executing_tests) > 0:
-    finished_tests.extend(CompleteAtLeastOneTest(resultfile, executing_tests))
+    finished_tests.extend(CompleteAtLeastOneTest(executing_tests))
   timings['compile_done'] = time.time()
 
   for test in finished_tests:
@@ -469,11 +469,13 @@ def main():
       if return_code != 0:
         sys.stderr.write(stderr)
       continue
-    ProcessTestResult(resultfile, test)
+    ProcessTestResult(resultfile, resultlog, test)
   timings['results_processed'] = time.time()
 
-  WriteStats(resultfile, suite_name, timings)
+  WriteStats(resultlog, suite_name, timings)
 
+  with open(resultfile_path + '.log', 'w') as fd:
+    fd.write(resultlog.getvalue())
   if return_code == 0:
     with open(resultfile_path, 'w') as fd:
       fd.write(resultfile.getvalue())

@@ -6,12 +6,14 @@
 #include <stdint.h>
 
 #include <cstdlib>
+#include <memory>
 #include <utility>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/macros.h"
-#include "base/memory/scoped_vector.h"
+#include "base/memory/ptr_util.h"
 #include "base/message_loop/message_loop.h"
 #include "base/native_library.h"
 #include "base/path_service.h"
@@ -889,25 +891,31 @@ TEST(StackSamplingProfilerTest, MAYBE_ConcurrentProfiling) {
     params[1].samples_per_burst = 1;
 
     CallStackProfiles profiles[2];
-    ScopedVector<WaitableEvent> sampling_completed;
-    ScopedVector<StackSamplingProfiler> profiler;
+    std::vector<std::unique_ptr<WaitableEvent>> sampling_completed(2);
+    std::vector<std::unique_ptr<StackSamplingProfiler>> profiler(2);
     for (int i = 0; i < 2; ++i) {
-      sampling_completed.push_back(
-          new WaitableEvent(WaitableEvent::ResetPolicy::AUTOMATIC,
-                            WaitableEvent::InitialState::NOT_SIGNALED));
+      sampling_completed[i] =
+          MakeUnique<WaitableEvent>(WaitableEvent::ResetPolicy::AUTOMATIC,
+                                    WaitableEvent::InitialState::NOT_SIGNALED);
       const StackSamplingProfiler::CompletedCallback callback =
           Bind(&SaveProfilesAndSignalEvent, Unretained(&profiles[i]),
-               Unretained(sampling_completed[i]));
-      profiler.push_back(
-          new StackSamplingProfiler(target_thread_id, params[i], callback));
+               Unretained(sampling_completed[i].get()));
+      profiler[i] = MakeUnique<StackSamplingProfiler>(target_thread_id,
+                                                      params[i], callback);
     }
 
     profiler[0]->Start();
     profiler[1]->Start();
 
+    std::vector<WaitableEvent*> sampling_completed_rawptrs(
+        sampling_completed.size());
+    std::transform(
+        sampling_completed.begin(), sampling_completed.end(),
+        sampling_completed_rawptrs.begin(),
+        [](const std::unique_ptr<WaitableEvent>& elem) { return elem.get(); });
     // Wait for one profiler to finish.
     size_t completed_profiler =
-        WaitableEvent::WaitMany(&sampling_completed[0], 2);
+        WaitableEvent::WaitMany(sampling_completed_rawptrs.data(), 2);
     EXPECT_EQ(1u, profiles[completed_profiler].size());
 
     size_t other_profiler = 1 - completed_profiler;

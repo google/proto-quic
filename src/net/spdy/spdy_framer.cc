@@ -25,6 +25,7 @@
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_decoder.h"
 #include "net/spdy/hpack/hpack_decoder2.h"
+#include "net/spdy/hpack/hpack_decoder3.h"
 #include "net/spdy/http2_frame_decoder_adapter.h"
 #include "net/spdy/spdy_bitmasks.h"
 #include "net/spdy/spdy_bug_tracker.h"
@@ -2471,7 +2472,11 @@ HpackEncoder* SpdyFramer::GetHpackEncoder() {
 
 HpackDecoderInterface* SpdyFramer::GetHpackDecoder() {
   if (hpack_decoder_.get() == nullptr) {
-    if (FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2) {
+    if (FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3) {
+      SPDY_BUG_IF(FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2)
+          << "Both alternate decoders are enabled.";
+      hpack_decoder_.reset(new HpackDecoder3());
+    } else if (FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2) {
       hpack_decoder_.reset(new HpackDecoder2());
     } else {
       hpack_decoder_.reset(new HpackDecoder());

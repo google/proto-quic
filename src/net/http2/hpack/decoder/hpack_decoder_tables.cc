@@ -33,6 +33,9 @@ const std::vector<HpackStringPair>* GetStaticTable() {
 
 }  // namespace
 
+HpackDecoderTablesDebugListener::HpackDecoderTablesDebugListener() {}
+HpackDecoderTablesDebugListener::~HpackDecoderTablesDebugListener() {}
+
 HpackDecoderStaticTable::HpackDecoderStaticTable(
     const std::vector<HpackStringPair>* table)
     : table_(table) {}
@@ -46,7 +49,13 @@ const HpackStringPair* HpackDecoderStaticTable::Lookup(size_t index) const {
   return nullptr;
 }
 
-HpackDecoderDynamicTable::HpackDecoderDynamicTable() {}
+HpackDecoderDynamicTable::HpackDecoderTableEntry::HpackDecoderTableEntry(
+    const HpackString& name,
+    const HpackString& value)
+    : HpackStringPair(name, value) {}
+
+HpackDecoderDynamicTable::HpackDecoderDynamicTable()
+    : insert_count_(kFirstDynamicTableIndex - 1), debug_listener_(nullptr) {}
 HpackDecoderDynamicTable::~HpackDecoderDynamicTable() {}
 
 void HpackDecoderDynamicTable::DynamicTableSizeUpdate(size_t size_limit) {
@@ -60,8 +69,8 @@ void HpackDecoderDynamicTable::DynamicTableSizeUpdate(size_t size_limit) {
 // peer are valid (e.g. are lower-case, no whitespace, etc.).
 bool HpackDecoderDynamicTable::Insert(const HpackString& name,
                                       const HpackString& value) {
-  HpackStringPair p(name, value);
-  size_t entry_size = p.size();
+  HpackDecoderTableEntry entry(name, value);
+  size_t entry_size = entry.size();
   DVLOG(2) << "InsertEntry of size=" << entry_size << "\n     name: " << name
            << "\n    value: " << value;
   if (entry_size > size_limit_) {
@@ -72,9 +81,15 @@ bool HpackDecoderDynamicTable::Insert(const HpackString& name,
     current_size_ = 0;
     return false;  // Not inserted because too large.
   }
+  ++insert_count_;
+  if (debug_listener_ != nullptr) {
+    entry.time_added = debug_listener_->OnEntryInserted(entry, insert_count_);
+    DVLOG(2) << "OnEntryInserted returned time_added=" << entry.time_added
+             << " for insert_count_=" << insert_count_;
+  }
   size_t insert_limit = size_limit_ - entry_size;
   EnsureSizeNoMoreThan(insert_limit);
-  table_.push_front(p);
+  table_.push_front(entry);
   current_size_ += entry_size;
   DVLOG(2) << "InsertEntry: current_size_=" << current_size_;
   DCHECK_GE(current_size_, entry_size);
@@ -84,7 +99,13 @@ bool HpackDecoderDynamicTable::Insert(const HpackString& name,
 
 const HpackStringPair* HpackDecoderDynamicTable::Lookup(size_t index) const {
   if (index < table_.size()) {
-    return &(table_[index]);
+    const HpackDecoderTableEntry& entry = table_[index];
+    if (debug_listener_ != nullptr) {
+      size_t insert_count_of_index = insert_count_ + table_.size() - index;
+      debug_listener_->OnUseEntry(entry, insert_count_of_index,
+                                  entry.time_added);
+    }
+    return &entry;
   }
   return nullptr;
 }
@@ -114,5 +135,18 @@ void HpackDecoderDynamicTable::RemoveLastEntry() {
 
 HpackDecoderTables::HpackDecoderTables() {}
 HpackDecoderTables::~HpackDecoderTables() {}
+
+void HpackDecoderTables::set_debug_listener(
+    HpackDecoderTablesDebugListener* debug_listener) {
+  dynamic_table_.set_debug_listener(debug_listener);
+}
+
+const HpackStringPair* HpackDecoderTables::Lookup(size_t index) const {
+  if (index < kFirstDynamicTableIndex) {
+    return static_table_.Lookup(index);
+  } else {
+    return dynamic_table_.Lookup(index - kFirstDynamicTableIndex);
+  }
+}
 
 }  // namespace net

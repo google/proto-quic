@@ -14,205 +14,6 @@ section	.text	code align=64
 %else
 section	.text	code
 %endif
-global	_gcm_gmult_4bit_x86
-align	16
-_gcm_gmult_4bit_x86:
-L$_gcm_gmult_4bit_x86_begin:
-	push	ebp
-	push	ebx
-	push	esi
-	push	edi
-	sub	esp,84
-	mov	edi,DWORD [104+esp]
-	mov	esi,DWORD [108+esp]
-	mov	ebp,DWORD [edi]
-	mov	edx,DWORD [4+edi]
-	mov	ecx,DWORD [8+edi]
-	mov	ebx,DWORD [12+edi]
-	mov	DWORD [16+esp],0
-	mov	DWORD [20+esp],471859200
-	mov	DWORD [24+esp],943718400
-	mov	DWORD [28+esp],610271232
-	mov	DWORD [32+esp],1887436800
-	mov	DWORD [36+esp],1822425088
-	mov	DWORD [40+esp],1220542464
-	mov	DWORD [44+esp],1423966208
-	mov	DWORD [48+esp],3774873600
-	mov	DWORD [52+esp],4246732800
-	mov	DWORD [56+esp],3644850176
-	mov	DWORD [60+esp],3311403008
-	mov	DWORD [64+esp],2441084928
-	mov	DWORD [68+esp],2376073216
-	mov	DWORD [72+esp],2847932416
-	mov	DWORD [76+esp],3051356160
-	mov	DWORD [esp],ebp
-	mov	DWORD [4+esp],edx
-	mov	DWORD [8+esp],ecx
-	mov	DWORD [12+esp],ebx
-	shr	ebx,20
-	and	ebx,240
-	mov	ebp,DWORD [4+ebx*1+esi]
-	mov	edx,DWORD [ebx*1+esi]
-	mov	ecx,DWORD [12+ebx*1+esi]
-	mov	ebx,DWORD [8+ebx*1+esi]
-	xor	eax,eax
-	mov	edi,15
-	jmp	NEAR L$000x86_loop
-align	16
-L$000x86_loop:
-	mov	al,bl
-	shrd	ebx,ecx,4
-	and	al,15
-	shrd	ecx,edx,4
-	shrd	edx,ebp,4
-	shr	ebp,4
-	xor	ebp,DWORD [16+eax*4+esp]
-	mov	al,BYTE [edi*1+esp]
-	and	al,240
-	xor	ebx,DWORD [8+eax*1+esi]
-	xor	ecx,DWORD [12+eax*1+esi]
-	xor	edx,DWORD [eax*1+esi]
-	xor	ebp,DWORD [4+eax*1+esi]
-	dec	edi
-	js	NEAR L$001x86_break
-	mov	al,bl
-	shrd	ebx,ecx,4
-	and	al,15
-	shrd	ecx,edx,4
-	shrd	edx,ebp,4
-	shr	ebp,4
-	xor	ebp,DWORD [16+eax*4+esp]
-	mov	al,BYTE [edi*1+esp]
-	shl	al,4
-	xor	ebx,DWORD [8+eax*1+esi]
-	xor	ecx,DWORD [12+eax*1+esi]
-	xor	edx,DWORD [eax*1+esi]
-	xor	ebp,DWORD [4+eax*1+esi]
-	jmp	NEAR L$000x86_loop
-align	16
-L$001x86_break:
-	bswap	ebx
-	bswap	ecx
-	bswap	edx
-	bswap	ebp
-	mov	edi,DWORD [104+esp]
-	mov	DWORD [12+edi],ebx
-	mov	DWORD [8+edi],ecx
-	mov	DWORD [4+edi],edx
-	mov	DWORD [edi],ebp
-	add	esp,84
-	pop	edi
-	pop	esi
-	pop	ebx
-	pop	ebp
-	ret
-global	_gcm_ghash_4bit_x86
-align	16
-_gcm_ghash_4bit_x86:
-L$_gcm_ghash_4bit_x86_begin:
-	push	ebp
-	push	ebx
-	push	esi
-	push	edi
-	sub	esp,84
-	mov	ebx,DWORD [104+esp]
-	mov	esi,DWORD [108+esp]
-	mov	edi,DWORD [112+esp]
-	mov	ecx,DWORD [116+esp]
-	add	ecx,edi
-	mov	DWORD [116+esp],ecx
-	mov	ebp,DWORD [ebx]
-	mov	edx,DWORD [4+ebx]
-	mov	ecx,DWORD [8+ebx]
-	mov	ebx,DWORD [12+ebx]
-	mov	DWORD [16+esp],0
-	mov	DWORD [20+esp],471859200
-	mov	DWORD [24+esp],943718400
-	mov	DWORD [28+esp],610271232
-	mov	DWORD [32+esp],1887436800
-	mov	DWORD [36+esp],1822425088
-	mov	DWORD [40+esp],1220542464
-	mov	DWORD [44+esp],1423966208
-	mov	DWORD [48+esp],3774873600
-	mov	DWORD [52+esp],4246732800
-	mov	DWORD [56+esp],3644850176
-	mov	DWORD [60+esp],3311403008
-	mov	DWORD [64+esp],2441084928
-	mov	DWORD [68+esp],2376073216
-	mov	DWORD [72+esp],2847932416
-	mov	DWORD [76+esp],3051356160
-align	16
-L$002x86_outer_loop:
-	xor	ebx,DWORD [12+edi]
-	xor	ecx,DWORD [8+edi]
-	xor	edx,DWORD [4+edi]
-	xor	ebp,DWORD [edi]
-	mov	DWORD [12+esp],ebx
-	mov	DWORD [8+esp],ecx
-	mov	DWORD [4+esp],edx
-	mov	DWORD [esp],ebp
-	shr	ebx,20
-	and	ebx,240
-	mov	ebp,DWORD [4+ebx*1+esi]
-	mov	edx,DWORD [ebx*1+esi]
-	mov	ecx,DWORD [12+ebx*1+esi]
-	mov	ebx,DWORD [8+ebx*1+esi]
-	xor	eax,eax
-	mov	edi,15
-	jmp	NEAR L$003x86_loop
-align	16
-L$003x86_loop:
-	mov	al,bl
-	shrd	ebx,ecx,4
-	and	al,15
-	shrd	ecx,edx,4
-	shrd	edx,ebp,4
-	shr	ebp,4
-	xor	ebp,DWORD [16+eax*4+esp]
-	mov	al,BYTE [edi*1+esp]
-	and	al,240
-	xor	ebx,DWORD [8+eax*1+esi]
-	xor	ecx,DWORD [12+eax*1+esi]
-	xor	edx,DWORD [eax*1+esi]
-	xor	ebp,DWORD [4+eax*1+esi]
-	dec	edi
-	js	NEAR L$004x86_break
-	mov	al,bl
-	shrd	ebx,ecx,4
-	and	al,15
-	shrd	ecx,edx,4
-	shrd	edx,ebp,4
-	shr	ebp,4
-	xor	ebp,DWORD [16+eax*4+esp]
-	mov	al,BYTE [edi*1+esp]
-	shl	al,4
-	xor	ebx,DWORD [8+eax*1+esi]
-	xor	ecx,DWORD [12+eax*1+esi]
-	xor	edx,DWORD [eax*1+esi]
-	xor	ebp,DWORD [4+eax*1+esi]
-	jmp	NEAR L$003x86_loop
-align	16
-L$004x86_break:
-	bswap	ebx
-	bswap	ecx
-	bswap	edx
-	bswap	ebp
-	mov	edi,DWORD [112+esp]
-	lea	edi,[16+edi]
-	cmp	edi,DWORD [116+esp]
-	mov	DWORD [112+esp],edi
-	jb	NEAR L$002x86_outer_loop
-	mov	edi,DWORD [104+esp]
-	mov	DWORD [12+edi],ebx
-	mov	DWORD [8+edi],ecx
-	mov	DWORD [4+edi],edx
-	mov	DWORD [edi],ebp
-	add	esp,84
-	pop	edi
-	pop	esi
-	pop	ebx
-	pop	ebp
-	ret
 global	_gcm_gmult_4bit_mmx
 align	16
 _gcm_gmult_4bit_mmx:
@@ -223,10 +24,10 @@ L$_gcm_gmult_4bit_mmx_begin:
 	push	edi
 	mov	edi,DWORD [20+esp]
 	mov	esi,DWORD [24+esp]
-	call	L$005pic_point
-L$005pic_point:
+	call	L$000pic_point
+L$000pic_point:
 	pop	eax
-	lea	eax,[(L$rem_4bit-L$005pic_point)+eax]
+	lea	eax,[(L$rem_4bit-L$000pic_point)+eax]
 	movzx	ebx,BYTE [15+edi]
 	xor	ecx,ecx
 	mov	edx,ebx
@@ -237,9 +38,9 @@ L$005pic_point:
 	movq	mm0,[8+ecx*1+esi]
 	movq	mm1,[ecx*1+esi]
 	movd	ebx,mm0
-	jmp	NEAR L$006mmx_loop
+	jmp	NEAR L$001mmx_loop
 align	16
-L$006mmx_loop:
+L$001mmx_loop:
 	psrlq	mm0,4
 	and	ebx,15
 	movq	mm2,mm1
@@ -253,7 +54,7 @@ L$006mmx_loop:
 	pxor	mm1,[edx*1+esi]
 	mov	edx,ecx
 	pxor	mm0,mm2
-	js	NEAR L$007mmx_break
+	js	NEAR L$002mmx_break
 	shl	cl,4
 	and	ebx,15
 	psrlq	mm0,4
@@ -266,9 +67,9 @@ L$006mmx_loop:
 	movd	ebx,mm0
 	pxor	mm1,[ecx*1+esi]
 	pxor	mm0,mm2
-	jmp	NEAR L$006mmx_loop
+	jmp	NEAR L$001mmx_loop
 align	16
-L$007mmx_break:
+L$002mmx_break:
 	shl	cl,4
 	and	ebx,15
 	psrlq	mm0,4
@@ -323,10 +124,10 @@ L$_gcm_ghash_4bit_mmx_begin:
 	mov	ecx,DWORD [28+esp]
 	mov	edx,DWORD [32+esp]
 	mov	ebp,esp
-	call	L$008pic_point
-L$008pic_point:
+	call	L$003pic_point
+L$003pic_point:
 	pop	esi
-	lea	esi,[(L$rem_8bit-L$008pic_point)+esi]
+	lea	esi,[(L$rem_8bit-L$003pic_point)+esi]
 	sub	esp,544
 	and	esp,-64
 	sub	esp,16
@@ -565,7 +366,7 @@ L$008pic_point:
 	mov	ebx,DWORD [8+eax]
 	mov	edx,DWORD [12+eax]
 align	16
-L$009outer:
+L$004outer:
 	xor	edx,DWORD [12+ecx]
 	xor	ebx,DWORD [8+ecx]
 	pxor	mm6,[ecx]
@@ -900,7 +701,7 @@ L$009outer:
 	pshufw	mm6,mm6,27
 	bswap	ebx
 	cmp	ecx,DWORD [552+esp]
-	jne	NEAR L$009outer
+	jne	NEAR L$004outer
 	mov	eax,DWORD [544+esp]
 	mov	DWORD [12+eax],edx
 	mov	DWORD [8+eax],ebx
@@ -918,10 +719,10 @@ _gcm_init_clmul:
 L$_gcm_init_clmul_begin:
 	mov	edx,DWORD [4+esp]
 	mov	eax,DWORD [8+esp]
-	call	L$010pic
-L$010pic:
+	call	L$005pic
+L$005pic:
 	pop	ecx
-	lea	ecx,[(L$bswap-L$010pic)+ecx]
+	lea	ecx,[(L$bswap-L$005pic)+ecx]
 	movdqu	xmm2,[eax]
 	pshufd	xmm2,xmm2,78
 	pshufd	xmm4,xmm2,255
@@ -985,10 +786,10 @@ _gcm_gmult_clmul:
 L$_gcm_gmult_clmul_begin:
 	mov	eax,DWORD [4+esp]
 	mov	edx,DWORD [8+esp]
-	call	L$011pic
-L$011pic:
+	call	L$006pic
+L$006pic:
 	pop	ecx
-	lea	ecx,[(L$bswap-L$011pic)+ecx]
+	lea	ecx,[(L$bswap-L$006pic)+ecx]
 	movdqu	xmm0,[eax]
 	movdqa	xmm5,[ecx]
 	movups	xmm2,[edx]
@@ -1042,16 +843,16 @@ L$_gcm_ghash_clmul_begin:
 	mov	edx,DWORD [24+esp]
 	mov	esi,DWORD [28+esp]
 	mov	ebx,DWORD [32+esp]
-	call	L$012pic
-L$012pic:
+	call	L$007pic
+L$007pic:
 	pop	ecx
-	lea	ecx,[(L$bswap-L$012pic)+ecx]
+	lea	ecx,[(L$bswap-L$007pic)+ecx]
 	movdqu	xmm0,[eax]
 	movdqa	xmm5,[ecx]
 	movdqu	xmm2,[edx]
 db	102,15,56,0,197
 	sub	ebx,16
-	jz	NEAR L$013odd_tail
+	jz	NEAR L$008odd_tail
 	movdqu	xmm3,[esi]
 	movdqu	xmm6,[16+esi]
 db	102,15,56,0,221
@@ -1068,10 +869,10 @@ db	102,15,58,68,221,0
 	movups	xmm2,[16+edx]
 	nop
 	sub	ebx,32
-	jbe	NEAR L$014even_tail
-	jmp	NEAR L$015mod_loop
+	jbe	NEAR L$009even_tail
+	jmp	NEAR L$010mod_loop
 align	32
-L$015mod_loop:
+L$010mod_loop:
 	pshufd	xmm4,xmm0,78
 	movdqa	xmm1,xmm0
 	pxor	xmm4,xmm0
@@ -1126,8 +927,8 @@ db	102,15,58,68,250,17
 db	102,15,58,68,221,0
 	lea	esi,[32+esi]
 	sub	ebx,32
-	ja	NEAR L$015mod_loop
-L$014even_tail:
+	ja	NEAR L$010mod_loop
+L$009even_tail:
 	pshufd	xmm4,xmm0,78
 	movdqa	xmm1,xmm0
 	pxor	xmm4,xmm0
@@ -1166,9 +967,9 @@ db	102,15,58,68,229,16
 	psrlq	xmm0,1
 	pxor	xmm0,xmm1
 	test	ebx,ebx
-	jnz	NEAR L$016done
+	jnz	NEAR L$011done
 	movups	xmm2,[edx]
-L$013odd_tail:
+L$008odd_tail:
 	movdqu	xmm3,[esi]
 db	102,15,56,0,221
 	pxor	xmm0,xmm3
@@ -1207,7 +1008,7 @@ db	102,15,58,68,220,0
 	pxor	xmm0,xmm4
 	psrlq	xmm0,1
 	pxor	xmm0,xmm1
-L$016done:
+L$011done:
 db	102,15,56,0,197
 	movdqu	[eax],xmm0
 	pop	edi

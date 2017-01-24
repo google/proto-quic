@@ -108,9 +108,6 @@ GURL::GURL(std::string canonical_spec, const url::Parsed& parsed, bool is_valid)
 template<typename STR>
 void GURL::InitCanonical(base::BasicStringPiece<STR> input_spec,
                          bool trim_path_end) {
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  spec_.reserve(input_spec.size() + 32);
   url::StdStringCanonOutput output(&spec_);
   is_valid_ = url::Canonicalize(
       input_spec.data(), static_cast<int>(input_spec.length()), trim_path_end,
@@ -198,12 +195,7 @@ GURL GURL::Resolve(const std::string& relative) const {
     return GURL();
 
   GURL result;
-
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
-
   if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.length()),
                             parsed_, relative.data(),
                             static_cast<int>(relative.length()),
@@ -229,12 +221,7 @@ GURL GURL::Resolve(const base::string16& relative) const {
     return GURL();
 
   GURL result;
-
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
-
   if (!url::ResolveRelative(spec_.data(), static_cast<int>(spec_.length()),
                             parsed_, relative.data(),
                             static_cast<int>(relative.length()),
@@ -262,11 +249,7 @@ GURL GURL::ReplaceComponents(
   if (!is_valid_)
     return GURL();
 
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
-
   result.is_valid_ = url::ReplaceComponents(
       spec_.data(), static_cast<int>(spec_.length()), parsed_, replacements,
       NULL, &output, &result.parsed_);
@@ -289,11 +272,7 @@ GURL GURL::ReplaceComponents(
   if (!is_valid_)
     return GURL();
 
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  result.spec_.reserve(spec_.size() + 32);
   url::StdStringCanonOutput output(&result.spec_);
-
   result.is_valid_ = url::ReplaceComponents(
       spec_.data(), static_cast<int>(spec_.length()), parsed_, replacements,
       NULL, &output, &result.parsed_);

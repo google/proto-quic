@@ -87,6 +87,7 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
     QuicByteCount recovery_window;
 
     bool last_sample_is_app_limited;
+    QuicPacketNumber end_of_app_limited_phase;
   };
 
   BbrSender(const RttStats* rtt_stats,

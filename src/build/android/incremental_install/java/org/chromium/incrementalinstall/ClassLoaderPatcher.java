@@ -220,10 +220,17 @@ final class ClassLoaderPatcher {
 
     private static Object[] makeNativePathElements(File[] paths)
             throws ReflectiveOperationException {
-        Class<?> entryClazz = Class.forName("dalvik.system.DexPathList$Element");
         Object[] entries = new Object[paths.length];
-        for (int i = 0; i < paths.length; ++i) {
-            entries[i] = Reflect.newInstance(entryClazz, paths[i], true, null, null);
+        if (Build.VERSION.CODENAME.startsWith("O")) {
+            Class<?> entryClazz = Class.forName("dalvik.system.DexPathList$NativeLibraryElement");
+            for (int i = 0; i < paths.length; ++i) {
+                entries[i] = Reflect.newInstance(entryClazz, paths[i]);
+            }
+        } else {
+            Class<?> entryClazz = Class.forName("dalvik.system.DexPathList$Element");
+            for (int i = 0; i < paths.length; ++i) {
+                entries[i] = Reflect.newInstance(entryClazz, paths[i], true, null, null);
+            }
         }
         return entries;
     }
@@ -238,16 +245,20 @@ final class ClassLoaderPatcher {
         for (int i = 0; i < files.length; ++i) {
             File file = files[i];
             Object dexFile;
-            if (Build.VERSION.CODENAME.equals("N")
-                    || Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 // loadDexFile requires that ret contain all previously added elements.
                 dexFile = Reflect.invokeMethod(clazz, "loadDexFile", file, optimizedDirectory,
                                                mClassLoader, ret);
             } else {
                 dexFile = Reflect.invokeMethod(clazz, "loadDexFile", file, optimizedDirectory);
             }
-            ret[curDexElements.length + i] =
-                    Reflect.newInstance(entryClazz, emptyDir, false, file, dexFile);
+            Object dexElement;
+            if (Build.VERSION.CODENAME.startsWith("O")) {
+                dexElement = Reflect.newInstance(entryClazz, dexFile, file);
+            } else {
+                dexElement = Reflect.newInstance(entryClazz, emptyDir, false, file, dexFile);
+            }
+            ret[curDexElements.length + i] = dexElement;
         }
         return ret;
     }

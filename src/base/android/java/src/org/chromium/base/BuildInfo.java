@@ -147,4 +147,12 @@ public class BuildInfo {
     public static boolean isGreaterThanN() {
         return Build.VERSION.SDK_INT > 24 || Build.VERSION.CODENAME.equals("NMR1");
     }
+
+    /**
+     * @return Whether the current device is running Android O release or newer.
+     */
+    public static boolean isAtLeastO() {
+        return !"REL".equals(Build.VERSION.CODENAME)
+                && ("O".equals(Build.VERSION.CODENAME) || Build.VERSION.CODENAME.startsWith("OMR"));
+    }
 }

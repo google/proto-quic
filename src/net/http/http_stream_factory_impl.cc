@@ -5,12 +5,17 @@
 #include "net/http/http_stream_factory_impl.h"
 
 #include <string>
+#include <tuple>
 
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_usage_estimator.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "net/http/http_network_session.h"
 #include "net/http/http_server_properties.h"
 #include "net/http/http_stream_factory_impl_job.h"
@@ -243,8 +248,26 @@ void HttpStreamFactoryImpl::OnJobControllerComplete(JobController* controller) {
   NOTREACHED();
 }
 
+HttpStreamFactoryImpl::PreconnectingProxyServer::PreconnectingProxyServer(
+    ProxyServer proxy_server,
+    PrivacyMode privacy_mode)
+    : proxy_server(proxy_server), privacy_mode(privacy_mode) {}
+
+bool HttpStreamFactoryImpl::PreconnectingProxyServer::operator<(
+    const PreconnectingProxyServer& other) const {
+  return std::tie(proxy_server, privacy_mode) <
+         std::tie(other.proxy_server, other.privacy_mode);
+}
+
+bool HttpStreamFactoryImpl::PreconnectingProxyServer::operator==(
+    const PreconnectingProxyServer& other) const {
+  return proxy_server == other.proxy_server &&
+         privacy_mode == other.privacy_mode;
+}
+
 bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
-                                             const ProxyInfo& proxy_info) {
+                                             const ProxyInfo& proxy_info,
+                                             PrivacyMode privacy_mode) {
   if (!controller.is_preconnect()) {
     // Connection initialization can be skipped only for the preconnect jobs.
     return false;
@@ -255,8 +278,11 @@ bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
     return false;
   }
 
+  PreconnectingProxyServer preconnecting_proxy_server(proxy_info.proxy_server(),
+                                                      privacy_mode);
+
   if (base::ContainsKey(preconnecting_proxy_servers_,
-                        proxy_info.proxy_server())) {
+                        preconnecting_proxy_server)) {
     UMA_HISTOGRAM_EXACT_LINEAR("Net.PreconnectSkippedToProxyServers", 1, 2);
     // Skip preconnect to the proxy server since we are already preconnecting
     // (probably via some other job).
@@ -272,16 +298,18 @@ bool HttpStreamFactoryImpl::OnInitConnection(const JobController& controller,
     preconnecting_proxy_servers_.erase(preconnecting_proxy_servers_.begin());
   }
 
-  preconnecting_proxy_servers_.insert(proxy_info.proxy_server());
+  preconnecting_proxy_servers_.insert(preconnecting_proxy_server);
   DCHECK_GE(kMaxPreconnectingServerSize, preconnecting_proxy_servers_.size());
   // The first preconnect should be allowed.
   return false;
 }
 
-void HttpStreamFactoryImpl::OnStreamReady(const ProxyInfo& proxy_info) {
+void HttpStreamFactoryImpl::OnStreamReady(const ProxyInfo& proxy_info,
+                                          PrivacyMode privacy_mode) {
   if (proxy_info.is_empty())
     return;
-  preconnecting_proxy_servers_.erase(proxy_info.proxy_server());
+  preconnecting_proxy_servers_.erase(
+      PreconnectingProxyServer(proxy_info.proxy_server(), privacy_mode));
 }
 
 bool HttpStreamFactoryImpl::ProxyServerSupportsPriorities(
@@ -300,6 +328,52 @@ bool HttpStreamFactoryImpl::ProxyServerSupportsPriorities(
 
   return session_->http_server_properties()->SupportsRequestPriority(
       scheme_host_port);
+}
+
+void HttpStreamFactoryImpl::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_absolute_name) const {
+  if (job_controller_set_.empty())
+    return;
+  std::string name =
+      base::StringPrintf("%s/stream_factory", parent_absolute_name.c_str());
+  base::trace_event::MemoryAllocatorDump* factory_dump =
+      pmd->CreateAllocatorDump(name);
+  size_t alt_job_count = 0;
+  size_t main_job_count = 0;
+  size_t preconnect_controller_count = 0;
+  for (const auto& it : job_controller_set_) {
+    // For a preconnect controller, it should have exactly the main job.
+    if (it->is_preconnect()) {
+      preconnect_controller_count++;
+      continue;
+    }
+    // For non-preconnects.
+    if (it->HasPendingAltJob())
+      alt_job_count++;
+    if (it->HasPendingMainJob())
+      main_job_count++;
+  }
+  factory_dump->AddScalar(
+      base::trace_event::MemoryAllocatorDump::kNameSize,
+      base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+      base::trace_event::EstimateMemoryUsage(job_controller_set_));
+  factory_dump->AddScalar(
+      base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+      base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+      job_controller_set_.size());
+  // The number of non-preconnect controllers with a pending alt job.
+  factory_dump->AddScalar("alt_job_count",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          alt_job_count);
+  // The number of non-preconnect controllers with a pending main job.
+  factory_dump->AddScalar("main_job_count",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          main_job_count);
+  // The number of preconnect controllers.
+  factory_dump->AddScalar("preconnect_count",
+                          base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                          preconnect_controller_count);
 }
 
 }  // namespace net

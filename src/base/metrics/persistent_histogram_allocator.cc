@@ -660,7 +660,9 @@ PersistentHistogramAllocator::GetOrCreateStatisticsRecorderHistogram(
 
   // Adding the passed histogram to the SR would cause a problem if the
   // allocator that holds it eventually goes away. Instead, create a new
-  // one from a serialized version.
+  // one from a serialized version. Deserialization calls the appropriate
+  // FactoryGet() which will create the histogram in the global persistent-
+  // histogram allocator if such is set.
   base::Pickle pickle;
   if (!histogram->SerializeInfo(&pickle))
     return nullptr;

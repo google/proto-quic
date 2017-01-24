@@ -200,6 +200,14 @@ config("hide_native_jni_exports") {
               rebase_path("//build/android/android_no_jni_exports.lst") ]
 }
 
+config("hide_all_but_jni_onload") {
+  # TODO(agrieve): https://codereview.chromium.org/2633593004/
+}
+
+config("hide_all_but_jni") {
+  # TODO(agrieve): https://codereview.chromium.org/2633593004/
+}
+
 # Instrumentation -------------------------------------------------------------
 #
 # The BUILDCONFIG file sets the "default_cygprofile_instrumentation" config on

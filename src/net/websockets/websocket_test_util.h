@@ -126,6 +126,10 @@ struct WebSocketTestURLRequestContextHost {
   // returned pointer remains owned by this object.
   TestURLRequestContext* GetURLRequestContext();
 
+  const TestNetworkDelegate& network_delegate() const {
+    return network_delegate_;
+  }
+
  private:
   WebSocketMockClientSocketFactoryMaker maker_;
   TestURLRequestContext url_request_context_;

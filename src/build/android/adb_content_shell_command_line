@@ -13,5 +13,4 @@
 # To remove all content shell flags, pass an empty string for the flags:
 #   adb_content_shell_command_line ""
 
-exec $(dirname $0)/adb_command_line.py --device-path \
-    /data/local/tmp/content-shell-command-line "$@"
+exec $(dirname $0)/adb_command_line.py --name content-shell-command-line "$@"

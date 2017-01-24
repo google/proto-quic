@@ -46,6 +46,7 @@
 #include "net/socket/socks_client_socket_pool.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/socket/ssl_client_socket_pool.h"
+#include "net/socket/stream_socket.h"
 #include "net/spdy/bidirectional_stream_spdy_impl.h"
 #include "net/spdy/spdy_http_stream.h"
 #include "net/spdy/spdy_protocol.h"
@@ -265,6 +266,7 @@ int HttpStreamFactoryImpl::Job::Preconnect(int num_streams) {
   DCHECK_GT(num_streams, 0);
   HttpServerProperties* http_server_properties =
       session_->http_server_properties();
+  // Preconnect one connection if the server supports H2 or QUIC.
   if (http_server_properties &&
       http_server_properties->SupportsRequestPriority(
           url::SchemeHostPort(request_info_.url))) {
@@ -332,6 +334,13 @@ NextProto HttpStreamFactoryImpl::Job::negotiated_protocol() const {
 
 bool HttpStreamFactoryImpl::Job::using_spdy() const {
   return using_spdy_;
+}
+
+size_t HttpStreamFactoryImpl::Job::EstimateMemoryUsage() const {
+  StreamSocket::SocketMemoryStats stats;
+  if (connection_)
+    connection_->DumpMemoryStats(&stats);
+  return stats.total_size;
 }
 
 const SSLConfig& HttpStreamFactoryImpl::Job::server_ssl_config() const {
@@ -1186,6 +1195,12 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
 
   CHECK(!stream_.get());
 
+  SpdySessionKey spdy_session_key = GetSpdySessionKey();
+  if (!existing_spdy_session_) {
+    existing_spdy_session_ =
+        session_->spdy_session_pool()->FindAvailableSession(
+            spdy_session_key, origin_url_, net_log_);
+  }
   bool direct = !IsHttpsProxyAndHttpUrl();
   if (existing_spdy_session_.get()) {
     // We picked up an existing session, so we don't need our socket.
@@ -1199,15 +1214,7 @@ int HttpStreamFactoryImpl::Job::DoCreateStream() {
     return set_result;
   }
 
-  SpdySessionKey spdy_session_key = GetSpdySessionKey();
   base::WeakPtr<SpdySession> spdy_session =
-      session_->spdy_session_pool()->FindAvailableSession(
-          spdy_session_key, origin_url_, net_log_);
-  if (spdy_session) {
-    return SetSpdyHttpStreamOrBidirectionalStreamImpl(spdy_session, direct);
-  }
-
-  spdy_session =
       session_->spdy_session_pool()->CreateAvailableSessionFromSocket(
           spdy_session_key, std::move(connection_), net_log_, using_ssl_);
 

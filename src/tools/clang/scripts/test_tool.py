@@ -56,9 +56,17 @@ def _RunToolAndApplyEdits(tools_clang_scripts_directory,
     # Launch the following pipeline:
     #     run_tool.py ... | extract_edits.py | apply_edits.py ...
     args = ['python',
-            os.path.join(tools_clang_scripts_directory, 'run_tool.py'),
+            os.path.join(tools_clang_scripts_directory, 'run_tool.py')]
+    extra_run_tool_args_path = os.path.join(test_directory_for_tool,
+                                            "run_tool.args")
+    if os.path.exists(extra_run_tool_args_path):
+        with open(extra_run_tool_args_path, 'r') as extra_run_tool_args_file:
+            extra_run_tool_args = extra_run_tool_args_file.readlines()
+            args.extend([arg.strip() for arg in extra_run_tool_args])
+    args.extend([
             tool_to_test,
-            test_directory_for_tool]
+            test_directory_for_tool])
+
     args.extend(actual_files)
     run_tool = subprocess.Popen(args, stdout=subprocess.PIPE)
 
@@ -142,6 +150,7 @@ def main(argv):
     f.write(_GenerateCompileCommands(actual_files, include_paths))
 
   # Run the tool.
+  os.chdir(test_directory_for_tool)
   exitcode = _RunToolAndApplyEdits(tools_clang_scripts_directory, tool_to_test,
                                    test_directory_for_tool, actual_files)
   if (exitcode != 0):

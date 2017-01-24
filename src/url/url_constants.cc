@@ -8,6 +8,9 @@ namespace url {
 
 const char kAboutBlankURL[] = "about:blank";
 
+const char kAboutBlankPath[] = "blank";
+const char kAboutBlankWithHashPath[] = "blank/";
+
 const char kAboutScheme[] = "about";
 const char kBlobScheme[] = "blob";
 const char kContentScheme[] = "content";

@@ -14991,6 +14991,11 @@ class FakeStreamFactory : public HttpStreamFactory {
     return NULL;
   }
 
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_absolute_name) const override {
+    ADD_FAILURE();
+  }
+
  private:
   base::WeakPtr<FakeStreamRequest> last_stream_request_;
 

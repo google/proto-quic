@@ -129,7 +129,6 @@ _scripts_to_wrap = [
   # TODO(agrieve): Once GYP is no more, delete the checked-in adb_gdb_* scripts
   # and generated a script for each android_apk() that has a native library.
   "adb_gdb_android_webview_shell",
-  "adb_gdb_blimp_client",
   "adb_gdb_chrome_public",
   "adb_gdb_content_shell",
   "adb_gdb_cronet_sample",

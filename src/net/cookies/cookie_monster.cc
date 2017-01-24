@@ -274,7 +274,7 @@ typedef struct ChangeCausePair_struct {
 } ChangeCausePair;
 const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_EXPLICIT
-    {CookieStore::ChangeCause::EXPLICIT_DELETE, true},
+    {CookieStore::ChangeCause::EXPLICIT, true},
     // DELETE_COOKIE_OVERWRITE
     {CookieStore::ChangeCause::OVERWRITE, true},
     // DELETE_COOKIE_EXPIRED
@@ -282,9 +282,9 @@ const ChangeCausePair kChangeCauseMapping[] = {
     // DELETE_COOKIE_EVICTED
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_DUPLICATE_IN_BACKING_STORE
-    {CookieStore::ChangeCause::EXPLICIT_DUPLICATE_IN_BACKING_STORE, false},
+    {CookieStore::ChangeCause::EXPLICIT, false},
     // DELETE_COOKIE_DONT_RECORD
-    {CookieStore::ChangeCause::EXPLICIT_DONT_RECORD, false},
+    {CookieStore::ChangeCause::EXPLICIT, false},
     // DELETE_COOKIE_EVICTED_DOMAIN
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_EVICTED_GLOBAL
@@ -299,8 +299,16 @@ const ChangeCausePair kChangeCauseMapping[] = {
     {CookieStore::ChangeCause::EVICTED, true},
     // DELETE_COOKIE_NON_SECURE
     {CookieStore::ChangeCause::EVICTED, true},
+    // DELETE_COOKIE_CREATED_BETWEEN
+    {CookieStore::ChangeCause::EXPLICIT_DELETE_BETWEEN, true},
+    // DELETE_COOKIE_CREATED_BETWEEN_WITH_PREDICATE
+    {CookieStore::ChangeCause::EXPLICIT_DELETE_PREDICATE, true},
+    // DELETE_COOKIE_SINGLE
+    {CookieStore::ChangeCause::EXPLICIT_DELETE_SINGLE, true},
+    // DELETE_COOKIE_CANONICAL
+    {CookieStore::ChangeCause::EXPLICIT_DELETE_CANONICAL, true},
     // DELETE_COOKIE_LAST_ENTRY
-    {CookieStore::ChangeCause::EXPLICIT_LAST_ENTRY, false}};
+    {CookieStore::ChangeCause::EXPLICIT, false}};
 
 void RunAsync(scoped_refptr<base::TaskRunner> proxy,
               const CookieStore::CookieChangedCallback& callback,
@@ -1140,7 +1148,7 @@ int CookieMonster::DeleteAllCreatedBetween(const Time& delete_begin,
     if (cc->CreationDate() >= delete_begin &&
         (delete_end.is_null() || cc->CreationDate() < delete_end)) {
       InternalDeleteCookie(curit, true, /*sync_to_store*/
-                           DELETE_COOKIE_EXPLICIT);
+                           DELETE_COOKIE_CREATED_BETWEEN);
       ++num_deleted;
     }
   }
@@ -1164,7 +1172,7 @@ int CookieMonster::DeleteAllCreatedBetweenWithPredicate(
         (delete_end.is_null() || cc->CreationDate() < delete_end) &&
         predicate.Run(*cc)) {
       InternalDeleteCookie(curit, true, /*sync_to_store*/
-                           DELETE_COOKIE_EXPLICIT);
+                           DELETE_COOKIE_CREATED_BETWEEN_WITH_PREDICATE);
       ++num_deleted;
     }
   }
@@ -1230,7 +1238,7 @@ void CookieMonster::DeleteCookie(const GURL& url,
     CookieMap::iterator curit = it;
     ++it;
     if (matching_cookies.find(curit->second.get()) != matching_cookies.end()) {
-      InternalDeleteCookie(curit, true, DELETE_COOKIE_EXPLICIT);
+      InternalDeleteCookie(curit, true, DELETE_COOKIE_SINGLE);
     }
   }
 }
@@ -1242,7 +1250,7 @@ int CookieMonster::DeleteCanonicalCookie(const CanonicalCookie& cookie) {
        its.first != its.second; ++its.first) {
     // The creation date acts as the unique index...
     if (its.first->second->CreationDate() == cookie.CreationDate()) {
-      InternalDeleteCookie(its.first, true, DELETE_COOKIE_EXPLICIT);
+      InternalDeleteCookie(its.first, true, DELETE_COOKIE_CANONICAL);
       return 1;
     }
   }
@@ -1846,8 +1854,13 @@ void CookieMonster::InternalDeleteCookie(CookieMap::iterator it,
                 "kChangeCauseMapping size should match DeletionCause size");
 
   // See InitializeHistograms() for details.
+  DeletionCause deletion_cause_to_record = deletion_cause;
+  if (deletion_cause >= DELETE_COOKIE_CREATED_BETWEEN &&
+      deletion_cause <= DELETE_COOKIE_CANONICAL) {
+    deletion_cause_to_record = DELETE_COOKIE_EXPLICIT;
+  }
   if (deletion_cause != DELETE_COOKIE_DONT_RECORD)
-    histogram_cookie_deletion_cause_->Add(deletion_cause);
+    histogram_cookie_deletion_cause_->Add(deletion_cause_to_record);
 
   CanonicalCookie* cc = it->second.get();
   VLOG(kVlogSetCookies) << "InternalDeleteCookie()"

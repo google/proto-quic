@@ -3056,3 +3056,19 @@ EVENT_TYPE(UPLOAD_DATA_STREAM_READ)
 //   "trigger": <Trigger for evaluation that caused request start>
 // }
 EVENT_TYPE(RESOURCE_SCHEDULER_REQUEST_STARTED)
+
+// -----------------------------------------------------------------------------
+// Network Quality Estimator related events
+// -----------------------------------------------------------------------------
+
+// This event is emitted whenever NetworkQualityEstimator determines that the
+// quality of the network has changed.
+// parameters:
+//  {
+//    "http_rtt": <Current estimate of the HTTP RTT>,
+//    "transport_rtt": <Current estimate of the transport RTT>,
+//    "downstream_throughput": <Current estimate of the downstream throughput>,
+//    "effective_connection_type": <Current estimate of the effective connection
+//                                  type>,
+//  }
+EVENT_TYPE(NETWORK_QUALITY_CHANGED)

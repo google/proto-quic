@@ -163,15 +163,14 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
     sender_ = SendAlgorithmInterface::Create(
         simulator_.GetClock(), rtt_stats_,
         QuicSentPacketManagerPeer::GetUnackedPacketMap(
-            QuicConnectionPeer::GetSentPacketManager(quic_sender_.connection(),
-                                                     kDefaultPathId)),
+            QuicConnectionPeer::GetSentPacketManager(
+                quic_sender_.connection())),
         GetParam().congestion_control_type, &random_, &stats_,
         kInitialCongestionWindowPackets);
 
     SetExperimentalOptionsInServerConfig();
 
-    QuicConnectionPeer::SetSendAlgorithm(quic_sender_.connection(),
-                                         kDefaultPathId, sender_);
+    QuicConnectionPeer::SetSendAlgorithm(quic_sender_.connection(), sender_);
 
     clock_ = simulator_.GetClock();
     simulator_.set_random_generator(&random_);

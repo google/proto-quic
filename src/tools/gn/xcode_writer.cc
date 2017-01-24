@@ -32,16 +32,11 @@
 namespace {
 
 using TargetToFileList = std::unordered_map<const Target*, Target::FileList>;
-using TargetToNativeTarget =
-    std::unordered_map<const Target*, PBXNativeTarget*>;
-using FileToTargets = std::map<SourceFile,
-                               std::vector<const Target*>,
-                               bool (*)(const SourceFile&, const SourceFile&)>;
+using TargetToTarget = std::unordered_map<const Target*, const Target*>;
 
 const char kEarlGreyFileNameIdentifier[] = "egtest.mm";
 const char kXCTestFileNameIdentifier[] = "xctest.mm";
 const char kXCTestModuleTargetNamePostfix[] = "_module";
-const char kXCTestFileReferenceFolder[] = "xctests/";
 
 struct SafeEnvironmentVariableInfo {
   const char* name;
@@ -52,15 +47,6 @@ SafeEnvironmentVariableInfo kSafeEnvironmentVariables[] = {
     {"HOME", true}, {"LANG", true},    {"PATH", true},
     {"USER", true}, {"TMPDIR", false},
 };
-
-bool CompareSourceFiles(const SourceFile& lhs, const SourceFile& rhs) {
-  if (lhs.GetName() < rhs.GetName())
-    return true;
-  else if (lhs.GetName() > rhs.GetName())
-    return false;
-  else
-    return lhs.value() < rhs.value();
-}
 
 XcodeWriter::TargetOsType GetTargetOs(const Args& args) {
   const Value* target_os_value = args.GetArgOverride(variables::kTargetOs);
@@ -121,6 +107,13 @@ bool IsXCTestModuleTarget(const Target* target) {
                         base::CompareCase::SENSITIVE);
 }
 
+bool IsXCTestFile(const SourceFile& file) {
+  return base::EndsWith(file.GetName(), kEarlGreyFileNameIdentifier,
+                        base::CompareCase::SENSITIVE) ||
+         base::EndsWith(file.GetName(), kXCTestFileNameIdentifier,
+                        base::CompareCase::SENSITIVE);
+}
+
 const Target* FindXCTestApplicationTarget(
     const Target* xctest_module_target,
     const std::vector<const Target*>& targets) {
@@ -141,14 +134,18 @@ const Target* FindXCTestApplicationTarget(
   return nullptr;
 }
 
-// Returns the corresponding application targets given XCTest module targets.
+// Given XCTest module targets, find the corresponding application targets and
+// the mappings between them.
 void FindXCTestApplicationTargets(
     const std::vector<const Target*>& xctest_module_targets,
     const std::vector<const Target*>& targets,
-    std::vector<const Target*>* xctest_application_targets) {
+    std::vector<const Target*>* xctest_application_targets,
+    TargetToTarget* xctest_module_to_application_target) {
   for (const Target* xctest_module_target : xctest_module_targets) {
     xctest_application_targets->push_back(
         FindXCTestApplicationTarget(xctest_module_target, targets));
+    xctest_module_to_application_target->insert(std::make_pair(
+        xctest_module_target, xctest_application_targets->back()));
   }
 }
 
@@ -161,10 +158,7 @@ void SearchXCTestFiles(const Target* target,
 
   Target::FileList xctest_files;
   for (const SourceFile& file : target->sources()) {
-    if (base::EndsWith(file.GetName(), kEarlGreyFileNameIdentifier,
-                       base::CompareCase::SENSITIVE) ||
-        base::EndsWith(file.GetName(), kXCTestFileNameIdentifier,
-                       base::CompareCase::SENSITIVE)) {
+    if (IsXCTestFile(file)) {
       xctest_files.push_back(file);
     }
   }
@@ -196,40 +190,15 @@ void SearchXCTestFiles(const Target* target,
 
 // Finds the list of xctest files recursively under each of the application
 // targets.
-void FindXCTestFilesForTargets(
+void FindXCTestFilesForApplicationTargets(
     const std::vector<const Target*>& application_targets,
-    std::vector<Target::FileList>* file_lists) {
+    TargetToFileList* xctest_files_per_application_target) {
   TargetToFileList xctest_files_per_target;
-
   for (const Target* target : application_targets) {
     DCHECK(IsApplicationTarget(target));
     SearchXCTestFiles(target, &xctest_files_per_target);
-    file_lists->push_back(xctest_files_per_target[target]);
-  }
-}
-
-// Maps each xctest file to a list of xctest application targets that contains
-// the file.
-void MapXCTestFileToApplicationTargets(
-    const std::vector<const Target*>& xctest_application_targets,
-    const std::vector<Target::FileList>& xctest_file_lists,
-    FileToTargets* xctest_file_to_application_targets) {
-  DCHECK_EQ(xctest_application_targets.size(), xctest_file_lists.size());
-
-  for (size_t i = 0; i < xctest_application_targets.size(); ++i) {
-    const Target* xctest_application_target = xctest_application_targets[i];
-    DCHECK(IsApplicationTarget(xctest_application_target));
-
-    for (const SourceFile& source : xctest_file_lists[i]) {
-      auto iter = xctest_file_to_application_targets->find(source);
-      if (iter == xctest_file_to_application_targets->end()) {
-        iter =
-            xctest_file_to_application_targets
-                ->insert(std::make_pair(source, std::vector<const Target*>()))
-                .first;
-      }
-      iter->second.push_back(xctest_application_target);
-    }
+    xctest_files_per_application_target->insert(
+        std::make_pair(target, xctest_files_per_target[target]));
   }
 }
 
@@ -341,13 +310,9 @@ bool XcodeWriter::RunAndWriteFiles(const std::string& workspace_name,
   }
 
   XcodeWriter workspace(workspace_name);
-  workspace.CreateProductsProject(targets, attributes, source_path, config_name,
-                                  root_target_name, ninja_extra_args,
-                                  build_settings, target_os);
-
-  workspace.CreateSourcesProject(
-      all_targets, build_settings->build_dir(), attributes, source_path,
-      build_settings->root_path_utf8(), config_name, target_os);
+  workspace.CreateProductsProject(targets, all_targets, attributes, source_path,
+                                  config_name, root_target_name,
+                                  ninja_extra_args, build_settings, target_os);
 
   return workspace.WriteFiles(build_settings, err);
 }
@@ -427,6 +392,7 @@ void XcodeWriter::FilterXCTestModuleTargets(
 
 void XcodeWriter::CreateProductsProject(
     const std::vector<const Target*>& targets,
+    const std::vector<const Target*>& all_targets,
     const PBXAttributes& attributes,
     const std::string& source_path,
     const std::string& config_name,
@@ -436,28 +402,59 @@ void XcodeWriter::CreateProductsProject(
     TargetOsType target_os) {
   std::unique_ptr<PBXProject> main_project(
       new PBXProject("products", config_name, source_path, attributes));
+  SourceDir source_dir("//");
+
+  // Add all source files for indexing.
+  std::vector<SourceFile> sources;
+  for (const Target* target : all_targets) {
+    for (const SourceFile& source : target->sources()) {
+      if (IsStringInOutputDir(build_settings->build_dir(), source.value()))
+        continue;
+
+      sources.push_back(source);
+    }
+  }
+
+  // Sort sources to ensure determinisn of the project file generation and
+  // remove duplicate reference to the source files (can happen due to the
+  // bundle_data targets).
+  std::sort(sources.begin(), sources.end());
+  sources.erase(std::unique(sources.begin(), sources.end()), sources.end());
+
+  for (const SourceFile& source : sources) {
+    std::string source_file = RebasePath(source.value(), source_dir,
+                                         build_settings->root_path_utf8());
+    main_project->AddSourceFileToIndexingTarget(source_file, source_file,
+                                                CompilerFlags::NONE);
+  }
 
   // Filter xctest module and application targets and find list of xctest files
   // recursively under them.
   std::vector<const Target*> xctest_module_targets;
   FilterXCTestModuleTargets(targets, &xctest_module_targets);
 
+  // There is a 1 on 1 mapping between |xctest_module_targets| and
+  // |xctest_application_targets|.
   std::vector<const Target*> xctest_application_targets;
+  TargetToTarget xctest_module_to_application_target;
   FindXCTestApplicationTargets(xctest_module_targets, targets,
-                               &xctest_application_targets);
+                               &xctest_application_targets,
+                               &xctest_module_to_application_target);
   DCHECK_EQ(xctest_module_targets.size(), xctest_application_targets.size());
+  DCHECK_EQ(xctest_module_targets.size(),
+            xctest_module_to_application_target.size());
 
-  std::vector<Target::FileList> xctest_file_lists;
-  FindXCTestFilesForTargets(xctest_application_targets, &xctest_file_lists);
-  DCHECK_EQ(xctest_application_targets.size(), xctest_file_lists.size());
+  TargetToFileList xctest_files_per_application_target;
+  FindXCTestFilesForApplicationTargets(xctest_application_targets,
+                                       &xctest_files_per_application_target);
+  DCHECK_EQ(xctest_application_targets.size(),
+            xctest_files_per_application_target.size());
 
   std::string build_path;
   std::unique_ptr<base::Environment> env(base::Environment::Create());
 
   main_project->AddAggregateTarget(
       "All", GetBuildScript(root_target, ninja_extra_args, env.get()));
-
-  TargetToNativeTarget xctest_application_to_module_native_target;
 
   for (const Target* target : targets) {
     switch (target->output_type()) {
@@ -502,12 +499,23 @@ void XcodeWriter::CreateProductsProject(
         if (!IsXCTestModuleTarget(target))
           continue;
 
-        // Populate |xctest_application_to_module_native_target| for XCTest
-        // module targets.
-        const Target* application_target =
-            FindXCTestApplicationTarget(target, xctest_application_targets);
-        xctest_application_to_module_native_target.insert(
-            std::make_pair(application_target, native_target));
+        // Add xctest files to the "Compiler Sources" of corresponding xctest
+        // native targets.
+        const Target::FileList& xctest_file_list =
+            xctest_files_per_application_target
+                [xctest_module_to_application_target[target]];
+
+        for (const SourceFile& source : xctest_file_list) {
+          std::string source_path = RebasePath(
+              source.value(), source_dir, build_settings->root_path_utf8());
+
+          // Test files need to be known to Xcode for proper indexing and for
+          // discovery of tests function for XCTest, but the compilation is done
+          // via ninja and thus must prevent Xcode from compiling the files by
+          // adding '-help' as per file compiler flag.
+          main_project->AddSourceFile(source_path, source_path,
+                                      CompilerFlags::HELP, native_target);
+        }
 
         break;
       }
@@ -517,73 +525,7 @@ void XcodeWriter::CreateProductsProject(
     }
   }
 
-  FileToTargets xctest_file_to_application_targets(CompareSourceFiles);
-  MapXCTestFileToApplicationTargets(xctest_application_targets,
-                                    xctest_file_lists,
-                                    &xctest_file_to_application_targets);
-
-  // Add xctest files to the "Compiler Sources" of corresponding xctest native
-  // targets.
-  SourceDir source_dir("//");
-  for (const auto& item : xctest_file_to_application_targets) {
-    const SourceFile& source = item.first;
-    for (const Target* xctest_application_target : item.second) {
-      std::string navigator_path =
-          kXCTestFileReferenceFolder + source.GetName();
-      std::string source_path = RebasePath(source.value(), source_dir,
-                                           build_settings->root_path_utf8());
-      PBXNativeTarget* xctest_module_native_target =
-          xctest_application_to_module_native_target[xctest_application_target];
-
-      // Test files need to be known to Xcode for proper indexing and for
-      // discovery of tests function for XCTest, but the compilation is done
-      // via ninja and thus must prevent Xcode from compiling the files by
-      // adding '-help' as per file compiler flag.
-      main_project->AddSourceFile(navigator_path, source_path,
-                                  CompilerFlags::HELP,
-                                  xctest_module_native_target);
-    }
-  }
-
   projects_.push_back(std::move(main_project));
-}
-
-void XcodeWriter::CreateSourcesProject(
-    const std::vector<const Target*>& targets,
-    const SourceDir& root_build_dir,
-    const PBXAttributes& attributes,
-    const std::string& source_path,
-    const std::string& absolute_source_path,
-    const std::string& config_name,
-    TargetOsType target_os) {
-  std::vector<SourceFile> sources;
-  for (const Target* target : targets) {
-    for (const SourceFile& source : target->sources()) {
-      if (IsStringInOutputDir(root_build_dir, source.value()))
-        continue;
-
-      sources.push_back(source);
-    }
-  }
-
-  std::unique_ptr<PBXProject> sources_for_indexing(
-      new PBXProject("sources", config_name, source_path, attributes));
-
-  // Sort sources to ensure determinisn of the project file generation and
-  // remove duplicate reference to the source files (can happen due to the
-  // bundle_data targets).
-  std::sort(sources.begin(), sources.end());
-  sources.erase(std::unique(sources.begin(), sources.end()), sources.end());
-
-  SourceDir source_dir("//");
-  for (const SourceFile& source : sources) {
-    std::string source_file =
-        RebasePath(source.value(), source_dir, absolute_source_path);
-    sources_for_indexing->AddSourceFileToIndexingTarget(
-        source_file, source_file, CompilerFlags::NONE);
-  }
-
-  projects_.push_back(std::move(sources_for_indexing));
 }
 
 bool XcodeWriter::WriteFiles(const BuildSettings* build_settings, Err* err) {

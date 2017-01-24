@@ -543,8 +543,9 @@ TEST_P(HpackDecoderTest, StringLiteralIncomplete) {
   EXPECT_EQ(21u, input_stream.ParsedBytes());
 }
 
-// Round-tripping the header set from E.2.1 should work.
-TEST_P(HpackDecoderTest, BasicE21) {
+// Round-tripping the header set from RFC 7541 C.3.1 should work.
+// http://httpwg.org/specs/rfc7541.html#rfc.section.C.3.1
+TEST_P(HpackDecoderTest, BasicC31) {
   HpackEncoder encoder(ObtainHpackHuffmanTable());
 
   SpdyHeaderBlock expected_header_set;
@@ -561,7 +562,9 @@ TEST_P(HpackDecoderTest, BasicE21) {
   EXPECT_EQ(expected_header_set, decoded_block());
 }
 
-TEST_P(HpackDecoderTest, SectionD4RequestHuffmanExamples) {
+// RFC 7541, Section C.4: Request Examples with Huffman Coding
+// http://httpwg.org/specs/rfc7541.html#rfc.section.C.4
+TEST_P(HpackDecoderTest, SectionC4RequestHuffmanExamples) {
   // 82                                      | == Indexed - Add ==
   //                                         |   idx = 2
   //                                         | -> :method: GET
@@ -668,7 +671,9 @@ TEST_P(HpackDecoderTest, SectionD4RequestHuffmanExamples) {
   EXPECT_EQ(164u, decoder_peer_.header_table()->size());
 }
 
-TEST_P(HpackDecoderTest, SectionD6ResponseHuffmanExamples) {
+// RFC 7541, Section C.6: Response Examples with Huffman Coding
+// http://httpwg.org/specs/rfc7541.html#rfc.section.C.6
+TEST_P(HpackDecoderTest, SectionC6ResponseHuffmanExamples) {
   decoder_.ApplyHeaderTableSizeSetting(256);
 
   // 48                                      | == Literal indexed ==

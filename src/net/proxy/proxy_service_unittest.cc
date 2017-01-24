@@ -2088,13 +2088,8 @@ TEST_F(ProxyServiceTest, InitialPACScriptDownload) {
   jobs[url2]->results()->UseNamedProxy("request2:80");
   jobs[url2]->CompleteNow(OK);
 
-  //<<<<<<< HEAD
-  //  // Complete and verify that requests ran as expected.
-  //  EXPECT_THAT(callback1.WaitForResult(), IsOk());
-  //=======
   // Complete and verify that jobs ran as expected.
   EXPECT_EQ(OK, callback1.WaitForResult());
-  //>>>>>>> parent of 9c8f424... Revert of Change
   // ProxyResolver::GetProxyForURL() to take a std::unique_ptr<Request>* rather
   // than a RequestHandle* (patchset #11 id:200001 of
   // https://codereview.chromium.org/1439053002/ )
@@ -2337,13 +2332,8 @@ TEST_F(ProxyServiceTest, FallbackFromAutodetectToCustomPac) {
   jobs[url1]->results()->UseNamedProxy("request1:80");
   jobs[url1]->CompleteNow(OK);
 
-  //<<<<<<< HEAD
-  //  // Verify that requests ran as expected.
-  //  EXPECT_THAT(callback1.WaitForResult(), IsOk());
-  //=======
   // Verify that jobs ran as expected.
   EXPECT_EQ(OK, callback1.WaitForResult());
-  //>>>>>>> parent of 9c8f424... Revert of Change
   // ProxyResolver::GetProxyForURL() to take a std::unique_ptr<Request>* rather
   // than a RequestHandle* (patchset #11 id:200001 of
   // https://codereview.chromium.org/1439053002/ )
@@ -2427,13 +2417,8 @@ TEST_F(ProxyServiceTest, FallbackFromAutodetectToCustomPac2) {
   jobs[url1]->results()->UseNamedProxy("request1:80");
   jobs[url1]->CompleteNow(OK);
 
-  //<<<<<<< HEAD
-  //  // Verify that requests ran as expected.
-  //  EXPECT_THAT(callback1.WaitForResult(), IsOk());
-  //=======
   // Verify that jobs ran as expected.
   EXPECT_EQ(OK, callback1.WaitForResult());
-  //>>>>>>> parent of 9c8f424... Revert of Change
   // ProxyResolver::GetProxyForURL() to take a std::unique_ptr<Request>* rather
   // than a RequestHandle* (patchset #11 id:200001 of
   // https://codereview.chromium.org/1439053002/ )

@@ -6,17 +6,16 @@
 
 #include <utility>
 
-#include "base/debug/stack_trace.h"
 #include "base/macros.h"
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_stack_trace.h"
 #include "net/tools/quic/chlo_extractor.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
-#include "net/tools/quic/quic_simple_server_session.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 #include "net/tools/quic/stateless_rejector.h"
@@ -498,7 +497,7 @@ void QuicDispatcher::OnConnectionClosed(QuicConnectionId connection_id,
     QUIC_BUG << "ConnectionId " << connection_id
              << " does not exist in the session map.  Error: "
              << QuicErrorCodeToString(error);
-    QUIC_BUG << base::debug::StackTrace().ToString();
+    QUIC_BUG << QuicStackTrace();
     return;
   }
 
@@ -662,8 +661,7 @@ void QuicDispatcher::ProcessBufferedChlos(size_t max_connections_to_create) {
     QuicSession* session =
         CreateQuicSession(connection_id, packets.front().client_address);
     QUIC_DLOG(INFO) << "Created new session for " << connection_id;
-    session_map_.insert(
-        std::make_pair(connection_id, base::WrapUnique(session)));
+    session_map_.insert(std::make_pair(connection_id, QuicWrapUnique(session)));
     DeliverPacketsToSession(packets, session);
   }
 }
@@ -755,7 +753,7 @@ void QuicDispatcher::ProcessChlo() {
       CreateQuicSession(current_connection_id_, current_client_address_);
   QUIC_DLOG(INFO) << "Created new session for " << current_connection_id_;
   session_map_.insert(
-      std::make_pair(current_connection_id_, base::WrapUnique(session)));
+      std::make_pair(current_connection_id_, QuicWrapUnique(session)));
   std::list<BufferedPacket> packets =
       buffered_packets_.DeliverPackets(current_connection_id_);
   // Check if CHLO is the first packet arrived on this connection.

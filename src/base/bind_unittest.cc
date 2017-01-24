@@ -1241,7 +1241,7 @@ TEST_F(BindTest, CapturelessLambda) {
   EXPECT_TRUE(internal::IsConvertibleToRunType<decltype(f)>::value);
 
   int i = 0;
-  auto g = [i]() {};
+  auto g = [i]() { (void)i; };
   EXPECT_FALSE(internal::IsConvertibleToRunType<decltype(g)>::value);
 
   auto h = [](int, double) { return 'k'; };

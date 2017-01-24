@@ -26,6 +26,9 @@ How build arguments are set
    - target_cpu
    - target_os
 
+  Next, project-specific overrides are applied. These are specified inside
+  the default_args variable of //.gn. See "gn help dotfile" for more.
+
   If specified, arguments from the --args command line flag are used. If that
   flag is not specified, args from previous builds in the build directory will
   be used (this is in the file args.gn in the build directory).

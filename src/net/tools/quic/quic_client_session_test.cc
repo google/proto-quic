@@ -6,11 +6,11 @@
 
 #include <vector>
 
-#include "base/memory/ptr_util.h"
 #include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
@@ -51,14 +51,14 @@ class TestQuicClientSession : public QuicClientSession {
                           push_promise_index) {}
 
   std::unique_ptr<QuicSpdyClientStream> CreateClientStream() override {
-    return base::MakeUnique<MockQuicSpdyClientStream>(GetNextOutgoingStreamId(),
-                                                      this);
+    return QuicMakeUnique<MockQuicSpdyClientStream>(GetNextOutgoingStreamId(),
+                                                    this);
   }
 
   MockQuicSpdyClientStream* CreateIncomingDynamicStream(
       QuicStreamId id) override {
     MockQuicSpdyClientStream* stream = new MockQuicSpdyClientStream(id, this);
-    ActivateStream(base::WrapUnique(stream));
+    ActivateStream(QuicWrapUnique(stream));
     return stream;
   }
 };

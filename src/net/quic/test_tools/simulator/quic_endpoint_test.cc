@@ -4,7 +4,7 @@
 
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 
-#include "base/memory/ptr_util.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/simulator.h"
@@ -38,8 +38,8 @@ class QuicEndpointTest : public ::testing::Test {
   Switch switch_;
 
   std::unique_ptr<SymmetricLink> Link(Endpoint* a, Endpoint* b) {
-    return base::MakeUnique<SymmetricLink>(a, b, kDefaultBandwidth,
-                                           kDefaultPropagationDelay);
+    return QuicMakeUnique<SymmetricLink>(a, b, kDefaultBandwidth,
+                                         kDefaultPropagationDelay);
   }
 };
 
@@ -98,8 +98,7 @@ TEST_F(QuicEndpointTest, WriteBlocked) {
   EXPECT_CALL(*sender, GetCongestionWindow())
       .WillRepeatedly(
           Return(kMaxPacketSize * kDefaultMaxCongestionWindowPackets));
-  test::QuicConnectionPeer::SetSendAlgorithm(endpoint_a.connection(),
-                                             kDefaultPathId, sender);
+  test::QuicConnectionPeer::SetSendAlgorithm(endpoint_a.connection(), sender);
 
   // First transmit a small, packet-size chunk of data.
   QuicByteCount bytes_to_transfer = 3 * 1024 * 1024;
@@ -147,17 +146,17 @@ TEST_F(QuicEndpointTest, TwoWayTransmission) {
 TEST_F(QuicEndpointTest, Competition) {
   simulator_.set_enable_random_delays(true);
 
-  auto endpoint_a = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_a = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint A", "Endpoint D (A)", Perspective::IS_CLIENT, 42);
-  auto endpoint_b = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_b = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint B", "Endpoint D (B)", Perspective::IS_CLIENT, 43);
-  auto endpoint_c = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_c = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint C", "Endpoint D (C)", Perspective::IS_CLIENT, 44);
-  auto endpoint_d_a = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_d_a = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint D (A)", "Endpoint A", Perspective::IS_SERVER, 42);
-  auto endpoint_d_b = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_d_b = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint D (B)", "Endpoint B", Perspective::IS_SERVER, 43);
-  auto endpoint_d_c = base::MakeUnique<QuicEndpoint>(
+  auto endpoint_d_c = QuicMakeUnique<QuicEndpoint>(
       &simulator_, "Endpoint D (C)", "Endpoint C", Perspective::IS_SERVER, 44);
   QuicEndpointMultiplexer endpoint_d(
       "Endpoint D",

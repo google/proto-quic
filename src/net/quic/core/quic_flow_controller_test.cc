@@ -162,8 +162,8 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastIncreasesFlowWindow) {
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
 
-  QuicSentPacketManagerInterface* manager =
-      QuicConnectionPeer::GetSentPacketManager(&connection_, kDefaultPathId);
+  QuicSentPacketManager* manager =
+      QuicConnectionPeer::GetSentPacketManager(&connection_);
 
   RttStats* rtt_stats = const_cast<RttStats*>(manager->GetRttStats());
   rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kRtt),
@@ -215,8 +215,8 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastNoAutoTune) {
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
 
-  QuicSentPacketManagerInterface* manager =
-      QuicConnectionPeer::GetSentPacketManager(&connection_, kDefaultPathId);
+  QuicSentPacketManager* manager =
+      QuicConnectionPeer::GetSentPacketManager(&connection_);
 
   RttStats* rtt_stats = const_cast<RttStats*>(manager->GetRttStats());
   rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kRtt),
@@ -268,8 +268,8 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalStableFlowWindow) {
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
 
-  QuicSentPacketManagerInterface* manager =
-      QuicConnectionPeer::GetSentPacketManager(&connection_, kDefaultPathId);
+  QuicSentPacketManager* manager =
+      QuicConnectionPeer::GetSentPacketManager(&connection_);
   RttStats* rtt_stats = const_cast<RttStats*>(manager->GetRttStats());
   rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kRtt),
                        QuicTime::Delta::Zero(), QuicTime::Zero());
@@ -323,8 +323,8 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesNormalNoAutoTune) {
   // Make sure clock is inititialized.
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(1));
 
-  QuicSentPacketManagerInterface* manager =
-      QuicConnectionPeer::GetSentPacketManager(&connection_, kDefaultPathId);
+  QuicSentPacketManager* manager =
+      QuicConnectionPeer::GetSentPacketManager(&connection_);
   RttStats* rtt_stats = const_cast<RttStats*>(manager->GetRttStats());
   rtt_stats->UpdateRtt(QuicTime::Delta::FromMilliseconds(kRtt),
                        QuicTime::Delta::Zero(), QuicTime::Zero());

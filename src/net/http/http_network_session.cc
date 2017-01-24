@@ -17,6 +17,7 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "base/values.h"
 #include "net/base/network_throttle_manager_impl.h"
@@ -428,6 +429,10 @@ void HttpNetworkSession::DumpMemoryStats(
         pmd, http_network_session_dump->absolute_name());
     spdy_session_pool_.DumpMemoryStats(
         pmd, http_network_session_dump->absolute_name());
+    if (http_stream_factory_) {
+      http_stream_factory_->DumpMemoryStats(
+          pmd, http_network_session_dump->absolute_name());
+    }
   }
   // Create an empty row under parent's dump so size can be attributed correctly
   // if |this| is shared between URLRequestContexts.

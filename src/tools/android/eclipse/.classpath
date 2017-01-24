@@ -24,11 +24,6 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="base/android/java/src"/>
     <classpathentry kind="src" path="base/android/javatests/src"/>
     <classpathentry kind="src" path="base/test/android/javatests/src"/>
-    <classpathentry kind="src" path="blimp/client/app/android/java/src"/>
-    <classpathentry kind="src" path="blimp/client/app/android/javatests/src"/>
-    <classpathentry kind="src" path="blimp/client/core/android/java/src"/>
-    <classpathentry kind="src" path="blimp/client/core/contents/android/java/src"/>
-    <classpathentry kind="src" path="blimp/client/public/android/java/src"/>
     <classpathentry kind="src" path="chrome/android/java/src"/>
     <classpathentry kind="src" path="chrome/android/javatests/src"/>
     <classpathentry kind="src" path="chrome/android/sync_shell/javatests/src"/>

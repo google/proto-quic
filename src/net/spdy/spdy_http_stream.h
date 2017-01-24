@@ -36,7 +36,7 @@ class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
   SpdyHttpStream(const base::WeakPtr<SpdySession>& spdy_session, bool direct);
   ~SpdyHttpStream() override;
 
-  SpdyStream* stream() { return stream_.get(); }
+  SpdyStream* stream() { return stream_; }
 
   // Cancels any callbacks from being invoked and deletes the stream.
   void Cancel();
@@ -128,8 +128,15 @@ class NET_EXPORT_PRIVATE SpdyHttpStream : public SpdyStream::Delegate,
   const base::WeakPtr<SpdySession> spdy_session_;
   bool is_reused_;
   SpdyStreamRequest stream_request_;
-  base::WeakPtr<SpdyStream> stream_;
 
+  // |stream_| is owned by SpdySession.
+  // Before InitializeStream() is called, stream_ == nullptr.
+  // After InitializeStream() is called but before OnClose() is called,
+  //   |*stream_| is guaranteed to be valid.
+  // After OnClose() is called, stream_ == nullptr.
+  SpdyStream* stream_;
+
+  // False before OnClose() is called, true after.
   bool stream_closed_;
 
   // Set only when |stream_closed_| is true.

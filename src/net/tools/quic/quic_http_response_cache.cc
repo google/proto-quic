@@ -8,11 +8,11 @@
 
 #include "base/files/file_enumerator.h"
 #include "base/files/file_util.h"
-#include "base/memory/ptr_util.h"
-#include "base/stl_util.h"
 #include "net/http/http_util.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_map_util.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_http_utils.h"
 
@@ -316,11 +316,11 @@ void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
 
   DCHECK(!host.empty()) << "Host must be populated, e.g. \"www.google.com\"";
   string key = GetKey(host, path);
-  if (base::ContainsKey(responses_, key)) {
+  if (QuicContainsKey(responses_, key)) {
     QUIC_BUG << "Response for '" << key << "' already exists!";
     return;
   }
-  std::unique_ptr<Response> new_response = base::MakeUnique<Response>();
+  std::unique_ptr<Response> new_response = QuicMakeUnique<Response>();
   new_response->set_response_type(response_type);
   new_response->set_headers(std::move(response_headers));
   new_response->set_body(response_body);
@@ -360,8 +360,7 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
     bool found_existing_response = false;
     {
       QuicWriterMutexLock lock(&response_mutex_);
-      found_existing_response =
-          base::ContainsKey(responses_, GetKey(host, path));
+      found_existing_response = QuicContainsKey(responses_, GetKey(host, path));
     }
     if (!found_existing_response) {
       // Add a server push response to responses map, if it is not in the map.

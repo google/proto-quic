@@ -4,7 +4,10 @@
 
 #include "net/http/proxy_client_socket.h"
 
+#include <unordered_set>
+
 #include "base/metrics/histogram_macros.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "net/base/host_port_pair.h"
 #include "net/base/net_errors.h"
@@ -15,20 +18,6 @@
 #include "url/gurl.h"
 
 namespace net {
-
-namespace {
-
-void CopyHeaderValues(scoped_refptr<HttpResponseHeaders> source,
-                      scoped_refptr<HttpResponseHeaders> dest,
-                      const std::string& header_name) {
-  size_t iter = 0;
-  std::string header_value;
-
-  while (source->EnumerateHeader(&iter, header_name, &header_value))
-    dest->AddHeader(header_name + ": " + header_value);
-}
-
-}  // namespace
 
 // static
 void ProxyClientSocket::BuildTunnelRequest(
@@ -87,27 +76,38 @@ void ProxyClientSocket::LogBlockedTunnelResponse(int http_status_code,
 bool ProxyClientSocket::SanitizeProxyAuth(HttpResponseInfo* response) {
   DCHECK(response && response->headers.get());
 
-  scoped_refptr<HttpResponseHeaders> old_headers = response->headers;
-
-  const char kHeaders[] = "HTTP/1.1 407 Proxy Authentication Required\n\n";
-  scoped_refptr<HttpResponseHeaders> new_headers = new HttpResponseHeaders(
-      HttpUtil::AssembleRawHeaders(kHeaders, arraysize(kHeaders)));
-
   // Copy status line and all hop-by-hop headers to preserve keep-alive
   // behavior.
-  new_headers->ReplaceStatusLine(old_headers->GetStatusLine());
-  CopyHeaderValues(old_headers, new_headers, "connection");
-  CopyHeaderValues(old_headers, new_headers, "proxy-connection");
-  CopyHeaderValues(old_headers, new_headers, "keep-alive");
-  CopyHeaderValues(old_headers, new_headers, "trailer");
-  CopyHeaderValues(old_headers, new_headers, "transfer-encoding");
-  CopyHeaderValues(old_headers, new_headers, "upgrade");
+  const char* kHeadersToKeep[] = {
+      "connection",         "proxy-connection", "keep-alive", "trailer",
+      "transfer-encoding",  "upgrade",
 
-  CopyHeaderValues(old_headers, new_headers, "content-length");
+      "content-length",
 
-  CopyHeaderValues(old_headers, new_headers, "proxy-authenticate");
+      "proxy-authenticate",
+  };
 
-  response->headers = new_headers;
+  // Create a list of all present header not in |kHeadersToKeep|, and then
+  // remove them.
+  size_t iter = 0;
+  std::string header_name;
+  std::string header_value;
+  std::unordered_set<std::string> headers_to_remove;
+  while (response->headers->EnumerateHeaderLines(&iter, &header_name,
+                                                 &header_value)) {
+    bool remove = true;
+    for (const char* header : kHeadersToKeep) {
+      if (base::EqualsCaseInsensitiveASCII(header, header_name)) {
+        remove = false;
+        break;
+      }
+    }
+    if (remove)
+      headers_to_remove.insert(header_name);
+  }
+
+  response->headers->RemoveHeaders(headers_to_remove);
+
   return true;
 }
 

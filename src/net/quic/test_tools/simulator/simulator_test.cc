@@ -4,8 +4,8 @@
 
 #include "net/quic/test_tools/simulator/simulator.h"
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 #include "net/quic/test_tools/simulator/link.h"
@@ -118,7 +118,7 @@ class LinkSaturator : public Endpoint {
 
   void Act() override {
     if (tx_port_->TimeUntilAvailable().IsZero()) {
-      auto packet = base::MakeUnique<Packet>();
+      auto packet = QuicMakeUnique<Packet>();
       packet->source = name_;
       packet->destination = destination_;
       packet->tx_timestamp = clock_->Now();
@@ -250,7 +250,7 @@ TEST(SimulatorTest, Queue) {
   EXPECT_EQ(0u, queue.packets_queued());
   EXPECT_EQ(0u, acceptor.packets()->size());
 
-  auto first_packet = base::MakeUnique<Packet>();
+  auto first_packet = QuicMakeUnique<Packet>();
   first_packet->size = 600;
   queue.AcceptPacket(std::move(first_packet));
   EXPECT_EQ(600u, queue.bytes_queued());
@@ -258,14 +258,14 @@ TEST(SimulatorTest, Queue) {
   EXPECT_EQ(0u, acceptor.packets()->size());
 
   // The second packet does not fit and is dropped.
-  auto second_packet = base::MakeUnique<Packet>();
+  auto second_packet = QuicMakeUnique<Packet>();
   second_packet->size = 500;
   queue.AcceptPacket(std::move(second_packet));
   EXPECT_EQ(600u, queue.bytes_queued());
   EXPECT_EQ(1u, queue.packets_queued());
   EXPECT_EQ(0u, acceptor.packets()->size());
 
-  auto third_packet = base::MakeUnique<Packet>();
+  auto third_packet = QuicMakeUnique<Packet>();
   third_packet->size = 400;
   queue.AcceptPacket(std::move(third_packet));
   EXPECT_EQ(1000u, queue.bytes_queued());
@@ -309,10 +309,9 @@ TEST(SimulatorTest, QueueBottleneck) {
   saturator.SetTxPort(&local_link);
   queue.set_tx_port(&bottleneck_link);
 
-  const QuicPacketCount packets_received = 1000;
-  simulator.RunUntil([&counter, packets_received]() {
-    return counter.packets() == packets_received;
-  });
+  static const QuicPacketCount packets_received = 1000;
+  simulator.RunUntil(
+      [&counter]() { return counter.packets() == packets_received; });
   const double loss_ratio =
       1 -
       static_cast<double>(packets_received) / saturator.packets_transmitted();
@@ -343,12 +342,12 @@ TEST(SimulatorTest, OnePacketQueue) {
   saturator.SetTxPort(&local_link);
   queue.set_tx_port(&bottleneck_link);
 
-  const QuicPacketCount packets_received = 10;
+  static const QuicPacketCount packets_received = 10;
   // The deadline here is to prevent this tests from looping infinitely in case
   // the packets never reach the receiver.
   const QuicTime deadline =
       simulator.GetClock()->Now() + QuicTime::Delta::FromSeconds(10);
-  simulator.RunUntil([&simulator, &counter, packets_received, deadline]() {
+  simulator.RunUntil([&simulator, &counter, deadline]() {
     return counter.packets() == packets_received ||
            simulator.GetClock()->Now() > deadline;
   });
@@ -379,8 +378,8 @@ TEST(SimulatorTest, SwitchedNetwork) {
                       base_propagation_delay * 3);
 
   const QuicTime start_time = simulator.GetClock()->Now();
-  const QuicPacketCount bytes_received = 64 * 1000;
-  simulator.RunUntil([&saturator1, bytes_received]() {
+  static const QuicPacketCount bytes_received = 64 * 1000;
+  simulator.RunUntil([&saturator1]() {
     return saturator1.counter()->bytes() >= bytes_received;
   });
   const QuicTime end_time = simulator.GetClock()->Now();
@@ -630,9 +629,9 @@ TEST(SimulatorTest, TrafficPolicer) {
   Switch network_switch(&simulator, "Switch", 8,
                         bandwidth * base_propagation_delay * 10);
 
-  const QuicByteCount initial_burst = 1000 * 10;
-  const QuicByteCount max_bucket_size = 1000 * 100;
-  const QuicBandwidth target_bandwidth = bandwidth * 0.25;
+  static const QuicByteCount initial_burst = 1000 * 10;
+  static const QuicByteCount max_bucket_size = 1000 * 100;
+  static const QuicBandwidth target_bandwidth = bandwidth * 0.25;
   TrafficPolicer policer(&simulator, "Policer", initial_burst, max_bucket_size,
                          target_bandwidth, network_switch.port(2));
 
@@ -642,14 +641,14 @@ TEST(SimulatorTest, TrafficPolicer) {
 
   // Ensure the initial burst passes without being dropped at all.
   bool simulator_result = simulator.RunUntilOrTimeout(
-      [&saturator1, initial_burst]() {
+      [&saturator1]() {
         return saturator1.bytes_transmitted() == initial_burst;
       },
       timeout);
   ASSERT_TRUE(simulator_result);
   saturator1.Pause();
   simulator_result = simulator.RunUntilOrTimeout(
-      [&saturator2, initial_burst]() {
+      [&saturator2]() {
         return saturator2.counter()->bytes() == initial_burst;
       },
       timeout);

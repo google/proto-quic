@@ -26,8 +26,7 @@
 #  "windowed_test_launcher"
 #  : the test is a gtest-based test that uses the "brave-new-test-launcher"
 #    from //base/test:test_support and needs to run under Xvfb if run on
-#    an X11-based platform (use_x11=true or use_ozone=true &&
-#    --ozone_platform=x11).
+#    some platforms (eg. Linux Desktop, X11 CrOS and Ozone CrOS).
 #  "console_test_launcher"
 #  : the test is a gtest-based test that uses the "brave-new-test-launcher"
 #    from //base/test:test_support but does not need Xvfb.
@@ -167,10 +166,6 @@
   },
   "battor_agent_unittests": {
     "label": "//tools/battor_agent:battor_agent_unittests",
-    "type": "console_test_launcher",
-  },
-  "blimp_unittests": {
-    "label": "//blimp:blimp_unittests",
     "type": "console_test_launcher",
   },
   "blink_heap_unittests": {
@@ -451,12 +446,11 @@
     "type": "raw",
     "args": [],
   },
-  "gl_unittests_ozonex": {
-    "label": "//ui/gl:gl_unittests_ozonex",
+  "gl_unittests_ozone": {
+    "label": "//ui/gl:gl_unittests_ozone",
     "label_type": "group",
     "type": "windowed_test_launcher",
     "executable": "gl_unittests",
-    "args": ["--ozone-platform=x11"],
   },
   "gn_unittests": {
     "label": "//tools/gn:gn_unittests",
@@ -618,11 +612,11 @@
     "type": "console_test_launcher",
   },
   "mojo_js_integration_tests": {
-    "label": "//mojo/edk/js/test:js_integration_tests",
+    "label": "//mojo/edk/js/tests:mojo_js_integration_tests",
     "type": "console_test_launcher",
   },
   "mojo_js_unittests": {
-    "label": "//mojo/edk/js/test:js_unittests",
+    "label": "//mojo/edk/js/tests:mojo_js_unittests",
     "type": "console_test_launcher",
   },
   "mojo_public_application_unittests": {

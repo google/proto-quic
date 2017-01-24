@@ -65,6 +65,9 @@
         'android_ndk_next_release_bot_minimal_symbols_x64',
       'NDK Next x86 Builder':
         'android_ndk_next_release_bot_minimal_symbols_x86',
+      'x64 Device Tester': 'android_shared_release_bot_x64',
+      'x86 Cloud Tester': 'android_debug_static_bot_x86',
+      'x86 Emulator Tester': 'android_debug_static_bot_x86',
     },
 
     'chromium.chrome': {
@@ -93,21 +96,10 @@
 
     'chromium.fyi': {
       'Afl Upload Linux ASan': 'release_afl_asan',
-      'Android Cloud Tests': 'android_debug_static_bot_x86',
-      'Android Tests (x86 emulator)': 'android_debug_static_bot_x86',
       'Android Builder (dbg)': 'android_debug_static_bot_vr_shell',
       'Android Builder Goma Canary (dbg)': 'android_debug_bot',
       'Android deterministic': 'android_without_codecs_release_bot_minimal_symbols',
       'Android deterministic (dbg)': 'android_debug_bot',
-      'Android x64 Tests': 'android_shared_release_bot_x64',
-      'Blimp Android Client':
-        '//build/args/bots/chromium.fyi/blimp_client_rel.gn',
-      'Blimp Linux Engine':
-        '//build/args/bots/chromium.fyi/blimp_engine_rel.gn',
-      'Blimp Client Engine Integration': {
-        'client': '//build/args/bots/chromium.fyi/blimp_client_rel.gn',
-        'engine': '//build/args/bots/chromium.fyi/blimp_engine_rel.gn',
-      },
       'Browser Side Navigation Linux': 'release_bot',
       'CFI Linux CF': 'cfi_full_cfi_diag_release_static',
       'CFI Linux ToT': 'cfi_full_clang_tot_release_static',
@@ -207,7 +199,7 @@
       'Site Isolation Android': 'android_release_bot_minimal_symbols_arm64',
       'Site Isolation Linux': 'release_trybot',
       'Site Isolation Win': 'release_trybot_x86',
-      'ThinLTO Linux ToT': 'thin_lto_clang_tot_release_static_use_lld',
+      'ThinLTO Linux ToT': 'thin_lto_clang_tot_full_symbols_release_static_use_lld',
       'UBSanVptr Linux': 'ubsan_vptr_release_bot',
       'WebKit Linux - TraceWrappables': 'debug_bot',
       'WebKit Linux - WPTServe': 'release_bot',
@@ -266,7 +258,6 @@
       'Android Clang Builder (dbg)': 'android_clang_asan_errorprone_findbugs_debug_bot_minimal_symbols',
       'Android Tests (dbg)': 'android_debug_static_bot',
       'Android Tests': 'android_release_bot_minimal_symbols',
-      'Blimp Linux (dbg)': '//build/args/bots/chromium.linux/blimp_linux_dbg.gn',
       'Cast Android (dbg)': 'android_cast_debug_static_bot',
       'Cast Linux': 'cast_release_bot',
       'Linux Builder (dbg)': 'debug_bot',
@@ -364,7 +355,9 @@
       'Chromium Win SyzyASAN': 'syzyasan_no_pch_release_x86',
       'Linux ASAN Builder': 'asan_lsan_release_bot',
       'Linux Debug Builder': 'debug_bot',
+      'Linux Release (NVIDIA)': 'gpu_tests_release_trybot',
       'Linux Snapshot Builder': 'release_bot',
+      'Mac Release (Intel)': 'gpu_tests_release_trybot',
       'V8 Android GN (dbg)': 'android_debug_bot',
       'V8 Linux GN': 'release_bot',
       'V8-Blink Linux 64': 'release_bot',
@@ -372,6 +365,7 @@
       'V8-Blink Linux 64 (dbg)': 'debug_bot',
       'V8-Blink Mac': 'release_bot',
       'V8-Blink Win': 'release_bot_x86',
+      'Win Release (NVIDIA)': 'gpu_tests_release_trybot_x86',
     },
 
     'chromium.webkit': {
@@ -420,10 +414,6 @@
       'Linux Dev': 'debug_bot',
       'Mac Dev': 'debug_bot',
       'Windows Dev': 'debug_bot',
-    },
-
-    'official.android': {
-      'blimp-engine': '//build/args/bots/official.android/blimp-engine.gn',
     },
 
     'official.desktop': {
@@ -525,7 +515,6 @@
     },
 
     'tryserver.chromium.linux': {
-      'blimp_linux_dbg': '//build/args/bots/chromium.linux/blimp_linux_dbg.gn',
       'Chromium Linux Codesearch Builder': 'codesearch',
       'ChromiumOS Codesearch Builder': 'codesearch',
       'cast_shell_linux': 'cast_release_trybot',
@@ -1459,8 +1448,8 @@
       'syzyasan', 'no_pch', 'release', 'x86',
     ],
 
-    'thin_lto_clang_tot_release_static_use_lld': [
-      'thin_lto', 'clang_tot', 'release', 'static', 'use_lld',
+    'thin_lto_clang_tot_full_symbols_release_static_use_lld': [
+      'thin_lto', 'clang_tot', 'full_symbols', 'release', 'static', 'use_lld',
     ],
 
     'tsan_disable_nacl_debug_bot': [
@@ -1596,7 +1585,7 @@
     },
 
     'clang_tot': {
-      'gn_args': 'llvm_force_head_revision=true clang_use_chrome_plugins=false',
+      'gn_args': 'llvm_force_head_revision=true clang_use_chrome_plugins=false enable_nocompile_tests=false',
       'mixins': ['clang'],
     },
 

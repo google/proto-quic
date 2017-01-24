@@ -18,6 +18,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
+#include "base/test/mock_callback.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -38,7 +39,6 @@ using net::test::IsOk;
 namespace net {
 namespace {
 
-typedef ::testing::MockFunction<void(int)> MockCallback;  // NOLINT
 using ::testing::_;
 using ::testing::InSequence;
 using ::testing::Invoke;
@@ -403,22 +403,21 @@ TEST_F(WebSocketDeflateStreamTest, ReadUncompressedFrameImmediately) {
 TEST_F(WebSocketDeflateStreamTest, ReadUncompressedFrameAsync) {
   ReadFramesStub stub(ERR_IO_PENDING);
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
-  MockCallback mock_callback, checkpoint;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+  base::MockCallback<CompletionCallback> mock_callback;
+  base::MockCallback<base::Closure> checkpoint;
 
   {
     InSequence s;
     EXPECT_CALL(*mock_stream_, ReadFrames(&frames, _))
         .WillOnce(Invoke(&stub, &ReadFramesStub::Call));
-    EXPECT_CALL(checkpoint, Call(0));
-    EXPECT_CALL(mock_callback, Call(OK));
+    EXPECT_CALL(checkpoint, Run());
+    EXPECT_CALL(mock_callback, Run(OK));
   }
-  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
   ASSERT_EQ(0u, frames.size());
 
-  checkpoint.Call(0);
+  checkpoint.Run();
 
   AppendTo(stub.frames_passed(),
            WebSocketFrameHeader::kOpCodeText,
@@ -435,22 +434,21 @@ TEST_F(WebSocketDeflateStreamTest, ReadUncompressedFrameAsync) {
 TEST_F(WebSocketDeflateStreamTest, ReadFailedAsync) {
   ReadFramesStub stub(ERR_IO_PENDING);
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
-  MockCallback mock_callback, checkpoint;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+  base::MockCallback<CompletionCallback> mock_callback;
+  base::MockCallback<base::Closure> checkpoint;
 
   {
     InSequence s;
     EXPECT_CALL(*mock_stream_, ReadFrames(&frames, _))
         .WillOnce(Invoke(&stub, &ReadFramesStub::Call));
-    EXPECT_CALL(checkpoint, Call(0));
-    EXPECT_CALL(mock_callback, Call(ERR_FAILED));
+    EXPECT_CALL(checkpoint, Run());
+    EXPECT_CALL(mock_callback, Run(ERR_FAILED));
   }
-  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
   ASSERT_EQ(0u, frames.size());
 
-  checkpoint.Call(0);
+  checkpoint.Run();
 
   AppendTo(stub.frames_passed(),
            WebSocketFrameHeader::kOpCodeText,
@@ -484,21 +482,21 @@ TEST_F(WebSocketDeflateStreamTest, ReadCompressedFrameImmediately) {
 
 TEST_F(WebSocketDeflateStreamTest, ReadCompressedFrameAsync) {
   ReadFramesStub stub(ERR_IO_PENDING);
-  MockCallback mock_callback, checkpoint;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+
+  base::MockCallback<CompletionCallback> mock_callback;
+  base::MockCallback<base::Closure> checkpoint;
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
   {
     InSequence s;
     EXPECT_CALL(*mock_stream_, ReadFrames(&frames, _))
         .WillOnce(Invoke(&stub, &ReadFramesStub::Call));
-    EXPECT_CALL(checkpoint, Call(0));
-    EXPECT_CALL(mock_callback, Call(OK));
+    EXPECT_CALL(checkpoint, Run());
+    EXPECT_CALL(mock_callback, Run(OK));
   }
-  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
 
-  checkpoint.Call(0);
+  checkpoint.Run();
 
   AppendTo(stub.frames_passed(),
            WebSocketFrameHeader::kOpCodeText,
@@ -523,9 +521,8 @@ TEST_F(WebSocketDeflateStreamTest,
            kReserved1,
            data1);
   ReadFramesStub stub1(OK, &frames_to_output), stub2(ERR_IO_PENDING);
-  MockCallback mock_callback, checkpoint;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+  base::MockCallback<CompletionCallback> mock_callback;
+  base::MockCallback<base::Closure> checkpoint;
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
 
   {
@@ -533,10 +530,10 @@ TEST_F(WebSocketDeflateStreamTest,
     EXPECT_CALL(*mock_stream_, ReadFrames(&frames, _))
         .WillOnce(Invoke(&stub1, &ReadFramesStub::Call))
         .WillOnce(Invoke(&stub2, &ReadFramesStub::Call));
-    EXPECT_CALL(checkpoint, Call(0));
-    EXPECT_CALL(mock_callback, Call(OK));
+    EXPECT_CALL(checkpoint, Run());
+    EXPECT_CALL(mock_callback, Run(OK));
   }
-  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
   ASSERT_EQ(0u, frames.size());
 
@@ -545,7 +542,7 @@ TEST_F(WebSocketDeflateStreamTest,
            kFinal,
            data2);
 
-  checkpoint.Call(0);
+  checkpoint.Run();
   stub2.callback().Run(OK);
 
   ASSERT_EQ(1u, frames.size());
@@ -987,9 +984,7 @@ TEST_F(WebSocketDeflateStreamTest, ReadEmptyAsyncFrame) {
   std::vector<std::unique_ptr<ReadFramesStub>> stub_vector;
   stub_vector.push_back(base::WrapUnique(new ReadFramesStub(ERR_IO_PENDING)));
   stub_vector.push_back(base::WrapUnique(new ReadFramesStub(ERR_IO_PENDING)));
-  MockCallback mock_callback;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+  base::MockCallback<CompletionCallback> mock_callback;
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
 
   {
@@ -1000,10 +995,10 @@ TEST_F(WebSocketDeflateStreamTest, ReadEmptyAsyncFrame) {
     EXPECT_CALL(*mock_stream_, ReadFrames(&frames, _))
         .WillOnce(Invoke(stub_vector[1].get(), &ReadFramesStub::Call));
 
-    EXPECT_CALL(mock_callback, Call(OK));
+    EXPECT_CALL(mock_callback, Run(OK));
   }
 
-  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->ReadFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
   AppendTo(stub_vector[0]->frames_passed(),
            WebSocketFrameHeader::kOpCodeText,
@@ -1070,23 +1065,22 @@ TEST_F(WebSocketDeflateStreamTest, WriteFrameImmediately) {
 
 TEST_F(WebSocketDeflateStreamTest, WriteFrameAsync) {
   WriteFramesStub stub(predictor_, ERR_IO_PENDING);
-  MockCallback mock_callback, checkpoint;
-  CompletionCallback callback =
-      base::Bind(&MockCallback::Call, base::Unretained(&mock_callback));
+  base::MockCallback<CompletionCallback> mock_callback;
+  base::MockCallback<base::Closure> checkpoint;
   std::vector<std::unique_ptr<WebSocketFrame>> frames;
   {
     InSequence s;
     EXPECT_CALL(*mock_stream_, WriteFrames(&frames, _))
         .WillOnce(Invoke(&stub, &WriteFramesStub::Call));
-    EXPECT_CALL(checkpoint, Call(0));
-    EXPECT_CALL(mock_callback, Call(OK));
+    EXPECT_CALL(checkpoint, Run());
+    EXPECT_CALL(mock_callback, Run(OK));
   }
   AppendTo(&frames, WebSocketFrameHeader::kOpCodeText, kFinal, "Hello");
   predictor_->AddFramesToBeInput(frames);
-  ASSERT_THAT(deflate_stream_->WriteFrames(&frames, callback),
+  ASSERT_THAT(deflate_stream_->WriteFrames(&frames, mock_callback.Get()),
               IsError(ERR_IO_PENDING));
 
-  checkpoint.Call(0);
+  checkpoint.Run();
   stub.callback().Run(OK);
 
   const std::vector<std::unique_ptr<WebSocketFrame>>& frames_passed =

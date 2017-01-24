@@ -4,11 +4,14 @@
 
 #include <stddef.h>
 
+#include <memory>
+#include <vector>
+
 #include "base/base_switches.h"
 #include "base/bind.h"
 #include "base/command_line.h"
 #include "base/location.h"
-#include "base/memory/scoped_vector.h"
+#include "base/memory/ptr_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/strings/stringprintf.h"
 #include "base/synchronization/condition_variable.h"
@@ -59,11 +62,11 @@ class ThreadPerfTest : public testing::Test {
     done->Signal();
   }
 
-  base::ThreadTicks ThreadNow(base::Thread* thread) {
+  base::ThreadTicks ThreadNow(const base::Thread& thread) {
     base::WaitableEvent done(WaitableEvent::ResetPolicy::AUTOMATIC,
                              WaitableEvent::InitialState::NOT_SIGNALED);
     base::ThreadTicks ticks;
-    thread->task_runner()->PostTask(
+    thread.task_runner()->PostTask(
         FROM_HERE, base::Bind(&ThreadPerfTest::TimeOnThread,
                               base::Unretained(this), &ticks, &done));
     done.Wait();
@@ -74,10 +77,10 @@ class ThreadPerfTest : public testing::Test {
     // Create threads and collect starting cpu-time for each thread.
     std::vector<base::ThreadTicks> thread_starts;
     while (threads_.size() < num_threads) {
-      threads_.push_back(new base::Thread("PingPonger"));
+      threads_.push_back(MakeUnique<base::Thread>("PingPonger"));
       threads_.back()->Start();
       if (base::ThreadTicks::IsSupported())
-        thread_starts.push_back(ThreadNow(threads_.back()));
+        thread_starts.push_back(ThreadNow(*threads_.back()));
     }
 
     Init();
@@ -92,7 +95,7 @@ class ThreadPerfTest : public testing::Test {
     base::TimeDelta thread_time;
     while (threads_.size()) {
       if (base::ThreadTicks::IsSupported()) {
-        thread_time += ThreadNow(threads_.back()) - thread_starts.back();
+        thread_time += ThreadNow(*threads_.back()) - thread_starts.back();
         thread_starts.pop_back();
       }
       threads_.pop_back();
@@ -117,7 +120,7 @@ class ThreadPerfTest : public testing::Test {
 
  protected:
   void FinishMeasurement() { done_.Signal(); }
-  ScopedVector<base::Thread> threads_;
+  std::vector<std::unique_ptr<base::Thread>> threads_;
 
  private:
   base::WaitableEvent done_;
@@ -126,7 +129,7 @@ class ThreadPerfTest : public testing::Test {
 // Class to test task performance by posting empty tasks back and forth.
 class TaskPerfTest : public ThreadPerfTest {
   base::Thread* NextThread(int count) {
-    return threads_[count % threads_.size()];
+    return threads_[count % threads_.size()].get();
   }
 
   void PingPong(int hops) override {
@@ -181,9 +184,9 @@ class EventPerfTest : public ThreadPerfTest {
  public:
   void Init() override {
     for (size_t i = 0; i < threads_.size(); i++) {
-      events_.push_back(
-          new WaitableEventType(WaitableEvent::ResetPolicy::AUTOMATIC,
-                                WaitableEvent::InitialState::NOT_SIGNALED));
+      events_.push_back(MakeUnique<WaitableEventType>(
+          WaitableEvent::ResetPolicy::AUTOMATIC,
+          WaitableEvent::InitialState::NOT_SIGNALED));
     }
   }
 
@@ -216,7 +219,7 @@ class EventPerfTest : public ThreadPerfTest {
   }
 
   int remaining_hops_;
-  ScopedVector<WaitableEventType> events_;
+  std::vector<std::unique_ptr<WaitableEventType>> events_;
 };
 
 // Similar to the task posting test, this just tests similar functionality

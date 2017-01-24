@@ -28,6 +28,11 @@ HpackDecoderListener* Http2HpackDecoder::listener() const {
   return decoder_state_.listener();
 }
 
+void Http2HpackDecoder::set_tables_debug_listener(
+    HpackDecoderTablesDebugListener* debug_listener) {
+  decoder_state_.set_tables_debug_listener(debug_listener);
+}
+
 void Http2HpackDecoder::set_max_string_size_bytes(
     size_t max_string_size_bytes) {
   entry_buffer_.set_max_string_size_bytes(max_string_size_bytes);

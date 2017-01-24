@@ -7,14 +7,13 @@
 #include "base/files/file_path.h"
 #include "base/memory/singleton.h"
 #include "base/path_service.h"
-#include "base/stl_util.h"
+#include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::ContainsKey;
 using base::StringPiece;
 using net::SpdyHeaderBlock;
 using std::string;
@@ -63,7 +62,7 @@ TEST_F(QuicHttpResponseCacheTest, AddSimpleResponseGetResponse) {
   const QuicHttpResponseCache::Response* response =
       cache_.GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
   EXPECT_EQ(response_body.size(), response->body().length());
 }
@@ -99,10 +98,10 @@ TEST_F(QuicHttpResponseCacheTest, ReadsCacheDir) {
   const QuicHttpResponseCache::Response* response =
       cache_.GetResponse("www.example.com", "/index.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
   // Connection headers are not valid in HTTP/2.
-  EXPECT_FALSE(ContainsKey(response->headers(), "connection"));
+  EXPECT_FALSE(QuicContainsKey(response->headers(), "connection"));
   EXPECT_LT(0U, response->body().length());
 }
 
@@ -125,10 +124,10 @@ TEST_F(QuicHttpResponseCacheTest, UsesOriginalUrl) {
   const QuicHttpResponseCache::Response* response =
       cache_.GetResponse("www.example.com", "/site_map.html");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
   // Connection headers are not valid in HTTP/2.
-  EXPECT_FALSE(ContainsKey(response->headers(), "connection"));
+  EXPECT_FALSE(QuicContainsKey(response->headers(), "connection"));
   EXPECT_LT(0U, response->body().length());
 }
 
@@ -151,20 +150,20 @@ TEST_F(QuicHttpResponseCacheTest, DefaultResponse) {
   // Now we should get the default response for the original request.
   response = cache_.GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 
   // Now add a set response for / and make sure it is returned
   cache_.AddSimpleResponse("www.google.com", "/", 302, "");
   response = cache_.GetResponse("www.google.com", "/");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("302", response->headers().find(":status")->second);
 
   // We should get the default response for other requests.
   response = cache_.GetResponse("www.google.com", "/asd");
   ASSERT_TRUE(response);
-  ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+  ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
   EXPECT_EQ("200", response->headers().find(":status")->second);
 }
 
@@ -238,7 +237,7 @@ TEST_F(QuicHttpResponseCacheTest, GetServerPushResourcesAndPushResponses) {
     const QuicHttpResponseCache::Response* response =
         cache_.GetResponse(host, path);
     ASSERT_TRUE(response);
-    ASSERT_TRUE(ContainsKey(response->headers(), ":status"));
+    ASSERT_TRUE(QuicContainsKey(response->headers(), ":status"));
     EXPECT_EQ(push_response_status[i++],
               response->headers().find(":status")->second);
     EXPECT_EQ(push_resource.body, response->body());

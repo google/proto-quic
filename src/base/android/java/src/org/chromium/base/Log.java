@@ -347,6 +347,11 @@ public class Log {
         }
     }
 
+    /** Handy function to get a loggable stack trace from a Throwable. */
+    public static String getStackTraceString(Throwable tr) {
+        return android.util.Log.getStackTraceString(tr);
+    }
+
     private static Throwable getThrowableToLog(Object[] args) {
         if (args == null || args.length == 0) return null;
 

@@ -6,6 +6,8 @@
 
 namespace blink {
 
+namespace simple_test {
+
 class Interface {
  public:
   virtual void MyMethod(int my_param) {}
@@ -24,5 +26,21 @@ void Test() {
       MyMethod(1));
   mocked_interface.MyMethod(123);
 }
+
+}  // namespace simple_test
+
+namespace no_base_method_to_override {
+
+class MockDestructible {
+ public:
+  MOCK_METHOD0(Destruct, void());
+};
+
+void Test() {
+  MockDestructible destructible;
+  EXPECT_CALL(destructible, Destruct());
+}
+
+}  // namespace no_base_method_to_override
 
 }  // namespace blink

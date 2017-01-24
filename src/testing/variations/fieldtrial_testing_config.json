@@ -202,7 +202,6 @@
                 {
                     "name": "Default",
                     "params": {
-                        "RedirectHistoryService": "true",
                         "RedirectSequencedWorkerPools": "true"
                     }
                 },
@@ -385,9 +384,9 @@
             ],
             "experiments": [
                 {
-                    "name": "Prefetch",
+                    "name": "Brotli",
                     "params": {
-                        "exp": "prefetch"
+                        "exp": "allow_brotli"
                     }
                 },
                 {
@@ -659,7 +658,10 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled"
+                    "name": "Enabled",
+                    "enable_features": [
+                        "EnableSyncClientToServerCompression"
+                    ]
                 }
             ]
         }
@@ -715,12 +717,12 @@
             ],
             "experiments": [
                 {
-                    "name": "ExpensiveBackgroundTimerThrottlingEnabled",
+                    "name": "Enabled_30sMaxThrottilingDelay",
                     "params": {
                         "cpu_budget": "0.01",
                         "initial_budget": "1.0",
                         "max_budget": "3.0",
-                        "max_delay": "-1"
+                        "max_delay": "30.0"
                     },
                     "enable_features": [
                         "ExpensiveBackgroundTimerThrottling"
@@ -781,6 +783,25 @@
             ]
         }
     ],
+    "FasterLocationReload": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "FasterLocationReload"
+                    ]
+                }
+            ]
+        }
+    ],
     "GoogleBrandedContextMenu": [
         {
             "platforms": [
@@ -824,6 +845,25 @@
                     },
                     "enable_features": [
                         "PreferHtmlOverPlugins"
+                    ]
+                }
+            ]
+        }
+    ],
+    "HttpFormWarning": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "HttpFormWarning"
                     ]
                 }
             ]
@@ -1046,6 +1086,21 @@
             ]
         }
     ],
+    "MidiManagerAndroid": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "MidiManagerAndroid"
+                    ]
+                }
+            ]
+        }
+    ],
     "ModerateBindingOnBackgroundTabCreation": [
         {
             "platforms": [
@@ -1111,15 +1166,15 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
+                    "name": "Enabled-PeekingCardAnimated",
                     "params": {
                         "content_suggestions_backend": "https://chromecontentsuggestions-pa.googleapis.com/v1/suggestions/fetch",
-                        "quota_SuggestionFetcher": "2"
+                        "first_card_animation_max_runs": "7",
+                        "first_card_offset": "0"
                     },
                     "enable_features": [
-                        "NTPArticleSuggestions",
-                        "NTPBookmarkSuggestions",
-                        "NTPSnippets"
+                        "NTPSnippets",
+                        "NTPSnippetsIncreasedVisibility"
                     ]
                 }
             ]
@@ -1584,7 +1639,7 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledGlobalMedium2",
+                    "name": "EnabledGlobalRankingNoVersioned",
                     "params": {
                         "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_gm"
                     }
@@ -1656,6 +1711,21 @@
                     "params": {
                         "progress-bar-animation": "smooth-indeterminate"
                     }
+                }
+            ]
+        }
+    ],
+    "ProgressBarCompletion": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "progress-bar-completion-resources-before-domContentLoaded",
+                    "enable_features": [
+                        "progress-bar-completion-resources-before-domContentLoaded"
+                    ]
                 }
             ]
         }
@@ -2452,7 +2522,7 @@
             "experiments": [
                 {
                     "name": "Enabled",
-                    "disable_features": [
+                    "enable_features": [
                         "VrShell"
                     ]
                 }
@@ -2546,6 +2616,24 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "WebRTC-TunedClippingLevelMin-SessionRandomized": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "TunedClippingLevelMin30"
+                    ]
                 }
             ]
         }

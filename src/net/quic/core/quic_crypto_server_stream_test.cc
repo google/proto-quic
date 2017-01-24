@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "base/memory/ptr_util.h"
 #include "net/quic/core/crypto/aes_128_gcm_12_encrypter.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
@@ -23,6 +22,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/failing_proof_source.h"
@@ -87,8 +87,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // called multiple times.
   void InitializeServer() {
     TestQuicSpdyServerSession* server_session = nullptr;
-    helpers_.push_back(base::MakeUnique<MockQuicConnectionHelper>());
-    alarm_factories_.push_back(base::MakeUnique<MockAlarmFactory>());
+    helpers_.push_back(QuicMakeUnique<MockQuicConnectionHelper>());
+    alarm_factories_.push_back(QuicMakeUnique<MockAlarmFactory>());
     CreateServerSessionForTest(
         server_id_, QuicTime::Delta::FromSeconds(100000), supported_versions_,
         helpers_.back().get(), alarm_factories_.back().get(),
@@ -115,8 +115,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   // testing.  May be called multiple times.
   void InitializeFakeClient(bool supports_stateless_rejects) {
     TestQuicSpdyClientSession* client_session = nullptr;
-    helpers_.push_back(base::MakeUnique<MockQuicConnectionHelper>());
-    alarm_factories_.push_back(base::MakeUnique<MockAlarmFactory>());
+    helpers_.push_back(QuicMakeUnique<MockQuicConnectionHelper>());
+    alarm_factories_.push_back(QuicMakeUnique<MockAlarmFactory>());
     CreateClientSessionForTest(
         server_id_, supports_stateless_rejects,
         QuicTime::Delta::FromSeconds(100000), supported_versions_,

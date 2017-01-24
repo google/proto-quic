@@ -117,6 +117,11 @@ class CanonOutputT {
     cur_len_ += str_len;
   }
 
+  void ReserveSizeIfNeeded(int estimated_size) {
+    if (estimated_size > buffer_len_)
+      Resize(estimated_size);
+  }
+
  protected:
   // Grows the given buffer so that it can fit at least |min_additional|
   // characters. Returns true if the buffer could be resized, false on OOM.

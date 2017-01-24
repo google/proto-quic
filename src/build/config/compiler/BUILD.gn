@@ -1082,6 +1082,9 @@ config("default_warnings") {
         cflags += [
           # TODO(hans): https://crbug.com/681136
           "-Wno-unused-lambda-capture",
+
+          # TODO(thakis ): https://crbug.com/683349
+          "-Wno-user-defined-warnings",
         ]
       }
     }

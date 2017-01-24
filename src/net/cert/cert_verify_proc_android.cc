@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/sha1.h"
 #include "base/strings/string_piece.h"
@@ -15,6 +16,7 @@
 #include "net/android/network_library.h"
 #include "net/base/net_errors.h"
 #include "net/cert/asn1_util.h"
+#include "net/cert/cert_net_fetcher.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/x509_certificate.h"
@@ -23,6 +25,9 @@
 namespace net {
 
 namespace {
+
+base::LazyInstance<scoped_refptr<CertNetFetcher>>::Leaky g_cert_net_fetcher =
+    LAZY_INSTANCE_INITIALIZER;
 
 // Returns true if the certificate verification call was successful (regardless
 // of its result), i.e. if |verify_result| was set. Otherwise returns false.
@@ -125,6 +130,18 @@ bool GetChainDEREncodedBytes(X509Certificate* cert,
 CertVerifyProcAndroid::CertVerifyProcAndroid() {}
 
 CertVerifyProcAndroid::~CertVerifyProcAndroid() {}
+
+// static
+void CertVerifyProcAndroid::SetCertNetFetcher(
+    scoped_refptr<CertNetFetcher> cert_net_fetcher) {
+  DCHECK(!g_cert_net_fetcher.Get());
+  g_cert_net_fetcher.Get() = std::move(cert_net_fetcher);
+}
+
+// static
+void CertVerifyProcAndroid::ShutdownCertNetFetcher() {
+  g_cert_net_fetcher.Get()->Shutdown();
+}
 
 bool CertVerifyProcAndroid::SupportsAdditionalTrustAnchors() const {
   return false;

@@ -180,7 +180,7 @@ void NinjaActionTargetWriter::WriteSourceRules(
 
     // The required types is the union of the args and response file. This
     // might theoretically duplicate a definition if the same substitution is
-    // used in both the args and the reponse file. However, this should be
+    // used in both the args and the response file. However, this should be
     // very unusual (normally the substitutions will go in one place or the
     // other) and the redundant assignment won't bother Ninja.
     SubstitutionWriter::WriteNinjaVariablesForSource(

@@ -81,7 +81,7 @@ class MediaAndroid(perf_benchmark.PerfBenchmark):
   tag = 'android'
   page_set = page_sets.ToughVideoCasesPageSet
   # Exclude is_4k and 50 fps media files (garden* & crowd*).
-  options = {'story_label_filter_exclude': 'is_4k,is_50fps'}
+  options = {'story_tag_filter_exclude': 'is_4k,is_50fps'}
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
@@ -111,9 +111,9 @@ class MediaChromeOS4kOnly(perf_benchmark.PerfBenchmark):
   tag = 'chromeOS4kOnly'
   page_set = page_sets.ToughVideoCasesPageSet
   options = {
-      'story_label_filter': 'is_4k',
+      'story_tag_filter': 'is_4k',
       # Exclude is_50fps test files: crbug/331816
-      'story_label_filter_exclude': 'is_50fps'
+      'story_tag_filter_exclude': 'is_50fps'
   }
 
   @classmethod
@@ -132,7 +132,7 @@ class MediaChromeOS(perf_benchmark.PerfBenchmark):
   tag = 'chromeOS'
   page_set = page_sets.ToughVideoCasesPageSet
   # Exclude is_50fps test files: crbug/331816
-  options = {'story_label_filter_exclude': 'is_4k,is_50fps'}
+  options = {'story_tag_filter_exclude': 'is_4k,is_50fps'}
 
   @classmethod
   def Name(cls):

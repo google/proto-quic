@@ -42,6 +42,11 @@ void HpackDecoderState::set_listener(HpackDecoderListener* listener) {
   listener_ = listener;
 }
 
+void HpackDecoderState::set_tables_debug_listener(
+    HpackDecoderTablesDebugListener* debug_listener) {
+  decoder_tables_.set_debug_listener(debug_listener);
+}
+
 void HpackDecoderState::ApplyHeaderTableSizeSetting(
     uint32_t header_table_size) {
   DVLOG(2) << "HpackDecoderState::ApplyHeaderTableSizeSetting("

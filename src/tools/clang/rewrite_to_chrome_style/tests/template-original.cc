@@ -337,6 +337,31 @@ class IntrusiveHeap {
 
 }  // namespace blacklisting_of_renaming_of_begin_method
 
+namespace specializations {
+
+template <unsigned long sizeOfValue>
+int toV8SignedIntegerInternal(long value);
+
+template <>
+int toV8SignedIntegerInternal<4>(long value) {
+  return 123 + value;
+}
+
+template <>
+int toV8SignedIntegerInternal<8>(long value) {
+  return 456 + value;
+}
+
+int toV8(int value) {
+  return toV8SignedIntegerInternal<sizeof value>(value);
+}
+
+int toV8(long value) {
+  return toV8SignedIntegerInternal<sizeof value>(value);
+}
+
+}  // namespace specializations
+
 }  // namespace blink
 
 namespace not_blink {

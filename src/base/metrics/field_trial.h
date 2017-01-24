@@ -567,7 +567,9 @@ class BASE_EXPORT FieldTrialList {
   // list of handles to be inherited.
   static void AppendFieldTrialHandleIfNeeded(
       base::HandlesToInheritVector* handles);
-#elif defined(OS_POSIX)
+#endif
+
+#if defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX, we also need to explicitly pass down this file descriptor that
   // should be shared with the child process. Returns kInvalidPlatformFile if no
   // handle exists or was not initialized properly.
@@ -649,7 +651,7 @@ class BASE_EXPORT FieldTrialList {
   static bool CreateTrialsFromHandleSwitch(const std::string& handle_switch);
 #endif
 
-#if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID)
+#if defined(OS_POSIX) && !defined(OS_NACL)
   // On POSIX systems that use the zygote, we look up the correct fd that backs
   // the shared memory segment containing the field trials by looking it up via
   // an fd key in GlobalDescriptors. Returns true on success, false on failure.

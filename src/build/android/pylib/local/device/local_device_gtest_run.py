@@ -19,6 +19,8 @@ from pylib.gtest import gtest_test_instance
 from pylib.local import local_test_server_spawner
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from py_trace_event import trace_event
+from py_utils import contextlib_ext
 import tombstones
 
 _MAX_INLINE_FLAGS_LENGTH = 50  # Arbitrarily chosen.
@@ -371,29 +373,35 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
   #override
   def _RunTest(self, device, test):
     # Run the test.
-    timeout = (self._test_instance.shard_timeout
-               * self.GetTool(device).GetTimeoutScale())
-    if self._test_instance.store_tombstones:
-      tombstones.ClearAllTombstones(device)
-    with device_temp_file.DeviceTempFile(
-        adb=device.adb,
-        dir=self._delegate.ResultsDirectory(device),
-        suffix='.xml') as device_tmp_results_file:
+    with contextlib_ext.Optional(
+        self._env.Tracing(),
+        self._env.trace_output):
+      timeout = (self._test_instance.shard_timeout
+                 * self.GetTool(device).GetTimeoutScale())
+      if self._test_instance.store_tombstones:
+        tombstones.ClearAllTombstones(device)
+      with device_temp_file.DeviceTempFile(
+          adb=device.adb,
+          dir=self._delegate.ResultsDirectory(device),
+          suffix='.xml') as device_tmp_results_file:
 
-      flags = self._test_instance.test_arguments or ''
-      if self._test_instance.enable_xml_result_parsing:
-        flags += ' --gtest_output=xml:%s' % device_tmp_results_file.name
-      if self._test_instance.gtest_also_run_disabled_tests:
-        flags += ' --gtest_also_run_disabled_tests'
+        flags = self._test_instance.test_arguments or ''
+        if self._test_instance.enable_xml_result_parsing:
+          flags += ' --gtest_output=xml:%s' % device_tmp_results_file.name
+        if self._test_instance.gtest_also_run_disabled_tests:
+          flags += ' --gtest_also_run_disabled_tests'
 
-      output = self._delegate.Run(
-          test, device, flags=flags,
-          timeout=timeout, retries=0)
+        with contextlib_ext.Optional(
+            trace_event.trace(str(test)),
+            self._env.trace_output):
+          output = self._delegate.Run(
+              test, device, flags=flags,
+              timeout=timeout, retries=0)
 
-      if self._test_instance.enable_xml_result_parsing:
-        gtest_xml = device.ReadFile(
-            device_tmp_results_file.name,
-            as_root=True)
+        if self._test_instance.enable_xml_result_parsing:
+          gtest_xml = device.ReadFile(
+              device_tmp_results_file.name,
+              as_root=True)
 
     for s in self._servers[str(device)]:
       s.Reset()

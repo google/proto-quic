@@ -29,7 +29,7 @@ public class NativeUnitTest extends NativeTest {
         PathUtils.setPrivateDataDirectorySuffix("chrome");
 
         // Needed by system_monitor_unittest.cc
-        PowerMonitor.createForTests(activity);
+        PowerMonitor.createForTests();
 
         // For NativeActivity based tests,
         // dependency libraries must be loaded before NativeActivity::OnCreate,

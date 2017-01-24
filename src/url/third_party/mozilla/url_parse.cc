@@ -690,8 +690,7 @@ bool DoExtractQueryKeyValue(const CHAR* spec,
 
 }  // namespace
 
-Parsed::Parsed() : inner_parsed_(NULL) {
-}
+Parsed::Parsed() : whitespace_removed(false), inner_parsed_(NULL) {}
 
 Parsed::Parsed(const Parsed& other) :
     scheme(other.scheme),

@@ -98,6 +98,17 @@ WebSocket::ParseResult WebSocket::Read(std::string* message) {
   if (closed_)
     return FRAME_CLOSE;
 
+  if (!encoder_) {
+    // RFC6455, section 4.1 says "Once the client's opening handshake has been
+    // sent, the client MUST wait for a response from the server before sending
+    // any further data". If |encoder_| is null here, ::Accept either has not
+    // been called at all, or has rejected a request rather than producing
+    // a server handshake. Either way, the client clearly couldn't have gotten
+    // a proper server handshake, so error out, especially since this method
+    // can't proceed without an |encoder_|.
+    return FRAME_ERROR;
+  }
+
   HttpConnection::ReadIOBuffer* read_buf = connection_->read_buf();
   base::StringPiece frame(read_buf->StartOfBuffer(), read_buf->GetSize());
   int bytes_consumed = 0;
