@@ -66,36 +66,6 @@ def copy_directories():
     shutil.copytree(chrome_root + "/" + directory, proto_quic_root + "/" + directory, symlinks=True)
 
 
-# Merges net/net.gypi. Copies any new additions to net.gypi but leaves
-# them commented out in the proto_quic repo. If any of these files are
-# needed for proto_quic, they will have to be uncommented in the new
-# net.gypi.
-def merge_net_gypi():
-  old_net_gypi = open(proto_quic_root + "/../modified_files/net/net.gypi", 'r')
-  new_net_gypi = open(chrome_root + "/net/net.gypi", 'r')
-  accept_lines = []
-
-  for line in old_net_gypi:
-    line = line.strip()
-    if line and line[0] != "#":
-      accept_lines.append(line)
-  old_net_gypi.close()
-
-  # Write empty lines, comments, and unmodified lines as they are.
-  # Add newly introduced lines into the proto_quic version, but
-  # comment them out.
-  merged_net_gypi = open(proto_quic_root + "/../modified_files/net/net.gypi", 'w')
-  for line in new_net_gypi:
-    stripped = line.strip()
-    if not stripped or stripped[0] == "#" or stripped in accept_lines:
-      merged_net_gypi.write(line)
-    else:
-      merged_net_gypi.write("#" + line)
-
-  new_net_gypi.close()
-  merged_net_gypi.close()
-
-
 # Copies modified build and other files into proto-quic.
 def copy_modified_files():
   # Modified files
@@ -127,7 +97,6 @@ def cleanup():
 # In the functions called below, the sequence of copy, merge, copy, and cleanup attempts
 # to leave the workspace in exactly the state that someone checking out repo will see.
 copy_directories()
-merge_net_gypi()
 copy_modified_files()
 cleanup()
 # Finally sync pulls down files required for building which are not part of the repo.

@@ -15,9 +15,6 @@ cd $PROTO_QUIC_ROOT
 
 echo "copying working copies of build files"
 cp $PROTO_QUIC_ROOT/BUILD.gn $PROTO_QUIC_ROOT/../modified_files/BUILD.gn
-cp $PROTO_QUIC_ROOT/net/BUILD.gn \
-   $PROTO_QUIC_ROOT/../modified_files/net/BUILD.gn
-cp $PROTO_QUIC_ROOT/net/net.gypi $PROTO_QUIC_ROOT/../modified_files/net/net.gypi
 cp $PROTO_QUIC_ROOT/net/test/run_all_unittests.cc \
    $PROTO_QUIC_ROOT/../modified_files/net/test/run_all_unittests.cc
 cp $PROTO_QUIC_ROOT/url/BUILD.gn $PROTO_QUIC_ROOT/../modified_files/url/BUILD.gn
