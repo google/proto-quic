@@ -49,6 +49,11 @@ enum : int {
   kFlagFull    = 1 << 1
 };
 
+// Errors that are logged in "errors" histogram.
+enum AllocatorError : int {
+  kMemoryIsCorrupt = 1,
+};
+
 bool CheckFlag(const volatile std::atomic<uint32_t>* flags, int flag) {
   uint32_t loaded_flags = flags->load(std::memory_order_relaxed);
   return (loaded_flags & flag) != 0;
@@ -300,7 +305,8 @@ PersistentMemoryAllocator::PersistentMemoryAllocator(Memory memory,
       readonly_(readonly),
       corrupt_(0),
       allocs_histogram_(nullptr),
-      used_histogram_(nullptr) {
+      used_histogram_(nullptr),
+      errors_histogram_(nullptr) {
   // These asserts ensure that the structures are 32/64-bit agnostic and meet
   // all the requirements of use within the allocator. They access private
   // definitions and so cannot be moved to the global scope.
@@ -441,16 +447,21 @@ void PersistentMemoryAllocator::CreateTrackingHistograms(
     base::StringPiece name) {
   if (name.empty() || readonly_)
     return;
-
   std::string name_string = name.as_string();
+
+  DCHECK(!allocs_histogram_);
+  allocs_histogram_ = Histogram::FactoryGet(
+      "UMA.PersistentAllocator." + name_string + ".Allocs", 1, 10000, 50,
+      HistogramBase::kUmaTargetedHistogramFlag);
+
   DCHECK(!used_histogram_);
   used_histogram_ = LinearHistogram::FactoryGet(
       "UMA.PersistentAllocator." + name_string + ".UsedPct", 1, 101, 21,
       HistogramBase::kUmaTargetedHistogramFlag);
 
-  DCHECK(!allocs_histogram_);
-  allocs_histogram_ = Histogram::FactoryGet(
-      "UMA.PersistentAllocator." + name_string + ".Allocs", 1, 10000, 50,
+  DCHECK(!errors_histogram_);
+  errors_histogram_ = SparseHistogram::FactoryGet(
+      "UMA.PersistentAllocator." + name_string + ".Errors",
       HistogramBase::kUmaTargetedHistogramFlag);
 }
 
@@ -652,7 +663,7 @@ void PersistentMemoryAllocator::GetMemoryInfo(MemoryInfo* meminfo) const {
       mem_size_ - shared_meta()->freeptr.load(std::memory_order_relaxed),
       (uint32_t)sizeof(BlockHeader));
   meminfo->total = mem_size_;
-  meminfo->free = IsCorrupt() ? 0 : remaining - sizeof(BlockHeader);
+  meminfo->free = remaining - sizeof(BlockHeader);
 }
 
 void PersistentMemoryAllocator::MakeIterable(Reference ref) {
@@ -720,9 +731,15 @@ void PersistentMemoryAllocator::MakeIterable(Reference ref) {
 // case, it's safe to discard the constness and modify the local flag and
 // maybe even the shared flag if the underlying data isn't actually read-only.
 void PersistentMemoryAllocator::SetCorrupt() const {
-  LOG(ERROR) << "Corruption detected in shared-memory segment.";
-  const_cast<std::atomic<bool>*>(&corrupt_)->store(true,
-                                                   std::memory_order_relaxed);
+  if (!corrupt_.load(std::memory_order_relaxed) &&
+      !CheckFlag(
+          const_cast<volatile std::atomic<uint32_t>*>(&shared_meta()->flags),
+          kFlagCorrupt)) {
+    LOG(ERROR) << "Corruption detected in shared-memory segment.";
+    RecordError(kMemoryIsCorrupt);
+  }
+
+  corrupt_.store(true, std::memory_order_relaxed);
   if (!readonly_) {
     SetFlag(const_cast<volatile std::atomic<uint32_t>*>(&shared_meta()->flags),
             kFlagCorrupt);
@@ -782,6 +799,11 @@ PersistentMemoryAllocator::GetBlock(Reference ref, uint32_t type_id,
 
   // Return pointer to block data.
   return reinterpret_cast<const volatile BlockHeader*>(mem_base_ + ref);
+}
+
+void PersistentMemoryAllocator::RecordError(int error) const {
+  if (errors_histogram_)
+    errors_histogram_->Add(error);
 }
 
 const volatile void* PersistentMemoryAllocator::GetBlockData(

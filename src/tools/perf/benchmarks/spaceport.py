@@ -4,6 +4,7 @@
 
 """Runs spaceport.io's PerfMarks benchmark."""
 
+import json
 import logging
 import os
 
@@ -59,10 +60,11 @@ class _SpaceportMeasurement(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     del page  # unused
-    tab.WaitForJavaScriptExpression(
-        '!document.getElementById("start-performance-tests").disabled', 60)
+    tab.WaitForJavaScriptCondition2(
+        '!document.getElementById("start-performance-tests").disabled',
+        timeout=60)
 
-    tab.ExecuteJavaScript("""
+    tab.ExecuteJavaScript2("""
         window.__results = {};
         window.console.log = function(str) {
             if (!str) return;
@@ -76,15 +78,16 @@ class _SpaceportMeasurement(legacy_page_test.LegacyPageTest):
     num_results = 0
     num_tests_in_spaceport = 24
     while num_results < num_tests_in_spaceport:
-      # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-      tab.WaitForJavaScriptExpression(
-          'Object.keys(window.__results).length > %d' % num_results, 180)
-      num_results = tab.EvaluateJavaScript(
+      tab.WaitForJavaScriptCondition2(
+          'Object.keys(window.__results).length > {{ num_results }}',
+          num_results=num_results,
+          timeout=180)
+      num_results = tab.EvaluateJavaScript2(
           'Object.keys(window.__results).length')
       logging.info('Completed test %d of %d',
                    num_results, num_tests_in_spaceport)
 
-    result_dict = eval(tab.EvaluateJavaScript(
+    result_dict = json.loads(tab.EvaluateJavaScript2(
         'JSON.stringify(window.__results)'))
     for key in result_dict:
       chart, trace = key.split('.', 1)

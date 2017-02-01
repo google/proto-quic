@@ -65,7 +65,7 @@ class NET_EXPORT_PRIVATE ProxyResolverV8 {
 
   int GetProxyForURL(const GURL& url, ProxyInfo* results, JSBindings* bindings);
 
-  // Get total/ued heap memory usage of all v8 instances used by the proxy
+  // Get total/used heap memory usage of all v8 instances used by the proxy
   // resolver.
   static size_t GetTotalHeapSize();
   static size_t GetUsedHeapSize();

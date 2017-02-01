@@ -9,13 +9,11 @@
 // It supports calls to accumulate either time intervals (which are processed
 // as integral number of milliseconds), or arbitrary integral units.
 
-// For Histogram(exponential histogram), LinearHistogram and CustomHistogram,
+// For Histogram (exponential histogram), LinearHistogram and CustomHistogram,
 // the minimum for a declared range is 1 (instead of 0), while the maximum is
-// (HistogramBase::kSampleType_MAX - 1). Currently you can declare histograms
-// with ranges exceeding those limits (e.g. 0 as minimal or
-// HistogramBase::kSampleType_MAX as maximal), but those excesses will be
-// silently clamped to those limits (for backwards compatibility with existing
-// code). Best practice is to not exceed the limits.
+// (HistogramBase::kSampleType_MAX - 1). However, there will always be underflow
+// and overflow buckets added automatically, so a 0 bucket will always exist
+// even when a minimum value of 1 is specified.
 
 // Each use of a histogram with the same name will reference the same underlying
 // data, so it is safe to record to the same histogram from multiple locations
@@ -41,7 +39,7 @@
 // are also counted by the constructor in the user supplied "bucket_count"
 // argument.
 // The above example has an exponential ratio of 2 (doubling the bucket width
-// in each consecutive bucket.  The Histogram class automatically calculates
+// in each consecutive bucket).  The Histogram class automatically calculates
 // the smallest ratio that it can use to construct the number of buckets
 // selected in the constructor.  An another example, if you had 50 buckets,
 // and millisecond time values from 1 to 10000, then the ratio between
@@ -81,11 +79,6 @@
 #include "base/macros.h"
 #include "base/metrics/bucket_ranges.h"
 #include "base/metrics/histogram_base.h"
-#if defined(OS_CHROMEOS) || defined(OS_IOS)
-// TODO(asvitkine): Migrate callers to to include this directly and remove this.
-// Note: Incrementally migrating platforms as they become clean.
-#include "base/metrics/histogram_macros.h"
-#endif
 #include "base/metrics/histogram_samples.h"
 #include "base/time/time.h"
 

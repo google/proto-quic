@@ -39,6 +39,8 @@
     'language_in=ECMASCRIPT6_STRICT',
     'language_out=ECMASCRIPT5_STRICT',
 
+    'checks_only',
+    'chrome_pass',
     'polymer_pass',
 
     'source_map_format=V3',

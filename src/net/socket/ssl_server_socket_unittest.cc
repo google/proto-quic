@@ -1081,8 +1081,8 @@ TEST_F(SSLServerSocketTest, RequireEcdheFlag) {
       0xc014,  // ECDHE_RSA_WITH_AES_256_CBC_SHA
       0xc02b,  // ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
       0xc02f,  // ECDHE_RSA_WITH_AES_128_GCM_SHA256
-      0xcc13,  // ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-      0xcc14,  // ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+      0xcca8,  // ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      0xcca9,  // ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
   };
   client_ssl_config_.disabled_cipher_suites.assign(
       kEcdheCiphers, kEcdheCiphers + arraysize(kEcdheCiphers));

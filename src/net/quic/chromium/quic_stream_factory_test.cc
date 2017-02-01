@@ -203,8 +203,9 @@ class MockQuicServerInfoFactory : public QuicServerInfoFactory {
   MockQuicServerInfoFactory() {}
   ~MockQuicServerInfoFactory() override {}
 
-  QuicServerInfo* GetForServer(const QuicServerId& server_id) override {
-    return new MockQuicServerInfo(server_id);
+  std::unique_ptr<QuicServerInfo> GetForServer(
+      const QuicServerId& server_id) override {
+    return base::MakeUnique<MockQuicServerInfo>(server_id);
   }
 };
 
@@ -258,7 +259,8 @@ class QuicStreamFactoryTestBase {
         migrate_sessions_early_(false),
         allow_server_migration_(false),
         force_hol_blocking_(false),
-        race_cert_verification_(false) {
+        race_cert_verification_(false),
+        estimate_initial_rtt_(false) {
     clock_->AdvanceTime(QuicTime::Delta::FromSeconds(1));
   }
 
@@ -290,7 +292,7 @@ class QuicStreamFactoryTestBase {
         packet_reader_yield_after_duration_milliseconds_,
         migrate_sessions_on_network_change_, migrate_sessions_early_,
         allow_server_migration_, force_hol_blocking_, race_cert_verification_,
-        /*do_not_fragment*/ true, QuicTagVector(),
+        /*do_not_fragment*/ true, estimate_initial_rtt_, QuicTagVector(),
         /*enable_token_binding*/ false));
     factory_->set_require_confirmation(false);
     EXPECT_FALSE(factory_->has_quic_server_info_factory());
@@ -792,6 +794,7 @@ class QuicStreamFactoryTestBase {
   bool allow_server_migration_;
   bool force_hol_blocking_;
   bool race_cert_verification_;
+  bool estimate_initial_rtt_;
 };
 
 class QuicStreamFactoryTest : public QuicStreamFactoryTestBase,
@@ -895,6 +898,133 @@ TEST_P(QuicStreamFactoryTest, CreateZeroRttPost) {
   EXPECT_TRUE(stream.get());
   EXPECT_TRUE(socket_data.AllReadDataConsumed());
   EXPECT_TRUE(socket_data.AllWriteDataConsumed());
+}
+
+TEST_P(QuicStreamFactoryTest, DefaultInitialRtt) {
+  Initialize();
+  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  MockQuicData socket_data;
+  socket_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);
+  socket_data.AddWrite(
+      ConstructSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
+                              kDefaultMaxUncompressedHeaderSize, nullptr));
+  socket_data.AddSocketDataToFactory(&socket_factory_);
+
+  QuicStreamRequest request(factory_.get());
+  EXPECT_EQ(ERR_IO_PENDING,
+            request.Request(host_port_pair_, privacy_mode_,
+                            /*cert_verify_flags=*/0, url_, "GET", net_log_,
+                            callback_.callback()));
+
+  EXPECT_THAT(callback_.WaitForResult(), IsOk());
+  std::unique_ptr<QuicHttpStream> stream = request.CreateStream();
+  EXPECT_TRUE(stream.get());
+
+  QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
+  EXPECT_EQ(100000u, session->connection()->GetStats().srtt_us);
+  ASSERT_FALSE(session->config()->HasInitialRoundTripTimeUsToSend());
+}
+
+TEST_P(QuicStreamFactoryTest, CachedInitialRtt) {
+  ServerNetworkStats stats;
+  stats.srtt = base::TimeDelta::FromMilliseconds(10);
+  http_server_properties_.SetServerNetworkStats(url::SchemeHostPort(url_),
+                                                stats);
+  estimate_initial_rtt_ = true;
+
+  Initialize();
+  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  MockQuicData socket_data;
+  socket_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);
+  socket_data.AddWrite(
+      ConstructSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
+                              kDefaultMaxUncompressedHeaderSize, nullptr));
+  socket_data.AddSocketDataToFactory(&socket_factory_);
+
+  QuicStreamRequest request(factory_.get());
+  EXPECT_EQ(ERR_IO_PENDING,
+            request.Request(host_port_pair_, privacy_mode_,
+                            /*cert_verify_flags=*/0, url_, "GET", net_log_,
+                            callback_.callback()));
+
+  EXPECT_THAT(callback_.WaitForResult(), IsOk());
+  std::unique_ptr<QuicHttpStream> stream = request.CreateStream();
+  EXPECT_TRUE(stream.get());
+
+  QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
+  EXPECT_EQ(10000u, session->connection()->GetStats().srtt_us);
+  ASSERT_TRUE(session->config()->HasInitialRoundTripTimeUsToSend());
+  EXPECT_EQ(10000u, session->config()->GetInitialRoundTripTimeUsToSend());
+}
+
+TEST_P(QuicStreamFactoryTest, 2gInitialRtt) {
+  ScopedMockNetworkChangeNotifier notifier;
+  notifier.mock_network_change_notifier()->SetConnectionType(
+      NetworkChangeNotifier::CONNECTION_2G);
+  estimate_initial_rtt_ = true;
+
+  Initialize();
+  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  MockQuicData socket_data;
+  socket_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);
+  socket_data.AddWrite(
+      ConstructSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
+                              kDefaultMaxUncompressedHeaderSize, nullptr));
+  socket_data.AddSocketDataToFactory(&socket_factory_);
+
+  QuicStreamRequest request(factory_.get());
+  EXPECT_EQ(ERR_IO_PENDING,
+            request.Request(host_port_pair_, privacy_mode_,
+                            /*cert_verify_flags=*/0, url_, "GET", net_log_,
+                            callback_.callback()));
+
+  EXPECT_THAT(callback_.WaitForResult(), IsOk());
+  std::unique_ptr<QuicHttpStream> stream = request.CreateStream();
+  EXPECT_TRUE(stream.get());
+
+  QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
+  EXPECT_EQ(1200000u, session->connection()->GetStats().srtt_us);
+  ASSERT_TRUE(session->config()->HasInitialRoundTripTimeUsToSend());
+  EXPECT_EQ(1200000u, session->config()->GetInitialRoundTripTimeUsToSend());
+}
+
+TEST_P(QuicStreamFactoryTest, 3gInitialRtt) {
+  ScopedMockNetworkChangeNotifier notifier;
+  notifier.mock_network_change_notifier()->SetConnectionType(
+      NetworkChangeNotifier::CONNECTION_3G);
+  estimate_initial_rtt_ = true;
+
+  Initialize();
+  ProofVerifyDetailsChromium verify_details = DefaultProofVerifyDetails();
+  crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
+
+  MockQuicData socket_data;
+  socket_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);
+  socket_data.AddWrite(
+      ConstructSettingsPacket(1, SETTINGS_MAX_HEADER_LIST_SIZE,
+                              kDefaultMaxUncompressedHeaderSize, nullptr));
+  socket_data.AddSocketDataToFactory(&socket_factory_);
+
+  QuicStreamRequest request(factory_.get());
+  EXPECT_EQ(ERR_IO_PENDING,
+            request.Request(host_port_pair_, privacy_mode_,
+                            /*cert_verify_flags=*/0, url_, "GET", net_log_,
+                            callback_.callback()));
+
+  EXPECT_THAT(callback_.WaitForResult(), IsOk());
+  std::unique_ptr<QuicHttpStream> stream = request.CreateStream();
+  EXPECT_TRUE(stream.get());
+
+  QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
+  EXPECT_EQ(400000u, session->connection()->GetStats().srtt_us);
+  ASSERT_TRUE(session->config()->HasInitialRoundTripTimeUsToSend());
+  EXPECT_EQ(400000u, session->config()->GetInitialRoundTripTimeUsToSend());
 }
 
 TEST_P(QuicStreamFactoryTest, GoAway) {

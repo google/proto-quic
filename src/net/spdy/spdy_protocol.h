@@ -58,19 +58,14 @@ const int32_t kSpdyMaximumWindowSize = 0x7FFFFFFF;  // Max signed 32bit int
 // Maximum padding size in octets for one DATA or HEADERS or PUSH_PROMISE frame.
 const int32_t kPaddingSizePerFrame = 256;
 
-// The HTTP/2 connection header prefix, which must be the first bytes
-// sent by the client upon starting an HTTP/2 connection, and which
-// must be followed by a SETTINGS frame.
-//
-// Equivalent to the string "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
-// (without the null terminator).
-const char kHttp2ConnectionHeaderPrefix[] = {
-  0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,  // PRI * HT
-  0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,  // TP/2.0..
-  0x0d, 0x0a, 0x53, 0x4d, 0x0d, 0x0a, 0x0d, 0x0a   // ..SM....
-};
-const int kHttp2ConnectionHeaderPrefixSize =
-    arraysize(kHttp2ConnectionHeaderPrefix);
+// The HTTP/2 connection preface, which must be the first bytes sent by the
+// client upon starting an HTTP/2 connection, and which must be followed by a
+// SETTINGS frame.  Note that even though |kHttp2ConnectionHeaderPrefix| is
+// defined as a string literal with a null terminator, the actual connection
+// preface is only the first |kHttp2ConnectionHeaderPrefixSize| bytes, which
+// excludes the null terminator.
+NET_EXPORT_PRIVATE extern const char* const kHttp2ConnectionHeaderPrefix;
+const int kHttp2ConnectionHeaderPrefixSize = 24;
 
 // Types of HTTP2 frames.
 enum SpdyFrameType {
@@ -152,6 +147,7 @@ using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 // Status codes for RST_STREAM frames.
 enum SpdyRstStreamStatus {
   RST_STREAM_NO_ERROR = 0,
+  RST_STREAM_MIN = RST_STREAM_NO_ERROR,
   RST_STREAM_PROTOCOL_ERROR = 1,
   RST_STREAM_INTERNAL_ERROR = 2,
   RST_STREAM_FLOW_CONTROL_ERROR = 3,
@@ -165,12 +161,14 @@ enum SpdyRstStreamStatus {
   RST_STREAM_ENHANCE_YOUR_CALM = 11,
   RST_STREAM_INADEQUATE_SECURITY = 12,
   RST_STREAM_HTTP_1_1_REQUIRED = 13,
+  RST_STREAM_MAX = RST_STREAM_HTTP_1_1_REQUIRED,
   RST_STREAM_NUM_STATUS_CODES = 14
 };
 
 // Status codes for GOAWAY frames.
 enum SpdyGoAwayStatus {
   GOAWAY_NO_ERROR = 0,
+  GOAWAY_MIN = GOAWAY_NO_ERROR,
   GOAWAY_PROTOCOL_ERROR = 1,
   GOAWAY_INTERNAL_ERROR = 2,
   GOAWAY_FLOW_CONTROL_ERROR = 3,
@@ -183,7 +181,8 @@ enum SpdyGoAwayStatus {
   GOAWAY_CONNECT_ERROR = 10,
   GOAWAY_ENHANCE_YOUR_CALM = 11,
   GOAWAY_INADEQUATE_SECURITY = 12,
-  GOAWAY_HTTP_1_1_REQUIRED = 13
+  GOAWAY_HTTP_1_1_REQUIRED = 13,
+  GOAWAY_MAX = GOAWAY_HTTP_1_1_REQUIRED
 };
 
 // A SPDY priority is a number between 0 and 7 (inclusive).
@@ -225,18 +224,14 @@ const unsigned int kHttp2RootStreamId = 0;
 
 typedef uint64_t SpdyPingId;
 
-// Returns true if a given on-the-wire enumeration of a frame type is valid
-// for a given protocol version, false otherwise.
-NET_EXPORT_PRIVATE bool IsValidFrameType(int frame_type_field);
+// Returns true if a given on-the-wire enumeration of a frame type is defined
+// in a standardized HTTP/2 specification, false otherwise.
+NET_EXPORT_PRIVATE bool IsDefinedFrameType(int frame_type_field);
 
 // Parses a frame type from an on-the-wire enumeration.
 // Behavior is undefined for invalid frame type fields; consumers should first
 // use IsValidFrameType() to verify validity of frame type fields.
 NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(int frame_type_field);
-
-// Serializes a given frame type to the on-the-wire enumeration value.
-// Returns -1 on failure (I.E. Invalid frame type).
-NET_EXPORT_PRIVATE int SerializeFrameType(SpdyFrameType frame_type);
 
 // (HTTP/2) All standard frame types except WINDOW_UPDATE are
 // (stream-specific xor connection-level). Returns false iff we know
@@ -255,35 +250,16 @@ NET_EXPORT_PRIVATE bool ParseSettingsId(int wire_setting_id,
 NET_EXPORT_PRIVATE bool SettingsIdToString(SpdySettingsIds id,
                                            const char** settings_id_string);
 
-// Returns true if a given on-the-wire enumeration of a RST_STREAM status code
-// is valid, false otherwise.
-NET_EXPORT_PRIVATE bool IsValidRstStreamStatus(int rst_stream_status_field);
-
-// Parses a RST_STREAM status code from an on-the-wire enumeration.
-// Behavior is undefined for invalid RST_STREAM status code fields; consumers
-// should first use IsValidRstStreamStatus() to verify validity of RST_STREAM
-// status code fields..
+// Parses a RST_STREAM error code from an on-the-wire enumeration.
+// Treat unrecognized error codes as INTERNAL_ERROR
+// as recommended by the HTTP/2 specification.
 NET_EXPORT_PRIVATE SpdyRstStreamStatus
 ParseRstStreamStatus(int rst_stream_status_field);
 
-// Serializes a given RST_STREAM status code to the on-the-wire enumeration
-// value.  Returns -1 on failure (I.E. Invalid RST_STREAM status code for the
-// given version).
-NET_EXPORT_PRIVATE int SerializeRstStreamStatus(
-    SpdyRstStreamStatus rst_stream_status);
-
-// Returns true if a given on-the-wire enumeration of a GOAWAY status code is
-// valid, false otherwise.
-NET_EXPORT_PRIVATE bool IsValidGoAwayStatus(int goaway_status_field);
-
-// Parses a GOAWAY status from an on-the-wire enumeration.
-// Behavior is undefined for invalid GOAWAY status fields; consumers should
-// first use IsValidGoAwayStatus() to verify validity of GOAWAY status fields.
+// Parses a GOAWAY error code from an on-the-wire enumeration.
+// Treat unrecognized error codes as INTERNAL_ERROR
+// as recommended by the HTTP/2 specification.
 NET_EXPORT_PRIVATE SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field);
-
-// Serializes a given GOAWAY status to the on-the-wire enumeration value.
-// Returns -1 on failure (I.E. Invalid GOAWAY status for the given version).
-NET_EXPORT_PRIVATE int SerializeGoAwayStatus(SpdyGoAwayStatus status);
 
 // Frame type for non-control (i.e. data) frames.
 const int kDataFrameType = 0;

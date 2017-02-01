@@ -16,12 +16,7 @@ class X : public GarbageCollected<X> {
 
 class TraceImplInlined : public GarbageCollected<TraceImplInlined> {
  public:
-  void Trace(Visitor* visitor) { TraceImpl(visitor); }
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
-    visitor->Trace(x_);
-  }
+  void Trace(Visitor* visitor) { visitor->Trace(x_); }
 
  private:
   Member<X> x_;
@@ -30,8 +25,6 @@ class TraceImplInlined : public GarbageCollected<TraceImplInlined> {
 class TraceImplExtern : public GarbageCollected<TraceImplExtern> {
  public:
   void Trace(Visitor* visitor);
-  template <typename VisitorDispatcher>
-  inline void TraceImpl(VisitorDispatcher);
 
  private:
   Member<X> x_;
@@ -44,20 +37,12 @@ class Base : public GarbageCollected<Base> {
 
 class TraceImplBaseInlined : public Base {
  public:
-  void Trace(Visitor* visitor) override { TraceImpl(visitor); }
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
-    Base::Trace(visitor);
-  }
+  void Trace(Visitor* visitor) override { Base::Trace(visitor); }
 };
 
 class TraceImplBaseExtern : public Base {
  public:
   void Trace(Visitor* visitor) override;
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher);
 
  private:
   Member<X> x_;

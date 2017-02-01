@@ -77,17 +77,6 @@ class QUIC_EXPORT_PRIVATE CryptoUtils {
                             base::StringPiece orbit,
                             std::string* nonce);
 
-  // Returns true if the sni is valid, false otherwise.
-  //  (1) disallow IP addresses;
-  //  (2) check that the hostname contains valid characters only; and
-  //  (3) contains at least one dot.
-  static bool IsValidSNI(base::StringPiece sni);
-
-  // Convert hostname to lowercase and remove the trailing '.'.
-  // Returns |hostname|. NormalizeHostname() doesn't support IP address
-  // literals. IsValidSNI() should be called before calling NormalizeHostname().
-  static std::string NormalizeHostname(const char* hostname);
-
   // DeriveKeys populates |crypters->encrypter|, |crypters->decrypter|, and
   // |subkey_secret| (optional -- may be null) given the contents of
   // |premaster_secret|, |client_nonce|, |server_nonce| and |hkdf_input|. |aead|

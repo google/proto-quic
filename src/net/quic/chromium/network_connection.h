@@ -11,18 +11,19 @@
 
 namespace net {
 
-namespace test {
-class NetworkConnectionPeer;
-}  // namespace test
-
-// This class returns the current network's connection description. It also
-// cache's the connection description to fix crbug.com/422516.
+// This class stores information about the current network type and
+// provides a textual description of it.
 class NET_EXPORT NetworkConnection
     : public NetworkChangeNotifier::IPAddressObserver,
       public NetworkChangeNotifier::ConnectionTypeObserver {
  public:
   NetworkConnection();
-  ~NetworkConnection() override {}
+  ~NetworkConnection() override;
+
+  // Returns the underlying connection type.
+  NetworkChangeNotifier::ConnectionType connection_type() {
+    return connection_type_;
+  }
 
   // Return a string equivalent of current connection type. Callers don't need
   // to make a copy of the returned C-string value. If the connection type is
@@ -33,10 +34,7 @@ class NET_EXPORT NetworkConnection
   // don't distinguish Wifi vs Etherenet, and call everything CONNECTION_UNKNOWN
   // :-(. Fo non CONNECTIION_WIFI, this returns the C-string returned by
   // NetworkChangeNotifier::ConnectionTypeToString.
-  const char* GetDescription();
-
-  // It clears the cached connection_type_ and connection_description_.
-  void Clear();
+  const char* connection_description() { return connection_description_; }
 
   // NetworkChangeNotifier::IPAddressObserver methods:
   void OnIPAddressChanged() override;
@@ -46,11 +44,11 @@ class NET_EXPORT NetworkConnection
       NetworkChangeNotifier::ConnectionType type) override;
 
  private:
-  friend class test::NetworkConnectionPeer;
-
-  // Cache the connection_type and the connection description string to avoid
-  // calling expensive GetWifiPHYLayerProtocol() function.
+  // Cache the connection type to avoid calling the potentially expensive
+  // NetworkChangeNotifier::GetConnectionType() function.
   NetworkChangeNotifier::ConnectionType connection_type_;
+  // Cache the connection description string to avoid calling the expensive
+  // GetWifiPHYLayerProtocol() function.
   const char* connection_description_;
 
   DISALLOW_COPY_AND_ASSIGN(NetworkConnection);

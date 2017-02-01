@@ -7,8 +7,6 @@
 
 #include "net/http2/decoder/http2_structure_decoder.h"
 
-#include <cstddef>
-
 #include "net/http2/tools/http2_random.h"
 
 namespace net {
@@ -16,12 +14,8 @@ namespace test {
 
 class Http2StructureDecoderPeer {
  public:
-  static void Randomize(Http2StructureDecoder* p, RandomBase* rng) {
-    p->offset_ = rng->Rand32();
-    for (size_t i = 0; i < sizeof p->buffer_; ++i) {
-      p->buffer_[i] = rng->Rand8();
-    }
-  }
+  // Overwrite the Http2StructureDecoder instance with random values.
+  static void Randomize(Http2StructureDecoder* p, RandomBase* rng);
 };
 
 }  // namespace test

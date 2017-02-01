@@ -5,6 +5,8 @@
 #ifndef TOOLS_GN_ARGS_H_
 #define TOOLS_GN_ARGS_H_
 
+#include <map>
+
 #include "base/containers/hash_tables.h"
 #include "base/macros.h"
 #include "base/synchronization/lock.h"
@@ -23,6 +25,18 @@ extern const char kBuildArgs_Help[];
 // the argument was unused.
 class Args {
  public:
+  struct ValueWithOverride {
+    ValueWithOverride();
+    ValueWithOverride(const Value& def_val);
+    ~ValueWithOverride();
+
+    Value default_value;  // Default value given in declare_args.
+
+    bool has_override;  // True indicates override_value is valid.
+    Value override_value;  // From .gn or the current build's "gn args".
+  };
+  using ValueWithOverrideMap = std::map<base::StringPiece, ValueWithOverride>;
+
   Args();
   Args(const Args& other);
   ~Args();
@@ -35,9 +49,6 @@ class Args {
   // Returns the value corresponding to the given argument name, or NULL if no
   // argument is set.
   const Value* GetArgOverride(const char* name) const;
-
-  // Gets all overrides set on the build.
-  Scope::KeyValueMap GetAllOverrides() const;
 
   // Sets up the root scope for a toolchain. This applies the default system
   // flags and saves the toolchain overrides so they can be applied to
@@ -62,10 +73,10 @@ class Args {
   // arguments. If there are, this returns false and sets the error.
   bool VerifyAllOverridesUsed(Err* err) const;
 
-  // Adds all declared arguments to the given output list. If the values exist
-  // in the list already, their values will be overwriten, but other values
-  // already in the list will remain.
-  void MergeDeclaredArguments(Scope::KeyValueMap* dest) const;
+  // Returns information about all arguements, both defaults and overrides.
+  // This is used for the help system which is not performance critical. Use a
+  // map instead of a hash map so the arguements are sorted alphabetically.
+  ValueWithOverrideMap GetAllArguments() const;
 
  private:
   using ArgumentsPerToolchain =

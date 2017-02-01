@@ -16,7 +16,7 @@ bool FLAGS_chromium_http2_flag_remove_rewritelength = true;
 bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
 
 // Use //net/http2/hpack/decoder as complete HPACK decoder.
-bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = false;
+bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
 
 // If true, increase HPACK table size up to optimal size kOptTableSize if
 // clients allow it.

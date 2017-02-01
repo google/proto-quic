@@ -76,6 +76,13 @@ class V8DetachedContextAgeInGC(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'v8.detached_context_age_in_gc'
 
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    # http://crbug.com/685350
+    if possible_browser.platform.GetDeviceTypeName() == 'Nexus 9':
+      return True
+    return False
+
 
 class _InfiniteScrollBenchmark(perf_benchmark.PerfBenchmark):
   """ Base class for infinite scroll benchmarks.

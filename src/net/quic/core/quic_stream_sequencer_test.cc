@@ -401,7 +401,7 @@ class QuicSequencerRandomTest : public QuicStreamSequencerTest {
 
   QuicSequencerRandomTest() {
     uint64_t seed = QuicRandom::GetInstance()->RandUint64();
-    VLOG(1) << "**** The current seed is " << seed << " ****";
+    QUIC_LOG(INFO) << "**** The current seed is " << seed << " ****";
     random_.set_seed(seed);
 
     CreateFrames();

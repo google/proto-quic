@@ -164,7 +164,6 @@ class NET_EXPORT CookieMonster : public CookieStore {
                                  bool secure,
                                  bool http_only,
                                  CookieSameSite same_site,
-                                 bool enforce_strict_secure,
                                  CookiePriority priority,
                                  const SetCookiesCallback& callback) override;
   void GetCookiesWithOptionsAsync(const GURL& url,
@@ -265,12 +264,10 @@ class NET_EXPORT CookieMonster : public CookieStore {
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, CookieSourceHistogram);
 
   // For kSafeFromGlobalPurgeDays in CookieStore.
-  FRIEND_TEST_ALL_PREFIXES(CookieMonsterStrictSecureTest, EvictSecureCookies);
+  FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest, EvictSecureCookies);
 
   // For CookieDeleteEquivalent histogram enum.
   FRIEND_TEST_ALL_PREFIXES(CookieMonsterTest,
-                           CookieDeleteEquivalentHistogramTest);
-  FRIEND_TEST_ALL_PREFIXES(CookieMonsterStrictSecureTest,
                            CookieDeleteEquivalentHistogramTest);
 
   // Internal reasons for deletion, used to populate informative histograms
@@ -412,7 +409,6 @@ class NET_EXPORT CookieMonster : public CookieStore {
                             bool secure,
                             bool http_only,
                             CookieSameSite same_site,
-                            bool enforce_strict_secure,
                             CookiePriority priority);
 
   CookieList GetAllCookies();
@@ -508,17 +504,15 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // |source_url| is the URL that is attempting to set the cookie.
   // If |skip_httponly| is true, httponly cookies will not be deleted.  The
   // return value will be true if |skip_httponly| skipped an httponly cookie or
-  // |enforce_strict_secure| is true and the cookie to
-  // delete was Secure and the scheme of |ecc| is insecure.  |key| is the key to
-  // find the cookie in cookies_; see the comment before the CookieMap typedef
-  // for details.
+  // the cookie to delete was Secure and the scheme of |ecc| is insecure.  |key|
+  // is the key to find the cookie in cookies_; see the comment before the
+  // CookieMap typedef for details.
   // NOTE: There should never be more than a single matching equivalent cookie.
   bool DeleteAnyEquivalentCookie(const std::string& key,
                                  const CanonicalCookie& ecc,
                                  const GURL& source_url,
                                  bool skip_httponly,
-                                 bool already_expired,
-                                 bool enforce_strict_secure);
+                                 bool already_expired);
 
   // Inserts |cc| into cookies_. Returns an iterator that points to the inserted
   // cookie in cookies_. Guarantee: all iterators to cookies_ remain valid.
@@ -562,9 +556,7 @@ class NET_EXPORT CookieMonster : public CookieStore {
   // constants for details.
   //
   // Returns the number of cookies deleted (useful for debugging).
-  size_t GarbageCollect(const base::Time& current,
-                        const std::string& key,
-                        bool enforce_strict_secure);
+  size_t GarbageCollect(const base::Time& current, const std::string& key);
 
   // Helper for GarbageCollect(). Deletes up to |purge_goal| cookies with a
   // priority less than or equal to |priority| from |cookies|, while ensuring

@@ -113,7 +113,7 @@ class WebRtcStatsUnittest(unittest.TestCase):
 
     stats_metric.Start(page, tab)
 
-    tab.ExpectCall('EvaluateJavaScript',
+    tab.ExpectCall('EvaluateJavaScript2',
                    simple_mock.DONT_CARE).WillReturn(json_to_return)
     stats_metric.Stop(page, tab)
 

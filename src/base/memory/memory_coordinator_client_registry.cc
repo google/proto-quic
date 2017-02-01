@@ -34,4 +34,8 @@ void MemoryCoordinatorClientRegistry::Notify(MemoryState state) {
                    &base::MemoryCoordinatorClient::OnMemoryStateChange, state);
 }
 
+void MemoryCoordinatorClientRegistry::PurgeMemory() {
+  clients_->Notify(FROM_HERE, &base::MemoryCoordinatorClient::OnPurgeMemory);
+}
+
 }  // namespace base

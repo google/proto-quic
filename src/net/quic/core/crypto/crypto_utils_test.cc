@@ -15,52 +15,6 @@ namespace net {
 namespace test {
 namespace {
 
-TEST(CryptoUtilsTest, IsValidSNI) {
-  // IP as SNI.
-  EXPECT_FALSE(CryptoUtils::IsValidSNI("192.168.0.1"));
-  // SNI without any dot.
-  EXPECT_FALSE(CryptoUtils::IsValidSNI("somedomain"));
-  // Invalid by RFC2396 but unfortunately domains of this form exist.
-  EXPECT_TRUE(CryptoUtils::IsValidSNI("some_domain.com"));
-  // An empty string must be invalid otherwise the QUIC client will try sending
-  // it.
-  EXPECT_FALSE(CryptoUtils::IsValidSNI(""));
-
-  // Valid SNI
-  EXPECT_TRUE(CryptoUtils::IsValidSNI("test.google.com"));
-}
-
-TEST(CryptoUtilsTest, NormalizeHostname) {
-  struct {
-    const char *input, *expected;
-  } tests[] = {
-      {
-          "www.google.com", "www.google.com",
-      },
-      {
-          "WWW.GOOGLE.COM", "www.google.com",
-      },
-      {
-          "www.google.com.", "www.google.com",
-      },
-      {
-          "www.google.COM.", "www.google.com",
-      },
-      {
-          "www.google.com..", "www.google.com",
-      },
-      {
-          "www.google.com........", "www.google.com",
-      },
-  };
-
-  for (size_t i = 0; i < arraysize(tests); ++i) {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "%s", tests[i].input);
-    EXPECT_EQ(string(tests[i].expected), CryptoUtils::NormalizeHostname(buf));
-  }
-}
-
 TEST(CryptoUtilsTest, TestExportKeyingMaterial) {
   const struct TestVector {
     // Input (strings of hexadecimal digits):

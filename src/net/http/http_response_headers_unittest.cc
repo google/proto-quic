@@ -2203,6 +2203,69 @@ TEST_F(HttpResponseHeadersCacheControlTest,
   EXPECT_EQ(TimeDelta::FromSeconds(1), GetStaleWhileRevalidateValue());
 }
 
+struct GetCurrentAgeTestData {
+  const char* headers;
+  const char* request_time;
+  const char* response_time;
+  const char* current_time;
+  const int expected_age;
+};
+
+class GetCurrentAgeTest
+    : public HttpResponseHeadersTest,
+      public ::testing::WithParamInterface<GetCurrentAgeTestData> {
+};
+
+TEST_P(GetCurrentAgeTest, GetCurrentAge) {
+  const GetCurrentAgeTestData test = GetParam();
+
+  base::Time request_time, response_time, current_time;
+  ASSERT_TRUE(base::Time::FromString(test.request_time, &request_time));
+  ASSERT_TRUE(base::Time::FromString(test.response_time, &response_time));
+  ASSERT_TRUE(base::Time::FromString(test.current_time, &current_time));
+
+  std::string headers(test.headers);
+  HeadersToRaw(&headers);
+  scoped_refptr<HttpResponseHeaders> parsed(new HttpResponseHeaders(headers));
+
+  base::TimeDelta age =
+      parsed->GetCurrentAge(request_time, response_time, current_time);
+  EXPECT_EQ(test.expected_age, age.InSeconds());
+}
+
+const struct GetCurrentAgeTestData get_current_age_tests[] = {
+    // Without Date header.
+    {"HTTP/1.1 200 OK\n"
+     "Age: 2",
+     "Fri, 20 Jan 2011 10:40:08 GMT", "Fri, 20 Jan 2011 10:40:12 GMT",
+     "Fri, 20 Jan 2011 10:40:14 GMT", 8},
+    // Without Age header.
+    {"HTTP/1.1 200 OK\n"
+     "Date: Fri, 20 Jan 2011 10:40:10 GMT\n",
+     "Fri, 20 Jan 2011 10:40:08 GMT", "Fri, 20 Jan 2011 10:40:12 GMT",
+     "Fri, 20 Jan 2011 10:40:14 GMT", 6},
+    // date_value > response_time with Age header.
+    {"HTTP/1.1 200 OK\n"
+     "Date: Fri, 20 Jan 2011 10:40:14 GMT\n"
+     "Age: 2\n",
+     "Fri, 20 Jan 2011 10:40:08 GMT", "Fri, 20 Jan 2011 10:40:12 GMT",
+     "Fri, 20 Jan 2011 10:40:14 GMT", 8},
+     // date_value > response_time without Age header.
+     {"HTTP/1.1 200 OK\n"
+     "Date: Fri, 20 Jan 2011 10:40:14 GMT\n",
+     "Fri, 20 Jan 2011 10:40:08 GMT", "Fri, 20 Jan 2011 10:40:12 GMT",
+     "Fri, 20 Jan 2011 10:40:14 GMT", 6},
+    // apparent_age > corrected_age_value
+    {"HTTP/1.1 200 OK\n"
+     "Date: Fri, 20 Jan 2011 10:40:07 GMT\n"
+     "Age: 0\n",
+     "Fri, 20 Jan 2011 10:40:08 GMT", "Fri, 20 Jan 2011 10:40:12 GMT",
+     "Fri, 20 Jan 2011 10:40:14 GMT", 7}};
+
+INSTANTIATE_TEST_CASE_P(HttpResponseHeaders,
+                        GetCurrentAgeTest,
+                        testing::ValuesIn(get_current_age_tests));
+
 }  // namespace
 
 }  // namespace net

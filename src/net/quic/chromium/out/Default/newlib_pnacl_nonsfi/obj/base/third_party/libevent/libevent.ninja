@@ -1,0 +1,23 @@
+defines = -DHAVE_CONFIG_H -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../../base/third_party/libevent/nacl_nonsfi -I../../../../../native_client/src/public/linux_syscalls -I../../../../.. -Inewlib_pnacl_nonsfi/gen
+cflags = -fno-strict-aliasing -fcolor-diagnostics --pnacl-allow-translate -arch x86-32-nonsfi --pnacl-bias=x86-32-nonsfi --target=i686-unknown-nacl -O0 -g2 -fvisibility=hidden -Werror -Wno-unused-variable -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override
+cflags_c =
+label_name = libevent
+root_out_dir = newlib_pnacl_nonsfi
+target_out_dir = newlib_pnacl_nonsfi/obj/base/third_party/libevent
+target_output_name = libevent
+
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/buffer.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/buffer.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/evbuffer.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/evbuffer.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/event.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/event.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/evutil.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/evutil.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/log.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/log.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/poll.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/poll.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/strlcpy.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/strlcpy.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/random.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/nacl_nonsfi/random.c
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/signal_stub.o: newlib_pnacl_nonsfi_cc ../../../../../base/third_party/libevent/nacl_nonsfi/signal_stub.c
+
+build newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent.a: newlib_pnacl_nonsfi_alink newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/buffer.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/evbuffer.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/event.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/evutil.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/log.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/poll.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/strlcpy.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/random.o newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent/signal_stub.o
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl_nonsfi/obj/base/third_party/libevent

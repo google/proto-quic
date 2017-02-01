@@ -38,16 +38,46 @@ std::unique_ptr<base::Value> EffectiveConnectionTypeChangedNetLogCallback(
 
 }  // namespace
 
-void AddEffectiveConnectionTypeChangedEventToNetLog(
-    const NetLogWithSource& net_log,
-    base::TimeDelta http_rtt,
-    base::TimeDelta transport_rtt,
-    int32_t downstream_throughput_kbps,
-    EffectiveConnectionType effective_connection_type) {
-  net_log.AddEvent(
+EventCreator::EventCreator(NetLogWithSource net_log)
+    : net_log_(net_log),
+      past_effective_connection_type_(EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {}
+
+EventCreator::~EventCreator() {
+  DCHECK(thread_checker_.CalledOnValidThread());
+}
+
+void EventCreator::MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
+    EffectiveConnectionType effective_connection_type,
+    const NetworkQuality& network_quality) {
+  DCHECK(thread_checker_.CalledOnValidThread());
+
+  // Check if any of the network quality metrics changed meaningfully.
+  bool effective_connection_type_changed =
+      past_effective_connection_type_ != effective_connection_type;
+  bool http_rtt_changed = (past_network_quality_.http_rtt() == InvalidRTT()) !=
+                          (network_quality.http_rtt() == InvalidRTT());
+  bool transport_rtt_changed =
+      (past_network_quality_.transport_rtt() == InvalidRTT()) !=
+      (network_quality.transport_rtt() == InvalidRTT());
+  bool kbps_changed =
+      (past_network_quality_.downstream_throughput_kbps() ==
+       INVALID_RTT_THROUGHPUT) !=
+      (network_quality.downstream_throughput_kbps() == INVALID_RTT_THROUGHPUT);
+
+  if (!effective_connection_type_changed && !http_rtt_changed &&
+      !transport_rtt_changed && !kbps_changed) {
+    // Return since none of the metrics changed meaningfully.
+    return;
+  }
+
+  past_effective_connection_type_ = effective_connection_type;
+  past_network_quality_ = network_quality;
+
+  net_log_.AddEvent(
       NetLogEventType::NETWORK_QUALITY_CHANGED,
-      base::Bind(&EffectiveConnectionTypeChangedNetLogCallback, http_rtt,
-                 transport_rtt, downstream_throughput_kbps,
+      base::Bind(&EffectiveConnectionTypeChangedNetLogCallback,
+                 network_quality.http_rtt(), network_quality.transport_rtt(),
+                 network_quality.downstream_throughput_kbps(),
                  effective_connection_type));
 }
 

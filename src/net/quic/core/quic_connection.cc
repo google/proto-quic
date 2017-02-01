@@ -17,8 +17,6 @@
 #include "base/format_macros.h"
 #include "base/macros.h"
 #include "base/metrics/histogram_macros.h"
-#include "net/base/address_family.h"
-#include "net/base/ip_address.h"
 #include "net/base/net_errors.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
@@ -249,7 +247,6 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       time_of_last_received_packet_(clock_->ApproximateNow()),
       time_of_last_sent_new_packet_(clock_->ApproximateNow()),
       last_send_for_timeout_(clock_->ApproximateNow()),
-      packet_number_of_last_sent_packet_(0),
       sent_packet_manager_(perspective, clock_, &stats_, kCubicBytes, kNack),
       version_negotiation_state_(START_NEGOTIATION),
       perspective_(perspective),
@@ -267,9 +264,6 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
   QUIC_DLOG(INFO) << ENDPOINT
                   << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
-  if (!FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
-    last_stop_waiting_frame_.least_unacked = 0;
-  }
   stats_.connection_creation_time = clock_->ApproximateNow();
   // TODO(ianswett): Supply the NetworkChangeVisitor as a constructor argument
   // and make it required non-null, because it's always used.
@@ -635,17 +629,14 @@ bool QuicConnection::OnPacketHeader(const QuicPacketHeader& header) {
   --stats_.packets_dropped;
   QUIC_DVLOG(1) << ENDPOINT << "Received packet header: " << header;
   last_header_ = header;
-  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
-    // An ack will be sent if a missing retransmittable packet was received;
-    was_last_packet_missing_ =
-        received_packet_manager_.IsMissing(last_header_.packet_number);
+  // An ack will be sent if a missing retransmittable packet was received;
+  was_last_packet_missing_ =
+      received_packet_manager_.IsMissing(last_header_.packet_number);
 
-    // Record received to populate ack info correctly before processing stream
-    // frames, since the processing may result in a response packet with a
-    // bundled ack.
-    received_packet_manager_.RecordPacketReceived(
-        last_header_, time_of_last_received_packet_);
-  }
+  // Record packet receipt to populate ack info before processing stream
+  // frames, since the processing may result in sending a bundled ack.
+  received_packet_manager_.RecordPacketReceived(last_header_,
+                                                time_of_last_received_packet_);
   DCHECK(connected_);
   return true;
 }
@@ -755,11 +746,7 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
     debug_visitor_->OnStopWaitingFrame(frame);
   }
 
-  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
-    ProcessStopWaitingFrame(frame);
-  } else {
-    last_stop_waiting_frame_ = frame;
-  }
+  ProcessStopWaitingFrame(frame);
   return connected_;
 }
 
@@ -938,37 +925,13 @@ void QuicConnection::OnPacketComplete() {
   QUIC_DVLOG(1) << ENDPOINT << "Got packet " << last_header_.packet_number
                 << " for " << last_header_.public_header.connection_id;
 
-  if (FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
-    // An ack will be sent if a missing retransmittable packet was received;
-    const bool was_missing =
-        should_last_packet_instigate_acks_ && was_last_packet_missing_;
+  // An ack will be sent if a missing retransmittable packet was received;
+  const bool was_missing =
+      should_last_packet_instigate_acks_ && was_last_packet_missing_;
 
-    // It's possible the ack frame was sent along with response data, so it
-    // no longer needs to be sent.
-    if (ack_frame_updated()) {
-      MaybeQueueAck(was_missing);
-    }
-  } else {
-    // An ack will be sent if a missing retransmittable packet was received;
-    const bool was_missing =
-        should_last_packet_instigate_acks_ &&
-        received_packet_manager_.IsMissing(last_header_.packet_number);
-
-    // Record received to populate ack info correctly before processing stream
-    // frames, since the processing may result in a response packet with a
-    // bundled ack.
-    received_packet_manager_.RecordPacketReceived(
-        last_header_, time_of_last_received_packet_);
-
-    // Process stop waiting frames here, instead of inline, because the packet
-    // needs to be considered 'received' before the entropy can be updated.
-    if (last_stop_waiting_frame_.least_unacked > 0) {
-      ProcessStopWaitingFrame(last_stop_waiting_frame_);
-      if (!connected_) {
-        return;
-      }
-    }
-
+  // It's possible the ack frame was sent along with response data, so it
+  // no longer needs to be sent.
+  if (ack_frame_updated()) {
     MaybeQueueAck(was_missing);
   }
 
@@ -1041,9 +1004,6 @@ void QuicConnection::MaybeQueueAck(bool was_missing) {
 
 void QuicConnection::ClearLastFrames() {
   should_last_packet_instigate_acks_ = false;
-  if (!FLAGS_quic_reloadable_flag_quic_receive_packet_once_decrypted) {
-    last_stop_waiting_frame_.least_unacked = 0;
-  }
 }
 
 const QuicFrame QuicConnection::GetUpdatedAckFrame() {
@@ -1527,11 +1487,6 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
   }
 
   QuicPacketNumber packet_number = packet->packet_number;
-  // TODO(ianswett): Remove packet_number_of_last_sent_packet_ because it's
-  // redundant to SentPacketManager_->GetLargestPacket in most cases, and wrong
-  // for multipath.
-  DCHECK_LE(packet_number_of_last_sent_packet_, packet_number);
-  packet_number_of_last_sent_packet_ = packet_number;
 
   QuicPacketLength encrypted_length = packet->encrypted_length;
   // Termination packets are eventually owned by TimeWaitListManager.
@@ -1627,7 +1582,7 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
     last_send_for_timeout_ = packet_send_time;
   }
   SetPingAlarm();
-  MaybeSetMtuAlarm();
+  MaybeSetMtuAlarm(packet_number);
   QUIC_DVLOG(1) << ENDPOINT << "time we began writing last sent packet: "
                 << packet_send_time.ToDebuggingValue();
 
@@ -2147,7 +2102,7 @@ void QuicConnection::SetRetransmissionAlarm() {
                                 QuicTime::Delta::FromMilliseconds(1));
 }
 
-void QuicConnection::MaybeSetMtuAlarm() {
+void QuicConnection::MaybeSetMtuAlarm(QuicPacketNumber sent_packet_number) {
   // Do not set the alarm if the target size is less than the current size.
   // This covers the case when |mtu_discovery_target_| is at its default value,
   // zero.
@@ -2163,7 +2118,7 @@ void QuicConnection::MaybeSetMtuAlarm() {
     return;
   }
 
-  if (packet_number_of_last_sent_packet_ >= next_mtu_probe_at_) {
+  if (sent_packet_number >= next_mtu_probe_at_) {
     // Use an alarm to send the MTU probe to ensure that no ScopedPacketBundlers
     // are active.
     mtu_discovery_alarm_->Set(clock_->ApproximateNow());
@@ -2336,8 +2291,8 @@ void QuicConnection::DiscoverMtu() {
   // MaybeSetMtuAlarm() will not realize that the probe has been just sent, and
   // will reschedule this probe again.
   packets_between_mtu_probes_ *= 2;
-  next_mtu_probe_at_ =
-      packet_number_of_last_sent_packet_ + packets_between_mtu_probes_ + 1;
+  next_mtu_probe_at_ = sent_packet_manager_.GetLargestSentPacket() +
+                       packets_between_mtu_probes_ + 1;
   ++mtu_probe_count_;
 
   QUIC_DVLOG(2) << "Sending a path MTU discovery packet #" << mtu_probe_count_;
@@ -2375,7 +2330,7 @@ void QuicConnection::StartPeerMigration(
                   << ", migrating connection.";
 
   highest_packet_sent_before_peer_migration_ =
-      packet_number_of_last_sent_packet_;
+      sent_packet_manager_.GetLargestSentPacket();
   peer_address_ = last_packet_source_address_;
   active_peer_migration_type_ = peer_migration_type;
 

@@ -44,9 +44,6 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
       const WorkerPoolIndexForTraitsCallback&
           worker_pool_index_for_traits_callback);
 
-  // Destroying a TaskSchedulerImpl is not allowed in production; it is always
-  // leaked. In tests, it can only be destroyed after JoinForTesting() has
-  // returned.
   ~TaskSchedulerImpl() override;
 
   // TaskScheduler:
@@ -63,10 +60,7 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   std::vector<const HistogramBase*> GetHistograms() const override;
   void Shutdown() override;
   void FlushForTesting() override;
-
-  // Joins all threads. Tasks that are already running are allowed to complete
-  // their execution. This can only be called once.
-  void JoinForTesting();
+  void JoinForTesting() override;
 
  private:
   explicit TaskSchedulerImpl(const WorkerPoolIndexForTraitsCallback&

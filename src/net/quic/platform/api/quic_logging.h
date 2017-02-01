@@ -14,10 +14,13 @@
 
 #define QUIC_DVLOG(verbose_level) QUIC_DVLOG_IMPL(verbose_level)
 #define QUIC_DLOG(severity) QUIC_DLOG_IMPL(severity)
+#define QUIC_DLOG_IF(severity, condition) QUIC_DLOG_IF_IMPL(severity, condition)
 #define QUIC_LOG(severity) QUIC_LOG_IMPL(severity)
 #define QUIC_LOG_FIRST_N(severity, n) QUIC_LOG_FIRST_N_IMPL(severity, n)
 #define QUIC_LOG_EVERY_N_SEC(severity, seconds) \
   QUIC_LOG_EVERY_N_SEC_IMPL(severity, seconds)
 #define QUIC_LOG_IF(severity, condition) QUIC_LOG_IF_IMPL(severity, condition)
+
+#define QUIC_PREDICT_FALSE(x) QUIC_PREDICT_FALSE_IMPL(x)
 
 #endif  // NET_QUIC_PLATFORM_API_QUIC_LOGGING_H_

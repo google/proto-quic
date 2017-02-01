@@ -37,6 +37,14 @@ void ScopedFDCloseTraits::Free(int fd) {
   int close_errno = errno;
   base::debug::Alias(&close_errno);
 
+#if defined(OS_LINUX)
+  // NB: Some file descriptors can return errors from close() e.g. network
+  // filesystems such as NFS and Linux input devices. On Linux, errors from
+  // close other than EBADF do not indicate failure to actually close the fd.
+  if (ret != 0 && errno != EBADF)
+    ret = 0;
+#endif
+
   PCHECK(0 == ret);
 }
 

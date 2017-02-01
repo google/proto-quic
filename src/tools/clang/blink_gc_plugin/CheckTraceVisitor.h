@@ -23,8 +23,6 @@ class CheckTraceVisitor : public clang::RecursiveASTVisitor<CheckTraceVisitor> {
                     RecordInfo* info,
                     RecordCache* cache);
 
-  bool delegates_to_traceimpl() const;
-
   bool VisitMemberExpr(clang::MemberExpr* member);
   bool VisitCallExpr(clang::CallExpr* call);
 
@@ -53,7 +51,6 @@ class CheckTraceVisitor : public clang::RecursiveASTVisitor<CheckTraceVisitor> {
   clang::CXXMethodDecl* trace_;
   RecordInfo* info_;
   RecordCache* cache_;
-  bool delegates_to_traceimpl_;
 };
 
 #endif  // TOOLS_BLINK_GC_PLUGIN_CHECK_TRACE_VISITOR_H_

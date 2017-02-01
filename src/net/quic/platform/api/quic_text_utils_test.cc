@@ -51,15 +51,77 @@ TEST(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
   }
 }
 
-TEST(QuicTextUtilsText, StringToUint64) {
-  uint64_t val = 0;
-  EXPECT_TRUE(QuicTextUtils::StringToUint64("123", &val));
-  EXPECT_EQ(123u, val);
-  EXPECT_TRUE(QuicTextUtils::StringToUint64("1234", &val));
-  EXPECT_EQ(1234u, val);
-  EXPECT_FALSE(QuicTextUtils::StringToUint64("", &val));
-  EXPECT_FALSE(QuicTextUtils::StringToUint64("-123", &val));
-  EXPECT_FALSE(QuicTextUtils::StringToUint64("-123.0", &val));
+TEST(QuicTextUtilsText, StringToNumbers) {
+  const string kMaxInt32Plus1 = "2147483648";
+  const string kMinInt32Minus1 = "-2147483649";
+  const string kMaxUint32Plus1 = "4294967296";
+
+  {
+    // StringToUint64
+    uint64_t uint64_val = 0;
+    EXPECT_TRUE(QuicTextUtils::StringToUint64("123", &uint64_val));
+    EXPECT_EQ(123u, uint64_val);
+    EXPECT_TRUE(QuicTextUtils::StringToUint64("1234", &uint64_val));
+    EXPECT_EQ(1234u, uint64_val);
+    EXPECT_FALSE(QuicTextUtils::StringToUint64("", &uint64_val));
+    EXPECT_FALSE(QuicTextUtils::StringToUint64("-123", &uint64_val));
+    EXPECT_FALSE(QuicTextUtils::StringToUint64("-123.0", &uint64_val));
+    EXPECT_TRUE(QuicTextUtils::StringToUint64(kMaxUint32Plus1, &uint64_val));
+    EXPECT_EQ(4294967296u, uint64_val);
+  }
+
+  {
+    // StringToint
+    int int_val = 0;
+    EXPECT_TRUE(QuicTextUtils::StringToInt("123", &int_val));
+    EXPECT_EQ(123, int_val);
+    EXPECT_TRUE(QuicTextUtils::StringToInt("1234", &int_val));
+    EXPECT_EQ(1234, int_val);
+    EXPECT_FALSE(QuicTextUtils::StringToInt("", &int_val));
+    EXPECT_TRUE(QuicTextUtils::StringToInt("-123", &int_val));
+    EXPECT_EQ(-123, int_val);
+    EXPECT_FALSE(QuicTextUtils::StringToInt("-123.0", &int_val));
+    if (sizeof(int) > 4) {
+      EXPECT_TRUE(QuicTextUtils::StringToInt(kMinInt32Minus1, &int_val));
+      EXPECT_EQ(-2147483649ll, int_val);
+      EXPECT_TRUE(QuicTextUtils::StringToInt(kMaxInt32Plus1, &int_val));
+      EXPECT_EQ(2147483648ll, int_val);
+    } else {
+      EXPECT_FALSE(QuicTextUtils::StringToInt(kMinInt32Minus1, &int_val));
+      EXPECT_FALSE(QuicTextUtils::StringToInt(kMaxInt32Plus1, &int_val));
+    }
+  }
+
+  {
+    // StringToUint32
+    uint32_t uint32_val = 0;
+    EXPECT_TRUE(QuicTextUtils::StringToUint32("123", &uint32_val));
+    EXPECT_EQ(123u, uint32_val);
+    EXPECT_TRUE(QuicTextUtils::StringToUint32("1234", &uint32_val));
+    EXPECT_EQ(1234u, uint32_val);
+    EXPECT_FALSE(QuicTextUtils::StringToUint32("", &uint32_val));
+    EXPECT_FALSE(QuicTextUtils::StringToUint32("-123", &uint32_val));
+    EXPECT_FALSE(QuicTextUtils::StringToUint32("-123.0", &uint32_val));
+    EXPECT_FALSE(QuicTextUtils::StringToUint32(kMaxUint32Plus1, &uint32_val));
+  }
+
+  {
+    // StringToSizeT
+    size_t size_t_val = 0;
+    EXPECT_TRUE(QuicTextUtils::StringToSizeT("123", &size_t_val));
+    EXPECT_EQ(123u, size_t_val);
+    EXPECT_TRUE(QuicTextUtils::StringToSizeT("1234", &size_t_val));
+    EXPECT_EQ(1234u, size_t_val);
+    EXPECT_FALSE(QuicTextUtils::StringToSizeT("", &size_t_val));
+    EXPECT_FALSE(QuicTextUtils::StringToSizeT("-123", &size_t_val));
+    EXPECT_FALSE(QuicTextUtils::StringToSizeT("-123.0", &size_t_val));
+    if (sizeof(size_t) > 4) {
+      EXPECT_TRUE(QuicTextUtils::StringToSizeT(kMaxUint32Plus1, &size_t_val));
+      EXPECT_EQ(4294967296ull, size_t_val);
+    } else {
+      EXPECT_FALSE(QuicTextUtils::StringToSizeT(kMaxUint32Plus1, &size_t_val));
+    }
+  }
 }
 
 TEST(QuicTextUtilsText, Uint64ToString) {

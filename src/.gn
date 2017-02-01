@@ -12,6 +12,34 @@ buildconfig = "//build/config/BUILDCONFIG.gn"
 # in the source tree, e.g. for third party source trees.
 secondary_source = "//build/secondary/"
 
+# These arguments override the default values for items in a declare_args
+# block. "gn args" in turn can override these.
+#
+# In general the value for a build arg in the declare_args block should be the
+# default. In some cases, a DEPS-ed in project will want different defaults for
+# being built as part of Chrome vs. being built standalone. In this case, the
+# Chrome defaults should go here. There should be no overrides here for
+# values declared in the main Chrome repository.
+default_args = {
+  v8_extra_library_files = [
+    # Dependencies used by the extra libraries. Putting them here causes them
+    # to be executed first during snapshot creation.
+    "//third_party/WebKit/Source/core/streams/CommonStrings.js",
+
+    # Extra libraries.
+    "//third_party/WebKit/Source/core/streams/ByteLengthQueuingStrategy.js",
+    "//third_party/WebKit/Source/core/streams/CountQueuingStrategy.js",
+    "//third_party/WebKit/Source/core/streams/ReadableStream.js",
+  ]
+  v8_experimental_extra_library_files = [
+    "//third_party/WebKit/Source/core/streams/ReadableStreamExperimentalPipeTo.js",
+    "//third_party/WebKit/Source/core/streams/WritableStream.js",
+  ]
+  v8_enable_inspector = true
+  v8_enable_gdbjit = false
+  v8_imminent_deprecation_warnings = false
+}
+
 # These are the targets to check headers for by default. The files in targets
 # matching these patterns (see "gn help label_pattern" for format) will have
 # their includes checked for proper dependencies when you run either

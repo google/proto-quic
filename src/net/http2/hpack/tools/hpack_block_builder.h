@@ -27,9 +27,8 @@ namespace test {
 
 class HpackBlockBuilder {
  public:
-  explicit HpackBlockBuilder(base::StringPiece initial_contents) {
-    initial_contents.AppendToString(&buffer_);
-  }
+  explicit HpackBlockBuilder(base::StringPiece initial_contents)
+      : buffer_(initial_contents.data(), initial_contents.size()) {}
   HpackBlockBuilder() {}
   ~HpackBlockBuilder() {}
 

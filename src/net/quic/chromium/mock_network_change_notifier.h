@@ -21,6 +21,10 @@ class MockNetworkChangeNotifier : public NetworkChangeNotifier {
 
   bool AreNetworkHandlesCurrentlySupported() const override;
 
+  void SetConnectionType(ConnectionType connection_type) {
+    connection_type_ = connection_type;
+  }
+
   void SetConnectedNetworksList(const NetworkList& network_list);
 
   void GetCurrentConnectedNetworks(NetworkList* network_list) const override;
@@ -44,6 +48,7 @@ class MockNetworkChangeNotifier : public NetworkChangeNotifier {
 
  private:
   bool force_network_handles_supported_;
+  ConnectionType connection_type_;
   NetworkChangeNotifier::NetworkList connected_networks_;
 };
 

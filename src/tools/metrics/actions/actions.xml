@@ -13362,6 +13362,7 @@ should be able to be added at any place in this file.
   <description>
     A high priority Physical Web opt-in notification was displayed.
   </description>
+  <obsolete>Deprecated 01/2017, no longer used</obsolete>
 </action>
 
 <action name="PhysicalWeb.OptIn.MinPriorityNotificationShown">
@@ -13371,6 +13372,7 @@ should be able to be added at any place in this file.
   <description>
     A min priority Physical Web opt-in notification was displayed.
   </description>
+  <obsolete>Deprecated 01/2017, no longer used</obsolete>
 </action>
 
 <action name="PhysicalWeb.OptIn.NotificationPressed">
@@ -13380,6 +13382,7 @@ should be able to be added at any place in this file.
   <description>
     The user pressed the Physical Web opt-in notification.
   </description>
+  <obsolete>Deprecated 01/2017, no longer used</obsolete>
 </action>
 
 <action name="PhysicalWeb.Prefs.FeatureDisabled">

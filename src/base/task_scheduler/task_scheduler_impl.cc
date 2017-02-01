@@ -94,6 +94,8 @@ void TaskSchedulerImpl::JoinForTesting() {
   DCHECK(!join_for_testing_returned_.IsSet());
 #endif
   for (const auto& worker_pool : worker_pools_)
+    worker_pool->DisallowWorkerDetachmentForTesting();
+  for (const auto& worker_pool : worker_pools_)
     worker_pool->JoinForTesting();
   service_thread_.Stop();
 #if DCHECK_IS_ON()

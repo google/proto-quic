@@ -646,6 +646,32 @@ class BASE_EXPORT GlobalActivityTracker {
     kTypeIdUserDataRecordFree = ~kTypeIdUserDataRecord,
   };
 
+  // This structure contains information about a loaded module, as shown to
+  // users of the tracker.
+  struct BASE_EXPORT ModuleInfo {
+    ModuleInfo();
+    ModuleInfo(ModuleInfo&& rhs);
+    ModuleInfo(const ModuleInfo& rhs);
+    ~ModuleInfo();
+
+    ModuleInfo& operator=(ModuleInfo&& rhs);
+    ModuleInfo& operator=(const ModuleInfo& rhs);
+
+    // Information about where and when the module was loaded/unloaded.
+    bool is_loaded = false;  // Was the last operation a load or unload?
+    uintptr_t address = 0;   // Address of the last load operation.
+    int64_t load_time = 0;   // Time of last change; set automatically.
+
+    // Information about the module itself. These never change no matter how
+    // many times a module may be loaded and unloaded.
+    size_t size = 0;         // The size of the loaded module.
+    uint32_t timestamp = 0;  // Opaque "timestamp" for the module.
+    uint32_t age = 0;        // Opaque "age" for the module.
+    uint8_t identifier[16];  // Opaque identifier (GUID, etc.) for the module.
+    std::string file;        // The full path to the file. (UTF-8)
+    std::string debug_file;  // The full path to the debug file.
+  };
+
   // This is a thin wrapper around the thread-tracker's ScopedActivity that
   // accesses the global tracker to provide some of the information, notably
   // which thread-tracker to use. It is safe to create even if activity
@@ -749,10 +775,15 @@ class BASE_EXPORT GlobalActivityTracker {
   // only store critical messages such as FATAL ones.
   void RecordLogMessage(StringPiece message);
 
+  // Records a module load/unload event. This is safe to call multiple times
+  // even with the same information.
+  void RecordModuleInfo(const ModuleInfo& info);
+
   // Accesses the global data record for storing arbitrary key/value pairs.
   ActivityUserData& user_data() { return user_data_; }
 
  private:
+  friend class GlobalActivityAnalyzer;
   friend class ScopedThreadActivity;
   friend class ActivityTrackerTest;
 
@@ -762,6 +793,51 @@ class BASE_EXPORT GlobalActivityTracker {
     kMaxThreadCount = 100,
     kCachedThreadMemories = 10,
     kCachedUserDataMemories = 10,
+  };
+
+  // State of a module as stored in persistent memory. This supports a single
+  // loading of a module only. If modules are loaded multiple times at
+  // different addresses, only the last will be recorded and an unload will
+  // not revert to the information of any other addresses.
+  struct BASE_EXPORT ModuleInfoRecord {
+    // SHA1(ModuleInfoRecord): Increment this if structure changes!
+    static constexpr uint32_t kPersistentTypeId = 0x05DB5F41 + 1;
+
+    // Expected size for 32/64-bit check by PersistentMemoryAllocator.
+    static constexpr size_t kExpectedInstanceSize = 56;
+
+    // The atomic unfortunately makes this a "complex" class on some compilers
+    // and thus requires an out-of-line constructor & destructor even though
+    // they do nothing.
+    ModuleInfoRecord();
+    ~ModuleInfoRecord();
+
+    uint64_t address;               // The base address of the module.
+    uint64_t load_time;             // Time of last load/unload.
+    uint64_t size;                  // The size of the module in bytes.
+    uint32_t timestamp;             // Opaque timestamp of the module.
+    uint32_t age;                   // Opaque "age" associated with the module.
+    uint8_t identifier[16];         // Opaque identifier for the module.
+    std::atomic<uint32_t> changes;  // Number load/unload actions.
+    uint16_t pickle_size;           // The size of the following pickle.
+    uint8_t loaded;                 // Flag if module is loaded or not.
+    char pickle[1];                 // Other strings; may allocate larger.
+
+    // Decodes/encodes storage structure from more generic info structure.
+    bool DecodeTo(GlobalActivityTracker::ModuleInfo* info,
+                  size_t record_size) const;
+    bool EncodeFrom(const GlobalActivityTracker::ModuleInfo& info,
+                    size_t record_size);
+
+    // Updates the core information without changing the encoded strings. This
+    // is useful when a known module changes state (i.e. new load or unload).
+    bool UpdateFrom(const GlobalActivityTracker::ModuleInfo& info);
+
+    // Determines the required memory size for the encoded storage.
+    static size_t EncodedSize(const GlobalActivityTracker::ModuleInfo& info);
+
+   private:
+    DISALLOW_COPY_AND_ASSIGN(ModuleInfoRecord);
   };
 
   // A thin wrapper around the main thread-tracker that keeps additional
@@ -824,6 +900,10 @@ class BASE_EXPORT GlobalActivityTracker {
   // An object for holding global arbitrary key value pairs. Values must always
   // be written from the main UI thread.
   ActivityUserData user_data_;
+
+  // A map of global module information, keyed by module path.
+  std::map<const std::string, ModuleInfoRecord*> modules_;
+  base::Lock modules_lock_;
 
   // The active global activity tracker.
   static GlobalActivityTracker* g_tracker_;

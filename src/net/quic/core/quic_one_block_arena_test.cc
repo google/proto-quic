@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-#include "net/quic/core/interval_set.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -41,7 +41,7 @@ TEST(QuicOneBlockArenaTest, Exhaust) {
 TEST(QuicOneBlockArenaTest, NoOverlaps) {
   QuicOneBlockArena<1024> arena;
   std::vector<QuicArenaScopedPtr<TestObject>> objects;
-  IntervalSet<uintptr_t> used;
+  QuicIntervalSet<uintptr_t> used;
   for (size_t i = 0; i < 1024 / kMaxAlign; ++i) {
     QuicArenaScopedPtr<TestObject> ptr = arena.New<TestObject>();
     EXPECT_TRUE(ptr.is_from_arena());

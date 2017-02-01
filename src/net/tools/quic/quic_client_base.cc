@@ -68,7 +68,7 @@ void QuicClientBase::OnClose(QuicSpdyStream* stream) {
   if (store_response_) {
     auto status = response_headers.find(":status");
     if (status == response_headers.end() ||
-        !StringToInt(status->second, &latest_response_code_)) {
+        !QuicTextUtils::StringToInt(status->second, &latest_response_code_)) {
       QUIC_LOG(ERROR) << "Invalid response headers";
     }
     latest_response_headers_ = response_headers.DebugString();

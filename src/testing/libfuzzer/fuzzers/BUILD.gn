@@ -391,6 +391,7 @@ fuzzer_test("skia_pathop_fuzzer") {
     "skia_pathop_fuzzer.cc",
   ]
   deps = [
+    "//base",
     "//skia",
   ]
   libfuzzer_options = [ "max_len=512" ]

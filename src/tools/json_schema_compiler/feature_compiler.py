@@ -25,11 +25,11 @@ HEADER_FILE_TEMPLATE = """
 #ifndef %(header_guard)s
 #define %(header_guard)s
 
-#include "extensions/common/features/base_feature_provider.h"
+#include "extensions/common/features/feature_provider.h"
 
 namespace extensions {
 
-class %(provider_class)s : public BaseFeatureProvider {
+class %(provider_class)s : public FeatureProvider {
  public:
   %(provider_class)s();
   ~%(provider_class)s() override;

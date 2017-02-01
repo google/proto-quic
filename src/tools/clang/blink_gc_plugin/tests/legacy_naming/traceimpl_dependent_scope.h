@@ -17,42 +17,19 @@ class X : public GarbageCollected<X> {
 template <typename T>
 class Base : public GarbageCollected<Base<T> > {
  public:
-  virtual void trace(Visitor* visitor) { traceImpl(visitor); }
-  virtual void trace(InlinedGlobalMarkingVisitor visitor) {
-    traceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {}
+  virtual void trace(Visitor*) {}
 };
 
 template <typename T>
 class Derived : public Base<T> {
  public:
-  void trace(Visitor* visitor) override { traceImpl(visitor); }
-  void trace(InlinedGlobalMarkingVisitor visitor) override {
-    traceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
-    Base<T>::trace(visitor);
-  }
+  void trace(Visitor* visitor) override { Base<T>::trace(visitor); }
 };
 
 template <typename T>
 class DerivedMissingTrace : public Base<T> {
  public:
-  void trace(Visitor* visitor) override { traceImpl(visitor); }
-  void trace(InlinedGlobalMarkingVisitor visitor) override {
-    traceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
+  void trace(Visitor* visitor) override {
     // Missing Base<T>::trace(visitor).
   }
 };

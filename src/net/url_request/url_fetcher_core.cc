@@ -82,7 +82,6 @@ URLFetcherCore::URLFetcherCore(URLFetcher* fetcher,
       delegate_task_runner_(base::SequencedTaskRunnerHandle::Get()),
       load_flags_(LOAD_NORMAL),
       response_code_(URLFetcher::RESPONSE_CODE_INVALID),
-      buffer_(new IOBuffer(kBufferSize)),
       url_request_data_key_(NULL),
       was_fetched_via_proxy_(false),
       was_cached_(false),
@@ -428,6 +427,9 @@ void URLFetcherCore::OnResponseStarted(URLRequest* request, int net_error) {
     total_response_bytes_ = request_->GetExpectedContentSize();
   }
 
+  DCHECK(!buffer_);
+  if (request_type_ != URLFetcher::HEAD)
+    buffer_ = new IOBuffer(kBufferSize);
   ReadResponse();
 }
 
@@ -816,6 +818,7 @@ void URLFetcherCore::ReleaseRequest() {
   request_context_getter_->RemoveObserver(this);
   upload_progress_checker_timer_.reset();
   request_.reset();
+  buffer_ = nullptr;
   g_registry.Get().RemoveURLFetcherCore(this);
 }
 

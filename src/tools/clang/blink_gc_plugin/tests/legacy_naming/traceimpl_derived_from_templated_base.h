@@ -18,12 +18,7 @@ template <int Y>
 class TraceImplTemplatedBase
     : public GarbageCollected<TraceImplTemplatedBase<Y> > {
  public:
-  void trace(Visitor* visitor) { traceImpl(visitor); }
-
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
-    visitor->trace(x_);
-  }
+  void trace(Visitor* visitor) { visitor->trace(x_); }
 
  private:
   Member<X> x_;

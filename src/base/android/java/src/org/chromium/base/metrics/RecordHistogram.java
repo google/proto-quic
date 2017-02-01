@@ -25,16 +25,23 @@ import java.util.concurrent.TimeUnit;
  */
 @JNINamespace("base::android")
 public class RecordHistogram {
-    private static boolean sIsDisabledForTests;
+    private static Throwable sDisabledBy;
     private static Map<String, Long> sCache =
             Collections.synchronizedMap(new HashMap<String, Long>());
 
     /**
-     * Tests may not have native initialized, so they may need to disable metrics.
+     * Tests may not have native initialized, so they may need to disable metrics. The value should
+     * be reset after the test done, to avoid carrying over state to unrelated tests.
+     *
+     * In JUnit tests this can be done automatically using
+     * {@link org.chromium.chrome.browser.DisableHistogramsRule}
      */
     @VisibleForTesting
-    public static void disableForTests() {
-        sIsDisabledForTests = true;
+    public static void setDisabledForTests(boolean disabled) {
+        if (disabled && sDisabledBy != null) {
+            throw new IllegalStateException("Histograms are already disabled.", sDisabledBy);
+        }
+        sDisabledBy = disabled ? new Throwable() : null;
     }
 
     private static long getCachedHistogramKey(String name) {
@@ -54,7 +61,7 @@ public class RecordHistogram {
      * @param sample sample to be recorded, either true or false
      */
     public static void recordBooleanHistogram(String name, boolean sample) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordBooleanHistogram(name, key, sample);
         if (result != key) sCache.put(name, result);
@@ -70,7 +77,7 @@ public class RecordHistogram {
      *        lower than |boundary|
      */
     public static void recordEnumeratedHistogram(String name, int sample, int boundary) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordEnumeratedHistogram(name, key, sample, boundary);
         if (result != key) sCache.put(name, result);
@@ -117,7 +124,7 @@ public class RecordHistogram {
      */
     public static void recordCustomCountHistogram(
             String name, int sample, int min, int max, int numBuckets) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordCustomCountHistogram(name, key, sample, min, max, numBuckets);
         if (result != key) sCache.put(name, result);
@@ -134,7 +141,7 @@ public class RecordHistogram {
      */
     public static void recordLinearCountHistogram(
             String name, int sample, int min, int max, int numBuckets) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordLinearCountHistogram(name, key, sample, min, max, numBuckets);
         if (result != key) sCache.put(name, result);
@@ -147,7 +154,7 @@ public class RecordHistogram {
      * @param sample sample to be recorded, at least 0 and at most 100.
      */
     public static void recordPercentageHistogram(String name, int sample) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordEnumeratedHistogram(name, key, sample, 101);
         if (result != key) sCache.put(name, result);
@@ -160,7 +167,7 @@ public class RecordHistogram {
     *        values.
     */
     public static void recordSparseSlowlyHistogram(String name, int sample) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         long result = nativeRecordSparseHistogram(name, key, sample);
         if (result != key) sCache.put(name, result);
@@ -241,7 +248,7 @@ public class RecordHistogram {
 
     private static void recordCustomTimesHistogramMilliseconds(
             String name, long duration, long min, long max, int numBuckets) {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         long key = getCachedHistogramKey(name);
         // Note: Duration, min and max are clamped to int here because that's what's expected by
         // the native histograms API. Callers of these functions still pass longs because that's
@@ -266,7 +273,7 @@ public class RecordHistogram {
      * Initializes the metrics system.
      */
     public static void initialize() {
-        if (sIsDisabledForTests) return;
+        if (sDisabledBy != null) return;
         nativeInitialize();
     }
 

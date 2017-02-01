@@ -16,6 +16,7 @@ using std::string;
 
 namespace net {
 namespace test {
+namespace {
 
 enum class TestEnumClass32 {
   kValue1 = 1,
@@ -46,127 +47,11 @@ struct TestStruct {
   TestEnum8 f8;
 };
 
-const size_t kF1Offset = 0;
-const size_t kF2Offset = 1;
-const size_t kF3Offset = 3;
-const size_t kF4Offset = 6;
-const size_t kF5Offset = 10;
-const size_t kF6Offset = 14;
-const size_t kF7Offset = 18;
-const size_t kF8Offset = 19;
-
 class DecodeBufferTest : public ::testing::Test {
  public:
   DecodeBufferTest() {}
 
  protected:
-  // Double checks the call fn(f).
-  template <typename T>
-  bool SlowDecodeField(DecodeBuffer* b,
-                       size_t field_size,
-                       size_t field_offset,
-                       std::function<bool(DecodeBuffer*)> fn,
-                       T* f) {
-    VLOG(2) << "Remaining: " << b->Remaining();
-    VLOG(2) << "field_size: " << field_size;
-    VLOG(2) << "field_offset: " << field_offset;
-    VLOG(2) << "decode_offset_: " << decode_offset_;
-    EXPECT_GE(decode_offset_, field_offset);
-    bool had_data = b->HasData();
-    VLOG(2) << "had_data: " << had_data;
-    uint32_t old = static_cast<uint32_t>(*f);
-    VLOG(2) << "old: " << old;
-    size_t old_decode_offset = decode_offset_;
-    bool done = fn(b);
-    VLOG(2) << "done: " << done;
-    if (old_decode_offset == decode_offset_) {
-      // Didn't do any decoding (may have no input, or may have already
-      // decoded this field).
-      if (done) {
-        EXPECT_LE(field_offset + field_size, decode_offset_);
-        // Shouldn't have modified already decoded field.
-        EXPECT_EQ(old, static_cast<uint32_t>(*f));
-      } else {
-        EXPECT_TRUE(!had_data);
-      }
-    } else {
-      // Did some decoding.
-      EXPECT_TRUE(had_data);
-      EXPECT_LT(old_decode_offset, decode_offset_);
-      if (done) {
-        EXPECT_EQ(field_offset + field_size, decode_offset_);
-      } else {
-        EXPECT_GT(field_offset + field_size, decode_offset_);
-      }
-    }
-    VLOG(2) << "---------------------------------------";
-    return done;
-  }
-
-
-  void SlowDecodeTestStruct(StringPiece input, TestStruct* p) {
-    VLOG(2) << "############################################################";
-    EXPECT_LE(10u, input.size());
-    decode_offset_ = 0;
-    auto decode_f1 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeUInt8(kF1Offset, &decode_offset_, &p->f1);
-    };
-    auto decode_f2 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeUInt16(kF2Offset, &decode_offset_, &p->f2);
-    };
-    auto decode_f3 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeUInt24(kF3Offset, &decode_offset_, &p->f3);
-    };
-    auto decode_f4 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeUInt32(kF4Offset, &decode_offset_, &p->f4);
-    };
-    auto decode_f5 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeUInt31(kF5Offset, &decode_offset_, &p->f5);
-    };
-    auto decode_f6 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeEnum(4, kF6Offset, &decode_offset_, &p->f6);
-    };
-    auto decode_f7 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeEnum(1, kF7Offset, &decode_offset_, &p->f7);
-    };
-    auto decode_f8 = [this, p](DecodeBuffer* db) {
-      return db->SlowDecodeEnum(1, kF8Offset, &decode_offset_, &p->f8);
-    };
-    while (input.size() > 0) {
-      size_t size = input.size();
-      // Sometimes check that zero length input is OK.
-      auto r = random_.Next();
-      if (r % 100 == 0) {
-        size = 0;
-      } else if (size > 1) {
-        auto r = random_.Next();
-        size = (r % size) + 1;
-      }
-      VLOG(2) << "================= input size " << size;
-      DecodeBuffer b(input.data(), size);
-      size_t old_decode_offset = decode_offset_;
-      if (SlowDecodeField(&b, 1, kF1Offset, decode_f1, &p->f1) &&
-          SlowDecodeField(&b, 2, kF2Offset, decode_f2, &p->f2) &&
-          SlowDecodeField(&b, 3, kF3Offset, decode_f3, &p->f3) &&
-          SlowDecodeField(&b, 4, kF4Offset, decode_f4, &p->f4) &&
-          SlowDecodeField(&b, 4, kF5Offset, decode_f5, &p->f5) &&
-          SlowDecodeField(&b, 4, kF6Offset, decode_f6, &p->f6) &&
-          SlowDecodeField(&b, 1, kF7Offset, decode_f7, &p->f7) &&
-          SlowDecodeField(&b, 1, kF8Offset, decode_f8, &p->f8)) {
-        EXPECT_TRUE(b.Empty());
-        EXPECT_EQ(size, input.size());
-        EXPECT_EQ(input.size(), b.Offset());  // All input consumed.
-        return;
-      }
-      EXPECT_EQ(old_decode_offset + size, decode_offset_);
-      EXPECT_TRUE(b.Empty());
-      EXPECT_EQ(size, b.Offset());    // All input consumed.
-      EXPECT_LT(size, input.size());  // More remains.
-      input = StringPiece(input.data() + size, input.size() - size);
-    }
-    ADD_FAILURE() << "Ran out of input! decode_offset_ = " << decode_offset_;
-  }
-
   Http2Random random_;
   uint32_t decode_offset_;
 };
@@ -178,60 +63,6 @@ TEST_F(DecodeBufferTest, DecodesFixedInts) {
   EXPECT_EQ(0x1223u, b1.DecodeUInt16());
   EXPECT_EQ(0x344556u, b1.DecodeUInt24());
   EXPECT_EQ(0x6778899Au, b1.DecodeUInt32());
-
-  DecodeBuffer b2(data, strlen(data));
-  uint8_t b;
-  decode_offset_ = 0;
-  EXPECT_TRUE(b2.SlowDecodeUInt8(0, &decode_offset_, &b));
-  EXPECT_EQ(1, b);
-  uint16_t s;
-  decode_offset_ = 0;
-  EXPECT_TRUE(b2.SlowDecodeUInt16(0, &decode_offset_, &s));
-  EXPECT_EQ(0x1223, s);
-  uint32_t i;
-  decode_offset_ = 0;
-  EXPECT_TRUE(b2.SlowDecodeUInt24(0, &decode_offset_, &i));
-  //  EXPECT_EQ(0x344556, b1.DecodeUInt24());
-  //  EXPECT_EQ(0x6778899a, b1.DecodeUInt32());
-}
-
-// Decode the structure many times, where we'll pass different partitions
-// into DecodeSlowly.
-TEST_F(DecodeBufferTest, SlowDecodeTestStruct) {
-  // clang-format off
-  const char data[] = {
-    0x12u,                       // f1
-    0x23u, 0x34u,                // f2
-    0x45u, 0x56u, 0x67u,         // f3
-    0x78u, 0x89u, 0x9au, 0xabu,  // f4
-    0xfeu, 0xedu, 0xdcu, 0xcbu,  // f5 (high-bit will be cleared.)
-    0x00u, 0x0fu, 0x42u, 0x40u,  // f6 (kValue1M)
-    0x63u,                       // f7 (kValue99)
-    0x81u,                       // f8 (kMaskLo | kMaskHi)
-  };
-  // clang-format on
-  StringPiece input(data, sizeof data);
-  for (int i = 0; i < 200; ++i) {
-    TestStruct ts;
-    // Init the struct to random garbage.
-    ts.f1 = random_.Rand8();
-    ts.f2 = random_.Rand16();
-    ts.f3 = random_.Rand32();
-    ts.f4 = random_.Rand32();
-    ts.f5 = 0x80000000 | random_.Rand32();  // Ensure high-bit is set.
-    ts.f6 = static_cast<TestEnumClass32>(random_.Rand32());
-    ts.f7 = static_cast<TestEnumClass8>(random_.Rand8());
-    ts.f8 = static_cast<TestEnum8>(random_.Rand8());
-    SlowDecodeTestStruct(input, &ts);
-    ASSERT_EQ(0x12u, ts.f1);
-    ASSERT_EQ(0x2334u, ts.f2);
-    ASSERT_EQ(0x455667u, ts.f3);
-    ASSERT_EQ(0x78899AABu, ts.f4);
-    ASSERT_EQ(0x7EEDDCCBu, ts.f5);
-    ASSERT_EQ(TestEnumClass32::kValue1M, ts.f6);
-    ASSERT_EQ(TestEnumClass8::kValue99, ts.f7);
-    ASSERT_EQ(kMaskLo | kMaskHi, ts.f8);
-  }
 }
 
 // Make sure that DecodeBuffer is not copying input, just pointing into
@@ -374,5 +205,6 @@ TEST(DecodeBufferSubsetDeathTest, BaseCursorAdvanced) {
 }
 #endif  // GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
 
+}  // namespace
 }  // namespace test
 }  // namespace net

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import math
 import os
 
@@ -32,36 +33,36 @@ class _DromaeoMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression(
+    tab.WaitForJavaScriptCondition2(
         'window.document.getElementById("pause") &&' +
         'window.document.getElementById("pause").value == "Run"',
-        120)
+        timeout=120)
 
     # Start spying on POST request that will report benchmark results, and
     # intercept result data.
-    tab.ExecuteJavaScript('(function() {' +
-                          '  var real_jquery_ajax_ = window.jQuery;' +
-                          '  window.results_ = "";' +
-                          '  window.jQuery.ajax = function(request) {' +
-                          '    if (request.url == "store.php") {' +
-                          '      window.results_ =' +
-                          '          decodeURIComponent(request.data);' +
-                          '      window.results_ = window.results_.substring(' +
-                          '          window.results_.indexOf("=") + 1, ' +
-                          '          window.results_.lastIndexOf("&"));' +
-                          '      real_jquery_ajax_(request);' +
-                          '    }' +
-                          '  };' +
-                          '})();')
+    tab.ExecuteJavaScript2("""
+        (function() {
+          var real_jquery_ajax_ = window.jQuery;
+          window.results_ = "";
+          window.jQuery.ajax = function(request) {
+            if (request.url == "store.php") {
+              window.results_ = decodeURIComponent(request.data);
+              window.results_ = window.results_.substring(
+                window.results_.indexOf("=") + 1,
+                window.results_.lastIndexOf("&"));
+              real_jquery_ajax_(request);
+            }
+          };
+        })();""")
     # Starts benchmark.
-    tab.ExecuteJavaScript('window.document.getElementById("pause").click();')
+    tab.ExecuteJavaScript2('window.document.getElementById("pause").click();')
 
-    tab.WaitForJavaScriptExpression('!!window.results_', 600)
+    tab.WaitForJavaScriptCondition2('!!window.results_', timeout=600)
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    score = eval(tab.EvaluateJavaScript('window.results_ || "[]"'))
+    score = json.loads(tab.EvaluateJavaScript2('window.results_ || "[]"'))
 
     def Escape(k):
       chars = [' ', '.', '-', '/', '(', ')', '*']

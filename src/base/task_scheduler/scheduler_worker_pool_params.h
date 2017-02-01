@@ -8,6 +8,7 @@
 #include <string>
 
 #include "base/macros.h"
+#include "base/task_scheduler/scheduler_worker_params.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
 
@@ -28,14 +29,19 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   // ("TaskScheduler." + histogram name + "." + |name| + extra suffixes). The
   // pool will contain up to |max_threads|. |priority_hint| is the preferred
   // thread priority; the actual thread priority depends on shutdown state and
-  // platform capabilities. |suggested_reclaim_time| sets a suggestion on when
-  // to reclaim idle threads. The pool is free to ignore this value for
-  // performance or correctness reasons.
-  SchedulerWorkerPoolParams(const std::string& name,
-                            ThreadPriority priority_hint,
-                            StandbyThreadPolicy standby_thread_policy,
-                            int max_threads,
-                            TimeDelta suggested_reclaim_time);
+  // platform capabilities. |standby_thread_policy| indicates whether an idle
+  // thread should be kept alive on standby. |suggested_reclaim_time| sets a
+  // suggestion on when to reclaim idle threads. The pool is free to ignore this
+  // value for performance or correctness reasons. |backward_compatibility|
+  // indicates whether backward compatibility is enabled.
+  SchedulerWorkerPoolParams(
+      const std::string& name,
+      ThreadPriority priority_hint,
+      StandbyThreadPolicy standby_thread_policy,
+      int max_threads,
+      TimeDelta suggested_reclaim_time,
+      SchedulerBackwardCompatibility backward_compatibility =
+          SchedulerBackwardCompatibility::DISABLED);
   SchedulerWorkerPoolParams(SchedulerWorkerPoolParams&& other);
   SchedulerWorkerPoolParams& operator=(SchedulerWorkerPoolParams&& other);
 
@@ -46,6 +52,9 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   }
   size_t max_threads() const { return max_threads_; }
   TimeDelta suggested_reclaim_time() const { return suggested_reclaim_time_; }
+  SchedulerBackwardCompatibility backward_compatibility() const {
+    return backward_compatibility_;
+  }
 
  private:
   std::string name_;
@@ -53,6 +62,7 @@ class BASE_EXPORT SchedulerWorkerPoolParams final {
   StandbyThreadPolicy standby_thread_policy_;
   size_t max_threads_;
   TimeDelta suggested_reclaim_time_;
+  SchedulerBackwardCompatibility backward_compatibility_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorkerPoolParams);
 };

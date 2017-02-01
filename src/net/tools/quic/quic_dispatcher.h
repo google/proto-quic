@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/linked_hash_map.h"
 #include "net/quic/core/crypto/quic_compressed_certs_cache.h"
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_blocked_writer_interface.h"
@@ -23,6 +22,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_version_manager.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
 #include "net/tools/quic/quic_process_packet_interface.h"
@@ -44,10 +44,7 @@ class QuicDispatcher : public QuicTimeWaitListManager::Visitor,
                        public QuicBufferedPacketStore::VisitorInterface {
  public:
   // Ideally we'd have a linked_hash_set: the  boolean is unused.
-  typedef linked_hash_map<QuicBlockedWriterInterface*,
-                          bool,
-                          QuicBlockedWriterInterfacePtrHash>
-      WriteBlockedList;
+  typedef QuicLinkedHashMap<QuicBlockedWriterInterface*, bool> WriteBlockedList;
 
   QuicDispatcher(const QuicConfig& config,
                  const QuicCryptoServerConfig* crypto_config,

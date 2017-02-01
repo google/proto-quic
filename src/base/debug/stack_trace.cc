@@ -192,14 +192,13 @@ void* LinkStackFrames(void* fpp, void* parent_fp) {
 
 }  // namespace
 
+StackTrace::StackTrace() : StackTrace(arraysize(trace_)) {}
+
 StackTrace::StackTrace(const void* const* trace, size_t count) {
   count = std::min(count, arraysize(trace_));
   if (count)
     memcpy(trace_, trace, count * sizeof(trace_[0]));
   count_ = count;
-}
-
-StackTrace::~StackTrace() {
 }
 
 const void *const *StackTrace::Addresses(size_t* count) const {

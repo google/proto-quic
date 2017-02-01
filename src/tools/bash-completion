@@ -19,8 +19,17 @@
 # Layout test switches:
 # $ third_party/WebKit/Tools/Scripts/run-webkit-tests --additional-driver-f<tab>
 # $ .../run-webkit-tests --additional-driver-flag=--site-per-pro<tab>
+#
+# Blink webkit-patch sub-commands:
+# $ third_party/WebKit/Tools/Scripts/webkit-patch reb<tab>
 
-chrome_source=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
+if [ -n "$BASH_SOURCE" ]; then
+    # The $BASH_SOURCE variable returns path of current script in bash.
+    chrome_source=$(cd $(dirname $BASH_SOURCE)/.. && pwd)
+else
+    # This is here for other similar shells, e.g. zsh.
+    chrome_source=$(cd $(dirname $0)/.. && pwd)
+fi
 
 _chrome_flag() {
     local cur targets
@@ -71,6 +80,16 @@ _layout_test_flag() {
     return 0
 }
 
+_webkit_patch_flag() {
+    local cur targets webkit_scripts_dir
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    webkit_scripts_dir=$chrome_source/third_party/WebKit/Tools/Scripts
+    targets=$($webkit_scripts_dir/webkit-patch help | grep '^   [a-z]' | \
+        awk '{ print $1 }')
+    COMPREPLY=($(compgen -W "$targets" -- "$cur"))
+    return 0
+}
+
 complete -F _chrome_flag google-chrome
 complete -F _chrome_flag chrome
 if [ $(uname) = "Darwin" ]
@@ -86,3 +105,4 @@ for gtest_test_executable in $(
 done
 
 complete -F _layout_test_flag run-webkit-tests
+complete -F _webkit_patch_flag webkit-patch

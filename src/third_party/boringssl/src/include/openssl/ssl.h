@@ -1767,6 +1767,11 @@ OPENSSL_EXPORT int SSL_CTX_set_session_id_context(SSL_CTX *ctx,
 OPENSSL_EXPORT int SSL_set_session_id_context(SSL *ssl, const uint8_t *sid_ctx,
                                               size_t sid_ctx_len);
 
+/* SSL_get0_session_id_context returns a pointer to |ssl|'s session ID context
+ * and sets |*out_len| to its length. */
+OPENSSL_EXPORT const uint8_t *SSL_get0_session_id_context(const SSL *ssl,
+                                                          size_t *out_len);
+
 /* SSL_SESSION_CACHE_MAX_SIZE_DEFAULT is the default maximum size of a session
  * cache. */
 #define SSL_SESSION_CACHE_MAX_SIZE_DEFAULT (1024 * 20)
@@ -2359,8 +2364,9 @@ OPENSSL_EXPORT int SSL_get_servername_type(const SSL *ssl);
  *
  * If the callback returns |SSL_TLSEXT_ERR_NOACK|, the server_name extension is
  * not acknowledged in the ServerHello. If the return value is
- * |SSL_TLSEXT_ERR_ALERT_FATAL| or |SSL_TLSEXT_ERR_ALERT_WARNING| then
- * |*out_alert| must be set to the alert value to send. */
+ * |SSL_TLSEXT_ERR_ALERT_FATAL|, then |*out_alert| is the alert to send,
+ * defaulting to |SSL_AD_UNRECOGNIZED_NAME|. |SSL_TLSEXT_ERR_ALERT_WARNING| is
+ * ignored and treated as |SSL_TLSEXT_ERR_OK|. */
 OPENSSL_EXPORT int SSL_CTX_set_tlsext_servername_callback(
     SSL_CTX *ctx, int (*callback)(SSL *ssl, int *out_alert, void *arg));
 
@@ -3000,10 +3006,7 @@ OPENSSL_EXPORT int SSL_early_callback_ctx_extension_get(
  * |SSL_get_error| will return |SSL_ERROR_PENDING_CERTIFICATE|.
  *
  * Note: The |SSL_CLIENT_HELLO| is only valid for the duration of the callback
- * and is not valid while the handshake is paused. Further, unlike with most
- * callbacks, when the handshake loop is resumed, it will not call the callback
- * a second time. The caller must finish reconfiguring the connection before
- * resuming the handshake. */
+ * and is not valid while the handshake is paused. */
 OPENSSL_EXPORT void SSL_CTX_set_select_certificate_cb(
     SSL_CTX *ctx, int (*cb)(const SSL_CLIENT_HELLO *));
 

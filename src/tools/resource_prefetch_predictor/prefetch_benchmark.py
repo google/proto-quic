@@ -34,10 +34,6 @@ from devil.android.sdk import intent
 import prefetch_predictor_common
 
 
-_EXTERNAL_PREFETCH_FLAG = (
-    '--speculative-resource-prefetching=enabled-external-only')
-
-
 def _CreateArgumentParser():
   """Creates and returns the argument parser."""
   parser = argparse.ArgumentParser(
@@ -74,7 +70,7 @@ def _Setup(device, database_filename):
   # that the disk database is re-created.
   command_line_path = '/data/local/tmp/chrome-command-line'
   with device_setup.FlagReplacer(
-      device, command_line_path, ['--disable-fre', _EXTERNAL_PREFETCH_FLAG]):
+      device, command_line_path, ['--disable-fre']):
     # Launch Chrome for the first time to recreate the local state.
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',

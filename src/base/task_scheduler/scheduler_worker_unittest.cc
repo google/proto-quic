@@ -25,6 +25,10 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+#if defined(OS_WIN)
+#include <objbase.h>
+#endif
+
 using testing::_;
 using testing::Mock;
 using testing::Ne;
@@ -276,6 +280,8 @@ class TaskSchedulerWorkerTest : public testing::TestWithParam<size_t> {
 
   DISALLOW_COPY_AND_ASSIGN(TaskSchedulerWorkerTest);
 };
+
+}  // namespace
 
 // Verify that when GetWork() continuously returns Sequences, all Tasks in these
 // Sequences run successfully. The test wakes up the SchedulerWorker once.
@@ -596,6 +602,84 @@ TEST(TaskSchedulerWorkerTest, BumpPriorityOfDetachedThreadDuringShutdown) {
   worker->JoinForTesting();
 }
 
+#if defined(OS_WIN)
+
+namespace {
+
+class CoInitializeDelegate : public SchedulerWorkerDefaultDelegate {
+ public:
+  CoInitializeDelegate()
+      : get_work_returned_(WaitableEvent::ResetPolicy::MANUAL,
+                           WaitableEvent::InitialState::NOT_SIGNALED) {}
+
+  scoped_refptr<Sequence> GetWork(SchedulerWorker* worker) override {
+    EXPECT_FALSE(get_work_returned_.IsSignaled());
+    EXPECT_EQ(E_UNEXPECTED, coinitialize_hresult_);
+
+    coinitialize_hresult_ = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    if (SUCCEEDED(coinitialize_hresult_))
+      CoUninitialize();
+
+    get_work_returned_.Signal();
+    return nullptr;
+  }
+
+  void WaitUntilGetWorkReturned() { get_work_returned_.Wait(); }
+
+  HRESULT coinitialize_hresult() const { return coinitialize_hresult_; }
+
+ private:
+  WaitableEvent get_work_returned_;
+  HRESULT coinitialize_hresult_ = E_UNEXPECTED;
+
+  DISALLOW_COPY_AND_ASSIGN(CoInitializeDelegate);
+};
+
 }  // namespace
+
+TEST(TaskSchedulerWorkerTest, BackwardCompatibilityEnabled) {
+  TaskTracker task_tracker;
+  auto delegate = MakeUnique<CoInitializeDelegate>();
+  CoInitializeDelegate* const delegate_raw = delegate.get();
+
+  // Create a worker with backward compatibility ENABLED. Wake it up and wait
+  // until GetWork() returns.
+  auto worker = SchedulerWorker::Create(
+      ThreadPriority::NORMAL, std::move(delegate), &task_tracker,
+      SchedulerWorker::InitialState::ALIVE,
+      SchedulerBackwardCompatibility::INIT_COM_STA);
+  worker->WakeUp();
+  delegate_raw->WaitUntilGetWorkReturned();
+
+  // The call to CoInitializeEx() should have returned S_FALSE to indicate that
+  // the COM library was already initialized on the thread.
+  EXPECT_EQ(S_FALSE, delegate_raw->coinitialize_hresult());
+
+  worker->JoinForTesting();
+}
+
+TEST(TaskSchedulerWorkerTest, BackwardCompatibilityDisabled) {
+  TaskTracker task_tracker;
+  auto delegate = MakeUnique<CoInitializeDelegate>();
+  CoInitializeDelegate* const delegate_raw = delegate.get();
+
+  // Create a worker with backward compatibility DISABLED. Wake it up and wait
+  // until GetWork() returns.
+  auto worker = SchedulerWorker::Create(
+      ThreadPriority::NORMAL, std::move(delegate), &task_tracker,
+      SchedulerWorker::InitialState::ALIVE,
+      SchedulerBackwardCompatibility::DISABLED);
+  worker->WakeUp();
+  delegate_raw->WaitUntilGetWorkReturned();
+
+  // The call to CoInitializeEx() should have returned S_OK to indicate that the
+  // COM library wasn't already initialized on the thread.
+  EXPECT_EQ(S_OK, delegate_raw->coinitialize_hresult());
+
+  worker->JoinForTesting();
+}
+
+#endif  // defined(OS_WIN)
+
 }  // namespace internal
 }  // namespace base

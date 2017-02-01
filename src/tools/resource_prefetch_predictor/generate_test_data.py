@@ -33,6 +33,10 @@ import prefetch_predictor_common
 
 
 _PAGE_LOAD_TIMEOUT = 40
+_LEARNING_FLAGS = [
+    '--force-fieldtrials=trial/group',
+    '--force-fieldtrial-params=trial.group:mode/learning',
+    '--enable-features="SpeculativeResourcePrefetching<trial"']
 
 
 def _CreateArgumentParser():
@@ -98,8 +102,7 @@ def main():
     logging.error('Could not find device: %s.', args.device)
     sys.exit(1)
 
-  chrome_controller = prefetch_predictor_common.Setup(
-      device, ['--speculative-resource-prefetching=learning'])
+  chrome_controller = prefetch_predictor_common.Setup(device, _LEARNING_FLAGS)
   _GenerateDatabase(chrome_controller, args.urls_filename,
                     args.output_filename, int(args.url_repeat))
   _GenerateWprArchive(device, args.test_url, args.wpr_archive)

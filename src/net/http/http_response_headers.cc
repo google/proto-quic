@@ -1116,31 +1116,48 @@ HttpResponseHeaders::GetFreshnessLifetimes(const Time& response_time) const {
   return lifetimes;
 }
 
-// From RFC 2616 section 13.2.3:
+// From RFC 7234 section 4.2.3:
 //
-// Summary of age calculation algorithm, when a cache receives a response:
+// The following data is used for the age calculation:
 //
-//   /*
-//    * age_value
-//    *      is the value of Age: header received by the cache with
-//    *              this response.
-//    * date_value
-//    *      is the value of the origin server's Date: header
-//    * request_time
-//    *      is the (local) time when the cache made the request
-//    *              that resulted in this cached response
-//    * response_time
-//    *      is the (local) time when the cache received the
-//    *              response
-//    * now
-//    *      is the current (local) time
-//    */
-//   apparent_age = max(0, response_time - date_value);
-//   corrected_received_age = max(apparent_age, age_value);
-//   response_delay = response_time - request_time;
-//   corrected_initial_age = corrected_received_age + response_delay;
-//   resident_time = now - response_time;
-//   current_age   = corrected_initial_age + resident_time;
+//    age_value
+//
+//       The term "age_value" denotes the value of the Age header field
+//       (Section 5.1), in a form appropriate for arithmetic operation; or
+//       0, if not available.
+//
+//    date_value
+//
+//       The term "date_value" denotes the value of the Date header field,
+//       in a form appropriate for arithmetic operations.  See Section
+//       7.1.1.2 of [RFC7231] for the definition of the Date header field,
+//       and for requirements regarding responses without it.
+//
+//    now
+//
+//       The term "now" means "the current value of the clock at the host
+//       performing the calculation".  A host ought to use NTP ([RFC5905])
+//       or some similar protocol to synchronize its clocks to Coordinated
+//       Universal Time.
+//
+//    request_time
+//
+//       The current value of the clock at the host at the time the request
+//       resulting in the stored response was made.
+//
+//    response_time
+//
+//       The current value of the clock at the host at the time the
+//       response was received.
+//
+//    The age is then calculated as
+//
+//     apparent_age = max(0, response_time - date_value);
+//     response_delay = response_time - request_time;
+//     corrected_age_value = age_value + response_delay;
+//     corrected_initial_age = max(apparent_age, corrected_age_value);
+//     resident_time = now - response_time;
+//     current_age = corrected_initial_age + resident_time;
 //
 TimeDelta HttpResponseHeaders::GetCurrentAge(const Time& request_time,
                                              const Time& response_time,
@@ -1157,9 +1174,9 @@ TimeDelta HttpResponseHeaders::GetCurrentAge(const Time& request_time,
   GetAgeValue(&age_value);
 
   TimeDelta apparent_age = std::max(TimeDelta(), response_time - date_value);
-  TimeDelta corrected_received_age = std::max(apparent_age, age_value);
   TimeDelta response_delay = response_time - request_time;
-  TimeDelta corrected_initial_age = corrected_received_age + response_delay;
+  TimeDelta corrected_age_value = age_value + response_delay;
+  TimeDelta corrected_initial_age = std::max(apparent_age, corrected_age_value);
   TimeDelta resident_time = current_time - response_time;
   TimeDelta current_age = corrected_initial_age + resident_time;
 

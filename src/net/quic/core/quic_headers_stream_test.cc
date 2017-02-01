@@ -15,6 +15,7 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
@@ -37,10 +38,6 @@ using testing::Invoke;
 using testing::Return;
 using testing::StrictMock;
 using testing::WithArgs;
-
-// TODO(bnc): Merge these correctly.
-bool FLAGS_use_http2_frame_decoder_adapter;
-bool FLAGS_spdy_framer_use_new_methods4;
 
 namespace net {
 namespace test {
@@ -189,7 +186,6 @@ struct TestParams {
         FLAGS_use_http2_frame_decoder_adapter = true;
         // Http2FrameDecoderAdapter needs the new header methods, else
         // --use_http2_frame_decoder_adapter=true will be ignored.
-        FLAGS_spdy_framer_use_new_methods4 = true;
         break;
     }
     switch (hpack_decoder) {
@@ -233,8 +229,6 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
         session_(connection_),
         headers_stream_(QuicSpdySessionPeer::GetHeadersStream(&session_)),
         body_("hello world"),
-        hpack_encoder_visitor_(new StrictMock<MockQuicHpackDebugVisitor>),
-        hpack_decoder_visitor_(new StrictMock<MockQuicHpackDebugVisitor>),
         stream_frame_(kHeadersStreamId, /*fin=*/false, /*offset=*/0, ""),
         next_promised_stream_id_(2) {
     headers_[":version"] = "HTTP/1.1";
@@ -358,7 +352,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
     }
     framer_->ProcessInput(saved_data_.data(), saved_data_.length());
     EXPECT_FALSE(framer_->HasError())
-        << SpdyFramer::ErrorCodeToString(framer_->error_code());
+        << SpdyFramer::SpdyFramerErrorToString(framer_->spdy_framer_error());
 
     CheckHeaders();
     saved_data_.clear();
@@ -403,8 +397,6 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
   string saved_payloads_;
   std::unique_ptr<SpdyFramer> framer_;
   StrictMock<MockVisitor> visitor_;
-  std::unique_ptr<StrictMock<MockQuicHpackDebugVisitor>> hpack_encoder_visitor_;
-  std::unique_ptr<StrictMock<MockQuicHpackDebugVisitor>> hpack_decoder_visitor_;
   QuicStreamFrame stream_frame_;
   QuicStreamId next_promised_stream_id_;
 };
@@ -463,7 +455,7 @@ TEST_P(QuicHeadersStreamTest, WritePushPromises) {
       EXPECT_CALL(visitor_, OnHeaderFrameEnd(stream_id, true)).Times(1);
       framer_->ProcessInput(saved_data_.data(), saved_data_.length());
       EXPECT_FALSE(framer_->HasError())
-          << SpdyFramer::ErrorCodeToString(framer_->error_code());
+          << SpdyFramer::SpdyFramerErrorToString(framer_->spdy_framer_error());
       CheckHeaders();
       saved_data_.clear();
     } else {
@@ -854,16 +846,8 @@ TEST_P(QuicHeadersStreamTest, NoConnectionLevelFlowControl) {
 }
 
 TEST_P(QuicHeadersStreamTest, HpackDecoderDebugVisitor) {
-  StrictMock<MockQuicHpackDebugVisitor>* hpack_decoder_visitor =
-      hpack_decoder_visitor_.get();
-  QuicSpdySessionPeer::SetHpackDecoderDebugVisitor(
-      &session_, std::move(hpack_decoder_visitor_));
-
-  // Create some headers we expect to generate entries in HPACK's
-  // dynamic table, in addition to content-length.
-  headers_["key0"] = string(1 << 1, '.');
-  headers_["key1"] = string(1 << 2, '.');
-  headers_["key2"] = string(1 << 3, '.');
+  auto hpack_decoder_visitor =
+      QuicMakeUnique<StrictMock<MockQuicHpackDebugVisitor>>();
   {
     InSequence seq;
     // Number of indexed representations generated in headers below.
@@ -873,6 +857,14 @@ TEST_P(QuicHeadersStreamTest, HpackDecoderDebugVisitor) {
           .Times(4);
     }
   }
+  QuicSpdySessionPeer::SetHpackDecoderDebugVisitor(
+      &session_, std::move(hpack_decoder_visitor));
+
+  // Create some headers we expect to generate entries in HPACK's
+  // dynamic table, in addition to content-length.
+  headers_["key0"] = string(1 << 1, '.');
+  headers_["key1"] = string(1 << 2, '.');
+  headers_["key2"] = string(1 << 3, '.');
   for (QuicStreamId stream_id = kClientDataStreamId1;
        stream_id < kClientDataStreamId3; stream_id += 2) {
     for (bool fin : {false, true}) {
@@ -906,11 +898,8 @@ TEST_P(QuicHeadersStreamTest, HpackDecoderDebugVisitor) {
 }
 
 TEST_P(QuicHeadersStreamTest, HpackEncoderDebugVisitor) {
-  StrictMock<MockQuicHpackDebugVisitor>* hpack_encoder_visitor =
-      hpack_encoder_visitor_.get();
-  QuicSpdySessionPeer::SetHpackEncoderDebugVisitor(
-      &session_, std::move(hpack_encoder_visitor_));
-
+  auto hpack_encoder_visitor =
+      QuicMakeUnique<StrictMock<MockQuicHpackDebugVisitor>>();
   if (perspective() == Perspective::IS_SERVER) {
     InSequence seq;
     for (int i = 1; i < 4; i++) {
@@ -924,6 +913,9 @@ TEST_P(QuicHeadersStreamTest, HpackEncoderDebugVisitor) {
                   OnUseEntry(QuicTime::Delta::FromMilliseconds(i)));
     }
   }
+  QuicSpdySessionPeer::SetHpackEncoderDebugVisitor(
+      &session_, std::move(hpack_encoder_visitor));
+
   for (QuicStreamId stream_id = kClientDataStreamId1;
        stream_id < kClientDataStreamId3; stream_id += 2) {
     for (bool fin : {false, true}) {

@@ -101,6 +101,18 @@ class JsUtil(object):
 
     c.Eblock(' */')
 
+  def AppendTypeJsDoc(self, c, namespace_name, js_type, optional):
+    """Appends the documentation for a type as a Code.
+    """
+    c.Append('@type {')
+    if optional:
+      c.Append('(', new_line=False)
+      c.Concat(self._TypeToJsType(namespace_name, js_type), new_line=False)
+      c.Append('|undefined)', new_line=False)
+    else:
+      c.Concat(self._TypeToJsType(namespace_name, js_type), new_line=False)
+    c.Append('}', new_line=False)
+
   def _FunctionToJsFunction(self, namespace_name, function):
     """Converts a model.Function to a JS type (i.e., function([params])...)"""
     c = Code()

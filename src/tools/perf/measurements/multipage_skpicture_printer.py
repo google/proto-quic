@@ -6,9 +6,6 @@ import os
 from telemetry.page import legacy_page_test
 
 
-_JS = 'chrome.gpuBenchmarking.printPagesToSkPictures("{0}");'
-
-
 class MultipageSkpicturePrinter(legacy_page_test.LegacyPageTest):
 
   def __init__(self, mskp_outdir):
@@ -25,9 +22,10 @@ class MultipageSkpicturePrinter(legacy_page_test.LegacyPageTest):
       raise legacy_page_test.MeasurementFailure(
           'Multipage SkPicture printing not supported on this platform')
 
-    # Replace win32 path separator char '\' with '\\'.
     outpath = os.path.abspath(
         os.path.join(self._mskp_outdir, page.file_safe_name + '.mskp'))
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    js = _JS.format(outpath.replace('\\', '\\\\'))
-    tab.EvaluateJavaScript(js)
+    # Replace win32 path separator char '\' with '\\'.
+    outpath = outpath.replace('\\', '\\\\')
+    tab.EvaluateJavaScript2(
+        'chrome.gpuBenchmarking.printPagesToSkPictures({{ outpath }});',
+        outpath=outpath)

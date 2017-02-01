@@ -105,15 +105,6 @@ class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     return page_sets.SystemHealthStorySet(platform=self.PLATFORM,
                                           take_memory_measurement=True)
 
-  def SetExtraBrowserOptions(self, options):
-    # Just before we measure memory we flush the system caches
-    # unfortunately this doesn't immediately take effect, instead
-    # the next story run is effected. Due to this the first story run
-    # has anomalous results. This option causes us to flush caches
-    # each time before Chrome starts so we effect even the first story
-    # - avoiding the bug.
-    options.clear_sytem_cache_for_browser_and_profile_on_start = True
-
   @classmethod
   def ShouldTearDownStateAfterEachStoryRun(cls):
     return True
@@ -152,6 +143,15 @@ class MobileMemorySystemHealth(_MemorySystemHealthBenchmark):
       return True
 
     return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
+
+  def SetExtraBrowserOptions(self, options):
+    # Just before we measure memory we flush the system caches
+    # unfortunately this doesn't immediately take effect, instead
+    # the next story run is effected. Due to this the first story run
+    # has anomalous results. This option causes us to flush caches
+    # each time before Chrome starts so we effect even the first story
+    # - avoiding the bug.
+    options.clear_sytem_cache_for_browser_and_profile_on_start = True
 
 
 @benchmark.Enabled('android-webview')

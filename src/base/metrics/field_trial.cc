@@ -75,14 +75,15 @@ bool WriteStringPair(Pickle* pickle,
 // TrialName, GroupName, ParamKey1, ParamValue1, ParamKey2, ParamValue2, ...
 // If there are no parameters, then it just ends at GroupName.
 bool PickleFieldTrial(const FieldTrial::State& trial_state, Pickle* pickle) {
-  if (!WriteStringPair(pickle, trial_state.trial_name, trial_state.group_name))
+  if (!WriteStringPair(pickle, *trial_state.trial_name,
+                       *trial_state.group_name)) {
     return false;
+  }
 
   // Get field trial params.
   std::map<std::string, std::string> params;
   FieldTrialParamAssociator::GetInstance()->GetFieldTrialParamsWithoutFallback(
-      trial_state.trial_name.as_string(), trial_state.group_name.as_string(),
-      &params);
+      *trial_state.trial_name, *trial_state.group_name, &params);
 
   // Write params to pickle.
   for (const auto& param : params) {
@@ -138,11 +139,18 @@ FieldTrial::Probability GetGroupBoundaryValue(
   return std::min(result, divisor - 1);
 }
 
+// Separate type from FieldTrial::State so that it can use StringPieces.
+struct FieldTrialStringEntry {
+  StringPiece trial_name;
+  StringPiece group_name;
+  bool activated = false;
+};
+
 // Parses the --force-fieldtrials string |trials_string| into |entries|.
 // Returns true if the string was parsed correctly. On failure, the |entries|
 // array may end up being partially filled.
 bool ParseFieldTrialsString(const std::string& trials_string,
-                            std::vector<FieldTrial::State>* entries) {
+                            std::vector<FieldTrialStringEntry>* entries) {
   const StringPiece trials_string_piece(trials_string);
 
   size_t next_item = 0;
@@ -157,7 +165,7 @@ bool ParseFieldTrialsString(const std::string& trials_string,
     if (group_name_end == trials_string.npos)
       group_name_end = trials_string.length();
 
-    FieldTrial::State entry;
+    FieldTrialStringEntry entry;
     // Verify if the trial should be activated or not.
     if (trials_string[next_item] == kActivationMarker) {
       // Name cannot be only the indicator.
@@ -242,7 +250,7 @@ int FieldTrialList::kNoExpirationYear = 0;
 FieldTrial::EntropyProvider::~EntropyProvider() {
 }
 
-FieldTrial::State::State() : activated(false) {}
+FieldTrial::State::State() {}
 
 FieldTrial::State::State(const State& other) = default;
 
@@ -456,8 +464,8 @@ bool FieldTrial::GetState(State* field_trial_state) {
   if (!enable_field_trial_)
     return false;
   FinalizeGroupChoice();
-  field_trial_state->trial_name = trial_name_;
-  field_trial_state->group_name = group_name_;
+  field_trial_state->trial_name = &trial_name_;
+  field_trial_state->group_name = &group_name_;
   field_trial_state->activated = group_reported_;
   return true;
 }
@@ -466,8 +474,8 @@ bool FieldTrial::GetStateWhileLocked(State* field_trial_state) {
   if (!enable_field_trial_)
     return false;
   FinalizeGroupChoiceImpl(true);
-  field_trial_state->trial_name = trial_name_;
-  field_trial_state->group_name = group_name_;
+  field_trial_state->trial_name = &trial_name_;
+  field_trial_state->group_name = &group_name_;
   field_trial_state->activated = group_reported_;
   return true;
 }
@@ -655,14 +663,14 @@ void FieldTrialList::AllStatesToString(std::string* output) {
     if (!registered.second->GetStateWhileLocked(&trial))
       continue;
     DCHECK_EQ(std::string::npos,
-              trial.trial_name.find(kPersistentStringSeparator));
+              trial.trial_name->find(kPersistentStringSeparator));
     DCHECK_EQ(std::string::npos,
-              trial.group_name.find(kPersistentStringSeparator));
+              trial.group_name->find(kPersistentStringSeparator));
     if (trial.activated)
       output->append(1, kActivationMarker);
-    trial.trial_name.AppendToString(output);
+    output->append(*trial.trial_name);
     output->append(1, kPersistentStringSeparator);
-    trial.group_name.AppendToString(output);
+    output->append(*trial.group_name);
     output->append(1, kPersistentStringSeparator);
   }
 }
@@ -687,7 +695,7 @@ void FieldTrialList::GetActiveFieldTrialGroups(
 void FieldTrialList::GetActiveFieldTrialGroupsFromString(
     const std::string& trials_string,
     FieldTrial::ActiveGroups* active_groups) {
-  std::vector<FieldTrial::State> entries;
+  std::vector<FieldTrialStringEntry> entries;
   if (!ParseFieldTrialsString(trials_string, &entries))
     return;
 
@@ -739,7 +747,7 @@ bool FieldTrialList::CreateTrialsFromString(
   if (trials_string.empty() || !global_)
     return true;
 
-  std::vector<FieldTrial::State> entries;
+  std::vector<FieldTrialStringEntry> entries;
   if (!ParseFieldTrialsString(trials_string, &entries))
     return false;
 

@@ -23,23 +23,11 @@ class TraceAfterDispatchInlinedBase
  public:
   explicit TraceAfterDispatchInlinedBase(ClassTag tag) : tag_(tag) {}
 
-  void Trace(Visitor* visitor) { TraceImpl(visitor); }
-  void Trace(InlinedGlobalMarkingVisitor visitor) { TraceImpl(visitor); }
+  void Trace(Visitor*);
 
-  void TraceAfterDispatch(Visitor* visitor) { TraceAfterDispatchImpl(visitor); }
-  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
-    TraceAfterDispatchImpl(visitor);
-  }
+  void TraceAfterDispatch(Visitor* visitor) { visitor->Trace(x_base_); }
 
  private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor);
-
-  template <typename VisitorDispatcher>
-  void TraceAfterDispatchImpl(VisitorDispatcher visitor) {
-    visitor->Trace(x_base_);
-  }
-
   ClassTag tag_;
   Member<X> x_base_;
 };
@@ -48,18 +36,12 @@ class TraceAfterDispatchInlinedDerived : public TraceAfterDispatchInlinedBase {
  public:
   TraceAfterDispatchInlinedDerived() : TraceAfterDispatchInlinedBase(DERIVED) {}
 
-  void TraceAfterDispatch(Visitor* visitor) { TraceAfterDispatchImpl(visitor); }
-  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor) {
-    TraceAfterDispatchImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void TraceAfterDispatchImpl(VisitorDispatcher visitor) {
+  void TraceAfterDispatch(Visitor* visitor) {
     visitor->Trace(x_derived_);
     TraceAfterDispatchInlinedBase::TraceAfterDispatch(visitor);
   }
 
+ private:
   Member<X> x_derived_;
 };
 
@@ -69,18 +51,10 @@ class TraceAfterDispatchExternBase
   explicit TraceAfterDispatchExternBase(ClassTag tag) : tag_(tag) {}
 
   void Trace(Visitor* visitor);
-  void Trace(InlinedGlobalMarkingVisitor visitor);
 
   void TraceAfterDispatch(Visitor* visitor);
-  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
 
  private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor);
-
-  template <typename VisitorDispatcher>
-  void TraceAfterDispatchImpl(VisitorDispatcher visitor);
-
   ClassTag tag_;
   Member<X> x_base_;
 };
@@ -90,12 +64,8 @@ class TraceAfterDispatchExternDerived : public TraceAfterDispatchExternBase {
   TraceAfterDispatchExternDerived() : TraceAfterDispatchExternBase(DERIVED) {}
 
   void TraceAfterDispatch(Visitor* visitor);
-  void TraceAfterDispatch(InlinedGlobalMarkingVisitor visitor);
 
  private:
-  template <typename VisitorDispatcher>
-  void TraceAfterDispatchImpl(VisitorDispatcher visitor);
-
   Member<X> x_derived_;
 };
 

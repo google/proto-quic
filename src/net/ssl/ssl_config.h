@@ -103,10 +103,10 @@ struct NET_EXPORT SSLConfig {
   // to them as far as downgrades are concerned, so this should only be used for
   // measurement of ciphers not to be carried long-term. It is no fix for
   // servers with bad configurations without full removal.
+  //
+  // TODO(davidben): This is no longer used. Remove
+  // it. https://crbug.com/684730.
   bool deprecated_cipher_suites_enabled;
-
-  // Enables DHE cipher suites.
-  bool dhe_enabled;
 
   bool channel_id_enabled;   // True if TLS channel ID extension is enabled.
 

@@ -191,6 +191,10 @@ Time Time::FromJsTime(double ms_since_epoch) {
 }
 
 double Time::ToJsTime() const {
+  if (is_null()) {
+    // Preserve 0 so the invalid result doesn't depend on the platform.
+    return 0;
+  }
   if (is_max()) {
     // Preserve max without offset to prevent overflow.
     return std::numeric_limits<double>::infinity();

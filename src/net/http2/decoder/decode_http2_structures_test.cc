@@ -7,10 +7,6 @@
 // Tests decoding all of the fixed size HTTP/2 structures (i.e. those defined
 // in net/http2/http2_structures.h).
 
-// TODO(jamessynge): Combine tests of DoDecode, MaybeDecode, SlowDecode and
-// Http2StructureDecoder test using gUnit's support for tests parameterized
-// by type.
-
 #include <stddef.h>
 #include <string>
 
@@ -21,7 +17,7 @@
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures_test_util.h"
 #include "net/http2/tools/http2_frame_builder.h"
-#include "net/http2/tools/random_decoder_test.h"
+#include "net/http2/tools/http2_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using ::testing::AssertionFailure;
@@ -34,6 +30,11 @@ namespace net {
 namespace test {
 namespace {
 
+template <typename T, size_t N>
+StringPiece ToStringPiece(T (&data)[N]) {
+  return StringPiece(reinterpret_cast<const char*>(data), N * sizeof(T));
+}
+
 template <class S>
 string SerializeStructure(const S& s) {
   Http2FrameBuilder fb;
@@ -43,110 +44,27 @@ string SerializeStructure(const S& s) {
 }
 
 template <class S>
-class StructureDecoderTest : public RandomDecoderTest {
+class StructureDecoderTest : public ::testing::Test {
  protected:
   typedef S Structure;
 
-  StructureDecoderTest() {
-    // IF the test adds more data after the encoded structure, stop as
-    // soon as the structure is decoded.
-    stop_decode_on_done_ = true;
-  }
-
-  // Reset the decoding to the start of the structure, and overwrite the
-  // current contents of |structure_|, in to which we'll decode the buffer.
-  DecodeStatus StartDecoding(DecodeBuffer* b) override {
-    decode_offset_ = 0;
-    Randomize(&structure_);
-    return ResumeDecoding(b);
-  }
-
-  DecodeStatus ResumeDecoding(DecodeBuffer* b) override {
-    // If we're at the start...
-    if (decode_offset_ == 0) {
-      const uint32_t start_offset = b->Offset();
-      const char* const start_cursor = b->cursor();
-      // ... attempt to decode the entire structure.
-      if (MaybeDecode(&structure_, b)) {
-        ++fast_decode_count_;
-        EXPECT_EQ(S::EncodedSize(), b->Offset() - start_offset);
-
-        if (!HasFailure()) {
-          // Success. Confirm that SlowDecode produces the same result.
-          DecodeBuffer b2(start_cursor, b->Offset() - start_offset);
-          S second;
-          Randomize(&second);
-          uint32_t second_offset = 0;
-          EXPECT_TRUE(SlowDecode(&second, &b2, &second_offset));
-          EXPECT_EQ(S::EncodedSize(), second_offset);
-          EXPECT_EQ(structure_, second);
-        }
-
-        // Test can't easily tell if MaybeDecode or SlowDecode is used, so
-        // update decode_offset_ as if SlowDecode had been used to completely
-        // decode.
-        decode_offset_ = S::EncodedSize();
-        return DecodeStatus::kDecodeDone;
-      }
-    }
-
-    // We didn't have enough in the first buffer to decode everything, so we'll
-    // reach here multiple times until we've completely decoded the structure.
-    if (SlowDecode(&structure_, b, &decode_offset_)) {
-      ++slow_decode_count_;
-      EXPECT_EQ(S::EncodedSize(), decode_offset_);
-      return DecodeStatus::kDecodeDone;
-    }
-
-    // Drained the input buffer, but not yet done.
-    EXPECT_TRUE(b->Empty());
-    EXPECT_GT(S::EncodedSize(), decode_offset_);
-
-    return DecodeStatus::kDecodeInProgress;
+  StructureDecoderTest() : random_decode_count_(100) {
+    CHECK_LE(random_decode_count_, 1000u * 1000u) << "That should be plenty!";
   }
 
   // Set the fields of |*p| to random values.
-  void Randomize(S* p) { ::net::test::Randomize(p, RandomPtr()); }
+  void Randomize(S* p) { ::net::test::Randomize(p, &random_); }
 
   // Fully decodes the Structure at the start of data, and confirms it matches
   // *expected (if provided).
   void DecodeLeadingStructure(const S* expected, StringPiece data) {
     ASSERT_LE(S::EncodedSize(), data.size());
-    DecodeBuffer original(data);
-
-    // The validator is called after each of the several times that the input
-    // DecodeBuffer is decoded, each with a different segmentation of the input.
-    // Validate that structure_ matches the expected value, if provided.
-    Validator validator = [expected, this](
-        const DecodeBuffer& db, DecodeStatus status) -> AssertionResult {
-      if (expected != nullptr && *expected != structure_) {
-        return AssertionFailure()
-               << "Expected structs to be equal\nExpected: " << *expected
-               << "\n  Actual: " << structure_;
-      }
-      return AssertionSuccess();
-    };
-
-    // First validate that decoding is done and that we've advanced the cursor
-    // the expected amount.
-    validator = ValidateDoneAndOffset(S::EncodedSize(), validator);
-
-    // Decode several times, with several segmentations of the input buffer.
-    fast_decode_count_ = 0;
-    slow_decode_count_ = 0;
-    EXPECT_TRUE(DecodeAndValidateSeveralWays(
-        &original, false /*return_non_zero_on_first*/, validator));
-
-    if (!HasFailure()) {
-      EXPECT_EQ(S::EncodedSize(), decode_offset_);
-      EXPECT_EQ(S::EncodedSize(), original.Offset());
-      EXPECT_LT(0u, fast_decode_count_);
-      EXPECT_LT(0u, slow_decode_count_);
-      if (expected != nullptr) {
-        DVLOG(1) << "DecodeLeadingStructure expected: " << *expected;
-        DVLOG(1) << "DecodeLeadingStructure   actual: " << structure_;
-        EXPECT_EQ(*expected, structure_);
-      }
+    DecodeBuffer db(data);
+    Randomize(&structure_);
+    DoDecode(&structure_, &db);
+    EXPECT_EQ(db.Offset(), S::EncodedSize());
+    if (expected != nullptr) {
+      EXPECT_EQ(structure_, *expected);
     }
   }
 
@@ -165,6 +83,7 @@ class StructureDecoderTest : public RandomDecoderTest {
 
   // Generate
   void TestDecodingRandomizedStructures(size_t count) {
+    EXPECT_LT(count, 1000u * 1000u) << "That should be plenty!";
     for (size_t i = 0; i < count && !HasFailure(); ++i) {
       Structure input;
       Randomize(&input);
@@ -172,6 +91,12 @@ class StructureDecoderTest : public RandomDecoderTest {
     }
   }
 
+  void TestDecodingRandomizedStructures() {
+    TestDecodingRandomizedStructures(random_decode_count_);
+  }
+
+  Http2Random random_;
+  const size_t random_decode_count_;
   uint32_t decode_offset_ = 0;
   S structure_;
   size_t fast_decode_count_ = 0;
@@ -218,7 +143,7 @@ TEST_F(FrameHeaderDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(FrameHeaderDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -255,7 +180,7 @@ TEST_F(PriorityFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(PriorityFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -287,7 +212,7 @@ TEST_F(RstStreamFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(RstStreamFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -323,7 +248,7 @@ TEST_F(SettingFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(SettingFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -355,7 +280,7 @@ TEST_F(PushPromiseFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(PushPromiseFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -395,7 +320,7 @@ TEST_F(PingFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(PingFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -443,7 +368,7 @@ TEST_F(GoAwayFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(GoAwayFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -475,10 +400,12 @@ TEST_F(WindowUpdateFieldsDecoderTest, DecodesLiteral) {
   {
     // Increment has R-bit (reserved for future use) set, which
     // should be cleared by the decoder.
+    // clang-format off
     const char kData[] = {
-        0xffu, 0xffu, 0xffu,
-        0xffu,  // Window Size Increment: max uint31 and R-bit
+        // Window Size Increment: max uint31 and R-bit
+        0xffu, 0xffu, 0xffu, 0xffu,
     };
+    // clang-format on
     DecodeLeadingStructure(kData);
     if (!HasFailure()) {
       EXPECT_EQ(StreamIdMask(), structure_.window_size_increment);
@@ -487,7 +414,7 @@ TEST_F(WindowUpdateFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(WindowUpdateFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 //------------------------------------------------------------------------------
@@ -526,7 +453,7 @@ TEST_F(AltSvcFieldsDecoderTest, DecodesLiteral) {
 }
 
 TEST_F(AltSvcFieldsDecoderTest, DecodesRandomized) {
-  TestDecodingRandomizedStructures(100);
+  TestDecodingRandomizedStructures();
 }
 
 }  // namespace

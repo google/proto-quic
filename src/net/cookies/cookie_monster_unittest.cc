@@ -108,30 +108,11 @@ struct CookieMonsterTestTraits {
   static const bool filters_schemes = true;
   static const bool has_path_prefix_bug = false;
   static const int creation_time_granularity_in_ms = 0;
-  static const bool enforce_strict_secure = false;
-};
-
-struct CookieMonsterEnforcingStrictSecure {
-  static std::unique_ptr<CookieStore> Create() {
-    return base::MakeUnique<CookieMonster>(nullptr, nullptr);
-  }
-
-  static const bool supports_http_only = true;
-  static const bool supports_non_dotted_domains = true;
-  static const bool preserves_trailing_dots = true;
-  static const bool filters_schemes = true;
-  static const bool has_path_prefix_bug = false;
-  static const int creation_time_granularity_in_ms = 0;
-  static const bool enforce_strict_secure = true;
 };
 
 INSTANTIATE_TYPED_TEST_CASE_P(CookieMonster,
                               CookieStoreTest,
                               CookieMonsterTestTraits);
-
-INSTANTIATE_TYPED_TEST_CASE_P(CookieMonsterStrictSecure,
-                              CookieStoreTest,
-                              CookieMonsterEnforcingStrictSecure);
 
 template <typename T>
 class CookieMonsterTestBase : public CookieStoreTest<T> {
@@ -805,8 +786,6 @@ class CookieMonsterTestBase : public CookieStoreTest<T> {
 };
 
 using CookieMonsterTest = CookieMonsterTestBase<CookieMonsterTestTraits>;
-using CookieMonsterStrictSecureTest =
-    CookieMonsterTestBase<CookieMonsterEnforcingStrictSecure>;
 
 // TODO(erikwright): Replace the other callbacks and synchronous helper methods
 // in this test suite with these Mocks.
@@ -864,7 +843,7 @@ ACTION_P3(SetCookieWithDetailsAction, cookie_monster, cc, callback) {
   cookie_monster->SetCookieWithDetailsAsync(
       cc.url, cc.name, cc.value, cc.domain, cc.path, base::Time(),
       cc.expiration_time, base::Time(), cc.secure, cc.http_only, cc.same_site,
-      false /* enforces strict secure cookies */, cc.priority, callback->Get());
+      cc.priority, callback->Get());
 }
 
 ACTION_P2(GetAllCookiesAction, cookie_monster, callback) {
@@ -1063,11 +1042,11 @@ TEST_F(DeferredCookieTaskTest, DeferredSetAllCookies) {
   list.push_back(*CanonicalCookie::Create(
       http_www_google_.url(), "A", "B", http_www_google_.domain(), "/",
       base::Time::Now(), base::Time(), false, true,
-      CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
       http_www_google_.url(), "C", "D", http_www_google_.domain(), "/",
       base::Time::Now(), base::Time(), false, true,
-      CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 
   BeginWith(
       SetAllCookiesAction(&cookie_monster(), list, &set_cookies_callback));
@@ -1565,7 +1544,7 @@ TEST_F(CookieMonsterTest, TestPriorityAwareGarbageCollectionSecure) {
   TestPriorityAwareGarbageCollectHelperSecure();
 }
 
-TEST_F(CookieMonsterStrictSecureTest, TestPriorityAwareGarbageCollectionMixed) {
+TEST_F(CookieMonsterTest, TestPriorityAwareGarbageCollectionMixed) {
   TestPriorityAwareGarbageCollectHelperMixed();
 }
 
@@ -2557,15 +2536,15 @@ TEST_F(CookieMonsterTest, SetAllCookies) {
   list.push_back(*CanonicalCookie::Create(
       http_www_google_.url(), "A", "B", http_www_google_.url().host(), "/",
       base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
       http_www_google_.url(), "W", "X", http_www_google_.url().host(), "/bar",
       base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   list.push_back(*CanonicalCookie::Create(
       http_www_google_.url(), "Y", "Z", http_www_google_.url().host(), "/",
       base::Time::Now(), base::Time(), false, false,
-      CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 
   // SetAllCookies must not flush.
   ASSERT_EQ(0, store->flush_count());
@@ -2600,51 +2579,51 @@ TEST_F(CookieMonsterTest, ComputeCookieDiff) {
   std::unique_ptr<CanonicalCookie> cookie1(CanonicalCookie::Create(
       http_www_google_.url(), "A", "B", http_www_google_.url().host(), "/",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie2(CanonicalCookie::Create(
       http_www_google_.url(), "C", "D", http_www_google_.url().host(), "/",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie3(CanonicalCookie::Create(
       http_www_google_.url(), "E", "F", http_www_google_.url().host(), "/",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie4(CanonicalCookie::Create(
       http_www_google_.url(), "G", "H", http_www_google_.url().host(), "/",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie4_with_new_value(
       CanonicalCookie::Create(
           http_www_google_.url(), "G", "iamnew", http_www_google_.url().host(),
           "/", creation_time, base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie5(CanonicalCookie::Create(
       http_www_google_.url(), "I", "J", http_www_google_.url().host(), "/",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie5_with_new_creation_time(
       CanonicalCookie::Create(
           http_www_google_.url(), "I", "J", http_www_google_.url().host(), "/",
-          now, base::Time(), false, false, CookieSameSite::DEFAULT_MODE, false,
+          now, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
           COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie6(CanonicalCookie::Create(
       http_www_google_.url(), "K", "L", http_www_google_.url().host(), "/foo",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie6_with_new_path(
       CanonicalCookie::Create(
           http_www_google_.url(), "K", "L", http_www_google_.url().host(),
           "/bar", creation_time, base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie7(CanonicalCookie::Create(
       http_www_google_.url(), "M", "N", http_www_google_.url().host(), "/foo",
       creation_time, base::Time(), false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT));
+      COOKIE_PRIORITY_DEFAULT));
   std::unique_ptr<CanonicalCookie> cookie7_with_new_path(
       CanonicalCookie::Create(
           http_www_google_.url(), "M", "N", http_www_google_.url().host(),
           "/bar", creation_time, base::Time(), false, false,
-          CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+          CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 
   CookieList old_cookies;
   old_cookies.push_back(*cookie1);
@@ -2861,7 +2840,7 @@ TEST_F(CookieMonsterTest, ControlCharacterPurge) {
       "\x05"
       "boo",
       domain, path, now2, later, false, false, CookieSameSite::DEFAULT_MODE,
-      false, COOKIE_PRIORITY_DEFAULT);
+      COOKIE_PRIORITY_DEFAULT);
   initial_cookies.push_back(std::move(cc));
 
   AddCookieToList(url, "hello=world; path=" + path, now3, &initial_cookies);
@@ -2900,48 +2879,47 @@ TEST_F(CookieMonsterTest, CookieSourceHistogram) {
       CookieMonster::COOKIE_SOURCE_NONSECURE_COOKIE_CRYPTOGRAPHIC_SCHEME, 1);
 
   // Set a secure cookie on a non-cryptographic scheme.
-  EXPECT_TRUE(
+  EXPECT_FALSE(
       SetCookie(cm.get(), http_www_google_.url(), "D=E; path=/; Secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 3);
+  histograms.ExpectTotalCount(cookie_source_histogram, 2);
   histograms.ExpectBucketCount(
       cookie_source_histogram,
-      CookieMonster::COOKIE_SOURCE_SECURE_COOKIE_NONCRYPTOGRAPHIC_SCHEME, 1);
+      CookieMonster::COOKIE_SOURCE_SECURE_COOKIE_NONCRYPTOGRAPHIC_SCHEME, 0);
 
   // Overwrite a secure cookie (set by a cryptographic scheme) on a
   // non-cryptographic scheme.
-  EXPECT_TRUE(
+  EXPECT_FALSE(
       SetCookie(cm.get(), http_www_google_.url(), "A=B; path=/; Secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 4);
+  histograms.ExpectTotalCount(cookie_source_histogram, 2);
   histograms.ExpectBucketCount(
       cookie_source_histogram,
       CookieMonster::COOKIE_SOURCE_SECURE_COOKIE_CRYPTOGRAPHIC_SCHEME, 1);
   histograms.ExpectBucketCount(
       cookie_source_histogram,
-      CookieMonster::COOKIE_SOURCE_SECURE_COOKIE_NONCRYPTOGRAPHIC_SCHEME, 2);
+      CookieMonster::COOKIE_SOURCE_SECURE_COOKIE_NONCRYPTOGRAPHIC_SCHEME, 0);
 
-  // Test that clearing a secure cookie on a http:// URL does not get
-  // counted.
+  // Test that attempting to clear a secure cookie on a http:// URL does
+  // nothing.
   EXPECT_TRUE(
       SetCookie(cm.get(), https_www_google_.url(), "F=G; path=/; Secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 5);
+  histograms.ExpectTotalCount(cookie_source_histogram, 3);
   std::string cookies1 = GetCookies(cm.get(), https_www_google_.url());
   EXPECT_NE(std::string::npos, cookies1.find("F=G"));
-  EXPECT_TRUE(SetCookie(cm.get(), http_www_google_.url(),
-                        "F=G; path=/; Expires=Thu, 01-Jan-1970 00:00:01 GMT"));
+  EXPECT_FALSE(SetCookie(cm.get(), http_www_google_.url(),
+                         "F=G; path=/; Expires=Thu, 01-Jan-1970 00:00:01 GMT"));
   std::string cookies2 = GetCookies(cm.get(), https_www_google_.url());
-  EXPECT_EQ(std::string::npos, cookies2.find("F=G"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 5);
+  EXPECT_NE(std::string::npos, cookies2.find("F=G"));
+  histograms.ExpectTotalCount(cookie_source_histogram, 3);
 
   // Set a non-secure cookie on a non-cryptographic scheme.
   EXPECT_TRUE(SetCookie(cm.get(), http_www_google_.url(), "H=I; path=/"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 6);
+  histograms.ExpectTotalCount(cookie_source_histogram, 4);
   histograms.ExpectBucketCount(
       cookie_source_histogram,
       CookieMonster::COOKIE_SOURCE_NONSECURE_COOKIE_NONCRYPTOGRAPHIC_SCHEME, 1);
 }
 
-// Test that cookie delete equivalent histograms are recorded correctly when
-// strict secure cookies are not enabled.
+// Test that cookie delete equivalent histograms are recorded correctly.
 TEST_F(CookieMonsterTest, CookieDeleteEquivalentHistogramTest) {
   base::HistogramTester histograms;
   const std::string cookie_source_histogram = "Cookie.CookieDeleteEquivalent";
@@ -2971,47 +2949,57 @@ TEST_F(CookieMonsterTest, CookieDeleteEquivalentHistogramTest) {
 
   // Set a non-secure cookie from an insecure origin that matches the name of an
   // already existing cookie and additionally is equivalent to the existing
-  // cookie.
-  EXPECT_TRUE(SetCookie(cm.get(), http_www_google_.url(), "A=B;"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 5);
+  // cookie. This should fail since it's trying to overwrite a secure cookie.
+  EXPECT_FALSE(SetCookie(cm.get(), http_www_google_.url(), "A=B;"));
+  histograms.ExpectTotalCount(cookie_source_histogram, 6);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
                                4);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND,
-                               1);
+                               0);
+  histograms.ExpectBucketCount(
+      cookie_source_histogram,
+      CookieMonster::COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE, 1);
+  histograms.ExpectBucketCount(
+      cookie_source_histogram,
+      CookieMonster::COOKIE_DELETE_EQUIVALENT_WOULD_HAVE_DELETED, 1);
 
   // Set a non-secure cookie from an insecure origin that matches the name of an
-  // already existing cookie but is not equivalent.
-  EXPECT_TRUE(
+  // already existing cookie but is not equivalent. This should fail since it's
+  // trying to shadow a secure cookie.
+  EXPECT_FALSE(
       SetCookie(cm.get(), http_www_google_.url(), "A=C; path=/some/path"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 6);
+  histograms.ExpectTotalCount(cookie_source_histogram, 8);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
                                5);
+  histograms.ExpectBucketCount(
+      cookie_source_histogram,
+      CookieMonster::COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE, 2);
 
   // Set a secure cookie from a secure origin that matches the name of an
   // already existing cookies and is equivalent.
   EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(), "A=D; secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 8);
+  histograms.ExpectTotalCount(cookie_source_histogram, 10);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
                                6);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND,
-                               2);
+                               1);
 
   // Set a secure cookie from a secure origin that matches the name of an
   // already existing cookie and is not equivalent.
   EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(),
                         "A=E; secure; path=/some/other/path"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 9);
+  histograms.ExpectTotalCount(cookie_source_histogram, 11);
   histograms.ExpectBucketCount(cookie_source_histogram,
                                CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
                                7);
 }
 
-TEST_F(CookieMonsterStrictSecureTest, SetSecureCookies) {
+TEST_F(CookieMonsterTest, SetSecureCookies) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
   GURL http_url("http://www.google.com");
   GURL http_superdomain_url("http://google.com");
@@ -3077,7 +3065,6 @@ TEST_F(CookieMonsterStrictSecureTest, SetSecureCookies) {
   // version of the cookie still does not overwrite it.
   CookieOptions include_httponly;
   include_httponly.set_include_httponly();
-  include_httponly.set_enforce_strict_secure();
   EXPECT_TRUE(SetCookieWithOptions(cm.get(), https_url, "C=D; httponly",
                                    include_httponly));
   // Note that the lack of an explicit options object below uses the default,
@@ -3085,8 +3072,8 @@ TEST_F(CookieMonsterStrictSecureTest, SetSecureCookies) {
   EXPECT_FALSE(SetCookie(cm.get(), https_url, "C=E; Secure"));
 }
 
-// Tests for behavior if strict secure cookies is enabled.
-TEST_F(CookieMonsterStrictSecureTest, EvictSecureCookies) {
+// Tests for behavior for strict secure cookies.
+TEST_F(CookieMonsterTest, EvictSecureCookies) {
   // Hard-coding limits in the test, but use DCHECK_EQ to enforce constraint.
   DCHECK_EQ(180U, CookieMonster::kDomainMaxCookies);
   DCHECK_EQ(150U, CookieMonster::kDomainMaxCookies -
@@ -3215,7 +3202,7 @@ TEST_F(CookieMonsterStrictSecureTest, EvictSecureCookies) {
 
 // Tests that strict secure cookies doesn't trip equivalent cookie checks
 // accidentally. Regression test for https://crbug.com/569943.
-TEST_F(CookieMonsterStrictSecureTest, EquivalentCookies) {
+TEST_F(CookieMonsterTest, EquivalentCookies) {
   std::unique_ptr<CookieMonster> cm(new CookieMonster(nullptr, nullptr));
   GURL http_url("http://www.google.com");
   GURL http_superdomain_url("http://google.com");
@@ -3232,83 +3219,6 @@ TEST_F(CookieMonsterStrictSecureTest, EquivalentCookies) {
   EXPECT_TRUE(SetCookie(cm.get(), https_url, "A=B; Secure"));
   EXPECT_TRUE(SetCookie(cm.get(), https_url, "A=C; domain=google.com"));
   EXPECT_FALSE(SetCookie(cm.get(), http_url, "A=D; domain=google.com"));
-}
-
-// Test that cookie delete equivalent histograms are recorded correctly for
-// strict secure cookies.
-TEST_F(CookieMonsterStrictSecureTest, CookieDeleteEquivalentHistogramTest) {
-  base::HistogramTester histograms;
-  const std::string cookie_source_histogram = "Cookie.CookieDeleteEquivalent";
-
-  scoped_refptr<MockPersistentCookieStore> store(new MockPersistentCookieStore);
-  std::unique_ptr<CookieMonster> cm(new CookieMonster(store.get(), nullptr));
-
-  // Set a secure cookie from a secure origin
-  EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(), "A=B; Secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 1);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               1);
-
-  // Set a new cookie with a different name from a variety of origins (including
-  // the same one).
-  EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(), "B=A;"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 2);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               2);
-  EXPECT_TRUE(SetCookie(cm.get(), http_www_google_.url(), "C=A;"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 3);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               3);
-
-  // Set a non-secure cookie from an insecure origin that matches the name of an
-  // already existing cookie and additionally is equivalent to the existing
-  // cookie.
-  EXPECT_FALSE(SetCookie(cm.get(), http_www_google_.url(), "A=B;"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 6);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               4);
-  histograms.ExpectBucketCount(
-      cookie_source_histogram,
-      CookieMonster::COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE, 1);
-  histograms.ExpectBucketCount(
-      cookie_source_histogram,
-      CookieMonster::COOKIE_DELETE_EQUIVALENT_WOULD_HAVE_DELETED, 1);
-
-  // Set a non-secure cookie from an insecure origin that matches the name of an
-  // already existing cookie but is not equivalent.
-  EXPECT_FALSE(
-      SetCookie(cm.get(), http_www_google_.url(), "A=B; path=/some/path"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 8);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               5);
-  histograms.ExpectBucketCount(
-      cookie_source_histogram,
-      CookieMonster::COOKIE_DELETE_EQUIVALENT_SKIPPING_SECURE, 2);
-
-  // Set a secure cookie from a secure origin that matches the name of an
-  // already existing cookies and is equivalent.
-  EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(), "A=B; secure"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 10);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               6);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_FOUND,
-                               1);
-
-  // Set a secure cookie from a secure origin that matches the name of an
-  // already existing cookie and is not equivalent.
-  EXPECT_TRUE(SetCookie(cm.get(), https_www_google_.url(),
-                        "A=C; secure; path=/some/path"));
-  histograms.ExpectTotalCount(cookie_source_histogram, 11);
-  histograms.ExpectBucketCount(cookie_source_histogram,
-                               CookieMonster::COOKIE_DELETE_EQUIVALENT_ATTEMPT,
-                               7);
 }
 
 class CookieMonsterNotificationTest : public CookieMonsterTest {

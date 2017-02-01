@@ -159,15 +159,6 @@ TEST_F(TimeTest, JsTime) {
   EXPECT_EQ(700.0003, t.ToDoubleT());
   t = Time::FromDoubleT(800.73);
   EXPECT_EQ(800730.0, t.ToJsTime());
-
-  // Correctly convert |- epoch offset| which is valid time in javascript.
-  Time minusEpoch = Time::FromJsTime(-11644473600000.0);
-  EXPECT_EQ(-11644473600000, minusEpoch.ToJsTime());
-
-  // Check conversion of boundary javascript time values.
-  // See http://www.ecma-international.org/ecma-262/6.0/#sec-timeclip
-  EXPECT_EQ(-8.46e15, Time::FromJsTime(-8.46e15).ToJsTime());
-  EXPECT_EQ(8.46e15, Time::FromJsTime(8.46e15).ToJsTime());
 }
 
 #if defined(OS_POSIX)

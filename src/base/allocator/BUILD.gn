@@ -294,56 +294,16 @@ buildflag_header("features") {
   ]
 }
 
-if (use_experimental_allocator_shim) {
-  # Used to shim malloc symbols on Android. see //base/allocator/README.md.
-  config("wrap_malloc_symbols") {
-    ldflags = [
-      "-Wl,-wrap,calloc",
-      "-Wl,-wrap,free",
-      "-Wl,-wrap,malloc",
-      "-Wl,-wrap,memalign",
-      "-Wl,-wrap,posix_memalign",
-      "-Wl,-wrap,pvalloc",
-      "-Wl,-wrap,realloc",
-      "-Wl,-wrap,valloc",
-    ]
-  }
-
-  source_set("unified_allocator_shim") {
-    # TODO(primiano): support other platforms, currently this works only on
-    # Linux/CrOS/Android. http://crbug.com/550886 .
-    configs += [ "//base:base_implementation" ]  # for BASE_EXPORT
-    visibility = [ "//base:base" ]
-    sources = [
-      "allocator_shim.cc",
-      "allocator_shim.h",
-      "allocator_shim_internals.h",
-      "allocator_shim_override_cpp_symbols.h",
-      "allocator_shim_override_libc_symbols.h",
-    ]
-    if (is_win) {
-      sources += [
-        "allocator_shim_default_dispatch_to_winheap.cc",
-        "allocator_shim_override_ucrt_symbols_win.h",
-        "winheap_stubs_win.cc",
-        "winheap_stubs_win.h",
-      ]
-    } else if (is_linux && use_allocator == "tcmalloc") {
-      sources += [
-        "allocator_shim_default_dispatch_to_tcmalloc.cc",
-        "allocator_shim_override_glibc_weak_symbols.h",
-      ]
-      deps = [
-        ":tcmalloc",
-      ]
-    } else if (is_linux && use_allocator == "none") {
-      sources += [ "allocator_shim_default_dispatch_to_glibc.cc" ]
-    } else if (is_android && use_allocator == "none") {
-      sources += [
-        "allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
-        "allocator_shim_override_linker_wrapped_symbols.h",
-      ]
-      all_dependent_configs = [ ":wrap_malloc_symbols" ]
-    }
-  }
+# Used to shim malloc symbols on Android. see //base/allocator/README.md.
+config("wrap_malloc_symbols") {
+  ldflags = [
+    "-Wl,-wrap,calloc",
+    "-Wl,-wrap,free",
+    "-Wl,-wrap,malloc",
+    "-Wl,-wrap,memalign",
+    "-Wl,-wrap,posix_memalign",
+    "-Wl,-wrap,pvalloc",
+    "-Wl,-wrap,realloc",
+    "-Wl,-wrap,valloc",
+  ]
 }

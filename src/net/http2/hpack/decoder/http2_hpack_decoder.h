@@ -29,6 +29,7 @@
 #include "net/http2/hpack/decoder/hpack_block_decoder.h"
 #include "net/http2/hpack/decoder/hpack_decoder_listener.h"
 #include "net/http2/hpack/decoder/hpack_decoder_state.h"
+#include "net/http2/hpack/decoder/hpack_decoder_tables.h"
 #include "net/http2/hpack/decoder/hpack_whole_entry_buffer.h"
 
 namespace net {

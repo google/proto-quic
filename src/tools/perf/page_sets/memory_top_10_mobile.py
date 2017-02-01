@@ -8,7 +8,6 @@ from telemetry.page import page as page_module
 from telemetry.page import shared_page_state
 from telemetry import story
 
-from devil.android.sdk import intent # pylint: disable=import-error
 from devil.android.sdk import keyevent # pylint: disable=import-error
 
 from page_sets import top_10_mobile
@@ -51,17 +50,15 @@ class BackgroundPage(MemoryMeasurementPage):
     action_runner.tab.WaitForDocumentReadyStateToBeComplete()
 
     # Launch clock app, pushing Chrome to the background.
-    android_platform = action_runner.tab.browser.platform
-    android_platform.LaunchAndroidApplication(
-        intent.Intent(package='com.google.android.deskclock',
-                      activity='com.android.deskclock.DeskClock'),
-        app_has_webviews=False)
+    android_browser = action_runner.tab.browser
+    android_browser.Background()
 
     # Take measurement.
     action_runner.MeasureMemory(self.story_set.DETERMINISTIC_MODE)
 
     # Go back to Chrome.
-    android_platform.android_action_runner.InputKeyEvent(keyevent.KEYCODE_BACK)
+    android_browser.platform.android_action_runner.InputKeyEvent(
+        keyevent.KEYCODE_BACK)
 
 
 class MemoryTop10Mobile(story.StorySet):

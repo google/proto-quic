@@ -231,11 +231,6 @@ PATH_SPECIFIC_WHITELISTED_LICENSES = {
         'UNKNOWN',
     ],
 
-    # https://bugs.chromium.org/p/chromium/issues/detail?id=655755
-    'third_party/dpkg-dev': [
-        'GPL (v2 or later)',
-    ],
-
     'third_party/devscripts': [
         'GPL (v2 or later)',
     ],

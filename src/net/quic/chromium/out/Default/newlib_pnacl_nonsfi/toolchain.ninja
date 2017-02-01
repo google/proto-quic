@@ -1,0 +1,327 @@
+rule newlib_pnacl_nonsfi_cc
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_c} -c ${in} -o ${out}
+  description = CC ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule newlib_pnacl_nonsfi_cxx
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang++ -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_cc} -c ${in} -o ${out}
+  description = CXX ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule newlib_pnacl_nonsfi_asm
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${asmflags} -c ${in} -o ${out}
+  description = ASM ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule newlib_pnacl_nonsfi_alink
+  command = python "../../../../../build/toolchain/gcc_ar_wrapper.py" --output=${out} --ar="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-ar" ${arflags} rcsD @"${out}.rsp"
+  description = AR ${out}
+  rspfile = ${out}.rsp
+  rspfile_content = ${in}
+rule newlib_pnacl_nonsfi_solink
+  command = python "/usr/local/google/home/jokulik/chromium/src/build/toolchain/gcc_solink_wrapper.py" --readelf="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-readelf" --nm="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-nm" --strip=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-strip --sofile="${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" --tocfile="${output_dir}/${target_output_name}${output_extension}.TOC" --output="${output_dir}/${target_output_name}${output_extension}" -- ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang++ -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+  restat = 1
+rule newlib_pnacl_nonsfi_solink_module
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang++ -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp" && ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-strip --strip-unneeded -o "${output_dir}/${target_output_name}${output_extension}" "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}"
+  description = SOLINK_MODULE ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+rule newlib_pnacl_nonsfi_link
+  command = python "../../../../../build/toolchain/gcc_link_wrapper.py" --strip="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-strip" --unstripped-file="${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" --output="${output_dir}/${target_output_name}${output_extension}" -- ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pnacl-clang++ ${ldflags} -o "${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" -Wl,--start-group @"${output_dir}/${target_output_name}${output_extension}.rsp" ${solibs} -Wl,--end-group  ${libs} 
+  description = LINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in}
+  pool = build_toolchain_link_pool
+rule newlib_pnacl_nonsfi_stamp
+  command = touch ${out}
+  description = STAMP ${out}
+rule newlib_pnacl_nonsfi_copy
+  command = ln -f ${in} ${out} 2>/dev/null || (rm -rf ${out} && cp -af ${in} ${out})
+  description = COPY ${in} ${out}
+
+subninja newlib_pnacl_nonsfi/obj/base/base.ninja
+build newlib_pnacl_nonsfi/obj/base/base_paths.stamp: newlib_pnacl_nonsfi_stamp
+subninja newlib_pnacl_nonsfi/obj/base/base_static.ninja
+rule __base_build_date___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../build/write_build_date_header.py newlib_pnacl_nonsfi/gen/base/generated_build_date.h default
+  description = ACTION //base:build_date(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/base/build_date.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../build/write_build_date_header.py ../../../../../build/util/LASTCHANGE
+
+build newlib_pnacl_nonsfi/gen/base/generated_build_date.h: __base_build_date___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/base/build_date.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/base/build_date.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/base/generated_build_date.h
+rule __base_debugging_flags___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  rspfile = __base_debugging_flags___build_toolchain_nacl_newlib_pnacl_nonsfi__rule.rsp
+  rspfile_content = --flags ENABLE_PROFILING=false
+  command = python ../../../../../build/write_buildflag_header.py --output base/debug/debugging_flags.h --rulename //base$:debugging_flags --gen-dir newlib_pnacl_nonsfi/gen --definitions ${rspfile}
+  description = ACTION //base:debugging_flags(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+
+build newlib_pnacl_nonsfi/gen/base/debug/debugging_flags.h: __base_debugging_flags___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | ../../../../../build/write_buildflag_header.py
+
+build newlib_pnacl_nonsfi/obj/base/debugging_flags.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/base/debug/debugging_flags.h
+build newlib_pnacl_nonsfi/obj/base/allocator/allocator.stamp: newlib_pnacl_nonsfi_stamp
+rule __base_allocator_features___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  rspfile = __base_allocator_features___build_toolchain_nacl_newlib_pnacl_nonsfi__rule.rsp
+  rspfile_content = --flags USE_EXPERIMENTAL_ALLOCATOR_SHIM=false ENABLE_WIN_ALLOCATOR_SHIM_TESTS=\(false\$ \|\|\$ false\)
+  command = python ../../../../../build/write_buildflag_header.py --output base/allocator/features.h --rulename //base/allocator$:features --gen-dir newlib_pnacl_nonsfi/gen --definitions ${rspfile}
+  description = ACTION //base/allocator:features(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+
+build newlib_pnacl_nonsfi/gen/base/allocator/features.h: __base_allocator_features___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | ../../../../../build/write_buildflag_header.py
+
+build newlib_pnacl_nonsfi/obj/base/allocator/features.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/base/allocator/features.h
+subninja newlib_pnacl_nonsfi/obj/base/test/test_config.ninja
+subninja newlib_pnacl_nonsfi/obj/base/test/test_support.ninja
+subninja newlib_pnacl_nonsfi/obj/base/third_party/dynamic_annotations/dynamic_annotations.ninja
+subninja newlib_pnacl_nonsfi/obj/base/third_party/libevent/libevent.ninja
+subninja newlib_pnacl_nonsfi/obj/build/config/nacl/nacl_base.ninja
+build newlib_pnacl_nonsfi/obj/build/config/sanitizers/deps.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/build/config/sanitizers/deps_no_options.stamp
+build newlib_pnacl_nonsfi/obj/build/config/sanitizers/deps_no_options.stamp: newlib_pnacl_nonsfi_stamp
+build newlib_pnacl_nonsfi/obj/build/win/default_exe_manifest.stamp: newlib_pnacl_nonsfi_stamp
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test.stamp: newlib_pnacl_nonsfi_stamp || newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_nmf.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_test_files.stamp
+build nacl_test_data/nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_translate_pexe_x64.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe
+rule __chrome_test_data_nacl_irt_exception_test_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../ppapi/tests/create_nonsfi_test_nmf.py --program=nacl_test_data/nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe --arch=x86-64 --output=nacl_test_data/nonsfi/irt_exception_test.nmf
+  description = ACTION //chrome/test/data/nacl:irt_exception_test_nmf(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_nmf.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../ppapi/tests/create_nonsfi_test_nmf.py nacl_test_data/nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_translate_pexe_x64.stamp
+
+build nacl_test_data/nonsfi/irt_exception_test.nmf: __chrome_test_data_nacl_irt_exception_test_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_nmf.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_nmf.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_exception_test.nmf
+build nacl_test_data/nonsfi/irt_exception_test.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/irt_exception/irt_exception_test.html
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_test_files.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_exception_test.html
+rule __chrome_test_data_nacl_irt_exception_test_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py pnacl-translate newlib_pnacl/irt_exception_test_newlib_pnacl.pexe -o newlib_pnacl_nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe -arch x86-32-nonsfi -Wl,-L/usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim
+  description = ACTION //chrome/test/data/nacl:irt_exception_test_translate_pexe_x64(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_translate_pexe_x64.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py newlib_pnacl/irt_exception_test_newlib_pnacl.pexe newlib_pnacl/irt_exception_test_newlib_pnacl.pexe
+
+build newlib_pnacl_nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe: __chrome_test_data_nacl_irt_exception_test_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_translate_pexe_x64.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_exception_test_translate_pexe_x64.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/irt_exception_test_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/libpnacl_irt_shim.a
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file.stamp: newlib_pnacl_nonsfi_stamp || newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_nmf.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_test_files.stamp
+build nacl_test_data/nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_translate_pexe_x64.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe
+rule __chrome_test_data_nacl_irt_manifest_file_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../ppapi/tests/create_nonsfi_test_nmf.py --program=nacl_test_data/nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe --arch=x86-64 --output=nacl_test_data/nonsfi/irt_manifest_file.nmf -xtest_file$:test_file.txt -xnmf\$ says\$ hello\$ world$:test_file.txt -xdummy_test_file$:dummy_test_file.txt
+  description = ACTION //chrome/test/data/nacl:irt_manifest_file_nmf(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_nmf.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../ppapi/tests/create_nonsfi_test_nmf.py nacl_test_data/nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_translate_pexe_x64.stamp
+
+build nacl_test_data/nonsfi/irt_manifest_file.nmf: __chrome_test_data_nacl_irt_manifest_file_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_nmf.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_nmf.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_manifest_file.nmf
+build nacl_test_data/nonsfi/irt_manifest_file_test.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/manifest_file/irt_manifest_file_test.html
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_test_files.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/irt_manifest_file_test.html
+rule __chrome_test_data_nacl_irt_manifest_file_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py pnacl-translate newlib_pnacl/irt_manifest_file_newlib_pnacl.pexe -o newlib_pnacl_nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe -arch x86-32-nonsfi -Wl,-L/usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim
+  description = ACTION //chrome/test/data/nacl:irt_manifest_file_translate_pexe_x64(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_translate_pexe_x64.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py newlib_pnacl/irt_manifest_file_newlib_pnacl.pexe newlib_pnacl/irt_manifest_file_newlib_pnacl.pexe
+
+build newlib_pnacl_nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe: __chrome_test_data_nacl_irt_manifest_file_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_translate_pexe_x64.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/irt_manifest_file_translate_pexe_x64.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/irt_manifest_file_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/libpnacl_irt_shim.a
+build nacl_test_data/nonsfi/nacltest.js: newlib_pnacl_nonsfi_copy ../../../../../ppapi/native_client/tools/browser_tester/browserdata/nacltest.js
+build nacl_test_data/nonsfi/ppapi_bad.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad.html
+build nacl_test_data/nonsfi/ppapi_bad.js: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad.js
+build nacl_test_data/nonsfi/ppapi_bad_doesnotexist.nmf: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_doesnotexist.nmf
+build nacl_test_data/nonsfi/ppapi_bad_magic.nmf: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_magic.nmf
+build nacl_test_data/nonsfi/ppapi_bad_manifest_bad_files.nmf: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_bad_files.nmf
+build nacl_test_data/nonsfi/ppapi_bad_manifest_nexe_arch.nmf: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_nexe_arch.nmf
+build nacl_test_data/nonsfi/ppapi_bad_manifest_uses_nexes.nmf: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_uses_nexes.nmf
+build nacl_test_data/nonsfi/ppapi_bad_native.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_native.html
+build nacl_test_data/nonsfi/ppapi_crash.js: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash.js
+build nacl_test_data/nonsfi/ppapi_crash_in_callback.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_in_callback.html
+build nacl_test_data/nonsfi/ppapi_crash_off_main_thread.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_off_main_thread.html
+build nacl_test_data/nonsfi/ppapi_crash_ppapi_off_main_thread.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_ppapi_off_main_thread.html
+build nacl_test_data/nonsfi/ppapi_crash_via_check_failure.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_via_check_failure.html
+build nacl_test_data/nonsfi/ppapi_crash_via_exit_call.html: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_via_exit_call.html
+build nacl_test_data/nonsfi/load_util.js: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/load_util.js
+build nacl_test_data/nonsfi/test_file.txt: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/manifest_file/test_file.txt
+build nacl_test_data/nonsfi/progress_event_listener.js: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/progress_event_listener.js
+build nacl_test_data/nonsfi/simple_cc.js: newlib_pnacl_nonsfi_copy ../../../../../chrome/test/data/nacl/simple_cc.js
+
+build newlib_pnacl_nonsfi/obj/chrome/test/data/nacl/shared_test_files.stamp: newlib_pnacl_nonsfi_stamp nacl_test_data/nonsfi/nacltest.js nacl_test_data/nonsfi/ppapi_bad.html nacl_test_data/nonsfi/ppapi_bad.js nacl_test_data/nonsfi/ppapi_bad_doesnotexist.nmf nacl_test_data/nonsfi/ppapi_bad_magic.nmf nacl_test_data/nonsfi/ppapi_bad_manifest_bad_files.nmf nacl_test_data/nonsfi/ppapi_bad_manifest_nexe_arch.nmf nacl_test_data/nonsfi/ppapi_bad_manifest_uses_nexes.nmf nacl_test_data/nonsfi/ppapi_bad_native.html nacl_test_data/nonsfi/ppapi_crash.js nacl_test_data/nonsfi/ppapi_crash_in_callback.html nacl_test_data/nonsfi/ppapi_crash_off_main_thread.html nacl_test_data/nonsfi/ppapi_crash_ppapi_off_main_thread.html nacl_test_data/nonsfi/ppapi_crash_via_check_failure.html nacl_test_data/nonsfi/ppapi_crash_via_exit_call.html nacl_test_data/nonsfi/load_util.js nacl_test_data/nonsfi/test_file.txt nacl_test_data/nonsfi/progress_event_listener.js nacl_test_data/nonsfi/simple_cc.js
+subninja newlib_pnacl_nonsfi/obj/components/nacl/common/switches.ninja
+build newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_copy.inputdeps.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/base/build_date.stamp newlib_pnacl_nonsfi/obj/base/debugging_flags.stamp newlib_pnacl_nonsfi/obj/base/allocator/features.stamp newlib_pnacl_nonsfi/obj/ipc/mojom__generator.stamp newlib_pnacl_nonsfi/obj/ipc/mojom__type_mappings.stamp newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__generator.stamp newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.stamp
+build nacl_helper_nonsfi: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/nacl_helper_nonsfi || newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_copy.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_copy.stamp: newlib_pnacl_nonsfi_stamp nacl_helper_nonsfi
+subninja newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_nexe.ninja
+subninja newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_sandbox.ninja
+subninja newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_unittests_main.ninja
+build newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_unittests_main_copy.inputdeps.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/base/build_date.stamp newlib_pnacl_nonsfi/obj/base/debugging_flags.stamp newlib_pnacl_nonsfi/obj/base/allocator/features.stamp
+build nacl_helper_nonsfi_unittests_main: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/nacl_helper_nonsfi_unittests_main || newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_unittests_main_copy.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/components/nacl/loader/nacl_helper_nonsfi_unittests_main_copy.stamp: newlib_pnacl_nonsfi_stamp nacl_helper_nonsfi_unittests_main
+subninja newlib_pnacl_nonsfi/obj/components/tracing/tracing.ninja
+subninja newlib_pnacl_nonsfi/obj/content/content.ninja
+build newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/client.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/client_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/client_sources.ninja
+build newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/gles2_cmd_helper.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/gles2_cmd_helper_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/gles2_cmd_helper_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/gles2_implementation.ninja
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/client/gles2_interface.ninja
+build newlib_pnacl_nonsfi/obj/gpu/command_buffer/common/common.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/gpu/command_buffer/common/common_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/common/common_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/gpu/command_buffer/common/gles2_utils.ninja
+build newlib_pnacl_nonsfi/obj/gpu/ipc/common/command_buffer_traits.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/gpu/ipc/common/command_buffer_traits_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/gpu/ipc/common/command_buffer_traits_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/ipc/ipc.ninja
+subninja newlib_pnacl_nonsfi/obj/ipc/mojom.ninja
+rule __ipc_mojom__generator___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs generate ${in} -d ../../../../../ -I ../../../../../ -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/gen --bytecode_path /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings -g c++,javascript,java --typemap newlib_pnacl_nonsfi/gen/ipc/mojom__type_mappings
+  description = ACTION //ipc:mojom__generator(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ipc/mojom__generator.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py newlib_pnacl_nonsfi/obj/ipc/mojom__type_mappings.stamp newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.stamp
+
+build newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.cc newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.h newlib_pnacl_nonsfi/gen/ipc/ipc.mojom-internal.h newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.srcjar newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.js: __ipc_mojom__generator___build_toolchain_nacl_newlib_pnacl_nonsfi__rule ../../../../../ipc/ipc.mojom | newlib_pnacl_nonsfi/obj/ipc/mojom__generator.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ipc/mojom__generator.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.cc newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.h newlib_pnacl_nonsfi/gen/ipc/ipc.mojom-internal.h newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.srcjar newlib_pnacl_nonsfi/gen/ipc/ipc.mojom.js
+rule __ipc_mojom__type_mappings___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../mojo/public/tools/bindings/generate_type_mappings.py --output newlib_pnacl_nonsfi/gen/ipc/mojom__type_mappings
+  description = ACTION //ipc:mojom__type_mappings(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ipc/mojom__type_mappings.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../mojo/public/tools/bindings/generate_type_mappings.py ../../../../../mojo/public/tools/bindings/chromium_bindings_configuration.gni ../../../../../mojo/public/tools/bindings/blink_bindings_configuration.gni
+
+build newlib_pnacl_nonsfi/gen/ipc/mojom__type_mappings: __ipc_mojom__type_mappings___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/ipc/mojom__type_mappings.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ipc/mojom__type_mappings.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/ipc/mojom__type_mappings
+subninja newlib_pnacl_nonsfi/obj/ipc/mojom_cpp_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/ipc/param_traits.ninja
+subninja newlib_pnacl_nonsfi/obj/media/shared_memory_support.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/embedder/delegates.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/embedder/embedder.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/embedder/headers.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/embedder/platform.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/system/system.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/edk/system/ports/ports.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/public/c/system/system.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/public/cpp/bindings/bindings.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/public/cpp/bindings/struct_traits.ninja
+subninja newlib_pnacl_nonsfi/obj/mojo/public/cpp/system/system.ninja
+rule __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs generate ${in} -d ../../../../../ -I ../../../../../ -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/gen --bytecode_path /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings -g c++,javascript,java --typemap newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/bindings__type_mappings --use_new_wrapper_types
+  description = ACTION //mojo/public/interfaces/bindings:bindings__generator(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.stamp
+
+build newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.cc newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom-internal.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.srcjar newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.js: __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_newlib_pnacl_nonsfi__rule ../../../../../mojo/public/interfaces/bindings/interface_control_messages.mojom | newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp
+build newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom-internal.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.srcjar newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.js: __mojo_public_interfaces_bindings_bindings__generator___build_toolchain_nacl_newlib_pnacl_nonsfi__rule ../../../../../mojo/public/interfaces/bindings/pipe_control_messages.mojom | newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__generator.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__generator.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.cc newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom-internal.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.srcjar newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/interface_control_messages.mojom.js newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.cc newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom-internal.h newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.srcjar newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/pipe_control_messages.mojom.js
+rule __mojo_public_interfaces_bindings_bindings__type_mappings___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../mojo/public/tools/bindings/generate_type_mappings.py --output newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/bindings__type_mappings
+  description = ACTION //mojo/public/interfaces/bindings:bindings__type_mappings(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__type_mappings.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../mojo/public/tools/bindings/generate_type_mappings.py ../../../../../mojo/public/tools/bindings/chromium_bindings_configuration.gni ../../../../../mojo/public/tools/bindings/blink_bindings_configuration.gni
+
+build newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/bindings__type_mappings: __mojo_public_interfaces_bindings_bindings__type_mappings___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__type_mappings.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/mojo/public/interfaces/bindings/bindings__type_mappings
+subninja newlib_pnacl_nonsfi/obj/mojo/public/interfaces/bindings/bindings_cpp_sources.ninja
+rule __mojo_public_tools_bindings_precompile_templates___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py --use_bundled_pylibs precompile -o /usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings
+  description = ACTION //mojo/public/tools/bindings:precompile_templates(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_cpp_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_js_generator.py ../../../../../mojo/public/tools/bindings/generators/mojom_java_generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/error.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/constant_resolver.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/data.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/generator.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/module.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/pack.py ../../../../../mojo/public/tools/bindings/pylib/mojom/generate/template_expander.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/__init__.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/ast.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/lexer.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/parser.py ../../../../../mojo/public/tools/bindings/pylib/mojom/parse/translate.py ../../../../../mojo/public/tools/bindings/mojom_bindings_generator.py ../../../../../mojo/public/tools/bindings/generators/cpp_templates/enum_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/enum_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_proxy_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_request_validator_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_response_validator_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/interface_stub_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module-internal.h.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module.cc.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/module.h.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_data_view_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_data_view_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/struct_serialization_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_data_view_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_data_view_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_serialization_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/union_serialization_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/validation_macros.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_class_template_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_declaration.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/cpp_templates/wrapper_union_class_template_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/constant_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/constants.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/data_types_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/enum.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/enum_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/header.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/interface_internal.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/struct.java.tmpl ../../../../../mojo/public/tools/bindings/generators/java_templates/union.java.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/enum_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/interface_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/module.amd.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/module_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/struct_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/union_definition.tmpl ../../../../../mojo/public/tools/bindings/generators/js_templates/validation_macros.tmpl
+
+build newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/cpp_templates.zip newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/java_templates.zip newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/js_templates.zip: __mojo_public_tools_bindings_precompile_templates___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/mojo/public/tools/bindings/precompile_templates.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/cpp_templates.zip newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/java_templates.zip newlib_pnacl_nonsfi/gen/mojo/public/tools/bindings/js_templates.zip
+subninja newlib_pnacl_nonsfi/obj/native_client/src/nonsfi/irt/nacl_sys_private.ninja
+subninja newlib_pnacl_nonsfi/obj/native_client/src/nonsfi/loader/elf_loader.ninja
+subninja newlib_pnacl_nonsfi/obj/native_client/src/shared/gio/gio.ninja
+subninja newlib_pnacl_nonsfi/obj/native_client/src/shared/platform/platform.ninja
+subninja newlib_pnacl_nonsfi/obj/native_client/src/untrusted/nacl/nacl.ninja
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests.stamp: newlib_pnacl_nonsfi_stamp || newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_nmf.stamp
+build ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_translate_pexe_x64.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp: newlib_pnacl_nonsfi_stamp ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe
+rule __ppapi_ppapi_nacl_tests_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../ppapi/tests/create_nonsfi_test_nmf.py --program=ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe --arch=x86-64 --output=ppapi_nacl_tests_pnacl_nonsfi.nmf
+  description = ACTION //ppapi:ppapi_nacl_tests_nmf(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_nmf.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../ppapi/tests/create_nonsfi_test_nmf.py ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_translate_pexe_x64.stamp
+
+build ppapi_nacl_tests_pnacl_nonsfi.nmf: __ppapi_ppapi_nacl_tests_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_nmf.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_nmf.stamp: newlib_pnacl_nonsfi_stamp ppapi_nacl_tests_pnacl_nonsfi.nmf
+rule __ppapi_ppapi_nacl_tests_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py pnacl-translate newlib_pnacl/ppapi_nacl_tests_newlib_pnacl.pexe -o newlib_pnacl_nonsfi/ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe -arch x86-32-nonsfi -Wl,-L/usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim
+  description = ACTION //ppapi:ppapi_nacl_tests_translate_pexe_x64(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_translate_pexe_x64.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py newlib_pnacl/ppapi_nacl_tests_newlib_pnacl.pexe newlib_pnacl/ppapi_nacl_tests_newlib_pnacl.pexe
+
+build newlib_pnacl_nonsfi/ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe: __ppapi_ppapi_nacl_tests_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_translate_pexe_x64.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/ppapi_nacl_tests_translate_pexe_x64.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/libpnacl_irt_shim.a
+subninja newlib_pnacl_nonsfi/obj/ppapi/c/c.ninja
+subninja newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/aot.ninja
+subninja newlib_pnacl_nonsfi/obj/ppapi/proxy/ipc_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/ppapi/proxy/proxy.ninja
+subninja newlib_pnacl_nonsfi/obj/ppapi/shared_impl/shared_impl.ninja
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app.stamp: newlib_pnacl_nonsfi_stamp || newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.stamp newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_test_files.stamp
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe: newlib_pnacl_nonsfi_copy newlib_pnacl_nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_translate_pexe_x64.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp: newlib_pnacl_nonsfi_stamp test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe
+rule __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../ppapi/tests/create_nonsfi_test_nmf.py --program=test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe --arch=x86-64 --output=test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app.nmf -xtest_file0$:test_file.txt -xtest_file1$:test_file2.txt -xtest_file2$:test_file.txt -xtest_file3$:test_file2.txt -xtest_file4$:test_file.txt -xtest_file5$:test_file2.txt -xtest_file6$:test_file.txt -xtest_file7$:test_file2.txt -xtest_file8$:test_file.txt -xtest_file9$:test_file2.txt -xtest_file10$:test_file.txt -xtest_file11$:test_file2.txt -xtest_file12$:test_file.txt -xtest_file13$:test_file2.txt -xtest_file14$:test_file.txt -xtest_file15$:test_file2.txt -xtest_file16$:test_file.txt -xtest_file17$:test_file2.txt -xtest_file18$:test_file.txt -xtest_file19$:test_file2.txt -xtest_file20$:test_file.txt -xtest_file21$:test_file2.txt -xtest_file22$:test_file.txt -xtest_file23$:test_file2.txt -xtest_file24$:test_file.txt -xtest_file25$:test_file2.txt -xtest_file26$:test_file.txt -xtest_file27$:test_file2.txt -xtest_file28$:test_file.txt -xtest_file29$:test_file2.txt -xtest_file30$:test_file.txt -xtest_file31$:test_file2.txt -xtest_file32$:test_file.txt -xtest_file33$:test_file2.txt -xtest_file34$:test_file.txt -xtest_file35$:test_file2.txt -xtest_file36$:test_file.txt -xtest_file37$:test_file2.txt -xtest_file38$:test_file.txt -xtest_file39$:test_file2.txt -xtest_file40$:test_file.txt -xtest_file41$:test_file2.txt -xtest_file42$:test_file.txt -xtest_file43$:test_file2.txt -xtest_file44$:test_file.txt -xtest_file45$:test_file2.txt -xtest_file46$:test_file.txt -xtest_file47$:test_file2.txt -xtest_file48$:test_file.txt -xtest_file49$:test_file2.txt -xtest_file50$:test_file.txt -xtest_file51$:test_file2.txt -xtest_file52$:test_file.txt -xtest_file53$:test_file2.txt -xtest_file54$:test_file.txt -xtest_file55$:test_file2.txt -xtest_file56$:test_file.txt -xtest_file57$:test_file2.txt -xtest_file58$:test_file.txt -xtest_file59$:test_file2.txt -xtest_file60$:test_file.txt -xtest_file61$:test_file2.txt -xtest_file62$:test_file.txt -xtest_file63$:test_file2.txt -xtest_file64$:test_file.txt -xtest_file65$:test_file2.txt -xtest_file66$:test_file.txt -xtest_file67$:test_file2.txt -xtest_file68$:test_file.txt -xtest_file69$:test_file2.txt -xtest_file70$:test_file.txt -xtest_file71$:test_file2.txt -xtest_file72$:test_file.txt -xtest_file73$:test_file2.txt -xtest_file74$:test_file.txt -xtest_file75$:test_file2.txt -xtest_file76$:test_file.txt -xtest_file77$:test_file2.txt -xtest_file78$:test_file.txt -xtest_file79$:test_file2.txt -xtest_file80$:test_file.txt -xtest_file81$:test_file2.txt -xtest_file82$:test_file.txt -xtest_file83$:test_file2.txt -xtest_file84$:test_file.txt -xtest_file85$:test_file2.txt -xtest_file86$:test_file.txt -xtest_file87$:test_file2.txt -xtest_file88$:test_file.txt -xtest_file89$:test_file2.txt -xtest_file90$:test_file.txt -xtest_file91$:test_file2.txt -xtest_file92$:test_file.txt -xtest_file93$:test_file2.txt -xtest_file94$:test_file.txt -xtest_file95$:test_file2.txt -xtest_file96$:test_file.txt -xtest_file97$:test_file2.txt -xtest_file98$:test_file.txt -xtest_file99$:test_file2.txt -xtest_file100$:test_file.txt -xtest_file101$:test_file2.txt -xtest_file102$:test_file.txt -xtest_file103$:test_file2.txt -xtest_file104$:test_file.txt -xtest_file105$:test_file2.txt -xtest_file106$:test_file.txt -xtest_file107$:test_file2.txt -xtest_file108$:test_file.txt -xtest_file109$:test_file2.txt -xtest_file110$:test_file.txt -xtest_file111$:test_file2.txt -xtest_file112$:test_file.txt -xtest_file113$:test_file2.txt -xtest_file114$:test_file.txt -xtest_file115$:test_file2.txt -xtest_file116$:test_file.txt -xtest_file117$:test_file2.txt -xtest_file118$:test_file.txt -xtest_file119$:test_file2.txt -xtest_file120$:test_file.txt -xtest_file121$:test_file2.txt -xtest_file122$:test_file.txt -xtest_file123$:test_file2.txt -xtest_file124$:test_file.txt -xtest_file125$:test_file2.txt -xtest_file126$:test_file.txt -xtest_file127$:test_file2.txt -xtest_file128$:test_file.txt
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_packaged_app_nmf(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../ppapi/tests/create_nonsfi_test_nmf.py test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_translate_pexe_x64.stamp
+
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_nmf___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.stamp: newlib_pnacl_nonsfi_stamp test_data/ppapi/tests/extensions/packaged_app/nonsfi/ppapi_tests_extensions_packaged_app.nmf
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/controller.js: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/controller.js
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/index.html: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/index.html
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/main.js: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/main.js
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/manifest.json: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/manifest.json
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/test_file.txt: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/test_file.txt
+build test_data/ppapi/tests/extensions/packaged_app/nonsfi/test_file2.txt: newlib_pnacl_nonsfi_copy ../../../../../ppapi/tests/extensions/packaged_app/test_file2.txt
+
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_test_files.stamp: newlib_pnacl_nonsfi_stamp test_data/ppapi/tests/extensions/packaged_app/nonsfi/controller.js test_data/ppapi/tests/extensions/packaged_app/nonsfi/index.html test_data/ppapi/tests/extensions/packaged_app/nonsfi/main.js test_data/ppapi/tests/extensions/packaged_app/nonsfi/manifest.json test_data/ppapi/tests/extensions/packaged_app/nonsfi/test_file.txt test_data/ppapi/tests/extensions/packaged_app/nonsfi/test_file2.txt
+rule __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule
+  command = python ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py pnacl-translate newlib_pnacl/ppapi_tests_extensions_packaged_app_newlib_pnacl.pexe -o newlib_pnacl_nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe -arch x86-32-nonsfi -Wl,-L/usr/local/google/home/jokulik/chromium/src/net/quic/chromium/out/Default/newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_packaged_app_translate_pexe_x64(//build/toolchain/nacl:newlib_pnacl_nonsfi)
+  restat = 1
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_translate_pexe_x64.inputdeps.stamp: newlib_pnacl_nonsfi_stamp ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/pydir/loader.py newlib_pnacl/ppapi_tests_extensions_packaged_app_newlib_pnacl.pexe newlib_pnacl/ppapi_tests_extensions_packaged_app_newlib_pnacl.pexe
+
+build newlib_pnacl_nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe: __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_translate_pexe_x64___build_toolchain_nacl_newlib_pnacl_nonsfi__rule | newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_translate_pexe_x64.inputdeps.stamp
+
+build newlib_pnacl_nonsfi/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_translate_pexe_x64.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/ppapi_tests_extensions_packaged_app_pnacl_newlib_x32_nonsfi.nexe || newlib_pnacl_nonsfi/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/libpnacl_irt_shim.a
+subninja newlib_pnacl_nonsfi/obj/ppapi/thunk/thunk.ninja
+build newlib_pnacl_nonsfi/obj/sandbox/linux/sandbox.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/sandbox/linux/libsandbox_services.a newlib_pnacl_nonsfi/obj/sandbox/linux/libsuid_sandbox_client.a newlib_pnacl_nonsfi/obj/sandbox/linux/libseccomp_bpf.a newlib_pnacl_nonsfi/obj/sandbox/linux/libseccomp_bpf_helpers.a
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/sandbox_linux_test_utils.ninja
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/sandbox_services.ninja
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/sandbox_services_headers.ninja
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/seccomp_bpf.ninja
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/seccomp_bpf_helpers.ninja
+subninja newlib_pnacl_nonsfi/obj/sandbox/linux/suid_sandbox_client.ninja
+subninja newlib_pnacl_nonsfi/obj/testing/gmock/gmock.ninja
+subninja newlib_pnacl_nonsfi/obj/testing/gtest/gtest.ninja
+subninja newlib_pnacl_nonsfi/obj/third_party/modp_b64/modp_b64.ninja
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/gfx_export.ninja
+build newlib_pnacl_nonsfi/obj/ui/gfx/memory_buffer.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/ui/gfx/memory_buffer_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/memory_buffer_sources.ninja
+build newlib_pnacl_nonsfi/obj/ui/gfx/selection_bound.stamp: newlib_pnacl_nonsfi_stamp newlib_pnacl_nonsfi/obj/ui/gfx/selection_bound_sources.stamp
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/selection_bound_sources.ninja
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/geometry/geometry.ninja
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/ipc/ipc.ninja
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/ipc/geometry/geometry.ninja
+subninja newlib_pnacl_nonsfi/obj/ui/gfx/range/range.ninja

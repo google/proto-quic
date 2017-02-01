@@ -96,12 +96,6 @@ class BASE_EXPORT SimpleThread : public PlatformThread::Delegate {
   // Subclasses should override the Run method.
   virtual void Run() = 0;
 
-  // Return the thread name prefix, or "unnamed" if none was supplied.
-  std::string name_prefix() { return name_prefix_; }
-
-  // Return the completed name including TID, only valid after Start().
-  std::string name() { return name_; }
-
   // Return the thread id, only valid after Start().
   PlatformThreadId tid() { return tid_; }
 

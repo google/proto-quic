@@ -110,6 +110,8 @@ component("net") {
     "base/hash_value.h",
     "base/host_port_pair.cc",
     "base/host_port_pair.h",
+    "base/interval.h",
+    "base/interval_set.h",
     "base/io_buffer.cc",
     "base/io_buffer.h",
     "base/ip_address.cc",
@@ -349,6 +351,7 @@ component("net") {
     ":net_resources",
     "//base",
     "//net/base/registry_controlled_domains",
+    "//net/data/ssl/wosign:wosign_domains",
     "//third_party/protobuf:protobuf_lite",
     "//url:url_features",
   ]
@@ -1110,8 +1113,8 @@ component("net") {
       "quic/core/congestion_control/send_algorithm_interface.h",
       "quic/core/congestion_control/tcp_cubic_sender_base.cc",
       "quic/core/congestion_control/tcp_cubic_sender_base.h",
-      "quic/core/congestion_control/tcp_cubic_sender_base.h",
       "quic/core/congestion_control/tcp_cubic_sender_bytes.cc",
+      "quic/core/congestion_control/tcp_cubic_sender_bytes.h",
       "quic/core/congestion_control/tcp_cubic_sender_packets.cc",
       "quic/core/congestion_control/tcp_cubic_sender_packets.h",
       "quic/core/congestion_control/windowed_filter.h",
@@ -1204,12 +1207,11 @@ component("net") {
       "quic/core/frames/quic_stream_frame.h",
       "quic/core/frames/quic_window_update_frame.cc",
       "quic/core/frames/quic_window_update_frame.h",
-      "quic/core/interval.h",
-      "quic/core/interval_set.h",
       "quic/core/quic_ack_listener_interface.cc",
       "quic/core/quic_ack_listener_interface.h",
       "quic/core/quic_alarm.cc",
       "quic/core/quic_alarm.h",
+      "quic/core/quic_alarm_factory.h",
       "quic/core/quic_arena_scoped_ptr.h",
       "quic/core/quic_bandwidth.cc",
       "quic/core/quic_bandwidth.h",
@@ -1247,6 +1249,7 @@ component("net") {
       "quic/core/quic_error_codes.h",
       "quic/core/quic_flags.cc",
       "quic/core/quic_flags.h",
+      "quic/core/quic_flags_list.h",
       "quic/core/quic_flow_controller.cc",
       "quic/core/quic_flow_controller.h",
       "quic/core/quic_framer.cc",
@@ -1319,37 +1322,47 @@ component("net") {
       "quic/platform/api/quic_bug_tracker.h",
       "quic/platform/api/quic_clock.cc",
       "quic/platform/api/quic_clock.h",
+      "quic/platform/api/quic_containers.h",
       "quic/platform/api/quic_export.h",
       "quic/platform/api/quic_ip_address.cc",
       "quic/platform/api/quic_ip_address.h",
       "quic/platform/api/quic_ip_address_family.h",
       "quic/platform/api/quic_logging.h",
       "quic/platform/api/quic_lru_cache.h",
+      "quic/platform/api/quic_map_util.h",
       "quic/platform/api/quic_mutex.cc",
       "quic/platform/api/quic_mutex.h",
       "quic/platform/api/quic_ptr_util.h",
       "quic/platform/api/quic_reference_counted.h",
       "quic/platform/api/quic_socket_address.cc",
       "quic/platform/api/quic_socket_address.h",
+      "quic/platform/api/quic_stack_trace.h",
       "quic/platform/api/quic_str_cat.h",
       "quic/platform/api/quic_text_utils.h",
+      "quic/platform/api/quic_url_utils.cc",
+      "quic/platform/api/quic_url_utils.h",
       "quic/platform/impl/quic_aligned_impl.h",
       "quic/platform/impl/quic_bug_tracker_impl.h",
       "quic/platform/impl/quic_chromium_clock.cc",
       "quic/platform/impl/quic_chromium_clock.h",
+      "quic/platform/impl/quic_containers_impl.h",
       "quic/platform/impl/quic_export_impl.h",
       "quic/platform/impl/quic_ip_address_impl.cc",
       "quic/platform/impl/quic_ip_address_impl.h",
       "quic/platform/impl/quic_logging_impl.h",
       "quic/platform/impl/quic_lru_cache_impl.h",
+      "quic/platform/impl/quic_map_util_impl.h",
       "quic/platform/impl/quic_mutex_impl.cc",
       "quic/platform/impl/quic_mutex_impl.h",
       "quic/platform/impl/quic_ptr_util_impl.h",
       "quic/platform/impl/quic_reference_counted_impl.h",
       "quic/platform/impl/quic_socket_address_impl.cc",
       "quic/platform/impl/quic_socket_address_impl.h",
+      "quic/platform/impl/quic_stack_trace_impl.h",
       "quic/platform/impl/quic_str_cat_impl.h",
       "quic/platform/impl/quic_text_utils_impl.h",
+      "quic/platform/impl/quic_url_utils_impl.cc",
+      "quic/platform/impl/quic_url_utils_impl.h",
       "quic/quartc/quartc_alarm_factory.cc",
       "quic/quartc/quartc_alarm_factory.h",
       "quic/quartc/quartc_factory.cc",
@@ -1363,6 +1376,7 @@ component("net") {
       "quic/quartc/quartc_stream.cc",
       "quic/quartc/quartc_stream.h",
       "quic/quartc/quartc_stream_interface.h",
+      "quic/quartc/quartc_task_runner_interface.h",
       "sdch/sdch_owner.cc",
       "sdch/sdch_owner.h",
       "socket/client_socket_factory.cc",
@@ -1497,8 +1511,6 @@ component("net") {
       "spdy/spdy_framer_decoder_adapter.h",
       "spdy/spdy_header_indexing.cc",
       "spdy/spdy_header_indexing.h",
-      "spdy/spdy_headers_block_parser.cc",
-      "spdy/spdy_headers_block_parser.h",
       "spdy/spdy_headers_handler_interface.h",
       "spdy/spdy_http_stream.cc",
       "spdy/spdy_http_stream.h",
@@ -1524,7 +1536,6 @@ component("net") {
       "spdy/spdy_stream.h",
       "spdy/spdy_write_queue.cc",
       "spdy/spdy_write_queue.h",
-      "spdy/write_blocked_list.h",
       "spdy/write_scheduler.h",
       "ssl/client_cert_store.h",
       "ssl/client_cert_store_mac.cc",
@@ -2503,7 +2514,7 @@ if (use_v8_in_net) {
   }
 }
 
-if (use_v8_in_net && !is_android) {
+if (!is_ios && !is_android && !is_proto_quic) {
   source_set("net_browser_services") {
     sources = [
       "dns/mojo_host_resolver_impl.cc",
@@ -2516,7 +2527,7 @@ if (use_v8_in_net && !is_android) {
     ]
 
     public_deps = [
-      ":net_with_v8",
+      ":net",
       "//base",
       "//mojo/public/cpp/bindings",
       "//net/interfaces",
@@ -4050,6 +4061,8 @@ test("net_unittests") {
     "base/host_mapping_rules_unittest.cc",
     "base/host_port_pair_unittest.cc",
     "base/int128_unittest.cc",
+    "base/interval_set_test.cc",
+    "base/interval_test.cc",
     "base/ip_address_unittest.cc",
     "base/ip_endpoint_unittest.cc",
     "base/ip_pattern_unittest.cc",
@@ -4079,6 +4092,7 @@ test("net_unittests") {
     "base/url_util_unittest.cc",
     "cert/caching_cert_verifier_unittest.cc",
     "cert/cert_verifier_unittest.cc",
+    "cert/cert_verify_proc_android_unittest.cc",
     "cert/cert_verify_proc_ios_unittest.cc",
     "cert/cert_verify_proc_unittest.cc",
     "cert/cert_verify_proc_whitelist_unittest.cc",
@@ -4167,6 +4181,7 @@ test("net_unittests") {
     "dns/dns_query_unittest.cc",
     "dns/dns_response_unittest.cc",
     "dns/dns_session_unittest.cc",
+    "dns/dns_socket_pool_unittest.cc",
     "dns/dns_transaction_unittest.cc",
     "dns/dns_util_unittest.cc",
     "dns/host_cache_unittest.cc",
@@ -4266,6 +4281,7 @@ test("net_unittests") {
     "http2/decoder/http2_frame_decoder_listener_test_util.h",
     "http2/decoder/http2_frame_decoder_test.cc",
     "http2/decoder/http2_structure_decoder_test.cc",
+    "http2/decoder/http2_structure_decoder_test_util.cc",
     "http2/decoder/http2_structure_decoder_test_util.h",
     "http2/decoder/payload_decoders/altsvc_payload_decoder_test.cc",
     "http2/decoder/payload_decoders/continuation_payload_decoder_test.cc",
@@ -4421,8 +4437,6 @@ test("net_unittests") {
     "quic/core/crypto/quic_random_test.cc",
     "quic/core/crypto/strike_register_test.cc",
     "quic/core/frames/quic_frames_test.cc",
-    "quic/core/interval_set_test.cc",
-    "quic/core/interval_test.cc",
     "quic/core/quic_alarm_test.cc",
     "quic/core/quic_arena_scoped_ptr_test.cc",
     "quic/core/quic_bandwidth_test.cc",
@@ -4470,6 +4484,7 @@ test("net_unittests") {
     "quic/platform/api/quic_reference_counted_test.cc",
     "quic/platform/api/quic_str_cat_test.cc",
     "quic/platform/api/quic_text_utils_test.cc",
+    "quic/platform/api/quic_url_utils_test.cc",
     "quic/platform/impl/quic_chromium_clock_test.cc",
     "quic/quartc/quartc_alarm_factory_test.cc",
     "quic/quartc/quartc_session_test.cc",
@@ -4621,7 +4636,6 @@ test("net_unittests") {
     "spdy/spdy_framer_test.cc",
     "spdy/spdy_header_block_test.cc",
     "spdy/spdy_header_indexing_test.cc",
-    "spdy/spdy_headers_block_parser_test.cc",
     "spdy/spdy_http_stream_unittest.cc",
     "spdy/spdy_http_utils_unittest.cc",
     "spdy/spdy_network_transaction_unittest.cc",
@@ -4646,7 +4660,6 @@ test("net_unittests") {
     "spdy/spdy_test_utils.cc",
     "spdy/spdy_test_utils.h",
     "spdy/spdy_write_queue_unittest.cc",
-    "spdy/write_blocked_list_test.cc",
     "ssl/channel_id_service_unittest.cc",
     "ssl/client_cert_store_mac_unittest.cc",
     "ssl/client_cert_store_nss_unittest.cc",
@@ -4712,6 +4725,7 @@ test("net_unittests") {
   defines = []
 
   deps = [
+    ":cert_verify_proc_whitelist_unittest_data",
     ":net",
     ":simple_quic_tools",
     ":test_support",
@@ -5132,6 +5146,21 @@ if (!is_ios && !is_proto_quic) {
   }
 }
 
+action_foreach("cert_verify_proc_whitelist_unittest_data") {
+  script = "//net/tools/dafsa/make_dafsa.py"
+  sources = [
+    "//net/cert/cert_verify_proc_whitelist_unittest1.gperf",
+  ]
+  outputs = [
+    "${target_gen_dir}/cert/{{source_name_part}}-inc.cc",
+  ]
+  args = [
+    "{{source}}",
+    rebase_path("${target_gen_dir}/cert/{{source_name_part}}-inc.cc",
+                root_build_dir),
+  ]
+}
+
 # Fuzzers
 
 # This has a global (InitGlobals) that must always be linked in, so
@@ -5147,6 +5176,8 @@ source_set("net_fuzzer_test_support") {
     "filter/fuzzed_source_stream.h",
     "socket/fuzzed_datagram_client_socket.cc",
     "socket/fuzzed_datagram_client_socket.h",
+    "socket/fuzzed_server_socket.cc",
+    "socket/fuzzed_server_socket.h",
     "socket/fuzzed_socket.cc",
     "socket/fuzzed_socket.h",
     "socket/fuzzed_socket_factory.cc",
@@ -5619,30 +5650,45 @@ fuzzer_test("net_http_transport_security_state_static_fuzzer") {
       "data/fuzzer_dictionaries/net_http_transport_security_state_fuzzer.dict"
 }
 
+fuzzer_test("net_http_server_fuzzer") {
+  sources = [
+    "server/http_server_fuzzer.cc",
+  ]
+  deps = [
+    ":http_server",
+    ":net_fuzzer_test_support",
+    ":test_support",
+    "//base",
+    "//net",
+  ]
+  dict = "data/fuzzer_dictionaries/net_http_server_fuzzer.dict"
+  seed_corpus = "data/fuzzer_data/http_server_requests/"
+}
+
 if (host_toolchain == current_toolchain && !is_proto_quic) {
-  executable("domain_security_preload_generator") {
+  executable("transport_security_state_generator") {
     sources = [
-      "tools/domain_security_preload_generator/bit_writer.cc",
-      "tools/domain_security_preload_generator/bit_writer.h",
-      "tools/domain_security_preload_generator/cert_util.cc",
-      "tools/domain_security_preload_generator/cert_util.h",
-      "tools/domain_security_preload_generator/domain_security_entry.cc",
-      "tools/domain_security_preload_generator/domain_security_entry.h",
-      "tools/domain_security_preload_generator/domain_security_preload_generator.cc",
-      "tools/domain_security_preload_generator/huffman/huffman_frequency_tracker.cc",
-      "tools/domain_security_preload_generator/huffman/huffman_frequency_tracker.h",
-      "tools/domain_security_preload_generator/pinset.cc",
-      "tools/domain_security_preload_generator/pinset.h",
-      "tools/domain_security_preload_generator/pinsets.cc",
-      "tools/domain_security_preload_generator/pinsets.h",
-      "tools/domain_security_preload_generator/preloaded_state_generator.cc",
-      "tools/domain_security_preload_generator/preloaded_state_generator.h",
-      "tools/domain_security_preload_generator/spki_hash.cc",
-      "tools/domain_security_preload_generator/spki_hash.h",
-      "tools/domain_security_preload_generator/trie/trie_bit_buffer.cc",
-      "tools/domain_security_preload_generator/trie/trie_bit_buffer.h",
-      "tools/domain_security_preload_generator/trie/trie_writer.cc",
-      "tools/domain_security_preload_generator/trie/trie_writer.h",
+      "tools/transport_security_state_generator/bit_writer.cc",
+      "tools/transport_security_state_generator/bit_writer.h",
+      "tools/transport_security_state_generator/cert_util.cc",
+      "tools/transport_security_state_generator/cert_util.h",
+      "tools/transport_security_state_generator/huffman/huffman_builder.cc",
+      "tools/transport_security_state_generator/huffman/huffman_builder.h",
+      "tools/transport_security_state_generator/pinset.cc",
+      "tools/transport_security_state_generator/pinset.h",
+      "tools/transport_security_state_generator/pinsets.cc",
+      "tools/transport_security_state_generator/pinsets.h",
+      "tools/transport_security_state_generator/preloaded_state_generator.cc",
+      "tools/transport_security_state_generator/preloaded_state_generator.h",
+      "tools/transport_security_state_generator/spki_hash.cc",
+      "tools/transport_security_state_generator/spki_hash.h",
+      "tools/transport_security_state_generator/transport_security_state_entry.cc",
+      "tools/transport_security_state_generator/transport_security_state_entry.h",
+      "tools/transport_security_state_generator/transport_security_state_generator.cc",
+      "tools/transport_security_state_generator/trie/trie_bit_buffer.cc",
+      "tools/transport_security_state_generator/trie/trie_bit_buffer.h",
+      "tools/transport_security_state_generator/trie/trie_writer.cc",
+      "tools/transport_security_state_generator/trie/trie_writer.h",
     ]
     deps = [
       "//base",

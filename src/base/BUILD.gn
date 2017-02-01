@@ -149,6 +149,8 @@ component("base") {
     "allocator/allocator_check.h",
     "allocator/allocator_extension.cc",
     "allocator/allocator_extension.h",
+    "allocator/allocator_interception_mac.h",
+    "allocator/allocator_interception_mac.mm",
     "allocator/allocator_shim.h",
     "allocator/oom.h",
     "android/animation_frame_time_histogram.cc",
@@ -559,6 +561,8 @@ component("base") {
     "metrics/field_trial.h",
     "metrics/field_trial_param_associator.cc",
     "metrics/field_trial_param_associator.h",
+    "metrics/field_trial_params.cc",
+    "metrics/field_trial_params.h",
     "metrics/histogram.cc",
     "metrics/histogram.h",
     "metrics/histogram_base.cc",
@@ -1081,6 +1085,7 @@ component("base") {
     "win/wrapped_window_proc.h",
   ]
 
+  all_dependent_configs = []
   defines = []
   data = []
 
@@ -1111,9 +1116,37 @@ component("base") {
   }
 
   if (use_experimental_allocator_shim) {
-    # The allocator shim is part of the base API. This is to allow clients of
-    # base should to install hooks into the allocator path.
-    public_deps += [ "//base/allocator:unified_allocator_shim" ]
+    # TODO(primiano): support other platforms, currently this works only on
+    # Linux/CrOS/Android. http://crbug.com/550886 .
+    sources += [
+      "allocator/allocator_shim.cc",
+      "allocator/allocator_shim.h",
+      "allocator/allocator_shim_internals.h",
+      "allocator/allocator_shim_override_cpp_symbols.h",
+      "allocator/allocator_shim_override_libc_symbols.h",
+    ]
+    if (is_win) {
+      sources += [
+        "allocator/allocator_shim_default_dispatch_to_winheap.cc",
+        "allocator/allocator_shim_override_ucrt_symbols_win.h",
+        "allocator/winheap_stubs_win.cc",
+        "allocator/winheap_stubs_win.h",
+      ]
+    } else if (is_linux && use_allocator == "tcmalloc") {
+      sources += [
+        "allocator/allocator_shim_default_dispatch_to_tcmalloc.cc",
+        "allocator/allocator_shim_override_glibc_weak_symbols.h",
+      ]
+      deps += [ "//base/allocator:tcmalloc" ]
+    } else if (is_linux && use_allocator == "none") {
+      sources += [ "allocator/allocator_shim_default_dispatch_to_glibc.cc" ]
+    } else if (is_android && use_allocator == "none") {
+      sources += [
+        "allocator/allocator_shim_default_dispatch_to_linker_wrapped_symbols.cc",
+        "allocator/allocator_shim_override_linker_wrapped_symbols.h",
+      ]
+      all_dependent_configs += [ "//base/allocator:wrap_malloc_symbols" ]
+    }
   }
 
   # Allow more direct string conversions on platforms with native utf8
@@ -1374,7 +1407,7 @@ component("base") {
       "userenv.lib",
       "winmm.lib",
     ]
-    all_dependent_configs = [ ":base_win_linker_flags" ]
+    all_dependent_configs += [ ":base_win_linker_flags" ]
   } else if (!is_nacl || is_nacl_nonsfi) {
     # Non-Windows.
     deps += [ "//base/third_party/libevent" ]
@@ -1431,7 +1464,7 @@ component("base") {
     defines += [ "USE_SYMBOLIZE" ]
 
     configs += linux_configs
-    all_dependent_configs = linux_configs
+    all_dependent_configs += linux_configs
 
     # These dependencies are not required on Android, and in the case
     # of xdg_mime must be excluded due to licensing restrictions.
@@ -1930,6 +1963,7 @@ test("base_unittests") {
     "memory/aligned_memory_unittest.cc",
     "memory/discardable_shared_memory_unittest.cc",
     "memory/linked_ptr_unittest.cc",
+    "memory/memory_coordinator_client_registry_unittest.cc",
     "memory/memory_pressure_listener_unittest.cc",
     "memory/memory_pressure_monitor_chromeos_unittest.cc",
     "memory/memory_pressure_monitor_mac_unittest.cc",
@@ -1949,6 +1983,7 @@ test("base_unittests") {
     "message_loop/message_pump_glib_unittest.cc",
     "message_loop/message_pump_io_ios_unittest.cc",
     "metrics/bucket_ranges_unittest.cc",
+    "metrics/field_trial_params_unittest.cc",
     "metrics/field_trial_unittest.cc",
     "metrics/histogram_base_unittest.cc",
     "metrics/histogram_delta_serialization_unittest.cc",

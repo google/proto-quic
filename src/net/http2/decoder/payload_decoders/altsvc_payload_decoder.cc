@@ -28,7 +28,11 @@ std::ostream& operator<<(std::ostream& out,
     case AltSvcPayloadDecoder::PayloadState::kResumeDecodingStruct:
       return out << "kResumeDecodingStruct";
   }
-  return out << static_cast<int>(v);
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  int unknown = static_cast<int>(v);
+  HTTP2_BUG << "Invalid AltSvcPayloadDecoder::PayloadState: " << unknown;
+  return out << "AltSvcPayloadDecoder::PayloadState(" << unknown << ")";
 }
 
 DecodeStatus AltSvcPayloadDecoder::StartDecodingPayload(

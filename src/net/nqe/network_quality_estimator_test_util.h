@@ -181,6 +181,14 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   // Returns the number of entries in |net_log_| that have type set to |type|.
   int GetEntriesCount(NetLogEventType type) const;
 
+  // Returns the value of the parameter with name |key| from the last net log
+  // entry that has type set to |type|. Different methods are provided for
+  // values of different types.
+  std::string GetNetLogLastStringValue(NetLogEventType type,
+                                       const std::string& key) const;
+  int GetNetLogLastIntegerValue(NetLogEventType type,
+                                const std::string& key) const;
+
   using NetworkQualityEstimator::SetTickClockForTesting;
   using NetworkQualityEstimator::OnConnectionTypeChanged;
 

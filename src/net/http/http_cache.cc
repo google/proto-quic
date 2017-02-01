@@ -282,8 +282,10 @@ class HttpCache::QuicServerInfoFactoryAdaptor : public QuicServerInfoFactory {
       : http_cache_(http_cache) {
   }
 
-  QuicServerInfo* GetForServer(const QuicServerId& server_id) override {
-    return new DiskCacheBasedQuicServerInfo(server_id, http_cache_);
+  std::unique_ptr<QuicServerInfo> GetForServer(
+      const QuicServerId& server_id) override {
+    return base::MakeUnique<DiskCacheBasedQuicServerInfo>(server_id,
+                                                          http_cache_);
   }
 
  private:

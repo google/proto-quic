@@ -33,7 +33,6 @@
 #include "net/http/http_response_headers.h"
 #include "net/http/http_response_info.h"
 #include "net/http/http_status_code.h"
-#include "net/nqe/event_creator.h"
 #include "net/nqe/network_quality_estimator_params.h"
 #include "net/nqe/socket_watcher_factory.h"
 #include "net/nqe/throughput_analyzer.h"
@@ -290,7 +289,7 @@ NetworkQualityEstimator::NetworkQualityEstimator(
               variation_params)),
       forced_effective_connection_type_(
           nqe::internal::forced_effective_connection_type(variation_params)),
-      net_log_(net_log),
+      event_creator_(net_log),
       weak_ptr_factory_(this) {
   // None of the algorithms can have an empty name.
   DCHECK(algorithm_name_to_enum_.end() ==
@@ -442,7 +441,6 @@ void NetworkQualityEstimator::NotifyHeadersReceived(const URLRequest& request) {
                      weak_ptr_factory_.GetWeakPtr(), measuring_delay),
           measuring_delay);
     }
-    UpdateSignalStrength();
   }
 
   LoadTimingInfo load_timing_info;
@@ -747,12 +745,9 @@ void NetworkQualityEstimator::ReportEffectiveConnectionTypeForTesting(
     EffectiveConnectionType effective_connection_type) {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  nqe::internal::AddEffectiveConnectionTypeChangedEventToNetLog(
-      net_log_, typical_network_quality_[effective_connection_type].http_rtt(),
-      typical_network_quality_[effective_connection_type].transport_rtt(),
-      typical_network_quality_[effective_connection_type]
-          .downstream_throughput_kbps(),
-      effective_connection_type);
+  event_creator_.MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
+      effective_connection_type_,
+      typical_network_quality_[effective_connection_type]);
 
   for (auto& observer : effective_connection_type_observer_list_)
     observer.OnEffectiveConnectionTypeChanged(effective_connection_type);
@@ -838,7 +833,6 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   estimated_quality_at_last_main_frame_ = nqe::internal::NetworkQuality();
   throughput_analyzer_->OnConnectionTypeChanged();
   MaybeComputeEffectiveConnectionType();
-  UpdateSignalStrength();
 }
 
 void NetworkQualityEstimator::MaybeQueryExternalEstimateProvider() const {
@@ -1020,6 +1014,8 @@ void NetworkQualityEstimator::RecordMetricsOnMainFrameRequest() const {
 void NetworkQualityEstimator::ComputeEffectiveConnectionType() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  UpdateSignalStrength();
+
   const base::TimeTicks now = tick_clock_->NowTicks();
 
   const EffectiveConnectionType past_type = effective_connection_type_;
@@ -1041,6 +1037,9 @@ void NetworkQualityEstimator::ComputeEffectiveConnectionType() {
 
   if (past_type != effective_connection_type_)
     NotifyObserversOfEffectiveConnectionTypeChanged();
+
+  event_creator_.MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
+      effective_connection_type_, network_quality_);
 
   rtt_observations_size_at_last_ect_computation_ = rtt_observations_.Size();
   throughput_observations_size_at_last_ect_computation_ =
@@ -1400,17 +1399,6 @@ bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
 
   const base::TimeTicks now = tick_clock_->NowTicks();
 
-  if (effective_connection_type_ == EFFECTIVE_CONNECTION_TYPE_UNKNOWN) {
-    // Read the effective connection type from the cached estimate.
-    last_effective_connection_type_computation_ = now;
-    network_quality_ = cached_network_quality.network_quality();
-    effective_connection_type_ =
-        cached_network_quality.effective_connection_type();
-
-    if (effective_connection_type_ != EFFECTIVE_CONNECTION_TYPE_UNKNOWN)
-      NotifyObserversOfEffectiveConnectionTypeChanged();
-  }
-
   if (cached_network_quality.network_quality().downstream_throughput_kbps() !=
       nqe::internal::kInvalidThroughput) {
     ThroughputObservation througphput_observation(
@@ -1440,6 +1428,7 @@ bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
     rtt_observations_.AddObservation(rtt_observation);
     NotifyObserversOfRTT(rtt_observation);
   }
+  ComputeEffectiveConnectionType();
   return true;
 }
 
@@ -1586,11 +1575,6 @@ void NetworkQualityEstimator::
     NotifyObserversOfEffectiveConnectionTypeChanged() {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_NE(EFFECTIVE_CONNECTION_TYPE_LAST, effective_connection_type_);
-
-  nqe::internal::AddEffectiveConnectionTypeChangedEventToNetLog(
-      net_log_, network_quality_.http_rtt(), network_quality_.transport_rtt(),
-      network_quality_.downstream_throughput_kbps(),
-      effective_connection_type_);
 
   // TODO(tbansal): Add hysteresis in the notification.
   for (auto& observer : effective_connection_type_observer_list_)

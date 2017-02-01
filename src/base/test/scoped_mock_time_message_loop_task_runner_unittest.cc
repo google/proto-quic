@@ -26,9 +26,13 @@ TaskRunner* GetCurrentTaskRunner() {
   return MessageLoop::current()->task_runner().get();
 }
 
+void AssignTrue(bool* out) {
+  *out = true;
+}
+
 // Pops a task from the front of |pending_tasks| and returns it.
 TestPendingTask PopFront(std::deque<TestPendingTask>* pending_tasks) {
-  TestPendingTask task = pending_tasks->front();
+  TestPendingTask task = std::move(pending_tasks->front());
   pending_tasks->pop_front();
   return task;
 }
@@ -69,10 +73,13 @@ TEST_F(ScopedMockTimeMessageLoopTaskRunnerTest,
   auto scoped_task_runner_ =
       base::MakeUnique<ScopedMockTimeMessageLoopTaskRunner>();
 
+  bool task_10_has_run = false;
+  bool task_11_has_run = false;
+
   Closure task_1 = Bind(&DoNothing);
   Closure task_2 = Bind(&DoNothing);
-  Closure task_10 = Bind(&DoNothing);
-  Closure task_11 = Bind(&DoNothing);
+  Closure task_10 = Bind(&AssignTrue, &task_10_has_run);
+  Closure task_11 = Bind(&AssignTrue, &task_11_has_run);
 
   constexpr TimeDelta task_1_delay = TimeDelta::FromSeconds(1);
   constexpr TimeDelta task_2_delay = TimeDelta::FromSeconds(2);
@@ -96,11 +103,15 @@ TEST_F(ScopedMockTimeMessageLoopTaskRunnerTest,
   EXPECT_EQ(2U, pending_tasks.size());
 
   TestPendingTask pending_task = PopFront(&pending_tasks);
-  EXPECT_TRUE(task_10.Equals(pending_task.task));
+  EXPECT_FALSE(task_10_has_run);
+  std::move(pending_task.task).Run();
+  EXPECT_TRUE(task_10_has_run);
   EXPECT_EQ(task_10_delay - step_time_by, pending_task.delay);
 
   pending_task = PopFront(&pending_tasks);
-  EXPECT_TRUE(task_11.Equals(pending_task.task));
+  EXPECT_FALSE(task_11_has_run);
+  std::move(pending_task.task).Run();
+  EXPECT_TRUE(task_11_has_run);
   EXPECT_EQ(task_11_delay - step_time_by, pending_task.delay);
 }
 

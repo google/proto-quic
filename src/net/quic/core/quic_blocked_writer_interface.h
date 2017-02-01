@@ -24,15 +24,6 @@ class QUIC_EXPORT_PRIVATE QuicBlockedWriterInterface {
   virtual void OnCanWrite() = 0;
 };
 
-// Hash pointers as if they were int's, but bring more entropy to the lower
-// bits.
-struct QuicBlockedWriterInterfacePtrHash {
-  std::size_t operator()(const net::QuicBlockedWriterInterface* ptr) const {
-    size_t k = reinterpret_cast<size_t>(ptr);
-    return k + (k >> 6);
-  }
-};
-
 }  // namespace net
 
 #endif  // NET_QUIC_CORE_QUIC_BLOCKED_WRITER_INTERFACE_H_

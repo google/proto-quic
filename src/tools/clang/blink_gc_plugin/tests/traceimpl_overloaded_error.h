@@ -12,62 +12,41 @@ namespace blink {
 class X : public GarbageCollected<X> {
  public:
   void Trace(Visitor*) {}
-  void Trace(InlinedGlobalMarkingVisitor) {}
 };
 
 class InlinedBase : public GarbageCollected<InlinedBase> {
  public:
-  virtual void Trace(Visitor* visitor) { TraceImpl(visitor); }
-  virtual void Trace(InlinedGlobalMarkingVisitor visitor) {
-    TraceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
+  virtual void Trace(Visitor* visitor) {
     // Missing visitor->Trace(x_base_).
   }
 
+ private:
   Member<X> x_base_;
 };
 
 class InlinedDerived : public InlinedBase {
  public:
-  void Trace(Visitor* visitor) override { TraceImpl(visitor); }
-  void Trace(InlinedGlobalMarkingVisitor visitor) override {
-    TraceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
+  void Trace(Visitor* visitor) override {
     // Missing visitor->Trace(x_derived_) and InlinedBase::Trace(visitor).
   }
 
+ private:
   Member<X> x_derived_;
 };
 
 class ExternBase : public GarbageCollected<ExternBase> {
  public:
   virtual void Trace(Visitor*);
-  virtual void Trace(InlinedGlobalMarkingVisitor);
 
  private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher);
-
   Member<X> x_base_;
 };
 
 class ExternDerived : public ExternBase {
  public:
   void Trace(Visitor*) override;
-  void Trace(InlinedGlobalMarkingVisitor) override;
 
  private:
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher);
-
   Member<X> x_derived_;
 };
 

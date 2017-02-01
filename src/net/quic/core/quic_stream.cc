@@ -72,7 +72,10 @@ QuicStream::QuicStream(QuicStreamId id, QuicSession* session)
                        perspective_,
                        GetReceivedFlowControlWindow(session),
                        GetInitialStreamFlowControlWindowToSend(session),
-                       session_->flow_controller()->auto_tune_receive_window()),
+                       session_->flow_controller()->auto_tune_receive_window(),
+                       session_->flow_control_invariant()
+                           ? session_->flow_controller()
+                           : nullptr),
       connection_flow_controller_(session_->flow_controller()),
       stream_contributes_to_connection_flow_control_(true),
       busy_counter_(0) {
@@ -346,6 +349,9 @@ QuicConsumedData QuicStream::WritevData(
     }
   } else {
     session_->MarkConnectionLevelWriteBlocked(id());
+  }
+  if (consumed_data.bytes_consumed > 0 || consumed_data.fin_consumed) {
+    busy_counter_ = 0;
   }
   return consumed_data;
 }

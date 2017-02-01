@@ -224,7 +224,8 @@ case $lsb_release in
     fi
     ;;
   *)
-    arm_list="libc6-dev-armhf-cross
+    arm_list="binutils-aarch64-linux-gnu
+              libc6-dev-armhf-cross
               linux-libc-dev-armhf-cross
               ${GPP_ARM_PACKAGE}"
     ;;

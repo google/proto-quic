@@ -7,8 +7,13 @@
 
 #include <stdint.h>
 
+#include "base/macros.h"
+#include "base/threading/thread_checker.h"
 #include "base/time/time.h"
+#include "net/base/net_export.h"
+#include "net/log/net_log_with_source.h"
 #include "net/nqe/effective_connection_type.h"
+#include "net/nqe/network_quality.h"
 
 namespace net {
 
@@ -18,17 +23,34 @@ namespace nqe {
 
 namespace internal {
 
-// Adds network quality changed event to the net-internals log. |http_rtt| is
-// the estimate of the HTTP RTT. |transport_rtt| is the estimate of the
-// transport RTT. |downstream_throughput_kbps| is the estimate of the
-// downstream throughput (in kilobits per second). |effective_connection_type|
-// is the current estimate of the effective connection type.
-void AddEffectiveConnectionTypeChangedEventToNetLog(
-    const NetLogWithSource& net_log,
-    base::TimeDelta http_rtt,
-    base::TimeDelta transport_rtt,
-    int32_t downstream_throughput_kbps,
-    EffectiveConnectionType effective_connection_type);
+// Class that adds net log events for network quality estimator.
+class NET_EXPORT_PRIVATE EventCreator {
+ public:
+  explicit EventCreator(NetLogWithSource net_log);
+  ~EventCreator();
+
+  // May add network quality changed event to the net-internals log if there
+  // is a change in the effective connection type, or if there is a change in
+  // the availability of HTTP RTT, transport RTT or bandwidth.
+  // |effective_connection_type| is the current effective connection type.
+  // |network_quality| is the current network quality.
+  void MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
+      EffectiveConnectionType effective_connection_type,
+      const NetworkQuality& network_quality);
+
+ private:
+  NetLogWithSource net_log_;
+
+  // The effective connection type when the net log event was last added.
+  EffectiveConnectionType past_effective_connection_type_;
+
+  //  The network quality when the net log event was last added.
+  NetworkQuality past_network_quality_;
+
+  base::ThreadChecker thread_checker_;
+
+  DISALLOW_COPY_AND_ASSIGN(EventCreator);
+};
 
 }  // namespace internal
 

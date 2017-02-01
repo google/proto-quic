@@ -5,6 +5,7 @@
 #include "net/http2/decoder/http2_frame_decoder.h"
 
 #include "net/http2/http2_constants.h"
+#include "net/http2/tools/http2_bug_tracker.h"
 
 namespace net {
 
@@ -19,7 +20,11 @@ std::ostream& operator<<(std::ostream& out, Http2FrameDecoder::State v) {
     case Http2FrameDecoder::State::kDiscardPayload:
       return out << "kDiscardPayload";
   }
-  return out << static_cast<int>(v);
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  int unknown = static_cast<int>(v);
+  HTTP2_BUG << "Http2FrameDecoder::State " << unknown;
+  return out << "Http2FrameDecoder::State(" << unknown << ")";
 }
 
 Http2FrameDecoder::Http2FrameDecoder(Http2FrameDecoderListener* listener)

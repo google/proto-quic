@@ -97,9 +97,9 @@ class _BlinkPerfMeasurement(legacy_page_test.LegacyPageTest):
       options.AppendExtraBrowserArgs('--expose-internals-for-testing')
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression('testRunner.isDone', 600)
+    tab.WaitForJavaScriptCondition2('testRunner.isDone', timeout=600)
 
-    log = tab.EvaluateJavaScript('document.getElementById("log").innerHTML')
+    log = tab.EvaluateJavaScript2('document.getElementById("log").innerHTML')
 
     for line in log.splitlines():
       if line.startswith("FATAL: "):
@@ -164,7 +164,8 @@ class BlinkPerfCSS(_BlinkPerfBenchmark):
   subdir = 'CSS'
 
 
-@benchmark.Disabled('android-webview', # http://crbug.com/593200
+@benchmark.Disabled('android', # http://crbug.com/685320
+                    'android-webview', # http://crbug.com/593200
                     'reference')  # http://crbug.com/576779
 class BlinkPerfCanvas(_BlinkPerfBenchmark):
   tag = 'canvas'

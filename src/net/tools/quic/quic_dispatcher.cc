@@ -501,7 +501,7 @@ void QuicDispatcher::OnConnectionClosed(QuicConnectionId connection_id,
     return;
   }
 
-  DVLOG_IF(1, error != QUIC_NO_ERROR)
+  QUIC_DLOG_IF(INFO, error != QUIC_NO_ERROR)
       << "Closing connection (" << connection_id
       << ") due to error: " << QuicErrorCodeToString(error)
       << ", with details: " << error_details;

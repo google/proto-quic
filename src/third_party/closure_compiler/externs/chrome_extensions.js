@@ -49,7 +49,7 @@
  * The best practices for each are described in more detail below.  It
  * should be noted that, due to historical reasons, and the evolutionary
  * nature of this file, much this file currently violates the best practices
- * described below. As changed are made, the changes should adhere to the
+ * described below. As changes are made, the changes should adhere to the
  * best practices.
  *
  * A. When to Add Packages to this File?
@@ -126,7 +126,7 @@
  * Always qualify the type name to reduce top-level pollution in this file:
  *
  *   Do:
- *        chrome.extension.Port = function() {}
+ *        chrome.runtime.Port = function() {}
  *   Don't:
  *        function Port() {}
  *
@@ -6587,7 +6587,6 @@ function Debuggee() {}
 
 /** @type {number} */
 Debuggee.prototype.tabId;
-
 
 
 /**

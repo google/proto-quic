@@ -8,9 +8,6 @@ from telemetry.page import legacy_page_test
 from telemetry.value import scalar
 
 
-_JS = 'chrome.gpuBenchmarking.printToSkPicture("{0}");'
-
-
 class SkpicturePrinter(legacy_page_test.LegacyPageTest):
 
   def __init__(self, skp_outdir):
@@ -27,12 +24,13 @@ class SkpicturePrinter(legacy_page_test.LegacyPageTest):
       raise legacy_page_test.MeasurementFailure(
           'SkPicture printing not supported on this platform')
 
-    # Replace win32 path separator char '\' with '\\'.
     outpath = os.path.abspath(
         os.path.join(self._skp_outdir, page.file_safe_name))
-    # TODO(catapult:#3028): Fix interpolation of JavaScript values.
-    js = _JS.format(outpath.replace('\\', '\\\\'))
-    tab.EvaluateJavaScript(js)
+    # Replace win32 path separator char '\' with '\\'.
+    outpath = outpath.replace('\\', '\\\\')
+    tab.EvaluateJavaScript2(
+        'chrome.gpuBenchmarking.printToSkPicture({{ outpath }});',
+        outpath=outpath)
     pictures = glob.glob(os.path.join(outpath, '*.skp'))
     results.AddValue(scalar.ScalarValue(
         results.current_page, 'saved_picture_count', 'count', len(pictures)))

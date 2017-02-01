@@ -52,7 +52,6 @@ class NET_EXPORT CanonicalCookie {
                                                  bool secure,
                                                  bool http_only,
                                                  CookieSameSite same_site,
-                                                 bool enforce_strict_secure,
                                                  CookiePriority priority);
 
   // Creates a canonical cookie from unparsed attribute values.

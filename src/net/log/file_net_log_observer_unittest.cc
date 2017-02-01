@@ -357,22 +357,19 @@ TEST_P(FileNetLogObserverTest, CustomConstants) {
   ASSERT_EQ(kConstantString, constants_string);
 }
 
-TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithContext) {
+TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithPolledData) {
   TestClosure closure;
 
   StartObserving(nullptr, nullptr);
 
-  // Create unique context.
-  TestURLRequestContext context(true);
-  context.set_net_log(&net_log_);
-  const int kDummyParam = 75;
-  std::unique_ptr<HttpNetworkSession::Params> params(
-      new HttpNetworkSession::Params);
-  params->quic_idle_connection_timeout_seconds = kDummyParam;
-  context.set_http_network_session_params(std::move(params));
-  context.Init();
+  // Create dummy polled data
+  const char kDummyPolledDataPath[] = "dummy_path";
+  const char kDummyPolledDataString[] = "dummy_info";
+  std::unique_ptr<base::DictionaryValue> dummy_polled_data =
+      base::MakeUnique<base::DictionaryValue>();
+  dummy_polled_data->SetString(kDummyPolledDataPath, kDummyPolledDataString);
 
-  logger_->StopObserving(&context, closure.closure());
+  logger_->StopObserving(std::move(dummy_polled_data), closure.closure());
 
   closure.WaitForResult();
 
@@ -386,19 +383,15 @@ TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithContext) {
   // Make sure additional information is present and validate it.
   base::DictionaryValue* dict;
   ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::DictionaryValue* tab_info;
-  base::DictionaryValue* quic_info;
-  ASSERT_TRUE(dict->GetDictionary("tabInfo", &tab_info));
-  ASSERT_TRUE(tab_info->GetDictionary("quicInfo", &quic_info));
-  base::Value* timeout_value = nullptr;
-  int timeout;
-  ASSERT_TRUE(
-      quic_info->Get("idle_connection_timeout_seconds", &timeout_value));
-  ASSERT_TRUE(timeout_value->GetAsInteger(&timeout));
-  ASSERT_EQ(timeout, kDummyParam);
+  base::DictionaryValue* polled_data;
+  std::string dummy_string;
+  ASSERT_TRUE(dict->GetDictionary("polledData", &polled_data));
+  ASSERT_TRUE(polled_data->GetString(kDummyPolledDataPath, &dummy_string));
+  ASSERT_EQ(dummy_string, kDummyPolledDataString);
 }
 
-TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithContextWithActiveRequest) {
+TEST_P(FileNetLogObserverTest,
+       GeneratesValidJSONWithPolledDataWithActiveRequest) {
   TestClosure closure;
 
   // Create context, start a request.
@@ -415,7 +408,8 @@ TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithContextWithActiveRequest) {
 
   StartObserving(nullptr, &context);
 
-  logger_->StopObserving(&context, closure.closure());
+  logger_->StopObserving(net::GetNetInfo(&context, NET_INFO_ALL_SOURCES),
+                         closure.closure());
 
   closure.WaitForResult();
 
@@ -429,8 +423,8 @@ TEST_P(FileNetLogObserverTest, GeneratesValidJSONWithContextWithActiveRequest) {
   // Make sure additional information is present, but don't validate it.
   base::DictionaryValue* dict;
   ASSERT_TRUE(root->GetAsDictionary(&dict));
-  base::DictionaryValue* tab_info;
-  ASSERT_TRUE(dict->GetDictionary("tabInfo", &tab_info));
+  base::DictionaryValue* polled_data;
+  ASSERT_TRUE(dict->GetDictionary("polledData", &polled_data));
 }
 
 // Adds events concurrently from several different threads. The exact order of

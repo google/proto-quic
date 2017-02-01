@@ -18,7 +18,7 @@ class LoadingMetric(Metric):
     raise NotImplementedError()
 
   def AddResults(self, tab, results):
-    load_timings = tab.EvaluateJavaScript('window.performance.timing')
+    load_timings = tab.EvaluateJavaScript2('window.performance.timing')
 
     # NavigationStart relative markers in milliseconds.
     load_start = (

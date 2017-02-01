@@ -1,0 +1,82 @@
+defines = -DGL_GLEXT_PROTOTYPES -DPPAPI_TEST_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -D_POSIX_C_SOURCE=199506 -D_XOPEN_SOURCE=600 -D_GNU_SOURCE=1 -D__STDC_LIMIT_MACROS=1 -DNACL_BUILD_ARCH=pnacl -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../../ppapi/lib/gl/include -I../../../../.. -Inewlib_pnacl/gen
+cflags = -fno-strict-aliasing -fcolor-diagnostics -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -O0 -g2 -fvisibility=hidden
+cflags_c =
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = ppapi_nacl_tests_nexe
+root_out_dir = newlib_pnacl
+target_out_dir = newlib_pnacl/obj/ppapi
+target_output_name = ppapi_nacl_tests_newlib_pnacl
+
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/gl2ext_ppapi.o: newlib_pnacl_cc ../../../../../ppapi/lib/gl/gles2/gl2ext_ppapi.c
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/gles2.o: newlib_pnacl_cc ../../../../../ppapi/lib/gl/gles2/gles2.c
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_audio.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_config.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_audio_config.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_encoder.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_audio_encoder.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_case.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_case.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_compositor.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_compositor.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_console.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_console.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_core.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_core.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_cursor_control.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_cursor_control.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_empty.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_empty.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_io.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_file_io.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_ref.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_file_ref.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_system.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_file_system.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_fullscreen.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_fullscreen.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_2d.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_graphics_2d.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_3d.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_graphics_3d.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_host_resolver.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_host_resolver_private.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private_disallowed.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_host_resolver_private_disallowed.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_image_data.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_image_data.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_ime_input_event.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_ime_input_event.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_input_event.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_input_event.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_audio_track.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_media_stream_audio_track.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_video_track.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_media_stream_video_track.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_memory.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_memory.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_message_handler.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_message_handler.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_message_loop.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_message_loop.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_cursor.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_mouse_cursor.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_lock.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_mouse_lock.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_net_address.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address_private_untrusted.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_net_address_private_untrusted.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_network_monitor.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_network_monitor.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_network_proxy.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_network_proxy.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_output_protection_private.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_output_protection_private.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_paint_aggregator.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_paint_aggregator.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_post_message.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_post_message.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_printing.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_printing.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_tcp_server_socket_private.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_tcp_socket.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_tcp_socket_private.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_test_internals.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_test_internals.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_trace_event.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_trace_event.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_truetype_font.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_truetype_font.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_udp_socket.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_udp_socket_private.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_uma.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_uma.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_url_loader.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_url_loader.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_url_request.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_url_request.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_utils.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_utils.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_var.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_var.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_var_resource.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_var_resource.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_decoder.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_video_decoder.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_destination.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_video_destination.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_encoder.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_video_encoder.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_source.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_video_source.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_view.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_view.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_websocket.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_websocket.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/testing_instance.o: newlib_pnacl_cxx ../../../../../ppapi/tests/testing_instance.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_c_includes.o: newlib_pnacl_cc ../../../../../ppapi/tests/test_c_includes.c
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_cpp_includes.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_cpp_includes.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_struct_sizes.o: newlib_pnacl_cc ../../../../../ppapi/tests/test_struct_sizes.c
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_nacl_irt_stack_alignment.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_nacl_irt_stack_alignment.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private_disallowed.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_tcp_server_socket_private_disallowed.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private_disallowed.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_tcp_socket_private_disallowed.cc
+build newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private_disallowed.o: newlib_pnacl_cxx ../../../../../ppapi/tests/test_udp_socket_private_disallowed.cc
+
+build newlib_pnacl/ppapi_nacl_tests_newlib_pnacl.pexe newlib_pnacl/exe.unstripped/ppapi_nacl_tests_newlib_pnacl.pexe: newlib_pnacl_link newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/gl2ext_ppapi.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/gles2.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_config.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_audio_encoder.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_case.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_compositor.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_console.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_core.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_cursor_control.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_empty.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_io.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_ref.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_file_system.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_fullscreen.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_2d.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_graphics_3d.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_host_resolver_private_disallowed.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_image_data.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_ime_input_event.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_input_event.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_audio_track.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_media_stream_video_track.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_memory.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_message_handler.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_message_loop.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_cursor.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_mouse_lock.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_net_address_private_untrusted.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_network_monitor.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_network_proxy.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_output_protection_private.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_paint_aggregator.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_post_message.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_printing.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_test_internals.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_trace_event.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_truetype_font.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_uma.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_url_loader.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_url_request.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_utils.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_var.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_var_resource.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_decoder.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_destination.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_encoder.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_video_source.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_view.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_websocket.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/testing_instance.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_c_includes.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_cpp_includes.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_struct_sizes.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_nacl_irt_stack_alignment.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_server_socket_private_disallowed.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_tcp_socket_private_disallowed.o newlib_pnacl/obj/ppapi/ppapi_nacl_tests_nexe/test_udp_socket_private_disallowed.o newlib_pnacl/obj/ppapi/libppapi_cpp_lib.a newlib_pnacl/obj/ppapi/native_client/src/untrusted/irt_stub/libppapi_stub.a || newlib_pnacl/obj/build/config/nacl/nacl_base.stamp newlib_pnacl/obj/ppapi/native_client/ppapi_lib.stamp
+  ldflags = -pthread -Wl,--fatal-warnings
+  libs =
+  output_extension = .pexe
+  output_dir = newlib_pnacl

@@ -11,6 +11,8 @@
 #define QUIC_LOG_EVERY_N_SEC_IMPL(severity, seconds) QUIC_LOG_IMPL(severity)
 #define QUIC_LOG_FIRST_N_IMPL(severity, n) QUIC_LOG_IMPL(severity)
 #define QUIC_DLOG_IMPL(severity) QUIC_CHROMIUM_DLOG_##severity
+#define QUIC_DLOG_IF_IMPL(severity, condition) \
+  QUIC_CHROMIUM_DLOG_IF_##severity(condition)
 #define QUIC_LOG_IF_IMPL(severity, condition) \
   QUIC_CHROMIUM_LOG_IF_##severity(condition)
 
@@ -32,6 +34,12 @@
 #define QUIC_CHROMIUM_LOG_IF_FATAL(condition) LOG_IF(FATAL, condition)
 #define QUIC_CHROMIUM_LOG_IF_DFATAL(condition) LOG_IF(DFATAL, condition)
 
+#define QUIC_CHROMIUM_DLOG_IF_INFO(condition) DVLOG_IF(1, condition)
+#define QUIC_CHROMIUM_DLOG_IF_WARNING(condition) DLOG_IF(WARNING, condition)
+#define QUIC_CHROMIUM_DLOG_IF_ERROR(condition) DLOG_IF(ERROR, condition)
+#define QUIC_CHROMIUM_DLOG_IF_FATAL(condition) DLOG_IF(FATAL, condition)
+#define QUIC_CHROMIUM_DLOG_IF_DFATAL(condition) DLOG_IF(DFATAL, condition)
+
 #define QUIC_DVLOG_IMPL(verbose_level) DVLOG(verbose_level)
 
 #if defined(OS_WIN)
@@ -42,6 +50,9 @@
 #define QUIC_CHROMIUM_LOG_0 QUIC_CHROMIUM_LOG_ERROR
 #define QUIC_CHROMIUM_DLOG_0 QUIC_CHROMIUM_DLOG_ERROR
 #define QUIC_CHROMIUM_LOG_IF_0 QUIC_CHROMIUM_LOG_IF_ERROR
+#define QUIC_CHROMIUM_DLOG_IF_0 QUIC_CHROMIUM_DLOG_IF_ERROR
 #endif
+
+#define QUIC_PREDICT_FALSE_IMPL(x) x
 
 #endif  // NET_QUIC_PLATFORM_IMPL_QUIC_LOGGING_IMPL_H_

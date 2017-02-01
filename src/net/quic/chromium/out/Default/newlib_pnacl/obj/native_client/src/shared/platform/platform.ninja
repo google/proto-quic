@@ -1,0 +1,26 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -D_POSIX_C_SOURCE=199506 -D_XOPEN_SOURCE=600 -D_GNU_SOURCE=1 -D__STDC_LIMIT_MACROS=1 -DNACL_BUILD_ARCH=pnacl -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../.. -Inewlib_pnacl/gen
+cflags = -fno-strict-aliasing -fcolor-diagnostics -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -O0 -g2 -fvisibility=hidden
+cflags_c =
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = platform
+root_out_dir = newlib_pnacl
+target_out_dir = newlib_pnacl/obj/native_client/src/shared/platform
+target_output_name = libplatform
+
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_check.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/nacl_check.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_log.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/nacl_log.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/condition_variable.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/condition_variable.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/lock.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/lock.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_error.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/nacl_error.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_exit.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/nacl_exit.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_thread_id.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/nacl_thread_id.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_threads.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/nacl_threads.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_timestamp.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/posix/nacl_timestamp.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_sync_checked.o: newlib_pnacl_cc ../../../../../native_client/src/shared/platform/nacl_sync_checked.c
+build newlib_pnacl/obj/native_client/src/shared/platform/platform/refcount_base.o: newlib_pnacl_cxx ../../../../../native_client/src/shared/platform/refcount_base.cc
+
+build newlib_pnacl/obj/native_client/src/shared/platform/libplatform.a: newlib_pnacl_alink newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_check.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_log.o newlib_pnacl/obj/native_client/src/shared/platform/platform/condition_variable.o newlib_pnacl/obj/native_client/src/shared/platform/platform/lock.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_error.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_exit.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_thread_id.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_threads.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_timestamp.o newlib_pnacl/obj/native_client/src/shared/platform/platform/nacl_sync_checked.o newlib_pnacl/obj/native_client/src/shared/platform/platform/refcount_base.o || newlib_pnacl/obj/build/config/nacl/nacl_base.stamp newlib_pnacl/obj/native_client/src/shared/gio/libgio.a
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl/obj/native_client/src/shared/platform

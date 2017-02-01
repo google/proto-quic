@@ -1,0 +1,16 @@
+defines = -DGFX_IPC_GEOMETRY_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../.. -Iirt_x64/gen
+cflags = -fno-strict-aliasing -fcolor-diagnostics -integrated-as -m64 -march=x86-64 -fasynchronous-unwind-tables -fomit-frame-pointer -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Os -ffunction-sections -fdata-sections -g2 -fvisibility=hidden
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = geometry
+root_out_dir = irt_x64
+target_out_dir = irt_x64/obj/ui/gfx/ipc/geometry
+target_output_name = libgfx_ipc_geometry
+
+build irt_x64/obj/ui/gfx/ipc/geometry/geometry.inputdeps.stamp: irt_x64_stamp irt_x64/obj/base/build_date.stamp irt_x64/obj/base/debugging_flags.stamp irt_x64/obj/base/allocator/features.stamp irt_x64/obj/ipc/mojom__generator.stamp irt_x64/obj/ipc/mojom__type_mappings.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__generator.stamp irt_x64/obj/mojo/public/interfaces/bindings/bindings__type_mappings.stamp irt_x64/obj/mojo/public/tools/bindings/precompile_templates.stamp ./tls_edit
+build irt_x64/obj/ui/gfx/ipc/geometry/geometry/gfx_param_traits.o: irt_x64_cxx ../../../../../ui/gfx/ipc/geometry/gfx_param_traits.cc || irt_x64/obj/ui/gfx/ipc/geometry/geometry.inputdeps.stamp
+
+build irt_x64/obj/ui/gfx/ipc/geometry/libgfx_ipc_geometry.a: irt_x64_alink irt_x64/obj/ui/gfx/ipc/geometry/geometry/gfx_param_traits.o || irt_x64/obj/base/libbase.a irt_x64/obj/ipc/libipc.a irt_x64/obj/ui/gfx/geometry/libgeometry.a irt_x64/obj/build/config/sanitizers/deps.stamp irt_x64/obj/base/libbase_static.a irt_x64/obj/base/third_party/dynamic_annotations/dynamic_annotations.stamp irt_x64/obj/third_party/modp_b64/libmodp_b64.a irt_x64/obj/ipc/param_traits.stamp irt_x64/obj/mojo/public/cpp/bindings/libbindings.a irt_x64/obj/mojo/public/cpp/bindings/struct_traits.stamp irt_x64/obj/mojo/public/cpp/system/system.stamp irt_x64/obj/mojo/public/c/system/libmojo_public_system.a irt_x64/obj/mojo/public/interfaces/bindings/bindings_cpp_sources.stamp irt_x64/obj/ipc/mojom.stamp irt_x64/obj/ipc/mojom_cpp_sources.stamp irt_x64/obj/ui/gfx/gfx_export.stamp
+  arflags =
+  output_extension = .a
+  output_dir = irt_x64/obj/ui/gfx/ipc/geometry

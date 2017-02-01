@@ -4,6 +4,7 @@
 
 """Runs Mozilla's Kraken JavaScript benchmark."""
 
+import json
 import os
 
 from core import perf_benchmark
@@ -85,18 +86,17 @@ class _KrakenMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression(
-        'document.title.indexOf("Results") != -1', 700)
+    tab.WaitForJavaScriptCondition2(
+        'document.title.indexOf("Results") != -1', timeout=700)
     tab.WaitForDocumentReadyStateToBeComplete()
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    js_get_results = """
+    result_dict = json.loads(tab.EvaluateJavaScript2("""
         var formElement = document.getElementsByTagName("input")[0];
         decodeURIComponent(formElement.value.split("?")[1]);
-        """
-    result_dict = eval(tab.EvaluateJavaScript(js_get_results))
+        """))
     total = 0
     for key in result_dict:
       if key == 'v':

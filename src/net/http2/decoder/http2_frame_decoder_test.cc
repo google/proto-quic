@@ -153,8 +153,7 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
 
     // Repeat with more input; it should stop without reading that input.
     string next_frame = Random().RandString(10);
-    string input;
-    payload.AppendToString(&input);
+    string input(payload.data(), payload.size());
     input += next_frame;
 
     ResetDecodeSpeedCounters();

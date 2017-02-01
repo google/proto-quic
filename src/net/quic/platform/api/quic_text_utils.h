@@ -40,6 +40,24 @@ class QuicTextUtils {
     return QuicTextUtilsImpl::StringToUint64(in, out);
   }
 
+  // Returns true if |in| represents a valid int, and stores that value in
+  // |out|.
+  static bool StringToInt(base::StringPiece in, int* out) {
+    return QuicTextUtilsImpl::StringToInt(in, out);
+  }
+
+  // Returns true if |in| represents a valid uint32, and stores that value in
+  // |out|.
+  static bool StringToUint32(base::StringPiece in, uint32_t* out) {
+    return QuicTextUtilsImpl::StringToUint32(in, out);
+  }
+
+  // Returns true if |in| represents a valid size_t, and stores that value in
+  // |out|.
+  static bool StringToSizeT(base::StringPiece in, size_t* out) {
+    return QuicTextUtilsImpl::StringToSizeT(in, out);
+  }
+
   // Returns a new string representing |in|.
   static std::string Uint64ToString(uint64_t in) {
     return QuicTextUtilsImpl::Uint64ToString(in);

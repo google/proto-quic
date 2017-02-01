@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+#include "base/gtest_prod_util.h"
 #include "base/strings/string_piece.h"
 #include "base/sys_byteorder.h"
 #include "net/base/net_export.h"
@@ -38,14 +39,6 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   // Returns the total size of the SpdyFrameBuilder's data, which may include
   // multiple frames.
   size_t length() const { return offset_ + length_; }
-
-  // Returns a writeable buffer of given size in bytes, to be appended to the
-  // currently written frame. Does bounds checking on length but does not
-  // increment the underlying iterator. To do so, consumers should subsequently
-  // call Seek().
-  // In general, consumers should use Write*() calls instead of this.
-  // Returns NULL on failure.
-  char* GetWritableBuffer(size_t length);
 
   // Seeks forward by the given number of bytes. Useful in conjunction with
   // GetWriteableBuffer() above.
@@ -106,24 +99,23 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   bool WriteBytes(const void* data, uint32_t data_len);
 
   // Update (in-place) the length field in the frame being built to reflect the
-  // current actual length of bytes written to said frame through this builder.
-  // The framer parameter is used to determine version-specific location and
-  // size information of the length field to be written, and must be initialized
-  // with the correct version for the frame being written.
-  bool RewriteLength(const SpdyFramer& framer);
-
-  // Update (in-place) the length field in the frame being built to reflect the
   // given length.
   // The framer parameter is used to determine version-specific location and
   // size information of the length field to be written, and must be initialized
   // with the correct version for the frame being written.
   bool OverwriteLength(const SpdyFramer& framer, size_t length);
 
-  // Update (in-place) the flags field in the frame being built to reflect the
-  // given flags value.
-  bool OverwriteFlags(const SpdyFramer& framer, uint8_t flags);
-
  private:
+  FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableBuffer);
+
+  // Returns a writeable buffer of given size in bytes, to be appended to the
+  // currently written frame. Does bounds checking on length but does not
+  // increment the underlying iterator. To do so, consumers should subsequently
+  // call Seek().
+  // In general, consumers should use Write*() calls instead of this.
+  // Returns NULL on failure.
+  char* GetWritableBuffer(size_t length);
+
   // Checks to make sure that there is an appropriate amount of space for a
   // write of given size, in bytes.
   bool CanWrite(size_t length) const;

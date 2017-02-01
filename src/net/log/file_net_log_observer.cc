@@ -117,10 +117,10 @@ class FileNetLogObserver::FileWriter {
   // Stop()).
   virtual void Initialize(std::unique_ptr<base::Value> constants_value) = 0;
 
-  // Closes the events array opened in Initialize() and writes |tab_info| to
-  // disk. If |tab_info| cannot be converted to proper JSON, then it
+  // Closes the events array opened in Initialize() and writes |polled_data| to
+  // disk. If |polled_data| cannot be converted to proper JSON, then it
   // is ignored.
-  virtual void Stop(std::unique_ptr<base::Value> tab_info) = 0;
+  virtual void Stop(std::unique_ptr<base::Value> polled_data) = 0;
 
   // Drains |queue_| from WriteQueue into a local file queue and writes the
   // events in the queue to disk.
@@ -129,6 +129,9 @@ class FileNetLogObserver::FileWriter {
   // Deletes all netlog files. It is not valid to call any method of
   // FileNetLogObserver after DeleteAllFiles().
   virtual void DeleteAllFiles() = 0;
+
+  void FlushThenStop(scoped_refptr<WriteQueue> write_queue,
+                     std::unique_ptr<base::Value> polled_data);
 };
 
 // This implementation of FileWriter is used when the observer is in bounded
@@ -147,7 +150,7 @@ class FileNetLogObserver::BoundedFileWriter
 
   // FileNetLogObserver::FileWriter implementation
   void Initialize(std::unique_ptr<base::Value> constants_value) override;
-  void Stop(std::unique_ptr<base::Value> tab_info) override;
+  void Stop(std::unique_ptr<base::Value> polled_data) override;
   void Flush(scoped_refptr<WriteQueue> write_queue) override;
   void DeleteAllFiles() override;
 
@@ -196,7 +199,7 @@ class FileNetLogObserver::UnboundedFileWriter
 
   // FileNetLogObserver::FileWriter implementation
   void Initialize(std::unique_ptr<base::Value> constants_value) override;
-  void Stop(std::unique_ptr<base::Value> tab_info) override;
+  void Stop(std::unique_ptr<base::Value> polled_data) override;
   void Flush(scoped_refptr<WriteQueue> write_queue) override;
   void DeleteAllFiles() override;
 
@@ -297,19 +300,12 @@ void FileNetLogObserver::StartObservingHelper(
   net_log->DeprecatedAddObserver(this, capture_mode);
 }
 
-void FileNetLogObserver::StopObserving(URLRequestContext* url_request_context,
+void FileNetLogObserver::StopObserving(std::unique_ptr<base::Value> polled_data,
                                        const base::Closure& callback) {
-  file_task_runner_->PostTask(
-      FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::Flush,
-                            base::Unretained(file_writer_), write_queue_));
-
   file_task_runner_->PostTaskAndReply(
-      FROM_HERE,
-      base::Bind(
-          &FileNetLogObserver::FileWriter::Stop, base::Unretained(file_writer_),
-          base::Passed(url_request_context ? GetNetInfo(url_request_context,
-                                                        NET_INFO_ALL_SOURCES)
-                                           : nullptr)),
+      FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::FlushThenStop,
+                            base::Unretained(file_writer_), write_queue_,
+                            base::Passed(&polled_data)),
       callback);
 
   net_log()->DeprecatedRemoveObserver(this);
@@ -354,6 +350,7 @@ size_t FileNetLogObserver::WriteQueue::AddEntryToQueue(
 
   return queue_.size();
 }
+
 void FileNetLogObserver::WriteQueue::SwapQueue(EventQueue* local_queue) {
   DCHECK(local_queue->empty());
   base::AutoLock lock(lock_);
@@ -364,6 +361,13 @@ void FileNetLogObserver::WriteQueue::SwapQueue(EventQueue* local_queue) {
 FileNetLogObserver::WriteQueue::~WriteQueue() {}
 
 FileNetLogObserver::FileWriter::~FileWriter() {}
+
+void FileNetLogObserver::FileWriter::FlushThenStop(
+    scoped_refptr<FileNetLogObserver::WriteQueue> write_queue,
+    std::unique_ptr<base::Value> polled_data) {
+  Flush(write_queue);
+  Stop(std::move(polled_data));
+}
 
 FileNetLogObserver::BoundedFileWriter::BoundedFileWriter(
     const base::FilePath& directory,
@@ -401,18 +405,18 @@ void FileNetLogObserver::BoundedFileWriter::Initialize(
 }
 
 void FileNetLogObserver::BoundedFileWriter::Stop(
-    std::unique_ptr<base::Value> tab_info) {
+    std::unique_ptr<base::Value> polled_data) {
   DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   base::ScopedFILE closing_file(
       base::OpenFile(directory_.AppendASCII("end_netlog.json"), "w"));
 
   std::string json;
-  if (tab_info)
-    base::JSONWriter::Write(*tab_info, &json);
+  if (polled_data)
+    base::JSONWriter::Write(*polled_data, &json);
 
   fprintf(closing_file.get(), "]%s}\n",
-          json.empty() ? "" : (",\"tabInfo\": " + json + "\n").c_str());
+          json.empty() ? "" : (",\n\"polledData\": " + json + "\n").c_str());
 
   // Flush all fprintfs to disk so that files can be safely accessed on
   // callback.
@@ -496,15 +500,15 @@ void FileNetLogObserver::UnboundedFileWriter::Initialize(
 }
 
 void FileNetLogObserver::UnboundedFileWriter::Stop(
-    std::unique_ptr<base::Value> tab_info) {
+    std::unique_ptr<base::Value> polled_data) {
   DCHECK(task_runner_->RunsTasksOnCurrentThread());
 
   std::string json;
-  if (tab_info)
-    base::JSONWriter::Write(*tab_info, &json);
+  if (polled_data)
+    base::JSONWriter::Write(*polled_data, &json);
 
   fprintf(file_.get(), "]%s}\n",
-          json.empty() ? "" : (",\n\"tabInfo\": " + json + "\n").c_str());
+          json.empty() ? "" : (",\n\"polledData\": " + json + "\n").c_str());
 
   // Flush all fprintfs to disk so that the file can be safely accessed on
   // callback.

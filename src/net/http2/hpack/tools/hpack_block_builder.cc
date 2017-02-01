@@ -77,7 +77,7 @@ void HpackBlockBuilder::AppendString(bool is_huffman_encoded,
   uint8_t high_bits = is_huffman_encoded ? 0x80 : 0;
   uint8_t prefix_length = 7;
   AppendHighBitsAndVarint(high_bits, prefix_length, str.size());
-  str.AppendToString(&buffer_);
+  buffer_.append(str.data(), str.size());
 }
 
 }  // namespace test

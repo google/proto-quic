@@ -100,7 +100,7 @@ def GenerateResultsDict(test_run_results):
           'elapsed_time_ms': r.GetDuration(),
           'output_snippet': r.GetLog(),
           'losless_snippet': '',
-          'output_snippet_base64:': '',
+          'output_snippet_base64': '',
           'tombstones': r.GetTombstonesUrl() or '',
           'logcat_url': r.GetLogcatUrl() or '',
       }

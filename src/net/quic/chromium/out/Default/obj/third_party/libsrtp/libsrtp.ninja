@@ -1,0 +1,34 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DHAVE_CONFIG_H -DHAVE_STDLIB_H -DHAVE_STRING_H -DTESTAPP_SOURCE -DOPENSSL -DHAVE_INT16_T -DHAVE_INT32_T -DHAVE_INT8_T -DHAVE_UINT16_T -DHAVE_UINT32_T -DHAVE_UINT64_T -DHAVE_UINT8_T -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DHAVE_NETINET_IN_H -DHAVE_ARPA_INET_H -DHAVE_UNISTD_H -DCPU_CISC -DBORINGSSL_SHARED_LIBRARY
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/libsrtp/config -I../../../../../third_party/libsrtp/srtp/include -I../../../../../third_party/libsrtp/srtp/crypto/include -I../../../../../third_party/boringssl/src/include
+cflags = -Wno-implicit-function-declaration -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -Werror -Wall -Wno-unused-variable -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -Wno-unused-variable
+cflags_c =
+label_name = libsrtp
+target_out_dir = obj/third_party/libsrtp
+target_output_name = libsrtp
+
+build obj/third_party/libsrtp/libsrtp/aes.o: cc ../../../../../third_party/libsrtp/srtp/crypto/cipher/aes.c
+build obj/third_party/libsrtp/libsrtp/cipher.o: cc ../../../../../third_party/libsrtp/srtp/crypto/cipher/cipher.c
+build obj/third_party/libsrtp/libsrtp/null_cipher.o: cc ../../../../../third_party/libsrtp/srtp/crypto/cipher/null_cipher.c
+build obj/third_party/libsrtp/libsrtp/auth.o: cc ../../../../../third_party/libsrtp/srtp/crypto/hash/auth.c
+build obj/third_party/libsrtp/libsrtp/null_auth.o: cc ../../../../../third_party/libsrtp/srtp/crypto/hash/null_auth.c
+build obj/third_party/libsrtp/libsrtp/alloc.o: cc ../../../../../third_party/libsrtp/srtp/crypto/kernel/alloc.c
+build obj/third_party/libsrtp/libsrtp/crypto_kernel.o: cc ../../../../../third_party/libsrtp/srtp/crypto/kernel/crypto_kernel.c
+build obj/third_party/libsrtp/libsrtp/err.o: cc ../../../../../third_party/libsrtp/srtp/crypto/kernel/err.c
+build obj/third_party/libsrtp/libsrtp/key.o: cc ../../../../../third_party/libsrtp/srtp/crypto/kernel/key.c
+build obj/third_party/libsrtp/libsrtp/datatypes.o: cc ../../../../../third_party/libsrtp/srtp/crypto/math/datatypes.c
+build obj/third_party/libsrtp/libsrtp/gf2_8.o: cc ../../../../../third_party/libsrtp/srtp/crypto/math/gf2_8.c
+build obj/third_party/libsrtp/libsrtp/stat.o: cc ../../../../../third_party/libsrtp/srtp/crypto/math/stat.c
+build obj/third_party/libsrtp/libsrtp/rdb.o: cc ../../../../../third_party/libsrtp/srtp/crypto/replay/rdb.c
+build obj/third_party/libsrtp/libsrtp/rdbx.o: cc ../../../../../third_party/libsrtp/srtp/crypto/replay/rdbx.c
+build obj/third_party/libsrtp/libsrtp/ut_sim.o: cc ../../../../../third_party/libsrtp/srtp/crypto/replay/ut_sim.c
+build obj/third_party/libsrtp/libsrtp/ekt.o: cc ../../../../../third_party/libsrtp/srtp/srtp/ekt.c
+build obj/third_party/libsrtp/libsrtp/srtp.o: cc ../../../../../third_party/libsrtp/srtp/srtp/srtp.c
+build obj/third_party/libsrtp/libsrtp/aes_gcm_ossl.o: cc ../../../../../third_party/libsrtp/srtp/crypto/cipher/aes_gcm_ossl.c
+build obj/third_party/libsrtp/libsrtp/aes_icm_ossl.o: cc ../../../../../third_party/libsrtp/srtp/crypto/cipher/aes_icm_ossl.c
+build obj/third_party/libsrtp/libsrtp/hmac_ossl.o: cc ../../../../../third_party/libsrtp/srtp/crypto/hash/hmac_ossl.c
+build obj/third_party/libsrtp/libsrtp/rand_source_ossl.o: cc ../../../../../third_party/libsrtp/srtp/crypto/rng/rand_source_ossl.c
+
+build obj/third_party/libsrtp/libsrtp.a: alink obj/third_party/libsrtp/libsrtp/aes.o obj/third_party/libsrtp/libsrtp/cipher.o obj/third_party/libsrtp/libsrtp/null_cipher.o obj/third_party/libsrtp/libsrtp/auth.o obj/third_party/libsrtp/libsrtp/null_auth.o obj/third_party/libsrtp/libsrtp/alloc.o obj/third_party/libsrtp/libsrtp/crypto_kernel.o obj/third_party/libsrtp/libsrtp/err.o obj/third_party/libsrtp/libsrtp/key.o obj/third_party/libsrtp/libsrtp/datatypes.o obj/third_party/libsrtp/libsrtp/gf2_8.o obj/third_party/libsrtp/libsrtp/stat.o obj/third_party/libsrtp/libsrtp/rdb.o obj/third_party/libsrtp/libsrtp/rdbx.o obj/third_party/libsrtp/libsrtp/ut_sim.o obj/third_party/libsrtp/libsrtp/ekt.o obj/third_party/libsrtp/libsrtp/srtp.o obj/third_party/libsrtp/libsrtp/aes_gcm_ossl.o obj/third_party/libsrtp/libsrtp/aes_icm_ossl.o obj/third_party/libsrtp/libsrtp/hmac_ossl.o obj/third_party/libsrtp/libsrtp/rand_source_ossl.o || ./libboringssl.so.TOC
+  arflags =
+  output_extension = .a
+  output_dir = obj/third_party/libsrtp

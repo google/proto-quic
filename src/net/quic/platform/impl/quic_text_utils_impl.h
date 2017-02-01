@@ -13,6 +13,7 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "net/base/parse_number.h"
 
 namespace net {
 
@@ -44,6 +45,24 @@ class QuicTextUtilsImpl {
   // |out|.
   static bool StringToUint64(base::StringPiece in, uint64_t* out) {
     return base::StringToUint64(in, out);
+  }
+
+  // Returns true if |in| represents a valid int, and stores that value in
+  // |out|.
+  static bool StringToInt(base::StringPiece in, int* out) {
+    return base::StringToInt(in, out);
+  }
+
+  // Returns true if |in| represents a valid uint32, and stores that value in
+  // |out|.
+  static bool StringToUint32(base::StringPiece in, uint32_t* out) {
+    return ParseUint32(in, out, nullptr);
+  }
+
+  // Returns true if |in| represents a valid size_t, and stores that value in
+  // |out|.
+  static bool StringToSizeT(base::StringPiece in, size_t* out) {
+    return base::StringToSizeT(in, out);
   }
 
   // Returns a new std::string representing |in|.

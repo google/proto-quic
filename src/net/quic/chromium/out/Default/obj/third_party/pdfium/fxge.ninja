@@ -1,0 +1,52 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DV8_DEPRECATION_WARNINGS -D_FX_CPU_=_FX_X64_ -DOPJ_STATIC -DPNG_PREFIX -DPNG_USE_READ_MACROS -DPDF_ENABLE_V8
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/pdfium -I../../../../../third_party/pdfium/third_party/freetype/include -I../../../../../third_party/pdfium/third_party/freetype/include/freetype
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -Wno-switch -fPIC
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = fxge
+target_out_dir = obj/third_party/pdfium
+target_output_name = libfxge
+
+build obj/third_party/pdfium/fxge/fx_mac_imp.o: cxx ../../../../../third_party/pdfium/core/fxge/apple/fx_mac_imp.cpp
+build obj/third_party/pdfium/fxge/fx_quartz_device.o: cxx ../../../../../third_party/pdfium/core/fxge/apple/fx_quartz_device.cpp
+build obj/third_party/pdfium/fxge/fx_dib_composite.o: cxx ../../../../../third_party/pdfium/core/fxge/dib/fx_dib_composite.cpp
+build obj/third_party/pdfium/fxge/fx_dib_convert.o: cxx ../../../../../third_party/pdfium/core/fxge/dib/fx_dib_convert.cpp
+build obj/third_party/pdfium/fxge/fx_dib_engine.o: cxx ../../../../../third_party/pdfium/core/fxge/dib/fx_dib_engine.cpp
+build obj/third_party/pdfium/fxge/fx_dib_main.o: cxx ../../../../../third_party/pdfium/core/fxge/dib/fx_dib_main.cpp
+build obj/third_party/pdfium/fxge/fx_dib_transform.o: cxx ../../../../../third_party/pdfium/core/fxge/dib/fx_dib_transform.cpp
+build obj/third_party/pdfium/fxge/FoxitDingbats.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitDingbats.cpp
+build obj/third_party/pdfium/fxge/FoxitFixed.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitFixed.cpp
+build obj/third_party/pdfium/fxge/FoxitFixedBold.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitFixedBold.cpp
+build obj/third_party/pdfium/fxge/FoxitFixedBoldItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitFixedBoldItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitFixedItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitFixedItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitSans.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSans.cpp
+build obj/third_party/pdfium/fxge/FoxitSansBold.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSansBold.cpp
+build obj/third_party/pdfium/fxge/FoxitSansBoldItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSansBoldItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitSansItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSansItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitSansMM.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSansMM.cpp
+build obj/third_party/pdfium/fxge/FoxitSerif.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSerif.cpp
+build obj/third_party/pdfium/fxge/FoxitSerifBold.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSerifBold.cpp
+build obj/third_party/pdfium/fxge/FoxitSerifBoldItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSerifBoldItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitSerifItalic.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSerifItalic.cpp
+build obj/third_party/pdfium/fxge/FoxitSerifMM.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSerifMM.cpp
+build obj/third_party/pdfium/fxge/FoxitSymbol.o: cxx ../../../../../third_party/pdfium/core/fxge/fontdata/chromefontdata/FoxitSymbol.cpp
+build obj/third_party/pdfium/fxge/fx_freetype.o: cxx ../../../../../third_party/pdfium/core/fxge/freetype/fx_freetype.cpp
+build obj/third_party/pdfium/fxge/cfx_cliprgn.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_cliprgn.cpp
+build obj/third_party/pdfium/fxge/cfx_folderfontinfo.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_folderfontinfo.cpp
+build obj/third_party/pdfium/fxge/cfx_fontmapper.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_fontmapper.cpp
+build obj/third_party/pdfium/fxge/cfx_fontmgr.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_fontmgr.cpp
+build obj/third_party/pdfium/fxge/cfx_gemodule.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_gemodule.cpp
+build obj/third_party/pdfium/fxge/cfx_pathdata.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/cfx_pathdata.cpp
+build obj/third_party/pdfium/fxge/fx_ge_device.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_device.cpp
+build obj/third_party/pdfium/fxge/fx_ge_font.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_font.cpp
+build obj/third_party/pdfium/fxge/fx_ge_fontmap.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_fontmap.cpp
+build obj/third_party/pdfium/fxge/fx_ge_linux.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_linux.cpp
+build obj/third_party/pdfium/fxge/fx_ge_path.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_path.cpp
+build obj/third_party/pdfium/fxge/fx_ge_text.o: cxx ../../../../../third_party/pdfium/core/fxge/ge/fx_ge_text.cpp
+build obj/third_party/pdfium/fxge/ifx_renderdevicedriver.o: cxx ../../../../../third_party/pdfium/core/fxge/ifx_renderdevicedriver.cpp
+build obj/third_party/pdfium/fxge/fx_agg_driver.o: cxx ../../../../../third_party/pdfium/core/fxge/agg/fx_agg_driver.cpp
+build obj/third_party/pdfium/fxge/fx_apple_platform.o: cxx ../../../../../third_party/pdfium/core/fxge/apple/fx_apple_platform.cpp
+
+build obj/third_party/pdfium/libfxge.a: alink obj/third_party/pdfium/fxge/fx_mac_imp.o obj/third_party/pdfium/fxge/fx_quartz_device.o obj/third_party/pdfium/fxge/fx_dib_composite.o obj/third_party/pdfium/fxge/fx_dib_convert.o obj/third_party/pdfium/fxge/fx_dib_engine.o obj/third_party/pdfium/fxge/fx_dib_main.o obj/third_party/pdfium/fxge/fx_dib_transform.o obj/third_party/pdfium/fxge/FoxitDingbats.o obj/third_party/pdfium/fxge/FoxitFixed.o obj/third_party/pdfium/fxge/FoxitFixedBold.o obj/third_party/pdfium/fxge/FoxitFixedBoldItalic.o obj/third_party/pdfium/fxge/FoxitFixedItalic.o obj/third_party/pdfium/fxge/FoxitSans.o obj/third_party/pdfium/fxge/FoxitSansBold.o obj/third_party/pdfium/fxge/FoxitSansBoldItalic.o obj/third_party/pdfium/fxge/FoxitSansItalic.o obj/third_party/pdfium/fxge/FoxitSansMM.o obj/third_party/pdfium/fxge/FoxitSerif.o obj/third_party/pdfium/fxge/FoxitSerifBold.o obj/third_party/pdfium/fxge/FoxitSerifBoldItalic.o obj/third_party/pdfium/fxge/FoxitSerifItalic.o obj/third_party/pdfium/fxge/FoxitSerifMM.o obj/third_party/pdfium/fxge/FoxitSymbol.o obj/third_party/pdfium/fxge/fx_freetype.o obj/third_party/pdfium/fxge/cfx_cliprgn.o obj/third_party/pdfium/fxge/cfx_folderfontinfo.o obj/third_party/pdfium/fxge/cfx_fontmapper.o obj/third_party/pdfium/fxge/cfx_fontmgr.o obj/third_party/pdfium/fxge/cfx_gemodule.o obj/third_party/pdfium/fxge/cfx_pathdata.o obj/third_party/pdfium/fxge/fx_ge_device.o obj/third_party/pdfium/fxge/fx_ge_font.o obj/third_party/pdfium/fxge/fx_ge_fontmap.o obj/third_party/pdfium/fxge/fx_ge_linux.o obj/third_party/pdfium/fxge/fx_ge_path.o obj/third_party/pdfium/fxge/fx_ge_text.o obj/third_party/pdfium/fxge/ifx_renderdevicedriver.o obj/third_party/pdfium/fxge/fx_agg_driver.o obj/third_party/pdfium/fxge/fx_apple_platform.o || obj/third_party/pdfium/third_party/libfx_agg.a
+  arflags =
+  output_extension = .a
+  output_dir = obj/third_party/pdfium

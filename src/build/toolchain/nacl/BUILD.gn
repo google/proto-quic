@@ -222,10 +222,6 @@ template("nacl_irt_toolchain") {
     toolchain_args = {
       current_cpu = toolchain_cpu
       is_clang = true
-
-      # Always build the IRT with full debugging symbols, regardless of
-      # how Chromium itself is being built (or other NaCl executables).
-      symbol_level = 2
     }
 
     # TODO(ncbray): depend on link script

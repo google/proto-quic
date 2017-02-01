@@ -5,6 +5,11 @@
 #
 # Download the newest version of Closure Compiler, build it and put into Chrome
 # source tree. Also update externs/chrome_extensions.js.
+#
+# TODO(dbeam): we don't really need to build the compiler any more. We used to
+# need to because we built a custom runner. We could probably just curl
+# https://dl.google.com/closure-compiler/compiler-latest.zip and unzip. And get
+# the externs from rawgit.com.
 
 java -version 2>&1 | head -1 | egrep -q '\b1\.7'
 if [[ $? -ne 0 ]]; then
@@ -67,18 +72,8 @@ if [[ "$?" -ne 0 ]]; then
   exit 1
 fi
 
-# TODO(dbeam): this .jar seems to be a bit bigger than the jar previously built
-# by ant. I tried many other jars in target/, but none of them were able to
-# build the runner.jar without issue.
+# TODO(dbeam): the Maven-built jar seems a little bigger than the ant version.
 cp target/closure-compiler-1.0-SNAPSHOT.jar "${SCRIPT_DIR}/compiler/compiler.jar"
-
-echo "Re-building runner.jar"
-"${SCRIPT_DIR}/runner/build_runner_jar.py"
-if [[ "$?" -ne 0 ]]; then
-  echo "Failed to build runner.jar, roll unsuccessful"
-  cleanup
-  exit 1
-fi
 
 readonly WARNING="$(cat <<EOT
 //    SSSSSSSSSSSSSSS TTTTTTTTTTTTTTTTTTTTTTT     OOOOOOOOO     PPPPPPPPPPPPPPPPP

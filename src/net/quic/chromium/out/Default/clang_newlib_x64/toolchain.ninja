@@ -1,0 +1,615 @@
+rule clang_newlib_x64_cc
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_c} -c ${in} -o ${out}
+  description = CC ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule clang_newlib_x64_cxx
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${cflags} ${cflags_cc} -c ${in} -o ${out}
+  description = CXX ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule clang_newlib_x64_asm
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang -MMD -MF ${out}.d -DNACL_TC_REV=2eeb54c6995817a39e5c5cc0b40e26518396335f ${defines} ${include_dirs} ${asmflags} -c ${in} -o ${out}
+  description = ASM ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule clang_newlib_x64_alink
+  command = python "../../../../../build/toolchain/gcc_ar_wrapper.py" --output=${out} --ar="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-ar" ${arflags} rcsD @"${out}.rsp"
+  description = AR ${out}
+  rspfile = ${out}.rsp
+  rspfile_content = ${in}
+rule clang_newlib_x64_solink
+  command = python "/usr/local/google/home/jokulik/chromium/src/build/toolchain/gcc_solink_wrapper.py" --readelf="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-readelf" --nm="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-nm" --strip=../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip --sofile="${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" --tocfile="${output_dir}/${target_output_name}${output_extension}.TOC" --output="${output_dir}/${target_output_name}${output_extension}" -- ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+  restat = 1
+rule clang_newlib_x64_solink_module
+  command = ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ -shared ${ldflags} -o "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp" && ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip --strip-unneeded -o "${output_dir}/${target_output_name}${output_extension}" "${root_out_dir}/lib.unstripped/${target_output_name}${output_extension}"
+  description = SOLINK_MODULE ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+rule clang_newlib_x64_link
+  command = python "../../../../../build/toolchain/gcc_link_wrapper.py" --strip="../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-strip" --unstripped-file="${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" --output="${output_dir}/${target_output_name}${output_extension}" -- ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-clang++ ${ldflags} -o "${root_out_dir}/exe.unstripped/${target_output_name}${output_extension}" -Wl,--start-group @"${output_dir}/${target_output_name}${output_extension}.rsp" ${solibs} -Wl,--end-group  ${libs} 
+  description = LINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in}
+  pool = build_toolchain_link_pool
+rule clang_newlib_x64_stamp
+  command = touch ${out}
+  description = STAMP ${out}
+rule clang_newlib_x64_copy
+  command = ln -f ${in} ${out} 2>/dev/null || (rm -rf ${out} && cp -af ${in} ${out})
+  description = COPY ${in} ${out}
+
+subninja clang_newlib_x64/obj/build/config/nacl/nacl_base.ninja
+build clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_test_files.stamp
+build nacl_test_data/newlib/pm_exit_status_test_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/pm_exit_status_test_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/pm_exit_status_test_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_nexe.ninja
+rule __chrome_test_data_nacl_exit_status_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/pm_exit_status_test.nmf nacl_test_data/newlib/pm_exit_status_test_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:exit_status_test_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/pm_exit_status_test_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_copy_nexe.stamp
+
+build nacl_test_data/newlib/pm_exit_status_test.nmf: __chrome_test_data_nacl_exit_status_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/pm_exit_status_test.nmf
+build nacl_test_data/newlib/pm_exit_status_test.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/exit_status/pm_exit_status_test.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/exit_status_test_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/pm_exit_status_test.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_test_files.stamp
+build nacl_test_data/extension_vcache_test/newlib/extension_validation_cache_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/extension_validation_cache_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/extension_vcache_test/newlib/extension_validation_cache_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_nexe.ninja
+rule __chrome_test_data_nacl_extension_validation_cache_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.nmf nacl_test_data/extension_vcache_test/newlib/extension_validation_cache_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:extension_validation_cache_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/extension_vcache_test/newlib/extension_validation_cache_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_copy_nexe.stamp
+
+build nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.nmf: __chrome_test_data_nacl_extension_validation_cache_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.nmf
+build nacl_test_data/extension_vcache_test/newlib/nacltest.js: clang_newlib_x64_copy ../../../../../ppapi/native_client/tools/browser_tester/browserdata/nacltest.js
+build nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_validation_cache/extension_validation_cache.html
+build nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_validation_cache/extension_validation_cache.js
+build nacl_test_data/extension_vcache_test/newlib/manifest.json: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_validation_cache/manifest.json
+build nacl_test_data/extension_vcache_test/newlib/load_util.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/load_util.js
+build nacl_test_data/extension_vcache_test/newlib/simple_cc.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/simple_cc.js
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/extension_validation_cache_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/extension_vcache_test/newlib/nacltest.js nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.html nacl_test_data/extension_vcache_test/newlib/extension_validation_cache.js nacl_test_data/extension_vcache_test/newlib/manifest.json nacl_test_data/extension_vcache_test/newlib/load_util.js nacl_test_data/extension_vcache_test/newlib/simple_cc.js
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_test_files.stamp
+build nacl_test_data/newlib/irt_exception_test_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/irt_exception_test_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_exception_test_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_nexe.ninja
+rule __chrome_test_data_nacl_irt_exception_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/irt_exception_test.nmf nacl_test_data/newlib/irt_exception_test_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:irt_exception_test_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/irt_exception_test_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_copy_nexe.stamp
+
+build nacl_test_data/newlib/irt_exception_test.nmf: __chrome_test_data_nacl_irt_exception_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_exception_test.nmf
+build nacl_test_data/newlib/irt_exception_test.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/irt_exception/irt_exception_test.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_exception_test_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_exception_test.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_test_files.stamp
+build nacl_test_data/newlib/irt_manifest_file_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/irt_manifest_file_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_manifest_file_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_nexe.ninja
+rule __chrome_test_data_nacl_irt_manifest_file_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/irt_manifest_file.nmf -xtest_file$:test_file.txt -xnmf\$ says\$ hello\$ world$:test_file.txt -xdummy_test_file$:dummy_test_file.txt nacl_test_data/newlib/irt_manifest_file_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:irt_manifest_file_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/irt_manifest_file_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_copy_nexe.stamp
+
+build nacl_test_data/newlib/irt_manifest_file.nmf: __chrome_test_data_nacl_irt_manifest_file_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_manifest_file.nmf
+build nacl_test_data/newlib/irt_manifest_file_test.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/manifest_file/irt_manifest_file_test.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/irt_manifest_file_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/irt_manifest_file_test.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_nmf.stamp
+build nacl_test_data/newlib/partly_invalid_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/partly_invalid_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/partly_invalid_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_nexe.ninja
+rule __chrome_test_data_nacl_partly_invalid_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/partly_invalid.nmf nacl_test_data/newlib/partly_invalid_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:partly_invalid_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/partly_invalid_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_copy_nexe.stamp
+
+build nacl_test_data/newlib/partly_invalid.nmf: __chrome_test_data_nacl_partly_invalid_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/partly_invalid_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/partly_invalid.nmf
+build nacl_test_data/newlib/pnacl_mime_type.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/pnacl_mime_type/pnacl_mime_type.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/pnacl_mime_type_test.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/pnacl_mime_type.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_get_ppp_instance_crash_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_get_ppp_instance_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash.nmf nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_get_ppp_instance_crash_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash.nmf: __chrome_test_data_nacl_ppapi_bad_get_ppp_instance_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_get_ppp_instance_crash_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_get_ppp_instance_crash.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_no_ppp_instance_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_no_ppp_instance_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_no_ppp_instance_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_no_ppp_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_no_ppp_instance.nmf nacl_test_data/newlib/ppapi_bad_no_ppp_instance_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_no_ppp_instance_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_no_ppp_instance_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_no_ppp_instance.nmf: __chrome_test_data_nacl_ppapi_bad_no_ppp_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_no_ppp_instance_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_no_ppp_instance.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_ppp_initialize_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_ppp_initialize_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_initialize_newlib_x86_64.nexe
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_ppp_initialize_crash_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_ppp_initialize_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash.nmf nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_ppp_initialize_crash_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash.nmf: __chrome_test_data_nacl_ppapi_bad_ppp_initialize_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_crash_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_initialize_crash.nmf
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_ppp_initialize_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_ppp_initialize.nmf nacl_test_data/newlib/ppapi_bad_ppp_initialize_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_ppp_initialize_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_ppp_initialize_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_ppp_initialize.nmf: __chrome_test_data_nacl_ppapi_bad_ppp_initialize_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_initialize_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_initialize.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_ppp_instance_didcreate_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_newlib_x86_64.nexe
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_nmf.stamp
+build nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_bad_ppp_instance_didcreate_crash_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_ppp_instance_didcreate_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash.nmf nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_ppp_instance_didcreate_crash_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash.nmf: __chrome_test_data_nacl_ppapi_bad_ppp_instance_didcreate_crash_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_crash_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_crash.nmf
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_bad_ppp_instance_didcreate_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate.nmf nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_bad_ppp_instance_didcreate_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate.nmf: __chrome_test_data_nacl_ppapi_bad_ppp_instance_didcreate_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_bad_ppp_instance_didcreate_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_bad_ppp_instance_didcreate.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_nmf.stamp
+build nacl_test_data/newlib/ppapi_crash_in_callback_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_crash_in_callback_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_in_callback_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_crash_in_callback_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_crash_in_callback.nmf nacl_test_data/newlib/ppapi_crash_in_callback_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_crash_in_callback_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_crash_in_callback_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_crash_in_callback.nmf: __chrome_test_data_nacl_ppapi_crash_in_callback_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_in_callback_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_in_callback.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_nmf.stamp
+build nacl_test_data/newlib/ppapi_crash_off_main_thread_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_crash_off_main_thread_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_off_main_thread_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_crash_off_main_thread_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_crash_off_main_thread.nmf nacl_test_data/newlib/ppapi_crash_off_main_thread_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_crash_off_main_thread_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_crash_off_main_thread_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_crash_off_main_thread.nmf: __chrome_test_data_nacl_ppapi_crash_off_main_thread_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_off_main_thread_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_off_main_thread.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_nmf.stamp
+build nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_crash_ppapi_off_main_thread_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_crash_ppapi_off_main_thread_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread.nmf nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_crash_ppapi_off_main_thread_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread.nmf: __chrome_test_data_nacl_ppapi_crash_ppapi_off_main_thread_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_ppapi_off_main_thread_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_nmf.stamp
+build nacl_test_data/newlib/ppapi_crash_via_check_failure_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_crash_via_check_failure_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_via_check_failure_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_crash_via_check_failure_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_crash_via_check_failure.nmf nacl_test_data/newlib/ppapi_crash_via_check_failure_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_crash_via_check_failure_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_crash_via_check_failure_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_crash_via_check_failure.nmf: __chrome_test_data_nacl_ppapi_crash_via_check_failure_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_check_failure_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_via_check_failure.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_nmf.stamp
+build nacl_test_data/newlib/ppapi_crash_via_exit_call_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_crash_via_exit_call_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_via_exit_call_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_crash_via_exit_call_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_crash_via_exit_call.nmf nacl_test_data/newlib/ppapi_crash_via_exit_call_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_crash_via_exit_call_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_crash_via_exit_call_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_crash_via_exit_call.nmf: __chrome_test_data_nacl_ppapi_crash_via_exit_call_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_crash_via_exit_call_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_crash_via_exit_call.nmf
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_test_files.stamp
+build nacl_test_data/newlib/ppapi_extension_mime_handler_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_extension_mime_handler_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_extension_mime_handler_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_extension_mime_handler_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_extension_mime_handler.nmf nacl_test_data/newlib/ppapi_extension_mime_handler_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_extension_mime_handler_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_extension_mime_handler_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_extension_mime_handler.nmf: __chrome_test_data_nacl_ppapi_extension_mime_handler_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_extension_mime_handler.nmf
+build nacl_test_data/newlib/ppapi_extension_mime_handler.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_mime_handler/ppapi_extension_mime_handler.html
+build nacl_test_data/newlib/mime_test_data.dat: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_mime_handler/mime_test_data.dat
+build nacl_test_data/newlib/mime_test_data.dat.mock-http-headers: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_mime_handler/mime_test_data.dat.mock-http-headers
+build nacl_test_data/newlib/manifest.json: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/extension_mime_handler/manifest.json
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_extension_mime_handler_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_extension_mime_handler.html nacl_test_data/newlib/mime_test_data.dat nacl_test_data/newlib/mime_test_data.dat.mock-http-headers nacl_test_data/newlib/manifest.json
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_test_files.stamp
+build nacl_test_data/newlib/ppapi_ppb_core_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_ppb_core_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_core_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_ppb_core_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_ppb_core.nmf nacl_test_data/newlib/ppapi_ppb_core_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_ppb_core_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_ppb_core_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_ppb_core.nmf: __chrome_test_data_nacl_ppapi_ppb_core_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_core.nmf
+build nacl_test_data/newlib/ppapi_ppb_core.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/ppapi/ppb_core/ppapi_ppb_core.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_core_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_core.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_test_files.stamp
+build nacl_test_data/newlib/ppapi_ppb_instance_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_ppb_instance_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_instance_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_ppb_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_ppb_instance.nmf nacl_test_data/newlib/ppapi_ppb_instance_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_ppb_instance_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_ppb_instance_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_ppb_instance.nmf: __chrome_test_data_nacl_ppapi_ppb_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_instance.nmf
+build nacl_test_data/newlib/ppapi_ppb_instance.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/ppapi/ppb_instance/ppapi_ppb_instance.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppb_instance_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppb_instance.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_test_files.stamp
+build nacl_test_data/newlib/ppapi_ppp_instance_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_ppp_instance_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppp_instance_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_ppp_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_ppp_instance.nmf nacl_test_data/newlib/ppapi_ppp_instance_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_ppp_instance_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_ppp_instance_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_ppp_instance.nmf: __chrome_test_data_nacl_ppapi_ppp_instance_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppp_instance.nmf
+build nacl_test_data/newlib/ppapi_ppp_instance.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/ppapi/ppp_instance/ppapi_ppp_instance.html
+build nacl_test_data/newlib/ppapi_ppp_instance.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/ppapi/ppp_instance/ppapi_ppp_instance.js
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_ppp_instance_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_ppp_instance.html nacl_test_data/newlib/ppapi_ppp_instance.js
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_test_files.stamp
+build nacl_test_data/newlib/ppapi_progress_events_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_progress_events_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_progress_events_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_nexe.ninja
+rule __chrome_test_data_nacl_ppapi_progress_events_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/ppapi_progress_events.nmf nacl_test_data/newlib/ppapi_progress_events_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:ppapi_progress_events_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/ppapi_progress_events_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_copy_nexe.stamp
+
+build nacl_test_data/newlib/ppapi_progress_events.nmf: __chrome_test_data_nacl_ppapi_progress_events_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_progress_events.nmf
+build nacl_test_data/newlib/ppapi_progress_events.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/progress_events/ppapi_progress_events.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_progress_events_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/ppapi_progress_events.html
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/ppapi_test_lib.ninja
+build nacl_test_data/newlib/nacltest.js: clang_newlib_x64_copy ../../../../../ppapi/native_client/tools/browser_tester/browserdata/nacltest.js
+build nacl_test_data/newlib/ppapi_bad.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad.html
+build nacl_test_data/newlib/ppapi_bad.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad.js
+build nacl_test_data/newlib/ppapi_bad_doesnotexist.nmf: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_doesnotexist.nmf
+build nacl_test_data/newlib/ppapi_bad_magic.nmf: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_magic.nmf
+build nacl_test_data/newlib/ppapi_bad_manifest_bad_files.nmf: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_bad_files.nmf
+build nacl_test_data/newlib/ppapi_bad_manifest_nexe_arch.nmf: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_nexe_arch.nmf
+build nacl_test_data/newlib/ppapi_bad_manifest_uses_nexes.nmf: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_manifest_uses_nexes.nmf
+build nacl_test_data/newlib/ppapi_bad_native.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/bad/ppapi_bad_native.html
+build nacl_test_data/newlib/ppapi_crash.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash.js
+build nacl_test_data/newlib/ppapi_crash_in_callback.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_in_callback.html
+build nacl_test_data/newlib/ppapi_crash_off_main_thread.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_off_main_thread.html
+build nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_ppapi_off_main_thread.html
+build nacl_test_data/newlib/ppapi_crash_via_check_failure.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_via_check_failure.html
+build nacl_test_data/newlib/ppapi_crash_via_exit_call.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/crash/ppapi_crash_via_exit_call.html
+build nacl_test_data/newlib/load_util.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/load_util.js
+build nacl_test_data/newlib/test_file.txt: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/manifest_file/test_file.txt
+build nacl_test_data/newlib/progress_event_listener.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/progress_event_listener.js
+build nacl_test_data/newlib/simple_cc.js: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/simple_cc.js
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/shared_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/nacltest.js nacl_test_data/newlib/ppapi_bad.html nacl_test_data/newlib/ppapi_bad.js nacl_test_data/newlib/ppapi_bad_doesnotexist.nmf nacl_test_data/newlib/ppapi_bad_magic.nmf nacl_test_data/newlib/ppapi_bad_manifest_bad_files.nmf nacl_test_data/newlib/ppapi_bad_manifest_nexe_arch.nmf nacl_test_data/newlib/ppapi_bad_manifest_uses_nexes.nmf nacl_test_data/newlib/ppapi_bad_native.html nacl_test_data/newlib/ppapi_crash.js nacl_test_data/newlib/ppapi_crash_in_callback.html nacl_test_data/newlib/ppapi_crash_off_main_thread.html nacl_test_data/newlib/ppapi_crash_ppapi_off_main_thread.html nacl_test_data/newlib/ppapi_crash_via_check_failure.html nacl_test_data/newlib/ppapi_crash_via_exit_call.html nacl_test_data/newlib/load_util.js nacl_test_data/newlib/test_file.txt nacl_test_data/newlib/progress_event_listener.js nacl_test_data/newlib/simple_cc.js
+build clang_newlib_x64/obj/chrome/test/data/nacl/simple_test.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_test_files.stamp
+build nacl_test_data/newlib/simple_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/simple_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/simple_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_nexe.ninja
+rule __chrome_test_data_nacl_simple_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/simple.nmf nacl_test_data/newlib/simple_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:simple_test_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/simple_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_copy_nexe.stamp
+
+build nacl_test_data/newlib/simple.nmf: __chrome_test_data_nacl_simple_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/simple.nmf
+build nacl_test_data/newlib/nacl_load_test.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/nacl_load_test.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/simple_test_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/nacl_load_test.html
+build clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_copy_nexe.stamp clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_nmf.stamp clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_test_files.stamp
+build nacl_test_data/newlib/sysconf_nprocessors_onln_test_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/sysconf_nprocessors_onln_test_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_copy_nexe.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/sysconf_nprocessors_onln_test_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_nexe.ninja
+rule __chrome_test_data_nacl_sysconf_nprocessors_onln_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=nacl_test_data/newlib/sysconf_nprocessors_onln_test.nmf nacl_test_data/newlib/sysconf_nprocessors_onln_test_newlib_x86_64.nexe
+  description = ACTION //chrome/test/data/nacl:sysconf_nprocessors_onln_test_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump nacl_test_data/newlib/sysconf_nprocessors_onln_test_newlib_x86_64.nexe clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_copy_nexe.stamp
+
+build nacl_test_data/newlib/sysconf_nprocessors_onln_test.nmf: __chrome_test_data_nacl_sysconf_nprocessors_onln_test_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_nmf.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/sysconf_nprocessors_onln_test.nmf
+build nacl_test_data/newlib/sysconf_nprocessors_onln_test.html: clang_newlib_x64_copy ../../../../../chrome/test/data/nacl/sysconf_nprocessors_onln/sysconf_nprocessors_onln_test.html
+
+build clang_newlib_x64/obj/chrome/test/data/nacl/sysconf_nprocessors_onln_test_test_files.stamp: clang_newlib_x64_stamp nacl_test_data/newlib/sysconf_nprocessors_onln_test.html
+subninja clang_newlib_x64/obj/native_client/src/shared/gio/gio.ninja
+subninja clang_newlib_x64/obj/native_client/src/shared/platform/platform.ninja
+subninja clang_newlib_x64/obj/ppapi/ppapi_cpp_lib.ninja
+build clang_newlib_x64/obj/ppapi/ppapi_nacl_tests.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_nmf.stamp
+build ppapi_nacl_tests_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_nacl_tests_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp: clang_newlib_x64_stamp ppapi_nacl_tests_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_nexe.ninja
+rule __ppapi_ppapi_nacl_tests_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=ppapi_nacl_tests_newlib.nmf ppapi_nacl_tests_newlib_x86_64.nexe
+  description = ACTION //ppapi:ppapi_nacl_tests_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump ppapi_nacl_tests_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_copy_nexe.stamp
+
+build ppapi_nacl_tests_newlib.nmf: __ppapi_ppapi_nacl_tests_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/ppapi_nacl_tests_nmf.stamp: clang_newlib_x64_stamp ppapi_nacl_tests_newlib.nmf
+build clang_newlib_x64/obj/ppapi/native_client/ppapi_lib.stamp: clang_newlib_x64_stamp clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/libppapi_stub.a
+subninja clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib.ninja
+subninja clang_newlib_x64/obj/ppapi/native_client/src/untrusted/pnacl_irt_shim/aot.ninja
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_test_files.stamp
+build test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_background_keepalive_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_background_keepalive_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive.nmf test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_background_keepalive_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_background_keepalive_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/background_keepalive/newlib/ppapi_tests_extensions_background_keepalive.nmf
+build test_data/ppapi/tests/extensions/background_keepalive/newlib/background.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/background_keepalive/background.js
+build test_data/ppapi/tests/extensions/background_keepalive/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/background_keepalive/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_background_keepalive_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/background_keepalive/newlib/background.js test_data/ppapi/tests/extensions/background_keepalive/newlib/manifest.json
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_test_files.stamp
+build test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_load_unload_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_load_unload_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload.nmf test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_load_unload_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_load_unload_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/load_unload/newlib/ppapi_tests_extensions_load_unload.nmf
+build test_data/ppapi/tests/extensions/load_unload/newlib/background.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/load_unload/background.js
+build test_data/ppapi/tests/extensions/load_unload/newlib/ext_icon.png: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/load_unload/ext_icon.png
+build test_data/ppapi/tests/extensions/load_unload/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/load_unload/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_load_unload_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/load_unload/newlib/background.js test_data/ppapi/tests/extensions/load_unload/newlib/ext_icon.png test_data/ppapi/tests/extensions/load_unload/newlib/manifest.json
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_test_files.stamp
+build test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_media_galleries_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_media_galleries_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries.nmf test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_media_galleries_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_media_galleries_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/media_galleries/newlib/ppapi_tests_extensions_media_galleries.nmf
+build test_data/ppapi/tests/extensions/media_galleries/newlib/background.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/media_galleries/background.js
+build test_data/ppapi/tests/extensions/media_galleries/newlib/index.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/media_galleries/index.html
+build test_data/ppapi/tests/extensions/media_galleries/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/media_galleries/manifest.json
+build test_data/ppapi/tests/extensions/media_galleries/newlib/test.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/media_galleries/test.js
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_media_galleries_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/media_galleries/newlib/background.js test_data/ppapi/tests/extensions/media_galleries/newlib/index.html test_data/ppapi/tests/extensions/media_galleries/newlib/manifest.json test_data/ppapi/tests/extensions/media_galleries/newlib/test.js
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_test_files.stamp
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_multicast_permissions_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_multicast_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions.nmf test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_multicast_permissions_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_multicast_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/multicast_permissions/newlib/ppapi_tests_extensions_multicast_permissions.nmf
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/controller.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/multicast_permissions/controller.js
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/index.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/multicast_permissions/index.html
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/main.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/multicast_permissions/main.js
+build test_data/ppapi/tests/extensions/multicast_permissions/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/multicast_permissions/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_multicast_permissions_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/multicast_permissions/newlib/controller.js test_data/ppapi/tests/extensions/multicast_permissions/newlib/index.html test_data/ppapi/tests/extensions/multicast_permissions/newlib/main.js test_data/ppapi/tests/extensions/multicast_permissions/newlib/manifest.json
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_test_files.stamp
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_no_socket_permissions_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_no_socket_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions.nmf test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_no_socket_permissions_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_no_socket_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/no_socket_permissions/newlib/ppapi_tests_extensions_no_socket_permissions.nmf
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/controller.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/no_socket_permissions/controller.js
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/index.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/no_socket_permissions/index.html
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/main.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/no_socket_permissions/main.js
+build test_data/ppapi/tests/extensions/no_socket_permissions/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/no_socket_permissions/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_no_socket_permissions_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/no_socket_permissions/newlib/controller.js test_data/ppapi/tests/extensions/no_socket_permissions/newlib/index.html test_data/ppapi/tests/extensions/no_socket_permissions/newlib/main.js test_data/ppapi/tests/extensions/no_socket_permissions/newlib/manifest.json
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_test_files.stamp
+build test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_packaged_app_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app.nmf -xtest_file0$:test_file.txt -xtest_file1$:test_file2.txt -xtest_file2$:test_file.txt -xtest_file3$:test_file2.txt -xtest_file4$:test_file.txt -xtest_file5$:test_file2.txt -xtest_file6$:test_file.txt -xtest_file7$:test_file2.txt -xtest_file8$:test_file.txt -xtest_file9$:test_file2.txt -xtest_file10$:test_file.txt -xtest_file11$:test_file2.txt -xtest_file12$:test_file.txt -xtest_file13$:test_file2.txt -xtest_file14$:test_file.txt -xtest_file15$:test_file2.txt -xtest_file16$:test_file.txt -xtest_file17$:test_file2.txt -xtest_file18$:test_file.txt -xtest_file19$:test_file2.txt -xtest_file20$:test_file.txt -xtest_file21$:test_file2.txt -xtest_file22$:test_file.txt -xtest_file23$:test_file2.txt -xtest_file24$:test_file.txt -xtest_file25$:test_file2.txt -xtest_file26$:test_file.txt -xtest_file27$:test_file2.txt -xtest_file28$:test_file.txt -xtest_file29$:test_file2.txt -xtest_file30$:test_file.txt -xtest_file31$:test_file2.txt -xtest_file32$:test_file.txt -xtest_file33$:test_file2.txt -xtest_file34$:test_file.txt -xtest_file35$:test_file2.txt -xtest_file36$:test_file.txt -xtest_file37$:test_file2.txt -xtest_file38$:test_file.txt -xtest_file39$:test_file2.txt -xtest_file40$:test_file.txt -xtest_file41$:test_file2.txt -xtest_file42$:test_file.txt -xtest_file43$:test_file2.txt -xtest_file44$:test_file.txt -xtest_file45$:test_file2.txt -xtest_file46$:test_file.txt -xtest_file47$:test_file2.txt -xtest_file48$:test_file.txt -xtest_file49$:test_file2.txt -xtest_file50$:test_file.txt -xtest_file51$:test_file2.txt -xtest_file52$:test_file.txt -xtest_file53$:test_file2.txt -xtest_file54$:test_file.txt -xtest_file55$:test_file2.txt -xtest_file56$:test_file.txt -xtest_file57$:test_file2.txt -xtest_file58$:test_file.txt -xtest_file59$:test_file2.txt -xtest_file60$:test_file.txt -xtest_file61$:test_file2.txt -xtest_file62$:test_file.txt -xtest_file63$:test_file2.txt -xtest_file64$:test_file.txt -xtest_file65$:test_file2.txt -xtest_file66$:test_file.txt -xtest_file67$:test_file2.txt -xtest_file68$:test_file.txt -xtest_file69$:test_file2.txt -xtest_file70$:test_file.txt -xtest_file71$:test_file2.txt -xtest_file72$:test_file.txt -xtest_file73$:test_file2.txt -xtest_file74$:test_file.txt -xtest_file75$:test_file2.txt -xtest_file76$:test_file.txt -xtest_file77$:test_file2.txt -xtest_file78$:test_file.txt -xtest_file79$:test_file2.txt -xtest_file80$:test_file.txt -xtest_file81$:test_file2.txt -xtest_file82$:test_file.txt -xtest_file83$:test_file2.txt -xtest_file84$:test_file.txt -xtest_file85$:test_file2.txt -xtest_file86$:test_file.txt -xtest_file87$:test_file2.txt -xtest_file88$:test_file.txt -xtest_file89$:test_file2.txt -xtest_file90$:test_file.txt -xtest_file91$:test_file2.txt -xtest_file92$:test_file.txt -xtest_file93$:test_file2.txt -xtest_file94$:test_file.txt -xtest_file95$:test_file2.txt -xtest_file96$:test_file.txt -xtest_file97$:test_file2.txt -xtest_file98$:test_file.txt -xtest_file99$:test_file2.txt -xtest_file100$:test_file.txt -xtest_file101$:test_file2.txt -xtest_file102$:test_file.txt -xtest_file103$:test_file2.txt -xtest_file104$:test_file.txt -xtest_file105$:test_file2.txt -xtest_file106$:test_file.txt -xtest_file107$:test_file2.txt -xtest_file108$:test_file.txt -xtest_file109$:test_file2.txt -xtest_file110$:test_file.txt -xtest_file111$:test_file2.txt -xtest_file112$:test_file.txt -xtest_file113$:test_file2.txt -xtest_file114$:test_file.txt -xtest_file115$:test_file2.txt -xtest_file116$:test_file.txt -xtest_file117$:test_file2.txt -xtest_file118$:test_file.txt -xtest_file119$:test_file2.txt -xtest_file120$:test_file.txt -xtest_file121$:test_file2.txt -xtest_file122$:test_file.txt -xtest_file123$:test_file2.txt -xtest_file124$:test_file.txt -xtest_file125$:test_file2.txt -xtest_file126$:test_file.txt -xtest_file127$:test_file2.txt -xtest_file128$:test_file.txt test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_packaged_app_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_packaged_app_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/packaged_app/newlib/ppapi_tests_extensions_packaged_app.nmf
+build test_data/ppapi/tests/extensions/packaged_app/newlib/controller.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/controller.js
+build test_data/ppapi/tests/extensions/packaged_app/newlib/index.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/index.html
+build test_data/ppapi/tests/extensions/packaged_app/newlib/main.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/main.js
+build test_data/ppapi/tests/extensions/packaged_app/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/manifest.json
+build test_data/ppapi/tests/extensions/packaged_app/newlib/test_file.txt: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/test_file.txt
+build test_data/ppapi/tests/extensions/packaged_app/newlib/test_file2.txt: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/packaged_app/test_file2.txt
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_packaged_app_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/packaged_app/newlib/controller.js test_data/ppapi/tests/extensions/packaged_app/newlib/index.html test_data/ppapi/tests/extensions/packaged_app/newlib/main.js test_data/ppapi/tests/extensions/packaged_app/newlib/manifest.json test_data/ppapi/tests/extensions/packaged_app/newlib/test_file.txt test_data/ppapi/tests/extensions/packaged_app/newlib/test_file2.txt
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_test_files.stamp
+build test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_popup_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_popup_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup.nmf test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_popup_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_popup_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/popup/newlib/ppapi_tests_extensions_popup.nmf
+build test_data/ppapi/tests/extensions/popup/newlib/background.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/popup/background.js
+build test_data/ppapi/tests/extensions/popup/newlib/popup.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/popup/popup.html
+build test_data/ppapi/tests/extensions/popup/newlib/popup.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/popup/popup.js
+build test_data/ppapi/tests/extensions/popup/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/popup/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_popup_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/popup/newlib/background.js test_data/ppapi/tests/extensions/popup/newlib/popup.html test_data/ppapi/tests/extensions/popup/newlib/popup.js test_data/ppapi/tests/extensions/popup/newlib/manifest.json
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions.stamp: clang_newlib_x64_stamp || clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_copy_nexe.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_nmf.stamp clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_test_files.stamp
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions_newlib_x86_64.nexe: clang_newlib_x64_copy clang_newlib_x64/ppapi_tests_extensions_socket_permissions_newlib_x86_64.nexe
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_copy_nexe.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions_newlib_x86_64.nexe
+subninja clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_nexe.ninja
+rule __ppapi_tests_extensions_ppapi_tests_extensions_socket_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule
+  command = python ../../../../../native_client_sdk/src/tools/create_nmf.py --no-default-libpath --objdump=/usr/local/google/home/jokulik/chromium/src/native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump --output=test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions.nmf test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions_newlib_x86_64.nexe
+  description = ACTION //ppapi/tests/extensions:ppapi_tests_extensions_socket_permissions_nmf(//build/toolchain/nacl:clang_newlib_x64)
+  restat = 1
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_nmf.inputdeps.stamp: clang_newlib_x64_stamp ../../../../../native_client_sdk/src/tools/create_nmf.py ../../../../../native_client/toolchain/linux_x86/pnacl_newlib/bin/x86_64-nacl-objdump test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions_newlib_x86_64.nexe clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_copy_nexe.stamp
+
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions.nmf: __ppapi_tests_extensions_ppapi_tests_extensions_socket_permissions_nmf___build_toolchain_nacl_clang_newlib_x64__rule | clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_nmf.inputdeps.stamp
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_nmf.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/socket_permissions/newlib/ppapi_tests_extensions_socket_permissions.nmf
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/controller.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/socket_permissions/controller.js
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/index.html: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/socket_permissions/index.html
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/main.js: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/socket_permissions/main.js
+build test_data/ppapi/tests/extensions/socket_permissions/newlib/manifest.json: clang_newlib_x64_copy ../../../../../ppapi/tests/extensions/socket_permissions/manifest.json
+
+build clang_newlib_x64/obj/ppapi/tests/extensions/ppapi_tests_extensions_socket_permissions_test_files.stamp: clang_newlib_x64_stamp test_data/ppapi/tests/extensions/socket_permissions/newlib/controller.js test_data/ppapi/tests/extensions/socket_permissions/newlib/index.html test_data/ppapi/tests/extensions/socket_permissions/newlib/main.js test_data/ppapi/tests/extensions/socket_permissions/newlib/manifest.json

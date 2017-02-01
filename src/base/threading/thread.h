@@ -175,9 +175,8 @@ class BASE_EXPORT Thread : PlatformThread::Delegate {
   // deadlock on Windows with printer worker thread. In any other case, Stop()
   // should be used.
   //
-  // StopSoon should not be called multiple times as it is risky to do so. It
-  // could cause a timing issue in message_loop() access. Call Stop() to reset
-  // the thread object once it is known that the thread has quit.
+  // Call Stop() to reset the thread object once it is known that the thread has
+  // quit.
   void StopSoon();
 
   // Detaches the owning sequence, indicating that the next call to this API

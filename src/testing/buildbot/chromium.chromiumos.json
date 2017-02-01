@@ -37,6 +37,9 @@
         "test": "app_shell_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -55,6 +58,9 @@
         "test": "aura_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -76,12 +82,18 @@
         "test": "browser_tests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "cacheinvalidation_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -119,12 +131,18 @@
         "test": "content_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "crypto_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -137,12 +155,18 @@
         "test": "display_service_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "display_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -161,12 +185,18 @@
         "test": "extensions_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "gcm_unit_tests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -206,6 +236,9 @@
         "test": "gpu_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -225,18 +258,27 @@
         "test": "ipc_tests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "jingle_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "mash_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -249,6 +291,9 @@
         "test": "media_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -262,10 +307,10 @@
       },
       {
         "args": [
-          "--override-use-gl-with-osmesa-for-tests"
+          "--ozone-platform=x11"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
         "test": "mus_demo_unittests"
       },
@@ -288,6 +333,9 @@
         "test": "nacl_loader_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -306,12 +354,18 @@
         "test": "ozone_gl_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "ozone_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -345,18 +399,36 @@
         "test": "sandbox_linux_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "service_unittests"
+      },
+      {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "skia_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "sql_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -369,6 +441,9 @@
         "test": "ui_arc_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -381,12 +456,18 @@
         "test": "ui_chromeos_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
         "test": "ui_struct_traits_unittests"
       },
       {
+        "args": [
+          "--ozone-platform=x11"
+        ],
         "swarming": {
           "can_use_on_swarming_builders": true
         },
@@ -719,6 +800,12 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "skia_unittests"
       },
       {
@@ -842,7 +929,7 @@
       {
         "swarming": {
           "can_use_on_swarming_builders": true,
-          "shards": 10
+          "shards": 20
         },
         "test": "browser_tests"
       },
@@ -1054,6 +1141,12 @@
           "can_use_on_swarming_builders": true
         },
         "test": "sandbox_linux_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "service_unittests"
       },
       {
         "swarming": {

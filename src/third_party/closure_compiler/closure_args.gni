@@ -42,6 +42,8 @@ checking_closure_args = [
   "language_in=ECMASCRIPT6_STRICT",
   "language_out=ECMASCRIPT5_STRICT",
 
+  "checks_only",
+  "chrome_pass",
   "polymer_pass",
 ]
 

@@ -36,6 +36,9 @@ JANUARY_1_2015_UTC = '150101120000Z'
 # January 1st, 2016 12:00 UTC
 JANUARY_1_2016_UTC = '160101120000Z'
 
+# January 1st, 2021 12:00 UTC
+JANUARY_1_2021_UTC = '210101120000Z'
+
 # The default time tests should use when verifying.
 DEFAULT_TIME = MARCH_2_2015_UTC
 
@@ -52,6 +55,19 @@ g_cur_path_id = {}
 g_out_dir = None
 g_out_pem = None
 
+# The default validity range of generated certificates. Can be modified with
+# set_default_validity_range().
+g_default_start_date = JANUARY_1_2015_UTC
+g_default_end_date = JANUARY_1_2016_UTC
+
+
+def set_default_validity_range(start_date, end_date):
+  """Sets the validity range that will be used for certificates created with
+  Certificate"""
+  global g_default_start_date
+  global g_default_end_date
+  g_default_start_date = start_date
+  g_default_end_date = end_date
 
 def get_unique_path_id(name):
   """Returns a base filename that contains 'name', but is unique to the output
@@ -156,7 +172,7 @@ class Certificate(object):
     # By default OpenSSL will use the current time for the start time. Instead
     # default to using a fixed timestamp for more predictable results each time
     # the certificates are re-generated.
-    self.set_validity_range(JANUARY_1_2015_UTC, JANUARY_1_2016_UTC)
+    self.set_validity_range(g_default_start_date, g_default_end_date)
 
     # Use SHA-256 when THIS certificate is signed (setting it in the
     # configuration would instead set the hash to use when signing other

@@ -315,7 +315,8 @@ class QUIC_EXPORT_PRIVATE QuicStream {
   // limited).
   bool stream_contributes_to_connection_flow_control_;
 
-  // For debugging only, used for busy loop check.
+  // A counter incremented when OnCanWrite() is called and no progress is made.
+  // For debugging only.
   size_t busy_counter_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicStream);

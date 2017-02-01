@@ -1,0 +1,2 @@
+newlib_pnacl/gen/net/grit/net_resources.h
+newlib_pnacl/gen/net/net_resources.pak

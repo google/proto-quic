@@ -5,14 +5,12 @@
 #ifndef NET_HTTP2_DECODER_DECODE_BUFFER_H_
 #define NET_HTTP2_DECODER_DECODE_BUFFER_H_
 
-// DecodeBuffer provides primitives for decoding various integer types found
-// in HTTP/2 frames.
-// DecodeBuffer wraps a byte array from which we can read and decode serialized
-// HTTP/2 frames, or parts thereof. DecodeBuffer is intended only for stack
-// allocation, where the caller is typically going to use the DecodeBuffer
+// DecodeBuffer provides primitives for decoding various integer types found in
+// HTTP/2 frames. It wraps a byte array from which we can read and decode
+// serialized HTTP/2 frames, or parts thereof. DecodeBuffer is intended only for
+// stack allocation, where the caller is typically going to use the DecodeBuffer
 // instance as part of decoding the entire buffer before returning to its own
-// caller. Only the concrete Slow* methods are defined in the cc file,
-// all other methods are defined in this header file to enable inlining.
+// caller.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -116,105 +114,24 @@ class NET_EXPORT_PRIVATE DecodeBuffer {
     return b1 << 24 | b2 << 16 | b3 << 8 | b4;
   }
 
-  // SlowDecode* routines are used for decoding a multi-field structure when
-  // there may not be enough bytes in the buffer to decode the entirety of the
-  // structure.
-
-  // Read as much of an unsigned int field of an encoded structure as possible,
-  // keeping track via decode_offset of our position in the encoded structure.
-  // Returns true if the field has been fully decoded.
-  // |field_size| is the number of bytes of the encoding of the field (usually
-  // a compile time fixed value).
-  // |field_offset| is the offset of the first byte of the encoding of the field
-  // within the encoding of that structure (usually a compile time fixed value).
-  // |*decode_offset| is the offset of the byte to be decoded next.
-  // |*value| is the storage for the decoded value, and is used for storing
-  // partially decoded values; if some, but not all, bytes of the encoding are
-  // available then this method will return having stored the decoded bytes into
-  // *value.
-  bool SlowDecodeUnsignedInt(uint32_t field_size,
-                             uint32_t field_offset,
-                             uint32_t* decode_offset,
-                             uint32_t* value);
-
-  // Like SlowDecodeUnsignedInt, but specifically for 8-bit unsigned integers.
-  // Obviously a byte can't be split (on our byte addressable machines), but
-  // a larger structure containing such a field might be.
-  bool SlowDecodeUInt8(uint32_t field_offset,
-                       uint32_t* decode_offset,
-                       uint8_t* value);
-
-  // Like SlowDecodeUnsignedInt, but specifically for 16-bit unsigned integers.
-  bool SlowDecodeUInt16(uint32_t field_offset,
-                        uint32_t* decode_offset,
-                        uint16_t* value);
-
-  // Like SlowDecodeUnsignedInt, but specifically for 24-bit unsigned integers.
-  bool SlowDecodeUInt24(uint32_t field_offset,
-                        uint32_t* decode_offset,
-                        uint32_t* value);
-
-  // Like SlowDecodeUnsignedInt, but specifically for 31-bit unsigned integers.
-  // (same definition as for DecodeUInt31).
-  bool SlowDecodeUInt31(uint32_t field_offset,
-                        uint32_t* decode_offset,
-                        uint32_t* value);
-
-  // Like SlowDecodeUnsignedInt, but specifically for 31-bit unsigned integers.
-  bool SlowDecodeUInt32(uint32_t field_offset,
-                        uint32_t* decode_offset,
-                        uint32_t* value);
-
-  // Decodes an enum value, where the size (in bytes) of the encoding must be
-  // stated explicitly. It is assumed that under the covers enums are really
-  // just integers, and that we can static_cast them to and from uint32.
-  template <typename E>
-  bool SlowDecodeEnum(uint32_t field_size,
-                      uint32_t field_offset,
-                      uint32_t* decode_offset,
-                      E* value) {
-    uint32_t tmp = static_cast<uint32_t>(*value);
-    const bool done =
-        SlowDecodeUnsignedInt(field_size, field_offset, decode_offset, &tmp);
-    *value = static_cast<E>(tmp);
-    DCHECK_EQ(tmp, static_cast<uint32_t>(*value));
-    return done;
-  }
-
-  // We assume the decode buffers will typically be modest in size (i.e. a few
-  // K).
-  // Let's make sure during testing that we don't go very high, with 32MB
-  // selected rather arbitrarily.
+  // We assume the decode buffers will typically be modest in size (i.e. often a
+  // few KB, perhaps as high as 100KB). Let's make sure during testing that we
+  // don't go very high, with 32MB selected rather arbitrarily.
   static constexpr size_t MaxDecodeBufferLength() { return 1 << 25; }
 
  protected:
 #ifndef NDEBUG
   // These are part of validating during tests that there is at most one
   // DecodeBufferSubset instance at a time for any DecodeBuffer instance.
-  void set_subset_of_base(DecodeBuffer* base,
-                          const DecodeBufferSubset* subset) {
-    DCHECK_EQ(this, subset);
-    base->set_subset(subset);
-  }
+  void set_subset_of_base(DecodeBuffer* base, const DecodeBufferSubset* subset);
   void clear_subset_of_base(DecodeBuffer* base,
-                            const DecodeBufferSubset* subset) {
-    DCHECK_EQ(this, subset);
-    base->clear_subset(subset);
-  }
+                            const DecodeBufferSubset* subset);
 #endif
 
  private:
 #ifndef NDEBUG
-  void set_subset(const DecodeBufferSubset* subset) {
-    DCHECK(subset != nullptr);
-    DCHECK_EQ(subset_, nullptr) << "There is already a subset";
-    subset_ = subset;
-  }
-  void clear_subset(const DecodeBufferSubset* subset) {
-    DCHECK(subset != nullptr);
-    DCHECK_EQ(subset_, subset);
-    subset_ = nullptr;
-  }
+  void set_subset(const DecodeBufferSubset* subset);
+  void clear_subset(const DecodeBufferSubset* subset);
 #endif
 
   // Prevent heap allocation of DecodeBuffer.
@@ -243,43 +160,33 @@ class NET_EXPORT_PRIVATE DecodeBuffer {
 // DecodeBuffer, though they can be nested (i.e. a DecodeBufferSubset's
 // base may itself be a DecodeBufferSubset). This avoids the AdvanceCursor
 // being called erroneously.
-class DecodeBufferSubset : public DecodeBuffer {
+class NET_EXPORT_PRIVATE DecodeBufferSubset : public DecodeBuffer {
  public:
   DecodeBufferSubset(DecodeBuffer* base, size_t subset_len)
       : DecodeBuffer(base->cursor(), base->MinLengthRemaining(subset_len)),
-#ifndef NDEBUG
-        start_base_offset_(base->Offset()),
-        max_base_offset_(start_base_offset_ + FullSize()),
-#endif
         base_buffer_(base) {
 #ifndef NDEBUG
-    DCHECK_LE(max_base_offset_, base->FullSize());
-    set_subset_of_base(base_buffer_, this);
+    DebugSetup();
 #endif
   }
 
   ~DecodeBufferSubset() {
     size_t offset = Offset();
 #ifndef NDEBUG
-    clear_subset_of_base(base_buffer_, this);
-    DCHECK_LE(Offset(), FullSize());
-    DCHECK_EQ(start_base_offset_, base_buffer_->Offset())
-        << "The base buffer was modified";
-    DCHECK_LE(offset, FullSize());
-    DCHECK_LE(start_base_offset_ + offset, base_buffer_->FullSize());
+    DebugTearDown();
 #endif
     base_buffer_->AdvanceCursor(offset);
-#ifndef NDEBUG
-    DCHECK_GE(max_base_offset_, base_buffer_->Offset());
-#endif
   }
 
  private:
-#ifndef NDEBUG
-  const size_t start_base_offset_;  // Used for DCHECKs.
-  const size_t max_base_offset_;    // Used for DCHECKs.
-#endif
   DecodeBuffer* const base_buffer_;
+#ifndef NDEBUG
+  size_t start_base_offset_;  // Used for DCHECKs.
+  size_t max_base_offset_;    // Used for DCHECKs.
+
+  void DebugSetup();
+  void DebugTearDown();
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(DecodeBufferSubset);
 };

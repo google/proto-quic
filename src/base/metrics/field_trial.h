@@ -124,11 +124,13 @@ class BASE_EXPORT FieldTrial : public RefCounted<FieldTrial> {
   };
 
   // A triplet representing a FieldTrial, its selected group and whether it's
-  // active.
+  // active. String members are pointers to the underlying strings owned by the
+  // FieldTrial object. Does not use StringPiece to avoid conversions back to
+  // std::string.
   struct BASE_EXPORT State {
-    StringPiece trial_name;
-    StringPiece group_name;
-    bool activated;
+    const std::string* trial_name = nullptr;
+    const std::string* group_name = nullptr;
+    bool activated = false;
 
     State();
     State(const State& other);

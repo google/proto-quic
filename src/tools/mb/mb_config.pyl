@@ -55,6 +55,7 @@
     },
 
     'chromium.android.fyi': {
+      'Memory Infra Tester': 'android_release_thumb_bot',
       'NDK Next MIPS Builder':
         'android_ndk_next_release_bot_minimal_symbols_mipsel',
       'NDK Next arm Builder':
@@ -107,6 +108,7 @@
       'CFI Linux Full': 'cfi_full_release_static',
       'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary (clobber)': 'release_bot',
+      'Chromium Linux Goma Canary LocalOutputCache': 'release_bot',
       'Chromium Linux Precise Goma LinkTest': 'release_bot',
       'Chromium Linux32 Goma Canary (clobber)': 'release_bot_x86',
       'Chromium Mac 10.10 MacViews': 'mac_views_browser_release_bot',
@@ -807,6 +809,10 @@
 
     'android_release_bot_minimal_symbols_arm64': [
       'android', 'release_bot', 'minimal_symbols', 'arm64',
+    ],
+
+    'android_release_thumb_bot': [
+      'android', 'release_bot', 'arm_thumb',
     ],
 
     'android_release_trybot': [
@@ -1525,6 +1531,10 @@
     'arm_no_neon': {
       'mixins': ['arm'],
       'gn_args': 'arm_use_neon=false',
+    },
+
+    'arm_thumb': {
+      'gn_args': 'arm_use_thumb=true',
     },
 
     'asan': {

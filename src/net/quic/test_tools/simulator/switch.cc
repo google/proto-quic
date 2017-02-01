@@ -5,11 +5,10 @@
 #include <cinttypes>
 
 #include "base/format_macros.h"
-#include "base/strings/stringprintf.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/simulator/switch.h"
 
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -20,8 +19,8 @@ Switch::Switch(Simulator* simulator,
                SwitchPortNumber port_count,
                QuicByteCount queue_capacity) {
   for (size_t port_number = 1; port_number <= port_count; port_number++) {
-    ports_.emplace_back(simulator, StringPrintf("%s (port %" PRIuS ")",
-                                                name.c_str(), port_number),
+    ports_.emplace_back(simulator, QuicStringPrintf("%s (port %" PRIuS ")",
+                                                    name.c_str(), port_number),
                         this, port_number, queue_capacity);
   }
 }
@@ -38,7 +37,7 @@ Switch::Port::Port(Simulator* simulator,
       port_number_(port_number),
       connected_(false),
       queue_(simulator,
-             StringPrintf("%s (queue)", name.c_str()),
+             QuicStringPrintf("%s (queue)", name.c_str()),
              queue_capacity) {}
 
 void Switch::Port::AcceptPacket(std::unique_ptr<Packet> packet) {

@@ -342,12 +342,12 @@ TEST_F(FieldTrialTest, AllGroups) {
   std::string winner("Winner");
   trial->AppendGroup(winner, 10);
   EXPECT_TRUE(trial->GetState(&field_trial_state));
-  EXPECT_EQ(one_winner, field_trial_state.trial_name);
-  EXPECT_EQ(winner, field_trial_state.group_name);
+  EXPECT_EQ(one_winner, *field_trial_state.trial_name);
+  EXPECT_EQ(winner, *field_trial_state.group_name);
   trial->group();
   EXPECT_TRUE(trial->GetState(&field_trial_state));
-  EXPECT_EQ(one_winner, field_trial_state.trial_name);
-  EXPECT_EQ(winner, field_trial_state.group_name);
+  EXPECT_EQ(one_winner, *field_trial_state.trial_name);
+  EXPECT_EQ(winner, *field_trial_state.group_name);
 
   std::string multi_group("MultiGroup");
   scoped_refptr<FieldTrial> multi_group_trial =
@@ -360,8 +360,8 @@ TEST_F(FieldTrialTest, AllGroups) {
   // Finalize the group selection by accessing the selected group.
   multi_group_trial->group();
   EXPECT_TRUE(multi_group_trial->GetState(&field_trial_state));
-  EXPECT_EQ(multi_group, field_trial_state.trial_name);
-  EXPECT_EQ(multi_group_trial->group_name(), field_trial_state.group_name);
+  EXPECT_EQ(multi_group, *field_trial_state.trial_name);
+  EXPECT_EQ(multi_group_trial->group_name(), *field_trial_state.group_name);
 }
 
 TEST_F(FieldTrialTest, ActiveGroupsNotFinalized) {

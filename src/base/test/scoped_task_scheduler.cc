@@ -53,6 +53,7 @@ class TestTaskScheduler : public TaskScheduler {
   std::vector<const HistogramBase*> GetHistograms() const override;
   void Shutdown() override;
   void FlushForTesting() override;
+  void JoinForTesting() override;
 
   // Posts |task| to this TaskScheduler with |sequence_token|. Returns true on
   // success.
@@ -168,6 +169,10 @@ void TestTaskScheduler::FlushForTesting() {
   NOTREACHED();
 }
 
+void TestTaskScheduler::JoinForTesting() {
+  // TestTaskScheduler doesn't create threads so this does nothing.
+}
+
 bool TestTaskScheduler::PostTask(std::unique_ptr<internal::Task> task,
                                  const SequenceToken& sequence_token) {
   DCHECK(task);
@@ -252,6 +257,10 @@ ScopedTaskScheduler::ScopedTaskScheduler(MessageLoop* external_message_loop) {
 ScopedTaskScheduler::~ScopedTaskScheduler() {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_EQ(task_scheduler_, TaskScheduler::GetInstance());
+
+  // Per contract, call JoinForTesting() before deleting the TaskScheduler.
+  TaskScheduler::GetInstance()->JoinForTesting();
+
   TaskScheduler::SetInstance(nullptr);
 }
 

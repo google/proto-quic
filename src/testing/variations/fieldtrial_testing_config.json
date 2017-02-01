@@ -86,9 +86,9 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledFive",
+                    "name": "EnabledThree",
                     "params": {
-                        "impression_limit": "5"
+                        "impression_limit": "3"
                     },
                     "enable_features": [
                         "AutofillCreditCardSigninPromo"
@@ -316,7 +316,10 @@
                         "enable_quick_answers": "true",
                         "enable_translation": "true",
                         "recent_scroll_duration_ms": "300"
-                    }
+                    },
+                    "enable_features": [
+                        "ContextualSearchSingleActions"
+                    ]
                 }
             ]
         }
@@ -1136,7 +1139,7 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled"
+                    "name": "EnabledFull"
                 }
             ]
         }
@@ -1199,6 +1202,26 @@
             ]
         }
     ],
+    "NetProxyPreconnects": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "NetProxyPreconnects",
+                    "params": {
+                        "restrict_to_one_preconnect_for_proxies": "true"
+                    }
+                }
+            ]
+        }
+    ],
     "NetworkQualityEstimator": [
         {
             "platforms": [
@@ -1245,7 +1268,10 @@
             ],
             "experiments": [
                 {
-                    "name": "NetworkTimeQueriesEnabled",
+                    "name": "NetworkTimeQueriesEnabledBackgroundAndOnDemand",
+                    "params": {
+                        "FetchBehavior": "background-and-on-demand"
+                    },
                     "enable_features": [
                         "NetworkTimeServiceQuerying"
                     ]
@@ -1317,7 +1343,8 @@
                 {
                     "name": "Enabled",
                     "enable_features": [
-                        "OfflinePagesAsyncDownload"
+                        "OfflinePagesAsyncDownload",
+                        "OfflinePagesSvelte"
                     ]
                 }
             ]
@@ -1639,9 +1666,9 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledGlobalRankingNoVersioned",
+                    "name": "EnabledCGUV20",
                     "params": {
-                        "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_gm"
+                        "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_g20"
                     }
                 }
             ]
@@ -1997,27 +2024,6 @@
             ]
         }
     ],
-    "SafeBrowsingReportPhishingErrorLink": [
-        {
-            "platforms": [
-                "android",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled"
-                },
-                {
-                    "name": "Control"
-                },
-                {
-                    "name": "Disabled"
-                }
-            ]
-        }
-    ],
     "SafeBrowsingScoutTransitionStudy": [
         {
             "platforms": [
@@ -2053,18 +2059,16 @@
             ]
         }
     ],
-    "SafeBrowsingUpdateFrequency": [
+    "SafeBrowsingUseLocalBlacklist": [
         {
             "platforms": [
-                "linux",
-                "mac",
-                "win"
+                "android"
             ],
             "experiments": [
                 {
-                    "name": "UpdateTime15m",
+                    "name": "Use3PAPI",
                     "params": {
-                        "NextUpdateIntervalInMinutes": "15"
+                        "check_local_blacklist": "false"
                     }
                 }
             ]
@@ -2253,6 +2257,21 @@
             "experiments": [
                 {
                     "name": "ExperimentYes"
+                }
+            ]
+        }
+    ],
+    "SiteIsolationForExtensions": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled"
                 }
             ]
         }
@@ -2470,6 +2489,21 @@
                         "enable_update_menu_item": "true",
                         "show_summary": "true"
                     }
+                }
+            ]
+        }
+    ],
+    "UseConsolidatedStartupFlow": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "UseConsolidatedStartupFlow"
+                    ]
                 }
             ]
         }

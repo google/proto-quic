@@ -707,7 +707,6 @@ TEST_F(HttpStreamFactoryTest, JobNotifiesProxy) {
 const int quic_proxy_test_mock_errors[] = {
     ERR_PROXY_CONNECTION_FAILED,
     ERR_NAME_NOT_RESOLVED,
-    ERR_INTERNET_DISCONNECTED,
     ERR_ADDRESS_UNREACHABLE,
     ERR_CONNECTION_CLOSED,
     ERR_CONNECTION_TIMED_OUT,
@@ -1239,6 +1238,7 @@ TEST_F(HttpStreamFactoryTest, OnlyOnePreconnectToProxyServer) {
       }
 
       SpdySessionDependencies session_deps;
+      session_deps.restrict_to_one_preconnect_for_proxies = true;
       HttpNetworkSession::Params params =
           SpdySessionDependencies::CreateSessionParams(&session_deps);
       params.enable_quic = true;
@@ -1329,6 +1329,7 @@ TEST_F(HttpStreamFactoryTest, ProxyServerPreconnectDifferentPrivacyModes) {
   http_server_properties.SetSupportsSpdy(spdy_server, true);
 
   SpdySessionDependencies session_deps;
+  session_deps.restrict_to_one_preconnect_for_proxies = true;
   HttpNetworkSession::Params params =
       SpdySessionDependencies::CreateSessionParams(&session_deps);
   params.enable_quic = true;
@@ -1693,6 +1694,7 @@ TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxy) {
 TEST_F(HttpStreamFactoryTest, RequestHttpStreamOverProxyWithPreconnects) {
   SpdySessionDependencies session_deps(
       ProxyService::CreateFixed("https://myproxy.org:443"));
+  session_deps.restrict_to_one_preconnect_for_proxies = true;
 
   // Set up the proxy server as a server that supports request priorities.
   std::unique_ptr<HttpServerPropertiesImpl> http_server_properties(

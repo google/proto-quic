@@ -65,9 +65,6 @@ const char kValidCookieLine[] = "A=B; path=/";
 //   // Time to wait between two cookie insertions to ensure that cookies have
 //   // different creation times.
 //   static const int creation_time_granularity_in_ms;
-//
-//   // The cookie store enforces secure flag requires a secure scheme.
-//   static const bool enforce_strict_secure;
 // };
 
 template <class CookieStoreTestTraits>
@@ -177,8 +174,7 @@ class CookieStoreTest : public testing::Test {
     ResultSavingCookieCallback<bool> callback;
     cs->SetCookieWithDetailsAsync(
         url, name, value, domain, path, creation_time, expiration_time,
-        last_access_time, secure, http_only, same_site,
-        false /* enforces strict secure cookies */, priority,
+        last_access_time, secure, http_only, same_site, priority,
         base::Bind(&ResultSavingCookieCallback<bool>::Run,
                    base::Unretained(&callback)));
     callback.WaitUntilDone();
@@ -202,8 +198,6 @@ class CookieStoreTest : public testing::Test {
     CookieOptions options;
     if (!CookieStoreTestTraits::supports_http_only)
       options.set_include_httponly();
-    if (CookieStoreTestTraits::enforce_strict_secure)
-      options.set_enforce_strict_secure();
     return SetCookieWithOptions(cs, url, cookie_line, options);
   }
 
@@ -355,8 +349,14 @@ TYPED_TEST_P(CookieStoreTest, SetCookieWithDetailsAsync) {
       cs, this->www_google_bar_.url(), "C", "D", this->www_google_bar_.domain(),
       "/bar", two_hours_ago, base::Time(), one_hour_ago, false, true,
       CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
-  EXPECT_TRUE(this->SetCookieWithDetails(
+  // Because of strict secure cookies, a cookie made by an HTTP URL should fail
+  // to create a cookie with a the secure attribute.
+  EXPECT_FALSE(this->SetCookieWithDetails(
       cs, this->http_www_google_.url(), "E", "F", std::string(), std::string(),
+      base::Time(), base::Time(), base::Time(), true, false,
+      CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
+  EXPECT_TRUE(this->SetCookieWithDetails(
+      cs, this->https_www_google_.url(), "E", "F", std::string(), std::string(),
       base::Time(), base::Time(), base::Time(), true, false,
       CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
 

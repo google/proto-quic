@@ -280,7 +280,7 @@ void QuicSentPacketManager::OnIncomingAck(const QuicAckFrame& ack_frame,
          pending_retransmissions_.front().second == LOSS_RETRANSMISSION) {
     // Cancel any pending retransmissions larger than largest_newly_acked_.
     unacked_packets_.RestoreToInFlight(pending_retransmissions_.front().first);
-    pending_retransmissions_.erase(pending_retransmissions_.begin());
+    pending_retransmissions_.pop_front();
   }
 
   if (debug_delegate_ != nullptr) {
@@ -438,7 +438,7 @@ bool QuicSentPacketManager::HasPendingRetransmissions() const {
 
 QuicPendingRetransmission QuicSentPacketManager::NextPendingRetransmission() {
   QUIC_BUG_IF(pending_retransmissions_.empty())
-      << "Unexpected call to PendingRetransmissions() with empty pending "
+      << "Unexpected call to NextPendingRetransmission() with empty pending "
       << "retransmission list. Corrupted memory usage imminent.";
   QuicPacketNumber packet_number = pending_retransmissions_.begin()->first;
   TransmissionType transmission_type = pending_retransmissions_.begin()->second;

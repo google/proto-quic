@@ -451,6 +451,13 @@ class SmoothnessPathologicalMobileSites(_Smoothness):
   def Name(cls):
     return 'smoothness.pathological_mobile_sites'
 
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    # http://crbug.com/685342
+    if possible_browser.platform.GetDeviceTypeName() == 'Nexus 7':
+      return True
+    return False
+
 
 class SmoothnessToughTextureUploadCases(_Smoothness):
   page_set = page_sets.ToughTextureUploadCasesPageSet
@@ -480,7 +487,8 @@ class SmoothnessToughAdCases(_Smoothness):
 
 
 # http://crbug.com/522619 (mac/win)
-@benchmark.Disabled('win', 'mac')
+# http://crbug.com/683247 (android/linux)
+@benchmark.Disabled('win', 'mac', 'android', 'linux')
 class SmoothnessScrollingToughAdCases(_Smoothness):
   """Measures rendering statistics while scrolling advertisements."""
   page_set = page_sets.ScrollingToughAdCasesPageSet

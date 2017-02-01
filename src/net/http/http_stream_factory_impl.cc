@@ -159,11 +159,12 @@ HttpStreamRequest* HttpStreamFactoryImpl::RequestStreamInternal(
         websocket_handshake_stream_create_helper,
     HttpStreamRequest::StreamType stream_type,
     const NetLogWithSource& net_log) {
-  JobController* job_controller =
-      new JobController(this, delegate, session_, job_factory_.get());
-  job_controller_set_.insert(base::WrapUnique(job_controller));
-
-  Request* request = job_controller->Start(
+  auto job_controller = base::MakeUnique<JobController>(
+      this, delegate, session_, job_factory_.get(), request_info,
+      /*is_preconnect=*/false);
+  JobController* job_controller_raw_ptr = job_controller.get();
+  job_controller_set_.insert(std::move(job_controller));
+  Request* request = job_controller_raw_ptr->Start(
       request_info, delegate, websocket_handshake_stream_create_helper, net_log,
       stream_type, priority, server_ssl_config, proxy_ssl_config);
 
@@ -182,11 +183,13 @@ void HttpStreamFactoryImpl::PreconnectStreams(
 
   DCHECK(!for_websockets_);
 
-  JobController* job_controller =
-      new JobController(this, nullptr, session_, job_factory_.get());
-  job_controller_set_.insert(base::WrapUnique(job_controller));
-  job_controller->Preconnect(num_streams, request_info, server_ssl_config,
-                             proxy_ssl_config);
+  auto job_controller = base::MakeUnique<JobController>(
+      this, nullptr, session_, job_factory_.get(), request_info,
+      /*is_preconnect=*/true);
+  JobController* job_controller_raw_ptr = job_controller.get();
+  job_controller_set_.insert(std::move(job_controller));
+  job_controller_raw_ptr->Preconnect(num_streams, request_info,
+                                     server_ssl_config, proxy_ssl_config);
 }
 
 const HostMappingRules* HttpStreamFactoryImpl::GetHostMappingRules() const {
@@ -200,8 +203,7 @@ void HttpStreamFactoryImpl::OnNewSpdySessionReady(
     const ProxyInfo& used_proxy_info,
     bool was_alpn_negotiated,
     NextProto negotiated_protocol,
-    bool using_spdy,
-    const NetLogWithSource& net_log) {
+    bool using_spdy) {
   while (true) {
     if (!spdy_session)
       break;

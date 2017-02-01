@@ -993,23 +993,11 @@ int SSLClientSocketImpl::Init() {
   SSL_clear_mode(ssl_.get(), mode.clear_mask);
 
   // Use BoringSSL defaults, but disable HMAC-SHA256 and HMAC-SHA384 ciphers
-  // (note that SHA256 and SHA384 only select legacy CBC ciphers). Also disable
-  // DHE_RSA_WITH_AES_256_GCM_SHA384. Historically, AES_256_GCM was not
-  // supported. As DHE is being deprecated, don't add a cipher only to remove
-  // it immediately.
-  //
-  // TODO(davidben): Remove the DHE_RSA_WITH_AES_256_GCM_SHA384 exclusion when
-  // the DHEEnabled administrative policy expires.
-  std::string command(
-      "ALL:!SHA256:!SHA384:!DHE-RSA-AES256-GCM-SHA384:!aPSK:!RC4");
+  // (note that SHA256 and SHA384 only select legacy CBC ciphers).
+  std::string command("ALL:!SHA256:!SHA384:!kDHE:!aPSK:!RC4");
 
   if (ssl_config_.require_ecdhe)
     command.append(":!kRSA:!kDHE");
-
-  if (!ssl_config_.deprecated_cipher_suites_enabled) {
-    // Only offer DHE on the second handshake. https://crbug.com/538690
-    command.append(":!kDHE");
-  }
 
   // Additionally disable HMAC-SHA1 ciphers in ECDSA. These are the remaining
   // CBC-mode ECDSA ciphers.
@@ -1159,16 +1147,6 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
       SSL_session_reused(ssl_.get())) {
     UMA_HISTOGRAM_EXACT_LINEAR("Net.SSLSessionConcurrentLookupCount",
                                ssl_session_cache_lookup_count_, 20);
-  }
-
-  // DHE is offered on the deprecated cipher fallback and then rejected
-  // afterwards. This is to aid in diagnosing connection failures because a
-  // server requires DHE ciphers.
-  //
-  // TODO(davidben): A few releases after DHE's removal, remove this logic.
-  if (!ssl_config_.dhe_enabled &&
-      SSL_CIPHER_is_DHE(SSL_get_current_cipher(ssl_.get()))) {
-    return ERR_SSL_OBSOLETE_CIPHER;
   }
 
   // Check that if token binding was negotiated, then extended master secret

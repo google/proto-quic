@@ -1,0 +1,48 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DV8_DEPRECATION_WARNINGS -D_FX_CPU_=_FX_X64_ -DOPJ_STATIC -DPNG_PREFIX -DPNG_USE_READ_MACROS -DPDF_ENABLE_V8
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/pdfium -I../../../../../third_party/pdfium/third_party/freetype/include -I../../../../../third_party/pdfium/third_party/freetype/include/freetype
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -fPIC
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = fpdfdoc
+target_out_dir = obj/third_party/pdfium
+target_output_name = libfpdfdoc
+
+build obj/third_party/pdfium/fpdfdoc/cline.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cline.cpp
+build obj/third_party/pdfium/fpdfdoc/clines.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/clines.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_aaction.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_aaction.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_action.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_action.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_actionfields.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_actionfields.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_annot.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_annot.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_annotlist.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_annotlist.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_apsettings.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_apsettings.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_bookmark.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_bookmark.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_bookmarktree.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_bookmarktree.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_defaultappearance.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_defaultappearance.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_dest.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_dest.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_docjsactions.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_docjsactions.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_filespec.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_filespec.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_formcontrol.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_formcontrol.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_formfield.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_formfield.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_iconfit.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_iconfit.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_interform.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_interform.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_link.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_link.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_linklist.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_linklist.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_metadata.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_metadata.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_nametree.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_nametree.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_numbertree.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_numbertree.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_occontext.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_occontext.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_pagelabel.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_pagelabel.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_variabletext.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_variabletext.cpp
+build obj/third_party/pdfium/fpdfdoc/cpdf_viewerpreferences.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpdf_viewerpreferences.cpp
+build obj/third_party/pdfium/fpdfdoc/cpvt_color.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpvt_color.cpp
+build obj/third_party/pdfium/fpdfdoc/cpvt_fontmap.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpvt_fontmap.cpp
+build obj/third_party/pdfium/fpdfdoc/cpvt_generateap.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpvt_generateap.cpp
+build obj/third_party/pdfium/fpdfdoc/cpvt_sectioninfo.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpvt_sectioninfo.cpp
+build obj/third_party/pdfium/fpdfdoc/cpvt_wordinfo.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/cpvt_wordinfo.cpp
+build obj/third_party/pdfium/fpdfdoc/csection.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/csection.cpp
+build obj/third_party/pdfium/fpdfdoc/ctypeset.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/ctypeset.cpp
+build obj/third_party/pdfium/fpdfdoc/ipdf_formnotify.o: cxx ../../../../../third_party/pdfium/core/fpdfdoc/ipdf_formnotify.cpp
+
+build obj/third_party/pdfium/libfpdfdoc.a: alink obj/third_party/pdfium/fpdfdoc/cline.o obj/third_party/pdfium/fpdfdoc/clines.o obj/third_party/pdfium/fpdfdoc/cpdf_aaction.o obj/third_party/pdfium/fpdfdoc/cpdf_action.o obj/third_party/pdfium/fpdfdoc/cpdf_actionfields.o obj/third_party/pdfium/fpdfdoc/cpdf_annot.o obj/third_party/pdfium/fpdfdoc/cpdf_annotlist.o obj/third_party/pdfium/fpdfdoc/cpdf_apsettings.o obj/third_party/pdfium/fpdfdoc/cpdf_bookmark.o obj/third_party/pdfium/fpdfdoc/cpdf_bookmarktree.o obj/third_party/pdfium/fpdfdoc/cpdf_defaultappearance.o obj/third_party/pdfium/fpdfdoc/cpdf_dest.o obj/third_party/pdfium/fpdfdoc/cpdf_docjsactions.o obj/third_party/pdfium/fpdfdoc/cpdf_filespec.o obj/third_party/pdfium/fpdfdoc/cpdf_formcontrol.o obj/third_party/pdfium/fpdfdoc/cpdf_formfield.o obj/third_party/pdfium/fpdfdoc/cpdf_iconfit.o obj/third_party/pdfium/fpdfdoc/cpdf_interform.o obj/third_party/pdfium/fpdfdoc/cpdf_link.o obj/third_party/pdfium/fpdfdoc/cpdf_linklist.o obj/third_party/pdfium/fpdfdoc/cpdf_metadata.o obj/third_party/pdfium/fpdfdoc/cpdf_nametree.o obj/third_party/pdfium/fpdfdoc/cpdf_numbertree.o obj/third_party/pdfium/fpdfdoc/cpdf_occontext.o obj/third_party/pdfium/fpdfdoc/cpdf_pagelabel.o obj/third_party/pdfium/fpdfdoc/cpdf_variabletext.o obj/third_party/pdfium/fpdfdoc/cpdf_viewerpreferences.o obj/third_party/pdfium/fpdfdoc/cpvt_color.o obj/third_party/pdfium/fpdfdoc/cpvt_fontmap.o obj/third_party/pdfium/fpdfdoc/cpvt_generateap.o obj/third_party/pdfium/fpdfdoc/cpvt_sectioninfo.o obj/third_party/pdfium/fpdfdoc/cpvt_wordinfo.o obj/third_party/pdfium/fpdfdoc/csection.o obj/third_party/pdfium/fpdfdoc/ctypeset.o obj/third_party/pdfium/fpdfdoc/ipdf_formnotify.o
+  arflags =
+  output_extension = .a
+  output_dir = obj/third_party/pdfium

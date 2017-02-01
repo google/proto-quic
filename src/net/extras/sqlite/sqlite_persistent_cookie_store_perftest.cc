@@ -82,7 +82,7 @@ class SQLitePersistentCookieStorePerfTest : public testing::Test {
         t += base::TimeDelta::FromInternalValue(10);
         store_->AddCookie(*CanonicalCookie::Create(
             gurl, base::StringPrintf("Cookie_%d", cookie_num), "1", domain_name,
-            "/", t, t, false, false, CookieSameSite::DEFAULT_MODE, false,
+            "/", t, t, false, false, CookieSameSite::DEFAULT_MODE,
             COOKIE_PRIORITY_DEFAULT));
       }
     }

@@ -481,7 +481,7 @@ void SpdyTestDeframerImpl::OnDataFrameHeader(SpdyStreamId stream_id,
 // The SpdyFramer will not process any more data at this point.
 void SpdyTestDeframerImpl::OnError(SpdyFramer* framer) {
   DVLOG(1) << "SpdyFramer detected an error in the stream: "
-           << SpdyFramer::ErrorCodeToString(framer->error_code())
+           << SpdyFramer::SpdyFramerErrorToString(framer->spdy_framer_error())
            << "     frame_type_: " << Http2FrameTypeToString(frame_type_);
   listener_->OnError(framer, this);
 }
@@ -509,7 +509,7 @@ bool SpdyTestDeframerImpl::OnGoAwayFrameData(const char* goaway_data,
   CHECK_EQ(frame_type_, GOAWAY) << "   frame_type_="
                                 << Http2FrameTypeToString(frame_type_);
   CHECK(goaway_description_);
-  StringPiece(goaway_data, len).AppendToString(goaway_description_.get());
+  goaway_description_->append(goaway_data, len);
   return true;
 }
 
@@ -707,7 +707,7 @@ void SpdyTestDeframerImpl::OnStreamFrameData(SpdyStreamId stream_id,
            << "    len: " << len;
   CHECK_EQ(stream_id_, stream_id);
   CHECK_EQ(frame_type_, DATA);
-  StringPiece(data, len).AppendToString(data_.get());
+  data_->append(data, len);
 }
 
 // Called when padding is skipped over, including the padding length field at

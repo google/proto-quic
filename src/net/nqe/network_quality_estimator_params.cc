@@ -232,30 +232,30 @@ void ObtainTypicalNetworkQuality(NetworkQuality typical_network_quality[]) {
   }
 
   typical_network_quality[EFFECTIVE_CONNECTION_TYPE_SLOW_2G] = NetworkQuality(
-      // Set to the 83rd percentile of 2G RTT observations on Android. This
+      // Set to the 77.5th percentile of 2G RTT observations on Android. This
       // corresponds to the median RTT observation when effective connection
       // type is Slow 2G.
       base::TimeDelta::FromMilliseconds(3600),
-      base::TimeDelta::FromMilliseconds(3000), kInvalidThroughput);
+      base::TimeDelta::FromMilliseconds(3000), 40);
 
   typical_network_quality[EFFECTIVE_CONNECTION_TYPE_2G] = NetworkQuality(
       // Set to the 58th percentile of 2G RTT observations on Android. This
       // corresponds to the median RTT observation when effective connection
       // type is 2G.
       base::TimeDelta::FromMilliseconds(1800),
-      base::TimeDelta::FromMilliseconds(1500), kInvalidThroughput);
+      base::TimeDelta::FromMilliseconds(1500), 75);
 
   typical_network_quality[EFFECTIVE_CONNECTION_TYPE_3G] = NetworkQuality(
       // Set to the 75th percentile of 3G RTT observations on Android. This
       // corresponds to the median RTT observation when effective connection
       // type is 3G.
       base::TimeDelta::FromMilliseconds(450),
-      base::TimeDelta::FromMilliseconds(400), kInvalidThroughput);
+      base::TimeDelta::FromMilliseconds(400), 400);
 
   // Set to the 25th percentile of 3G RTT observations on Android.
-  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_4G] = NetworkQuality(
-      base::TimeDelta::FromMilliseconds(175),
-      base::TimeDelta::FromMilliseconds(125), kInvalidThroughput);
+  typical_network_quality[EFFECTIVE_CONNECTION_TYPE_4G] =
+      NetworkQuality(base::TimeDelta::FromMilliseconds(175),
+                     base::TimeDelta::FromMilliseconds(125), 1600);
 
   static_assert(
       EFFECTIVE_CONNECTION_TYPE_4G + 1 == EFFECTIVE_CONNECTION_TYPE_LAST,

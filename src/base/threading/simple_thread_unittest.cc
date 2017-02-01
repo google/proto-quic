@@ -158,31 +158,6 @@ TEST(SimpleThreadTest, WaitForEvent) {
   thread.Join();
 }
 
-TEST(SimpleThreadTest, NamedWithOptions) {
-  WaitableEvent event(WaitableEvent::ResetPolicy::MANUAL,
-                      WaitableEvent::InitialState::NOT_SIGNALED);
-
-  WaitEventRunner runner(&event);
-  SimpleThread::Options options;
-  DelegateSimpleThread thread(&runner, "event_waiter", options);
-  EXPECT_EQ(thread.name_prefix(), "event_waiter");
-  EXPECT_FALSE(event.IsSignaled());
-
-  thread.Start();
-  EXPECT_EQ(thread.name_prefix(), "event_waiter");
-  EXPECT_EQ(thread.name(),
-            std::string("event_waiter/") + IntToString(thread.tid()));
-  event.Wait();
-
-  EXPECT_TRUE(event.IsSignaled());
-  thread.Join();
-
-  // We keep the name and tid, even after the thread is gone.
-  EXPECT_EQ(thread.name_prefix(), "event_waiter");
-  EXPECT_EQ(thread.name(),
-            std::string("event_waiter/") + IntToString(thread.tid()));
-}
-
 TEST(SimpleThreadTest, NonJoinableStartAndDieOnJoin) {
   ControlledRunner runner;
 

@@ -17,6 +17,8 @@ from pylib.base import base_test_result
 from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from py_trace_event import trace_event
+from py_utils import contextlib_ext
 import tombstones
 
 _TAG = 'test_runner_py'
@@ -68,6 +70,7 @@ class LocalDeviceInstrumentationTestRun(
   def SetUp(self):
     @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
+    @trace_event.traced
     def individual_device_set_up(dev, host_device_tuples):
       def install_apk():
         if self._test_instance.apk_under_test:
@@ -152,6 +155,7 @@ class LocalDeviceInstrumentationTestRun(
   def TearDown(self):
     @local_device_environment.handle_shard_failures_with(
         self._env.BlacklistDevice)
+    @trace_event.traced
     def individual_device_tear_down(dev):
       if str(dev) in self._flag_changers:
         self._flag_changers[str(dev)].Restore()
@@ -248,19 +252,21 @@ class LocalDeviceInstrumentationTestRun(
       logcat_url = None
       time_ms = lambda: int(time.time() * 1e3)
       start_ms = time_ms()
-      if self._test_instance.should_save_logcat:
-        stream_name = 'logcat_%s_%s_%s' % (
-            test_name.replace('#', '.'),
-            time.strftime('%Y%m%dT%H%M%S', time.localtime()),
-            device.serial)
-        with logdog_logcat_monitor.LogdogLogcatMonitor(
-            device.adb, stream_name) as logmon:
+
+      stream_name = 'logcat_%s_%s_%s' % (
+          test_name.replace('#', '.'),
+          time.strftime('%Y%m%dT%H%M%S', time.localtime()),
+          device.serial)
+      with contextlib_ext.Optional(
+          logdog_logcat_monitor.LogdogLogcatMonitor(device.adb, stream_name),
+          self._test_instance.should_save_logcat) as logmon:
+        with contextlib_ext.Optional(
+            trace_event.trace(test_name),
+            self._env.trace_output):
           output = device.StartInstrumentation(
               target, raw=True, extras=extras, timeout=timeout, retries=0)
-        logcat_url = logmon.GetLogcatURL()
-      else:
-        output = device.StartInstrumentation(
-            target, raw=True, extras=extras, timeout=timeout, retries=0)
+        if logmon:
+          logcat_url = logmon.GetLogcatURL()
     finally:
       device.RunShellCommand(
           ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],

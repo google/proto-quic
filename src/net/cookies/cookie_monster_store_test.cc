@@ -133,7 +133,7 @@ std::unique_ptr<CanonicalCookie> BuildCanonicalCookie(
   return CanonicalCookie::Create(url, pc.Name(), pc.Value(), url.host(),
                                  cookie_path, creation_time, cookie_expires,
                                  pc.IsSecure(), pc.IsHttpOnly(), pc.SameSite(),
-                                 false, pc.Priority());
+                                 pc.Priority());
 }
 
 void AddCookieToList(const GURL& url,
@@ -235,10 +235,13 @@ std::unique_ptr<CookieMonster> CreateMonsterFromStoreForGC(
             ? current - base::TimeDelta::FromDays(days_old)
             : current;
 
+    // The URL must be HTTPS since |secure| can be true or false, and because
+    // strict secure cookies are enforced, the cookie will fail to be created if
+    // |secure| is true but the URL is an insecure scheme.
     std::unique_ptr<CanonicalCookie> cc(CanonicalCookie::Create(
-        GURL(base::StringPrintf("http://h%05d.izzle/", i)), "a", "1",
+        GURL(base::StringPrintf("https://h%05d.izzle/", i)), "a", "1",
         std::string(), "/path", creation_time, expiration_time, secure, false,
-        CookieSameSite::DEFAULT_MODE, false, COOKIE_PRIORITY_DEFAULT));
+        CookieSameSite::DEFAULT_MODE, COOKIE_PRIORITY_DEFAULT));
     cc->SetLastAccessDate(last_access_time);
     store->AddCookie(*cc);
   }

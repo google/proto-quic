@@ -31,7 +31,7 @@ ThreadActivityAnalyzer::ThreadActivityAnalyzer(
     : ThreadActivityAnalyzer(allocator->GetAsArray<char>(
                                  reference,
                                  GlobalActivityTracker::kTypeIdActivityTracker,
-                                 1),
+                                 PersistentMemoryAllocator::kSizeAny),
                              allocator->GetAllocSize(reference)) {}
 
 ThreadActivityAnalyzer::~ThreadActivityAnalyzer() {}
@@ -157,6 +157,26 @@ std::vector<std::string> GlobalActivityAnalyzer::GetLogMessages() {
   }
 
   return messages;
+}
+
+std::vector<GlobalActivityTracker::ModuleInfo>
+GlobalActivityAnalyzer::GetModules() {
+  std::vector<GlobalActivityTracker::ModuleInfo> modules;
+
+  PersistentMemoryAllocator::Iterator iter(allocator_.get());
+  const GlobalActivityTracker::ModuleInfoRecord* record;
+  while (
+      (record =
+           iter.GetNextOfObject<GlobalActivityTracker::ModuleInfoRecord>()) !=
+      nullptr) {
+    GlobalActivityTracker::ModuleInfo info;
+    if (record->DecodeTo(&info, allocator_->GetAllocSize(
+                                    allocator_->GetAsReference(record)))) {
+      modules.push_back(std::move(info));
+    }
+  }
+
+  return modules;
 }
 
 GlobalActivityAnalyzer::ProgramLocation

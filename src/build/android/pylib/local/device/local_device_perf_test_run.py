@@ -265,6 +265,7 @@ class DeviceTestShard(TestShard):
     logging.info('%s : exit_code=%d in %d secs on device %s',
                  test, exit_code, duration, str(self._device))
 
+  @trace_event.traced
   def _TestSetUp(self, test):
     if not self._device.IsOnline():
       msg = 'Device %s is unresponsive.' % str(self._device)
@@ -298,6 +299,7 @@ class DeviceTestShard(TestShard):
     persisted_result['host_test'] = False
     persisted_result['device'] = str(self._device)
 
+  @trace_event.traced
   def _TestTearDown(self):
     try:
       logging.info('Unmapping device ports for %s.', self._device)
@@ -455,16 +457,12 @@ class LocalDevicePerfTestRun(local_device_test_run.LocalDeviceTestRun):
           device_shard_helper)
       return [x for x in shards.pGet(self._timeout) if x is not None]
 
-    # Run the tests.
-    with contextlib_ext.Optional(
-        self._env.Tracing(),
-        self._env.trace_output):
-      # Affinitize the tests.
-      self._SplitTestsByAffinity()
-      if not self._test_buckets and not self._no_device_tests:
-        raise local_device_test_run.NoTestsError()
-      host_test_results, device_test_results = reraiser_thread.RunAsync(
-          [run_no_devices_tests, run_devices_tests])
+    # Affinitize the tests.
+    self._SplitTestsByAffinity()
+    if not self._test_buckets and not self._no_device_tests:
+      raise local_device_test_run.NoTestsError()
+    host_test_results, device_test_results = reraiser_thread.RunAsync(
+        [run_no_devices_tests, run_devices_tests])
 
     return host_test_results + device_test_results
 

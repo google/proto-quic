@@ -68,11 +68,28 @@ union U {
 // https://crbug.com/640749#c1: Some type traits are inside blink namespace.
 struct IsGarbageCollectedMixin {
   static const bool value = true;
+  static const bool safe_to_compare_to_empty_or_deleted = false;
 };
 
 }  // namespace blink
 
+namespace not_blink {
+
+// These are traits for WTF types that may be defined outside of blink such
+// as in mojo. But their names are unique so we can globally treat them as
+// type traits for renaming.
+struct GloballyKnownTraits {
+  static const bool safe_to_compare_to_empty_or_deleted = false;
+};
+
+}  // namespace not_blink
+
 namespace WTF {
+
+void TestForTraits() {
+  bool a = blink::IsGarbageCollectedMixin::safe_to_compare_to_empty_or_deleted;
+  bool b = not_blink::GloballyKnownTraits::safe_to_compare_to_empty_or_deleted;
+}
 
 // We don't want to capitalize fields in type traits
 // (i.e. the |value| -> |kValue| rename is undesirable below).

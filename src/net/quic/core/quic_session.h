@@ -12,12 +12,10 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "base/compiler_specific.h"
-#include "base/containers/small_map.h"
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_connection.h"
@@ -26,6 +24,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_write_blocked_list.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -247,13 +246,13 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // Returns true if this stream should yield writes to another blocked stream.
   bool ShouldYield(QuicStreamId stream_id);
 
- protected:
-  using StaticStreamMap =
-      base::SmallMap<std::unordered_map<QuicStreamId, QuicStream*>, 2>;
+  bool flow_control_invariant() { return flow_control_invariant_; }
 
-  using DynamicStreamMap = base::SmallMap<
-      std::unordered_map<QuicStreamId, std::unique_ptr<QuicStream>>,
-      10>;
+ protected:
+  using StaticStreamMap = QuicSmallMap<QuicStreamId, QuicStream*, 2>;
+
+  using DynamicStreamMap =
+      QuicSmallMap<QuicStreamId, std::unique_ptr<QuicStream>, 10>;
 
   using ClosedStreams = std::vector<std::unique_ptr<QuicStream>>;
 
@@ -439,6 +438,9 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
   // The stream id which was last popped in OnCanWrite, or 0, if not under the
   // call stack of OnCanWrite.
   QuicStreamId currently_writing_stream_id_;
+
+  // Latched value of gfe2_reloadable_flag_quic_flow_control_invariant.
+  const bool flow_control_invariant_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicSession);
 };
