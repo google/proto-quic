@@ -1213,6 +1213,12 @@ class SimpleGetRunner {
     reads_.push_back(MockRead(SYNCHRONOUS, sequence_number_++, data.data()));
   }
 
+  // Simple overload - the above method requires using std::strings that outlive
+  // the function call.  This version works with inlined C-style strings.
+  void AddRead(const char* data) {
+    reads_.push_back(MockRead(SYNCHRONOUS, sequence_number_++, data));
+  }
+
   void SetupParserAndSendRequest() {
     reads_.push_back(MockRead(SYNCHRONOUS, 0, sequence_number_++));  // EOF
 
@@ -1281,50 +1287,55 @@ TEST(HttpStreamParser, Http09PortTests) {
     const char* url;
     bool http_09_on_non_default_ports_enabled;
 
-    // Expected result when trying to read headers.
-    Error expected_header_error;
+    // Expected result when trying to read headers and response is an HTTP/0.9
+    // non-Shoutcast response.
+    Error expected_09_header_error;
+
+    // Expected result when trying to read headers for a shoutcast response.
+    Error expected_shoutcast_header_error;
   };
 
   const TestCase kTestCases[] = {
       // Default ports should work for HTTP/0.9, regardless of whether the port
       // is explicitly specified or not.
-      {"http://foo.com/", false, OK},
-      {"http://foo.com:80/", false, OK},
-      {"https://foo.com/", false, OK},
-      {"https://foo.com:443/", false, OK},
+      {"http://foo.com/", false, OK, OK},
+      {"http://foo.com:80/", false, OK, OK},
+      {"https://foo.com/", false, OK, OK},
+      {"https://foo.com:443/", false, OK, OK},
 
       // Non-standard ports should not support HTTP/0.9, by default.
-      {"http://foo.com:8080/", false, ERR_INVALID_HTTP_RESPONSE},
-      {"https://foo.com:8080/", false, ERR_INVALID_HTTP_RESPONSE},
-      {"http://foo.com:443/", false, ERR_INVALID_HTTP_RESPONSE},
-      {"https://foo.com:80/", false, ERR_INVALID_HTTP_RESPONSE},
+      {"http://foo.com:8080/", false, ERR_INVALID_HTTP_RESPONSE, OK},
+      {"https://foo.com:8080/", false, ERR_INVALID_HTTP_RESPONSE,
+       ERR_INVALID_HTTP_RESPONSE},
+      {"http://foo.com:443/", false, ERR_INVALID_HTTP_RESPONSE, OK},
+      {"https://foo.com:80/", false, ERR_INVALID_HTTP_RESPONSE,
+       ERR_INVALID_HTTP_RESPONSE},
 
       // Allowing non-default ports should not break the default ones.
-      {"http://foo.com/", true, OK},
-      {"http://foo.com:80/", true, OK},
-      {"https://foo.com/", true, OK},
-      {"https://foo.com:443/", true, OK},
+      {"http://foo.com/", true, OK, OK},
+      {"http://foo.com:80/", true, OK, OK},
+      {"https://foo.com/", true, OK, OK},
+      {"https://foo.com:443/", true, OK, OK},
 
       // Check that non-default ports works.
-      {"http://foo.com:8080/", true, OK},
-      {"https://foo.com:8080/", true, OK},
-      {"http://foo.com:443/", true, OK},
-      {"https://foo.com:80/", true, OK},
+      {"http://foo.com:8080/", true, OK, OK},
+      {"https://foo.com:8080/", true, OK, OK},
+      {"http://foo.com:443/", true, OK, OK},
+      {"https://foo.com:80/", true, OK, OK},
   };
 
-  std::string response = "hello\r\nworld\r\n";
-  int response_size = response.size();
+  const std::string kResponse = "hello\r\nworld\r\n";
 
   for (const auto& test_case : kTestCases) {
     SimpleGetRunner get_runner;
     get_runner.set_url(GURL(test_case.url));
     get_runner.set_http_09_on_non_default_ports_enabled(
         test_case.http_09_on_non_default_ports_enabled);
-    get_runner.AddRead(response);
+    get_runner.AddRead(kResponse);
     get_runner.SetupParserAndSendRequest();
 
-    get_runner.ReadHeadersExpectingError(test_case.expected_header_error);
-    if (test_case.expected_header_error != OK)
+    get_runner.ReadHeadersExpectingError(test_case.expected_09_header_error);
+    if (test_case.expected_09_header_error != OK)
       continue;
 
     ASSERT_TRUE(get_runner.response_info()->headers);
@@ -1332,12 +1343,74 @@ TEST(HttpStreamParser, Http09PortTests) {
               get_runner.response_info()->headers->GetStatusLine());
 
     EXPECT_EQ(0, get_runner.parser()->received_bytes());
-    int read_lengths[] = {response_size, 0};
-    get_runner.ReadBody(response_size, read_lengths);
-    EXPECT_EQ(response_size, get_runner.parser()->received_bytes());
+    int read_lengths[] = {kResponse.size(), 0};
+    get_runner.ReadBody(kResponse.size(), read_lengths);
+    EXPECT_EQ(kResponse.size(),
+              static_cast<size_t>(get_runner.parser()->received_bytes()));
     EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_HTTP0_9,
               get_runner.response_info()->connection_info);
   }
+
+  const std::string kShoutcastResponse = "ICY 200 blah\r\n\r\n";
+  for (const auto& test_case : kTestCases) {
+    SimpleGetRunner get_runner;
+    get_runner.set_url(GURL(test_case.url));
+    get_runner.set_http_09_on_non_default_ports_enabled(
+        test_case.http_09_on_non_default_ports_enabled);
+    get_runner.AddRead(kShoutcastResponse);
+    get_runner.SetupParserAndSendRequest();
+
+    get_runner.ReadHeadersExpectingError(
+        test_case.expected_shoutcast_header_error);
+    if (test_case.expected_shoutcast_header_error != OK)
+      continue;
+
+    ASSERT_TRUE(get_runner.response_info()->headers);
+    EXPECT_EQ("HTTP/0.9 200 OK",
+              get_runner.response_info()->headers->GetStatusLine());
+
+    EXPECT_EQ(0, get_runner.parser()->received_bytes());
+    int read_lengths[] = {kShoutcastResponse.size(), 0};
+    get_runner.ReadBody(kShoutcastResponse.size(), read_lengths);
+    EXPECT_EQ(kShoutcastResponse.size(),
+              static_cast<size_t>(get_runner.parser()->received_bytes()));
+    EXPECT_EQ(HttpResponseInfo::CONNECTION_INFO_HTTP0_9,
+              get_runner.response_info()->connection_info);
+  }
+}
+
+// Make sure that Shoutcast is recognized when receiving one byte at a time.
+TEST(HttpStreamParser, ShoutcastSingleByteReads) {
+  SimpleGetRunner get_runner;
+  get_runner.set_url(GURL("http://foo.com:8080/"));
+  get_runner.set_http_09_on_non_default_ports_enabled(false);
+  get_runner.AddRead("i");
+  get_runner.AddRead("c");
+  get_runner.AddRead("Y");
+  // Needed because HttpStreamParser::Read returns ERR_CONNECTION_CLOSED on
+  // small response headers, which HttpNetworkTransaction replaces with net::OK.
+  // TODO(mmenke): Can we just change that behavior?
+  get_runner.AddRead(" Extra stuff");
+  get_runner.SetupParserAndSendRequest();
+
+  get_runner.ReadHeadersExpectingError(OK);
+  EXPECT_EQ("HTTP/0.9 200 OK",
+            get_runner.response_info()->headers->GetStatusLine());
+}
+
+// Make sure that Shoutcast is recognized when receiving any string starting
+// with "ICY", regardless of capitalization, and without a space following it
+// (The latter behavior is just to match HTTP detection).
+TEST(HttpStreamParser, ShoutcastWeirdHeader) {
+  SimpleGetRunner get_runner;
+  get_runner.set_url(GURL("http://foo.com:8080/"));
+  get_runner.set_http_09_on_non_default_ports_enabled(false);
+  get_runner.AddRead("iCyCreamSundae");
+  get_runner.SetupParserAndSendRequest();
+
+  get_runner.ReadHeadersExpectingError(OK);
+  EXPECT_EQ("HTTP/0.9 200 OK",
+            get_runner.response_info()->headers->GetStatusLine());
 }
 
 // Make sure that HTTP/0.9 isn't allowed in the truncated header case on a weird

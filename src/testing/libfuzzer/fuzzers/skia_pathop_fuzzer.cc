@@ -5,9 +5,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "base/logging.h"
 #include "testing/libfuzzer/fuzzers/skia_path_common.h"
 #include "third_party/skia/include/core/SkPath.h"
 #include "third_party/skia/include/pathops/SkPathOps.h"
+
+struct Environment {
+  Environment() {
+    // Disable noisy logging as per "libFuzzer in Chrome" documentation:
+    // testing/libfuzzer/getting_started.md#Disable-noisy-error-message-logging.
+    logging::SetMinLogLevel(logging::LOG_FATAL);
+  }
+};
+
+Environment* env = new Environment();
 
 const int kLastOp = SkPathOp::kReverseDifference_SkPathOp;
 

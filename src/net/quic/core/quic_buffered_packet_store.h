@@ -7,12 +7,12 @@
 
 #include <list>
 
-#include "net/base/linked_hash_map.h"
 #include "net/quic/core/quic_alarm.h"
 #include "net/quic/core/quic_alarm_factory.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_clock.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 
@@ -68,7 +68,7 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
     QuicTime creation_time;
   };
 
-  typedef linked_hash_map<QuicConnectionId, BufferedPacketList>
+  typedef QuicLinkedHashMap<QuicConnectionId, BufferedPacketList>
       BufferedPacketMap;
 
   class QUIC_EXPORT_PRIVATE VisitorInterface {
@@ -155,7 +155,7 @@ class QUIC_EXPORT_PRIVATE QuicBufferedPacketStore {
 
   // Keeps track of connection with CHLO buffered up already and the order they
   // arrive.
-  linked_hash_map<QuicConnectionId, bool> connections_with_chlo_;
+  QuicLinkedHashMap<QuicConnectionId, bool> connections_with_chlo_;
 };
 
 }  // namespace net

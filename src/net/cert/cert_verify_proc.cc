@@ -513,7 +513,7 @@ int CertVerifyProc::Verify(X509Certificate* cert,
   }
 
   if (IsNonWhitelistedCertificate(*verify_result->verified_cert,
-                                  verify_result->public_key_hashes)) {
+                                  verify_result->public_key_hashes, hostname)) {
     verify_result->cert_status |= CERT_STATUS_AUTHORITY_INVALID;
     rv = MapCertStatusToNetError(verify_result->cert_status);
   }

@@ -78,8 +78,8 @@ void TestSimpleTaskRunner::RunPendingTasks() {
     tasks_to_run.swap(pending_tasks_);
   }
 
-  for (const auto& task : tasks_to_run)
-    task.task.Run();
+  for (auto& task : tasks_to_run)
+    std::move(task.task).Run();
 }
 
 void TestSimpleTaskRunner::RunUntilIdle() {

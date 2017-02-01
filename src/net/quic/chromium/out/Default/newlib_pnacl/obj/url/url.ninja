@@ -1,0 +1,36 @@
+defines = -DURL_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -DU_USING_ICU_NAMESPACE=0 -DU_ENABLE_DYLOAD=0 -DU_NOEXCEPT= -DU_STATIC_IMPLEMENTATION -DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE
+include_dirs = -I../../../../.. -Inewlib_pnacl/gen -I../../../../../third_party/icu/source/common -I../../../../../third_party/icu/source/i18n
+cflags = -fno-strict-aliasing -fcolor-diagnostics -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -O0 -g2 -fvisibility=hidden
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = url
+root_out_dir = newlib_pnacl
+target_out_dir = newlib_pnacl/obj/url
+target_output_name = liburl
+
+build newlib_pnacl/obj/url/url.inputdeps.stamp: newlib_pnacl_stamp newlib_pnacl/obj/base/build_date.stamp newlib_pnacl/obj/base/debugging_flags.stamp newlib_pnacl/obj/base/allocator/features.stamp newlib_pnacl/obj/third_party/icu/icudata.stamp
+build newlib_pnacl/obj/url/url/gurl.o: newlib_pnacl_cxx ../../../../../url/gurl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/origin.o: newlib_pnacl_cxx ../../../../../url/origin.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/scheme_host_port.o: newlib_pnacl_cxx ../../../../../url/scheme_host_port.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_parse.o: newlib_pnacl_cxx ../../../../../url/third_party/mozilla/url_parse.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_etc.o: newlib_pnacl_cxx ../../../../../url/url_canon_etc.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_filesystemurl.o: newlib_pnacl_cxx ../../../../../url/url_canon_filesystemurl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_fileurl.o: newlib_pnacl_cxx ../../../../../url/url_canon_fileurl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_host.o: newlib_pnacl_cxx ../../../../../url/url_canon_host.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_internal.o: newlib_pnacl_cxx ../../../../../url/url_canon_internal.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_ip.o: newlib_pnacl_cxx ../../../../../url/url_canon_ip.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_mailtourl.o: newlib_pnacl_cxx ../../../../../url/url_canon_mailtourl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_path.o: newlib_pnacl_cxx ../../../../../url/url_canon_path.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_pathurl.o: newlib_pnacl_cxx ../../../../../url/url_canon_pathurl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_query.o: newlib_pnacl_cxx ../../../../../url/url_canon_query.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_relative.o: newlib_pnacl_cxx ../../../../../url/url_canon_relative.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_stdstring.o: newlib_pnacl_cxx ../../../../../url/url_canon_stdstring.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_stdurl.o: newlib_pnacl_cxx ../../../../../url/url_canon_stdurl.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_constants.o: newlib_pnacl_cxx ../../../../../url/url_constants.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_parse_file.o: newlib_pnacl_cxx ../../../../../url/url_parse_file.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_util.o: newlib_pnacl_cxx ../../../../../url/url_util.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+build newlib_pnacl/obj/url/url/url_canon_icu.o: newlib_pnacl_cxx ../../../../../url/url_canon_icu.cc || newlib_pnacl/obj/url/url.inputdeps.stamp
+
+build newlib_pnacl/obj/url/liburl.a: newlib_pnacl_alink newlib_pnacl/obj/url/url/gurl.o newlib_pnacl/obj/url/url/origin.o newlib_pnacl/obj/url/url/scheme_host_port.o newlib_pnacl/obj/url/url/url_parse.o newlib_pnacl/obj/url/url/url_canon_etc.o newlib_pnacl/obj/url/url/url_canon_filesystemurl.o newlib_pnacl/obj/url/url/url_canon_fileurl.o newlib_pnacl/obj/url/url/url_canon_host.o newlib_pnacl/obj/url/url/url_canon_internal.o newlib_pnacl/obj/url/url/url_canon_ip.o newlib_pnacl/obj/url/url/url_canon_mailtourl.o newlib_pnacl/obj/url/url/url_canon_path.o newlib_pnacl/obj/url/url/url_canon_pathurl.o newlib_pnacl/obj/url/url/url_canon_query.o newlib_pnacl/obj/url/url/url_canon_relative.o newlib_pnacl/obj/url/url/url_canon_stdstring.o newlib_pnacl/obj/url/url/url_canon_stdurl.o newlib_pnacl/obj/url/url/url_constants.o newlib_pnacl/obj/url/url/url_parse_file.o newlib_pnacl/obj/url/url/url_util.o newlib_pnacl/obj/url/url/url_canon_icu.o || newlib_pnacl/obj/base/libbase.a newlib_pnacl/obj/base/third_party/dynamic_annotations/dynamic_annotations.stamp newlib_pnacl/obj/third_party/icu/icu.stamp newlib_pnacl/obj/build/config/sanitizers/deps.stamp newlib_pnacl/obj/base/libbase_static.a newlib_pnacl/obj/third_party/modp_b64/libmodp_b64.a newlib_pnacl/obj/third_party/icu/libicui18n.a newlib_pnacl/obj/third_party/icu/libicuuc.a
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl/obj/url

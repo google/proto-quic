@@ -66,6 +66,11 @@ void QuicChromiumPacketReader::StartReading() {
   }
 }
 
+size_t QuicChromiumPacketReader::EstimateMemoryUsage() const {
+  // Return the size of |read_buffer_|.
+  return kMaxPacketSize;
+}
+
 void QuicChromiumPacketReader::OnReadComplete(int result) {
   read_pending_ = false;
   if (result == 0)

@@ -1,0 +1,935 @@
+rule cc
+  command = ../../../third_party/llvm-build/Release+Asserts/bin/clang -MMD -MF ${out}.d ${defines} ${include_dirs} ${cflags} ${cflags_c} -c ${in} -o ${out}
+  description = CC ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule cxx
+  command = ../../../third_party/llvm-build/Release+Asserts/bin/clang++ -MMD -MF ${out}.d ${defines} ${include_dirs} ${cflags} ${cflags_cc} -c ${in} -o ${out}
+  description = CXX ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule asm
+  command = ../../../third_party/llvm-build/Release+Asserts/bin/clang -MMD -MF ${out}.d ${defines} ${include_dirs} ${asmflags} -c ${in} -o ${out}
+  description = ASM ${out}
+  depfile = ${out}.d
+  deps = gcc
+rule alink
+  command = python "../../../build/toolchain/gcc_ar_wrapper.py"  --output=${out} --ar="ar" ${arflags} rcsD @"${out}.rsp"
+  description = AR ${out}
+  rspfile = ${out}.rsp
+  rspfile_content = ${in}
+rule solink
+  command = python "/tmp/proto-quic/src/build/toolchain/gcc_solink_wrapper.py" --readelf="readelf" --nm="nm"  --sofile="${output_dir}/${target_output_name}${output_extension}" --tocfile="${output_dir}/${target_output_name}${output_extension}.TOC" --output="${output_dir}/${target_output_name}${output_extension}"  -- ../../../third_party/llvm-build/Release+Asserts/bin/clang++ -shared ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+  restat = 1
+rule solink_module
+  command = ../../../third_party/llvm-build/Release+Asserts/bin/clang++ -shared ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,-soname="${target_output_name}${output_extension}" @"${output_dir}/${target_output_name}${output_extension}.rsp"
+  description = SOLINK_MODULE ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = -Wl,--whole-archive ${in} ${solibs} -Wl,--no-whole-archive  ${libs} 
+  pool = build_toolchain_link_pool
+rule link
+  command = ../../../third_party/llvm-build/Release+Asserts/bin/clang++ ${ldflags} -o "${output_dir}/${target_output_name}${output_extension}" -Wl,--start-group @"${output_dir}/${target_output_name}${output_extension}.rsp" ${solibs} -Wl,--end-group  ${libs} 
+  description = LINK ${output_dir}/${target_output_name}${output_extension}
+  rspfile = ${output_dir}/${target_output_name}${output_extension}.rsp
+  rspfile_content = ${in}
+  pool = build_toolchain_link_pool
+rule stamp
+  command = touch ${out}
+  description = STAMP ${out}
+rule copy
+  command = ln -f ${in} ${out} 2>/dev/null || (rm -rf ${out} && cp -af ${in} ${out})
+  description = COPY ${in} ${out}
+
+build obj/root.stamp: stamp ./libbase.so.TOC ./net_unittests ./quic_server ./quic_client
+subninja obj/base/base.ninja
+subninja obj/base/base_i18n_perftests.ninja
+build obj/base/base_i18n_perftests_run.stamp: stamp ./base_i18n_perftests
+subninja obj/base/base_json_correctness_fuzzer.ninja
+build obj/base/base_json_correctness_fuzzer_run.stamp: stamp ./base_json_correctness_fuzzer
+subninja obj/base/base_nocompile_tests.ninja
+build obj/base/base_nocompile_tests_run.stamp: stamp ./base_nocompile_tests
+rule __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule
+  command = python ../../../tools/nocompile_driver.py 4 ${in} -Wall\$ -Werror\$ -Wfatal-errors\$ -I../../../\$ --sysroot\$ ../../../build/linux/debian_wheezy_amd64-sysroot gen/base/${source_name_part}_nc.cc
+  description = ACTION //base:base_nocompile_tests_run_nocompile(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/base/bind_unittest_nc.cc: __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule ../../../base/bind_unittest.nc | ../../../tools/nocompile_driver.py
+  source_name_part = bind_unittest
+  depfile = gen/base/bind_unittest_nc.cc.d
+build gen/base/callback_list_unittest_nc.cc: __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule ../../../base/callback_list_unittest.nc | ../../../tools/nocompile_driver.py
+  source_name_part = callback_list_unittest
+  depfile = gen/base/callback_list_unittest_nc.cc.d
+build gen/base/callback_unittest_nc.cc: __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule ../../../base/callback_unittest.nc | ../../../tools/nocompile_driver.py
+  source_name_part = callback_unittest
+  depfile = gen/base/callback_unittest_nc.cc.d
+build gen/base/weak_ptr_unittest_nc.cc: __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule ../../../base/memory/weak_ptr_unittest.nc | ../../../tools/nocompile_driver.py
+  source_name_part = weak_ptr_unittest
+  depfile = gen/base/weak_ptr_unittest_nc.cc.d
+build gen/base/histogram_unittest_nc.cc: __base_base_nocompile_tests_run_nocompile___build_toolchain_linux_clang_x64__rule ../../../base/metrics/histogram_unittest.nc | ../../../tools/nocompile_driver.py
+  source_name_part = histogram_unittest
+  depfile = gen/base/histogram_unittest_nc.cc.d
+
+build obj/base/base_nocompile_tests_run_nocompile.stamp: stamp gen/base/bind_unittest_nc.cc gen/base/callback_list_unittest_nc.cc gen/base/callback_unittest_nc.cc gen/base/weak_ptr_unittest_nc.cc gen/base/histogram_unittest_nc.cc
+subninja obj/base/base_paths.ninja
+subninja obj/base/base_perftests.ninja
+build obj/base/base_perftests_run.stamp: stamp ./base_perftests
+subninja obj/base/base_static.ninja
+subninja obj/base/base_unittests.ninja
+build obj/base/base_unittests_bundle_data.stamp: stamp ../../../base/test/data/file_util/binary_file.bin ../../../base/test/data/file_util/binary_file_diff.bin ../../../base/test/data/file_util/binary_file_same.bin ../../../base/test/data/file_util/blank_line.txt ../../../base/test/data/file_util/blank_line_crlf.txt ../../../base/test/data/file_util/crlf.txt ../../../base/test/data/file_util/different.txt ../../../base/test/data/file_util/different_first.txt ../../../base/test/data/file_util/different_last.txt ../../../base/test/data/file_util/empty1.txt ../../../base/test/data/file_util/empty2.txt ../../../base/test/data/file_util/first1.txt ../../../base/test/data/file_util/first2.txt ../../../base/test/data/file_util/original.txt ../../../base/test/data/file_util/same.txt ../../../base/test/data/file_util/same_length.txt ../../../base/test/data/file_util/shortened.txt ../../../base/test/data/json/bom_feff.json ../../../base/test/data/serializer_nested_test.json ../../../base/test/data/serializer_test.json ../../../base/test/data/serializer_test_nowhitespace.json
+build obj/base/base_unittests_run.stamp: stamp ./base_unittests
+rule __base_build_date___build_toolchain_linux_clang_x64__rule
+  command = python ../../../build/write_build_date_header.py gen/base/generated_build_date.h default
+  description = ACTION //base:build_date(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/base/build_date.inputdeps.stamp: stamp ../../../build/write_build_date_header.py ../../../build/util/LASTCHANGE
+
+build gen/base/generated_build_date.h: __base_build_date___build_toolchain_linux_clang_x64__rule | obj/base/build_date.inputdeps.stamp
+
+build obj/base/build_date.stamp: stamp gen/base/generated_build_date.h
+subninja obj/base/build_utf8_validator_tables.ninja
+subninja obj/base/check_example.ninja
+rule __base_debugging_flags___build_toolchain_linux_clang_x64__rule
+  rspfile = __base_debugging_flags___build_toolchain_linux_clang_x64__rule.rsp
+  rspfile_content = --flags ENABLE_PROFILING=false ENABLE_MEMORY_TASK_PROFILER=true
+  command = python ../../../build/write_buildflag_header.py --output base/debug/debugging_flags.h --rulename //base$:debugging_flags --gen-dir gen --definitions ${rspfile}
+  description = ACTION //base:debugging_flags(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/base/debug/debugging_flags.h: __base_debugging_flags___build_toolchain_linux_clang_x64__rule | ../../../build/write_buildflag_header.py
+
+build obj/base/debugging_flags.stamp: stamp gen/base/debug/debugging_flags.h
+subninja obj/base/i18n.ninja
+subninja obj/base/message_loop_tests.ninja
+build obj/base/allocator/allocator.stamp: stamp obj/base/allocator/tcmalloc.stamp
+rule __base_allocator_features___build_toolchain_linux_clang_x64__rule
+  rspfile = __base_allocator_features___build_toolchain_linux_clang_x64__rule.rsp
+  rspfile_content = --flags USE_EXPERIMENTAL_ALLOCATOR_SHIM=true ENABLE_WIN_ALLOCATOR_SHIM_TESTS=\(true\$ \|\|\$ false\)
+  command = python ../../../build/write_buildflag_header.py --output base/allocator/features.h --rulename //base/allocator$:features --gen-dir gen --definitions ${rspfile}
+  description = ACTION //base/allocator:features(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/base/allocator/features.h: __base_allocator_features___build_toolchain_linux_clang_x64__rule | ../../../build/write_buildflag_header.py
+
+build obj/base/allocator/features.stamp: stamp gen/base/allocator/features.h
+subninja obj/base/allocator/tcmalloc.ninja
+subninja obj/base/test/malloc_wrapper.ninja
+subninja obj/base/test/native_library_test_utils.ninja
+subninja obj/base/test/run_all_base_unittests.ninja
+subninja obj/base/test/run_all_unittests.ninja
+subninja obj/base/test/test_config.ninja
+subninja obj/base/test/test_launcher_nacl_nonsfi.ninja
+subninja obj/base/test/test_shared_library.ninja
+subninja obj/base/test/test_support.ninja
+subninja obj/base/test/test_support_perf.ninja
+subninja obj/base/third_party/dynamic_annotations/dynamic_annotations.ninja
+subninja obj/base/third_party/libevent/libevent.ninja
+subninja obj/base/third_party/symbolize/symbolize.ninja
+subninja obj/base/third_party/xdg_mime/xdg_mime.ninja
+subninja obj/base/third_party/xdg_user_dirs/xdg_user_dirs.ninja
+build obj/build/config/linux/linux.stamp: stamp
+build obj/build/config/posix/posix.stamp: stamp
+build obj/build/config/sanitizers/deps.stamp: stamp obj/build/config/sanitizers/deps_no_options.stamp
+build obj/build/config/sanitizers/deps_no_options.stamp: stamp
+subninja obj/build/config/sanitizers/options_sources.ninja
+build obj/build/linux/fontconfig.stamp: stamp obj/build/linux/libgio/libgio.stamp
+build obj/build/linux/freetype2.stamp: stamp obj/build/linux/libgio/libgio.stamp
+subninja obj/build/linux/libgio/libgio.ninja
+rule __build_linux_libgio_libgio_loader___build_toolchain_linux_clang_x64__rule
+  command = python ../../../tools/generate_library_loader/generate_library_loader.py --name LibGioLoader --output-h /tmp/proto-quic/src/net/out/Default/gen/library_loaders/libgio.h --output-cc /tmp/proto-quic/src/net/out/Default/gen/library_loaders/libgio_loader.cc --header \<gio/gio.h\> --link-directly=0 glib_check_version g_type_init g_settings_new g_settings_get_child g_settings_get_string g_settings_get_boolean g_settings_get_int g_settings_get_strv g_settings_list_schemas
+  description = ACTION //build/linux/libgio:libgio_loader(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/library_loaders/libgio.h gen/library_loaders/libgio_loader.cc: __build_linux_libgio_libgio_loader___build_toolchain_linux_clang_x64__rule | ../../../tools/generate_library_loader/generate_library_loader.py
+
+build obj/build/linux/libgio/libgio_loader.stamp: stamp gen/library_loaders/libgio.h gen/library_loaders/libgio_loader.cc
+build obj/build/win/default_exe_manifest.stamp: stamp
+subninja obj/crypto/crypto.ninja
+subninja obj/crypto/crypto_unittests.ninja
+build obj/crypto/crypto_unittests_run.stamp: stamp ./crypto_unittests
+build obj/crypto/platform.stamp: stamp ./libboringssl.so.TOC
+subninja obj/crypto/test_support.ninja
+subninja obj/net/cachetool.ninja
+rule __net_cert_verify_proc_whitelist_unittest_data___build_toolchain_linux_clang_x64__rule
+  command = python ../../../net/tools/dafsa/make_dafsa.py ${in} gen/net/cert/${source_name_part}-inc.cc
+  description = ACTION //net:cert_verify_proc_whitelist_unittest_data(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/net/cert/cert_verify_proc_whitelist_unittest1-inc.cc: __net_cert_verify_proc_whitelist_unittest_data___build_toolchain_linux_clang_x64__rule ../../../net/cert/cert_verify_proc_whitelist_unittest1.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = cert_verify_proc_whitelist_unittest1
+
+build obj/net/cert_verify_proc_whitelist_unittest_data.stamp: stamp gen/net/cert/cert_verify_proc_whitelist_unittest1-inc.cc
+subninja obj/net/cert_verify_tool.ninja
+subninja obj/net/constants.ninja
+subninja obj/net/content_decoder_tool.ninja
+subninja obj/net/crash_cache.ninja
+subninja obj/net/crl_set_dump.ninja
+subninja obj/net/crypto_message_printer.ninja
+subninja obj/net/disk_cache_memory_test.ninja
+subninja obj/net/dns_fuzz_stub.ninja
+subninja obj/net/dump_cache.ninja
+subninja obj/net/epoll_quic_client.ninja
+subninja obj/net/epoll_quic_server.ninja
+subninja obj/net/epoll_quic_tools.ninja
+subninja obj/net/epoll_server.ninja
+rule __net_features___build_toolchain_linux_clang_x64__rule
+  rspfile = __net_features___build_toolchain_linux_clang_x64__rule.rsp
+  rspfile_content = --flags POSIX_AVOID_MMAP=false DISABLE_FILE_SUPPORT=false DISABLE_FTP_SUPPORT=false ENABLE_MDNS=true ENABLE_WEBSOCKETS=true
+  command = python ../../../build/write_buildflag_header.py --output net/net_features.h --rulename //net$:features --gen-dir gen --definitions ${rspfile}
+  description = ACTION //net:features(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/net/net_features.h: __net_features___build_toolchain_linux_clang_x64__rule | ../../../build/write_buildflag_header.py
+
+build obj/net/features.stamp: stamp gen/net/net_features.h
+subninja obj/net/gdig.ninja
+subninja obj/net/get_server_time.ninja
+subninja obj/net/hpack_example_generator.ninja
+subninja obj/net/hpack_fuzz_mutator.ninja
+subninja obj/net/hpack_fuzz_wrapper.ninja
+subninja obj/net/http_server.ninja
+subninja obj/net/net.ninja
+subninja obj/net/net_auth_challenge_tokenizer_fuzzer.ninja
+build obj/net/net_auth_challenge_tokenizer_fuzzer_run.stamp: stamp ./net_auth_challenge_tokenizer_fuzzer
+subninja obj/net/net_brotli_source_stream_fuzzer.ninja
+build obj/net/net_brotli_source_stream_fuzzer_run.stamp: stamp ./net_brotli_source_stream_fuzzer
+subninja obj/net/net_cert_normalize_name_fuzzer.ninja
+build obj/net/net_cert_normalize_name_fuzzer_run.stamp: stamp ./net_cert_normalize_name_fuzzer
+subninja obj/net/net_cert_parse_certificate_fuzzer.ninja
+build obj/net/net_cert_parse_certificate_fuzzer_run.stamp: stamp ./net_cert_parse_certificate_fuzzer
+subninja obj/net/net_cert_verify_name_in_subtree_fuzzer.ninja
+build obj/net/net_cert_verify_name_in_subtree_fuzzer_run.stamp: stamp ./net_cert_verify_name_in_subtree_fuzzer
+subninja obj/net/net_cert_verify_name_match_fuzzer.ninja
+build obj/net/net_cert_verify_name_match_fuzzer_run.stamp: stamp ./net_cert_verify_name_match_fuzzer
+subninja obj/net/net_data_job_fuzzer.ninja
+build obj/net/net_data_job_fuzzer_run.stamp: stamp ./net_data_job_fuzzer
+subninja obj/net/net_dns_hosts_parse_fuzzer.ninja
+rule __net_net_dns_hosts_parse_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_dns_hosts_parse_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_dns_hosts_parse_fuzzer.dict
+  description = ACTION //net:net_dns_hosts_parse_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_dns_hosts_parse_fuzzer.options: __net_net_dns_hosts_parse_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_dns_hosts_parse_fuzzer.options.stamp: stamp net_dns_hosts_parse_fuzzer.options
+build net_dns_hosts_parse_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_dns_hosts_parse_fuzzer.dict
+
+build obj/net/net_dns_hosts_parse_fuzzer_dict_copy.stamp: stamp net_dns_hosts_parse_fuzzer.dict
+build obj/net/net_dns_hosts_parse_fuzzer_run.stamp: stamp ./net_dns_hosts_parse_fuzzer
+subninja obj/net/net_dns_record_fuzzer.ninja
+rule __net_net_dns_record_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_dns_record_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_dns_record_fuzzer.dict
+  description = ACTION //net:net_dns_record_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_dns_record_fuzzer.options: __net_net_dns_record_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_dns_record_fuzzer.options.stamp: stamp net_dns_record_fuzzer.options
+build net_dns_record_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_dns_record_fuzzer.dict
+
+build obj/net/net_dns_record_fuzzer_dict_copy.stamp: stamp net_dns_record_fuzzer.dict
+build obj/net/net_dns_record_fuzzer_run.stamp: stamp ./net_dns_record_fuzzer
+subninja obj/net/net_ftp_ctrl_response_fuzzer.ninja
+build obj/net/net_ftp_ctrl_response_fuzzer_run.stamp: stamp ./net_ftp_ctrl_response_fuzzer
+subninja obj/net/net_ftp_directory_listing_fuzzer.ninja
+build obj/net/net_ftp_directory_listing_fuzzer_run.stamp: stamp ./net_ftp_directory_listing_fuzzer
+subninja obj/net/net_fuzzer_test_support.ninja
+subninja obj/net/net_get_domain_and_registry_fuzzer.ninja
+rule __net_net_get_domain_and_registry_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_get_domain_and_registry_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_get_domain_and_registry_fuzzer.dict
+  description = ACTION //net:net_get_domain_and_registry_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_get_domain_and_registry_fuzzer.options: __net_net_get_domain_and_registry_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_get_domain_and_registry_fuzzer.options.stamp: stamp net_get_domain_and_registry_fuzzer.options
+build net_get_domain_and_registry_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_get_domain_and_registry_fuzzer.dict
+
+build obj/net/net_get_domain_and_registry_fuzzer_dict_copy.stamp: stamp net_get_domain_and_registry_fuzzer.dict
+build obj/net/net_get_domain_and_registry_fuzzer_run.stamp: stamp ./net_get_domain_and_registry_fuzzer
+subninja obj/net/net_gzip_source_stream_fuzzer.ninja
+build obj/net/net_gzip_source_stream_fuzzer_run.stamp: stamp ./net_gzip_source_stream_fuzzer
+subninja obj/net/net_host_resolver_impl_fuzzer.ninja
+rule __net_net_host_resolver_impl_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_host_resolver_impl_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_host_resolver_impl_fuzzer.dict
+  description = ACTION //net:net_host_resolver_impl_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_host_resolver_impl_fuzzer.options: __net_net_host_resolver_impl_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_host_resolver_impl_fuzzer.options.stamp: stamp net_host_resolver_impl_fuzzer.options
+build net_host_resolver_impl_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_host_resolver_impl_fuzzer.dict
+
+build obj/net/net_host_resolver_impl_fuzzer_dict_copy.stamp: stamp net_host_resolver_impl_fuzzer.dict
+build obj/net/net_host_resolver_impl_fuzzer_run.stamp: stamp ./net_host_resolver_impl_fuzzer
+subninja obj/net/net_http_chunked_decoder_fuzzer.ninja
+build obj/net/net_http_chunked_decoder_fuzzer_run.stamp: stamp ./net_http_chunked_decoder_fuzzer
+subninja obj/net/net_http_proxy_client_socket_fuzzer.ninja
+rule __net_net_http_proxy_client_socket_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_proxy_client_socket_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_proxy_client_socket_fuzzer.dict
+  description = ACTION //net:net_http_proxy_client_socket_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_proxy_client_socket_fuzzer.options: __net_net_http_proxy_client_socket_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_proxy_client_socket_fuzzer.options.stamp: stamp net_http_proxy_client_socket_fuzzer.options
+build net_http_proxy_client_socket_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_proxy_client_socket_fuzzer.dict
+
+build obj/net/net_http_proxy_client_socket_fuzzer_dict_copy.stamp: stamp net_http_proxy_client_socket_fuzzer.dict
+build obj/net/net_http_proxy_client_socket_fuzzer_run.stamp: stamp ./net_http_proxy_client_socket_fuzzer
+subninja obj/net/net_http_security_headers_hpkp_fuzzer.ninja
+rule __net_net_http_security_headers_hpkp_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hpkp_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hpkp_fuzzer.dict
+  description = ACTION //net:net_http_security_headers_hpkp_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_security_headers_hpkp_fuzzer.options: __net_net_http_security_headers_hpkp_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_security_headers_hpkp_fuzzer.options.stamp: stamp net_http_security_headers_hpkp_fuzzer.options
+build net_http_security_headers_hpkp_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_security_headers_fuzzer.dict
+
+build obj/net/net_http_security_headers_hpkp_fuzzer_dict_copy.stamp: stamp net_http_security_headers_hpkp_fuzzer.dict
+build obj/net/net_http_security_headers_hpkp_fuzzer_run.stamp: stamp ./net_http_security_headers_hpkp_fuzzer
+subninja obj/net/net_http_security_headers_hpkp_report_only_fuzzer.ninja
+rule __net_net_http_security_headers_hpkp_report_only_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hpkp_report_only_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hpkp_report_only_fuzzer.dict
+  description = ACTION //net:net_http_security_headers_hpkp_report_only_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_security_headers_hpkp_report_only_fuzzer.options: __net_net_http_security_headers_hpkp_report_only_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_security_headers_hpkp_report_only_fuzzer.options.stamp: stamp net_http_security_headers_hpkp_report_only_fuzzer.options
+build net_http_security_headers_hpkp_report_only_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_security_headers_fuzzer.dict
+
+build obj/net/net_http_security_headers_hpkp_report_only_fuzzer_dict_copy.stamp: stamp net_http_security_headers_hpkp_report_only_fuzzer.dict
+build obj/net/net_http_security_headers_hpkp_report_only_fuzzer_run.stamp: stamp ./net_http_security_headers_hpkp_report_only_fuzzer
+subninja obj/net/net_http_security_headers_hsts_fuzzer.ninja
+rule __net_net_http_security_headers_hsts_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hsts_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_security_headers_hsts_fuzzer.dict
+  description = ACTION //net:net_http_security_headers_hsts_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_security_headers_hsts_fuzzer.options: __net_net_http_security_headers_hsts_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_security_headers_hsts_fuzzer.options.stamp: stamp net_http_security_headers_hsts_fuzzer.options
+build net_http_security_headers_hsts_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_security_headers_fuzzer.dict
+
+build obj/net/net_http_security_headers_hsts_fuzzer_dict_copy.stamp: stamp net_http_security_headers_hsts_fuzzer.dict
+build obj/net/net_http_security_headers_hsts_fuzzer_run.stamp: stamp ./net_http_security_headers_hsts_fuzzer
+subninja obj/net/net_http_server_fuzzer.ninja
+rule __net_net_http_server_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_server_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_server_fuzzer.dict
+  description = ACTION //net:net_http_server_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_server_fuzzer.options: __net_net_http_server_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_server_fuzzer.options.stamp: stamp net_http_server_fuzzer.options
+build net_http_server_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_server_fuzzer.dict
+
+build obj/net/net_http_server_fuzzer_dict_copy.stamp: stamp net_http_server_fuzzer.dict
+build obj/net/net_http_server_fuzzer_run.stamp: stamp ./net_http_server_fuzzer
+rule __net_net_http_server_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/net/data/fuzzer_data/http_server_requests/ --output /tmp/proto-quic/src/net/out/Default/net_http_server_fuzzer_seed_corpus.zip
+  description = ACTION //net:net_http_server_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/net/net_http_server_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build net_http_server_fuzzer_seed_corpus.zip: __net_net_http_server_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/net/net_http_server_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/net/net_http_server_fuzzer_seed_corpus.stamp: stamp net_http_server_fuzzer_seed_corpus.zip
+subninja obj/net/net_http_stream_parser_fuzzer.ninja
+rule __net_net_http_stream_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_stream_parser_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_stream_parser_fuzzer.dict
+  description = ACTION //net:net_http_stream_parser_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_stream_parser_fuzzer.options: __net_net_http_stream_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_stream_parser_fuzzer.options.stamp: stamp net_http_stream_parser_fuzzer.options
+build net_http_stream_parser_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_stream_parser_fuzzer.dict
+
+build obj/net/net_http_stream_parser_fuzzer_dict_copy.stamp: stamp net_http_stream_parser_fuzzer.dict
+build obj/net/net_http_stream_parser_fuzzer_run.stamp: stamp ./net_http_stream_parser_fuzzer
+subninja obj/net/net_http_transport_security_state_static_fuzzer.ninja
+rule __net_net_http_transport_security_state_static_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_http_transport_security_state_static_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_http_transport_security_state_static_fuzzer.dict
+  description = ACTION //net:net_http_transport_security_state_static_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_http_transport_security_state_static_fuzzer.options: __net_net_http_transport_security_state_static_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_http_transport_security_state_static_fuzzer.options.stamp: stamp net_http_transport_security_state_static_fuzzer.options
+build net_http_transport_security_state_static_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_http_transport_security_state_fuzzer.dict
+
+build obj/net/net_http_transport_security_state_static_fuzzer_dict_copy.stamp: stamp net_http_transport_security_state_static_fuzzer.dict
+build obj/net/net_http_transport_security_state_static_fuzzer_run.stamp: stamp ./net_http_transport_security_state_static_fuzzer
+subninja obj/net/net_mime_sniffer_fuzzer.ninja
+rule __net_net_mime_sniffer_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_mime_sniffer_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_mime_sniffer_fuzzer.dict
+  description = ACTION //net:net_mime_sniffer_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_mime_sniffer_fuzzer.options: __net_net_mime_sniffer_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_mime_sniffer_fuzzer.options.stamp: stamp net_mime_sniffer_fuzzer.options
+build net_mime_sniffer_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_mime_sniffer_fuzzer.dict
+
+build obj/net/net_mime_sniffer_fuzzer_dict_copy.stamp: stamp net_mime_sniffer_fuzzer.dict
+build obj/net/net_mime_sniffer_fuzzer_run.stamp: stamp ./net_mime_sniffer_fuzzer
+subninja obj/net/net_parse_cookie_line_fuzzer.ninja
+build obj/net/net_parse_cookie_line_fuzzer_run.stamp: stamp ./net_parse_cookie_line_fuzzer
+subninja obj/net/net_parse_data_url_fuzzer.ninja
+rule __net_net_parse_data_url_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_parse_data_url_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_parse_data_url_fuzzer.dict
+  description = ACTION //net:net_parse_data_url_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_parse_data_url_fuzzer.options: __net_net_parse_data_url_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_parse_data_url_fuzzer.options.stamp: stamp net_parse_data_url_fuzzer.options
+build net_parse_data_url_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_parse_data_url_fuzzer.dict
+
+build obj/net/net_parse_data_url_fuzzer_dict_copy.stamp: stamp net_parse_data_url_fuzzer.dict
+build obj/net/net_parse_data_url_fuzzer_run.stamp: stamp ./net_parse_data_url_fuzzer
+subninja obj/net/net_parse_ip_pattern_fuzzer.ninja
+build obj/net/net_parse_ip_pattern_fuzzer_run.stamp: stamp ./net_parse_ip_pattern_fuzzer
+subninja obj/net/net_parse_proxy_bypass_rules_fuzzer.ninja
+build obj/net/net_parse_proxy_bypass_rules_fuzzer_run.stamp: stamp ./net_parse_proxy_bypass_rules_fuzzer
+subninja obj/net/net_parse_proxy_list_fuzzer.ninja
+build obj/net/net_parse_proxy_list_fuzzer_run.stamp: stamp ./net_parse_proxy_list_fuzzer
+subninja obj/net/net_parse_proxy_list_pac_fuzzer.ninja
+build obj/net/net_parse_proxy_list_pac_fuzzer_run.stamp: stamp ./net_parse_proxy_list_pac_fuzzer
+subninja obj/net/net_parse_proxy_rules_fuzzer.ninja
+rule __net_net_parse_proxy_rules_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_parse_proxy_rules_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_parse_proxy_rules_fuzzer.dict
+  description = ACTION //net:net_parse_proxy_rules_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_parse_proxy_rules_fuzzer.options: __net_net_parse_proxy_rules_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_parse_proxy_rules_fuzzer.options.stamp: stamp net_parse_proxy_rules_fuzzer.options
+build net_parse_proxy_rules_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_parse_proxy_bypass_rules_fuzzer.dict
+
+build obj/net/net_parse_proxy_rules_fuzzer_dict_copy.stamp: stamp net_parse_proxy_rules_fuzzer.dict
+build obj/net/net_parse_proxy_rules_fuzzer_run.stamp: stamp ./net_parse_proxy_rules_fuzzer
+subninja obj/net/net_parse_url_hostname_to_address_fuzzer.ninja
+rule __net_net_parse_url_hostname_to_address_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_parse_url_hostname_to_address_fuzzer.options --libfuzzer_options max_len=512
+  description = ACTION //net:net_parse_url_hostname_to_address_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_parse_url_hostname_to_address_fuzzer.options: __net_net_parse_url_hostname_to_address_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_parse_url_hostname_to_address_fuzzer.options.stamp: stamp net_parse_url_hostname_to_address_fuzzer.options
+build obj/net/net_parse_url_hostname_to_address_fuzzer_run.stamp: stamp ./net_parse_url_hostname_to_address_fuzzer
+rule __net_net_parse_url_hostname_to_address_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/net/data/fuzzer_data/hostnames/ --output /tmp/proto-quic/src/net/out/Default/net_parse_url_hostname_to_address_fuzzer_seed_corpus.zip
+  description = ACTION //net:net_parse_url_hostname_to_address_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build net_parse_url_hostname_to_address_fuzzer_seed_corpus.zip: __net_net_parse_url_hostname_to_address_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.stamp: stamp net_parse_url_hostname_to_address_fuzzer_seed_corpus.zip
+subninja obj/net/net_quic_crypto_framer_parse_message_fuzzer.ninja
+build obj/net/net_quic_crypto_framer_parse_message_fuzzer_run.stamp: stamp ./net_quic_crypto_framer_parse_message_fuzzer
+subninja obj/net/net_quic_proto.ninja
+rule __net_net_quic_proto_gen___build_toolchain_linux_clang_x64__rule
+  command = python ../../../tools/protoc_wrapper/protoc_wrapper.py cached_network_parameters.proto source_address_token.proto --protoc ./protoc --proto-in-dir ../../quic/core/proto --cc-out-dir gen/net/quic/core/proto --cc-options dllexport_decl=NET_EXPORT_PRIVATE$: --include net/base/net_export.h --py-out-dir pyproto/net/quic/core/proto
+  description = ACTION //net:net_quic_proto_gen(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/net/net_quic_proto_gen.inputdeps.stamp: stamp ../../../tools/protoc_wrapper/protoc_wrapper.py protoc ../../../net/quic/core/proto/cached_network_parameters.proto ../../../net/quic/core/proto/source_address_token.proto ./protoc
+
+build gen/net/quic/core/proto/cached_network_parameters.pb.h gen/net/quic/core/proto/cached_network_parameters.pb.cc pyproto/net/quic/core/proto/cached_network_parameters_pb2.py gen/net/quic/core/proto/source_address_token.pb.h gen/net/quic/core/proto/source_address_token.pb.cc pyproto/net/quic/core/proto/source_address_token_pb2.py: __net_net_quic_proto_gen___build_toolchain_linux_clang_x64__rule | obj/net/net_quic_proto_gen.inputdeps.stamp
+
+build obj/net/net_quic_proto_gen.stamp: stamp gen/net/quic/core/proto/cached_network_parameters.pb.h gen/net/quic/core/proto/cached_network_parameters.pb.cc pyproto/net/quic/core/proto/cached_network_parameters_pb2.py gen/net/quic/core/proto/source_address_token.pb.h gen/net/quic/core/proto/source_address_token.pb.cc pyproto/net/quic/core/proto/source_address_token_pb2.py
+subninja obj/net/net_resources.ninja
+rule __net_net_resources_grit___build_toolchain_linux_clang_x64__rule
+  command = python ../../../tools/grit/grit.py -i ../../base/net_resources.grd build -o gen/net --depdir . --depfile gen/net/net_resources_stamp.d --write-only-new=1 --depend-on-stamp -D _chromium -E CHROMIUM_BUILD=chromium -D desktop_linux -D toolkit_views -D use_aura -D use_nss_certs -D enable_media_router -f ../../../tools/gritsettings/resource_ids --assert-file-list=obj/net/net_resources_expected_outputs.txt
+  description = ACTION //net:net_resources_grit(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/net/net_resources_grit.inputdeps.stamp: stamp ../../../tools/grit/grit.py ../../../net/base/net_resources.grd ../../../tools/gritsettings/resource_ids obj/tools/grit/grit_sources.stamp
+
+build gen/net/net_resources_stamp.d.stamp gen/net/grit/net_resources.h gen/net/net_resources.pak: __net_net_resources_grit___build_toolchain_linux_clang_x64__rule | obj/net/net_resources_grit.inputdeps.stamp
+  depfile = gen/net/net_resources_stamp.d
+
+build obj/net/net_resources_grit.stamp: stamp gen/net/net_resources_stamp.d.stamp gen/net/grit/net_resources.h gen/net/net_resources.pak
+subninja obj/net/net_socks5_client_socket_fuzzer.ninja
+build obj/net/net_socks5_client_socket_fuzzer_run.stamp: stamp ./net_socks5_client_socket_fuzzer
+subninja obj/net/net_socks_client_socket_fuzzer.ninja
+build obj/net/net_socks_client_socket_fuzzer_run.stamp: stamp ./net_socks_client_socket_fuzzer
+subninja obj/net/net_unescape_url_component_fuzzer.ninja
+rule __net_net_unescape_url_component_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_unescape_url_component_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_unescape_url_component_fuzzer.dict --libfuzzer_options max_len\$ =\$ 2048
+  description = ACTION //net:net_unescape_url_component_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_unescape_url_component_fuzzer.options: __net_net_unescape_url_component_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_unescape_url_component_fuzzer.options.stamp: stamp net_unescape_url_component_fuzzer.options
+build net_unescape_url_component_fuzzer.dict: copy ../../../net/base/unescape_url_component_fuzzer.dict
+
+build obj/net/net_unescape_url_component_fuzzer_dict_copy.stamp: stamp net_unescape_url_component_fuzzer.dict
+build obj/net/net_unescape_url_component_fuzzer_run.stamp: stamp ./net_unescape_url_component_fuzzer
+subninja obj/net/net_unittests.ninja
+build obj/net/net_unittests_bundle_data.stamp: stamp ../../data/cert_issuer_source_aia_unittest/i.pem ../../data/cert_issuer_source_aia_unittest/i2.pem ../../data/cert_issuer_source_aia_unittest/i3.pem ../../data/cert_issuer_source_aia_unittest/target_file_aia.pem ../../data/cert_issuer_source_aia_unittest/target_file_and_http_aia.pem ../../data/cert_issuer_source_aia_unittest/target_invalid_and_http_aia.pem ../../data/cert_issuer_source_aia_unittest/target_invalid_url_aia.pem ../../data/cert_issuer_source_aia_unittest/target_no_aia.pem ../../data/cert_issuer_source_aia_unittest/target_one_aia.pem ../../data/cert_issuer_source_aia_unittest/target_six_aia.pem ../../data/cert_issuer_source_aia_unittest/target_three_aia.pem ../../data/cert_issuer_source_aia_unittest/target_two_aia.pem ../../data/cert_issuer_source_static_unittest/c1.pem ../../data/cert_issuer_source_static_unittest/c2.pem ../../data/cert_issuer_source_static_unittest/d.pem ../../data/cert_issuer_source_static_unittest/e1.pem ../../data/cert_issuer_source_static_unittest/e2.pem ../../data/cert_issuer_source_static_unittest/i1_1.pem ../../data/cert_issuer_source_static_unittest/i1_2.pem ../../data/cert_issuer_source_static_unittest/i2.pem ../../data/cert_issuer_source_static_unittest/i3_1.pem ../../data/cert_issuer_source_static_unittest/i3_2.pem ../../data/cert_issuer_source_static_unittest/root.pem ../../data/certificate_policies_unittest/anypolicy.pem ../../data/certificate_policies_unittest/anypolicy_with_qualifier.pem ../../data/certificate_policies_unittest/invalid-anypolicy_with_custom_qualifier.pem ../../data/certificate_policies_unittest/invalid-empty.pem ../../data/certificate_policies_unittest/invalid-policy_1_2_3_dupe.pem ../../data/certificate_policies_unittest/invalid-policy_1_2_3_policyinformation_unconsumed_data.pem ../../data/certificate_policies_unittest/invalid-policy_1_2_3_policyqualifierinfo_unconsumed_data.pem ../../data/certificate_policies_unittest/invalid-policy_1_2_3_with_empty_qualifiers_sequence.pem ../../data/certificate_policies_unittest/invalid-policy_identifier_not_oid.pem ../../data/certificate_policies_unittest/policy_1_2_3.pem ../../data/certificate_policies_unittest/policy_1_2_3_and_1_2_4.pem ../../data/certificate_policies_unittest/policy_1_2_3_and_1_2_4_with_qualifiers.pem ../../data/certificate_policies_unittest/policy_1_2_3_with_custom_qualifier.pem ../../data/certificate_policies_unittest/policy_1_2_3_with_qualifier.pem ../../data/filter_unittests/google.br ../../data/filter_unittests/google.txt ../../data/name_constraints_unittest/directoryname-excludeall.pem ../../data/name_constraints_unittest/directoryname-excluded.pem ../../data/name_constraints_unittest/directoryname.pem ../../data/name_constraints_unittest/directoryname_and_dnsname.pem ../../data/name_constraints_unittest/directoryname_and_dnsname_and_ipaddress.pem ../../data/name_constraints_unittest/dnsname-exclude_dot.pem ../../data/name_constraints_unittest/dnsname-excludeall.pem ../../data/name_constraints_unittest/dnsname-excluded.pem ../../data/name_constraints_unittest/dnsname-excluded_with_leading_dot.pem ../../data/name_constraints_unittest/dnsname-permitted_two_dot.pem ../../data/name_constraints_unittest/dnsname-permitted_with_leading_dot.pem ../../data/name_constraints_unittest/dnsname-with_max.pem ../../data/name_constraints_unittest/dnsname-with_min_0.pem ../../data/name_constraints_unittest/dnsname-with_min_0_and_max.pem ../../data/name_constraints_unittest/dnsname-with_min_1.pem ../../data/name_constraints_unittest/dnsname-with_min_1_and_max.pem ../../data/name_constraints_unittest/dnsname.pem ../../data/name_constraints_unittest/dnsname2.pem ../../data/name_constraints_unittest/edipartyname-excluded.pem ../../data/name_constraints_unittest/edipartyname-permitted.pem ../../data/name_constraints_unittest/invalid-empty_excluded_subtree.pem ../../data/name_constraints_unittest/invalid-empty_permitted_subtree.pem ../../data/name_constraints_unittest/invalid-no_subtrees.pem ../../data/name_constraints_unittest/ipaddress-excludeall.pem ../../data/name_constraints_unittest/ipaddress-excluded.pem ../../data/name_constraints_unittest/ipaddress-invalid_addr.pem ../../data/name_constraints_unittest/ipaddress-invalid_mask_not_contiguous_1.pem ../../data/name_constraints_unittest/ipaddress-invalid_mask_not_contiguous_2.pem ../../data/name_constraints_unittest/ipaddress-invalid_mask_not_contiguous_3.pem ../../data/name_constraints_unittest/ipaddress-invalid_mask_not_contiguous_4.pem ../../data/name_constraints_unittest/ipaddress-permit_all.pem ../../data/name_constraints_unittest/ipaddress-permit_prefix1.pem ../../data/name_constraints_unittest/ipaddress-permit_prefix31.pem ../../data/name_constraints_unittest/ipaddress-permit_singlehost.pem ../../data/name_constraints_unittest/ipaddress.pem ../../data/name_constraints_unittest/name-ca.pem ../../data/name_constraints_unittest/name-de.pem ../../data/name_constraints_unittest/name-empty.pem ../../data/name_constraints_unittest/name-jp-tokyo.pem ../../data/name_constraints_unittest/name-jp.pem ../../data/name_constraints_unittest/name-us-arizona-1.1.1.1.pem ../../data/name_constraints_unittest/name-us-arizona-192.168.1.1.pem ../../data/name_constraints_unittest/name-us-arizona-email.pem ../../data/name_constraints_unittest/name-us-arizona-foo.com.pem ../../data/name_constraints_unittest/name-us-arizona-ipv6.pem ../../data/name_constraints_unittest/name-us-arizona-permitted.example.com.pem ../../data/name_constraints_unittest/name-us-arizona.pem ../../data/name_constraints_unittest/name-us-california-192.168.1.1.pem ../../data/name_constraints_unittest/name-us-california-mountain_view.pem ../../data/name_constraints_unittest/name-us-california-permitted.example.com.pem ../../data/name_constraints_unittest/name-us-california.pem ../../data/name_constraints_unittest/name-us.pem ../../data/name_constraints_unittest/othername-excluded.pem ../../data/name_constraints_unittest/othername-permitted.pem ../../data/name_constraints_unittest/registeredid-excluded.pem ../../data/name_constraints_unittest/registeredid-permitted.pem ../../data/name_constraints_unittest/rfc822name-excluded.pem ../../data/name_constraints_unittest/rfc822name-permitted.pem ../../data/name_constraints_unittest/san-edipartyname.pem ../../data/name_constraints_unittest/san-excluded-directoryname.pem ../../data/name_constraints_unittest/san-excluded-dnsname.pem ../../data/name_constraints_unittest/san-excluded-ipaddress.pem ../../data/name_constraints_unittest/san-invalid-empty.pem ../../data/name_constraints_unittest/san-invalid-ipaddress.pem ../../data/name_constraints_unittest/san-othername.pem ../../data/name_constraints_unittest/san-permitted.pem ../../data/name_constraints_unittest/san-registeredid.pem ../../data/name_constraints_unittest/san-rfc822name.pem ../../data/name_constraints_unittest/san-uri.pem ../../data/name_constraints_unittest/san-x400address.pem ../../data/name_constraints_unittest/uri-excluded.pem ../../data/name_constraints_unittest/uri-permitted.pem ../../data/name_constraints_unittest/x400address-excluded.pem ../../data/name_constraints_unittest/x400address-permitted.pem ../../data/parse_certificate_unittest/basic_constraints_ca_false.pem ../../data/parse_certificate_unittest/basic_constraints_ca_no_path.pem ../../data/parse_certificate_unittest/basic_constraints_ca_path_9.pem ../../data/parse_certificate_unittest/basic_constraints_negative_path.pem ../../data/parse_certificate_unittest/basic_constraints_not_ca.pem ../../data/parse_certificate_unittest/basic_constraints_path_too_large.pem ../../data/parse_certificate_unittest/basic_constraints_pathlen_255.pem ../../data/parse_certificate_unittest/basic_constraints_pathlen_256.pem ../../data/parse_certificate_unittest/basic_constraints_pathlen_not_ca.pem ../../data/parse_certificate_unittest/basic_constraints_unconsumed_data.pem ../../data/parse_certificate_unittest/cert_algorithm_not_sequence.pem ../../data/parse_certificate_unittest/cert_data_after_signature.pem ../../data/parse_certificate_unittest/cert_empty_sequence.pem ../../data/parse_certificate_unittest/cert_missing_signature.pem ../../data/parse_certificate_unittest/cert_not_sequence.pem ../../data/parse_certificate_unittest/cert_signature_not_bit_string.pem ../../data/parse_certificate_unittest/cert_skeleton.pem ../../data/parse_certificate_unittest/cert_version3.pem ../../data/parse_certificate_unittest/extended_key_usage.pem ../../data/parse_certificate_unittest/extension_critical.pem ../../data/parse_certificate_unittest/extension_critical_0.pem ../../data/parse_certificate_unittest/extension_critical_3.pem ../../data/parse_certificate_unittest/extension_not_critical.pem ../../data/parse_certificate_unittest/extensions_data_after_sequence.pem ../../data/parse_certificate_unittest/extensions_duplicate_key_usage.pem ../../data/parse_certificate_unittest/extensions_empty_sequence.pem ../../data/parse_certificate_unittest/extensions_not_sequence.pem ../../data/parse_certificate_unittest/extensions_real.pem ../../data/parse_certificate_unittest/key_usage.pem ../../data/parse_certificate_unittest/policies.pem ../../data/parse_certificate_unittest/subject_alt_name.pem ../../data/parse_certificate_unittest/tbs_explicit_v1.pem ../../data/parse_certificate_unittest/tbs_negative_serial_number.pem ../../data/parse_certificate_unittest/tbs_serial_number_21_octets_leading_0.pem ../../data/parse_certificate_unittest/tbs_serial_number_26_octets.pem ../../data/parse_certificate_unittest/tbs_v1.pem ../../data/parse_certificate_unittest/tbs_v1_extensions.pem ../../data/parse_certificate_unittest/tbs_v2_extensions.pem ../../data/parse_certificate_unittest/tbs_v2_issuer_and_subject_unique_id.pem ../../data/parse_certificate_unittest/tbs_v2_issuer_unique_id.pem ../../data/parse_certificate_unittest/tbs_v2_no_optionals.pem ../../data/parse_certificate_unittest/tbs_v3_all_optionals.pem ../../data/parse_certificate_unittest/tbs_v3_data_after_extensions.pem ../../data/parse_certificate_unittest/tbs_v3_extensions.pem ../../data/parse_certificate_unittest/tbs_v3_extensions_not_sequence.pem ../../data/parse_certificate_unittest/tbs_v3_no_optionals.pem ../../data/parse_certificate_unittest/tbs_v3_real.pem ../../data/parse_certificate_unittest/tbs_v4.pem ../../data/parse_certificate_unittest/tbs_validity_both_generalized_time.pem ../../data/parse_certificate_unittest/tbs_validity_both_utc_time.pem ../../data/parse_certificate_unittest/tbs_validity_generalized_time_and_utc_time.pem ../../data/parse_certificate_unittest/tbs_validity_relaxed.pem ../../data/parse_certificate_unittest/tbs_validity_utc_time_and_generalized_time.pem ../../data/parse_certificate_unittest/v3_certificate_template.txt ../../data/parse_ocsp_unittest/bad_ocsp_type.pem ../../data/parse_ocsp_unittest/bad_signature.pem ../../data/parse_ocsp_unittest/bad_status.pem ../../data/parse_ocsp_unittest/good_response.pem ../../data/parse_ocsp_unittest/good_response_next_update.pem ../../data/parse_ocsp_unittest/has_extension.pem ../../data/parse_ocsp_unittest/has_single_extension.pem ../../data/parse_ocsp_unittest/has_version.pem ../../data/parse_ocsp_unittest/malformed_status.pem ../../data/parse_ocsp_unittest/missing_response.pem ../../data/parse_ocsp_unittest/multiple_response.pem ../../data/parse_ocsp_unittest/no_response.pem ../../data/parse_ocsp_unittest/ocsp_extra_certs.pem ../../data/parse_ocsp_unittest/ocsp_sign_bad_indirect.pem ../../data/parse_ocsp_unittest/ocsp_sign_direct.pem ../../data/parse_ocsp_unittest/ocsp_sign_indirect.pem ../../data/parse_ocsp_unittest/ocsp_sign_indirect_missing.pem ../../data/parse_ocsp_unittest/other_response.pem ../../data/parse_ocsp_unittest/responder_id.pem ../../data/parse_ocsp_unittest/responder_name.pem ../../data/parse_ocsp_unittest/revoke_response.pem ../../data/parse_ocsp_unittest/revoke_response_reason.pem ../../data/parse_ocsp_unittest/unknown_response.pem ../../data/test.html ../../data/url_request_unittest/308-without-location-header ../../data/url_request_unittest/308-without-location-header.mock-http-headers ../../data/url_request_unittest/BullRunSpeech.txt ../../data/url_request_unittest/content-type-normalization.html ../../data/url_request_unittest/content-type-normalization.html.mock-http-headers ../../data/url_request_unittest/expect-ct-header.html ../../data/url_request_unittest/expect-ct-header.html.mock-http-headers ../../data/url_request_unittest/filedir-sentinel ../../data/url_request_unittest/gzip-encoded ../../data/url_request_unittest/gzip-encoded.mock-http-headers ../../data/url_request_unittest/hpkp-headers-report-only.html ../../data/url_request_unittest/hpkp-headers-report-only.html.mock-http-headers ../../data/url_request_unittest/hpkp-headers.html ../../data/url_request_unittest/hpkp-headers.html.mock-http-headers ../../data/url_request_unittest/hsts-and-hpkp-headers.html ../../data/url_request_unittest/hsts-and-hpkp-headers.html.mock-http-headers ../../data/url_request_unittest/hsts-and-hpkp-headers2.html ../../data/url_request_unittest/hsts-and-hpkp-headers2.html.mock-http-headers ../../data/url_request_unittest/hsts-headers.html ../../data/url_request_unittest/hsts-headers.html.mock-http-headers ../../data/url_request_unittest/hsts-multiple-headers.html ../../data/url_request_unittest/hsts-multiple-headers.html.mock-http-headers ../../data/url_request_unittest/redirect-test.html ../../data/url_request_unittest/redirect-test.html.mock-http-headers ../../data/url_request_unittest/redirect-to-data.html ../../data/url_request_unittest/redirect-to-data.html.mock-http-headers ../../data/url_request_unittest/redirect-to-echoall ../../data/url_request_unittest/redirect-to-echoall.mock-http-headers ../../data/url_request_unittest/redirect-to-file.html ../../data/url_request_unittest/redirect-to-file.html.mock-http-headers ../../data/url_request_unittest/redirect-to-invalid-url.html ../../data/url_request_unittest/redirect-to-invalid-url.html.mock-http-headers ../../data/url_request_unittest/redirect301-to-echo ../../data/url_request_unittest/redirect301-to-echo.mock-http-headers ../../data/url_request_unittest/redirect301-to-https ../../data/url_request_unittest/redirect301-to-https.mock-http-headers ../../data/url_request_unittest/redirect302-to-echo ../../data/url_request_unittest/redirect302-to-echo-cacheable ../../data/url_request_unittest/redirect302-to-echo-cacheable.mock-http-headers ../../data/url_request_unittest/redirect302-to-echo.mock-http-headers ../../data/url_request_unittest/redirect302-to-https ../../data/url_request_unittest/redirect302-to-https.mock-http-headers ../../data/url_request_unittest/redirect303-to-echo ../../data/url_request_unittest/redirect303-to-echo.mock-http-headers ../../data/url_request_unittest/redirect303-to-https ../../data/url_request_unittest/redirect303-to-https.mock-http-headers ../../data/url_request_unittest/redirect307-to-echo ../../data/url_request_unittest/redirect307-to-echo.mock-http-headers ../../data/url_request_unittest/redirect307-to-https ../../data/url_request_unittest/redirect307-to-https.mock-http-headers ../../data/url_request_unittest/redirect308-to-echo ../../data/url_request_unittest/redirect308-to-echo.mock-http-headers ../../data/url_request_unittest/redirect308-to-https ../../data/url_request_unittest/redirect308-to-https.mock-http-headers ../../data/url_request_unittest/simple.html ../../data/url_request_unittest/simple.html.mock-http-headers ../../data/url_request_unittest/two-content-lengths.html ../../data/url_request_unittest/two-content-lengths.html.mock-http-headers ../../data/url_request_unittest/with-headers.html ../../data/url_request_unittest/with-headers.html.mock-http-headers ../../data/verify_certificate_chain_unittest/basic-constraints-pathlen-0-self-issued.pem ../../data/verify_certificate_chain_unittest/constrained-non-self-signed-root.pem ../../data/verify_certificate_chain_unittest/constrained-root-basic-constraints-ca-false.pem ../../data/verify_certificate_chain_unittest/constrained-root-lacks-basic-constraints.pem ../../data/verify_certificate_chain_unittest/expired-constrained-root.pem ../../data/verify_certificate_chain_unittest/expired-intermediate.pem ../../data/verify_certificate_chain_unittest/expired-target-notBefore.pem ../../data/verify_certificate_chain_unittest/expired-target.pem ../../data/verify_certificate_chain_unittest/expired-unconstrained-root.pem ../../data/verify_certificate_chain_unittest/incorrect-trust-anchor.pem ../../data/verify_certificate_chain_unittest/intermediate-basic-constraints-ca-false.pem ../../data/verify_certificate_chain_unittest/intermediate-basic-constraints-not-critical.pem ../../data/verify_certificate_chain_unittest/intermediate-lacks-basic-constraints.pem ../../data/verify_certificate_chain_unittest/intermediate-lacks-signing-key-usage.pem ../../data/verify_certificate_chain_unittest/intermediate-signed-with-md5.pem ../../data/verify_certificate_chain_unittest/intermediate-unknown-critical-extension.pem ../../data/verify_certificate_chain_unittest/intermediate-unknown-non-critical-extension.pem ../../data/verify_certificate_chain_unittest/issuer-and-subject-not-byte-for-byte-equal-anchor.pem ../../data/verify_certificate_chain_unittest/issuer-and-subject-not-byte-for-byte-equal.pem ../../data/verify_certificate_chain_unittest/key-rollover-longrolloverchain.pem ../../data/verify_certificate_chain_unittest/key-rollover-newchain.pem ../../data/verify_certificate_chain_unittest/key-rollover-oldchain.pem ../../data/verify_certificate_chain_unittest/key-rollover-rolloverchain.pem ../../data/verify_certificate_chain_unittest/non-self-signed-root.pem ../../data/verify_certificate_chain_unittest/target-and-intermediate.pem ../../data/verify_certificate_chain_unittest/target-has-keycertsign-but-not-ca.pem ../../data/verify_certificate_chain_unittest/target-has-pathlen-but-not-ca.pem ../../data/verify_certificate_chain_unittest/target-not-end-entity.pem ../../data/verify_certificate_chain_unittest/target-signed-by-512bit-rsa.pem ../../data/verify_certificate_chain_unittest/target-signed-using-ecdsa.pem ../../data/verify_certificate_chain_unittest/target-signed-with-md5.pem ../../data/verify_certificate_chain_unittest/target-unknown-critical-extension.pem ../../data/verify_certificate_chain_unittest/target-wrong-signature.pem ../../data/verify_certificate_chain_unittest/unconstrained-non-self-signed-root.pem ../../data/verify_certificate_chain_unittest/unconstrained-root-basic-constraints-ca-false.pem ../../data/verify_certificate_chain_unittest/unconstrained-root-lacks-basic-constraints.pem ../../data/verify_certificate_chain_unittest/violates-basic-constraints-pathlen-0.pem ../../data/verify_certificate_chain_unittest/violates-pathlen-1-constrained-root.pem ../../data/verify_certificate_chain_unittest/violates-pathlen-1-unconstrained-root.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-case_swap-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-case_swap-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-case_swap-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-case_swap.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-extra_whitespace-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-extra_whitespace-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-extra_whitespace-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-extra_whitespace.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-unmangled-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-unmangled-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-unmangled-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-BMPSTRING-unmangled.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-case_swap-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-case_swap-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-case_swap-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-case_swap.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-extra_whitespace-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-extra_whitespace-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-extra_whitespace-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-extra_whitespace.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-rdn_sorting_1.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-rdn_sorting_2.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-unmangled-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-unmangled-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-unmangled-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-PRINTABLESTRING-unmangled.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-case_swap-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-case_swap-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-case_swap-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-case_swap.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-extra_whitespace-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-extra_whitespace-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-extra_whitespace-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-extra_whitespace.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-unmangled-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-unmangled-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-unmangled-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-T61STRING-unmangled.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-case_swap-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-case_swap-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-case_swap-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-case_swap.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-extra_whitespace-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-extra_whitespace-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-extra_whitespace-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-extra_whitespace.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-unmangled-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-unmangled-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-unmangled-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UNIVERSALSTRING-unmangled.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-case_swap-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-case_swap-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-case_swap-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-case_swap.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-extra_whitespace-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-extra_whitespace-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-extra_whitespace-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-extra_whitespace.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-unmangled-dupe_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-unmangled-extra_attr.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-unmangled-extra_rdn.pem ../../data/verify_name_match_unittest/names/ascii-UTF8-unmangled.pem ../../data/verify_name_match_unittest/names/ascii-mixed-rdn_dupetype_sorting_1.pem ../../data/verify_name_match_unittest/names/ascii-mixed-rdn_dupetype_sorting_2.pem ../../data/verify_name_match_unittest/names/invalid-AttributeTypeAndValue-badAttributeType.pem ../../data/verify_name_match_unittest/names/invalid-AttributeTypeAndValue-empty.pem ../../data/verify_name_match_unittest/names/invalid-AttributeTypeAndValue-extradata.pem ../../data/verify_name_match_unittest/names/invalid-AttributeTypeAndValue-onlyOneElement.pem ../../data/verify_name_match_unittest/names/invalid-AttributeTypeAndValue-setNotSequence.pem ../../data/verify_name_match_unittest/names/invalid-Name-setInsteadOfSequence.pem ../../data/verify_name_match_unittest/names/invalid-RDN-empty.pem ../../data/verify_name_match_unittest/names/invalid-RDN-sequenceInsteadOfSet.pem ../../data/verify_name_match_unittest/names/unicode-mixed-normalized.pem ../../data/verify_name_match_unittest/names/unicode-mixed-unnormalized.pem ../../data/verify_name_match_unittest/names/unicode_bmp-BMPSTRING-unmangled.pem ../../data/verify_name_match_unittest/names/unicode_bmp-UNIVERSALSTRING-unmangled.pem ../../data/verify_name_match_unittest/names/unicode_bmp-UTF8-unmangled.pem ../../data/verify_name_match_unittest/names/unicode_supplementary-UNIVERSALSTRING-unmangled.pem ../../data/verify_name_match_unittest/names/unicode_supplementary-UTF8-unmangled.pem ../../data/verify_name_match_unittest/names/valid-Name-empty.pem ../../data/verify_name_match_unittest/names/valid-minimal.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-spki-params-null.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-unused-bits-signature.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-using-ecdh-key.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-using-ecmqv-key.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-using-rsa-algorithm.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512-wrong-signature-format.pem ../../data/verify_signed_data_unittest/ecdsa-prime256v1-sha512.pem ../../data/verify_signed_data_unittest/ecdsa-secp384r1-sha256-corrupted-data.pem ../../data/verify_signed_data_unittest/ecdsa-secp384r1-sha256.pem ../../data/verify_signed_data_unittest/ecdsa-using-rsa-key.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1-bad-key-der-length.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1-bad-key-der-null.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1-key-params-absent.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1-using-pss-key-no-params.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1-wrong-algorithm.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha1.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha256-key-encoded-ber.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha256-spki-non-null-params.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha256-using-ecdsa-algorithm.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha256-using-id-ea-rsa.pem ../../data/verify_signed_data_unittest/rsa-pkcs1-sha256.pem ../../data/verify_signed_data_unittest/rsa-pss-sha1-salt20-using-pss-key-no-params.pem ../../data/verify_signed_data_unittest/rsa-pss-sha1-salt20-using-pss-key-with-null-params.pem ../../data/verify_signed_data_unittest/rsa-pss-sha1-salt20.pem ../../data/verify_signed_data_unittest/rsa-pss-sha1-wrong-salt.pem ../../data/verify_signed_data_unittest/rsa-pss-sha256-mgf1-sha512-salt33.pem ../../data/verify_signed_data_unittest/rsa-pss-sha256-salt10-using-pss-key-with-params.pem ../../data/verify_signed_data_unittest/rsa-pss-sha256-salt10-using-pss-key-with-wrong-params.pem ../../data/verify_signed_data_unittest/rsa-pss-sha256-salt10.pem ../../data/verify_signed_data_unittest/rsa-using-ec-key.pem ../../data/verify_signed_data_unittest/rsa2048-pkcs1-sha512.pem ../../third_party/nist-pkits/certs/AllCertificatesNoPoliciesTest2EE.crt ../../third_party/nist-pkits/certs/AllCertificatesSamePoliciesTest10EE.crt ../../third_party/nist-pkits/certs/AllCertificatesSamePoliciesTest13EE.crt ../../third_party/nist-pkits/certs/AllCertificatesanyPolicyTest11EE.crt ../../third_party/nist-pkits/certs/AnyPolicyTest14EE.crt ../../third_party/nist-pkits/certs/BadCRLIssuerNameCACert.crt ../../third_party/nist-pkits/certs/BadCRLSignatureCACert.crt ../../third_party/nist-pkits/certs/BadSignedCACert.crt ../../third_party/nist-pkits/certs/BadnotAfterDateCACert.crt ../../third_party/nist-pkits/certs/BadnotBeforeDateCACert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedCRLSigningKeyCACert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedCRLSigningKeyCRLCert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedNewKeyCACert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedNewKeyOldWithNewCACert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedOldKeyCACert.crt ../../third_party/nist-pkits/certs/BasicSelfIssuedOldKeyNewWithOldCACert.crt ../../third_party/nist-pkits/certs/CPSPointerQualifierTest20EE.crt ../../third_party/nist-pkits/certs/DSACACert.crt ../../third_party/nist-pkits/certs/DSAParametersInheritedCACert.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest12EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest3EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest4EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest5EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest7EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest8EE.crt ../../third_party/nist-pkits/certs/DifferentPoliciesTest9EE.crt ../../third_party/nist-pkits/certs/GeneralizedTimeCRLnextUpdateCACert.crt ../../third_party/nist-pkits/certs/GoodCACert.crt ../../third_party/nist-pkits/certs/GoodsubCACert.crt ../../third_party/nist-pkits/certs/GoodsubCAPanyPolicyMapping1to2CACert.crt ../../third_party/nist-pkits/certs/InvalidBadCRLIssuerNameTest5EE.crt ../../third_party/nist-pkits/certs/InvalidBadCRLSignatureTest4EE.crt ../../third_party/nist-pkits/certs/InvalidBasicSelfIssuedCRLSigningKeyTest7EE.crt ../../third_party/nist-pkits/certs/InvalidBasicSelfIssuedCRLSigningKeyTest8EE.crt ../../third_party/nist-pkits/certs/InvalidBasicSelfIssuedNewWithOldTest5EE.crt ../../third_party/nist-pkits/certs/InvalidBasicSelfIssuedOldWithNewTest2EE.crt ../../third_party/nist-pkits/certs/InvalidCASignatureTest2EE.crt ../../third_party/nist-pkits/certs/InvalidCAnotAfterDateTest5EE.crt ../../third_party/nist-pkits/certs/InvalidCAnotBeforeDateTest1EE.crt ../../third_party/nist-pkits/certs/InvalidDNSnameConstraintsTest31EE.crt ../../third_party/nist-pkits/certs/InvalidDNSnameConstraintsTest33EE.crt ../../third_party/nist-pkits/certs/InvalidDNSnameConstraintsTest38EE.crt ../../third_party/nist-pkits/certs/InvalidDNandRFC822nameConstraintsTest28EE.crt ../../third_party/nist-pkits/certs/InvalidDNandRFC822nameConstraintsTest29EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest10EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest12EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest13EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest15EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest16EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest17EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest20EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest2EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest3EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest7EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest8EE.crt ../../third_party/nist-pkits/certs/InvalidDNnameConstraintsTest9EE.crt ../../third_party/nist-pkits/certs/InvalidDSASignatureTest6EE.crt ../../third_party/nist-pkits/certs/InvalidEESignatureTest3EE.crt ../../third_party/nist-pkits/certs/InvalidEEnotAfterDateTest6EE.crt ../../third_party/nist-pkits/certs/InvalidEEnotBeforeDateTest2EE.crt ../../third_party/nist-pkits/certs/InvalidIDPwithindirectCRLTest23EE.crt ../../third_party/nist-pkits/certs/InvalidIDPwithindirectCRLTest26EE.crt ../../third_party/nist-pkits/certs/InvalidLongSerialNumberTest18EE.crt ../../third_party/nist-pkits/certs/InvalidMappingFromanyPolicyTest7EE.crt ../../third_party/nist-pkits/certs/InvalidMappingToanyPolicyTest8EE.crt ../../third_party/nist-pkits/certs/InvalidMissingCRLTest1EE.crt ../../third_party/nist-pkits/certs/InvalidMissingbasicConstraintsTest1EE.crt ../../third_party/nist-pkits/certs/InvalidNameChainingOrderTest2EE.crt ../../third_party/nist-pkits/certs/InvalidNameChainingTest1EE.crt ../../third_party/nist-pkits/certs/InvalidNegativeSerialNumberTest15EE.crt ../../third_party/nist-pkits/certs/InvalidOldCRLnextUpdateTest11EE.crt ../../third_party/nist-pkits/certs/InvalidPolicyMappingTest10EE.crt ../../third_party/nist-pkits/certs/InvalidPolicyMappingTest2EE.crt ../../third_party/nist-pkits/certs/InvalidPolicyMappingTest4EE.crt ../../third_party/nist-pkits/certs/InvalidRFC822nameConstraintsTest22EE.crt ../../third_party/nist-pkits/certs/InvalidRFC822nameConstraintsTest24EE.crt ../../third_party/nist-pkits/certs/InvalidRFC822nameConstraintsTest26EE.crt ../../third_party/nist-pkits/certs/InvalidRevokedCATest2EE.crt ../../third_party/nist-pkits/certs/InvalidRevokedEETest3EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitAnyPolicyTest10EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitAnyPolicyTest8EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitPolicyMappingTest10EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitPolicyMappingTest11EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitPolicyMappingTest8EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedinhibitPolicyMappingTest9EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedpathLenConstraintTest16EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedrequireExplicitPolicyTest7EE.crt ../../third_party/nist-pkits/certs/InvalidSelfIssuedrequireExplicitPolicyTest8EE.crt ../../third_party/nist-pkits/certs/InvalidSeparateCertificateandCRLKeysTest20EE.crt ../../third_party/nist-pkits/certs/InvalidSeparateCertificateandCRLKeysTest21EE.crt ../../third_party/nist-pkits/certs/InvalidURInameConstraintsTest35EE.crt ../../third_party/nist-pkits/certs/InvalidURInameConstraintsTest37EE.crt ../../third_party/nist-pkits/certs/InvalidUnknownCRLEntryExtensionTest8EE.crt ../../third_party/nist-pkits/certs/InvalidUnknownCRLExtensionTest10EE.crt ../../third_party/nist-pkits/certs/InvalidUnknownCRLExtensionTest9EE.crt ../../third_party/nist-pkits/certs/InvalidUnknownCriticalCertificateExtensionTest2EE.crt ../../third_party/nist-pkits/certs/InvalidWrongCRLTest6EE.crt ../../third_party/nist-pkits/certs/InvalidcAFalseTest2EE.crt ../../third_party/nist-pkits/certs/InvalidcAFalseTest3EE.crt ../../third_party/nist-pkits/certs/InvalidcRLIssuerTest27EE.crt ../../third_party/nist-pkits/certs/InvalidcRLIssuerTest31EE.crt ../../third_party/nist-pkits/certs/InvalidcRLIssuerTest32EE.crt ../../third_party/nist-pkits/certs/InvalidcRLIssuerTest34EE.crt ../../third_party/nist-pkits/certs/InvalidcRLIssuerTest35EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLIndicatorNoBaseTest1EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLTest10EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLTest3EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLTest4EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLTest6EE.crt ../../third_party/nist-pkits/certs/InvaliddeltaCRLTest9EE.crt ../../third_party/nist-pkits/certs/InvaliddistributionPointTest2EE.crt ../../third_party/nist-pkits/certs/InvaliddistributionPointTest3EE.crt ../../third_party/nist-pkits/certs/InvaliddistributionPointTest6EE.crt ../../third_party/nist-pkits/certs/InvaliddistributionPointTest8EE.crt ../../third_party/nist-pkits/certs/InvaliddistributionPointTest9EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitAnyPolicyTest1EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitAnyPolicyTest4EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitAnyPolicyTest5EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitAnyPolicyTest6EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitPolicyMappingTest1EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitPolicyMappingTest3EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitPolicyMappingTest5EE.crt ../../third_party/nist-pkits/certs/InvalidinhibitPolicyMappingTest6EE.crt ../../third_party/nist-pkits/certs/InvalidkeyUsageCriticalcRLSignFalseTest4EE.crt ../../third_party/nist-pkits/certs/InvalidkeyUsageCriticalkeyCertSignFalseTest1EE.crt ../../third_party/nist-pkits/certs/InvalidkeyUsageNotCriticalcRLSignFalseTest5EE.crt ../../third_party/nist-pkits/certs/InvalidkeyUsageNotCriticalkeyCertSignFalseTest2EE.crt ../../third_party/nist-pkits/certs/InvalidonlyContainsAttributeCertsTest14EE.crt ../../third_party/nist-pkits/certs/InvalidonlyContainsCACertsTest12EE.crt ../../third_party/nist-pkits/certs/InvalidonlyContainsUserCertsTest11EE.crt ../../third_party/nist-pkits/certs/InvalidonlySomeReasonsTest15EE.crt ../../third_party/nist-pkits/certs/InvalidonlySomeReasonsTest16EE.crt ../../third_party/nist-pkits/certs/InvalidonlySomeReasonsTest17EE.crt ../../third_party/nist-pkits/certs/InvalidonlySomeReasonsTest20EE.crt ../../third_party/nist-pkits/certs/InvalidonlySomeReasonsTest21EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest10EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest11EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest12EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest5EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest6EE.crt ../../third_party/nist-pkits/certs/InvalidpathLenConstraintTest9EE.crt ../../third_party/nist-pkits/certs/Invalidpre2000CRLnextUpdateTest12EE.crt ../../third_party/nist-pkits/certs/Invalidpre2000UTCEEnotAfterDateTest7EE.crt ../../third_party/nist-pkits/certs/InvalidrequireExplicitPolicyTest3EE.crt ../../third_party/nist-pkits/certs/InvalidrequireExplicitPolicyTest5EE.crt ../../third_party/nist-pkits/certs/LongSerialNumberCACert.crt ../../third_party/nist-pkits/certs/Mapping1to2CACert.crt ../../third_party/nist-pkits/certs/MappingFromanyPolicyCACert.crt ../../third_party/nist-pkits/certs/MappingToanyPolicyCACert.crt ../../third_party/nist-pkits/certs/MissingbasicConstraintsCACert.crt ../../third_party/nist-pkits/certs/NameOrderingCACert.crt ../../third_party/nist-pkits/certs/NegativeSerialNumberCACert.crt ../../third_party/nist-pkits/certs/NoCRLCACert.crt ../../third_party/nist-pkits/certs/NoPoliciesCACert.crt ../../third_party/nist-pkits/certs/NoissuingDistributionPointCACert.crt ../../third_party/nist-pkits/certs/OldCRLnextUpdateCACert.crt ../../third_party/nist-pkits/certs/OverlappingPoliciesTest6EE.crt ../../third_party/nist-pkits/certs/P12Mapping1to3CACert.crt ../../third_party/nist-pkits/certs/P12Mapping1to3subCACert.crt ../../third_party/nist-pkits/certs/P12Mapping1to3subsubCACert.crt ../../third_party/nist-pkits/certs/P1Mapping1to234CACert.crt ../../third_party/nist-pkits/certs/P1Mapping1to234subCACert.crt ../../third_party/nist-pkits/certs/P1anyPolicyMapping1to2CACert.crt ../../third_party/nist-pkits/certs/PanyPolicyMapping1to2CACert.crt ../../third_party/nist-pkits/certs/PoliciesP1234CACert.crt ../../third_party/nist-pkits/certs/PoliciesP1234subCAP123Cert.crt ../../third_party/nist-pkits/certs/PoliciesP1234subsubCAP123P12Cert.crt ../../third_party/nist-pkits/certs/PoliciesP123CACert.crt ../../third_party/nist-pkits/certs/PoliciesP123subCAP12Cert.crt ../../third_party/nist-pkits/certs/PoliciesP123subsubCAP12P1Cert.crt ../../third_party/nist-pkits/certs/PoliciesP123subsubCAP12P2Cert.crt ../../third_party/nist-pkits/certs/PoliciesP123subsubsubCAP12P2P1Cert.crt ../../third_party/nist-pkits/certs/PoliciesP12CACert.crt ../../third_party/nist-pkits/certs/PoliciesP12subCAP1Cert.crt ../../third_party/nist-pkits/certs/PoliciesP12subsubCAP1P2Cert.crt ../../third_party/nist-pkits/certs/PoliciesP2subCA2Cert.crt ../../third_party/nist-pkits/certs/PoliciesP2subCACert.crt ../../third_party/nist-pkits/certs/PoliciesP3CACert.crt ../../third_party/nist-pkits/certs/RFC3280MandatoryAttributeTypesCACert.crt ../../third_party/nist-pkits/certs/RFC3280OptionalAttributeTypesCACert.crt ../../third_party/nist-pkits/certs/RevokedsubCACert.crt ../../third_party/nist-pkits/certs/RolloverfromPrintableStringtoUTF8StringCACert.crt ../../third_party/nist-pkits/certs/SeparateCertificateandCRLKeysCA2CRLSigningCert.crt ../../third_party/nist-pkits/certs/SeparateCertificateandCRLKeysCA2CertificateSigningCACert.crt ../../third_party/nist-pkits/certs/SeparateCertificateandCRLKeysCRLSigningCert.crt ../../third_party/nist-pkits/certs/SeparateCertificateandCRLKeysCertificateSigningCACert.crt ../../third_party/nist-pkits/certs/TrustAnchorRootCertificate.crt ../../third_party/nist-pkits/certs/TwoCRLsCACert.crt ../../third_party/nist-pkits/certs/UIDCACert.crt ../../third_party/nist-pkits/certs/UTF8StringCaseInsensitiveMatchCACert.crt ../../third_party/nist-pkits/certs/UTF8StringEncodedNamesCACert.crt ../../third_party/nist-pkits/certs/UnknownCRLEntryExtensionCACert.crt ../../third_party/nist-pkits/certs/UnknownCRLExtensionCACert.crt ../../third_party/nist-pkits/certs/UserNoticeQualifierTest15EE.crt ../../third_party/nist-pkits/certs/UserNoticeQualifierTest16EE.crt ../../third_party/nist-pkits/certs/UserNoticeQualifierTest17EE.crt ../../third_party/nist-pkits/certs/UserNoticeQualifierTest18EE.crt ../../third_party/nist-pkits/certs/UserNoticeQualifierTest19EE.crt ../../third_party/nist-pkits/certs/ValidBasicSelfIssuedCRLSigningKeyTest6EE.crt ../../third_party/nist-pkits/certs/ValidBasicSelfIssuedNewWithOldTest3EE.crt ../../third_party/nist-pkits/certs/ValidBasicSelfIssuedNewWithOldTest4EE.crt ../../third_party/nist-pkits/certs/ValidBasicSelfIssuedOldWithNewTest1EE.crt ../../third_party/nist-pkits/certs/ValidCertificatePathTest1EE.crt ../../third_party/nist-pkits/certs/ValidDNSnameConstraintsTest30EE.crt ../../third_party/nist-pkits/certs/ValidDNSnameConstraintsTest32EE.crt ../../third_party/nist-pkits/certs/ValidDNandRFC822nameConstraintsTest27EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest11EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest14EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest18EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest19EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest1EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest4EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest5EE.crt ../../third_party/nist-pkits/certs/ValidDNnameConstraintsTest6EE.crt ../../third_party/nist-pkits/certs/ValidDSAParameterInheritanceTest5EE.crt ../../third_party/nist-pkits/certs/ValidDSASignaturesTest4EE.crt ../../third_party/nist-pkits/certs/ValidGeneralizedTimeCRLnextUpdateTest13EE.crt ../../third_party/nist-pkits/certs/ValidGeneralizedTimenotAfterDateTest8EE.crt ../../third_party/nist-pkits/certs/ValidGeneralizedTimenotBeforeDateTest4EE.crt ../../third_party/nist-pkits/certs/ValidIDPwithindirectCRLTest22EE.crt ../../third_party/nist-pkits/certs/ValidIDPwithindirectCRLTest24EE.crt ../../third_party/nist-pkits/certs/ValidIDPwithindirectCRLTest25EE.crt ../../third_party/nist-pkits/certs/ValidLongSerialNumberTest16EE.crt ../../third_party/nist-pkits/certs/ValidLongSerialNumberTest17EE.crt ../../third_party/nist-pkits/certs/ValidNameChainingCapitalizationTest5EE.crt ../../third_party/nist-pkits/certs/ValidNameChainingWhitespaceTest3EE.crt ../../third_party/nist-pkits/certs/ValidNameChainingWhitespaceTest4EE.crt ../../third_party/nist-pkits/certs/ValidNameUIDsTest6EE.crt ../../third_party/nist-pkits/certs/ValidNegativeSerialNumberTest14EE.crt ../../third_party/nist-pkits/certs/ValidNoissuingDistributionPointTest10EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest11EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest12EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest13EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest14EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest1EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest3EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest5EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest6EE.crt ../../third_party/nist-pkits/certs/ValidPolicyMappingTest9EE.crt ../../third_party/nist-pkits/certs/ValidRFC3280MandatoryAttributeTypesTest7EE.crt ../../third_party/nist-pkits/certs/ValidRFC3280OptionalAttributeTypesTest8EE.crt ../../third_party/nist-pkits/certs/ValidRFC822nameConstraintsTest21EE.crt ../../third_party/nist-pkits/certs/ValidRFC822nameConstraintsTest23EE.crt ../../third_party/nist-pkits/certs/ValidRFC822nameConstraintsTest25EE.crt ../../third_party/nist-pkits/certs/ValidRolloverfromPrintableStringtoUTF8StringTest10EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedinhibitAnyPolicyTest7EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedinhibitAnyPolicyTest9EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedinhibitPolicyMappingTest7EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedpathLenConstraintTest15EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedpathLenConstraintTest17EE.crt ../../third_party/nist-pkits/certs/ValidSelfIssuedrequireExplicitPolicyTest6EE.crt ../../third_party/nist-pkits/certs/ValidSeparateCertificateandCRLKeysTest19EE.crt ../../third_party/nist-pkits/certs/ValidTwoCRLsTest7EE.crt ../../third_party/nist-pkits/certs/ValidURInameConstraintsTest34EE.crt ../../third_party/nist-pkits/certs/ValidURInameConstraintsTest36EE.crt ../../third_party/nist-pkits/certs/ValidUTF8StringCaseInsensitiveMatchTest11EE.crt ../../third_party/nist-pkits/certs/ValidUTF8StringEncodedNamesTest9EE.crt ../../third_party/nist-pkits/certs/ValidUnknownNotCriticalCertificateExtensionTest1EE.crt ../../third_party/nist-pkits/certs/ValidbasicConstraintsNotCriticalTest4EE.crt ../../third_party/nist-pkits/certs/ValidcRLIssuerTest28EE.crt ../../third_party/nist-pkits/certs/ValidcRLIssuerTest29EE.crt ../../third_party/nist-pkits/certs/ValidcRLIssuerTest30EE.crt ../../third_party/nist-pkits/certs/ValidcRLIssuerTest33EE.crt ../../third_party/nist-pkits/certs/ValiddeltaCRLTest2EE.crt ../../third_party/nist-pkits/certs/ValiddeltaCRLTest5EE.crt ../../third_party/nist-pkits/certs/ValiddeltaCRLTest7EE.crt ../../third_party/nist-pkits/certs/ValiddeltaCRLTest8EE.crt ../../third_party/nist-pkits/certs/ValiddistributionPointTest1EE.crt ../../third_party/nist-pkits/certs/ValiddistributionPointTest4EE.crt ../../third_party/nist-pkits/certs/ValiddistributionPointTest5EE.crt ../../third_party/nist-pkits/certs/ValiddistributionPointTest7EE.crt ../../third_party/nist-pkits/certs/ValidinhibitAnyPolicyTest2EE.crt ../../third_party/nist-pkits/certs/ValidinhibitPolicyMappingTest2EE.crt ../../third_party/nist-pkits/certs/ValidinhibitPolicyMappingTest4EE.crt ../../third_party/nist-pkits/certs/ValidkeyUsageNotCriticalTest3EE.crt ../../third_party/nist-pkits/certs/ValidonlyContainsCACertsTest13EE.crt ../../third_party/nist-pkits/certs/ValidonlySomeReasonsTest18EE.crt ../../third_party/nist-pkits/certs/ValidonlySomeReasonsTest19EE.crt ../../third_party/nist-pkits/certs/ValidpathLenConstraintTest13EE.crt ../../third_party/nist-pkits/certs/ValidpathLenConstraintTest14EE.crt ../../third_party/nist-pkits/certs/ValidpathLenConstraintTest7EE.crt ../../third_party/nist-pkits/certs/ValidpathLenConstraintTest8EE.crt ../../third_party/nist-pkits/certs/Validpre2000UTCnotBeforeDateTest3EE.crt ../../third_party/nist-pkits/certs/ValidrequireExplicitPolicyTest1EE.crt ../../third_party/nist-pkits/certs/ValidrequireExplicitPolicyTest2EE.crt ../../third_party/nist-pkits/certs/ValidrequireExplicitPolicyTest4EE.crt ../../third_party/nist-pkits/certs/WrongCRLCACert.crt ../../third_party/nist-pkits/certs/anyPolicyCACert.crt ../../third_party/nist-pkits/certs/basicConstraintsCriticalcAFalseCACert.crt ../../third_party/nist-pkits/certs/basicConstraintsNotCriticalCACert.crt ../../third_party/nist-pkits/certs/basicConstraintsNotCriticalcAFalseCACert.crt ../../third_party/nist-pkits/certs/deltaCRLCA1Cert.crt ../../third_party/nist-pkits/certs/deltaCRLCA2Cert.crt ../../third_party/nist-pkits/certs/deltaCRLCA3Cert.crt ../../third_party/nist-pkits/certs/deltaCRLIndicatorNoBaseCACert.crt ../../third_party/nist-pkits/certs/distributionPoint1CACert.crt ../../third_party/nist-pkits/certs/distributionPoint2CACert.crt ../../third_party/nist-pkits/certs/indirectCRLCA1Cert.crt ../../third_party/nist-pkits/certs/indirectCRLCA2Cert.crt ../../third_party/nist-pkits/certs/indirectCRLCA3Cert.crt ../../third_party/nist-pkits/certs/indirectCRLCA3cRLIssuerCert.crt ../../third_party/nist-pkits/certs/indirectCRLCA4Cert.crt ../../third_party/nist-pkits/certs/indirectCRLCA4cRLIssuerCert.crt ../../third_party/nist-pkits/certs/indirectCRLCA5Cert.crt ../../third_party/nist-pkits/certs/indirectCRLCA6Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy0CACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1CACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1SelfIssuedsubCA2Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1subCA1Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1subCA2Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1subCAIAP5Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy1subsubCA2Cert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy5CACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy5subCACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicy5subsubCACert.crt ../../third_party/nist-pkits/certs/inhibitAnyPolicyTest3EE.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping0CACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping0subCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P12CACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P12subCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P12subCAIPM5Cert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P12subsubCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P12subsubCAIPM5Cert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P1CACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P1SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P1SelfIssuedsubCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P1subCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping1P1subsubCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping5CACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping5subCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping5subsubCACert.crt ../../third_party/nist-pkits/certs/inhibitPolicyMapping5subsubsubCACert.crt ../../third_party/nist-pkits/certs/keyUsageCriticalcRLSignFalseCACert.crt ../../third_party/nist-pkits/certs/keyUsageCriticalkeyCertSignFalseCACert.crt ../../third_party/nist-pkits/certs/keyUsageNotCriticalCACert.crt ../../third_party/nist-pkits/certs/keyUsageNotCriticalcRLSignFalseCACert.crt ../../third_party/nist-pkits/certs/keyUsageNotCriticalkeyCertSignFalseCACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN1CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN1SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN1subCA1Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN1subCA2Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN1subCA3Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN2CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN3CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN3subCA1Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN3subCA2Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN4CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDN5CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDNS1CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsDNS2CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsRFC822CA1Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsRFC822CA2Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsRFC822CA3Cert.crt ../../third_party/nist-pkits/certs/nameConstraintsURI1CACert.crt ../../third_party/nist-pkits/certs/nameConstraintsURI2CACert.crt ../../third_party/nist-pkits/certs/onlyContainsAttributeCertsCACert.crt ../../third_party/nist-pkits/certs/onlyContainsCACertsCACert.crt ../../third_party/nist-pkits/certs/onlyContainsUserCertsCACert.crt ../../third_party/nist-pkits/certs/onlySomeReasonsCA1Cert.crt ../../third_party/nist-pkits/certs/onlySomeReasonsCA2Cert.crt ../../third_party/nist-pkits/certs/onlySomeReasonsCA3Cert.crt ../../third_party/nist-pkits/certs/onlySomeReasonsCA4Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint0CACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint0SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint0subCA2Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint0subCACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint1CACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint1SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint1SelfIssuedsubCACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint1subCACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6CACert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subCA0Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subCA1Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subCA4Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subsubCA00Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subsubCA11Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subsubCA41Cert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subsubsubCA11XCert.crt ../../third_party/nist-pkits/certs/pathLenConstraint6subsubsubCA41XCert.crt ../../third_party/nist-pkits/certs/pre2000CRLnextUpdateCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy0CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy0subCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy0subsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy0subsubsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy10CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy10subCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy10subsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy10subsubsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy2CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy2SelfIssuedCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy2SelfIssuedsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy2subCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy4CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy4subCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy4subsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy4subsubsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy5CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy5subCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy5subsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy5subsubsubCACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy7CACert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy7subCARE2Cert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy7subsubCARE2RE4Cert.crt ../../third_party/nist-pkits/certs/requireExplicitPolicy7subsubsubCARE2RE4Cert.crt ../../third_party/nist-pkits/crls/BadCRLIssuerNameCACRL.crl ../../third_party/nist-pkits/crls/BadCRLSignatureCACRL.crl ../../third_party/nist-pkits/crls/BadSignedCACRL.crl ../../third_party/nist-pkits/crls/BadnotAfterDateCACRL.crl ../../third_party/nist-pkits/crls/BadnotBeforeDateCACRL.crl ../../third_party/nist-pkits/crls/BasicSelfIssuedCRLSigningKeyCACRL.crl ../../third_party/nist-pkits/crls/BasicSelfIssuedCRLSigningKeyCRLCertCRL.crl ../../third_party/nist-pkits/crls/BasicSelfIssuedNewKeyCACRL.crl ../../third_party/nist-pkits/crls/BasicSelfIssuedOldKeyCACRL.crl ../../third_party/nist-pkits/crls/BasicSelfIssuedOldKeySelfIssuedCertCRL.crl ../../third_party/nist-pkits/crls/DSACACRL.crl ../../third_party/nist-pkits/crls/DSAParametersInheritedCACRL.crl ../../third_party/nist-pkits/crls/GeneralizedTimeCRLnextUpdateCACRL.crl ../../third_party/nist-pkits/crls/GoodCACRL.crl ../../third_party/nist-pkits/crls/GoodsubCACRL.crl ../../third_party/nist-pkits/crls/GoodsubCAPanyPolicyMapping1to2CACRL.crl ../../third_party/nist-pkits/crls/LongSerialNumberCACRL.crl ../../third_party/nist-pkits/crls/Mapping1to2CACRL.crl ../../third_party/nist-pkits/crls/MappingFromanyPolicyCACRL.crl ../../third_party/nist-pkits/crls/MappingToanyPolicyCACRL.crl ../../third_party/nist-pkits/crls/MissingbasicConstraintsCACRL.crl ../../third_party/nist-pkits/crls/NameOrderCACRL.crl ../../third_party/nist-pkits/crls/NegativeSerialNumberCACRL.crl ../../third_party/nist-pkits/crls/NoPoliciesCACRL.crl ../../third_party/nist-pkits/crls/NoissuingDistributionPointCACRL.crl ../../third_party/nist-pkits/crls/OldCRLnextUpdateCACRL.crl ../../third_party/nist-pkits/crls/P12Mapping1to3CACRL.crl ../../third_party/nist-pkits/crls/P12Mapping1to3subCACRL.crl ../../third_party/nist-pkits/crls/P12Mapping1to3subsubCACRL.crl ../../third_party/nist-pkits/crls/P1Mapping1to234CACRL.crl ../../third_party/nist-pkits/crls/P1Mapping1to234subCACRL.crl ../../third_party/nist-pkits/crls/P1anyPolicyMapping1to2CACRL.crl ../../third_party/nist-pkits/crls/PanyPolicyMapping1to2CACRL.crl ../../third_party/nist-pkits/crls/PoliciesP1234CACRL.crl ../../third_party/nist-pkits/crls/PoliciesP1234subCAP123CRL.crl ../../third_party/nist-pkits/crls/PoliciesP1234subsubCAP123P12CRL.crl ../../third_party/nist-pkits/crls/PoliciesP123CACRL.crl ../../third_party/nist-pkits/crls/PoliciesP123subCAP12CRL.crl ../../third_party/nist-pkits/crls/PoliciesP123subsubCAP12P1CRL.crl ../../third_party/nist-pkits/crls/PoliciesP123subsubCAP2P2CRL.crl ../../third_party/nist-pkits/crls/PoliciesP123subsubsubCAP12P2P1CRL.crl ../../third_party/nist-pkits/crls/PoliciesP12CACRL.crl ../../third_party/nist-pkits/crls/PoliciesP12subCAP1CRL.crl ../../third_party/nist-pkits/crls/PoliciesP12subsubCAP1P2CRL.crl ../../third_party/nist-pkits/crls/PoliciesP2subCA2CRL.crl ../../third_party/nist-pkits/crls/PoliciesP2subCACRL.crl ../../third_party/nist-pkits/crls/PoliciesP3CACRL.crl ../../third_party/nist-pkits/crls/RFC3280MandatoryAttributeTypesCACRL.crl ../../third_party/nist-pkits/crls/RFC3280OptionalAttributeTypesCACRL.crl ../../third_party/nist-pkits/crls/RevokedsubCACRL.crl ../../third_party/nist-pkits/crls/RolloverfromPrintableStringtoUTF8StringCACRL.crl ../../third_party/nist-pkits/crls/SeparateCertificateandCRLKeysCA2CRL.crl ../../third_party/nist-pkits/crls/SeparateCertificateandCRLKeysCRL.crl ../../third_party/nist-pkits/crls/TrustAnchorRootCRL.crl ../../third_party/nist-pkits/crls/TwoCRLsCABadCRL.crl ../../third_party/nist-pkits/crls/TwoCRLsCAGoodCRL.crl ../../third_party/nist-pkits/crls/UIDCACRL.crl ../../third_party/nist-pkits/crls/UTF8StringCaseInsensitiveMatchCACRL.crl ../../third_party/nist-pkits/crls/UTF8StringEncodedNamesCACRL.crl ../../third_party/nist-pkits/crls/UnknownCRLEntryExtensionCACRL.crl ../../third_party/nist-pkits/crls/UnknownCRLExtensionCACRL.crl ../../third_party/nist-pkits/crls/WrongCRLCACRL.crl ../../third_party/nist-pkits/crls/anyPolicyCACRL.crl ../../third_party/nist-pkits/crls/basicConstraintsCriticalcAFalseCACRL.crl ../../third_party/nist-pkits/crls/basicConstraintsNotCriticalCACRL.crl ../../third_party/nist-pkits/crls/basicConstraintsNotCriticalcAFalseCACRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA1CRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA1deltaCRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA2CRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA2deltaCRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA3CRL.crl ../../third_party/nist-pkits/crls/deltaCRLCA3deltaCRL.crl ../../third_party/nist-pkits/crls/deltaCRLIndicatorNoBaseCACRL.crl ../../third_party/nist-pkits/crls/distributionPoint1CACRL.crl ../../third_party/nist-pkits/crls/distributionPoint2CACRL.crl ../../third_party/nist-pkits/crls/indirectCRLCA1CRL.crl ../../third_party/nist-pkits/crls/indirectCRLCA3CRL.crl ../../third_party/nist-pkits/crls/indirectCRLCA3cRLIssuerCRL.crl ../../third_party/nist-pkits/crls/indirectCRLCA4cRLIssuerCRL.crl ../../third_party/nist-pkits/crls/indirectCRLCA5CRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy0CACRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy1CACRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy1subCA1CRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy1subCA2CRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy1subCAIAP5CRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy1subsubCA2CRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy5CACRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy5subCACRL.crl ../../third_party/nist-pkits/crls/inhibitAnyPolicy5subsubCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping0CACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping0subCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P12CACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P12subCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P12subCAIPM5CRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P12subsubCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P12subsubCAIPM5CRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P1CACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P1subCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping1P1subsubCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping5CACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping5subCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping5subsubCACRL.crl ../../third_party/nist-pkits/crls/inhibitPolicyMapping5subsubsubCACRL.crl ../../third_party/nist-pkits/crls/keyUsageCriticalcRLSignFalseCACRL.crl ../../third_party/nist-pkits/crls/keyUsageCriticalkeyCertSignFalseCACRL.crl ../../third_party/nist-pkits/crls/keyUsageNotCriticalCACRL.crl ../../third_party/nist-pkits/crls/keyUsageNotCriticalcRLSignFalseCACRL.crl ../../third_party/nist-pkits/crls/keyUsageNotCriticalkeyCertSignFalseCACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN1CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN1subCA1CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN1subCA2CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN1subCA3CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN2CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN3CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN3subCA1CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN3subCA2CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN4CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDN5CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDNS1CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsDNS2CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsRFC822CA1CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsRFC822CA2CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsRFC822CA3CRL.crl ../../third_party/nist-pkits/crls/nameConstraintsURI1CACRL.crl ../../third_party/nist-pkits/crls/nameConstraintsURI2CACRL.crl ../../third_party/nist-pkits/crls/onlyContainsAttributeCertsCACRL.crl ../../third_party/nist-pkits/crls/onlyContainsCACertsCACRL.crl ../../third_party/nist-pkits/crls/onlyContainsUserCertsCACRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA1compromiseCRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA1otherreasonsCRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA2CRL1.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA2CRL2.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA3compromiseCRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA3otherreasonsCRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA4compromiseCRL.crl ../../third_party/nist-pkits/crls/onlySomeReasonsCA4otherreasonsCRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint0CACRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint0subCA2CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint0subCACRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint1CACRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint1subCACRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6CACRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subCA0CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subCA1CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subCA4CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subsubCA00CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subsubCA11CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subsubCA41CRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subsubsubCA11XCRL.crl ../../third_party/nist-pkits/crls/pathLenConstraint6subsubsubCA41XCRL.crl ../../third_party/nist-pkits/crls/pre2000CRLnextUpdateCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy0CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy0subCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy0subsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy0subsubsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy10CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy10subCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy10subsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy10subsubsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy2CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy2subCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy4CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy4subCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy4subsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy4subsubsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy5CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy5subCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy5subsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy5subsubsubCACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy7CACRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy7subCARE2CRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy7subsubCARE2RE4CRL.crl ../../third_party/nist-pkits/crls/requireExplicitPolicy7subsubsubCARE2RE4CRL.crl
+build obj/net/net_unittests_run.stamp: stamp ./net_unittests
+subninja obj/net/net_url_request_ftp_fuzzer.ninja
+rule __net_net_url_request_ftp_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_url_request_ftp_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_url_request_ftp_fuzzer.dict
+  description = ACTION //net:net_url_request_ftp_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_url_request_ftp_fuzzer.options: __net_net_url_request_ftp_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_url_request_ftp_fuzzer.options.stamp: stamp net_url_request_ftp_fuzzer.options
+build net_url_request_ftp_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_url_request_ftp_fuzzer.dict
+
+build obj/net/net_url_request_ftp_fuzzer_dict_copy.stamp: stamp net_url_request_ftp_fuzzer.dict
+build obj/net/net_url_request_ftp_fuzzer_run.stamp: stamp ./net_url_request_ftp_fuzzer
+rule __net_net_url_request_ftp_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/net/data/fuzzer_data/net_url_request_ftp_fuzzer/ --output /tmp/proto-quic/src/net/out/Default/net_url_request_ftp_fuzzer_seed_corpus.zip
+  description = ACTION //net:net_url_request_ftp_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/net/net_url_request_ftp_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build net_url_request_ftp_fuzzer_seed_corpus.zip: __net_net_url_request_ftp_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/net/net_url_request_ftp_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/net/net_url_request_ftp_fuzzer_seed_corpus.stamp: stamp net_url_request_ftp_fuzzer_seed_corpus.zip
+subninja obj/net/net_url_request_fuzzer.ninja
+rule __net_net_url_request_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_url_request_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_url_request_fuzzer.dict
+  description = ACTION //net:net_url_request_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_url_request_fuzzer.options: __net_net_url_request_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_url_request_fuzzer.options.stamp: stamp net_url_request_fuzzer.options
+build net_url_request_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_url_request_fuzzer.dict
+
+build obj/net/net_url_request_fuzzer_dict_copy.stamp: stamp net_url_request_fuzzer.dict
+build obj/net/net_url_request_fuzzer_run.stamp: stamp ./net_url_request_fuzzer
+subninja obj/net/net_websocket_deflate_stream_fuzzer.ninja
+rule __net_net_websocket_deflate_stream_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_websocket_deflate_stream_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_websocket_deflate_stream_fuzzer.dict --libfuzzer_options max_len=512
+  description = ACTION //net:net_websocket_deflate_stream_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_websocket_deflate_stream_fuzzer.options: __net_net_websocket_deflate_stream_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_websocket_deflate_stream_fuzzer.options.stamp: stamp net_websocket_deflate_stream_fuzzer.options
+build net_websocket_deflate_stream_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_websocket_frame_parser_fuzzer.dict
+
+build obj/net/net_websocket_deflate_stream_fuzzer_dict_copy.stamp: stamp net_websocket_deflate_stream_fuzzer.dict
+build obj/net/net_websocket_deflate_stream_fuzzer_run.stamp: stamp ./net_websocket_deflate_stream_fuzzer
+subninja obj/net/net_websocket_extension_parser_fuzzer.ninja
+rule __net_net_websocket_extension_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_websocket_extension_parser_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_websocket_extension_parser_fuzzer.dict --libfuzzer_options max_len\$ =\$ 256
+  description = ACTION //net:net_websocket_extension_parser_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_websocket_extension_parser_fuzzer.options: __net_net_websocket_extension_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_websocket_extension_parser_fuzzer.options.stamp: stamp net_websocket_extension_parser_fuzzer.options
+build net_websocket_extension_parser_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_websocket_extension_parser_fuzzer.dict
+
+build obj/net/net_websocket_extension_parser_fuzzer_dict_copy.stamp: stamp net_websocket_extension_parser_fuzzer.dict
+build obj/net/net_websocket_extension_parser_fuzzer_run.stamp: stamp ./net_websocket_extension_parser_fuzzer
+subninja obj/net/net_websocket_frame_parser_fuzzer.ninja
+rule __net_net_websocket_frame_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/net_websocket_frame_parser_fuzzer.options --dict /tmp/proto-quic/src/net/out/Default/net_websocket_frame_parser_fuzzer.dict --libfuzzer_options max_len=256
+  description = ACTION //net:net_websocket_frame_parser_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build net_websocket_frame_parser_fuzzer.options: __net_net_websocket_frame_parser_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/net/net_websocket_frame_parser_fuzzer.options.stamp: stamp net_websocket_frame_parser_fuzzer.options
+build net_websocket_frame_parser_fuzzer.dict: copy ../../../net/data/fuzzer_dictionaries/net_websocket_frame_parser_fuzzer.dict
+
+build obj/net/net_websocket_frame_parser_fuzzer_dict_copy.stamp: stamp net_websocket_frame_parser_fuzzer.dict
+build obj/net/net_websocket_frame_parser_fuzzer_run.stamp: stamp ./net_websocket_frame_parser_fuzzer
+subninja obj/net/quic_client.ninja
+subninja obj/net/quic_packet_printer.ninja
+subninja obj/net/quic_reject_reason_decoder.ninja
+subninja obj/net/quic_server.ninja
+subninja obj/net/run_testserver.ninja
+subninja obj/net/simple_quic_tools.ninja
+subninja obj/net/stress_cache.ninja
+subninja obj/net/test_support.ninja
+build obj/net/test_support_bundle_data.stamp: stamp ../../data/ssl/certificates/1024-rsa-ee-by-1024-rsa-intermediate.pem ../../data/ssl/certificates/1024-rsa-ee-by-2048-rsa-intermediate.pem ../../data/ssl/certificates/1024-rsa-ee-by-768-rsa-intermediate.pem ../../data/ssl/certificates/1024-rsa-ee-by-prime256v1-ecdsa-intermediate.pem ../../data/ssl/certificates/1024-rsa-intermediate.pem ../../data/ssl/certificates/10_year_validity.pem ../../data/ssl/certificates/11_year_validity.pem ../../data/ssl/certificates/2029_globalsign_com_cert.pem ../../data/ssl/certificates/2048-rsa-ee-by-1024-rsa-intermediate.pem ../../data/ssl/certificates/2048-rsa-ee-by-2048-rsa-intermediate.pem ../../data/ssl/certificates/2048-rsa-ee-by-768-rsa-intermediate.pem ../../data/ssl/certificates/2048-rsa-ee-by-prime256v1-ecdsa-intermediate.pem ../../data/ssl/certificates/2048-rsa-intermediate.pem ../../data/ssl/certificates/2048-rsa-root.pem ../../data/ssl/certificates/39_months_after_2015_04.pem ../../data/ssl/certificates/40_months_after_2015_04.pem ../../data/ssl/certificates/60_months_after_2012_07.pem ../../data/ssl/certificates/61_months_after_2012_07.pem ../../data/ssl/certificates/768-rsa-ee-by-1024-rsa-intermediate.pem ../../data/ssl/certificates/768-rsa-ee-by-2048-rsa-intermediate.pem ../../data/ssl/certificates/768-rsa-ee-by-768-rsa-intermediate.pem ../../data/ssl/certificates/768-rsa-ee-by-prime256v1-ecdsa-intermediate.pem ../../data/ssl/certificates/768-rsa-intermediate.pem ../../data/ssl/certificates/aia-cert.pem ../../data/ssl/certificates/aia-intermediate.der ../../data/ssl/certificates/aia-root.pem ../../data/ssl/certificates/bad_validity.pem ../../data/ssl/certificates/client-empty-password.p12 ../../data/ssl/certificates/client-nokey.p12 ../../data/ssl/certificates/client-null-password.p12 ../../data/ssl/certificates/client.p12 ../../data/ssl/certificates/client_1.key ../../data/ssl/certificates/client_1.pem ../../data/ssl/certificates/client_1.pk8 ../../data/ssl/certificates/client_1_ca.pem ../../data/ssl/certificates/client_2.key ../../data/ssl/certificates/client_2.pem ../../data/ssl/certificates/client_2.pk8 ../../data/ssl/certificates/client_2_ca.pem ../../data/ssl/certificates/client_3.key ../../data/ssl/certificates/client_3.pem ../../data/ssl/certificates/client_3.pk8 ../../data/ssl/certificates/client_3_ca.pem ../../data/ssl/certificates/client_4.key ../../data/ssl/certificates/client_4.pem ../../data/ssl/certificates/client_4.pk8 ../../data/ssl/certificates/client_4_ca.pem ../../data/ssl/certificates/client_5.key ../../data/ssl/certificates/client_5.pem ../../data/ssl/certificates/client_5.pk8 ../../data/ssl/certificates/client_5_ca.pem ../../data/ssl/certificates/client_6.key ../../data/ssl/certificates/client_6.pem ../../data/ssl/certificates/client_6.pk8 ../../data/ssl/certificates/client_6_ca.pem ../../data/ssl/certificates/client_root_ca.pem ../../data/ssl/certificates/comodo.chain.pem ../../data/ssl/certificates/crit-codeSigning-chain.pem ../../data/ssl/certificates/crlset_by_intermediate_serial.raw ../../data/ssl/certificates/crlset_by_leaf_spki.raw ../../data/ssl/certificates/crlset_by_root_serial.raw ../../data/ssl/certificates/cross-signed-leaf.pem ../../data/ssl/certificates/cross-signed-root-md5.pem ../../data/ssl/certificates/cross-signed-root-sha256.pem ../../data/ssl/certificates/ct-test-embedded-cert.pem ../../data/ssl/certificates/ct-test-embedded-with-intermediate-chain.pem ../../data/ssl/certificates/ct-test-embedded-with-intermediate-preca-chain.pem ../../data/ssl/certificates/ct-test-embedded-with-preca-chain.pem ../../data/ssl/certificates/diginotar_cyber_ca.pem ../../data/ssl/certificates/diginotar_pkioverheid.pem ../../data/ssl/certificates/diginotar_pkioverheid_g2.pem ../../data/ssl/certificates/diginotar_public_ca_2025.pem ../../data/ssl/certificates/diginotar_root_ca.pem ../../data/ssl/certificates/diginotar_services_1024_ca.pem ../../data/ssl/certificates/dod_ca_13_cert.der ../../data/ssl/certificates/dod_ca_17_cert.der ../../data/ssl/certificates/dod_root_ca_2_cert.der ../../data/ssl/certificates/duplicate_cn_1.p12 ../../data/ssl/certificates/duplicate_cn_1.pem ../../data/ssl/certificates/duplicate_cn_2.p12 ../../data/ssl/certificates/duplicate_cn_2.pem ../../data/ssl/certificates/eku-test-root.pem ../../data/ssl/certificates/empty_subject_cert.der ../../data/ssl/certificates/expired_cert.pem ../../data/ssl/certificates/explicit-policy-chain.pem ../../data/ssl/certificates/foaf.me.chromium-test-cert.der ../../data/ssl/certificates/google.binary.p7b ../../data/ssl/certificates/google.chain.pem ../../data/ssl/certificates/google.pem_cert.p7b ../../data/ssl/certificates/google.pem_pkcs7.p7b ../../data/ssl/certificates/google.single.der ../../data/ssl/certificates/google.single.pem ../../data/ssl/certificates/google_diginotar.pem ../../data/ssl/certificates/googlenew.chain.pem ../../data/ssl/certificates/intermediate_ca_cert.pem ../../data/ssl/certificates/invalid_key_usage_cert.der ../../data/ssl/certificates/large_key.pem ../../data/ssl/certificates/localhost_cert.pem ../../data/ssl/certificates/mit.davidben.der ../../data/ssl/certificates/multi-root-A-by-B.pem ../../data/ssl/certificates/multi-root-B-by-C.pem ../../data/ssl/certificates/multi-root-B-by-F.pem ../../data/ssl/certificates/multi-root-BFE.keychain ../../data/ssl/certificates/multi-root-C-by-D.pem ../../data/ssl/certificates/multi-root-C-by-E.pem ../../data/ssl/certificates/multi-root-D-by-D.pem ../../data/ssl/certificates/multi-root-E-by-E.pem ../../data/ssl/certificates/multi-root-F-by-E.pem ../../data/ssl/certificates/multi-root-chain1.pem ../../data/ssl/certificates/multi-root-chain2.pem ../../data/ssl/certificates/multi-root-crlset-C.raw ../../data/ssl/certificates/multi-root-crlset-CD-and-FE.raw ../../data/ssl/certificates/multi-root-crlset-D-and-E.raw ../../data/ssl/certificates/multi-root-crlset-E.raw ../../data/ssl/certificates/multi-root-crlset-unrelated.raw ../../data/ssl/certificates/multivalue_rdn.pem ../../data/ssl/certificates/name_constraint_bad.pem ../../data/ssl/certificates/name_constraint_good.pem ../../data/ssl/certificates/ndn.ca.crt ../../data/ssl/certificates/nist.der ../../data/ssl/certificates/no_subject_common_name_cert.pem ../../data/ssl/certificates/non-crit-codeSigning-chain.pem ../../data/ssl/certificates/ocsp-test-root.pem ../../data/ssl/certificates/ok_cert.pem ../../data/ssl/certificates/ok_cert_by_intermediate.pem ../../data/ssl/certificates/post_june_2016.pem ../../data/ssl/certificates/pre_br_validity_bad_121.pem ../../data/ssl/certificates/pre_br_validity_bad_2020.pem ../../data/ssl/certificates/pre_br_validity_ok.pem ../../data/ssl/certificates/pre_june_2016.pem ../../data/ssl/certificates/prime256v1-ecdsa-ee-by-1024-rsa-intermediate.pem ../../data/ssl/certificates/prime256v1-ecdsa-ee-by-2048-rsa-intermediate.pem ../../data/ssl/certificates/prime256v1-ecdsa-ee-by-768-rsa-intermediate.pem ../../data/ssl/certificates/prime256v1-ecdsa-ee-by-prime256v1-ecdsa-intermediate.pem ../../data/ssl/certificates/prime256v1-ecdsa-intermediate.pem ../../data/ssl/certificates/punycodetest.pem ../../data/ssl/certificates/quic_chain.crt ../../data/ssl/certificates/quic_intermediate.crt ../../data/ssl/certificates/quic_intermediate.key ../../data/ssl/certificates/quic_root.crt ../../data/ssl/certificates/quic_root.key ../../data/ssl/certificates/quic_test.example.com.crt ../../data/ssl/certificates/quic_test.example.com.key ../../data/ssl/certificates/quic_test.example.com.key.pkcs8 ../../data/ssl/certificates/quic_test.example.com.key.sct ../../data/ssl/certificates/quic_test_ecc.example.com.crt ../../data/ssl/certificates/quic_test_ecc.example.com.key ../../data/ssl/certificates/quic_test_ecc.example.com.sct ../../data/ssl/certificates/redundant-server-chain.pem ../../data/ssl/certificates/redundant-validated-chain-root.pem ../../data/ssl/certificates/redundant-validated-chain.pem ../../data/ssl/certificates/reject_intranet_hosts.pem ../../data/ssl/certificates/root_ca_cert.pem ../../data/ssl/certificates/salesforce_com_test.pem ../../data/ssl/certificates/self-signed-invalid-name.pem ../../data/ssl/certificates/self-signed-invalid-sig.pem ../../data/ssl/certificates/sha1_2016.pem ../../data/ssl/certificates/sha1_dec_2015.pem ../../data/ssl/certificates/sha1_jan_2016.pem ../../data/ssl/certificates/spdy_pooling.pem ../../data/ssl/certificates/start_after_expiry.pem ../../data/ssl/certificates/subjectAltName_sanity_check.pem ../../data/ssl/certificates/test_mail_google_com.pem ../../data/ssl/certificates/thawte.single.pem ../../data/ssl/certificates/tls_feature_extension.pem ../../data/ssl/certificates/tripadvisor-verisign-chain.pem ../../data/ssl/certificates/twitter-chain.pem ../../data/ssl/certificates/unescaped.pem ../../data/ssl/certificates/unittest.key.bin ../../data/ssl/certificates/unittest.originbound.der ../../data/ssl/certificates/unittest.originbound.key.der ../../data/ssl/certificates/unittest.selfsigned.der ../../data/ssl/certificates/verisign_class3_g5_crosssigned-trusted.keychain ../../data/ssl/certificates/verisign_class3_g5_crosssigned.pem ../../data/ssl/certificates/verisign_intermediate_ca_2011.pem ../../data/ssl/certificates/verisign_intermediate_ca_2016.pem ../../data/ssl/certificates/weak_digest_md2_ee.pem ../../data/ssl/certificates/weak_digest_md2_intermediate.pem ../../data/ssl/certificates/weak_digest_md2_root.pem ../../data/ssl/certificates/weak_digest_md4_ee.pem ../../data/ssl/certificates/weak_digest_md4_intermediate.pem ../../data/ssl/certificates/weak_digest_md4_root.pem ../../data/ssl/certificates/weak_digest_md5_ee.pem ../../data/ssl/certificates/weak_digest_md5_intermediate.pem ../../data/ssl/certificates/weak_digest_md5_root.pem ../../data/ssl/certificates/weak_digest_sha1_ee.pem ../../data/ssl/certificates/weak_digest_sha1_intermediate.pem ../../data/ssl/certificates/weak_digest_sha1_root.pem ../../data/ssl/certificates/websocket_cacert.pem ../../data/ssl/certificates/websocket_client_cert.p12 ../../data/ssl/certificates/wildcard.pem ../../data/ssl/certificates/wosign_after_oct_21.pem ../../data/ssl/certificates/wosign_before_oct_21.pem ../../data/ssl/certificates/www_us_army_mil_cert.der ../../data/ssl/certificates/x509_verify_results.chain.pem
+subninja obj/net/tld_cleanup.ninja
+rule __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule
+  command = python ../../../net/tools/dafsa/make_dafsa.py ${in} gen/net/base/registry_controlled_domains/${source_name_part}-inc.cc
+  description = ACTION //net/base/registry_controlled_domains:registry_controlled_domains(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/net/base/registry_controlled_domains/effective_tld_names-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest1-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest1.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest1
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest2-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest2.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest2
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest3-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest3.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest3
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest4-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest4.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest4
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest5-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest5.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest5
+build gen/net/base/registry_controlled_domains/effective_tld_names_unittest6-inc.cc: __net_base_registry_controlled_domains_registry_controlled_domains___build_toolchain_linux_clang_x64__rule ../../../net/base/registry_controlled_domains/effective_tld_names_unittest6.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = effective_tld_names_unittest6
+
+build obj/net/base/registry_controlled_domains/registry_controlled_domains.stamp: stamp gen/net/base/registry_controlled_domains/effective_tld_names-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest1-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest2-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest3-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest4-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest5-inc.cc gen/net/base/registry_controlled_domains/effective_tld_names_unittest6-inc.cc
+rule __net_data_ssl_wosign_wosign_domains___build_toolchain_linux_clang_x64__rule
+  command = python ../../../net/tools/dafsa/make_dafsa.py ${in} gen/net/data/ssl/wosign/${source_name_part}-inc.cc
+  description = ACTION //net/data/ssl/wosign:wosign_domains(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/net/data/ssl/wosign/wosign_domains-inc.cc: __net_data_ssl_wosign_wosign_domains___build_toolchain_linux_clang_x64__rule ../../../net/data/ssl/wosign/wosign_domains.gperf | ../../tools/dafsa/make_dafsa.py
+  source_name_part = wosign_domains
+
+build obj/net/data/ssl/wosign/wosign_domains.stamp: stamp gen/net/data/ssl/wosign/wosign_domains-inc.cc
+build obj/net/third_party/nist-pkits/nist-pkits.stamp: stamp
+subninja obj/net/tools/tld_cleanup/tld_cleanup.ninja
+subninja obj/sdch/sdch.ninja
+subninja obj/testing/gmock/gmock.ninja
+subninja obj/testing/gmock/gmock_main.ninja
+subninja obj/testing/gtest/gtest.ninja
+subninja obj/testing/gtest/gtest_main.ninja
+subninja obj/testing/libfuzzer/libfuzzer_main.ninja
+subninja obj/testing/libfuzzer/seed_corpus.ninja
+subninja obj/testing/perf/perf.ninja
+subninja obj/third_party/boringssl/boringssl.ninja
+subninja obj/third_party/boringssl/boringssl_aead_test.ninja
+subninja obj/third_party/boringssl/boringssl_aes_test.ninja
+subninja obj/third_party/boringssl/boringssl_asm.ninja
+subninja obj/third_party/boringssl/boringssl_asn1_test.ninja
+subninja obj/third_party/boringssl/boringssl_base64_test.ninja
+subninja obj/third_party/boringssl/boringssl_bio_test.ninja
+subninja obj/third_party/boringssl/boringssl_bn_test.ninja
+subninja obj/third_party/boringssl/boringssl_bytestring_test.ninja
+subninja obj/third_party/boringssl/boringssl_cert_fuzzer.ninja
+rule __third_party_boringssl_boringssl_cert_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_cert_fuzzer.options --libfuzzer_options max_len=3072
+  description = ACTION //third_party/boringssl:boringssl_cert_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_cert_fuzzer.options: __third_party_boringssl_boringssl_cert_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_cert_fuzzer.options.stamp: stamp boringssl_cert_fuzzer.options
+build obj/third_party/boringssl/boringssl_cert_fuzzer_run.stamp: stamp ./boringssl_cert_fuzzer
+rule __third_party_boringssl_boringssl_cert_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/cert_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_cert_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_cert_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_cert_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_cert_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.stamp: stamp boringssl_cert_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_chacha_test.ninja
+subninja obj/third_party/boringssl/boringssl_cipher_test.ninja
+subninja obj/third_party/boringssl/boringssl_client_fuzzer.ninja
+rule __third_party_boringssl_boringssl_client_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_client_fuzzer.options --libfuzzer_options max_len=20000
+  description = ACTION //third_party/boringssl:boringssl_client_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_client_fuzzer.options: __third_party_boringssl_boringssl_client_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_client_fuzzer.options.stamp: stamp boringssl_client_fuzzer.options
+build obj/third_party/boringssl/boringssl_client_fuzzer_run.stamp: stamp ./boringssl_client_fuzzer
+rule __third_party_boringssl_boringssl_client_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/client_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_client_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_client_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_client_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_client_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.stamp: stamp boringssl_client_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer.ninja
+build obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_run.stamp: stamp ./boringssl_client_no_fuzzer_mode_fuzzer
+rule __third_party_boringssl_boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/client_corpus_no_fuzzer_mode --output /tmp/proto-quic/src/net/out/Default/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.stamp: stamp boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_cmac_test.ninja
+subninja obj/third_party/boringssl/boringssl_constant_time_test.ninja
+subninja obj/third_party/boringssl/boringssl_crypto_tests.ninja
+build obj/third_party/boringssl/boringssl_crypto_tests_run.stamp: stamp ./boringssl_crypto_tests
+subninja obj/third_party/boringssl/boringssl_digest_test.ninja
+subninja obj/third_party/boringssl/boringssl_ec_test.ninja
+subninja obj/third_party/boringssl/boringssl_ecdh_test.ninja
+subninja obj/third_party/boringssl/boringssl_ecdsa_sign_test.ninja
+subninja obj/third_party/boringssl/boringssl_ecdsa_test.ninja
+subninja obj/third_party/boringssl/boringssl_ecdsa_verify_test.ninja
+subninja obj/third_party/boringssl/boringssl_ed25519_test.ninja
+subninja obj/third_party/boringssl/boringssl_err_test.ninja
+subninja obj/third_party/boringssl/boringssl_evp_extra_test.ninja
+subninja obj/third_party/boringssl/boringssl_evp_test.ninja
+subninja obj/third_party/boringssl/boringssl_example_mul.ninja
+subninja obj/third_party/boringssl/boringssl_fuzzer.ninja
+subninja obj/third_party/boringssl/boringssl_fuzzer_no_fuzzer_mode.ninja
+subninja obj/third_party/boringssl/boringssl_gcm_test.ninja
+subninja obj/third_party/boringssl/boringssl_hkdf_test.ninja
+subninja obj/third_party/boringssl/boringssl_hmac_test.ninja
+subninja obj/third_party/boringssl/boringssl_lhash_test.ninja
+subninja obj/third_party/boringssl/boringssl_obj_test.ninja
+subninja obj/third_party/boringssl/boringssl_p256-x86_64_test.ninja
+subninja obj/third_party/boringssl/boringssl_pbkdf_test.ninja
+subninja obj/third_party/boringssl/boringssl_pkcs12_test.ninja
+subninja obj/third_party/boringssl/boringssl_pkcs7_test.ninja
+subninja obj/third_party/boringssl/boringssl_pkcs8_fuzzer.ninja
+rule __third_party_boringssl_boringssl_pkcs8_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_pkcs8_fuzzer.options --libfuzzer_options max_len=2048
+  description = ACTION //third_party/boringssl:boringssl_pkcs8_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_pkcs8_fuzzer.options: __third_party_boringssl_boringssl_pkcs8_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_pkcs8_fuzzer.options.stamp: stamp boringssl_pkcs8_fuzzer.options
+build obj/third_party/boringssl/boringssl_pkcs8_fuzzer_run.stamp: stamp ./boringssl_pkcs8_fuzzer
+rule __third_party_boringssl_boringssl_pkcs8_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/pkcs8_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_pkcs8_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_pkcs8_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_pkcs8_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_pkcs8_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.stamp: stamp boringssl_pkcs8_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_pkcs8_test.ninja
+subninja obj/third_party/boringssl/boringssl_poly1305_test.ninja
+subninja obj/third_party/boringssl/boringssl_pool_test.ninja
+subninja obj/third_party/boringssl/boringssl_privkey_fuzzer.ninja
+rule __third_party_boringssl_boringssl_privkey_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_privkey_fuzzer.options --libfuzzer_options max_len=2048
+  description = ACTION //third_party/boringssl:boringssl_privkey_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_privkey_fuzzer.options: __third_party_boringssl_boringssl_privkey_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_privkey_fuzzer.options.stamp: stamp boringssl_privkey_fuzzer.options
+build obj/third_party/boringssl/boringssl_privkey_fuzzer_run.stamp: stamp ./boringssl_privkey_fuzzer
+rule __third_party_boringssl_boringssl_privkey_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/privkey_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_privkey_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_privkey_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_privkey_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_privkey_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.stamp: stamp boringssl_privkey_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_read_pem_fuzzer.ninja
+rule __third_party_boringssl_boringssl_read_pem_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_read_pem_fuzzer.options --libfuzzer_options max_len=512
+  description = ACTION //third_party/boringssl:boringssl_read_pem_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_read_pem_fuzzer.options: __third_party_boringssl_boringssl_read_pem_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_read_pem_fuzzer.options.stamp: stamp boringssl_read_pem_fuzzer.options
+build obj/third_party/boringssl/boringssl_read_pem_fuzzer_run.stamp: stamp ./boringssl_read_pem_fuzzer
+rule __third_party_boringssl_boringssl_read_pem_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/read_pem_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_read_pem_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_read_pem_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_read_pem_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_read_pem_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.stamp: stamp boringssl_read_pem_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_refcount_test.ninja
+subninja obj/third_party/boringssl/boringssl_rsa_test.ninja
+subninja obj/third_party/boringssl/boringssl_server_fuzzer.ninja
+rule __third_party_boringssl_boringssl_server_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_server_fuzzer.options --libfuzzer_options max_len=4096
+  description = ACTION //third_party/boringssl:boringssl_server_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_server_fuzzer.options: __third_party_boringssl_boringssl_server_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_server_fuzzer.options.stamp: stamp boringssl_server_fuzzer.options
+build obj/third_party/boringssl/boringssl_server_fuzzer_run.stamp: stamp ./boringssl_server_fuzzer
+rule __third_party_boringssl_boringssl_server_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/server_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_server_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_server_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_server_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_server_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.stamp: stamp boringssl_server_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer.ninja
+build obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_run.stamp: stamp ./boringssl_server_no_fuzzer_mode_fuzzer
+rule __third_party_boringssl_boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/server_corpus_no_fuzzer_mode --output /tmp/proto-quic/src/net/out/Default/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.stamp: stamp boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_session_fuzzer.ninja
+rule __third_party_boringssl_boringssl_session_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_session_fuzzer.options --libfuzzer_options max_len=8192
+  description = ACTION //third_party/boringssl:boringssl_session_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_session_fuzzer.options: __third_party_boringssl_boringssl_session_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_session_fuzzer.options.stamp: stamp boringssl_session_fuzzer.options
+build obj/third_party/boringssl/boringssl_session_fuzzer_run.stamp: stamp ./boringssl_session_fuzzer
+rule __third_party_boringssl_boringssl_session_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/session_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_session_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_session_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_session_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_session_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.stamp: stamp boringssl_session_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_spake25519_test.ninja
+subninja obj/third_party/boringssl/boringssl_spki_fuzzer.ninja
+rule __third_party_boringssl_boringssl_spki_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_spki_fuzzer.options --libfuzzer_options max_len=1024
+  description = ACTION //third_party/boringssl:boringssl_spki_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_spki_fuzzer.options: __third_party_boringssl_boringssl_spki_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_spki_fuzzer.options.stamp: stamp boringssl_spki_fuzzer.options
+build obj/third_party/boringssl/boringssl_spki_fuzzer_run.stamp: stamp ./boringssl_spki_fuzzer
+rule __third_party_boringssl_boringssl_spki_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/spki_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_spki_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_spki_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_spki_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_spki_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.stamp: stamp boringssl_spki_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer.ninja
+rule __third_party_boringssl_boringssl_ssl_ctx_api_fuzzer.options___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/gen_fuzzer_config.py --config /tmp/proto-quic/src/net/out/Default/boringssl_ssl_ctx_api_fuzzer.options --libfuzzer_options max_len=256
+  description = ACTION //third_party/boringssl:boringssl_ssl_ctx_api_fuzzer.options(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build boringssl_ssl_ctx_api_fuzzer.options: __third_party_boringssl_boringssl_ssl_ctx_api_fuzzer.options___build_toolchain_linux_clang_x64__rule | ../../../testing/libfuzzer/gen_fuzzer_config.py
+
+build obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer.options.stamp: stamp boringssl_ssl_ctx_api_fuzzer.options
+build obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_run.stamp: stamp ./boringssl_ssl_ctx_api_fuzzer
+rule __third_party_boringssl_boringssl_ssl_ctx_api_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule
+  command = python ../../../testing/libfuzzer/archive_corpus.py --corpus /tmp/proto-quic/src/third_party/boringssl/src/fuzz/ssl_ctx_api_corpus --output /tmp/proto-quic/src/net/out/Default/boringssl_ssl_ctx_api_fuzzer_seed_corpus.zip
+  description = ACTION //third_party/boringssl:boringssl_ssl_ctx_api_fuzzer_seed_corpus(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.inputdeps.stamp: stamp ../../../testing/libfuzzer/archive_corpus.py obj/testing/libfuzzer/seed_corpus.stamp
+
+build boringssl_ssl_ctx_api_fuzzer_seed_corpus.zip: __third_party_boringssl_boringssl_ssl_ctx_api_fuzzer_seed_corpus___build_toolchain_linux_clang_x64__rule | obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.inputdeps.stamp
+
+build obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.stamp: stamp boringssl_ssl_ctx_api_fuzzer_seed_corpus.zip
+subninja obj/third_party/boringssl/boringssl_ssl_tests.ninja
+build obj/third_party/boringssl/boringssl_ssl_tests_run.stamp: stamp ./boringssl_ssl_tests
+subninja obj/third_party/boringssl/boringssl_tab_test.ninja
+build obj/third_party/boringssl/boringssl_tests.stamp: stamp ./boringssl_aead_test ./boringssl_aes_test ./boringssl_asn1_test ./boringssl_base64_test ./boringssl_bio_test ./boringssl_bn_test ./boringssl_bytestring_test ./boringssl_chacha_test ./boringssl_cipher_test ./boringssl_cmac_test ./boringssl_constant_time_test ./boringssl_digest_test ./boringssl_ec_test ./boringssl_ecdh_test ./boringssl_ecdsa_sign_test ./boringssl_ecdsa_test ./boringssl_ecdsa_verify_test ./boringssl_ed25519_test ./boringssl_err_test ./boringssl_evp_extra_test ./boringssl_evp_test ./boringssl_example_mul ./boringssl_gcm_test ./boringssl_hkdf_test ./boringssl_hmac_test ./boringssl_lhash_test ./boringssl_obj_test ./boringssl_p256-x86_64_test ./boringssl_pbkdf_test ./boringssl_pkcs12_test ./boringssl_pkcs7_test ./boringssl_pkcs8_test ./boringssl_poly1305_test ./boringssl_pool_test ./boringssl_refcount_test ./boringssl_rsa_test ./boringssl_spake25519_test ./boringssl_tab_test ./boringssl_thread_test ./boringssl_v3name_test ./boringssl_x25519_test ./boringssl_x509_test
+subninja obj/third_party/boringssl/boringssl_thread_test.ninja
+subninja obj/third_party/boringssl/boringssl_unittests.ninja
+build obj/third_party/boringssl/boringssl_unittests_run.stamp: stamp ./boringssl_unittests
+subninja obj/third_party/boringssl/boringssl_v3name_test.ninja
+subninja obj/third_party/boringssl/boringssl_x25519_test.ninja
+subninja obj/third_party/boringssl/boringssl_x509_test.ninja
+subninja obj/third_party/brotli/bro.ninja
+subninja obj/third_party/brotli/common.ninja
+subninja obj/third_party/brotli/dec.ninja
+subninja obj/third_party/ced/ced.ninja
+subninja obj/third_party/ced/ced_unittests.ninja
+build obj/third_party/ced/ced_unittests_run.stamp: stamp ./ced_unittests
+build obj/third_party/icu/icu.stamp: stamp ./libicui18n.so.TOC ./libicuuc.so.TOC
+build icudtl.dat: copy ../../../third_party/icu/common/icudtl.dat
+
+build obj/third_party/icu/icudata.stamp: stamp icudtl.dat
+subninja obj/third_party/icu/icui18n.ninja
+subninja obj/third_party/icu/icuuc.ninja
+subninja obj/third_party/libxml/libxml.ninja
+subninja obj/third_party/modp_b64/modp_b64.ninja
+build pyproto/google/__init__.py: copy ../../../third_party/protobuf/__init__.py
+
+build obj/third_party/protobuf/copy_google.stamp: stamp pyproto/google/__init__.py
+build pyproto/google/protobuf/__init__.py: copy ../../../third_party/protobuf/python/google/protobuf/__init__.py
+build pyproto/google/protobuf/descriptor.py: copy ../../../third_party/protobuf/python/google/protobuf/descriptor.py
+build pyproto/google/protobuf/descriptor_database.py: copy ../../../third_party/protobuf/python/google/protobuf/descriptor_database.py
+build pyproto/google/protobuf/descriptor_pool.py: copy ../../../third_party/protobuf/python/google/protobuf/descriptor_pool.py
+build pyproto/google/protobuf/json_format.py: copy ../../../third_party/protobuf/python/google/protobuf/json_format.py
+build pyproto/google/protobuf/message.py: copy ../../../third_party/protobuf/python/google/protobuf/message.py
+build pyproto/google/protobuf/message_factory.py: copy ../../../third_party/protobuf/python/google/protobuf/message_factory.py
+build pyproto/google/protobuf/proto_builder.py: copy ../../../third_party/protobuf/python/google/protobuf/proto_builder.py
+build pyproto/google/protobuf/reflection.py: copy ../../../third_party/protobuf/python/google/protobuf/reflection.py
+build pyproto/google/protobuf/service.py: copy ../../../third_party/protobuf/python/google/protobuf/service.py
+build pyproto/google/protobuf/service_reflection.py: copy ../../../third_party/protobuf/python/google/protobuf/service_reflection.py
+build pyproto/google/protobuf/symbol_database.py: copy ../../../third_party/protobuf/python/google/protobuf/symbol_database.py
+build pyproto/google/protobuf/text_encoding.py: copy ../../../third_party/protobuf/python/google/protobuf/text_encoding.py
+build pyproto/google/protobuf/text_format.py: copy ../../../third_party/protobuf/python/google/protobuf/text_format.py
+build pyproto/google/protobuf/descriptor_pb2.py: copy ../../../third_party/protobuf/python/google/protobuf/descriptor_pb2.py
+
+build obj/third_party/protobuf/copy_google_protobuf.stamp: stamp pyproto/google/protobuf/__init__.py pyproto/google/protobuf/descriptor.py pyproto/google/protobuf/descriptor_database.py pyproto/google/protobuf/descriptor_pool.py pyproto/google/protobuf/json_format.py pyproto/google/protobuf/message.py pyproto/google/protobuf/message_factory.py pyproto/google/protobuf/proto_builder.py pyproto/google/protobuf/reflection.py pyproto/google/protobuf/service.py pyproto/google/protobuf/service_reflection.py pyproto/google/protobuf/symbol_database.py pyproto/google/protobuf/text_encoding.py pyproto/google/protobuf/text_format.py pyproto/google/protobuf/descriptor_pb2.py
+build pyproto/google/protobuf/internal/__init__.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/__init__.py
+build pyproto/google/protobuf/internal/_parameterized.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/_parameterized.py
+build pyproto/google/protobuf/internal/api_implementation.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/api_implementation.py
+build pyproto/google/protobuf/internal/containers.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/containers.py
+build pyproto/google/protobuf/internal/decoder.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/decoder.py
+build pyproto/google/protobuf/internal/encoder.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/encoder.py
+build pyproto/google/protobuf/internal/enum_type_wrapper.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/enum_type_wrapper.py
+build pyproto/google/protobuf/internal/message_listener.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/message_listener.py
+build pyproto/google/protobuf/internal/python_message.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/python_message.py
+build pyproto/google/protobuf/internal/type_checkers.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/type_checkers.py
+build pyproto/google/protobuf/internal/well_known_types.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/well_known_types.py
+build pyproto/google/protobuf/internal/wire_format.py: copy ../../../third_party/protobuf/python/google/protobuf/internal/wire_format.py
+
+build obj/third_party/protobuf/copy_google_protobuf_internal.stamp: stamp pyproto/google/protobuf/internal/__init__.py pyproto/google/protobuf/internal/_parameterized.py pyproto/google/protobuf/internal/api_implementation.py pyproto/google/protobuf/internal/containers.py pyproto/google/protobuf/internal/decoder.py pyproto/google/protobuf/internal/encoder.py pyproto/google/protobuf/internal/enum_type_wrapper.py pyproto/google/protobuf/internal/message_listener.py pyproto/google/protobuf/internal/python_message.py pyproto/google/protobuf/internal/type_checkers.py pyproto/google/protobuf/internal/well_known_types.py pyproto/google/protobuf/internal/wire_format.py
+build pyproto/google/third_party/six/six.py: copy ../../../third_party/protobuf/third_party/six/six.py
+
+build obj/third_party/protobuf/copy_six.stamp: stamp pyproto/google/third_party/six/six.py
+subninja obj/third_party/protobuf/protobuf_full.ninja
+subninja obj/third_party/protobuf/protobuf_lite.ninja
+subninja obj/third_party/protobuf/protoc.ninja
+subninja obj/third_party/protobuf/protoc_lib.ninja
+build obj/third_party/protobuf/py_proto.stamp: stamp obj/third_party/protobuf/copy_google.stamp obj/third_party/protobuf/copy_google_protobuf.stamp obj/third_party/protobuf/copy_google_protobuf_internal.stamp obj/third_party/protobuf/copy_six.stamp
+build obj/third_party/pyftpdlib/pyftpdlib.stamp: stamp
+build obj/third_party/pywebsocket/pywebsocket.stamp: stamp
+build obj/third_party/tlslite/tlslite.stamp: stamp
+subninja obj/third_party/zlib/compression_utils.ninja
+subninja obj/third_party/zlib/minizip.ninja
+subninja obj/third_party/zlib/zip.ninja
+subninja obj/third_party/zlib/zlib.ninja
+subninja obj/third_party/zlib/zlib_x86_simd.ninja
+rule __tools_grit_grit_sources___build_toolchain_linux_clang_x64__rule
+  command = python ../../../tools/grit/stamp_grit_sources.py ../../../tools/grit obj/tools/grit/grit_sources.script.stamp obj/tools/grit/grit_sources.d
+  description = ACTION //tools/grit:grit_sources(//build/toolchain/linux:clang_x64)
+  restat = 1
+build obj/tools/grit/grit_sources.inputdeps.stamp: stamp ../../../tools/grit/stamp_grit_sources.py ../../../tools/grit/grit.py
+
+build obj/tools/grit/grit_sources.script.stamp: __tools_grit_grit_sources___build_toolchain_linux_clang_x64__rule | obj/tools/grit/grit_sources.inputdeps.stamp
+  depfile = obj/tools/grit/grit_sources.d
+
+build obj/tools/grit/grit_sources.stamp: stamp obj/tools/grit/grit_sources.script.stamp
+subninja obj/url/url.ninja
+rule __url_url_features___build_toolchain_linux_clang_x64__rule
+  rspfile = __url_url_features___build_toolchain_linux_clang_x64__rule.rsp
+  rspfile_content = --flags USE_PLATFORM_ICU_ALTERNATIVES=false
+  command = python ../../../build/write_buildflag_header.py --output url/url_features.h --rulename //url$:url_features --gen-dir gen --definitions ${rspfile}
+  description = ACTION //url:url_features(//build/toolchain/linux:clang_x64)
+  restat = 1
+
+build gen/url/url_features.h: __url_url_features___build_toolchain_linux_clang_x64__rule | ../../../build/write_buildflag_header.py
+
+build obj/url/url_features.stamp: stamp gen/url/url_features.h

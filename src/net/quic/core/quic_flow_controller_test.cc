@@ -22,6 +22,17 @@ namespace test {
 // Receive window auto-tuning uses RTT in its logic.
 const int64_t kRtt = 100;
 
+class MockFlowController : public QuicFlowControllerInterface {
+ public:
+  MockFlowController() {}
+  ~MockFlowController() override {}
+
+  MOCK_METHOD1(EnsureWindowAtLeast, void(QuicByteCount));
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(MockFlowController);
+};
+
 class QuicFlowControllerTest : public ::testing::Test {
  public:
   QuicFlowControllerTest()
@@ -31,9 +42,9 @@ class QuicFlowControllerTest : public ::testing::Test {
         connection_(&helper_, &alarm_factory_, Perspective::IS_CLIENT) {}
 
   void Initialize() {
-    flow_controller_.reset(
-        new QuicFlowController(&connection_, stream_id_, Perspective::IS_CLIENT,
-                               send_window_, receive_window_, false));
+    flow_controller_.reset(new QuicFlowController(
+        &connection_, stream_id_, Perspective::IS_CLIENT, send_window_,
+        receive_window_, false, &session_flow_controller_));
   }
 
  protected:
@@ -44,6 +55,7 @@ class QuicFlowControllerTest : public ::testing::Test {
   MockQuicConnectionHelper helper_;
   MockAlarmFactory alarm_factory_;
   MockQuicConnection connection_;
+  MockFlowController session_flow_controller_;
 };
 
 TEST_F(QuicFlowControllerTest, SendingBytes) {
@@ -195,6 +207,10 @@ TEST_F(QuicFlowControllerTest, ReceivingBytesFastIncreasesFlowWindow) {
   // Move time forward, but by less than two RTTs.  Then receive and consume
   // some more, forcing a second WINDOW_UPDATE with an increased max window
   // size.
+  EXPECT_CALL(
+      session_flow_controller_,
+      EnsureWindowAtLeast(kInitialSessionFlowControlWindowForTest * 2 * 1.5));
+
   connection_.AdvanceTime(QuicTime::Delta::FromMilliseconds(2 * kRtt - 1));
   receive_offset += threshold + 1;
   EXPECT_TRUE(flow_controller_->UpdateHighestReceivedOffset(receive_offset));

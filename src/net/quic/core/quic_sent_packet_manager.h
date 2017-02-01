@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "net/base/linked_hash_map.h"
 #include "net/quic/core/congestion_control/general_loss_algorithm.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/pacing_sender.h"
@@ -24,6 +23,7 @@
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_sustained_bandwidth_recorder.h"
 #include "net/quic/core/quic_unacked_packet_map.h"
+#include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -240,7 +240,7 @@ class QUIC_EXPORT_PRIVATE QuicSentPacketManager {
     LOSS_MODE,
   };
 
-  typedef linked_hash_map<QuicPacketNumber, TransmissionType>
+  typedef QuicLinkedHashMap<QuicPacketNumber, TransmissionType>
       PendingRetransmissionMap;
 
   // Updates the least_packet_awaited_by_peer.

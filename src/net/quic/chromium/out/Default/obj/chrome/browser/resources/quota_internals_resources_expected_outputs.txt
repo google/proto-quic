@@ -1,0 +1,2 @@
+gen/chrome/grit/quota_internals_resources.h
+gen/chrome/quota_internals_resources.pak

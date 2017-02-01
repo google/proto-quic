@@ -1,0 +1,6 @@
+gen/chrome/grit/theme_resources.h
+gen/chrome/grit/theme_resources_map.cc
+gen/chrome/grit/theme_resources_map.h
+gen/chrome/theme_resources_100_percent.pak
+gen/chrome/theme_resources_200_percent.pak
+gen/chrome/theme_resources_300_percent.pak

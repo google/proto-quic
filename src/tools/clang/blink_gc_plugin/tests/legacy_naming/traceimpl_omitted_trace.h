@@ -11,14 +11,7 @@ namespace blink {
 
 class A : public GarbageCollected<A> {
  public:
-  virtual void trace(Visitor* visitor) { traceImpl(visitor); }
-  virtual void trace(InlinedGlobalMarkingVisitor visitor) {
-    traceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {}
+  virtual void trace(Visitor* visitor) {}
 };
 
 class B : public A {
@@ -27,14 +20,7 @@ class B : public A {
 
 class C : public B {
  public:
-  void trace(Visitor* visitor) override { traceImpl(visitor); }
-  void trace(InlinedGlobalMarkingVisitor visitor) override {
-    traceImpl(visitor);
-  }
-
- private:
-  template <typename VisitorDispatcher>
-  void traceImpl(VisitorDispatcher visitor) {
+  void trace(Visitor* visitor) override {
     // B::trace() is actually A::trace(), and in certain cases we only get
     // limited information like "there is a function call that will be resolved
     // to A::trace()". We still want to mark B as traced.

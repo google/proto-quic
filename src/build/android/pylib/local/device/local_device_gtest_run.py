@@ -266,6 +266,7 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
   def SetUp(self):
     @local_device_environment.handle_shard_failures_with(
         on_failure=self._env.BlacklistDevice)
+    @trace_event.traced
     def individual_device_set_up(dev, host_device_tuples):
       def install_apk():
         # Install test APK.
@@ -373,35 +374,32 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
   #override
   def _RunTest(self, device, test):
     # Run the test.
-    with contextlib_ext.Optional(
-        self._env.Tracing(),
-        self._env.trace_output):
-      timeout = (self._test_instance.shard_timeout
-                 * self.GetTool(device).GetTimeoutScale())
-      if self._test_instance.store_tombstones:
-        tombstones.ClearAllTombstones(device)
-      with device_temp_file.DeviceTempFile(
-          adb=device.adb,
-          dir=self._delegate.ResultsDirectory(device),
-          suffix='.xml') as device_tmp_results_file:
+    timeout = (self._test_instance.shard_timeout
+               * self.GetTool(device).GetTimeoutScale())
+    if self._test_instance.store_tombstones:
+      tombstones.ClearAllTombstones(device)
+    with device_temp_file.DeviceTempFile(
+        adb=device.adb,
+        dir=self._delegate.ResultsDirectory(device),
+        suffix='.xml') as device_tmp_results_file:
 
-        flags = self._test_instance.test_arguments or ''
-        if self._test_instance.enable_xml_result_parsing:
-          flags += ' --gtest_output=xml:%s' % device_tmp_results_file.name
-        if self._test_instance.gtest_also_run_disabled_tests:
-          flags += ' --gtest_also_run_disabled_tests'
+      flags = self._test_instance.test_arguments or ''
+      if self._test_instance.enable_xml_result_parsing:
+        flags += ' --gtest_output=xml:%s' % device_tmp_results_file.name
+      if self._test_instance.gtest_also_run_disabled_tests:
+        flags += ' --gtest_also_run_disabled_tests'
 
-        with contextlib_ext.Optional(
-            trace_event.trace(str(test)),
-            self._env.trace_output):
-          output = self._delegate.Run(
-              test, device, flags=flags,
-              timeout=timeout, retries=0)
+      with contextlib_ext.Optional(
+          trace_event.trace(str(test)),
+          self._env.trace_output):
+        output = self._delegate.Run(
+            test, device, flags=flags,
+            timeout=timeout, retries=0)
 
-        if self._test_instance.enable_xml_result_parsing:
-          gtest_xml = device.ReadFile(
-              device_tmp_results_file.name,
-              as_root=True)
+      if self._test_instance.enable_xml_result_parsing:
+        gtest_xml = device.ReadFile(
+            device_tmp_results_file.name,
+            as_root=True)
 
     for s in self._servers[str(device)]:
       s.Reset()
@@ -440,11 +438,12 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
           result.SetTombstonesUrl(tombstones_url)
 
     not_run_tests = set(test).difference(set(r.GetName() for r in results))
-    return results, list(not_run_tests)
+    return results, list(not_run_tests) if results else None
 
   #override
   def TearDown(self):
     @local_device_environment.handle_shard_failures
+    @trace_event.traced
     def individual_device_tear_down(dev):
       for s in self._servers.get(str(dev), []):
         s.TearDown()

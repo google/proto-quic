@@ -102,17 +102,47 @@ void GetContextForValue(const Value& value,
   }
 }
 
-void PrintArgHelp(const base::StringPiece& name, const Value& value) {
-  OutputString(name.as_string(), DECORATION_YELLOW);
-  OutputString("  Default = " + value.ToString(true) + "\n");
-
+// Prints the value and origin for a default value. Default values always list
+// an origin and if there is no origin, print a message about it being
+// internally set. Overrides can't be internally set so the location handling
+// is a bit different.
+//
+// The default value also contains the docstring.
+void PrintDefaultValueInfo(base::StringPiece name, const Value& value) {
+  OutputString(value.ToString(true) + "\n");
   if (value.origin()) {
     std::string location, comment;
     GetContextForValue(value, &location, &comment);
-    OutputString("    " + location + "\n" + comment);
+    OutputString("      From " + location + "\n");
+    if (!comment.empty())
+      OutputString("\n" + comment);
   } else {
-    OutputString("    (Internally set; try `gn help " + name.as_string() +
+    OutputString("      (Internally set; try `gn help " + name.as_string() +
                  "`.)\n");
+  }
+}
+
+// Override value is null if there is no override.
+void PrintArgHelp(const base::StringPiece& name,
+                  const Args::ValueWithOverride& val) {
+  OutputString(name.as_string(), DECORATION_YELLOW);
+  OutputString("\n");
+
+  if (val.has_override) {
+    // Override present, print both it and the default.
+    OutputString("    Current value = " + val.override_value.ToString(true) +
+                 "\n");
+    if (val.override_value.origin()) {
+      std::string location, comment;
+      GetContextForValue(val.override_value, &location, &comment);
+      OutputString("      From " + location + "\n");
+    }
+    OutputString("    Overridden from the default = ");
+    PrintDefaultValueInfo(name, val.default_value);
+  } else {
+    // No override.
+    OutputString("    Current value (from the default) = ");
+    PrintDefaultValueInfo(name, val.default_value);
   }
 }
 
@@ -121,43 +151,42 @@ int ListArgs(const std::string& build_dir) {
   if (!setup->DoSetup(build_dir, false) || !setup->Run())
     return 1;
 
-  Scope::KeyValueMap build_args;
-  setup->build_settings().build_args().MergeDeclaredArguments(&build_args);
-
-  // Find all of the arguments we care about. Use a regular map so they're
-  // sorted nicely when we write them out.
-  std::map<base::StringPiece, Value> sorted_args;
+  Args::ValueWithOverrideMap args =
+      setup->build_settings().build_args().GetAllArguments();
   std::string list_value =
       base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(kSwitchList);
-  if (list_value.empty()) {
-    // List all values.
-    for (const auto& arg : build_args)
-      sorted_args.insert(arg);
-  } else {
+  if (!list_value.empty()) {
     // List just the one specified as the parameter to --list.
-    Scope::KeyValueMap::const_iterator found_arg = build_args.find(list_value);
-    if (found_arg == build_args.end()) {
+    auto found = args.find(list_value);
+    if (found == args.end()) {
       Err(Location(), "Unknown build argument.",
           "You asked for \"" + list_value + "\" which I didn't find in any "
           "build file\nassociated with this build.").PrintToStdout();
       return 1;
     }
-    sorted_args.insert(*found_arg);
+
+    // Delete everything from the map except the one requested.
+    Args::ValueWithOverrideMap::value_type preserved = *found;
+    args.clear();
+    args.insert(preserved);
   }
 
   if (base::CommandLine::ForCurrentProcess()->HasSwitch(kSwitchShort)) {
-    // Short key=value output.
-    for (const auto& arg : sorted_args) {
+    // Short <key>=<current_value> output.
+    for (const auto& arg : args) {
       OutputString(arg.first.as_string());
       OutputString(" = ");
-      OutputString(arg.second.ToString(true));
+      if (arg.second.has_override)
+        OutputString(arg.second.override_value.ToString(true));
+      else
+        OutputString(arg.second.default_value.ToString(true));
       OutputString("\n");
     }
     return 0;
   }
 
   // Long output.
-  for (const auto& arg : sorted_args) {
+  for (const auto& arg : args) {
     PrintArgHelp(arg.first, arg.second);
     OutputString("\n");
   }
@@ -199,9 +228,9 @@ bool RunEditor(const base::FilePath& file_to_edit) {
 #else  // POSIX
 
 bool RunEditor(const base::FilePath& file_to_edit) {
-  const char* editor_ptr = getenv("VISUAL");
+  const char* editor_ptr = getenv("GN_EDITOR");
   if (!editor_ptr)
-    editor_ptr = getenv("GN_EDITOR");
+    editor_ptr = getenv("VISUAL");
   if (!editor_ptr)
     editor_ptr = getenv("EDITOR");
   if (!editor_ptr)
@@ -284,14 +313,18 @@ extern const char kArgs_Help[] =
   build arguments work.
 
 Usage
+
   gn args <out_dir>
-      Open the arguments for the given build directory in an editor (as
-      specified by the EDITOR environment variable). If the given build
-      directory doesn't exist, it will be created and an empty args file will
-      be opened in the editor. You would type something like this into that
-      file:
+      Open the arguments for the given build directory in an editor. If the
+      given build directory doesn't exist, it will be created and an empty args
+      file will be opened in the editor. You would type something like this
+      into that file:
           enable_doom_melon=false
           os="android"
+
+      To find your editor on Posix, GN will search the environment variables in
+      order: GN_EDITOR, VISUAL, and EDITOR. On Windows GN will open the command
+      associated with .txt files.
 
       Note: you can edit the build args manually by editing the file "args.gn"
       in the build directory and then running "gn gen <out_dir>".
@@ -301,20 +334,12 @@ Usage
       an exact_arg is specified for the list flag, just that one build
       argument.
 
-      The output will list the declaration location, default value, and comment
-      preceeding the declaration. If --short is specified, only the names and
-      values will be printed.
+      The output will list the declaration location, current value for the
+      build, default value (if different than the current value), and comment
+      preceeding the declaration.
 
-      If the out_dir is specified, the build configuration will be taken from
-      that build directory. The reason this is needed is that the definition of
-      some arguments is dependent on the build configuration, so setting some
-      values might add, remove, or change the default values for other
-      arguments. Specifying your exact configuration allows the proper
-      arguments to be displayed.
-
-      Instead of specifying the out_dir, you can also use the command-line flag
-      to specify the build configuration:
-        --args=<exact list of args to use>
+      If --short is specified, only the names and current values will be
+      printed.
 
 Examples
 

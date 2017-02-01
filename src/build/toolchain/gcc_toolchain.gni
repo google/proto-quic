@@ -8,6 +8,7 @@ import("//build/config/nacl/config.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/v8_target_cpu.gni")
 import("//build/toolchain/cc_wrapper.gni")
+import("//build/toolchain/clang_static_analyzer.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/toolchain.gni")
 
@@ -486,6 +487,21 @@ template("clang_toolchain") {
     cc = "$prefix/clang"
     cxx = "$prefix/clang++"
     ld = cxx
+
+    if (use_clang_static_analyzer) {
+      # Call "ccc-analyzer" or "c++-analyzer" instead of directly calling Clang.
+      # |wrapper_tool| sets the environment variables which are read by the
+      # analyzer tools.
+      analyzer_wrapper =
+          rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
+                      root_build_dir)
+      cc = analyzer_wrapper + " --clang-cc-path=${cc} --analyzer=" +
+           rebase_path("//third_party/scan-build/src/libexec/ccc-analyzer",
+                       root_build_dir)
+      cxx = analyzer_wrapper + " --clang-cxx-path=${cxx} --analyzer=" +
+            rebase_path("//third_party/scan-build/src/libexec/c++-analyzer",
+                        root_build_dir)
+    }
 
     readelf = "${toolprefix}readelf"
     ar = "${toolprefix}ar"

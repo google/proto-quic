@@ -154,6 +154,8 @@ HttpNetworkSession::Params::Params()
       quic_force_hol_blocking(false),
       quic_race_cert_verification(false),
       quic_do_not_fragment(false),
+      quic_do_not_mark_as_broken_on_network_change(false),
+      quic_estimate_initial_rtt(false),
       proxy_delegate(nullptr),
       enable_token_binding(false),
       http_09_on_non_default_ports_enabled(false),
@@ -216,6 +218,7 @@ HttpNetworkSession::HttpNetworkSession(const Params& params)
           params.quic_force_hol_blocking,
           params.quic_race_cert_verification,
           params.quic_do_not_fragment,
+          params.quic_estimate_initial_rtt,
           params.quic_connection_options,
           params.enable_token_binding),
       spdy_session_pool_(params.host_resolver,
@@ -433,6 +436,8 @@ void HttpNetworkSession::DumpMemoryStats(
       http_stream_factory_->DumpMemoryStats(
           pmd, http_network_session_dump->absolute_name());
     }
+    quic_stream_factory_.DumpMemoryStats(
+        pmd, http_network_session_dump->absolute_name());
   }
   // Create an empty row under parent's dump so size can be attributed correctly
   // if |this| is shared between URLRequestContexts.

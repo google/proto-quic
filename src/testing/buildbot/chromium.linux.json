@@ -33,7 +33,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -65,7 +65,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -96,7 +96,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -127,7 +127,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -159,7 +159,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -190,7 +190,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -221,7 +221,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -255,7 +255,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -290,7 +290,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -322,7 +322,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -353,7 +353,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -384,7 +384,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -419,7 +419,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -451,7 +451,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -482,7 +482,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -513,7 +513,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -544,7 +544,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -575,7 +575,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -607,7 +607,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -638,7 +638,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -669,7 +669,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -700,7 +700,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -731,7 +731,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -763,7 +763,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -795,7 +795,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -827,7 +827,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -859,7 +859,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -894,7 +894,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -926,7 +926,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -957,7 +957,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -988,7 +988,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1019,7 +1019,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1050,7 +1050,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1081,7 +1081,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1112,7 +1112,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1143,7 +1143,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1208,6 +1208,9 @@
       },
       {
         "test": "components_web_restrictions_junit_tests"
+      },
+      {
+        "test": "components_variations_junit_tests"
       },
       {
         "test": "content_junit_tests"
@@ -1242,7 +1245,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1274,7 +1277,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1305,7 +1308,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1336,7 +1339,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1368,7 +1371,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1399,7 +1402,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1430,7 +1433,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1464,7 +1467,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1499,7 +1502,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1531,7 +1534,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1562,7 +1565,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1593,7 +1596,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1628,7 +1631,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1660,7 +1663,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1691,7 +1694,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1722,7 +1725,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1753,7 +1756,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1784,7 +1787,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1816,7 +1819,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1847,7 +1850,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1878,7 +1881,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1909,7 +1912,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1940,7 +1943,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -1972,7 +1975,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2004,7 +2007,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2036,7 +2039,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2068,7 +2071,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2103,7 +2106,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2135,7 +2138,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2166,7 +2169,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2190,6 +2193,38 @@
         "test": "sandbox_linux_unittests"
       },
       {
+        "override_isolate_target": "service_unittests",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "cipd_packages": [
+            {
+              "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
+              "location": "bin",
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
+            }
+          ],
+          "dimension_sets": [
+            {
+              "android_devices": "4",
+              "device_os": "KTU84P",
+              "device_type": "hammerhead"
+            }
+          ],
+          "hard_timeout": 120,
+          "output_links": [
+            {
+              "link": [
+                "https://luci-logdog.appspot.com/v/?s",
+                "=android%2Fswarming%2Flogcats%2F",
+                "${TASK_ID}%2F%2B%2Funified_logcats"
+              ],
+              "name": "shard #${SHARD_INDEX} logcats"
+            }
+          ]
+        },
+        "test": "service_unittests"
+      },
+      {
         "override_isolate_target": "sql_unittests",
         "swarming": {
           "can_use_on_swarming_builders": true,
@@ -2197,7 +2232,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2228,7 +2263,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2259,7 +2294,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2290,7 +2325,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2321,7 +2356,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2352,7 +2387,7 @@
             {
               "cipd_package": "infra/tools/luci/logdog/butler/${platform}",
               "location": "bin",
-              "revision": "git_revision:25755a2c316937ee44a6432163dc5e2f9c85cf58"
+              "revision": "git_revision:dec8cc6fd715753846d0aca1693dc63844ea55d6"
             }
           ],
           "dimension_sets": [
@@ -2419,6 +2454,9 @@
         "test": "components_web_restrictions_junit_tests"
       },
       {
+        "test": "components_variations_junit_tests"
+      },
+      {
         "test": "content_junit_tests"
       },
       {
@@ -2442,43 +2480,43 @@
     "gtest_tests": [
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "base_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cacheinvalidation_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "capture_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_alsa_cma_backend_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_base_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_crash_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_media_unittests"
       },
@@ -2490,13 +2528,13 @@
           "--test-launcher-jobs=1"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_shell_browsertests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "cast_shell_unittests"
       },
@@ -2505,103 +2543,97 @@
           "--test-launcher-filter-file=src/testing/buildbot/filters/cast-linux.content_browsertests.filter"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "content_browsertests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "content_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "crypto_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "gpu_ipc_service_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "gpu_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "ipc_tests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "jingle_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "media_blink_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "media_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "midi_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "net_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
-        },
-        "test": "ppapi_unittests"
-      },
-      {
-        "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "sandbox_linux_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "sql_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "storage_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "ui_base_unittests"
       },
       {
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": false
         },
         "test": "url_unittests"
       }
@@ -3119,7 +3151,19 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "skia_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "snapshot_unittests"
       },
       {
         "swarming": {
@@ -3243,13 +3287,17 @@
         }
       },
       {
+        "args": [
+          "--jobs=1"
+        ],
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
         "override_compile_targets": [
           "telemetry_unittests_run"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "shards": 4
         }
       }
     ],
@@ -3709,7 +3757,19 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "skia_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "snapshot_unittests"
       },
       {
         "swarming": {
@@ -3798,13 +3858,17 @@
         }
       },
       {
+        "args": [
+          "--jobs=1"
+        ],
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
         "override_compile_targets": [
           "telemetry_unittests_run"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "shards": 4
         }
       }
     ],
@@ -4096,7 +4160,19 @@
         "swarming": {
           "can_use_on_swarming_builders": true
         },
+        "test": "service_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
         "test": "skia_unittests"
+      },
+      {
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        },
+        "test": "snapshot_unittests"
       },
       {
         "swarming": {
@@ -4159,13 +4235,17 @@
         }
       },
       {
+        "args": [
+          "--jobs=1"
+        ],
         "isolate_name": "telemetry_unittests",
         "name": "telemetry_unittests",
         "override_compile_targets": [
           "telemetry_unittests_run"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "shards": 4
         }
       }
     ]

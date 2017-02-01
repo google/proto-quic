@@ -26,7 +26,6 @@ _CLOSURE_ARGS_GYPI = os.path.join(_SCRIPT_DIR, "closure_args.gypi")
 _GYPI_DICT = literal_eval(open(_CLOSURE_ARGS_GYPI).read())
 _COMMON_CLOSURE_ARGS = _GYPI_DICT["default_closure_args"] + \
                        _GYPI_DICT["default_disabled_closure_args"]
-_RUNNER_ARGS = ["enable-chrome-pass"]
 
 class CompilerTest(unittest.TestCase):
   _ASSERT_DEFINITION = Processor(_ASSERT_JS).contents
@@ -45,23 +44,25 @@ class CompilerTest(unittest.TestCase):
       if os.path.exists(file):
         os.remove(file)
 
-  def _runChecker(self, source_code, closure_args=None):
+  def _runChecker(self, source_code, needs_output, closure_args=None):
     file_path = "/script.js"
     FileCache._cache[file_path] = source_code
     out_file, out_map = self._createOutFiles()
     args = _COMMON_CLOSURE_ARGS + (closure_args or [])
+    if needs_output:
+      args.remove("checks_only")
 
     externs = [_POLYMER_EXTERNS, _CHROME_SEND_EXTERNS]
     found_errors, stderr = self._checker.check(file_path,
                                                externs=externs,
                                                out_file=out_file,
-                                               runner_args=_RUNNER_ARGS,
                                                closure_args=args)
     return found_errors, stderr, out_file, out_map
 
   def _runCheckerTestExpectError(self, source_code, expected_error,
                                  closure_args=None):
-    _, stderr, out_file, out_map = self._runChecker(source_code, closure_args)
+    _, stderr, out_file, out_map = self._runChecker(
+        source_code, needs_output=False, closure_args=closure_args)
 
     self.assertTrue(expected_error in stderr,
         msg="Expected chunk: \n%s\n\nOutput:\n%s\n" % (
@@ -71,8 +72,8 @@ class CompilerTest(unittest.TestCase):
 
   def _runCheckerTestExpectSuccess(self, source_code, expected_output=None,
                                    closure_args=None):
-    found_errors, stderr, out_file, out_map = self._runChecker(source_code,
-                                                               closure_args)
+    found_errors, stderr, out_file, out_map = self._runChecker(
+        source_code, needs_output=True, closure_args=closure_args)
 
     self.assertFalse(found_errors,
         msg="Expected success, but got failure\n\nOutput:\n%s\n" % stderr)
@@ -321,9 +322,9 @@ testScript();
     out_file, out_map = self._createOutFiles()
     sources = [source_file1.name, source_file2.name]
     externs = [_POLYMER_EXTERNS]
+    closure_args = [a for a in _COMMON_CLOSURE_ARGS if a != "checks_only"]
     found_errors, stderr = self._checker.check_multiple(
-        sources, externs=externs, out_file=out_file,
-        closure_args=_COMMON_CLOSURE_ARGS)
+        sources, externs=externs, out_file=out_file, closure_args=closure_args)
     self.assertFalse(found_errors,
         msg="Expected success, but got failure\n\nOutput:\n%s\n" % stderr)
 

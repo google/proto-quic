@@ -91,15 +91,14 @@ class _SunspiderMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression(
+    tab.WaitForJavaScriptCondition2(
         'window.location.pathname.indexOf("results.html") >= 0'
-        '&& typeof(output) != "undefined"', 300)
+        '&& typeof(output) != "undefined"', timeout=300)
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    js_get_results = 'JSON.stringify(output);'
-    js_results = json.loads(tab.EvaluateJavaScript(js_get_results))
+    js_results = json.loads(tab.EvaluateJavaScript2('JSON.stringify(output);'))
 
     # Below, r is a map of benchmark names to lists of result numbers,
     # and totals is a list of totals of result numbers.

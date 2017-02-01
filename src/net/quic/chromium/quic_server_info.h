@@ -5,6 +5,7 @@
 #ifndef NET_QUIC_CHROMIUM_QUIC_SERVER_INFO_H_
 #define NET_QUIC_CHROMIUM_QUIC_SERVER_INFO_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -167,7 +168,8 @@ class QUIC_EXPORT_PRIVATE QuicServerInfoFactory {
 
   // GetForServer returns a fresh, allocated QuicServerInfo for the given
   // |server_id| or NULL on failure.
-  virtual QuicServerInfo* GetForServer(const QuicServerId& server_id) = 0;
+  virtual std::unique_ptr<QuicServerInfo> GetForServer(
+      const QuicServerId& server_id) = 0;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicServerInfoFactory);

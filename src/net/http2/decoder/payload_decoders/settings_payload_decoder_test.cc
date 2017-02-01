@@ -142,8 +142,8 @@ TEST_F(SettingsPayloadDecoderTest, OneRealSetting) {
 
 // Decode a SETTINGS frame with lots of fields.
 TEST_F(SettingsPayloadDecoderTest, ManySettings) {
-  const uint32_t num_settings = 100;
-  const uint32_t size = Http2SettingFields::EncodedSize() * num_settings;
+  const size_t num_settings = 100;
+  const size_t size = Http2SettingFields::EncodedSize() * num_settings;
   Http2FrameHeader header(size, Http2FrameType::SETTINGS,
                           RandFlags(),  // & ~Http2FrameFlag::FLAG_ACK,
                           RandStreamId());

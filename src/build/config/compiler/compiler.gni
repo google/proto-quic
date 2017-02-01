@@ -99,7 +99,8 @@ if (symbol_level == -1) {
     # memory consumption and link times unsustainable (crbug.com/630074).
     # Clang on windows does not have this issue.
     symbol_level = 1
-  } else if (!is_linux || is_debug || is_official_build || is_chromecast) {
+  } else if ((!is_nacl && !is_linux) || is_debug || is_official_build ||
+             is_chromecast) {
     # Linux is slowed by having symbols as part of the target binary, whereas
     # Mac and Windows have them separate, so in Release Linux, default them off,
     # but keep them on for Official builds and Chromecast builds.

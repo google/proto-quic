@@ -1,0 +1,2 @@
+gen/chrome/grit/options_resources.h
+gen/chrome/options_resources.pak

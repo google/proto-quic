@@ -57,7 +57,7 @@ string Http2FrameFlagsToString(Http2FrameType type, uint8_t flags) {
     if (!s.empty()) {
       s.push_back('|');
     }
-    v.AppendToString(&s);
+    s.append(v.data(), v.size());
     flags ^= bit;
   };
   if (flags & 0x01) {

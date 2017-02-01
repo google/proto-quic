@@ -1,0 +1,2 @@
+gen/blink/public/resources/grit/blink_resources.h
+gen/blink/public/resources/blink_resources.pak

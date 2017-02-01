@@ -1,0 +1,34 @@
+defines = -DBASE_I18N_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -DU_USING_ICU_NAMESPACE=0 -DU_ENABLE_DYLOAD=0 -DU_NOEXCEPT= -DU_STATIC_IMPLEMENTATION -DICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_FILE
+include_dirs = -I../../../../.. -Iirt_x64/gen -I../../../../../third_party/icu/source/common -I../../../../../third_party/icu/source/i18n
+cflags = -fno-strict-aliasing -fcolor-diagnostics -integrated-as -m64 -march=x86-64 -fasynchronous-unwind-tables -fomit-frame-pointer -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Os -ffunction-sections -fdata-sections -g2 -fvisibility=hidden -Wexit-time-destructors
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = i18n
+root_out_dir = irt_x64
+target_out_dir = irt_x64/obj/base
+target_output_name = libbase_i18n
+
+build irt_x64/obj/base/i18n.inputdeps.stamp: irt_x64_stamp irt_x64/obj/base/build_date.stamp irt_x64/obj/base/debugging_flags.stamp irt_x64/obj/base/allocator/features.stamp ./tls_edit irt_x64/obj/third_party/icu/icudata.stamp
+build irt_x64/obj/base/i18n/base_i18n_switches.o: irt_x64_cxx ../../../../../base/i18n/base_i18n_switches.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/bidi_line_iterator.o: irt_x64_cxx ../../../../../base/i18n/bidi_line_iterator.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/break_iterator.o: irt_x64_cxx ../../../../../base/i18n/break_iterator.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/case_conversion.o: irt_x64_cxx ../../../../../base/i18n/case_conversion.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/char_iterator.o: irt_x64_cxx ../../../../../base/i18n/char_iterator.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/file_util_icu.o: irt_x64_cxx ../../../../../base/i18n/file_util_icu.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/i18n_constants.o: irt_x64_cxx ../../../../../base/i18n/i18n_constants.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/icu_encoding_detection.o: irt_x64_cxx ../../../../../base/i18n/icu_encoding_detection.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/icu_string_conversions.o: irt_x64_cxx ../../../../../base/i18n/icu_string_conversions.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/icu_util.o: irt_x64_cxx ../../../../../base/i18n/icu_util.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/message_formatter.o: irt_x64_cxx ../../../../../base/i18n/message_formatter.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/number_formatting.o: irt_x64_cxx ../../../../../base/i18n/number_formatting.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/rtl.o: irt_x64_cxx ../../../../../base/i18n/rtl.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/streaming_utf8_validator.o: irt_x64_cxx ../../../../../base/i18n/streaming_utf8_validator.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/string_compare.o: irt_x64_cxx ../../../../../base/i18n/string_compare.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/string_search.o: irt_x64_cxx ../../../../../base/i18n/string_search.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/time_formatting.o: irt_x64_cxx ../../../../../base/i18n/time_formatting.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/timezone.o: irt_x64_cxx ../../../../../base/i18n/timezone.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+build irt_x64/obj/base/i18n/utf8_validator_tables.o: irt_x64_cxx ../../../../../base/i18n/utf8_validator_tables.cc || irt_x64/obj/base/i18n.inputdeps.stamp
+
+build irt_x64/obj/base/libbase_i18n.a: irt_x64_alink irt_x64/obj/base/i18n/base_i18n_switches.o irt_x64/obj/base/i18n/bidi_line_iterator.o irt_x64/obj/base/i18n/break_iterator.o irt_x64/obj/base/i18n/case_conversion.o irt_x64/obj/base/i18n/char_iterator.o irt_x64/obj/base/i18n/file_util_icu.o irt_x64/obj/base/i18n/i18n_constants.o irt_x64/obj/base/i18n/icu_encoding_detection.o irt_x64/obj/base/i18n/icu_string_conversions.o irt_x64/obj/base/i18n/icu_util.o irt_x64/obj/base/i18n/message_formatter.o irt_x64/obj/base/i18n/number_formatting.o irt_x64/obj/base/i18n/rtl.o irt_x64/obj/base/i18n/streaming_utf8_validator.o irt_x64/obj/base/i18n/string_compare.o irt_x64/obj/base/i18n/string_search.o irt_x64/obj/base/i18n/time_formatting.o irt_x64/obj/base/i18n/timezone.o irt_x64/obj/base/i18n/utf8_validator_tables.o || irt_x64/obj/third_party/icu/icu.stamp irt_x64/obj/base/libbase.a irt_x64/obj/base/third_party/dynamic_annotations/dynamic_annotations.stamp irt_x64/obj/build/config/sanitizers/deps.stamp irt_x64/obj/third_party/icu/libicui18n.a irt_x64/obj/third_party/icu/libicuuc.a irt_x64/obj/base/libbase_static.a irt_x64/obj/third_party/modp_b64/libmodp_b64.a
+  arflags =
+  output_extension = .a
+  output_dir = irt_x64/obj/base

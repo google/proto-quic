@@ -65,7 +65,7 @@ class _IndexedDbMeasurement(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     tab.WaitForDocumentReadyStateToBeComplete()
-    tab.WaitForJavaScriptExpression('window.done', 600)
+    tab.WaitForJavaScriptCondition2('window.done', timeout=600)
 
     self._power_metric.Stop(page, tab)
     self._memory_metric.Stop(page, tab)
@@ -73,8 +73,8 @@ class _IndexedDbMeasurement(legacy_page_test.LegacyPageTest):
     self._memory_metric.AddResults(tab, results)
     self._power_metric.AddResults(tab, results)
 
-    js_get_results = 'JSON.stringify(automation.getResults());'
-    result_dict = json.loads(tab.EvaluateJavaScript(js_get_results))
+    result_dict = json.loads(tab.EvaluateJavaScript2(
+        'JSON.stringify(automation.getResults());'))
     total = 0.0
     for key in result_dict:
       if key == 'OverallTestDuration':

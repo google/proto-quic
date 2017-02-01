@@ -10,66 +10,62 @@ namespace net {
 
 NetworkConnection::NetworkConnection()
     : connection_type_(NetworkChangeNotifier::CONNECTION_UNKNOWN),
-      connection_description_(nullptr) {}
-
-const char* NetworkConnection::GetDescription() {
-  NetworkChangeNotifier::ConnectionType type =
-      NetworkChangeNotifier::GetConnectionType();
-  if (connection_description_ != nullptr && type == connection_type_)
-    return connection_description_;
-
-  DVLOG(1) << "Updating NetworkConnection's Cached Data";
-
-  connection_description_ = NetworkChangeNotifier::ConnectionTypeToString(type);
-  connection_type_ = type;
-  if (connection_type_ == NetworkChangeNotifier::CONNECTION_UNKNOWN ||
-      connection_type_ == NetworkChangeNotifier::CONNECTION_WIFI) {
-    // This function only seems usefully defined on Windows currently.
-    WifiPHYLayerProtocol wifi_type = GetWifiPHYLayerProtocol();
-    switch (wifi_type) {
-      case WIFI_PHY_LAYER_PROTOCOL_NONE:
-        // No wifi support or no associated AP.
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_ANCIENT:
-        // An obsolete modes introduced by the original 802.11, e.g. IR, FHSS.
-        connection_description_ = "CONNECTION_WIFI_ANCIENT";
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_A:
-        // 802.11a, OFDM-based rates.
-        connection_description_ = "CONNECTION_WIFI_802.11a";
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_B:
-        // 802.11b, DSSS or HR DSSS.
-        connection_description_ = "CONNECTION_WIFI_802.11b";
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_G:
-        // 802.11g, same rates as 802.11a but compatible with 802.11b.
-        connection_description_ = "CONNECTION_WIFI_802.11g";
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_N:
-        // 802.11n, HT rates.
-        connection_description_ = "CONNECTION_WIFI_802.11n";
-        break;
-      case WIFI_PHY_LAYER_PROTOCOL_UNKNOWN:
-        // Unclassified mode or failure to identify.
-        break;
-    }
-  }
-  return connection_description_;
+      connection_description_(nullptr) {
+  NetworkChangeNotifier::AddIPAddressObserver(this);
+  NetworkChangeNotifier::AddConnectionTypeObserver(this);
+  OnIPAddressChanged();
 }
 
-void NetworkConnection::Clear() {
-  connection_type_ = NetworkChangeNotifier::CONNECTION_UNKNOWN;
-  connection_description_ = nullptr;
+NetworkConnection::~NetworkConnection() {
+  NetworkChangeNotifier::RemoveConnectionTypeObserver(this);
+  NetworkChangeNotifier::RemoveIPAddressObserver(this);
 }
 
 void NetworkConnection::OnIPAddressChanged() {
-  Clear();
+  OnConnectionTypeChanged(NetworkChangeNotifier::GetConnectionType());
 }
 
 void NetworkConnection::OnConnectionTypeChanged(
     NetworkChangeNotifier::ConnectionType type) {
-  Clear();
+  DVLOG(1) << "Updating NetworkConnection's Cached Data";
+
+  connection_type_ = type;
+  connection_description_ = NetworkChangeNotifier::ConnectionTypeToString(type);
+  if (connection_type_ != NetworkChangeNotifier::CONNECTION_UNKNOWN &&
+      connection_type_ != NetworkChangeNotifier::CONNECTION_WIFI) {
+    return;
+  }
+
+  // This function only seems usefully defined on Windows currently.
+  WifiPHYLayerProtocol wifi_type = GetWifiPHYLayerProtocol();
+  switch (wifi_type) {
+    case WIFI_PHY_LAYER_PROTOCOL_NONE:
+      // No wifi support or no associated AP.
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_ANCIENT:
+      // An obsolete modes introduced by the original 802.11, e.g. IR, FHSS.
+      connection_description_ = "CONNECTION_WIFI_ANCIENT";
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_A:
+      // 802.11a, OFDM-based rates.
+      connection_description_ = "CONNECTION_WIFI_802.11a";
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_B:
+      // 802.11b, DSSS or HR DSSS.
+      connection_description_ = "CONNECTION_WIFI_802.11b";
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_G:
+      // 802.11g, same rates as 802.11a but compatible with 802.11b.
+      connection_description_ = "CONNECTION_WIFI_802.11g";
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_N:
+      // 802.11n, HT rates.
+      connection_description_ = "CONNECTION_WIFI_802.11n";
+      break;
+    case WIFI_PHY_LAYER_PROTOCOL_UNKNOWN:
+      // Unclassified mode or failure to identify.
+      break;
+  }
 }
 
 }  // namespace net

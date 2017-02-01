@@ -1,0 +1,2 @@
+gen/chrome/grit/chrome_unscaled_resources.h
+gen/chrome/chrome_unscaled_resources.pak

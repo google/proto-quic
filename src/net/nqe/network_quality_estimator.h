@@ -21,9 +21,9 @@
 #include "base/time/time.h"
 #include "net/base/net_export.h"
 #include "net/base/network_change_notifier.h"
-#include "net/log/net_log_with_source.h"
 #include "net/nqe/cached_network_quality.h"
 #include "net/nqe/effective_connection_type.h"
+#include "net/nqe/event_creator.h"
 #include "net/nqe/external_estimate_provider.h"
 #include "net/nqe/network_id.h"
 #include "net/nqe/network_quality.h"
@@ -763,7 +763,8 @@ class NET_EXPORT NetworkQualityEstimator
 
   base::ThreadChecker thread_checker_;
 
-  NetLogWithSource net_log_;
+  // Manages the writing of events to the net log.
+  nqe::internal::EventCreator event_creator_;
 
   base::WeakPtrFactory<NetworkQualityEstimator> weak_ptr_factory_;
 

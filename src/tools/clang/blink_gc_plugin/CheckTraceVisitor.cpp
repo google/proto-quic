@@ -13,15 +13,7 @@ using namespace clang;
 CheckTraceVisitor::CheckTraceVisitor(CXXMethodDecl* trace,
                                      RecordInfo* info,
                                      RecordCache* cache)
-    : trace_(trace),
-      info_(info),
-      cache_(cache),
-      delegates_to_traceimpl_(false) {
-}
-
-bool CheckTraceVisitor::delegates_to_traceimpl() const {
-  return delegates_to_traceimpl_;
-}
+    : trace_(trace), info_(info), cache_(cache) {}
 
 bool CheckTraceVisitor::VisitMemberExpr(MemberExpr* member) {
   // In weak callbacks, consider any occurrence as a correct usage.
@@ -72,8 +64,6 @@ bool CheckTraceVisitor::VisitCallExpr(CallExpr* call) {
     CXXRecordDecl* decl = base->getPointeeType()->getAsCXXRecordDecl();
     if (decl)
       CheckTraceFieldCall(expr->getMemberName().getAsString(), decl, arg);
-    if (Config::IsTraceImplName(expr->getMemberName().getAsString()))
-      delegates_to_traceimpl_ = true;
     return true;
   }
 
@@ -81,10 +71,6 @@ bool CheckTraceVisitor::VisitCallExpr(CallExpr* call) {
     if (CheckTraceFieldMemberCall(expr) || CheckRegisterWeakMembers(expr))
       return true;
 
-    if (Config::IsTraceImplName(expr->getMethodDecl()->getNameAsString())) {
-      delegates_to_traceimpl_ = true;
-      return true;
-    }
   }
 
   CheckTraceBaseCall(call);
@@ -92,10 +78,6 @@ bool CheckTraceVisitor::VisitCallExpr(CallExpr* call) {
 }
 
 bool CheckTraceVisitor::IsTraceCallName(const std::string& name) {
-  if (trace_->getName() == kTraceImplName)
-    return name == kTraceName;
-  if (trace_->getName() == kTraceAfterDispatchImplName)
-    return name == kTraceAfterDispatchName;
   // Currently, a manually dispatched class cannot have mixin bases (having
   // one would add a vtable which we explicitly check against). This means
   // that we can only make calls to a trace method of the same name. Revisit
@@ -232,8 +214,7 @@ bool CheckTraceVisitor::CheckTraceBaseCall(CallExpr* call) {
              dyn_cast<UnresolvedMemberExpr>(call->getCallee())) {
     // Callee part may become unresolved if the type of the argument
     // ("visitor") is a template parameter and the called function is
-    // overloaded (i.e. trace(Visitor*) and
-    // trace(InlinedGlobalMarkingVisitor)).
+    // overloaded.
     //
     // Here, we try to find a function that looks like trace() from the
     // candidate overloaded functions, and if we find one, we assume it is
@@ -351,6 +332,8 @@ bool CheckTraceVisitor::CheckRegisterWeakMembers(CXXMemberCallExpr* call) {
           nested_visitor.TraverseStmt(callback->getBody());
         }
       }
+      // TODO: mark all WeakMember<>s as traced even if
+      // the body isn't available?
     }
   }
   return true;

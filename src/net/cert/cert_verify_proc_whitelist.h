@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "base/strings/string_piece.h"
 #include "crypto/sha2.h"
 #include "net/base/hash_value.h"
 #include "net/base/net_export.h"
@@ -22,10 +23,19 @@ class X509Certificate;
 // unconstrained CA or if it was in the whitelist for that
 // CA.
 // |cert| should be the verified certificate chain, with |public_key_hashes|
-// being the set of hashes of the SPKIs within the verified chain.
+// being the set of hashes of the SPKIs within the verified chain, and
+// |hostname| as the GURL-normalized hostname.
 bool NET_EXPORT_PRIVATE
 IsNonWhitelistedCertificate(const X509Certificate& cert,
-                            const HashValueVector& public_key_hashes);
+                            const HashValueVector& public_key_hashes,
+                            base::StringPiece hostname);
+
+// Returns true if |host| is in (or a subdomain of) a whitelisted host
+// in |graph|, which is a DAFSA constructed by
+// //net/tools/dafsa/make_dafsa.py that is |graph_length| bytes long.
+bool NET_EXPORT_PRIVATE IsWhitelistedHost(const unsigned char* graph,
+                                          size_t graph_length,
+                                          base::StringPiece host);
 
 }  // namespace net
 

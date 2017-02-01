@@ -76,7 +76,7 @@ bool IsCertIssuerInEncodedList(X509Certificate::OSCertHandle cert_handle,
 void GetCertDateForOID(const x509_util::CSSMCachedCertificate& cached_cert,
                        const CSSM_OID* oid,
                        Time* result) {
-  *result = Time::Time();
+  *result = Time();
 
   x509_util::CSSMFieldValue field;
   OSStatus status = cached_cert.GetField(oid, &field);

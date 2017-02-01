@@ -67,7 +67,7 @@ class SpdyFramerDecoderAdapter {
   virtual SpdyFramer::SpdyState state() const = 0;
 
   // Current error code (NO_ERROR if state != ERROR).
-  virtual SpdyFramer::SpdyError error_code() const = 0;
+  virtual SpdyFramer::SpdyFramerError spdy_framer_error() const = 0;
 
   // Has any frame header looked like the start of an HTTP/1.1 (or earlier)
   // response? Used to detect if a backend/server that we sent a request to

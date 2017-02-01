@@ -712,6 +712,10 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // whether DCHECKs are enabled; this is so that we don't get unused
 // variable warnings if the only use of a variable is in a DCHECK.
 // This behavior is different from DLOG_IF et al.
+//
+// Note that the definition of the DCHECK macros depends on whether or not
+// DCHECK_IS_ON() is true. When DCHECK_IS_ON() is false, the macros use
+// EAT_STREAM_PARAMETERS to avoid expressions that would create temporaries.
 
 #if defined(_PREFAST_) && defined(OS_WIN)
 // See comments on the previous use of __analysis_assume.
@@ -726,17 +730,45 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
   LAZY_STREAM(PLOG_STREAM(DCHECK), false)                               \
   << "Check failed: " #condition ". "
 
-#else  // _PREFAST_
+#elif defined(__clang_analyzer__)
 
-#define DCHECK(condition)                                                \
-  LAZY_STREAM(LOG_STREAM(DCHECK), DCHECK_IS_ON() ? !(condition) : false) \
+// Keeps the static analyzer from proceeding along the current codepath,
+// otherwise false positive errors may be generated  by null pointer checks.
+inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
+  return false;
+}
+
+#define DCHECK(condition)                                                     \
+  LAZY_STREAM(                                                                \
+      LOG_STREAM(DCHECK),                                                     \
+      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
       << "Check failed: " #condition ". "
 
-#define DPCHECK(condition)                                                \
-  LAZY_STREAM(PLOG_STREAM(DCHECK), DCHECK_IS_ON() ? !(condition) : false) \
+#define DPCHECK(condition)                                                    \
+  LAZY_STREAM(                                                                \
+      PLOG_STREAM(DCHECK),                                                    \
+      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
       << "Check failed: " #condition ". "
 
-#endif  // _PREFAST_
+#else
+
+#if DCHECK_IS_ON()
+
+#define DCHECK(condition)                       \
+  LAZY_STREAM(LOG_STREAM(DCHECK), !(condition)) \
+      << "Check failed: " #condition ". "
+#define DPCHECK(condition)                       \
+  LAZY_STREAM(PLOG_STREAM(DCHECK), !(condition)) \
+      << "Check failed: " #condition ". "
+
+#else  // DCHECK_IS_ON()
+
+#define DCHECK(condition) EAT_STREAM_PARAMETERS << !(condition)
+#define DPCHECK(condition) EAT_STREAM_PARAMETERS << !(condition)
+
+#endif  // DCHECK_IS_ON()
+
+#endif
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use DCHECK_EQ et al below.
@@ -744,6 +776,8 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // macro is used in an 'if' clause such as:
 // if (a == 1)
 //   DCHECK_EQ(2, a);
+#if DCHECK_IS_ON()
+
 #define DCHECK_OP(name, op, val1, val2)                                \
   switch (0) case 0: default:                                          \
   if (::logging::CheckOpResult true_if_passed =                        \
@@ -754,6 +788,25 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
   else                                                                 \
     ::logging::LogMessage(__FILE__, __LINE__, ::logging::LOG_DCHECK,   \
                           true_if_passed.message()).stream()
+
+#else  // DCHECK_IS_ON()
+
+// When DCHECKs aren't enabled, DCHECK_OP still needs to reference operator<<
+// overloads for |val1| and |val2| to avoid potential compiler warnings about
+// unused functions. For the same reason, it also compares |val1| and |val2|
+// using |op|.
+//
+// Note that the contract of DCHECK_EQ, etc is that arguments are only evaluated
+// once. Even though |val1| and |val2| appear twice in this version of the macro
+// expansion, this is OK, since the expression is never actually evaluated.
+#define DCHECK_OP(name, op, val1, val2)                             \
+  EAT_STREAM_PARAMETERS << (::logging::MakeCheckOpValueString(      \
+                                ::logging::g_swallow_stream, val1), \
+                            ::logging::MakeCheckOpValueString(      \
+                                ::logging::g_swallow_stream, val2), \
+                            (val1)op(val2))
+
+#endif  // DCHECK_IS_ON()
 
 // Equality/Inequality checks - compare two values, and log a
 // LOG_DCHECK message including the two values when the result is not

@@ -19,6 +19,9 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/trace_event/memory_allocator_dump.h"
+#include "base/trace_event/memory_usage_estimator.h"
+#include "base/trace_event/process_memory_dump.h"
 #include "base/trace_event/trace_event.h"
 #include "base/values.h"
 #include "crypto/openssl_util.h"
@@ -71,6 +74,14 @@ enum CreateSessionFailure {
   CREATION_ERROR_SETTING_SEND_BUFFER,
   CREATION_ERROR_SETTING_DO_NOT_FRAGMENT,
   CREATION_ERROR_MAX
+};
+
+enum InitialRttEstimateSource {
+  INITIAL_RTT_DEFAULT,
+  INITIAL_RTT_CACHED,
+  INITIAL_RTT_2G,
+  INITIAL_RTT_3G,
+  INITIAL_RTT_SOURCE_MAX,
 };
 
 // The maximum receive window sizes for QUIC sessions and streams.
@@ -152,6 +163,15 @@ void HistogramMigrationStatus(enum QuicConnectionMigrationStatus status) {
                             MIGRATION_STATUS_MAX);
 }
 
+void SetInitialRttEstimate(base::TimeDelta estimate,
+                           enum InitialRttEstimateSource source,
+                           QuicConfig* config) {
+  UMA_HISTOGRAM_ENUMERATION("Net.QuicSession.InitialRttEsitmateSource", source,
+                            INITIAL_RTT_SOURCE_MAX);
+  if (estimate != base::TimeDelta())
+    config->SetInitialRoundTripTimeUsToSend(estimate.InMicroseconds());
+}
+
 QuicConfig InitializeQuicConfig(const QuicTagVector& connection_options,
                                 int idle_connection_timeout_seconds) {
   DCHECK_GT(idle_connection_timeout_seconds, 0);
@@ -184,6 +204,11 @@ class ServerIdOriginFilter : public QuicCryptoClientConfig::ServerIdFilter {
  private:
   const base::Callback<bool(const GURL&)> origin_filter_;
 };
+
+// Returns the estimate of dynamically allocated memory of |server_id|.
+size_t EstimateServerIdMemoryUsage(const QuicServerId& server_id) {
+  return HostPortPair::EstimateMemoryUsage(server_id.host_port_pair());
+}
 
 }  // namespace
 
@@ -282,7 +307,7 @@ class QuicStreamFactory::Job {
       const QuicSessionKey& key,
       bool was_alternative_service_recently_broken,
       int cert_verify_flags,
-      QuicServerInfo* server_info,
+      std::unique_ptr<QuicServerInfo> server_info,
       const NetLogWithSource& net_log);
 
   // Creates a new job to handle the resumption of for connecting an
@@ -354,7 +379,7 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
                             const QuicSessionKey& key,
                             bool was_alternative_service_recently_broken,
                             int cert_verify_flags,
-                            QuicServerInfo* server_info,
+                            std::unique_ptr<QuicServerInfo> server_info,
                             const NetLogWithSource& net_log)
     : io_state_(STATE_RESOLVE_HOST),
       factory_(factory),
@@ -363,7 +388,7 @@ QuicStreamFactory::Job::Job(QuicStreamFactory* factory,
       cert_verify_flags_(cert_verify_flags),
       was_alternative_service_recently_broken_(
           was_alternative_service_recently_broken),
-      server_info_(server_info),
+      server_info_(std::move(server_info)),
       started_another_job_(false),
       net_log_(net_log),
       num_sent_client_hellos_(0),
@@ -738,7 +763,8 @@ QuicStreamFactory::QuicStreamFactory(
     bool allow_server_migration,
     bool force_hol_blocking,
     bool race_cert_verification,
-    bool quic_do_not_fragment,
+    bool do_not_fragment,
+    bool estimate_initial_rtt,
     const QuicTagVector& connection_options,
     bool enable_token_binding)
     : require_confirmation_(true),
@@ -794,7 +820,8 @@ QuicStreamFactory::QuicStreamFactory(
       allow_server_migration_(allow_server_migration),
       force_hol_blocking_(force_hol_blocking),
       race_cert_verification_(race_cert_verification),
-      quic_do_not_fragment_(quic_do_not_fragment),
+      do_not_fragment_(do_not_fragment),
+      estimate_initial_rtt(estimate_initial_rtt),
       check_persisted_supports_quic_(true),
       has_initialized_data_(false),
       num_push_streams_created_(0),
@@ -897,6 +924,24 @@ void QuicStreamFactory::set_quic_server_info_factory(
   quic_server_info_factory_.reset(quic_server_info_factory);
 }
 
+void QuicStreamFactory::DumpMemoryStats(
+    base::trace_event::ProcessMemoryDump* pmd,
+    const std::string& parent_absolute_name) const {
+  if (all_sessions_.empty())
+    return;
+  base::trace_event::MemoryAllocatorDump* factory_dump =
+      pmd->CreateAllocatorDump(parent_absolute_name + "/quic_stream_factory");
+  size_t memory_estimate =
+      base::trace_event::EstimateMemoryUsage(all_sessions_);
+  factory_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
+                          base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                          memory_estimate);
+  factory_dump->AddScalar(
+      base::trace_event::MemoryAllocatorDump::kNameObjectCount,
+      base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+      all_sessions_.size());
+}
+
 bool QuicStreamFactory::CanUseExistingSession(const QuicServerId& server_id,
                                               const HostPortPair& destination) {
   // TODO(zhongyi): delete active_sessions_.empty() checks once the
@@ -987,7 +1032,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   if (!task_runner_)
     task_runner_ = base::ThreadTaskRunnerHandle::Get().get();
 
-  QuicServerInfo* quic_server_info = nullptr;
+  std::unique_ptr<QuicServerInfo> quic_server_info;
   if (quic_server_info_factory_.get()) {
     bool load_from_disk_cache = !disable_disk_cache_;
     MaybeInitialize();
@@ -1005,7 +1050,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
   QuicSessionKey key(destination, server_id);
   std::unique_ptr<Job> job = base::MakeUnique<Job>(
       this, host_resolver_, key, WasQuicRecentlyBroken(server_id),
-      cert_verify_flags, quic_server_info, net_log);
+      cert_verify_flags, std::move(quic_server_info), net_log);
   int rv = job->Run(base::Bind(&QuicStreamFactory::OnJobComplete,
                                base::Unretained(this), job.get()));
   if (rv == ERR_IO_PENDING) {
@@ -1045,6 +1090,11 @@ bool QuicStreamFactory::QuicSessionKey::operator==(
     const QuicSessionKey& other) const {
   return destination_.Equals(other.destination_) &&
          server_id_ == other.server_id_;
+}
+
+size_t QuicStreamFactory::QuicSessionKey::EstimateMemoryUsage() const {
+  return HostPortPair::EstimateMemoryUsage(destination_) +
+         EstimateServerIdMemoryUsage(server_id_);
 }
 
 void QuicStreamFactory::CreateAuxilaryJob(const QuicSessionKey& key,
@@ -1565,7 +1615,7 @@ int QuicStreamFactory::ConfigureSocket(DatagramClientSocket* socket,
     return rv;
   }
 
-  if (quic_do_not_fragment_) {
+  if (do_not_fragment_) {
     rv = socket->SetDoNotFragment();
     // SetDoNotFragment is not implemented on all platforms, so ignore errors.
     if (rv != OK && rv != ERR_NOT_IMPLEMENTED) {
@@ -1654,10 +1704,8 @@ int QuicStreamFactory::CreateSession(
   config.SetInitialSessionFlowControlWindowToSend(
       kQuicSessionMaxRecvWindowSize);
   config.SetInitialStreamFlowControlWindowToSend(kQuicStreamMaxRecvWindowSize);
-  int64_t srtt = GetServerNetworkStatsSmoothedRttInMicroseconds(server_id);
-  if (srtt > 0)
-    config.SetInitialRoundTripTimeUsToSend(static_cast<uint32_t>(srtt));
   config.SetBytesForConnectionIdToSend(0);
+  ConfigureInitialRttEstimate(server_id, &config);
 
   if (force_hol_blocking_)
     config.SetForceHolBlocking();
@@ -1666,7 +1714,7 @@ int QuicStreamFactory::CreateSession(
     // Start the disk cache loading so that we can persist the newer QUIC server
     // information and/or inform the disk cache that we have reused
     // |server_info|.
-    server_info.reset(quic_server_info_factory_->GetForServer(server_id));
+    server_info = quic_server_info_factory_->GetForServer(server_id);
     server_info->Start();
   }
 
@@ -1683,7 +1731,7 @@ int QuicStreamFactory::CreateSession(
       connection, std::move(socket), this, quic_crypto_client_stream_factory_,
       clock_.get(), transport_security_state_, std::move(server_info),
       server_id, yield_after_packets_, yield_after_duration_, cert_verify_flags,
-      config, &crypto_config_, network_connection_.GetDescription(),
+      config, &crypto_config_, network_connection_.connection_description(),
       dns_resolution_start_time, dns_resolution_end_time, &push_promise_index_,
       push_delegate_, task_runner_, std::move(socket_performance_watcher),
       net_log.net_log());
@@ -1719,15 +1767,47 @@ void QuicStreamFactory::ActivateSession(const QuicSessionKey& key,
   session_peer_ip_[session] = peer_address;
 }
 
-int64_t QuicStreamFactory::GetServerNetworkStatsSmoothedRttInMicroseconds(
+void QuicStreamFactory::ConfigureInitialRttEstimate(
+    const QuicServerId& server_id,
+    QuicConfig* config) {
+  const base::TimeDelta* srtt = GetServerNetworkStatsSmoothedRtt(server_id);
+  if (srtt != nullptr) {
+    SetInitialRttEstimate(*srtt, INITIAL_RTT_CACHED, config);
+    return;
+  }
+
+  NetworkChangeNotifier::ConnectionType type =
+      network_connection_.connection_type();
+  if (type == NetworkChangeNotifier::CONNECTION_2G) {
+    SetInitialRttEstimate(base::TimeDelta::FromMilliseconds(1200),
+                          INITIAL_RTT_CACHED, config);
+    return;
+  }
+
+  if (type == NetworkChangeNotifier::CONNECTION_3G) {
+    SetInitialRttEstimate(base::TimeDelta::FromMilliseconds(400),
+                          INITIAL_RTT_CACHED, config);
+    return;
+  }
+
+  SetInitialRttEstimate(base::TimeDelta(), INITIAL_RTT_DEFAULT, config);
+}
+
+const base::TimeDelta* QuicStreamFactory::GetServerNetworkStatsSmoothedRtt(
     const QuicServerId& server_id) const {
   url::SchemeHostPort server("https", server_id.host_port_pair().host(),
                              server_id.host_port_pair().port());
   const ServerNetworkStats* stats =
       http_server_properties_->GetServerNetworkStats(server);
   if (stats == nullptr)
-    return 0;
-  return stats->srtt.InMicroseconds();
+    return nullptr;
+  return &(stats->srtt);
+}
+
+int64_t QuicStreamFactory::GetServerNetworkStatsSmoothedRttInMicroseconds(
+    const QuicServerId& server_id) const {
+  const base::TimeDelta* srtt = GetServerNetworkStatsSmoothedRtt(server_id);
+  return srtt == nullptr ? 0 : srtt->InMicroseconds();
 }
 
 bool QuicStreamFactory::WasQuicRecentlyBroken(
@@ -1848,7 +1928,7 @@ void QuicStreamFactory::MaybeInitialize() {
     server_list.push_back(key_value.first);
   for (auto it = server_list.rbegin(); it != server_list.rend(); ++it) {
     const QuicServerId& server_id = *it;
-    server_info.reset(quic_server_info_factory_->GetForServer(server_id));
+    server_info = quic_server_info_factory_->GetForServer(server_id);
     if (server_info->WaitForDataReady(callback) == OK) {
       DVLOG(1) << "Initialized server config for: " << server_id.ToString();
       InitializeCachedStateInCryptoConfig(server_id, server_info, nullptr);

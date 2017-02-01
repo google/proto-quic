@@ -188,7 +188,7 @@ class OilpanGCTimesForBlinkPerf(_OilpanGCTimesBase):
     super(OilpanGCTimesForBlinkPerf, self).WillNavigateToPage(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression('testRunner.isDone', 600)
+    tab.WaitForJavaScriptCondition2('testRunner.isDone', timeout=600)
     super(OilpanGCTimesForBlinkPerf, self).ValidateAndMeasurePage(
         page, tab, results)
 

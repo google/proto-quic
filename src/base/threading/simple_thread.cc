@@ -17,7 +17,6 @@ SimpleThread::SimpleThread(const std::string& name_prefix)
 SimpleThread::SimpleThread(const std::string& name_prefix,
                            const Options& options)
     : name_prefix_(name_prefix),
-      name_(name_prefix),
       options_(options),
       event_(WaitableEvent::ResetPolicy::MANUAL,
              WaitableEvent::InitialState::NOT_SIGNALED) {}
@@ -58,9 +57,10 @@ bool SimpleThread::HasBeenStarted() {
 void SimpleThread::ThreadMain() {
   tid_ = PlatformThread::CurrentId();
   // Construct our full name of the form "name_prefix_/TID".
-  name_.push_back('/');
-  name_.append(IntToString(tid_));
-  PlatformThread::SetName(name_);
+  std::string name(name_prefix_);
+  name.push_back('/');
+  name.append(IntToString(tid_));
+  PlatformThread::SetName(name);
 
   // We've initialized our new thread, signal that we're done to Start().
   event_.Signal();

@@ -13,9 +13,11 @@
 #include "base/synchronization/atomic_flag.h"
 #include "base/synchronization/waitable_event.h"
 #include "base/task_scheduler/scheduler_lock.h"
+#include "base/task_scheduler/scheduler_worker_params.h"
 #include "base/task_scheduler/sequence.h"
 #include "base/threading/platform_thread.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 
 namespace base {
 namespace internal {
@@ -76,8 +78,6 @@ class BASE_EXPORT SchedulerWorker {
     // - The next WakeUp() could be more costly due to new thread creation.
     // - The worker will take this as a signal that it can detach, but it is not
     //   obligated to do so.
-    // This MUST return false if SchedulerWorker::JoinForTesting() is in
-    // progress.
     virtual bool CanDetach(SchedulerWorker* worker) = 0;
 
     // Called by a thread before it detaches. This method is not allowed to
@@ -94,12 +94,15 @@ class BASE_EXPORT SchedulerWorker {
   // |task_tracker| is used to handle shutdown behavior of Tasks. If
   // |worker_state| is DETACHED, the thread will be created upon a WakeUp().
   // Returns nullptr if creating the underlying platform thread fails during
-  // Create().
+  // Create(). |backward_compatibility| indicates whether backward compatibility
+  // is enabled.
   static std::unique_ptr<SchedulerWorker> Create(
       ThreadPriority priority_hint,
       std::unique_ptr<Delegate> delegate,
       TaskTracker* task_tracker,
-      InitialState initial_state);
+      InitialState initial_state,
+      SchedulerBackwardCompatibility backward_compatibility =
+          SchedulerBackwardCompatibility::DISABLED);
 
   // Destroying a SchedulerWorker in production is not allowed; it is always
   // leaked. In tests, it can only be destroyed after JoinForTesting() has
@@ -117,6 +120,10 @@ class BASE_EXPORT SchedulerWorker {
 
   // Joins this SchedulerWorker. If a Task is already running, it will be
   // allowed to complete its execution. This can only be called once.
+  //
+  // Note: A thread that detaches before JoinForTesting() is called may still be
+  // running after JoinForTesting() returns. However, it can't run tasks after
+  // JoinForTesting() returns.
   void JoinForTesting();
 
   // Returns true if the worker is alive.
@@ -127,7 +134,8 @@ class BASE_EXPORT SchedulerWorker {
 
   SchedulerWorker(ThreadPriority thread_priority,
                   std::unique_ptr<Delegate> delegate,
-                  TaskTracker* task_tracker);
+                  TaskTracker* task_tracker,
+                  SchedulerBackwardCompatibility backward_compatibility);
 
   // Returns the thread instance if the detach was successful so that it can be
   // freed upon termination of the thread.
@@ -145,8 +153,13 @@ class BASE_EXPORT SchedulerWorker {
   std::unique_ptr<Thread> thread_;
 
   const ThreadPriority priority_hint_;
+
   const std::unique_ptr<Delegate> delegate_;
   TaskTracker* const task_tracker_;
+
+#if defined(OS_WIN)
+  const SchedulerBackwardCompatibility backward_compatibility_;
+#endif
 
   // Set once JoinForTesting() has been called.
   AtomicFlag should_exit_for_testing_;

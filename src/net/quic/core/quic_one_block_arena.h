@@ -15,8 +15,7 @@
 #include "net/quic/core/quic_arena_scoped_ptr.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
-
-#define PREDICT_FALSE(x) x
+#include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
 
@@ -60,7 +59,7 @@ QuicArenaScopedPtr<T> QuicOneBlockArena<ArenaSize>::New(Args&&... args) {
       << "Object is too large for the arena.";
   static_assert(QUIC_ALIGN_OF(T) > 1,
                 "Objects added to the arena must be at least 2B aligned.");
-  if (PREDICT_FALSE(offset_ > ArenaSize - AlignedSize<T>())) {
+  if (QUIC_PREDICT_FALSE(offset_ > ArenaSize - AlignedSize<T>())) {
     QUIC_BUG << "Ran out of space in QuicOneBlockArena at " << this
              << ", max size was " << ArenaSize << ", failing request was "
              << AlignedSize<T>() << ", end of arena was " << offset_;

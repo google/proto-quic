@@ -17,6 +17,7 @@
 #include "base/metrics/field_trial.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/pending_task.h"
+#include "base/pickle.h"
 #include "base/process/process.h"
 #include "base/process/process_handle.h"
 #include "base/stl_util.h"
@@ -43,6 +44,9 @@ const size_t kUserDataSize = 1024;    // bytes
 const size_t kGlobalDataSize = 4096;  // bytes
 const size_t kMaxUserDataNameLength =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
+
+// A constant used to indicate that module information is changing.
+const uint32_t kModuleInformationChanging = 0x80000000;
 
 union ThreadRef {
   int64_t as_id;
@@ -478,6 +482,10 @@ const void* ActivityUserData::GetBaseAddress() {
 // the very first time the thread is seen. All fields must be of exact sizes
 // so there is no issue moving between 32 and 64-bit builds.
 struct ThreadActivityTracker::Header {
+  // Defined in .h for analyzer access. Increment this if structure changes!
+  static constexpr uint32_t kPersistentTypeId =
+      GlobalActivityTracker::kTypeIdActivityTracker;
+
   // Expected size for 32/64-bit check.
   static constexpr size_t kExpectedInstanceSize = 80;
 
@@ -894,6 +902,119 @@ size_t ThreadActivityTracker::SizeForStackDepth(int stack_depth) {
 
 GlobalActivityTracker* GlobalActivityTracker::g_tracker_ = nullptr;
 
+GlobalActivityTracker::ModuleInfo::ModuleInfo() {}
+GlobalActivityTracker::ModuleInfo::ModuleInfo(ModuleInfo&& rhs) = default;
+GlobalActivityTracker::ModuleInfo::ModuleInfo(const ModuleInfo& rhs) = default;
+GlobalActivityTracker::ModuleInfo::~ModuleInfo() {}
+
+GlobalActivityTracker::ModuleInfo& GlobalActivityTracker::ModuleInfo::operator=(
+    ModuleInfo&& rhs) = default;
+GlobalActivityTracker::ModuleInfo& GlobalActivityTracker::ModuleInfo::operator=(
+    const ModuleInfo& rhs) = default;
+
+GlobalActivityTracker::ModuleInfoRecord::ModuleInfoRecord() {}
+GlobalActivityTracker::ModuleInfoRecord::~ModuleInfoRecord() {}
+
+bool GlobalActivityTracker::ModuleInfoRecord::DecodeTo(
+    GlobalActivityTracker::ModuleInfo* info,
+    size_t record_size) const {
+  // Get the current "changes" indicator, acquiring all the other values.
+  uint32_t current_changes = changes.load(std::memory_order_acquire);
+
+  // Copy out the dynamic information.
+  info->is_loaded = loaded != 0;
+  info->address = static_cast<uintptr_t>(address);
+  info->load_time = load_time;
+
+  // Check to make sure no information changed while being read. A "seq-cst"
+  // operation is expensive but is only done during analysis and it's the only
+  // way to ensure this occurs after all the accesses above. If changes did
+  // occur then return a "not loaded" result so that |size| and |address|
+  // aren't expected to be accurate.
+  if ((current_changes & kModuleInformationChanging) != 0 ||
+      changes.load(std::memory_order_seq_cst) != current_changes) {
+    info->is_loaded = false;
+  }
+
+  // Copy out the static information. These never change so don't have to be
+  // protected by the atomic |current_changes| operations.
+  info->size = static_cast<size_t>(size);
+  info->timestamp = timestamp;
+  info->age = age;
+  memcpy(info->identifier, identifier, sizeof(info->identifier));
+
+  if (offsetof(ModuleInfoRecord, pickle) + pickle_size > record_size)
+    return false;
+  Pickle pickler(pickle, pickle_size);
+  PickleIterator iter(pickler);
+  return iter.ReadString(&info->file) && iter.ReadString(&info->debug_file);
+}
+
+bool GlobalActivityTracker::ModuleInfoRecord::EncodeFrom(
+    const GlobalActivityTracker::ModuleInfo& info,
+    size_t record_size) {
+  Pickle pickler;
+  bool okay =
+      pickler.WriteString(info.file) && pickler.WriteString(info.debug_file);
+  if (!okay) {
+    NOTREACHED();
+    return false;
+  }
+  if (offsetof(ModuleInfoRecord, pickle) + pickler.size() > record_size) {
+    NOTREACHED();
+    return false;
+  }
+
+  // These fields never changes and are done before the record is made
+  // iterable so no thread protection is necessary.
+  size = info.size;
+  timestamp = info.timestamp;
+  age = info.age;
+  memcpy(identifier, info.identifier, sizeof(identifier));
+  memcpy(pickle, pickler.data(), pickler.size());
+  pickle_size = pickler.size();
+  changes.store(0, std::memory_order_relaxed);
+
+  // Now set those fields that can change.
+  return UpdateFrom(info);
+}
+
+bool GlobalActivityTracker::ModuleInfoRecord::UpdateFrom(
+    const GlobalActivityTracker::ModuleInfo& info) {
+  // Updates can occur after the record is made visible so make changes atomic.
+  // A "strong" exchange ensures no false failures.
+  uint32_t old_changes = changes.load(std::memory_order_relaxed);
+  uint32_t new_changes = old_changes | kModuleInformationChanging;
+  if ((old_changes & kModuleInformationChanging) != 0 ||
+      !changes.compare_exchange_strong(old_changes, new_changes,
+                                       std::memory_order_acquire,
+                                       std::memory_order_acquire)) {
+    NOTREACHED() << "Multiple sources are updating module information.";
+    return false;
+  }
+
+  loaded = info.is_loaded ? 1 : 0;
+  address = info.address;
+  load_time = Time::Now().ToInternalValue();
+
+  bool success = changes.compare_exchange_strong(new_changes, old_changes + 1,
+                                                 std::memory_order_release,
+                                                 std::memory_order_relaxed);
+  DCHECK(success);
+  return true;
+}
+
+// static
+size_t GlobalActivityTracker::ModuleInfoRecord::EncodedSize(
+    const GlobalActivityTracker::ModuleInfo& info) {
+  PickleSizer sizer;
+  sizer.AddString(info.file);
+  sizer.AddString(info.debug_file);
+
+  return offsetof(ModuleInfoRecord, pickle) + sizeof(Pickle::Header) +
+         sizer.payload_size();
+}
+
 GlobalActivityTracker::ScopedThreadActivity::ScopedThreadActivity(
     const void* program_counter,
     const void* origin,
@@ -1022,13 +1143,8 @@ ThreadActivityTracker* GlobalActivityTracker::CreateTrackerForCurrentThread() {
   // TODO(bcwhite): Review this after major compiler releases.
   DCHECK(mem_reference);
   void* mem_base;
-#if 0  // TODO(bcwhite): Update this for new GetAsObject functionality.
-  mem_base = allocator_->GetAsObject<ThreadActivityTracker::Header>(
-      mem_reference, kTypeIdActivityTracker);
-#else
-  mem_base = allocator_->GetAsArray<char>(mem_reference, kTypeIdActivityTracker,
-                                          PersistentMemoryAllocator::kSizeAny);
-#endif
+  mem_base =
+      allocator_->GetAsObject<ThreadActivityTracker::Header>(mem_reference);
 
   DCHECK(mem_base);
   DCHECK_LE(stack_memory_size_, allocator_->GetAllocSize(mem_reference));
@@ -1066,6 +1182,33 @@ void GlobalActivityTracker::RecordLogMessage(StringPiece message) {
   }
 }
 
+void GlobalActivityTracker::RecordModuleInfo(const ModuleInfo& info) {
+  AutoLock lock(modules_lock_);
+  auto found = modules_.find(info.file);
+  if (found != modules_.end()) {
+    ModuleInfoRecord* record = found->second;
+    DCHECK(record);
+
+    // Update the basic state of module information that has been already
+    // recorded. It is assumed that the string information (identifier,
+    // version, etc.) remain unchanged which means that there's no need
+    // to create a new record to accommodate a possibly longer length.
+    record->UpdateFrom(info);
+    return;
+  }
+
+  size_t required_size = ModuleInfoRecord::EncodedSize(info);
+  ModuleInfoRecord* record =
+      allocator_->AllocateObject<ModuleInfoRecord>(required_size);
+  if (!record)
+    return;
+
+  bool success = record->EncodeFrom(info, required_size);
+  DCHECK(success);
+  allocator_->MakeIterable(record);
+  modules_.insert(std::make_pair(info.file, record));
+}
+
 GlobalActivityTracker::GlobalActivityTracker(
     std::unique_ptr<PersistentMemoryAllocator> allocator,
     int stack_depth)
@@ -1099,8 +1242,7 @@ GlobalActivityTracker::GlobalActivityTracker(
   DCHECK(!g_tracker_);
   g_tracker_ = this;
 
-  // The global user-data record must be iterable in order to be found by an
-  // analyzer.
+  // The global records must be iterable in order to be found by an analyzer.
   allocator_->MakeIterable(allocator_->GetAsReference(
       user_data_.GetBaseAddress(), kTypeIdGlobalDataRecord));
 }

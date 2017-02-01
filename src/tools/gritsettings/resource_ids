@@ -105,38 +105,38 @@
     "structures": [11920],
   },
   "chrome/browser/resources/options_test_resources.grd": {
-    "structures": [11950],
+    "structures": [11970],
   },
   "chrome/browser/resources/password_manager_internals_resources.grd": {
-    "includes": [11960],
+    "includes": [11980],
   },
   "chrome/browser/resources/quota_internals_resources.grd": {
-    "includes": [11970],
+    "includes": [11990],
   },
   "chrome/browser/resources/settings/settings_resources.grd": {
-    "structures": [12000],
+    "structures": [12020],
   },
   "chrome/browser/resources/sync_file_system_internals_resources.grd": {
-    "includes": [12500],
+    "includes": [12520],
   },
   "chrome/browser/resources/task_scheduler_internals/resources.grd": {
-    "includes": [12530],
+    "includes": [12550],
   },
   "chrome/browser/resources/translate_internals_resources.grd": {
-    "includes": [12540],
+    "includes": [12560],
   },
   # END chrome/browser section.
 
   # START chrome/ miscellaneous section.
   "chrome/common/common_resources.grd": {
-    "includes": [12700],
+    "includes": [12720],
   },
   "chrome/renderer/resources/renderer_resources.grd": {
-    "includes": [12710],
-    "structures": [12790],
+    "includes": [12730],
+    "structures": [12810],
   },
   "chrome/test/data/webui_test_resources.grd": {
-    "includes": [12800],
+    "includes": [12820],
   },
   # END chrome/ miscellaneous section.
 

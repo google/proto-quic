@@ -9,8 +9,8 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 #include "base/task_scheduler/task_tracker.h"
-#include "build/build_config.h"
 
 #if defined(OS_MACOSX)
 #include "base/mac/scoped_nsautorelease_pool.h"
@@ -44,12 +44,11 @@ class SchedulerWorker::Thread : public PlatformThread::Delegate {
     WaitForWork();
 
 #if defined(OS_WIN)
-    // This is required as SequencedWorkerPool previously blindly CoInitialized
-    // all of its threads.
-    // TODO: Get rid of this broad COM scope and force tasks that care about a
-    // CoInitialized environment to request one (via an upcoming execution
-    // mode).
-    win::ScopedCOMInitializer com_initializer;
+    std::unique_ptr<win::ScopedCOMInitializer> com_initializer;
+    if (outer_->backward_compatibility_ ==
+        SchedulerBackwardCompatibility::INIT_COM_STA) {
+      com_initializer = MakeUnique<win::ScopedCOMInitializer>();
+    }
 #endif
 
     while (!outer_->task_tracker_->IsShutdownComplete() &&
@@ -192,9 +191,11 @@ std::unique_ptr<SchedulerWorker> SchedulerWorker::Create(
     ThreadPriority priority_hint,
     std::unique_ptr<Delegate> delegate,
     TaskTracker* task_tracker,
-    InitialState initial_state) {
-  std::unique_ptr<SchedulerWorker> worker(
-      new SchedulerWorker(priority_hint, std::move(delegate), task_tracker));
+    InitialState initial_state,
+    SchedulerBackwardCompatibility backward_compatibility) {
+  auto worker =
+      WrapUnique(new SchedulerWorker(priority_hint, std::move(delegate),
+                                     task_tracker, backward_compatibility));
   // Creation happens before any other thread can reference this one, so no
   // synchronization is necessary.
   if (initial_state == SchedulerWorker::InitialState::ALIVE) {
@@ -216,6 +217,9 @@ SchedulerWorker::~SchedulerWorker() {
 
 void SchedulerWorker::WakeUp() {
   AutoSchedulerLock auto_lock(thread_lock_);
+
+  DCHECK(!should_exit_for_testing_.IsSet());
+
   if (!thread_)
     CreateThreadAssertSynchronized();
 
@@ -227,17 +231,21 @@ void SchedulerWorker::JoinForTesting() {
   DCHECK(!should_exit_for_testing_.IsSet());
   should_exit_for_testing_.Set();
 
-  WakeUp();
+  std::unique_ptr<Thread> thread;
 
-  // Normally holding a lock and joining is dangerous. However, since this is
-  // only for testing, we're okay since the only scenario that could impact this
-  // is a call to Detach, which is disallowed by having the delegate always
-  // return false for the CanDetach call.
-  AutoSchedulerLock auto_lock(thread_lock_);
-  if (thread_)
-    thread_->Join();
+  {
+    AutoSchedulerLock auto_lock(thread_lock_);
 
-  thread_.reset();
+    if (thread_) {
+      // Make sure the thread is awake. It will see that
+      // |should_exit_for_testing_| is set and exit shortly after.
+      thread_->WakeUp();
+      thread = std::move(thread_);
+    }
+  }
+
+  if (thread)
+    thread->Join();
 }
 
 bool SchedulerWorker::ThreadAliveForTesting() const {
@@ -245,19 +253,32 @@ bool SchedulerWorker::ThreadAliveForTesting() const {
   return !!thread_;
 }
 
-SchedulerWorker::SchedulerWorker(ThreadPriority priority_hint,
-                                 std::unique_ptr<Delegate> delegate,
-                                 TaskTracker* task_tracker)
+SchedulerWorker::SchedulerWorker(
+    ThreadPriority priority_hint,
+    std::unique_ptr<Delegate> delegate,
+    TaskTracker* task_tracker,
+    SchedulerBackwardCompatibility backward_compatibility)
     : priority_hint_(priority_hint),
       delegate_(std::move(delegate)),
-      task_tracker_(task_tracker) {
+      task_tracker_(task_tracker)
+#if defined(OS_WIN)
+      ,
+      backward_compatibility_(backward_compatibility)
+#endif
+{
   DCHECK(delegate_);
   DCHECK(task_tracker_);
 }
 
 std::unique_ptr<SchedulerWorker::Thread> SchedulerWorker::Detach() {
-  DCHECK(!should_exit_for_testing_.IsSet()) << "Worker was already joined";
   AutoSchedulerLock auto_lock(thread_lock_);
+
+  // Do not detach if the thread is being joined.
+  if (!thread_) {
+    DCHECK(should_exit_for_testing_.IsSet());
+    return nullptr;
+  }
+
   // If a wakeup is pending, then a WakeUp() came in while we were deciding to
   // detach. This means we can't go away anymore since we would break the
   // guarantee that we call GetWork() after a successful wakeup.

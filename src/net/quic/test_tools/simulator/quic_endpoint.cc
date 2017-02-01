@@ -5,14 +5,13 @@
 #include "net/quic/test_tools/simulator/quic_endpoint.h"
 
 #include "base/sha1.h"
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -64,7 +63,7 @@ QuicEndpoint::QuicEndpoint(Simulator* simulator,
       peer_name_(peer_name),
       writer_(this),
       nic_tx_queue_(simulator,
-                    StringPrintf("%s (TX Queue)", name.c_str()),
+                    QuicStringPrintf("%s (TX Queue)", name.c_str()),
                     kMaxPacketSize * kTxQueueSize),
       connection_(connection_id,
                   GetAddressFromName(peer_name),

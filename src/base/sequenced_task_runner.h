@@ -163,9 +163,7 @@ struct BASE_EXPORT OnTaskRunnerDeleter {
 
   template <typename T>
   void operator()(const T* ptr) {
-    if (task_runner_->RunsTasksOnCurrentThread())
-      delete ptr;
-    else if (ptr)
+    if (ptr)
       task_runner_->DeleteSoon(FROM_HERE, ptr);
   }
 

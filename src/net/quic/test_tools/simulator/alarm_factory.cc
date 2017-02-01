@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_alarm.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/simulator/alarm_factory.h"
 
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -60,7 +59,7 @@ AlarmFactory::~AlarmFactory() {}
 
 string AlarmFactory::GetNewAlarmName() {
   ++counter_;
-  return StringPrintf("%s (alarm %i)", name_.c_str(), counter_);
+  return QuicStringPrintf("%s (alarm %i)", name_.c_str(), counter_);
 }
 
 QuicAlarm* AlarmFactory::CreateAlarm(QuicAlarm::Delegate* delegate) {

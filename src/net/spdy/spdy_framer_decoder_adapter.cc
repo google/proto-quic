@@ -179,7 +179,7 @@ bool SpdyFramerVisitorAdapter::OnUnknownFrame(SpdyStreamId stream_id,
 
 class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
   typedef SpdyFramer::SpdyState SpdyState;
-  typedef SpdyFramer::SpdyError SpdyError;
+  typedef SpdyFramer::SpdyFramerError SpdyFramerError;
 
  public:
   explicit NestedSpdyFramerDecoder(SpdyFramer* outer)
@@ -229,8 +229,8 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
 
   void Reset() override { framer_.Reset(); }
 
-  SpdyFramer::SpdyError error_code() const override {
-    return framer_.error_code();
+  SpdyFramer::SpdyFramerError spdy_framer_error() const override {
+    return framer_.spdy_framer_error();
   }
   SpdyFramer::SpdyState state() const override { return framer_.state(); }
   bool probable_http_response() const override {

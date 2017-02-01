@@ -47,8 +47,10 @@ class PowerTypical10Mobile(perf_benchmark.PerfBenchmark):
   def Name(cls):
     return 'power.typical_10_mobile'
 
-
-@benchmark.Enabled('android')
+# This benchmark runs only on android but it is disabled on android as well
+# because of http://crbug.com/683238
+# @benchmark.Enabled('android')
+@benchmark.Disabled('all')
 @benchmark.Disabled('android-webview')  # http://crbug.com/622300
 class PowerToughAdCases(perf_benchmark.PerfBenchmark):
   """Android power test with tough ad pages."""

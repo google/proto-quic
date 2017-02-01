@@ -755,11 +755,6 @@ void URLRequestHttpJob::SaveCookiesAndNotifyHeadersComplete(int result) {
     options.set_include_httponly();
     options.set_server_time(response_date);
 
-    if (network_delegate() &&
-        network_delegate()->AreStrictSecureCookiesEnabled()) {
-      options.set_enforce_strict_secure();
-    }
-
     // Set all cookies, without waiting for them to be set. Any subsequent read
     // will see the combined result of all cookie operation.
     const base::StringPiece name("Set-Cookie");

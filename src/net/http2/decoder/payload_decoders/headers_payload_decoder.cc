@@ -30,7 +30,11 @@ std::ostream& operator<<(std::ostream& out,
     case HeadersPayloadDecoder::PayloadState::kSkipPadding:
       return out << "kSkipPadding";
   }
-  return out << static_cast<int>(v);
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  int unknown = static_cast<int>(v);
+  HTTP2_BUG << "Invalid HeadersPayloadDecoder::PayloadState: " << unknown;
+  return out << "HeadersPayloadDecoder::PayloadState(" << unknown << ")";
 }
 
 DecodeStatus HeadersPayloadDecoder::StartDecodingPayload(

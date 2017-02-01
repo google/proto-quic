@@ -50,11 +50,6 @@ class NET_EXPORT CookieOptions {
     return same_site_cookie_mode_;
   }
 
-  // TODO(jww): Remove once we decide whether to ship modifying 'secure' cookies
-  // only from secure schemes. https://crbug.com/546820
-  void set_enforce_strict_secure() { enforce_strict_secure_ = true; }
-  bool enforce_strict_secure() const { return enforce_strict_secure_; }
-
   // |server_time| indicates what the server sending us the Cookie thought the
   // current time was when the cookie was produced.  This is used to adjust for
   // clock skew between server and host.
@@ -70,7 +65,6 @@ class NET_EXPORT CookieOptions {
  private:
   bool exclude_httponly_;
   SameSiteCookieMode same_site_cookie_mode_;
-  bool enforce_strict_secure_;
   bool update_access_time_;
   base::Time server_time_;
 };

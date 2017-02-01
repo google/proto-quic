@@ -510,7 +510,7 @@ chrome.fileManagerPrivate.validatePathNameLength = function(
     parentEntry, name, callback) {};
 
 /**
- * Changes the zoom factor of the Files.app. |operation| Zooming mode.
+ * Changes the zoom factor of the Files app. |operation| Zooming mode.
  * @param {string} operation
  */
 chrome.fileManagerPrivate.zoom = function(operation) {};

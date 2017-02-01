@@ -26,7 +26,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   BufferedSpdyFramerVisitorInterface() {}
 
   // Called if an error is detected in the SpdySerializedFrame protocol.
-  virtual void OnError(SpdyFramer::SpdyError error_code) = 0;
+  virtual void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) = 0;
 
   // Called if an error is detected in a HTTP2 stream.
   virtual void OnStreamError(SpdyStreamId stream_id,
@@ -177,7 +177,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   size_t ProcessInput(const char* data, size_t len);
   void UpdateHeaderDecoderTableSize(uint32_t value);
   void Reset();
-  SpdyFramer::SpdyError error_code() const;
+  SpdyFramer::SpdyFramerError spdy_framer_error() const;
   SpdyFramer::SpdyState state() const;
   bool MessageFullyRead();
   bool HasError();

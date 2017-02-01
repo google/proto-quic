@@ -84,6 +84,21 @@ void RemoveDeclaredOverrides(const Scope::KeyValueMap& declared_arguments,
 
 }  // namespace
 
+Args::ValueWithOverride::ValueWithOverride()
+    : default_value(),
+      has_override(false),
+      override_value() {
+}
+
+Args::ValueWithOverride::ValueWithOverride(const Value& def_val)
+    : default_value(def_val),
+      has_override(false),
+      override_value() {
+}
+
+Args::ValueWithOverride::~ValueWithOverride() {
+}
+
 Args::Args() {
 }
 
@@ -122,11 +137,6 @@ const Value* Args::GetArgOverride(const char* name) const {
   if (found == all_overrides_.end())
     return nullptr;
   return &found->second;
-}
-
-Scope::KeyValueMap Args::GetAllOverrides() const {
-  base::AutoLock lock(lock_);
-  return all_overrides_;
 }
 
 void Args::SetupRootScope(Scope* dest,
@@ -254,12 +264,27 @@ bool Args::VerifyAllOverridesUsed(Err* err) const {
   return false;
 }
 
-void Args::MergeDeclaredArguments(Scope::KeyValueMap* dest) const {
+Args::ValueWithOverrideMap Args::GetAllArguments() const {
+  ValueWithOverrideMap result;
+
   base::AutoLock lock(lock_);
+
+  // Default values.
   for (const auto& map_pair : declared_arguments_per_toolchain_) {
     for (const auto& arg : map_pair.second)
-      (*dest)[arg.first] = arg.second;
+      result.insert(std::make_pair(arg.first, ValueWithOverride(arg.second)));
   }
+
+  // Merge in overrides.
+  for (const auto& over : overrides_) {
+    auto found = result.find(over.first);
+    if (found != result.end()) {
+      found->second.has_override = true;
+      found->second.override_value = over.second;
+    }
+  }
+
+  return result;
 }
 
 void Args::SetSystemVarsLocked(Scope* dest) const {

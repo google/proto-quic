@@ -32,27 +32,30 @@ TEST_F(HttpStreamFactoryImplRequestTest, SetPriority) {
       static_cast<HttpStreamFactoryImpl*>(session->http_stream_factory());
   MockHttpStreamRequestDelegate request_delegate;
   TestJobFactory job_factory;
-  HttpStreamFactoryImpl::JobController* job_controller =
-      new HttpStreamFactoryImpl::JobController(factory, &request_delegate,
-                                               session.get(), &job_factory);
-  factory->job_controller_set_.insert(base::WrapUnique(job_controller));
-
   HttpRequestInfo request_info;
+  auto job_controller = base::MakeUnique<HttpStreamFactoryImpl::JobController>(
+      factory, &request_delegate, session.get(), &job_factory, request_info,
+      /*is_preconnect=*/false);
+  HttpStreamFactoryImpl::JobController* job_controller_raw_ptr =
+      job_controller.get();
+  factory->job_controller_set_.insert(std::move(job_controller));
+
   std::unique_ptr<HttpStreamFactoryImpl::Request> request(
-      job_controller->Start(request_info, &request_delegate, nullptr,
-                            NetLogWithSource(), HttpStreamRequest::HTTP_STREAM,
-                            DEFAULT_PRIORITY, SSLConfig(), SSLConfig()));
-  EXPECT_TRUE(job_controller->main_job());
-  EXPECT_EQ(DEFAULT_PRIORITY, job_controller->main_job()->priority());
+      job_controller_raw_ptr->Start(
+          request_info, &request_delegate, nullptr, NetLogWithSource(),
+          HttpStreamRequest::HTTP_STREAM, DEFAULT_PRIORITY, SSLConfig(),
+          SSLConfig()));
+  EXPECT_TRUE(job_controller_raw_ptr->main_job());
+  EXPECT_EQ(DEFAULT_PRIORITY, job_controller_raw_ptr->main_job()->priority());
 
   request->SetPriority(MEDIUM);
-  EXPECT_EQ(MEDIUM, job_controller->main_job()->priority());
+  EXPECT_EQ(MEDIUM, job_controller_raw_ptr->main_job()->priority());
 
   EXPECT_CALL(request_delegate, OnStreamFailed(_, _)).Times(1);
-  job_controller->OnStreamFailed(job_factory.main_job(), ERR_FAILED,
-                                 SSLConfig());
+  job_controller_raw_ptr->OnStreamFailed(job_factory.main_job(), ERR_FAILED,
+                                         SSLConfig());
 
   request->SetPriority(IDLE);
-  EXPECT_EQ(IDLE, job_controller->main_job()->priority());
+  EXPECT_EQ(IDLE, job_controller_raw_ptr->main_job()->priority());
 }
 }  // namespace net

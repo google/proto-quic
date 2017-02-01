@@ -107,10 +107,6 @@ bool NetworkDelegateImpl::OnAreExperimentalCookieFeaturesEnabled() const {
   return false;
 }
 
-bool NetworkDelegateImpl::OnAreStrictSecureCookiesEnabled() const {
-  return false;
-}
-
 bool NetworkDelegateImpl::OnCancelURLRequestWithPolicyViolatingReferrerHeader(
     const URLRequest& request,
     const GURL& target_url,

@@ -1,0 +1,2 @@
+gen/extensions/grit/extensions_resources.h
+gen/extensions/extensions_resources.pak

@@ -286,6 +286,7 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // IMPORTANT: Callers must update tools/metrics/histograms/histograms.xml
   // with the following histograms:
   //    UMA.PersistentAllocator.name.Allocs
+  //    UMA.PersistentAllocator.name.Errors
   //    UMA.PersistentAllocator.name.UsedPct
   void CreateTrackingHistograms(base::StringPiece name);
 
@@ -609,11 +610,15 @@ class BASE_EXPORT PersistentMemoryAllocator {
               ref, type_id, size));
   }
 
-  const bool readonly_;              // Indicates access to read-only memory.
-  std::atomic<bool> corrupt_;        // Local version of "corrupted" flag.
+  // Record an error in the internal histogram.
+  void RecordError(int error) const;
+
+  const bool readonly_;                // Indicates access to read-only memory.
+  mutable std::atomic<bool> corrupt_;  // Local version of "corrupted" flag.
 
   HistogramBase* allocs_histogram_;  // Histogram recording allocs.
   HistogramBase* used_histogram_;    // Histogram recording used space.
+  HistogramBase* errors_histogram_;  // Histogram recording errors.
 
   friend class PersistentMemoryAllocatorTest;
   FRIEND_TEST_ALL_PREFIXES(PersistentMemoryAllocatorTest, AllocateAndIterate);

@@ -28,8 +28,8 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
         header_stream_id_(static_cast<SpdyStreamId>(-1)),
         promised_stream_id_(static_cast<SpdyStreamId>(-1)) {}
 
-  void OnError(SpdyFramer::SpdyError error_code) override {
-    VLOG(1) << "SpdyFramer Error: " << error_code;
+  void OnError(SpdyFramer::SpdyFramerError spdy_framer_error) override {
+    VLOG(1) << "SpdyFramer Error: " << spdy_framer_error;
     error_count_++;
   }
 
@@ -133,7 +133,8 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
     size_t input_remaining = size;
     const char* input_ptr = reinterpret_cast<const char*>(input);
     while (input_remaining > 0 &&
-           buffered_spdy_framer_.error_code() == SpdyFramer::SPDY_NO_ERROR) {
+           buffered_spdy_framer_.spdy_framer_error() ==
+               SpdyFramer::SPDY_NO_ERROR) {
       // To make the tests more interesting, we feed random (amd small) chunks
       // into the framer.  This simulates getting strange-sized reads from
       // the socket.

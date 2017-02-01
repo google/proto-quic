@@ -55,7 +55,7 @@ FrameParts::FrameParts(const Http2FrameHeader& header) : frame_header(header) {
 FrameParts::FrameParts(const Http2FrameHeader& header, StringPiece payload)
     : FrameParts(header) {
   VLOG(1) << "FrameParts with payload.size() = " << payload.size();
-  payload.AppendToString(&this->payload);
+  this->payload.append(payload.data(), payload.size());
   opt_payload_length = payload.size();
 }
 FrameParts::FrameParts(const Http2FrameHeader& header,
@@ -66,7 +66,7 @@ FrameParts::FrameParts(const Http2FrameHeader& header,
   SetTotalPadLength(total_pad_length);
 }
 
-FrameParts::FrameParts(const FrameParts& other) = default;
+FrameParts::FrameParts(const FrameParts& header) = default;
 
 FrameParts::~FrameParts() {}
 
@@ -118,8 +118,8 @@ void FrameParts::SetTotalPadLength(size_t total_pad_length) {
 }
 
 void FrameParts::SetAltSvcExpected(StringPiece origin, StringPiece value) {
-  origin.AppendToString(&altsvc_origin);
-  value.AppendToString(&altsvc_value);
+  altsvc_origin.append(origin.data(), origin.size());
+  altsvc_value.append(value.data(), value.size());
   opt_altsvc_origin_length = origin.size();
   opt_altsvc_value_length = value.size();
 }
@@ -205,7 +205,7 @@ void FrameParts::OnPadLength(size_t trailing_length) {
   ASSERT_FALSE(opt_pad_length);
   ASSERT_TRUE(opt_payload_length);
   size_t total_padding_length = trailing_length + 1;
-  ASSERT_GE(opt_payload_length.value(), static_cast<int>(total_padding_length));
+  ASSERT_GE(opt_payload_length.value(), total_padding_length);
   opt_payload_length = opt_payload_length.value() - total_padding_length;
   opt_pad_length = trailing_length;
 }
@@ -265,8 +265,7 @@ void FrameParts::OnPushPromiseStart(const Http2FrameHeader& header,
   ASSERT_FALSE(opt_push_promise);
   opt_push_promise = promise;
   if (total_padding_length > 0) {
-    ASSERT_GE(opt_payload_length.value(),
-              static_cast<int>(total_padding_length));
+    ASSERT_GE(opt_payload_length.value(), total_padding_length);
     OnPadLength(total_padding_length - 1);
   } else {
     ASSERT_FALSE(header.IsPadded());
@@ -507,8 +506,8 @@ AssertionResult FrameParts::InPaddedFrame() {
 
 AssertionResult FrameParts::AppendString(StringPiece source,
                                          string* target,
-                                         base::Optional<int>* opt_length) {
-  source.AppendToString(target);
+                                         base::Optional<size_t>* opt_length) {
+  target->append(source.data(), source.size());
   if (opt_length != nullptr) {
     VERIFY_TRUE(*opt_length) << "Length is not set yet\n" << *this;
     VERIFY_LE(target->size(), static_cast<size_t>(opt_length->value()))

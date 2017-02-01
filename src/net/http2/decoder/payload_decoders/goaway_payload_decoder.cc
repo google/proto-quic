@@ -28,9 +28,11 @@ std::ostream& operator<<(std::ostream& out,
     case GoAwayPayloadDecoder::PayloadState::kResumeDecodingFixedFields:
       return out << "kResumeDecodingFixedFields";
   }
-
-  NOTREACHED();
-  return out;
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  int unknown = static_cast<int>(v);
+  HTTP2_BUG << "Invalid GoAwayPayloadDecoder::PayloadState: " << unknown;
+  return out << "GoAwayPayloadDecoder::PayloadState(" << unknown << ")";
 }
 
 DecodeStatus GoAwayPayloadDecoder::StartDecodingPayload(

@@ -1,0 +1,2 @@
+gen/chrome/grit/net_internals_resources.h
+gen/chrome/net_internals_resources.pak

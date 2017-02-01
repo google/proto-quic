@@ -1,0 +1,4 @@
+gen/blink/grit/devtools_resources.h
+gen/blink/devtools_resources.pak
+gen/blink/grit/devtools_resources_map.cc
+gen/blink/grit/devtools_resources_map.h

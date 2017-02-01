@@ -438,7 +438,6 @@ void RecordInfo::DetermineTracingMethods() {
   if (Config::IsGCBase(name_))
     return;
   CXXMethodDecl* trace = nullptr;
-  CXXMethodDecl* trace_impl = nullptr;
   CXXMethodDecl* trace_after_dispatch = nullptr;
   bool has_adjust_and_mark = false;
   bool has_is_heap_object_alive = false;
@@ -459,11 +458,6 @@ void RecordInfo::DetermineTracingMethods() {
       case Config::TRACE_AFTER_DISPATCH_METHOD:
         trace_after_dispatch = method;
         break;
-      case Config::TRACE_IMPL_METHOD:
-        trace_impl = method;
-        break;
-      case Config::TRACE_AFTER_DISPATCH_IMPL_METHOD:
-        break;
       case Config::NOT_TRACE_METHOD:
         if (method->getNameAsString() == kFinalizeName) {
           finalize_dispatch_method_ = method;
@@ -481,7 +475,7 @@ void RecordInfo::DetermineTracingMethods() {
       has_adjust_and_mark && has_is_heap_object_alive ? kTrue : kFalse;
   if (trace_after_dispatch) {
     trace_method_ = trace_after_dispatch;
-    trace_dispatch_method_ = trace_impl ? trace_impl : trace;
+    trace_dispatch_method_ = trace;
   } else {
     // TODO: Can we never have a dispatch method called trace without the same
     // class defining a traceAfterDispatch method?

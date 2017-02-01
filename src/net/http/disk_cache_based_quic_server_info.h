@@ -32,6 +32,7 @@ class NET_EXPORT_PRIVATE DiskCacheBasedQuicServerInfo
  public:
   DiskCacheBasedQuicServerInfo(const QuicServerId& server_id,
                                HttpCache* http_cache);
+  ~DiskCacheBasedQuicServerInfo() override;
 
   // QuicServerInfo implementation.
   void Start() override;
@@ -61,8 +62,6 @@ class NET_EXPORT_PRIVATE DiskCacheBasedQuicServerInfo
     SET_DONE,
     NONE,
   };
-
-  ~DiskCacheBasedQuicServerInfo() override;
 
   // Persists |pending_write_data_| if it is not empty, otherwise serializes the
   // data and pesists it.

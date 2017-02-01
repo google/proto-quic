@@ -38,6 +38,9 @@ class BASE_EXPORT TaskScheduler {
   using WorkerPoolIndexForTraitsCallback =
       Callback<size_t(const TaskTraits& traits)>;
 
+  // Destroying a TaskScheduler is not allowed in production; it is always
+  // leaked. In tests, it should only be destroyed after JoinForTesting() has
+  // returned.
   virtual ~TaskScheduler() = default;
 
   // Posts |task| with a |delay| and specific |traits|. |delay| can be zero.
@@ -84,6 +87,10 @@ class BASE_EXPORT TaskScheduler {
   // Does not wait for delayed tasks. Waits for undelayed tasks posted from
   // other threads during the call. Returns immediately when shutdown completes.
   virtual void FlushForTesting() = 0;
+
+  // Joins all threads. Tasks that are already running are allowed to complete
+  // their execution. This can only be called once.
+  virtual void JoinForTesting() = 0;
 
   // CreateAndSetSimpleTaskScheduler(), CreateAndSetDefaultTaskScheduler(), and
   // SetInstance() register a TaskScheduler to handle tasks posted through the

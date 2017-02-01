@@ -317,6 +317,11 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
 
   QuicVersion GetQuicVersion() const;
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  // See base/trace_event/memory_usage_estimator.h.
+  // TODO(xunjieli): It only tracks |packet_readers_|. Write a better estimate.
+  size_t EstimateMemoryUsage() const;
+
  protected:
   // QuicSession methods:
   bool ShouldCreateIncomingDynamicStream(QuicStreamId id) override;

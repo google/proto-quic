@@ -40,9 +40,9 @@ void TestTaskRunner::RunNextTask() {
   DCHECK(next != tasks_.end());
   clock_->AdvanceTime(QuicTime::Delta::FromMicroseconds(
       (next->GetTimeToRun() - clock_->NowInTicks()).InMicroseconds()));
-  PostedTask task = *next;
+  PostedTask task = std::move(*next);
   tasks_.erase(next);
-  task.task.Run();
+  std::move(task.task).Run();
 }
 
 namespace {

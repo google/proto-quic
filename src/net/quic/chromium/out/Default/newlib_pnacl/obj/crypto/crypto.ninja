@@ -1,0 +1,35 @@
+defines = -DCRYPTO_IMPLEMENTATION -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../.. -Inewlib_pnacl/gen -I../../../../../third_party/boringssl/src/include -I../../../../../native_client_sdk/src/libraries -I../../../../../native_client_sdk/src/libraries/nacl_io/include -I../../../../../native_client_sdk/src/libraries/third_party/newlib-extras
+cflags = -fno-strict-aliasing -fcolor-diagnostics -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -O0 -g2 -fvisibility=hidden
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = crypto
+root_out_dir = newlib_pnacl
+target_out_dir = newlib_pnacl/obj/crypto
+target_output_name = libcrcrypto
+
+build newlib_pnacl/obj/crypto/crypto.inputdeps.stamp: newlib_pnacl_stamp newlib_pnacl/obj/base/build_date.stamp newlib_pnacl/obj/base/debugging_flags.stamp newlib_pnacl/obj/base/allocator/features.stamp
+build newlib_pnacl/obj/crypto/crypto/aead.o: newlib_pnacl_cxx ../../../../../crypto/aead.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/curve25519.o: newlib_pnacl_cxx ../../../../../crypto/curve25519.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/ec_private_key.o: newlib_pnacl_cxx ../../../../../crypto/ec_private_key.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/ec_signature_creator.o: newlib_pnacl_cxx ../../../../../crypto/ec_signature_creator.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/ec_signature_creator_impl.o: newlib_pnacl_cxx ../../../../../crypto/ec_signature_creator_impl.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/encryptor.o: newlib_pnacl_cxx ../../../../../crypto/encryptor.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/hkdf.o: newlib_pnacl_cxx ../../../../../crypto/hkdf.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/hmac.o: newlib_pnacl_cxx ../../../../../crypto/hmac.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/openssl_bio_string.o: newlib_pnacl_cxx ../../../../../crypto/openssl_bio_string.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/openssl_util.o: newlib_pnacl_cxx ../../../../../crypto/openssl_util.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/p224.o: newlib_pnacl_cxx ../../../../../crypto/p224.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/p224_spake.o: newlib_pnacl_cxx ../../../../../crypto/p224_spake.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/random.o: newlib_pnacl_cxx ../../../../../crypto/random.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/rsa_private_key.o: newlib_pnacl_cxx ../../../../../crypto/rsa_private_key.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/secure_hash.o: newlib_pnacl_cxx ../../../../../crypto/secure_hash.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/secure_util.o: newlib_pnacl_cxx ../../../../../crypto/secure_util.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/sha2.o: newlib_pnacl_cxx ../../../../../crypto/sha2.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/signature_creator.o: newlib_pnacl_cxx ../../../../../crypto/signature_creator.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/signature_verifier.o: newlib_pnacl_cxx ../../../../../crypto/signature_verifier.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+build newlib_pnacl/obj/crypto/crypto/symmetric_key.o: newlib_pnacl_cxx ../../../../../crypto/symmetric_key.cc || newlib_pnacl/obj/crypto/crypto.inputdeps.stamp
+
+build newlib_pnacl/obj/crypto/libcrcrypto.a: newlib_pnacl_alink newlib_pnacl/obj/crypto/crypto/aead.o newlib_pnacl/obj/crypto/crypto/curve25519.o newlib_pnacl/obj/crypto/crypto/ec_private_key.o newlib_pnacl/obj/crypto/crypto/ec_signature_creator.o newlib_pnacl/obj/crypto/crypto/ec_signature_creator_impl.o newlib_pnacl/obj/crypto/crypto/encryptor.o newlib_pnacl/obj/crypto/crypto/hkdf.o newlib_pnacl/obj/crypto/crypto/hmac.o newlib_pnacl/obj/crypto/crypto/openssl_bio_string.o newlib_pnacl/obj/crypto/crypto/openssl_util.o newlib_pnacl/obj/crypto/crypto/p224.o newlib_pnacl/obj/crypto/crypto/p224_spake.o newlib_pnacl/obj/crypto/crypto/random.o newlib_pnacl/obj/crypto/crypto/rsa_private_key.o newlib_pnacl/obj/crypto/crypto/secure_hash.o newlib_pnacl/obj/crypto/crypto/secure_util.o newlib_pnacl/obj/crypto/crypto/sha2.o newlib_pnacl/obj/crypto/crypto/signature_creator.o newlib_pnacl/obj/crypto/crypto/signature_verifier.o newlib_pnacl/obj/crypto/crypto/symmetric_key.o || newlib_pnacl/obj/crypto/platform.stamp newlib_pnacl/obj/base/libbase.a newlib_pnacl/obj/base/third_party/dynamic_annotations/dynamic_annotations.stamp newlib_pnacl/obj/native_client_sdk/src/libraries/nacl_io/nacl_io.stamp newlib_pnacl/obj/build/config/sanitizers/deps.stamp newlib_pnacl/obj/third_party/boringssl/libboringssl.a newlib_pnacl/obj/third_party/boringssl/boringssl_asm.stamp newlib_pnacl/obj/base/libbase_static.a newlib_pnacl/obj/third_party/modp_b64/libmodp_b64.a
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl/obj/crypto

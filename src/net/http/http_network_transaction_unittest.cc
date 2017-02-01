@@ -16518,4 +16518,80 @@ TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
 }
 #endif  // !defined(OS_IOS)
 
+// Test a SPDY CONNECT through an HTTPS Proxy to plaintext WebSocket Server.
+TEST_F(HttpNetworkTransactionTest, PlaintextWebsocketOverSpdyProxy) {
+  HttpRequestInfo request;
+  request.method = "GET";
+  request.url = GURL("ws://www.example.org/");
+  AddWebSocketHeaders(&request.extra_headers);
+
+  // Configure against https proxy server "proxy:70".
+  session_deps_.proxy_service = ProxyService::CreateFixed("https://proxy:70");
+  BoundTestNetLog log;
+  session_deps_.net_log = log.bound().net_log();
+  std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
+
+  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
+  FakeWebSocketStreamCreateHelper websocket_stream_create_helper;
+  trans.SetWebSocketHandshakeStreamCreateHelper(
+      &websocket_stream_create_helper);
+
+  // CONNECT to www.example.org:443 via SPDY
+  SpdySerializedFrame connect(spdy_util_.ConstructSpdyConnect(
+      nullptr, 0, 1, LOWEST, HostPortPair("www.example.org", 80)));
+  const char req[] =
+      "GET / HTTP/1.1\r\n"
+      "Host: www.example.org\r\n"
+      "Connection: Upgrade\r\n"
+      "Upgrade: websocket\r\n"
+      "Origin: http://www.example.org\r\n"
+      "Sec-WebSocket-Version: 13\r\n"
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n";
+  SpdySerializedFrame wrapped_ws_req(
+      spdy_util_.ConstructSpdyDataFrame(1, req, strlen(req), false));
+  SpdySerializedFrame conn_resp(
+      spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
+  const char resp[] =
+      "HTTP/1.1 101 Switching Protocols\r\n"
+      "Upgrade: websocket\r\n"
+      "Connection: Upgrade\r\n"
+      "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n";
+  SpdySerializedFrame wrapped_ws_resp(
+      spdy_util_.ConstructSpdyDataFrame(1, resp, strlen(resp), false));
+  SpdySerializedFrame window_update(
+      spdy_util_.ConstructSpdyWindowUpdate(1, wrapped_ws_resp.size()));
+
+  MockWrite spdy_writes[] = {
+      CreateMockWrite(connect, 0), CreateMockWrite(wrapped_ws_req, 2),
+      CreateMockWrite(window_update, 4),
+  };
+
+  MockRead spdy_reads[] = {
+      CreateMockRead(conn_resp, 1, ASYNC),
+      CreateMockRead(wrapped_ws_resp, 3, ASYNC), MockRead(ASYNC, 0, 5),
+  };
+
+  SequencedSocketData spdy_data(spdy_reads, arraysize(spdy_reads), spdy_writes,
+                                arraysize(spdy_writes));
+  session_deps_.socket_factory->AddSocketDataProvider(&spdy_data);
+
+  SSLSocketDataProvider ssl(ASYNC, OK);
+  ssl.next_proto = kProtoHTTP2;
+  session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl);
+
+  TestCompletionCallback callback;
+
+  int rv = trans.Start(&request, callback.callback(), log.bound());
+  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+
+  rv = callback.WaitForResult();
+  ASSERT_THAT(rv, IsOk());
+
+  const HttpResponseInfo* response = trans.GetResponseInfo();
+  ASSERT_TRUE(response);
+  ASSERT_TRUE(response->headers);
+  EXPECT_EQ("HTTP/1.1 101 Switching Protocols",
+            response->headers->GetStatusLine());
+}
+
 }  // namespace net

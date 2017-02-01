@@ -968,13 +968,19 @@ int HttpStreamParser::ParseResponseHeaders(int end_offset) {
 
     // If the port is not the default for the scheme, assume it's not a real
     // HTTP/0.9 response, and fail the request.
-    // TODO(crbug.com/624462):  Further restrict the cases in which we allow
-    // HTTP/0.9.
-    std::string scheme(request_->url.scheme());
+    base::StringPiece scheme = request_->url.scheme_piece();
     if (!http_09_on_non_default_ports_enabled_ &&
-        url::DefaultPortForScheme(scheme.c_str(), scheme.length()) !=
+        url::DefaultPortForScheme(scheme.data(), scheme.length()) !=
             request_->url.EffectiveIntPort()) {
-      return ERR_INVALID_HTTP_RESPONSE;
+      // Allow Shoutcast responses over HTTP, as it's somewhat common and relies
+      // on HTTP/0.9 on weird ports to work.
+      // See
+      // https://groups.google.com/a/chromium.org/forum/#!topic/blink-dev/qS63pYso4P0
+      if (read_buf_->offset() < 3 || scheme != "http" ||
+          !base::LowerCaseEqualsASCII(
+              base::StringPiece(read_buf_->StartOfBuffer(), 3), "icy")) {
+        return ERR_INVALID_HTTP_RESPONSE;
+      }
     }
 
     headers = new HttpResponseHeaders(std::string("HTTP/0.9 200 OK"));

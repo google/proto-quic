@@ -14,4 +14,5 @@ tools/gyp/gyp --no-circular-check \
 third_party/closure_compiler/compiled_resources.gyp \
 third_party/closure_compiler/compiled_resources2.gyp
 
+# TODO(dbeam): should we be setting -j dynamically based on number of cores?
 ninja -C out/Default -j4 $@

@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "base/atomicops.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/files/important_file_writer.h"
@@ -44,8 +45,10 @@ enum : uint32_t {
 // but that's best since PersistentMemoryAllocator objects (that underlie
 // GlobalHistogramAllocator objects) are explicitly forbidden from doing
 // anything essential at exit anyway due to the fact that they depend on data
-// managed elsewhere and which could be destructed first.
-GlobalHistogramAllocator* g_allocator = nullptr;
+// managed elsewhere and which could be destructed first. An AtomicWord is
+// used instead of std::atomic because the latter can create global ctors
+// and dtors.
+subtle::AtomicWord g_allocator = 0;
 
 // Take an array of range boundaries and create a proper BucketRanges object
 // which is returned to the caller. A return of nullptr indicates that the
@@ -502,7 +505,7 @@ PersistentHistogramAllocator::GetCreateHistogramResultHistogram() {
     static bool initialized = false;
     if (!initialized) {
       initialized = true;
-      if (g_allocator) {
+      if (GlobalHistogramAllocator::Get()) {
         DVLOG(1) << "Creating the results-histogram inside persistent"
                  << " memory can cause future allocations to crash if"
                  << " that memory is ever released (for testing).";
@@ -650,7 +653,7 @@ PersistentHistogramAllocator::GetOrCreateStatisticsRecorderHistogram(
     const HistogramBase* histogram) {
   // This should never be called on the global histogram allocator as objects
   // created there are already within the global statistics recorder.
-  DCHECK_NE(g_allocator, this);
+  DCHECK_NE(GlobalHistogramAllocator::Get(), this);
   DCHECK(histogram);
 
   HistogramBase* existing =
@@ -821,8 +824,9 @@ void GlobalHistogramAllocator::Set(
   // Releasing or changing an allocator is extremely dangerous because it
   // likely has histograms stored within it. If the backing memory is also
   // also released, future accesses to those histograms will seg-fault.
-  CHECK(!g_allocator);
-  g_allocator = allocator.release();
+  CHECK(!subtle::NoBarrier_Load(&g_allocator));
+  subtle::NoBarrier_Store(&g_allocator,
+                          reinterpret_cast<uintptr_t>(allocator.release()));
   size_t existing = StatisticsRecorder::GetHistogramCount();
 
   DVLOG_IF(1, existing)
@@ -831,13 +835,14 @@ void GlobalHistogramAllocator::Set(
 
 // static
 GlobalHistogramAllocator* GlobalHistogramAllocator::Get() {
-  return g_allocator;
+  return reinterpret_cast<GlobalHistogramAllocator*>(
+      subtle::NoBarrier_Load(&g_allocator));
 }
 
 // static
 std::unique_ptr<GlobalHistogramAllocator>
 GlobalHistogramAllocator::ReleaseForTesting() {
-  GlobalHistogramAllocator* histogram_allocator = g_allocator;
+  GlobalHistogramAllocator* histogram_allocator = Get();
   if (!histogram_allocator)
     return nullptr;
   PersistentMemoryAllocator* memory_allocator =
@@ -861,7 +866,7 @@ GlobalHistogramAllocator::ReleaseForTesting() {
     DCHECK_NE(kResultHistogram, data->name);
   }
 
-  g_allocator = nullptr;
+  subtle::NoBarrier_Store(&g_allocator, 0);
   return WrapUnique(histogram_allocator);
 };
 

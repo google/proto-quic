@@ -1,0 +1,948 @@
+rule gn
+  command = /tmp/proto-quic/src/buildtools/linux64/gn --root=/tmp/proto-quic/src -q gen .
+  description = Regenerating ninja files
+
+build build.ninja: gn
+  generator = 1
+  depfile = build.ninja.d
+
+pool build_toolchain_link_pool
+  depth = 3
+
+subninja toolchain.ninja
+
+build root: phony obj/root.stamp
+build base: phony ./libbase.so.TOC
+build crypto: phony ./libcrcrypto.so.TOC
+build net: phony ./libnet.so.TOC
+build sdch: phony obj/sdch/libsdch.a
+build url: phony ./liburl.so.TOC
+build allocator: phony obj/base/allocator/allocator.stamp
+build base_i18n_perftests_run: phony obj/base/base_i18n_perftests_run.stamp
+build base_json_correctness_fuzzer_run: phony obj/base/base_json_correctness_fuzzer_run.stamp
+build base_nocompile_tests_run: phony obj/base/base_nocompile_tests_run.stamp
+build base_nocompile_tests_run_nocompile: phony obj/base/base_nocompile_tests_run_nocompile.stamp
+build base_paths: phony obj/base/libbase_paths.a
+build base_perftests_run: phony obj/base/base_perftests_run.stamp
+build base_static: phony obj/base/libbase_static.a
+build base_unittests_bundle_data: phony obj/base/base_unittests_bundle_data.stamp
+build base_unittests_run: phony obj/base/base_unittests_run.stamp
+build boringssl: phony ./libboringssl.so.TOC
+build boringssl_asm: phony obj/third_party/boringssl/boringssl_asm.stamp
+build boringssl_cert_fuzzer_run: phony obj/third_party/boringssl/boringssl_cert_fuzzer_run.stamp
+build boringssl_cert_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.stamp
+build boringssl_client_fuzzer_run: phony obj/third_party/boringssl/boringssl_client_fuzzer_run.stamp
+build boringssl_client_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.stamp
+build boringssl_client_no_fuzzer_mode_fuzzer_run: phony obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_run.stamp
+build boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.stamp
+build boringssl_crypto_tests_run: phony obj/third_party/boringssl/boringssl_crypto_tests_run.stamp
+build boringssl_fuzzer: phony ./libboringssl_fuzzer.so.TOC
+build boringssl_fuzzer_no_fuzzer_mode: phony ./libboringssl_fuzzer_no_fuzzer_mode.so.TOC
+build boringssl_pkcs8_fuzzer_run: phony obj/third_party/boringssl/boringssl_pkcs8_fuzzer_run.stamp
+build boringssl_pkcs8_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.stamp
+build boringssl_privkey_fuzzer_run: phony obj/third_party/boringssl/boringssl_privkey_fuzzer_run.stamp
+build boringssl_privkey_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.stamp
+build boringssl_read_pem_fuzzer_run: phony obj/third_party/boringssl/boringssl_read_pem_fuzzer_run.stamp
+build boringssl_read_pem_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.stamp
+build boringssl_server_fuzzer_run: phony obj/third_party/boringssl/boringssl_server_fuzzer_run.stamp
+build boringssl_server_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.stamp
+build boringssl_server_no_fuzzer_mode_fuzzer_run: phony obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_run.stamp
+build boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.stamp
+build boringssl_session_fuzzer_run: phony obj/third_party/boringssl/boringssl_session_fuzzer_run.stamp
+build boringssl_session_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.stamp
+build boringssl_spki_fuzzer_run: phony obj/third_party/boringssl/boringssl_spki_fuzzer_run.stamp
+build boringssl_spki_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.stamp
+build boringssl_ssl_ctx_api_fuzzer_run: phony obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_run.stamp
+build boringssl_ssl_ctx_api_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.stamp
+build boringssl_ssl_tests_run: phony obj/third_party/boringssl/boringssl_ssl_tests_run.stamp
+build boringssl_tests: phony obj/third_party/boringssl/boringssl_tests.stamp
+build boringssl_unittests_run: phony obj/third_party/boringssl/boringssl_unittests_run.stamp
+build build_date: phony obj/base/build_date.stamp
+build ced: phony obj/third_party/ced/libced.a
+build ced_unittests_run: phony obj/third_party/ced/ced_unittests_run.stamp
+build cert_verify_proc_whitelist_unittest_data: phony obj/net/cert_verify_proc_whitelist_unittest_data.stamp
+build common: phony obj/third_party/brotli/libcommon.a
+build compression_utils: phony obj/third_party/zlib/libcompression_utils.a
+build constants: phony obj/net/constants.stamp
+build copy_google: phony obj/third_party/protobuf/copy_google.stamp
+build copy_google_protobuf: phony obj/third_party/protobuf/copy_google_protobuf.stamp
+build copy_google_protobuf_internal: phony obj/third_party/protobuf/copy_google_protobuf_internal.stamp
+build copy_six: phony obj/third_party/protobuf/copy_six.stamp
+build crypto_unittests_run: phony obj/crypto/crypto_unittests_run.stamp
+build debugging_flags: phony obj/base/debugging_flags.stamp
+build dec: phony obj/third_party/brotli/libdec.a
+build default_exe_manifest: phony obj/build/win/default_exe_manifest.stamp
+build deps: phony obj/build/config/sanitizers/deps.stamp
+build deps_no_options: phony obj/build/config/sanitizers/deps_no_options.stamp
+build dynamic_annotations: phony obj/base/third_party/dynamic_annotations/libdynamic_annotations.a
+build epoll_quic_tools: phony obj/net/epoll_quic_tools.stamp
+build epoll_server: phony obj/net/libepoll_server.a
+build fontconfig: phony obj/build/linux/fontconfig.stamp
+build freetype2: phony obj/build/linux/freetype2.stamp
+build gmock: phony obj/testing/gmock/libgmock.a
+build gmock_main: phony obj/testing/gmock/libgmock_main.a
+build grit_sources: phony obj/tools/grit/grit_sources.stamp
+build gtest: phony obj/testing/gtest/libgtest.a
+build gtest_main: phony obj/testing/gtest/gtest_main.stamp
+build http_server: phony obj/net/libhttp_server.a
+build i18n: phony ./libbase_i18n.so.TOC
+build icu: phony obj/third_party/icu/icu.stamp
+build icudata: phony obj/third_party/icu/icudata.stamp
+build icui18n: phony ./libicui18n.so.TOC
+build icuuc: phony ./libicuuc.so.TOC
+build libevent: phony obj/base/third_party/libevent/libevent.a
+build libfuzzer_main: phony obj/testing/libfuzzer/libfuzzer_main.stamp
+build libgio: phony obj/build/linux/libgio/libgio.stamp
+build libgio_loader: phony obj/build/linux/libgio/libgio_loader.stamp
+build libxml: phony obj/third_party/libxml/libxml2.a
+build linux: phony obj/build/config/linux/linux.stamp
+build malloc_wrapper: phony ./libmalloc_wrapper.so.TOC
+build message_loop_tests: phony obj/base/message_loop_tests.stamp
+build minizip: phony obj/third_party/zlib/libminizip.a
+build modp_b64: phony obj/third_party/modp_b64/libmodp_b64.a
+build native_library_test_utils: phony obj/base/test/native_library_test_utils.stamp
+build net_auth_challenge_tokenizer_fuzzer_run: phony obj/net/net_auth_challenge_tokenizer_fuzzer_run.stamp
+build net_brotli_source_stream_fuzzer_run: phony obj/net/net_brotli_source_stream_fuzzer_run.stamp
+build net_cert_normalize_name_fuzzer_run: phony obj/net/net_cert_normalize_name_fuzzer_run.stamp
+build net_cert_parse_certificate_fuzzer_run: phony obj/net/net_cert_parse_certificate_fuzzer_run.stamp
+build net_cert_verify_name_in_subtree_fuzzer_run: phony obj/net/net_cert_verify_name_in_subtree_fuzzer_run.stamp
+build net_cert_verify_name_match_fuzzer_run: phony obj/net/net_cert_verify_name_match_fuzzer_run.stamp
+build net_data_job_fuzzer_run: phony obj/net/net_data_job_fuzzer_run.stamp
+build net_dns_hosts_parse_fuzzer_dict_copy: phony obj/net/net_dns_hosts_parse_fuzzer_dict_copy.stamp
+build net_dns_hosts_parse_fuzzer_run: phony obj/net/net_dns_hosts_parse_fuzzer_run.stamp
+build net_dns_record_fuzzer_dict_copy: phony obj/net/net_dns_record_fuzzer_dict_copy.stamp
+build net_dns_record_fuzzer_run: phony obj/net/net_dns_record_fuzzer_run.stamp
+build net_ftp_ctrl_response_fuzzer_run: phony obj/net/net_ftp_ctrl_response_fuzzer_run.stamp
+build net_ftp_directory_listing_fuzzer_run: phony obj/net/net_ftp_directory_listing_fuzzer_run.stamp
+build net_fuzzer_test_support: phony obj/net/net_fuzzer_test_support.stamp
+build net_get_domain_and_registry_fuzzer_dict_copy: phony obj/net/net_get_domain_and_registry_fuzzer_dict_copy.stamp
+build net_get_domain_and_registry_fuzzer_run: phony obj/net/net_get_domain_and_registry_fuzzer_run.stamp
+build net_gzip_source_stream_fuzzer_run: phony obj/net/net_gzip_source_stream_fuzzer_run.stamp
+build net_host_resolver_impl_fuzzer_dict_copy: phony obj/net/net_host_resolver_impl_fuzzer_dict_copy.stamp
+build net_host_resolver_impl_fuzzer_run: phony obj/net/net_host_resolver_impl_fuzzer_run.stamp
+build net_http_chunked_decoder_fuzzer_run: phony obj/net/net_http_chunked_decoder_fuzzer_run.stamp
+build net_http_proxy_client_socket_fuzzer_dict_copy: phony obj/net/net_http_proxy_client_socket_fuzzer_dict_copy.stamp
+build net_http_proxy_client_socket_fuzzer_run: phony obj/net/net_http_proxy_client_socket_fuzzer_run.stamp
+build net_http_security_headers_hpkp_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hpkp_fuzzer_dict_copy.stamp
+build net_http_security_headers_hpkp_fuzzer_run: phony obj/net/net_http_security_headers_hpkp_fuzzer_run.stamp
+build net_http_security_headers_hpkp_report_only_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hpkp_report_only_fuzzer_dict_copy.stamp
+build net_http_security_headers_hpkp_report_only_fuzzer_run: phony obj/net/net_http_security_headers_hpkp_report_only_fuzzer_run.stamp
+build net_http_security_headers_hsts_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hsts_fuzzer_dict_copy.stamp
+build net_http_security_headers_hsts_fuzzer_run: phony obj/net/net_http_security_headers_hsts_fuzzer_run.stamp
+build net_http_server_fuzzer_dict_copy: phony obj/net/net_http_server_fuzzer_dict_copy.stamp
+build net_http_server_fuzzer_run: phony obj/net/net_http_server_fuzzer_run.stamp
+build net_http_server_fuzzer_seed_corpus: phony obj/net/net_http_server_fuzzer_seed_corpus.stamp
+build net_http_stream_parser_fuzzer_dict_copy: phony obj/net/net_http_stream_parser_fuzzer_dict_copy.stamp
+build net_http_stream_parser_fuzzer_run: phony obj/net/net_http_stream_parser_fuzzer_run.stamp
+build net_http_transport_security_state_static_fuzzer_dict_copy: phony obj/net/net_http_transport_security_state_static_fuzzer_dict_copy.stamp
+build net_http_transport_security_state_static_fuzzer_run: phony obj/net/net_http_transport_security_state_static_fuzzer_run.stamp
+build net_mime_sniffer_fuzzer_dict_copy: phony obj/net/net_mime_sniffer_fuzzer_dict_copy.stamp
+build net_mime_sniffer_fuzzer_run: phony obj/net/net_mime_sniffer_fuzzer_run.stamp
+build net_parse_cookie_line_fuzzer_run: phony obj/net/net_parse_cookie_line_fuzzer_run.stamp
+build net_parse_data_url_fuzzer_dict_copy: phony obj/net/net_parse_data_url_fuzzer_dict_copy.stamp
+build net_parse_data_url_fuzzer_run: phony obj/net/net_parse_data_url_fuzzer_run.stamp
+build net_parse_ip_pattern_fuzzer_run: phony obj/net/net_parse_ip_pattern_fuzzer_run.stamp
+build net_parse_proxy_bypass_rules_fuzzer_run: phony obj/net/net_parse_proxy_bypass_rules_fuzzer_run.stamp
+build net_parse_proxy_list_fuzzer_run: phony obj/net/net_parse_proxy_list_fuzzer_run.stamp
+build net_parse_proxy_list_pac_fuzzer_run: phony obj/net/net_parse_proxy_list_pac_fuzzer_run.stamp
+build net_parse_proxy_rules_fuzzer_dict_copy: phony obj/net/net_parse_proxy_rules_fuzzer_dict_copy.stamp
+build net_parse_proxy_rules_fuzzer_run: phony obj/net/net_parse_proxy_rules_fuzzer_run.stamp
+build net_parse_url_hostname_to_address_fuzzer_run: phony obj/net/net_parse_url_hostname_to_address_fuzzer_run.stamp
+build net_parse_url_hostname_to_address_fuzzer_seed_corpus: phony obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.stamp
+build net_quic_crypto_framer_parse_message_fuzzer_run: phony obj/net/net_quic_crypto_framer_parse_message_fuzzer_run.stamp
+build net_quic_proto: phony obj/net/net_quic_proto.stamp
+build net_quic_proto_gen: phony obj/net/net_quic_proto_gen.stamp
+build net_resources: phony obj/net/net_resources.stamp
+build net_resources_grit: phony obj/net/net_resources_grit.stamp
+build net_socks5_client_socket_fuzzer_run: phony obj/net/net_socks5_client_socket_fuzzer_run.stamp
+build net_socks_client_socket_fuzzer_run: phony obj/net/net_socks_client_socket_fuzzer_run.stamp
+build net_unescape_url_component_fuzzer_dict_copy: phony obj/net/net_unescape_url_component_fuzzer_dict_copy.stamp
+build net_unescape_url_component_fuzzer_run: phony obj/net/net_unescape_url_component_fuzzer_run.stamp
+build net_unittests_bundle_data: phony obj/net/net_unittests_bundle_data.stamp
+build net_unittests_run: phony obj/net/net_unittests_run.stamp
+build net_url_request_ftp_fuzzer_dict_copy: phony obj/net/net_url_request_ftp_fuzzer_dict_copy.stamp
+build net_url_request_ftp_fuzzer_run: phony obj/net/net_url_request_ftp_fuzzer_run.stamp
+build net_url_request_ftp_fuzzer_seed_corpus: phony obj/net/net_url_request_ftp_fuzzer_seed_corpus.stamp
+build net_url_request_fuzzer_dict_copy: phony obj/net/net_url_request_fuzzer_dict_copy.stamp
+build net_url_request_fuzzer_run: phony obj/net/net_url_request_fuzzer_run.stamp
+build net_websocket_deflate_stream_fuzzer_dict_copy: phony obj/net/net_websocket_deflate_stream_fuzzer_dict_copy.stamp
+build net_websocket_deflate_stream_fuzzer_run: phony obj/net/net_websocket_deflate_stream_fuzzer_run.stamp
+build net_websocket_extension_parser_fuzzer_dict_copy: phony obj/net/net_websocket_extension_parser_fuzzer_dict_copy.stamp
+build net_websocket_extension_parser_fuzzer_run: phony obj/net/net_websocket_extension_parser_fuzzer_run.stamp
+build net_websocket_frame_parser_fuzzer_dict_copy: phony obj/net/net_websocket_frame_parser_fuzzer_dict_copy.stamp
+build net_websocket_frame_parser_fuzzer_run: phony obj/net/net_websocket_frame_parser_fuzzer_run.stamp
+build nist-pkits: phony obj/net/third_party/nist-pkits/nist-pkits.stamp
+build options_sources: phony obj/build/config/sanitizers/liboptions_sources.a
+build perf: phony obj/testing/perf/perf.stamp
+build platform: phony obj/crypto/platform.stamp
+build posix: phony obj/build/config/posix/posix.stamp
+build protobuf_full: phony obj/third_party/protobuf/libprotobuf_full.a
+build protobuf_lite: phony ./libprotobuf_lite.so.TOC
+build protoc_lib: phony obj/third_party/protobuf/libprotoc_lib.a
+build py_proto: phony obj/third_party/protobuf/py_proto.stamp
+build pyftpdlib: phony obj/third_party/pyftpdlib/pyftpdlib.stamp
+build pywebsocket: phony obj/third_party/pywebsocket/pywebsocket.stamp
+build registry_controlled_domains: phony obj/net/base/registry_controlled_domains/registry_controlled_domains.stamp
+build run_all_base_unittests: phony obj/base/test/librun_all_base_unittests.a
+build run_all_unittests: phony obj/base/test/librun_all_unittests.a
+build seed_corpus: phony obj/testing/libfuzzer/seed_corpus.stamp
+build simple_quic_tools: phony obj/net/simple_quic_tools.stamp
+build symbolize: phony obj/base/third_party/symbolize/libsymbolize.a
+build tcmalloc: phony obj/base/allocator/tcmalloc.stamp
+build test_config: phony obj/base/test/libtest_config.a
+build test_launcher_nacl_nonsfi: phony obj/base/test/libtest_launcher_nacl_nonsfi.a
+build test_shared_library: phony ./libtest_shared_library.so.TOC
+build test_support_bundle_data: phony obj/net/test_support_bundle_data.stamp
+build test_support_perf: phony obj/base/test/test_support_perf.stamp
+build tlslite: phony obj/third_party/tlslite/tlslite.stamp
+build url_features: phony obj/url/url_features.stamp
+build wosign_domains: phony obj/net/data/ssl/wosign/wosign_domains.stamp
+build xdg_mime: phony obj/base/third_party/xdg_mime/libxdg_mime.a
+build xdg_user_dirs: phony obj/base/third_party/xdg_user_dirs/libxdg_user_dirs.a
+build zip: phony obj/third_party/zlib/libzip.a
+build zlib: phony obj/third_party/zlib/libchrome_zlib.a
+build zlib_x86_simd: phony obj/third_party/zlib/libzlib_x86_simd.a
+build $:root: phony obj/root.stamp
+build base$:base: phony ./libbase.so.TOC
+build base$:base_i18n_perftests: phony ./base_i18n_perftests
+build base$:base_i18n_perftests_run: phony obj/base/base_i18n_perftests_run.stamp
+build base$:base_json_correctness_fuzzer: phony ./base_json_correctness_fuzzer
+build base$:base_json_correctness_fuzzer_run: phony obj/base/base_json_correctness_fuzzer_run.stamp
+build base$:base_nocompile_tests: phony ./base_nocompile_tests
+build base$:base_nocompile_tests_run: phony obj/base/base_nocompile_tests_run.stamp
+build base$:base_nocompile_tests_run_nocompile: phony obj/base/base_nocompile_tests_run_nocompile.stamp
+build base$:base_paths: phony obj/base/libbase_paths.a
+build base$:base_perftests: phony ./base_perftests
+build base$:base_perftests_run: phony obj/base/base_perftests_run.stamp
+build base$:base_static: phony obj/base/libbase_static.a
+build base$:base_unittests: phony ./base_unittests
+build base$:base_unittests_bundle_data: phony obj/base/base_unittests_bundle_data.stamp
+build base$:base_unittests_run: phony obj/base/base_unittests_run.stamp
+build base$:build_date: phony obj/base/build_date.stamp
+build base$:build_utf8_validator_tables: phony ./build_utf8_validator_tables
+build base$:check_example: phony ./check_example
+build base$:debugging_flags: phony obj/base/debugging_flags.stamp
+build base$:i18n: phony ./libbase_i18n.so.TOC
+build base$:message_loop_tests: phony obj/base/message_loop_tests.stamp
+build base/allocator$:allocator: phony obj/base/allocator/allocator.stamp
+build base/allocator: phony obj/base/allocator/allocator.stamp
+build base/allocator$:features: phony obj/base/allocator/features.stamp
+build base/allocator$:tcmalloc: phony obj/base/allocator/tcmalloc.stamp
+build base/test$:malloc_wrapper: phony ./libmalloc_wrapper.so.TOC
+build base/test$:native_library_test_utils: phony obj/base/test/native_library_test_utils.stamp
+build base/test$:run_all_base_unittests: phony obj/base/test/librun_all_base_unittests.a
+build base/test$:run_all_unittests: phony obj/base/test/librun_all_unittests.a
+build base/test$:test_config: phony obj/base/test/libtest_config.a
+build base/test$:test_launcher_nacl_nonsfi: phony obj/base/test/libtest_launcher_nacl_nonsfi.a
+build base/test$:test_shared_library: phony ./libtest_shared_library.so.TOC
+build base/test$:test_support: phony obj/base/test/libtest_support.a
+build base/test$:test_support_perf: phony obj/base/test/test_support_perf.stamp
+build base/third_party/dynamic_annotations$:dynamic_annotations: phony obj/base/third_party/dynamic_annotations/libdynamic_annotations.a
+build base/third_party/dynamic_annotations: phony obj/base/third_party/dynamic_annotations/libdynamic_annotations.a
+build base/third_party/libevent$:libevent: phony obj/base/third_party/libevent/libevent.a
+build base/third_party/libevent: phony obj/base/third_party/libevent/libevent.a
+build base/third_party/symbolize$:symbolize: phony obj/base/third_party/symbolize/libsymbolize.a
+build base/third_party/symbolize: phony obj/base/third_party/symbolize/libsymbolize.a
+build base/third_party/xdg_mime$:xdg_mime: phony obj/base/third_party/xdg_mime/libxdg_mime.a
+build base/third_party/xdg_mime: phony obj/base/third_party/xdg_mime/libxdg_mime.a
+build base/third_party/xdg_user_dirs$:xdg_user_dirs: phony obj/base/third_party/xdg_user_dirs/libxdg_user_dirs.a
+build base/third_party/xdg_user_dirs: phony obj/base/third_party/xdg_user_dirs/libxdg_user_dirs.a
+build build/config/linux$:linux: phony obj/build/config/linux/linux.stamp
+build build/config/linux: phony obj/build/config/linux/linux.stamp
+build build/config/posix$:posix: phony obj/build/config/posix/posix.stamp
+build build/config/posix: phony obj/build/config/posix/posix.stamp
+build build/config/sanitizers$:deps: phony obj/build/config/sanitizers/deps.stamp
+build build/config/sanitizers$:deps_no_options: phony obj/build/config/sanitizers/deps_no_options.stamp
+build build/config/sanitizers$:options_sources: phony obj/build/config/sanitizers/liboptions_sources.a
+build build/linux$:fontconfig: phony obj/build/linux/fontconfig.stamp
+build build/linux$:freetype2: phony obj/build/linux/freetype2.stamp
+build build/linux/libgio$:libgio: phony obj/build/linux/libgio/libgio.stamp
+build build/linux/libgio: phony obj/build/linux/libgio/libgio.stamp
+build build/linux/libgio$:libgio_loader: phony obj/build/linux/libgio/libgio_loader.stamp
+build build/win$:default_exe_manifest: phony obj/build/win/default_exe_manifest.stamp
+build crypto$:crypto: phony ./libcrcrypto.so.TOC
+build crypto$:crypto_unittests: phony ./crypto_unittests
+build crypto$:crypto_unittests_run: phony obj/crypto/crypto_unittests_run.stamp
+build crypto$:platform: phony obj/crypto/platform.stamp
+build crypto$:test_support: phony obj/crypto/test_support.stamp
+build net$:cachetool: phony ./cachetool
+build net$:cert_verify_proc_whitelist_unittest_data: phony obj/net/cert_verify_proc_whitelist_unittest_data.stamp
+build net$:cert_verify_tool: phony ./cert_verify_tool
+build net$:constants: phony obj/net/constants.stamp
+build net$:content_decoder_tool: phony ./content_decoder_tool
+build net$:crash_cache: phony ./crash_cache
+build net$:crl_set_dump: phony ./crl_set_dump
+build net$:crypto_message_printer: phony ./crypto_message_printer
+build net$:disk_cache_memory_test: phony ./disk_cache_memory_test
+build net$:dns_fuzz_stub: phony ./dns_fuzz_stub
+build net$:dump_cache: phony ./dump_cache
+build net$:epoll_quic_client: phony ./epoll_quic_client
+build net$:epoll_quic_server: phony ./epoll_quic_server
+build net$:epoll_quic_tools: phony obj/net/epoll_quic_tools.stamp
+build net$:epoll_server: phony obj/net/libepoll_server.a
+build net$:features: phony obj/net/features.stamp
+build net$:gdig: phony ./gdig
+build net$:get_server_time: phony ./get_server_time
+build net$:hpack_example_generator: phony ./hpack_example_generator
+build net$:hpack_fuzz_mutator: phony ./hpack_fuzz_mutator
+build net$:hpack_fuzz_wrapper: phony ./hpack_fuzz_wrapper
+build net$:http_server: phony obj/net/libhttp_server.a
+build net$:net: phony ./libnet.so.TOC
+build net$:net_auth_challenge_tokenizer_fuzzer: phony ./net_auth_challenge_tokenizer_fuzzer
+build net$:net_auth_challenge_tokenizer_fuzzer_run: phony obj/net/net_auth_challenge_tokenizer_fuzzer_run.stamp
+build net$:net_brotli_source_stream_fuzzer: phony ./net_brotli_source_stream_fuzzer
+build net$:net_brotli_source_stream_fuzzer_run: phony obj/net/net_brotli_source_stream_fuzzer_run.stamp
+build net$:net_cert_normalize_name_fuzzer: phony ./net_cert_normalize_name_fuzzer
+build net$:net_cert_normalize_name_fuzzer_run: phony obj/net/net_cert_normalize_name_fuzzer_run.stamp
+build net$:net_cert_parse_certificate_fuzzer: phony ./net_cert_parse_certificate_fuzzer
+build net$:net_cert_parse_certificate_fuzzer_run: phony obj/net/net_cert_parse_certificate_fuzzer_run.stamp
+build net$:net_cert_verify_name_in_subtree_fuzzer: phony ./net_cert_verify_name_in_subtree_fuzzer
+build net$:net_cert_verify_name_in_subtree_fuzzer_run: phony obj/net/net_cert_verify_name_in_subtree_fuzzer_run.stamp
+build net$:net_cert_verify_name_match_fuzzer: phony ./net_cert_verify_name_match_fuzzer
+build net$:net_cert_verify_name_match_fuzzer_run: phony obj/net/net_cert_verify_name_match_fuzzer_run.stamp
+build net$:net_data_job_fuzzer: phony ./net_data_job_fuzzer
+build net$:net_data_job_fuzzer_run: phony obj/net/net_data_job_fuzzer_run.stamp
+build net$:net_dns_hosts_parse_fuzzer: phony ./net_dns_hosts_parse_fuzzer
+build net$:net_dns_hosts_parse_fuzzer.options: phony obj/net/net_dns_hosts_parse_fuzzer.options.stamp
+build net$:net_dns_hosts_parse_fuzzer_dict_copy: phony obj/net/net_dns_hosts_parse_fuzzer_dict_copy.stamp
+build net$:net_dns_hosts_parse_fuzzer_run: phony obj/net/net_dns_hosts_parse_fuzzer_run.stamp
+build net$:net_dns_record_fuzzer: phony ./net_dns_record_fuzzer
+build net$:net_dns_record_fuzzer.options: phony obj/net/net_dns_record_fuzzer.options.stamp
+build net$:net_dns_record_fuzzer_dict_copy: phony obj/net/net_dns_record_fuzzer_dict_copy.stamp
+build net$:net_dns_record_fuzzer_run: phony obj/net/net_dns_record_fuzzer_run.stamp
+build net$:net_ftp_ctrl_response_fuzzer: phony ./net_ftp_ctrl_response_fuzzer
+build net$:net_ftp_ctrl_response_fuzzer_run: phony obj/net/net_ftp_ctrl_response_fuzzer_run.stamp
+build net$:net_ftp_directory_listing_fuzzer: phony ./net_ftp_directory_listing_fuzzer
+build net$:net_ftp_directory_listing_fuzzer_run: phony obj/net/net_ftp_directory_listing_fuzzer_run.stamp
+build net$:net_fuzzer_test_support: phony obj/net/net_fuzzer_test_support.stamp
+build net$:net_get_domain_and_registry_fuzzer: phony ./net_get_domain_and_registry_fuzzer
+build net$:net_get_domain_and_registry_fuzzer.options: phony obj/net/net_get_domain_and_registry_fuzzer.options.stamp
+build net$:net_get_domain_and_registry_fuzzer_dict_copy: phony obj/net/net_get_domain_and_registry_fuzzer_dict_copy.stamp
+build net$:net_get_domain_and_registry_fuzzer_run: phony obj/net/net_get_domain_and_registry_fuzzer_run.stamp
+build net$:net_gzip_source_stream_fuzzer: phony ./net_gzip_source_stream_fuzzer
+build net$:net_gzip_source_stream_fuzzer_run: phony obj/net/net_gzip_source_stream_fuzzer_run.stamp
+build net$:net_host_resolver_impl_fuzzer: phony ./net_host_resolver_impl_fuzzer
+build net$:net_host_resolver_impl_fuzzer.options: phony obj/net/net_host_resolver_impl_fuzzer.options.stamp
+build net$:net_host_resolver_impl_fuzzer_dict_copy: phony obj/net/net_host_resolver_impl_fuzzer_dict_copy.stamp
+build net$:net_host_resolver_impl_fuzzer_run: phony obj/net/net_host_resolver_impl_fuzzer_run.stamp
+build net$:net_http_chunked_decoder_fuzzer: phony ./net_http_chunked_decoder_fuzzer
+build net$:net_http_chunked_decoder_fuzzer_run: phony obj/net/net_http_chunked_decoder_fuzzer_run.stamp
+build net$:net_http_proxy_client_socket_fuzzer: phony ./net_http_proxy_client_socket_fuzzer
+build net$:net_http_proxy_client_socket_fuzzer.options: phony obj/net/net_http_proxy_client_socket_fuzzer.options.stamp
+build net$:net_http_proxy_client_socket_fuzzer_dict_copy: phony obj/net/net_http_proxy_client_socket_fuzzer_dict_copy.stamp
+build net$:net_http_proxy_client_socket_fuzzer_run: phony obj/net/net_http_proxy_client_socket_fuzzer_run.stamp
+build net$:net_http_security_headers_hpkp_fuzzer: phony ./net_http_security_headers_hpkp_fuzzer
+build net$:net_http_security_headers_hpkp_fuzzer.options: phony obj/net/net_http_security_headers_hpkp_fuzzer.options.stamp
+build net$:net_http_security_headers_hpkp_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hpkp_fuzzer_dict_copy.stamp
+build net$:net_http_security_headers_hpkp_fuzzer_run: phony obj/net/net_http_security_headers_hpkp_fuzzer_run.stamp
+build net$:net_http_security_headers_hpkp_report_only_fuzzer: phony ./net_http_security_headers_hpkp_report_only_fuzzer
+build net$:net_http_security_headers_hpkp_report_only_fuzzer.options: phony obj/net/net_http_security_headers_hpkp_report_only_fuzzer.options.stamp
+build net$:net_http_security_headers_hpkp_report_only_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hpkp_report_only_fuzzer_dict_copy.stamp
+build net$:net_http_security_headers_hpkp_report_only_fuzzer_run: phony obj/net/net_http_security_headers_hpkp_report_only_fuzzer_run.stamp
+build net$:net_http_security_headers_hsts_fuzzer: phony ./net_http_security_headers_hsts_fuzzer
+build net$:net_http_security_headers_hsts_fuzzer.options: phony obj/net/net_http_security_headers_hsts_fuzzer.options.stamp
+build net$:net_http_security_headers_hsts_fuzzer_dict_copy: phony obj/net/net_http_security_headers_hsts_fuzzer_dict_copy.stamp
+build net$:net_http_security_headers_hsts_fuzzer_run: phony obj/net/net_http_security_headers_hsts_fuzzer_run.stamp
+build net$:net_http_server_fuzzer: phony ./net_http_server_fuzzer
+build net$:net_http_server_fuzzer.options: phony obj/net/net_http_server_fuzzer.options.stamp
+build net$:net_http_server_fuzzer_dict_copy: phony obj/net/net_http_server_fuzzer_dict_copy.stamp
+build net$:net_http_server_fuzzer_run: phony obj/net/net_http_server_fuzzer_run.stamp
+build net$:net_http_server_fuzzer_seed_corpus: phony obj/net/net_http_server_fuzzer_seed_corpus.stamp
+build net$:net_http_stream_parser_fuzzer: phony ./net_http_stream_parser_fuzzer
+build net$:net_http_stream_parser_fuzzer.options: phony obj/net/net_http_stream_parser_fuzzer.options.stamp
+build net$:net_http_stream_parser_fuzzer_dict_copy: phony obj/net/net_http_stream_parser_fuzzer_dict_copy.stamp
+build net$:net_http_stream_parser_fuzzer_run: phony obj/net/net_http_stream_parser_fuzzer_run.stamp
+build net$:net_http_transport_security_state_static_fuzzer: phony ./net_http_transport_security_state_static_fuzzer
+build net$:net_http_transport_security_state_static_fuzzer.options: phony obj/net/net_http_transport_security_state_static_fuzzer.options.stamp
+build net$:net_http_transport_security_state_static_fuzzer_dict_copy: phony obj/net/net_http_transport_security_state_static_fuzzer_dict_copy.stamp
+build net$:net_http_transport_security_state_static_fuzzer_run: phony obj/net/net_http_transport_security_state_static_fuzzer_run.stamp
+build net$:net_mime_sniffer_fuzzer: phony ./net_mime_sniffer_fuzzer
+build net$:net_mime_sniffer_fuzzer.options: phony obj/net/net_mime_sniffer_fuzzer.options.stamp
+build net$:net_mime_sniffer_fuzzer_dict_copy: phony obj/net/net_mime_sniffer_fuzzer_dict_copy.stamp
+build net$:net_mime_sniffer_fuzzer_run: phony obj/net/net_mime_sniffer_fuzzer_run.stamp
+build net$:net_parse_cookie_line_fuzzer: phony ./net_parse_cookie_line_fuzzer
+build net$:net_parse_cookie_line_fuzzer_run: phony obj/net/net_parse_cookie_line_fuzzer_run.stamp
+build net$:net_parse_data_url_fuzzer: phony ./net_parse_data_url_fuzzer
+build net$:net_parse_data_url_fuzzer.options: phony obj/net/net_parse_data_url_fuzzer.options.stamp
+build net$:net_parse_data_url_fuzzer_dict_copy: phony obj/net/net_parse_data_url_fuzzer_dict_copy.stamp
+build net$:net_parse_data_url_fuzzer_run: phony obj/net/net_parse_data_url_fuzzer_run.stamp
+build net$:net_parse_ip_pattern_fuzzer: phony ./net_parse_ip_pattern_fuzzer
+build net$:net_parse_ip_pattern_fuzzer_run: phony obj/net/net_parse_ip_pattern_fuzzer_run.stamp
+build net$:net_parse_proxy_bypass_rules_fuzzer: phony ./net_parse_proxy_bypass_rules_fuzzer
+build net$:net_parse_proxy_bypass_rules_fuzzer_run: phony obj/net/net_parse_proxy_bypass_rules_fuzzer_run.stamp
+build net$:net_parse_proxy_list_fuzzer: phony ./net_parse_proxy_list_fuzzer
+build net$:net_parse_proxy_list_fuzzer_run: phony obj/net/net_parse_proxy_list_fuzzer_run.stamp
+build net$:net_parse_proxy_list_pac_fuzzer: phony ./net_parse_proxy_list_pac_fuzzer
+build net$:net_parse_proxy_list_pac_fuzzer_run: phony obj/net/net_parse_proxy_list_pac_fuzzer_run.stamp
+build net$:net_parse_proxy_rules_fuzzer: phony ./net_parse_proxy_rules_fuzzer
+build net$:net_parse_proxy_rules_fuzzer.options: phony obj/net/net_parse_proxy_rules_fuzzer.options.stamp
+build net$:net_parse_proxy_rules_fuzzer_dict_copy: phony obj/net/net_parse_proxy_rules_fuzzer_dict_copy.stamp
+build net$:net_parse_proxy_rules_fuzzer_run: phony obj/net/net_parse_proxy_rules_fuzzer_run.stamp
+build net$:net_parse_url_hostname_to_address_fuzzer: phony ./net_parse_url_hostname_to_address_fuzzer
+build net$:net_parse_url_hostname_to_address_fuzzer.options: phony obj/net/net_parse_url_hostname_to_address_fuzzer.options.stamp
+build net$:net_parse_url_hostname_to_address_fuzzer_run: phony obj/net/net_parse_url_hostname_to_address_fuzzer_run.stamp
+build net$:net_parse_url_hostname_to_address_fuzzer_seed_corpus: phony obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.stamp
+build net$:net_quic_crypto_framer_parse_message_fuzzer: phony ./net_quic_crypto_framer_parse_message_fuzzer
+build net$:net_quic_crypto_framer_parse_message_fuzzer_run: phony obj/net/net_quic_crypto_framer_parse_message_fuzzer_run.stamp
+build net$:net_quic_proto: phony obj/net/net_quic_proto.stamp
+build net$:net_quic_proto_gen: phony obj/net/net_quic_proto_gen.stamp
+build net$:net_resources: phony obj/net/net_resources.stamp
+build net$:net_resources_grit: phony obj/net/net_resources_grit.stamp
+build net$:net_socks5_client_socket_fuzzer: phony ./net_socks5_client_socket_fuzzer
+build net$:net_socks5_client_socket_fuzzer_run: phony obj/net/net_socks5_client_socket_fuzzer_run.stamp
+build net$:net_socks_client_socket_fuzzer: phony ./net_socks_client_socket_fuzzer
+build net$:net_socks_client_socket_fuzzer_run: phony obj/net/net_socks_client_socket_fuzzer_run.stamp
+build net$:net_unescape_url_component_fuzzer: phony ./net_unescape_url_component_fuzzer
+build net$:net_unescape_url_component_fuzzer.options: phony obj/net/net_unescape_url_component_fuzzer.options.stamp
+build net$:net_unescape_url_component_fuzzer_dict_copy: phony obj/net/net_unescape_url_component_fuzzer_dict_copy.stamp
+build net$:net_unescape_url_component_fuzzer_run: phony obj/net/net_unescape_url_component_fuzzer_run.stamp
+build net$:net_unittests: phony ./net_unittests
+build net$:net_unittests_bundle_data: phony obj/net/net_unittests_bundle_data.stamp
+build net$:net_unittests_run: phony obj/net/net_unittests_run.stamp
+build net$:net_url_request_ftp_fuzzer: phony ./net_url_request_ftp_fuzzer
+build net$:net_url_request_ftp_fuzzer.options: phony obj/net/net_url_request_ftp_fuzzer.options.stamp
+build net$:net_url_request_ftp_fuzzer_dict_copy: phony obj/net/net_url_request_ftp_fuzzer_dict_copy.stamp
+build net$:net_url_request_ftp_fuzzer_run: phony obj/net/net_url_request_ftp_fuzzer_run.stamp
+build net$:net_url_request_ftp_fuzzer_seed_corpus: phony obj/net/net_url_request_ftp_fuzzer_seed_corpus.stamp
+build net$:net_url_request_fuzzer: phony ./net_url_request_fuzzer
+build net$:net_url_request_fuzzer.options: phony obj/net/net_url_request_fuzzer.options.stamp
+build net$:net_url_request_fuzzer_dict_copy: phony obj/net/net_url_request_fuzzer_dict_copy.stamp
+build net$:net_url_request_fuzzer_run: phony obj/net/net_url_request_fuzzer_run.stamp
+build net$:net_websocket_deflate_stream_fuzzer: phony ./net_websocket_deflate_stream_fuzzer
+build net$:net_websocket_deflate_stream_fuzzer.options: phony obj/net/net_websocket_deflate_stream_fuzzer.options.stamp
+build net$:net_websocket_deflate_stream_fuzzer_dict_copy: phony obj/net/net_websocket_deflate_stream_fuzzer_dict_copy.stamp
+build net$:net_websocket_deflate_stream_fuzzer_run: phony obj/net/net_websocket_deflate_stream_fuzzer_run.stamp
+build net$:net_websocket_extension_parser_fuzzer: phony ./net_websocket_extension_parser_fuzzer
+build net$:net_websocket_extension_parser_fuzzer.options: phony obj/net/net_websocket_extension_parser_fuzzer.options.stamp
+build net$:net_websocket_extension_parser_fuzzer_dict_copy: phony obj/net/net_websocket_extension_parser_fuzzer_dict_copy.stamp
+build net$:net_websocket_extension_parser_fuzzer_run: phony obj/net/net_websocket_extension_parser_fuzzer_run.stamp
+build net$:net_websocket_frame_parser_fuzzer: phony ./net_websocket_frame_parser_fuzzer
+build net$:net_websocket_frame_parser_fuzzer.options: phony obj/net/net_websocket_frame_parser_fuzzer.options.stamp
+build net$:net_websocket_frame_parser_fuzzer_dict_copy: phony obj/net/net_websocket_frame_parser_fuzzer_dict_copy.stamp
+build net$:net_websocket_frame_parser_fuzzer_run: phony obj/net/net_websocket_frame_parser_fuzzer_run.stamp
+build net$:quic_client: phony ./quic_client
+build net$:quic_packet_printer: phony ./quic_packet_printer
+build net$:quic_reject_reason_decoder: phony ./quic_reject_reason_decoder
+build net$:quic_server: phony ./quic_server
+build net$:run_testserver: phony ./run_testserver
+build net$:simple_quic_tools: phony obj/net/simple_quic_tools.stamp
+build net$:stress_cache: phony ./stress_cache
+build net$:test_support: phony obj/net/libtest_support.a
+build net$:test_support_bundle_data: phony obj/net/test_support_bundle_data.stamp
+build net$:tld_cleanup: phony ./tld_cleanup
+build net/base/registry_controlled_domains$:registry_controlled_domains: phony obj/net/base/registry_controlled_domains/registry_controlled_domains.stamp
+build net/base/registry_controlled_domains: phony obj/net/base/registry_controlled_domains/registry_controlled_domains.stamp
+build net/data/ssl/wosign$:wosign_domains: phony obj/net/data/ssl/wosign/wosign_domains.stamp
+build net/third_party/nist-pkits$:nist-pkits: phony obj/net/third_party/nist-pkits/nist-pkits.stamp
+build net/third_party/nist-pkits: phony obj/net/third_party/nist-pkits/nist-pkits.stamp
+build net/tools/tld_cleanup$:tld_cleanup: phony obj/net/tools/tld_cleanup/tld_cleanup.stamp
+build net/tools/tld_cleanup: phony obj/net/tools/tld_cleanup/tld_cleanup.stamp
+build sdch$:sdch: phony obj/sdch/libsdch.a
+build testing/gmock$:gmock: phony obj/testing/gmock/libgmock.a
+build testing/gmock: phony obj/testing/gmock/libgmock.a
+build testing/gmock$:gmock_main: phony obj/testing/gmock/libgmock_main.a
+build testing/gtest$:gtest: phony obj/testing/gtest/libgtest.a
+build testing/gtest: phony obj/testing/gtest/libgtest.a
+build testing/gtest$:gtest_main: phony obj/testing/gtest/gtest_main.stamp
+build testing/libfuzzer$:libfuzzer_main: phony obj/testing/libfuzzer/libfuzzer_main.stamp
+build testing/libfuzzer$:seed_corpus: phony obj/testing/libfuzzer/seed_corpus.stamp
+build testing/perf$:perf: phony obj/testing/perf/perf.stamp
+build testing/perf: phony obj/testing/perf/perf.stamp
+build third_party/boringssl$:boringssl: phony ./libboringssl.so.TOC
+build third_party/boringssl: phony ./libboringssl.so.TOC
+build third_party/boringssl$:boringssl_aead_test: phony ./boringssl_aead_test
+build third_party/boringssl$:boringssl_aes_test: phony ./boringssl_aes_test
+build third_party/boringssl$:boringssl_asm: phony obj/third_party/boringssl/boringssl_asm.stamp
+build third_party/boringssl$:boringssl_asn1_test: phony ./boringssl_asn1_test
+build third_party/boringssl$:boringssl_base64_test: phony ./boringssl_base64_test
+build third_party/boringssl$:boringssl_bio_test: phony ./boringssl_bio_test
+build third_party/boringssl$:boringssl_bn_test: phony ./boringssl_bn_test
+build third_party/boringssl$:boringssl_bytestring_test: phony ./boringssl_bytestring_test
+build third_party/boringssl$:boringssl_cert_fuzzer: phony ./boringssl_cert_fuzzer
+build third_party/boringssl$:boringssl_cert_fuzzer.options: phony obj/third_party/boringssl/boringssl_cert_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_cert_fuzzer_run: phony obj/third_party/boringssl/boringssl_cert_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_cert_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_chacha_test: phony ./boringssl_chacha_test
+build third_party/boringssl$:boringssl_cipher_test: phony ./boringssl_cipher_test
+build third_party/boringssl$:boringssl_client_fuzzer: phony ./boringssl_client_fuzzer
+build third_party/boringssl$:boringssl_client_fuzzer.options: phony obj/third_party/boringssl/boringssl_client_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_client_fuzzer_run: phony obj/third_party/boringssl/boringssl_client_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_client_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_client_no_fuzzer_mode_fuzzer: phony ./boringssl_client_no_fuzzer_mode_fuzzer
+build third_party/boringssl$:boringssl_client_no_fuzzer_mode_fuzzer_run: phony obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_cmac_test: phony ./boringssl_cmac_test
+build third_party/boringssl$:boringssl_constant_time_test: phony ./boringssl_constant_time_test
+build third_party/boringssl$:boringssl_crypto_tests: phony ./boringssl_crypto_tests
+build third_party/boringssl$:boringssl_crypto_tests_run: phony obj/third_party/boringssl/boringssl_crypto_tests_run.stamp
+build third_party/boringssl$:boringssl_digest_test: phony ./boringssl_digest_test
+build third_party/boringssl$:boringssl_ec_test: phony ./boringssl_ec_test
+build third_party/boringssl$:boringssl_ecdh_test: phony ./boringssl_ecdh_test
+build third_party/boringssl$:boringssl_ecdsa_sign_test: phony ./boringssl_ecdsa_sign_test
+build third_party/boringssl$:boringssl_ecdsa_test: phony ./boringssl_ecdsa_test
+build third_party/boringssl$:boringssl_ecdsa_verify_test: phony ./boringssl_ecdsa_verify_test
+build third_party/boringssl$:boringssl_ed25519_test: phony ./boringssl_ed25519_test
+build third_party/boringssl$:boringssl_err_test: phony ./boringssl_err_test
+build third_party/boringssl$:boringssl_evp_extra_test: phony ./boringssl_evp_extra_test
+build third_party/boringssl$:boringssl_evp_test: phony ./boringssl_evp_test
+build third_party/boringssl$:boringssl_example_mul: phony ./boringssl_example_mul
+build third_party/boringssl$:boringssl_fuzzer: phony ./libboringssl_fuzzer.so.TOC
+build third_party/boringssl$:boringssl_fuzzer_no_fuzzer_mode: phony ./libboringssl_fuzzer_no_fuzzer_mode.so.TOC
+build third_party/boringssl$:boringssl_gcm_test: phony ./boringssl_gcm_test
+build third_party/boringssl$:boringssl_hkdf_test: phony ./boringssl_hkdf_test
+build third_party/boringssl$:boringssl_hmac_test: phony ./boringssl_hmac_test
+build third_party/boringssl$:boringssl_lhash_test: phony ./boringssl_lhash_test
+build third_party/boringssl$:boringssl_obj_test: phony ./boringssl_obj_test
+build third_party/boringssl$:boringssl_p256-x86_64_test: phony ./boringssl_p256-x86_64_test
+build third_party/boringssl$:boringssl_pbkdf_test: phony ./boringssl_pbkdf_test
+build third_party/boringssl$:boringssl_pkcs12_test: phony ./boringssl_pkcs12_test
+build third_party/boringssl$:boringssl_pkcs7_test: phony ./boringssl_pkcs7_test
+build third_party/boringssl$:boringssl_pkcs8_fuzzer: phony ./boringssl_pkcs8_fuzzer
+build third_party/boringssl$:boringssl_pkcs8_fuzzer.options: phony obj/third_party/boringssl/boringssl_pkcs8_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_pkcs8_fuzzer_run: phony obj/third_party/boringssl/boringssl_pkcs8_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_pkcs8_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_pkcs8_test: phony ./boringssl_pkcs8_test
+build third_party/boringssl$:boringssl_poly1305_test: phony ./boringssl_poly1305_test
+build third_party/boringssl$:boringssl_pool_test: phony ./boringssl_pool_test
+build third_party/boringssl$:boringssl_privkey_fuzzer: phony ./boringssl_privkey_fuzzer
+build third_party/boringssl$:boringssl_privkey_fuzzer.options: phony obj/third_party/boringssl/boringssl_privkey_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_privkey_fuzzer_run: phony obj/third_party/boringssl/boringssl_privkey_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_privkey_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_read_pem_fuzzer: phony ./boringssl_read_pem_fuzzer
+build third_party/boringssl$:boringssl_read_pem_fuzzer.options: phony obj/third_party/boringssl/boringssl_read_pem_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_read_pem_fuzzer_run: phony obj/third_party/boringssl/boringssl_read_pem_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_read_pem_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_refcount_test: phony ./boringssl_refcount_test
+build third_party/boringssl$:boringssl_rsa_test: phony ./boringssl_rsa_test
+build third_party/boringssl$:boringssl_server_fuzzer: phony ./boringssl_server_fuzzer
+build third_party/boringssl$:boringssl_server_fuzzer.options: phony obj/third_party/boringssl/boringssl_server_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_server_fuzzer_run: phony obj/third_party/boringssl/boringssl_server_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_server_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_server_no_fuzzer_mode_fuzzer: phony ./boringssl_server_no_fuzzer_mode_fuzzer
+build third_party/boringssl$:boringssl_server_no_fuzzer_mode_fuzzer_run: phony obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_session_fuzzer: phony ./boringssl_session_fuzzer
+build third_party/boringssl$:boringssl_session_fuzzer.options: phony obj/third_party/boringssl/boringssl_session_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_session_fuzzer_run: phony obj/third_party/boringssl/boringssl_session_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_session_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_spake25519_test: phony ./boringssl_spake25519_test
+build third_party/boringssl$:boringssl_spki_fuzzer: phony ./boringssl_spki_fuzzer
+build third_party/boringssl$:boringssl_spki_fuzzer.options: phony obj/third_party/boringssl/boringssl_spki_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_spki_fuzzer_run: phony obj/third_party/boringssl/boringssl_spki_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_spki_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_ssl_ctx_api_fuzzer: phony ./boringssl_ssl_ctx_api_fuzzer
+build third_party/boringssl$:boringssl_ssl_ctx_api_fuzzer.options: phony obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer.options.stamp
+build third_party/boringssl$:boringssl_ssl_ctx_api_fuzzer_run: phony obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_run.stamp
+build third_party/boringssl$:boringssl_ssl_ctx_api_fuzzer_seed_corpus: phony obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.stamp
+build third_party/boringssl$:boringssl_ssl_tests: phony ./boringssl_ssl_tests
+build third_party/boringssl$:boringssl_ssl_tests_run: phony obj/third_party/boringssl/boringssl_ssl_tests_run.stamp
+build third_party/boringssl$:boringssl_tab_test: phony ./boringssl_tab_test
+build third_party/boringssl$:boringssl_tests: phony obj/third_party/boringssl/boringssl_tests.stamp
+build third_party/boringssl$:boringssl_thread_test: phony ./boringssl_thread_test
+build third_party/boringssl$:boringssl_unittests: phony ./boringssl_unittests
+build third_party/boringssl$:boringssl_unittests_run: phony obj/third_party/boringssl/boringssl_unittests_run.stamp
+build third_party/boringssl$:boringssl_v3name_test: phony ./boringssl_v3name_test
+build third_party/boringssl$:boringssl_x25519_test: phony ./boringssl_x25519_test
+build third_party/boringssl$:boringssl_x509_test: phony ./boringssl_x509_test
+build third_party/brotli$:bro: phony ./bro
+build third_party/brotli$:common: phony obj/third_party/brotli/libcommon.a
+build third_party/brotli$:dec: phony obj/third_party/brotli/libdec.a
+build third_party/ced$:ced: phony obj/third_party/ced/libced.a
+build third_party/ced: phony obj/third_party/ced/libced.a
+build third_party/ced$:ced_unittests: phony ./ced_unittests
+build third_party/ced$:ced_unittests_run: phony obj/third_party/ced/ced_unittests_run.stamp
+build third_party/icu$:icu: phony obj/third_party/icu/icu.stamp
+build third_party/icu: phony obj/third_party/icu/icu.stamp
+build third_party/icu$:icudata: phony obj/third_party/icu/icudata.stamp
+build third_party/icu$:icui18n: phony ./libicui18n.so.TOC
+build third_party/icu$:icuuc: phony ./libicuuc.so.TOC
+build third_party/libxml$:libxml: phony obj/third_party/libxml/libxml2.a
+build third_party/libxml: phony obj/third_party/libxml/libxml2.a
+build third_party/modp_b64$:modp_b64: phony obj/third_party/modp_b64/libmodp_b64.a
+build third_party/modp_b64: phony obj/third_party/modp_b64/libmodp_b64.a
+build third_party/protobuf$:copy_google: phony obj/third_party/protobuf/copy_google.stamp
+build third_party/protobuf$:copy_google_protobuf: phony obj/third_party/protobuf/copy_google_protobuf.stamp
+build third_party/protobuf$:copy_google_protobuf_internal: phony obj/third_party/protobuf/copy_google_protobuf_internal.stamp
+build third_party/protobuf$:copy_six: phony obj/third_party/protobuf/copy_six.stamp
+build third_party/protobuf$:protobuf_full: phony obj/third_party/protobuf/libprotobuf_full.a
+build third_party/protobuf$:protobuf_lite: phony ./libprotobuf_lite.so.TOC
+build third_party/protobuf$:protoc: phony ./protoc
+build third_party/protobuf$:protoc_lib: phony obj/third_party/protobuf/libprotoc_lib.a
+build third_party/protobuf$:py_proto: phony obj/third_party/protobuf/py_proto.stamp
+build third_party/pyftpdlib$:pyftpdlib: phony obj/third_party/pyftpdlib/pyftpdlib.stamp
+build third_party/pyftpdlib: phony obj/third_party/pyftpdlib/pyftpdlib.stamp
+build third_party/pywebsocket$:pywebsocket: phony obj/third_party/pywebsocket/pywebsocket.stamp
+build third_party/pywebsocket: phony obj/third_party/pywebsocket/pywebsocket.stamp
+build third_party/tlslite$:tlslite: phony obj/third_party/tlslite/tlslite.stamp
+build third_party/tlslite: phony obj/third_party/tlslite/tlslite.stamp
+build third_party/zlib$:compression_utils: phony obj/third_party/zlib/libcompression_utils.a
+build third_party/zlib$:minizip: phony obj/third_party/zlib/libminizip.a
+build third_party/zlib$:zip: phony obj/third_party/zlib/libzip.a
+build third_party/zlib$:zlib: phony obj/third_party/zlib/libchrome_zlib.a
+build third_party/zlib: phony obj/third_party/zlib/libchrome_zlib.a
+build third_party/zlib$:zlib_x86_simd: phony obj/third_party/zlib/libzlib_x86_simd.a
+build tools/grit$:grit_sources: phony obj/tools/grit/grit_sources.stamp
+build url$:url: phony ./liburl.so.TOC
+build url$:url_features: phony obj/url/url_features.stamp
+
+build all: phony $
+    obj/root.stamp $
+    ./libbase.so.TOC $
+    ./base_i18n_perftests $
+    obj/base/base_i18n_perftests_run.stamp $
+    ./base_json_correctness_fuzzer $
+    obj/base/base_json_correctness_fuzzer_run.stamp $
+    ./base_nocompile_tests $
+    obj/base/base_nocompile_tests_run.stamp $
+    obj/base/base_nocompile_tests_run_nocompile.stamp $
+    obj/base/libbase_paths.a $
+    ./base_perftests $
+    obj/base/base_perftests_run.stamp $
+    obj/base/libbase_static.a $
+    ./base_unittests $
+    obj/base/base_unittests_bundle_data.stamp $
+    obj/base/base_unittests_run.stamp $
+    obj/base/build_date.stamp $
+    ./build_utf8_validator_tables $
+    ./check_example $
+    obj/base/debugging_flags.stamp $
+    ./libbase_i18n.so.TOC $
+    obj/base/message_loop_tests.stamp $
+    obj/base/allocator/allocator.stamp $
+    obj/base/allocator/features.stamp $
+    obj/base/allocator/tcmalloc.stamp $
+    ./libmalloc_wrapper.so.TOC $
+    obj/base/test/native_library_test_utils.stamp $
+    obj/base/test/librun_all_base_unittests.a $
+    obj/base/test/librun_all_unittests.a $
+    obj/base/test/libtest_config.a $
+    obj/base/test/libtest_launcher_nacl_nonsfi.a $
+    ./libtest_shared_library.so.TOC $
+    obj/base/test/libtest_support.a $
+    obj/base/test/test_support_perf.stamp $
+    obj/base/third_party/dynamic_annotations/libdynamic_annotations.a $
+    obj/base/third_party/libevent/libevent.a $
+    obj/base/third_party/symbolize/libsymbolize.a $
+    obj/base/third_party/xdg_mime/libxdg_mime.a $
+    obj/base/third_party/xdg_user_dirs/libxdg_user_dirs.a $
+    obj/build/config/linux/linux.stamp $
+    obj/build/config/posix/posix.stamp $
+    obj/build/config/sanitizers/deps.stamp $
+    obj/build/config/sanitizers/deps_no_options.stamp $
+    obj/build/config/sanitizers/liboptions_sources.a $
+    obj/build/linux/fontconfig.stamp $
+    obj/build/linux/freetype2.stamp $
+    obj/build/linux/libgio/libgio.stamp $
+    obj/build/linux/libgio/libgio_loader.stamp $
+    obj/build/win/default_exe_manifest.stamp $
+    ./libcrcrypto.so.TOC $
+    ./crypto_unittests $
+    obj/crypto/crypto_unittests_run.stamp $
+    obj/crypto/platform.stamp $
+    obj/crypto/test_support.stamp $
+    ./cachetool $
+    obj/net/cert_verify_proc_whitelist_unittest_data.stamp $
+    ./cert_verify_tool $
+    obj/net/constants.stamp $
+    ./content_decoder_tool $
+    ./crash_cache $
+    ./crl_set_dump $
+    ./crypto_message_printer $
+    ./disk_cache_memory_test $
+    ./dns_fuzz_stub $
+    ./dump_cache $
+    ./epoll_quic_client $
+    ./epoll_quic_server $
+    obj/net/epoll_quic_tools.stamp $
+    obj/net/libepoll_server.a $
+    obj/net/features.stamp $
+    ./gdig $
+    ./get_server_time $
+    ./hpack_example_generator $
+    ./hpack_fuzz_mutator $
+    ./hpack_fuzz_wrapper $
+    obj/net/libhttp_server.a $
+    ./libnet.so.TOC $
+    ./net_auth_challenge_tokenizer_fuzzer $
+    obj/net/net_auth_challenge_tokenizer_fuzzer_run.stamp $
+    ./net_brotli_source_stream_fuzzer $
+    obj/net/net_brotli_source_stream_fuzzer_run.stamp $
+    ./net_cert_normalize_name_fuzzer $
+    obj/net/net_cert_normalize_name_fuzzer_run.stamp $
+    ./net_cert_parse_certificate_fuzzer $
+    obj/net/net_cert_parse_certificate_fuzzer_run.stamp $
+    ./net_cert_verify_name_in_subtree_fuzzer $
+    obj/net/net_cert_verify_name_in_subtree_fuzzer_run.stamp $
+    ./net_cert_verify_name_match_fuzzer $
+    obj/net/net_cert_verify_name_match_fuzzer_run.stamp $
+    ./net_data_job_fuzzer $
+    obj/net/net_data_job_fuzzer_run.stamp $
+    ./net_dns_hosts_parse_fuzzer $
+    obj/net/net_dns_hosts_parse_fuzzer.options.stamp $
+    obj/net/net_dns_hosts_parse_fuzzer_dict_copy.stamp $
+    obj/net/net_dns_hosts_parse_fuzzer_run.stamp $
+    ./net_dns_record_fuzzer $
+    obj/net/net_dns_record_fuzzer.options.stamp $
+    obj/net/net_dns_record_fuzzer_dict_copy.stamp $
+    obj/net/net_dns_record_fuzzer_run.stamp $
+    ./net_ftp_ctrl_response_fuzzer $
+    obj/net/net_ftp_ctrl_response_fuzzer_run.stamp $
+    ./net_ftp_directory_listing_fuzzer $
+    obj/net/net_ftp_directory_listing_fuzzer_run.stamp $
+    obj/net/net_fuzzer_test_support.stamp $
+    ./net_get_domain_and_registry_fuzzer $
+    obj/net/net_get_domain_and_registry_fuzzer.options.stamp $
+    obj/net/net_get_domain_and_registry_fuzzer_dict_copy.stamp $
+    obj/net/net_get_domain_and_registry_fuzzer_run.stamp $
+    ./net_gzip_source_stream_fuzzer $
+    obj/net/net_gzip_source_stream_fuzzer_run.stamp $
+    ./net_host_resolver_impl_fuzzer $
+    obj/net/net_host_resolver_impl_fuzzer.options.stamp $
+    obj/net/net_host_resolver_impl_fuzzer_dict_copy.stamp $
+    obj/net/net_host_resolver_impl_fuzzer_run.stamp $
+    ./net_http_chunked_decoder_fuzzer $
+    obj/net/net_http_chunked_decoder_fuzzer_run.stamp $
+    ./net_http_proxy_client_socket_fuzzer $
+    obj/net/net_http_proxy_client_socket_fuzzer.options.stamp $
+    obj/net/net_http_proxy_client_socket_fuzzer_dict_copy.stamp $
+    obj/net/net_http_proxy_client_socket_fuzzer_run.stamp $
+    ./net_http_security_headers_hpkp_fuzzer $
+    obj/net/net_http_security_headers_hpkp_fuzzer.options.stamp $
+    obj/net/net_http_security_headers_hpkp_fuzzer_dict_copy.stamp $
+    obj/net/net_http_security_headers_hpkp_fuzzer_run.stamp $
+    ./net_http_security_headers_hpkp_report_only_fuzzer $
+    obj/net/net_http_security_headers_hpkp_report_only_fuzzer.options.stamp $
+    obj/net/net_http_security_headers_hpkp_report_only_fuzzer_dict_copy.stamp $
+    obj/net/net_http_security_headers_hpkp_report_only_fuzzer_run.stamp $
+    ./net_http_security_headers_hsts_fuzzer $
+    obj/net/net_http_security_headers_hsts_fuzzer.options.stamp $
+    obj/net/net_http_security_headers_hsts_fuzzer_dict_copy.stamp $
+    obj/net/net_http_security_headers_hsts_fuzzer_run.stamp $
+    ./net_http_server_fuzzer $
+    obj/net/net_http_server_fuzzer.options.stamp $
+    obj/net/net_http_server_fuzzer_dict_copy.stamp $
+    obj/net/net_http_server_fuzzer_run.stamp $
+    obj/net/net_http_server_fuzzer_seed_corpus.stamp $
+    ./net_http_stream_parser_fuzzer $
+    obj/net/net_http_stream_parser_fuzzer.options.stamp $
+    obj/net/net_http_stream_parser_fuzzer_dict_copy.stamp $
+    obj/net/net_http_stream_parser_fuzzer_run.stamp $
+    ./net_http_transport_security_state_static_fuzzer $
+    obj/net/net_http_transport_security_state_static_fuzzer.options.stamp $
+    obj/net/net_http_transport_security_state_static_fuzzer_dict_copy.stamp $
+    obj/net/net_http_transport_security_state_static_fuzzer_run.stamp $
+    ./net_mime_sniffer_fuzzer $
+    obj/net/net_mime_sniffer_fuzzer.options.stamp $
+    obj/net/net_mime_sniffer_fuzzer_dict_copy.stamp $
+    obj/net/net_mime_sniffer_fuzzer_run.stamp $
+    ./net_parse_cookie_line_fuzzer $
+    obj/net/net_parse_cookie_line_fuzzer_run.stamp $
+    ./net_parse_data_url_fuzzer $
+    obj/net/net_parse_data_url_fuzzer.options.stamp $
+    obj/net/net_parse_data_url_fuzzer_dict_copy.stamp $
+    obj/net/net_parse_data_url_fuzzer_run.stamp $
+    ./net_parse_ip_pattern_fuzzer $
+    obj/net/net_parse_ip_pattern_fuzzer_run.stamp $
+    ./net_parse_proxy_bypass_rules_fuzzer $
+    obj/net/net_parse_proxy_bypass_rules_fuzzer_run.stamp $
+    ./net_parse_proxy_list_fuzzer $
+    obj/net/net_parse_proxy_list_fuzzer_run.stamp $
+    ./net_parse_proxy_list_pac_fuzzer $
+    obj/net/net_parse_proxy_list_pac_fuzzer_run.stamp $
+    ./net_parse_proxy_rules_fuzzer $
+    obj/net/net_parse_proxy_rules_fuzzer.options.stamp $
+    obj/net/net_parse_proxy_rules_fuzzer_dict_copy.stamp $
+    obj/net/net_parse_proxy_rules_fuzzer_run.stamp $
+    ./net_parse_url_hostname_to_address_fuzzer $
+    obj/net/net_parse_url_hostname_to_address_fuzzer.options.stamp $
+    obj/net/net_parse_url_hostname_to_address_fuzzer_run.stamp $
+    obj/net/net_parse_url_hostname_to_address_fuzzer_seed_corpus.stamp $
+    ./net_quic_crypto_framer_parse_message_fuzzer $
+    obj/net/net_quic_crypto_framer_parse_message_fuzzer_run.stamp $
+    obj/net/net_quic_proto.stamp $
+    obj/net/net_quic_proto_gen.stamp $
+    obj/net/net_resources.stamp $
+    obj/net/net_resources_grit.stamp $
+    ./net_socks5_client_socket_fuzzer $
+    obj/net/net_socks5_client_socket_fuzzer_run.stamp $
+    ./net_socks_client_socket_fuzzer $
+    obj/net/net_socks_client_socket_fuzzer_run.stamp $
+    ./net_unescape_url_component_fuzzer $
+    obj/net/net_unescape_url_component_fuzzer.options.stamp $
+    obj/net/net_unescape_url_component_fuzzer_dict_copy.stamp $
+    obj/net/net_unescape_url_component_fuzzer_run.stamp $
+    ./net_unittests $
+    obj/net/net_unittests_bundle_data.stamp $
+    obj/net/net_unittests_run.stamp $
+    ./net_url_request_ftp_fuzzer $
+    obj/net/net_url_request_ftp_fuzzer.options.stamp $
+    obj/net/net_url_request_ftp_fuzzer_dict_copy.stamp $
+    obj/net/net_url_request_ftp_fuzzer_run.stamp $
+    obj/net/net_url_request_ftp_fuzzer_seed_corpus.stamp $
+    ./net_url_request_fuzzer $
+    obj/net/net_url_request_fuzzer.options.stamp $
+    obj/net/net_url_request_fuzzer_dict_copy.stamp $
+    obj/net/net_url_request_fuzzer_run.stamp $
+    ./net_websocket_deflate_stream_fuzzer $
+    obj/net/net_websocket_deflate_stream_fuzzer.options.stamp $
+    obj/net/net_websocket_deflate_stream_fuzzer_dict_copy.stamp $
+    obj/net/net_websocket_deflate_stream_fuzzer_run.stamp $
+    ./net_websocket_extension_parser_fuzzer $
+    obj/net/net_websocket_extension_parser_fuzzer.options.stamp $
+    obj/net/net_websocket_extension_parser_fuzzer_dict_copy.stamp $
+    obj/net/net_websocket_extension_parser_fuzzer_run.stamp $
+    ./net_websocket_frame_parser_fuzzer $
+    obj/net/net_websocket_frame_parser_fuzzer.options.stamp $
+    obj/net/net_websocket_frame_parser_fuzzer_dict_copy.stamp $
+    obj/net/net_websocket_frame_parser_fuzzer_run.stamp $
+    ./quic_client $
+    ./quic_packet_printer $
+    ./quic_reject_reason_decoder $
+    ./quic_server $
+    ./run_testserver $
+    obj/net/simple_quic_tools.stamp $
+    ./stress_cache $
+    obj/net/libtest_support.a $
+    obj/net/test_support_bundle_data.stamp $
+    ./tld_cleanup $
+    obj/net/base/registry_controlled_domains/registry_controlled_domains.stamp $
+    obj/net/data/ssl/wosign/wosign_domains.stamp $
+    obj/net/third_party/nist-pkits/nist-pkits.stamp $
+    obj/net/tools/tld_cleanup/tld_cleanup.stamp $
+    obj/sdch/libsdch.a $
+    obj/testing/gmock/libgmock.a $
+    obj/testing/gmock/libgmock_main.a $
+    obj/testing/gtest/libgtest.a $
+    obj/testing/gtest/gtest_main.stamp $
+    obj/testing/libfuzzer/libfuzzer_main.stamp $
+    obj/testing/libfuzzer/seed_corpus.stamp $
+    obj/testing/perf/perf.stamp $
+    ./libboringssl.so.TOC $
+    ./boringssl_aead_test $
+    ./boringssl_aes_test $
+    obj/third_party/boringssl/boringssl_asm.stamp $
+    ./boringssl_asn1_test $
+    ./boringssl_base64_test $
+    ./boringssl_bio_test $
+    ./boringssl_bn_test $
+    ./boringssl_bytestring_test $
+    ./boringssl_cert_fuzzer $
+    obj/third_party/boringssl/boringssl_cert_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_cert_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_cert_fuzzer_seed_corpus.stamp $
+    ./boringssl_chacha_test $
+    ./boringssl_cipher_test $
+    ./boringssl_client_fuzzer $
+    obj/third_party/boringssl/boringssl_client_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_client_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_client_fuzzer_seed_corpus.stamp $
+    ./boringssl_client_no_fuzzer_mode_fuzzer $
+    obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_client_no_fuzzer_mode_fuzzer_seed_corpus.stamp $
+    ./boringssl_cmac_test $
+    ./boringssl_constant_time_test $
+    ./boringssl_crypto_tests $
+    obj/third_party/boringssl/boringssl_crypto_tests_run.stamp $
+    ./boringssl_digest_test $
+    ./boringssl_ec_test $
+    ./boringssl_ecdh_test $
+    ./boringssl_ecdsa_sign_test $
+    ./boringssl_ecdsa_test $
+    ./boringssl_ecdsa_verify_test $
+    ./boringssl_ed25519_test $
+    ./boringssl_err_test $
+    ./boringssl_evp_extra_test $
+    ./boringssl_evp_test $
+    ./boringssl_example_mul $
+    ./libboringssl_fuzzer.so.TOC $
+    ./libboringssl_fuzzer_no_fuzzer_mode.so.TOC $
+    ./boringssl_gcm_test $
+    ./boringssl_hkdf_test $
+    ./boringssl_hmac_test $
+    ./boringssl_lhash_test $
+    ./boringssl_obj_test $
+    ./boringssl_p256-x86_64_test $
+    ./boringssl_pbkdf_test $
+    ./boringssl_pkcs12_test $
+    ./boringssl_pkcs7_test $
+    ./boringssl_pkcs8_fuzzer $
+    obj/third_party/boringssl/boringssl_pkcs8_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_pkcs8_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_pkcs8_fuzzer_seed_corpus.stamp $
+    ./boringssl_pkcs8_test $
+    ./boringssl_poly1305_test $
+    ./boringssl_pool_test $
+    ./boringssl_privkey_fuzzer $
+    obj/third_party/boringssl/boringssl_privkey_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_privkey_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_privkey_fuzzer_seed_corpus.stamp $
+    ./boringssl_read_pem_fuzzer $
+    obj/third_party/boringssl/boringssl_read_pem_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_read_pem_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_read_pem_fuzzer_seed_corpus.stamp $
+    ./boringssl_refcount_test $
+    ./boringssl_rsa_test $
+    ./boringssl_server_fuzzer $
+    obj/third_party/boringssl/boringssl_server_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_server_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_server_fuzzer_seed_corpus.stamp $
+    ./boringssl_server_no_fuzzer_mode_fuzzer $
+    obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_server_no_fuzzer_mode_fuzzer_seed_corpus.stamp $
+    ./boringssl_session_fuzzer $
+    obj/third_party/boringssl/boringssl_session_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_session_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_session_fuzzer_seed_corpus.stamp $
+    ./boringssl_spake25519_test $
+    ./boringssl_spki_fuzzer $
+    obj/third_party/boringssl/boringssl_spki_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_spki_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_spki_fuzzer_seed_corpus.stamp $
+    ./boringssl_ssl_ctx_api_fuzzer $
+    obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer.options.stamp $
+    obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_run.stamp $
+    obj/third_party/boringssl/boringssl_ssl_ctx_api_fuzzer_seed_corpus.stamp $
+    ./boringssl_ssl_tests $
+    obj/third_party/boringssl/boringssl_ssl_tests_run.stamp $
+    ./boringssl_tab_test $
+    obj/third_party/boringssl/boringssl_tests.stamp $
+    ./boringssl_thread_test $
+    ./boringssl_unittests $
+    obj/third_party/boringssl/boringssl_unittests_run.stamp $
+    ./boringssl_v3name_test $
+    ./boringssl_x25519_test $
+    ./boringssl_x509_test $
+    ./bro $
+    obj/third_party/brotli/libcommon.a $
+    obj/third_party/brotli/libdec.a $
+    obj/third_party/ced/libced.a $
+    ./ced_unittests $
+    obj/third_party/ced/ced_unittests_run.stamp $
+    obj/third_party/icu/icu.stamp $
+    obj/third_party/icu/icudata.stamp $
+    ./libicui18n.so.TOC $
+    ./libicuuc.so.TOC $
+    obj/third_party/libxml/libxml2.a $
+    obj/third_party/modp_b64/libmodp_b64.a $
+    obj/third_party/protobuf/copy_google.stamp $
+    obj/third_party/protobuf/copy_google_protobuf.stamp $
+    obj/third_party/protobuf/copy_google_protobuf_internal.stamp $
+    obj/third_party/protobuf/copy_six.stamp $
+    obj/third_party/protobuf/libprotobuf_full.a $
+    ./libprotobuf_lite.so.TOC $
+    ./protoc $
+    obj/third_party/protobuf/libprotoc_lib.a $
+    obj/third_party/protobuf/py_proto.stamp $
+    obj/third_party/pyftpdlib/pyftpdlib.stamp $
+    obj/third_party/pywebsocket/pywebsocket.stamp $
+    obj/third_party/tlslite/tlslite.stamp $
+    obj/third_party/zlib/libcompression_utils.a $
+    obj/third_party/zlib/libminizip.a $
+    obj/third_party/zlib/libzip.a $
+    obj/third_party/zlib/libchrome_zlib.a $
+    obj/third_party/zlib/libzlib_x86_simd.a $
+    obj/tools/grit/grit_sources.stamp $
+    ./liburl.so.TOC $
+    obj/url/url_features.stamp
+
+default all

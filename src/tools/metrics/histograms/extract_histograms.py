@@ -142,6 +142,12 @@ def _ExpandHistogramNameWithSuffixes(suffix_name, histogram_name,
     ordering = histogram_suffixes_node.getAttribute('ordering')
   else:
     ordering = 'suffix'
+  parts = ordering.split(',')
+  ordering = parts[0]
+  if len(parts) > 1:
+    placement = int(parts[1])
+  else:
+    placement = 1
   if ordering not in ['prefix', 'suffix']:
     logging.error('ordering needs to be prefix or suffix, value is %s',
                   ordering)
@@ -156,15 +162,16 @@ def _ExpandHistogramNameWithSuffixes(suffix_name, histogram_name,
   # For prefixes, the suffix_name is inserted between the "cluster" and the
   # "remainder", e.g. Foo.BarHist expanded with gamma becomes Foo.gamma_BarHist.
   sections = histogram_name.split('.')
-  if len(sections) <= 1:
+  if len(sections) <= placement:
     logging.error(
-        'Prefix Field Trial expansions require histogram names which include a '
-        'dot separator. Histogram name is %s, and Field Trial is %s',
-        histogram_name, histogram_suffixes_node.getAttribute('name'))
+        'Prefix histogram_suffixes expansions require histogram names which '
+        'include a dot separator. Histogram name is %s, histogram_suffixes is '
+        '%s, and placment is %d',
+        histogram_name, histogram_suffixes_node.getAttribute('name'), placement)
     raise Error()
 
-  cluster = sections[0] + '.'
-  remainder = '.'.join(sections[1:])
+  cluster = '.'.join(sections[0:placement]) + '.'
+  remainder = '.'.join(sections[placement:])
   return cluster + suffix_name + separator + remainder
 
 

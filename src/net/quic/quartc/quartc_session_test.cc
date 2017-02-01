@@ -17,7 +17,6 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "net/quic/core/quic_crypto_client_stream.h"
 #include "net/quic/core/quic_crypto_server_stream.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/platform/impl/quic_chromium_clock.h"
 #include "net/quic/quartc/quartc_alarm_factory.h"
@@ -464,23 +463,20 @@ class QuartcSessionTest : public ::testing::Test,
   std::unique_ptr<QuartcSessionForTest> server_peer_;
 };
 
-TEST_F(QuartcSessionTest, StreamConnection) {
-  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
+TEST_F(QuartcSessionTest, DISABLED_StreamConnection) {
   CreateClientAndServerSessions();
   StartHandshake();
   TestStreamConnection();
 }
 
-TEST_F(QuartcSessionTest, ClientRejection) {
-  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
+TEST_F(QuartcSessionTest, DISABLED_ClientRejection) {
   CreateClientAndServerSessions(false /*client_handshake_success*/,
                                 true /*server_handshake_success*/);
   StartHandshake();
   TestDisconnectAfterFailedHandshake();
 }
 
-TEST_F(QuartcSessionTest, ServerRejection) {
-  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
+TEST_F(QuartcSessionTest, DISABLED_ServerRejection) {
   CreateClientAndServerSessions(true /*client_handshake_success*/,
                                 false /*server_handshake_success*/);
   StartHandshake();
@@ -494,8 +490,7 @@ TEST_F(QuartcSessionTest, CannotCreateDataStreamBeforeHandshake) {
   EXPECT_EQ(nullptr, client_peer_->CreateOutgoingStream(kDefaultStreamParam));
 }
 
-TEST_F(QuartcSessionTest, CloseQuartcStream) {
-  FLAGS_quic_reloadable_flag_enable_async_get_proof = false;
+TEST_F(QuartcSessionTest, DISABLED_CloseQuartcStream) {
   CreateClientAndServerSessions();
   StartHandshake();
   ASSERT_TRUE(client_peer_->IsCryptoHandshakeConfirmed() &&

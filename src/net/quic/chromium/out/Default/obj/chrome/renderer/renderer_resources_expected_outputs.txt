@@ -1,0 +1,4 @@
+gen/chrome/grit/renderer_resources.h
+gen/chrome/renderer_resources_100_percent.pak
+gen/chrome/renderer_resources_200_percent.pak
+gen/chrome/renderer_resources_300_percent.pak

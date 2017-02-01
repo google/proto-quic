@@ -30,6 +30,14 @@ base::LazyInstance<ThreadLocalBoolean>::Leaky
 
 const int kIdleSecondsBeforeExit = 10 * 60;
 
+#if defined(OS_MACOSX)
+// On Mac OS X a background thread's default stack size is 512Kb. We need at
+// least 1MB for compilation tasks in V8, so increase this default.
+const int kStackSize = 1 * 1024 * 1024;
+#else
+const int kStackSize = 0;
+#endif
+
 class WorkerPoolImpl {
  public:
   WorkerPoolImpl();
@@ -146,7 +154,7 @@ void PosixDynamicThreadPool::AddTask(PendingTask* pending_task) {
     // The new PlatformThread will take ownership of the WorkerThread object,
     // which will delete itself on exit.
     WorkerThread* worker = new WorkerThread(name_prefix_, this);
-    PlatformThread::CreateNonJoinable(0, worker);
+    PlatformThread::CreateNonJoinable(kStackSize, worker);
   }
 }
 

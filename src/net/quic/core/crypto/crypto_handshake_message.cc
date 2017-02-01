@@ -6,17 +6,16 @@
 
 #include <memory>
 
-#include "base/strings/stringprintf.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/quic_socket_address_coder.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_map_util.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
 using base::StringPiece;
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -304,8 +303,8 @@ string CryptoHandshakeMessage::DebugStringInternal(size_t indent) const {
         }
         break;
       case kPAD:
-        ret += StringPrintf("(%d bytes of padding)",
-                            static_cast<int>(it->second.size()));
+        ret += QuicStringPrintf("(%d bytes of padding)",
+                                static_cast<int>(it->second.size()));
         done = true;
         break;
       case kSNI:

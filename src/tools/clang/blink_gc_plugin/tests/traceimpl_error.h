@@ -17,10 +17,7 @@ class X : public GarbageCollected<X> {
 class TraceImplInlinedWithUntracedMember
     : public GarbageCollected<TraceImplInlinedWithUntracedMember> {
  public:
-  void Trace(Visitor* visitor) { TraceImpl(visitor); }
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
+  void Trace(Visitor* visitor) {
     // Empty; should get complaints from the plugin for untraced x_.
   }
 
@@ -33,9 +30,6 @@ class TraceImplExternWithUntracedMember
  public:
   void Trace(Visitor* visitor);
 
-  template <typename VisitorDispatcher>
-  inline void TraceImpl(VisitorDispatcher);
-
  private:
   Member<X> x_;
 };
@@ -47,10 +41,7 @@ class Base : public GarbageCollected<Base> {
 
 class TraceImplInlineWithUntracedBase : public Base {
  public:
-  void Trace(Visitor* visitor) override { TraceImpl(visitor); }
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor) {
+  void Trace(Visitor* visitor) override {
     // Empty; should get complaints from the plugin for untraced Base.
   }
 };
@@ -58,9 +49,6 @@ class TraceImplInlineWithUntracedBase : public Base {
 class TraceImplExternWithUntracedBase : public Base {
  public:
   void Trace(Visitor*) override;
-
-  template <typename VisitorDispatcher>
-  void TraceImpl(VisitorDispatcher visitor);
 };
 
 }

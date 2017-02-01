@@ -92,14 +92,13 @@ def ExtractResourceIdsFromPragmaWarnings(text):
   return used_resources
 
 
-def CaptureCommandStderr(command):
+def CaptureCommandStderr(command, env=None):
   """Returns the stderr of a command.
 
   Args:
-    args: A list containing the command and arguments.
-    cwd: The working directory from where the command should be made.
+    command: A list containing the command and arguments.
     env: Environment variables for the new process.
   """
-  child = subprocess.Popen(command, stderr=subprocess.PIPE)
+  child = subprocess.Popen(command, stderr=subprocess.PIPE, env=env)
   _, stderr = child.communicate()
   return child.returncode, stderr

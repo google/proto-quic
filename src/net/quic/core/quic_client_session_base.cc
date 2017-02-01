@@ -79,47 +79,50 @@ void QuicClientSessionBase::OnPromiseHeaderList(
 }
 
 bool QuicClientSessionBase::HandlePromised(QuicStreamId /* associated_id */,
-                                           QuicStreamId id,
+                                           QuicStreamId promised_id,
                                            const SpdyHeaderBlock& headers) {
   // Due to pathalogical packet re-ordering, it is possible that
   // frames for the promised stream have already arrived, and the
   // promised stream could be active or closed.
-  if (IsClosedStream(id)) {
+  if (IsClosedStream(promised_id)) {
     // There was a RST on the data stream already, perhaps
     // QUIC_REFUSED_STREAM?
-    QUIC_DVLOG(1) << "Promise ignored for stream " << id
+    QUIC_DVLOG(1) << "Promise ignored for stream " << promised_id
                   << " that is already closed";
     return false;
   }
 
   if (push_promise_index_->promised_by_url()->size() >= get_max_promises()) {
-    QUIC_DVLOG(1) << "Too many promises, rejecting promise for stream " << id;
-    ResetPromised(id, QUIC_REFUSED_STREAM);
+    QUIC_DVLOG(1) << "Too many promises, rejecting promise for stream "
+                  << promised_id;
+    ResetPromised(promised_id, QUIC_REFUSED_STREAM);
     return false;
   }
 
   const string url = SpdyUtils::GetUrlFromHeaderBlock(headers);
   QuicClientPromisedInfo* old_promised = GetPromisedByUrl(url);
   if (old_promised) {
-    QUIC_DVLOG(1) << "Promise for stream " << id << " is duplicate URL " << url
+    QUIC_DVLOG(1) << "Promise for stream " << promised_id
+                  << " is duplicate URL " << url
                   << " of previous promise for stream " << old_promised->id();
-    ResetPromised(id, QUIC_DUPLICATE_PROMISE_URL);
+    ResetPromised(promised_id, QUIC_DUPLICATE_PROMISE_URL);
     return false;
   }
 
-  if (GetPromisedById(id)) {
+  if (GetPromisedById(promised_id)) {
     // OnPromiseHeadersComplete() would have closed the connection if
     // promised id is a duplicate.
-    QUIC_BUG << "Duplicate promise for id " << id;
+    QUIC_BUG << "Duplicate promise for id " << promised_id;
     return false;
   }
 
-  QuicClientPromisedInfo* promised = new QuicClientPromisedInfo(this, id, url);
+  QuicClientPromisedInfo* promised =
+      new QuicClientPromisedInfo(this, promised_id, url);
   std::unique_ptr<QuicClientPromisedInfo> promised_owner(promised);
   promised->Init();
-  QUIC_DVLOG(1) << "stream " << id << " emplace url " << url;
+  QUIC_DVLOG(1) << "stream " << promised_id << " emplace url " << url;
   (*push_promise_index_->promised_by_url())[url] = promised;
-  promised_by_id_[id] = std::move(promised_owner);
+  promised_by_id_[promised_id] = std::move(promised_owner);
   promised->OnPromiseHeaders(headers);
   return true;
 }

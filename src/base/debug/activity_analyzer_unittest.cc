@@ -321,6 +321,82 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
   EXPECT_EQ(strlen(string2), snapshot.at("sref").GetStringReference().size());
 }
 
+TEST_F(ActivityAnalyzerTest, GlobalModulesTest) {
+  GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
+
+  PersistentMemoryAllocator* allocator =
+      GlobalActivityTracker::Get()->allocator();
+  GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
+      const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
+
+  GlobalActivityTracker::ModuleInfo info1;
+  info1.is_loaded = true;
+  info1.address = 0x12345678;
+  info1.load_time = 1111;
+  info1.size = 0xABCDEF;
+  info1.timestamp = 111;
+  info1.age = 11;
+  info1.identifier[0] = 1;
+  info1.file = "anything";
+  info1.debug_file = "elsewhere";
+
+  GlobalActivityTracker::Get()->RecordModuleInfo(info1);
+  std::vector<GlobalActivityTracker::ModuleInfo> modules1;
+  modules1 = global_analyzer.GetModules();
+  ASSERT_EQ(1U, modules1.size());
+  GlobalActivityTracker::ModuleInfo& stored1a = modules1[0];
+  EXPECT_EQ(info1.is_loaded, stored1a.is_loaded);
+  EXPECT_EQ(info1.address, stored1a.address);
+  EXPECT_NE(info1.load_time, stored1a.load_time);
+  EXPECT_EQ(info1.size, stored1a.size);
+  EXPECT_EQ(info1.timestamp, stored1a.timestamp);
+  EXPECT_EQ(info1.age, stored1a.age);
+  EXPECT_EQ(info1.identifier[0], stored1a.identifier[0]);
+  EXPECT_EQ(info1.file, stored1a.file);
+  EXPECT_EQ(info1.debug_file, stored1a.debug_file);
+
+  info1.is_loaded = false;
+  GlobalActivityTracker::Get()->RecordModuleInfo(info1);
+  modules1 = global_analyzer.GetModules();
+  ASSERT_EQ(1U, modules1.size());
+  GlobalActivityTracker::ModuleInfo& stored1b = modules1[0];
+  EXPECT_EQ(info1.is_loaded, stored1b.is_loaded);
+  EXPECT_EQ(info1.address, stored1b.address);
+  EXPECT_NE(info1.load_time, stored1b.load_time);
+  EXPECT_EQ(info1.size, stored1b.size);
+  EXPECT_EQ(info1.timestamp, stored1b.timestamp);
+  EXPECT_EQ(info1.age, stored1b.age);
+  EXPECT_EQ(info1.identifier[0], stored1b.identifier[0]);
+  EXPECT_EQ(info1.file, stored1b.file);
+  EXPECT_EQ(info1.debug_file, stored1b.debug_file);
+
+  GlobalActivityTracker::ModuleInfo info2;
+  info2.is_loaded = true;
+  info2.address = 0x87654321;
+  info2.load_time = 2222;
+  info2.size = 0xFEDCBA;
+  info2.timestamp = 222;
+  info2.age = 22;
+  info2.identifier[0] = 2;
+  info2.file = "nothing";
+  info2.debug_file = "farewell";
+
+  GlobalActivityTracker::Get()->RecordModuleInfo(info2);
+  std::vector<GlobalActivityTracker::ModuleInfo> modules2;
+  modules2 = global_analyzer.GetModules();
+  ASSERT_EQ(2U, modules2.size());
+  GlobalActivityTracker::ModuleInfo& stored2 = modules2[1];
+  EXPECT_EQ(info2.is_loaded, stored2.is_loaded);
+  EXPECT_EQ(info2.address, stored2.address);
+  EXPECT_NE(info2.load_time, stored2.load_time);
+  EXPECT_EQ(info2.size, stored2.size);
+  EXPECT_EQ(info2.timestamp, stored2.timestamp);
+  EXPECT_EQ(info2.age, stored2.age);
+  EXPECT_EQ(info2.identifier[0], stored2.identifier[0]);
+  EXPECT_EQ(info2.file, stored2.file);
+  EXPECT_EQ(info2.debug_file, stored2.debug_file);
+}
+
 TEST_F(ActivityAnalyzerTest, GlobalLogMessages) {
   GlobalActivityTracker::CreateWithLocalMemory(kMemorySize, 0, "", 3);
 

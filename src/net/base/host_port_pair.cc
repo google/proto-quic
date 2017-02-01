@@ -9,6 +9,7 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/ip_endpoint.h"
 #include "net/base/parse_number.h"
 #include "net/base/port_util.h"
@@ -46,6 +47,10 @@ HostPortPair HostPortPair::FromString(const std::string& str) {
   host_port_pair.set_host(key_port[0].as_string());
   host_port_pair.set_port(static_cast<uint16_t>(port));
   return host_port_pair;
+}
+
+size_t HostPortPair::EstimateMemoryUsage(const HostPortPair& pair) {
+  return base::trace_event::EstimateMemoryUsage(pair.host());
 }
 
 std::string HostPortPair::ToString() const {

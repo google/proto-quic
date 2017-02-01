@@ -127,13 +127,20 @@ def InstallDefaultSysroots(host_arch):
   # available.
   InstallSysroot('Precise', 'amd64')
 
-  # Finally, if we can detect a non-standard target_arch such as ARM or
-  # MIPS, then install the sysroot too.
-  # Don't attampt to install arm64 since this is currently and android-only
-  # architecture.
+  # If we can detect a non-standard target_arch such as ARM or MIPS,
+  # then install the sysroot too.  Don't attempt to install arm64
+  # since this is currently and android-only architecture.
   target_arch = DetectTargetArch()
   if target_arch and target_arch not in (host_arch, 'i386'):
     InstallDefaultSysrootForArch(target_arch)
+
+  # Desktop Linux ozone builds require libxkbcommon* which is not
+  # available in Wheezy.
+  # TODO(thomasanderson): Remove this once the Jessie sysroot is used
+  # by default.
+  gyp_defines = gyp_chromium.GetGypVars(gyp_chromium.GetSupplementalFiles())
+  if gyp_defines.get('use_ozone') == '1':
+    InstallSysroot('Jessie', 'amd64')
 
 
 def main(args):
@@ -198,7 +205,7 @@ def InstallSysroot(target_platform, target_arch):
   if os.path.exists(stamp):
     with open(stamp) as s:
       if s.read() == url:
-        print 'Debian %s %s root image already up to date: %s' % \
+        print '%s %s sysroot image already up to date: %s' % \
             (target_platform, target_arch, sysroot)
         return
 

@@ -8,6 +8,7 @@
 #include <dbghelp.h>
 #include <stddef.h>
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
@@ -209,9 +210,11 @@ bool EnableInProcessStackDumping() {
 #pragma optimize("", off)
 #endif
 
-StackTrace::StackTrace() {
+StackTrace::StackTrace(size_t count) {
+  count = std::min(arraysize(trace_), count);
+
   // When walking our own stack, use CaptureStackBackTrace().
-  count_ = CaptureStackBackTrace(0, arraysize(trace_), trace_, NULL);
+  count_ = CaptureStackBackTrace(0, count, trace_, NULL);
 }
 
 #if defined(COMPILER_MSVC)

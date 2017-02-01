@@ -462,6 +462,7 @@ def main():
     finished_tests.extend(CompleteAtLeastOneTest(executing_tests))
   timings['compile_done'] = time.time()
 
+  finished_tests = sorted(finished_tests, key=lambda test: test['name'])
   for test in finished_tests:
     if test['name'] == 'NCTEST_SANITY':
       _, stderr = test['proc'].communicate()

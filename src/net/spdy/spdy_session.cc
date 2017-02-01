@@ -370,7 +370,7 @@ class SpdyServerPushHelper : public ServerPushDelegate::ServerPushHelper {
 }  // namespace
 
 SpdyProtocolErrorDetails MapFramerErrorToProtocolError(
-    SpdyFramer::SpdyError err) {
+    SpdyFramer::SpdyFramerError err) {
   switch (err) {
     case SpdyFramer::SPDY_NO_ERROR:
       return SPDY_ERROR_NO_ERROR;
@@ -412,7 +412,7 @@ SpdyProtocolErrorDetails MapFramerErrorToProtocolError(
   }
 }
 
-Error MapFramerErrorToNetError(SpdyFramer::SpdyError err) {
+Error MapFramerErrorToNetError(SpdyFramer::SpdyFramerError err) {
   switch (err) {
     case SpdyFramer::SPDY_NO_ERROR:
       return OK;
@@ -1482,7 +1482,8 @@ int SpdySession::DoReadComplete(int result) {
       return ERR_CONNECTION_CLOSED;
     }
 
-    DCHECK_EQ(buffered_spdy_framer_->error_code(), SpdyFramer::SPDY_NO_ERROR);
+    DCHECK_EQ(buffered_spdy_framer_->spdy_framer_error(),
+              SpdyFramer::SPDY_NO_ERROR);
   }
 
   read_state_ = READ_STATE_DO_READ;
@@ -2039,15 +2040,15 @@ Error SpdySession::GetTokenBindingSignature(crypto::ECPrivateKey* key,
   return ssl_socket->GetTokenBindingSignature(key, tb_type, out);
 }
 
-void SpdySession::OnError(SpdyFramer::SpdyError error_code) {
+void SpdySession::OnError(SpdyFramer::SpdyFramerError spdy_framer_error) {
   CHECK(in_io_loop_);
 
-  RecordProtocolErrorHistogram(MapFramerErrorToProtocolError(error_code));
-  std::string description =
-      base::StringPrintf("Framer error: %d (%s).",
-                         error_code,
-                         SpdyFramer::ErrorCodeToString(error_code));
-  DoDrainSession(MapFramerErrorToNetError(error_code), description);
+  RecordProtocolErrorHistogram(
+      MapFramerErrorToProtocolError(spdy_framer_error));
+  std::string description = base::StringPrintf(
+      "Framer error: %d (%s).", spdy_framer_error,
+      SpdyFramer::SpdyFramerErrorToString(spdy_framer_error));
+  DoDrainSession(MapFramerErrorToNetError(spdy_framer_error), description);
 }
 
 void SpdySession::OnStreamError(SpdyStreamId stream_id,

@@ -1,0 +1,2 @@
+newlib_pnacl_nonsfi/gen/content/grit/content_resources.h
+newlib_pnacl_nonsfi/gen/content/content_resources.pak

@@ -12,6 +12,7 @@ sky@chromium.org
 stip@chromium.org
 thakis@chromium.org
 
+per-file chromium.android*.json=bpastene@chromium.org
 per-file chromium.android*.json=jbudorick@chromium.org
 
 # For Site Isolation FYI tests:

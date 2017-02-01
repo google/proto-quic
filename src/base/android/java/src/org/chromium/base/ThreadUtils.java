@@ -34,6 +34,11 @@ public class ThreadUtils {
     @VisibleForTesting
     public static void setUiThread(Looper looper) {
         synchronized (sLock) {
+            if (looper == null) {
+                // Used to reset the looper after tests.
+                sUiThreadHandler = null;
+                return;
+            }
             if (sUiThreadHandler != null && sUiThreadHandler.getLooper() != looper) {
                 throw new RuntimeException("UI thread looper is already set to "
                         + sUiThreadHandler.getLooper() + " (Main thread looper is "

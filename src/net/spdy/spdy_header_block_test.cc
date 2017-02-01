@@ -16,7 +16,6 @@
 using base::StringPiece;
 using std::make_pair;
 using std::string;
-using std::vector;
 using ::testing::ElementsAre;
 
 namespace net {
@@ -197,7 +196,7 @@ TEST(SpdyHeaderBlockTest, AppendHeaders) {
 }
 
 TEST(JoinTest, JoinEmpty) {
-  vector<StringPiece> empty;
+  std::vector<StringPiece> empty;
   StringPiece separator = ", ";
   char buf[10] = "";
   size_t written = Join(buf, empty, separator);
@@ -205,7 +204,7 @@ TEST(JoinTest, JoinEmpty) {
 }
 
 TEST(JoinTest, JoinOne) {
-  vector<StringPiece> v = {"one"};
+  std::vector<StringPiece> v = {"one"};
   StringPiece separator = ", ";
   char buf[15];
   size_t written = Join(buf, v, separator);
@@ -214,7 +213,7 @@ TEST(JoinTest, JoinOne) {
 }
 
 TEST(JoinTest, JoinMultiple) {
-  vector<StringPiece> v = {"one", "two", "three"};
+  std::vector<StringPiece> v = {"one", "two", "three"};
   StringPiece separator = ", ";
   char buf[15];
   size_t written = Join(buf, v, separator);

@@ -28,7 +28,6 @@
 
 using base::StringPiece;
 using std::string;
-#define PREDICT_FALSE(x) (x)
 
 namespace net {
 
@@ -1999,7 +1998,7 @@ bool QuicFramer::AppendAckFrameAndTypeByte(const QuicAckFrame& frame,
         ++num_ack_blocks_written;
       }
       if (num_ack_blocks_written >= num_ack_blocks) {
-        if (PREDICT_FALSE(num_ack_blocks_written != num_ack_blocks)) {
+        if (QUIC_PREDICT_FALSE(num_ack_blocks_written != num_ack_blocks)) {
           QUIC_BUG << "Wrote " << num_ack_blocks_written
                    << ", expected to write " << num_ack_blocks;
         }

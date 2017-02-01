@@ -30,7 +30,7 @@ config("compiler") {
     rebased_android_toolchain_root =
         rebase_path(android_toolchain_root, root_build_dir)
     assert(rebased_android_toolchain_root != "")  # Mark as used.
-    if (current_cpu == "mipsel" || current_cpu == "mips64el") {
+    if (current_cpu == "mips64el") {
       cflags += [
         # TODO(gordanac) Enable integrated-as.
         "-fno-integrated-as",

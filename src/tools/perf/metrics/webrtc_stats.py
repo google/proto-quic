@@ -140,7 +140,7 @@ class WebRtcStatisticsMetric(Metric):
 
   def Stop(self, page, tab):
     """Digs out stats from data populated by the javascript in webrtc_cases."""
-    self._all_reports = tab.EvaluateJavaScript(
+    self._all_reports = tab.EvaluateJavaScript2(
         'JSON.stringify(window.peerConnectionReports)')
 
   def AddResults(self, tab, results):

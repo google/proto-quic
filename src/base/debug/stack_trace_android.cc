@@ -7,6 +7,8 @@
 #include <android/log.h>
 #include <stddef.h>
 #include <unwind.h>
+
+#include <algorithm>
 #include <ostream>
 
 #include "base/debug/proc_maps_linux.h"
@@ -67,8 +69,10 @@ bool EnableInProcessStackDumping() {
   return (sigaction(SIGPIPE, &action, NULL) == 0);
 }
 
-StackTrace::StackTrace() {
-  StackCrawlState state(reinterpret_cast<uintptr_t*>(trace_), kMaxTraces);
+StackTrace::StackTrace(size_t count) {
+  count = std::min(arraysize(trace_), count);
+
+  StackCrawlState state(reinterpret_cast<uintptr_t*>(trace_), count);
   _Unwind_Backtrace(&TraceStackFrame, &state);
   count_ = state.frame_count;
 }

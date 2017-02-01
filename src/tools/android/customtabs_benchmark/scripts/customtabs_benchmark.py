@@ -187,6 +187,12 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
               '--force-fieldtrials=trial/group',
               '--force-fieldtrial-params=trial.group:mode/no_state_prefetch',
               '--enable-features="NoStatePrefetch<trial"'])
+        elif config['speculation_mode'] == 'speculative_prefetch':
+          # Speculative Prefetch is enabled through an experiment.
+          chrome_args.extend([
+              '--force-fieldtrials=trial/group',
+              '--force-fieldtrial-params=trial.group:mode/external-prefetching',
+              '--enable-features="SpeculativeResourcePrefetching<trial"'])
 
         result = RunOnce(device, config['url'], config['warmup'],
                          config['speculation_mode'],

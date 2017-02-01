@@ -33,7 +33,6 @@
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_frame_reader.h"
 #include "net/spdy/spdy_framer_decoder_adapter.h"
-#include "net/spdy/spdy_headers_block_parser.h"
 
 using base::StringPiece;
 using std::hex;
@@ -144,8 +143,8 @@ SpdyFramer::SpdyFramer(SpdyFramer::DecoderAdapterFactoryFn adapter_factory,
                        CompressionOption option)
     : current_frame_buffer_(kControlFrameBufferSize),
       expect_continuation_(0),
-      visitor_(NULL),
-      debug_visitor_(NULL),
+      visitor_(nullptr),
+      debug_visitor_(nullptr),
       header_handler_(nullptr),
       compression_option_(option),
       probable_http_response_(false),
@@ -175,7 +174,7 @@ void SpdyFramer::Reset() {
   }
   state_ = SPDY_READY_FOR_FRAME;
   previous_state_ = SPDY_READY_FOR_FRAME;
-  error_code_ = SPDY_NO_ERROR;
+  spdy_framer_error_ = SPDY_NO_ERROR;
   remaining_data_length_ = 0;
   remaining_control_header_ = 0;
   current_frame_buffer_.Rewind();
@@ -217,11 +216,11 @@ bool SpdyFramer::probable_http_response() const {
   return probable_http_response_;
 }
 
-SpdyFramer::SpdyError SpdyFramer::error_code() const {
+SpdyFramer::SpdyFramerError SpdyFramer::spdy_framer_error() const {
   if (decoder_adapter_ != nullptr) {
-    return decoder_adapter_->error_code();
+    return decoder_adapter_->spdy_framer_error();
   }
-  return error_code_;
+  return spdy_framer_error_;
 }
 
 SpdyFramer::SpdyState SpdyFramer::state() const {
@@ -351,8 +350,6 @@ const char* SpdyFramer::StateToString(int state) {
       return "SPDY_CONTROL_FRAME_HEADER_BLOCK";
     case SPDY_GOAWAY_FRAME_PAYLOAD:
       return "SPDY_GOAWAY_FRAME_PAYLOAD";
-    case SPDY_RST_STREAM_FRAME_PAYLOAD:
-      return "SPDY_RST_STREAM_FRAME_PAYLOAD";
     case SPDY_SETTINGS_FRAME_HEADER:
       return "SPDY_SETTINGS_FRAME_HEADER";
     case SPDY_SETTINGS_FRAME_PAYLOAD:
@@ -363,9 +360,9 @@ const char* SpdyFramer::StateToString(int state) {
   return "UNKNOWN_STATE";
 }
 
-void SpdyFramer::set_error(SpdyError error) {
+void SpdyFramer::set_error(SpdyFramerError error) {
   DCHECK(visitor_);
-  error_code_ = error;
+  spdy_framer_error_ = error;
   // These values will usually get reset once we come to the end
   // of a header block, but if we run into an error that
   // might not happen, so reset them here.
@@ -376,8 +373,8 @@ void SpdyFramer::set_error(SpdyError error) {
   visitor_->OnError(this);
 }
 
-const char* SpdyFramer::ErrorCodeToString(int error_code) {
-  switch (error_code) {
+const char* SpdyFramer::SpdyFramerErrorToString(int spdy_framer_error) {
+  switch (spdy_framer_error) {
     case SPDY_NO_ERROR:
       return "NO_ERROR";
     case SPDY_INVALID_STREAM_ID:
@@ -546,13 +543,6 @@ size_t SpdyFramer::ProcessInput(const char* data, size_t len) {
         break;
       }
 
-      case SPDY_RST_STREAM_FRAME_PAYLOAD: {
-        size_t bytes_read = ProcessRstStreamFramePayload(data, len);
-        len -= bytes_read;
-        data += bytes_read;
-        break;
-      }
-
       case SPDY_GOAWAY_FRAME_PAYLOAD: {
         size_t bytes_read = ProcessGoAwayFramePayload(data, len);
         len -= bytes_read;
@@ -648,7 +638,7 @@ void SpdyFramer::SpdySettingsScratch::Reset() {
 SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
                                               int frame_type_field,
                                               size_t payload_length_field) {
-  if (!IsValidFrameType(frame_type_field)) {
+  if (!IsDefinedFrameType(frame_type_field)) {
     // We ignore unknown frame types for extensibility, as long as
     // the rest of the control frame header is valid.
     // We rely on the visitor to check validity of current_frame_stream_id_.
@@ -728,9 +718,6 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
   bool is_control_frame = false;
 
   int control_frame_type_field = kDataFrameType;
-  // ProcessControlFrameHeader() will set current_frame_type_ to the
-  // correct value if this is a valid control frame.
-  current_frame_type_ = DATA;
   uint32_t length_field = 0;
   bool successful_read = reader.ReadUInt24(&length_field);
   DCHECK(successful_read);
@@ -739,7 +726,7 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
   successful_read = reader.ReadUInt8(&control_frame_type_field_uint8);
   DCHECK(successful_read);
   // We check control_frame_type_field's validity in
-  // ProcessControlFrameHeader().
+  // ValidateFrameHeader().
   control_frame_type_field = control_frame_type_field_uint8;
   is_control_frame = control_frame_type_field != kDataFrameType;
 
@@ -797,14 +784,14 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
       }
     }
   } else {
-    ProcessControlFrameHeader(control_frame_type_field);
+    ProcessControlFrameHeader();
   }
 
   return original_len - len;
 }
 
-void SpdyFramer::ProcessControlFrameHeader(int control_frame_type_field) {
-  DCHECK_EQ(SPDY_NO_ERROR, error_code_);
+void SpdyFramer::ProcessControlFrameHeader() {
+  DCHECK_EQ(SPDY_NO_ERROR, spdy_framer_error_);
   DCHECK_LE(GetFrameHeaderSize(), current_frame_buffer_.len());
 
   // Do some sanity checking on the control frame sizes and flags.
@@ -957,11 +944,6 @@ void SpdyFramer::ProcessControlFrameHeader(int control_frame_type_field) {
 
   if (current_frame_type_ == GOAWAY) {
     CHANGE_STATE(SPDY_GOAWAY_FRAME_PAYLOAD);
-    return;
-  }
-
-  if (current_frame_type_ == RST_STREAM) {
-    CHANGE_STATE(SPDY_RST_STREAM_FRAME_PAYLOAD);
     return;
   }
 
@@ -1216,8 +1198,7 @@ size_t SpdyFramer::ProcessControlFrameBeforeHeaderBlock(const char* data,
 }
 
 // Does not buffer the control payload. Instead, either passes directly to the
-// visitor or decompresses and then passes directly to the visitor, via
-// IncrementallyDeliverControlFrameHeaderData()
+// visitor or decompresses and then passes directly to the visitor.
 size_t SpdyFramer::ProcessControlFrameHeaderBlock(const char* data,
                                                   size_t data_len) {
   DCHECK_EQ(SPDY_CONTROL_FRAME_HEADER_BLOCK, state_);
@@ -1380,51 +1361,54 @@ size_t SpdyFramer::ProcessControlFramePayload(const char* data, size_t len) {
 
     // Use frame-specific handlers.
     switch (current_frame_type_) {
+      case RST_STREAM: {
+        uint32_t status_raw = RST_STREAM_NO_ERROR;
+        bool successful_read = reader.ReadUInt32(&status_raw);
+        DCHECK(successful_read);
+        DCHECK(reader.IsDoneReading());
+        SpdyRstStreamStatus status = ParseRstStreamStatus(status_raw);
+        visitor_->OnRstStream(current_frame_stream_id_, status);
+      } break;
       case PING: {
-          SpdyPingId id = 0;
-          bool is_ack = current_frame_flags_ & PING_FLAG_ACK;
-          bool successful_read = true;
-          successful_read = reader.ReadUInt64(&id);
-          DCHECK(successful_read);
-          DCHECK(reader.IsDoneReading());
-          visitor_->OnPing(id, is_ack);
-        }
-        break;
+        SpdyPingId id = 0;
+        bool is_ack = current_frame_flags_ & PING_FLAG_ACK;
+        bool successful_read = true;
+        successful_read = reader.ReadUInt64(&id);
+        DCHECK(successful_read);
+        DCHECK(reader.IsDoneReading());
+        visitor_->OnPing(id, is_ack);
+      } break;
       case WINDOW_UPDATE: {
         uint32_t delta_window_size = 0;
-          bool successful_read = true;
-          successful_read = reader.ReadUInt32(&delta_window_size);
-          DCHECK(successful_read);
-          DCHECK(reader.IsDoneReading());
-          visitor_->OnWindowUpdate(current_frame_stream_id_,
-                                   delta_window_size);
-        }
-        break;
+        bool successful_read = true;
+        successful_read = reader.ReadUInt32(&delta_window_size);
+        DCHECK(successful_read);
+        DCHECK(reader.IsDoneReading());
+        visitor_->OnWindowUpdate(current_frame_stream_id_, delta_window_size);
+      } break;
       case BLOCKED: {
-          DCHECK(reader.IsDoneReading());
-          visitor_->OnBlocked(current_frame_stream_id_);
-        }
-        break;
+        DCHECK(reader.IsDoneReading());
+        visitor_->OnBlocked(current_frame_stream_id_);
+      } break;
       case PRIORITY: {
-          uint32_t stream_dependency;
-          uint32_t parent_stream_id;
-          bool exclusive;
-          uint8_t serialized_weight;
-          bool successful_read = reader.ReadUInt32(&stream_dependency);
-          DCHECK(successful_read);
-          UnpackStreamDependencyValues(stream_dependency, &exclusive,
-                                       &parent_stream_id);
+        uint32_t stream_dependency;
+        uint32_t parent_stream_id;
+        bool exclusive;
+        uint8_t serialized_weight;
+        bool successful_read = reader.ReadUInt32(&stream_dependency);
+        DCHECK(successful_read);
+        UnpackStreamDependencyValues(stream_dependency, &exclusive,
+                                     &parent_stream_id);
 
-          successful_read = reader.ReadUInt8(&serialized_weight);
-          DCHECK(successful_read);
-          DCHECK(reader.IsDoneReading());
-          // Per RFC 7540 section 6.3, serialized weight value is
-          // actual value - 1.
-          int weight = serialized_weight + 1;
-          visitor_->OnPriority(
-              current_frame_stream_id_, parent_stream_id, weight, exclusive);
-        }
-        break;
+        successful_read = reader.ReadUInt8(&serialized_weight);
+        DCHECK(successful_read);
+        DCHECK(reader.IsDoneReading());
+        // Per RFC 7540 section 6.3, serialized weight value is
+        // actual value - 1.
+        int weight = serialized_weight + 1;
+        visitor_->OnPriority(current_frame_stream_id_, parent_stream_id, weight,
+                             exclusive);
+      } break;
       default:
         // Unreachable.
         LOG(FATAL) << "Unhandled control frame " << current_frame_type_;
@@ -1463,17 +1447,10 @@ size_t SpdyFramer::ProcessGoAwayFramePayload(const char* data, size_t len) {
       DCHECK(successful_read);
 
       // Parse status code.
-      SpdyGoAwayStatus status = GOAWAY_NO_ERROR;
       uint32_t status_raw = GOAWAY_NO_ERROR;
       successful_read = reader.ReadUInt32(&status_raw);
       DCHECK(successful_read);
-      if (IsValidGoAwayStatus(status_raw)) {
-        status = ParseGoAwayStatus(status_raw);
-      } else {
-        // Treat unrecognized status codes as INTERNAL_ERROR as
-        // recommended by the HTTP/2 spec.
-        status = GOAWAY_INTERNAL_ERROR;
-      }
+      SpdyGoAwayStatus status = ParseGoAwayStatus(status_raw);
       // Finished parsing the GOAWAY header, call frame handler.
       visitor_->OnGoAway(current_frame_stream_id_, status);
     }
@@ -1489,66 +1466,7 @@ size_t SpdyFramer::ProcessGoAwayFramePayload(const char* data, size_t len) {
     set_error(SPDY_GOAWAY_FRAME_CORRUPT);
   } else if (remaining_data_length_ == 0) {
     // Signal that there is not more opaque data.
-    visitor_->OnGoAwayFrameData(NULL, 0);
-    CHANGE_STATE(SPDY_FRAME_COMPLETE);
-  }
-  return original_len;
-}
-
-size_t SpdyFramer::ProcessRstStreamFramePayload(const char* data, size_t len) {
-  if (len == 0) {
-    return 0;
-  }
-  // Clamp to the actual remaining payload.
-  if (len > remaining_data_length_) {
-    len = remaining_data_length_;
-  }
-  size_t original_len = len;
-
-  // Check if we had already read enough bytes to parse the fixed-length portion
-  // of the RST_STREAM frame.
-  const size_t header_size = GetRstStreamSize();
-  size_t unread_header_bytes = header_size - current_frame_buffer_.len();
-  bool already_parsed_header = (unread_header_bytes == 0);
-  if (!already_parsed_header) {
-    // Buffer the new RST_STREAM header bytes we got.
-    UpdateCurrentFrameBuffer(&data, &len, unread_header_bytes);
-
-    // Do we have enough to parse the constant size RST_STREAM header?
-    if (current_frame_buffer_.len() == header_size) {
-      // Parse out the last good stream id.
-      SpdyFrameReader reader(current_frame_buffer_.data(),
-                             current_frame_buffer_.len());
-      reader.Seek(GetFrameHeaderSize());  // Seek past frame header.
-
-      SpdyRstStreamStatus status = RST_STREAM_NO_ERROR;
-      uint32_t status_raw = status;
-      bool successful_read = reader.ReadUInt32(&status_raw);
-      DCHECK(successful_read);
-      if (IsValidRstStreamStatus(status_raw)) {
-        status = ParseRstStreamStatus(status_raw);
-      } else {
-        // Treat unrecognized status codes as INTERNAL_ERROR as
-        // recommended by the HTTP/2 spec.
-        status = RST_STREAM_INTERNAL_ERROR;
-      }
-      // Finished parsing the RST_STREAM header, call frame handler.
-      visitor_->OnRstStream(current_frame_stream_id_, status);
-    }
-  }
-
-  // Handle remaining data as opaque.
-  // TODO(jamessynge): Remove support for variable length/opaque trailer.
-  bool processed_successfully = true;
-  if (len > 0) {
-    processed_successfully = visitor_->OnRstStreamFrameData(data, len);
-  }
-  remaining_data_length_ -= original_len;
-  if (!processed_successfully) {
-    set_error(SPDY_RST_STREAM_FRAME_CORRUPT);
-  } else if (remaining_data_length_ == 0) {
-    // Signal that there is not more opaque data.
-    visitor_->OnRstStreamFrameData(NULL, 0);
+    visitor_->OnGoAwayFrameData(nullptr, 0);
     CHANGE_STATE(SPDY_FRAME_COMPLETE);
   }
   return original_len;
@@ -1886,7 +1804,7 @@ SpdySerializedFrame SpdyFramer::SerializeRstStream(
 
   builder.BeginNewFrame(*this, RST_STREAM, 0, rst_stream.stream_id());
 
-  builder.WriteUInt32(SerializeRstStreamStatus(rst_stream.status()));
+  builder.WriteUInt32(rst_stream.status());
 
   DCHECK_EQ(expected_length, builder.length());
   return builder.take();
@@ -1951,7 +1869,7 @@ SpdySerializedFrame SpdyFramer::SerializeGoAway(
   builder.WriteUInt32(goaway.last_good_stream_id());
 
   // GOAWAY frames also specify the error status code.
-  builder.WriteUInt32(SerializeGoAwayStatus(goaway.status()));
+  builder.WriteUInt32(goaway.status());
 
   // GOAWAY frames may also specify opaque data.
   if (!goaway.description().empty()) {
@@ -2483,27 +2401,6 @@ HpackDecoderInterface* SpdyFramer::GetHpackDecoder() {
     }
   }
   return hpack_decoder_.get();
-}
-
-bool SpdyFramer::IncrementallyDeliverControlFrameHeaderData(
-    SpdyStreamId stream_id, const char* data, size_t len) {
-  bool read_successfully = true;
-  while (read_successfully && len > 0) {
-    size_t bytes_to_deliver = std::min(len, kHeaderDataChunkMaxSize);
-    read_successfully = header_parser_->HandleControlFrameHeadersData(
-        stream_id, data, bytes_to_deliver);
-    if (header_parser_->get_error() == SpdyHeadersBlockParser::NEED_MORE_DATA) {
-      read_successfully = true;
-    }
-    data += bytes_to_deliver;
-    len -= bytes_to_deliver;
-    if (!read_successfully) {
-      // Assume that the problem was the header block was too large for the
-      // visitor.
-      set_error(SPDY_CONTROL_PAYLOAD_TOO_LARGE);
-    }
-  }
-  return read_successfully;
 }
 
 void SpdyFramer::SetDecoderHeaderTableDebugVisitor(

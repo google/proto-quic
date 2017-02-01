@@ -5,9 +5,11 @@
 package org.chromium.base;
 
 import org.chromium.base.annotations.JNINamespace;
+import org.chromium.base.annotations.MainDex;
 
 /** Time-related utilities. */
 @JNINamespace("base::android")
+@MainDex
 public class TimeUtils {
     private TimeUtils() {}
 

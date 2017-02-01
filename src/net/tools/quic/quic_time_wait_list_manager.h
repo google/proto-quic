@@ -15,13 +15,13 @@
 #include <memory>
 
 #include "base/macros.h"
-#include "net/base/linked_hash_map.h"
 #include "net/quic/core/quic_blocked_writer_interface.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_writer.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_session.h"
+#include "net/quic/platform/api/quic_containers.h"
 
 namespace net {
 
@@ -181,8 +181,8 @@ class QuicTimeWaitListManager : public QuicBlockedWriterInterface {
     bool connection_rejected_statelessly;
   };
 
-  // linked_hash_map allows lookup by ConnectionId and traversal in add order.
-  typedef linked_hash_map<QuicConnectionId, ConnectionIdData> ConnectionIdMap;
+  // QuicLinkedHashMap allows lookup by ConnectionId and traversal in add order.
+  typedef QuicLinkedHashMap<QuicConnectionId, ConnectionIdData> ConnectionIdMap;
   ConnectionIdMap connection_id_map_;
 
   // Pending public reset packets that need to be sent out to the client

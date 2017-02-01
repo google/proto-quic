@@ -1,0 +1,2 @@
+gen/content/shell/grit/shell_resources.h
+gen/content/shell/shell_resources.pak

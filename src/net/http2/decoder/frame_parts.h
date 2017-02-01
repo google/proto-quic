@@ -29,8 +29,8 @@
 namespace net {
 namespace test {
 
+// Forward declarations.
 struct FrameParts;
-
 std::ostream& operator<<(std::ostream& out, const FrameParts& v);
 
 struct FrameParts : public Http2FrameDecoderListener {
@@ -47,7 +47,8 @@ struct FrameParts : public Http2FrameDecoderListener {
              base::StringPiece payload,
              size_t total_pad_length);
 
-  FrameParts(const FrameParts& other);
+  // Copy constructor.
+  FrameParts(const FrameParts& header);
 
   ~FrameParts() override;
 
@@ -127,11 +128,11 @@ struct FrameParts : public Http2FrameDecoderListener {
   base::Optional<Http2PingFields> opt_ping;
   base::Optional<Http2GoAwayFields> opt_goaway;
 
-  base::Optional<int> opt_pad_length;
-  base::Optional<int> opt_payload_length;
-  base::Optional<int> opt_missing_length;
-  base::Optional<int> opt_altsvc_origin_length;
-  base::Optional<int> opt_altsvc_value_length;
+  base::Optional<size_t> opt_pad_length;
+  base::Optional<size_t> opt_payload_length;
+  base::Optional<size_t> opt_missing_length;
+  base::Optional<size_t> opt_altsvc_origin_length;
+  base::Optional<size_t> opt_altsvc_value_length;
 
   base::Optional<size_t> opt_window_update_increment;
 
@@ -167,7 +168,7 @@ struct FrameParts : public Http2FrameDecoderListener {
   // called), and that target is not longer than opt_length->value().
   ::testing::AssertionResult AppendString(base::StringPiece source,
                                           std::string* target,
-                                          base::Optional<int>* opt_length);
+                                          base::Optional<size_t>* opt_length);
 };
 
 }  // namespace test

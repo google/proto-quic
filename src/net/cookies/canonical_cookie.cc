@@ -195,8 +195,7 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
   // origins", if the cookie's "secure-only-flag" is "true" and the requesting
   // URL does not have a secure scheme, the cookie should be thrown away.
   // https://tools.ietf.org/html/draft-ietf-httpbis-cookie-alone
-  if (options.enforce_strict_secure() && parsed_cookie.IsSecure() &&
-      !url.SchemeIsCryptographic()) {
+  if (parsed_cookie.IsSecure() && !url.SchemeIsCryptographic()) {
     VLOG(kVlogSetCookies)
         << "Create() is trying to create a secure cookie from an insecure URL";
     return nullptr;
@@ -240,7 +239,6 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     bool secure,
     bool http_only,
     CookieSameSite same_site,
-    bool enforce_strict_secure,
     CookiePriority priority) {
   // Expect valid attribute tokens and values, as defined by the ParsedCookie
   // logic, otherwise don't create the cookie.
@@ -260,7 +258,7 @@ std::unique_ptr<CanonicalCookie> CanonicalCookie::Create(
     return nullptr;
   }
 
-  if (enforce_strict_secure && secure && !url.SchemeIsCryptographic())
+  if (secure && !url.SchemeIsCryptographic())
     return nullptr;
 
   std::string parsed_path = ParsedCookie::ParseValueString(path);

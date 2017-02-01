@@ -395,7 +395,7 @@ class AbstractPaddablePayloadDecoderTest
   ::testing::AssertionResult VerifyDetectsPaddingTooLong(
       base::StringPiece payload,
       const Http2FrameHeader& header,
-      int expected_missing_length) {
+      size_t expected_missing_length) {
     set_frame_header(header);
     auto& listener = listener_;
     Validator validator = [header, expected_missing_length, &listener](
@@ -441,7 +441,8 @@ class AbstractPaddablePayloadDecoderTest
     // The missing length is the amount we cut off the end, unless
     // payload_length is zero, in which case the decoder knows only that 1
     // byte, the Pad Length field, is missing.
-    int missing_length = payload_length == 0 ? 1 : fb.size() - payload_length;
+    size_t missing_length =
+        payload_length == 0 ? 1 : fb.size() - payload_length;
     VLOG(1) << "missing_length=" << missing_length;
 
     const Http2FrameHeader header(payload_length, DecoderPeer::FrameType(),

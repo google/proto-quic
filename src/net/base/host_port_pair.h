@@ -34,6 +34,9 @@ class NET_EXPORT HostPortPair {
   // ToString().
   static HostPortPair FromString(const std::string& str);
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  static size_t EstimateMemoryUsage(const HostPortPair& pair);
+
   // TODO(willchan): Define a functor instead.
   // Comparator function so this can be placed in a std::map.
   bool operator<(const HostPortPair& other) const {

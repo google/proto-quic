@@ -494,6 +494,7 @@ class QuicNetworkTransactionTest
     params_.http_auth_handler_factory = auth_handler_factory_.get();
     params_.http_server_properties = &http_server_properties_;
     params_.quic_supported_versions = SupportedVersions(version_);
+    params_.net_log = net_log_.bound().net_log();
     for (const char* host :
          {kDefaultServerHostName, "www.example.org", "news.example.org",
           "bar.example.org", "foo.example.org", "invalid.example.org",
@@ -2119,7 +2120,7 @@ TEST_P(QuicNetworkTransactionTest,
       ConstructServerRstPacket(1, false, 99, QUIC_STREAM_LAST_ERROR));
   std::string quic_error_details = "Data for nonexistent stream";
   mock_quic_data.AddWrite(ConstructClientAckAndConnectionClosePacket(
-      3, QuicTime::Delta::Infinite(), 0, 1, QUIC_INVALID_STREAM_ID,
+      3, QuicTime::Delta::Zero(), 1, 1, QUIC_INVALID_STREAM_ID,
       quic_error_details));
   mock_quic_data.AddSocketDataToFactory(&socket_factory_);
 
@@ -2427,8 +2428,7 @@ TEST_P(QuicNetworkTransactionTest, DISABLED_HangingZeroRttFallback) {
 TEST_P(QuicNetworkTransactionTest, BrokenAlternateProtocolOnConnectFailure) {
   // Alternate-protocol job will fail before creating a QUIC session.
   StaticSocketDataProvider quic_data(nullptr, 0, nullptr, 0);
-  quic_data.set_connect_data(
-      MockConnect(SYNCHRONOUS, ERR_INTERNET_DISCONNECTED));
+  quic_data.set_connect_data(MockConnect(SYNCHRONOUS, ERR_CONNECTION_FAILED));
   socket_factory_.AddSocketDataProvider(&quic_data);
 
   // Main job which will succeed even though the alternate job fails.

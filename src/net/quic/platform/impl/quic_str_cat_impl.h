@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 
+#include "base/strings/stringprintf.h"
+
 namespace net {
 
 template <typename... Args>
@@ -16,6 +18,11 @@ inline std::string QuicStrCatImpl(const Args&... args) {
   int dummy[] = {1, (oss << args, 0)...};
   static_cast<void>(dummy);
   return oss.str();
+}
+
+template <typename... Args>
+inline std::string QuicStringPrintfImpl(const Args&... args) {
+  return std::move(base::StringPrintf(std::forward<const Args&>(args)...));
 }
 
 }  // namespace net

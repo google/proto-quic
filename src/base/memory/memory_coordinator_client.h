@@ -12,16 +12,22 @@ namespace base {
 // OVERVIEW:
 //
 // MemoryCoordinatorClient is an interface which a component can implement to
-// respond to memory state changes. Unlike MemoryPressureListener, this is a
-// stateful mechanism and clients receive notifications only when memory states
-// are changed. State transitions are throttled to avoid thrashing; the exact
-// throttling period is platform dependent, but will be at least 5-10 seconds.
-// Clients are expected to make changes in memory usage that persist for the
-// duration of the memory state.
+// adjust "future allocation" and "existing allocation". For "future allocation"
+// it provides a callback to observe memory state changes, and for "existing
+// allocation" it provides a callback to purge memory.
+//
+// Unlike MemoryPressureListener, memory state changes are stateful. State
+// transitions are throttled to avoid thrashing; the exact throttling period is
+// platform dependent, but will be at least 5-10 seconds. When a state change
+// notification is dispatched, clients are expected to update their allocation
+// policies (e.g. setting cache limit) that persist for the duration of the
+// memory state. Note that clients aren't expected to free up memory on memory
+// state changes. Clients should wait for a separate purge request to free up
+// memory. Purging requests will be throttled as well.
 
 // MemoryState is an indicator that processes can use to guide their memory
-// allocation policies. For example, a process that receives the suspended
-// state can use that as as signal to drop memory caches.
+// allocation policies. For example, a process that receives the throttled
+// state can use that as as signal to decrease memory cache limits.
 // NOTE: This enum is used to back an UMA histogram, and therefore should be
 // treated as append-only.
 enum class MemoryState : int {
@@ -29,14 +35,13 @@ enum class MemoryState : int {
   UNKNOWN = -1,
   // No memory constraints.
   NORMAL = 0,
-  // Running and interactive but allocation should be throttled.
-  // Clients should free up any memory that is used as an optimization but
-  // that is not necessary for the process to run (e.g. caches).
+  // Running and interactive but memory allocation should be throttled.
+  // Clients should set lower budget for any memory that is used as an
+  // optimization but that is not necessary for the process to run.
+  // (e.g. caches)
   THROTTLED = 1,
   // Still resident in memory but core processing logic has been suspended.
-  // Clients should free up any memory that is used as an optimization, or
-  // any memory whose contents can be reproduced when transitioning out of
-  // the suspended state (e.g. parsed resource that can be reloaded from disk).
+  // In most cases, OnPurgeMemory() will be called before entering this state.
   SUSPENDED = 2,
 };
 
@@ -54,11 +59,18 @@ class BASE_EXPORT MemoryCoordinatorClient {
   // UNKNOWN. General guidelines are:
   //  * NORMAL:    Restore the default settings for memory allocation/usage if
   //               it has changed.
-  //  * THROTTLED: Use smaller limits for memory allocations and caches.
-  //  * SUSPENDED: Purge memory.
-  virtual void OnMemoryStateChange(MemoryState state) = 0;
+  //  * THROTTLED: Use smaller limits for future memory allocations. You don't
+  //               need to take any action on existing allocations.
+  //  * SUSPENDED: Use much smaller limits for future memory allocations. You
+  //               don't need to take any action on existing allocations.
+  virtual void OnMemoryStateChange(MemoryState state) {}
 
-protected:
+  // Called to purge memory.
+  // This callback should free up any memory that is used as an optimization, or
+  // any memory whose contents can be reproduced.
+  virtual void OnPurgeMemory() {}
+
+ protected:
   virtual ~MemoryCoordinatorClient() {}
 };
 

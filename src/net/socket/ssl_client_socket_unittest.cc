@@ -2596,34 +2596,17 @@ TEST_F(SSLClientSocketTest, CertificateErrorNoResume) {
   EXPECT_EQ(SSLInfo::HANDSHAKE_FULL, ssl_info.handshake_type);
 }
 
-// Test that DHE is removed but gives a dedicated error. Also test that the
-// dhe_enabled option can restore it.
-TEST_F(SSLClientSocketTest, DHE) {
+// Test that DHE is removed.
+TEST_F(SSLClientSocketTest, NoDHE) {
   SpawnedTestServer::SSLOptions ssl_options;
   ssl_options.key_exchanges =
       SpawnedTestServer::SSLOptions::KEY_EXCHANGE_DHE_RSA;
   ASSERT_TRUE(StartTestServer(ssl_options));
 
-  // Normal handshakes with DHE do not work, with or without DHE enabled.
   SSLConfig ssl_config;
   int rv;
   ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
   EXPECT_THAT(rv, IsError(ERR_SSL_VERSION_OR_CIPHER_MISMATCH));
-
-  ssl_config.dhe_enabled = true;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsError(ERR_SSL_VERSION_OR_CIPHER_MISMATCH));
-
-  // Enabling deprecated ciphers gives DHE a dedicated error code.
-  ssl_config.dhe_enabled = false;
-  ssl_config.deprecated_cipher_suites_enabled = true;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsError(ERR_SSL_OBSOLETE_CIPHER));
-
-  // Enabling both deprecated ciphers and DHE restores it.
-  ssl_config.dhe_enabled = true;
-  ASSERT_TRUE(CreateAndConnectSSLClientSocket(ssl_config, &rv));
-  EXPECT_THAT(rv, IsOk());
 }
 
 // Tests that enabling deprecated ciphers shards the session cache.
@@ -2774,21 +2757,6 @@ TEST_F(SSLClientSocketFalseStartTest, RSA) {
   client_config.alpn_protos.push_back(kProtoHTTP11);
   ASSERT_NO_FATAL_FAILURE(
       TestFalseStart(server_options, client_config, false));
-}
-
-// Test that False Start is disabled with DHE_RSA ciphers.
-TEST_F(SSLClientSocketFalseStartTest, DHE_RSA) {
-  SpawnedTestServer::SSLOptions server_options;
-  server_options.key_exchanges =
-      SpawnedTestServer::SSLOptions::KEY_EXCHANGE_DHE_RSA;
-  server_options.bulk_ciphers =
-      SpawnedTestServer::SSLOptions::BULK_CIPHER_AES128GCM;
-  server_options.alpn_protocols.push_back("http/1.1");
-  SSLConfig client_config;
-  client_config.alpn_protos.push_back(kProtoHTTP11);
-  // DHE is only advertised when deprecated ciphers are enabled.
-  client_config.deprecated_cipher_suites_enabled = true;
-  ASSERT_NO_FATAL_FAILURE(TestFalseStart(server_options, client_config, false));
 }
 
 // Test that False Start is disabled without an AEAD.

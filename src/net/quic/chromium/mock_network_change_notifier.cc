@@ -10,12 +10,13 @@ namespace net {
 namespace test {
 
 MockNetworkChangeNotifier::MockNetworkChangeNotifier()
-    : force_network_handles_supported_(false) {}
+    : force_network_handles_supported_(false),
+      connection_type_(CONNECTION_UNKNOWN) {}
 MockNetworkChangeNotifier::~MockNetworkChangeNotifier() {}
 
 MockNetworkChangeNotifier::ConnectionType
 MockNetworkChangeNotifier::GetCurrentConnectionType() const {
-  return CONNECTION_UNKNOWN;
+  return connection_type_;
 }
 
 void MockNetworkChangeNotifier::ForceNetworkHandlesSupported() {

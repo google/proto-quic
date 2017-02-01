@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "net/http2/tools/http2_bug_tracker.h"
 
 using base::StringPiece;
 using std::string;
@@ -22,9 +23,12 @@ std::ostream& operator<<(std::ostream& out,
       return out << "COLLECTING";
     case HpackDecoderStringBuffer::State::COMPLETE:
       return out << "COMPLETE";
-    default:
-      return out << "Unknown HpackDecoderStringBuffer::State!";
   }
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  int unknown = static_cast<int>(v);
+  HTTP2_BUG << "Invalid HpackDecoderStringBuffer::State: " << unknown;
+  return out << "HpackDecoderStringBuffer::State(" << unknown << ")";
 }
 
 std::ostream& operator<<(std::ostream& out,
@@ -38,9 +42,12 @@ std::ostream& operator<<(std::ostream& out,
       return out << "BUFFERED";
     case HpackDecoderStringBuffer::Backing::STATIC:
       return out << "STATIC";
-    default:
-      return out << "Unknown HpackDecoderStringBuffer::Backing!";
   }
+  // Since the value doesn't come over the wire, only a programming bug should
+  // result in reaching this point.
+  auto v2 = static_cast<int>(v);
+  HTTP2_BUG << "Invalid HpackDecoderStringBuffer::Backing: " << v2;
+  return out << "HpackDecoderStringBuffer::Backing(" << v2 << ")";
 }
 
 HpackDecoderStringBuffer::HpackDecoderStringBuffer()

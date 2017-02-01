@@ -4,10 +4,9 @@
 
 #include "net/quic/test_tools/simulator/link.h"
 
-#include "base/strings/stringprintf.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/simulator/simulator.h"
 
-using base::StringPrintf;
 using std::string;
 
 namespace net {
@@ -92,12 +91,12 @@ SymmetricLink::SymmetricLink(Simulator* simulator,
                              QuicBandwidth bandwidth,
                              QuicTime::Delta propagation_delay)
     : a_to_b_link_(simulator,
-                   StringPrintf("%s (A-to-B)", name.c_str()),
+                   QuicStringPrintf("%s (A-to-B)", name.c_str()),
                    sink_b,
                    bandwidth,
                    propagation_delay),
       b_to_a_link_(simulator,
-                   StringPrintf("%s (B-to-A)", name.c_str()),
+                   QuicStringPrintf("%s (B-to-A)", name.c_str()),
                    sink_a,
                    bandwidth,
                    propagation_delay) {}
@@ -107,9 +106,9 @@ SymmetricLink::SymmetricLink(Endpoint* endpoint_a,
                              QuicBandwidth bandwidth,
                              QuicTime::Delta propagation_delay)
     : SymmetricLink(endpoint_a->simulator(),
-                    StringPrintf("Link [%s]<->[%s]",
-                                 endpoint_a->name().c_str(),
-                                 endpoint_b->name().c_str()),
+                    QuicStringPrintf("Link [%s]<->[%s]",
+                                     endpoint_a->name().c_str(),
+                                     endpoint_b->name().c_str()),
                     endpoint_a->GetRxPort(),
                     endpoint_b->GetRxPort(),
                     bandwidth,

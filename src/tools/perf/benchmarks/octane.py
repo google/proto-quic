@@ -99,14 +99,14 @@ class _OctaneMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptExpression('window.completed', 10)
-    tab.WaitForJavaScriptExpression(
-        '!document.getElementById("progress-bar-container")', 1200)
+    tab.WaitForJavaScriptCondition2('window.completed', timeout=10)
+    tab.WaitForJavaScriptCondition2(
+        '!document.getElementById("progress-bar-container")', timeout=1200)
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    results_log = tab.EvaluateJavaScript('__results')
+    results_log = tab.EvaluateJavaScript2('__results')
     all_scores = []
     for output in results_log:
       # Split the results into score and test name.

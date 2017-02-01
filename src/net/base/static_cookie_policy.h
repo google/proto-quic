@@ -41,13 +41,9 @@ class NET_EXPORT StaticCookiePolicy {
   Type type() const { return type_; }
 
   // Consults the user's third-party cookie blocking preferences to determine
-  // whether the URL's cookies can be read.
-  int CanGetCookies(const GURL& url, const GURL& first_party_for_cookies) const;
-
-  // Consults the user's third-party cookie blocking preferences to determine
-  // whether the URL's cookies can be set.
-  int CanSetCookie(const GURL& url,
-                   const GURL& first_party_for_cookies) const;
+  // whether the URL's cookies can be accessed (i.e., can be get or set).
+  int CanAccessCookies(const GURL& url,
+                       const GURL& first_party_for_cookies) const;
 
  private:
   Type type_;

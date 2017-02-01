@@ -9,6 +9,7 @@
 #include "base/callback_helpers.h"
 #include "base/logging.h"
 #include "base/metrics/histogram_macros.h"
+#include "base/stl_util.h"
 #include "net/base/completion_callback.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -63,6 +64,12 @@ DiskCacheBasedQuicServerInfo::DiskCacheBasedQuicServerInfo(
           base::Bind(&DiskCacheBasedQuicServerInfo::OnIOComplete,
                      weak_factory_.GetWeakPtr(),
                      base::Owned(data_shim_));  // Ownership assigned.
+}
+
+DiskCacheBasedQuicServerInfo::~DiskCacheBasedQuicServerInfo() {
+  DCHECK(wait_for_ready_callback_.is_null());
+  if (entry_)
+    entry_->Close();
 }
 
 void DiskCacheBasedQuicServerInfo::Start() {
@@ -152,7 +159,7 @@ void DiskCacheBasedQuicServerInfo::PersistInternal() {
     new_data_ = Serialize();
   } else {
     new_data_ = pending_write_data_;
-    pending_write_data_.clear();
+    base::STLClearObject(&pending_write_data_);
   }
 
   RecordQuicServerInfoStatus(QUIC_SERVER_INFO_PERSIST);
@@ -176,12 +183,6 @@ void DiskCacheBasedQuicServerInfo::OnExternalCacheHit() {
   }
 
   backend_->OnExternalCacheHit(key());
-}
-
-DiskCacheBasedQuicServerInfo::~DiskCacheBasedQuicServerInfo() {
-  DCHECK(wait_for_ready_callback_.is_null());
-  if (entry_)
-    entry_->Close();
 }
 
 std::string DiskCacheBasedQuicServerInfo::key() const {
@@ -289,6 +290,7 @@ int DiskCacheBasedQuicServerInfo::DoReadComplete(int rv) {
   else if (rv < 0)
     RecordQuicServerInfoFailure(READ_FAILURE);
 
+  read_buffer_ = nullptr;
   state_ = WAIT_FOR_DATA_READY_DONE;
   return OK;
 }
@@ -296,6 +298,7 @@ int DiskCacheBasedQuicServerInfo::DoReadComplete(int rv) {
 int DiskCacheBasedQuicServerInfo::DoWriteComplete(int rv) {
   if (rv < 0)
     RecordQuicServerInfoFailure(WRITE_FAILURE);
+  write_buffer_ = nullptr;
   state_ = SET_DONE;
   return OK;
 }
@@ -390,7 +393,7 @@ int DiskCacheBasedQuicServerInfo::DoSetDone() {
   if (entry_)
     entry_->Close();
   entry_ = NULL;
-  new_data_.clear();
+  base::STLClearObject(&new_data_);
   state_ = NONE;
   return OK;
 }

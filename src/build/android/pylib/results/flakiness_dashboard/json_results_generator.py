@@ -159,7 +159,8 @@ class JSONResultsGeneratorBase(object):
 
   # line too long pylint: disable=line-too-long
   URL_FOR_TEST_LIST_JSON = (
-      'http://%s/testfile?builder=%s&name=%s&testlistjson=1&testtype=%s&master=%s')
+      'https://%s/testfile?builder=%s&name=%s&testlistjson=1&testtype=%s&'
+      'master=%s')
   # pylint: enable=line-too-long
 
   def __init__(self, builder_name, build_name, build_number,
@@ -286,7 +287,7 @@ class JSONResultsGeneratorBase(object):
     files = [(json_file, os.path.join(self._results_directory, json_file))
              for json_file in json_files]
 
-    url = 'http://%s/testfile/upload' % self._test_results_server
+    url = 'https://%s/testfile/upload' % self._test_results_server
     # Set uploading timeout in case appengine server is having problems.
     # 120 seconds are more than enough to upload test results.
     uploader = _FileUploader(url, 120)

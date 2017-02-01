@@ -216,13 +216,6 @@ QuicPacketHeader* QuicConnectionPeer::GetLastHeader(
 }
 
 // static
-void QuicConnectionPeer::SetPacketNumberOfLastSentPacket(
-    QuicConnection* connection,
-    QuicPacketNumber number) {
-  connection->packet_number_of_last_sent_packet_ = number;
-}
-
-// static
 QuicConnectionStats* QuicConnectionPeer::GetStats(QuicConnection* connection) {
   return &connection->stats_;
 }

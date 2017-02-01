@@ -150,7 +150,6 @@ class HackerNewsStory(_NewsBrowsingStory):
   ITEM_SELECTOR = '.athing .title > a'
 
 
-@decorators.Disabled('android')  # crbug.com/676315
 class NytimesMobileStory(_NewsBrowsingStory):
   """The third top website in http://www.alexa.com/topsites/category/News"""
   NAME = 'browse:news:nytimes'

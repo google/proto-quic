@@ -155,6 +155,9 @@ class BASE_EXPORT GlobalActivityAnalyzer {
   // Gets all log messages stored within.
   std::vector<std::string> GetLogMessages();
 
+  // Gets all the known modules.
+  std::vector<GlobalActivityTracker::ModuleInfo> GetModules();
+
   // Gets the corresponding "program location" for a given "program counter".
   // This will return {0,0} if no mapping could be found.
   ProgramLocation GetProgramLocationFromAddress(uint64_t address);

@@ -116,7 +116,7 @@ struct MagicNumber {
 };
 
 #define MAGIC_NUMBER(mime_type, magic) \
-  { (mime_type), (magic), sizeof(magic)-1, false, NULL },
+  { (mime_type), (magic), sizeof(magic)-1, false, NULL }
 
 template <int MagicSize, int MaskSize>
 class VerifySizes {
@@ -130,46 +130,46 @@ class VerifySizes {
 VerifySizes<sizeof(magic), sizeof(mask)>::SIZES
 
 #define MAGIC_MASK(mime_type, magic, mask) \
-  { (mime_type), (magic), verified_sizeof(magic, mask)-1, false, (mask) },
+  { (mime_type), (magic), verified_sizeof(magic, mask)-1, false, (mask) }
 
 // Magic strings are case insensitive and must not include '\0' characters
 #define MAGIC_STRING(mime_type, magic) \
-  { (mime_type), (magic), sizeof(magic)-1, true, NULL },
+  { (mime_type), (magic), sizeof(magic)-1, true, NULL }
 
 static const MagicNumber kMagicNumbers[] = {
   // Source: HTML 5 specification
-  MAGIC_NUMBER("application/pdf", "%PDF-")
-  MAGIC_NUMBER("application/postscript", "%!PS-Adobe-")
-  MAGIC_NUMBER("image/gif", "GIF87a")
-  MAGIC_NUMBER("image/gif", "GIF89a")
-  MAGIC_NUMBER("image/png", "\x89" "PNG\x0D\x0A\x1A\x0A")
-  MAGIC_NUMBER("image/jpeg", "\xFF\xD8\xFF")
-  MAGIC_NUMBER("image/bmp", "BM")
+  MAGIC_NUMBER("application/pdf", "%PDF-"),
+  MAGIC_NUMBER("application/postscript", "%!PS-Adobe-"),
+  MAGIC_NUMBER("image/gif", "GIF87a"),
+  MAGIC_NUMBER("image/gif", "GIF89a"),
+  MAGIC_NUMBER("image/png", "\x89" "PNG\x0D\x0A\x1A\x0A"),
+  MAGIC_NUMBER("image/jpeg", "\xFF\xD8\xFF"),
+  MAGIC_NUMBER("image/bmp", "BM"),
   // Source: Mozilla
-  MAGIC_NUMBER("text/plain", "#!")  // Script
-  MAGIC_NUMBER("text/plain", "%!")  // Script, similar to PS
-  MAGIC_NUMBER("text/plain", "From")
-  MAGIC_NUMBER("text/plain", ">From")
+  MAGIC_NUMBER("text/plain", "#!"),  // Script
+  MAGIC_NUMBER("text/plain", "%!"),  // Script, similar to PS
+  MAGIC_NUMBER("text/plain", "From"),
+  MAGIC_NUMBER("text/plain", ">From"),
   // Chrome specific
-  MAGIC_NUMBER("application/x-gzip", "\x1F\x8B\x08")
-  MAGIC_NUMBER("audio/x-pn-realaudio", "\x2E\x52\x4D\x46")
+  MAGIC_NUMBER("application/x-gzip", "\x1F\x8B\x08"),
+  MAGIC_NUMBER("audio/x-pn-realaudio", "\x2E\x52\x4D\x46"),
   MAGIC_NUMBER("video/x-ms-asf",
-      "\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C")
-  MAGIC_NUMBER("image/tiff", "I I")
-  MAGIC_NUMBER("image/tiff", "II*")
-  MAGIC_NUMBER("image/tiff", "MM\x00*")
-  MAGIC_NUMBER("audio/mpeg", "ID3")
-  MAGIC_NUMBER("image/webp", "RIFF....WEBPVP8 ")
-  MAGIC_NUMBER("video/webm", "\x1A\x45\xDF\xA3")
-  MAGIC_NUMBER("application/zip", "PK\x03\x04")
-  MAGIC_NUMBER("application/x-rar-compressed", "Rar!\x1A\x07\x00")
-  MAGIC_NUMBER("application/x-msmetafile", "\xD7\xCD\xC6\x9A")
-  MAGIC_NUMBER("application/octet-stream", "MZ")  // EXE
+      "\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C"),
+  MAGIC_NUMBER("image/tiff", "I I"),
+  MAGIC_NUMBER("image/tiff", "II*"),
+  MAGIC_NUMBER("image/tiff", "MM\x00*"),
+  MAGIC_NUMBER("audio/mpeg", "ID3"),
+  MAGIC_NUMBER("image/webp", "RIFF....WEBPVP8 "),
+  MAGIC_NUMBER("video/webm", "\x1A\x45\xDF\xA3"),
+  MAGIC_NUMBER("application/zip", "PK\x03\x04"),
+  MAGIC_NUMBER("application/x-rar-compressed", "Rar!\x1A\x07\x00"),
+  MAGIC_NUMBER("application/x-msmetafile", "\xD7\xCD\xC6\x9A"),
+  MAGIC_NUMBER("application/octet-stream", "MZ"),  // EXE
   // Sniffing for Flash:
   //
-  //   MAGIC_NUMBER("application/x-shockwave-flash", "CWS")
-  //   MAGIC_NUMBER("application/x-shockwave-flash", "FLV")
-  //   MAGIC_NUMBER("application/x-shockwave-flash", "FWS")
+  //   MAGIC_NUMBER("application/x-shockwave-flash", "CWS"),
+  //   MAGIC_NUMBER("application/x-shockwave-flash", "FLV"),
+  //   MAGIC_NUMBER("application/x-shockwave-flash", "FWS"),
   //
   // Including these magic number for Flash is a trade off.
   //
@@ -190,8 +190,8 @@ static const MagicNumber kMagicNumbers[] = {
 static const size_t kBytesRequiredForOfficeMagic = 8;
 
 static const MagicNumber kOfficeMagicNumbers[] = {
-  MAGIC_NUMBER("CFB", "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1")
-  MAGIC_NUMBER("OOXML", "PK\x03\x04")
+  MAGIC_NUMBER("CFB", "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"),
+  MAGIC_NUMBER("OOXML", "PK\x03\x04"),
 };
 
 enum OfficeDocType {
@@ -208,49 +208,49 @@ struct OfficeExtensionType {
 };
 
 #define OFFICE_EXTENSION(type, extension) \
-  { (type), (extension), sizeof(extension) - 1 },
+  { (type), (extension), sizeof(extension) - 1 }
 
 static const OfficeExtensionType kOfficeExtensionTypes[] = {
-  OFFICE_EXTENSION(DOC_TYPE_WORD, ".doc")
-  OFFICE_EXTENSION(DOC_TYPE_EXCEL, ".xls")
-  OFFICE_EXTENSION(DOC_TYPE_POWERPOINT, ".ppt")
-  OFFICE_EXTENSION(DOC_TYPE_WORD, ".docx")
-  OFFICE_EXTENSION(DOC_TYPE_EXCEL, ".xlsx")
-  OFFICE_EXTENSION(DOC_TYPE_POWERPOINT, ".pptx")
+  OFFICE_EXTENSION(DOC_TYPE_WORD, ".doc"),
+  OFFICE_EXTENSION(DOC_TYPE_EXCEL, ".xls"),
+  OFFICE_EXTENSION(DOC_TYPE_POWERPOINT, ".ppt"),
+  OFFICE_EXTENSION(DOC_TYPE_WORD, ".docx"),
+  OFFICE_EXTENSION(DOC_TYPE_EXCEL, ".xlsx"),
+  OFFICE_EXTENSION(DOC_TYPE_POWERPOINT, ".pptx"),
 };
 
 static const MagicNumber kExtraMagicNumbers[] = {
-  MAGIC_NUMBER("image/x-xbitmap", "#define")
-  MAGIC_NUMBER("image/x-icon", "\x00\x00\x01\x00")
-  MAGIC_NUMBER("image/svg+xml", "<?xml_version=")
-  MAGIC_NUMBER("audio/wav", "RIFF....WAVEfmt ")
-  MAGIC_NUMBER("video/avi", "RIFF....AVI LIST")
-  MAGIC_NUMBER("audio/ogg", "OggS")
-  MAGIC_MASK("video/mpeg", "\x00\x00\x01\xB0", "\xFF\xFF\xFF\xF0")
-  MAGIC_MASK("audio/mpeg", "\xFF\xE0", "\xFF\xE0")
-  MAGIC_NUMBER("video/3gpp", "....ftyp3g")
-  MAGIC_NUMBER("video/3gpp", "....ftypavcl")
-  MAGIC_NUMBER("video/mp4", "....ftyp")
-  MAGIC_NUMBER("video/quicktime", "....moov")
-  MAGIC_NUMBER("application/x-shockwave-flash", "CWS")
-  MAGIC_NUMBER("application/x-shockwave-flash", "FWS")
-  MAGIC_NUMBER("video/x-flv", "FLV")
-  MAGIC_NUMBER("audio/x-flac", "fLaC")
+  MAGIC_NUMBER("image/x-xbitmap", "#define"),
+  MAGIC_NUMBER("image/x-icon", "\x00\x00\x01\x00"),
+  MAGIC_NUMBER("image/svg+xml", "<?xml_version="),
+  MAGIC_NUMBER("audio/wav", "RIFF....WAVEfmt "),
+  MAGIC_NUMBER("video/avi", "RIFF....AVI LIST"),
+  MAGIC_NUMBER("audio/ogg", "OggS\0"),
+  MAGIC_MASK("video/mpeg", "\x00\x00\x01\xB0", "\xFF\xFF\xFF\xF0"),
+  MAGIC_MASK("audio/mpeg", "\xFF\xE0", "\xFF\xE0"),
+  MAGIC_NUMBER("video/3gpp", "....ftyp3g"),
+  MAGIC_NUMBER("video/3gpp", "....ftypavcl"),
+  MAGIC_NUMBER("video/mp4", "....ftyp"),
+  MAGIC_NUMBER("video/quicktime", "....moov"),
+  MAGIC_NUMBER("application/x-shockwave-flash", "CWS"),
+  MAGIC_NUMBER("application/x-shockwave-flash", "FWS"),
+  MAGIC_NUMBER("video/x-flv", "FLV"),
+  MAGIC_NUMBER("audio/x-flac", "fLaC"),
 
   // RAW image types.
-  MAGIC_NUMBER("image/x-canon-cr2", "II\x2a\x00\x10\x00\x00\x00CR")
-  MAGIC_NUMBER("image/x-canon-crw", "II\x1a\x00\x00\x00HEAPCCDR")
-  MAGIC_NUMBER("image/x-minolta-mrw", "\x00MRM")
-  MAGIC_NUMBER("image/x-olympus-orf", "MMOR")  // big-endian
-  MAGIC_NUMBER("image/x-olympus-orf", "IIRO")  // little-endian
-  MAGIC_NUMBER("image/x-olympus-orf", "IIRS")  // little-endian
-  MAGIC_NUMBER("image/x-fuji-raf", "FUJIFILMCCD-RAW ")
+  MAGIC_NUMBER("image/x-canon-cr2", "II\x2a\x00\x10\x00\x00\x00CR"),
+  MAGIC_NUMBER("image/x-canon-crw", "II\x1a\x00\x00\x00HEAPCCDR"),
+  MAGIC_NUMBER("image/x-minolta-mrw", "\x00MRM"),
+  MAGIC_NUMBER("image/x-olympus-orf", "MMOR"),  // big-endian
+  MAGIC_NUMBER("image/x-olympus-orf", "IIRO"),  // little-endian
+  MAGIC_NUMBER("image/x-olympus-orf", "IIRS"),  // little-endian
+  MAGIC_NUMBER("image/x-fuji-raf", "FUJIFILMCCD-RAW "),
   MAGIC_NUMBER("image/x-panasonic-raw",
-               "IIU\x00\x08\x00\x00\x00")  // Panasonic .raw
+               "IIU\x00\x08\x00\x00\x00"),  // Panasonic .raw
   MAGIC_NUMBER("image/x-panasonic-raw",
-               "IIU\x00\x18\x00\x00\x00")  // Panasonic .rw2
-  MAGIC_NUMBER("image/x-phaseone-raw", "MMMMRaw")
-  MAGIC_NUMBER("image/x-x3f", "FOVb")
+               "IIU\x00\x18\x00\x00\x00"),  // Panasonic .rw2
+  MAGIC_NUMBER("image/x-phaseone-raw", "MMMMRaw"),
+  MAGIC_NUMBER("image/x-x3f", "FOVb"),
 };
 
 // Our HTML sniffer differs slightly from Mozilla.  For example, Mozilla will
@@ -264,26 +264,26 @@ static const MagicNumber kSniffableTags[] = {
   // XML processing directive.  Although this is not an HTML mime type, we sniff
   // for this in the HTML phase because text/xml is just as powerful as HTML and
   // we want to leverage our white space skipping technology.
-  MAGIC_NUMBER("text/xml", "<?xml")  // Mozilla
+  MAGIC_NUMBER("text/xml", "<?xml"),  // Mozilla
   // DOCTYPEs
-  MAGIC_HTML_TAG("!DOCTYPE html")  // HTML5 spec
+  MAGIC_HTML_TAG("!DOCTYPE html"),  // HTML5 spec
   // Sniffable tags, ordered by how often they occur in sniffable documents.
-  MAGIC_HTML_TAG("script")  // HTML5 spec, Mozilla
-  MAGIC_HTML_TAG("html")  // HTML5 spec, Mozilla
-  MAGIC_HTML_TAG("!--")
-  MAGIC_HTML_TAG("head")  // HTML5 spec, Mozilla
-  MAGIC_HTML_TAG("iframe")  // Mozilla
-  MAGIC_HTML_TAG("h1")  // Mozilla
-  MAGIC_HTML_TAG("div")  // Mozilla
-  MAGIC_HTML_TAG("font")  // Mozilla
-  MAGIC_HTML_TAG("table")  // Mozilla
-  MAGIC_HTML_TAG("a")  // Mozilla
-  MAGIC_HTML_TAG("style")  // Mozilla
-  MAGIC_HTML_TAG("title")  // Mozilla
-  MAGIC_HTML_TAG("b")  // Mozilla
-  MAGIC_HTML_TAG("body")  // Mozilla
-  MAGIC_HTML_TAG("br")
-  MAGIC_HTML_TAG("p")  // Mozilla
+  MAGIC_HTML_TAG("script"),  // HTML5 spec, Mozilla
+  MAGIC_HTML_TAG("html"),  // HTML5 spec, Mozilla
+  MAGIC_HTML_TAG("!--"),
+  MAGIC_HTML_TAG("head"),  // HTML5 spec, Mozilla
+  MAGIC_HTML_TAG("iframe"),  // Mozilla
+  MAGIC_HTML_TAG("h1"),  // Mozilla
+  MAGIC_HTML_TAG("div"),  // Mozilla
+  MAGIC_HTML_TAG("font"),  // Mozilla
+  MAGIC_HTML_TAG("table"),  // Mozilla
+  MAGIC_HTML_TAG("a"),  // Mozilla
+  MAGIC_HTML_TAG("style"),  // Mozilla
+  MAGIC_HTML_TAG("title"),  // Mozilla
+  MAGIC_HTML_TAG("b"),  // Mozilla
+  MAGIC_HTML_TAG("body"),  // Mozilla
+  MAGIC_HTML_TAG("br"),
+  MAGIC_HTML_TAG("p"),  // Mozilla
 };
 
 // Compare content header to a magic number where magic_entry can contain '.'
@@ -547,9 +547,9 @@ static const MagicNumber kMagicXML[] = {
   // So we match explicitly on this, and don't match other ways of writing
   // it in semantically-equivalent ways.
   MAGIC_STRING("application/xhtml+xml",
-               "<html xmlns=\"http://www.w3.org/1999/xhtml\"")
-  MAGIC_STRING("application/atom+xml", "<feed")
-  MAGIC_STRING("application/rss+xml", "<rss")  // UTF-8
+               "<html xmlns=\"http://www.w3.org/1999/xhtml\""),
+  MAGIC_STRING("application/atom+xml", "<feed"),
+  MAGIC_STRING("application/rss+xml", "<rss"),  // UTF-8
 };
 
 // Returns true and sets result if the content appears to contain XHTML or a
@@ -620,9 +620,9 @@ static bool SniffXML(const char* content,
 
 // Byte order marks
 static const MagicNumber kByteOrderMark[] = {
-  MAGIC_NUMBER("text/plain", "\xFE\xFF")  // UTF-16BE
-  MAGIC_NUMBER("text/plain", "\xFF\xFE")  // UTF-16LE
-  MAGIC_NUMBER("text/plain", "\xEF\xBB\xBF")  // UTF-8
+  MAGIC_NUMBER("text/plain", "\xFE\xFF"),  // UTF-16BE
+  MAGIC_NUMBER("text/plain", "\xFF\xFE"),  // UTF-16LE
+  MAGIC_NUMBER("text/plain", "\xEF\xBB\xBF"),  // UTF-8
 };
 
 // Returns true and sets result to "application/octet-stream" if the content

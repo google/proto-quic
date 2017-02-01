@@ -98,7 +98,8 @@ static void PrintIfDynamicInitializer(const std::wstring& module,
 
   BSTR bstr_name;
   if (SUCCEEDED(symbol->get_name(&bstr_name))) {
-    if (wcsstr(bstr_name, L"`dynamic initializer for '")) {
+    if (wcsstr(bstr_name, L"`dynamic initializer for '") ||
+        wcsstr(bstr_name, L"`dynamic atexit destructor for '")) {
       wprintf(L"%s: %s\n", module.c_str(), bstr_name);
       SysFreeString(bstr_name);
     }

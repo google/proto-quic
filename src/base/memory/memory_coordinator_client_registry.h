@@ -39,6 +39,9 @@ class BASE_EXPORT MemoryCoordinatorClientRegistry {
   // Notify clients of a memory state change.
   void Notify(MemoryState state);
 
+  // Requests purging memory.
+  void PurgeMemory();
+
  private:
   friend struct DefaultSingletonTraits<MemoryCoordinatorClientRegistry>;
 

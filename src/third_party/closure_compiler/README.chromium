@@ -3,7 +3,7 @@ Short Name: closure-compiler
 URL: http://github.com/google/closure-compiler
 Version: v20150729-236-gad656a1
 Date: 2015/08/26 08:46
-Revision: 56aa496ea370f5101e5309e96685b82511278a28
+Revision: 72c88ff7e9e85b4c2413274539897b6d43024d48
 License: Apache 2.0
 License File: LICENSE
 Security Critical: no
@@ -14,16 +14,7 @@ potentially dangerous operations, helping you to produce JavaScript that is less
 buggy and easier to maintain.
 
 Local modifications:
-- A custom runner (see: runner/) to continue on errors, understand and enforce
-  Chrome-specific code, and do checks only (i.e. throw away output).  See:
-  --enable-chrome-pass in runner.jar's arguments.
-- third_party/closure_compiler/runner/src/com/google/javascript/jscomp/ChromePass.java
-  Added pass to handle namespace definition with cr.define(), object chain
-  creation with cr.exportPath(), property definition with
-  {cr|Object}.defineProperty() and public API generation with cr.makePublic().
-  See third_party/closure_compiler/runner/how_to_test_compiler_pass.md for
-  testing instructions on this pass.
-- Use the script third_party/closure_compiler/bump_compiler_version to update
+- Use the script third_party/closure_compiler/roll_closure_compiler to update
   the versions of third_party/closure_compiler/compiler/compiler.jar and/or
   third_party/closure_compiler/externs/chrome_extensions.js.
 - Some externs here are for chrome-specific use; these primarily include the

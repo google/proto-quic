@@ -29,7 +29,8 @@ class NET_EXPORT HttpResponseInfo {
   // Describes the kind of connection used to fetch this response.
   //
   // NOTE: Please keep in sync with Net.HttpResponseInfo.ConnectionInfo
-  // histogram.  Because of that, and also because these values are persisted to
+  // histogram in tools/metrics/histograms/histograms.xml.
+  // Because of that, and also because these values are persisted to
   // the cache, please make sure not to delete or reorder values.
   enum ConnectionInfo {
     CONNECTION_INFO_UNKNOWN = 0,

@@ -21,7 +21,6 @@
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_header_block.h"
-#include "net/spdy/spdy_headers_block_parser.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 #include "net/spdy/spdy_protocol.h"
 
@@ -265,14 +264,13 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     SPDY_CONTROL_FRAME_BEFORE_HEADER_BLOCK,
     SPDY_CONTROL_FRAME_HEADER_BLOCK,
     SPDY_GOAWAY_FRAME_PAYLOAD,
-    SPDY_RST_STREAM_FRAME_PAYLOAD,
     SPDY_SETTINGS_FRAME_HEADER,
     SPDY_SETTINGS_FRAME_PAYLOAD,
     SPDY_ALTSVC_FRAME_PAYLOAD,
   };
 
-  // SPDY error codes.
-  enum SpdyError {
+  // Framer error codes.
+  enum SpdyFramerError {
     SPDY_NO_ERROR,
     SPDY_INVALID_STREAM_ID,            // Stream ID is invalid
     SPDY_INVALID_CONTROL_FRAME,        // Control frame is mal-formatted.
@@ -358,7 +356,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   void Reset();
 
   // Check the state of the framer.
-  SpdyError error_code() const;
+  SpdyFramerError spdy_framer_error() const;
   SpdyState state() const;
   bool HasError() const { return state() == SPDY_ERROR; }
 
@@ -493,7 +491,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   // For debugging.
   static const char* StateToString(int state);
-  static const char* ErrorCodeToString(int error_code);
+  static const char* SpdyFramerErrorToString(int spdy_framer_error);
   static const char* StatusCodeToString(int status_code);
   static const char* FrameTypeToString(SpdyFrameType type);
 
@@ -599,7 +597,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   size_t ProcessFramePadding(const char* data, size_t len);
   size_t ProcessDataFramePayload(const char* data, size_t len);
   size_t ProcessGoAwayFramePayload(const char* data, size_t len);
-  size_t ProcessRstStreamFramePayload(const char* data, size_t len);
   size_t ProcessSettingsFrameHeader(const char* data, size_t len);
   size_t ProcessSettingsFramePayload(const char* data, size_t len);
   size_t ProcessAltSvcFramePayload(const char* data, size_t len);
@@ -614,13 +611,13 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   //
   // For valid frames, returns the correct SpdyFrameType.
   // Otherwise returns a best guess at invalid frame type,
-  // after setting the appropriate SpdyError.
+  // after setting the appropriate SpdyFramerError.
   SpdyFrameType ValidateFrameHeader(bool is_control_frame,
                                     int frame_type_field,
                                     size_t payload_length_field);
 
   // Helpers for above internal breakouts from ProcessInput.
-  void ProcessControlFrameHeader(int control_frame_type_field);
+  void ProcessControlFrameHeader();
   // Always passed exactly 1 setting's worth of data.
   bool ProcessSetting(const char* data);
 
@@ -635,13 +632,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
                                     SpdyStreamId stream_id,
                                     SpdyFrameType type,
                                     int padding_payload_len);
-
-  // Deliver the given control frame's uncompressed headers block to the
-  // visitor in chunks. Returns true if the visitor has accepted all of the
-  // chunks.
-  bool IncrementallyDeliverControlFrameHeaderData(SpdyStreamId stream_id,
-                                                  const char* data,
-                                                  size_t len);
 
   // Utility to copy the given data block to the current frame buffer, up
   // to the given maximum number of bytes, and update the buffer
@@ -666,7 +656,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   uint8_t SerializeHeaderFrameFlags(const SpdyHeadersIR& header_ir) const;
 
   // Set the error code and moves the framer into the error state.
-  void set_error(SpdyError error);
+  void set_error(SpdyFramerError error);
 
   // The size of the control frame buffer.
   // Since this is only used for control frame headers, the maximum control
@@ -685,7 +675,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   SpdyState state_;
   SpdyState previous_state_;
-  SpdyError error_code_;
+  SpdyFramerError spdy_framer_error_;
 
   // Note that for DATA frame, remaining_data_length_ is sum of lengths of
   // frame header, padding length field (optional), data payload (optional) and
@@ -738,7 +728,6 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   SpdyFramerVisitorInterface* visitor_;
   SpdyFramerDebugVisitorInterface* debug_visitor_;
 
-  std::unique_ptr<SpdyHeadersBlockParser> header_parser_;
   SpdyHeadersHandlerInterface* header_handler_;
 
   // Optional decoder to use instead of this instance.

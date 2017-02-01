@@ -4,7 +4,6 @@
 
 #include "net/quic/core/quic_versions.h"
 
-#include "base/memory/ptr_util.h"
 #include "base/strings/string_piece.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_flags.h"

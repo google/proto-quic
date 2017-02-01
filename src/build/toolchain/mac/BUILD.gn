@@ -17,6 +17,7 @@ import("//build/config/mac/symbols.gni")
 assert(host_os == "mac")
 
 import("//build/toolchain/cc_wrapper.gni")
+import("//build/toolchain/clang_static_analyzer.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/toolchain.gni")
 import("//build/toolchain/concurrent_links.gni")
@@ -122,7 +123,23 @@ template("mac_toolchain") {
 
     cc = compiler_prefix + _cc
     cxx = compiler_prefix + _cxx
-    ld = _cxx
+
+    if (use_clang_static_analyzer && !toolchain_uses_goma) {
+      # Call "ccc-analyzer" or "c++-analyzer" instead of directly calling Clang.
+      # |wrapper_tool| sets the environment variables which are read by the
+      # analyzer tools.
+      analyzer_wrapper =
+          rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
+                      root_build_dir)
+      cc = analyzer_wrapper + " --clang-cc-path=${cc} --analyzer=" +
+           rebase_path("//third_party/scan-build/src/libexec/ccc-analyzer",
+                       root_build_dir)
+      cxx = analyzer_wrapper + " --clang-cxx-path=${cxx} --analyzer=" +
+            rebase_path("//third_party/scan-build/src/libexec/c++-analyzer",
+                        root_build_dir)
+    }
+
+    ld = cxx
 
     linker_driver =
         "TOOL_VERSION=${tool_versions.linker_driver} " +

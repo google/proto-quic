@@ -1,0 +1,2 @@
+gen/components/grit/components_resources.h
+gen/components/components_resources.pak

@@ -1050,6 +1050,12 @@ EVENT_TYPE(HTTP_STREAM_JOB)
 //   }
 EVENT_TYPE(HTTP_STREAM_REQUEST_STARTED_JOB)
 
+// Logs the proxy server resolved for the job. The event parameters are:
+//   {
+//      "proxy_server": The proxy server resolved for the Job,
+//   }
+EVENT_TYPE(HTTP_STREAM_JOB_PROXY_SERVER_RESOLVED)
+
 // Identifies the NetLogSource() for the Job that fulfilled the Request.
 // The event parameters are:
 //   {
@@ -1082,6 +1088,23 @@ EVENT_TYPE(HTTP_STREAM_JOB_ORPHANED)
 //     "resume_after_ms": <Number of milliseconds until job will be unblocked>
 //   }
 EVENT_TYPE(HTTP_STREAM_JOB_DELAYED)
+
+// Marks the start/end of a HttpStreamFactoryImpl::JobController.
+// The following parameters are attached:
+//   {
+//      "url": <String of request URL>,
+//      "is_preconnect": <True if controller is created for a preconnect.>,
+//   }
+EVENT_TYPE(HTTP_STREAM_JOB_CONTROLLER)
+
+// Links a JobController with its user (a URL_REQUEST).
+// The event parameters are:
+//   {
+//      "source_dependency": <The source identifier for JobController if the
+//          event is logged in URL_REQUEST or the source identifier for the
+//          URL_REQUEST if the event is logged in HTTP_STREAM_JOB_CONTROLLER>,
+//   }
+EVENT_TYPE(HTTP_STREAM_JOB_CONTROLLER_BOUND)
 
 // ------------------------------------------------------------------------
 // HttpNetworkTransaction

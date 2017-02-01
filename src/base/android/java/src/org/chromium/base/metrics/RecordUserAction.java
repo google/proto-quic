@@ -5,7 +5,6 @@
 package org.chromium.base.metrics;
 
 import org.chromium.base.ThreadUtils;
-import org.chromium.base.VisibleForTesting;
 import org.chromium.base.annotations.JNINamespace;
 
 /**
@@ -19,19 +18,7 @@ import org.chromium.base.annotations.JNINamespace;
  */
 @JNINamespace("base::android")
 public class RecordUserAction {
-    private static boolean sIsDisabledForTests;
-
-    /**
-     * Tests may not have native initialized, so they may need to disable metrics.
-     */
-    @VisibleForTesting
-    public static void disableForTests() {
-        sIsDisabledForTests = true;
-    }
-
     public static void record(final String action) {
-        if (sIsDisabledForTests) return;
-
         if (ThreadUtils.runningOnUiThread()) {
             nativeRecordUserAction(action);
             return;

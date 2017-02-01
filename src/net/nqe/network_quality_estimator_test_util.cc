@@ -212,6 +212,38 @@ int TestNetworkQualityEstimator::GetEntriesCount(NetLogEventType type) const {
   return count;
 }
 
+std::string TestNetworkQualityEstimator::GetNetLogLastStringValue(
+    NetLogEventType type,
+    const std::string& key) const {
+  std::string return_value;
+  TestNetLogEntry::List entries;
+  net_log_->GetEntries(&entries);
+
+  for (int i = entries.size() - 1; i >= 0; --i) {
+    if (entries[i].type == type &&
+        entries[i].GetStringValue(key, &return_value)) {
+      return return_value;
+    }
+  }
+  return return_value;
+}
+
+int TestNetworkQualityEstimator::GetNetLogLastIntegerValue(
+    NetLogEventType type,
+    const std::string& key) const {
+  int return_value = 0;
+  TestNetLogEntry::List entries;
+  net_log_->GetEntries(&entries);
+
+  for (int i = entries.size() - 1; i >= 0; --i) {
+    if (entries[i].type == type &&
+        entries[i].GetIntegerValue(key, &return_value)) {
+      return return_value;
+    }
+  }
+  return return_value;
+}
+
 nqe::internal::NetworkID TestNetworkQualityEstimator::GetCurrentNetworkID()
     const {
   return nqe::internal::NetworkID(current_network_type_, current_network_id_);

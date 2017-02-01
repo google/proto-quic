@@ -6,85 +6,50 @@
 
 namespace net {
 
-bool DecodeBuffer::SlowDecodeUnsignedInt(uint32_t field_size,
-                                         uint32_t field_offset,
-                                         uint32_t* decode_offset,
-                                         uint32_t* value) {
-  DCHECK_LT(0u, field_size);
-  DCHECK_LE(field_size, 4u);
-  DCHECK(decode_offset != nullptr);
-  DCHECK_LE(field_offset, *decode_offset);
-  const uint32_t next_field_offset = field_offset + field_size;
-  if (*decode_offset == field_offset) {
-    // Starting to decode field. It is possible we will reach this point
-    // twice, once when we've just exhausted the input, and once when
-    // resuming decoding with a new input buffer.
-    // Clear the field; we do NOT assume that the caller has done so
-    // previously.
-    *value = 0;
-  } else if (*decode_offset >= next_field_offset) {
-    // We already decoded this field.
-    return true;
-  }
-  do {
-    if (Empty()) {
-      return false;  // Not done decoding.
-    }
-    *value = *value << 8 | DecodeUInt8();
-    (*decode_offset)++;
-  } while (*decode_offset < next_field_offset);
-  return true;
+#ifndef NDEBUG
+// These are part of validating during tests that there is at most one
+// DecodeBufferSubset instance at a time for any DecodeBuffer instance.
+void DecodeBuffer::set_subset_of_base(DecodeBuffer* base,
+                                      const DecodeBufferSubset* subset) {
+  DCHECK_EQ(this, subset);
+  base->set_subset(subset);
 }
+void DecodeBuffer::clear_subset_of_base(DecodeBuffer* base,
+                                        const DecodeBufferSubset* subset) {
+  DCHECK_EQ(this, subset);
+  base->clear_subset(subset);
+}
+void DecodeBuffer::set_subset(const DecodeBufferSubset* subset) {
+  DCHECK(subset != nullptr);
+  DCHECK_EQ(subset_, nullptr) << "There is already a subset";
+  subset_ = subset;
+}
+void DecodeBuffer::clear_subset(const DecodeBufferSubset* subset) {
+  DCHECK(subset != nullptr);
+  DCHECK_EQ(subset_, subset);
+  subset_ = nullptr;
+}
+void DecodeBufferSubset::DebugSetup() {
+  start_base_offset_ = base_buffer_->Offset();
+  max_base_offset_ = start_base_offset_ + FullSize();
+  DCHECK_LE(max_base_offset_, base_buffer_->FullSize());
 
-bool DecodeBuffer::SlowDecodeUInt8(uint32_t field_offset,
-                                   uint32_t* decode_offset,
-                                   uint8_t* value) {
-  uint32_t tmp = *value;
-  const bool done = SlowDecodeUnsignedInt(1 /* field_size */, field_offset,
-                                          decode_offset, &tmp);
-  *value = tmp & 0xff;
-  DCHECK_EQ(tmp, *value);
-  return done;
+  // Ensure that there is only one DecodeBufferSubset at a time for a base.
+  set_subset_of_base(base_buffer_, this);
 }
+void DecodeBufferSubset::DebugTearDown() {
+  // Ensure that the base hasn't been modified.
+  DCHECK_EQ(start_base_offset_, base_buffer_->Offset())
+      << "The base buffer was modified";
 
-bool DecodeBuffer::SlowDecodeUInt16(uint32_t field_offset,
-                                    uint32_t* decode_offset,
-                                    uint16_t* value) {
-  uint32_t tmp = *value;
-  const bool done = SlowDecodeUnsignedInt(2 /* field_size */, field_offset,
-                                          decode_offset, &tmp);
-  *value = tmp & 0xffff;
-  DCHECK_EQ(tmp, *value);
-  return done;
-}
+  // Ensure that we haven't gone beyond the maximum allowed offset.
+  size_t offset = Offset();
+  DCHECK_LE(offset, FullSize());
+  DCHECK_LE(start_base_offset_ + offset, max_base_offset_);
+  DCHECK_LE(max_base_offset_, base_buffer_->FullSize());
 
-bool DecodeBuffer::SlowDecodeUInt24(uint32_t field_offset,
-                                    uint32_t* decode_offset,
-                                    uint32_t* value) {
-  uint32_t tmp = *value;
-  const bool done = SlowDecodeUnsignedInt(3 /* field_size */, field_offset,
-                                          decode_offset, &tmp);
-  *value = tmp & 0xffffff;
-  DCHECK_EQ(tmp, *value);
-  return done;
+  clear_subset_of_base(base_buffer_, this);
 }
-
-bool DecodeBuffer::SlowDecodeUInt31(uint32_t field_offset,
-                                    uint32_t* decode_offset,
-                                    uint32_t* value) {
-  uint32_t tmp = *value;
-  const bool done = SlowDecodeUnsignedInt(4 /* field_size */, field_offset,
-                                          decode_offset, &tmp);
-  *value = tmp & 0x7fffffff;
-  DCHECK_EQ(tmp & 0x7fffffff, *value);
-  return done;
-}
-
-bool DecodeBuffer::SlowDecodeUInt32(uint32_t field_offset,
-                                    uint32_t* decode_offset,
-                                    uint32_t* value) {
-  return SlowDecodeUnsignedInt(4 /* field_size */, field_offset, decode_offset,
-                               value);
-}
+#endif
 
 }  // namespace net

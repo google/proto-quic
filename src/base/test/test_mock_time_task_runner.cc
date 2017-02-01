@@ -83,14 +83,23 @@ struct TestMockTimeTaskRunner::TestOrderedPendingTask
                          TimeDelta delay,
                          size_t ordinal,
                          TestNestability nestability);
+  TestOrderedPendingTask(TestOrderedPendingTask&&);
   ~TestOrderedPendingTask();
 
+  TestOrderedPendingTask& operator=(TestOrderedPendingTask&&);
+
   size_t ordinal;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(TestOrderedPendingTask);
 };
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask()
     : ordinal(0) {
 }
+
+TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
+    TestOrderedPendingTask&&) = default;
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
     const tracked_objects::Location& location,
@@ -100,11 +109,14 @@ TestMockTimeTaskRunner::TestOrderedPendingTask::TestOrderedPendingTask(
     size_t ordinal,
     TestNestability nestability)
     : base::TestPendingTask(location, task, post_time, delay, nestability),
-      ordinal(ordinal) {
-}
+      ordinal(ordinal) {}
 
 TestMockTimeTaskRunner::TestOrderedPendingTask::~TestOrderedPendingTask() {
 }
+
+TestMockTimeTaskRunner::TestOrderedPendingTask&
+TestMockTimeTaskRunner::TestOrderedPendingTask::operator=(
+    TestOrderedPendingTask&&) = default;
 
 // TestMockTimeTaskRunner -----------------------------------------------------
 
@@ -176,7 +188,10 @@ std::unique_ptr<TickClock> TestMockTimeTaskRunner::GetMockTickClock() const {
 std::deque<TestPendingTask> TestMockTimeTaskRunner::TakePendingTasks() {
   std::deque<TestPendingTask> tasks;
   while (!tasks_.empty()) {
-    tasks.push_back(tasks_.top());
+    // It's safe to remove const and consume |task| here, since |task| is not
+    // used for ordering the item.
+    tasks.push_back(
+        std::move(const_cast<TestOrderedPendingTask&>(tasks_.top())));
     tasks_.pop();
   }
   return tasks;
@@ -248,7 +263,7 @@ void TestMockTimeTaskRunner::ProcessAllTasksNoLaterThan(TimeDelta max_delta) {
     // be less than |now_ticks_|. ForwardClocksUntilTickTime() takes care of not
     // moving the clock backwards in this case.
     ForwardClocksUntilTickTime(task_info.GetTimeToRun());
-    task_info.task.Run();
+    std::move(task_info.task).Run();
     OnAfterTaskRun();
   }
 }
@@ -268,7 +283,9 @@ bool TestMockTimeTaskRunner::DequeueNextTask(const TimeTicks& reference,
   AutoLock scoped_lock(tasks_lock_);
   if (!tasks_.empty() &&
       (tasks_.top().GetTimeToRun() - reference) <= max_delta) {
-    *next_task = tasks_.top();
+    // It's safe to remove const and consume |task| here, since |task| is not
+    // used for ordering the item.
+    *next_task = std::move(const_cast<TestOrderedPendingTask&>(tasks_.top()));
     tasks_.pop();
     return true;
   }

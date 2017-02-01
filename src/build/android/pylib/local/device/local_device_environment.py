@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import contextlib
 import datetime
 import functools
 import logging
@@ -97,7 +96,8 @@ class LocalDeviceEnvironment(environment.Environment):
 
   #override
   def SetUp(self):
-    pass
+    if self.trace_output:
+      self.EnableTracing()
 
   def _InitDevices(self):
     device_arg = 'default'
@@ -197,6 +197,9 @@ class LocalDeviceEnvironment(environment.Environment):
 
   #override
   def TearDown(self):
+    if self.trace_output:
+      self.DisableTracing()
+
     if self._devices is None:
       return
     @handle_shard_failures_with(on_failure=self.BlacklistDevice)
@@ -261,11 +264,3 @@ class LocalDeviceEnvironment(environment.Environment):
       logging.warning('Tracing is already running.')
     else:
       trace_event.trace_enable(self._trace_output + '.json')
-
-  @contextlib.contextmanager
-  def Tracing(self):
-    try:
-      self.EnableTracing()
-      yield
-    finally:
-      self.DisableTracing()

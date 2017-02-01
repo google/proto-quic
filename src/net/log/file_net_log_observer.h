@@ -109,10 +109,9 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // once all file writing is complete and the netlog files can be accessed
   // safely.
   //
-  // |url_request_context| is an optional argument used to add additional
-  // network stack state to the log. If the context is non-NULL,
-  // StopObserving() must be called on the context's thread.
-  void StopObserving(URLRequestContext* url_request_context,
+  // |polled_data| is an optional argument used to add additional network stack
+  // state to the log.
+  void StopObserving(std::unique_ptr<base::Value> polled_data,
                      const base::Closure& callback);
 
   // NetLog::ThreadSafeObserver

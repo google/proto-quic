@@ -824,7 +824,7 @@ void Parser::AssignComments(ParseNode* file) {
       CHECK_EQ(node, file) << "Only expected on top file node";
       continue;
     }
-    const Location& start = node->GetRange().begin();
+    const Location start = node->GetRange().begin();
     while (cur_comment < static_cast<int>(line_comment_tokens_.size())) {
       if (start.byte() >= line_comment_tokens_[cur_comment].location().byte()) {
         const_cast<ParseNode*>(node)->comments_mutable()->append_before(

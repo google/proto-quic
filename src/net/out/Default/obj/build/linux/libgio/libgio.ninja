@@ -1,0 +1,11 @@
+defines = -DV8_DEPRECATION_WARNINGS -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=289944-2 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DUSE_GIO -DGLIB_DISABLE_DEPRECATION_WARNINGS
+include_dirs = -I../../.. -Igen -I../../../build/linux/debian_wheezy_amd64-sysroot/usr/include/glib-2.0 -I../../../build/linux/debian_wheezy_amd64-sysroot/usr/lib/x86_64-linux-gnu/glib-2.0/include
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/tmp/proto-quic/src=. -m64 -march=x86-64 -pthread -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -Wno-address-of-packed-member -O0 -fno-omit-frame-pointer -g2 -gsplit-dwarf --sysroot=../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -Wtautological-overlap-compare
+cflags_cc = -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = libgio
+target_out_dir = obj/build/linux/libgio
+target_output_name = libgio
+
+build obj/build/linux/libgio/libgio/libgio_loader.o: cxx gen/library_loaders/libgio_loader.cc || obj/build/linux/libgio/libgio_loader.stamp
+
+build obj/build/linux/libgio/libgio.stamp: stamp obj/build/linux/libgio/libgio/libgio_loader.o || obj/build/linux/libgio/libgio_loader.stamp

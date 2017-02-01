@@ -25,6 +25,10 @@ void test() {
       mockedInterface,  // A comment to prevent reformatting into single line.
       myMethod(1));
   mockedInterface.myMethod(123);
+
+  int arg;
+  ON_CALL(mockedInterface, myMethod(1))
+      .WillByDefault(testing::SaveArg<0>(&arg));
 }
 
 }  // namespace simple_test

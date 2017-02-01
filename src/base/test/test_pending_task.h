@@ -21,13 +21,15 @@ struct TestPendingTask {
   enum TestNestability { NESTABLE, NON_NESTABLE };
 
   TestPendingTask();
-  TestPendingTask(const TestPendingTask& other);
+  TestPendingTask(TestPendingTask&& other);
   TestPendingTask(const tracked_objects::Location& location,
                   const Closure& task,
                   TimeTicks post_time,
                   TimeDelta delay,
                   TestNestability nestability);
   ~TestPendingTask();
+
+  TestPendingTask& operator=(TestPendingTask&& other);
 
   // Returns post_time + delay.
   TimeTicks GetTimeToRun() const;
@@ -51,7 +53,7 @@ struct TestPendingTask {
   bool ShouldRunBefore(const TestPendingTask& other) const;
 
   tracked_objects::Location location;
-  Closure task;
+  OnceClosure task;
   TimeTicks post_time;
   TimeDelta delay;
   TestNestability nestability;
@@ -61,6 +63,9 @@ struct TestPendingTask {
   void AsValueInto(base::trace_event::TracedValue* state) const;
   std::unique_ptr<base::trace_event::ConvertableToTraceFormat> AsValue() const;
   std::string ToString() const;
+
+ private:
+  DISALLOW_COPY_AND_ASSIGN(TestPendingTask);
 };
 
 // gtest helpers which allow pretty printing of the tasks, very useful in unit

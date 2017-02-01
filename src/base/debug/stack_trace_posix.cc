@@ -16,13 +16,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
 
-#if defined(__GLIBCXX__)
+#if !defined(USE_SYMBOLIZE)
 #include <cxxabi.h>
 #endif
 #if !defined(__UCLIBC__)
@@ -58,7 +59,7 @@ namespace {
 
 volatile sig_atomic_t in_signal_handler = 0;
 
-#if !defined(USE_SYMBOLIZE) && defined(__GLIBCXX__)
+#if !defined(USE_SYMBOLIZE)
 // The prefix used for mangled symbols, per the Itanium C++ ABI:
 // http://www.codesourcery.com/cxx-abi/abi.html#mangling
 const char kMangledSymbolPrefix[] = "_Z";
@@ -67,7 +68,7 @@ const char kMangledSymbolPrefix[] = "_Z";
 // (('a'..'z').to_a+('A'..'Z').to_a+('0'..'9').to_a + ['_']).join
 const char kSymbolCharacters[] =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
-#endif  // !defined(USE_SYMBOLIZE) && defined(__GLIBCXX__)
+#endif  // !defined(USE_SYMBOLIZE)
 
 #if !defined(USE_SYMBOLIZE)
 // Demangles C++ symbols in the given text. Example:
@@ -79,7 +80,7 @@ void DemangleSymbols(std::string* text) {
   // Note: code in this function is NOT async-signal safe (std::string uses
   // malloc internally).
 
-#if defined(__GLIBCXX__) && !defined(__UCLIBC__)
+#if !defined(__UCLIBC__)
 
   std::string::size_type search_from = 0;
   while (search_from < text->size()) {
@@ -115,8 +116,7 @@ void DemangleSymbols(std::string* text) {
       search_from = mangled_start + 2;
     }
   }
-
-#endif  // defined(__GLIBCXX__) && !defined(__UCLIBC__)
+#endif  // !defined(__UCLIBC__)
 }
 #endif  // !defined(USE_SYMBOLIZE)
 
@@ -717,14 +717,16 @@ bool EnableInProcessStackDumping() {
   return success;
 }
 
-StackTrace::StackTrace() {
-  // NOTE: This code MUST be async-signal safe (it's used by in-process
-  // stack dumping signal handler). NO malloc or stdio is allowed here.
+StackTrace::StackTrace(size_t count) {
+// NOTE: This code MUST be async-signal safe (it's used by in-process
+// stack dumping signal handler). NO malloc or stdio is allowed here.
 
 #if !defined(__UCLIBC__)
+  count = std::min(arraysize(trace_), count);
+
   // Though the backtrace API man page does not list any possible negative
   // return values, we take no chance.
-  count_ = base::saturated_cast<size_t>(backtrace(trace_, arraysize(trace_)));
+  count_ = base::saturated_cast<size_t>(backtrace(trace_, count));
 #else
   count_ = 0;
 #endif

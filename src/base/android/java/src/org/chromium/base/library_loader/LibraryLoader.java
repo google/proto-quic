@@ -13,6 +13,7 @@ import org.chromium.base.CommandLine;
 import org.chromium.base.ContextUtils;
 import org.chromium.base.Log;
 import org.chromium.base.TraceEvent;
+import org.chromium.base.VisibleForTesting;
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
 import org.chromium.base.annotations.MainDex;
@@ -441,6 +442,15 @@ public class LibraryLoader {
     public static int getLibraryProcessType() {
         if (sInstance == null) return LibraryProcessType.PROCESS_UNINITIALIZED;
         return sInstance.mLibraryProcessType;
+    }
+
+    /**
+     * Override the library loader (normally with a mock) for testing.
+     * @param loader the mock library loader.
+     */
+    @VisibleForTesting
+    public static void setLibraryLoaderForTesting(LibraryLoader loader) {
+        sInstance = loader;
     }
 
     private native void nativeInitCommandLine(String[] initCommandLine);

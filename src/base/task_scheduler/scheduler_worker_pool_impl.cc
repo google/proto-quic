@@ -21,6 +21,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/task_runner.h"
 #include "base/task_scheduler/delayed_task_manager.h"
+#include "base/task_scheduler/scheduler_worker_pool_params.h"
 #include "base/task_scheduler/task_tracker.h"
 #include "base/task_scheduler/task_traits.h"
 #include "base/threading/platform_thread.h"
@@ -283,14 +284,10 @@ std::unique_ptr<SchedulerWorkerPoolImpl> SchedulerWorkerPoolImpl::Create(
     const ReEnqueueSequenceCallback& re_enqueue_sequence_callback,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager) {
-  auto worker_pool = WrapUnique(new SchedulerWorkerPoolImpl(
-      params.name(), params.suggested_reclaim_time(), task_tracker,
-      delayed_task_manager));
-  if (worker_pool->Initialize(
-          params.priority_hint(), params.standby_thread_policy(),
-          params.max_threads(), re_enqueue_sequence_callback)) {
+  auto worker_pool = WrapUnique(
+      new SchedulerWorkerPoolImpl(params, task_tracker, delayed_task_manager));
+  if (worker_pool->Initialize(params, re_enqueue_sequence_callback))
     return worker_pool;
-  }
   return nullptr;
 }
 
@@ -624,12 +621,11 @@ void SchedulerWorkerPoolImpl::SchedulerWorkerDelegateImpl::OnDetach() {
 }
 
 SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
-    StringPiece name,
-    TimeDelta suggested_reclaim_time,
+    const SchedulerWorkerPoolParams& params,
     TaskTracker* task_tracker,
     DelayedTaskManager* delayed_task_manager)
-    : name_(name.as_string()),
-      suggested_reclaim_time_(suggested_reclaim_time),
+    : name_(params.name()),
+      suggested_reclaim_time_(params.suggested_reclaim_time()),
       idle_workers_stack_lock_(shared_priority_queue_.container_lock()),
       idle_workers_stack_cv_for_testing_(
           idle_workers_stack_lock_.CreateConditionVariable()),
@@ -672,31 +668,29 @@ SchedulerWorkerPoolImpl::SchedulerWorkerPoolImpl(
 }
 
 bool SchedulerWorkerPoolImpl::Initialize(
-    ThreadPriority priority_hint,
-    SchedulerWorkerPoolParams::StandbyThreadPolicy standby_thread_policy,
-    size_t max_threads,
+    const SchedulerWorkerPoolParams& params,
     const ReEnqueueSequenceCallback& re_enqueue_sequence_callback) {
   AutoSchedulerLock auto_lock(idle_workers_stack_lock_);
 
   DCHECK(workers_.empty());
-  workers_.resize(max_threads);
+  workers_.resize(params.max_threads());
 
   // Create workers and push them to the idle stack in reverse order of index.
   // This ensures that they are woken up in order of index and that the ALIVE
   // worker is on top of the stack.
-  for (int index = max_threads - 1; index >= 0; --index) {
+  for (int index = params.max_threads() - 1; index >= 0; --index) {
     const bool is_standby_lazy =
-        standby_thread_policy ==
+        params.standby_thread_policy() ==
         SchedulerWorkerPoolParams::StandbyThreadPolicy::LAZY;
     const SchedulerWorker::InitialState initial_state =
         (index == 0 && !is_standby_lazy)
             ? SchedulerWorker::InitialState::ALIVE
             : SchedulerWorker::InitialState::DETACHED;
     std::unique_ptr<SchedulerWorker> worker = SchedulerWorker::Create(
-        priority_hint,
+        params.priority_hint(),
         MakeUnique<SchedulerWorkerDelegateImpl>(
             this, re_enqueue_sequence_callback, &shared_priority_queue_, index),
-        task_tracker_, initial_state);
+        task_tracker_, initial_state, params.backward_compatibility());
     if (!worker)
       break;
     idle_workers_stack_.Push(worker.get());

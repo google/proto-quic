@@ -132,8 +132,7 @@ class NET_EXPORT_PRIVATE HttpStreamFactoryImpl : public HttpStreamFactory {
                              const ProxyInfo& used_proxy_info,
                              bool was_alpn_negotiated,
                              NextProto negotiated_protocol,
-                             bool using_spdy,
-                             const NetLogWithSource& net_log);
+                             bool using_spdy);
 
   // Called when the Job detects that the endpoint indicated by the
   // Alternate-Protocol does not work. Lets the factory update

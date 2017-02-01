@@ -78,8 +78,6 @@ class BbrSenderTest : public ::testing::Test {
                   "BBR sender",
                   Perspective::IS_SERVER,
                   42) {
-    FLAGS_quic_reloadable_flag_quic_bbr_faster_startup = true;
-
     rtt_stats_ = bbr_sender_.connection()->sent_packet_manager().GetRttStats();
     sender_ = new BbrSender(
         rtt_stats_,

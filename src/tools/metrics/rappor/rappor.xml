@@ -1316,6 +1316,15 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Media.Session.APIUsage.Origin" type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the URL of frames using the Media Session API.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="NTP.ExplicitUserAction.PageNavigation.NTPTileClick"
     type="UMA_RAPPOR_TYPE">
   <owner>knn@chromium.org</owner>
@@ -1934,6 +1943,16 @@ now we are only interested in H264, VP8 and VP9.
   <summary>
     The ETLD+1 of the URL with a WebRTC peer connection with at least one data
     channel.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="RTCPeerConnection.Unconnected" type="ETLD_PLUS_ONE">
+  <owner>guidou@chromium.org</owner>
+  <owner>hta@chromium.org</owner>
+  <owner>tommi@chromium.org</owner>
+  <summary>
+    The ETLD+1 of the URL with a WebRTC peer connection that was created but
+    never connected.
   </summary>
 </rappor-metric>
 

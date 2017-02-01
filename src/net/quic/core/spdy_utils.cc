@@ -10,14 +10,13 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_text_utils.h"
+#include "net/quic/platform/api/quic_url_utils.h"
 #include "net/spdy/spdy_flags.h"
 #include "net/spdy/spdy_frame_builder.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
-#include "url/gurl.h"
 
 using base::StringPiece;
-using base::ContainsKey;
 using std::string;
 
 namespace net {
@@ -62,8 +61,8 @@ bool SpdyUtils::ExtractContentLengthFromHeaders(int64_t* content_length,
     std::vector<StringPiece> values =
         QuicTextUtils::Split(content_length_header, '\0');
     for (const StringPiece& value : values) {
-      int64_t new_value;
-      if (!base::StringToInt64(value, &new_value) || new_value < 0) {
+      uint64_t new_value;
+      if (!QuicTextUtils::StringToUint64(value, &new_value)) {
         QUIC_DLOG(ERROR)
             << "Content length was either unparseable or negative.";
         return false;
@@ -72,7 +71,7 @@ bool SpdyUtils::ExtractContentLengthFromHeaders(int64_t* content_length,
         *content_length = new_value;
         continue;
       }
-      if (new_value != *content_length) {
+      if (new_value != static_cast<uint64_t>(*content_length)) {
         QUIC_DLOG(ERROR)
             << "Parsed content length " << new_value << " is "
             << "inconsistent with previously detected content length "
@@ -100,7 +99,7 @@ bool SpdyUtils::ParseTrailers(const char* data,
   // response body bytes expected.
   auto it = trailers->find(kFinalOffsetHeaderKey);
   if (it == trailers->end() ||
-      !base::StringToSizeT(it->second, final_byte_offset)) {
+      !QuicTextUtils::StringToSizeT(it->second, final_byte_offset)) {
     QUIC_DVLOG(1) << "Required key '" << kFinalOffsetHeaderKey
                   << "' not present";
     return false;
@@ -121,7 +120,7 @@ bool SpdyUtils::ParseTrailers(const char* data,
     // TODO(rjshade): Check for other forbidden keys, following the HTTP/2 spec.
   }
 
-  QUIC_DVLOG(1) << "Successfully parsed Trailers.";
+  QUIC_DVLOG(1) << "Successfully parsed Trailers: " << trailers->DebugString();
   return true;
 }
 
@@ -162,10 +161,8 @@ bool SpdyUtils::CopyAndValidateTrailers(const QuicHeaderList& header_list,
 
     // Pull out the final offset pseudo header which indicates the number of
     // response body bytes expected.
-    int offset;
     if (!found_final_byte_offset && name == kFinalOffsetHeaderKey &&
-        base::StringToInt(p.second, &offset)) {
-      *final_byte_offset = offset;
+        QuicTextUtils::StringToSizeT(p.second, final_byte_offset)) {
       found_final_byte_offset = true;
       continue;
     }
@@ -229,13 +226,15 @@ string SpdyUtils::GetUrlFromHeaderBlock(const SpdyHeaderBlock& headers) {
 
 // static
 string SpdyUtils::GetHostNameFromHeaderBlock(const SpdyHeaderBlock& headers) {
-  return GURL(GetUrlFromHeaderBlock(headers)).host();
+  // TODO(fayang): Consider just checking out the value of the ":authority" key
+  // in headers.
+  return QuicUrlUtils::HostName(GetUrlFromHeaderBlock(headers));
 }
 
 // static
 bool SpdyUtils::UrlIsValid(const SpdyHeaderBlock& headers) {
   string url(GetUrlFromHeaderBlock(headers));
-  return url != "" && GURL(url).is_valid();
+  return url != "" && QuicUrlUtils::IsValidUrl(url);
 }
 
 // static

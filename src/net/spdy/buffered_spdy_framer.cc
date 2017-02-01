@@ -42,7 +42,7 @@ void BufferedSpdyFramer::set_debug_visitor(
 
 void BufferedSpdyFramer::OnError(SpdyFramer* spdy_framer) {
   DCHECK(spdy_framer);
-  visitor_->OnError(spdy_framer->error_code());
+  visitor_->OnError(spdy_framer->spdy_framer_error());
 }
 
 void BufferedSpdyFramer::OnHeaders(SpdyStreamId stream_id,
@@ -219,8 +219,8 @@ void BufferedSpdyFramer::Reset() {
   spdy_framer_.Reset();
 }
 
-SpdyFramer::SpdyError BufferedSpdyFramer::error_code() const {
-  return spdy_framer_.error_code();
+SpdyFramer::SpdyFramerError BufferedSpdyFramer::spdy_framer_error() const {
+  return spdy_framer_.spdy_framer_error();
 }
 
 SpdyFramer::SpdyState BufferedSpdyFramer::state() const {

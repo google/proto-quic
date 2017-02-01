@@ -5,6 +5,7 @@
 #include "net/http2/decoder/decode_status.h"
 
 #include "base/logging.h"
+#include "net/http2/tools/http2_bug_tracker.h"
 
 namespace net {
 
@@ -20,8 +21,8 @@ std::ostream& operator<<(std::ostream& out, DecodeStatus v) {
   // Since the value doesn't come over the wire, only a programming bug should
   // result in reaching this point.
   int unknown = static_cast<int>(v);
-  LOG(DFATAL) << "Unknown DecodeStatus " << unknown << std::hex << unknown;
-  return out << "UnknownDecodeStatus(" << unknown << ")";
+  HTTP2_BUG << "Unknown DecodeStatus " << unknown;
+  return out << "DecodeStatus(" << unknown << ")";
 }
 
 }  // namespace net

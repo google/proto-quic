@@ -18,8 +18,6 @@ component("crypto") {
     "crypto_export.h",
     "cssm_init.cc",
     "cssm_init.h",
-    "curve25519.cc",
-    "curve25519.h",
     "ec_private_key.cc",
     "ec_private_key.h",
     "ec_signature_creator.cc",
@@ -134,7 +132,6 @@ component("crypto") {
 test("crypto_unittests") {
   sources = [
     "aead_unittest.cc",
-    "curve25519_unittest.cc",
     "ec_private_key_unittest.cc",
     "ec_signature_creator_unittest.cc",
     "encryptor_unittest.cc",

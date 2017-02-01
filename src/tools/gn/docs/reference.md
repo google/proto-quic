@@ -325,15 +325,19 @@
 ```
 
 ### **Usage**
+
 ```
   gn args <out_dir>
-      Open the arguments for the given build directory in an editor (as
-      specified by the EDITOR environment variable). If the given build
-      directory doesn't exist, it will be created and an empty args file will
-      be opened in the editor. You would type something like this into that
-      file:
+      Open the arguments for the given build directory in an editor. If the
+      given build directory doesn't exist, it will be created and an empty args
+      file will be opened in the editor. You would type something like this
+      into that file:
           enable_doom_melon=false
           os="android"
+
+      To find your editor on Posix, GN will search the environment variables in
+      order: GN_EDITOR, VISUAL, and EDITOR. On Windows GN will open the command
+      associated with .txt files.
 
       Note: you can edit the build args manually by editing the file "args.gn"
       in the build directory and then running "gn gen <out_dir>".
@@ -343,20 +347,12 @@
       an exact_arg is specified for the list flag, just that one build
       argument.
 
-      The output will list the declaration location, default value, and comment
-      preceeding the declaration. If --short is specified, only the names and
-      values will be printed.
+      The output will list the declaration location, current value for the
+      build, default value (if different than the current value), and comment
+      preceeding the declaration.
 
-      If the out_dir is specified, the build configuration will be taken from
-      that build directory. The reason this is needed is that the definition of
-      some arguments is dependent on the build configuration, so setting some
-      values might add, remove, or change the default values for other
-      arguments. Specifying your exact configuration allows the proper
-      arguments to be displayed.
-
-      Instead of specifying the out_dir, you can also use the command-line flag
-      to specify the build configuration:
-        --args=<exact list of args to use>
+      If --short is specified, only the names and current values will be
+      printed.
 
 ```
 
@@ -5730,6 +5726,9 @@
    - target_cpu
    - target_os
 
+  Next, project-specific overrides are applied. These are specified inside
+  the default_args variable of //.gn. See "gn help dotfile" for more.
+
   If specified, arguments from the --args command line flag are used. If that
   flag is not specified, args from previous builds in the build directory will
   be used (this is in the file args.gn in the build directory).
@@ -5845,6 +5844,15 @@
 
       The secondary source root must be inside the main source tree.
 
+  default_args [optional]
+      Scope containing the default overrides for declared arguments. These
+      overrides take precedence over the default values specified in the
+      declare_args() block, but can be overriden using --args or the
+      args.gn file.
+
+      This is intended to be used when subprojects declare arguments with
+      default values that need to be changed for whatever reason.
+
 ```
 
 ### **Example .gn file contents**
@@ -5860,6 +5868,12 @@
   root = "//:root"
 
   secondary_source = "//build/config/temporary_buildfiles/"
+
+  default_args = {
+    # Default to release builds for this project.
+    is_debug = false
+    is_component_build = false
+  }
 
 
 ```

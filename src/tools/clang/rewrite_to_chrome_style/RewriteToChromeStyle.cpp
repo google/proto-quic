@@ -439,7 +439,7 @@ bool IsBlacklistedInstanceMethodName(llvm::StringRef name) {
 
       // https://crbug.com/672902: Should not rewrite names that mimick methods
       // from std library.
-      "back", "empty", "erase", "front", "insert",
+      "back", "empty", "erase", "front", "insert", "length", "size",
   };
   for (const auto& b : kBlacklistedNames) {
     if (name == b)
@@ -486,6 +486,15 @@ AST_MATCHER(clang::FunctionDecl, isBlacklistedFunction) {
 
 AST_MATCHER(clang::CXXMethodDecl, isBlacklistedMethod) {
   return IsBlacklistedMethod(Node);
+}
+
+bool IsKnownTraitName(clang::StringRef name) {
+  // This set of names is globally a type trait throughout chromium.
+  return name == "safeToCompareToEmptyOrDeleted";
+}
+
+AST_MATCHER(clang::VarDecl, isKnownTraitName) {
+  return IsKnownTraitName(Node.getName());
 }
 
 // Helper to convert from a camelCaseName to camel_case_name. It uses some
@@ -642,17 +651,18 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "frame",
       "frameBlameContext",
       "frontend",
+      "gridCell",
       "hash",
       "heapObjectHeader",
       "iconURL",
       "image",
       "inputMethodController",
       "inputType",
+      "interpolationTypes",
       "layout",
       "layoutBlock",
       "layoutObject",
       "layoutSize",
-      "length",
       "lineCap",
       "lineEndings",
       "lineJoin",
@@ -664,15 +674,20 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "name",
       "navigationType",
       "node",
+      "notificationManager",
       "outcome",
       "pagePopup",
       "paintWorklet",
       "path",
+      "position",
       "processingInstruction",
       "readyState",
       "relList",
+      "referrer",
+      "referrerPolicy",
       "resource",
       "response",
+      "restrictedKeyMap",
       "sandboxSupport",
       "screenInfo",
       "screenOrientationController",
@@ -680,6 +695,7 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "selectionInFlatTree",
       "settings",
       "signalingState",
+      "snapshotById",
       "state",
       "string",
       "styleSheet",
@@ -694,6 +710,7 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
       "type",
       "vector",
       "visibleSelection",
+      "visibleSelectionInFlatTree",
       "webFrame",
       "widget",
       "wordBoundaries",
@@ -831,6 +848,13 @@ bool GetNameForDecl(const clang::VarDecl& decl,
         });
     if (!is_child_location_within_parent_source_range)
       return false;
+  }
+
+  // This is a type trait that appears in consumers of WTF as well as inside
+  // WTF. We want it to be named in this_style_of_case accordingly.
+  if (IsKnownTraitName(original_name)) {
+    name = CamelCaseToUnderscoreCase(original_name);
+    return true;
   }
 
   // static class members match against VarDecls. Blink style dictates that
@@ -1180,28 +1204,29 @@ class GMockMemberRewriter
     // Find location of the gmock_##MockedMethod identifier.
     clang::SourceLocation target_loc = Base::GetTargetLoc(result);
 
-    // Find location of EXPECT_CALL macro invocation.
+    // Find location of EXPECT_CALL or ON_CALL macro invocation.
     clang::SourceLocation macro_call_loc =
         result.SourceManager->getExpansionLoc(target_loc);
 
     // Map |macro_call_loc| to argument location (location of the method name
     // that needs renaming).
-    auto it = expect_call_to_2nd_arg.find(macro_call_loc);
-    if (it == expect_call_to_2nd_arg.end())
+    auto it = gmock_macro_call_to_2nd_arg.find(macro_call_loc);
+    if (it == gmock_macro_call_to_2nd_arg.end())
       return clang::SourceLocation();
     return it->second;
   }
 
  private:
-  std::map<clang::SourceLocation, clang::SourceLocation> expect_call_to_2nd_arg;
+  std::map<clang::SourceLocation, clang::SourceLocation>
+      gmock_macro_call_to_2nd_arg;
 
-  // Called from PPCallbacks with the locations of EXPECT_CALL macro invocation:
-  // Example:
+  // Called from PPCallbacks with the locations of EXPECT_CALL and ON_CALL macro
+  // invocation.  Example:
   //   EXPECT_CALL(my_mock, myMethod(123, 456));
   //   ^- expansion_loc     ^- actual_arg_loc
-  void RecordExpectCallMacroInvocation(clang::SourceLocation expansion_loc,
-                                       clang::SourceLocation second_arg_loc) {
-    expect_call_to_2nd_arg[expansion_loc] = second_arg_loc;
+  void RecordGMockMacroInvocation(clang::SourceLocation expansion_loc,
+                                  clang::SourceLocation second_arg_loc) {
+    gmock_macro_call_to_2nd_arg[expansion_loc] = second_arg_loc;
   }
 
   class PPCallbacks : public clang::PPCallbacks {
@@ -1216,7 +1241,7 @@ class GMockMemberRewriter
       if (!id)
         return;
 
-      if (id->getName() != "EXPECT_CALL")
+      if (id->getName() != "EXPECT_CALL" && id->getName() != "ON_CALL")
         return;
 
       if (def.getMacroInfo()->getNumArgs() != 2)
@@ -1226,7 +1251,7 @@ class GMockMemberRewriter
       // is in testing/gmock/include/gmock/gmock-spec-builders.h but I don't
       // know how to get clang::SourceManager to call getFileName.
 
-      rewriter_->RecordExpectCallMacroInvocation(
+      rewriter_->RecordGMockMacroInvocation(
           name.getLocation(), args->getUnexpArgument(1)->getLocation());
     }
 
@@ -1463,6 +1488,8 @@ int main(int argc, const char* argv[]) {
                   has(cxxMethodDecl(isUserProvided(), isInstanceMethod()))))));
   auto var_decl_matcher =
       id("decl", varDecl(in_blink_namespace, unless(is_type_trait_value)));
+  // For known trait names, rename every instance anywhere in the codebase.
+  auto type_trait_decl_matcher = id("decl", varDecl(isKnownTraitName()));
   auto enum_member_decl_matcher =
       id("decl", enumConstantDecl(in_blink_namespace));
 
@@ -1471,6 +1498,7 @@ int main(int argc, const char* argv[]) {
 
   VarDeclRewriter var_decl_rewriter(&replacements);
   match_finder.addMatcher(var_decl_matcher, &var_decl_rewriter);
+  match_finder.addMatcher(type_trait_decl_matcher, &var_decl_rewriter);
 
   EnumConstantDeclRewriter enum_member_decl_rewriter(&replacements);
   match_finder.addMatcher(enum_member_decl_matcher, &enum_member_decl_rewriter);
@@ -1493,6 +1521,8 @@ int main(int argc, const char* argv[]) {
           // there's nothing interesting to rewrite in those either.
           unless(hasAncestor(functionDecl(isDefaulted())))));
   auto decl_ref_matcher = id("expr", declRefExpr(to(var_decl_matcher)));
+  auto type_trait_ref_matcher =
+      id("expr", declRefExpr(to(type_trait_decl_matcher)));
   auto enum_member_ref_matcher =
       id("expr", declRefExpr(to(enum_member_decl_matcher)));
 
@@ -1501,6 +1531,7 @@ int main(int argc, const char* argv[]) {
 
   DeclRefRewriter decl_ref_rewriter(&replacements);
   match_finder.addMatcher(decl_ref_matcher, &decl_ref_rewriter);
+  match_finder.addMatcher(type_trait_ref_matcher, &decl_ref_rewriter);
 
   EnumConstantDeclRefRewriter enum_member_ref_rewriter(&replacements);
   match_finder.addMatcher(enum_member_ref_matcher, &enum_member_ref_rewriter);
@@ -1778,7 +1809,9 @@ int main(int argc, const char* argv[]) {
   // GMock calls lookup ========
   // Given
   //   EXPECT_CALL(obj, myMethod(...))
-  // will match obj.gmock_myMethod(...) call generated by the macro
+  // or
+  //   ON_CALL(obj, myMethod(...))
+  // will match obj.gmock_myMethod(...) call generated by the macros
   // (but only if it mocks a Blink method).
   auto gmock_member_matcher =
       id("expr", memberExpr(hasDeclaration(

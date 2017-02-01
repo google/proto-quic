@@ -1,0 +1,18 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -D_POSIX_C_SOURCE=199506 -D_XOPEN_SOURCE=600 -D_GNU_SOURCE=1 -D__STDC_LIMIT_MACROS=1 -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_
+include_dirs = -I../../../../.. -Iclang_newlib_x64/gen
+cflags = -fPIC -fno-strict-aliasing -fcolor-diagnostics -integrated-as -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -O0 -g2 -fvisibility=default
+cflags_c =
+label_name = ppapi_stub_lib
+root_out_dir = clang_newlib_x64
+target_out_dir = clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub
+target_output_name = libppapi_stub
+
+build clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/plugin_main_irt.o: clang_newlib_x64_cc ../../../../../ppapi/native_client/src/untrusted/irt_stub/plugin_main_irt.c
+build clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/ppapi_plugin_main.o: clang_newlib_x64_cc ../../../../../ppapi/native_client/src/untrusted/irt_stub/ppapi_plugin_main.c
+build clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/ppapi_plugin_start.o: clang_newlib_x64_cc ../../../../../ppapi/native_client/src/untrusted/irt_stub/ppapi_plugin_start.c
+build clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/thread_creator.o: clang_newlib_x64_cc ../../../../../ppapi/native_client/src/untrusted/irt_stub/thread_creator.c
+
+build clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/libppapi_stub.a: clang_newlib_x64_alink clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/plugin_main_irt.o clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/ppapi_plugin_main.o clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/ppapi_plugin_start.o clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub/ppapi_stub_lib/thread_creator.o || clang_newlib_x64/obj/build/config/nacl/nacl_base.stamp
+  arflags =
+  output_extension = .a
+  output_dir = clang_newlib_x64/obj/ppapi/native_client/src/untrusted/irt_stub

@@ -27,7 +27,7 @@ config("internal_config") {
   ]
   configs = [
     # TODO(davidben): Fix size_t truncations in BoringSSL.
-    # https://crbug.com/429039
+    # https://crbug.com/boringssl/22
     "//build/config/compiler:no_size_t_to_int_warning",
   ]
   if (is_posix) {
@@ -121,6 +121,38 @@ component("boringssl") {
   if (is_nacl) {
     deps += [ "//native_client_sdk/src/libraries/nacl_io" ]
   }
+}
+
+# These targets are named "_tests" rather than "_test" to avoid colliding with a
+# historical "boringssl_ssl_test" target. This works around a bug with the iOS
+# build rules.
+
+test("boringssl_crypto_tests") {
+  sources = crypto_test_sources + test_support_sources
+  deps = [
+    ":boringssl",
+    "//testing/gtest",
+  ]
+
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [
+    ":internal_config",
+    "//build/config/compiler:no_chromium_code",
+  ]
+}
+
+test("boringssl_ssl_tests") {
+  sources = ssl_test_sources + test_support_sources
+  deps = [
+    ":boringssl",
+    "//testing/gtest",
+  ]
+
+  configs -= [ "//build/config/compiler:chromium_code" ]
+  configs += [
+    ":internal_config",
+    "//build/config/compiler:no_chromium_code",
+  ]
 }
 
 if (build_with_chromium) {

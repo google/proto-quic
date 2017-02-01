@@ -1,0 +1,25 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_MDNS=1 -DENABLE_NOTIFICATIONS -DENABLE_PEPPER_CDMS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_UDEV -DUI_COMPOSITOR_IMAGE_TRANSPORT -DUSE_AURA=1 -DUSE_PANGO=1 -DUSE_CAIRO=1 -DUSE_CLIPBOARD_AURAX11=1 -DUSE_DEFAULT_RENDER_THEME=1 -DUSE_GLIB=1 -DUSE_NSS_CERTS=1 -DUSE_X11=1 -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DENABLE_SERVICE_DISCOVERY=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -DCR_CLANG_REVISION=277962-1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -DCOMPONENT_BUILD -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -D_GLIBCXX_DEBUG=1 -DV8_DEPRECATION_WARNINGS -D_FX_CPU_=_FX_X64_ -DOPJ_STATIC -DPNG_PREFIX -DPNG_USE_READ_MACROS -DPDF_ENABLE_V8
+include_dirs = -I../../../../.. -Igen -I../../../../../third_party/pdfium -I../../../../../third_party/pdfium/third_party/freetype/include -I../../../../../third_party/pdfium/third_party/freetype/include/freetype
+cflags = -fno-strict-aliasing --param=ssp-buffer-size=4 -fstack-protector -funwind-tables -fPIC -pipe -B../../../../../third_party/binutils/Linux_x64/Release/bin -fcolor-diagnostics -fdebug-prefix-map=/usr/local/google/home/jokulik/chromium/src=. -pthread -m64 -march=x86-64 -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-shift-negative-value -Wno-undefined-var-template -Wno-nonportable-include-path -O0 -g2 -gsplit-dwarf --sysroot=../../../../../build/linux/debian_wheezy_amd64-sysroot -fvisibility=hidden -Xclang -load -Xclang ../../../../../third_party/llvm-build/Release+Asserts/lib/libFindBadConstructs.so -Xclang -add-plugin -Xclang find-bad-constructs -Xclang -plugin-arg-find-bad-constructs -Xclang check-templates -Xclang -plugin-arg-find-bad-constructs -Xclang follow-macro-expansion -Xclang -plugin-arg-find-bad-constructs -Xclang check-implicit-copy-ctors -Xclang -plugin-arg-find-bad-constructs -Xclang check-ipc -Wheader-hygiene -Wstring-conversion -fPIC
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = pdfwindow
+target_out_dir = obj/third_party/pdfium
+target_output_name = libpdfwindow
+
+build obj/third_party/pdfium/pdfwindow/PWL_Button.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Button.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_Caret.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Caret.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_ComboBox.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_ComboBox.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_Edit.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Edit.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_EditCtrl.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_EditCtrl.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_FontMap.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_FontMap.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_Icon.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Icon.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_ListBox.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_ListBox.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_ScrollBar.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_ScrollBar.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_SpecialButton.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_SpecialButton.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_Utils.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Utils.cpp
+build obj/third_party/pdfium/pdfwindow/PWL_Wnd.o: cxx ../../../../../third_party/pdfium/fpdfsdk/pdfwindow/PWL_Wnd.cpp
+
+build obj/third_party/pdfium/libpdfwindow.a: alink obj/third_party/pdfium/pdfwindow/PWL_Button.o obj/third_party/pdfium/pdfwindow/PWL_Caret.o obj/third_party/pdfium/pdfwindow/PWL_ComboBox.o obj/third_party/pdfium/pdfwindow/PWL_Edit.o obj/third_party/pdfium/pdfwindow/PWL_EditCtrl.o obj/third_party/pdfium/pdfwindow/PWL_FontMap.o obj/third_party/pdfium/pdfwindow/PWL_Icon.o obj/third_party/pdfium/pdfwindow/PWL_ListBox.o obj/third_party/pdfium/pdfwindow/PWL_ScrollBar.o obj/third_party/pdfium/pdfwindow/PWL_SpecialButton.o obj/third_party/pdfium/pdfwindow/PWL_Utils.o obj/third_party/pdfium/pdfwindow/PWL_Wnd.o
+  arflags =
+  output_extension = .a
+  output_dir = obj/third_party/pdfium

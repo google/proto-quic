@@ -7,22 +7,10 @@
 namespace blink {
 
 void TraceImplExternWithUntracedMember::trace(Visitor* visitor) {
-  traceImpl(visitor);
-}
-
-template <typename VisitorDispatcher>
-inline void TraceImplExternWithUntracedMember::traceImpl(
-    VisitorDispatcher visitor) {
   // Should get a warning as well.
 }
 
 void TraceImplExternWithUntracedBase::trace(Visitor* visitor) {
-  traceImpl(visitor);
-}
-
-template <typename VisitorDispatcher>
-inline void TraceImplExternWithUntracedBase::traceImpl(
-    VisitorDispatcher visitor) {
   // Ditto.
 }
 

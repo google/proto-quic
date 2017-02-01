@@ -1,0 +1,37 @@
+defines = -DV8_DEPRECATION_WARNINGS -DENABLE_NOTIFICATIONS -DENABLE_PLUGINS=1 -DENABLE_PDF=1 -DENABLE_PRINTING=1 -DENABLE_BASIC_PRINTING=1 -DENABLE_PRINT_PREVIEW=1 -DENABLE_SPELLCHECK=1 -DUSE_OPENSSL_CERTS=1 -DNO_TCMALLOC -DENABLE_WEBRTC=1 -DENABLE_EXTENSIONS=1 -DENABLE_TASK_MANAGER=1 -DENABLE_THEMES=1 -DENABLE_CAPTIVE_PORTAL_DETECTION=1 -DENABLE_SESSION_SERVICE=1 -DENABLE_SUPERVISED_USERS=1 -DFULL_SAFE_BROWSING -DSAFE_BROWSING_CSD -DSAFE_BROWSING_DB_LOCAL -DCHROMIUM_BUILD -DENABLE_MEDIA_ROUTER=1 -DFIELDTRIAL_TESTING_ENABLED -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1 -DDYNAMIC_ANNOTATIONS_PREFIX=NACL_ -DGOOGLE_PROTOBUF_NO_RTTI -DGOOGLE_PROTOBUF_NO_STATIC_INITIALIZER -DHAVE_PTHREAD
+include_dirs = -I../../../../.. -Inewlib_pnacl/gen -I../../../../../third_party/protobuf/src
+cflags = -fno-strict-aliasing -fcolor-diagnostics -O0 -g2 -fvisibility=hidden -Werror -Wno-unused-variable -Wno-missing-field-initializers -Wno-unused-parameter -Wno-c++11-narrowing -Wno-covered-switch-default -Wno-deprecated-register -Wno-unneeded-internal-declaration -Wno-inconsistent-missing-override -Wno-unused-function
+cflags_cc = -fno-threadsafe-statics -fvisibility-inlines-hidden -Wno-undefined-bool-conversion -Wno-tautological-undefined-compare -std=gnu++11 -fno-rtti -fno-exceptions
+label_name = protobuf_lite
+root_out_dir = newlib_pnacl
+target_out_dir = newlib_pnacl/obj/third_party/protobuf
+target_output_name = libprotobuf_lite
+
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/arena.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/arena.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/arenastring.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/arenastring.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/extension_set.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/extension_set.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/generated_message_util.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/generated_message_util.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/coded_stream.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/io/coded_stream.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/zero_copy_stream.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/io/zero_copy_stream.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/zero_copy_stream_impl_lite.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/io/zero_copy_stream_impl_lite.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/message_lite.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/message_lite.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/repeated_field.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/repeated_field.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/atomicops_internals_x86_gcc.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/atomicops_internals_x86_gcc.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/atomicops_internals_x86_msvc.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/atomicops_internals_x86_msvc.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/bytestream.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/bytestream.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/common.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/common.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/int128.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/int128.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/once.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/once.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/status.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/status.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/statusor.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/statusor.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/stringpiece.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/stringpiece.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/stringprintf.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/stringprintf.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/structurally_valid.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/structurally_valid.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/strutil.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/strutil.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/time.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/stubs/time.cc
+build newlib_pnacl/obj/third_party/protobuf/protobuf_lite/wire_format_lite.o: newlib_pnacl_cxx ../../../../../third_party/protobuf/src/google/protobuf/wire_format_lite.cc
+
+build newlib_pnacl/obj/third_party/protobuf/libprotobuf_lite.a: newlib_pnacl_alink newlib_pnacl/obj/third_party/protobuf/protobuf_lite/arena.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/arenastring.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/extension_set.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/generated_message_util.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/coded_stream.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/zero_copy_stream.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/zero_copy_stream_impl_lite.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/message_lite.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/repeated_field.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/atomicops_internals_x86_gcc.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/atomicops_internals_x86_msvc.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/bytestream.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/common.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/int128.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/once.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/status.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/statusor.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/stringpiece.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/stringprintf.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/structurally_valid.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/strutil.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/time.o newlib_pnacl/obj/third_party/protobuf/protobuf_lite/wire_format_lite.o || newlib_pnacl/obj/build/config/sanitizers/deps.stamp
+  arflags =
+  output_extension = .a
+  output_dir = newlib_pnacl/obj/third_party/protobuf

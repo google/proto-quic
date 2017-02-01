@@ -1,0 +1,3 @@
+gen/content/app/resources/grit/content_resources.h
+gen/content/app/resources/content_resources_100_percent.pak
+gen/content/app/resources/content_resources_200_percent.pak

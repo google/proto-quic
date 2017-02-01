@@ -53,9 +53,13 @@ class BASE_EXPORT StackTrace {
   // Creates a stacktrace from the current location.
   StackTrace();
 
+  // Creates a stacktrace from the current location, of up to |count| entries.
+  // |count| will be limited to at most |kMaxTraces|.
+  explicit StackTrace(size_t count);
+
   // Creates a stacktrace from an existing array of instruction
   // pointers (such as returned by Addresses()).  |count| will be
-  // trimmed to |kMaxTraces|.
+  // limited to at most |kMaxTraces|.
   StackTrace(const void* const* trace, size_t count);
 
 #if defined(OS_WIN)
@@ -67,8 +71,6 @@ class BASE_EXPORT StackTrace {
 #endif
 
   // Copying and assignment are allowed with the default functions.
-
-  ~StackTrace();
 
   // Gets an array of instruction pointer values. |*count| will be set to the
   // number of elements in the returned array.
