@@ -19,6 +19,7 @@ from pylib.gtest import gtest_test_instance
 from pylib.local import local_test_server_spawner
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from pylib.utils import logdog_helper
 from py_trace_event import trace_event
 from py_utils import contextlib_ext
 import tombstones
@@ -433,9 +434,9 @@ class LocalDeviceGtestRun(local_device_test_run.LocalDeviceTestRun):
             stream_name = 'tombstones_%s_%s' % (
                 time.strftime('%Y%m%dT%H%M%S', time.localtime()),
                 device.serial)
-            tombstones_url = tombstones.LogdogTombstones(resolved_tombstones,
-                                                         stream_name)
-          result.SetTombstonesUrl(tombstones_url)
+            tombstones_url = logdog_helper.text(
+                stream_name, resolved_tombstones)
+          result.SetLink('tombstones', tombstones_url)
 
     not_run_tests = set(test).difference(set(r.GetName() for r in results))
     return results, list(not_run_tests) if results else None

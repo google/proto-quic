@@ -15,10 +15,12 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string16.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "crypto/scoped_nss_types.h"
 #include "crypto/scoped_test_nss_db.h"
@@ -61,6 +63,9 @@ void SwapCertList(CertificateList* destination,
 
 class CertDatabaseNSSTest : public testing::Test {
  public:
+  CertDatabaseNSSTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+
   void SetUp() override {
     ASSERT_TRUE(test_nssdb_.is_open());
     cert_db_.reset(new NSSCertDatabase(
@@ -125,6 +130,7 @@ class CertDatabaseNSSTest : public testing::Test {
     return result;
   }
 
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<NSSCertDatabase> cert_db_;
   const CertificateList empty_cert_list_;
   crypto::ScopedTestNSSDB test_nssdb_;
@@ -145,7 +151,6 @@ TEST_F(CertDatabaseNSSTest, ListCerts) {
   // This test isn't terribly useful, though it will at least let valgrind test
   // for leaks.
   CertificateList certs;
-  cert_db_->SetSlowTaskRunnerForTest(base::ThreadTaskRunnerHandle::Get());
   cert_db_->ListCerts(base::Bind(&SwapCertList, base::Unretained(&certs)));
   EXPECT_EQ(0U, certs.size());
 

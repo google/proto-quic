@@ -4,6 +4,7 @@
 
 #include "net/quic/core/quic_session.h"
 
+#include <cstdint>
 #include <set>
 #include <utility>
 
@@ -33,8 +34,6 @@
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using net::SpdyHeaderBlock;
-using net::SpdyPriority;
 using std::string;
 using testing::CreateFunctor;
 using testing::AtLeast;

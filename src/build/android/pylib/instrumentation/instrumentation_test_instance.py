@@ -51,7 +51,7 @@ _PARAMETERIZED_TEST_SET_ANNOTATION = 'ParameterizedTest$Set'
 _NATIVE_CRASH_RE = re.compile('(process|native) crash', re.IGNORECASE)
 _CMDLINE_NAME_SEGMENT_RE = re.compile(
     r' with(?:out)? \{[^\}]*\}')
-_PICKLE_FORMAT_VERSION = 10
+_PICKLE_FORMAT_VERSION = 11
 
 
 class MissingSizeAnnotationError(test_exception.TestException):
@@ -355,6 +355,7 @@ def _GetTestsFromProguard(jar_path):
       'class': c['class'],
       'annotations': recursive_class_annotations(c),
       'methods': [m for m in c['methods'] if is_test_method(m)],
+      'superclass': c['superclass'],
     }
 
   return [stripped_test_class(c) for c in p['classes']
@@ -362,7 +363,7 @@ def _GetTestsFromProguard(jar_path):
 
 
 def _GetTestsFromDexdump(test_apk):
-  d = dexdump.Dump(test_apk)
+  dump = dexdump.Dump(test_apk)
   tests = []
 
   def get_test_methods(methods):
@@ -374,13 +375,14 @@ def _GetTestsFromDexdump(test_apk):
           'annotations': {'MediumTest': None},
         } for m in methods if m.startswith('test')]
 
-  for package_name, package_info in d.iteritems():
+  for package_name, package_info in dump.iteritems():
     for class_name, class_info in package_info['classes'].iteritems():
       if class_name.endswith('Test'):
         tests.append({
             'class': '%s.%s' % (package_name, class_name),
             'annotations': {},
             'methods': get_test_methods(class_info['methods']),
+            'superclass': class_info['superclass'],
         })
   return tests
 
@@ -394,6 +396,14 @@ def _SaveTestsToPickle(pickle_path, jar_path, tests):
   }
   with open(pickle_path, 'w') as pickle_file:
     pickle.dump(pickle_data, pickle_file)
+
+
+class MissingJUnit4RunnerException(test_exception.TestException):
+  """Raised when JUnit4 runner is not provided or specified in apk manifest"""
+
+  def __init__(self):
+    super(MissingJUnit4RunnerException, self).__init__(
+        'JUnit4 runner is not provided or specified in test apk manifest.')
 
 
 class UnmatchedFilterException(test_exception.TestException):
@@ -456,6 +466,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._test_jar = None
     self._test_package = None
     self._test_runner = None
+    self._test_runner_junit4 = None
     self._test_support_apk = None
     self._initializeApkAttributes(args, error_func)
 
@@ -549,7 +560,24 @@ class InstrumentationTestInstance(test_instance.TestInstance):
       error_func('Unable to find test JAR: %s' % self._test_jar)
 
     self._test_package = self._test_apk.GetPackageName()
-    self._test_runner = self._test_apk.GetInstrumentationName()
+    all_instrumentations = self._test_apk.GetAllInstrumentations()
+    junit3_runners = [
+        x for x in all_instrumentations if ('true' not in x.get(
+            'chromium-junit4', ''))]
+    junit4_runners = [
+        x for x in all_instrumentations if ('true' in x.get(
+            'chromium-junit4', ''))]
+
+    if len(junit3_runners) > 1:
+      logging.warning('This test apk has more than one JUnit3 instrumentation')
+    if len(junit4_runners) > 1:
+      logging.warning('This test apk has more than one JUnit4 instrumentation')
+
+    self._test_runner = (
+      junit3_runners[0]['android:name'] if junit3_runners else
+      self.test_apk.GetInstrumentationName())
+    self._test_runner_junit4 = (
+      junit4_runners[0]['android:name'] if junit4_runners else None)
 
     self._package_info = None
     if self._apk_under_test:
@@ -724,6 +752,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     return self._test_runner
 
   @property
+  def test_runner_junit4(self):
+    return self._test_runner_junit4
+
+  @property
   def timeout_scale(self):
     return self._timeout_scale
 
@@ -745,6 +777,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     else:
       tests = GetAllTestsFromApk(self.test_apk.path)
     inflated_tests = self._ParametrizeTestsWithFlags(self._InflateTests(tests))
+    if self._test_runner_junit4 is None and any(
+        t['is_junit4'] for t in inflated_tests):
+      raise MissingJUnit4RunnerException()
     filtered_tests = FilterTests(
         inflated_tests, self._test_filter, self._annotations,
         self._excluded_annotations)
@@ -765,6 +800,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
             'class': c['class'],
             'method': m['method'],
             'annotations': a,
+            'is_junit4': c['superclass'] == 'java.lang.Object'
         })
     return inflated_tests
 

@@ -92,5 +92,8 @@ const AllocatorDispatch AllocatorDispatch::default_dispatch = {
     &RealRealloc,      /* realloc_function */
     &RealFree,         /* free_function */
     &RealSizeEstimate, /* get_size_estimate_function */
+    nullptr,           /* batch_malloc_function */
+    nullptr,           /* batch_free_function */
+    nullptr,           /* free_definite_size_function */
     nullptr,           /* next */
 };

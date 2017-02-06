@@ -309,7 +309,26 @@ int LaunchChildTestProcessWithOptions(
     // in the set.
     AutoLock lock(g_live_processes_lock.Get());
 
+#if defined(OS_WIN)
+    // Allow the handle used to capture stdio and stdout to be inherited by the
+    // child. Note that this is done under g_live_processes_lock to ensure that
+    // only the desired child receives the handle.
+    if (new_options.stdout_handle) {
+      ::SetHandleInformation(new_options.stdout_handle, HANDLE_FLAG_INHERIT,
+                             HANDLE_FLAG_INHERIT);
+    }
+#endif
+
     process = LaunchProcess(command_line, new_options);
+
+#if defined(OS_WIN)
+    // Revoke inheritance so that the handle isn't leaked into other children.
+    // Note that this is done under g_live_processes_lock to ensure that only
+    // the desired child receives the handle.
+    if (new_options.stdout_handle)
+      ::SetHandleInformation(new_options.stdout_handle, HANDLE_FLAG_INHERIT, 0);
+#endif
+
     if (!process.IsValid())
       return -1;
 
@@ -382,19 +401,9 @@ void DoLaunchChildTestProcess(
   win::ScopedHandle handle;
 
   if (redirect_stdio) {
-    // Make the file handle inheritable by the child.
-    SECURITY_ATTRIBUTES sa_attr;
-    sa_attr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa_attr.lpSecurityDescriptor = NULL;
-    sa_attr.bInheritHandle = TRUE;
-
-    handle.Set(CreateFile(output_file.value().c_str(),
-                          GENERIC_WRITE,
-                          FILE_SHARE_READ | FILE_SHARE_DELETE,
-                          &sa_attr,
-                          OPEN_EXISTING,
-                          FILE_ATTRIBUTE_TEMPORARY,
-                          NULL));
+    handle.Set(CreateFile(output_file.value().c_str(), GENERIC_WRITE,
+                          FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr,
+                          OPEN_EXISTING, FILE_ATTRIBUTE_TEMPORARY, NULL));
     CHECK(handle.IsValid());
     options.inherit_handles = true;
     options.stdin_handle = INVALID_HANDLE_VALUE;

@@ -212,9 +212,6 @@ def get_waterfall_config():
     waterfall, 'Android Nexus7v2 Perf', 'android-nexus7v2',
    'android', target_bits=32, num_device_shards=7, num_host_shards=3)
   waterfall = add_tester(
-    waterfall, 'Android Nexus9 Perf', 'android-nexus9',
-    'android', num_device_shards=7, num_host_shards=3)
-  waterfall = add_tester(
     waterfall, 'Android One Perf', 'android-one',
     'android', target_bits=32, num_device_shards=7, num_host_shards=3)
 

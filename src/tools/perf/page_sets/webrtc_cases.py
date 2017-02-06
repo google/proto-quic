@@ -49,10 +49,10 @@ class Page2(WebrtcPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Action_Create_PeerConnection',
                                          repeatable=False):
-      action_runner.ExecuteJavaScript('minWidthInput.value = 1280')
-      action_runner.ExecuteJavaScript('maxWidthInput.value = 1280')
-      action_runner.ExecuteJavaScript('minHeightInput.value = 720')
-      action_runner.ExecuteJavaScript('maxHeightInput.value = 720')
+      action_runner.ExecuteJavaScript2('minWidthInput.value = 1280')
+      action_runner.ExecuteJavaScript2('maxWidthInput.value = 1280')
+      action_runner.ExecuteJavaScript2('minHeightInput.value = 720')
+      action_runner.ExecuteJavaScript2('maxHeightInput.value = 720')
       action_runner.ClickElement('button[id="getMedia"]')
       action_runner.Wait(2)
       action_runner.ClickElement('button[id="connect"]')
@@ -71,7 +71,7 @@ class Page3(WebrtcPage):
   def RunPageInteractions(self, action_runner):
     # It won't have time to finish the 512 MB, but we're only interested in
     # cpu + memory anyway rather than how much data we manage to transfer.
-    action_runner.ExecuteJavaScript('megsToSend.value = 512;')
+    action_runner.ExecuteJavaScript2('megsToSend.value = 512;')
     action_runner.ClickElement('button[id="sendTheData"]')
     action_runner.Wait(30)
 
@@ -86,7 +86,7 @@ class Page4(WebrtcPage):
         page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript('codecSelector.value="OPUS";')
+    action_runner.ExecuteJavaScript2('codecSelector.value="OPUS";')
     action_runner.ClickElement('button[id="callButton"]')
     action_runner.Wait(10)
 
@@ -101,7 +101,7 @@ class Page5(WebrtcPage):
         page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript('codecSelector.value="G722";')
+    action_runner.ExecuteJavaScript2('codecSelector.value="G722";')
     action_runner.ClickElement('button[id="callButton"]')
     action_runner.Wait(10)
 
@@ -116,7 +116,7 @@ class Page6(WebrtcPage):
         page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript('codecSelector.value="PCMU";')
+    action_runner.ExecuteJavaScript2('codecSelector.value="PCMU";')
     action_runner.ClickElement('button[id="callButton"]')
     action_runner.Wait(10)
 
@@ -131,7 +131,7 @@ class Page7(WebrtcPage):
         page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript('codecSelector.value="ISAC/16000";')
+    action_runner.ExecuteJavaScript2('codecSelector.value="ISAC/16000";')
     action_runner.ClickElement('button[id="callButton"]')
     action_runner.Wait(10)
 
@@ -149,8 +149,8 @@ class Page8(WebrtcPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('Action_Canvas_PeerConnection',
                                          repeatable=False):
-      action_runner.ExecuteJavaScript('draw();')
-      action_runner.ExecuteJavaScript('doCanvasCaptureAndPeerConnection();')
+      action_runner.ExecuteJavaScript2('draw();')
+      action_runner.ExecuteJavaScript2('doCanvasCaptureAndPeerConnection();')
       action_runner.Wait(10)
 
 
@@ -167,9 +167,9 @@ class Page9(WebrtcPage):
     with action_runner.CreateInteraction('Action_Create_PeerConnection',
                                          repeatable=False):
       # Set the number of peer connections to create to 15.
-      action_runner.ExecuteJavaScript(
+      action_runner.ExecuteJavaScript2(
           'document.getElementById("num-peerconnections").value=15')
-      action_runner.ExecuteJavaScript(
+      action_runner.ExecuteJavaScript2(
           'document.getElementById("cpuoveruse-detection").checked=false')
       action_runner.ClickElement('button[id="start-test"]')
       action_runner.Wait(45)

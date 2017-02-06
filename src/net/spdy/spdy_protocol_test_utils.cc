@@ -66,7 +66,7 @@ namespace test {
   DVLOG(1) << "VerifySpdyFrameIREquals SpdyGoAwayIR";
   if (expected.last_good_stream_id() != actual.last_good_stream_id())
     return ::testing::AssertionFailure();
-  if (expected.status() != actual.status())
+  if (expected.error_code() != actual.error_code())
     return ::testing::AssertionFailure();
   if (expected.description() != actual.description())
     return ::testing::AssertionFailure();
@@ -141,7 +141,7 @@ namespace test {
   DVLOG(1) << "VerifySpdyFrameIREquals SpdyRstStreamIR";
   if (expected.stream_id() != actual.stream_id())
     return ::testing::AssertionFailure();
-  if (expected.status() != actual.status())
+  if (expected.error_code() != actual.error_code())
     return ::testing::AssertionFailure();
 
   return ::testing::AssertionSuccess();

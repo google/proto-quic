@@ -8,6 +8,7 @@
 #include <limits>
 #include <utility>
 
+#include "base/atomic_sequence_num.h"
 #include "base/debug/stack_trace.h"
 #include "base/files/file.h"
 #include "base/files/file_path.h"
@@ -253,7 +254,7 @@ ActivityUserData::ValueInfo::ValueInfo() {}
 ActivityUserData::ValueInfo::ValueInfo(ValueInfo&&) = default;
 ActivityUserData::ValueInfo::~ValueInfo() {}
 
-std::atomic<uint32_t> ActivityUserData::next_id_;
+StaticAtomicSequenceNumber ActivityUserData::next_id_;
 
 ActivityUserData::ActivityUserData(void* memory, size_t size)
     : memory_(reinterpret_cast<char*>(memory)),
@@ -268,7 +269,7 @@ ActivityUserData::ActivityUserData(void* memory, size_t size)
     // Generate a new ID and store it in the first 32-bit word of memory_.
     // |id_| must be non-zero for non-sink instances.
     uint32_t id;
-    while ((id = next_id_.fetch_add(1, std::memory_order_relaxed)) == 0)
+    while ((id = next_id_.GetNext()) == 0)
       ;
     id_->store(id, std::memory_order_relaxed);
     DCHECK_NE(0U, id_->load(std::memory_order_relaxed));
@@ -899,8 +900,14 @@ size_t ThreadActivityTracker::SizeForStackDepth(int stack_depth) {
   return static_cast<size_t>(stack_depth) * sizeof(Activity) + sizeof(Header);
 }
 
-
-GlobalActivityTracker* GlobalActivityTracker::g_tracker_ = nullptr;
+// The instantiation of the GlobalActivityTracker object.
+// The object held here will obviously not be destructed at process exit
+// but that's best since PersistentMemoryAllocator objects (that underlie
+// GlobalActivityTracker objects) are explicitly forbidden from doing anything
+// essential at exit anyway due to the fact that they depend on data managed
+// elsewhere and which could be destructed first. An AtomicWord is used instead
+// of std::atomic because the latter can create global ctors and dtors.
+subtle::AtomicWord GlobalActivityTracker::g_tracker_ = 0;
 
 GlobalActivityTracker::ModuleInfo::ModuleInfo() {}
 GlobalActivityTracker::ModuleInfo::ModuleInfo(ModuleInfo&& rhs) = default;
@@ -1062,7 +1069,7 @@ GlobalActivityTracker::ManagedActivityTracker::~ManagedActivityTracker() {
   // objects of this type must be destructed before |g_tracker_| can be changed
   // (something that only occurs in tests).
   DCHECK(g_tracker_);
-  g_tracker_->ReturnTrackerMemory(this);
+  GlobalActivityTracker::Get()->ReturnTrackerMemory(this);
 }
 
 void GlobalActivityTracker::CreateWithAllocator(
@@ -1240,7 +1247,7 @@ GlobalActivityTracker::GlobalActivityTracker(
 
   // Ensure that there is no other global object and then make this one such.
   DCHECK(!g_tracker_);
-  g_tracker_ = this;
+  subtle::NoBarrier_Store(&g_tracker_, reinterpret_cast<uintptr_t>(this));
 
   // The global records must be iterable in order to be found by an analyzer.
   allocator_->MakeIterable(allocator_->GetAsReference(
@@ -1248,9 +1255,9 @@ GlobalActivityTracker::GlobalActivityTracker(
 }
 
 GlobalActivityTracker::~GlobalActivityTracker() {
-  DCHECK_EQ(g_tracker_, this);
+  DCHECK_EQ(Get(), this);
   DCHECK_EQ(0, thread_tracker_count_.load(std::memory_order_relaxed));
-  g_tracker_ = nullptr;
+  subtle::NoBarrier_Store(&g_tracker_, 0);
 }
 
 void GlobalActivityTracker::ReturnTrackerMemory(

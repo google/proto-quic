@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 
 #include "base/logging.h"
@@ -150,7 +151,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                          bool fin) override;
   void OnError(SpdyFramer* framer) override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status) override;
+                SpdyErrorCode error_code) override;
   bool OnGoAwayFrameData(const char* goaway_data, size_t len) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
@@ -167,8 +168,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
                      bool end) override;
-  void OnRstStream(SpdyStreamId stream_id, SpdyRstStreamStatus status) override;
-  bool OnRstStreamFrameData(const char* rst_stream_data, size_t len) override;
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnSetting(SpdySettingsIds id, uint32_t value) override;
   void OnSettings(bool clear_persisted) override;
   void OnSettingsAck() override;
@@ -178,7 +178,7 @@ class SpdyTestDeframerImpl : public SpdyTestDeframer,
                          size_t len) override;
   void OnStreamEnd(SpdyStreamId stream_id) override;
   void OnStreamPadding(SpdyStreamId stream_id, size_t len) override;
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override;
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
 
   // Callbacks defined in SpdyHeadersHandlerInterface.
@@ -274,7 +274,7 @@ void SpdyTestDeframerImpl::AtGoAwayEnd() {
     listener_->OnGoAway(std::move(goaway_ir_));
   } else {
     listener_->OnGoAway(MakeUnique<SpdyGoAwayIR>(
-        goaway_ir_->last_good_stream_id(), goaway_ir_->status(),
+        goaway_ir_->last_good_stream_id(), goaway_ir_->error_code(),
         std::move(*goaway_description_)));
     CHECK_EQ(0u, goaway_description_->size());
   }
@@ -492,13 +492,13 @@ void SpdyTestDeframerImpl::OnError(SpdyFramer* framer) {
 // for any non-zero amount of data, and after that it will be called with len==0
 // to indicate the end of the GOAWAY frame.
 void SpdyTestDeframerImpl::OnGoAway(SpdyStreamId last_good_stream_id,
-                                    SpdyGoAwayStatus status) {
+                                    SpdyErrorCode error_code) {
   DVLOG(1) << "OnGoAway last_good_stream_id: " << last_good_stream_id
-           << "     status: " << status;
+           << "     error code: " << error_code;
   CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
                                << Http2FrameTypeToString(frame_type_);
   frame_type_ = GOAWAY;
-  goaway_ir_ = MakeUnique<SpdyGoAwayIR>(last_good_stream_id, status, "");
+  goaway_ir_ = MakeUnique<SpdyGoAwayIR>(last_good_stream_id, error_code, "");
   goaway_description_.reset(new string());
 }
 
@@ -613,25 +613,14 @@ void SpdyTestDeframerImpl::OnPushPromise(SpdyStreamId stream_id,
 // Closes the specified stream. After this the sender may still send PRIORITY
 // frames for this stream, which we can ignore.
 void SpdyTestDeframerImpl::OnRstStream(SpdyStreamId stream_id,
-                                       SpdyRstStreamStatus status) {
+                                       SpdyErrorCode error_code) {
   DVLOG(1) << "OnRstStream stream_id: " << stream_id
-           << "     status: " << status;
+           << "     error code: " << error_code;
   CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
                                << Http2FrameTypeToString(frame_type_);
   CHECK_GT(stream_id, 0u);
 
-  listener_->OnRstStream(MakeUnique<SpdyRstStreamIR>(stream_id, status));
-}
-
-// The HTTP/2 spec states that there is no data in the frame other that the
-// SpdyRstStreamStatus passed to OnRstStream, so it appears that SpdyFramer's
-// comments w.r.t. this method are obsolete. We still receive a zero length
-// invocation when RST_STREAM frame processing completes.
-bool SpdyTestDeframerImpl::OnRstStreamFrameData(const char* rst_stream_data,
-                                                size_t len) {
-  DVLOG(1) << "OnRstStreamFrameData";
-  CHECK_EQ(0u, len);
-  return true;
+  listener_->OnRstStream(MakeUnique<SpdyRstStreamIR>(stream_id, error_code));
 }
 
 // Called for an individual setting. There is no negotiation, the sender is
@@ -746,7 +735,7 @@ void SpdyTestDeframerImpl::OnWindowUpdate(SpdyStreamId stream_id,
 // of the set of currently open streams. For now we'll assume that unknown
 // frame types are unsupported.
 bool SpdyTestDeframerImpl::OnUnknownFrame(SpdyStreamId stream_id,
-                                          int frame_type) {
+                                          uint8_t frame_type) {
   DVLOG(1) << "OnAltSvc stream_id: " << stream_id;
   CHECK_EQ(frame_type_, UNSET) << "   frame_type_="
                                << Http2FrameTypeToString(frame_type_);

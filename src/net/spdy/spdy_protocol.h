@@ -144,45 +144,23 @@ enum SpdySettingsIds {
 
 using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 
-// Status codes for RST_STREAM frames.
-enum SpdyRstStreamStatus {
-  RST_STREAM_NO_ERROR = 0,
-  RST_STREAM_MIN = RST_STREAM_NO_ERROR,
-  RST_STREAM_PROTOCOL_ERROR = 1,
-  RST_STREAM_INTERNAL_ERROR = 2,
-  RST_STREAM_FLOW_CONTROL_ERROR = 3,
-  RST_STREAM_SETTINGS_TIMEOUT = 4,
-  RST_STREAM_STREAM_CLOSED = 5,
-  RST_STREAM_FRAME_SIZE_ERROR = 6,
-  RST_STREAM_REFUSED_STREAM = 7,
-  RST_STREAM_CANCEL = 8,
-  RST_STREAM_COMPRESSION_ERROR = 9,
-  RST_STREAM_CONNECT_ERROR = 10,
-  RST_STREAM_ENHANCE_YOUR_CALM = 11,
-  RST_STREAM_INADEQUATE_SECURITY = 12,
-  RST_STREAM_HTTP_1_1_REQUIRED = 13,
-  RST_STREAM_MAX = RST_STREAM_HTTP_1_1_REQUIRED,
-  RST_STREAM_NUM_STATUS_CODES = 14
-};
-
-// Status codes for GOAWAY frames.
-enum SpdyGoAwayStatus {
-  GOAWAY_NO_ERROR = 0,
-  GOAWAY_MIN = GOAWAY_NO_ERROR,
-  GOAWAY_PROTOCOL_ERROR = 1,
-  GOAWAY_INTERNAL_ERROR = 2,
-  GOAWAY_FLOW_CONTROL_ERROR = 3,
-  GOAWAY_SETTINGS_TIMEOUT = 4,
-  GOAWAY_STREAM_CLOSED = 5,
-  GOAWAY_FRAME_SIZE_ERROR = 6,
-  GOAWAY_REFUSED_STREAM = 7,
-  GOAWAY_CANCEL = 8,
-  GOAWAY_COMPRESSION_ERROR = 9,
-  GOAWAY_CONNECT_ERROR = 10,
-  GOAWAY_ENHANCE_YOUR_CALM = 11,
-  GOAWAY_INADEQUATE_SECURITY = 12,
-  GOAWAY_HTTP_1_1_REQUIRED = 13,
-  GOAWAY_MAX = GOAWAY_HTTP_1_1_REQUIRED
+// HTTP/2 error codes, RFC 7540 Section 7.
+enum SpdyErrorCode : uint32_t {
+  ERROR_CODE_NO_ERROR = 0x0,
+  ERROR_CODE_PROTOCOL_ERROR = 0x1,
+  ERROR_CODE_INTERNAL_ERROR = 0x2,
+  ERROR_CODE_FLOW_CONTROL_ERROR = 0x3,
+  ERROR_CODE_SETTINGS_TIMEOUT = 0x4,
+  ERROR_CODE_STREAM_CLOSED = 0x5,
+  ERROR_CODE_FRAME_SIZE_ERROR = 0x6,
+  ERROR_CODE_REFUSED_STREAM = 0x7,
+  ERROR_CODE_CANCEL = 0x8,
+  ERROR_CODE_COMPRESSION_ERROR = 0x9,
+  ERROR_CODE_CONNECT_ERROR = 0xa,
+  ERROR_CODE_ENHANCE_YOUR_CALM = 0xb,
+  ERROR_CODE_INADEQUATE_SECURITY = 0xc,
+  ERROR_CODE_HTTP_1_1_REQUIRED = 0xd,
+  ERROR_CODE_MAX = ERROR_CODE_HTTP_1_1_REQUIRED
 };
 
 // A SPDY priority is a number between 0 and 7 (inclusive).
@@ -240,6 +218,9 @@ NET_EXPORT_PRIVATE bool IsValidHTTP2FrameStreamId(
     SpdyStreamId current_frame_stream_id,
     SpdyFrameType frame_type_field);
 
+// Serialize |frame_type| to string for logging/debugging.
+const char* FrameTypeToString(SpdyFrameType frame_type);
+
 // If |wire_setting_id| is the on-the-wire representation of a defined SETTINGS
 // parameter, parse it to |*setting_id| and return true.
 NET_EXPORT_PRIVATE bool ParseSettingsId(int wire_setting_id,
@@ -250,16 +231,14 @@ NET_EXPORT_PRIVATE bool ParseSettingsId(int wire_setting_id,
 NET_EXPORT_PRIVATE bool SettingsIdToString(SpdySettingsIds id,
                                            const char** settings_id_string);
 
-// Parses a RST_STREAM error code from an on-the-wire enumeration.
+// Parse |wire_error_code| to a SpdyErrorCode.
 // Treat unrecognized error codes as INTERNAL_ERROR
 // as recommended by the HTTP/2 specification.
-NET_EXPORT_PRIVATE SpdyRstStreamStatus
-ParseRstStreamStatus(int rst_stream_status_field);
+NET_EXPORT_PRIVATE SpdyErrorCode ParseErrorCode(uint32_t wire_error_code);
 
-// Parses a GOAWAY error code from an on-the-wire enumeration.
-// Treat unrecognized error codes as INTERNAL_ERROR
-// as recommended by the HTTP/2 specification.
-NET_EXPORT_PRIVATE SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field);
+// Serialize RST_STREAM or GOAWAY frame error code to string
+// for logging/debugging.
+const char* ErrorCodeToString(SpdyErrorCode error_code);
 
 // Frame type for non-control (i.e. data) frames.
 const int kDataFrameType = 0;
@@ -530,21 +509,17 @@ class NET_EXPORT_PRIVATE SpdyDataIR
 
 class NET_EXPORT_PRIVATE SpdyRstStreamIR : public SpdyFrameWithStreamIdIR {
  public:
-  SpdyRstStreamIR(SpdyStreamId stream_id, SpdyRstStreamStatus status);
+  SpdyRstStreamIR(SpdyStreamId stream_id, SpdyErrorCode error_code);
 
   ~SpdyRstStreamIR() override;
 
-  SpdyRstStreamStatus status() const {
-    return status_;
-  }
-  void set_status(SpdyRstStreamStatus status) {
-    status_ = status;
-  }
+  SpdyErrorCode error_code() const { return error_code_; }
+  void set_error_code(SpdyErrorCode error_code) { error_code_ = error_code; }
 
   void Visit(SpdyFrameVisitor* visitor) const override;
 
  private:
-  SpdyRstStreamStatus status_;
+  SpdyErrorCode error_code_;
 
   DISALLOW_COPY_AND_ASSIGN(SpdyRstStreamIR);
 };
@@ -594,19 +569,19 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
   // References description, doesn't copy it, so description must outlast
   // this SpdyGoAwayIR.
   SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-               SpdyGoAwayStatus status,
+               SpdyErrorCode error_code,
                base::StringPiece description);
 
   // References description, doesn't copy it, so description must outlast
   // this SpdyGoAwayIR.
   SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-               SpdyGoAwayStatus status,
+               SpdyErrorCode error_code,
                const char* description);
 
   // Moves description into description_store_, so caller doesn't need to
   // keep description live after constructing this SpdyGoAwayIR.
   SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-               SpdyGoAwayStatus status,
+               SpdyErrorCode error_code,
                std::string description);
 
   ~SpdyGoAwayIR() override;
@@ -616,10 +591,10 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
     DCHECK_EQ(0u, last_good_stream_id & ~kStreamIdMask);
     last_good_stream_id_ = last_good_stream_id;
   }
-  SpdyGoAwayStatus status() const { return status_; }
-  void set_status(SpdyGoAwayStatus status) {
-    // TODO(hkhalil): Check valid ranges of status?
-    status_ = status;
+  SpdyErrorCode error_code() const { return error_code_; }
+  void set_error_code(SpdyErrorCode error_code) {
+    // TODO(hkhalil): Check valid ranges of error_code?
+    error_code_ = error_code;
   }
 
   const base::StringPiece& description() const { return description_; }
@@ -628,7 +603,7 @@ class NET_EXPORT_PRIVATE SpdyGoAwayIR : public SpdyFrameIR {
 
  private:
   SpdyStreamId last_good_stream_id_;
-  SpdyGoAwayStatus status_;
+  SpdyErrorCode error_code_;
   const std::string description_store_;
   const base::StringPiece description_;
 

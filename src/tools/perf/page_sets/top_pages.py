@@ -59,7 +59,7 @@ class GmailPage(TopPages):
 
   def RunNavigateSteps(self, action_runner):
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
 
@@ -80,7 +80,7 @@ class GoogleCalendarPage(TopPages):
     super(GoogleCalendarPage, self).RunNavigateSteps(action_runner)
     action_runner.Wait(2)
     action_runner.WaitForElement('div[class~="navForward"]')
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
         (function() {
           var elem = document.createElement('meta');
           elem.name='viewport';
@@ -107,7 +107,7 @@ class GoogleDocPage(TopPages):
   def RunNavigateSteps(self, action_runner):
     super(GoogleDocPage, self).RunNavigateSteps(action_runner)
     action_runner.Wait(2)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementsByClassName("kix-appview-editor").length')
 
 

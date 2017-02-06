@@ -18,7 +18,7 @@ class SimplePage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(SimplePage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.readyState == "complete"')
 
 
@@ -31,7 +31,7 @@ class SimpleTextSelectionPage(SimplePage):
     # Create a fixed position div in the top left corner of the page, and
     # another one in the bottom right corner of the page.
     # Select the text within the first div.
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
         (function() {
           var text_div = document.createElement('div');
           var text_div_2 = document.createElement('div');
@@ -65,32 +65,32 @@ class SimpleTextSelectionPage(SimplePage):
 
     # Wait two frames so that the selection information is sent to chromium
     # and it is able to process input events interacting with selection.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("text-for-perf-test").style.color == "green"')
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
           window.requestAnimationFrame(function() {
             document.getElementById("text-for-perf-test").style.color="red";
           });
         ''')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("text-for-perf-test").style.color == "red"')
 
     # Confirm that the selection is set correctly.
-    text = action_runner.EvaluateJavaScript('window.getSelection().toString()')
+    text = action_runner.EvaluateJavaScript2('window.getSelection().toString()')
     assert text == "Hello"
 
     # Tap on the selected text to make the handles show up.
     with action_runner.CreateGestureInteraction('TapAction'):
       action_runner.TapElement('#text-for-perf-test')
 
-    text_div_bottom = float(action_runner.EvaluateJavaScript('''
+    text_div_bottom = float(action_runner.EvaluateJavaScript2('''
         document.getElementById("text-for-perf-test").getClientRects()[0].bottom
         '''))
-    text_div_2_bottom = float(action_runner.EvaluateJavaScript('''
+    text_div_2_bottom = float(action_runner.EvaluateJavaScript2('''
         document.getElementById(
             "text-for-perf-test-2").getClientRects()[0].bottom
         '''))
-    body_rect_str = action_runner.EvaluateJavaScript('''
+    body_rect_str = action_runner.EvaluateJavaScript2('''
         var r = window.__GestureCommon_GetBoundingVisibleRect(document.body);
         r.left + " " + r.top + " " + r.height + " " + r.width;
         ''')
@@ -116,11 +116,11 @@ class SimpleTextSelectionPage(SimplePage):
           use_touch=1)
 
     # Confirm that the selection has changed.
-    text = action_runner.EvaluateJavaScript('window.getSelection().toString()')
+    text = action_runner.EvaluateJavaScript2('window.getSelection().toString()')
     assert text != "Hello"
 
     # Determine the coordinates of the end of the selection
-    sel_end_str = action_runner.EvaluateJavaScript('''
+    sel_end_str = action_runner.EvaluateJavaScript2('''
           var rects = window.getSelection().getRangeAt(0).getClientRects();
           var last_rect = rects[rects.length - 1];
           last_rect.right + " " + last_rect.bottom;
@@ -139,7 +139,7 @@ class SimpleTextSelectionPage(SimplePage):
           use_touch=1)
 
     # Confirm that the selection is back to the text in the first div.
-    text = action_runner.EvaluateJavaScript('window.getSelection().toString()')
+    text = action_runner.EvaluateJavaScript2('window.getSelection().toString()')
     assert text == "Hello"
 
 

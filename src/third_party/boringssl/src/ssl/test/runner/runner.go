@@ -3417,6 +3417,7 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 			},
 		},
 		resumeSession: true,
+		flags:         []string{"-expect-no-session-id"},
 	})
 	tests = append(tests, testCase{
 		testType: serverTest,
@@ -3426,6 +3427,7 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 			SessionTicketsDisabled: true,
 		},
 		resumeSession: true,
+		flags:         []string{"-expect-session-id"},
 	})
 	tests = append(tests, testCase{
 		testType: serverTest,
@@ -3467,6 +3469,9 @@ func addStateMachineCoverageTests(config stateMachineTestConfig) {
 			},
 			resumeSession:        true,
 			resumeRenewedSession: true,
+			// TLS 1.3 uses tickets, so the session should not be
+			// cached statefully.
+			flags: []string{"-expect-no-session-id"},
 		})
 
 		tests = append(tests, testCase{
@@ -8443,7 +8448,20 @@ func addSessionTicketTests() {
 			},
 		},
 		flags: []string{
+			"-enable-early-data",
 			"-expect-early-data-info",
+		},
+	})
+
+	// Test that 0-RTT tickets are ignored in clients unless opted in.
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "TLS13-SendTicketEarlyDataInfo-Disabled",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendTicketEarlyDataInfo: 16384,
+			},
 		},
 	})
 
@@ -8474,6 +8492,40 @@ func addSessionTicketTests() {
 		flags: []string{
 			"-enable-early-data",
 		},
+	})
+
+	// Test that, in TLS 1.3, the server-offered NewSessionTicket lifetime
+	// is honored.
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "TLS13-HonorServerSessionTicketLifetime",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendTicketLifetime: 20 * time.Second,
+			},
+		},
+		flags: []string{
+			"-resumption-delay", "19",
+		},
+		resumeSession: true,
+	})
+	testCases = append(testCases, testCase{
+		testType: clientTest,
+		name:     "TLS13-HonorServerSessionTicketLifetime-2",
+		config: Config{
+			MaxVersion: VersionTLS13,
+			Bugs: ProtocolBugs{
+				SendTicketLifetime: 20 * time.Second,
+				// The client should not offer the expired session.
+				ExpectNoTLS13PSK: true,
+			},
+		},
+		flags: []string{
+			"-resumption-delay", "21",
+		},
+		resumeSession: true,
+		expectResumeRejected: true,
 	})
 }
 

@@ -94,7 +94,7 @@ TEST(DiskCacheBasedQuicServerInfo, DeleteInCallback) {
   // Use the blocking mock backend factory to force asynchronous completion
   // of quic_server_info->WaitForDataReady(), so that the callback will run.
   MockBlockingBackendFactory* factory = new MockBlockingBackendFactory();
-  MockHttpCache cache(base::WrapUnique(factory));
+  MockHttpCache cache(base::WrapUnique(factory), true);
   QuicServerId server_id("www.verisign.com", 443, PRIVACY_MODE_DISABLED);
   std::unique_ptr<QuicServerInfo> quic_server_info(
       new DiskCacheBasedQuicServerInfo(server_id, cache.http_cache()));
@@ -109,7 +109,7 @@ TEST(DiskCacheBasedQuicServerInfo, DeleteInCallback) {
 
 // Tests the basic logic of storing, retrieving and updating data.
 TEST(DiskCacheBasedQuicServerInfo, Update) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -180,7 +180,7 @@ TEST(DiskCacheBasedQuicServerInfo, Update) {
 
 // Test that demonstrates different info is returned when the ports differ.
 TEST(DiskCacheBasedQuicServerInfo, UpdateDifferentPorts) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   AddMockTransaction(&kHostInfoTransaction2);
   TestCompletionCallback callback;
@@ -281,7 +281,7 @@ TEST(DiskCacheBasedQuicServerInfo, UpdateDifferentPorts) {
 
 // Test IsReadyToPersist when there is a pending write.
 TEST(DiskCacheBasedQuicServerInfo, IsReadyToPersist) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -343,7 +343,7 @@ TEST(DiskCacheBasedQuicServerInfo, IsReadyToPersist) {
 
 // Test multiple calls to Persist.
 TEST(DiskCacheBasedQuicServerInfo, MultiplePersist) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -433,7 +433,7 @@ TEST(DiskCacheBasedQuicServerInfo, MultiplePersist) {
 
 TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReady) {
   MockBlockingBackendFactory* factory = new MockBlockingBackendFactory();
-  MockHttpCache cache(base::WrapUnique(factory));
+  MockHttpCache cache(base::WrapUnique(factory), true);
   TestCompletionCallback callback;
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
   std::unique_ptr<QuicServerInfo> quic_server_info(
@@ -451,7 +451,7 @@ TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReady) {
 }
 
 TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReadyButDataIsReady) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -470,7 +470,7 @@ TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReadyButDataIsReady) {
 TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReadyAfterDeleteCache) {
   std::unique_ptr<QuicServerInfo> quic_server_info;
   {
-    MockHttpCache cache;
+    MockHttpCache cache(true);
     AddMockTransaction(&kHostInfoTransaction1);
     TestCompletionCallback callback;
 
@@ -491,7 +491,7 @@ TEST(DiskCacheBasedQuicServerInfo, CancelWaitForDataReadyAfterDeleteCache) {
 
 // Test Start() followed by Persist() without calling WaitForDataReady.
 TEST(DiskCacheBasedQuicServerInfo, StartAndPersist) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
 
   QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
@@ -557,7 +557,7 @@ TEST(DiskCacheBasedQuicServerInfo, StartAndPersist) {
 // persists the data when Start() finishes.
 TEST(DiskCacheBasedQuicServerInfo, PersistWhenNotReadyToPersist) {
   MockBlockingBackendFactory* factory = new MockBlockingBackendFactory();
-  MockHttpCache cache(base::WrapUnique(factory));
+  MockHttpCache cache(base::WrapUnique(factory), true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -618,7 +618,7 @@ TEST(DiskCacheBasedQuicServerInfo, PersistWhenNotReadyToPersist) {
 
 // Test multiple calls to Persist without waiting for the data to be written.
 TEST(DiskCacheBasedQuicServerInfo, MultiplePersistsWithoutWaiting) {
-  MockHttpCache cache;
+  MockHttpCache cache(true);
   AddMockTransaction(&kHostInfoTransaction1);
   TestCompletionCallback callback;
 
@@ -704,7 +704,7 @@ TEST(DiskCacheBasedQuicServerInfo, DeleteServerInfoInCallback) {
   // Use the blocking mock backend factory to force asynchronous completion
   // of quic_server_info->WaitForDataReady(), so that the callback will run.
   MockBlockingBackendFactory* factory = new MockBlockingBackendFactory();
-  MockHttpCache cache(base::WrapUnique(factory));
+  MockHttpCache cache(base::WrapUnique(factory), true);
   QuicServerId server_id("www.verisign.com", 443, PRIVACY_MODE_DISABLED);
   QuicServerInfo* quic_server_info =
       new DiskCacheBasedQuicServerInfo(server_id, cache.http_cache());

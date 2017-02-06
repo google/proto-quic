@@ -4,6 +4,7 @@
 
 #include "net/spdy/spdy_proxy_client_socket.h"
 
+#include <memory>
 #include <utility>
 
 #include "base/bind.h"
@@ -431,7 +432,7 @@ TEST_F(SpdyProxyClientSocketTest, ConnectWithAuthCredentials) {
 TEST_F(SpdyProxyClientSocketTest, ConnectRedirects) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -486,7 +487,7 @@ TEST_F(SpdyProxyClientSocketTest, ConnectFails) {
 TEST_F(SpdyProxyClientSocketTest, WasEverUsedReturnsCorrectValues) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -977,7 +978,7 @@ TEST_F(SpdyProxyClientSocketTest, PendingReadOnCloseReturnsZero) {
 TEST_F(SpdyProxyClientSocketTest, ReadOnDisconnectSocketReturnsNotConnected) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -1062,7 +1063,7 @@ TEST_F(SpdyProxyClientSocketTest, WriteOnClosedStream) {
 TEST_F(SpdyProxyClientSocketTest, WriteOnDisconnectedSocket) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -1123,7 +1124,7 @@ TEST_F(SpdyProxyClientSocketTest, WritePendingOnClose) {
 TEST_F(SpdyProxyClientSocketTest, DisconnectWithWritePending) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -1157,7 +1158,7 @@ TEST_F(SpdyProxyClientSocketTest, DisconnectWithWritePending) {
 TEST_F(SpdyProxyClientSocketTest, DisconnectWithReadPending) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 3),
   };
@@ -1196,7 +1197,7 @@ TEST_F(SpdyProxyClientSocketTest, RstWithReadAndWritePending) {
 
   SpdySerializedFrame resp(ConstructConnectReplyFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockRead reads[] = {
       CreateMockRead(resp, 1, ASYNC), MockRead(ASYNC, ERR_IO_PENDING, 2),
       CreateMockRead(rst, 3, ASYNC), MockRead(ASYNC, 0, 4)  // EOF
@@ -1233,7 +1234,7 @@ TEST_F(SpdyProxyClientSocketTest, RstWithReadAndWritePending) {
 TEST_F(SpdyProxyClientSocketTest, NetLog) {
   SpdySerializedFrame conn(ConstructConnectRequestFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS), CreateMockWrite(rst, 5),
   };
@@ -1326,7 +1327,7 @@ TEST_F(SpdyProxyClientSocketTest, RstWithReadAndWritePendingDelete) {
 
   SpdySerializedFrame resp(ConstructConnectReplyFrame());
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockRead reads[] = {
       CreateMockRead(resp, 1, ASYNC), MockRead(ASYNC, ERR_IO_PENDING, 2),
       CreateMockRead(rst, 3, ASYNC), MockRead(SYNCHRONOUS, ERR_IO_PENDING, 4),

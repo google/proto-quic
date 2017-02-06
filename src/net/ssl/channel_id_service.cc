@@ -18,11 +18,11 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
-#include "base/memory/ref_counted.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/rand_util.h"
 #include "base/single_thread_task_runner.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "crypto/ec_private_key.h"
 #include "net/base/net_errors.h"
@@ -110,9 +110,8 @@ std::unique_ptr<ChannelIDStore::ChannelID> GenerateChannelID(
 
 }  // namespace
 
-// ChannelIDServiceWorker runs on a worker thread and takes care of the
-// blocking process of performing key generation. Will take care of deleting
-// itself once Start() is called.
+// ChannelIDServiceWorker takes care of the blocking process of performing key
+// generation. Will take care of deleting itself once Start() is called.
 class ChannelIDServiceWorker {
  public:
   typedef base::Callback<
@@ -125,15 +124,22 @@ class ChannelIDServiceWorker {
         origin_task_runner_(base::ThreadTaskRunnerHandle::Get()),
         callback_(callback) {}
 
-  // Starts the worker on |task_runner|. If the worker fails to start, such as
-  // if the task runner is shutting down, then it will take care of deleting
-  // itself.
-  bool Start(const scoped_refptr<base::TaskRunner>& task_runner) {
+  // Starts the worker asynchronously.
+  void Start(const scoped_refptr<base::TaskRunner>& task_runner) {
     DCHECK(origin_task_runner_->RunsTasksOnCurrentThread());
 
-    return task_runner->PostTask(
-        FROM_HERE,
-        base::Bind(&ChannelIDServiceWorker::Run, base::Owned(this)));
+    auto callback = base::Bind(&ChannelIDServiceWorker::Run, base::Owned(this));
+
+    if (task_runner) {
+      task_runner->PostTask(FROM_HERE, callback);
+    } else {
+      base::PostTaskWithTraits(
+          FROM_HERE, base::TaskTraits()
+                         .WithShutdownBehavior(
+                             base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
+                         .MayBlock(),
+          callback);
+    }
   }
 
  private:
@@ -269,11 +275,8 @@ void ChannelIDService::Request::Post(
   base::ResetAndReturn(&callback_).Run(error);
 }
 
-ChannelIDService::ChannelIDService(
-    ChannelIDStore* channel_id_store,
-    const scoped_refptr<base::TaskRunner>& task_runner)
+ChannelIDService::ChannelIDService(ChannelIDStore* channel_id_store)
     : channel_id_store_(channel_id_store),
-      task_runner_(task_runner),
       id_(g_next_id.GetNext()),
       requests_(0),
       key_store_hits_(0),
@@ -332,12 +335,8 @@ int ChannelIDService::GetOrCreateChannelID(
         domain,
         base::Bind(&ChannelIDService::GeneratedChannelID,
                    weak_ptr_factory_.GetWeakPtr()));
-    if (!worker->Start(task_runner_)) {
-      // TODO(rkn): Log to the NetLog.
-      LOG(ERROR) << "ChannelIDServiceWorker couldn't be started.";
-      RecordGetChannelIDResult(WORKER_FAILURE);
-      return ERR_INSUFFICIENT_RESOURCES;
-    }
+    worker->Start(task_runner_);
+
     // We are waiting for key generation.  Create a job & request to track it.
     ChannelIDServiceJob* job = new ChannelIDServiceJob(create_if_missing);
     inflight_[domain] = base::WrapUnique(job);
@@ -415,11 +414,7 @@ void ChannelIDService::GotChannelID(int err,
       server_identifier,
       base::Bind(&ChannelIDService::GeneratedChannelID,
                  weak_ptr_factory_.GetWeakPtr()));
-  if (!worker->Start(task_runner_)) {
-    // TODO(rkn): Log to the NetLog.
-    LOG(ERROR) << "ChannelIDServiceWorker couldn't be started.";
-    HandleResult(ERR_INSUFFICIENT_RESOURCES, server_identifier, nullptr);
-  }
+  worker->Start(task_runner_);
 }
 
 ChannelIDStore* ChannelIDService::GetChannelIDStore() {

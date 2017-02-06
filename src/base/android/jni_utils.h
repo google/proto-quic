@@ -18,6 +18,9 @@ namespace android {
 // via JNI from Java.
 BASE_EXPORT ScopedJavaLocalRef<jobject> GetClassLoader(JNIEnv* env);
 
+// Returns true if the current process permits selective JNI registration.
+BASE_EXPORT bool isSelectiveJniRegistrationEnabled(JNIEnv* env);
+
 }  // namespace android
 }  // namespace base
 

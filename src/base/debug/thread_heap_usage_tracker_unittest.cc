@@ -206,6 +206,9 @@ base::allocator::AllocatorDispatch ThreadHeapUsageTrackerTest::g_mock_dispatch =
         &ThreadHeapUsageTrackerTest::OnFreeFn,     // free_function
         &ThreadHeapUsageTrackerTest::
             OnGetSizeEstimateFn,  // get_size_estimate_function
+        nullptr,                  // batch_malloc
+        nullptr,                  // batch_free
+        nullptr,                  // free_definite_size_function
         nullptr,                  // next
 };
 
@@ -539,6 +542,10 @@ TEST_F(ThreadHeapUsageTrackerTest, AllShimFunctionsAreProvided) {
 
 #if BUILDFLAG(USE_EXPERIMENTAL_ALLOCATOR_SHIM)
 TEST(ThreadHeapUsageShimTest, HooksIntoMallocWhenShimAvailable) {
+#if defined(OS_MACOSX)
+  allocator::InitializeAllocatorShim();
+#endif
+
   ASSERT_FALSE(ThreadHeapUsageTracker::IsHeapTrackingEnabled());
 
   ThreadHeapUsageTracker::EnableHeapTracking();

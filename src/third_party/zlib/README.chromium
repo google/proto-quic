@@ -18,9 +18,6 @@ A few minor changes, all marked with "Google":
 - Added casts to suppress VC++ warnings
 The 'google.patch' file represents our changes from the original zlib-1.2.5.
 
-A more significant change to support mixed-source data compression. See
-crbug.com/139744 and mixed-source.patch.
-
 Integrated Intel SIMD optimisations from: https://github.com/jtkukunas/zlib/
 and modified to accomodate the older version and existing changes in tree.
 
@@ -42,5 +39,5 @@ Currently we upgrade to madler's version 1.2.8,merged SIMD optimisation and
 some other changes above.
 The step as follows:
 1.download a clean madler zlib from github.
-2.apply google.patch, mixed.patch, simd.patch sequencely.
+2.apply google.patch, simd.patch sequencely.
 3.update these patches.

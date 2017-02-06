@@ -28,7 +28,7 @@ class CapitolVolkswagenPage(KeyMobileSitesPage):
   def RunNavigateSteps(self, action_runner):
     super(CapitolVolkswagenPage, self).RunNavigateSteps(action_runner)
     action_runner.WaitForElement(text='Next 35')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.body.scrollHeight > 2560')
 
 
@@ -45,7 +45,7 @@ class TheVergeArticlePage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(TheVergeArticlePage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.Chorus !== undefined &&'
         'window.Chorus.Comments !== undefined &&'
         'window.Chorus.Comments.Json !== undefined &&'
@@ -80,7 +80,7 @@ class FacebookPage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(FacebookPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("u_0_c") !== null &&'
         'document.body.scrollHeight > window.innerHeight')
 
@@ -96,7 +96,7 @@ class YoutubeMobilePage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(YoutubeMobilePage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("paginatortarget") !== null')
 
 
@@ -112,7 +112,7 @@ class LinkedInPage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(LinkedInPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("profile-view-scroller") !== null')
 
 
@@ -146,9 +146,9 @@ class GmailPage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("og_user_warning") !== null')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("og_user_warning") === null')
 
 
@@ -165,7 +165,7 @@ class GroupClonedPage(KeyMobileSitesPage):
   def RunNavigateSteps(self, action_runner):
     super(GroupClonedPage, self).RunNavigateSteps(action_runner)
     action_runner.Wait(5)
-    action_runner.WaitForJavaScriptCondition('''
+    action_runner.WaitForJavaScriptCondition2('''
         document.getElementById("element-19") !== null &&
         document.getElementById("element-19").contentDocument
           .getElementById("element-22") !== null &&
@@ -185,7 +185,7 @@ class GroupClonedListImagesPage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GroupClonedListImagesPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("element-5") !== null')
 
 
@@ -200,7 +200,7 @@ class GoogleNewsMobilePage(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GoogleNewsMobilePage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'typeof NEWS_telemetryReady !== "undefined" && '
         'NEWS_telemetryReady == true')
 
@@ -218,7 +218,7 @@ class GoogleNewsMobile2Page(KeyMobileSitesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GoogleNewsMobile2Page, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById(":h") != null')
     action_runner.Wait(1)
 

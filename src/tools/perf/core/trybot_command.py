@@ -39,11 +39,6 @@ EXCLUDED_BOTS = {
     'mac_fyi_perf_bisect',
     'win_fyi_perf_bisect',
     'winx64_fyi_perf_bisect',
-    # CQ bots on tryserver.chromium.perf
-    'android_s5_perf_cq',
-    'winx64_10_perf_cq',
-    'mac_retina_perf_cq',
-    'linux_perf_cq',
 }
 
 INCLUDE_BOTS = [
@@ -182,7 +177,7 @@ def RunGit(cmd, msg_on_error='', ignore_return_code=False):
   if returncode:
     if ignore_return_code:
       return None
-    raise TrybotError('%s. \n%s' % (msg_on_error, err))
+    raise TrybotError('%s. \n%s \n%s' % (msg_on_error, err, output))
 
   return output.strip()
 

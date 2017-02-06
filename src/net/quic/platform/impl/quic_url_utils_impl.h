@@ -7,6 +7,7 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
+#include "net/quic/core/quic_server_id.h"
 #include "net/quic/platform/api/quic_export.h"
 
 namespace net {
@@ -30,6 +31,10 @@ class QUIC_EXPORT_PRIVATE QuicUrlUtilsImpl {
   // Convert hostname to lowercase and remove the trailing '.'.
   // WARNING: mutates |hostname| in place and returns |hostname|.
   static char* NormalizeHostname(char* hostname);
+
+  // Creates a QuicServerId from a string formatted in same manner as
+  // QuicServerId::ToString().
+  static void StringToQuicServerId(const std::string& str, QuicServerId* out);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicUrlUtilsImpl);

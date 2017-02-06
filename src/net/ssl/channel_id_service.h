@@ -10,9 +10,11 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/macros.h"
+#include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
@@ -69,14 +71,16 @@ class NET_EXPORT ChannelIDService
     ChannelIDServiceJob* job_;
   };
 
-  // This object owns |channel_id_store|.  |task_runner| will
-  // be used to post channel ID generation worker tasks.  The tasks are
-  // safe for use with WorkerPool and SequencedWorkerPool::CONTINUE_ON_SHUTDOWN.
-  ChannelIDService(
-      ChannelIDStore* channel_id_store,
-      const scoped_refptr<base::TaskRunner>& task_runner);
+  // This object owns |channel_id_store|.
+  explicit ChannelIDService(ChannelIDStore* channel_id_store);
 
   ~ChannelIDService();
+
+  // Sets the TaskRunner to use for asynchronous operations.
+  void set_task_runner_for_testing(
+      scoped_refptr<base::TaskRunner> task_runner) {
+    task_runner_ = std::move(task_runner);
+  }
 
   // Returns the domain to be used for |host|.  The domain is the
   // "registry controlled domain", or the "ETLD + 1" where one exists, or

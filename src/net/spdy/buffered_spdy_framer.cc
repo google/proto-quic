@@ -147,15 +147,15 @@ void BufferedSpdyFramer::OnPing(SpdyPingId unique_id, bool is_ack) {
 }
 
 void BufferedSpdyFramer::OnRstStream(SpdyStreamId stream_id,
-                                     SpdyRstStreamStatus status) {
-  visitor_->OnRstStream(stream_id, status);
+                                     SpdyErrorCode error_code) {
+  visitor_->OnRstStream(stream_id, error_code);
 }
 void BufferedSpdyFramer::OnGoAway(SpdyStreamId last_accepted_stream_id,
-                                  SpdyGoAwayStatus status) {
+                                  SpdyErrorCode error_code) {
   DCHECK(!goaway_fields_);
   goaway_fields_.reset(new GoAwayFields());
   goaway_fields_->last_accepted_stream_id = last_accepted_stream_id;
-  goaway_fields_->status = status;
+  goaway_fields_->error_code = error_code;
 }
 
 bool BufferedSpdyFramer::OnGoAwayFrameData(const char* goaway_data,
@@ -169,7 +169,7 @@ bool BufferedSpdyFramer::OnGoAwayFrameData(const char* goaway_data,
     return true;
   }
   visitor_->OnGoAway(goaway_fields_->last_accepted_stream_id,
-                     goaway_fields_->status, goaway_fields_->debug_data);
+                     goaway_fields_->error_code, goaway_fields_->debug_data);
   goaway_fields_.reset();
   return true;
 }
@@ -203,7 +203,7 @@ void BufferedSpdyFramer::OnContinuation(SpdyStreamId stream_id, bool end) {
 }
 
 bool BufferedSpdyFramer::OnUnknownFrame(SpdyStreamId stream_id,
-                                        int frame_type) {
+                                        uint8_t frame_type) {
   return visitor_->OnUnknownFrame(stream_id, frame_type);
 }
 
@@ -239,8 +239,8 @@ bool BufferedSpdyFramer::HasError() {
 // SpdyRstStreamIR).
 SpdySerializedFrame* BufferedSpdyFramer::CreateRstStream(
     SpdyStreamId stream_id,
-    SpdyRstStreamStatus status) const {
-  SpdyRstStreamIR rst_ir(stream_id, status);
+    SpdyErrorCode error_code) const {
+  SpdyRstStreamIR rst_ir(stream_id, error_code);
   return new SpdySerializedFrame(spdy_framer_.SerializeRstStream(rst_ir));
 }
 
@@ -267,9 +267,9 @@ SpdySerializedFrame* BufferedSpdyFramer::CreatePingFrame(SpdyPingId unique_id,
 // TODO(jgraettinger): Eliminate uses of this method (prefer SpdyGoAwayIR).
 SpdySerializedFrame* BufferedSpdyFramer::CreateGoAway(
     SpdyStreamId last_accepted_stream_id,
-    SpdyGoAwayStatus status,
+    SpdyErrorCode error_code,
     base::StringPiece debug_data) const {
-  SpdyGoAwayIR go_ir(last_accepted_stream_id, status, debug_data);
+  SpdyGoAwayIR go_ir(last_accepted_stream_id, error_code, debug_data);
   return new SpdySerializedFrame(spdy_framer_.SerializeGoAway(go_ir));
 }
 

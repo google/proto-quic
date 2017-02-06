@@ -254,8 +254,8 @@ SSL_CTX *SSL_CTX_new(const SSL_METHOD *method) {
   ret->session_cache_mode = SSL_SESS_CACHE_SERVER;
   ret->session_cache_size = SSL_SESSION_CACHE_MAX_SIZE_DEFAULT;
 
-  /* We take the system default */
   ret->session_timeout = SSL_DEFAULT_SESSION_TIMEOUT;
+  ret->session_psk_dhe_timeout = SSL_DEFAULT_SESSION_PSK_DHE_TIMEOUT;
 
   ret->references = 1;
 
@@ -425,22 +425,21 @@ SSL *SSL_new(SSL_CTX *ctx) {
   ssl->initial_ctx = ctx;
 
   if (ctx->supported_group_list) {
-    ssl->supported_group_list =
-        BUF_memdup(ctx->supported_group_list,
-                   ctx->supported_group_list_len * 2);
+    ssl->supported_group_list = BUF_memdup(ctx->supported_group_list,
+                                           ctx->supported_group_list_len * 2);
     if (!ssl->supported_group_list) {
       goto err;
     }
     ssl->supported_group_list_len = ctx->supported_group_list_len;
   }
 
-  if (ssl->ctx->alpn_client_proto_list) {
-    ssl->alpn_client_proto_list = BUF_memdup(
-        ssl->ctx->alpn_client_proto_list, ssl->ctx->alpn_client_proto_list_len);
+  if (ctx->alpn_client_proto_list) {
+    ssl->alpn_client_proto_list = BUF_memdup(ctx->alpn_client_proto_list,
+                                             ctx->alpn_client_proto_list_len);
     if (ssl->alpn_client_proto_list == NULL) {
       goto err;
     }
-    ssl->alpn_client_proto_list_len = ssl->ctx->alpn_client_proto_list_len;
+    ssl->alpn_client_proto_list_len = ctx->alpn_client_proto_list_len;
   }
 
   ssl->method = ctx->method;
@@ -469,16 +468,11 @@ SSL *SSL_new(SSL_CTX *ctx) {
     ssl->tlsext_channel_id_private = ctx->tlsext_channel_id_private;
   }
 
-  ssl->signed_cert_timestamps_enabled =
-      ssl->ctx->signed_cert_timestamps_enabled;
-  ssl->ocsp_stapling_enabled = ssl->ctx->ocsp_stapling_enabled;
+  ssl->signed_cert_timestamps_enabled = ctx->signed_cert_timestamps_enabled;
+  ssl->ocsp_stapling_enabled = ctx->ocsp_stapling_enabled;
 
-  ssl->session_timeout = SSL_DEFAULT_SESSION_TIMEOUT;
-
-  /* If the context has a default timeout, use it over the default. */
-  if (ctx->session_timeout != 0) {
-    ssl->session_timeout = ctx->session_timeout;
-  }
+  ssl->session_timeout = ctx->session_timeout;
+  ssl->session_psk_dhe_timeout = ctx->session_psk_dhe_timeout;
 
   /* If the context has an OCSP response, use it. */
   if (ctx->ocsp_response != NULL) {
@@ -503,9 +497,6 @@ void SSL_free(SSL *ssl) {
   X509_VERIFY_PARAM_free(ssl->param);
 
   CRYPTO_free_ex_data(&g_ex_data_class_ssl, ssl, &ssl->ex_data);
-
-  ssl_free_wbio_buffer(ssl);
-  assert(ssl->bbio == NULL);
 
   BIO_free_all(ssl->rbio);
   BIO_free_all(ssl->wbio);
@@ -553,18 +544,8 @@ void SSL_set0_rbio(SSL *ssl, BIO *rbio) {
 }
 
 void SSL_set0_wbio(SSL *ssl, BIO *wbio) {
-  /* If the output buffering BIO is still in place, remove it. */
-  if (ssl->bbio != NULL) {
-    ssl->wbio = BIO_pop(ssl->wbio);
-  }
-
   BIO_free_all(ssl->wbio);
   ssl->wbio = wbio;
-
-  /* Re-attach |bbio| to the new |wbio|. */
-  if (ssl->bbio != NULL) {
-    ssl->wbio = BIO_push(ssl->bbio, ssl->wbio);
-  }
 }
 
 void SSL_set_bio(SSL *ssl, BIO *rbio, BIO *wbio) {
@@ -603,14 +584,7 @@ void SSL_set_bio(SSL *ssl, BIO *rbio, BIO *wbio) {
 
 BIO *SSL_get_rbio(const SSL *ssl) { return ssl->rbio; }
 
-BIO *SSL_get_wbio(const SSL *ssl) {
-  if (ssl->bbio != NULL) {
-    /* If |bbio| is active, the true caller-configured BIO is its |next_bio|. */
-    assert(ssl->bbio == ssl->wbio);
-    return ssl->bbio->next_bio;
-  }
-  return ssl->wbio;
-}
+BIO *SSL_get_wbio(const SSL *ssl) { return ssl->wbio; }
 
 void ssl_reset_error_state(SSL *ssl) {
   /* Functions which use |SSL_get_error| must reset I/O and error state on
@@ -1072,63 +1046,6 @@ void SSL_CTX_set0_buffer_pool(SSL_CTX *ctx, CRYPTO_BUFFER_POOL *pool) {
   ctx->pool = pool;
 }
 
-X509 *SSL_get_peer_certificate(const SSL *ssl) {
-  if (ssl == NULL) {
-    return NULL;
-  }
-  SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL || session->x509_peer == NULL) {
-    return NULL;
-  }
-  X509_up_ref(session->x509_peer);
-  return session->x509_peer;
-}
-
-STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *ssl) {
-  if (ssl == NULL) {
-    return NULL;
-  }
-  SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL ||
-      session->x509_chain == NULL) {
-    return NULL;
-  }
-
-  if (!ssl->server) {
-    return session->x509_chain;
-  }
-
-  /* OpenSSL historically didn't include the leaf certificate in the returned
-   * certificate chain, but only for servers. */
-  if (session->x509_chain_without_leaf == NULL) {
-    session->x509_chain_without_leaf = sk_X509_new_null();
-    if (session->x509_chain_without_leaf == NULL) {
-      return NULL;
-    }
-
-    for (size_t i = 1; i < sk_X509_num(session->x509_chain); i++) {
-      X509 *cert = sk_X509_value(session->x509_chain, i);
-      if (!sk_X509_push(session->x509_chain_without_leaf, cert)) {
-        sk_X509_pop_free(session->x509_chain_without_leaf, X509_free);
-        session->x509_chain_without_leaf = NULL;
-        return NULL;
-      }
-      X509_up_ref(cert);
-    }
-  }
-
-  return session->x509_chain_without_leaf;
-}
-
-STACK_OF(X509) *SSL_get_peer_full_cert_chain(const SSL *ssl) {
-  SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL) {
-    return NULL;
-  }
-
-  return session->x509_chain;
-}
-
 int SSL_get_tls_unique(const SSL *ssl, uint8_t *out, size_t *out_len,
                        size_t max_out) {
   /* tls-unique is not defined for SSL 3.0 or TLS 1.3. */
@@ -1199,30 +1116,6 @@ const uint8_t *SSL_get0_session_id_context(const SSL *ssl, size_t *out_len) {
   return ssl->sid_ctx;
 }
 
-int SSL_CTX_set_purpose(SSL_CTX *ctx, int purpose) {
-  return X509_VERIFY_PARAM_set_purpose(ctx->param, purpose);
-}
-
-int SSL_set_purpose(SSL *ssl, int purpose) {
-  return X509_VERIFY_PARAM_set_purpose(ssl->param, purpose);
-}
-
-int SSL_CTX_set_trust(SSL_CTX *ctx, int trust) {
-  return X509_VERIFY_PARAM_set_trust(ctx->param, trust);
-}
-
-int SSL_set_trust(SSL *ssl, int trust) {
-  return X509_VERIFY_PARAM_set_trust(ssl->param, trust);
-}
-
-int SSL_CTX_set1_param(SSL_CTX *ctx, const X509_VERIFY_PARAM *param) {
-  return X509_VERIFY_PARAM_set1(ctx->param, param);
-}
-
-int SSL_set1_param(SSL *ssl, const X509_VERIFY_PARAM *param) {
-  return X509_VERIFY_PARAM_set1(ssl->param, param);
-}
-
 void ssl_cipher_preference_list_free(
     struct ssl_cipher_preference_list_st *cipher_list) {
   if (cipher_list == NULL) {
@@ -1232,10 +1125,6 @@ void ssl_cipher_preference_list_free(
   OPENSSL_free(cipher_list->in_group_flags);
   OPENSSL_free(cipher_list);
 }
-
-X509_VERIFY_PARAM *SSL_CTX_get0_param(SSL_CTX *ctx) { return ctx->param; }
-
-X509_VERIFY_PARAM *SSL_get0_param(SSL *ssl) { return ssl->param; }
 
 void SSL_certs_clear(SSL *ssl) { ssl_cert_clear_certs(ssl->cert); }
 
@@ -1352,43 +1241,12 @@ size_t SSL_get_peer_finished(const SSL *ssl, void *buf, size_t count) {
 
 int SSL_get_verify_mode(const SSL *ssl) { return ssl->verify_mode; }
 
-int SSL_get_verify_depth(const SSL *ssl) {
-  return X509_VERIFY_PARAM_get_depth(ssl->param);
-}
-
 int SSL_get_extms_support(const SSL *ssl) {
   if (!ssl->s3->have_version) {
     return 0;
   }
   return ssl3_protocol_version(ssl) >= TLS1_3_VERSION ||
          ssl->s3->tmp.extended_master_secret == 1;
-}
-
-int (*SSL_get_verify_callback(const SSL *ssl))(int, X509_STORE_CTX *) {
-  return ssl->verify_callback;
-}
-
-int SSL_CTX_get_verify_mode(const SSL_CTX *ctx) { return ctx->verify_mode; }
-
-int SSL_CTX_get_verify_depth(const SSL_CTX *ctx) {
-  return X509_VERIFY_PARAM_get_depth(ctx->param);
-}
-
-int (*SSL_CTX_get_verify_callback(const SSL_CTX *ctx))(
-    int ok, X509_STORE_CTX *store_ctx) {
-  return ctx->default_verify_callback;
-}
-
-void SSL_set_verify(SSL *ssl, int mode,
-                    int (*callback)(int ok, X509_STORE_CTX *store_ctx)) {
-  ssl->verify_mode = mode;
-  if (callback != NULL) {
-    ssl->verify_callback = callback;
-  }
-}
-
-void SSL_set_verify_depth(SSL *ssl, int depth) {
-  X509_VERIFY_PARAM_set_depth(ssl->param, depth);
 }
 
 int SSL_CTX_get_read_ahead(const SSL_CTX *ctx) { return 0; }
@@ -1408,34 +1266,12 @@ int SSL_pending(const SSL *ssl) {
 
 /* Fix this so it checks all the valid key/cert options */
 int SSL_CTX_check_private_key(const SSL_CTX *ctx) {
-  if (ctx->cert->privatekey == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_PRIVATE_KEY_ASSIGNED);
-    return 0;
-  }
-
-  X509 *x509 = ctx->cert->x509_leaf;
-  if (x509 == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_ASSIGNED);
-    return 0;
-  }
-
-  return X509_check_private_key(x509, ctx->cert->privatekey);
+  return ssl_cert_check_private_key(ctx->cert, ctx->cert->privatekey);
 }
 
 /* Fix this function so that it takes an optional type parameter */
 int SSL_check_private_key(const SSL *ssl) {
-  if (ssl->cert->privatekey == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_PRIVATE_KEY_ASSIGNED);
-    return 0;
-  }
-
-  X509 *x509 = ssl->cert->x509_leaf;
-  if (x509 == NULL) {
-    OPENSSL_PUT_ERROR(SSL, SSL_R_NO_CERTIFICATE_ASSIGNED);
-    return 0;
-  }
-
-  return X509_check_private_key(x509, ssl->cert->privatekey);
+  return ssl_cert_check_private_key(ssl->cert, ssl->cert->privatekey);
 }
 
 long SSL_get_default_timeout(const SSL *ssl) {
@@ -2010,24 +1846,6 @@ size_t SSL_get_tls_channel_id(SSL *ssl, uint8_t *out, size_t max_out) {
   return 64;
 }
 
-void SSL_CTX_set_cert_verify_callback(SSL_CTX *ctx,
-                                      int (*cb)(X509_STORE_CTX *store_ctx,
-                                                void *arg),
-                                      void *arg) {
-  ctx->app_verify_callback = cb;
-  ctx->app_verify_arg = arg;
-}
-
-void SSL_CTX_set_verify(SSL_CTX *ctx, int mode,
-                        int (*cb)(int, X509_STORE_CTX *)) {
-  ctx->verify_mode = mode;
-  ctx->default_verify_callback = cb;
-}
-
-void SSL_CTX_set_verify_depth(SSL_CTX *ctx, int depth) {
-  X509_VERIFY_PARAM_set_depth(ctx->param, depth);
-}
-
 size_t SSL_get0_certificate_types(SSL *ssl, const uint8_t **out_types) {
   if (ssl->server || ssl->s3->hs == NULL) {
     *out_types = NULL;
@@ -2124,25 +1942,9 @@ const char *SSL_SESSION_get_version(const SSL_SESSION *session) {
   return ssl_get_version(session->ssl_version);
 }
 
-X509 *SSL_get_certificate(const SSL *ssl) {
-  if (ssl->cert != NULL) {
-    return ssl->cert->x509_leaf;
-  }
-
-  return NULL;
-}
-
 EVP_PKEY *SSL_get_privatekey(const SSL *ssl) {
   if (ssl->cert != NULL) {
     return ssl->cert->privatekey;
-  }
-
-  return NULL;
-}
-
-X509 *SSL_CTX_get0_certificate(const SSL_CTX *ctx) {
-  if (ctx->cert != NULL) {
-    return ctx->cert->x509_leaf;
   }
 
   return NULL;
@@ -2172,41 +1974,6 @@ const COMP_METHOD *SSL_get_current_compression(SSL *ssl) { return NULL; }
 const COMP_METHOD *SSL_get_current_expansion(SSL *ssl) { return NULL; }
 
 int *SSL_get_server_tmp_key(SSL *ssl, EVP_PKEY **out_key) { return 0; }
-
-int ssl_is_wbio_buffered(const SSL *ssl) {
-  return ssl->bbio != NULL;
-}
-
-int ssl_init_wbio_buffer(SSL *ssl) {
-  if (ssl->bbio != NULL) {
-    /* Already buffered. */
-    assert(ssl->bbio == ssl->wbio);
-    return 1;
-  }
-
-  BIO *bbio = BIO_new(BIO_f_buffer());
-  if (bbio == NULL ||
-      !BIO_set_read_buffer_size(bbio, 1)) {
-    BIO_free(bbio);
-    return 0;
-  }
-
-  ssl->bbio = bbio;
-  ssl->wbio = BIO_push(bbio, ssl->wbio);
-  return 1;
-}
-
-void ssl_free_wbio_buffer(SSL *ssl) {
-  if (ssl->bbio == NULL) {
-    return;
-  }
-
-  assert(ssl->bbio == ssl->wbio);
-
-  ssl->wbio = BIO_pop(ssl->wbio);
-  BIO_free(ssl->bbio);
-  ssl->bbio = NULL;
-}
 
 void SSL_CTX_set_quiet_shutdown(SSL_CTX *ctx, int mode) {
   ctx->quiet_shutdown = (mode != 0);
@@ -2286,15 +2053,6 @@ SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX *ctx) {
   return ssl->ctx;
 }
 
-int SSL_CTX_set_default_verify_paths(SSL_CTX *ctx) {
-  return X509_STORE_set_default_paths(ctx->cert_store);
-}
-
-int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *ca_file,
-                                  const char *ca_dir) {
-  return X509_STORE_load_locations(ctx->cert_store, ca_file, ca_dir);
-}
-
 void SSL_set_info_callback(SSL *ssl,
                            void (*cb)(const SSL *ssl, int type, int value)) {
   ssl->info_callback = cb;
@@ -2322,20 +2080,6 @@ char *SSL_get_shared_ciphers(const SSL *ssl, char *buf, int len) {
   }
   buf[0] = '\0';
   return buf;
-}
-
-void SSL_set_verify_result(SSL *ssl, long result) {
-  if (result != X509_V_OK) {
-    abort();
-  }
-}
-
-long SSL_get_verify_result(const SSL *ssl) {
-  SSL_SESSION *session = SSL_get_session(ssl);
-  if (session == NULL) {
-    return X509_V_ERR_INVALID_CALL;
-  }
-  return session->verify_result;
 }
 
 int SSL_get_ex_new_index(long argl, void *argp, CRYPTO_EX_unused *unused,
@@ -2373,15 +2117,6 @@ int SSL_CTX_set_ex_data(SSL_CTX *ctx, int idx, void *arg) {
 
 void *SSL_CTX_get_ex_data(const SSL_CTX *ctx, int idx) {
   return CRYPTO_get_ex_data(&ctx->ex_data, idx);
-}
-
-X509_STORE *SSL_CTX_get_cert_store(const SSL_CTX *ctx) {
-  return ctx->cert_store;
-}
-
-void SSL_CTX_set_cert_store(SSL_CTX *ctx, X509_STORE *store) {
-  X509_STORE_free(ctx->cert_store);
-  ctx->cert_store = store;
 }
 
 int SSL_want(const SSL *ssl) { return ssl->rwstate; }
@@ -2549,41 +2284,6 @@ static int cbb_add_hex(CBB *cbb, const uint8_t *in, size_t in_len) {
     *(out++) = (uint8_t)hextable[in[i] & 0xf];
   }
 
-  return 1;
-}
-
-int ssl_log_rsa_client_key_exchange(const SSL *ssl,
-                                    const uint8_t *encrypted_premaster,
-                                    size_t encrypted_premaster_len,
-                                    const uint8_t *premaster,
-                                    size_t premaster_len) {
-  if (ssl->ctx->keylog_callback == NULL) {
-    return 1;
-  }
-
-  if (encrypted_premaster_len < 8) {
-    OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
-    return 0;
-  }
-
-  CBB cbb;
-  uint8_t *out;
-  size_t out_len;
-  if (!CBB_init(&cbb, 4 + 16 + 1 + premaster_len * 2 + 1) ||
-      !CBB_add_bytes(&cbb, (const uint8_t *)"RSA ", 4) ||
-      /* Only the first 8 bytes of the encrypted premaster secret are
-       * logged. */
-      !cbb_add_hex(&cbb, encrypted_premaster, 8) ||
-      !CBB_add_bytes(&cbb, (const uint8_t *)" ", 1) ||
-      !cbb_add_hex(&cbb, premaster, premaster_len) ||
-      !CBB_add_u8(&cbb, 0 /* NUL */) ||
-      !CBB_finish(&cbb, &out, &out_len)) {
-    CBB_cleanup(&cbb);
-    return 0;
-  }
-
-  ssl->ctx->keylog_callback(ssl, (const char *)out);
-  OPENSSL_free(out);
   return 1;
 }
 

@@ -225,14 +225,12 @@ QuicAsyncStatus ProofVerifierChromium::Job::VerifyProof(
   if (!GetX509Certificate(certs, error_details, verify_details))
     return QUIC_FAILURE;
 
-  if (!cert_sct.empty()) {
-    // Note that this is a completely synchronous operation: The CT Log Verifier
-    // gets all the data it needs for SCT verification and does not do any
-    // external communication.
-    cert_transparency_verifier_->Verify(cert_.get(), std::string(), cert_sct,
-                                        &verify_details_->ct_verify_result.scts,
-                                        net_log_);
-  }
+  // Note that this is a completely synchronous operation: The CT Log Verifier
+  // gets all the data it needs for SCT verification and does not do any
+  // external communication.
+  cert_transparency_verifier_->Verify(cert_.get(), std::string(), cert_sct,
+                                      &verify_details_->ct_verify_result.scts,
+                                      net_log_);
 
   // We call VerifySignature first to avoid copying of server_config and
   // signature.

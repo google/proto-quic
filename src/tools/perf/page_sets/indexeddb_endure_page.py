@@ -15,12 +15,12 @@ class IndexedDBEndurePage(page_module.Page):
     self._subtest = subtest
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript(
+    action_runner.ExecuteJavaScript2(
         'window.testFilter = {{ subtest }};', subtest=self._subtest)
     with action_runner.CreateInteraction('Action_Test'):
-      action_runner.ExecuteJavaScript('window.test();')
-      action_runner.WaitForJavaScriptCondition(
-          'window.done', timeout_in_seconds=600)
+      action_runner.ExecuteJavaScript2('window.test();')
+      action_runner.WaitForJavaScriptCondition2(
+          'window.done', timeout=600)
 
 class IndexedDBEndurePageSet(story.StorySet):
   """The IndexedDB Endurance page set.

@@ -10,7 +10,6 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/stl_util.h"
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"

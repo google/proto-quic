@@ -13,7 +13,7 @@ class DummyPage(page_module.Page):
       page_set=page_set)
 
   def RunPageInteractions(self, action_runner):
-    assert action_runner.EvaluateJavaScript('1 + window.__dummy_value') == 2
+    assert action_runner.EvaluateJavaScript2('1 + window.__dummy_value') == 2
 
 
 class BrokenDummyPage(page_module.Page):
@@ -26,7 +26,7 @@ class BrokenDummyPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
     # The call below should raise an AssertionError
-    assert action_runner.EvaluateJavaScript('1 + window.__dummy_value') == 3
+    assert action_runner.EvaluateJavaScript2('1 + window.__dummy_value') == 3
 
 
 class DummyStorySet(story.StorySet):

@@ -1,5 +1,0 @@
-gen/extensions/grit/extensions_browser_resources.h
-gen/extensions/grit/extensions_browser_resources_map.cc
-gen/extensions/grit/extensions_browser_resources_map.h
-gen/extensions/extensions_browser_resources_100_percent.pak
-gen/extensions/extensions_browser_resources_200_percent.pak

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef NET_CRYPTO_WINCRYPT_SHIM_H_
-#define NET_CRYPTO_WINCRYPT_SHIM_H_
+#ifndef CRYPTO_WINCRYPT_SHIM_H_
+#define CRYPTO_WINCRYPT_SHIM_H_
 
 // wincrypt.h defines macros which conflict with OpenSSL's types. This header
 // includes wincrypt and undefines the OpenSSL macros which conflict. Any
@@ -22,4 +22,4 @@
 #define WINCRYPT_X509_EXTENSIONS ((LPCSTR) 5)
 #define WINCRYPT_X509_NAME ((LPCSTR) 7)
 
-#endif  // NET_CRYPTO_WINCRYPT_SHIM_H_
+#endif  // CRYPTO_WINCRYPT_SHIM_H_

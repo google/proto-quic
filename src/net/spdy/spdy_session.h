@@ -108,7 +108,7 @@ enum SpdyProtocolErrorDetails {
   SPDY_ERROR_INTERNAL_FRAMER_ERROR = 41,
   SPDY_ERROR_INVALID_CONTROL_FRAME_SIZE = 37,
   SPDY_ERROR_OVERSIZED_PAYLOAD = 40,
-  // SpdyRstStreamStatus mappings.
+  // SpdyErrorCode mappings.
   STATUS_CODE_NO_ERROR = 41,
   STATUS_CODE_PROTOCOL_ERROR = 11,
   STATUS_CODE_INTERNAL_ERROR = 16,
@@ -145,15 +145,15 @@ MapFramerErrorToProtocolError(SpdyFramer::SpdyFramerError error);
 Error NET_EXPORT_PRIVATE
 MapFramerErrorToNetError(SpdyFramer::SpdyFramerError error);
 SpdyProtocolErrorDetails NET_EXPORT_PRIVATE
-    MapRstStreamStatusToProtocolError(SpdyRstStreamStatus status);
-SpdyGoAwayStatus NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
+MapRstStreamStatusToProtocolError(SpdyErrorCode error_code);
+SpdyErrorCode NET_EXPORT_PRIVATE MapNetErrorToGoAwayStatus(Error err);
 
 // If these compile asserts fail then SpdyProtocolErrorDetails needs
 // to be updated with new values, as do the mapping functions above.
 static_assert(17 == SpdyFramer::LAST_ERROR,
               "SpdyProtocolErrorDetails / Spdy Errors mismatch");
-static_assert(14 == RST_STREAM_NUM_STATUS_CODES,
-              "SpdyProtocolErrorDetails / RstStreamStatus mismatch");
+static_assert(13 == SpdyErrorCode::ERROR_CODE_MAX,
+              "SpdyProtocolErrorDetails / SpdyErrorCode mismatch");
 
 // A helper class used to manage a request to create a stream.
 class NET_EXPORT_PRIVATE SpdyStreamRequest {
@@ -396,7 +396,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // stream with the given ID, which must exist and be active. Note
   // that that stream may hold the last reference to the session.
   void ResetStream(SpdyStreamId stream_id,
-                   SpdyRstStreamStatus status,
+                   SpdyErrorCode error_code,
                    const std::string& description);
 
   // Check if a stream is active.
@@ -690,7 +690,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // Calls EnqueueResetStreamFrame() and then
   // CloseActiveStreamIterator().
   void ResetStreamIterator(ActiveStreamMap::iterator it,
-                           SpdyRstStreamStatus status,
+                           SpdyErrorCode error_code,
                            const std::string& description);
 
   // Send a RST_STREAM frame with the given parameters. There should
@@ -698,7 +698,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // stream should be closed shortly after this function is called.
   void EnqueueResetStreamFrame(SpdyStreamId stream_id,
                                RequestPriority priority,
-                               SpdyRstStreamStatus status,
+                               SpdyErrorCode error_code,
                                const std::string& description);
 
   // Send a PRIORITY frame with the given parameters.
@@ -861,9 +861,9 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   void OnStreamError(SpdyStreamId stream_id,
                      const std::string& description) override;
   void OnPing(SpdyPingId unique_id, bool is_ack) override;
-  void OnRstStream(SpdyStreamId stream_id, SpdyRstStreamStatus status) override;
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status,
+                SpdyErrorCode error_code,
                 base::StringPiece debug_data) override;
   void OnDataFrameHeader(SpdyStreamId stream_id,
                          size_t length,
@@ -890,7 +890,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                 base::StringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override;
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;
 
   // SpdyFramerDebugVisitorInterface
   void OnSendCompressedFrame(SpdyStreamId stream_id,

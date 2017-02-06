@@ -74,7 +74,7 @@ class MockVisitor : public SpdyFramerVisitorInterface {
                     const char* header_data,
                     size_t len));
   MOCK_METHOD2(OnRstStream,
-               void(SpdyStreamId stream_id, SpdyRstStreamStatus status));
+               void(SpdyStreamId stream_id, SpdyErrorCode error_code));
   MOCK_METHOD1(OnSettings, void(bool clear_persisted));
   MOCK_METHOD2(OnSetting, void(SpdySettingsIds id, uint32_t value));
   MOCK_METHOD0(OnSettingsAck, void());
@@ -82,7 +82,7 @@ class MockVisitor : public SpdyFramerVisitorInterface {
   MOCK_METHOD2(OnPing, void(SpdyPingId unique_id, bool is_ack));
   MOCK_METHOD2(OnGoAway,
                void(SpdyStreamId last_accepted_stream_id,
-                    SpdyGoAwayStatus status));
+                    SpdyErrorCode error_code));
   MOCK_METHOD7(OnHeaders,
                void(SpdyStreamId stream_id,
                     bool has_priority,
@@ -109,7 +109,8 @@ class MockVisitor : public SpdyFramerVisitorInterface {
                     SpdyStreamId parent_stream_id,
                     int weight,
                     bool exclusive));
-  MOCK_METHOD2(OnUnknownFrame, bool(SpdyStreamId stream_id, int frame_type));
+  MOCK_METHOD2(OnUnknownFrame,
+               bool(SpdyStreamId stream_id, uint8_t frame_type));
 };
 
 class ForceHolAckListener : public QuicAckListenerInterface {
@@ -715,7 +716,7 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdyDataFrameEmptyWithFin) {
 }
 
 TEST_P(QuicHeadersStreamTest, ProcessSpdyRstStreamFrame) {
-  SpdyRstStreamIR data(2, RST_STREAM_PROTOCOL_ERROR);
+  SpdyRstStreamIR data(2, ERROR_CODE_PROTOCOL_ERROR);
   SpdySerializedFrame frame(framer_->SerializeFrame(data));
   EXPECT_CALL(*connection_,
               CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
@@ -816,7 +817,7 @@ TEST_P(QuicHeadersStreamTest, ProcessSpdyPingFrame) {
 }
 
 TEST_P(QuicHeadersStreamTest, ProcessSpdyGoAwayFrame) {
-  SpdyGoAwayIR data(1, GOAWAY_PROTOCOL_ERROR, "go away");
+  SpdyGoAwayIR data(1, ERROR_CODE_PROTOCOL_ERROR, "go away");
   SpdySerializedFrame frame(framer_->SerializeFrame(data));
   EXPECT_CALL(*connection_, CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA,
                                             "SPDY GOAWAY frame received.", _))
@@ -941,8 +942,7 @@ TEST_P(QuicHeadersStreamTest, WritevStreamData) {
   // This test will issue a write that will require fragmenting into
   // multiple HTTP/2 DATA frames.
   const int kMinDataFrames = 4;
-  const size_t data_len =
-      kSpdyInitialFrameSizeLimit * kMinDataFrames + 1024;
+  const size_t data_len = kSpdyInitialFrameSizeLimit * kMinDataFrames + 1024;
   // Set headers stream send window large enough for data written below.
   headers_stream_->flow_controller()->UpdateSendWindowOffset(data_len * 2 * 4);
   string data(data_len, 'a');

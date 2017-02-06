@@ -459,16 +459,30 @@ static const StandardType kStandardTypes[] = {
   { NULL, NULL, 0 }
 };
 
+// GetExtensionsFromHardCodedMappings() adds file extensions (without a leading
+// dot) to the set |extensions|, for all MIME types matching |mime_type|.
+//
+// The meaning of |mime_type| depends on the value of |prefix_match|:
+//
+//  * If |prefix_match = false| then |mime_type| is an exact (case-insensitive)
+//    string such as "text/plain".
+//
+//  * If |prefix_match = true| then |mime_type| is treated as the prefix for a
+//    (case-insensitive) string. For instance "Text/" would match "text/plain".
+template <size_t N>
 void GetExtensionsFromHardCodedMappings(
-    const MimeInfo* mappings,
-    size_t mappings_len,
-    const std::string& leading_mime_type,
+    const MimeInfo (&mappings)[N],
+    const std::string& mime_type,
+    bool prefix_match,
     std::unordered_set<base::FilePath::StringType>* extensions) {
-  for (size_t i = 0; i < mappings_len; ++i) {
-    if (base::StartsWith(mappings[i].mime_type, leading_mime_type,
-                         base::CompareCase::INSENSITIVE_ASCII)) {
+  for (const auto& mapping : mappings) {
+    base::StringPiece cur_mime_type(mapping.mime_type);
+
+    if (base::StartsWith(cur_mime_type, mime_type,
+                         base::CompareCase::INSENSITIVE_ASCII) &&
+        (prefix_match || (cur_mime_type.length() == mime_type.length()))) {
       for (const base::StringPiece& this_extension : base::SplitStringPiece(
-               mappings[i].extensions, ",", base::TRIM_WHITESPACE,
+               mapping.extensions, ",", base::TRIM_WHITESPACE,
                base::SPLIT_WANT_ALL)) {
 #if defined(OS_WIN)
         extensions->insert(base::UTF8ToUTF16(this_extension));
@@ -492,13 +506,11 @@ void GetExtensionsHelper(
 
   // Also look up the extensions from hard-coded mappings in case that some
   // supported extensions are not registered in the system registry, like ogg.
-  GetExtensionsFromHardCodedMappings(kPrimaryMappings,
-                                     arraysize(kPrimaryMappings),
-                                     leading_mime_type, extensions);
+  GetExtensionsFromHardCodedMappings(kPrimaryMappings, leading_mime_type, true,
+                                     extensions);
 
-  GetExtensionsFromHardCodedMappings(kSecondaryMappings,
-                                     arraysize(kSecondaryMappings),
-                                     leading_mime_type, extensions);
+  GetExtensionsFromHardCodedMappings(kSecondaryMappings, leading_mime_type,
+                                     true, extensions);
 }
 
 // Note that the elements in the source set will be appended to the target
@@ -561,12 +573,10 @@ void GetExtensionsForMimeType(
 
     // Also look up the extensions from hard-coded mappings in case that some
     // supported extensions are not registered in the system registry, like ogg.
-    GetExtensionsFromHardCodedMappings(kPrimaryMappings,
-                                       arraysize(kPrimaryMappings), mime_type,
+    GetExtensionsFromHardCodedMappings(kPrimaryMappings, mime_type, false,
                                        &unique_extensions);
 
-    GetExtensionsFromHardCodedMappings(kSecondaryMappings,
-                                       arraysize(kSecondaryMappings), mime_type,
+    GetExtensionsFromHardCodedMappings(kSecondaryMappings, mime_type, false,
                                        &unique_extensions);
   }
 

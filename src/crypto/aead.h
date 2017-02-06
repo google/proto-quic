@@ -7,6 +7,8 @@
 
 #include <stddef.h>
 
+#include <string>
+
 #include "base/strings/string_piece.h"
 #include "crypto/crypto_export.h"
 
@@ -46,4 +48,4 @@ class CRYPTO_EXPORT Aead {
 
 }  // namespace crypto
 
-#endif  // CRYPTO_ENCRYPTOR_H_
+#endif  // CRYPTO_AEAD_H_

@@ -267,6 +267,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientStream
   // STATE_VERIFY_PROOF*, and subsequent STATE_SEND_CHLO state.
   bool stateless_reject_received_;
 
+  // Only used in chromium, not internally.
   base::TimeTicks proof_verify_start_time_;
 
   int num_scup_messages_received_;

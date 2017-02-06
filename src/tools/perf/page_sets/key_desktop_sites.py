@@ -45,7 +45,7 @@ class GmailPage(KeyDesktopSitesPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.gmonkey !== undefined && '
         'document.getElementById("gb") !== null')
 
@@ -80,7 +80,7 @@ class GoogleDrivePage(KeyDesktopSitesPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementsByClassName("doclistview-list").length')
 
 
@@ -101,7 +101,7 @@ class GoogleDocPage(KeyDesktopSitesPage):
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementsByClassName("kix-appview-editor").length')
 
 

@@ -4,10 +4,8 @@
 
 #include "net/quic/core/quic_utils.h"
 
-#include <ctype.h>
-#include <stdint.h>
-
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 #include "base/containers/adapters.h"

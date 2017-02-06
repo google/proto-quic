@@ -375,8 +375,12 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
 
   QuicChromiumAlarmFactory* alarm_factory() { return alarm_factory_.get(); }
 
-  bool has_quic_server_info_factory() {
+  bool has_quic_server_info_factory() const {
     return quic_server_info_factory_.get() != nullptr;
+  }
+
+  QuicServerInfoFactory* quic_server_info_factory() const {
+    return quic_server_info_factory_.get();
   }
 
   void set_quic_server_info_factory(

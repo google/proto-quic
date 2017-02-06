@@ -1,2 +1,0 @@
-gen/content/grit/content_resources.h
-gen/content/content_resources.pak

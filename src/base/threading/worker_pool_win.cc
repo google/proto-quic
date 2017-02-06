@@ -16,21 +16,23 @@ namespace base {
 
 namespace {
 
-base::LazyInstance<ThreadLocalBoolean>::Leaky
-    g_worker_pool_running_on_this_thread = LAZY_INSTANCE_INITIALIZER;
+ThreadLocalBoolean* GetWorkerPoolRunningOnThisThread() {
+  static auto thread_local_boolean = new ThreadLocalBoolean();
+  return thread_local_boolean;
+}
 
 DWORD CALLBACK WorkItemCallback(void* param) {
   PendingTask* pending_task = static_cast<PendingTask*>(param);
   TRACE_TASK_EXECUTION("WorkerThread::ThreadMain::Run", *pending_task);
 
-  g_worker_pool_running_on_this_thread.Get().Set(true);
+  GetWorkerPoolRunningOnThisThread()->Set(true);
 
   tracked_objects::TaskStopwatch stopwatch;
   stopwatch.Start();
   std::move(pending_task->task).Run();
   stopwatch.Stop();
 
-  g_worker_pool_running_on_this_thread.Get().Set(false);
+  GetWorkerPoolRunningOnThisThread()->Set(false);
 
   tracked_objects::ThreadData::TallyRunOnWorkerThreadIfTracking(
       pending_task->birth_tally, pending_task->time_posted, stopwatch);
@@ -65,7 +67,7 @@ bool WorkerPool::PostTask(const tracked_objects::Location& from_here,
 
 // static
 bool WorkerPool::RunsTasksOnCurrentThread() {
-  return g_worker_pool_running_on_this_thread.Get().Get();
+  return GetWorkerPoolRunningOnThisThread()->Get();
 }
 
 }  // namespace base

@@ -6,10 +6,7 @@
 
 #include <tuple>
 
-#include "net/base/host_port_pair.h"
-#include "net/base/port_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
-#include "url/gurl.h"
 
 using std::string;
 
@@ -39,16 +36,6 @@ bool QuicServerId::operator<(const QuicServerId& other) const {
 bool QuicServerId::operator==(const QuicServerId& other) const {
   return privacy_mode_ == other.privacy_mode_ &&
          host_port_pair_.Equals(other.host_port_pair_);
-}
-
-// static
-QuicServerId QuicServerId::FromString(const std::string& str) {
-  GURL url(str);
-  if (!url.is_valid())
-    return QuicServerId();
-  return QuicServerId(HostPortPair::FromURL(url), url.path_piece() == "/private"
-                                                      ? PRIVACY_MODE_ENABLED
-                                                      : PRIVACY_MODE_DISABLED);
 }
 
 string QuicServerId::ToString() const {

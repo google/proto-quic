@@ -488,7 +488,6 @@ def _CombineTestEntries(entries):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--output-directory',
-                      default='out/Debug',
                       help='Path to the root build directory.')
   parser.add_argument('-v',
                       '--verbose',

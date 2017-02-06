@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "base/atomicops.h"
 #include "base/base_export.h"
 #include "base/compiler_specific.h"
 #include "base/gtest_prod_util.h"
@@ -39,6 +40,7 @@ class FilePath;
 class Lock;
 class PlatformThreadHandle;
 class Process;
+class StaticAtomicSequenceNumber;
 class WaitableEvent;
 
 namespace debug {
@@ -463,7 +465,7 @@ class BASE_EXPORT ActivityUserData {
 
   // This ID is used to create unique indentifiers for user data so that it's
   // possible to tell if the information has been overwritten.
-  static std::atomic<uint32_t> next_id_;
+  static StaticAtomicSequenceNumber next_id_;
 
   DISALLOW_COPY_AND_ASSIGN(ActivityUserData);
 };
@@ -740,7 +742,10 @@ class BASE_EXPORT GlobalActivityTracker {
                                     int stack_depth);
 
   // Gets the global activity-tracker or null if none exists.
-  static GlobalActivityTracker* Get() { return g_tracker_; }
+  static GlobalActivityTracker* Get() {
+    return reinterpret_cast<GlobalActivityTracker*>(
+        subtle::NoBarrier_Load(&g_tracker_));
+  }
 
   // Gets the persistent-memory-allocator in which data is stored. Callers
   // can store additional records here to pass more information to the
@@ -906,7 +911,7 @@ class BASE_EXPORT GlobalActivityTracker {
   base::Lock modules_lock_;
 
   // The active global activity tracker.
-  static GlobalActivityTracker* g_tracker_;
+  static subtle::AtomicWord g_tracker_;
 
   DISALLOW_COPY_AND_ASSIGN(GlobalActivityTracker);
 };

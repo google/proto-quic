@@ -1,5 +1,5 @@
 diff --git a/third_party/zlib/crc32.c b/third_party/zlib/crc32.c
-index 979a719..09228ed 100644
+index 979a7190a3ca..09228ed9c76f 100644
 --- a/third_party/zlib/crc32.c
 +++ b/third_party/zlib/crc32.c
 @@ -28,6 +28,8 @@
@@ -41,9 +41,8 @@ index 979a719..09228ed 100644
 +    strm->adler = crc32(strm->adler, dst, size);
 +}
 diff --git a/third_party/zlib/crc_folding.c b/third_party/zlib/crc_folding.c
-new file mode 100644
-index 0000000..48d7774
---- /dev/null
+index e69de29bb2d1..48d77744aaf4 100644
+--- a/third_party/zlib/crc_folding.c
 +++ b/third_party/zlib/crc_folding.c
 @@ -0,0 +1,493 @@
 +/*
@@ -540,7 +539,7 @@ index 0000000..48d7774
 +    CRC_SAVE(s)
 +}
 diff --git a/third_party/zlib/deflate.c b/third_party/zlib/deflate.c
-index 7c95b30..59645eb 100644
+index 696957705b75..02fa2f64f83e 100644
 --- a/third_party/zlib/deflate.c
 +++ b/third_party/zlib/deflate.c
 @@ -48,8 +48,9 @@
@@ -554,7 +553,7 @@ index 7c95b30..59645eb 100644
  
  const char deflate_copyright[] =
     " deflate 1.2.8 Copyright 1995-2013 Jean-loup Gailly and Mark Adler ";
-@@ -85,7 +86,7 @@ local block_state deflate_huff   OF((deflate_state *s, int flush));
+@@ -84,7 +85,7 @@ local block_state deflate_huff   OF((deflate_state *s, int flush));
  local void lm_init        OF((deflate_state *s));
  local void putShortMSB    OF((deflate_state *s, uInt b));
  local void flush_pending  OF((z_streamp strm));
@@ -562,8 +561,8 @@ index 7c95b30..59645eb 100644
 +
  #ifdef ASMV
        void match_init OF((void)); /* asm code initialization */
-       uInt longest_match  OF((deflate_state *s, IPos cur_match, int clas));
-@@ -98,6 +99,23 @@ local  void check_match OF((deflate_state *s, IPos start, IPos match,
+       uInt longest_match  OF((deflate_state *s, IPos cur_match));
+@@ -97,6 +98,23 @@ local  void check_match OF((deflate_state *s, IPos start, IPos match,
                              int length));
  #endif
  
@@ -587,7 +586,7 @@ index 7c95b30..59645eb 100644
  /* ===========================================================================
   * Local data
   */
-@@ -167,7 +185,6 @@ struct static_tree_desc_s {int dummy;}; /* for buggy compilers */
+@@ -166,7 +184,6 @@ struct static_tree_desc_s {int dummy;}; /* for buggy compilers */
   */
  #define UPDATE_HASH(s,h,c) (h = (((h)<<s->hash_shift) ^ (c)) & s->hash_mask)
  
@@ -595,7 +594,7 @@ index 7c95b30..59645eb 100644
  /* ===========================================================================
   * Insert string str in the dictionary and set match_head to the previous head
   * of the hash chain (the most recent string with same hash key). Return
-@@ -178,17 +195,28 @@ struct static_tree_desc_s {int dummy;}; /* for buggy compilers */
+@@ -177,17 +194,28 @@ struct static_tree_desc_s {int dummy;}; /* for buggy compilers */
   *    input characters and the first MIN_MATCH bytes of str are valid
   *    (except for the last MIN_MATCH-1 bytes of the input file).
   */
@@ -632,7 +631,7 @@ index 7c95b30..59645eb 100644
  
  /* ===========================================================================
   * Initialize the hash table (avoiding 64K overflow for 16 bit systems).
-@@ -222,6 +250,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+@@ -221,6 +249,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
      const char *version;
      int stream_size;
  {
@@ -640,7 +639,7 @@ index 7c95b30..59645eb 100644
      deflate_state *s;
      int wrap = 1;
      static const char my_version[] = ZLIB_VERSION;
-@@ -231,6 +260,8 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+@@ -230,6 +259,8 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
       * output size for (length,distance) codes is <= 24 bits.
       */
  
@@ -649,7 +648,7 @@ index 7c95b30..59645eb 100644
      if (version == Z_NULL || version[0] != my_version[0] ||
          stream_size != sizeof(z_stream)) {
          return Z_VERSION_ERROR;
-@@ -286,12 +317,17 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
+@@ -285,12 +316,17 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
      s->w_size = 1 << s->w_bits;
      s->w_mask = s->w_size - 1;
  
@@ -668,8 +667,8 @@ index 7c95b30..59645eb 100644
 +    s->window = (Bytef *) ZALLOC(strm, s->w_size + window_padding, 2*sizeof(Byte));
      s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
      s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
-     s->class_bitmap = NULL;
-@@ -369,11 +405,7 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
+ 
+@@ -365,11 +401,7 @@ int ZEXPORT deflateSetDictionary (strm, dictionary, dictLength)
          str = s->strstart;
          n = s->lookahead - (MIN_MATCH-1);
          do {
@@ -682,7 +681,7 @@ index 7c95b30..59645eb 100644
              str++;
          } while (--n);
          s->strstart = str;
-@@ -696,7 +728,7 @@ int ZEXPORT deflate (strm, flush)
+@@ -690,7 +722,7 @@ int ZEXPORT deflate (strm, flush)
      if (s->status == INIT_STATE) {
  #ifdef GZIP
          if (s->wrap == 2) {
@@ -691,7 +690,7 @@ index 7c95b30..59645eb 100644
              put_byte(s, 31);
              put_byte(s, 139);
              put_byte(s, 8);
-@@ -975,6 +1007,7 @@ int ZEXPORT deflate (strm, flush)
+@@ -952,6 +984,7 @@ int ZEXPORT deflate (strm, flush)
      /* Write the trailer */
  #ifdef GZIP
      if (s->wrap == 2) {
@@ -699,7 +698,7 @@ index 7c95b30..59645eb 100644
          put_byte(s, (Byte)(strm->adler & 0xff));
          put_byte(s, (Byte)((strm->adler >> 8) & 0xff));
          put_byte(s, (Byte)((strm->adler >> 16) & 0xff));
-@@ -1097,7 +1130,7 @@ int ZEXPORT deflateCopy (dest, source)
+@@ -1073,7 +1106,7 @@ int ZEXPORT deflateCopy (dest, source)
   * allocating a large strm->next_in buffer and copying from it.
   * (See also flush_pending()).
   */
@@ -708,7 +707,7 @@ index 7c95b30..59645eb 100644
      z_streamp strm;
      Bytef *buf;
      unsigned size;
-@@ -1109,15 +1142,16 @@ local int read_buf(strm, buf, size)
+@@ -1085,15 +1118,16 @@ local int read_buf(strm, buf, size)
  
      strm->avail_in  -= len;
  
@@ -732,7 +731,7 @@ index 7c95b30..59645eb 100644
      strm->next_in  += len;
      strm->total_in += len;
  
-@@ -1530,7 +1564,19 @@ local void check_match(s, start, match, length)
+@@ -1387,7 +1421,19 @@ local void check_match(s, start, match, length)
   *    performed for at least two bytes (required for the zip translate_eol
   *    option -- not supported here).
   */
@@ -753,7 +752,7 @@ index 7c95b30..59645eb 100644
      deflate_state *s;
  {
      register unsigned n, m;
-@@ -1818,7 +1864,7 @@ local block_state deflate_fast(s, flush, clas)
+@@ -1651,7 +1697,7 @@ local block_state deflate_fast(s, flush)
           */
          hash_head = NIL;
          if (s->lookahead >= MIN_MATCH) {
@@ -762,7 +761,7 @@ index 7c95b30..59645eb 100644
          }
  
          /* Find the longest match, discarding those <= prev_length.
-@@ -1849,7 +1895,7 @@ local block_state deflate_fast(s, flush, clas)
+@@ -1682,7 +1728,7 @@ local block_state deflate_fast(s, flush)
                  s->match_length--; /* string at strstart already in table */
                  do {
                      s->strstart++;
@@ -771,7 +770,7 @@ index 7c95b30..59645eb 100644
                      /* strstart never exceeds WSIZE-MAX_MATCH, so there are
                       * always MIN_MATCH bytes ahead.
                       */
-@@ -1934,7 +1980,7 @@ local block_state deflate_slow(s, flush, clas)
+@@ -1754,7 +1800,7 @@ local block_state deflate_slow(s, flush)
           */
          hash_head = NIL;
          if (s->lookahead >= MIN_MATCH) {
@@ -780,7 +779,7 @@ index 7c95b30..59645eb 100644
          }
  
          /* Find the longest match, discarding those <= prev_length.
-@@ -2003,7 +2049,7 @@ local block_state deflate_slow(s, flush, clas)
+@@ -1805,7 +1851,7 @@ local block_state deflate_slow(s, flush)
              s->prev_length -= 2;
              do {
                  if (++s->strstart <= max_insert) {
@@ -789,7 +788,7 @@ index 7c95b30..59645eb 100644
                  }
              } while (--s->prev_length != 0);
              s->match_available = 0;
-@@ -2163,3 +2209,37 @@ local block_state deflate_huff(s, flush)
+@@ -1965,3 +2011,37 @@ local block_state deflate_huff(s, flush)
          FLUSH_BLOCK(s, 0);
      return block_done;
  }
@@ -828,10 +827,10 @@ index 7c95b30..59645eb 100644
 +    return ret;
 +}
 diff --git a/third_party/zlib/deflate.h b/third_party/zlib/deflate.h
-index c795034..c61e4ab 100644
+index ce0299edd191..022d9c326ecc 100644
 --- a/third_party/zlib/deflate.h
 +++ b/third_party/zlib/deflate.h
-@@ -109,7 +109,7 @@ typedef struct internal_state {
+@@ -106,7 +106,7 @@ typedef struct internal_state {
      uInt   gzindex;      /* where in extra, name, or comment */
      Byte  method;        /* can only be DEFLATED */
      int   last_flush;    /* value of flush param for previous deflate call */
@@ -840,7 +839,7 @@ index c795034..c61e4ab 100644
                  /* used by deflate.c: */
  
      uInt  w_size;        /* LZ77 window size (32K by default) */
-@@ -348,4 +348,14 @@ void ZLIB_INTERNAL _tr_stored_block OF((deflate_state *s, charf *buf,
+@@ -343,4 +343,14 @@ void ZLIB_INTERNAL _tr_stored_block OF((deflate_state *s, charf *buf,
                flush = _tr_tally(s, distance, length)
  #endif
  
@@ -856,9 +855,8 @@ index c795034..c61e4ab 100644
 +
  #endif /* DEFLATE_H */
 diff --git a/third_party/zlib/fill_window_sse.c b/third_party/zlib/fill_window_sse.c
-new file mode 100644
-index 0000000..949ccce
---- /dev/null
+index e69de29bb2d1..949ccce1ba9c 100644
+--- a/third_party/zlib/fill_window_sse.c
 +++ b/third_party/zlib/fill_window_sse.c
 @@ -0,0 +1,175 @@
 +/*
@@ -1036,10 +1034,28 @@ index 0000000..949ccce
 +    Assert((ulg)s->strstart <= s->window_size - MIN_LOOKAHEAD,
 +           "not enough room for search");
 +}
+diff --git a/third_party/zlib/mozzconf.h b/third_party/zlib/mozzconf.h
+index d7e9f91c5a12..10aca44b29a4 100644
+--- a/third_party/zlib/mozzconf.h
++++ b/third_party/zlib/mozzconf.h
+@@ -169,6 +169,14 @@
+ #define inflateResetKeep MOZ_Z_inflateResetKeep
+ #define gzopen_w MOZ_Z_gzopen_w
+ 
++/* Chromium-specific modifications */
++#define copy_with_crc MOZ_Z__copy_with_crc
++#define crc_finalize MOZ_Z__crc_finalize
++#define crc_reset MOZ_Z__crc_reset
++// read_buf used to be local, but this was changed in simd.patch.
++#define read_buf MOZ_Z__read_buf
++#define x86_check_features MOZ_Z__x86_check_features
++
+ /* Mangle Byte types except on Mac. */
+ #if !defined(__MACTYPES__)
+ #define Byte MOZ_Z_Byte
 diff --git a/third_party/zlib/simd_stub.c b/third_party/zlib/simd_stub.c
-new file mode 100644
-index 0000000..796f1f6
---- /dev/null
+index e69de29bb2d1..796f1f63f690 100644
+--- a/third_party/zlib/simd_stub.c
 +++ b/third_party/zlib/simd_stub.c
 @@ -0,0 +1,35 @@
 +/* simd_stub.c -- stub implementations
@@ -1078,9 +1094,8 @@ index 0000000..796f1f6
 +{
 +}
 diff --git a/third_party/zlib/x86.c b/third_party/zlib/x86.c
-new file mode 100644
-index 0000000..e6532fd
---- /dev/null
+index e69de29bb2d1..e6532fd10ddb 100644
+--- a/third_party/zlib/x86.c
 +++ b/third_party/zlib/x86.c
 @@ -0,0 +1,91 @@
 +/*
@@ -1175,9 +1190,8 @@ index 0000000..e6532fd
 +}
 +#endif  /* _MSC_VER */
 diff --git a/third_party/zlib/x86.h b/third_party/zlib/x86.h
-new file mode 100644
-index 0000000..ac3d180
---- /dev/null
+index e69de29bb2d1..ebcf10ab09d2 100644
+--- a/third_party/zlib/x86.h
 +++ b/third_party/zlib/x86.h
 @@ -0,0 +1,15 @@
 +/* x86.h -- check for x86 CPU features
@@ -1195,25 +1209,3 @@ index 0000000..ac3d180
 +void x86_check_features(void);
 +
 +#endif  /* X86_H */
-diff --git a/third_party/zlib/mozzconf.h b/third_party/zlib/mozzconf.h
-index 06918bc..10aca44 100644
---- a/third_party/zlib/mozzconf.h
-+++ b/third_party/zlib/mozzconf.h
-@@ -169,6 +169,14 @@
- #define inflateResetKeep MOZ_Z_inflateResetKeep
- #define gzopen_w MOZ_Z_gzopen_w
-
-+/* Chromium-specific modifications */
-+#define copy_with_crc MOZ_Z__copy_with_crc
-+#define crc_finalize MOZ_Z__crc_finalize
-+#define crc_reset MOZ_Z__crc_reset
-+// read_buf used to be local, but this was changed in simd.patch.
-+#define read_buf MOZ_Z__read_buf
-+#define x86_check_features MOZ_Z__x86_check_features
-+
- /* Mangle Byte types except on Mac. */
- #if !defined(__MACTYPES__)
- #define Byte MOZ_Z_Byte
---
-2.7.4
-

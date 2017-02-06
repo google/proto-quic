@@ -21,15 +21,15 @@ class SwiffyPage(page_module.Page):
     util.WaitFor(action_runner.tab.HasReachedQuiescence, 60)
     # Swiffy overwrites toString() to return a constant string, so "undo" that
     # here so that we don't think it has stomped over console.time.
-    action_runner.EvaluateJavaScript(
+    action_runner.EvaluateJavaScript2(
         'Function.prototype.toString = function() { return "[native code]"; }')
     # Make sure we have a reasonable viewport for mobile.
-    viewport_js = (
-        'var meta = document.createElement("meta");'
-        'meta.name = "viewport";'
-        'meta.content = "width=device-width";'
-        'document.getElementsByTagName("head")[0].appendChild(meta);')
-    action_runner.EvaluateJavaScript(viewport_js)
+    action_runner.EvaluateJavaScript2("""
+        var meta = document.createElement("meta");
+        meta.name = "viewport";
+        meta.content = "width=device-width";
+        document.getElementsByTagName("head")[0].appendChild(meta);
+        """)
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('ToughAd'):
@@ -68,14 +68,14 @@ class AdPage(page_module.Page):
     # Most ads have touch handlers and we want to simulate the worst case of the
     # user trying to scroll the page by grabbing an ad.
     if self._wait_for_interactive_or_better:
-        action_runner.WaitForJavaScriptCondition(
+        action_runner.WaitForJavaScriptCondition2(
             '(document.readyState == "interactive" || '
             'document.readyState == "complete") &&'
             'document.body != null && '
             'document.body.scrollHeight > window.innerHeight && '
             '!document.body.addEventListener("touchstart", function() {})')
     else:
-        action_runner.WaitForJavaScriptCondition(
+        action_runner.WaitForJavaScriptCondition2(
             'document.body != null && '
             'document.body.scrollHeight > window.innerHeight && '
             '!document.body.addEventListener("touchstart", function() {})')
@@ -104,7 +104,7 @@ class ForbesAdPage(AdPage):
   def RunNavigateSteps(self, action_runner):
     super(ForbesAdPage, self).RunNavigateSteps(action_runner)
     # Wait until the interstitial banner goes away.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.location.pathname.indexOf("welcome") == -1')
 
 
@@ -189,9 +189,8 @@ class ToughAdCasesPageSet(story.StorySet):
         self, scroll=scroll))
     self.AddStory(AdPage('http://androidcentral.com', self, scroll=scroll,
         wait_for_interactive_or_better=True))
-    # Disabled: crbug.com/682349
-    #self.AddStory(AdPage('http://mashable.com', self, scroll=scroll,
-    #    y_scroll_distance_multiplier=0.25))
+    self.AddStory(AdPage('http://mashable.com', self, scroll=scroll,
+        y_scroll_distance_multiplier=0.25))
     self.AddStory(AdPage('http://www.androidauthority.com/'
         'reduce-data-use-turn-on-data-compression-in-chrome-630064/', self,
         scroll=scroll))

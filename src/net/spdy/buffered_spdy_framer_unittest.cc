@@ -81,15 +81,14 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
 
   void OnPing(SpdyPingId unique_id, bool is_ack) override {}
 
-  void OnRstStream(SpdyStreamId stream_id,
-                   SpdyRstStreamStatus status) override {}
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override {}
 
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status,
+                SpdyErrorCode error_code,
                 base::StringPiece debug_data) override {
     goaway_count_++;
     goaway_last_accepted_stream_id_ = last_accepted_stream_id;
-    goaway_status_ = status;
+    goaway_error_code_ = error_code;
     goaway_debug_data_.assign(debug_data.data(), debug_data.size());
   }
 
@@ -123,7 +122,7 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
     altsvc_vector_ = altsvc_vector;
   }
 
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override {
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override {
     return true;
   }
 
@@ -167,7 +166,7 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
 
   // OnGoAway parameters.
   SpdyStreamId goaway_last_accepted_stream_id_;
-  SpdyGoAwayStatus goaway_status_;
+  SpdyErrorCode goaway_error_code_;
   std::string goaway_debug_data_;
 
   // OnAltSvc parameters.
@@ -264,7 +263,7 @@ TEST_F(BufferedSpdyFramerTest, ReadPushPromiseHeaderBlock) {
 TEST_F(BufferedSpdyFramerTest, GoAwayDebugData) {
   BufferedSpdyFramer framer;
   std::unique_ptr<SpdySerializedFrame> goaway_frame(
-      framer.CreateGoAway(2u, GOAWAY_FRAME_SIZE_ERROR, "foo"));
+      framer.CreateGoAway(2u, ERROR_CODE_FRAME_SIZE_ERROR, "foo"));
 
   TestBufferedSpdyVisitor visitor;
   visitor.SimulateInFramer(
@@ -273,7 +272,7 @@ TEST_F(BufferedSpdyFramerTest, GoAwayDebugData) {
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(1, visitor.goaway_count_);
   EXPECT_EQ(2u, visitor.goaway_last_accepted_stream_id_);
-  EXPECT_EQ(GOAWAY_FRAME_SIZE_ERROR, visitor.goaway_status_);
+  EXPECT_EQ(ERROR_CODE_FRAME_SIZE_ERROR, visitor.goaway_error_code_);
   EXPECT_EQ("foo", visitor.goaway_debug_data_);
 }
 

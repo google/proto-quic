@@ -356,10 +356,8 @@ std::unique_ptr<URLRequestContext> URLRequestContextBuilder::Build() {
   } else {
     std::unique_ptr<CookieStore> cookie_store(
         new CookieMonster(nullptr, nullptr));
-    // TODO(mmenke):  This always creates a file thread, even when it ends up
-    // not being used.  Consider lazily creating the thread.
-    std::unique_ptr<ChannelIDService> channel_id_service(new ChannelIDService(
-        new DefaultChannelIDStore(NULL), context->GetFileTaskRunner()));
+    std::unique_ptr<ChannelIDService> channel_id_service(
+        new ChannelIDService(new DefaultChannelIDStore(NULL)));
     cookie_store->SetChannelIDServiceID(channel_id_service->GetUniqueID());
     storage->set_cookie_store(std::move(cookie_store));
     storage->set_channel_id_service(std::move(channel_id_service));

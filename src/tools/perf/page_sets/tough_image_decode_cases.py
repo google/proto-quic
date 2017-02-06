@@ -16,7 +16,7 @@ class ToughImageDecodeCasesPage(page_module.Page):
     self.archive_data_file = 'data/tough_image_decode_cases.json'
 
   def RunPageInteractions(self, action_runner):
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
       'document.readyState === "complete"')
     action_runner.ScrollPage(direction='down', speed_in_pixels_per_second=5000)
     with action_runner.CreateGestureInteraction('ScrollAction'):

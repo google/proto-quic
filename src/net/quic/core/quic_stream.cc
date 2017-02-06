@@ -4,10 +4,8 @@
 
 #include "net/quic/core/quic_stream.h"
 
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/core/quic_session.h"
-#include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
 

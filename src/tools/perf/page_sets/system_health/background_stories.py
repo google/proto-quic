@@ -56,7 +56,7 @@ class BackgroundNytimesMobileStory(_BackgroundStory):
     action_runner.WaitForElement(selector='#additional-content button')
     action_runner.ScrollPageToElement(selector='#additional-content button')
     # TapElement seems flaky here so use JavaScript instead.
-    action_runner.ExecuteJavaScript(
+    action_runner.ExecuteJavaScript2(
         'document.querySelector("#additional-content button").click()')
 
     # Scroll to video, start it and then wait for a few seconds.

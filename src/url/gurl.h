@@ -405,6 +405,10 @@ class URL_EXPORT GURL {
     return inner_url_.get();
   }
 
+  // Estimates dynamic memory usage.
+  // See base/trace_event/memory_usage_estimator.h for more info.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // Variant of the string parsing constructor that allows the caller to elect
   // retain trailing whitespace, if any, on the passed URL spec, but only if

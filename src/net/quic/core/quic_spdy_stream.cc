@@ -19,7 +19,6 @@ using base::StringPiece;
 using std::string;
 
 namespace net {
-
 #define ENDPOINT                                                               \
   (session()->perspective() == Perspective::IS_SERVER ? "Server: " : "Client:" \
                                                                      " ")

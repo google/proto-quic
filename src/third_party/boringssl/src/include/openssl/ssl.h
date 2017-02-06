@@ -1726,25 +1726,46 @@ OPENSSL_EXPORT SSL_SESSION *SSL_get_session(const SSL *ssl);
 OPENSSL_EXPORT SSL_SESSION *SSL_get1_session(SSL *ssl);
 
 /* SSL_DEFAULT_SESSION_TIMEOUT is the default lifetime, in seconds, of a
- * session. */
+ * session in TLS 1.2 or earlier. This is how long we are willing to use the
+ * secret to encrypt traffic without fresh key material. */
 #define SSL_DEFAULT_SESSION_TIMEOUT (2 * 60 * 60)
 
-/* SSL_CTX_set_timeout sets the lifetime, in seconds, of sessions created in
- * |ctx| to |timeout|. */
+/* SSL_DEFAULT_SESSION_PSK_DHE_TIMEOUT is the default lifetime, in seconds, of a
+ * session for TLS 1.3 psk_dhe_ke. This is how long we are willing to use the
+ * secret as an authenticator. */
+#define SSL_DEFAULT_SESSION_PSK_DHE_TIMEOUT (2 * 24 * 60 * 60)
+
+/* SSL_DEFAULT_SESSION_AUTH_TIMEOUT is the default non-renewable lifetime, in
+ * seconds, of a TLS 1.3 session. This is how long we are willing to trust the
+ * signature in the initial handshake. */
+#define SSL_DEFAULT_SESSION_AUTH_TIMEOUT (7 * 24 * 60 * 60)
+
+/* SSL_CTX_set_timeout sets the lifetime, in seconds, of TLS 1.2 (or earlier)
+ * sessions created in |ctx| to |timeout|. */
 OPENSSL_EXPORT long SSL_CTX_set_timeout(SSL_CTX *ctx, long timeout);
 
-/* SSL_CTX_get_timeout returns the lifetime, in seconds, of sessions created in
- * |ctx|. */
+/* SSL_CTX_set_session_psk_dhe_timeout sets the lifetime, in seconds, of TLS 1.3
+ * sessions created in |ctx| to |timeout|. */
+OPENSSL_EXPORT void SSL_CTX_set_session_psk_dhe_timeout(SSL_CTX *ctx,
+                                                        long timeout);
+
+/* SSL_CTX_get_timeout returns the lifetime, in seconds, of TLS 1.2 (or earlier)
+ * sessions created in |ctx|. */
 OPENSSL_EXPORT long SSL_CTX_get_timeout(const SSL_CTX *ctx);
 
-/* SSL_set_session_timeout sets the default lifetime, in seconds, of the
- * session created in |ssl| to |timeout|, and returns the old value.
+/* SSL_set_session_timeout sets the default lifetime, in seconds, of a TLS 1.2
+ * (or earlier) session created in |ssl| to |timeout|, and returns the old
+ * value.
  *
  * By default the value |SSL_DEFAULT_SESSION_TIMEOUT| is used, which can be
  * overridden at the context level by calling |SSL_CTX_set_timeout|.
  *
  * If |timeout| is zero the newly created session will not be resumable. */
 OPENSSL_EXPORT long SSL_set_session_timeout(SSL *ssl, long timeout);
+
+/* SSL_set_session_psk_dhe_timeout sets the lifetime, in seconds, of TLS 1.3
+ * sessions created in |ssl| to |timeout|. */
+OPENSSL_EXPORT void SSL_set_session_psk_dhe_timeout(SSL *ssl, long timeout);
 
 /* SSL_CTX_set_session_id_context sets |ctx|'s session ID context to |sid_ctx|.
  * It returns one on success and zero on error. The session ID context is an
@@ -2968,6 +2989,10 @@ OPENSSL_EXPORT int SSL_CTX_set_max_send_fragment(SSL_CTX *ctx,
 OPENSSL_EXPORT int SSL_set_max_send_fragment(SSL *ssl,
                                              size_t max_send_fragment);
 
+/* SSL_get_v2clienthello_count returns the total number of V2ClientHellos that
+ * are accepted. */
+OPENSSL_EXPORT uint64_t SSL_get_v2clienthello_count(void);
+
 /* ssl_early_callback_ctx (aka |SSL_CLIENT_HELLO|) is passed to certain
  * callbacks that are called very early on during the server handshake. At this
  * point, much of the SSL* hasn't been filled out and only the ClientHello can
@@ -3732,8 +3757,13 @@ struct ssl_session_st {
    * non-fatal certificate errors. */
   long verify_result;
 
-  /* timeout is the lifetime of the session in seconds, measured from |time|. */
+  /* timeout is the lifetime of the session in seconds, measured from |time|.
+   * This is renewable up to |auth_timeout|. */
   long timeout;
+
+  /* auth_timeout is the non-renewable lifetime of the session in seconds,
+   * measured from |time|. */
+  long auth_timeout;
 
   /* time is the time the session was issued, measured in seconds from the UNIX
    * epoch. */
@@ -3868,9 +3898,13 @@ struct ssl_ctx_st {
    * SSL_accept which cache SSL_SESSIONS. */
   int session_cache_mode;
 
-  /* If timeout is not 0, it is the default timeout value set when SSL_new() is
-   * called.  This has been put in to make life easier to set things up */
+  /* session_timeout is the default lifetime for new sessions in TLS 1.2 and
+   * earlier, in seconds. */
   long session_timeout;
+
+  /* session_psk_dhe_timeout is the default lifetime for new sessions in TLS
+   * 1.3, in seconds. */
+  long session_psk_dhe_timeout;
 
   /* If this callback is not null, it will be called each time a session id is
    * added to the cache.  If this function returns 1, it means that the
@@ -4106,17 +4140,6 @@ struct ssl_st {
   BIO *rbio; /* used by SSL_read */
   BIO *wbio; /* used by SSL_write */
 
-  /* bbio, if non-NULL, is a buffer placed in front of |wbio| to pack handshake
-   * messages within one flight into a single |BIO_write|. In this case, |wbio|
-   * and |bbio| are equal and the true caller-configured BIO is
-   * |bbio->next_bio|.
-   *
-   * TODO(davidben): This does not work right for DTLS. It assumes the MTU is
-   * smaller than the buffer size so that the buffer's internal flushing never
-   * kicks in. It also doesn't kick in for DTLS retransmission. Replace this
-   * with a better mechanism. */
-  BIO *bbio;
-
   int (*handshake_func)(SSL_HANDSHAKE *hs);
 
   BUF_MEM *init_buf; /* buffer used during init */
@@ -4125,10 +4148,6 @@ struct ssl_st {
   const uint8_t *init_msg;
   /* init_num is the length of the current handshake message body. */
   uint32_t init_num;
-
-  /* init_off, in DTLS, is the number of bytes of the current message that have
-   * been written. */
-  uint32_t init_off;
 
   struct ssl3_state_st *s3;  /* SSLv3 variables */
   struct dtls1_state_st *d1; /* DTLSv1 variables */
@@ -4249,8 +4268,12 @@ struct ssl_st {
   unsigned retain_only_sha256_of_client_certs:1;
 
   /* session_timeout is the default lifetime in seconds of the session
-   * created in this connection. */
+   * created in this connection at TLS 1.2 and earlier. */
   long session_timeout;
+
+  /* session_psk_dhe_timeout is the default lifetime in seconds of sessions
+   * created in this connection at TLS 1.3. */
+  long session_psk_dhe_timeout;
 
   /* OCSP response to be sent to the client, if requested. */
   CRYPTO_BUFFER *ocsp_response;

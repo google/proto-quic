@@ -1,3 +1,0 @@
-gen/ash/resources/grit/ash_resources.h
-gen/ash/resources/ash_resources_100_percent.pak
-gen/ash/resources/ash_resources_200_percent.pak

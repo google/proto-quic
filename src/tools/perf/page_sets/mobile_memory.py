@@ -59,7 +59,7 @@ class GoogleSearchPage(MobileMemoryPage):
     action_runner.Wait(3)
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("rg_s").childElementCount > 300')
 
 

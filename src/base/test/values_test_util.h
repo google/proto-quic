@@ -13,8 +13,8 @@
 namespace base {
 class DictionaryValue;
 class ListValue;
-class StringValue;
 class Value;
+using StringValue = Value;
 
 // All the functions below expect that the value for the given key in
 // the given dictionary equals the given expected value.

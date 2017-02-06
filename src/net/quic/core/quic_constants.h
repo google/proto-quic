@@ -27,6 +27,7 @@ const uint64_t kNumMicrosPerSecond = 1000 * 1000;
 
 // Default initial maximum size in bytes of a QUIC packet.
 const QuicByteCount kDefaultMaxPacketSize = 1350;
+// Default initial maximum size in bytes of a QUIC packet for servers.
 const QuicByteCount kDefaultServerMaxPacketSize = 1000;
 // The maximum packet size of any QUIC packet, based on ethernet's max size,
 // minus the IP and UDP headers. IPv6 has a 40 byte header, UDP adds an

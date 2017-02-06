@@ -7,7 +7,6 @@
 #include <limits>
 #include <utility>
 
-#include "net/base/linked_hash_map.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
@@ -72,8 +71,8 @@ bool QuicReceivedPacketManager::IsMissing(QuicPacketNumber packet_number) {
 
 bool QuicReceivedPacketManager::IsAwaitingPacket(
     QuicPacketNumber packet_number) {
-  return ::net::IsAwaitingPacket(ack_frame_, packet_number,
-                                 peer_least_packet_awaiting_ack_);
+  return net::IsAwaitingPacket(ack_frame_, packet_number,
+                               peer_least_packet_awaiting_ack_);
 }
 
 const QuicFrame QuicReceivedPacketManager::GetUpdatedAckFrame(

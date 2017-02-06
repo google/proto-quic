@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <vector>
+
 #include "base/compiler_specific.h"
 #include "base/macros.h"
 #include "crypto/ec_signature_creator.h"

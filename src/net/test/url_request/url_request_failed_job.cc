@@ -114,13 +114,6 @@ int URLRequestFailedJob::ReadRawData(IOBuffer* buf, int buf_size) {
   return ERR_IO_PENDING;
 }
 
-int URLRequestFailedJob::GetResponseCode() const {
-  // If we have headers, get the response code from them.
-  if (response_info_.headers)
-    return response_info_.headers->response_code();
-  return URLRequestJob::GetResponseCode();
-}
-
 void URLRequestFailedJob::GetResponseInfo(HttpResponseInfo* info) {
   *info = response_info_;
 }

@@ -5,7 +5,9 @@
 #include "net/http/bidirectional_stream.h"
 
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -1212,7 +1214,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamAfterSendData) {
   SpdySerializedFrame data_frame(spdy_util_.ConstructSpdyDataFrame(
       1, kBodyData, kBodyDataSize, /*fin=*/false));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(data_frame, 3),
@@ -1272,7 +1274,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringReadData) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kBodyDataSize * 3, LOWEST, nullptr, 0));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 4),
@@ -1333,7 +1335,7 @@ TEST_F(BidirectionalStreamTest, PropagateProtocolError) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kBodyDataSize * 3, LOW, nullptr, 0));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
@@ -1400,7 +1402,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnHeadersReceived) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
 
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
   };
@@ -1449,7 +1451,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnDataRead) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
 
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 3),
   };
@@ -1502,7 +1504,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnTrailersReceived) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
 
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 4),
   };
@@ -1560,7 +1562,7 @@ TEST_F(BidirectionalStreamTest, DeleteStreamDuringOnFailed) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyGet(kDefaultUrl, 1, LOWEST));
 
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),

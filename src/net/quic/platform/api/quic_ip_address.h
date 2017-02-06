@@ -17,6 +17,10 @@ class QUIC_EXPORT_PRIVATE QuicIpAddress {
   // implementation (platform dependent) of an IP address is in
   // QuicIpAddressImpl.
  public:
+  enum : size_t {
+    kIPv4AddressSize = QuicIpAddressImpl::kIPv4AddressSize,
+    kIPv6AddressSize = QuicIpAddressImpl::kIPv6AddressSize
+  };
   static QuicIpAddress Loopback4();
   static QuicIpAddress Loopback6();
   static QuicIpAddress Any4();

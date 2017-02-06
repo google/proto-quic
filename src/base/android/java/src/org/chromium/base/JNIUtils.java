@@ -12,6 +12,8 @@ import org.chromium.base.annotations.MainDex;
  */
 @MainDex
 public class JNIUtils {
+    private static Boolean sSelectiveJniRegistrationEnabled;
+
     /**
      * This returns a ClassLoader that is capable of loading Chromium Java code. Such a ClassLoader
      * is needed for the few cases where the JNI mechanism is unable to automatically determine the
@@ -20,5 +22,25 @@ public class JNIUtils {
     @CalledByNative
     public static Object getClassLoader() {
         return JNIUtils.class.getClassLoader();
+    }
+
+    /**
+     * @return whether or not the current process supports selective JNI registration.
+     */
+    @CalledByNative
+    public static boolean isSelectiveJniRegistrationEnabled() {
+        if (sSelectiveJniRegistrationEnabled == null) {
+            sSelectiveJniRegistrationEnabled = false;
+        }
+        return sSelectiveJniRegistrationEnabled;
+    }
+
+    /**
+     * Allow this process to selectively perform JNI registration. This must be called before
+     * loading native libraries or it will have no effect.
+     */
+    public static void enableSelectiveJniRegistration() {
+        assert sSelectiveJniRegistrationEnabled == null;
+        sSelectiveJniRegistrationEnabled = true;
     }
 }

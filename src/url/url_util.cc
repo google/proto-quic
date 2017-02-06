@@ -193,9 +193,7 @@ bool DoCanonicalize(const CHAR* spec,
                     CharsetConverter* charset_converter,
                     CanonOutput* output,
                     Parsed* output_parsed) {
-  // Reserve enough room in the output for the input, plus some extra so that
-  // we have room if we have to escape a few things without reallocating.
-  output->ReserveSizeIfNeeded(spec_len + 8);
+  output->ReserveSizeIfNeeded(spec_len);
 
   // Remove any whitespace from the middle of the relative URL if necessary.
   // Possibly this will result in copying to the new buffer.
@@ -423,7 +421,7 @@ bool DoReplaceComponents(const char* spec,
   // in callers below, and the code checks to see which components are being
   // replaced, and with what length. If this ends up being a hot spot it should
   // be changed.
-  output->ReserveSizeIfNeeded(spec_len + 8);
+  output->ReserveSizeIfNeeded(spec_len);
 
   // If we get here, then we know the scheme doesn't need to be replaced, so can
   // just key off the scheme in the spec to know how to do the replacements.

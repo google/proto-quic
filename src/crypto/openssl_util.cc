@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <string>
+
 #include "base/logging.h"
 #include "base/strings/string_piece.h"
 #include "third_party/boringssl/src/include/openssl/crypto.h"

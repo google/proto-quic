@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <list>
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "base/bind.h"
@@ -436,7 +438,7 @@ void SpdyHttpStream::InitializeStreamHelper() {
 }
 
 void SpdyHttpStream::ResetStreamInternal() {
-  spdy_session_->ResetStream(stream()->stream_id(), RST_STREAM_INTERNAL_ERROR,
+  spdy_session_->ResetStream(stream()->stream_id(), ERROR_CODE_INTERNAL_ERROR,
                              std::string());
 }
 

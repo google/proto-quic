@@ -228,7 +228,6 @@ TEST_P(QuicCryptoServerStreamTest, ForwardSecureAfterCHLO) {
 
 TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
   FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
-
   Initialize();
 
   EXPECT_CALL(*server_connection_,
@@ -262,7 +261,6 @@ TEST_P(QuicCryptoServerStreamTest, StatelessRejectAfterCHLO) {
 
 TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
   FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
-
   Initialize();
 
   InitializeFakeClient(/* supports_stateless_rejects= */ true);
@@ -306,7 +304,6 @@ TEST_P(QuicCryptoServerStreamTest, ConnectedAfterStatelessHandshake) {
 
 TEST_P(QuicCryptoServerStreamTest, NoStatelessRejectIfNoClientSupport) {
   FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
-
   Initialize();
 
   // The server is configured to use stateless rejects, but the client does not
@@ -508,6 +505,5 @@ TEST_P(QuicCryptoServerStreamTestWithFailingProofSource, Test) {
 }
 
 }  // namespace
-
 }  // namespace test
 }  // namespace net

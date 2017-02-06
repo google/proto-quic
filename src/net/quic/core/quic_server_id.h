@@ -31,15 +31,11 @@ class QUIC_EXPORT_PRIVATE QuicServerId {
   bool operator<(const QuicServerId& other) const;
   bool operator==(const QuicServerId& other) const;
 
-  // Creates a QuicServerId from a string formatted in same manner as
-  // ToString().
-  static QuicServerId FromString(const std::string& str);
-
   // ToString() will convert the QuicServerId to "scheme:hostname:port" or
   // "scheme:hostname:port/private". "scheme" will be "https".
   std::string ToString() const;
 
-  // Used in Chromium, but not in the server.
+  // Used in Chromium, but not internally.
   const HostPortPair& host_port_pair() const { return host_port_pair_; }
 
   const std::string& host() const { return host_port_pair_.host(); }

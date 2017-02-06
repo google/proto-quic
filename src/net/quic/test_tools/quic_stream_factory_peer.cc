@@ -174,7 +174,9 @@ void QuicStreamFactoryPeer::CacheDummyServerConfig(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
   DCHECK(cert);
   std::string der_bytes;
-  DCHECK(X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der_bytes));
+  bool success =
+      X509Certificate::GetDEREncoded(cert->os_cert_handle(), &der_bytes);
+  DCHECK(success);
   certs.push_back(der_bytes);
 
   QuicCryptoClientConfig* crypto_config = &factory->crypto_config_;

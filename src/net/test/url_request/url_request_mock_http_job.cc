@@ -203,15 +203,6 @@ bool URLRequestMockHTTPJob::GetMimeType(std::string* mime_type) const {
   return info.headers.get() && info.headers->GetMimeType(mime_type);
 }
 
-int URLRequestMockHTTPJob::GetResponseCode() const {
-  HttpResponseInfo info;
-  GetResponseInfoConst(&info);
-  // If we have headers, get the response code from them.
-  if (info.headers.get())
-    return info.headers->response_code();
-  return URLRequestJob::GetResponseCode();
-}
-
 bool URLRequestMockHTTPJob::GetCharset(std::string* charset) {
   HttpResponseInfo info;
   GetResponseInfo(&info);

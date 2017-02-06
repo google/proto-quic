@@ -94,9 +94,6 @@ typedef unsigned IPos;
  * save space in the various tables. IPos is used only for parameter passing.
  */
 
-#define Z_COOKIE_HASH_SIZE 256
-#define Z_COOKIE_HASH_MASK (Z_COOKIE_HASH_SIZE-1)
-
 typedef struct internal_state {
     z_streamp strm;      /* pointer back to this zlib stream */
     int   status;        /* as the name implies */
@@ -145,8 +142,6 @@ typedef struct internal_state {
     uInt  hash_mask;      /* hash_size-1 */
 
     uInt  hash_shift;
-    Bytef *class_bitmap;  /* bitmap of class for each byte in window */
-    IPos cookie_locations[Z_COOKIE_HASH_SIZE];
     /* Number of bits by which ins_h must be shifted at each input
      * step. It must be such that after MIN_MATCH steps, the oldest
      * byte no longer takes part in the hash key, that is:

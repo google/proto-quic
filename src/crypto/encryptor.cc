@@ -32,7 +32,7 @@ const EVP_CIPHER* GetCipherForKey(SymmetricKey* key) {
 // ERR stack as a convenience.
 class ScopedCipherCTX {
  public:
-  explicit ScopedCipherCTX() {
+  ScopedCipherCTX() {
     EVP_CIPHER_CTX_init(&ctx_);
   }
   ~ScopedCipherCTX() {

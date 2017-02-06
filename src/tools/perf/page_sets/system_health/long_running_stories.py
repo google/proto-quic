@@ -65,12 +65,12 @@ class _LongRunningGmailMobileBase(_LongRunningGmailBase):
 
   def _DidLoadDocument(self, action_runner):
     # Close the "Get Inbox by Gmail" interstitial.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.querySelector("#isppromo a") !== null')
-    action_runner.ExecuteJavaScript(
+    action_runner.ExecuteJavaScript2(
         'document.querySelector("#isppromo a").click()')
     # Wait until the UI loads.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("apploadingdiv").style.height === "0px"')
 
 
@@ -79,7 +79,7 @@ class _LongRunningGmailDesktopBase(_LongRunningGmailBase):
 
   def _DidLoadDocument(self, action_runner):
     # Wait until the UI loads.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("loading").style.display === "none"')
 
 

@@ -1826,6 +1826,7 @@ __bn_sqr8x_reduction:
 
 .align	32
 .L8x_tail_done:
+	xorq	%rax,%rax
 	addq	(%rdx),%r8
 	adcq	$0,%r9
 	adcq	$0,%r10
@@ -1834,9 +1835,7 @@ __bn_sqr8x_reduction:
 	adcq	$0,%r13
 	adcq	$0,%r14
 	adcq	$0,%r15
-
-
-	xorq	%rax,%rax
+	adcq	$0,%rax
 
 	negq	%rsi
 .L8x_no_tail:

@@ -11,9 +11,9 @@
 #ifndef NET_QUIC_CORE_QUIC_TIME_H_
 #define NET_QUIC_CORE_QUIC_TIME_H_
 
-#include <stdint.h>
-
 #include <cmath>
+#include <cstdint>
+#include <limits>
 #include <ostream>
 
 #include "base/compiler_specific.h"

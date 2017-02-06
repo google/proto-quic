@@ -211,6 +211,7 @@ class TwitterDesktopStory(_NewsBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
 
 
+@decorators.Disabled('all')  # crbug.com/688190
 class WashingtonPostMobileStory(_NewsBrowsingStory):
   """Progressive website"""
   NAME = 'browse:news:washingtonpost'
@@ -225,7 +226,7 @@ class WashingtonPostMobileStory(_NewsBrowsingStory):
     # window does not have a "Close" button, instead it has only a "Send link
     # to phone" button. So on tablets we run with the popup window open. The
     # popup is transparent, so this is mostly an aesthetical issue.
-    has_button = action_runner.EvaluateJavaScript(
+    has_button = action_runner.EvaluateJavaScript2(
         '!!document.querySelector({{ selector }})',
         selector=self._CLOSE_BUTTON_SELECTOR)
     if has_button:
@@ -319,7 +320,7 @@ class GoogleIndiaDesktopStory(_NewsBrowsingStory):
     # Refine search query in the search box.
     # TODO(nednguyen): replace this with input text gesture to make it more
     # realistic.
-    action_runner.ExecuteJavaScript(
+    action_runner.ExecuteJavaScript2(
         js_template.Render(
             'document.querySelector({{ selector }}).value += "वितरण";',
             selector=self._SEARCH_BOX_SELECTOR))

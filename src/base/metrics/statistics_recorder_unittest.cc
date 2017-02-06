@@ -12,6 +12,7 @@
 #include "base/bind.h"
 #include "base/json/json_reader.h"
 #include "base/logging.h"
+#include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/sparse_histogram.h"
@@ -654,6 +655,76 @@ TEST_P(StatisticsRecorderTest, LogOnShutdownInitialized) {
   InitializeStatisticsRecorder();
   EXPECT_TRUE(VLOG_IS_ON(1));
   EXPECT_TRUE(VLogInitialized());
+}
+
+class TestHistogramProvider : public StatisticsRecorder::HistogramProvider {
+ public:
+  TestHistogramProvider(std::unique_ptr<PersistentHistogramAllocator> allocator)
+      : allocator_(std::move(allocator)), weak_factory_(this) {
+    StatisticsRecorder::RegisterHistogramProvider(weak_factory_.GetWeakPtr());
+  }
+
+  void MergeHistogramDeltas() override {
+    PersistentHistogramAllocator::Iterator hist_iter(allocator_.get());
+    while (true) {
+      std::unique_ptr<base::HistogramBase> histogram = hist_iter.GetNext();
+      if (!histogram)
+        break;
+      allocator_->MergeHistogramDeltaToStatisticsRecorder(histogram.get());
+    }
+  }
+
+ private:
+  std::unique_ptr<PersistentHistogramAllocator> allocator_;
+  WeakPtrFactory<TestHistogramProvider> weak_factory_;
+
+  DISALLOW_COPY_AND_ASSIGN(TestHistogramProvider);
+};
+
+TEST_P(StatisticsRecorderTest, ImportHistogramsTest) {
+  // Create a second SR to create some histograms for later import.
+  std::unique_ptr<StatisticsRecorder> temp_sr =
+      StatisticsRecorder::CreateTemporaryForTesting();
+
+  // Extract any existing global allocator so a new one can be created.
+  std::unique_ptr<GlobalHistogramAllocator> old_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
+
+  // Create a histogram inside a new allocator for testing.
+  GlobalHistogramAllocator::CreateWithLocalMemory(kAllocatorMemorySize, 0, "");
+  HistogramBase* histogram = LinearHistogram::FactoryGet("Foo", 1, 10, 11, 0);
+  histogram->Add(3);
+
+  // Undo back to the starting point.
+  std::unique_ptr<GlobalHistogramAllocator> new_allocator =
+      GlobalHistogramAllocator::ReleaseForTesting();
+  GlobalHistogramAllocator::Set(std::move(old_allocator));
+  temp_sr.reset();
+
+  // Create a provider that can supply histograms to the current SR.
+  TestHistogramProvider provider(std::move(new_allocator));
+
+  // Verify that the created histogram is no longer known.
+  ASSERT_FALSE(StatisticsRecorder::FindHistogram(histogram->histogram_name()));
+
+  // Now test that it merges.
+  StatisticsRecorder::ImportProvidedHistograms();
+  HistogramBase* found =
+      StatisticsRecorder::FindHistogram(histogram->histogram_name());
+  ASSERT_TRUE(found);
+  EXPECT_NE(histogram, found);
+  std::unique_ptr<HistogramSamples> snapshot = found->SnapshotSamples();
+  EXPECT_EQ(1, snapshot->TotalCount());
+  EXPECT_EQ(1, snapshot->GetCount(3));
+
+  // Finally, verify that updates can also be merged.
+  histogram->Add(3);
+  histogram->Add(5);
+  StatisticsRecorder::ImportProvidedHistograms();
+  snapshot = found->SnapshotSamples();
+  EXPECT_EQ(3, snapshot->TotalCount());
+  EXPECT_EQ(2, snapshot->GetCount(3));
+  EXPECT_EQ(1, snapshot->GetCount(5));
 }
 
 }  // namespace base

@@ -4,8 +4,6 @@
 
 #include "net/quic/core/quic_socket_address_coder.h"
 
-#include "net/base/sys_addrinfo.h"
-
 using std::string;
 
 namespace net {
@@ -59,10 +57,10 @@ bool QuicSocketAddressCoder::Decode(const char* data, size_t length) {
   size_t ip_length;
   switch (address_family) {
     case kIPv4:
-      ip_length = IPAddress::kIPv4AddressSize;
+      ip_length = QuicIpAddress::kIPv4AddressSize;
       break;
     case kIPv6:
-      ip_length = IPAddress::kIPv6AddressSize;
+      ip_length = QuicIpAddress::kIPv6AddressSize;
       break;
     default:
       return false;

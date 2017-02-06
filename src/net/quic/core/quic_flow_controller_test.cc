@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "base/format_macros.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_flow_controller_peer.h"

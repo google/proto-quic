@@ -12,6 +12,7 @@
 #include "base/android/early_trace_event_binding.h"
 #include "base/android/field_trial_list.h"
 #include "base/android/important_file_writer_android.h"
+#include "base/android/java_exception_reporter.h"
 #include "base/android/java_handler_thread.h"
 #include "base/android/jni_android.h"
 #include "base/android/jni_registrar.h"
@@ -44,6 +45,7 @@ static RegistrationMethod kBaseRegisteredMethods[] = {
      base::android::RegisterImportantFileWriterAndroid},
     {"MemoryPressureListenerAndroid",
      base::android::MemoryPressureListenerAndroid::Register},
+    {"JavaExceptionReporter", base::android::RegisterJavaExceptionReporterJni},
     {"JavaHandlerThread", base::android::JavaHandlerThread::RegisterBindings},
     {"PathService", base::android::RegisterPathService},
     {"PowerMonitor", base::RegisterPowerMonitor},

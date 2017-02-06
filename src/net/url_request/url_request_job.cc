@@ -334,7 +334,10 @@ bool URLRequestJob::GetMimeType(std::string* mime_type) const {
 }
 
 int URLRequestJob::GetResponseCode() const {
-  return -1;
+  HttpResponseHeaders* headers = request_->response_headers();
+  if (!headers)
+    return -1;
+  return headers->response_code();
 }
 
 HostPortPair URLRequestJob::GetSocketAddress() const {

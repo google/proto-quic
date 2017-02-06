@@ -103,10 +103,8 @@ TEST(RSAPrivateKeyUnitTest, InitRandomTest) {
 
   ASSERT_EQ(privkey1.size(), privkey3.size());
   ASSERT_EQ(privkey2.size(), privkey4.size());
-  ASSERT_TRUE(0 == memcmp(&privkey1.front(), &privkey3.front(),
-                          privkey1.size()));
-  ASSERT_TRUE(0 == memcmp(&privkey2.front(), &privkey4.front(),
-                          privkey2.size()));
+  ASSERT_EQ(0, memcmp(&privkey1.front(), &privkey3.front(), privkey1.size()));
+  ASSERT_EQ(0, memcmp(&privkey2.front(), &privkey4.front(), privkey2.size()));
 }
 
 // Test Copy() method.
@@ -195,8 +193,8 @@ TEST(RSAPrivateKeyUnitTest, PublicKeyTest) {
   std::vector<uint8_t> output;
   ASSERT_TRUE(key->ExportPublicKey(&output));
 
-  ASSERT_TRUE(
-      memcmp(expected_public_key_info, &output.front(), output.size()) == 0);
+  ASSERT_EQ(0,
+            memcmp(expected_public_key_info, &output.front(), output.size()));
 }
 
 // These two test keys each contain an integer that has 0x00 for its most
@@ -349,10 +347,8 @@ TEST(RSAPrivateKeyUnitTest, ShortIntegers) {
 
   ASSERT_EQ(input1.size(), output1.size());
   ASSERT_EQ(input2.size(), output2.size());
-  ASSERT_TRUE(0 == memcmp(&output1.front(), &input1.front(),
-                          input1.size()));
-  ASSERT_TRUE(0 == memcmp(&output2.front(), &input2.front(),
-                          input2.size()));
+  ASSERT_EQ(0, memcmp(&output1.front(), &input1.front(), input1.size()));
+  ASSERT_EQ(0, memcmp(&output2.front(), &input2.front(), input2.size()));
 }
 
 TEST(RSAPrivateKeyUnitTest, CreateFromKeyTest) {

@@ -13,7 +13,6 @@
 #include "base/memory/ptr_util.h"
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
-#include "base/threading/thread_task_runner_handle.h"
 #include "net/base/test_proxy_delegate.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_policy_enforcer.h"
@@ -229,8 +228,7 @@ class QuicStreamFactoryTestBase {
                       Perspective::IS_SERVER),
         cert_verifier_(CertVerifier::CreateDefault()),
         channel_id_service_(
-            new ChannelIDService(new DefaultChannelIDStore(nullptr),
-                                 base::ThreadTaskRunnerHandle::Get())),
+            new ChannelIDService(new DefaultChannelIDStore(nullptr))),
         cert_transparency_verifier_(new MultiLogCTVerifier()),
         scoped_mock_network_change_notifier_(nullptr),
         factory_(nullptr),

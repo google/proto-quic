@@ -21,23 +21,6 @@ secondary_source = "//build/secondary/"
 # Chrome defaults should go here. There should be no overrides here for
 # values declared in the main Chrome repository.
 default_args = {
-  v8_extra_library_files = [
-    # Dependencies used by the extra libraries. Putting them here causes them
-    # to be executed first during snapshot creation.
-    "//third_party/WebKit/Source/core/streams/CommonStrings.js",
-
-    # Extra libraries.
-    "//third_party/WebKit/Source/core/streams/ByteLengthQueuingStrategy.js",
-    "//third_party/WebKit/Source/core/streams/CountQueuingStrategy.js",
-    "//third_party/WebKit/Source/core/streams/ReadableStream.js",
-  ]
-  v8_experimental_extra_library_files = [
-    "//third_party/WebKit/Source/core/streams/ReadableStreamExperimentalPipeTo.js",
-    "//third_party/WebKit/Source/core/streams/WritableStream.js",
-  ]
-  v8_enable_inspector = true
-  v8_enable_gdbjit = false
-  v8_imminent_deprecation_warnings = false
 }
 
 # These are the targets to check headers for by default. The files in targets
@@ -137,7 +120,6 @@ check_targets = [
 
   #"//third_party/*",  # May not ever want this.
   "//third_party/hunspell/*",
-  "//third_party/kasko/*",
   "//third_party/libaddressinput/*",
   "//third_party/libphonenumber/*",
   "//third_party/WebKit/Source/*",

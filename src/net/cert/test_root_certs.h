@@ -48,8 +48,9 @@ class NET_EXPORT TestRootCerts {
   // Returns true if an instance exists, without forcing an initialization.
   static bool HasInstance();
 
-  // Marks |certificate| as trusted for X509Certificate::Verify(). Returns
-  // false if the certificate could not be marked trusted.
+  // Marks |certificate| as trusted in the effective trust store
+  // used by CertVerifier::Verify(). Returns false if the
+  // certificate could not be marked trusted.
   bool Add(X509Certificate* certificate);
 
   // Reads a single certificate from |file| and marks it as trusted. Returns
@@ -150,7 +151,9 @@ class NET_EXPORT TestRootCerts {
 class NET_EXPORT_PRIVATE ScopedTestRoot {
  public:
   ScopedTestRoot();
-  // Creates a ScopedTestRoot that will add |cert| to the TestRootCerts store.
+  // Creates a ScopedTestRoot that sets |cert| as the single root in the
+  // TestRootCerts store (if there were existing roots they are
+  // cleared).
   explicit ScopedTestRoot(X509Certificate* cert);
   ~ScopedTestRoot();
 

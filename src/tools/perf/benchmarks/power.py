@@ -199,7 +199,7 @@ class PowerGpuRasterizationTop25(PowerTop25):
 class PowerScrollingTrivialPage(perf_benchmark.PerfBenchmark):
   """Measure power consumption for some very simple pages."""
   test = power.QuiescentPower
-  page_set = page_sets.MacGpuTrivialPagesStorySet
+  page_set = page_sets.TrivialSitesStorySet
 
   @classmethod
   def Name(cls):

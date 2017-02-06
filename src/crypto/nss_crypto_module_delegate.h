@@ -35,7 +35,6 @@ class CryptoModuleBlockingPasswordDelegate {
   // user entered.
   virtual std::string RequestPassword(const std::string& slot_name, bool retry,
                                       bool* cancelled) = 0;
-
 };
 
 // Extends CryptoModuleBlockingPasswordDelegate with the ability to return a

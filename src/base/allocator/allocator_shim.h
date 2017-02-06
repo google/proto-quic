@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include "base/base_export.h"
+#include "build/build_config.h"
 
 namespace base {
 namespace allocator {
@@ -62,6 +63,16 @@ struct AllocatorDispatch {
   // allocation. If no good estimate is possible, returns zero.
   using GetSizeEstimateFn = size_t(const AllocatorDispatch* self,
                                    void* address);
+  using BatchMallocFn = unsigned(const AllocatorDispatch* self,
+                                 size_t size,
+                                 void** results,
+                                 unsigned num_requested);
+  using BatchFreeFn = void(const AllocatorDispatch* self,
+                           void** to_be_freed,
+                           unsigned num_to_be_freed);
+  using FreeDefiniteSizeFn = void(const AllocatorDispatch* self,
+                                  void* ptr,
+                                  size_t size);
 
   AllocFn* const alloc_function;
   AllocZeroInitializedFn* const alloc_zero_initialized_function;
@@ -69,6 +80,9 @@ struct AllocatorDispatch {
   ReallocFn* const realloc_function;
   FreeFn* const free_function;
   GetSizeEstimateFn* const get_size_estimate_function;
+  BatchMallocFn* const batch_malloc_function;
+  BatchFreeFn* const batch_free_function;
+  FreeDefiniteSizeFn* const free_definite_size_function;
 
   const AllocatorDispatch* next;
 
@@ -96,6 +110,11 @@ BASE_EXPORT void InsertAllocatorDispatch(AllocatorDispatch* dispatch);
 // removal of arbitrary elements from a singly linked list would require a lock
 // in malloc(), which we really don't want.
 BASE_EXPORT void RemoveAllocatorDispatchForTesting(AllocatorDispatch* dispatch);
+
+#if defined(OS_MACOSX)
+// On macOS, the allocator shim needs to be turned on during runtime.
+BASE_EXPORT void InitializeAllocatorShim();
+#endif  // defined(OS_MACOSX)
 
 }  // namespace allocator
 }  // namespace base

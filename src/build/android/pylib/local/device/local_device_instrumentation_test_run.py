@@ -17,6 +17,7 @@ from pylib.base import base_test_result
 from pylib.instrumentation import instrumentation_test_instance
 from pylib.local.device import local_device_environment
 from pylib.local.device import local_device_test_run
+from pylib.utils import logdog_helper
 from py_trace_event import trace_event
 from py_utils import contextlib_ext
 import tombstones
@@ -204,6 +205,8 @@ class LocalDeviceInstrumentationTestRun(
       if not self._test_instance.driver_apk:
         raise Exception('driver_apk does not exist. '
                         'Please build it and try again.')
+      if any(t.get('is_junit4') for t in test):
+        raise Exception('driver apk does not support JUnit4 tests')
 
       def name_and_timeout(t):
         n = instrumentation_test_instance.GetTestName(t)
@@ -224,8 +227,13 @@ class LocalDeviceInstrumentationTestRun(
     else:
       test_name = instrumentation_test_instance.GetTestName(test)
       test_display_name = self._GetUniqueTestName(test)
-      target = '%s/%s' % (
-          self._test_instance.test_package, self._test_instance.test_runner)
+      if test['is_junit4']:
+        target = '%s/%s' % (
+            self._test_instance.test_package,
+            self._test_instance.test_runner_junit4)
+      else:
+        target = '%s/%s' % (
+            self._test_instance.test_package, self._test_instance.test_runner)
       extras['class'] = test_name
       if 'flags' in test:
         flags = test['flags']
@@ -285,7 +293,7 @@ class LocalDeviceInstrumentationTestRun(
     results = self._test_instance.GenerateTestResults(
         result_code, result_bundle, statuses, start_ms, duration_ms)
     for result in results:
-      result.SetLogcatUrl(logcat_url)
+      result.SetLink('logcat', logcat_url)
 
     # Update the result name if the test used flags.
     if flags:
@@ -357,9 +365,9 @@ class LocalDeviceInstrumentationTestRun(
             stream_name = 'tombstones_%s_%s' % (
                 time.strftime('%Y%m%dT%H%M%S', time.localtime()),
                 device.serial)
-            tombstones_url = tombstones.LogdogTombstones(resolved_tombstones,
-                                                         stream_name)
-          result.SetTombstonesUrl(tombstones_url)
+            tombstones_url = logdog_helper.text(
+                stream_name, resolved_tombstones)
+          result.SetLink('tombstones', tombstones_url)
     return results, None
 
   #override

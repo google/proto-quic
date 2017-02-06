@@ -52,7 +52,7 @@ class OortOnlineTBMPage(OortOnlinePage):
   def RunPageInteractions(self, action_runner):
     WAIT_TIME_IN_SECONDS = 2
     RUN_TIME_IN_SECONDS = 20
-    action_runner.WaitForJavaScriptCondition('window.benchmarkStarted')
+    action_runner.WaitForJavaScriptCondition2('window.benchmarkStarted')
     # Perform GC to get rid of start-up garbage.
     action_runner.ForceGarbageCollection()
     with action_runner.CreateInteraction('Begin'):

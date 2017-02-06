@@ -131,7 +131,7 @@ struct SpdyHeaderInfo {
   SpdyPriority priority;
   int weight;
   SpdyControlFlags control_flags;
-  SpdyRstStreamStatus status;
+  SpdyErrorCode error_code;
   const char* data;
   uint32_t data_length;
   SpdyDataFlags data_flags;
@@ -326,7 +326,7 @@ class SpdyTestUtil {
   // status, and description. Returns the constructed frame. The caller takes
   // ownership of the frame.
   SpdySerializedFrame ConstructSpdyGoAway(SpdyStreamId last_good_stream_id,
-                                          SpdyGoAwayStatus status,
+                                          SpdyErrorCode error_code,
                                           const std::string& desc);
 
   // Construct a SPDY WINDOW_UPDATE frame.
@@ -337,7 +337,7 @@ class SpdyTestUtil {
   // Construct a SPDY RST_STREAM frame.
   // Returns the constructed frame.  The caller takes ownership of the frame.
   SpdySerializedFrame ConstructSpdyRstStream(SpdyStreamId stream_id,
-                                             SpdyRstStreamStatus status);
+                                             SpdyErrorCode error_code);
 
   // Construct a PRIORITY frame. The weight is derived from |request_priority|.
   // Returns the constructed frame.  The caller takes ownership of the frame.

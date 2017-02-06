@@ -2,21 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import os
 import logging
-import sys
 
 from devil.android import logcat_monitor
 from devil.utils import reraiser_thread
-from pylib import constants
-
-sys.path.insert(0, os.path.abspath(os.path.join(
-    constants.DIR_SOURCE_ROOT, 'tools', 'swarming_client')))
-from libs.logdog import bootstrap # pylint: disable=import-error
+from pylib.utils import logdog_helper
 
 class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
   """Logcat monitor that writes logcat to a logdog stream.
-  The logdog stream client will return a url, where contains the logcat.
+
+  The logdog stream client will return a url which contains the logcat.
   """
   def __init__(self, adb, stream_name, clear=True, filter_specs=None):
     super(LogdogLogcatMonitor, self).__init__(adb, clear, filter_specs)
@@ -24,16 +19,6 @@ class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
     self._logdog_stream = None
     self._stream_client = None
     self._stream_name = stream_name
-    try:
-      self._stream_client = bootstrap.ButlerBootstrap.probe().stream_client()
-      self._logdog_stream = self._stream_client.open_text(self._stream_name)
-    except bootstrap.NotBootstrappedError as e:
-      if logging.getLogger().isEnabledFor(logging.DEBUG):
-        logging.exception('Unable to enable logdog_logcat: %s.', e)
-    except (KeyError, ValueError) as e:
-      logging.exception('Error when creating stream_client/stream: %s.', e)
-    except Exception as e: # pylint: disable=broad-except
-      logging.exception('Unknown Error: %s.', e)
 
   def GetLogcatURL(self):
     """Return logcat url.
@@ -50,11 +35,7 @@ class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
     try:
       super(LogdogLogcatMonitor, self)._StopRecording()
       if self._logdog_stream:
-        try:
-          self._logcat_url = self._stream_client.get_viewer_url(
-              self._stream_name)
-        except (KeyError, ValueError) as e:
-          logging.exception('Error cannot get viewer url: %s', e)
+        self._logcat_url = logdog_helper.get_viewer_url(self._stream_name)
         self._logdog_stream.close()
     except Exception as e: # pylint: disable=broad-except
       logging.exception('Unknown Error: %s.', e)
@@ -66,6 +47,8 @@ class LogdogLogcatMonitor(logcat_monitor.LogcatMonitor):
     """
     if self._clear:
       self._adb.Logcat(clear=True)
+
+    self._logdog_stream = logdog_helper.open_text(self._stream_name)
     self._StartRecording()
 
   def _StartRecording(self):

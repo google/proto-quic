@@ -65,20 +65,10 @@ class DesktopCommonSystemHealth(_CommonSystemHealthBenchmark):
     return (possible_browser.platform.GetDeviceTypeName() != 'Desktop' or
             possible_browser.browser_type == 'reference')
 
-
+@benchmark.Enabled('android')
 class MobileCommonSystemHealth(_CommonSystemHealthBenchmark):
   """Mobile Chrome Energy System Health Benchmark."""
   PLATFORM = 'mobile'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/612144
-    if (possible_browser.browser_type == 'reference' and
-        possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'):
-      return True
-
-    return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
-
 
 class _MemorySystemHealthBenchmark(perf_benchmark.PerfBenchmark):
   """Chrome Memory System Health Benchmark.
@@ -131,18 +121,10 @@ class DesktopMemorySystemHealth(_MemorySystemHealthBenchmark):
             possible_browser.browser_type == 'reference')
 
 
+@benchmark.Enabled('android')
 class MobileMemorySystemHealth(_MemorySystemHealthBenchmark):
   """Mobile Chrome Memory System Health Benchmark."""
   PLATFORM = 'mobile'
-
-  @classmethod
-  def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/612144
-    if (possible_browser.browser_type == 'reference' and
-        possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X'):
-      return True
-
-    return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
 
   def SetExtraBrowserOptions(self, options):
     # Just before we measure memory we flush the system caches

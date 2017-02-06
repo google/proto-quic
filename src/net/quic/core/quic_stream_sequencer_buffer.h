@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_H_
 #define NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_BUFFER_H_
 
-// QuicStreamSequencerBuffer implements QuicStreamSequencerBufferInterface.
-// It is a circular stream buffer with random write and
+// QuicStreamSequencerBuffer is a circular stream buffer with random write and
 // in-sequence read. It consists of a vector of pointers pointing
 // to memory blocks created as needed and a list of Gaps to indicate
 // the missing data between the data already written into the buffer.
@@ -60,8 +59,7 @@
 //  size_t consumed = consume_iovs(iovs, iov_count);
 //  buffer.MarkConsumed(consumed);
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <memory>
@@ -221,12 +219,10 @@ class QUIC_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // should be removed from the map.
   void UpdateFrameArrivalMap(QuicStreamOffset offset);
 
-  // Return |gaps_| as a std::string: [1024, 1500) [1800, 2048)... for
-  // debugging.
+  // Return |gaps_| as a string: [1024, 1500) [1800, 2048)... for debugging.
   std::string GapsDebugString();
 
-  // Return all received frames as a std::string in same format as
-  // GapsDebugString();
+  // Return all received frames as a string in same format as GapsDebugString();
   std::string ReceivedFramesDebugString();
 
   // The maximum total capacity of this buffer in byte, as constructed.

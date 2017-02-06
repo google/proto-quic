@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/base/mime_util.h"
+
+#include <algorithm>
+
 #include "base/strings/string_split.h"
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
-#include "net/base/mime_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -236,42 +239,46 @@ TEST(MimeUtilTest, TestGetExtensionsForMimeType) {
     const char* const mime_type;
     size_t min_expected_size;
     const char* const contained_result;
+    bool no_matches;
   } tests[] = {
-    { "text/plain", 2, "txt" },
-    { "*",          0, NULL  },
-    { "message/*",  1, "eml" },
-    { "MeSsAge/*",  1, "eml" },
-    { "image/bmp",  1, "bmp" },
-    { "video/*",    6, "mp4" },
+    {"text/plain", 2, "txt"},
+    {"text/pl", 0, NULL, true},
+    {"*", 0, NULL},
+    {"", 0, NULL, true},
+    {"message/*", 1, "eml"},
+    {"MeSsAge/*", 1, "eml"},
+    {"message/", 0, NULL, true},
+    {"image/bmp", 1, "bmp"},
+    {"video/*", 6, "mp4"},
 #if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_IOS)
-    { "video/*",    6, "mpg" },
+    {"video/*", 6, "mpg"},
 #else
-    { "video/*",    6, "mpeg" },
+    {"video/*", 6, "mpeg"},
 #endif
-    { "audio/*",    6, "oga" },
-    { "aUDIo/*",    6, "wav" },
+    {"audio/*", 6, "oga"},
+    {"aUDIo/*", 6, "wav"},
   };
 
-  for (size_t i = 0; i < arraysize(tests); ++i) {
+  for (const auto& test : tests) {
     std::vector<base::FilePath::StringType> extensions;
-    GetExtensionsForMimeType(tests[i].mime_type, &extensions);
-    ASSERT_TRUE(tests[i].min_expected_size <= extensions.size());
+    GetExtensionsForMimeType(test.mime_type, &extensions);
+    ASSERT_LE(test.min_expected_size, extensions.size());
 
-    if (!tests[i].contained_result)
-      continue;
+    if (test.no_matches)
+      ASSERT_EQ(0u, extensions.size());
 
-    bool found = false;
-    for (size_t j = 0; !found && j < extensions.size(); ++j) {
-#if defined(OS_WIN)
-      if (extensions[j] == base::UTF8ToWide(tests[i].contained_result))
-        found = true;
-#else
-      if (extensions[j] == tests[i].contained_result)
-        found = true;
-#endif
+    if (test.contained_result) {
+      // Convert ASCII to FilePath::StringType.
+      base::FilePath::StringType contained_result(
+          test.contained_result,
+          test.contained_result + strlen(test.contained_result));
+
+      bool found = std::find(extensions.begin(), extensions.end(),
+                             contained_result) != extensions.end();
+
+      ASSERT_TRUE(found) << "Must find at least the contained result within "
+                         << test.mime_type;
     }
-    ASSERT_TRUE(found) << "Must find at least the contained result within "
-                       << tests[i].mime_type;
   }
 }
 

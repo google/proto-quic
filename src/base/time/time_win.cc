@@ -40,7 +40,6 @@
 #include "base/atomicops.h"
 #include "base/bit_cast.h"
 #include "base/cpu.h"
-#include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/synchronization/lock.h"
 #include "base/threading/platform_thread.h"
@@ -97,8 +96,10 @@ bool g_high_res_timer_enabled = false;
 // How many times the high resolution timer has been called.
 uint32_t g_high_res_timer_count = 0;
 // The lock to control access to the above two variables.
-base::LazyInstance<base::Lock>::Leaky g_high_res_lock =
-    LAZY_INSTANCE_INITIALIZER;
+base::Lock* GetHighResLock() {
+  static auto lock = new base::Lock();
+  return lock;
+}
 
 // Returns the current value of the performance counter.
 uint64_t QPCNowRaw() {
@@ -191,7 +192,7 @@ FILETIME Time::ToFileTime() const {
 
 // static
 void Time::EnableHighResolutionTimer(bool enable) {
-  base::AutoLock lock(g_high_res_lock.Get());
+  base::AutoLock lock(*GetHighResLock());
   if (g_high_res_timer_enabled == enable)
     return;
   g_high_res_timer_enabled = enable;
@@ -218,7 +219,7 @@ bool Time::ActivateHighResolutionTimer(bool activating) {
   // called.
   const uint32_t max = std::numeric_limits<uint32_t>::max();
 
-  base::AutoLock lock(g_high_res_lock.Get());
+  base::AutoLock lock(*GetHighResLock());
   UINT period = g_high_res_timer_enabled ? kMinTimerIntervalHighResMs
                                          : kMinTimerIntervalLowResMs;
   if (activating) {
@@ -237,7 +238,7 @@ bool Time::ActivateHighResolutionTimer(bool activating) {
 
 // static
 bool Time::IsHighResolutionTimerInUse() {
-  base::AutoLock lock(g_high_res_lock.Get());
+  base::AutoLock lock(*GetHighResLock());
   return g_high_res_timer_enabled && g_high_res_timer_count > 0;
 }
 

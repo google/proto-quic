@@ -37,7 +37,7 @@
 #include "net/test/gtest_util.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
-#include "net/tools/quic/test_tools/mock_quic_server_session_visitor.h"
+#include "net/tools/quic/test_tools/mock_quic_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
 using base::StringPiece;

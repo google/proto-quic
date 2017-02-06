@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include <algorithm>
+#include <string>
 
 #include "base/logging.h"
 #include "base/stl_util.h"

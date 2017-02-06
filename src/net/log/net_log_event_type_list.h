@@ -670,6 +670,18 @@ EVENT_TYPE(CERT_CT_COMPLIANCE_CHECKED)
 // }
 EVENT_TYPE(EV_CERT_CT_COMPLIANCE_CHECKED)
 
+// A Certificate Transparency log entry was audited for inclusion in the
+// log.
+//
+// The following parameters are attached to the event:
+// {
+//  "log_entry": <hex-encoded hash of the log entry>
+//  "log_id": <hex-encoded hash of the CT log>
+//  "success": <boolean>
+// }
+
+EVENT_TYPE(CT_LOG_ENTRY_AUDITED)
+
 // ------------------------------------------------------------------------
 // DatagramSocket
 // ------------------------------------------------------------------------
@@ -1360,7 +1372,7 @@ EVENT_TYPE(HTTP2_SESSION_RECV_SETTING)
 //     "stream_id": <The stream ID for the window update>,
 //     "status": <The reason for the RST_STREAM>,
 //   }
-EVENT_TYPE(HTTP2_SESSION_RST_STREAM)
+EVENT_TYPE(HTTP2_SESSION_RECV_RST_STREAM)
 
 // Sending of a RST_STREAM
 // The following parameters are attached:
@@ -1387,14 +1399,14 @@ EVENT_TYPE(HTTP2_SESSION_PING)
 //     "unclaimed_streams":       <Number of unclaimed push streams>,
 //     "status":                  <The reason for the GOAWAY>,
 //   }
-EVENT_TYPE(HTTP2_SESSION_GOAWAY)
+EVENT_TYPE(HTTP2_SESSION_RECV_GOAWAY)
 
 // Receipt of an HTTP/2 WINDOW_UPDATE frame (which controls the send window).
 //   {
 //     "stream_id": <The stream ID for the window update>,
 //     "delta"    : <The delta window size>,
 //   }
-EVENT_TYPE(HTTP2_SESSION_RECEIVED_WINDOW_UPDATE_FRAME)
+EVENT_TYPE(HTTP2_SESSION_RECV_WINDOW_UPDATE)
 
 // Sending of an HTTP/2 WINDOW_UPDATE frame (which controls the
 // receive window).
@@ -1402,7 +1414,7 @@ EVENT_TYPE(HTTP2_SESSION_RECEIVED_WINDOW_UPDATE_FRAME)
 //     "stream_id": <The stream ID for the window update>,
 //     "delta"    : <The delta window size>,
 //   }
-EVENT_TYPE(HTTP2_SESSION_SENT_WINDOW_UPDATE_FRAME)
+EVENT_TYPE(HTTP2_SESSION_SEND_WINDOW_UPDATE)
 
 // This event indicates that the send window has been updated for a session.
 //   {

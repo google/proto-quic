@@ -7,8 +7,6 @@
 #ifndef NET_QUIC_CORE_QUIC_SERVER_SESSION_BASE_H_
 #define NET_QUIC_CORE_QUIC_SERVER_SESSION_BASE_H_
 
-#include <stdint.h>
-
 #include <cstdint>
 #include <memory>
 #include <set>

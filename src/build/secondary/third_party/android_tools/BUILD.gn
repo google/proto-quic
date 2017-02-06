@@ -125,6 +125,14 @@ java_group("android_support_v7_appcompat_java") {
   ]
 }
 
+android_aar_prebuilt("android_support_v7_gridlayout_java") {
+  deps = [
+    ":android_support_v7_appcompat_java",
+  ]
+  _lib_name = "gridlayout-v7"
+  aar_path = "$lib_path/$_lib_name/$lib_version/$_lib_name-$lib_version.aar"
+}
+
 android_aar_prebuilt("android_support_v7_mediarouter_java") {
   deps = [
     ":android_support_v7_appcompat_java",

@@ -87,6 +87,36 @@ bool IsValidHTTP2FrameStreamId(SpdyStreamId current_frame_stream_id,
   }
 }
 
+const char* FrameTypeToString(SpdyFrameType frame_type) {
+  switch (frame_type) {
+    case DATA:
+      return "DATA";
+    case RST_STREAM:
+      return "RST_STREAM";
+    case SETTINGS:
+      return "SETTINGS";
+    case PING:
+      return "PING";
+    case GOAWAY:
+      return "GOAWAY";
+    case HEADERS:
+      return "HEADERS";
+    case WINDOW_UPDATE:
+      return "WINDOW_UPDATE";
+    case PUSH_PROMISE:
+      return "PUSH_PROMISE";
+    case CONTINUATION:
+      return "CONTINUATION";
+    case PRIORITY:
+      return "PRIORITY";
+    case ALTSVC:
+      return "ALTSVC";
+    case BLOCKED:
+      return "BLOCKED";
+  }
+  return "UNKNOWN_FRAME_TYPE";
+}
+
 bool ParseSettingsId(int wire_setting_id, SpdySettingsIds* setting_id) {
   // HEADER_TABLE_SIZE is the first defined setting id.
   if (wire_setting_id < SETTINGS_MIN) {
@@ -128,21 +158,46 @@ bool SettingsIdToString(SpdySettingsIds id, const char** settings_id_string) {
   return false;
 }
 
-SpdyRstStreamStatus ParseRstStreamStatus(int rst_stream_status_field) {
-  if (rst_stream_status_field < RST_STREAM_MIN ||
-      rst_stream_status_field > RST_STREAM_MAX) {
-    return RST_STREAM_INTERNAL_ERROR;
+SpdyErrorCode ParseErrorCode(uint32_t wire_error_code) {
+  if (wire_error_code > ERROR_CODE_MAX) {
+    return ERROR_CODE_INTERNAL_ERROR;
   }
 
-  return static_cast<SpdyRstStreamStatus>(rst_stream_status_field);
+  return static_cast<SpdyErrorCode>(wire_error_code);
 }
 
-SpdyGoAwayStatus ParseGoAwayStatus(int goaway_status_field) {
-  if (goaway_status_field < GOAWAY_MIN || goaway_status_field > GOAWAY_MAX) {
-    return GOAWAY_INTERNAL_ERROR;
+const char* ErrorCodeToString(SpdyErrorCode error_code) {
+  switch (error_code) {
+    case ERROR_CODE_NO_ERROR:
+      return "NO_ERROR";
+    case ERROR_CODE_PROTOCOL_ERROR:
+      return "PROTOCOL_ERROR";
+    case ERROR_CODE_INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
+    case ERROR_CODE_FLOW_CONTROL_ERROR:
+      return "FLOW_CONTROL_ERROR";
+    case ERROR_CODE_SETTINGS_TIMEOUT:
+      return "SETTINGS_TIMEOUT";
+    case ERROR_CODE_STREAM_CLOSED:
+      return "STREAM_CLOSED";
+    case ERROR_CODE_FRAME_SIZE_ERROR:
+      return "FRAME_SIZE_ERROR";
+    case ERROR_CODE_REFUSED_STREAM:
+      return "REFUSED_STREAM";
+    case ERROR_CODE_CANCEL:
+      return "CANCEL";
+    case ERROR_CODE_COMPRESSION_ERROR:
+      return "COMPRESSION_ERROR";
+    case ERROR_CODE_CONNECT_ERROR:
+      return "CONNECT_ERROR";
+    case ERROR_CODE_ENHANCE_YOUR_CALM:
+      return "ENHANCE_YOUR_CALM";
+    case ERROR_CODE_INADEQUATE_SECURITY:
+      return "INADEQUATE_SECURITY";
+    case ERROR_CODE_HTTP_1_1_REQUIRED:
+      return "HTTP_1_1_REQUIRED";
   }
-
-  return static_cast<SpdyGoAwayStatus>(goaway_status_field);
+  return "UNKNOWN_ERROR_CODE";
 }
 
 const char* const kHttp2Npn = "h2";
@@ -188,9 +243,9 @@ void SpdyDataIR::Visit(SpdyFrameVisitor* visitor) const {
 }
 
 SpdyRstStreamIR::SpdyRstStreamIR(SpdyStreamId stream_id,
-                                 SpdyRstStreamStatus status)
+                                 SpdyErrorCode error_code)
     : SpdyFrameWithStreamIdIR(stream_id) {
-  set_status(status);
+  set_error_code(error_code);
 }
 
 SpdyRstStreamIR::~SpdyRstStreamIR() {}
@@ -212,27 +267,27 @@ void SpdyPingIR::Visit(SpdyFrameVisitor* visitor) const {
 }
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-                           SpdyGoAwayStatus status,
+                           SpdyErrorCode error_code,
                            base::StringPiece description)
     : description_(description) {
-      set_last_good_stream_id(last_good_stream_id);
-  set_status(status);
+  set_last_good_stream_id(last_good_stream_id);
+  set_error_code(error_code);
 }
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-                           SpdyGoAwayStatus status,
+                           SpdyErrorCode error_code,
                            const char* description)
     : SpdyGoAwayIR(last_good_stream_id,
-                   status,
+                   error_code,
                    base::StringPiece(description)) {}
 
 SpdyGoAwayIR::SpdyGoAwayIR(SpdyStreamId last_good_stream_id,
-                           SpdyGoAwayStatus status,
+                           SpdyErrorCode error_code,
                            std::string description)
     : description_store_(std::move(description)),
       description_(description_store_) {
   set_last_good_stream_id(last_good_stream_id);
-  set_status(status);
+  set_error_code(error_code);
 }
 
 SpdyGoAwayIR::~SpdyGoAwayIR() {}

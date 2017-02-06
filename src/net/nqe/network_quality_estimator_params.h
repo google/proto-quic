@@ -73,6 +73,11 @@ bool forced_effective_connection_type_set(
 EffectiveConnectionType forced_effective_connection_type(
     const std::map<std::string, std::string>& variation_params);
 
+// Returns true if reading from the persistent cache has been enabled via field
+// trial.
+bool persistent_cache_reading_enabled(
+    const std::map<std::string, std::string>& variation_params);
+
 }  // namespace internal
 
 }  // namespace nqe

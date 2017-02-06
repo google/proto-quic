@@ -184,3 +184,8 @@ assert(!is_debug || !(is_msan || is_ubsan || is_ubsan_null || is_ubsan_vptr),
 
 assert(!is_msan || (is_linux && current_cpu == "x64"),
        "MSan currently only works on 64-bit Linux and ChromeOS builds.")
+
+# ASAN build on Windows is not working in debug mode. Intercepting memory
+# allocation functions is hard on Windows and not yet implemented in LLVM.
+assert(!is_win || !is_debug || !is_asan,
+       "ASan on Windows doesn't work in debug (set is_debug=false).")

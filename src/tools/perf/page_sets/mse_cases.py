@@ -12,7 +12,7 @@ class MseCasesPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(MseCasesPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition('window.__testDone == true')
+    action_runner.WaitForJavaScriptCondition2('window.__testDone == true')
 
 
 class MseCasesPageSet(story.StorySet):

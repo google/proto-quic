@@ -14,8 +14,10 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/single_thread_task_runner.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/values.h"
@@ -1010,25 +1012,29 @@ class SSLClientSocketFalseStartTest : public SSLClientSocketTest {
 
 class SSLClientSocketChannelIDTest : public SSLClientSocketTest {
  protected:
+  SSLClientSocketChannelIDTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+
   void EnableChannelID() {
-    channel_id_service_.reset(new ChannelIDService(
-        new DefaultChannelIDStore(NULL), base::ThreadTaskRunnerHandle::Get()));
+    channel_id_service_.reset(
+        new ChannelIDService(new DefaultChannelIDStore(NULL)));
     context_.channel_id_service = channel_id_service_.get();
   }
 
   void EnableFailingChannelID() {
-    channel_id_service_.reset(new ChannelIDService(
-        new FailingChannelIDStore(), base::ThreadTaskRunnerHandle::Get()));
+    channel_id_service_.reset(
+        new ChannelIDService(new FailingChannelIDStore()));
     context_.channel_id_service = channel_id_service_.get();
   }
 
   void EnableAsyncFailingChannelID() {
-    channel_id_service_.reset(new ChannelIDService(
-        new AsyncFailingChannelIDStore(), base::ThreadTaskRunnerHandle::Get()));
+    channel_id_service_.reset(
+        new ChannelIDService(new AsyncFailingChannelIDStore()));
     context_.channel_id_service = channel_id_service_.get();
   }
 
  private:
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
 };
 

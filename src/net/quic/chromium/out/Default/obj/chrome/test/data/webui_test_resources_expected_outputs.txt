@@ -1,2 +1,0 @@
-gen/chrome/chrome/test/data/grit/webui_test_resources.h
-gen/chrome/webui_test_resources.pak

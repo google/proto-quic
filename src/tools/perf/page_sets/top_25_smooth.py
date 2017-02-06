@@ -57,17 +57,17 @@ class GmailSmoothPage(top_pages.TopPages):
     google_login.LoginGoogleAccount(action_runner, 'google3',
                                     self.credentials_path)
     super(GmailSmoothPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null',
-        timeout_in_seconds=120)
+        timeout=120)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
         gmonkey.load('2.0', function(api) {
           window.__scrollableElementForTelemetry = api.getScrollableElement();
         });''')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.__scrollableElementForTelemetry != null')
     action_runner.Wait(1)
     with action_runner.CreateGestureInteraction('ScrollAction'):

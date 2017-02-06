@@ -40,7 +40,6 @@ class URLRequestMockHTTPJob : public URLRequestFileJob {
   void Start() override;
   int64_t GetTotalReceivedBytes() const override;
   bool GetMimeType(std::string* mime_type) const override;
-  int GetResponseCode() const override;
   bool GetCharset(std::string* charset) override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   bool IsRedirectResponse(GURL* location, int* http_status_code) override;

@@ -13,7 +13,7 @@ class ToughCanvasCasesPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(ToughCanvasCasesPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         "document.readyState == 'complete'")
 
   def RunPageInteractions(self, action_runner):

@@ -17,12 +17,10 @@
 {
   # https://crbug.com/383340
   'android': [
-    'flatc',
   ],
 
   # https://crbug.com/330263
   'linux': [
-    'flatc',
     # https://crbug.com/654989
     'ppapi_nacl_tests_pnacl_newlib_x32_nonsfi.nexe',
     'ppapi_nacl_tests_pnacl_newlib_x64.nexe',
@@ -82,7 +80,6 @@
     'ffmpeg_regression_tests',
     'filesystem_service_unittests',
     'filter_fuzz_stub',
-    'flatc',
     'gcm_unit_tests',
     'generate_barcode_video',
     'generate_timecode_audio',

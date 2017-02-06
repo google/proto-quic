@@ -135,6 +135,9 @@ class MethodBlocklist {
   }
 
   bool Contains(const clang::FunctionDecl& method) const {
+    if (!method.getDeclName().isIdentifier())
+      return false;
+
     auto it = method_to_class_to_args_.find(method.getName());
     if (it == method_to_class_to_args_.end())
       return false;
@@ -145,6 +148,8 @@ class MethodBlocklist {
     const clang::NamedDecl* method_context =
         clang::dyn_cast<clang::NamedDecl>(method.getDeclContext());
     if (!method_context)
+      return false;
+    if (!method_context->getDeclName().isIdentifier())
       return false;
 
     const llvm::StringMap<std::set<unsigned>>& class_to_args = it->second;
@@ -454,11 +459,17 @@ bool IsBlacklistedMethodName(llvm::StringRef name) {
 }
 
 bool IsBlacklistedFunction(const clang::FunctionDecl& decl) {
+  if (!decl.getDeclName().isIdentifier())
+    return false;
+
   clang::StringRef name = decl.getName();
   return IsBlacklistedFunctionName(name) || IsBlacklistedFreeFunctionName(name);
 }
 
 bool IsBlacklistedMethod(const clang::CXXMethodDecl& decl) {
+  if (!decl.getDeclName().isIdentifier())
+    return false;
+
   clang::StringRef name = decl.getName();
   if (IsBlacklistedFunctionName(name))
     return true;
@@ -494,7 +505,7 @@ bool IsKnownTraitName(clang::StringRef name) {
 }
 
 AST_MATCHER(clang::VarDecl, isKnownTraitName) {
-  return IsKnownTraitName(Node.getName());
+  return Node.getDeclName().isIdentifier() && IsKnownTraitName(Node.getName());
 }
 
 // Helper to convert from a camelCaseName to camel_case_name. It uses some
@@ -725,7 +736,8 @@ bool ShouldPrefixFunctionName(const std::string& old_method_name) {
 }
 
 AST_MATCHER(clang::FunctionDecl, shouldPrefixFunctionName) {
-  return ShouldPrefixFunctionName(Node.getName().str());
+  return Node.getDeclName().isIdentifier() &&
+      ShouldPrefixFunctionName(Node.getName().str());
 }
 
 bool GetNameForDecl(const clang::FunctionDecl& decl,
@@ -1131,6 +1143,9 @@ class DeclRewriterBase : public RewriterBase<TargetNode> {
 
   void run(const MatchFinder::MatchResult& result) override {
     const DeclNode* decl = result.Nodes.getNodeAs<DeclNode>("decl");
+    if (!decl->getDeclName().isIdentifier())
+      return;
+
     assert(decl);
     llvm::StringRef old_name = decl->getName();
 

@@ -1,6 +1,0 @@
-gen/components/grit/components_scaled_resources.h
-gen/components/grit/components_scaled_resources_map.cc
-gen/components/grit/components_scaled_resources_map.h
-gen/components/components_resources_100_percent.pak
-gen/components/components_resources_200_percent.pak
-gen/components/components_resources_300_percent.pak
