@@ -51,9 +51,7 @@ class _MemoryInfra(perf_benchmark.PerfBenchmark):
     options.clear_sytem_cache_for_browser_and_profile_on_start = True
 
 
-# TODO(bashi): Workaround for http://crbug.com/532075.
-# @benchmark.Enabled('android') shouldn't be needed.
-@benchmark.Enabled('android')
+@benchmark.Enabled('android')  # catapult:#3176
 class MemoryBenchmarkTop10Mobile(_MemoryInfra):
   """Measure foreground/background memory on top 10 mobile page set.
 
@@ -78,6 +76,7 @@ class MemoryBenchmarkTop10Mobile(_MemoryInfra):
     return not _IGNORED_STATS_RE.search(value.name)
 
 
+@benchmark.Enabled('android')  # catapult:#3176
 class MemoryBenchmarkTop10MobileStress(MemoryBenchmarkTop10Mobile):
   """Run top 10 mobile page set without closing/restarting the browser.
 
@@ -152,9 +151,7 @@ class LongRunningDualBrowserBenchmark(_MemoryInfra):
     return not _IGNORED_STATS_RE.search(value.name)
 
 
-# TODO(bashi): Workaround for http://crbug.com/532075
-# @benchmark.Enabled('android') shouldn't be needed.
-@benchmark.Enabled('android')
+@benchmark.Enabled('android')  # catapult:#3176
 class RendererMemoryBlinkMemoryMobile(_MemoryInfra):
   """Timeline based benchmark for measuring memory consumption on mobile
   sites on which blink's memory consumption is relatively high.

@@ -1,6 +1,0 @@
-gen/ui/views/resources/grit/views_resources.h
-gen/ui/views/resources/grit/views_resources_map.cc
-gen/ui/views/resources/grit/views_resources_map.h
-gen/ui/views/resources/views_resources_100_percent.pak
-gen/ui/views/resources/views_resources_200_percent.pak
-gen/ui/views/resources/views_resources_300_percent.pak

@@ -48,15 +48,6 @@ def _ProcessEntry(e):
   except IOError:
     pass
 
-  # TODO(dcheng): This should be implemented in Clang tooling.
-  # http://llvm.org/bugs/show_bug.cgi?id=19687
-  # Finally, use slashes instead of backslashes to avoid bad escaping by the
-  # tooling. This should really only matter for command, but we do it for all
-  # keys for consistency.
-  e['directory'] = e['directory'].replace('\\', '/')
-  e['command'] = e['command'].replace('\\', '/')
-  e['file'] = e['file'].replace('\\', '/')
-
   return e
 
 

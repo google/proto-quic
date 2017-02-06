@@ -13,7 +13,6 @@
 #include "base/bind.h"
 #include "base/command_line.h"
 #include "base/debug/leak_annotations.h"
-#include "base/lazy_instance.h"
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
@@ -89,14 +88,10 @@ const int kThreadFlushTimeoutMs = 3000;
 #define MAX_TRACE_EVENT_FILTERS 32
 
 // List of TraceEventFilter objects from the most recent tracing session.
-base::LazyInstance<std::vector<std::unique_ptr<TraceEventFilter>>>::Leaky
-    g_category_group_filters = LAZY_INSTANCE_INITIALIZER;
-
-// The name of the current thread. This is used to decide if the current
-// thread name has changed. We combine all the seen thread names into the
-// output name for the thread.
-LazyInstance<ThreadLocalPointer<const char>>::Leaky g_current_thread_name =
-    LAZY_INSTANCE_INITIALIZER;
+std::vector<std::unique_ptr<TraceEventFilter>>& GetCategoryGroupFilters() {
+  static auto filters = new std::vector<std::unique_ptr<TraceEventFilter>>();
+  return *filters;
+}
 
 ThreadTicks ThreadNow() {
   return ThreadTicks::IsSupported() ? ThreadTicks::Now() : ThreadTicks();
@@ -169,8 +164,8 @@ void ForEachCategoryFilter(const unsigned char* category_group_enabled,
       CategoryRegistry::GetCategoryByStatePtr(category_group_enabled);
   uint32_t filter_bitmap = category->enabled_filters();
   for (int index = 0; filter_bitmap != 0; filter_bitmap >>= 1, index++) {
-    if (filter_bitmap & 1 && g_category_group_filters.Get()[index])
-      filter_fn(g_category_group_filters.Get()[index].get());
+    if (filter_bitmap & 1 && GetCategoryGroupFilters()[index])
+      filter_fn(GetCategoryGroupFilters()[index].get());
   }
 }
 
@@ -473,7 +468,7 @@ void TraceLog::UpdateCategoryState(TraceCategory* category) {
   for (const auto& event_filter : enabled_event_filters_) {
     if (event_filter.IsCategoryGroupEnabled(category->name())) {
       state_flags |= TraceCategory::ENABLED_FOR_FILTERING;
-      DCHECK(g_category_group_filters.Get()[index]);
+      DCHECK(GetCategoryGroupFilters()[index]);
       enabled_filters_bitmap |= 1 << index;
     }
     if (index++ >= MAX_TRACE_EVENT_FILTERS) {
@@ -499,11 +494,11 @@ void TraceLog::CreateFiltersForTraceConfig() {
 
   // Filters were already added and tracing could be enabled. Filters list
   // cannot be changed when trace events are using them.
-  if (g_category_group_filters.Get().size())
+  if (GetCategoryGroupFilters().size())
     return;
 
   for (auto& filter_config : enabled_event_filters_) {
-    if (g_category_group_filters.Get().size() >= MAX_TRACE_EVENT_FILTERS) {
+    if (GetCategoryGroupFilters().size() >= MAX_TRACE_EVENT_FILTERS) {
       NOTREACHED()
           << "Too many trace event filters installed in the current session";
       break;
@@ -522,7 +517,7 @@ void TraceLog::CreateFiltersForTraceConfig() {
         new_filter = filter_factory_for_testing_(predicate_name);
       CHECK(new_filter) << "Unknown trace filter " << predicate_name;
     }
-    g_category_group_filters.Get().push_back(std::move(new_filter));
+    GetCategoryGroupFilters().push_back(std::move(new_filter));
   }
 }
 
@@ -589,7 +584,7 @@ void TraceLog::SetEnabled(const TraceConfig& trace_config,
     // cleared at the end of tracing because some threads which hit trace event
     // when disabling, could try to use the filters.
     if (!enabled_modes_)
-      g_category_group_filters.Get().clear();
+      GetCategoryGroupFilters().clear();
 
     // Update trace config for recording.
     const bool already_recording = enabled_modes_ & RECORDING_MODE;
@@ -1220,9 +1215,9 @@ TraceEventHandle TraceLog::AddTraceEventWithThreadIdAndTimestamp(
     // call (if any), but don't bother if the new name is empty. Note this will
     // not detect a thread name change within the same char* buffer address: we
     // favor common case performance over corner case correctness.
-    if (new_name != g_current_thread_name.Get().Get() && new_name &&
-        *new_name) {
-      g_current_thread_name.Get().Set(new_name);
+    static auto current_thread_name = new ThreadLocalPointer<const char>();
+    if (new_name != current_thread_name->Get() && new_name && *new_name) {
+      current_thread_name->Set(new_name);
 
       AutoLock thread_info_lock(thread_info_lock_);
 

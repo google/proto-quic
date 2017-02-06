@@ -173,8 +173,10 @@ pylib/results/flakiness_dashboard/results_uploader.py
 pylib/results/json_results.py
 pylib/results/report_results.py
 pylib/utils/__init__.py
+pylib/utils/decorators.py
 pylib/utils/device_dependencies.py
 pylib/utils/dexdump.py
+pylib/utils/logdog_helper.py
 pylib/utils/proguard.py
 pylib/utils/repo_utils.py
 pylib/valgrind_tools.py

@@ -1781,7 +1781,7 @@ TEST_F(SpdyNetworkTransactionTest, SocketWriteReturnsZero) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 0, SYNCHRONOUS), MockWrite(SYNCHRONOUS, 0, 0, 2),
       CreateMockWrite(rst, 3, SYNCHRONOUS),
@@ -1819,7 +1819,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseWithoutHeaders) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
   };
@@ -1837,7 +1837,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseWithTwoSynReplies) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 4),
   };
@@ -1882,7 +1882,7 @@ TEST_F(SpdyNetworkTransactionTest, ResetReplyWithTransferEncoding) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
   };
@@ -1915,7 +1915,7 @@ TEST_F(SpdyNetworkTransactionTest, ResetPushWithTransferEncoding) {
   SpdySerializedFrame priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(priority, 3),
       CreateMockWrite(rst, 5),
@@ -1991,7 +1991,7 @@ TEST_F(SpdyNetworkTransactionTest, CancelledTransactionSendRst) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 0, SYNCHRONOUS),
       CreateMockWrite(rst, 2, SYNCHRONOUS),
@@ -2346,7 +2346,7 @@ TEST_F(SpdyNetworkTransactionTest, DISABLED_RedirectServerPush) {
       "301 Moved Permanently", "http://www.foo.com/index.php"));
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_CANCEL));
   MockWrite writes[] = {
       CreateMockWrite(req, 1), CreateMockWrite(rst, 6),
   };
@@ -2665,7 +2665,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushServerAborted) {
   SpdySerializedFrame stream2_syn(spdy_util_.ConstructSpdyPush(
       nullptr, 0, 2, 1, GetDefaultUrlWithPath("/foo.dat").c_str()));
   SpdySerializedFrame stream2_rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
   SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
   MockRead reads[] = {
       CreateMockRead(stream1_reply, 1),
@@ -2711,7 +2711,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushDuplicate) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame stream3_rst(
-      spdy_util_.ConstructSpdyRstStream(4, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(4, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(stream3_rst, 5),
@@ -2865,7 +2865,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID0) {
   SpdySerializedFrame stream1_syn(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_PROTOCOL_ERROR, "Framer error: 1 (INVALID_STREAM_ID)."));
+      0, ERROR_CODE_PROTOCOL_ERROR, "Framer error: 1 (INVALID_STREAM_ID)."));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(goaway, 3),
   };
@@ -2913,7 +2913,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID9) {
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame stream2_rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_STREAM_CLOSED));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_STREAM_CLOSED));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_rst, 3),
   };
@@ -2963,7 +2963,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushNoURL) {
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame stream1_body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame stream2_rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_rst, 3),
   };
@@ -3018,7 +3018,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnPushedStream) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      2, GOAWAY_PROTOCOL_ERROR, "Push on even stream id."));
+      2, ERROR_CODE_PROTOCOL_ERROR, "Push on even stream id."));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(goaway, 5),
@@ -3046,7 +3046,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnClosedStream) {
   SpdySerializedFrame stream1_syn(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_STREAM_CLOSED));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_STREAM_CLOSED));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(rst, 5),
   };
@@ -3095,7 +3095,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushOnClosedPushedStream) {
   SpdySerializedFrame stream2_priority(
       spdy_util_.ConstructSpdyPriority(2, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      2, GOAWAY_PROTOCOL_ERROR, "Push on even stream id."));
+      2, ERROR_CODE_PROTOCOL_ERROR, "Push on even stream id."));
   MockWrite writes[] = {
       CreateMockWrite(stream1_syn, 0), CreateMockWrite(stream2_priority, 3),
       CreateMockWrite(goaway, 8),
@@ -3366,7 +3366,7 @@ TEST_F(SpdyNetworkTransactionTest, InvalidResponseHeaders) {
     SpdySerializedFrame req(
         spdy_test_util.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
     SpdySerializedFrame rst(
-        spdy_test_util.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+        spdy_test_util.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
     MockWrite writes[] = {
         CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
     };
@@ -3394,8 +3394,9 @@ TEST_F(SpdyNetworkTransactionTest, InvalidResponseHeaders) {
 TEST_F(SpdyNetworkTransactionTest, CorruptFrameSessionError) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_COMPRESSION_ERROR, "Framer error: 6 (DECOMPRESS_FAILURE)."));
+  SpdySerializedFrame goaway(
+      spdy_util_.ConstructSpdyGoAway(0, ERROR_CODE_COMPRESSION_ERROR,
+                                     "Framer error: 6 (DECOMPRESS_FAILURE)."));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(goaway, 2)};
 
   // This is the length field that's too short.
@@ -3421,8 +3422,9 @@ TEST_F(SpdyNetworkTransactionTest, CorruptFrameSessionError) {
 TEST_F(SpdyNetworkTransactionTest, GoAwayOnDecompressionFailure) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
-  SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_COMPRESSION_ERROR, "Framer error: 6 (DECOMPRESS_FAILURE)."));
+  SpdySerializedFrame goaway(
+      spdy_util_.ConstructSpdyGoAway(0, ERROR_CODE_COMPRESSION_ERROR,
+                                     "Framer error: 6 (DECOMPRESS_FAILURE)."));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(goaway, 2)};
 
   // Read HEADERS with corrupted payload.
@@ -3442,7 +3444,7 @@ TEST_F(SpdyNetworkTransactionTest, GoAwayOnFrameSizeError) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_FRAME_SIZE_ERROR,
+      0, ERROR_CODE_FRAME_SIZE_ERROR,
       "Framer error: 15 (INVALID_CONTROL_FRAME_SIZE)."));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(goaway, 2)};
 
@@ -3951,7 +3953,7 @@ TEST_F(SpdyNetworkTransactionTest, BufferedCancelled) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 4)};
 
   // NOTE: We don't FIN the stream.
@@ -4045,7 +4047,7 @@ TEST_F(SpdyNetworkTransactionTest, GracefulGoaway) {
   SpdySerializedFrame resp1(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
   SpdySerializedFrame body1(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0x7fffffff, GOAWAY_NO_ERROR, "Graceful shutdown."));
+      0x7fffffff, ERROR_CODE_NO_ERROR, "Graceful shutdown."));
   SpdySerializedFrame resp2(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 3));
   SpdySerializedFrame body2(spdy_util_.ConstructSpdyDataFrame(3, true));
   MockRead reads[] = {CreateMockRead(resp1, 1),  CreateMockRead(body1, 2),
@@ -4155,7 +4157,7 @@ TEST_F(SpdyNetworkTransactionTest, HTTP11RequiredRetry) {
       spdy_util_.ConstructSpdyHeaders(1, std::move(headers), LOWEST, true));
   MockWrite writes0[] = {CreateMockWrite(req, 0)};
   SpdySerializedFrame go_away(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_HTTP_1_1_REQUIRED, "Try again using HTTP/1.1 please."));
+      0, ERROR_CODE_HTTP_1_1_REQUIRED, "Try again using HTTP/1.1 please."));
   MockRead reads0[] = {CreateMockRead(go_away, 1)};
   SequencedSocketData data0(reads0, arraysize(reads0), writes0,
                             arraysize(writes0));
@@ -4233,7 +4235,7 @@ TEST_F(SpdyNetworkTransactionTest, HTTP11RequiredProxyRetry) {
       nullptr, 0, 1, LOWEST, HostPortPair("www.example.org", 443)));
   MockWrite writes0[] = {CreateMockWrite(req, 0)};
   SpdySerializedFrame go_away(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_HTTP_1_1_REQUIRED, "Try again using HTTP/1.1 please."));
+      0, ERROR_CODE_HTTP_1_1_REQUIRED, "Try again using HTTP/1.1 please."));
   MockRead reads0[] = {CreateMockRead(go_away, 1)};
   SequencedSocketData data0(reads0, arraysize(reads0), writes0,
                             arraysize(writes0));
@@ -4829,7 +4831,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseHeadersTwice) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 4),
   };
@@ -4862,7 +4864,7 @@ TEST_F(SpdyNetworkTransactionTest, SyncReplyDataAfterTrailers) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 5),
   };
@@ -4922,7 +4924,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushCrossOriginCorrectness) {
     SpdySerializedFrame stream1_body(
         spdy_test_util.ConstructSpdyDataFrame(1, true));
     SpdySerializedFrame push_rst(
-        spdy_test_util.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+        spdy_test_util.ConstructSpdyRstStream(2, ERROR_CODE_REFUSED_STREAM));
     MockWrite writes[] = {
         CreateMockWrite(stream1_syn, 0), CreateMockWrite(push_rst, 3),
     };
@@ -4935,7 +4937,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushCrossOriginCorrectness) {
     SpdySerializedFrame stream2_body(spdy_test_util.ConstructSpdyDataFrame(
         2, kPushedData, strlen(kPushedData), true));
     SpdySerializedFrame rst(
-        spdy_test_util.ConstructSpdyRstStream(2, RST_STREAM_CANCEL));
+        spdy_test_util.ConstructSpdyRstStream(2, ERROR_CODE_CANCEL));
 
     MockRead reads[] = {
         CreateMockRead(stream1_reply, 1),
@@ -5268,7 +5270,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidCrossOrigin) {
   SpdySerializedFrame headers(
       spdy_util_.ConstructSpdyGet(url_to_fetch, 1, LOWEST));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_REFUSED_STREAM));
   MockWrite writes[] = {
       CreateMockWrite(headers, 0), CreateMockWrite(rst, 3),
   };
@@ -5316,7 +5318,7 @@ TEST_F(SpdyNetworkTransactionTest, RetryAfterRefused) {
   };
 
   SpdySerializedFrame refused(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_REFUSED_STREAM));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_REFUSED_STREAM));
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyGetReply(nullptr, 0, 3));
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(3, true));
   MockRead reads[] = {
@@ -5710,7 +5712,7 @@ TEST_F(SpdyNetworkTransactionTest, WindowUpdateOverflow) {
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(
       1, content->c_str(), content->size(), false));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_FLOW_CONTROL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_FLOW_CONTROL_ERROR));
 
   // We're not going to write a data frame with FIN, we'll receive a bad
   // WINDOW_UPDATE while sending a request and will send a RST_STREAM frame.
@@ -6251,7 +6253,7 @@ TEST_F(SpdyNetworkTransactionTest, GoAwayOnOddPushStreamId) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      0, GOAWAY_PROTOCOL_ERROR, "Odd push stream id."));
+      0, ERROR_CODE_PROTOCOL_ERROR, "Odd push stream id."));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(goaway, 2),
   };
@@ -6282,7 +6284,7 @@ TEST_F(SpdyNetworkTransactionTest,
   SpdySerializedFrame priority_a(
       spdy_util_.ConstructSpdyPriority(4, 1, IDLE, true));
   SpdySerializedFrame goaway(spdy_util_.ConstructSpdyGoAway(
-      4, GOAWAY_PROTOCOL_ERROR,
+      4, ERROR_CODE_PROTOCOL_ERROR,
       "New push stream id must be greater than the last accepted."));
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(priority_a, 2),
@@ -6379,7 +6381,7 @@ TEST_F(SpdyNetworkTransactionTest, CRLFInHeaderValue) {
   SpdySerializedFrame req(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(rst, 2)};
 
   const char* response_headers[] = {"folded", "foo\r\nbar"};
@@ -6404,7 +6406,7 @@ TEST_F(SpdyNetworkTransactionTest, RstStreamNoError) {
   MockWrite writes[] = {CreateMockWrite(req, 0, ASYNC)};
 
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_NO_ERROR));
   MockRead reads[] = {CreateMockRead(rst, 1), MockRead(ASYNC, 0, 2)};
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
@@ -6426,7 +6428,7 @@ TEST_F(SpdyNetworkTransactionTest, RstStreamNoErrorAfterResponse) {
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_NO_ERROR));
   MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(body, 2),
                       CreateMockRead(rst, 3), MockRead(ASYNC, 0, 4)};
 
@@ -6504,7 +6506,7 @@ TEST_F(SpdyNetworkTransactionTest, ResponseAndRstStreamBeforePostDataSent) {
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
   SpdySerializedFrame body(spdy_util_.ConstructSpdyDataFrame(1, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_NO_ERROR));
   MockRead reads[] = {CreateMockRead(resp, 1), CreateMockRead(body, 2),
                       CreateMockRead(rst, 3), MockRead(ASYNC, 0, 4)};
 
@@ -6527,7 +6529,7 @@ class SpdyNetworkTransactionTLSUsageCheckTest
   void RunTLSUsageCheckTest(
       std::unique_ptr<SSLSocketDataProvider> ssl_provider) {
     SpdySerializedFrame goaway(
-        spdy_util_.ConstructSpdyGoAway(0, GOAWAY_INADEQUATE_SECURITY, ""));
+        spdy_util_.ConstructSpdyGoAway(0, ERROR_CODE_INADEQUATE_SECURITY, ""));
     MockWrite writes[] = {CreateMockWrite(goaway)};
 
     StaticSocketDataProvider data(nullptr, 0, writes, arraysize(writes));

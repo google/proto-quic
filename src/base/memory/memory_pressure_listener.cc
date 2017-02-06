@@ -4,7 +4,6 @@
 
 #include "base/memory/memory_pressure_listener.h"
 
-#include "base/lazy_instance.h"
 #include "base/observer_list_threadsafe.h"
 #include "base/trace_event/trace_event.h"
 
@@ -51,8 +50,10 @@ class MemoryPressureObserver {
   DISALLOW_COPY_AND_ASSIGN(MemoryPressureObserver);
 };
 
-LazyInstance<MemoryPressureObserver>::Leaky g_observer =
-    LAZY_INSTANCE_INITIALIZER;
+MemoryPressureObserver* GetMemoryPressureObserver() {
+  static auto observer = new MemoryPressureObserver();
+  return observer;
+}
 
 subtle::Atomic32 g_notifications_suppressed = 0;
 
@@ -61,7 +62,7 @@ subtle::Atomic32 g_notifications_suppressed = 0;
 MemoryPressureListener::MemoryPressureListener(
     const MemoryPressureListener::MemoryPressureCallback& callback)
     : callback_(callback) {
-  g_observer.Get().AddObserver(this, false);
+  GetMemoryPressureObserver()->AddObserver(this, false);
 }
 
 MemoryPressureListener::MemoryPressureListener(
@@ -70,11 +71,11 @@ MemoryPressureListener::MemoryPressureListener(
         sync_memory_pressure_callback)
     : callback_(callback),
       sync_memory_pressure_callback_(sync_memory_pressure_callback) {
-  g_observer.Get().AddObserver(this, true);
+  GetMemoryPressureObserver()->AddObserver(this, true);
 }
 
 MemoryPressureListener::~MemoryPressureListener() {
-  g_observer.Get().RemoveObserver(this);
+  GetMemoryPressureObserver()->RemoveObserver(this);
 }
 
 void MemoryPressureListener::Notify(MemoryPressureLevel memory_pressure_level) {
@@ -123,7 +124,7 @@ void MemoryPressureListener::DoNotifyMemoryPressure(
     MemoryPressureLevel memory_pressure_level) {
   DCHECK_NE(memory_pressure_level, MEMORY_PRESSURE_LEVEL_NONE);
 
-  g_observer.Get().Notify(memory_pressure_level);
+  GetMemoryPressureObserver()->Notify(memory_pressure_level);
 }
 
 }  // namespace base

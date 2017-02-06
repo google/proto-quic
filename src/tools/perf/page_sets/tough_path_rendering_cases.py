@@ -16,7 +16,7 @@ class ChalkboardPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('ClickStart'):
-      action_runner.EvaluateJavaScript(
+      action_runner.EvaluateJavaScript2(
           'document.getElementById("StartButton").click()')
       action_runner.Wait(20)
 

@@ -1305,7 +1305,7 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
   if (!Near(header.packet_number, last_header_.packet_number)) {
     QUIC_DLOG(INFO) << ENDPOINT << "Packet " << header.packet_number
                     << " out of bounds.  Discarding";
-    CloseConnection(QUIC_INVALID_PACKET_HEADER, "packet number out of bounds.",
+    CloseConnection(QUIC_INVALID_PACKET_HEADER, "Packet number out of bounds.",
                     ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
     return false;
   }
@@ -1641,7 +1641,6 @@ void QuicConnection::OnWriteError(int error_code) {
   const string error_details = QuicStrCat(
       "Write failed with error: ", error_code, " (", strerror(error_code), ")");
   QUIC_LOG_FIRST_N(ERROR, 2) << ENDPOINT << error_details;
-  // We can't send an error as the socket is presumably borked.
   switch (error_code) {
     case kMessageTooBigErrorCode:
       CloseConnection(
@@ -1690,8 +1689,9 @@ void QuicConnection::OnCongestionChange() {
         sent_packet_manager_.GetRttStats()->initial_rtt_us());
   }
 
-  if (debug_visitor_)
+  if (debug_visitor_ != nullptr) {
     debug_visitor_->OnRttChanged(rtt);
+  }
 }
 
 void QuicConnection::OnPathDegrading() {

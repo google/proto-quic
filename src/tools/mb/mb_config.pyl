@@ -1032,11 +1032,11 @@
     ],
 
     'chromeos_with_codecs_ozone_release_bot': [
-      'chromeos_with_codecs', 'ozone', 'release_bot',
+      'chromeos_with_codecs', 'ozone', 'default_ozone_platform_x11', 'release_bot',
     ],
 
     'chromeos_with_codecs_ozone_release_trybot': [
-      'chromeos_with_codecs', 'ozone', 'release_trybot',
+      'chromeos_with_codecs', 'ozone', 'default_ozone_platform_x11', 'release_trybot',
     ],
 
     'chromeos_with_codecs_release_bot': [
@@ -1646,6 +1646,10 @@
 
     'debug_trybot': {
       'mixins': ['debug_bot', 'minimal_symbols'],
+    },
+
+    'default_ozone_platform_x11': {
+      'gn_args': 'ozone_platform="x11"',
     },
 
     'disable_nacl': {

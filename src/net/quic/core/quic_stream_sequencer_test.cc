@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include "net/base/ip_endpoint.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"

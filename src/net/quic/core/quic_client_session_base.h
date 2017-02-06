@@ -65,15 +65,15 @@ class QUIC_EXPORT_PRIVATE QuicClientSessionBase
   // Called by |QuicSpdyClientStream| on receipt of PUSH_PROMISE, does
   // some session level validation and creates the
   // |QuicClientPromisedInfo| inserting into maps by (promised) id and
-  // url. Returns true if a new push promise is accepted. Reset the promised
-  // stream and returns false otherwiese.
+  // url. Returns true if a new push promise is accepted. Resets the promised
+  // stream and returns false otherwise.
   virtual bool HandlePromised(QuicStreamId associated_id,
                               QuicStreamId promised_id,
                               const SpdyHeaderBlock& headers);
 
   // For cross-origin server push, this should verify the server is
   // authoritative per [RFC2818], Section 3.  Roughly, subjectAltName
-  // std::list in the certificate should contain a matching DNS name, or IP
+  // list in the certificate should contain a matching DNS name, or IP
   // address.  |hostname| is derived from the ":authority" header field of
   // the PUSH_PROMISE frame, port if present there will be dropped.
   virtual bool IsAuthorized(const std::string& hostname) = 0;

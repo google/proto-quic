@@ -4,7 +4,6 @@
 
 #include "net/quic/core/quic_socket_address_coder.h"
 
-#include "net/base/sys_addrinfo.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 using std::string;

@@ -23,6 +23,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/lazy_instance.h"
 #include "base/macros.h"
+#include "base/memory/weak_ptr.h"
 #include "base/metrics/histogram_base.h"
 #include "base/strings/string_piece.h"
 #include "base/synchronization/lock.h"
@@ -62,8 +63,17 @@ class BASE_EXPORT StatisticsRecorder {
     }
   };
 
+  // An interface class that allows the StatisticsRecorder to forcibly merge
+  // histograms from providers when necessary.
+  class HistogramProvider {
+   public:
+    // Merges all histogram information into the global versions.
+    virtual void MergeHistogramDeltas() = 0;
+  };
+
   typedef std::map<StringKey, HistogramBase*> HistogramMap;
   typedef std::vector<HistogramBase*> Histograms;
+  typedef std::vector<WeakPtr<HistogramProvider>> HistogramProviders;
 
   // A class for iterating over the histograms held within this global resource.
   class BASE_EXPORT HistogramIterator {
@@ -101,6 +111,12 @@ class BASE_EXPORT StatisticsRecorder {
   // Find out if histograms can now be registered into our list.
   static bool IsActive();
 
+  // Register a provider of histograms that can be called to merge those into
+  // the global StatisticsRecorder. Calls to ImportProvidedHistograms() will
+  // fetch from registered providers.
+  static void RegisterHistogramProvider(
+      const WeakPtr<HistogramProvider>& provider);
+
   // Register, or add a new histogram to the collection of statistics. If an
   // identically named histogram is already registered, then the argument
   // |histogram| will deleted.  The returned value is always the registered
@@ -133,6 +149,9 @@ class BASE_EXPORT StatisticsRecorder {
   // Find a histogram by name. It matches the exact name. This method is thread
   // safe.  It returns NULL if a matching histogram is not found.
   static HistogramBase* FindHistogram(base::StringPiece name);
+
+  // Imports histograms from providers. This must be called on the UI thread.
+  static void ImportProvidedHistograms();
 
   // Support for iterating over known histograms.
   static HistogramIterator begin(bool include_persistent);
@@ -220,6 +239,7 @@ class BASE_EXPORT StatisticsRecorder {
   std::unique_ptr<HistogramMap> existing_histograms_;
   std::unique_ptr<CallbackMap> existing_callbacks_;
   std::unique_ptr<RangesMap> existing_ranges_;
+  std::unique_ptr<HistogramProviders> existing_providers_;
 
   bool vlog_initialized_ = false;
 
@@ -229,6 +249,7 @@ class BASE_EXPORT StatisticsRecorder {
   static HistogramMap* histograms_;
   static CallbackMap* callbacks_;
   static RangesMap* ranges_;
+  static HistogramProviders* providers_;
 
   // Lock protects access to above maps. This is a LazyInstance to avoid races
   // when the above methods are used before Initialize(). Previously each method

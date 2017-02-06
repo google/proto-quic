@@ -29,7 +29,6 @@ class URLRequestMockDataJob : public URLRequestJob {
 
   void Start() override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;
-  int GetResponseCode() const override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   void ContinueWithCertificate(X509Certificate* client_cert,
                                SSLPrivateKey* client_private_key) override;

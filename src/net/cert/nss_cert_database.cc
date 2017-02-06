@@ -18,9 +18,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/observer_list_threadsafe.h"
-#include "base/task_runner.h"
-#include "base/task_runner_util.h"
-#include "base/threading/worker_pool.h"
+#include "base/task_scheduler/post_task.h"
 #include "crypto/scoped_nss_types.h"
 #include "net/base/crypto_module.h"
 #include "net/base/net_errors.h"
@@ -104,8 +102,11 @@ void NSSCertDatabase::ListCerts(
 
   // base::Passed will NULL out |certs|, so cache the underlying pointer here.
   CertificateList* raw_certs = certs.get();
-  GetSlowTaskRunner()->PostTaskAndReply(
-      FROM_HERE,
+  base::PostTaskWithTraitsAndReply(
+      FROM_HERE, base::TaskTraits()
+                     .WithShutdownBehavior(
+                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
+                     .MayBlock(),
       base::Bind(&NSSCertDatabase::ListCertsImpl,
                  base::Passed(crypto::ScopedPK11Slot()),
                  base::Unretained(raw_certs)),
@@ -119,8 +120,11 @@ void NSSCertDatabase::ListCertsInSlot(const ListCertsCallback& callback,
 
   // base::Passed will NULL out |certs|, so cache the underlying pointer here.
   CertificateList* raw_certs = certs.get();
-  GetSlowTaskRunner()->PostTaskAndReply(
-      FROM_HERE,
+  base::PostTaskWithTraitsAndReply(
+      FROM_HERE, base::TaskTraits()
+                     .WithShutdownBehavior(
+                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
+                     .MayBlock(),
       base::Bind(&NSSCertDatabase::ListCertsImpl,
                  base::Passed(crypto::ScopedPK11Slot(PK11_ReferenceSlot(slot))),
                  base::Unretained(raw_certs)),
@@ -379,14 +383,14 @@ bool NSSCertDatabase::DeleteCertAndKey(X509Certificate* cert) {
 void NSSCertDatabase::DeleteCertAndKeyAsync(
     const scoped_refptr<X509Certificate>& cert,
     const DeleteCertCallback& callback) {
-  base::PostTaskAndReplyWithResult(
-      GetSlowTaskRunner().get(),
-      FROM_HERE,
+  base::PostTaskWithTraitsAndReplyWithResult(
+      FROM_HERE, base::TaskTraits()
+                     .WithShutdownBehavior(
+                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN)
+                     .MayBlock(),
       base::Bind(&NSSCertDatabase::DeleteCertAndKeyImpl, cert),
       base::Bind(&NSSCertDatabase::NotifyCertRemovalAndCallBack,
-                 weak_factory_.GetWeakPtr(),
-                 cert,
-                 callback));
+                 weak_factory_.GetWeakPtr(), cert, callback));
 }
 
 bool NSSCertDatabase::IsReadOnly(const X509Certificate* cert) const {
@@ -407,11 +411,6 @@ void NSSCertDatabase::RemoveObserver(Observer* observer) {
   observer_list_->RemoveObserver(observer);
 }
 
-void NSSCertDatabase::SetSlowTaskRunnerForTest(
-    const scoped_refptr<base::TaskRunner>& task_runner) {
-  slow_task_runner_for_test_ = task_runner;
-}
-
 // static
 void NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot slot,
                                     CertificateList* certs) {
@@ -430,12 +429,6 @@ void NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot slot,
         node->cert, X509Certificate::OSCertHandles()));
   }
   CERT_DestroyCertList(cert_list);
-}
-
-scoped_refptr<base::TaskRunner> NSSCertDatabase::GetSlowTaskRunner() const {
-  if (slow_task_runner_for_test_.get())
-    return slow_task_runner_for_test_;
-  return base::WorkerPool::GetTaskRunner(true /*task is slow*/);
 }
 
 void NSSCertDatabase::NotifyCertRemovalAndCallBack(

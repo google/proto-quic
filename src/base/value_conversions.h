@@ -14,8 +14,8 @@ namespace base {
 
 class FilePath;
 class TimeDelta;
-class StringValue;
 class Value;
+using StringValue = Value;
 
 // The caller takes ownership of the returned value.
 BASE_EXPORT StringValue* CreateFilePathValue(const FilePath& in_value);

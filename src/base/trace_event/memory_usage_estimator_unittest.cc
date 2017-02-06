@@ -225,5 +225,20 @@ TEST(EstimateMemoryUsageTest, UnorderedMultiMap) {
   EXPECT_EQ_32_64(515540u, 531580u, EstimateMemoryUsage(map));
 }
 
+TEST(EstimateMemoryUsageTest, Deque) {
+  std::deque<Data> deque;
+
+  // Pick a large value so that platform-specific accounting
+  // for deque's blocks is small compared to usage of all items.
+  constexpr size_t kDataSize = 100000;
+  for (int i = 0; i != 1500; ++i) {
+    deque.push_back(Data(kDataSize));
+  }
+
+  // Compare against a reasonable minimum (i.e. no overhead).
+  size_t min_expected_usage = deque.size() * (sizeof(Data) + kDataSize);
+  EXPECT_LE(min_expected_usage, EstimateMemoryUsage(deque));
+}
+
 }  // namespace trace_event
 }  // namespace base

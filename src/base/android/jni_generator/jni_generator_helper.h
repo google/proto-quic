@@ -42,6 +42,21 @@ inline void CheckException(JNIEnv* env) {
   base::android::CheckException(env);
 }
 
+inline bool ShouldSkipJniRegistration(bool is_maindex_class) {
+  switch (base::android::GetJniRegistrationType()) {
+    case base::android::ALL_JNI_REGISTRATION:
+      return false;
+    case base::android::NO_JNI_REGISTRATION:
+      // TODO(estevenson): Change this to a DCHECK.
+      return true;
+    case base::android::SELECTIVE_JNI_REGISTRATION:
+      return !is_maindex_class;
+    default:
+      NOTREACHED();
+      return false;
+  }
+}
+
 }  // namespace jni_generator
 
 #endif  // BASE_ANDROID_JNI_GENERATOR_JNI_GENERATOR_HELPER_H_

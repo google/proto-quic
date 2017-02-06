@@ -403,6 +403,10 @@ void SchedulerWorkerPoolImpl::GetHistograms(
   histograms->push_back(num_tasks_between_waits_histogram_);
 }
 
+int SchedulerWorkerPoolImpl::GetMaxConcurrentTasksDeprecated() const {
+  return workers_.size();
+}
+
 void SchedulerWorkerPoolImpl::WaitForAllWorkersIdleForTesting() {
   AutoSchedulerLock auto_lock(idle_workers_stack_lock_);
   while (idle_workers_stack_.Size() < workers_.size())

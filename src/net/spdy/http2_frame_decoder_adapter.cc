@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 
+#include <cstdint>
 #include <cstring>
 #include <string>
 #include <utility>
@@ -160,7 +161,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
       // the rest of the control frame header is valid.
       // We rely on the visitor to check validity of stream_id.
       bool valid_stream = visitor()->OnUnknownFrame(
-          header.stream_id, static_cast<int>(header.type));
+          header.stream_id, static_cast<uint8_t>(header.type));
       if (has_expected_frame_type_ && header.type != expected_frame_type_) {
         // Report an unexpected frame error and close the connection if we
         // expect a known frame type (probably CONTINUATION) and receive an
@@ -350,9 +351,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
                    Http2ErrorCode http2_error_code) override {
     DVLOG(1) << "OnRstStream: " << header << "; code=" << http2_error_code;
     if (IsOkToStartFrame(header) && HasRequiredStreamId(header)) {
-      SpdyRstStreamStatus status =
-          ParseRstStreamStatus(static_cast<int>(http2_error_code));
-      visitor()->OnRstStream(header.stream_id, status);
+      SpdyErrorCode error_code =
+          ParseErrorCode(static_cast<uint32_t>(http2_error_code));
+      visitor()->OnRstStream(header.stream_id, error_code);
     }
   }
 
@@ -435,9 +436,9 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     if (IsOkToStartFrame(header) && HasRequiredStreamIdZero(header)) {
       frame_header_ = header;
       has_frame_header_ = true;
-      SpdyGoAwayStatus status =
-          ParseGoAwayStatus(static_cast<int>(goaway.error_code));
-      visitor()->OnGoAway(goaway.last_stream_id, status);
+      SpdyErrorCode error_code =
+          ParseErrorCode(static_cast<uint32_t>(goaway.error_code));
+      visitor()->OnGoAway(goaway.last_stream_id, error_code);
     }
   }
 

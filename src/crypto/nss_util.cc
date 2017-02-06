@@ -264,13 +264,13 @@ class ChromeOSUserData {
 };
 
 class ScopedChapsLoadFixup {
-  public:
-    ScopedChapsLoadFixup();
-    ~ScopedChapsLoadFixup();
+ public:
+  ScopedChapsLoadFixup();
+  ~ScopedChapsLoadFixup();
 
-  private:
+ private:
 #if defined(COMPONENT_BUILD)
-    void *chaps_handle_;
+  void* chaps_handle_;
 #endif
 };
 
@@ -368,14 +368,11 @@ class NSSInitSingleton {
     if (base::WorkerPool::PostTaskAndReply(
             FROM_HERE,
             base::Bind(&NSSInitSingleton::InitializeTPMTokenOnWorkerThread,
-                       system_slot_id,
-                       tpm_args_ptr),
+                       system_slot_id, tpm_args_ptr),
             base::Bind(&NSSInitSingleton::OnInitializedTPMTokenAndSystemSlot,
                        base::Unretained(this),  // NSSInitSingleton is leaky
-                       callback,
-                       base::Passed(&tpm_args)),
-            true /* task_is_slow */
-            )) {
+                       callback, base::Passed(&tpm_args)),
+            true /* task_is_slow */)) {
       initializing_tpm_token_ = true;
     } else {
       base::ThreadTaskRunnerHandle::Get()->PostTask(
@@ -530,15 +527,12 @@ class NSSInitSingleton {
     TPMModuleAndSlot* tpm_args_ptr = tpm_args.get();
     base::WorkerPool::PostTaskAndReply(
         FROM_HERE,
-        base::Bind(&NSSInitSingleton::InitializeTPMTokenOnWorkerThread,
-                   slot_id,
+        base::Bind(&NSSInitSingleton::InitializeTPMTokenOnWorkerThread, slot_id,
                    tpm_args_ptr),
         base::Bind(&NSSInitSingleton::OnInitializedTPMForChromeOSUser,
                    base::Unretained(this),  // NSSInitSingleton is leaky
-                   username_hash,
-                   base::Passed(&tpm_args)),
-        true /* task_is_slow */
-        );
+                   username_hash, base::Passed(&tpm_args)),
+        true /* task_is_slow */);
   }
 
   void OnInitializedTPMForChromeOSUser(

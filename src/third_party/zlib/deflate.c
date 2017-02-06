@@ -71,15 +71,14 @@ typedef enum {
     finish_done     /* finish done, accept no more input or output */
 } block_state;
 
-typedef block_state (*compress_func) OF((deflate_state *s, int flush,
-                                         int clas));
+typedef block_state (*compress_func) OF((deflate_state *s, int flush));
 /* Compression function. Returns the block state after the call. */
 
 local void fill_window    OF((deflate_state *s));
-local block_state deflate_stored OF((deflate_state *s, int flush, int clas));
-local block_state deflate_fast   OF((deflate_state *s, int flush, int clas));
+local block_state deflate_stored OF((deflate_state *s, int flush));
+local block_state deflate_fast   OF((deflate_state *s, int flush));
 #ifndef FASTEST
-local block_state deflate_slow   OF((deflate_state *s, int flush, int clas));
+local block_state deflate_slow   OF((deflate_state *s, int flush));
 #endif
 local block_state deflate_rle    OF((deflate_state *s, int flush));
 local block_state deflate_huff   OF((deflate_state *s, int flush));
@@ -89,9 +88,9 @@ local void flush_pending  OF((z_streamp strm));
 
 #ifdef ASMV
       void match_init OF((void)); /* asm code initialization */
-      uInt longest_match  OF((deflate_state *s, IPos cur_match, int clas));
+      uInt longest_match  OF((deflate_state *s, IPos cur_match));
 #else
-local uInt longest_match  OF((deflate_state *s, IPos cur_match, int clas));
+local uInt longest_match  OF((deflate_state *s, IPos cur_match));
 #endif
 
 #ifdef DEBUG
@@ -330,9 +329,6 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
     s->window = (Bytef *) ZALLOC(strm, s->w_size + window_padding, 2*sizeof(Byte));
     s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
     s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
-    s->class_bitmap = NULL;
-    zmemzero(&s->cookie_locations, sizeof(s->cookie_locations));
-    strm->clas = 0;
 
     s->high_water = 0;      /* nothing written to s->window yet */
 
@@ -442,8 +438,6 @@ int ZEXPORT deflateResetKeep (strm)
     s = (deflate_state *)strm->state;
     s->pending = 0;
     s->pending_out = s->pending_buf;
-    TRY_FREE(strm, s->class_bitmap);
-    s->class_bitmap = NULL;
 
     if (s->wrap < 0) {
         s->wrap = -s->wrap; /* was made negative by deflate(..., Z_FINISH); */
@@ -938,26 +932,9 @@ int ZEXPORT deflate (strm, flush)
         (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
         block_state bstate;
 
-        if (strm->clas && s->class_bitmap == NULL) {
-            /* This is the first time that we have seen alternative class
-             * data. All data up till this point has been standard class. */
-            s->class_bitmap = (Bytef*) ZALLOC(strm, s->w_size/4, sizeof(Byte));
-            zmemzero(s->class_bitmap, s->w_size/4);
-        }
-
-        if (strm->clas && s->strategy == Z_RLE) {
-            /* We haven't patched deflate_rle. */
-            ERR_RETURN(strm, Z_BUF_ERROR);
-        }
-
-        if (s->strategy == Z_HUFFMAN_ONLY) {
-            bstate = deflate_huff(s, flush);
-        } else if (s->strategy == Z_RLE) {
-            bstate = deflate_rle(s, flush);
-        } else {
-            bstate = (*(configuration_table[s->level].func))
-                (s, flush, strm->clas);
-        }
+        bstate = s->strategy == Z_HUFFMAN_ONLY ? deflate_huff(s, flush) :
+                    (s->strategy == Z_RLE ? deflate_rle(s, flush) :
+                        (*(configuration_table[s->level].func))(s, flush));
 
         if (bstate == finish_started || bstate == finish_done) {
             s->status = FINISH_STATE;
@@ -1055,7 +1032,6 @@ int ZEXPORT deflateEnd (strm)
     TRY_FREE(strm, strm->state->head);
     TRY_FREE(strm, strm->state->prev);
     TRY_FREE(strm, strm->state->window);
-    TRY_FREE(strm, strm->state->class_bitmap);
 
     ZFREE(strm, strm->state);
     strm->state = Z_NULL;
@@ -1189,57 +1165,6 @@ local void lm_init (s)
 #endif
 }
 
-/* class_set sets bits [offset,offset+len) in s->class_bitmap to either 1 (if
- * class != 0) or 0 (otherwise). */
-local void class_set(s, offset, len, clas)
-    deflate_state *s;
-    IPos offset;
-    uInt len;
-    int clas;
-{
-    IPos byte = offset >> 3;
-    IPos bit = offset & 7;
-    Bytef class_byte_value = clas ? 0xff : 0x00;
-    Bytef class_bit_value = clas ? 1 : 0;
-    static const Bytef mask[8] = {0xfe, 0xfd, 0xfb, 0xf7,
-                                  0xef, 0xdf, 0xbf, 0x7f};
-
-    if (bit) {
-        while (len) {
-            s->class_bitmap[byte] &= mask[bit];
-            s->class_bitmap[byte] |= class_bit_value << bit;
-            bit++;
-            len--;
-            if (bit == 8) {
-                bit = 0;
-                byte++;
-                break;
-            }
-        }
-    }
-
-    while (len >= 8) {
-        s->class_bitmap[byte++] = class_byte_value;
-        len -= 8;
-    }
-
-    while (len) {
-            s->class_bitmap[byte] &= mask[bit];
-            s->class_bitmap[byte] |= class_bit_value << bit;
-            bit++;
-            len--;
-    }
-}
-
-local int class_at(s, window_offset)
-    deflate_state *s;
-    IPos window_offset;
-{
-    IPos byte = window_offset >> 3;
-    IPos bit = window_offset & 7;
-    return (s->class_bitmap[byte] >> bit) & 1;
-}
-
 #ifndef FASTEST
 /* ===========================================================================
  * Set match_start to the longest match starting at the given string and
@@ -1254,10 +1179,9 @@ local int class_at(s, window_offset)
 /* For 80x86 and 680x0, an optimized version will be provided in match.asm or
  * match.S. The code will be functionally equivalent.
  */
-local uInt longest_match(s, cur_match, clas)
+local uInt longest_match(s, cur_match)
     deflate_state *s;
     IPos cur_match;                             /* current match */
-    int clas;
 {
     unsigned chain_length = s->max_chain_length;/* max hash chain length */
     register Bytef *scan = s->window + s->strstart; /* current string */
@@ -1305,9 +1229,6 @@ local uInt longest_match(s, cur_match, clas)
     do {
         Assert(cur_match < s->strstart, "no future");
         match = s->window + cur_match;
-        /* If the matched data is in the wrong class, skip it. */
-        if (s->class_bitmap && class_at(s, cur_match) != clas)
-            continue;
 
         /* Skip to next match if the match length cannot increase
          * or if the match length is less than 2.  Note that the checks below
@@ -1350,8 +1271,6 @@ local uInt longest_match(s, cur_match, clas)
         len = (MAX_MATCH - 1) - (int)(strend-scan);
         scan = strend - (MAX_MATCH-1);
 
-#error "UNALIGNED_OK hasn't been patched."
-
 #else /* UNALIGNED_OK */
 
         if (match[best_len]   != scan_end  ||
@@ -1368,23 +1287,15 @@ local uInt longest_match(s, cur_match, clas)
         scan += 2, match++;
         Assert(*scan == *match, "match[2]?");
 
-        if (!s->class_bitmap) {
-            /* We check for insufficient lookahead only every 8th comparison;
-             * the 256th check will be made at strstart+258.
-             */
-            do {
-            } while (*++scan == *++match && *++scan == *++match &&
-                     *++scan == *++match && *++scan == *++match &&
-                     *++scan == *++match && *++scan == *++match &&
-                     *++scan == *++match && *++scan == *++match &&
-                     scan < strend);
-        } else {
-            /* We have to be mindful of the class of the data and not stray. */
-            do {
-            } while (*++scan == *++match &&
-                     class_at(s, match - s->window) == clas &&
-                     scan < strend);
-        }
+        /* We check for insufficient lookahead only every 8th comparison;
+         * the 256th check will be made at strstart+258.
+         */
+        do {
+        } while (*++scan == *++match && *++scan == *++match &&
+                 *++scan == *++match && *++scan == *++match &&
+                 *++scan == *++match && *++scan == *++match &&
+                 *++scan == *++match && *++scan == *++match &&
+                 scan < strend);
 
         Assert(scan <= s->window+(unsigned)(s->window_size-1), "wild scan");
 
@@ -1412,73 +1323,19 @@ local uInt longest_match(s, cur_match, clas)
 }
 #endif /* ASMV */
 
-/* cookie_match is a replacement for longest_match in the case of cookie data.
- * Here we only wish to match the entire value so trying the partial matches in
- * longest_match is both wasteful and often fails to find the correct match.
- *
- * So we take the djb2 hash of the cookie and look up the last position for a
- * match in a special hash table. */
-local uInt cookie_match(s, start, len)
-    deflate_state *s;
-    IPos start;
-    unsigned len;
-{
-    unsigned hash = 5381;
-    Bytef *str = s->window + start;
-    unsigned i;
-    IPos cookie_location;
-
-    if (len >= MAX_MATCH || len == 0)
-        return 0;
-
-    for (i = 0; i < len; i++)
-        hash = ((hash << 5) + hash) + str[i];
-
-    hash &= Z_COOKIE_HASH_MASK;
-    cookie_location = s->cookie_locations[hash];
-    s->cookie_locations[hash] = start;
-    s->match_start = 0;
-    if (cookie_location &&
-        (start - cookie_location) > len &&
-        (start - cookie_location) < MAX_DIST(s) &&
-        len <= s->lookahead) {
-        for (i = 0; i < len; i++) {
-            if (s->window[start+i] != s->window[cookie_location+i] ||
-                class_at(s, cookie_location+i) != 1) {
-                return 0;
-            }
-        }
-        /* Check that we aren't matching a prefix of another cookie by ensuring
-         * that the final byte is either a semicolon (which cannot appear in a
-         * cookie value), or non-cookie data. */
-        if (s->window[cookie_location+len-1] != ';' &&
-            class_at(s, cookie_location+len) != 0) {
-          return 0;
-        }
-        s->match_start = cookie_location;
-        return len;
-    }
-
-    return 0;
-}
-
-
 #else /* FASTEST */
 
 /* ---------------------------------------------------------------------------
  * Optimized version for FASTEST only
  */
-local uInt longest_match(s, cur_match, clas)
+local uInt longest_match(s, cur_match)
     deflate_state *s;
     IPos cur_match;                             /* current match */
-    int clas;
 {
     register Bytef *scan = s->window + s->strstart; /* current string */
     register Bytef *match;                       /* matched string */
     register int len;                           /* length of current match */
     register Bytef *strend = s->window + s->strstart + MAX_MATCH;
-
-#error "This code not patched"
 
     /* The code is optimized for HASH_BITS >= 8 and MAX_MATCH-2 multiple of 16.
      * It is easy to get rid of this optimization if necessary.
@@ -1636,20 +1493,6 @@ local void fill_window_c(s)
                  */
             } while (--n);
 #endif
-            for (n = 0; n < Z_COOKIE_HASH_SIZE; n++) {
-                if (s->cookie_locations[n] > wsize) {
-                    s->cookie_locations[n] -= wsize;
-                } else {
-                    s->cookie_locations[n] = 0;
-                }
-            }
-
-            if (s->class_bitmap) {
-                zmemcpy(s->class_bitmap, s->class_bitmap + s->w_size/8,
-                        s->w_size/8);
-                zmemzero(s->class_bitmap + s->w_size/8, s->w_size/8);
-            }
-
             more += wsize;
         }
         if (s->strm->avail_in == 0) break;
@@ -1668,9 +1511,6 @@ local void fill_window_c(s)
         Assert(more >= 2, "more < 2");
 
         n = read_buf(s->strm, s->window + s->strstart + s->lookahead, more);
-        if (s->class_bitmap != NULL) {
-            class_set(s, s->strstart + s->lookahead, n, s->strm->clas);
-        }
         s->lookahead += n;
 
         /* Initialize the hash value now that we have some input: */
@@ -1767,10 +1607,9 @@ local void fill_window_c(s)
  * NOTE: this function should be optimized to avoid extra copying from
  * window to pending_buf.
  */
-local block_state deflate_stored(s, flush, clas)
+local block_state deflate_stored(s, flush)
     deflate_state *s;
     int flush;
-    int clas;
 {
     /* Stored blocks are limited to 0xffff bytes, pending_buf is limited
      * to pending_buf_size, and each stored block has a 5 byte header:
@@ -1832,18 +1671,12 @@ local block_state deflate_stored(s, flush, clas)
  * new strings in the dictionary only for unmatched strings or for short
  * matches. It is used only for the fast compression options.
  */
-local block_state deflate_fast(s, flush, clas)
+local block_state deflate_fast(s, flush)
     deflate_state *s;
     int flush;
-    int clas;
 {
     IPos hash_head;       /* head of the hash chain */
     int bflush;           /* set if current block must be flushed */
-
-    if (clas != 0) {
-        /* We haven't patched this code for alternative class data. */
-        return Z_BUF_ERROR;
-    }
 
     for (;;) {
         /* Make sure that we always have enough lookahead, except
@@ -1875,7 +1708,7 @@ local block_state deflate_fast(s, flush, clas)
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).
              */
-            s->match_length = longest_match (s, hash_head, clas);
+            s->match_length = longest_match (s, hash_head);
             /* longest_match() sets match_start */
         }
         if (s->match_length >= MIN_MATCH) {
@@ -1940,25 +1773,12 @@ local block_state deflate_fast(s, flush, clas)
  * evaluation for matches: a match is finally adopted only if there is
  * no better match at the next window position.
  */
-local block_state deflate_slow(s, flush, clas)
+local block_state deflate_slow(s, flush)
     deflate_state *s;
     int flush;
-    int clas;
 {
     IPos hash_head;          /* head of hash chain */
     int bflush;              /* set if current block must be flushed */
-    uInt input_length ;
-    int first = 1;           /* first says whether this is the first iteration
-                                of the loop, below. */
-
-    if (clas == Z_CLASS_COOKIE) {
-        if (s->lookahead) {
-            /* Alternative class data must always be presented at the beginning
-             * of a block. */
-            return Z_BUF_ERROR;
-        }
-        input_length = s->strm->avail_in;
-    }
 
     /* Process the input block. */
     for (;;) {
@@ -1988,18 +1808,13 @@ local block_state deflate_slow(s, flush, clas)
         s->prev_length = s->match_length, s->prev_match = s->match_start;
         s->match_length = MIN_MATCH-1;
 
-        if (clas == Z_CLASS_COOKIE && first) {
-            s->match_length = cookie_match(s, s->strstart, input_length);
-        } else if (clas == Z_CLASS_STANDARD &&
-                   hash_head != NIL &&
-                   s->prev_length < s->max_lazy_match &&
-                   s->strstart - hash_head <= MAX_DIST(s)) {
+        if (hash_head != NIL && s->prev_length < s->max_lazy_match &&
+            s->strstart - hash_head <= MAX_DIST(s)) {
             /* To simplify the code, we prevent matches with the string
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).
              */
-            s->match_length = longest_match (s, hash_head, clas);
-
+            s->match_length = longest_match (s, hash_head);
             /* longest_match() sets match_start */
 
             if (s->match_length <= 5 && (s->strategy == Z_FILTERED
@@ -2018,20 +1833,7 @@ local block_state deflate_slow(s, flush, clas)
         /* If there was a match at the previous step and the current
          * match is not better, output the previous match:
          */
-        first = 0;
-        if (s->prev_length >= MIN_MATCH && s->match_length <= s->prev_length &&
-            /* We will only accept an exact match for Z_CLASS_COOKIE data and
-             * we won't match Z_CLASS_HUFFMAN_ONLY data at all. */
-            (clas == Z_CLASS_STANDARD || (clas == Z_CLASS_COOKIE &&
-                            s->prev_length == input_length &&
-                            s->prev_match > 0 &&
-                            /* We require that a Z_CLASS_COOKIE match be
-                             * preceded by either a semicolon (which cannot be
-                             * part of a cookie), or non-cookie data. This is
-                             * to prevent a cookie from being a suffix of
-                             * another. */
-                            (class_at(s, s->prev_match-1) == Z_CLASS_STANDARD ||
-                             *(s->window + s->prev_match-1) == ';')))) {
+        if (s->prev_length >= MIN_MATCH && s->match_length <= s->prev_length) {
             uInt max_insert = s->strstart + s->lookahead - MIN_MATCH;
             /* Do not insert strings in hash table beyond this. */
 

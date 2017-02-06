@@ -8,6 +8,8 @@
 #include "base/macros.h"
 #include "base/threading/sequenced_worker_pool.h"
 #include "base/threading/thread_restrictions.h"
+#include "net/http/http_response_headers.h"
+#include "net/http/http_response_info.h"
 #include "net/url_request/url_request.h"
 #include "net/url_request/url_request_file_job.h"
 #include "net/url_request/url_request_filter.h"
@@ -31,7 +33,9 @@ class TestURLRequestJob : public URLRequestFileJob {
                           file_path,
                           worker_task_runner) {}
 
-  int GetResponseCode() const override { return 200; }
+  void GetResponseInfo(HttpResponseInfo* info) override {
+    info->headers = new net::HttpResponseHeaders("HTTP/1.1 200 OK");
+  }
 
  private:
   ~TestURLRequestJob() override {}

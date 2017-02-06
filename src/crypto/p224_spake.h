@@ -5,12 +5,14 @@
 #ifndef CRYPTO_P224_SPAKE_H_
 #define CRYPTO_P224_SPAKE_H_
 
-#include <crypto/p224.h>
-#include <crypto/sha2.h>
 #include <stdint.h>
+
+#include <string>
 
 #include "base/gtest_prod_util.h"
 #include "base/strings/string_piece.h"
+#include "crypto/p224.h"
+#include "crypto/sha2.h"
 
 namespace crypto {
 

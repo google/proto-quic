@@ -1,2 +1,0 @@
-gen/content/browser/tracing/grit/tracing_resources.h
-gen/content/browser/tracing/tracing_resources.pak

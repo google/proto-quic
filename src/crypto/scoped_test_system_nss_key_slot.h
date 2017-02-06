@@ -27,7 +27,7 @@ class ScopedTestNSSDB;
 // At most one instance of this helper must be used at a time.
 class CRYPTO_EXPORT ScopedTestSystemNSSKeySlot {
  public:
-  explicit ScopedTestSystemNSSKeySlot();
+  ScopedTestSystemNSSKeySlot();
   ~ScopedTestSystemNSSKeySlot();
 
   bool ConstructedSuccessfully() const;

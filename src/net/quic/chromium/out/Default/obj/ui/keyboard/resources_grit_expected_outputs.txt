@@ -1,3 +1,0 @@
-gen/ui/keyboard/grit/keyboard_resources.h
-gen/ui/keyboard/grit/keyboard_resources_map.h
-gen/ui/keyboard/keyboard_resources.pak

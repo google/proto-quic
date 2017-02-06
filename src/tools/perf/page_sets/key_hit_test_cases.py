@@ -18,7 +18,7 @@ class PaperCalculatorHitTest(polymer.PolymerPage):
 
   def PerformPageInteractions(self, action_runner):
     # pay cost of selecting tap target only once
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
         window.__tapTarget = document.querySelector(
             'body /deep/ #outerPanels'
         ).querySelector(
@@ -26,7 +26,7 @@ class PaperCalculatorHitTest(polymer.PolymerPage):
         ).shadowRoot.querySelector(
             'paper-calculator-key[label="5"]'
         )''')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.__tapTarget != null')
 
     for _ in xrange(100):

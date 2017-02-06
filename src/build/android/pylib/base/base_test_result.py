@@ -56,8 +56,7 @@ class BaseTestResult(object):
     self._test_type = test_type
     self._duration = duration
     self._log = log
-    self._tombstones_url = None
-    self._logcat_url = None
+    self._links = {}
 
   def __str__(self):
     return self._name
@@ -105,24 +104,30 @@ class BaseTestResult(object):
     """Get the test log."""
     return self._log
 
-  def SetTombstonesUrl(self, tombstones_url):
-    self._tombstones_url = tombstones_url
+  def SetLink(self, name, link_url):
+    """Set link with test result data."""
+    self._links[name] = link_url
 
-  def GetTombstonesUrl(self):
-    return self._tombstones_url
+  def GetLinks(self):
+    """Get dict containing links to test result data."""
+    return self._links
 
-  def SetLogcatUrl(self, logcat_url):
-    self._logcat_url = logcat_url
-
-  def GetLogcatUrl(self):
-    return self._logcat_url
 
 class TestRunResults(object):
   """Set of results for a test run."""
 
   def __init__(self):
+    self._links = {}
     self._results = set()
     self._results_lock = threading.RLock()
+
+  def SetLink(self, name, link_url):
+    """Add link with test run results data."""
+    self._links[name] = link_url
+
+  def GetLinks(self):
+    """Get dict containing links to test run result data."""
+    return self._links
 
   def GetLogs(self):
     """Get the string representation of all test logs."""

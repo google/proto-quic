@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
@@ -116,7 +117,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
 
   // Called when a RST_STREAM frame has been parsed.
   virtual void OnRstStream(SpdyStreamId stream_id,
-                           SpdyRstStreamStatus status) = 0;
+                           SpdyErrorCode error_code) = 0;
 
   // Called when a SETTINGS frame is received.
   // |clear_persisted| True if the respective flag is set on the SETTINGS frame.
@@ -137,7 +138,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
 
   // Called when a GOAWAY frame has been parsed.
   virtual void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                        SpdyGoAwayStatus status) = 0;
+                        SpdyErrorCode error_code) = 0;
 
   // Called when a HEADERS frame is received.
   // Note that header block data is not included. See OnHeaderFrameStart().
@@ -174,16 +175,6 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // occurred while processing the data. Default implementation returns true.
   virtual bool OnGoAwayFrameData(const char* goaway_data, size_t len);
 
-  // Called when rst_stream frame opaque data is available.
-  // |rst_stream_data| A buffer containing the opaque RST_STREAM
-  // data chunk received.
-  // |len| The length of the header data buffer. A length of zero indicates
-  //       that the opaque data has been completely sent.
-  // When this function returns true the visitor indicates that it accepted
-  // all of the data. Returning false indicates that that an error has
-  // occurred while processing the data. Default implementation returns true.
-  virtual bool OnRstStreamFrameData(const char* rst_stream_data, size_t len);
-
   // Called when a BLOCKED frame has been parsed.
   virtual void OnBlocked(SpdyStreamId stream_id) {}
 
@@ -218,7 +209,7 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   // Return true if this appears to be a valid extension frame, false otherwise.
   // We distinguish between extension frames and nonsense by checking
   // whether the stream id is valid.
-  virtual bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) = 0;
+  virtual bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) = 0;
 };
 
 // Optionally, and in addition to SpdyFramerVisitorInterface, a class supporting
@@ -491,9 +482,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
 
   // For debugging.
   static const char* StateToString(int state);
-  static const char* SpdyFramerErrorToString(int spdy_framer_error);
-  static const char* StatusCodeToString(int status_code);
-  static const char* FrameTypeToString(SpdyFrameType type);
+  static const char* SpdyFramerErrorToString(SpdyFramerError spdy_framer_error);
 
   // Did the most recent frame header appear to be an HTTP/1.x (or earlier)
   // response (i.e. start with "HTTP/")?

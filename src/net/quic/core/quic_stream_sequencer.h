@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_H_
 #define NET_QUIC_CORE_QUIC_STREAM_SEQUENCER_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <map>
 
 #include "base/macros.h"

@@ -81,11 +81,11 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
 
   // Called when a RST_STREAM frame has been parsed.
   virtual void OnRstStream(SpdyStreamId stream_id,
-                           SpdyRstStreamStatus status) = 0;
+                           SpdyErrorCode error_code) = 0;
 
   // Called when a GOAWAY frame has been parsed.
   virtual void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                        SpdyGoAwayStatus status,
+                        SpdyErrorCode error_code,
                         base::StringPiece debug_data) = 0;
 
   // Called when a WINDOW_UPDATE frame has been parsed.
@@ -107,7 +107,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramerVisitorInterface {
   // Return true if this appears to be a valid extension frame, false otherwise.
   // We distinguish between extension frames and nonsense by checking
   // whether the stream id is valid.
-  virtual bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) = 0;
+  virtual bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) = 0;
 
  protected:
   virtual ~BufferedSpdyFramerVisitorInterface() {}
@@ -155,9 +155,9 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   void OnSettingsAck() override;
   void OnSettingsEnd() override;
   void OnPing(SpdyPingId unique_id, bool is_ack) override;
-  void OnRstStream(SpdyStreamId stream_id, SpdyRstStreamStatus status) override;
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status) override;
+                SpdyErrorCode error_code) override;
   bool OnGoAwayFrameData(const char* goaway_data, size_t len) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   void OnPushPromise(SpdyStreamId stream_id,
@@ -171,7 +171,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
                          size_t length,
                          bool fin) override;
   void OnContinuation(SpdyStreamId stream_id, bool end) override;
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override;
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;
 
   // SpdyFramer methods.
   size_t ProcessInput(const char* data, size_t len);
@@ -182,11 +182,11 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   bool MessageFullyRead();
   bool HasError();
   SpdySerializedFrame* CreateRstStream(SpdyStreamId stream_id,
-                                       SpdyRstStreamStatus status) const;
+                                       SpdyErrorCode error_code) const;
   SpdySerializedFrame* CreateSettings(const SettingsMap& values) const;
   SpdySerializedFrame* CreatePingFrame(SpdyPingId unique_id, bool is_ack) const;
   SpdySerializedFrame* CreateGoAway(SpdyStreamId last_accepted_stream_id,
-                                    SpdyGoAwayStatus status,
+                                    SpdyErrorCode error_code,
                                     base::StringPiece debug_data) const;
   SpdySerializedFrame* CreateHeaders(SpdyStreamId stream_id,
                                      SpdyControlFlags flags,
@@ -267,7 +267,7 @@ class NET_EXPORT_PRIVATE BufferedSpdyFramer
   // Collection of fields of a GOAWAY frame that this class needs to buffer.
   struct GoAwayFields {
     SpdyStreamId last_accepted_stream_id;
-    SpdyGoAwayStatus status;
+    SpdyErrorCode error_code;
     std::string debug_data;
   };
   std::unique_ptr<GoAwayFields> goaway_fields_;

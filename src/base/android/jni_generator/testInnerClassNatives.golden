@@ -52,7 +52,8 @@ static const JNINativeMethod kMethodsMyInnerClass[] = {
 };
 
 static bool RegisterNativesImpl(JNIEnv* env) {
-  if (base::android::IsManualJniRegistrationDisabled()) return true;
+  if (jni_generator::ShouldSkipJniRegistration(false))
+    return true;
 
   const int kMethodsMyInnerClassSize = arraysize(kMethodsMyInnerClass);
 

@@ -1,2 +1,0 @@
-gen/chrome/grit/extensions_api_resources.h
-gen/chrome/extensions_api_resources.pak

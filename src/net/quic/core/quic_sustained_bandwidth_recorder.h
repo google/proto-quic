@@ -5,7 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
 #define NET_QUIC_CORE_QUIC_SUSTAINED_BANDWIDTH_RECORDER_H_
 
-#include <stdint.h>
+#include <cstdint>
 
 #include "base/macros.h"
 #include "net/quic/core/quic_bandwidth.h"

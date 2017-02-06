@@ -385,7 +385,7 @@ TEST_F(BidirectionalStreamSpdyImplTest, SendDataAfterStreamFailed) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyPost(
       kDefaultUrl, 1, kBodyDataSize * 3, LOW, nullptr, 0));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_PROTOCOL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_PROTOCOL_ERROR));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0), CreateMockWrite(rst, 2),
@@ -446,7 +446,7 @@ TEST_P(BidirectionalStreamSpdyImplTest, RstWithNoErrorBeforeSendIsComplete) {
 
   SpdySerializedFrame resp(spdy_util_.ConstructSpdyPostReply(nullptr, 0));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_NO_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_NO_ERROR));
   MockRead reads[] = {CreateMockRead(resp, 1),
                       MockRead(ASYNC, ERR_IO_PENDING, 2),  // Force a pause.
                       CreateMockRead(rst, 3), MockRead(ASYNC, 0, 4)};

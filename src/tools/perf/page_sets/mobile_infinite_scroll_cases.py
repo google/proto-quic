@@ -29,7 +29,7 @@ def _ScrollAction(action_runner, scroll_amount, delay, repeat):
 
 def _WaitAction(action_runner):
   with action_runner.CreateInteraction('Load'):
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
       'document.body != null && '
       'document.body.scrollHeight > window.innerHeight && '
       '!document.body.addEventListener("touchstart", function() {})')

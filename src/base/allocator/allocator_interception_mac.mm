@@ -38,9 +38,12 @@
 namespace base {
 namespace allocator {
 
+MallocZoneFunctions::MallocZoneFunctions() {}
+
 namespace {
 
 bool g_oom_killer_enabled;
+bool g_replaced_default_zone = false;
 
 // Starting with Mac OS X 10.7, the zone allocators set up by the system are
 // read-only, to prevent them from being overwritten in an attack. However,
@@ -302,12 +305,21 @@ void StoreZoneFunctions(ChromeMallocZone* zone,
   functions->valloc = zone->valloc;
   functions->free = zone->free;
   functions->realloc = zone->realloc;
+  functions->size = zone->size;
   CHECK(functions->malloc && functions->calloc && functions->valloc &&
-        functions->free && functions->realloc);
+        functions->free && functions->realloc && functions->size);
+
+  // These functions might be nullptr.
+  functions->batch_malloc = zone->batch_malloc;
+  functions->batch_free = zone->batch_free;
 
   if (zone->version >= 5) {
     functions->memalign = zone->memalign;
     CHECK(functions->memalign);
+  }
+  if (zone->version >= 6) {
+    // This may be nullptr.
+    functions->free_definite_size = zone->free_definite_size;
   }
 }
 
@@ -320,13 +332,24 @@ void ReplaceZoneFunctions(ChromeMallocZone* zone,
   DeprotectMallocZone(zone, &reprotection_start, &reprotection_length,
                       &reprotection_value);
 
+  CHECK(functions->malloc && functions->calloc && functions->valloc &&
+        functions->free && functions->realloc);
   zone->malloc = functions->malloc;
   zone->calloc = functions->calloc;
   zone->valloc = functions->valloc;
   zone->free = functions->free;
   zone->realloc = functions->realloc;
-  if (zone->version >= 5) {
+  if (functions->batch_malloc)
+    zone->batch_malloc = functions->batch_malloc;
+  if (functions->batch_free)
+    zone->batch_free = functions->batch_free;
+  if (functions->size)
+    zone->size = functions->size;
+  if (zone->version >= 5 && functions->memalign) {
     zone->memalign = functions->memalign;
+  }
+  if (zone->version >= 6 && functions->free_definite_size) {
+    zone->free_definite_size = functions->free_definite_size;
   }
 
   // Restore protection if it was active.
@@ -336,6 +359,23 @@ void ReplaceZoneFunctions(ChromeMallocZone* zone,
                         reprotection_length, false, reprotection_value);
     MACH_CHECK(result == KERN_SUCCESS, result) << "mach_vm_protect";
   }
+}
+
+void StoreFunctionsForDefaultZone(MallocZoneFunctions* functions) {
+  ChromeMallocZone* default_zone = reinterpret_cast<ChromeMallocZone*>(
+      malloc_default_zone());
+  StoreZoneFunctions(default_zone, functions);
+}
+
+void ReplaceFunctionsForDefaultZone(const MallocZoneFunctions* functions) {
+  CHECK(!g_replaced_default_zone);
+  g_replaced_default_zone = true;
+#if !defined(ADDRESS_SANITIZER)
+  StoreFunctionsForDefaultZone(&g_old_zone);
+#endif
+  ChromeMallocZone* default_zone = reinterpret_cast<ChromeMallocZone*>(
+      malloc_default_zone());
+  ReplaceZoneFunctions(default_zone, functions);
 }
 
 void InterceptAllocationsMac() {
@@ -356,17 +396,17 @@ void InterceptAllocationsMac() {
 #if !defined(ADDRESS_SANITIZER)
   // Don't do anything special on OOM for the malloc zones replaced by
   // AddressSanitizer, as modifying or protecting them may not work correctly.
-  ChromeMallocZone* default_zone =
-      reinterpret_cast<ChromeMallocZone*>(malloc_default_zone());
-  StoreZoneFunctions(default_zone, &g_old_zone);
-  MallocZoneFunctions new_functions;
-  new_functions.malloc = oom_killer_malloc;
-  new_functions.calloc = oom_killer_calloc;
-  new_functions.valloc = oom_killer_valloc;
-  new_functions.free = oom_killer_free;
-  new_functions.realloc = oom_killer_realloc;
-  new_functions.memalign = oom_killer_memalign;
-  ReplaceZoneFunctions(default_zone, &new_functions);
+  if (!g_replaced_default_zone) {
+    StoreFunctionsForDefaultZone(&g_old_zone);
+    MallocZoneFunctions new_functions;
+    new_functions.malloc = oom_killer_malloc;
+    new_functions.calloc = oom_killer_calloc;
+    new_functions.valloc = oom_killer_valloc;
+    new_functions.free = oom_killer_free;
+    new_functions.realloc = oom_killer_realloc;
+    new_functions.memalign = oom_killer_memalign;
+    ReplaceFunctionsForDefaultZone(&new_functions);
+  }
 
   ChromeMallocZone* purgeable_zone =
       reinterpret_cast<ChromeMallocZone*>(malloc_default_purgeable_zone());

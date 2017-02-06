@@ -346,7 +346,7 @@
           "--output-format=chartjson",
           "--browser=android-chromium",
           "--story-filter=load:search:google",
-          "--extra-browser-args=\"--enable-heap-profiler\""
+          "--extra-browser-args=\"--enable-heap-profiling\""
         ],
         "isolate_name": "telemetry_perf_tests",
         "name": "system_health.memory_mobile",

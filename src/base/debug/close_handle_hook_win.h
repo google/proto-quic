@@ -13,9 +13,6 @@ namespace debug {
 // Installs the hooks required to debug use of improper handles.
 BASE_EXPORT void InstallHandleHooks();
 
-// Removes the hooks installed by InstallHandleHooks().
-BASE_EXPORT void RemoveHandleHooks();
-
 }  // namespace debug
 }  // namespace base
 

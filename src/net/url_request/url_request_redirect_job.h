@@ -49,7 +49,6 @@ class NET_EXPORT URLRequestRedirectJob : public URLRequestJob {
   void Start() override;
   void Kill() override;
   bool CopyFragmentOnRedirect(const GURL& location) const override;
-  int GetResponseCode() const override;
 
  private:
   void StartAsync();

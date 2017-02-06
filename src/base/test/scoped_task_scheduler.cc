@@ -51,6 +51,8 @@ class TestTaskScheduler : public TaskScheduler {
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   std::vector<const HistogramBase*> GetHistograms() const override;
+  int GetMaxConcurrentTasksWithTraitsDeprecated(
+      const TaskTraits& traits) const override;
   void Shutdown() override;
   void FlushForTesting() override;
   void JoinForTesting() override;
@@ -156,6 +158,11 @@ std::vector<const HistogramBase*> TestTaskScheduler::GetHistograms() const {
   return std::vector<const HistogramBase*>();
 }
 
+int TestTaskScheduler::GetMaxConcurrentTasksWithTraitsDeprecated(
+    const TaskTraits& traits) const {
+  return 1;
+}
+
 void TestTaskScheduler::Shutdown() {
   // Prevent SKIP_ON_SHUTDOWN and CONTINUE_ON_SHUTDOWN tasks from running from
   // now on.
@@ -247,10 +254,9 @@ TestTaskSchedulerTaskRunner::~TestTaskSchedulerTaskRunner() = default;
 
 ScopedTaskScheduler::ScopedTaskScheduler() : ScopedTaskScheduler(nullptr) {}
 
-ScopedTaskScheduler::ScopedTaskScheduler(MessageLoop* external_message_loop) {
+ScopedTaskScheduler::ScopedTaskScheduler(MessageLoop* message_loop) {
   DCHECK(!TaskScheduler::GetInstance());
-  TaskScheduler::SetInstance(
-      MakeUnique<TestTaskScheduler>(external_message_loop));
+  TaskScheduler::SetInstance(MakeUnique<TestTaskScheduler>(message_loop));
   task_scheduler_ = TaskScheduler::GetInstance();
 }
 

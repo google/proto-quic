@@ -15,6 +15,10 @@ namespace net {
 
 class QUIC_EXPORT_PRIVATE QuicIpAddressImpl {
  public:
+  enum : size_t {
+    kIPv4AddressSize = IPAddress::kIPv4AddressSize,
+    kIPv6AddressSize = IPAddress::kIPv6AddressSize
+  };
   static QuicIpAddressImpl Loopback4();
   static QuicIpAddressImpl Loopback6();
   static QuicIpAddressImpl Any4();

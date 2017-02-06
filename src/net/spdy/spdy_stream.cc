@@ -4,6 +4,7 @@
 
 #include "net/spdy/spdy_stream.h"
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -95,7 +96,7 @@ bool ContainsUppercaseAscii(base::StringPiece str) {
 // A wrapper around a stream that calls into ProduceHeadersFrame().
 class SpdyStream::HeadersBufferProducer : public SpdyBufferProducer {
  public:
-  HeadersBufferProducer(const base::WeakPtr<SpdyStream>& stream)
+  explicit HeadersBufferProducer(const base::WeakPtr<SpdyStream>& stream)
       : stream_(stream) {
     DCHECK(stream_.get());
   }
@@ -289,7 +290,7 @@ void SpdyStream::IncreaseSendWindowSize(int32_t delta_window_size) {
           "Received WINDOW_UPDATE [delta: %d] for stream %d overflows "
           "send_window_size_ [current: %d]", delta_window_size, stream_id_,
           send_window_size_);
-      session_->ResetStream(stream_id_, RST_STREAM_FLOW_CONTROL_ERROR, desc);
+      session_->ResetStream(stream_id_, ERROR_CODE_FLOW_CONTROL_ERROR, desc);
       return;
     }
   }
@@ -370,7 +371,7 @@ void SpdyStream::DecreaseRecvWindowSize(int32_t delta_window_size) {
   // the peer, that means that the receive window is not being respected.
   if (delta_window_size > recv_window_size_ - unacked_recv_window_bytes_) {
     session_->ResetStream(
-        stream_id_, RST_STREAM_FLOW_CONTROL_ERROR,
+        stream_id_, ERROR_CODE_FLOW_CONTROL_ERROR,
         "delta_window_size is " + base::IntToString(delta_window_size) +
             " in DecreaseRecvWindowSize, which is larger than the receive " +
             "window size of " + base::IntToString(recv_window_size_));
@@ -416,13 +417,13 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
         case STATUS_HEADER_NOT_INCLUDED: {
           const std::string error("Response headers do not include :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-          session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+          session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
         }
         case STATUS_HEADER_DOES_NOT_START_WITH_NUMBER: {
           const std::string error("Cannot parse :status.");
           LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-          session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+          session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
           return;
         }
         // Intentional fallthrough for the following two cases,
@@ -448,7 +449,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
           if (io_state_ == STATE_IDLE) {
             const std::string error("Response received before request sent.");
             LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-            session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+            session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
             return;
           }
           break;
@@ -479,7 +480,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       if (type_ == SPDY_PUSH_STREAM) {
         const std::string error("Trailers not supported for push stream.");
         LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-        session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+        session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
         return;
       }
 
@@ -491,7 +492,7 @@ void SpdyStream::OnHeadersReceived(const SpdyHeaderBlock& response_headers,
       // No further header blocks are allowed after trailers.
       const std::string error("Header block received after trailers.");
       LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-      session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+      session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
       break;
   }
 }
@@ -514,14 +515,14 @@ void SpdyStream::OnDataReceived(std::unique_ptr<SpdyBuffer> buffer) {
   if (response_state_ == READY_FOR_HEADERS) {
     const std::string error("DATA received before headers.");
     LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+    session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
     return;
   }
 
   if (response_state_ == TRAILERS_RECEIVED && buffer) {
     const std::string error("DATA received after trailers.");
     LogStreamError(ERR_SPDY_PROTOCOL_ERROR, error);
-    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR, error);
+    session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR, error);
     return;
   }
 
@@ -696,9 +697,9 @@ void SpdyStream::Cancel() {
     return;
 
   if (stream_id_ != 0) {
-    session_->ResetStream(stream_id_, RST_STREAM_CANCEL, std::string());
+    session_->ResetStream(stream_id_, ERROR_CODE_CANCEL, std::string());
   } else {
-    session_->CloseCreatedStream(GetWeakPtr(), RST_STREAM_CANCEL);
+    session_->CloseCreatedStream(GetWeakPtr(), ERROR_CODE_CANCEL);
   }
   // |this| is invalid at this point.
 }
@@ -899,8 +900,8 @@ void SpdyStream::QueueNextDataFrame() {
 void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {
   DCHECK(response_headers_.empty());
   if (response_headers.find("transfer-encoding") != response_headers.end()) {
-    session_->ResetStream(stream_id_, RST_STREAM_PROTOCOL_ERROR,
-                         "Received transfer-encoding header");
+    session_->ResetStream(stream_id_, ERROR_CODE_PROTOCOL_ERROR,
+                          "Received transfer-encoding header");
     return;
   }
 
@@ -909,7 +910,7 @@ void SpdyStream::SaveResponseHeaders(const SpdyHeaderBlock& response_headers) {
     // Disallow uppercase headers.
     if (ContainsUppercaseAscii(it->first)) {
       session_->ResetStream(
-          stream_id_, RST_STREAM_PROTOCOL_ERROR,
+          stream_id_, ERROR_CODE_PROTOCOL_ERROR,
           "Upper case characters in header: " + it->first.as_string());
       return;
     }

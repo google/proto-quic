@@ -5,8 +5,6 @@
 #ifndef BASE_TASK_SCHEDULER_TASK_SCHEDULER_IMPL_H_
 #define BASE_TASK_SCHEDULER_TASK_SCHEDULER_IMPL_H_
 
-#include <stddef.h>
-
 #include <memory>
 #include <vector>
 
@@ -58,6 +56,8 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
   scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
       const TaskTraits& traits) override;
   std::vector<const HistogramBase*> GetHistograms() const override;
+  int GetMaxConcurrentTasksWithTraitsDeprecated(
+      const TaskTraits& traits) const override;
   void Shutdown() override;
   void FlushForTesting() override;
   void JoinForTesting() override;
@@ -70,7 +70,8 @@ class BASE_EXPORT TaskSchedulerImpl : public TaskScheduler {
       const std::vector<SchedulerWorkerPoolParams>& worker_pool_params_vector);
 
   // Returns the worker pool that runs Tasks with |traits|.
-  SchedulerWorkerPool* GetWorkerPoolForTraits(const TaskTraits& traits);
+  SchedulerWorkerPoolImpl* GetWorkerPoolForTraits(
+      const TaskTraits& traits) const;
 
   // Callback invoked when a non-single-thread |sequence| isn't empty after a
   // worker pops a Task from it.

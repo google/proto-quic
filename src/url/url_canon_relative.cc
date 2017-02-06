@@ -288,7 +288,7 @@ bool DoResolveRelativePath(const char* base_url,
   // possible escaped characters.
   output->ReserveSizeIfNeeded(
       base_parsed.path.begin +
-      std::max(path.end(), std::max(query.end(), ref.end())) + 8);
+      std::max(path.end(), std::max(query.end(), ref.end())));
   output->Append(base_url, base_parsed.path.begin);
 
   if (path.len > 0) {
@@ -406,7 +406,7 @@ bool DoResolveRelativeHost(const char* base_url,
   // base URL.
   output->ReserveSizeIfNeeded(
       replacements.components().Length() +
-      base_parsed.CountCharactersBefore(Parsed::USERNAME, false) + 8);
+      base_parsed.CountCharactersBefore(Parsed::USERNAME, false));
   return ReplaceStandardURL(base_url, base_parsed, replacements,
                             query_converter, output, out_parsed);
 }

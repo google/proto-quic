@@ -31,6 +31,10 @@ class QUIC_EXPORT_PRIVATE QuicUrlUtils {
   // WARNING: mutates |hostname| in place and returns |hostname|.
   static char* NormalizeHostname(char* hostname);
 
+  // Creates a QuicServerId from a string formatted in same manner as
+  // QuicServerId::ToString().
+  static void StringToQuicServerId(const std::string& str, QuicServerId* out);
+
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicUrlUtils);
 };

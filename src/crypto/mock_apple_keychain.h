@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_MOCK_KEYCHAIN_MAC_H_
-#define CRYPTO_MOCK_KEYCHAIN_MAC_H_
+#ifndef CRYPTO_MOCK_APPLE_KEYCHAIN_H_
+#define CRYPTO_MOCK_APPLE_KEYCHAIN_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -254,4 +254,4 @@ class CRYPTO_EXPORT MockAppleKeychain : public AppleKeychain {
 
 }  // namespace crypto
 
-#endif  // CRYPTO_MOCK_KEYCHAIN_MAC_H_
+#endif  // CRYPTO_MOCK_APPLE_KEYCHAIN_H_

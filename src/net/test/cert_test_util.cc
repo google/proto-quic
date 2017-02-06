@@ -8,7 +8,7 @@
 #include "base/files/file_util.h"
 #include "net/cert/ev_root_ca_metadata.h"
 #include "net/cert/x509_certificate.h"
-#include "testing/gtest/include/gtest/gtest.h"
+#include "net/test/test_data_directory.h"
 
 namespace net {
 
@@ -23,6 +23,23 @@ CertificateList CreateCertificateListFromFile(
   return X509Certificate::CreateCertificateListFromBytes(cert_data.data(),
                                                          cert_data.size(),
                                                          format);
+}
+
+::testing::AssertionResult LoadCertificateFiles(
+    const std::vector<std::string>& cert_filenames,
+    CertificateList* certs) {
+  certs->clear();
+  for (const std::string& filename : cert_filenames) {
+    scoped_refptr<X509Certificate> cert = CreateCertificateChainFromFile(
+        GetTestCertsDirectory(), filename, X509Certificate::FORMAT_AUTO);
+    if (!cert)
+      return ::testing::AssertionFailure()
+             << "Failed loading certificate from file: " << filename
+             << " (in directory: " << GetTestCertsDirectory().value() << ")";
+    certs->push_back(cert);
+  }
+
+  return ::testing::AssertionSuccess();
 }
 
 scoped_refptr<X509Certificate> CreateCertificateChainFromFile(

@@ -164,6 +164,8 @@ Still reading?
   <issue id="LongLogTag" severity="ignore"/>
   <issue id="MissingApplicationIcon" severity="ignore"/>
   <issue id="MissingPermission" severity="ignore"/>
+  <!-- TODO(yolandyan) remove this once all tests are converted to junit4 -->
+  <issue id="MissingPrefix" severity="ignore"/>
   <!--
     TODO(estevenson) remove this once translations are added for
     IDS_ACCESSIBILITY_TOOLBAR_BTN_TABSWITCHER_TOGGLE (http://crbug.com/635677)

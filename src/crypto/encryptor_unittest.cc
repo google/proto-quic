@@ -325,7 +325,7 @@ TEST(EncryptorTest, CTRCounter) {
     counter1.Increment();
   counter1.Write(buf);
   EXPECT_EQ(0, memcmp(buf, kTest1, 15));
-  EXPECT_TRUE(buf[15] == 10);
+  EXPECT_EQ(10, buf[15]);
 
   // Check corner cases.
   const unsigned char kTest2[] = {

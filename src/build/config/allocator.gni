@@ -17,7 +17,7 @@ if (is_android || current_cpu == "mipsel" || is_mac || is_ios || is_asan ||
 # the shim. NaCl in particular does seem to link some binaries statically
 # against the debug CRT with "is_nacl=false".
 if ((is_linux || is_android || (is_win && !is_component_build && !is_debug)) &&
-     !is_asan && !is_lsan && !is_tsan && !is_msan) {
+    !is_asan && !is_lsan && !is_tsan && !is_msan) {
   _default_use_experimental_allocator_shim = true
 } else {
   _default_use_experimental_allocator_shim = false
@@ -42,10 +42,12 @@ if (is_nacl) {
 assert(use_allocator == "none" || use_allocator == "tcmalloc")
 
 assert(!is_win || use_allocator == "none", "Tcmalloc doesn't work on Windows.")
+assert(!is_mac || use_allocator == "none", "Tcmalloc doesn't work on macOS.")
 
-assert(
-    !use_experimental_allocator_shim || is_linux || is_android || is_win,
-    "use_experimental_allocator_shim supported only on Linux, Android and Windows targets")
+assert(!use_experimental_allocator_shim || is_linux || is_android || is_win ||
+           is_mac,
+       "use_experimental_allocator_shim supported only on Linux, Android, " +
+           "Windows and macOS targets")
 
 if (is_win && use_experimental_allocator_shim) {
   assert(!is_component_build,

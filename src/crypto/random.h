@@ -18,4 +18,4 @@ CRYPTO_EXPORT void RandBytes(void *bytes, size_t length);
 
 }
 
-#endif
+#endif  // CRYPTO_RANDOM_H_

@@ -43,6 +43,7 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/test/histogram_tester.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/values.h"
 #include "net/base/chunked_upload_data_stream.h"
@@ -54,6 +55,7 @@
 #include "net/base/net_errors.h"
 #include "net/base/net_module.h"
 #include "net/base/request_priority.h"
+#include "net/base/test_completion_callback.h"
 #include "net/base/upload_bytes_element_reader.h"
 #include "net/base/upload_data_stream.h"
 #include "net/base/upload_file_element_reader.h"
@@ -63,6 +65,7 @@
 #include "net/cert/do_nothing_ct_verifier.h"
 #include "net/cert/ev_root_ca_metadata.h"
 #include "net/cert/mock_cert_verifier.h"
+#include "net/cert/multi_log_ct_verifier.h"
 #include "net/cert/signed_certificate_timestamp_and_status.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert_net/nss_ocsp.h"
@@ -76,6 +79,7 @@
 #include "net/http/http_network_session.h"
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_headers.h"
+#include "net/http/http_server_properties_impl.h"
 #include "net/http/http_util.h"
 #include "net/log/net_log_event_type.h"
 #include "net/log/net_log_source.h"
@@ -86,6 +90,9 @@
 #include "net/nqe/external_estimate_provider.h"
 #include "net/proxy/proxy_server.h"
 #include "net/proxy/proxy_service.h"
+#include "net/quic/chromium/mock_crypto_client_stream_factory.h"
+#include "net/quic/chromium/quic_server_info.h"
+#include "net/socket/socket_test_util.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/ssl/channel_id_service.h"
 #include "net/ssl/default_channel_id_store.h"
@@ -3443,16 +3450,21 @@ class TestSSLConfigService : public SSLConfigService {
 #if !defined(OS_IOS)
 class TokenBindingURLRequestTest : public URLRequestTestHTTP {
  public:
+  TokenBindingURLRequestTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+
   void SetUp() override {
     default_context_.set_ssl_config_service(
         new TestSSLConfigService(false, false, false, true));
-    channel_id_service_.reset(new ChannelIDService(
-        new DefaultChannelIDStore(NULL), base::ThreadTaskRunnerHandle::Get()));
+    channel_id_service_.reset(
+        new ChannelIDService(new DefaultChannelIDStore(NULL)));
     default_context_.set_channel_id_service(channel_id_service_.get());
     URLRequestTestHTTP::SetUp();
   }
 
  protected:
+  // Required by ChannelIDService.
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
 };
 
@@ -7721,6 +7733,126 @@ TEST_F(URLRequestTestHTTP, SetSubsequentJobPriority) {
   EXPECT_EQ(LOW, job_priority);
 }
 
+TEST_F(URLRequestTest, QuicServerInfoFactoryTest) {
+  HttpNetworkSession::Params params;
+
+  MockClientSocketFactory socket_factory;
+  MockCryptoClientStreamFactory crypto_client_stream_factory;
+  MockHostResolver host_resolver;
+  MockCertVerifier cert_verifier;
+  CTPolicyEnforcer ct_policy_enforcer;
+  TransportSecurityState transport_security_state;
+  std::unique_ptr<CTVerifier> cert_transparency_verifier(
+      new MultiLogCTVerifier());
+  std::unique_ptr<ProxyService> proxy_service = ProxyService::CreateDirect();
+  scoped_refptr<SSLConfigServiceDefaults> ssl_config_service(
+      new SSLConfigServiceDefaults);
+  HttpServerPropertiesImpl http_server_properties;
+  // Set up the quic stream factory.
+  params.enable_quic = true;
+  params.client_socket_factory = &socket_factory;
+  params.quic_crypto_client_stream_factory = &crypto_client_stream_factory;
+  params.host_resolver = &host_resolver;
+  params.cert_verifier = &cert_verifier;
+  params.ct_policy_enforcer = &ct_policy_enforcer;
+  params.transport_security_state = &transport_security_state;
+  params.cert_transparency_verifier = cert_transparency_verifier.get();
+
+  params.proxy_service = proxy_service.get();
+  params.ssl_config_service = ssl_config_service.get();
+  params.http_server_properties = &http_server_properties;
+
+  HttpNetworkSession session(params);
+  DCHECK(session.quic_stream_factory());
+
+  std::unique_ptr<HttpNetworkLayer> network_layer1(
+      new HttpNetworkLayer(&session));
+
+  HttpCache main_cache(std::move(network_layer1),
+                       HttpCache::DefaultBackend::InMemory(0), true);
+
+  EXPECT_TRUE(session.quic_stream_factory()->has_quic_server_info_factory());
+
+  default_context_.set_http_transaction_factory(&main_cache);
+
+  QuicServerInfoFactory* quic_server_info_factory =
+      session.quic_stream_factory()->quic_server_info_factory();
+  DCHECK(quic_server_info_factory);
+
+  QuicServerId server_id("www.google.com", 443, PRIVACY_MODE_DISABLED);
+  const string server_config_a = "server_config_a";
+  const string source_address_token_a = "source_address_token_a";
+  const string cert_sct_a = "cert_sct_a";
+  const string chlo_hash_a = "chlo_hash_a";
+  const string server_config_sig_a = "server_config_sig_a";
+  const string cert_a = "cert_a";
+  const string cert_b = "cert_b";
+
+  {
+    // Store a QuicServerInfo to the quic server info factory.
+    TestCompletionCallback cb;
+    std::unique_ptr<QuicServerInfo> quic_server_info =
+        quic_server_info_factory->GetForServer(server_id);
+    quic_server_info->Start();
+    int rv = quic_server_info->WaitForDataReady(cb.callback());
+    EXPECT_THAT(cb.GetResult(rv), IsOk());
+
+    QuicServerInfo::State* state = quic_server_info->mutable_state();
+    EXPECT_TRUE(state->certs.empty());
+
+    state->server_config = server_config_a;
+    state->source_address_token = source_address_token_a;
+    state->cert_sct = cert_sct_a;
+    state->chlo_hash = chlo_hash_a;
+    state->server_config_sig = server_config_sig_a;
+    state->certs.push_back(cert_a);
+    quic_server_info->Persist();
+    base::RunLoop().RunUntilIdle();
+  }
+
+  // Retrieve the QuicServerInfo from the quic server info factory and verify
+  // the data is correct.
+  {
+    TestCompletionCallback cb;
+    std::unique_ptr<QuicServerInfo> quic_server_info =
+        quic_server_info_factory->GetForServer(server_id);
+    quic_server_info->Start();
+    int rv = quic_server_info->WaitForDataReady(cb.callback());
+    EXPECT_THAT(cb.GetResult(rv), IsOk());
+
+    QuicServerInfo::State* state = quic_server_info->mutable_state();
+    EXPECT_TRUE(quic_server_info->IsDataReady());
+    EXPECT_EQ(server_config_a, state->server_config);
+    EXPECT_EQ(source_address_token_a, state->source_address_token);
+    EXPECT_EQ(cert_sct_a, state->cert_sct);
+    EXPECT_EQ(chlo_hash_a, state->chlo_hash);
+    EXPECT_EQ(server_config_sig_a, state->server_config_sig);
+    EXPECT_EQ(1U, state->certs.size());
+    EXPECT_EQ(cert_a, state->certs[0]);
+
+    // Update the data.
+    state->certs.push_back(cert_b);
+    quic_server_info->Persist();
+    base::RunLoop().RunUntilIdle();
+  }
+
+  {
+    // Verify data has been successfully updated.
+    TestCompletionCallback cb;
+    std::unique_ptr<QuicServerInfo> quic_server_info =
+        quic_server_info_factory->GetForServer(server_id);
+    quic_server_info->Start();
+    int rv = quic_server_info->WaitForDataReady(cb.callback());
+    EXPECT_THAT(cb.GetResult(rv), IsOk());
+
+    QuicServerInfo::State* state = quic_server_info->mutable_state();
+    EXPECT_TRUE(quic_server_info->IsDataReady());
+    EXPECT_EQ(2U, state->certs.size());
+    EXPECT_EQ(cert_a, state->certs[0]);
+    EXPECT_EQ(cert_b, state->certs[1]);
+  }
+}
+
 // Check that creating a network request while entering/exiting suspend mode
 // fails as it should.  This is the only case where an HttpTransactionFactory
 // does not return an HttpTransaction.
@@ -7731,7 +7863,8 @@ TEST_F(URLRequestTestHTTP, NetworkSuspendTest) {
   network_layer->OnSuspend();
 
   HttpCache http_cache(std::move(network_layer),
-                       HttpCache::DefaultBackend::InMemory(0), true);
+                       HttpCache::DefaultBackend::InMemory(0),
+                       false /* set_up_quic_server_info_factory */);
 
   TestURLRequestContext context(true);
   context.set_http_transaction_factory(&http_cache);
@@ -8531,13 +8664,17 @@ TEST_F(URLRequestTestReferrerPolicy, HTTPSToHTTP) {
 
 class HTTPSRequestTest : public testing::Test {
  public:
-  HTTPSRequestTest() : default_context_(true) {
+  HTTPSRequestTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()),
+        default_context_(true) {
     default_context_.set_network_delegate(&default_network_delegate_);
     default_context_.Init();
   }
   ~HTTPSRequestTest() override {}
 
  protected:
+  // Required by ChannelIDService.
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   TestNetworkDelegate default_network_delegate_;  // Must outlive URLRequest.
   TestURLRequestContext default_context_;
 };
@@ -9154,7 +9291,9 @@ TEST_F(HTTPSFallbackTest, TLSv1_1NoFallback) {
 
 class HTTPSSessionTest : public testing::Test {
  public:
-  HTTPSSessionTest() : default_context_(true) {
+  HTTPSSessionTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()),
+        default_context_(true) {
     cert_verifier_.set_default_result(OK);
 
     default_context_.set_network_delegate(&default_network_delegate_);
@@ -9164,6 +9303,8 @@ class HTTPSSessionTest : public testing::Test {
   ~HTTPSSessionTest() override {}
 
  protected:
+  // Required by ChannelIDService.
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   MockCertVerifier cert_verifier_;
   TestNetworkDelegate default_network_delegate_;  // Must outlive URLRequest.
   TestURLRequestContext default_context_;

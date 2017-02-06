@@ -7,8 +7,6 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using net::SpdyHeaderBlock;
-using net::kPushPromiseTimeoutSecs;
 using std::string;
 
 namespace net {

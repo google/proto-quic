@@ -45,9 +45,8 @@ int tls13_handshake(SSL_HANDSHAKE *hs) {
 
       case ssl_hs_flush:
       case ssl_hs_flush_and_read_message: {
-        int ret = BIO_flush(ssl->wbio);
+        int ret = ssl->method->flush_flight(ssl);
         if (ret <= 0) {
-          ssl->rwstate = SSL_WRITING;
           return ret;
         }
         if (hs->wait != ssl_hs_flush_and_read_message) {
@@ -59,15 +58,7 @@ int tls13_handshake(SSL_HANDSHAKE *hs) {
       }
 
       case ssl_hs_read_message: {
-        int ret = ssl->method->ssl_get_message(ssl, -1, ssl_dont_hash_message);
-        if (ret <= 0) {
-          return ret;
-        }
-        break;
-      }
-
-      case ssl_hs_write_message: {
-        int ret = ssl->method->write_message(ssl);
+        int ret = ssl->method->ssl_get_message(ssl);
         if (ret <= 0) {
           return ret;
         }
@@ -407,18 +398,6 @@ err:
   return ret;
 }
 
-int tls13_check_message_type(SSL *ssl, int type) {
-  if (ssl->s3->tmp.message_type != type) {
-    ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNEXPECTED_MESSAGE);
-    OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_MESSAGE);
-    ERR_add_error_dataf("got type %d, wanted type %d",
-                        ssl->s3->tmp.message_type, type);
-    return 0;
-  }
-
-  return 1;
-}
-
 int tls13_process_finished(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   uint8_t verify_data[EVP_MAX_MD_SIZE];
@@ -442,7 +421,7 @@ int tls13_process_finished(SSL_HANDSHAKE *hs) {
   return 1;
 }
 
-int tls13_prepare_certificate(SSL_HANDSHAKE *hs) {
+int tls13_add_certificate(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   CBB cbb, body, certificate_list;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CERTIFICATE) ||
@@ -454,7 +433,7 @@ int tls13_prepare_certificate(SSL_HANDSHAKE *hs) {
   }
 
   if (!ssl_has_certificate(ssl)) {
-    if (!ssl_complete_message(ssl, &cbb)) {
+    if (!ssl_add_message_cbb(ssl, &cbb)) {
       goto err;
     }
 
@@ -462,9 +441,11 @@ int tls13_prepare_certificate(SSL_HANDSHAKE *hs) {
   }
 
   CERT *cert = ssl->cert;
+  CRYPTO_BUFFER *leaf_buf = sk_CRYPTO_BUFFER_value(cert->chain, 0);
   CBB leaf, extensions;
   if (!CBB_add_u24_length_prefixed(&certificate_list, &leaf) ||
-      !ssl_add_cert_to_cbb(&leaf, cert->x509_leaf) ||
+      !CBB_add_bytes(&leaf, CRYPTO_BUFFER_data(leaf_buf),
+                     CRYPTO_BUFFER_len(leaf_buf)) ||
       !CBB_add_u16_length_prefixed(&certificate_list, &extensions)) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
     goto err;
@@ -498,17 +479,19 @@ int tls13_prepare_certificate(SSL_HANDSHAKE *hs) {
     }
   }
 
-  for (size_t i = 0; i < sk_X509_num(cert->x509_chain); i++) {
+  for (size_t i = 1; i < sk_CRYPTO_BUFFER_num(cert->chain); i++) {
+    CRYPTO_BUFFER *cert_buf = sk_CRYPTO_BUFFER_value(cert->chain, i);
     CBB child;
     if (!CBB_add_u24_length_prefixed(&certificate_list, &child) ||
-        !ssl_add_cert_to_cbb(&child, sk_X509_value(cert->x509_chain, i)) ||
+        !CBB_add_bytes(&child, CRYPTO_BUFFER_data(cert_buf),
+                       CRYPTO_BUFFER_len(cert_buf)) ||
         !CBB_add_u16(&certificate_list, 0 /* no extensions */)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       goto err;
     }
   }
 
-  if (!ssl_complete_message(ssl, &cbb)) {
+  if (!ssl_add_message_cbb(ssl, &cbb)) {
     goto err;
   }
 
@@ -519,8 +502,8 @@ err:
   return 0;
 }
 
-enum ssl_private_key_result_t tls13_prepare_certificate_verify(
-    SSL_HANDSHAKE *hs, int is_first_run) {
+enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
+                                                           int is_first_run) {
   SSL *const ssl = hs->ssl;
   enum ssl_private_key_result_t ret = ssl_private_key_failure;
   uint8_t *msg = NULL;
@@ -570,7 +553,7 @@ enum ssl_private_key_result_t tls13_prepare_certificate_verify(
   }
 
   if (!CBB_did_write(&child, sig_len) ||
-      !ssl_complete_message(ssl, &cbb)) {
+      !ssl_add_message_cbb(ssl, &cbb)) {
     goto err;
   }
 
@@ -582,7 +565,7 @@ err:
   return ret;
 }
 
-int tls13_prepare_finished(SSL_HANDSHAKE *hs) {
+int tls13_add_finished(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   size_t verify_data_len;
   uint8_t verify_data[EVP_MAX_MD_SIZE];
@@ -596,7 +579,7 @@ int tls13_prepare_finished(SSL_HANDSHAKE *hs) {
   CBB cbb, body;
   if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_FINISHED) ||
       !CBB_add_bytes(&body, verify_data, verify_data_len) ||
-      !ssl_complete_message(ssl, &cbb)) {
+      !ssl_add_message_cbb(ssl, &cbb)) {
     CBB_cleanup(&cbb);
     return 0;
   }

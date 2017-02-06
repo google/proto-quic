@@ -1,4 +1,0 @@
-gen/chrome/grit/policy_resources.h
-gen/chrome/grit/policy_resources_map.cc
-gen/chrome/grit/policy_resources_map.h
-gen/chrome/policy_resources.pak

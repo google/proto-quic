@@ -1,3 +1,0 @@
-gen/blink/public/resources/grit/blink_image_resources.h
-gen/blink/public/resources/blink_image_resources_100_percent.pak
-gen/blink/public/resources/blink_image_resources_200_percent.pak

@@ -87,6 +87,7 @@ StatisticsRecorder::~StatisticsRecorder() {
   histograms_ = existing_histograms_.release();
   callbacks_ = existing_callbacks_.release();
   ranges_ = existing_ranges_.release();
+  providers_ = existing_providers_.release();
 }
 
 // static
@@ -110,6 +111,12 @@ void StatisticsRecorder::Initialize() {
 bool StatisticsRecorder::IsActive() {
   base::AutoLock auto_lock(lock_.Get());
   return histograms_ != nullptr;
+}
+
+// static
+void StatisticsRecorder::RegisterHistogramProvider(
+    const WeakPtr<HistogramProvider>& provider) {
+  providers_->push_back(provider);
 }
 
 // static
@@ -307,6 +314,20 @@ HistogramBase* StatisticsRecorder::FindHistogram(base::StringPiece name) {
 }
 
 // static
+void StatisticsRecorder::ImportProvidedHistograms() {
+  if (!providers_)
+    return;
+
+  // Merge histogram data from each provider in turn.
+  for (const WeakPtr<HistogramProvider>& provider : *providers_) {
+    // Weak-pointer may be invalid if the provider was destructed, though they
+    // generally never are.
+    if (provider)
+      provider->MergeHistogramDeltas();
+  }
+}
+
+// static
 StatisticsRecorder::HistogramIterator StatisticsRecorder::begin(
     bool include_persistent) {
   DCHECK(histograms_);
@@ -345,6 +366,8 @@ void StatisticsRecorder::GetSnapshot(const std::string& query,
   base::AutoLock auto_lock(lock_.Get());
   if (!histograms_)
     return;
+
+  ImportGlobalPersistentHistograms();
 
   for (const auto& entry : *histograms_) {
     if (entry.second->histogram_name().find(query) != std::string::npos)
@@ -458,10 +481,12 @@ StatisticsRecorder::StatisticsRecorder() {
   existing_histograms_.reset(histograms_);
   existing_callbacks_.reset(callbacks_);
   existing_ranges_.reset(ranges_);
+  existing_providers_.reset(providers_);
 
   histograms_ = new HistogramMap;
   callbacks_ = new CallbackMap;
   ranges_ = new RangesMap;
+  providers_ = new HistogramProviders;
 
   InitLogOnShutdownWithoutLock();
 }
@@ -479,14 +504,17 @@ void StatisticsRecorder::Reset() {
   std::unique_ptr<HistogramMap> histograms_deleter;
   std::unique_ptr<CallbackMap> callbacks_deleter;
   std::unique_ptr<RangesMap> ranges_deleter;
+  std::unique_ptr<HistogramProviders> providers_deleter;
   {
     base::AutoLock auto_lock(lock_.Get());
     histograms_deleter.reset(histograms_);
     callbacks_deleter.reset(callbacks_);
     ranges_deleter.reset(ranges_);
+    providers_deleter.reset(providers_);
     histograms_ = nullptr;
     callbacks_ = nullptr;
     ranges_ = nullptr;
+    providers_ = nullptr;
   }
   // We are going to leak the histograms and the ranges.
 }
@@ -505,6 +533,8 @@ StatisticsRecorder::HistogramMap* StatisticsRecorder::histograms_ = nullptr;
 StatisticsRecorder::CallbackMap* StatisticsRecorder::callbacks_ = nullptr;
 // static
 StatisticsRecorder::RangesMap* StatisticsRecorder::ranges_ = nullptr;
+// static
+StatisticsRecorder::HistogramProviders* StatisticsRecorder::providers_;
 // static
 base::LazyInstance<base::Lock>::Leaky StatisticsRecorder::lock_ =
     LAZY_INSTANCE_INITIALIZER;

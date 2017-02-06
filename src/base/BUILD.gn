@@ -184,6 +184,8 @@ component("base") {
     "android/field_trial_list.h",
     "android/important_file_writer_android.cc",
     "android/important_file_writer_android.h",
+    "android/java_exception_reporter.cc",
+    "android/java_exception_reporter.h",
     "android/java_handler_thread.cc",
     "android/java_handler_thread.h",
     "android/java_message_handler_factory.h",
@@ -226,6 +228,8 @@ component("base") {
     "android/statistics_recorder_android.h",
     "android/sys_utils.cc",
     "android/sys_utils.h",
+    "android/throw_uncaught_exception.cc",
+    "android/throw_uncaught_exception.h",
     "android/time_utils.cc",
     "android/time_utils.h",
     "android/trace_event_binding.cc",
@@ -1146,6 +1150,12 @@ component("base") {
         "allocator/allocator_shim_override_linker_wrapped_symbols.h",
       ]
       all_dependent_configs += [ "//base/allocator:wrap_malloc_symbols" ]
+    } else if (is_mac) {
+      sources += [
+        "allocator/allocator_shim_default_dispatch_to_mac_zoned_malloc.cc",
+        "allocator/allocator_shim_default_dispatch_to_mac_zoned_malloc.h",
+        "allocator/allocator_shim_override_mac_symbols.h",
+      ]
     }
   }
 
@@ -1703,6 +1713,7 @@ test("base_perftests") {
     "message_loop/message_pump_perftest.cc",
 
     # "test/run_all_unittests.cc",
+    "json/json_perftest.cc",
     "threading/thread_perftest.cc",
   ]
   deps = [
@@ -2371,6 +2382,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/FieldTrialList.java",
       "android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
       "android/java/src/org/chromium/base/JNIUtils.java",
+      "android/java/src/org/chromium/base/JavaExceptionReporter.java",
       "android/java/src/org/chromium/base/JavaHandlerThread.java",
       "android/java/src/org/chromium/base/LocaleUtils.java",
       "android/java/src/org/chromium/base/MemoryPressureListener.java",
@@ -2380,6 +2392,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/SysUtils.java",
       "android/java/src/org/chromium/base/SystemMessageHandler.java",
       "android/java/src/org/chromium/base/ThreadUtils.java",
+      "android/java/src/org/chromium/base/ThrowUncaughtException.java",
       "android/java/src/org/chromium/base/TimeUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",
@@ -2436,6 +2449,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/FileUtils.java",
       "android/java/src/org/chromium/base/ImportantFileWriterAndroid.java",
       "android/java/src/org/chromium/base/JNIUtils.java",
+      "android/java/src/org/chromium/base/JavaExceptionReporter.java",
       "android/java/src/org/chromium/base/JavaHandlerThread.java",
       "android/java/src/org/chromium/base/LocaleUtils.java",
       "android/java/src/org/chromium/base/Log.java",
@@ -2454,6 +2468,7 @@ if (is_android) {
       "android/java/src/org/chromium/base/SysUtils.java",
       "android/java/src/org/chromium/base/SystemMessageHandler.java",
       "android/java/src/org/chromium/base/ThreadUtils.java",
+      "android/java/src/org/chromium/base/ThrowUncaughtException.java",
       "android/java/src/org/chromium/base/TimeUtils.java",
       "android/java/src/org/chromium/base/TraceEvent.java",
       "android/java/src/org/chromium/base/UnguessableToken.java",

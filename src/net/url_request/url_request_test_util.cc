@@ -14,7 +14,6 @@
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
-#include "base/threading/worker_pool.h"
 #include "net/base/host_port_pair.h"
 #include "net/cert/cert_verifier.h"
 #include "net/cert/ct_policy_enforcer.h"
@@ -108,9 +107,8 @@ void TestURLRequestContext::Init() {
   // In-memory Channel ID service.  Must be created before the
   // HttpNetworkSession.
   if (!channel_id_service()) {
-    context_storage_.set_channel_id_service(base::MakeUnique<ChannelIDService>(
-        new DefaultChannelIDStore(nullptr),
-        base::WorkerPool::GetTaskRunner(true)));
+    context_storage_.set_channel_id_service(
+        base::MakeUnique<ChannelIDService>(new DefaultChannelIDStore(nullptr)));
   }
   if (http_transaction_factory()) {
     // Make sure we haven't been passed an object we're not going to use.

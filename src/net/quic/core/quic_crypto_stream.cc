@@ -17,7 +17,6 @@
 
 using std::string;
 using base::StringPiece;
-using net::SpdyPriority;
 
 namespace net {
 

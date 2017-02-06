@@ -7,7 +7,6 @@
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/debug/leak_annotations.h"
-#include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/task_runner.h"
 #include "base/threading/post_task_and_reply_impl.h"
@@ -98,9 +97,6 @@ struct TaskRunnerHolder {
   scoped_refptr<TaskRunner> taskrunners_[2];
 };
 
-base::LazyInstance<TaskRunnerHolder>::Leaky
-    g_taskrunners = LAZY_INSTANCE_INITIALIZER;
-
 }  // namespace
 
 bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
@@ -120,7 +116,8 @@ bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
 // static
 const scoped_refptr<TaskRunner>&
 WorkerPool::GetTaskRunner(bool tasks_are_slow) {
-  return g_taskrunners.Get().taskrunners_[tasks_are_slow];
+  static auto task_runner_holder = new TaskRunnerHolder();
+  return task_runner_holder->taskrunners_[tasks_are_slow];
 }
 
 }  // namespace base

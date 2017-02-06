@@ -5,9 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_SOCKET_ADDRESS_CODER_H_
 #define NET_QUIC_CORE_QUIC_SOCKET_ADDRESS_CODER_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
+#include <cstdint>
 #include <string>
 
 #include "base/macros.h"

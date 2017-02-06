@@ -47,11 +47,11 @@ class TheVergePage(BlinkMemoryMobilePage):
 
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForElement(selector=TheVergePage.COMMENT_LINK_SELECTOR)
-    action_runner.ExecuteJavaScript(
+    action_runner.ExecuteJavaScript2(
         'window.location.hash = "comments"')
     action_runner.TapElement(
         selector=TheVergePage.COMMENT_LINK_SELECTOR)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.Chorus.Comments.collection.length > 0')
     super(TheVergePage, self).RunPageInteractions(action_runner)
 
@@ -65,7 +65,7 @@ class FacebookPage(BlinkMemoryMobilePage):
 
   def RunNavigateSteps(self, action_runner):
     super(FacebookPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("u_0_c") !== null &&'
         'document.body.scrollHeight > window.innerHeight')
 
@@ -82,7 +82,7 @@ class GmailPage(BlinkMemoryMobilePage):
                                     self.credentials_path)
     super(GmailPage, self).RunNavigateSteps(action_runner)
     action_runner.WaitForElement(selector='#apploadingdiv')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.querySelector("#apploadingdiv").style.opacity == "0"')
 
 

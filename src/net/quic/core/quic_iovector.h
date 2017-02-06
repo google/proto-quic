@@ -5,7 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_IOVECTOR_H_
 #define NET_QUIC_CORE_QUIC_IOVECTOR_H_
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "net/base/iovec.h"
 #include "net/quic/platform/api/quic_export.h"

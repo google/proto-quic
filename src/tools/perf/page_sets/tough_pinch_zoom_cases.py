@@ -62,7 +62,7 @@ class GmailPage(ToughPinchZoomCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
 

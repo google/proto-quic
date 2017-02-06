@@ -80,13 +80,6 @@ bool URLRequestRedirectJob::CopyFragmentOnRedirect(const GURL& location) const {
   return false;
 }
 
-int URLRequestRedirectJob::GetResponseCode() const {
-  // Should only be called after the URLRequest has been notified there's header
-  // information.
-  DCHECK(fake_headers_.get());
-  return response_code_;
-}
-
 void URLRequestRedirectJob::StartAsync() {
   DCHECK(request_);
   DCHECK(request_->status().is_success());

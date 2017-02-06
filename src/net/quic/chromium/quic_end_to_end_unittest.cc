@@ -9,9 +9,10 @@
 
 #include "base/compiler_specific.h"
 #include "base/memory/ptr_util.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_number_conversions.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "net/base/elements_upload_data_stream.h"
 #include "net/base/ip_address.h"
 #include "net/base/test_completion_callback.h"
@@ -126,8 +127,7 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
     params_.http_auth_handler_factory = auth_handler_factory_.get();
     params_.http_server_properties = &http_server_properties_;
     channel_id_service_.reset(
-        new ChannelIDService(new DefaultChannelIDStore(nullptr),
-                             base::ThreadTaskRunnerHandle::Get()));
+        new ChannelIDService(new DefaultChannelIDStore(nullptr)));
     params_.channel_id_service = channel_id_service_.get();
 
     CertVerifyResult verify_result;
@@ -278,6 +278,10 @@ TEST_P(QuicEndToEndTest, LargeGetWithNoPacketLoss) {
 }
 
 TEST_P(QuicEndToEndTest, TokenBinding) {
+  // Required by ChannelIDService.
+  base::test::ScopedTaskScheduler scoped_task_scheduler(
+      base::MessageLoop::current());
+
   // Enable token binding and re-initialize the TestTransactionFactory.
   params_.enable_token_binding = true;
   transaction_factory_.reset(new TestTransactionFactory(params_));

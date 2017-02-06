@@ -41,7 +41,6 @@ class URLRequestFailedJob : public URLRequestJob {
   // URLRequestJob implementation:
   void Start() override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;
-  int GetResponseCode() const override;
   void GetResponseInfo(HttpResponseInfo* info) override;
   void PopulateNetErrorDetails(NetErrorDetails* details) const override;
   int64_t GetTotalReceivedBytes() const override;

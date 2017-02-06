@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "base/strings/string_piece.h"
@@ -115,14 +116,14 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
   SpdyHeadersHandlerInterface* OnHeaderFrameStart(
       SpdyStreamId stream_id) override;
   void OnHeaderFrameEnd(SpdyStreamId stream_id, bool end_headers) override;
-  void OnRstStream(SpdyStreamId stream_id, SpdyRstStreamStatus status) override;
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override;
   void OnSetting(SpdySettingsIds id, uint32_t value) override;
   void OnPing(SpdyPingId unique_id, bool is_ack) override;
   void OnSettings(bool clear_persisted) override;
   void OnSettingsAck() override;
   void OnSettingsEnd() override;
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status) override;
+                SpdyErrorCode error_code) override;
   void OnHeaders(SpdyStreamId stream_id,
                  bool has_priority,
                  int weight,
@@ -132,7 +133,6 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
                  bool end) override;
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override;
   bool OnGoAwayFrameData(const char* goaway_data, size_t len) override;
-  bool OnRstStreamFrameData(const char* rst_stream_data, size_t len) override;
   void OnBlocked(SpdyStreamId stream_id) override;
   void OnPushPromise(SpdyStreamId stream_id,
                      SpdyStreamId promised_stream_id,
@@ -146,7 +146,7 @@ class SpdyFramerVisitorAdapter : public SpdyFramerVisitorInterface {
                 base::StringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override;
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override;
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override;
 
  protected:
   SpdyFramerVisitorInterface* visitor() const { return visitor_; }

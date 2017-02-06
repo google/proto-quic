@@ -122,6 +122,9 @@ TEST_F(StackTraceTest, MAYBE_OutputToStream) {
 #endif  // define(OS_MACOSX)
 }
 
+#if !defined(OFFICIAL_BUILD)
+// Disabled in Official builds, where Link-Time Optimization can result in two
+// or fewer stack frames being available, causing the test to fail.
 TEST_F(StackTraceTest, TruncatedTrace) {
   StackTrace trace;
 
@@ -133,6 +136,7 @@ TEST_F(StackTraceTest, TruncatedTrace) {
   truncated.Addresses(&count);
   EXPECT_EQ(2u, count);
 }
+#endif  // !defined(OFFICIAL_BUILD)
 
 // The test is used for manual testing, e.g., to see the raw output.
 TEST_F(StackTraceTest, DebugOutputToStream) {

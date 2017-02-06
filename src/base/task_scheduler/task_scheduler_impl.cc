@@ -78,6 +78,11 @@ std::vector<const HistogramBase*> TaskSchedulerImpl::GetHistograms() const {
   return histograms;
 }
 
+int TaskSchedulerImpl::GetMaxConcurrentTasksWithTraitsDeprecated(
+    const TaskTraits& traits) const {
+  return GetWorkerPoolForTraits(traits)->GetMaxConcurrentTasksDeprecated();
+}
+
 void TaskSchedulerImpl::Shutdown() {
   // TODO(fdoray): Increase the priority of BACKGROUND tasks blocking shutdown.
   DCHECK(task_tracker_);
@@ -161,8 +166,8 @@ void TaskSchedulerImpl::Initialize(
   }
 }
 
-SchedulerWorkerPool* TaskSchedulerImpl::GetWorkerPoolForTraits(
-    const TaskTraits& traits) {
+SchedulerWorkerPoolImpl* TaskSchedulerImpl::GetWorkerPoolForTraits(
+    const TaskTraits& traits) const {
   const size_t index = worker_pool_index_for_traits_callback_.Run(traits);
   DCHECK_LT(index, worker_pools_.size());
   return worker_pools_[index].get();

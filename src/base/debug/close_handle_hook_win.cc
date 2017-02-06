@@ -12,7 +12,6 @@
 #include <memory>
 #include <vector>
 
-#include "base/lazy_instance.h"
 #include "base/macros.h"
 #include "base/win/iat_patch_function.h"
 #include "base/win/pe_image.h"
@@ -197,13 +196,11 @@ class HandleHooks {
 
   void AddIATPatch(HMODULE module);
   void AddEATPatch();
-  void Unpatch();
 
  private:
   std::vector<base::win::IATPatchFunction*> hooks_;
   DISALLOW_COPY_AND_ASSIGN(HandleHooks);
 };
-base::LazyInstance<HandleHooks> g_hooks = LAZY_INSTANCE_INITIALIZER;
 
 void HandleHooks::AddIATPatch(HMODULE module) {
   if (!module)
@@ -232,14 +229,6 @@ void HandleHooks::AddEATPatch() {
            reinterpret_cast<void**>(&g_duplicate_function));
 }
 
-void HandleHooks::Unpatch() {
-  for (std::vector<base::win::IATPatchFunction*>::iterator it = hooks_.begin();
-       it != hooks_.end(); ++it) {
-    (*it)->Unpatch();
-    delete *it;
-  }
-}
-
 void PatchLoadedModules(HandleHooks* hooks) {
   const DWORD kSize = 256;
   DWORD returned;
@@ -259,17 +248,12 @@ void PatchLoadedModules(HandleHooks* hooks) {
 }  // namespace
 
 void InstallHandleHooks() {
-  HandleHooks* hooks = g_hooks.Pointer();
+  static HandleHooks* hooks = new HandleHooks();
 
   // Performing EAT interception first is safer in the presence of other
   // threads attempting to call CloseHandle.
   hooks->AddEATPatch();
   PatchLoadedModules(hooks);
-}
-
-void RemoveHandleHooks() {
-  // We are partching all loaded modules without forcing them to stay in memory,
-  // removing patches is not safe.
 }
 
 }  // namespace debug

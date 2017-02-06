@@ -412,6 +412,19 @@ def ExtractNatives(contents, ptr_type):
   return natives
 
 
+def IsMainDexJavaClass(contents):
+  """Returns "true" if the class is annotated with "@MainDex", "false" if not.
+
+  JNI registration doesn't always need to be completed for non-browser processes
+  since most Java code is only used by the browser process. Classes that are
+  needed by non-browser processes must explicitly be annotated with @MainDex
+  to force JNI registration.
+  """
+  re_maindex = re.compile(r'@MainDex[\s\S]*class\s+\w+\s*{')
+  found = re.search(re_maindex, contents)
+  return 'true' if found else 'false'
+
+
 def GetStaticCastForReturnType(return_type):
   type_map = { 'String' : 'jstring',
                'java/lang/String' : 'jstring',
@@ -634,8 +647,8 @@ class JNIFromJavaP(object):
                           value=value.group('value')))
 
     self.inl_header_file_generator = InlHeaderFileGenerator(
-        self.namespace, self.fully_qualified_class, [],
-        self.called_by_natives, self.constant_fields, options)
+        self.namespace, self.fully_qualified_class, [], self.called_by_natives,
+        self.constant_fields, options)
 
   def GetContent(self):
     return self.inl_header_file_generator.GetContent()
@@ -669,12 +682,13 @@ class JNIFromJavaSource(object):
     jni_namespace = ExtractJNINamespace(contents) or options.namespace
     natives = ExtractNatives(contents, options.ptr_type)
     called_by_natives = ExtractCalledByNatives(contents)
+    maindex = IsMainDexJavaClass(contents)
     if len(natives) == 0 and len(called_by_natives) == 0:
       raise SyntaxError('Unable to find any JNI methods for %s.' %
                         fully_qualified_class)
     inl_header_file_generator = InlHeaderFileGenerator(
-        jni_namespace, fully_qualified_class, natives, called_by_natives,
-        [], options)
+        jni_namespace, fully_qualified_class, natives, called_by_natives, [],
+        options, maindex)
     self.content = inl_header_file_generator.GetContent()
 
   @classmethod
@@ -710,7 +724,7 @@ class InlHeaderFileGenerator(object):
   """Generates an inline header file for JNI integration."""
 
   def __init__(self, namespace, fully_qualified_class, natives,
-               called_by_natives, constant_fields, options):
+               called_by_natives, constant_fields, options, maindex='false'):
     self.namespace = namespace
     self.fully_qualified_class = fully_qualified_class
     self.class_name = self.fully_qualified_class.split('/')[-1]
@@ -718,6 +732,7 @@ class InlHeaderFileGenerator(object):
     self.called_by_natives = called_by_natives
     self.header_guard = fully_qualified_class.replace('/', '_') + '_JNI'
     self.constant_fields = constant_fields
+    self.maindex = maindex
     self.options = options
 
 
@@ -862,8 +877,9 @@ ${NATIVES}
     early_exit = ''
     if self.options.native_exports_optional:
       early_exit = """\
-  if (base::android::IsManualJniRegistrationDisabled()) return true;
-"""
+  if (jni_generator::ShouldSkipJniRegistration(%s))
+    return true;
+""" % self.maindex
 
     values = {'REGISTER_NATIVES_SIGNATURE': signature,
               'EARLY_EXIT': early_exit,

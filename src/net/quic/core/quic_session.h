@@ -7,8 +7,7 @@
 #ifndef NET_QUIC_CORE_QUIC_SESSION_H_
 #define NET_QUIC_CORE_QUIC_SESSION_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
@@ -26,6 +25,7 @@
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/platform/api/quic_containers.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_socket_address.h"
 
 namespace net {
 
@@ -41,7 +41,7 @@ class QUIC_EXPORT_PRIVATE QuicSession : public QuicConnectionVisitorInterface {
  public:
   // An interface from the session to the entity owning the session.
   // This lets the session notify its owner (the Dispatcher) when the connection
-  // is closed, blocked, or added/removed from the time-wait std::list.
+  // is closed, blocked, or added/removed from the time-wait list.
   class Visitor {
    public:
     virtual ~Visitor() {}

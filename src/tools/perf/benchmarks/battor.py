@@ -87,7 +87,7 @@ class BattOrTrivialPages(_BattOrBenchmark):
 
   def CreateStorySet(self, options):
     # We want it to wait for 30 seconds to be comparable to legacy power tests.
-    return page_sets.MacGpuTrivialPagesStorySet(wait_in_seconds=30)
+    return page_sets.TrivialSitesStorySet(wait_in_seconds=30)
 
   @classmethod
   def Name(cls):

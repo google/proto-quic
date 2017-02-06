@@ -1,4 +1,19 @@
 {
+    "AndroidAIAFetching": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "AndroidAIAFetching"
+                    ]
+                }
+            ]
+        }
+    ],
     "AndroidSpellChecker": [
         {
             "platforms": [
@@ -71,6 +86,26 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "AutofillCreditCardPopup": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "IconAtStartAndIncreaseDropdownItemHeight",
+                    "params": {
+                        "dropdown_item_height": "56",
+                        "is_credit_card_icon_at_start": "true",
+                        "margin": "18"
+                    },
+                    "enable_features": [
+                        "AutofillCreditCardPopupLayout"
+                    ]
                 }
             ]
         }
@@ -734,21 +769,6 @@
             ]
         }
     ],
-    "ExtensionActionRedesign": [
-        {
-            "platforms": [
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled"
-                }
-            ]
-        }
-    ],
     "ExtensionContentVerification": [
         {
             "platforms": [
@@ -1382,29 +1402,6 @@
             ]
         }
     ],
-    "ParseHTMLOnMainThread": [
-        {
-            "platforms": [
-                "android",
-                "chromeos",
-                "linux",
-                "mac",
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Enabled",
-                    "params": {
-                        "parseHTMLOnMainThreadCoalesceChunks": "false",
-                        "parseHTMLOnMainThreadSyncTokenize": "false"
-                    },
-                    "enable_features": [
-                        "ParseHTMLOnMainThread"
-                    ]
-                }
-            ]
-        }
-    ],
     "PassiveDocumentEventListeners": [
         {
             "platforms": [
@@ -1666,7 +1663,7 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledCGUV20",
+                    "name": "EnabledCGRUV20",
                     "params": {
                         "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_g20"
                     }
@@ -2409,6 +2406,26 @@
             ]
         }
     ],
+    "TranslateRankerLogging": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "TranslateRankerLogging",
+                    "enable_features": [
+                        "TranslateRankerLogging"
+                    ]
+                }
+            ]
+        }
+    ],
     "TranslateUiLangTrial": [
         {
             "platforms": [
@@ -2666,7 +2683,7 @@
                 {
                     "name": "Enabled",
                     "enable_features": [
-                        "TunedClippingLevelMin30"
+                        "TunedClippingLevelMin70"
                     ]
                 }
             ]

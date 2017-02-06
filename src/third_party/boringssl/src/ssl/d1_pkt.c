@@ -331,7 +331,7 @@ void dtls1_read_close_notify(SSL *ssl) {
   }
 }
 
-int dtls1_write_app_data(SSL *ssl, const void *buf_, int len) {
+int dtls1_write_app_data(SSL *ssl, const uint8_t *buf, int len) {
   assert(!SSL_in_init(ssl));
 
   if (len > SSL3_RT_MAX_PLAIN_LENGTH) {
@@ -348,7 +348,7 @@ int dtls1_write_app_data(SSL *ssl, const void *buf_, int len) {
     return 0;
   }
 
-  int ret = dtls1_write_record(ssl, SSL3_RT_APPLICATION_DATA, buf_, (size_t)len,
+  int ret = dtls1_write_record(ssl, SSL3_RT_APPLICATION_DATA, buf, (size_t)len,
                                dtls1_use_current_epoch);
   if (ret <= 0) {
     return ret;
@@ -363,15 +363,6 @@ int dtls1_write_record(SSL *ssl, int type, const uint8_t *buf, size_t len,
    * a datagram, so the write buffer is always dropped in
    * |ssl_write_buffer_flush|. */
   assert(!ssl_write_buffer_is_pending(ssl));
-
-  /* If we have an alert to send, lets send it */
-  if (ssl->s3->alert_dispatch) {
-    int ret = ssl->method->dispatch_alert(ssl);
-    if (ret <= 0) {
-      return ret;
-    }
-    /* if it went, fall through and send more stuff */
-  }
 
   if (len > SSL3_RT_MAX_PLAIN_LENGTH) {
     OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
@@ -397,13 +388,12 @@ int dtls1_write_record(SSL *ssl, int type, const uint8_t *buf, size_t len,
 }
 
 int dtls1_dispatch_alert(SSL *ssl) {
-  ssl->s3->alert_dispatch = 0;
   int ret = dtls1_write_record(ssl, SSL3_RT_ALERT, &ssl->s3->send_alert[0], 2,
                                dtls1_use_current_epoch);
   if (ret <= 0) {
-    ssl->s3->alert_dispatch = 1;
     return ret;
   }
+  ssl->s3->alert_dispatch = 0;
 
   /* If the alert is fatal, flush the BIO now. */
   if (ssl->s3->send_alert[0] == SSL3_AL_FATAL) {

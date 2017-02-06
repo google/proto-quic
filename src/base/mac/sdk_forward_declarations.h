@@ -14,8 +14,9 @@
 #import <AppKit/AppKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 #import <CoreWLAN/CoreWLAN.h>
-#import <ImageCaptureCore/ImageCaptureCore.h>
 #import <IOBluetooth/IOBluetooth.h>
+#import <ImageCaptureCore/ImageCaptureCore.h>
+#import <QuartzCore/QuartzCore.h>
 #include <stdint.h>
 
 #include "base/base_export.h"
@@ -75,6 +76,7 @@ typedef NSUInteger NSSpringLoadingHighlight;
 extern "C" {
 #if !defined(MAC_OS_X_VERSION_10_10) || \
     MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10
+BASE_EXPORT extern NSString* const CIDetectorTypeQRCode;
 BASE_EXPORT extern NSString* const NSUserActivityTypeBrowsingWeb;
 BASE_EXPORT extern NSString* const NSAppearanceNameVibrantDark;
 BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
@@ -127,6 +129,17 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 @end
 
 @class NSVisualEffectView;
+
+@interface CIQRCodeFeature (YosemiteSDK)
+@property(readonly) CGRect bounds;
+@property(readonly) CGPoint topLeft;
+@property(readonly) CGPoint topRight;
+@property(readonly) CGPoint bottomLeft;
+@property(readonly) CGPoint bottomRight;
+@property(readonly, copy) NSString* messageString;
+@end
+
+@class CIQRCodeFeature;
 
 #endif  // MAC_OS_X_VERSION_10_10
 

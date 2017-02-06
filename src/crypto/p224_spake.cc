@@ -5,14 +5,14 @@
 // This code implements SPAKE2, a variant of EKE:
 //  http://www.di.ens.fr/~pointche/pub.php?reference=AbPo04
 
-#include <crypto/p224_spake.h>
+#include "crypto/p224_spake.h"
 
 #include <algorithm>
 
-#include <base/logging.h>
-#include <crypto/p224.h>
-#include <crypto/random.h>
-#include <crypto/secure_util.h>
+#include "base/logging.h"
+#include "crypto/p224.h"
+#include "crypto/random.h"
+#include "crypto/secure_util.h"
 
 namespace {
 
@@ -26,6 +26,9 @@ namespace {
 // #include <openssl/ec.h>
 // #include <openssl/obj_mac.h>
 // #include <openssl/sha.h>
+//
+// // Silence a presubmit.
+// #define PRINTF printf
 //
 // static const char kSeed1[] = "P224 point generation seed (M)";
 // static const char kSeed2[] = "P224 point generation seed (N)";
@@ -52,7 +55,7 @@ namespace {
 //       EC_POINT_get_affine_coordinates_GFp(p224, p, &x, &y, NULL);
 //       char* x_str = BN_bn2hex(&x);
 //       char* y_str = BN_bn2hex(&y);
-//       printf("Found after %u iterations:\n%s\n%s\n", i, x_str, y_str);
+//       PRINTF("Found after %u iterations:\n%s\n%s\n", i, x_str, y_str);
 //       OPENSSL_free(x_str);
 //       OPENSSL_free(y_str);
 //       BN_free(&x);

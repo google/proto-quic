@@ -9,7 +9,6 @@
 
 #include "base/bind.h"
 #include "base/compiler_specific.h"
-#include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/memory/ptr_util.h"
 #include "base/message_loop/message_pump_default.h"
@@ -38,10 +37,11 @@ namespace base {
 namespace {
 
 // A lazily created thread local storage for quick access to a thread's message
-// loop, if one exists.  This should be safe and free of static constructors.
-LazyInstance<base::ThreadLocalPointer<MessageLoop> >::Leaky lazy_tls_ptr =
-    LAZY_INSTANCE_INITIALIZER;
-
+// loop, if one exists.
+base::ThreadLocalPointer<MessageLoop>* GetTLSMessageLoop() {
+  static auto lazy_tls_ptr = new base::ThreadLocalPointer<MessageLoop>();
+  return lazy_tls_ptr;
+}
 MessageLoop::MessagePumpFactory* message_pump_for_ui_factory_ = NULL;
 
 #if defined(OS_IOS)
@@ -137,7 +137,7 @@ MessageLoop::~MessageLoop() {
 
   // OK, now make it so that no one can find us.
   if (current() == this)
-    lazy_tls_ptr.Pointer()->Set(nullptr);
+    GetTLSMessageLoop()->Set(nullptr);
 }
 
 // static
@@ -145,7 +145,7 @@ MessageLoop* MessageLoop::current() {
   // TODO(darin): sadly, we cannot enable this yet since people call us even
   // when they have no intention of using us.
   // DCHECK(loop) << "Ouch, did you forget to initialize me?";
-  return lazy_tls_ptr.Pointer()->Get();
+  return GetTLSMessageLoop()->Get();
 }
 
 // static
@@ -338,7 +338,7 @@ void MessageLoop::BindToCurrentThread() {
     pump_ = CreateMessagePumpForType(type_);
 
   DCHECK(!current()) << "should only have one message loop per thread";
-  lazy_tls_ptr.Pointer()->Set(this);
+  GetTLSMessageLoop()->Set(this);
 
   incoming_task_queue_->StartScheduling();
   unbound_task_runner_->BindToCurrentThread();

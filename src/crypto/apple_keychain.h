@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CRYPTO_KEYCHAIN_MAC_H_
-#define CRYPTO_KEYCHAIN_MAC_H_
+#ifndef CRYPTO_APPLE_KEYCHAIN_H_
+#define CRYPTO_APPLE_KEYCHAIN_H_
 
 #include <Security/Security.h>
 
@@ -106,4 +106,4 @@ class CRYPTO_EXPORT AppleKeychain {
 
 }  // namespace crypto
 
-#endif  // CRYPTO_KEYCHAIN_MAC_H_
+#endif  // CRYPTO_APPLE_KEYCHAIN_H_

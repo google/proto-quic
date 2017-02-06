@@ -509,6 +509,12 @@ Curves:
 		}
 	}
 
+	// Decide whether or not to accept early data.
+	if hs.clientHello.hasEarlyData {
+		// For now, we'll reject and skip early data.
+		c.skipEarlyData = true
+	}
+
 	// Resolve PSK and compute the early secret.
 	if hs.sessionState != nil {
 		hs.finishedHash.addEntropy(hs.sessionState.masterSecret)
@@ -851,6 +857,13 @@ ResendHelloRetryRequest:
 	// Switch to application data keys on write. In particular, any alerts
 	// from the client certificate are sent over these keys.
 	c.out.useTrafficSecret(c.vers, hs.suite, serverTrafficSecret, serverWrite)
+
+	// Send 0.5-RTT messages.
+	for _, halfRTTMsg := range config.Bugs.SendHalfRTTData {
+		if _, err := c.writeRecord(recordTypeApplicationData, halfRTTMsg); err != nil {
+			return err
+		}
+	}
 
 	// If we requested a client certificate, then the client must send a
 	// certificate message, even if it's empty.
@@ -1668,6 +1681,9 @@ func (hs *serverHandshakeState) sendSessionTicket() error {
 	}
 
 	m := new(newSessionTicketMsg)
+	if c.config.Bugs.SendTicketLifetime != 0 {
+		m.ticketLifetime = uint32(c.config.Bugs.SendTicketLifetime / time.Second)
+	}
 
 	if !c.config.Bugs.SendEmptySessionTicket {
 		var err error

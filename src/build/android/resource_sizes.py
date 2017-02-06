@@ -16,6 +16,7 @@ import operator
 import optparse
 import os
 import re
+import shutil
 import struct
 import sys
 import tempfile
@@ -23,11 +24,14 @@ import zipfile
 import zlib
 
 import devil_chromium
+from devil.android.sdk import build_tools
 from devil.utils import cmd_helper
+from devil.utils import lazy
 import method_count
 from pylib import constants
 from pylib.constants import host_paths
 
+_AAPT_PATH = lazy.WeakConstant(lambda: build_tools.GetPath('aapt'))
 _GRIT_PATH = os.path.join(host_paths.DIR_SOURCE_ROOT, 'tools', 'grit')
 
 # Prepend the grit module from the source tree so it takes precedence over other
@@ -79,10 +83,11 @@ def _PatchedDecodeExtra(self):
 zipfile.ZipInfo._decodeExtra = (  # pylint: disable=protected-access
     _PatchedDecodeExtra)
 
-# Static initializers expected in official builds. Note that this list is built
-# using 'nm' on libchrome.so which results from a GCC official build (i.e.
-# Clang is not supported currently).
-
+# Captures an entire config from aapt output.
+_AAPT_CONFIG_PATTERN = r'config %s:(.*?)config [a-zA-Z-]+:'
+# Matches string resource entries from aapt output.
+_AAPT_ENTRY_RE = re.compile(
+    r'resource (?P<id>\w{10}) [\w\.]+:string/.*?"(?P<val>.+?)"', re.DOTALL)
 _BASE_CHART = {
     'format_version': '0.1',
     'benchmark_name': 'resource_sizes',
@@ -95,9 +100,58 @@ _DUMP_STATIC_INITIALIZERS_PATH = os.path.join(
 # Pragma exists when enable_resource_whitelist_generation=true.
 _RC_HEADER_RE = re.compile(
     r'^#define (?P<name>\w+) (?:_Pragma\(.*?\) )?(?P<id>\d+)$')
+_READELF_SIZES_METRICS = {
+  'text': ['.text'],
+  'data': ['.data', '.rodata', '.data.rel.ro', '.data.rel.ro.local'],
+  'relocations': ['.rel.dyn', '.rel.plt', '.rela.dyn', '.rela.plt'],
+  'unwind': ['.ARM.extab', '.ARM.exidx', '.eh_frame', '.eh_frame_hdr',],
+  'symbols': ['.dynsym', '.dynstr', '.dynamic', '.shstrtab', '.got', '.plt',
+              '.got.plt', '.hash'],
+  'bss': ['.bss'],
+  'other': ['.init_array', '.fini_array', '.comment', '.note.gnu.gold-version',
+            '.ARM.attributes', '.note.gnu.build-id', '.gnu.version',
+            '.gnu.version_d', '.gnu.version_r', '.interp', '.gcc_except_table']
+}
+
+
+def _ExtractMainLibSectionSizesFromApk(apk_path, main_lib_path):
+  tmpdir = tempfile.mkdtemp(suffix='_apk_extract')
+  grouped_section_sizes = collections.defaultdict(int)
+  try:
+    with zipfile.ZipFile(apk_path, 'r') as z:
+      extracted_lib_path = z.extract(main_lib_path, tmpdir)
+      section_sizes = _CreateSectionNameSizeMap(extracted_lib_path)
+
+      for group_name, section_names in _READELF_SIZES_METRICS.iteritems():
+        for section_name in section_names:
+          if section_name in section_sizes:
+            grouped_section_sizes[group_name] += section_sizes.pop(section_name)
+
+      # Group any unknown section headers into the "other" group.
+      for section_header, section_size in section_sizes.iteritems():
+        print "Unknown elf section header:", section_header
+        grouped_section_sizes['other'] += section_size
+
+      return grouped_section_sizes
+  finally:
+    shutil.rmtree(tmpdir)
+
+
+def _CreateSectionNameSizeMap(so_path):
+  stdout = cmd_helper.GetCmdOutput(['readelf', '-S', '--wide', so_path])
+  section_sizes = {}
+  # Matches  [ 2] .hash HASH 00000000006681f0 0001f0 003154 04   A  3   0  8
+  for match in re.finditer(r'\[[\s\d]+\] (\..*)$', stdout, re.MULTILINE):
+    items = match.group(1).split()
+    section_sizes[items[0]] = int(items[4], 16)
+
+  return section_sizes
 
 
 def CountStaticInitializers(so_path):
+  # Static initializers expected in official builds. Note that this list is
+  # built using 'nm' on libchrome.so which results from a GCC official build
+  # (i.e. Clang is not supported currently).
   def get_elf_section_size(readelf_stdout, section_name):
     # Matches: .ctors PROGBITS 000000000516add0 5169dd0 000010 00 WA 0 0 8
     match = re.search(r'\.%s.*$' % re.escape(section_name),
@@ -133,6 +187,51 @@ def GetStaticInitializers(so_path):
   output = cmd_helper.GetCmdOutput([_DUMP_STATIC_INITIALIZERS_PATH, '-d',
                                     so_path])
   return output.splitlines()
+
+
+def _NormalizeResourcesArsc(apk_path, num_supported_configs):
+  """Estimates the expected overhead of untranslated strings in resources.arsc.
+
+  See http://crbug.com/677966 for why this is necessary.
+  """
+  aapt_output = _RunAaptDumpResources(apk_path)
+
+  # en-rUS is in the default config and may be cluttered with non-translatable
+  # strings, so en-rGB is a better baseline for finding missing translations.
+  en_strings = _CreateResourceIdValueMap(aapt_output, 'en-rGB')
+  fr_strings = _CreateResourceIdValueMap(aapt_output, 'fr')
+
+  # en-US and en-GB configs will never be translated.
+  config_count = num_supported_configs - 2
+
+  size = 0
+  for res_id, string_val in en_strings.iteritems():
+    if string_val == fr_strings[res_id]:
+      string_size = len(string_val)
+      # 7 bytes is the per-entry overhead (not specific to any string). See
+      # https://android.googlesource.com/platform/frameworks/base.git/+/android-4.2.2_r1/tools/aapt/StringPool.cpp#414.
+      # The 1.5 factor was determined experimentally and is meant to account for
+      # other languages generally having longer strings than english.
+      size += config_count * (7 + string_size * 1.5)
+
+  return size
+
+
+def _CreateResourceIdValueMap(aapt_output, lang):
+  """Return a map of resource ids to string values for the given |lang|."""
+  config_re = _AAPT_CONFIG_PATTERN % lang
+  return {entry.group('id'): entry.group('val')
+          for config_section in re.finditer(config_re, aapt_output, re.DOTALL)
+          for entry in re.finditer(_AAPT_ENTRY_RE, config_section.group(0))}
+
+
+def _RunAaptDumpResources(apk_path):
+  cmd = [_AAPT_PATH.read(), 'dump', '--values', 'resources', apk_path]
+  status, output = cmd_helper.GetCmdStatusAndOutput(cmd)
+  if status != 0:
+    raise Exception('Failed running aapt command: "%s" with output "%s".' %
+                    (' '.join(cmd), output))
+  return output
 
 
 def ReportPerfResult(chart_data, graph_title, trace_title, value, units,
@@ -313,6 +412,12 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
     ReportPerfResult(chartjson, apk_basename + '_Specifics',
                      'other lib size', secondary_size, 'bytes')
 
+    main_lib_section_sizes = _ExtractMainLibSectionSizesFromApk(
+        apk_filename, main_lib_info.filename)
+    for metric_name, size in main_lib_section_sizes.iteritems():
+      ReportPerfResult(chartjson, apk_basename + '_MainLibInfo',
+                       metric_name, size, 'bytes')
+
   # Main metric that we want to monitor for jumps.
   normalized_apk_size = total_apk_size
   # Always look at uncompressed .dex & .so.
@@ -323,14 +428,15 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
   # Avoid noise caused when strings change and translations haven't yet been
   # updated.
   english_pak = translations.FindByPattern(r'.*/en[-_][Uu][Ss]\.l?pak')
-  if english_pak:
-    # TODO(agrieve): This should also analyze .arsc file to remove non-en
-    # configs. http://crbug.com/677966
+  num_translations = translations.GetNumEntries()
+  if english_pak and num_translations > 1:
     normalized_apk_size -= translations.ComputeZippedSize()
     # 1.17 found by looking at Chrome.apk and seeing how much smaller en-US.pak
     # is relative to the average locale .pak.
     normalized_apk_size += int(
-        english_pak.compress_size * translations.GetNumEntries() * 1.17)
+        english_pak.compress_size * num_translations * 1.17)
+    normalized_apk_size += int(
+        _NormalizeResourcesArsc(apk_filename, num_translations))
 
   ReportPerfResult(chartjson, apk_basename + '_Specifics',
                    'normalized apk size', normalized_apk_size, 'bytes')

@@ -262,6 +262,15 @@ components/rappor/rappor_parameters.h.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Bluetooth.APIUsage.Origin" type="ETLD_PLUS_ONE">
+  <owner>jyasskin@chromium.org</owner>
+  <owner>ortuno@chromium.org</owner>
+  <owner>scheib@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the URL of frames using the Web Bluetooth API.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="Cast.Sender.MediaFrameUrl" type="ETLD_PLUS_ONE">
   <owner>avayvod@chromium.org</owner>
   <owner>aberent@chromium.org</owner>

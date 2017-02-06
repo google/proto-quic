@@ -219,6 +219,26 @@ config("compiler") {
     }
   }
 
+  # Eliminate build metadata (__DATE__, __TIME__ and __TIMESTAMP__) for
+  # deterministic build.  See https://crbug.com/314403
+  if (!is_official_build) {
+    if (is_win && !is_clang) {
+      cflags += [
+        "/wd4117",  # Trying to define or undefine a predefined macro.
+        "/D__DATE__=",
+        "/D__TIME__=",
+        "/D__TIMESTAMP__=",
+      ]
+    } else {
+      cflags += [
+        "-Wno-builtin-macro-redefined",
+        "-D__DATE__=",
+        "-D__TIME__=",
+        "-D__TIMESTAMP__=",
+      ]
+    }
+  }
+
   if (is_clang && is_debug) {
     # Allow comparing the address of references and 'this' against 0
     # in debug builds. Technically, these can never be null in
@@ -1470,9 +1490,8 @@ config("optimize_max") {
             # incremental value of C4702 for PGO builds is likely very small.
             "/wd4702",
           ]
-        } else if (is_clang && use_lld) {
-          cflags += [ "-flto" ]  # Link-time optimization (whole program optimization).
         }
+        # TODO(crbug.com/598772): Enable -flto for Clang.
       }
     } else if (optimize_for_fuzzing) {
       cflags = [ "-O1" ] + common_optimize_on_cflags

@@ -21,7 +21,8 @@ using base::android::GetClass;
 using base::android::MethodID;
 using base::android::ScopedJavaLocalRef;
 
-bool g_disable_manual_jni_registration = false;
+base::android::JniRegistrationType g_jni_registration_type =
+    base::android::ALL_JNI_REGISTRATION;
 
 JavaVM* g_jvm = NULL;
 base::LazyInstance<base::android::ScopedJavaGlobalRef<jobject> >::Leaky
@@ -38,13 +39,12 @@ base::LazyInstance<base::ThreadLocalPointer<void>>::Leaky
 namespace base {
 namespace android {
 
-bool IsManualJniRegistrationDisabled() {
-  return g_disable_manual_jni_registration;
+JniRegistrationType GetJniRegistrationType() {
+  return g_jni_registration_type;
 }
 
-void DisableManualJniRegistration() {
-  DCHECK(!g_disable_manual_jni_registration);
-  g_disable_manual_jni_registration = true;
+void SetJniRegistrationType(JniRegistrationType jni_registration_type) {
+  g_jni_registration_type = jni_registration_type;
 }
 
 JNIEnv* AttachCurrentThread() {

@@ -440,7 +440,6 @@ TEST_P(QuicSpdyStreamTest, StreamFlowControlNoWindowUpdateIfNotConsumed) {
 
   // Stream receives enough data to fill a fraction of the receive window.
   string body(kWindow / 3, 'a');
-  auto headers = AsHeaderList(headers_);
   ProcessHeaders(false, headers_);
 
   QuicStreamFrame frame1(kClientDataStreamId1, false, 0, StringPiece(body));
@@ -679,14 +678,51 @@ TEST_P(QuicSpdyStreamTest, ReceivingTrailersViaHeaderList) {
   EXPECT_TRUE(stream_->IsDoneReading());
 }
 
+TEST_P(QuicSpdyStreamTest, ReceivingTrailersWithOffset) {
+  // Test that when receiving trailing headers with an offset before response
+  // body, stream is closed at the right offset.
+  Initialize(kShouldProcessData);
+
+  // Receive initial headers.
+  QuicHeaderList headers = ProcessHeaders(false, headers_);
+  stream_->ConsumeHeaderList();
+
+  const string body = "this is the body";
+  // Receive trailing headers.
+  SpdyHeaderBlock trailers_block;
+  trailers_block["key1"] = "value1";
+  trailers_block["key2"] = "value2";
+  trailers_block["key3"] = "value3";
+  trailers_block[kFinalOffsetHeaderKey] =
+      QuicTextUtils::Uint64ToString(body.size());
+
+  QuicHeaderList trailers = ProcessHeaders(true, trailers_block);
+
+  // The trailers should be decompressed, and readable from the stream.
+  EXPECT_TRUE(stream_->trailers_decompressed());
+
+  // The final offset trailer will be consumed by QUIC.
+  trailers_block.erase(kFinalOffsetHeaderKey);
+  EXPECT_EQ(trailers_block, stream_->received_trailers());
+
+  // Consuming the trailers erases them from the stream.
+  stream_->MarkTrailersConsumed();
+  EXPECT_TRUE(stream_->FinishedReadingTrailers());
+
+  EXPECT_FALSE(stream_->IsDoneReading());
+  // Receive and consume body.
+  QuicStreamFrame frame(kClientDataStreamId1, /*fin=*/false, 0, body);
+  stream_->OnStreamFrame(frame);
+  EXPECT_EQ(body, stream_->data());
+  EXPECT_TRUE(stream_->IsDoneReading());
+}
+
 TEST_P(QuicSpdyStreamTest, ReceivingTrailersWithoutOffset) {
   // Test that receiving trailers without a final offset field is an error.
   Initialize(kShouldProcessData);
 
   // Receive initial headers.
-  auto headers = AsHeaderList(headers_);
-  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
-                              headers);
+  ProcessHeaders(false, headers_);
   stream_->ConsumeHeaderList();
 
   const string body = "this is the body";
@@ -728,12 +764,13 @@ TEST_P(QuicSpdyStreamTest, ReceivingTrailersWithoutFin) {
                               trailers.uncompressed_header_bytes(), trailers);
 }
 
-TEST_P(QuicSpdyStreamTest, ReceivingTrailersAfterFin) {
-  // If Trailers are sent, neither Headers nor Body should contain a FIN.
+TEST_P(QuicSpdyStreamTest, ReceivingTrailersAfterHeadersWithFin) {
+  // If headers are received with a FIN, no trailers should then arrive.
   Initialize(kShouldProcessData);
 
   // Receive initial headers with FIN set.
   ProcessHeaders(true, headers_);
+  stream_->ConsumeHeaderList();
 
   // Receive trailing headers after FIN already received.
   SpdyHeaderBlock trailers_block;
@@ -749,6 +786,7 @@ TEST_P(QuicSpdyStreamTest, ReceivingTrailersAfterBodyWithFin) {
 
   // Receive initial headers without FIN set.
   ProcessHeaders(false, headers_);
+  stream_->ConsumeHeaderList();
 
   // Receive body data, with FIN.
   QuicStreamFrame frame(kClientDataStreamId1, /*fin=*/true, 0, "body");
@@ -760,45 +798,6 @@ TEST_P(QuicSpdyStreamTest, ReceivingTrailersAfterBodyWithFin) {
               CloseConnection(QUIC_INVALID_HEADERS_STREAM_DATA, _, _))
       .Times(1);
   ProcessHeaders(false, trailers_block);
-}
-
-TEST_P(QuicSpdyStreamTest, ReceivingTrailersWithOffset) {
-  // Test that when receiving trailing headers with an offset before response
-  // body, stream is closed at the right offset.
-  Initialize(kShouldProcessData);
-
-  // Receive initial headers.
-  QuicHeaderList headers = ProcessHeaders(false, headers_);
-  stream_->ConsumeHeaderList();
-
-  const string body = "this is the body";
-  // Receive trailing headers.
-  SpdyHeaderBlock trailers_block;
-  trailers_block["key1"] = "value1";
-  trailers_block["key2"] = "value2";
-  trailers_block["key3"] = "value3";
-  trailers_block[kFinalOffsetHeaderKey] =
-      QuicTextUtils::Uint64ToString(body.size());
-
-  QuicHeaderList trailers = ProcessHeaders(true, trailers_block);
-
-  // The trailers should be decompressed, and readable from the stream.
-  EXPECT_TRUE(stream_->trailers_decompressed());
-
-  // The final offset trailer will be consumed by QUIC.
-  trailers_block.erase(kFinalOffsetHeaderKey);
-  EXPECT_EQ(trailers_block, stream_->received_trailers());
-
-  // Consuming the trailers erases them from the stream.
-  stream_->MarkTrailersConsumed();
-  EXPECT_TRUE(stream_->FinishedReadingTrailers());
-
-  EXPECT_FALSE(stream_->IsDoneReading());
-  // Receive and consume body.
-  QuicStreamFrame frame(kClientDataStreamId1, /*fin=*/false, 0, body);
-  stream_->OnStreamFrame(frame);
-  EXPECT_EQ(body, stream_->data());
-  EXPECT_TRUE(stream_->IsDoneReading());
 }
 
 TEST_P(QuicSpdyStreamTest, ClosingStreamWithNoTrailers) {

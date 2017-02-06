@@ -1,2 +1,0 @@
-gen/chrome/grit/invalidations_resources.h
-gen/chrome/invalidations_resources.pak

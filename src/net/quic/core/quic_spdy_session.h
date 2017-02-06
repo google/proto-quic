@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_CORE_QUIC_SPDY_SESSION_H_
 #define NET_QUIC_CORE_QUIC_SPDY_SESSION_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <memory>
 
 #include "base/macros.h"

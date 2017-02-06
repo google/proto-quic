@@ -17,10 +17,8 @@
 #ifndef NET_QUIC_CORE_QUIC_STREAM_H_
 #define NET_QUIC_CORE_QUIC_STREAM_H_
 
-#include <stddef.h>
-#include <stdint.h>
-#include <sys/types.h>
-
+#include <cstddef>
+#include <cstdint>
 #include <list>
 #include <string>
 

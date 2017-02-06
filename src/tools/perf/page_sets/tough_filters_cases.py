@@ -23,7 +23,7 @@ class PirateMarkPage(page_module.Page):
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForNetworkQuiescence()
     with action_runner.CreateInteraction('Filter'):
-      action_runner.EvaluateJavaScript(
+      action_runner.EvaluateJavaScript2(
           'document.getElementById("benchmarkButtonText").click()')
       action_runner.Wait(10)
 

@@ -29,4 +29,9 @@ char* QuicUrlUtils::NormalizeHostname(char* hostname) {
   return QuicUrlUtilsImpl::NormalizeHostname(hostname);
 }
 
+// static
+void QuicUrlUtils::StringToQuicServerId(const string& str, QuicServerId* out) {
+  QuicUrlUtilsImpl::StringToQuicServerId(str, out);
+}
+
 }  // namespace net

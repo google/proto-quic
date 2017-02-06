@@ -369,6 +369,16 @@ EffectiveConnectionType forced_effective_connection_type(
   return forced_effective_connection_type;
 }
 
+bool persistent_cache_reading_enabled(
+    const std::map<std::string, std::string>& variation_params) {
+  if (GetStringValueForVariationParamWithDefaultValue(
+          variation_params, "persistent_cache_reading_enabled", "false") !=
+      "true") {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace internal
 
 }  // namespace nqe

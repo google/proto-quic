@@ -120,4 +120,4 @@ size_t Aead::NonceLength() const {
   return EVP_AEAD_nonce_length(aead_);
 }
 
-}  // namespace
+}  // namespace crypto

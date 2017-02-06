@@ -118,8 +118,9 @@ class CanonOutputT {
   }
 
   void ReserveSizeIfNeeded(int estimated_size) {
+    // Reserve a bit extra to account for escaped chars.
     if (estimated_size > buffer_len_)
-      Resize(estimated_size);
+      Resize(estimated_size + 8);
   }
 
  protected:

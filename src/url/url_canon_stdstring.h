@@ -23,8 +23,7 @@ namespace url {
 // throughout the lifetime of this object.
 //
 // The given string will be appended to; any existing data in the string will
-// be preserved. The caller should reserve() the amount of data in the string
-// they expect to be written. We will resize if necessary, but that's slow.
+// be preserved.
 //
 // Note that when canonicalization is complete, the string will likely have
 // unused space at the end because we make the string very big to start out

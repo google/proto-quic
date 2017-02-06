@@ -187,7 +187,7 @@ class LoadWashingtonPostMobileStory(_LoadingStory):
     # window does not have a "Close" button, instead it has only a "Send link
     # to phone" button. So on tablets we run with the popup window open. The
     # popup is transparent, so this is mostly an aesthetical issue.
-    has_button = action_runner.EvaluateJavaScript(
+    has_button = action_runner.EvaluateJavaScript2(
         '!!document.querySelector({{ selector }})',
         selector=self._CLOSE_BUTTON_SELECTOR)
     if has_button:
@@ -241,7 +241,7 @@ class LoadFlickrStory(_LoadingStory):
 
   def _DidLoadDocument(self, action_runner):
     # Wait until the 'Recently tagged' view loads.
-    action_runner.WaitForJavaScriptCondition('''
+    action_runner.WaitForJavaScriptCondition2('''
         document.querySelector(
             '.search-photos-everyone-trending-view .photo-list-view')
                 !== null''')
@@ -305,7 +305,7 @@ class LoadGmailDesktopStory(_LoadGmailBaseStory):
 
   def _DidLoadDocument(self, action_runner):
     # Wait until the UI loads.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("loading").style.display === "none"')
 
 
@@ -316,7 +316,7 @@ class LoadGmailMobileStory(_LoadGmailBaseStory):
   def _DidLoadDocument(self, action_runner):
     # Wait until the UI loads.
     action_runner.WaitForElement('#apploadingdiv')
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("apploadingdiv").style.height === "0px"')
 
 class LoadMapsStory(_LoadingStory):
@@ -364,7 +364,7 @@ class LoadBubblesStory(_LoadingStory):
 
   def _DidLoadDocument(self, action_runner):
     # The #logo element is removed right before the main menu is displayed.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.getElementById("logo") === null')
 
 
@@ -382,7 +382,7 @@ class LoadSpyChaseStory(_LoadingStory):
   def _DidLoadDocument(self, action_runner):
     # The background of the game canvas is set when the "Tap screen to play"
     # caption is displayed.
-    action_runner.WaitForJavaScriptCondition(
+    action_runner.WaitForJavaScriptCondition2(
         'document.querySelector("#game canvas").style.background !== ""')
 
 

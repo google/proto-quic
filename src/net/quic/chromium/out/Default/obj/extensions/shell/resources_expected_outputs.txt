@@ -1,2 +1,0 @@
-gen/extensions/shell/grit/app_shell_resources.h
-gen/extensions/shell/app_shell_resources.pak

@@ -380,6 +380,11 @@ class NET_EXPORT NetworkQualityEstimator
       base::TimeDelta* transport_rtt,
       int32_t* downstream_throughput_kbps) const;
 
+  // Notifies |this| of a new transport layer RTT. Called by socket watchers.
+  // Protected for testing.
+  void OnUpdatedRTTAvailable(SocketPerformanceWatcherFactory::Protocol protocol,
+                             const base::TimeDelta& rtt);
+
  private:
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            AdaptiveRecomputationEffectiveConnectionType);
@@ -398,6 +403,8 @@ class NET_EXPORT NetworkQualityEstimator
                            UnknownEffectiveConnectionType);
   FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
                            TypicalNetworkQualities);
+  FRIEND_TEST_ALL_PREFIXES(NetworkQualityEstimatorTest,
+                           OnPrefsReadWithReadingDisabled);
 
   // Value of round trip time observations is in base::TimeDelta.
   typedef nqe::internal::Observation<base::TimeDelta> RttObservation;
@@ -464,10 +471,6 @@ class NET_EXPORT NetworkQualityEstimator
   // a valid observation is available. |downstream_kbps| is the downstream
   // throughput in kilobits per second.
   void OnNewThroughputObservationAvailable(int32_t downstream_kbps);
-
-  // Notifies |this| of a new transport layer RTT.
-  void OnUpdatedRTTAvailable(SocketPerformanceWatcherFactory::Protocol protocol,
-                             const base::TimeDelta& rtt);
 
   // Obtains the model parameters for different effective connection types from
   // the field trial parameters. For each effective connection type, a model
@@ -760,6 +763,9 @@ class NET_EXPORT NetworkQualityEstimator
   // |forced_effective_connection_type_|.
   const bool forced_effective_connection_type_set_;
   const EffectiveConnectionType forced_effective_connection_type_;
+
+  // Set to true if reading of the network quality prefs is enabled.
+  const bool persistent_cache_reading_enabled_;
 
   base::ThreadChecker thread_checker_;
 

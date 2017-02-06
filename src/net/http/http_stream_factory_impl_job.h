@@ -475,6 +475,8 @@ class HttpStreamFactoryImpl::Job {
   // Only used if |new_spdy_session_| is non-NULL.
   bool spdy_session_direct_;
 
+  base::TimeTicks job_stream_ready_start_time_;
+
   // Type of stream that is requested.
   HttpStreamRequest::StreamType stream_type_;
 

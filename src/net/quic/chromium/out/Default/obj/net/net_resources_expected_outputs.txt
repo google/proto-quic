@@ -1,2 +1,0 @@
-gen/net/grit/net_resources.h
-gen/net/net_resources.pak

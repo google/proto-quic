@@ -213,10 +213,9 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
   void OnSettings() override {}
   void OnSetting(SpdySettingsIds id, uint32_t value) override {}
   void OnPing(SpdyPingId unique_id, bool is_ack) override {}
-  void OnRstStream(SpdyStreamId stream_id,
-                   SpdyRstStreamStatus status) override {}
+  void OnRstStream(SpdyStreamId stream_id, SpdyErrorCode error_code) override {}
   void OnGoAway(SpdyStreamId last_accepted_stream_id,
-                SpdyGoAwayStatus status,
+                SpdyErrorCode error_code,
                 base::StringPiece debug_data) override {}
   void OnWindowUpdate(SpdyStreamId stream_id, int delta_window_size) override {}
   void OnPushPromise(SpdyStreamId stream_id,
@@ -226,7 +225,7 @@ class PriorityGetter : public BufferedSpdyFramerVisitorInterface {
                 base::StringPiece origin,
                 const SpdyAltSvcWireFormat::AlternativeServiceVector&
                     altsvc_vector) override {}
-  bool OnUnknownFrame(SpdyStreamId stream_id, int frame_type) override {
+  bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) override {
     return false;
   }
 
@@ -763,15 +762,15 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway() {
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway(
     SpdyStreamId last_good_stream_id) {
-  SpdyGoAwayIR go_ir(last_good_stream_id, GOAWAY_NO_ERROR, "go away");
+  SpdyGoAwayIR go_ir(last_good_stream_id, ERROR_CODE_NO_ERROR, "go away");
   return SpdySerializedFrame(headerless_spdy_framer_.SerializeFrame(go_ir));
 }
 
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyGoAway(
     SpdyStreamId last_good_stream_id,
-    SpdyGoAwayStatus status,
+    SpdyErrorCode error_code,
     const std::string& desc) {
-  SpdyGoAwayIR go_ir(last_good_stream_id, status, desc);
+  SpdyGoAwayIR go_ir(last_good_stream_id, error_code, desc);
   return SpdySerializedFrame(headerless_spdy_framer_.SerializeFrame(go_ir));
 }
 
@@ -786,8 +785,8 @@ SpdySerializedFrame SpdyTestUtil::ConstructSpdyWindowUpdate(
 // SpdyRstStreamIR).
 SpdySerializedFrame SpdyTestUtil::ConstructSpdyRstStream(
     SpdyStreamId stream_id,
-    SpdyRstStreamStatus status) {
-  SpdyRstStreamIR rst_ir(stream_id, status);
+    SpdyErrorCode error_code) {
+  SpdyRstStreamIR rst_ir(stream_id, error_code);
   return SpdySerializedFrame(
       headerless_spdy_framer_.SerializeRstStream(rst_ir));
 }

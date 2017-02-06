@@ -46,9 +46,9 @@ bool ExportKeyWithBio(const void* key,
   if (!export_fn(bio.get(), key))
     return false;
 
-  char* data = nullptr;
-  long len = BIO_get_mem_data(bio.get(), &data);
-  if (!data || len < 0)
+  const uint8_t* data;
+  size_t len;
+  if (!BIO_mem_contents(bio.get(), &data, &len))
     return false;
 
   output->assign(data, data + len);

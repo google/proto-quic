@@ -4,7 +4,9 @@
 
 #include "net/quic/core/quic_session.h"
 
-#include "net/quic/core/crypto/proof_verifier.h"
+#include <cstdint>
+#include <utility>
+
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_flow_controller.h"

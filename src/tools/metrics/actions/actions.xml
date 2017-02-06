@@ -1569,6 +1569,15 @@ should be able to be added at any place in this file.
   </description>
 </action>
 
+<action name="Autofill_ShowedHttpNotSecureExplanation">
+  <owner>estark@chromium.org</owner>
+  <description>
+    This user action is logged when the user selects a &quot;Login not
+    secure&quot; or &quot;Payment not secure&quot; warning item in the autofill
+    dropdown to show more information about the warning.
+  </description>
+</action>
+
 <action name="Autofill_ShowedProfileSuggestions">
   <owner>sebsg@chromium.org</owner>
   <description>
@@ -13240,6 +13249,15 @@ should be able to be added at any place in this file.
 <action name="PasswordManager_RemoveSavedPassword">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+</action>
+
+<action name="PasswordManager_ShowedHttpNotSecureExplanation">
+  <owner>estark@chromium.org</owner>
+  <description>
+    The user selected the &quot;Login not secure&quot; or &quot;Form not
+    secure&quot; item in the password manager autofill dropdown to show more
+    information about the warning.
+  </description>
 </action>
 
 <action name="PasswordManager_SyncCredentialFilledAndLoginSuccessfull">

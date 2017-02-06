@@ -26,10 +26,6 @@ from devil.android import device_utils
 from devil.utils import run_tests_helper
 from pylib import constants
 
-sys.path.insert(0, os.path.abspath(os.path.join(
-    constants.DIR_SOURCE_ROOT, 'tools', 'swarming_client')))
-from libs.logdog import bootstrap # pylint: disable=import-error
-
 
 _TZ_UTC = {'TZ': 'UTC'}
 
@@ -256,32 +252,6 @@ def ResolveTombstones(device, resolve_all_tombstones, include_stack_symbols,
                                                     resolve_all_tombstones,
                                                     include_stack_symbols,
                                                     wipe_tombstones))
-
-
-def LogdogTombstones(resolved_tombstones, stream_name):
-  """Save resolved tombstones to logdog and return the url.
-
-  Args:
-    stream_name: The name of the logdog stream that records tombstones.
-    resolved_tombstones: Resolved tombstones (output of ResolveTombstones).
-
-  Returns:
-    A url link to the recorded tombstones.
-  """
-  try:
-    tombstones_url = ''
-    stream_client = bootstrap.ButlerBootstrap.probe().stream_client()
-    with stream_client.text(stream_name) as logdog_stream:
-      for tombstones_line in resolved_tombstones:
-        logdog_stream.write(tombstones_line + '\n')
-      tombstones_url = logdog_stream.get_viewer_url(stream_name)
-  except bootstrap.NotBootstrappedError:
-    logging.exception('Error not bootstrapped. Failed to start logdog')
-  except (KeyError, ValueError) as e:
-    logging.exception('Error when creating stream_client/stream: %s.', e)
-  except Exception as e: # pylint: disable=broad-except
-    logging.exception('Unknown Error: %s.', e)
-  return tombstones_url
 
 
 def main():

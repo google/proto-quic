@@ -6,7 +6,11 @@ import inspect
 import os
 import sys
 
+from core import path_util
 from core import perf_benchmark
+
+from telemetry.core import discover
+from telemetry import benchmark as benchmark_module
 
 
 def GetClassFilePath(clazz):
@@ -37,3 +41,11 @@ def GetBenchmarkNamesForFile(top_level_dir, benchmark_file_dir):
     return sorted(benchmark_names)
   finally:
     sys.path = original_sys_path
+
+
+def GetAllPerfBenchmarks():
+  benchmarks_dir = path_util.GetPerfBenchmarksDir()
+  top_level_dir = os.path.join(benchmarks_dir, '..')
+  return discover.DiscoverClasses(
+      benchmarks_dir, top_level_dir, benchmark_module.Benchmark,
+      index_by_class_name=True).values()

@@ -17,6 +17,197 @@
 
 namespace base {
 
+// Group of tests for the value constructors.
+TEST(ValuesTest, ConstructBool) {
+  FundamentalValue true_value(true);
+  EXPECT_EQ(Value::Type::BOOLEAN, true_value.type());
+  EXPECT_TRUE(true_value.GetBool());
+
+  FundamentalValue false_value(false);
+  EXPECT_EQ(Value::Type::BOOLEAN, false_value.type());
+  EXPECT_FALSE(false_value.GetBool());
+}
+
+TEST(ValuesTest, ConstructInt) {
+  FundamentalValue value(-37);
+  EXPECT_EQ(Value::Type::INTEGER, value.type());
+  EXPECT_EQ(-37, value.GetInt());
+}
+
+TEST(ValuesTest, ConstructDouble) {
+  FundamentalValue value(-4.655);
+  EXPECT_EQ(Value::Type::DOUBLE, value.type());
+  EXPECT_EQ(-4.655, value.GetDouble());
+}
+
+TEST(ValuesTest, ConstructStringFromConstCharPtr) {
+  const char* str = "foobar";
+  StringValue value(str);
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+TEST(ValuesTest, ConstructStringFromStdStringConstRef) {
+  std::string str = "foobar";
+  StringValue value(str);
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+TEST(ValuesTest, ConstructStringFromStdStringRefRef) {
+  std::string str = "foobar";
+  StringValue value(std::move(str));
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+TEST(ValuesTest, ConstructStringFromConstChar16Ptr) {
+  string16 str = ASCIIToUTF16("foobar");
+  StringValue value(str.c_str());
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+TEST(ValuesTest, ConstructStringFromString16) {
+  string16 str = ASCIIToUTF16("foobar");
+  StringValue value(str);
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+TEST(ValuesTest, ConstructStringFromStringPiece) {
+  StringPiece str = "foobar";
+  StringValue value(str);
+  EXPECT_EQ(Value::Type::STRING, value.type());
+  EXPECT_EQ("foobar", value.GetString());
+}
+
+// Group of tests for the copy constructors and copy-assigmnent. For equality
+// checks comparisons of the interesting fields are done instead of relying on
+// Equals being correct.
+TEST(ValuesTest, CopyBool) {
+  FundamentalValue true_value(true);
+  FundamentalValue copied_true_value(true_value);
+  EXPECT_EQ(true_value.type(), copied_true_value.type());
+  EXPECT_EQ(true_value.GetBool(), copied_true_value.GetBool());
+
+  FundamentalValue false_value(false);
+  FundamentalValue copied_false_value(false_value);
+  EXPECT_EQ(false_value.type(), copied_false_value.type());
+  EXPECT_EQ(false_value.GetBool(), copied_false_value.GetBool());
+
+  Value blank;
+
+  blank = true_value;
+  EXPECT_EQ(true_value.type(), blank.type());
+  EXPECT_EQ(true_value.GetBool(), blank.GetBool());
+
+  blank = false_value;
+  EXPECT_EQ(false_value.type(), blank.type());
+  EXPECT_EQ(false_value.GetBool(), blank.GetBool());
+}
+
+TEST(ValuesTest, CopyInt) {
+  FundamentalValue value(74);
+  FundamentalValue copied_value(value);
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(value.GetInt(), copied_value.GetInt());
+
+  Value blank;
+
+  blank = value;
+  EXPECT_EQ(value.type(), blank.type());
+  EXPECT_EQ(value.GetInt(), blank.GetInt());
+}
+
+TEST(ValuesTest, CopyDouble) {
+  FundamentalValue value(74.896);
+  FundamentalValue copied_value(value);
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(value.GetDouble(), copied_value.GetDouble());
+
+  Value blank;
+
+  blank = value;
+  EXPECT_EQ(value.type(), blank.type());
+  EXPECT_EQ(value.GetDouble(), blank.GetDouble());
+}
+
+TEST(ValuesTest, CopyString) {
+  StringValue value("foobar");
+  StringValue copied_value(value);
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(value.GetString(), copied_value.GetString());
+
+  Value blank;
+
+  blank = value;
+  EXPECT_EQ(value.type(), blank.type());
+  EXPECT_EQ(value.GetString(), blank.GetString());
+}
+
+// Group of tests for the move constructors and move-assigmnent.
+TEST(ValuesTest, MoveBool) {
+  FundamentalValue true_value(true);
+  FundamentalValue moved_true_value(std::move(true_value));
+  EXPECT_EQ(Value::Type::BOOLEAN, moved_true_value.type());
+  EXPECT_TRUE(moved_true_value.GetBool());
+
+  FundamentalValue false_value(false);
+  FundamentalValue moved_false_value(std::move(false_value));
+  EXPECT_EQ(Value::Type::BOOLEAN, moved_false_value.type());
+  EXPECT_FALSE(moved_false_value.GetBool());
+
+  Value blank;
+
+  blank = FundamentalValue(true);
+  EXPECT_EQ(Value::Type::BOOLEAN, blank.type());
+  EXPECT_TRUE(blank.GetBool());
+
+  blank = FundamentalValue(false);
+  EXPECT_EQ(Value::Type::BOOLEAN, blank.type());
+  EXPECT_FALSE(blank.GetBool());
+}
+
+TEST(ValuesTest, MoveInt) {
+  FundamentalValue value(74);
+  FundamentalValue moved_value(std::move(value));
+  EXPECT_EQ(Value::Type::INTEGER, moved_value.type());
+  EXPECT_EQ(74, moved_value.GetInt());
+
+  Value blank;
+
+  blank = FundamentalValue(47);
+  EXPECT_EQ(Value::Type::INTEGER, blank.type());
+  EXPECT_EQ(47, blank.GetInt());
+}
+
+TEST(ValuesTest, MoveDouble) {
+  FundamentalValue value(74.896);
+  FundamentalValue moved_value(std::move(value));
+  EXPECT_EQ(Value::Type::DOUBLE, moved_value.type());
+  EXPECT_EQ(74.896, moved_value.GetDouble());
+
+  Value blank;
+
+  blank = FundamentalValue(654.38);
+  EXPECT_EQ(Value::Type::DOUBLE, blank.type());
+  EXPECT_EQ(654.38, blank.GetDouble());
+}
+
+TEST(ValuesTest, MoveString) {
+  StringValue value("foobar");
+  StringValue moved_value(std::move(value));
+  EXPECT_EQ(Value::Type::STRING, moved_value.type());
+  EXPECT_EQ("foobar", moved_value.GetString());
+
+  Value blank;
+
+  blank = StringValue("foobar");
+  EXPECT_EQ(Value::Type::STRING, blank.type());
+  EXPECT_EQ("foobar", blank.GetString());
+}
+
 TEST(ValuesTest, Basic) {
   // Test basic dictionary getting/setting
   DictionaryValue settings;

@@ -54,12 +54,23 @@ namespace android {
 // Used to mark symbols to be exported in a shared library's symbol table.
 #define JNI_EXPORT __attribute__ ((visibility("default")))
 
-// Used to disable manual JNI registration in binaries that prefer to use native
-// JNI exports for startup performance. This is not compatible with the crazy
-// linker and so defaults to off. Call DisableManualJniRegistration at the very
-// beginning of JNI_OnLoad to use this.
-BASE_EXPORT bool IsManualJniRegistrationDisabled();
-BASE_EXPORT void DisableManualJniRegistration();
+// The level of JNI registration required for the current process.
+enum JniRegistrationType {
+  // Register all native methods.
+  ALL_JNI_REGISTRATION,
+  // Register some native methods, as controlled by the jni_generator.
+  SELECTIVE_JNI_REGISTRATION,
+  // Do not register any native methods.
+  NO_JNI_REGISTRATION,
+};
+
+BASE_EXPORT JniRegistrationType GetJniRegistrationType();
+
+// Set the JniRegistrationType for this process (defaults to
+// ALL_JNI_REGISTRATION). This should be called in the JNI_OnLoad function
+// which is called when the native library is first loaded.
+BASE_EXPORT void SetJniRegistrationType(
+    JniRegistrationType jni_registration_type);
 
 // Contains the registration method information for initializing JNI bindings.
 struct RegistrationMethod {

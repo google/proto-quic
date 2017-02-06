@@ -302,8 +302,25 @@ TEST_F(TaskSchedulerImplTest, MultipleTraitsExecutionModePairs) {
   }
 }
 
-// TODO(fdoray): Add tests with Sequences that move around worker pools once
-// child TaskRunners are supported.
+TEST_F(TaskSchedulerImplTest, GetMaxConcurrentTasksWithTraitsDeprecated) {
+  EXPECT_EQ(1, scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+                   TaskTraits().WithPriority(TaskPriority::BACKGROUND)));
+  EXPECT_EQ(
+      3, scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+             TaskTraits().WithPriority(TaskPriority::BACKGROUND).MayBlock()));
+  EXPECT_EQ(4, scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+                   TaskTraits().WithPriority(TaskPriority::USER_VISIBLE)));
+  EXPECT_EQ(
+      12,
+      scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+          TaskTraits().WithPriority(TaskPriority::USER_VISIBLE).MayBlock()));
+  EXPECT_EQ(4, scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+                   TaskTraits().WithPriority(TaskPriority::USER_BLOCKING)));
+  EXPECT_EQ(
+      12,
+      scheduler_->GetMaxConcurrentTasksWithTraitsDeprecated(
+          TaskTraits().WithPriority(TaskPriority::USER_BLOCKING).MayBlock()));
+}
 
 }  // namespace internal
 }  // namespace base

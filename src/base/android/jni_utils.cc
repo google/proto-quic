@@ -4,7 +4,6 @@
 
 #include "base/android/jni_utils.h"
 
-#include "base/android/jni_android.h"
 #include "base/android/scoped_java_ref.h"
 
 #include "jni/JNIUtils_jni.h"
@@ -14,6 +13,10 @@ namespace android {
 
 ScopedJavaLocalRef<jobject> GetClassLoader(JNIEnv* env) {
   return Java_JNIUtils_getClassLoader(env);
+}
+
+bool isSelectiveJniRegistrationEnabled(JNIEnv* env) {
+  return Java_JNIUtils_isSelectiveJniRegistrationEnabled(env);
 }
 
 }  // namespace android

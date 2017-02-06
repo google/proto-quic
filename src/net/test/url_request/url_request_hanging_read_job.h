@@ -21,7 +21,6 @@ class URLRequestHangingReadJob : public URLRequestJob {
 
   void Start() override;
   int ReadRawData(IOBuffer* buf, int buf_size) override;
-  int GetResponseCode() const override;
   void GetResponseInfo(HttpResponseInfo* info) override;
 
   // Adds the testing URLs to the URLRequestFilter.

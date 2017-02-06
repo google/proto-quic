@@ -23,9 +23,11 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/weak_ptr.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/test/test_file_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/base/auth.h"
@@ -5027,7 +5029,7 @@ TEST_F(HttpNetworkTransactionTest, HttpsProxySpdyConnectFailure) {
   SpdySerializedFrame connect(spdy_util_.ConstructSpdyConnect(
       NULL, 0, 1, LOWEST, HostPortPair("www.example.org", 443)));
   SpdySerializedFrame get(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
 
   MockWrite spdy_writes[] = {
       CreateMockWrite(connect, 0), CreateMockWrite(get, 2),
@@ -7862,7 +7864,7 @@ TEST_F(HttpNetworkTransactionTest, RedirectOfHttpsConnectViaSpdyProxy) {
   SpdySerializedFrame conn(spdy_util_.ConstructSpdyConnect(
       NULL, 0, 1, LOWEST, HostPortPair("www.example.org", 443)));
   SpdySerializedFrame goaway(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite data_writes[] = {
       CreateMockWrite(conn, 0, SYNCHRONOUS),
       CreateMockWrite(goaway, 2, SYNCHRONOUS),
@@ -7959,7 +7961,7 @@ TEST_F(HttpNetworkTransactionTest, ErrorResponseToHttpsConnectViaSpdyProxy) {
   SpdySerializedFrame conn(spdy_util_.ConstructSpdyConnect(
       NULL, 0, 1, LOWEST, HostPortPair("www.example.org", 443)));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite data_writes[] = {
       CreateMockWrite(conn, 0), CreateMockWrite(rst, 3),
   };
@@ -8019,7 +8021,7 @@ TEST_F(HttpNetworkTransactionTest, BasicAuthSpdyProxy) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyConnect(
       NULL, 0, 1, LOWEST, HostPortPair("www.example.org", 443)));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   spdy_util_.UpdateWithStreamDestruction(1);
 
   // After calling trans.RestartWithAuth(), this is the request we should
@@ -8279,7 +8281,7 @@ TEST_F(HttpNetworkTransactionTest, CrossOriginProxyPushCorrectness) {
       spdy_util_.ConstructSpdyGet("http://www.example.org/", 1, LOWEST));
 
   SpdySerializedFrame push_rst(
-      spdy_util_.ConstructSpdyRstStream(2, RST_STREAM_REFUSED_STREAM));
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_REFUSED_STREAM));
 
   MockWrite spdy_writes[] = {
       CreateMockWrite(stream1_syn, 0, ASYNC), CreateMockWrite(push_rst, 3),
@@ -16484,6 +16486,10 @@ TEST_F(HttpNetworkTransactionTest, ThrottlingPrioritySetDestroy) {
 
 #if !defined(OS_IOS)
 TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
+  // Required by ChannelIDService.
+  base::test::ScopedTaskScheduler scoped_task_scheduler(
+      base::MessageLoop::current());
+
   const std::string https_url = "https://www.example.com";
   HttpRequestInfo request;
   request.url = GURL(https_url);
@@ -16501,8 +16507,8 @@ TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
                       MockRead(ASYNC, ERR_IO_PENDING)};
   StaticSocketDataProvider data(reads, arraysize(reads), nullptr, 0);
   session_deps_.socket_factory->AddSocketDataProvider(&data);
-  session_deps_.channel_id_service.reset(new ChannelIDService(
-      new DefaultChannelIDStore(nullptr), base::ThreadTaskRunnerHandle::Get()));
+  session_deps_.channel_id_service.reset(
+      new ChannelIDService(new DefaultChannelIDStore(nullptr)));
   std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
 
   HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
@@ -16517,81 +16523,5 @@ TEST_F(HttpNetworkTransactionTest, TokenBindingSpdy) {
   EXPECT_TRUE(headers.HasHeader(HttpRequestHeaders::kTokenBinding));
 }
 #endif  // !defined(OS_IOS)
-
-// Test a SPDY CONNECT through an HTTPS Proxy to plaintext WebSocket Server.
-TEST_F(HttpNetworkTransactionTest, PlaintextWebsocketOverSpdyProxy) {
-  HttpRequestInfo request;
-  request.method = "GET";
-  request.url = GURL("ws://www.example.org/");
-  AddWebSocketHeaders(&request.extra_headers);
-
-  // Configure against https proxy server "proxy:70".
-  session_deps_.proxy_service = ProxyService::CreateFixed("https://proxy:70");
-  BoundTestNetLog log;
-  session_deps_.net_log = log.bound().net_log();
-  std::unique_ptr<HttpNetworkSession> session(CreateSession(&session_deps_));
-
-  HttpNetworkTransaction trans(DEFAULT_PRIORITY, session.get());
-  FakeWebSocketStreamCreateHelper websocket_stream_create_helper;
-  trans.SetWebSocketHandshakeStreamCreateHelper(
-      &websocket_stream_create_helper);
-
-  // CONNECT to www.example.org:443 via SPDY
-  SpdySerializedFrame connect(spdy_util_.ConstructSpdyConnect(
-      nullptr, 0, 1, LOWEST, HostPortPair("www.example.org", 80)));
-  const char req[] =
-      "GET / HTTP/1.1\r\n"
-      "Host: www.example.org\r\n"
-      "Connection: Upgrade\r\n"
-      "Upgrade: websocket\r\n"
-      "Origin: http://www.example.org\r\n"
-      "Sec-WebSocket-Version: 13\r\n"
-      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n";
-  SpdySerializedFrame wrapped_ws_req(
-      spdy_util_.ConstructSpdyDataFrame(1, req, strlen(req), false));
-  SpdySerializedFrame conn_resp(
-      spdy_util_.ConstructSpdyGetReply(nullptr, 0, 1));
-  const char resp[] =
-      "HTTP/1.1 101 Switching Protocols\r\n"
-      "Upgrade: websocket\r\n"
-      "Connection: Upgrade\r\n"
-      "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n";
-  SpdySerializedFrame wrapped_ws_resp(
-      spdy_util_.ConstructSpdyDataFrame(1, resp, strlen(resp), false));
-  SpdySerializedFrame window_update(
-      spdy_util_.ConstructSpdyWindowUpdate(1, wrapped_ws_resp.size()));
-
-  MockWrite spdy_writes[] = {
-      CreateMockWrite(connect, 0), CreateMockWrite(wrapped_ws_req, 2),
-      CreateMockWrite(window_update, 4),
-  };
-
-  MockRead spdy_reads[] = {
-      CreateMockRead(conn_resp, 1, ASYNC),
-      CreateMockRead(wrapped_ws_resp, 3, ASYNC), MockRead(ASYNC, 0, 5),
-  };
-
-  SequencedSocketData spdy_data(spdy_reads, arraysize(spdy_reads), spdy_writes,
-                                arraysize(spdy_writes));
-  session_deps_.socket_factory->AddSocketDataProvider(&spdy_data);
-
-  SSLSocketDataProvider ssl(ASYNC, OK);
-  ssl.next_proto = kProtoHTTP2;
-  session_deps_.socket_factory->AddSSLSocketDataProvider(&ssl);
-
-  TestCompletionCallback callback;
-
-  int rv = trans.Start(&request, callback.callback(), log.bound());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-
-  rv = callback.WaitForResult();
-  ASSERT_THAT(rv, IsOk());
-
-  const HttpResponseInfo* response = trans.GetResponseInfo();
-  ASSERT_TRUE(response);
-  ASSERT_TRUE(response->headers);
-  EXPECT_EQ("HTTP/1.1 101 Switching Protocols",
-            response->headers->GetStatusLine());
-}
 
 }  // namespace net

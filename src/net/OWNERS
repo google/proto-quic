@@ -26,3 +26,6 @@ per-file net.gyp*=bengr@chromium.org
 
 per-file BUILD.gn=file://net/websockets/OWNERS
 per-file net.gyp*=file://net/websockets/OWNERS
+
+# TEAM: net-dev@chromium.org
+# COMPONENT: Internals>Network

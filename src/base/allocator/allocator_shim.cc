@@ -241,12 +241,35 @@ void ShimFree(void* address) {
   return chain_head->free_function(chain_head, address);
 }
 
+size_t ShimGetSizeEstimate(const void* address) {
+  const allocator::AllocatorDispatch* const chain_head = GetChainHead();
+  return chain_head->get_size_estimate_function(chain_head,
+                                                const_cast<void*>(address));
+}
+
+unsigned ShimBatchMalloc(size_t size, void** results, unsigned num_requested) {
+  const allocator::AllocatorDispatch* const chain_head = GetChainHead();
+  return chain_head->batch_malloc_function(chain_head, size, results,
+                                           num_requested);
+}
+
+void ShimBatchFree(void** to_be_freed, unsigned num_to_be_freed) {
+  const allocator::AllocatorDispatch* const chain_head = GetChainHead();
+  return chain_head->batch_free_function(chain_head, to_be_freed,
+                                         num_to_be_freed);
+}
+
+void ShimFreeDefiniteSize(void* ptr, size_t size) {
+  const allocator::AllocatorDispatch* const chain_head = GetChainHead();
+  return chain_head->free_definite_size_function(chain_head, ptr, size);
+}
+
 }  // extern "C"
 
-#if !defined(OS_WIN)
+#if !defined(OS_WIN) && !defined(OS_MACOSX)
 // Cpp symbols (new / delete) should always be routed through the shim layer
-// except on Windows where the malloc intercept is deep enough that it also
-// catches the cpp calls.
+// except on Windows and macOS where the malloc intercept is deep enough that it
+// also catches the cpp calls.
 #include "base/allocator/allocator_shim_override_cpp_symbols.h"
 #endif
 
@@ -257,6 +280,9 @@ void ShimFree(void* address) {
 #elif defined(OS_WIN)
 // On Windows we use plain link-time overriding of the CRT symbols.
 #include "base/allocator/allocator_shim_override_ucrt_symbols_win.h"
+#elif defined(OS_MACOSX)
+#include "base/allocator/allocator_shim_default_dispatch_to_mac_zoned_malloc.h"
+#include "base/allocator/allocator_shim_override_mac_symbols.h"
 #else
 #include "base/allocator/allocator_shim_override_libc_symbols.h"
 #endif
@@ -266,6 +292,22 @@ void ShimFree(void* address) {
 // accidentally performed on the glibc heap instead of the tcmalloc one.
 #if defined(USE_TCMALLOC)
 #include "base/allocator/allocator_shim_override_glibc_weak_symbols.h"
+#endif
+
+#if defined(OS_MACOSX)
+namespace base {
+namespace allocator {
+void InitializeAllocatorShim() {
+  // Prepares the default dispatch. After the intercepted malloc calls have
+  // traversed the shim this will route them to the default malloc zone.
+  InitializeDefaultDispatchToMacAllocator();
+
+  // This replaces the default malloc zone, causing calls to malloc & friends
+  // from the codebase to be routed to ShimMalloc() above.
+  OverrideMacSymbols();
+}
+}  // namespace allocator
+}  // namespace base
 #endif
 
 // Cross-checks.

@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include <memory>
+#include <string>
 
 #include "base/run_loop.h"
 #include "base/stl_util.h"
@@ -104,7 +105,7 @@ class ReadErrorUploadDataStream : public UploadDataStream {
 
 class CancelStreamCallback : public TestCompletionCallbackBase {
  public:
-  CancelStreamCallback(SpdyHttpStream* stream)
+  explicit CancelStreamCallback(SpdyHttpStream* stream)
       : stream_(stream),
         callback_(base::Bind(&CancelStreamCallback::CancelStream,
                              base::Unretained(this))) {}
@@ -912,11 +913,11 @@ TEST_F(SpdyHttpStreamTest, DelayedSendChunkedPostWithWindowUpdate) {
 TEST_F(SpdyHttpStreamTest, DataReadErrorSynchronous) {
   SpdySerializedFrame req(spdy_util_.ConstructChunkedSpdyPost(nullptr, 0));
 
-  // Server receives RST_STREAM_INTERNAL_ERROR on client's internal failure.
+  // Server receives ERROR_CODE_INTERNAL_ERROR on client's internal failure.
   // The failure is a reading error in this case caused by
   // UploadDataStream::Read().
   SpdySerializedFrame rst_frame(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_INTERNAL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_INTERNAL_ERROR));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0, SYNCHRONOUS),       // Request
@@ -965,11 +966,11 @@ TEST_F(SpdyHttpStreamTest, DataReadErrorSynchronous) {
 TEST_F(SpdyHttpStreamTest, DataReadErrorAsynchronous) {
   SpdySerializedFrame req(spdy_util_.ConstructChunkedSpdyPost(nullptr, 0));
 
-  // Server receives RST_STREAM_INTERNAL_ERROR on client's internal failure.
+  // Server receives ERROR_CODE_INTERNAL_ERROR on client's internal failure.
   // The failure is a reading error in this case caused by
   // UploadDataStream::Read().
   SpdySerializedFrame rst_frame(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_INTERNAL_ERROR));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_INTERNAL_ERROR));
 
   MockWrite writes[] = {
       CreateMockWrite(req, 0),       // Request
@@ -1022,7 +1023,7 @@ TEST_F(SpdyHttpStreamTest, RequestCallbackCancelsStream) {
   SpdySerializedFrame chunk(
       spdy_util_.ConstructSpdyDataFrame(1, nullptr, 0, true));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite writes[] = {CreateMockWrite(req, 0), CreateMockWrite(chunk, 1),
                         CreateMockWrite(rst, 2)};
   MockRead reads[] = {MockRead(ASYNC, 0, 3)};

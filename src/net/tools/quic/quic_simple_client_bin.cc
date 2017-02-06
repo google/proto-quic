@@ -47,6 +47,8 @@
 #include "net/base/net_errors.h"
 #include "net/base/privacy_mode.h"
 #include "net/cert/cert_verifier.h"
+#include "net/cert/ct_known_logs.h"
+#include "net/cert/ct_log_verifier.h"
 #include "net/cert/multi_log_ct_verifier.h"
 #include "net/http/transport_security_state.h"
 #include "net/quic/chromium/crypto/proof_verifier_chromium.h"
@@ -258,7 +260,8 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<CertVerifier> cert_verifier(CertVerifier::CreateDefault());
   std::unique_ptr<TransportSecurityState> transport_security_state(
       new TransportSecurityState);
-  std::unique_ptr<CTVerifier> ct_verifier(new MultiLogCTVerifier());
+  std::unique_ptr<MultiLogCTVerifier> ct_verifier(new MultiLogCTVerifier());
+  ct_verifier->AddLogs(net::ct::CreateLogVerifiersForKnownLogs());
   std::unique_ptr<CTPolicyEnforcer> ct_policy_enforcer(new CTPolicyEnforcer());
   std::unique_ptr<ProofVerifier> proof_verifier;
   if (line->HasSwitch("disable-certificate-verification")) {

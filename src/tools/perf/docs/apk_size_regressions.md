@@ -67,9 +67,8 @@ showing the breakdowns.
 ```
 
 ### Option 2: Download artifacts from perf jobs (Googlers only)**
- 1. Replace the bolded part of the following URL with your build number:
-  [https://luci-milo.appspot.com/buildbot/chromium.perf/Android%20Builder/**131325**](https://luci-milo.appspot.com/buildbot/chromium.perf/Android%20Builder/131325)
- 2. Click the **gsutil.upload** link in the **gsutil upload_build_product** step
+ 1. Replace the bolded part of the following URL with the git commit hash:
+  [https://storage.cloud.google.com/chrome-perf/Android%20Builder/full-build-linux_**HASH**.zip](https://storage.cloud.google.com/chrome-perf/Android%20Builder/full-build-linux_**HASH**.zip)
 
 ## Step 3: Analyze
 

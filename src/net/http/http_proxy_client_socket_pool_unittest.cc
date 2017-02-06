@@ -259,7 +259,7 @@ TEST_P(HttpProxyClientSocketPoolTest, NeedAuth) {
   SpdySerializedFrame req(spdy_util_.ConstructSpdyConnect(
       NULL, 0, 1, LOW, HostPortPair("www.google.com", 443)));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite spdy_writes[] = {
       CreateMockWrite(req, 0, ASYNC), CreateMockWrite(rst, 2, ASYNC),
   };
@@ -588,7 +588,7 @@ TEST_P(HttpProxyClientSocketPoolTest, TunnelSetupError) {
       spdy_util_.ConstructSpdyConnect(kAuthHeaders, kAuthHeadersSize, 1, LOW,
                                       HostPortPair("www.google.com", 443)));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
   MockWrite spdy_writes[] = {
       CreateMockWrite(req, 0, ASYNC), CreateMockWrite(rst, 2, ASYNC),
   };
@@ -637,7 +637,7 @@ TEST_P(HttpProxyClientSocketPoolTest, TunnelSetupRedirect) {
       spdy_util_.ConstructSpdyConnect(kAuthHeaders, kAuthHeadersSize, 1, LOW,
                                       HostPortPair("www.google.com", 443)));
   SpdySerializedFrame rst(
-      spdy_util_.ConstructSpdyRstStream(1, RST_STREAM_CANCEL));
+      spdy_util_.ConstructSpdyRstStream(1, ERROR_CODE_CANCEL));
 
   MockWrite spdy_writes[] = {
       CreateMockWrite(req, 0, ASYNC), CreateMockWrite(rst, 3, ASYNC),

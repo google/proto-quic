@@ -251,8 +251,6 @@ class ModernLinker extends Linker {
             Log.i(TAG, "disableSharedRelros() called");
         }
         synchronized (mLock) {
-            assert !mPrepareLibraryLoadCalled;
-
             // Mark this as a service process, and disable wait for shared RELRO.
             mInBrowserProcess = false;
             mWaitForSharedRelros = false;

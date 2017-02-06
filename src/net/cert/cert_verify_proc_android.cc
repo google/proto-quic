@@ -297,13 +297,6 @@ bool VerifyFromAndroidTrustManager(
       verify_result->verified_cert = verified_cert;
   }
 
-  // Extract the algorithm information from the certs
-  X509Certificate::OSCertHandles chain;
-  const X509Certificate::OSCertHandles& intermediates =
-      verify_result->verified_cert->GetIntermediateCertificates();
-  chain.push_back(verify_result->verified_cert->os_cert_handle());
-  chain.insert(chain.end(), intermediates.begin(), intermediates.end());
-
   // Extract the public key hashes.
   for (size_t i = 0; i < verified_chain.size(); i++) {
     base::StringPiece spki_bytes;
