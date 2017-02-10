@@ -21,6 +21,7 @@ secondary_source = "//build/secondary/"
 # Chrome defaults should go here. There should be no overrides here for
 # values declared in the main Chrome repository.
 default_args = {
+  is_proto_quic = true
 }
 
 # These are the targets to check headers for by default. The files in targets
@@ -28,141 +29,15 @@ default_args = {
 # their includes checked for proper dependencies when you run either
 # "gn check" or "gn gen --check".
 check_targets = [
-  #"//apps/*",  # Medium-hard.
-  "//ash/*",
   "//base/*",
-  "//blink/*",
-  "//breakpad/*",
   "//build/*",
-  "//cc/*",
-
-  #"//chrome/*",  # Epic number of errors.
-  "//chrome/app/*",
-  "//chrome/browser/extensions/*",
-  "//chrome/browser/ui/*",
-  "//chrome/common/*",
-  "//chrome/installer/*",
-  "//chrome/third_party/mozilla_security_manager/*",
-  "//chrome/tools/*",
-  "//chrome/utility/*",
-  "//chromecast/*",
-  "//chromeos/*",
-  "//chrome_elf/*",
-  "//cloud_print/*",
-  "//components/*",
-  "//content/*",
-  "//courgette/*",
   "//crypto/*",
-  "//data/*",
-  "//dbus/*",
-  "//device/*",
-
-  #"//extensions/*",  # Lots of errors.
-  "//extensions:extensions_unittests",
-  "//extensions/browser:browser_tests",
-  "//extensions/browser:unit_tests",
-  "//extensions/common:unit_tests",
-  "//extensions/renderer:unit_tests",
-  "//extensions/shell:browser_tests",
-  "//extensions/shell:unit_tests",
-  "//extensions/utility:unit_tests",
-  "//gin/*",
-  "//google_apis/*",
-  "//google_update/*",
-  "//gpu/*",
-
-  "//ios/*",
-  "//ios_internal/*",
-  "//ipc/*",
-
-  #"//jingle/*",
-  "//mash/*",
-
-  #"//media/*",  # Lots of errors.
-  #"//media/base/*",
-  #"//media/capture/*",
-  "//media/cast/*",
-  "//media:media",
-  "//media:shared_memory_support",
-  "//media:media_unittests",
-  "//media:audio_unittests",
-  "//media:media_perftests",
-  "//media/audio/*",
-  "//media/blink/*",
-  "//media/cdm/*",
-  "//media/ffmpeg/*",
-  "//media/gpu/*",
-  "//media/midi/*",
-  "//media/mojo/*",
-  "//media/remoting/*",
-  "//media/test/*",
-
-  "mojo/*",
-
-  #"//native_client/*",
   "//net/*",
-
-  #"//pdf/*",  # Medium-hard.
-  #"//ppapi/*",  # Lots of errors.
-  "//ppapi/examples/*",
-  "//printing/*",
-
-  #"//remoting/*",  # Medium-hard.
-  "//rlz/*",
-
-  #"//sandbox/*",  # Medium-hard.
   "//sdch/*",
-  "//services/*",
-  "//skia/*",
   "//sql/*",
-  "//storage/*",
   "//testing/*",
-
-  #"//third_party/*",  # May not ever want this.
-  "//third_party/hunspell/*",
-  "//third_party/libaddressinput/*",
-  "//third_party/libphonenumber/*",
-  "//third_party/WebKit/Source/*",
   "//tools/*",
-
-  #"//ui/*",  # Work left on Chromeos w/ use_ozone. Some parts of UI that work:
-  "//ui/accessibility/*",
-  "//ui/android/*",
-  "//ui/app_list/*",
-  "//ui/arc/*",
-  "//ui/aura/*",
-  "//ui/aura_extra/*",
-  "//ui/base/*",
-  "//ui/chromeos/*",
-  "//ui/compositor/*",
-  "//ui/content_accelerators/*",
-  "//ui/display/*",
-  "//ui/events/*",
-  "//ui/file_manager/*",
-  "//ui/gfx/*",
-  "//ui/gl/*",
-  "//ui/keyboard/*",
-  "//ui/latency_info/*",
-  "//ui/login/*",
-  "//ui/message_center/*",
-  "//ui/mojo/*",
-  "//ui/native_theme/*",
-  "//ui/ozone/*",
-  "//ui/platform_window/*",
-  "//ui/resources/*",
-  "//ui/shell_dialogs/*",
-  "//ui/snapshot/*",
-  "//ui/strings/*",
-  "//ui/surface/*",
-  "//ui/touch_selection/*",
-  "//ui/views/*",
-  "//ui/views_content_client/*",
-  "//ui/web_dialogs/*",
-  "//ui/webui/*",
-  "//ui/wm/*",
   "//url/*",
-  "//v8/*",
-  "//win8/*",
 ]
 
 # These are the list of GN files that run exec_script. This whitelist exists
@@ -233,33 +108,6 @@ exec_script_whitelist =
       # //build/dotfile_settings.gni instead, so that they can be shared
       # with other repos. The entries in this list should be only for files
       # in the Chromium repo outside of //build.
-      "//android_webview/BUILD.gn",
       "//build_overrides/build.gni",
-      "//chromeos/BUILD.gn",
-
-      # TODO(dgn): Layer violation but breaks the build otherwise, see
-      # https://crbug.com/474506.
-      "//clank/java/BUILD.gn",
-      "//clank/native/BUILD.gn",
-
-      "//jingle/BUILD.gn",
       "//net/BUILD.gn",
-      "//remoting/host/installer/linux/BUILD.gn",
-      "//remoting/remoting_version.gni",
-      "//remoting/host/installer/win/generate_clsids.gni",
-
-      # TODO(dpranke): Get these from the appropriate repos instead.
-      "//third_party/angle/BUILD.gn",
-      "//third_party/angle/src/tests/BUILD.gn",
-      "//third_party/angle/src/vulkan_support/BUILD.gn",
-      "//third_party/catapult/tracing/BUILD.gn",
-      "//third_party/google_input_tools/inputview.gni",
-
-      # CLD2 should be removed soon, delete this when we do.
-      "//third_party/cld_2/BUILD.gn",
-      "//tools/grit/grit_rule.gni",
-
-      # Not gypi-to-gn.
-      "//google_apis/BUILD.gn",
-      "//printing/BUILD.gn",
     ]
