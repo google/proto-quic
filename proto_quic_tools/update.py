@@ -72,10 +72,6 @@ def copy_modified_files():
   command = "cp -r " + modified_files_dir + "/* " + proto_quic_root
   print "running", command;
   os.system(command)
-  # .gn file at root of tree
-  command = "cp " + chrome_root + "/.gn " + proto_quic_root
-  print "running", command;
-  os.system(command)
   # New version file
   command = "cp " + chrome_root + "/chrome/VERSION " + proto_quic_root + "/chrome/VERSION"
   print "running", command;
