@@ -10,14 +10,13 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "testing/gmock/include/gmock/gmock.h"
-// #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
 namespace test {
 
-class MockQuicSpdyClientStream : public net::QuicSpdyClientStream {
+class MockQuicSpdyClientStream : public QuicSpdyClientStream {
  public:
-  MockQuicSpdyClientStream(QuicStreamId id, net::QuicClientSession* session);
+  MockQuicSpdyClientStream(QuicStreamId id, QuicClientSession* session);
   ~MockQuicSpdyClientStream() override;
 
   MOCK_METHOD1(OnStreamFrame, void(const QuicStreamFrame& frame));

@@ -125,6 +125,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientStream : public QuicSpdyStream {
   bool IsFirstStream();
 
   using QuicSpdyStream::HasBufferedData;
+  using QuicStream::sequencer;
 
  private:
   void NotifyDelegateOfHeadersCompleteLater(SpdyHeaderBlock headers,

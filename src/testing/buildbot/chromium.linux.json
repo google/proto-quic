@@ -2793,8 +2793,7 @@
       },
       {
         "args": [
-          "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.content_browsertests.filter"
+          "--enable-browser-side-navigation"
         ],
         "name": "browser_side_navigation_content_browsertests",
         "swarming": {
@@ -3248,6 +3247,13 @@
     ],
     "isolated_scripts": [
       {
+        "isolate_name": "content_shell_crash_test",
+        "name": "content_shell_crash_test",
+        "swarming": {
+          "can_use_on_swarming_builders": true
+        }
+      },
+      {
         "isolate_name": "devtools_closure_compile",
         "name": "devtools_closure_compile",
         "swarming": {
@@ -3460,8 +3466,7 @@
       },
       {
         "args": [
-          "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.content_browsertests.filter"
+          "--enable-browser-side-navigation"
         ],
         "name": "browser_side_navigation_content_browsertests",
         "swarming": {

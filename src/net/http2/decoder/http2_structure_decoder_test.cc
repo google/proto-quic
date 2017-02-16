@@ -27,6 +27,7 @@
 #include "net/http2/decoder/decode_status.h"
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_structures_test_util.h"
+#include "net/http2/platform/api/http2_reconstruct_object.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -58,8 +59,7 @@ class Http2StructureDecoderTest : public RandomDecoderTest {
     // Overwrite the current contents of |structure_|, in to which we'll
     // decode the buffer, so that we can be confident that we really decoded
     // the structure every time.
-    structure_.~S();
-    new (&structure_) S;
+    Http2DefaultReconstructObject(&structure_, RandomPtr());
     uint32_t old_remaining = b->Remaining();
     if (structure_decoder_.Start(&structure_, b)) {
       EXPECT_EQ(old_remaining - S::EncodedSize(), b->Remaining());

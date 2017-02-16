@@ -41,7 +41,7 @@ const char* GetNameForEffectiveConnectionType(EffectiveConnectionType type) {
 }
 
 bool GetEffectiveConnectionTypeForName(
-    const std::string& connection_type_name,
+    base::StringPiece connection_type_name,
     EffectiveConnectionType* effective_connection_type) {
   if (connection_type_name == kEffectiveConnectionTypeUnknown) {
     *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;

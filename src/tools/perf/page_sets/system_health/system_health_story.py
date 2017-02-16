@@ -67,6 +67,7 @@ class SystemHealthStory(page.Page):
   ABSTRACT_STORY = True
   SUPPORTED_PLATFORMS = platforms.ALL_PLATFORMS
   TAGS = None
+  PLATFORM_SPECIFIC = False
 
   def __init__(self, story_set, take_memory_measurement):
     case, group, _ = self.NAME.split(':')
@@ -79,7 +80,8 @@ class SystemHealthStory(page.Page):
         shared_page_state_class=_SystemHealthSharedState, page_set=story_set,
         name=self.NAME, url=self.URL, tags=tags,
         credentials_path='../data/credentials.json',
-        grouping_keys={'case': case, 'group': group})
+        grouping_keys={'case': case, 'group': group},
+        platform_specific=self.PLATFORM_SPECIFIC)
     self._take_memory_measurement = take_memory_measurement
 
   @classmethod

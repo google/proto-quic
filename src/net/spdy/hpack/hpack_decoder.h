@@ -78,6 +78,8 @@ class NET_EXPORT_PRIVATE HpackDecoder : public HpackDecoderInterface {
   void set_max_decode_buffer_size_bytes(
       size_t max_decode_buffer_size_bytes) override;
 
+  size_t EstimateMemoryUsage() const override;
+
  private:
   // Adds the header representation to |decoded_block_|, applying the
   // following rules:

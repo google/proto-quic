@@ -255,7 +255,7 @@ config("compiler") {
     # when turning clang on or off. (defines are passed via the command line,
     # and build system rebuild things when their commandline changes). Nothing
     # should ever read this define.
-    defines += [ "CR_CLANG_REVISION=$clang_revision" ]
+    defines += [ "CR_CLANG_REVISION=\"$clang_revision\"" ]
   }
 
   # Non-Mac Posix compiler flags setup.
@@ -1093,6 +1093,9 @@ config("default_warnings") {
 
         # TODO(hans): https://crbug.com/637306
         "-Wno-address-of-packed-member",
+
+        # TODO(thakis): Consider turning this on, https://crbug.com/691120
+        "-Wno-block-capture-autoreleasing",
       ]
       if (llvm_force_head_revision) {
         cflags += [
@@ -1447,6 +1450,7 @@ config("no_optimize") {
     cflags = [
       "/Od",  # Disable optimization.
       "/Ob0",  # Disable all inlining (on by default).
+      "/GF",  # Enable string pooling (off by default).
     ]
   } else if (is_android && !android_full_debug) {
     # On Android we kind of optimize some things that don't affect debugging

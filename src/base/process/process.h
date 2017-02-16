@@ -76,6 +76,9 @@ class BASE_EXPORT Process {
   // Returns true if processes can be backgrounded.
   static bool CanBackgroundProcesses();
 
+  // Terminates the current process immediately with |exit_code|.
+  static void TerminateCurrentProcessImmediately(int exit_code);
+
   // Returns true if this objects represents a valid process.
   bool IsValid() const;
 

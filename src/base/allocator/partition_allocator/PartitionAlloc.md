@@ -2,7 +2,7 @@
 
 This document explains a high-level design of PartitionAlloc.
 If you're interested in its in-depth implementation, see comments
-in PartitionAlloc.h.
+in partition_alloc.h.
 
 [TOC]
 
@@ -73,7 +73,7 @@ the physical memory is returned to the system but the address space
 remains reserved. The address space may be reused later only for the partition.
 Remember that PartitionAlloc puts LayoutObjects into a dedicated partition.
 This is because LayoutObjects are likely to be a source of use-after-free.
-Simiarly, PartitionAlloc puts Strings, Vectors etc into the Buffer partition
+Similarly, PartitionAlloc puts Strings, Vectors etc into the Buffer partition
 because the length and/or contents may be exploited by user scripts.
 This means that PartitionAlloc greedily uses virtual address spaces in favor of
 security hardening.

@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "base/strings/string_util.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/url_util.h"
 #include "net/http/http_util.h"
 
@@ -207,6 +208,10 @@ int ProxyServer::GetDefaultPortForScheme(Scheme scheme) {
 // static
 ProxyServer::Scheme ProxyServer::GetSchemeFromURI(const std::string& scheme) {
   return GetSchemeFromURIInternal(scheme);
+}
+
+size_t ProxyServer::EstimateMemoryUsage() const {
+  return base::trace_event::EstimateMemoryUsage(host_port_pair_);
 }
 
 // static

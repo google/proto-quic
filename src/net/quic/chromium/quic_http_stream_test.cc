@@ -202,7 +202,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
 
   QuicHttpStreamTest()
       : use_closing_stream_(false),
-        crypto_config_(CryptoTestUtils::ProofVerifierForTesting()),
+        crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         read_buffer_(new IOBufferWithSize(4096)),
         promise_id_(kServerDataStreamId1),
         stream_id_(kClientDataStreamId1),
@@ -317,7 +317,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
         base::WrapUnique(static_cast<QuicServerInfo*>(nullptr)),
         QuicServerId(kDefaultServerHostName, kDefaultServerPort,
                      PRIVACY_MODE_DISABLED),
-        kQuicYieldAfterPacketsRead,
+        /*require_confirmation=*/false, kQuicYieldAfterPacketsRead,
         QuicTime::Delta::FromMilliseconds(kQuicYieldAfterDurationMilliseconds),
         /*cert_verify_flags=*/0, DefaultQuicConfig(), &crypto_config_,
         "CONNECTION_UNKNOWN", dns_start, dns_end, &push_promise_index_, nullptr,
@@ -325,8 +325,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
         /*socket_performance_watcher=*/nullptr, net_log_.bound().net_log()));
     session_->Initialize();
     TestCompletionCallback callback;
-    session_->CryptoConnect(/*require_confirmation=*/false,
-                            callback.callback());
+    session_->CryptoConnect(callback.callback());
     EXPECT_TRUE(session_->IsCryptoHandshakeConfirmed());
     stream_.reset(use_closing_stream_
                       ? new AutoClosingStream(session_->GetWeakPtr())

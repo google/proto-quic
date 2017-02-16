@@ -212,6 +212,25 @@ class NET_EXPORT_PRIVATE SpdyFramerVisitorInterface {
   virtual bool OnUnknownFrame(SpdyStreamId stream_id, uint8_t frame_type) = 0;
 };
 
+class ExtensionVisitorInterface {
+ public:
+  virtual ~ExtensionVisitorInterface() {}
+
+  // Called when non-standard SETTINGS are received.
+  virtual void OnSetting(uint16_t id, uint32_t value) = 0;
+
+  // Called when non-standard frames are received.
+  virtual bool OnFrameHeader(SpdyStreamId stream_id,
+                             size_t length,
+                             uint8_t type,
+                             uint8_t flags) = 0;
+
+  // The payload for a single frame may be delivered as multiple calls to
+  // OnFramePayload. Since the length field is passed in OnFrameHeader, there is
+  // no explicit indication of the end of the frame payload.
+  virtual void OnFramePayload(const char* data, size_t len) = 0;
+};
+
 // Optionally, and in addition to SpdyFramerVisitorInterface, a class supporting
 // SpdyFramerDebugVisitorInterface may be used in conjunction with SpdyFramer in
 // order to extract debug/internal information about the SpdyFramer as it
@@ -258,6 +277,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     SPDY_SETTINGS_FRAME_HEADER,
     SPDY_SETTINGS_FRAME_PAYLOAD,
     SPDY_ALTSVC_FRAME_PAYLOAD,
+    SPDY_EXTENSION_FRAME_PAYLOAD,
   };
 
   // Framer error codes.
@@ -324,6 +344,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // to do nothing.  If this is called multiple times, only the last visitor
   // will be used.
   void set_visitor(SpdyFramerVisitorInterface* visitor);
+
+  // Set extension callbacks to be called from the framer. (Optional.)
+  void set_extension_visitor(ExtensionVisitorInterface* extension);
 
   // Set debug callbacks to be called from the framer. The debug visitor is
   // completely optional and need not be set in order for normal operation.
@@ -528,6 +551,9 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     return GetHpackDecoder();
   }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  protected:
   friend class BufferedSpdyFramer;
   friend class HttpNetworkLayer;  // This is temporary for the server.
@@ -553,6 +579,8 @@ class NET_EXPORT_PRIVATE SpdyFramer {
     const char* data() const { return buffer_.get(); }
     size_t len() const { return len_; }
 
+    size_t EstimateMemoryUsage() const;
+
    private:
     std::unique_ptr<char[]> buffer_;
     size_t capacity_;
@@ -563,6 +591,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   struct SpdySettingsScratch {
     SpdySettingsScratch();
     void Reset();
+    size_t EstimateMemoryUsage() const;
 
     // Buffer contains up to one complete key/value pair.
     CharBuffer buffer;
@@ -590,6 +619,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   size_t ProcessSettingsFramePayload(const char* data, size_t len);
   size_t ProcessAltSvcFramePayload(const char* data, size_t len);
   size_t ProcessIgnoredControlFramePayload(/*const char* data,*/ size_t len);
+  size_t ProcessExtensionFramePayload(const char* data, size_t len);
 
   // Validates the frame header against the current protocol, e.g.
   // Frame type must be known, must specify a non-zero stream id.
@@ -602,7 +632,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   // Otherwise returns a best guess at invalid frame type,
   // after setting the appropriate SpdyFramerError.
   SpdyFrameType ValidateFrameHeader(bool is_control_frame,
-                                    int frame_type_field,
+                                    uint8_t frame_type_field,
                                     size_t payload_length_field);
 
   // Helpers for above internal breakouts from ProcessInput.
@@ -715,6 +745,7 @@ class NET_EXPORT_PRIVATE SpdyFramer {
   std::unique_ptr<HpackDecoderInterface> hpack_decoder_;
 
   SpdyFramerVisitorInterface* visitor_;
+  ExtensionVisitorInterface* extension_;
   SpdyFramerDebugVisitorInterface* debug_visitor_;
 
   SpdyHeadersHandlerInterface* header_handler_;

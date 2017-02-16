@@ -69,11 +69,5 @@ void QuicConfigPeer::SetReceivedForceHolBlocking(QuicConfig* config) {
   config->force_hol_blocking_.SetReceivedValue(1);
 }
 
-// static
-void QuicConfigPeer::SetReceivedAlternateServerAddress(QuicConfig* config,
-                                                       QuicSocketAddress addr) {
-  config->alternate_server_address_.SetReceivedValue(addr);
-}
-
 }  // namespace test
 }  // namespace net

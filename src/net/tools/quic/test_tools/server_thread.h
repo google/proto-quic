@@ -61,8 +61,8 @@ class ServerThread : public base::SimpleThread {
   void MaybeNotifyOfHandshakeConfirmation();
   void ExecuteScheduledActions();
 
-  base::WaitableEvent confirmed_;  // Notified when the first handshake is
-                                   // confirmed.
+  base::WaitableEvent
+      confirmed_;  // Notified when the first handshake is confirmed.
   base::WaitableEvent pause_;      // Notified when the server should pause.
   base::WaitableEvent paused_;     // Notitied when the server has paused
   base::WaitableEvent resume_;     // Notified when the server should resume.
@@ -70,8 +70,8 @@ class ServerThread : public base::SimpleThread {
 
   std::unique_ptr<QuicServer> server_;
   QuicSocketAddress address_;
-  base::Lock port_lock_;
-  int port_;
+  mutable QuicMutex port_lock_;
+  int port_ GUARDED_BY(port_lock_);
 
   bool initialized_;
 

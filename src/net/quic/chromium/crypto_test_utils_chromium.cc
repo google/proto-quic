@@ -79,8 +79,9 @@ class TestProofVerifierChromium : public ProofVerifierChromium {
 
 }  // namespace
 
-// static
-std::unique_ptr<ProofSource> CryptoTestUtils::ProofSourceForTesting() {
+namespace crypto_test_utils {
+
+std::unique_ptr<ProofSource> ProofSourceForTesting() {
   std::unique_ptr<ProofSourceChromium> source(new ProofSourceChromium());
   base::FilePath certs_dir = GetTestCertsDirectory();
   CHECK(source->Initialize(
@@ -90,8 +91,7 @@ std::unique_ptr<ProofSource> CryptoTestUtils::ProofSourceForTesting() {
   return std::move(source);
 }
 
-// static
-std::unique_ptr<ProofVerifier> CryptoTestUtils::ProofVerifierForTesting() {
+std::unique_ptr<ProofVerifier> ProofVerifierForTesting() {
   // TODO(rch): use a real cert verifier?
   std::unique_ptr<MockCertVerifier> cert_verifier(new MockCertVerifier());
   net::CertVerifyResult verify_result;
@@ -109,11 +109,12 @@ std::unique_ptr<ProofVerifier> CryptoTestUtils::ProofVerifierForTesting() {
       base::WrapUnique(new CTPolicyEnforcer), "quic_root.crt");
 }
 
-// static
-ProofVerifyContext* CryptoTestUtils::ProofVerifyContextForTesting() {
+ProofVerifyContext* ProofVerifyContextForTesting() {
   return new ProofVerifyContextChromium(/*cert_verify_flags=*/0,
                                         NetLogWithSource());
 }
+
+}  // namespace crypto_test_utils
 
 }  // namespace test
 

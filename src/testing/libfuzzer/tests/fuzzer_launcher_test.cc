@@ -79,6 +79,78 @@ TEST(FuzzerConfigTest, ConfigAndDict) {
 }
 
 
+TEST(FuzzerConfigTest, ConfigAndSeedCorpus) {
+  // Test of .options file for fuzzer with libfuzzer_options and seed corpus.
+  base::FilePath exe_path;
+  PathService::Get(base::FILE_EXE, &exe_path);
+  std::string launcher_path =
+    exe_path.DirName().Append("check_fuzzer_config.py").value();
+
+  std::string output;
+  base::CommandLine cmd(
+      {{launcher_path, "test_config_and_seed_corpus.options"}});
+  bool success = base::GetAppOutputAndError(cmd, &output);
+  EXPECT_TRUE(success);
+  std::vector<std::string> fuzzer_args = base::SplitString(
+      output, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  EXPECT_EQ(2UL, fuzzer_args.size());
+
+  EXPECT_EQ(fuzzer_args[0], "some_test_option=test_value");
+  EXPECT_EQ(fuzzer_args[1], "max_len=1024");
+
+  // Test seed_corpus archive.
+  launcher_path =
+    exe_path.DirName().Append("check_seed_corpus_archive.py").value();
+
+  cmd = base::CommandLine(
+      {{launcher_path, "test_config_and_seed_corpus_seed_corpus.zip"}});
+  success = base::GetAppOutputAndError(cmd, &output);
+  EXPECT_TRUE(success);
+  std::vector<std::string> seed_corpus_info = base::SplitString(
+      output, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  EXPECT_EQ(1UL, seed_corpus_info.size());
+  EXPECT_EQ(seed_corpus_info[0], "3");
+}
+
+
+TEST(FuzzerConfigTest, ConfigAndSeedCorpuses) {
+  // Test of .options file for fuzzer with libfuzzer_options and seed corpuses.
+  base::FilePath exe_path;
+  PathService::Get(base::FILE_EXE, &exe_path);
+  std::string launcher_path =
+    exe_path.DirName().Append("check_fuzzer_config.py").value();
+
+  std::string output;
+  base::CommandLine cmd(
+      {{launcher_path, "test_config_and_seed_corpuses.options"}});
+  bool success = base::GetAppOutputAndError(cmd, &output);
+  EXPECT_TRUE(success);
+  std::vector<std::string> fuzzer_args = base::SplitString(
+      output, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  EXPECT_EQ(2UL, fuzzer_args.size());
+
+  EXPECT_EQ(fuzzer_args[0], "some_test_option=another_test_value");
+  EXPECT_EQ(fuzzer_args[1], "max_len=1337");
+
+  // Test seed_corpus archive.
+  launcher_path =
+    exe_path.DirName().Append("check_seed_corpus_archive.py").value();
+
+  cmd = base::CommandLine(
+      {{launcher_path, "test_config_and_seed_corpuses_seed_corpus.zip"}});
+  success = base::GetAppOutputAndError(cmd, &output);
+  EXPECT_TRUE(success);
+  std::vector<std::string> seed_corpus_info = base::SplitString(
+      output, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+
+  EXPECT_EQ(1UL, seed_corpus_info.size());
+  EXPECT_EQ(seed_corpus_info[0], "5");
+}
+
+
 TEST(FuzzerConfigTest, DictSubdir) {
   // Test of auto-generated .options file for fuzzer with dict in sub-directory.
   base::FilePath exe_path;

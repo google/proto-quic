@@ -363,8 +363,17 @@ SpdySessionDependencies::~SpdySessionDependencies() {}
 // static
 std::unique_ptr<HttpNetworkSession> SpdySessionDependencies::SpdyCreateSession(
     SpdySessionDependencies* session_deps) {
+  return SpdyCreateSessionWithSocketFactory(session_deps,
+                                            session_deps->socket_factory.get());
+}
+
+// static
+std::unique_ptr<HttpNetworkSession>
+SpdySessionDependencies::SpdyCreateSessionWithSocketFactory(
+    SpdySessionDependencies* session_deps,
+    ClientSocketFactory* factory) {
   HttpNetworkSession::Params params = CreateSessionParams(session_deps);
-  params.client_socket_factory = session_deps->socket_factory.get();
+  params.client_socket_factory = factory;
   std::unique_ptr<HttpNetworkSession> http_session(
       new HttpNetworkSession(params));
   SpdySessionPoolPeer pool_peer(http_session->spdy_session_pool());
@@ -683,31 +692,32 @@ void SpdyTestUtil::AddUrlToHeaderBlock(base::StringPiece url,
   (*headers)[GetPathKey()] = path;
 }
 
-SpdyHeaderBlock SpdyTestUtil::ConstructGetHeaderBlock(
-    base::StringPiece url) const {
+// static
+SpdyHeaderBlock SpdyTestUtil::ConstructGetHeaderBlock(base::StringPiece url) {
   return ConstructHeaderBlock("GET", url, NULL);
 }
 
+// static
 SpdyHeaderBlock SpdyTestUtil::ConstructGetHeaderBlockForProxy(
-    base::StringPiece url) const {
+    base::StringPiece url) {
   return ConstructGetHeaderBlock(url);
 }
 
-SpdyHeaderBlock SpdyTestUtil::ConstructHeadHeaderBlock(
-    base::StringPiece url,
-    int64_t content_length) const {
+// static
+SpdyHeaderBlock SpdyTestUtil::ConstructHeadHeaderBlock(base::StringPiece url,
+                                                       int64_t content_length) {
   return ConstructHeaderBlock("HEAD", url, nullptr);
 }
 
-SpdyHeaderBlock SpdyTestUtil::ConstructPostHeaderBlock(
-    base::StringPiece url,
-    int64_t content_length) const {
+// static
+SpdyHeaderBlock SpdyTestUtil::ConstructPostHeaderBlock(base::StringPiece url,
+                                                       int64_t content_length) {
   return ConstructHeaderBlock("POST", url, &content_length);
 }
 
-SpdyHeaderBlock SpdyTestUtil::ConstructPutHeaderBlock(
-    base::StringPiece url,
-    int64_t content_length) const {
+// static
+SpdyHeaderBlock SpdyTestUtil::ConstructPutHeaderBlock(base::StringPiece url,
+                                                      int64_t content_length) {
   return ConstructHeaderBlock("PUT", url, &content_length);
 }
 
@@ -1094,30 +1104,35 @@ void SpdyTestUtil::UpdateWithStreamDestruction(int stream_id) {
   NOTREACHED();
 }
 
-const char* SpdyTestUtil::GetMethodKey() const {
+// static
+const char* SpdyTestUtil::GetMethodKey() {
   return ":method";
 }
 
-const char* SpdyTestUtil::GetStatusKey() const {
+// static
+const char* SpdyTestUtil::GetStatusKey() {
   return ":status";
 }
 
-const char* SpdyTestUtil::GetHostKey() const {
+// static
+const char* SpdyTestUtil::GetHostKey() {
   return ":authority";
 }
 
-const char* SpdyTestUtil::GetSchemeKey() const {
+// static
+const char* SpdyTestUtil::GetSchemeKey() {
   return ":scheme";
 }
 
-const char* SpdyTestUtil::GetPathKey() const {
+// static
+const char* SpdyTestUtil::GetPathKey() {
   return ":path";
 }
 
-SpdyHeaderBlock SpdyTestUtil::ConstructHeaderBlock(
-    base::StringPiece method,
-    base::StringPiece url,
-    int64_t* content_length) const {
+// static
+SpdyHeaderBlock SpdyTestUtil::ConstructHeaderBlock(base::StringPiece method,
+                                                   base::StringPiece url,
+                                                   int64_t* content_length) {
   std::string scheme, host, path;
   ParseUrl(url, &scheme, &host, &path);
   SpdyHeaderBlock headers;

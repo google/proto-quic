@@ -182,6 +182,12 @@ struct SpdySessionDependencies {
 
   static std::unique_ptr<HttpNetworkSession> SpdyCreateSession(
       SpdySessionDependencies* session_deps);
+
+  // Variant that ignores session_deps->socket_factory, and uses the passed in
+  // |factory| instead.
+  static std::unique_ptr<HttpNetworkSession> SpdyCreateSessionWithSocketFactory(
+      SpdySessionDependencies* session_deps,
+      ClientSocketFactory* factory);
   static HttpNetworkSession::Params CreateSessionParams(
       SpdySessionDependencies* session_deps);
 
@@ -290,14 +296,14 @@ class SpdyTestUtil {
   void AddUrlToHeaderBlock(base::StringPiece url,
                            SpdyHeaderBlock* headers) const;
 
-  SpdyHeaderBlock ConstructGetHeaderBlock(base::StringPiece url) const;
-  SpdyHeaderBlock ConstructGetHeaderBlockForProxy(base::StringPiece url) const;
-  SpdyHeaderBlock ConstructHeadHeaderBlock(base::StringPiece url,
-                                           int64_t content_length) const;
-  SpdyHeaderBlock ConstructPostHeaderBlock(base::StringPiece url,
-                                           int64_t content_length) const;
-  SpdyHeaderBlock ConstructPutHeaderBlock(base::StringPiece url,
-                                          int64_t content_length) const;
+  static SpdyHeaderBlock ConstructGetHeaderBlock(base::StringPiece url);
+  static SpdyHeaderBlock ConstructGetHeaderBlockForProxy(base::StringPiece url);
+  static SpdyHeaderBlock ConstructHeadHeaderBlock(base::StringPiece url,
+                                                  int64_t content_length);
+  static SpdyHeaderBlock ConstructPostHeaderBlock(base::StringPiece url,
+                                                  int64_t content_length);
+  static SpdyHeaderBlock ConstructPutHeaderBlock(base::StringPiece url,
+                                                 int64_t content_length);
 
   // Construct an expected SPDY reply string from the given headers.
   std::string ConstructSpdyReplyString(const SpdyHeaderBlock& headers) const;
@@ -500,18 +506,18 @@ class SpdyTestUtil {
 
   void set_default_url(const GURL& url) { default_url_ = url; }
 
-  const char* GetMethodKey() const;
-  const char* GetStatusKey() const;
-  const char* GetHostKey() const;
-  const char* GetSchemeKey() const;
-  const char* GetPathKey() const;
+  static const char* GetMethodKey();
+  static const char* GetStatusKey();
+  static const char* GetHostKey();
+  static const char* GetSchemeKey();
+  static const char* GetPathKey();
 
  private:
   // |content_length| may be NULL, in which case the content-length
   // header will be omitted.
-  SpdyHeaderBlock ConstructHeaderBlock(base::StringPiece method,
-                                       base::StringPiece url,
-                                       int64_t* content_length) const;
+  static SpdyHeaderBlock ConstructHeaderBlock(base::StringPiece method,
+                                              base::StringPiece url,
+                                              int64_t* content_length);
 
   // Multiple SpdyFramers are required to keep track of header compression
   // state.

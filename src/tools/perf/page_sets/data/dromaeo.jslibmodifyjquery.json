@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "dromaeo.jslibmodifyjquery_000.wpr": [
-            "http://dromaeo.com?jslib-modify-jquery"
-        ]
-    }
+        "http://dromaeo.com?jslib-modify-jquery": {
+            "DEFAULT": "dromaeo.jslibmodifyjquery_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

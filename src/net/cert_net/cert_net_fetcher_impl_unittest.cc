@@ -69,7 +69,7 @@ class RequestContext : public URLRequestContext {
         base::MakeUnique<HttpNetworkSession>(params));
     storage_.set_http_transaction_factory(base::MakeUnique<HttpCache>(
         storage_.http_network_session(), HttpCache::DefaultBackend::InMemory(0),
-        false /* set_up_quic_server_info */));
+        false /* is_main_cache */));
     storage_.set_job_factory(base::MakeUnique<URLRequestJobFactoryImpl>());
   }
 

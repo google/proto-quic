@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "dromaeo.domcoreattr_000.wpr": [
-            "http://dromaeo.com?dom-attr"
-        ]
-    }
+        "http://dromaeo.com?dom-attr": {
+            "DEFAULT": "dromaeo.domcoreattr_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

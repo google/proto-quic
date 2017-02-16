@@ -12,6 +12,7 @@
 #include "net/http2/decoder/decode_buffer.h"
 #include "net/http2/decoder/decode_status.h"
 #include "net/spdy/hpack/hpack_entry.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 using base::StringPiece;
 
@@ -157,6 +158,12 @@ void HpackDecoder2::set_max_decode_buffer_size_bytes(
     size_t max_decode_buffer_size_bytes) {
   DVLOG(2) << "HpackDecoder2::set_max_decode_buffer_size_bytes";
   max_decode_buffer_size_bytes_ = max_decode_buffer_size_bytes;
+}
+
+size_t HpackDecoder2::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(header_table_) +
+         SpdyEstimateMemoryUsage(decoded_block_) +
+         SpdyEstimateMemoryUsage(name_) + SpdyEstimateMemoryUsage(value_);
 }
 
 void HpackDecoder2::OnIndexedHeader(size_t index) {

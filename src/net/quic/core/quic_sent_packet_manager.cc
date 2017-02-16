@@ -781,8 +781,7 @@ const QuicTime QuicSentPacketManager::GetRetransmissionTime() const {
       pending_timer_transmission_count_ > 0) {
     return QuicTime::Zero();
   }
-  if (FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm &&
-      !unacked_packets_.HasUnackedRetransmittableFrames()) {
+  if (!unacked_packets_.HasUnackedRetransmittableFrames()) {
     return QuicTime::Zero();
   }
   switch (GetRetransmissionMode()) {

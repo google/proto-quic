@@ -20,7 +20,6 @@ size_t GetPacketHeaderSize(QuicVersion version,
                            const QuicPacketHeader& header) {
   return GetPacketHeaderSize(version, header.public_header.connection_id_length,
                              header.public_header.version_flag,
-                             header.public_header.multipath_flag,
                              header.public_header.nonce != nullptr,
                              header.public_header.packet_number_length);
 }
@@ -28,12 +27,10 @@ size_t GetPacketHeaderSize(QuicVersion version,
 size_t GetPacketHeaderSize(QuicVersion version,
                            QuicConnectionIdLength connection_id_length,
                            bool include_version,
-                           bool include_path_id,
                            bool include_diversification_nonce,
                            QuicPacketNumberLength packet_number_length) {
   return kPublicFlagsSize + connection_id_length +
-         (include_version ? kQuicVersionSize : 0) +
-         (include_path_id ? kQuicPathIdSize : 0) + packet_number_length +
+         (include_version ? kQuicVersionSize : 0) + packet_number_length +
          (include_diversification_nonce ? kDiversificationNonceSize : 0);
 }
 
@@ -45,12 +42,11 @@ size_t GetStartOfEncryptedData(QuicVersion version,
 size_t GetStartOfEncryptedData(QuicVersion version,
                                QuicConnectionIdLength connection_id_length,
                                bool include_version,
-                               bool include_path_id,
                                bool include_diversification_nonce,
                                QuicPacketNumberLength packet_number_length) {
   // Encryption starts before private flags.
   return GetPacketHeaderSize(version, connection_id_length, include_version,
-                             include_path_id, include_diversification_nonce,
+                             include_diversification_nonce,
                              packet_number_length);
 }
 
@@ -87,7 +83,6 @@ std::ostream& operator<<(std::ostream& os, const QuicPacketHeader& header) {
   os << "{ connection_id: " << header.public_header.connection_id
      << ", connection_id_length: " << header.public_header.connection_id_length
      << ", packet_number_length: " << header.public_header.packet_number_length
-     << ", multipath_flag: " << header.public_header.multipath_flag
      << ", reset_flag: " << header.public_header.reset_flag
      << ", version_flag: " << header.public_header.version_flag;
   if (header.public_header.version_flag) {
@@ -125,14 +120,12 @@ QuicPacket::QuicPacket(char* buffer,
                        bool owns_buffer,
                        QuicConnectionIdLength connection_id_length,
                        bool includes_version,
-                       bool includes_path_id,
                        bool includes_diversification_nonce,
                        QuicPacketNumberLength packet_number_length)
     : QuicData(buffer, length, owns_buffer),
       buffer_(buffer),
       connection_id_length_(connection_id_length),
       includes_version_(includes_version),
-      includes_path_id_(includes_path_id),
       includes_diversification_nonce_(includes_diversification_nonce),
       packet_number_length_(packet_number_length) {}
 
@@ -194,15 +187,14 @@ std::ostream& operator<<(std::ostream& os, const QuicReceivedPacket& s) {
 
 StringPiece QuicPacket::AssociatedData(QuicVersion version) const {
   return StringPiece(
-      data(), GetStartOfEncryptedData(version, connection_id_length_,
-                                      includes_version_, includes_path_id_,
-                                      includes_diversification_nonce_,
-                                      packet_number_length_));
+      data(), GetStartOfEncryptedData(
+                  version, connection_id_length_, includes_version_,
+                  includes_diversification_nonce_, packet_number_length_));
 }
 
 StringPiece QuicPacket::Plaintext(QuicVersion version) const {
   const size_t start_of_encrypted_data = GetStartOfEncryptedData(
-      version, connection_id_length_, includes_version_, includes_path_id_,
+      version, connection_id_length_, includes_version_,
       includes_diversification_nonce_, packet_number_length_);
   return StringPiece(data() + start_of_encrypted_data,
                      length() - start_of_encrypted_data);

@@ -70,18 +70,13 @@ base::string16 GenerateTempKeyPath(const base::string16& test_key_root,
 RegistryOverrideManager::ScopedRegistryKeyOverride::ScopedRegistryKeyOverride(
     HKEY override,
     const base::string16& key_path)
-    : override_(override) {
-  EXPECT_EQ(
-      ERROR_SUCCESS,
-      temp_key_.Create(HKEY_CURRENT_USER, key_path.c_str(), KEY_ALL_ACCESS));
-  EXPECT_EQ(ERROR_SUCCESS,
-            ::RegOverridePredefKey(override_, temp_key_.Handle()));
-}
+    : override_(override), key_path_(key_path) {}
 
 RegistryOverrideManager::
     ScopedRegistryKeyOverride::~ScopedRegistryKeyOverride() {
   ::RegOverridePredefKey(override_, NULL);
-  temp_key_.DeleteKey(L"");
+  base::win::RegKey(HKEY_CURRENT_USER, L"", KEY_QUERY_VALUE)
+      .DeleteKey(key_path_.c_str());
 }
 
 RegistryOverrideManager::RegistryOverrideManager()
@@ -105,6 +100,12 @@ void RegistryOverrideManager::OverrideRegistry(HKEY override) {
 void RegistryOverrideManager::OverrideRegistry(HKEY override,
                                                base::string16* override_path) {
   base::string16 key_path = GenerateTempKeyPath(test_key_root_, timestamp_);
+
+  base::win::RegKey temp_key;
+  ASSERT_EQ(ERROR_SUCCESS, temp_key.Create(HKEY_CURRENT_USER, key_path.c_str(),
+                                           KEY_ALL_ACCESS));
+  ASSERT_EQ(ERROR_SUCCESS, ::RegOverridePredefKey(override, temp_key.Handle()));
+
   overrides_.push_back(
       base::MakeUnique<ScopedRegistryKeyOverride>(override, key_path));
   if (override_path)

@@ -348,6 +348,19 @@ bool GURL::IsStandard() const {
   return url::IsStandard(spec_.data(), parsed_.scheme);
 }
 
+bool GURL::IsAboutBlank() const {
+  if (!SchemeIs(url::kAboutScheme))
+    return false;
+
+  if (has_host() || has_username() || has_password() || has_port())
+    return false;
+
+  if (path() != url::kAboutBlankPath && path() != url::kAboutBlankWithHashPath)
+    return false;
+
+  return true;
+}
+
 bool GURL::SchemeIs(base::StringPiece lower_ascii_scheme) const {
   DCHECK(base::IsStringASCII(lower_ascii_scheme));
   DCHECK(base::ToLowerASCII(lower_ascii_scheme) == lower_ascii_scheme);
@@ -466,6 +479,14 @@ bool GURL::DomainIs(base::StringPiece lower_ascii_domain) const {
   if (SchemeIsFileSystem() && inner_url_)
     return inner_url_->DomainIs(lower_ascii_domain);
   return url::DomainIs(host_piece(), lower_ascii_domain);
+}
+
+bool GURL::EqualsIgnoringRef(const GURL& other) const {
+  int ref_position = parsed_.CountCharactersBefore(url::Parsed::REF, true);
+  int ref_position_other =
+      other.parsed_.CountCharactersBefore(url::Parsed::REF, true);
+  return base::StringPiece(spec_).substr(0, ref_position) ==
+         base::StringPiece(other.spec_).substr(0, ref_position_other);
 }
 
 void GURL::Swap(GURL* other) {

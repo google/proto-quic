@@ -15,6 +15,7 @@
 #include "net/base/arena.h"
 #include "net/http/http_log_util.h"
 #include "net/log/net_log_capture_mode.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 using base::StringPiece;
 using std::dec;
@@ -88,6 +89,11 @@ class SpdyHeaderBlock::Storage {
   }
 
   size_t bytes_allocated() const { return arena_.status().bytes_allocated(); }
+
+  // TODO(xunjieli): https://crbug.com/669108. Merge this with bytes_allocated()
+  size_t EstimateMemoryUsage() const {
+    return arena_.status().bytes_allocated();
+  }
 
  private:
   UnsafeArena arena_;
@@ -297,6 +303,12 @@ void SpdyHeaderBlock::AppendValueOrAddHeader(const StringPiece key,
   }
   DVLOG(1) << "Updating key: " << iter->first << "; appending value: " << value;
   iter->second.Append(GetStorage()->Write(value));
+}
+
+size_t SpdyHeaderBlock::EstimateMemoryUsage() const {
+  // TODO(xunjieli): https://crbug.com/669108. Also include |block_| when EMU()
+  // supports linked_hash_map.
+  return SpdyEstimateMemoryUsage(storage_);
 }
 
 void SpdyHeaderBlock::AppendHeader(const StringPiece key,

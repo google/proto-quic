@@ -127,10 +127,10 @@ class TestBufferedSpdyVisitor : public BufferedSpdyFramerVisitorInterface {
   }
 
   // Convenience function which runs a framer simulation with particular input.
-  void SimulateInFramer(const unsigned char* input, size_t size) {
+  void SimulateInFramer(const SpdySerializedFrame& frame) {
+    const char* input_ptr = frame.data();
+    size_t input_remaining = frame.size();
     buffered_spdy_framer_.set_visitor(this);
-    size_t input_remaining = size;
-    const char* input_ptr = reinterpret_cast<const char*>(input);
     while (input_remaining > 0 &&
            buffered_spdy_framer_.spdy_framer_error() ==
                SpdyFramer::SPDY_NO_ERROR) {
@@ -187,9 +187,7 @@ TEST_F(BufferedSpdyFramerTest, OnSetting) {
   SpdySerializedFrame control_frame(framer.SerializeSettings(settings_ir));
   TestBufferedSpdyVisitor visitor;
 
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(control_frame.data()),
-      control_frame.size());
+  visitor.SimulateInFramer(control_frame);
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(2, visitor.setting_count_);
 }
@@ -198,18 +196,13 @@ TEST_F(BufferedSpdyFramerTest, HeaderListTooLarge) {
   SpdyHeaderBlock headers;
   std::string long_header_value(256 * 1024, 'x');
   headers["foo"] = long_header_value;
+  SpdyHeadersIR headers_ir(/*stream_id=*/1, std::move(headers));
+
   BufferedSpdyFramer framer;
-  std::unique_ptr<SpdySerializedFrame> control_frame(
-      framer.CreateHeaders(1,  // stream_id
-                           CONTROL_FLAG_NONE,
-                           255,  // weight
-                           std::move(headers)));
-  EXPECT_TRUE(control_frame);
+  SpdySerializedFrame control_frame = framer.SerializeFrame(headers_ir);
 
   TestBufferedSpdyVisitor visitor;
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(control_frame.get()->data()),
-      control_frame.get()->size());
+  visitor.SimulateInFramer(control_frame);
 
   EXPECT_EQ(1, visitor.error_count_);
   EXPECT_EQ(0, visitor.headers_frame_count_);
@@ -217,22 +210,40 @@ TEST_F(BufferedSpdyFramerTest, HeaderListTooLarge) {
   EXPECT_EQ(SpdyHeaderBlock(), visitor.headers_);
 }
 
+TEST_F(BufferedSpdyFramerTest, ValidHeadersAfterInvalidHeaders) {
+  SpdyHeaderBlock headers;
+  headers["invalid"] = "\r\n\r\n";
+
+  SpdyHeaderBlock headers2;
+  headers["alpha"] = "beta";
+
+  SpdyTestUtil spdy_test_util;
+  SpdySerializedFrame headers_frame(
+      spdy_test_util.ConstructSpdyReply(1, std::move(headers)));
+  SpdySerializedFrame headers_frame2(
+      spdy_test_util.ConstructSpdyReply(2, std::move(headers2)));
+
+  TestBufferedSpdyVisitor visitor;
+  visitor.SimulateInFramer(headers_frame);
+  EXPECT_EQ(1, visitor.error_count_);
+  EXPECT_EQ(0, visitor.headers_frame_count_);
+
+  visitor.SimulateInFramer(headers_frame2);
+  EXPECT_EQ(1, visitor.error_count_);
+  EXPECT_EQ(1, visitor.headers_frame_count_);
+}
+
 TEST_F(BufferedSpdyFramerTest, ReadHeadersHeaderBlock) {
   SpdyHeaderBlock headers;
   headers["alpha"] = "beta";
   headers["gamma"] = "delta";
+  SpdyHeadersIR headers_ir(/*stream_id=*/1, headers.Clone());
+
   BufferedSpdyFramer framer;
-  std::unique_ptr<SpdySerializedFrame> control_frame(
-      framer.CreateHeaders(1,  // stream_id
-                           CONTROL_FLAG_NONE,
-                           255,  // weight
-                           headers.Clone()));
-  EXPECT_TRUE(control_frame.get() != NULL);
+  SpdySerializedFrame control_frame = framer.SerializeFrame(headers_ir);
 
   TestBufferedSpdyVisitor visitor;
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(control_frame.get()->data()),
-      control_frame.get()->size());
+  visitor.SimulateInFramer(control_frame);
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(1, visitor.headers_frame_count_);
   EXPECT_EQ(0, visitor.push_promise_frame_count_);
@@ -244,14 +255,12 @@ TEST_F(BufferedSpdyFramerTest, ReadPushPromiseHeaderBlock) {
   headers["alpha"] = "beta";
   headers["gamma"] = "delta";
   BufferedSpdyFramer framer;
-  std::unique_ptr<SpdySerializedFrame> control_frame(
-      framer.CreatePushPromise(1, 2, headers.Clone()));
-  EXPECT_TRUE(control_frame.get() != NULL);
+  SpdyPushPromiseIR push_promise_ir(/*stream_id=*/1, /*promised_stream_id=*/2,
+                                    headers.Clone());
+  SpdySerializedFrame control_frame = framer.SerializeFrame(push_promise_ir);
 
   TestBufferedSpdyVisitor visitor;
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(control_frame.get()->data()),
-      control_frame.get()->size());
+  visitor.SimulateInFramer(control_frame);
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(0, visitor.headers_frame_count_);
   EXPECT_EQ(1, visitor.push_promise_frame_count_);
@@ -261,14 +270,13 @@ TEST_F(BufferedSpdyFramerTest, ReadPushPromiseHeaderBlock) {
 }
 
 TEST_F(BufferedSpdyFramerTest, GoAwayDebugData) {
+  SpdyGoAwayIR go_ir(/*last_accepted_stream_id=*/2, ERROR_CODE_FRAME_SIZE_ERROR,
+                     "foo");
   BufferedSpdyFramer framer;
-  std::unique_ptr<SpdySerializedFrame> goaway_frame(
-      framer.CreateGoAway(2u, ERROR_CODE_FRAME_SIZE_ERROR, "foo"));
+  SpdySerializedFrame goaway_frame = framer.SerializeFrame(go_ir);
 
   TestBufferedSpdyVisitor visitor;
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(goaway_frame.get()->data()),
-      goaway_frame.get()->size());
+  visitor.SimulateInFramer(goaway_frame);
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(1, visitor.goaway_count_);
   EXPECT_EQ(2u, visitor.goaway_last_accepted_stream_id_);
@@ -289,9 +297,7 @@ TEST_F(BufferedSpdyFramerTest, OnAltSvc) {
   SpdySerializedFrame altsvc_frame(framer.SerializeFrame(altsvc_ir));
 
   TestBufferedSpdyVisitor visitor;
-  visitor.SimulateInFramer(
-      reinterpret_cast<unsigned char*>(altsvc_frame.data()),
-      altsvc_frame.size());
+  visitor.SimulateInFramer(altsvc_frame);
   EXPECT_EQ(0, visitor.error_count_);
   EXPECT_EQ(1, visitor.altsvc_count_);
   EXPECT_EQ(altsvc_stream_id, visitor.altsvc_stream_id_);

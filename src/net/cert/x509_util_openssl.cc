@@ -25,6 +25,7 @@
 #include "third_party/boringssl/src/include/openssl/asn1.h"
 #include "third_party/boringssl/src/include/openssl/digest.h"
 #include "third_party/boringssl/src/include/openssl/mem.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -190,6 +191,19 @@ class DERCacheInitSingleton {
 base::LazyInstance<DERCacheInitSingleton>::Leaky g_der_cache_singleton =
     LAZY_INSTANCE_INITIALIZER;
 
+class BufferPoolSingleton {
+ public:
+  BufferPoolSingleton() : pool_(CRYPTO_BUFFER_POOL_new()) {}
+  CRYPTO_BUFFER_POOL* pool() { return pool_; }
+
+ private:
+  // The singleton is leaky, so there is no need to use a smart pointer.
+  CRYPTO_BUFFER_POOL* pool_;
+};
+
+base::LazyInstance<BufferPoolSingleton>::Leaky g_buffer_pool_singleton =
+    LAZY_INSTANCE_INITIALIZER;
+
 }  // namespace
 
 bool CreateSelfSignedCert(crypto::RSAPrivateKey* key,
@@ -345,6 +359,10 @@ bool GetTLSServerEndPointChannelBinding(const X509Certificate& certificate,
   token->assign(kChannelBindingPrefix);
   token->append(digest.begin(), digest.end());
   return true;
+}
+
+CRYPTO_BUFFER_POOL* GetBufferPool() {
+  return g_buffer_pool_singleton.Get().pool();
 }
 
 }  // namespace x509_util

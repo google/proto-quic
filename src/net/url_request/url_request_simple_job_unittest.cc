@@ -10,11 +10,12 @@
 #include "base/bind_helpers.h"
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/sequenced_task_runner.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/stringprintf.h"
-#include "base/threading/thread.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "net/base/request_priority.h"
 #include "net/test/gtest_util.h"
 #include "net/url_request/url_request_job.h"
@@ -44,11 +45,9 @@ class MockSimpleJob : public URLRequestSimpleJob {
  public:
   MockSimpleJob(URLRequest* request,
                 NetworkDelegate* network_delegate,
-                scoped_refptr<base::TaskRunner> task_runner,
                 base::StringPiece data)
       : URLRequestSimpleJob(request, network_delegate),
-        data_(data.as_string()),
-        task_runner_(std::move(task_runner)) {}
+        data_(data.as_string()) {}
 
  protected:
   // URLRequestSimpleJob implementation:
@@ -62,16 +61,10 @@ class MockSimpleJob : public URLRequestSimpleJob {
     return OK;
   }
 
-  base::TaskRunner* GetTaskRunner() const override {
-    return task_runner_.get();
-  }
-
  private:
   ~MockSimpleJob() override {}
 
   const std::string data_;
-
-  const scoped_refptr<base::TaskRunner> task_runner_;
 
   DISALLOW_COPY_AND_ASSIGN(MockSimpleJob);
 };
@@ -101,33 +94,27 @@ class CancelAfterFirstReadURLRequestDelegate : public TestDelegate {
 class SimpleJobProtocolHandler :
     public URLRequestJobFactory::ProtocolHandler {
  public:
-  SimpleJobProtocolHandler(scoped_refptr<base::TaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {}
+  SimpleJobProtocolHandler() = default;
   URLRequestJob* MaybeCreateJob(
       URLRequest* request,
       NetworkDelegate* network_delegate) const override {
     if (request->url().spec() == "data:empty")
-      return new MockSimpleJob(request, network_delegate, task_runner_, "");
-    return new MockSimpleJob(request, network_delegate, task_runner_,
-                             kTestData);
+      return new MockSimpleJob(request, network_delegate, "");
+    return new MockSimpleJob(request, network_delegate, kTestData);
   }
 
   ~SimpleJobProtocolHandler() override {}
 
  private:
-  const scoped_refptr<base::TaskRunner> task_runner_;
-
   DISALLOW_COPY_AND_ASSIGN(SimpleJobProtocolHandler);
 };
 
 class URLRequestSimpleJobTest : public ::testing::Test {
  public:
   URLRequestSimpleJobTest()
-      : worker_thread_("URLRequestSimpleJobTest"), context_(true) {
-    EXPECT_TRUE(worker_thread_.Start());
-
+      : context_(true), scoped_task_scheduler_(base::MessageLoop::current()) {
     job_factory_.SetProtocolHandler(
-        "data", base::MakeUnique<SimpleJobProtocolHandler>(task_runner()));
+        "data", base::MakeUnique<SimpleJobProtocolHandler>());
     context_.set_job_factory(&job_factory_);
     context_.Init();
 
@@ -145,16 +132,14 @@ class URLRequestSimpleJobTest : public ::testing::Test {
     EXPECT_FALSE(request_->is_pending());
   }
 
-  scoped_refptr<base::SequencedTaskRunner> task_runner() {
-    return worker_thread_.task_runner();
-  }
-
  protected:
-  base::Thread worker_thread_;
   TestURLRequestContext context_;
   URLRequestJobFactoryImpl job_factory_;
   TestDelegate delegate_;
   std::unique_ptr<URLRequest> request_;
+
+ private:
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestSimpleJobTest);
 };
@@ -236,12 +221,8 @@ TEST_F(URLRequestSimpleJobTest, CancelAfterFirstReadStarted) {
   request_->Start();
   cancel_delegate.WaitUntilHeadersReceived();
 
-  // Feed a dummy task to the SequencedTaskRunner to make sure that the
-  // callbacks which are invoked in ReadRawData have completed safely.
-  base::RunLoop run_loop;
-  EXPECT_TRUE(task_runner()->PostTaskAndReply(
-      FROM_HERE, base::Bind(&base::DoNothing), run_loop.QuitClosure()));
-  run_loop.Run();
+  // Run ScopedTaskScheduler tasks.
+  base::RunLoop().RunUntilIdle();
 
   EXPECT_THAT(cancel_delegate.request_status(), IsError(ERR_ABORTED));
   EXPECT_EQ(1, cancel_delegate.response_started_count());

@@ -171,6 +171,11 @@ string16 TimeFormatFriendlyDate(const Time& time) {
   return TimeFormat(formatter.get(), time);
 }
 
+string16 TimeFormatWithPattern(const Time& time, const char* pattern) {
+  icu::SimpleDateFormat formatter = CreateSimpleDateFormatter(pattern);
+  return TimeFormat(&formatter, time);
+}
+
 string16 TimeDurationFormat(const TimeDelta time,
                             const DurationFormatWidth width) {
   UErrorCode status = U_ZERO_ERROR;

@@ -26,6 +26,9 @@ class NET_EXPORT_PRIVATE HeaderCoalescer : public SpdyHeadersHandlerInterface {
   SpdyHeaderBlock release_headers();
   bool error_seen() const { return error_seen_; }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   SpdyHeaderBlock headers_;
   bool headers_valid_ = true;

@@ -12,9 +12,11 @@
 #include "base/task_scheduler/post_task.h"
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/task_scheduler/test_utils.h"
+#include "base/test/scoped_mock_time_message_loop_task_runner.h"
 #include "base/threading/sequenced_task_runner_handle.h"
 #include "base/threading/thread_checker.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/time/time.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -265,6 +267,34 @@ TEST(ScopedTaskSchedulerTest, DestructorRunsBlockShutdownTasksOnly) {
                            Unretained(&block_shutdown_task_ran)));
   }
   EXPECT_TRUE(block_shutdown_task_ran);
+}
+
+TEST(ScopedTaskSchedulerTest, ReassignCurrentTaskRunner) {
+  bool first_task_ran = false;
+  bool second_task_ran = false;
+
+  auto TestTaskRan = [](bool* task_ran) { *task_ran = true; };
+
+  ScopedTaskScheduler scoped_task_scheduler;
+  {
+    ScopedMockTimeMessageLoopTaskRunner mock_time_task_runner;
+    PostDelayedTask(FROM_HERE, Bind(TestTaskRan, Unretained(&first_task_ran)),
+                    TimeDelta::FromSeconds(1));
+
+    // The delayed task should be queued on |mock_time_task_runner|, not the
+    // default task runner.
+    EXPECT_TRUE(mock_time_task_runner.task_runner()->HasPendingTask());
+  }
+
+  PostDelayedTask(FROM_HERE, Bind(TestTaskRan, Unretained(&second_task_ran)),
+                  TimeDelta());
+
+  RunLoop().RunUntilIdle();
+
+  // We never pumped |mock_time_task_runner| so the first task should not have
+  // run.
+  EXPECT_FALSE(first_task_ran);
+  EXPECT_TRUE(second_task_ran);
 }
 
 }  // namespace test

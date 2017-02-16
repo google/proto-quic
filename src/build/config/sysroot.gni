@@ -6,7 +6,6 @@
 # of the sysroot. If no sysroot applies, the variable will be an empty string.
 
 import("//build/config/chrome_build.gni")
-import("//net/features.gni")
 
 declare_args() {
   # The absolute path of the sysroot that is applied when compiling using
@@ -17,6 +16,10 @@ declare_args() {
   target_sysroot_dir = ""
 
   use_sysroot = true
+
+  # TODO(tonikitoo): Remove this arg when wheezy is finally dropped and we
+  # can just use debian/jessie everywhere by default. crbug.com/564904.
+  use_jessie_sysroot = false
 }
 
 if (is_linux && target_sysroot_dir != "") {
@@ -59,14 +62,8 @@ if (is_linux && target_sysroot_dir != "") {
     if (current_cpu == "x64") {
       sysroot = "//build/linux/debian_wheezy_amd64-sysroot"
 
-      # TODO(tonikitoo): Remove the whole if clause below when debian/wheezy
-      # sysroots are switched to debian/jessie, crbug.com/564904.
-      import("//build_overrides/build.gni")
-      if (build_with_chromium && !is_proto_quic) {
-        import("//ui/ozone/ozone.gni")
-        if (use_ozone && !is_chromecast) {
-          sysroot = "//build/linux/debian_jessie_amd64-sysroot"
-        }
+      if (use_jessie_sysroot) {
+        sysroot = "//build/linux/debian_jessie_amd64-sysroot"
       }
     } else if (current_cpu == "x86") {
       sysroot = "//build/linux/debian_wheezy_i386-sysroot"

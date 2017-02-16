@@ -27,10 +27,6 @@
 
 namespace net {
 
-class QuicConfig;
-class QuicConnection;
-class QuicCryptoServerConfig;
-
 namespace test {
 class QuicSimpleServerSessionPeer;
 }  // namespace test

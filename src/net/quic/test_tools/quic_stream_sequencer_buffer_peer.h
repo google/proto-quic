@@ -13,8 +13,7 @@ namespace test {
 
 class QuicStreamSequencerBufferPeer {
  public:
-  explicit QuicStreamSequencerBufferPeer(
-      net::QuicStreamSequencerBuffer* buffer);
+  explicit QuicStreamSequencerBufferPeer(QuicStreamSequencerBuffer* buffer);
 
   // Read from this buffer_ into the given destination buffer_ up to the
   // size of the destination. Returns the number of bytes read. Reading from
@@ -33,27 +32,27 @@ class QuicStreamSequencerBufferPeer {
 
   size_t GetInBlockOffset(QuicStreamOffset offset);
 
-  net::QuicStreamSequencerBuffer::BufferBlock* GetBlock(size_t index);
+  QuicStreamSequencerBuffer::BufferBlock* GetBlock(size_t index);
 
   int GapSize();
 
-  std::list<net::QuicStreamSequencerBuffer::Gap> GetGaps();
+  std::list<QuicStreamSequencerBuffer::Gap> GetGaps();
 
   size_t max_buffer_capacity();
 
   size_t ReadableBytes();
 
-  std::map<QuicStreamOffset, net::QuicStreamSequencerBuffer::FrameInfo>*
+  std::map<QuicStreamOffset, QuicStreamSequencerBuffer::FrameInfo>*
   frame_arrival_time_map();
 
   void set_total_bytes_read(QuicStreamOffset total_bytes_read);
 
-  void set_gaps(const std::list<net::QuicStreamSequencerBuffer::Gap>& gaps);
+  void set_gaps(const std::list<QuicStreamSequencerBuffer::Gap>& gaps);
 
   bool IsBufferAllocated();
 
  private:
-  net::QuicStreamSequencerBuffer* buffer_;
+  QuicStreamSequencerBuffer* buffer_;
   DISALLOW_COPY_AND_ASSIGN(QuicStreamSequencerBufferPeer);
 };
 

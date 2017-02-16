@@ -1,720 +1,2139 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.",
     "archives": {
-        "key_desktop_sites_001.wpr": [
-            "http://www.google.com/nexus/5/#/"
-        ],
-        "key_desktop_sites_000.wpr": [
-            "http://facebook.com",
-            "http://youtube.com",
-            "http://twitter.com/nbc",
-            "http://bbc.co.uk",
-            "http://imdb.com",
-            "http://espn.go.com",
-            "http://cnn.com",
-            "http://bbc.co.uk/news/",
-            "http://weather.com",
-            "http://livejournal.com",
-            "http://deviantart.com",
-            "http://foxnews.com",
-            "http://nbcnews.com",
-            "http://scribd.com",
-            "http://movies.yahoo.com",
-            "http://tv.yahoo.com",
-            "http://pandora.com",
-            "http://tmz.com",
-            "http://hulu.com",
-            "http://abcnews.go.com",
-            "http://youtube.com/videos",
-            "http://ndtv.com",
-            "http://money.cnn.com",
-            "http://msn.foxsports.com",
-            "http://cbsnews.com",
-            "http://wired.com",
-            "http://cnbc.com",
-            "http://sportsillustrated.cnn.com",
-            "http://home.disney.go.com",
-            "http://urbandictionary.com",
-            "http://rottentomatoes.com",
-            "http://foodnetwork.com",
-            "http://npr.org",
-            "http://gawker.com",
-            "http://last.fm",
-            "http://sky.com",
-            "http://eonline.com",
-            "http://egotastic.com",
-            "http://copyscape.com",
-            "http://mtv.com",
-            "http://ultimate-guitar.com",
-            "http://comcast.com",
-            "http://cbc.ca",
-            "http://fanfiction.net",
-            "http://discovery.com",
-            "http://deezer.com",
-            "http://metrolyrics.com",
-            "http://foxnews.com/entertainment/",
-            "http://cartoonnetwork.com",
-            "http://paypal.com",
-            "http://finance.yahoo.com",
-            "http://alibaba.com",
-            "http://bankofamerica.com",
-            "http://www.chase.com/",
-            "http://wellsfargo.com",
-            "http://skype.com",
-            "http://online.wsj.com",
-            "http://indeed.com",
-            "http://samsung.com",
-            "http://reuters.com",
-            "http://ups.com",
-            "http://forbes.com",
-            "http://clickbank.com",
-            "http://target.com",
-            "http://att.com",
-            "http://cj.com",
-            "http://constantcontact.com",
-            "http://ezinearticles.com",
-            "http://shutterstock.com",
-            "http://americanexpress.com",
-            "http://freelancer.com",
-            "http://istockphoto.com",
-            "http://fedex.com",
-            "http://verizonwireless.com",
-            "http://capitalone.com",
-            "http://bloomberg.com",
-            "http://monster.com",
-            "http://hdfcbank.com",
-            "http://fotolia.com",
-            "http://thesun.co.uk",
-            "http://zillow.com",
-            "http://nokia.com",
-            "http://tradedoubler.com",
-            "http://icicibank.com",
-            "http://123rf.com",
-            "http://elance.com",
-            "http://icbc.com.cn",
-            "http://news.cnet.com",
-            "http://verizon.com",
-            "http://careerbuilder.com",
-            "http://sears.com",
-            "http://getresponse.com",
-            "http://sitesell.com",
-            "http://manta.com",
-            "http://www.blogger.com/",
-            "http://avg.com",
-            "http://google.com/analytics/",
-            "http://go.com",
-            "http://flickr.com",
-            "http://aol.com",
-            "http://thepiratebay.se",
-            "http://zedo.com",
-            "http://about.com",
-            "http://stackoverflow.com",
-            "http://godaddy.com",
-            "http://mediafire.com",
-            "http://wordpress.org",
-            "http://adwords.google.com",
-            "http://imgur.com",
-            "http://4shared.com",
-            "http://vimeo.com",
-            "http://play.google.com/",
-            "http://badoo.com",
-            "http://aweber.com",
-            "http://mozilla.org",
-            "http://www.stumbleupon.com/stumbler/chimacintosh",
-            "http://www.google.com/adsense/",
-            "http://my.yahoo.com",
-            "http://sourceforge.net",
-            "http://answers.com",
-            "http://wordpress.org/extend/plugins/",
-            "http://photobucket.com",
-            "http://clicksor.com",
-            "http://google.com/reader/",
-            "http://store.apple.com",
-            "http://wikia.com",
-            "http://statcounter.com",
-            "http://fiverr.com",
-            "http://slideshare.net",
-            "http://salesforce.com",
-            "http://myspace.com",
-            "http://hootsuite.com",
-            "http://domaintools.com",
-            "http://rediff.com",
-            "http://soundcloud.com",
-            "http://download.cnet.com",
-            "http://archive.org",
-            "http://filestube.com",
-            "http://developers.facebook.com",
-            "http://hostgator.com",
-            "http://battle.net",
-            "http://pch.com",
-            "http://ign.com",
-            "http://pogo.com",
-            "http://miniclip.com",
-            "http://888.com",
-            "http://gamespot.com",
-            "http://steampowered.com",
-            "http://gamefaqs.com",
-            "http://xbox.com",
-            "http://games.yahoo.com",
-            "http://betfair.com",
-            "http://kongregate.com",
-            "http://ea.com",
-            "http://leagueoflegends.com",
-            "http://roblox.com",
-            "http://williamhill.com",
-            "http://playstation.com",
-            "http://wowhead.com",
-            "http://king.com",
-            "http://minecraft.net",
-            "http://chess.com",
-            "http://minecraftwiki.net",
-            "http://addictinggames.com",
-            "http://mmo-champion.com",
-            "http://runescape.com",
-            "http://travian.com",
-            "http://zone.msn.com",
-            "http://ubi.com",
-            "http://calottery.com",
-            "http://freeonlinegames.com",
-            "http://games.com",
-            "http://n4g.com",
-            "http://nvidia.com",
-            "http://callofduty.com",
-            "http://us.playstation.com",
-            "http://bet-at-home.com",
-            "http://gametrailers.com",
-            "http://teamliquid.net",
-            "http://nick.com/games/",
-            "http://planetminecraft.com",
-            "http://nintendo.com",
-            "http://popcap.com",
-            "http://gamehouse.com",
-            "http://curse.com",
-            "http://bulbagarden.net",
-            "http://rockstargames.com",
-            "http://partycasino.com",
-            "http://square-enix.com",
-            "http://perfectworld.com",
-            "http://nih.gov",
-            "http://webmd.com",
-            "http://ncbi.nlm.nih.gov/pubmed/",
-            "http://focusoncrohnsdisease.com",
-            "http://mayoclinic.com",
-            "http://mercola.com",
-            "http://drugs.com",
-            "http://menshealth.com",
-            "http://nlm.nih.gov/medlineplus/",
-            "http://weightwatchers.com",
-            "http://cdc.gov",
-            "http://caloriecount.about.com",
-            "http://patents.uspto.gov",
-            "http://psychologytoday.com",
-            "http://nhs.uk",
-            "http://medscape.com",
-            "http://foxnews.com/health/",
-            "http://who.int",
-            "http://healthboards.com",
-            "http://self.com",
-            "http://health.com",
-            "http://kidshealth.org",
-            "http://fda.gov",
-            "http://netdoctor.co.uk",
-            "http://prevention.com",
-            "http://makeupalley.com",
-            "http://stevepavlina.com",
-            "http://realage.com",
-            "http://fitnessmagazine.com",
-            "http://healthcentral.com",
-            "http://rxlist.com",
-            "http://vitals.com",
-            "http://totalbeauty.com",
-            "http://nuance.com",
-            "http://telegraph.co.uk/health/",
-            "http://drbatras.com",
-            "http://emedtv.com",
-            "http://bmj.com",
-            "http://medcohealth.com",
-            "http://webmd.com/skin-problems-and-treatments/default.htm",
-            "http://tums.ac.ir",
-            "http://apa.org",
-            "http://cancer.org",
-            "http://healthguru.com",
-            "http://earthclinic.com",
-            "http://curezone.com",
-            "http://beauty.about.com",
-            "http://www.kaiserpermanente.org/",
-            "http://drweil.com",
-            "http://24hourfitness.com",
-            "http://ehow.com",
-            "http://yelp.com",
-            "http://groupon.com/san-francisco",
-            "http://engadget.com",
-            "http://gsmarena.com",
-            "http://reviews.cnet.com",
-            "http://allrecipes.com",
-            "http://autos.yahoo.com",
-            "http://shopping.yahoo.com",
-            "http://gizmodo.com",
-            "http://marketwatch.com",
-            "http://babycenter.com",
-            "http://nextag.com",
-            "http://fixya.com",
-            "http://dpreview.com",
-            "http://tomshardware.com",
-            "http://theverge.com",
-            "http://instructables.com",
-            "http://cafemom.com",
-            "http://google.com/products",
-            "http://bbb.org",
-            "http://shopping.com",
-            "http://irs.gov",
-            "http://kbb.com",
-            "http://retailmenot.com",
-            "http://edmunds.com",
-            "http://mobile9.com",
-            "http://bankrate.com",
-            "http://fatwallet.com",
-            "http://fool.com",
-            "http://hgtv.com",
-            "http://coupons.com",
-            "http://apartmenttherapy.com",
-            "http://phonearena.com",
-            "http://shopzilla.com",
-            "http://marthastewart.com",
-            "http://consumerreports.org",
-            "http://pricegrabber.com",
-            "http://epinions.com",
-            "http://cooks.com",
-            "http://bhg.com",
-            "http://mouthshut.com",
-            "http://travel.state.gov",
-            "http://realsimple.com",
-            "http://opendns.com",
-            "http://gardenweb.com",
-            "http://blu-ray.com",
-            "http://thesaurus.com",
-            "http://espncricinfo.com",
-            "http://weebly.com",
-            "http://bbc.co.uk/sport/0/football/",
-            "http://y8.com",
-            "http://xe.com/ucc/",
-            "http://timeanddate.com",
-            "http://soccernet.espn.go.com",
-            "http://howstuffworks.com",
-            "http://en.wikipedia.org/wiki/Main_Page",
-            "http://reverso.net",
-            "http://timeanddate.com/worldclock/",
-            "http://sitepoint.com",
-            "http://usopen.org",
-            "http://stardoll.com",
-            "http://london2012.com",
-            "http://lego.com",
-            "http://000webhost.com",
-            "http://fifa.com",
-            "http://uefa.com",
-            "http://nick.com",
-            "http://girlsgogames.com",
-            "http://pbskids.org",
-            "http://thestar.com",
-            "http://dynamicdrive.com",
-            "http://nickjr.com",
-            "http://manutd.com",
-            "http://earthquake.usgs.gov",
-            "http://khanacademy.org",
-            "http://barbie.com",
-            "http://sciencedaily.com",
-            "http://gocomics.com",
-            "http://webdeveloper.com",
-            "http://www2.warnerbros.com",
-            "http://jpl.nasa.gov",
-            "http://yola.com",
-            "http://bom.gov.au",
-            "http://nationalpost.com",
-            "http://booking.com",
-            "http://tripadvisor.com",
-            "http://agoda.com",
-            "http://xe.com",
-            "http://expedia.com",
-            "http://metacafe.com",
-            "http://priceline.com",
-            "http://southwest.com",
-            "http://cracked.com",
-            "http://kayak.com",
-            "http://travelocity.com",
-            "http://united.com",
-            "http://delta.com",
-            "http://ryanair.com",
-            "http://lonelyplanet.com",
-            "http://orbitz.com",
-            "http://aa.com",
-            "http://easyjet.com",
-            "http://hilton.com",
-            "http://travel.yahoo.com",
-            "http://marriott.com",
-            "http://couchsurfing.org",
-            "http://hotwire.com",
-            "http://autoblog.com",
-            "http://lufthansa.com",
-            "http://theonion.com",
-            "http://britishairways.com",
-            "http://travelzoo.com",
-            "http://ebaumsworld.com",
-            "http://emirates.com",
-            "http://venere.com",
-            "http://wikitravel.org",
-            "http://jal.co.jp",
-            "http://collegehumor.com",
-            "http://ford.com",
-            "http://vrbo.com",
-            "http://opentable.com",
-            "http://hyatt.com",
-            "http://klm.com",
-            "http://airberlin.com",
-            "http://usairways.com",
-            "http://skyscanner.net",
-            "http://timeout.com",
-            "http://homeaway.com",
-            "http://lonelyplanet.com/thorntree/",
-            "http://virgin-atlantic.com",
-            "http://news.yahoo.com",
-            "http://huffingtonpost.com",
-            "http://news.google.com",
-            "http://reddit.com",
-            "http://guardian.co.uk",
-            "http://timesofindia.indiatimes.com",
-            "http://washingtonpost.com",
-            "http://usatoday.com",
-            "http://drudgereport.com",
-            "http://latimes.com",
-            "http://wunderground.com",
-            "http://accuweather.com",
-            "http://examiner.com",
-            "http://news.com.au",
-            "http://time.com",
-            "http://alarabiya.net",
-            "http://businessweek.com",
-            "http://smh.com.au",
-            "http://weather.yahoo.com",
-            "http://foxnews.com/politics/",
-            "http://economictimes.indiatimes.com",
-            "http://nationalgeographic.com",
-            "http://ft.com",
-            "http://nypost.com",
-            "http://sfgate.com",
-            "http://topix.com",
-            "http://hindustantimes.com",
-            "http://chicagotribune.com",
-            "http://newsmax.com",
-            "http://breitbart.com",
-            "http://economist.com",
-            "http://theatlantic.com",
-            "http://prweb.com",
-            "http://theglobeandmail.com",
-            "http://answers.yahoo.com",
-            "http://wiki.answers.com",
-            "http://wordreference.com",
-            "http://thefreedictionary.com",
-            "http://dict.leo.org",
-            "http://w3.org",
-            "http://nlm.nih.gov",
-            "http://goodreads.com",
-            "http://mapquest.com",
-            "http://yellowpages.com",
-            "http://wiktionary.org",
-            "http://dict.cc",
-            "http://bing.com/maps/",
-            "http://whitepages.com",
-            "http://m-w.com",
-            "http://classmates.com",
-            "http://blackboard.com",
-            "http://justanswer.com",
-            "http://mit.edu",
-            "http://medterms.com",
-            "http://stanford.edu",
-            "http://brainyquote.com",
-            "http://harvard.edu",
-            "http://superpages.com",
-            "http://mylife.com",
-            "http://en.wiktionary.org",
-            "http://investopedia.com",
-            "http://lumosity.com",
-            "http://phoenix.edu",
-            "http://berkeley.edu",
-            "http://ecollege.com",
-            "http://ed.gov",
-            "http://yellowpages.sulekha.com",
-            "http://wisegeek.com",
-            "http://utexas.edu",
-            "http://wwp.greenwichmeantime.com",
-            "http://cornell.edu",
-            "http://psu.edu",
-            "http://maps.yahoo.com",
-            "http://linkedin.com/answers",
-            "http://yahoo.co.jp",
-            "http://translate.google.com",
-            "http://noaa.gov",
-            "http://ncbi.nlm.nih.gov",
-            "http://nhc.noaa.gov",
-            "http://ted.com",
-            "http://jma.go.jp",
-            "http://usgs.gov",
-            "http://care2.com",
-            "http://sciencedirect.com",
-            "http://intellicast.com",
-            "http://guardian.co.uk/technology",
-            "http://nature.com",
-            "http://wunderground.com/tropical/",
-            "http://ieee.org",
-            "http://elsevier.com",
-            "http://usda.gov",
-            "http://redorbit.com",
-            "http://scientificamerican.com",
-            "http://nps.gov",
-            "http://metoffice.gov.uk",
-            "http://space.com",
-            "http://foreignpolicy.com",
-            "http://bbc.co.uk/news/technology/",
-            "http://newscientist.com",
-            "http://livescience.com",
-            "http://jstor.org",
-            "http://mnn.com",
-            "http://foxnews.com/scitech/",
-            "http://census.gov",
-            "http://epa.gov",
-            "http://bls.gov",
-            "http://metric-conversions.org",
-            "http://news.nationalgeographic.com/index.rss",
-            "http://bbc.co.uk/news/science_and_environment/",
-            "http://colorado.edu",
-            "http://popsci.com",
-            "http://amazon.com",
-            "http://ebay.com",
-            "http://netflix.com",
-            "http://amazon.co.uk",
-            "http://walmart.com",
-            "http://ikea.com",
-            "http://bestbuy.com",
-            "http://multiply.com",
-            "http://newegg.com",
-            "http://homedepot.com",
-            "http://macys.com",
-            "http://livingsocial.com",
-            "http://gap.com",
-            "http://bodybuilding.com",
-            "http://kohls.com",
-            "http://barnesandnoble.com",
-            "http://lowes.com",
-            "http://zappos.com",
-            "http://overstock.com",
-            "http://legacy.com",
-            "http://staples.com",
-            "http://shutterfly.com",
-            "http://nike.com",
-            "http://nordstrom.com",
-            "http://pixmania.com",
-            "http://costco.com",
-            "http://bhphotovideo.com",
-            "http://hm.com",
-            "http://ticketmaster.com",
-            "http://jcpenney.com",
-            "http://walgreens.com",
-            "http://qvc.com",
-            "http://autotrader.com",
-            "http://tigerdirect.com",
-            "http://trademe.co.nz",
-            "http://sony.com",
-            "http://directv.com",
-            "http://buy.com",
-            "http://victoriassecret.com",
-            "http://cars.com",
-            "http://gamestop.com",
-            "http://cvs.com",
-            "http://dealextreme.com",
-            "http://cafepress.com",
-            "http://6pm.com",
-            "http://facebook.com/home.php#!/OccupyAirForce",
-            "http://deviantart.com/#catpath=anthro",
-            "http://shine.yahoo.com",
-            "http://match.com",
-            "http://siteadvisor.com",
-            "http://digg.com",
-            "http://hi5.com",
-            "http://ancestry.com",
-            "http://sulekha.com",
-            "http://europa.eu",
-            "http://biblegateway.com",
-            "http://slate.com",
-            "http://correios.com.br",
-            "http://wonderwall.msn.com",
-            "http://change.org",
-            "http://state.gov",
-            "http://salon.com",
-            "http://askmen.com",
-            "http://infowars.com",
-            "http://wnd.com",
-            "http://ec.europa.eu",
-            "http://justjared.com",
-            "http://sheknows.com",
-            "http://slashdot.org",
-            "http://newgrounds.com",
-            "http://weeklystandard.com",
-            "http://royalmail.com",
-            "http://snopes.com",
-            "http://lds.org",
-            "http://dailykos.com",
-            "http://complex.com",
-            "http://avaaz.org",
-            "http://aarp.org",
-            "http://theregister.co.uk",
-            "http://creativecommons.org",
-            "http://jw.org",
-            "http://peoplesmart.com",
-            "http://uspto.gov",
-            "http://uscis.gov",
-            "http://whitehouse.gov",
-            "http://townhall.com",
-            "http://sec.gov",
-            "http://sports.yahoo.com",
-            "http://nfl.com",
-            "http://mlb.mlb.com",
-            "http://cbssports.com",
-            "http://bleacherreport.com",
-            "http://livescore.com",
-            "http://espn.go.com/nfl/",
-            "http://sports.yahoo.com/nfl",
-            "http://espn.go.com/mlb/",
-            "http://premierleague.com",
-            "http://skysports.com",
-            "http://sports.yahoo.com/mlb",
-            "http://games.espn.go.com/frontpage",
-            "http://uk.eurosport.yahoo.com",
-            "http://baseball.fantasysports.yahoo.com",
-            "http://baseball.fantasysports.yahoo.com/b1",
-            "http://skysports.com/football/",
-            "http://nba.com",
-            "http://hattrick.org",
-            "http://wwe.com",
-            "http://telegraph.co.uk/sport/",
-            "http://rivals.com",
-            "http://sports.yahoo.com/fantasy",
-            "http://espn.go.com/nba/",
-            "http://scout.com",
-            "http://msn.foxsports.com/nfl",
-            "http://sports.yahoo.com/nfl/players/",
-            "http://guardian.co.uk/football",
-            "http://rotoworld.com",
-            "http://nascar.com",
-            "http://arsenal.com",
-            "http://formula1.com",
-            "http://yardbarker.com",
-            "http://pgatour.com",
-            "http://rei.com",
-            "http://liverpoolfc.tv",
-            "http://deadspin.com",
-            "http://sbnation.com",
-            "https://www.google.com",
-            "https://www.google.com/search?q=barack%20obama",
-            "https://mail.google.com/mail/",
-            "https://www.google.com/calendar/",
-            "https://drive.google.com",
-            "https://docs.google.com/a/google.com/document/d/1XMAtPiVFZfItsMUOYl39v5YA8bcSPe4LDrVO25OdsCU/edit",
-            "https://maps.google.com",
-            "http://reader.google.com",
-            "https://plus.google.com/110031535020051778989/posts/2wP4KPPBMG8",
-            "https://plus.google.com/110031535020051778989/photos",
-            "http://googleblog.blogspot.com/",
-            "https://chrome.google.com/webstore/category/home",
-            "http://staff.tumblr.com/",
-            "http://mashable.com/",
-            "http://www.buzzfeed.com/celebrity",
-            "http://www.thedailybeast.com/",
-            "http://www.theverge.com/",
-            "http://techcrunch.com/",
-            "http://www.engadget.com/",
-            "http://gizmodo.com/",
-            "http://thinkprogress.org/?mobile=nc",
-            "http://gawker.com/",
-            "http://arstechnica.com/",
-            "http://boingboing.net/category/featured/",
-            "http://thenextweb.com/",
-            "http://politicalticker.blogs.cnn.com/",
-            "http://deadspin.com/",
-            "http://news.yahoo.com/",
-            "http://www.cnn.com/",
-            "http://www.nbcnews.com/",
-            "http://www.bbc.co.uk/news/",
-            "http://www.reddit.com/",
-            "http://my.yahoo.com/",
-            "http://www.foxnews.com/",
-            "http://www.guardiannews.com/uk-home",
-            "http://timesofindia.indiatimes.com/",
-            "http://online.wsj.com/home-page",
-            "http://www.forbes.com/home_usa/",
-            "http://www.washingtonpost.com/",
-            "http://www.usatoday.com/",
-            "http://drudgereport.com/",
-            "http://abcnews.go.com/",
-            "http://www.latimes.com/",
-            "http://www.bloomberg.com/",
-            "http://money.cnn.com/",
-            "http://www.news.com.au/",
-            "http://www.cbsnews.com/",
-            "http://www.examiner.com/",
-            "http://www.cnbc.com/",
-            "http://www.alarabiya.net/default.html",
-            "http://www.time.com/time/",
-            "http://www.foxnews.com/politics/index.html",
-            "http://www.smh.com.au/",
-            "http://www.businessweek.com/",
-            "http://www.nationalgeographic.com/",
-            "http://www.wunderground.com/cgi-bin/findweather/getForecast?query=94035&sp=KCAMOUNT24",
-            "http://www.accuweather.com/en/search-locations?zipcode=mountain%20view,%20ca",
-            "http://www.weather.com/weather/right-now/Mountain+View+CA+94043",
-            "http://weather.yahoo.com/united-states/california/mountain-view-12797130/",
-            "http://www.yr.no/place/Norway/Oslo/Oslo/Oslo/",
-            "http://www.metoffice.gov.uk/",
-            "http://www.intellicast.com/Local/Weather.aspx?location=USCA0746",
-            "http://www.shutterstock.com/cat.mhtml?searchterm=google&search_group=&lang=en&search_source=search_form",
-            "http://www.flickr.com/search/?q=monkeys&f=hp",
-            "http://www.flickr.com/photos/davidgutierrez/sets/72157604615916402/?page=3",
-            "http://www.flickr.com/photos/davidgutierrez/sets/72157604615916402/show/with/4403158307/",
-            "http://www.apple.com/iphone/",
-            "http://www.taobao.com/index_global.php",
-            "http://hootsuite.com/",
-            "http://www.android.com/",
-            "https://www.change.org/",
-            "http://www.nytimes.com/skimmer/#/Technology",
-            "http://www.glennbeck.com/",
-            "http://www.pengyou.com/mobile?from=loginAndroid",
-            "http://en.wikipedia.org/wiki/Cat",
-            "http://en.wikipedia.org/wiki/British_Royal_Family",
-            "http://9gag.com/gag/5202885",
-            "http://www.wowwiki.com/World_of_Warcraft:_Mists_of_Pandaria",
-            "http://twitter.github.com/bootstrap/",
-            "http://reviews.cnet.com/8301-13727_7-57431192-263/disable-elastic-scrolling-in-os-x/",
-            "http://mlb.com",
-            "http://thenounproject.com/zh-cn/",
-            "http://allrecipes.com/recipe/chicken-pot-pie-ix/",
-            "http://www.gamespot.com/",
-            "http://valleywag.com/",
-            "http://gawker.com/5939683/based-on-a-true-story-is-a-rotten-lie-i-hope-you-never-believe",
-            "http://www.imdb.com/title/tt0910970/",
-            "http://www.html5rocks.com/en/",
-            "http://athome.kimvallee.com/2010/03/why-to-splurge-on-a-high-end-dishwasher/",
-            "http://mlb.mlb.com/mlb/gameday/index.jsp?gid=2012_08_31_sfnmlb_chnmlb_1&mode=wrap#gid=2012_08_31_sfnmlb_chnmlb_1&mode=box",
-            "http://nytimes.com",
-            "http://arstechnica.com",
-            "http://pinterest.com",
-            "http://www.theregister.co.uk/",
-            "http://forum.xda-developers.com/",
-            "http://maps.google.com",
-            "https://www.google.com/search?num=10&hl=en&site=&tbm=isch&q=cats",
-            "http://code.google.com/p/chromium/issues/list",
-            "http://code.google.com/p/chromium/issues/detail?id=142038&q=black%20screen%20amd&colspec=ID%20Pri%20Mstone%20ReleaseBlock%20OS%20Area%20Feature%20Status%20Owner%20Summary",
-            "http://mlb.mlb.com/index.jsp",
-            "http://www.nfl.com/",
-            "http://airbnb.github.com/infinity/demo-on.html",
-            "http://habrahabr.ru/post/149892/#habracut"
-        ]
-    }
+        "http://000webhost.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://123rf.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://24hourfitness.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://4shared.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://6pm.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://888.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://9gag.com/gag/5202885": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://aa.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://aarp.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://abcnews.go.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://abcnews.go.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://about.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://accuweather.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://addictinggames.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://adwords.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://agoda.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://airberlin.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://airbnb.github.com/infinity/demo-on.html": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://alarabiya.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://alibaba.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://allrecipes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://allrecipes.com/recipe/chicken-pot-pie-ix/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://amazon.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://amazon.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://americanexpress.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ancestry.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://answers.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://answers.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://aol.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://apa.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://apartmenttherapy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://archive.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://arsenal.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://arstechnica.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://arstechnica.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://askmen.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://athome.kimvallee.com/2010/03/why-to-splurge-on-a-high-end-dishwasher/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://att.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://autoblog.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://autos.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://autotrader.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://avaaz.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://avg.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://aweber.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://babycenter.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://badoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bankofamerica.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bankrate.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://barbie.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://barnesandnoble.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://baseball.fantasysports.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://baseball.fantasysports.yahoo.com/b1": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://battle.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbb.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbc.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbc.co.uk/news/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbc.co.uk/news/science_and_environment/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbc.co.uk/news/technology/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bbc.co.uk/sport/0/football/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://beauty.about.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://berkeley.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bestbuy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bet-at-home.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://betfair.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bhg.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bhphotovideo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://biblegateway.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bing.com/maps/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://blackboard.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bleacherreport.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bloomberg.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bls.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://blu-ray.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bmj.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bodybuilding.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://boingboing.net/category/featured/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bom.gov.au": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://booking.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://brainyquote.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://breitbart.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://britishairways.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://bulbagarden.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://businessweek.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://buy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cafemom.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cafepress.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://callofduty.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://caloriecount.about.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://calottery.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cancer.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://capitalone.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://care2.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://careerbuilder.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cars.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cartoonnetwork.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cbc.ca": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cbsnews.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cbssports.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cdc.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://census.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://change.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://chess.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://chicagotribune.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cj.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://classmates.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://clickbank.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://clicksor.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cnbc.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cnn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://code.google.com/p/chromium/issues/detail?id=142038&q=black%20screen%20amd&colspec=ID%20Pri%20Mstone%20ReleaseBlock%20OS%20Area%20Feature%20Status%20Owner%20Summary": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://code.google.com/p/chromium/issues/list": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://collegehumor.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://colorado.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://comcast.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://complex.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://constantcontact.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://consumerreports.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cooks.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://copyscape.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cornell.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://correios.com.br": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://costco.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://couchsurfing.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://coupons.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cracked.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://creativecommons.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://curezone.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://curse.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://cvs.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dailykos.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://deadspin.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://deadspin.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dealextreme.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://deezer.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://delta.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://developers.facebook.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://deviantart.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://deviantart.com/#catpath=anthro": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dict.cc": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dict.leo.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://digg.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://directv.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://discovery.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://domaintools.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://download.cnet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dpreview.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://drbatras.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://drudgereport.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://drudgereport.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://drugs.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://drweil.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://dynamicdrive.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ea.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://earthclinic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://earthquake.usgs.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://easyjet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ebaumsworld.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ebay.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ec.europa.eu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ecollege.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://economictimes.indiatimes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://economist.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ed.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://edmunds.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://egotastic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ehow.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://elance.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://elsevier.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://emedtv.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://emirates.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://en.wikipedia.org/wiki/British_Royal_Family": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://en.wikipedia.org/wiki/Cat": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://en.wikipedia.org/wiki/Main_Page": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://en.wiktionary.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://engadget.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://eonline.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://epa.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://epinions.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://espn.go.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://espn.go.com/mlb/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://espn.go.com/nba/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://espn.go.com/nfl/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://espncricinfo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://europa.eu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://examiner.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://expedia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ezinearticles.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://facebook.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://facebook.com/home.php#!/OccupyAirForce": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fanfiction.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fatwallet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fda.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fedex.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fifa.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://filestube.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://finance.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fitnessmagazine.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fiverr.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fixya.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://flickr.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://focusoncrohnsdisease.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foodnetwork.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fool.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://forbes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ford.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foreignpolicy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://formula1.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://forum.xda-developers.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://fotolia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foxnews.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foxnews.com/entertainment/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foxnews.com/health/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foxnews.com/politics/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://foxnews.com/scitech/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://freelancer.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://freeonlinegames.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ft.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gamefaqs.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gamehouse.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://games.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://games.espn.go.com/frontpage": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://games.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gamespot.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gamestop.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gametrailers.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gap.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gardenweb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gawker.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gawker.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gawker.com/5939683/based-on-a-true-story-is-a-rotten-lie-i-hope-you-never-believe": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://getresponse.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://girlsgogames.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gizmodo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gizmodo.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://go.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gocomics.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://godaddy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://goodreads.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://google.com/analytics/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://google.com/products": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://google.com/reader/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://googleblog.blogspot.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://groupon.com/san-francisco": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://gsmarena.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://guardian.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://guardian.co.uk/football": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://guardian.co.uk/technology": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://habrahabr.ru/post/149892/#habracut": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://harvard.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hattrick.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hdfcbank.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://health.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://healthboards.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://healthcentral.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://healthguru.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hgtv.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hi5.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hilton.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hindustantimes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hm.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://home.disney.go.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://homeaway.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://homedepot.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hootsuite.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hootsuite.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hostgator.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hotwire.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://howstuffworks.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://huffingtonpost.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hulu.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://hyatt.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://icbc.com.cn": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://icicibank.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ieee.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ign.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ikea.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://imdb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://imgur.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://indeed.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://infowars.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://instructables.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://intellicast.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://investopedia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://irs.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://istockphoto.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jal.co.jp": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jcpenney.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jma.go.jp": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jpl.nasa.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jstor.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://justanswer.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://justjared.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://jw.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://kayak.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://kbb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://khanacademy.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://kidshealth.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://king.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://klm.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://kohls.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://kongregate.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://last.fm": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://latimes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lds.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://leagueoflegends.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://legacy.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lego.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://linkedin.com/answers": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://livejournal.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://liverpoolfc.tv": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://livescience.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://livescore.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://livingsocial.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://london2012.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lonelyplanet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lonelyplanet.com/thorntree/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lowes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lufthansa.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://lumosity.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://m-w.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://macys.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://makeupalley.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://manta.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://manutd.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mapquest.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://maps.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://maps.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://marketwatch.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://marriott.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://marthastewart.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mashable.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://match.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mayoclinic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://medcohealth.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mediafire.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://medscape.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://medterms.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://menshealth.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mercola.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://metacafe.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://metoffice.gov.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://metric-conversions.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://metrolyrics.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://minecraft.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://minecraftwiki.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://miniclip.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mit.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mlb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mlb.mlb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mlb.mlb.com/index.jsp": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mlb.mlb.com/mlb/gameday/index.jsp?gid=2012_08_31_sfnmlb_chnmlb_1&mode=wrap#gid=2012_08_31_sfnmlb_chnmlb_1&mode=box": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mmo-champion.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mnn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mobile9.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://money.cnn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://money.cnn.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://monster.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mouthshut.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://movies.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mozilla.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://msn.foxsports.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://msn.foxsports.com/nfl": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mtv.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://multiply.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://my.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://my.yahoo.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://mylife.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://myspace.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://n4g.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nascar.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nationalgeographic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nationalpost.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nature.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nba.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nbcnews.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ncbi.nlm.nih.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ncbi.nlm.nih.gov/pubmed/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ndtv.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://netdoctor.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://netflix.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://newegg.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://newgrounds.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.cnet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.com.au": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.nationalgeographic.com/index.rss": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://news.yahoo.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://newscientist.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://newsmax.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nextag.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nfl.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nhc.noaa.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nhs.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nick.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nick.com/games/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nickjr.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nih.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nike.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nintendo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nlm.nih.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nlm.nih.gov/medlineplus/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://noaa.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nokia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nordstrom.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://npr.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nps.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nuance.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nvidia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nypost.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://nytimes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://online.wsj.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://online.wsj.com/home-page": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://opendns.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://opentable.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://orbitz.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://overstock.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pandora.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://partycasino.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://patents.uspto.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://paypal.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pbskids.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pch.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://peoplesmart.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://perfectworld.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pgatour.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://phoenix.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://phonearena.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://photobucket.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pinterest.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pixmania.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://planetminecraft.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://play.google.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://playstation.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pogo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://politicalticker.blogs.cnn.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://popcap.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://popsci.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://premierleague.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://prevention.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://pricegrabber.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://priceline.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://prweb.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://psu.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://psychologytoday.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://qvc.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reader.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://realage.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://realsimple.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reddit.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rediff.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://redorbit.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rei.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://retailmenot.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reuters.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reverso.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reviews.cnet.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://reviews.cnet.com/8301-13727_7-57431192-263/disable-elastic-scrolling-in-os-x/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rivals.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://roblox.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rockstargames.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rotoworld.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rottentomatoes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://royalmail.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://runescape.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://rxlist.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ryanair.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://salesforce.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://salon.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://samsung.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sbnation.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sciencedaily.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sciencedirect.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://scientificamerican.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://scout.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://scribd.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sears.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sec.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://self.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sfgate.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sheknows.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shine.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shopping.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shopping.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shopzilla.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shutterfly.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://shutterstock.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://siteadvisor.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sitepoint.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sitesell.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sky.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://skype.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://skyscanner.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://skysports.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://skysports.com/football/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://slashdot.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://slate.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://slideshare.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://smh.com.au": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://snopes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://soccernet.espn.go.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sony.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://soundcloud.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sourceforge.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://southwest.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://space.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sports.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sports.yahoo.com/fantasy": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sports.yahoo.com/mlb": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sports.yahoo.com/nfl": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sports.yahoo.com/nfl/players/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sportsillustrated.cnn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://square-enix.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://stackoverflow.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://staff.tumblr.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://stanford.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://staples.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://stardoll.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://statcounter.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://state.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://steampowered.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://stevepavlina.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://store.apple.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://sulekha.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://superpages.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://target.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://teamliquid.net": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://techcrunch.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ted.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://telegraph.co.uk/health/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://telegraph.co.uk/sport/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://theatlantic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thefreedictionary.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://theglobeandmail.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thenextweb.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thenounproject.com/zh-cn/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://theonion.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thepiratebay.se": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://theregister.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thesaurus.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thestar.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thesun.co.uk": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://theverge.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://thinkprogress.org/?mobile=nc": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ticketmaster.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tigerdirect.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://time.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://timeanddate.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://timeanddate.com/worldclock/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://timeout.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://timesofindia.indiatimes.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://timesofindia.indiatimes.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tmz.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tomshardware.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://topix.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://totalbeauty.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://townhall.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tradedoubler.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://trademe.co.nz": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://translate.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://travel.state.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://travel.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://travelocity.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://travelzoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://travian.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tripadvisor.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tums.ac.ir": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://tv.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://twitter.com/nbc": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://twitter.github.com/bootstrap/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ubi.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://uefa.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://uk.eurosport.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ultimate-guitar.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://united.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://ups.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://urbandictionary.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://us.playstation.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://usairways.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://usatoday.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://uscis.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://usda.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://usgs.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://usopen.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://uspto.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://utexas.edu": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://valleywag.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://venere.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://verizon.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://verizonwireless.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://victoriassecret.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://vimeo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://virgin-atlantic.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://vitals.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://vrbo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://w3.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://walgreens.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://walmart.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://washingtonpost.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weather.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weather.yahoo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weather.yahoo.com/united-states/california/mountain-view-12797130/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://webdeveloper.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://webmd.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://webmd.com/skin-problems-and-treatments/default.htm": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weebly.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weeklystandard.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://weightwatchers.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wellsfargo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://whitehouse.gov": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://whitepages.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://who.int": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wiki.answers.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wikia.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wikitravel.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wiktionary.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://williamhill.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wired.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wisegeek.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wnd.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wonderwall.msn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wordpress.org": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wordpress.org/extend/plugins/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wordreference.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wowhead.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wunderground.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wunderground.com/tropical/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wwe.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://wwp.greenwichmeantime.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.accuweather.com/en/search-locations?zipcode=mountain%20view,%20ca": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.alarabiya.net/default.html": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.android.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.apple.com/iphone/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.bbc.co.uk/news/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.blogger.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.bloomberg.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.businessweek.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.buzzfeed.com/celebrity": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.cbsnews.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.chase.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.cnbc.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.cnn.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.engadget.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.examiner.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.flickr.com/photos/davidgutierrez/sets/72157604615916402/?page=3": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.flickr.com/photos/davidgutierrez/sets/72157604615916402/show/with/4403158307/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.flickr.com/search/?q=monkeys&f=hp": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.forbes.com/home_usa/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.foxnews.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.foxnews.com/politics/index.html": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.gamespot.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.glennbeck.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.google.com/adsense/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.google.com/nexus/5/#/": {
+            "DEFAULT": "key_desktop_sites_001.wpr"
+        },
+        "http://www.guardiannews.com/uk-home": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.html5rocks.com/en/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.imdb.com/title/tt0910970/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.intellicast.com/Local/Weather.aspx?location=USCA0746": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.kaiserpermanente.org/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.latimes.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.metoffice.gov.uk/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.nationalgeographic.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.nbcnews.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.news.com.au/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.nfl.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.nytimes.com/skimmer/#/Technology": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.pengyou.com/mobile?from=loginAndroid": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.reddit.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.shutterstock.com/cat.mhtml?searchterm=google&search_group=&lang=en&search_source=search_form": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.smh.com.au/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.stumbleupon.com/stumbler/chimacintosh": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.taobao.com/index_global.php": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.thedailybeast.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.theregister.co.uk/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.theverge.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.time.com/time/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.usatoday.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.washingtonpost.com/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.weather.com/weather/right-now/Mountain+View+CA+94043": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.wowwiki.com/World_of_Warcraft:_Mists_of_Pandaria": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.wunderground.com/cgi-bin/findweather/getForecast?query=94035&sp=KCAMOUNT24": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www.yr.no/place/Norway/Oslo/Oslo/Oslo/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://www2.warnerbros.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://xbox.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://xe.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://xe.com/ucc/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://y8.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yahoo.co.jp": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yardbarker.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yellowpages.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yellowpages.sulekha.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yelp.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://yola.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://youtube.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://youtube.com/videos": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://zappos.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://zedo.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://zillow.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "http://zone.msn.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://chrome.google.com/webstore/category/home": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://docs.google.com/a/google.com/document/d/1XMAtPiVFZfItsMUOYl39v5YA8bcSPe4LDrVO25OdsCU/edit": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://drive.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://maps.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://plus.google.com/110031535020051778989/photos": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://plus.google.com/110031535020051778989/posts/2wP4KPPBMG8": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://www.change.org/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://www.google.com": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://www.google.com/calendar/": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://www.google.com/search?num=10&hl=en&site=&tbm=isch&q=cats": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        },
+        "https://www.google.com/search?q=barack%20obama": {
+            "DEFAULT": "key_desktop_sites_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

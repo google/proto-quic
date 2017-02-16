@@ -221,7 +221,7 @@ base::string16 GetSuggestedFilenameImpl(
     const std::string& suggested_name,
     const std::string& mime_type,
     const std::string& default_name,
-    ReplaceIllegalCharactersCallback replace_illegal_characters_callback) {
+    ReplaceIllegalCharactersFunction replace_illegal_characters_function) {
   // TODO: this function to be updated to match the httpbis recommendations.
   // Talk to abarth for the latest news.
 
@@ -277,7 +277,7 @@ base::string16 GetSuggestedFilenameImpl(
                      : base::FilePath::StringType(kFinalFallbackName);
     overwrite_extension = false;
   }
-  replace_illegal_characters_callback.Run(&result_str, '-');
+  replace_illegal_characters_function(&result_str, '-');
   base::FilePath result(result_str);
   // extension should not appended to filename derived from
   // content-disposition, if it does not have one.
@@ -305,15 +305,10 @@ base::FilePath GenerateFileNameImpl(
     const std::string& suggested_name,
     const std::string& mime_type,
     const std::string& default_file_name,
-    ReplaceIllegalCharactersCallback replace_illegal_characters_callback) {
-  base::string16 file_name =
-      GetSuggestedFilenameImpl(url,
-                               content_disposition,
-                               referrer_charset,
-                               suggested_name,
-                               mime_type,
-                               default_file_name,
-                               replace_illegal_characters_callback);
+    ReplaceIllegalCharactersFunction replace_illegal_characters_function) {
+  base::string16 file_name = GetSuggestedFilenameImpl(
+      url, content_disposition, referrer_charset, suggested_name, mime_type,
+      default_file_name, replace_illegal_characters_function);
 
 #if defined(OS_WIN)
   base::FilePath generated_name(file_name);

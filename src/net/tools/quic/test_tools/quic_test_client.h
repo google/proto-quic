@@ -5,9 +5,6 @@
 #ifndef NET_TOOLS_QUIC_TEST_TOOLS_QUIC_TEST_CLIENT_H_
 #define NET_TOOLS_QUIC_TEST_TOOLS_QUIC_TEST_CLIENT_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -17,7 +14,6 @@
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packet_creator.h"
 #include "net/quic/core/quic_packets.h"
-#include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_client.h"
 #include "testing/gmock/include/gmock/gmock.h"
 
@@ -26,13 +22,9 @@ using base::StringPiece;
 namespace net {
 
 class ProofVerifier;
-
-class ProofVerifier;
 class QuicPacketWriterWrapper;
 
 namespace test {
-
-class MockableQuicClient;
 
 // A quic client which allows mocking out reads and writes.
 class MockableQuicClient : public QuicClient {

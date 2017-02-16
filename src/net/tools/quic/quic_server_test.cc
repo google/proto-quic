@@ -51,8 +51,8 @@ class MockQuicSimpleDispatcher : public QuicSimpleDispatcher {
 class TestQuicServer : public QuicServer {
  public:
   TestQuicServer()
-      : QuicServer(CryptoTestUtils::ProofSourceForTesting(), &response_cache_) {
-  }
+      : QuicServer(crypto_test_utils::ProofSourceForTesting(),
+                   &response_cache_) {}
 
   ~TestQuicServer() override {}
 
@@ -130,9 +130,8 @@ TEST_F(QuicServerEpollInTest, ProcessBufferedCHLOsOnEpollin) {
   char buf[1024];
   memset(buf, 0, arraysize(buf));
   sockaddr_storage storage = server_address_.generic_address();
-  socklen_t storage_size = sizeof(storage);
   int rc = sendto(fd, buf, arraysize(buf), 0,
-                  reinterpret_cast<sockaddr*>(&storage), storage_size);
+                  reinterpret_cast<sockaddr*>(&storage), sizeof(storage));
   if (rc < 0) {
     QUIC_DLOG(INFO) << errno << " " << strerror(errno);
   }
@@ -147,7 +146,7 @@ class QuicServerDispatchPacketTest : public ::testing::Test {
   QuicServerDispatchPacketTest()
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
-                       CryptoTestUtils::ProofSourceForTesting()),
+                       crypto_test_utils::ProofSourceForTesting()),
         version_manager_(AllSupportedVersions()),
         dispatcher_(
             config_,

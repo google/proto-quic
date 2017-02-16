@@ -41,8 +41,8 @@ const int kMinStackDepth = 2;
 
 // The amount of memory set aside for holding arbitrary user data (key/value
 // pairs) globally or associated with ActivityData entries.
-const size_t kUserDataSize = 1024;    // bytes
-const size_t kGlobalDataSize = 4096;  // bytes
+const size_t kUserDataSize = 1 << 10;     // 1 KiB
+const size_t kGlobalDataSize = 16 << 10;  // 16 KiB
 const size_t kMaxUserDataNameLength =
     static_cast<size_t>(std::numeric_limits<uint8_t>::max());
 
@@ -121,8 +121,9 @@ ActivityTrackerMemoryAllocator::GetObjectReference() {
     Reference cached = cache_values_[--cache_used_];
     // Change the type of the cached object to the proper type and return it.
     // If the type-change fails that means another thread has taken this from
-    // under us (via the search below) so ignore it and keep trying.
-    if (allocator_->ChangeType(cached, object_type_, object_free_type_))
+    // under us (via the search below) so ignore it and keep trying. Don't
+    // clear the memory because that was done when the type was made "free".
+    if (allocator_->ChangeType(cached, object_type_, object_free_type_, false))
       return cached;
   }
 
@@ -140,7 +141,7 @@ ActivityTrackerMemoryAllocator::GetObjectReference() {
       // Found a free object. Change it to the proper type and return it. If
       // the type-change fails that means another thread has taken this from
       // under us so ignore it and keep trying.
-      if (allocator_->ChangeType(found, object_type_, object_free_type_))
+      if (allocator_->ChangeType(found, object_type_, object_free_type_, false))
         return found;
     }
     if (found == last) {
@@ -161,14 +162,9 @@ ActivityTrackerMemoryAllocator::GetObjectReference() {
 }
 
 void ActivityTrackerMemoryAllocator::ReleaseObjectReference(Reference ref) {
-  // Zero the memory so that it is ready for immediate use if needed later.
-  char* mem_base = allocator_->GetAsArray<char>(
-      ref, object_type_, PersistentMemoryAllocator::kSizeAny);
-  DCHECK(mem_base);
-  memset(mem_base, 0, object_size_);
-
   // Mark object as free.
-  bool success = allocator_->ChangeType(ref, object_free_type_, object_type_);
+  bool success = allocator_->ChangeType(ref, object_free_type_, object_type_,
+                                        /*clear=*/true);
   DCHECK(success);
 
   // Add this reference to our "free" cache if there is space. If not, the type
@@ -288,7 +284,6 @@ void ActivityUserData::Set(StringPiece name,
                            ValueType type,
                            const void* memory,
                            size_t size) {
-  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_GE(std::numeric_limits<uint8_t>::max(), name.length());
   size = std::min(std::numeric_limits<uint16_t>::max() - (kMemoryAlignment - 1),
                   size);
@@ -1056,6 +1051,19 @@ ActivityUserData& GlobalActivityTracker::ScopedThreadActivity::user_data() {
   return *user_data_;
 }
 
+GlobalActivityTracker::GlobalUserData::GlobalUserData(void* memory, size_t size)
+    : ActivityUserData(memory, size) {}
+
+GlobalActivityTracker::GlobalUserData::~GlobalUserData() {}
+
+void GlobalActivityTracker::GlobalUserData::Set(StringPiece name,
+                                                ValueType type,
+                                                const void* memory,
+                                                size_t size) {
+  AutoLock lock(data_lock_);
+  ActivityUserData::Set(name, type, memory, size);
+}
+
 GlobalActivityTracker::ManagedActivityTracker::ManagedActivityTracker(
     PersistentMemoryAllocator::Reference mem_reference,
     void* base,
@@ -1205,8 +1213,7 @@ void GlobalActivityTracker::RecordModuleInfo(const ModuleInfo& info) {
   }
 
   size_t required_size = ModuleInfoRecord::EncodedSize(info);
-  ModuleInfoRecord* record =
-      allocator_->AllocateObject<ModuleInfoRecord>(required_size);
+  ModuleInfoRecord* record = allocator_->New<ModuleInfoRecord>(required_size);
   if (!record)
     return;
 
@@ -1214,6 +1221,12 @@ void GlobalActivityTracker::RecordModuleInfo(const ModuleInfo& info) {
   DCHECK(success);
   allocator_->MakeIterable(record);
   modules_.insert(std::make_pair(info.file, record));
+}
+
+void GlobalActivityTracker::RecordFieldTrial(const std::string& trial_name,
+                                             StringPiece group_name) {
+  const std::string key = std::string("FieldTrial.") + trial_name;
+  global_data_.SetString(key, group_name);
 }
 
 GlobalActivityTracker::GlobalActivityTracker(
@@ -1235,7 +1248,7 @@ GlobalActivityTracker::GlobalActivityTracker(
                            kUserDataSize,
                            kCachedUserDataMemories,
                            /*make_iterable=*/false),
-      user_data_(
+      global_data_(
           allocator_->GetAsArray<char>(
               allocator_->Allocate(kGlobalDataSize, kTypeIdGlobalDataRecord),
               kTypeIdGlobalDataRecord,
@@ -1247,17 +1260,23 @@ GlobalActivityTracker::GlobalActivityTracker(
 
   // Ensure that there is no other global object and then make this one such.
   DCHECK(!g_tracker_);
-  subtle::NoBarrier_Store(&g_tracker_, reinterpret_cast<uintptr_t>(this));
+  subtle::Release_Store(&g_tracker_, reinterpret_cast<uintptr_t>(this));
 
   // The global records must be iterable in order to be found by an analyzer.
   allocator_->MakeIterable(allocator_->GetAsReference(
-      user_data_.GetBaseAddress(), kTypeIdGlobalDataRecord));
+      global_data_.GetBaseAddress(), kTypeIdGlobalDataRecord));
+
+  // Fetch and record all activated field trials.
+  FieldTrial::ActiveGroups active_groups;
+  FieldTrialList::GetActiveFieldTrialGroups(&active_groups);
+  for (auto& group : active_groups)
+    RecordFieldTrial(group.trial_name, group.group_name);
 }
 
 GlobalActivityTracker::~GlobalActivityTracker() {
   DCHECK_EQ(Get(), this);
   DCHECK_EQ(0, thread_tracker_count_.load(std::memory_order_relaxed));
-  subtle::NoBarrier_Store(&g_tracker_, 0);
+  subtle::Release_Store(&g_tracker_, 0);
 }
 
 void GlobalActivityTracker::ReturnTrackerMemory(

@@ -51,7 +51,7 @@ class SharedMemory;
 //
 // OBJECTS: Although the allocator can be used in a "malloc" sense, fetching
 // character arrays and manipulating that memory manually, the better way is
-// generally to use the "Object" methods to create and manage allocations. In
+// generally to use the "object" methods to create and manage allocations. In
 // this way the sizing, type-checking, and construction are all automatic. For
 // this to work, however, every type of stored object must define two public
 // "constexpr" values, kPersistentTypeId and kExpectedInstanceSize, as such:
@@ -83,11 +83,10 @@ class SharedMemory;
 //   verify that the structure is compatible between both 32-bit and 64-bit
 //   versions of the code.
 //
-// Using AllocateObject (and ChangeObject) will zero the memory and then call
-// the default constructor for the object. Given that objects are persistent,
-// no destructor is ever called automatically though a caller can explicitly
-// call DeleteObject to destruct it and change the type to something indicating
-// it is no longer in use.
+// Using New manages the memory and then calls the default constructor for the
+// object. Given that objects are persistent, no destructor is ever called
+// automatically though a caller can explicitly call Delete to destruct it and
+// change the type to something indicating it is no longer in use.
 //
 // Though persistent memory segments are transferrable between programs built
 // for different natural word widths, they CANNOT be exchanged between CPUs
@@ -215,10 +214,12 @@ class BASE_EXPORT PersistentMemoryAllocator {
   enum : Reference {
     // A common "null" reference value.
     kReferenceNull = 0,
+  };
 
+  enum : uint32_t {
     // A value indicating that the type is in transition. Work is being done
     // on the contents to prepare it for a new type to come.
-    kReferenceTransitioning = 0xFFFFFFFF,
+    kTypeIdTransitioning = 0xFFFFFFFF,
   };
 
   enum : size_t {
@@ -385,12 +386,6 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // result will be returned.
   Reference GetAsReference(const void* memory, uint32_t type_id) const;
 
-  // As above but works with objects allocated from persistent memory.
-  template <typename T>
-  Reference GetAsReference(const T* obj) const {
-    return GetAsReference(obj, T::kPersistentTypeId);
-  }
-
   // Get the number of bytes allocated to a block. This is useful when storing
   // arrays in order to validate the ending boundary. The returned value will
   // include any padding added to achieve the required alignment and so could
@@ -402,104 +397,21 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // even though the memory stays valid and allocated. Changing the type is
   // an atomic compare/exchange and so requires knowing the existing value.
   // It will return false if the existing type is not what is expected.
+  //
   // Changing the type doesn't mean the data is compatible with the new type.
-  // It will likely be necessary to clear or reconstruct the type before it
-  // can be used. Changing the type WILL NOT invalidate existing pointers to
-  // the data, either in this process or others, so changing the data structure
-  // could have unpredicatable results. USE WITH CARE!
+  // Passing true for |clear| will zero the memory after the type has been
+  // changed away from |from_type_id| but before it becomes |to_type_id| meaning
+  // that it is done in a manner that is thread-safe.
+  //
+  // It will likely be necessary to reconstruct the type before it can be used.
+  // Changing the type WILL NOT invalidate existing pointers to the data, either
+  // in this process or others, so changing the data structure could have
+  // unpredicatable results. USE WITH CARE!
   uint32_t GetType(Reference ref) const;
-  bool ChangeType(Reference ref, uint32_t to_type_id, uint32_t from_type_id);
-
-  // Like ChangeType() but gets the "to" type from the object type, clears
-  // the memory, and constructs a new object of the desired type just as
-  // though it was fresh from AllocateObject<>(). The old type simply ceases
-  // to exist; no destructor is called for it. Calling this will not invalidate
-  // existing pointers to the object, either in this process or others, so
-  // changing the object could have unpredictable results. USE WITH CARE!
-  template <typename T>
-  T* ChangeObject(Reference ref, uint32_t from_type_id) {
-    DCHECK_LE(sizeof(T), GetAllocSize(ref)) << "alloc not big enough for obj";
-    // Make sure the memory is appropriate. This won't be used until after
-    // the type is changed but checking first avoids the possibility of having
-    // to change the type back.
-    void* mem = const_cast<void*>(GetBlockData(ref, 0, sizeof(T)));
-    if (!mem)
-      return nullptr;
-    // Ensure the allocator's internal alignment is sufficient for this object.
-    // This protects against coding errors in the allocator.
-    DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(mem) & (ALIGNOF(T) - 1));
-    // First change the type to "transitioning" so that there is no race
-    // condition with the clearing and construction of the object should
-    // another thread be simultaneously iterating over data. This will
-    // "acquire" the memory so no changes get reordered before it.
-    if (!ChangeType(ref, kReferenceTransitioning, from_type_id))
-      return nullptr;
-    // Clear the memory so that the property of all memory being zero after an
-    // allocation also applies here.
-    memset(mem, 0, GetAllocSize(ref));
-    // Construct an object of the desired type on this memory, just as if
-    // AllocateObject had been called to create it.
-    T* obj = new (mem) T();
-    // Finally change the type to the desired one. This will "release" all of
-    // the changes above and so provide a consistent view to other threads.
-    bool success =
-        ChangeType(ref, T::kPersistentTypeId, kReferenceTransitioning);
-    DCHECK(success);
-    return obj;
-  }
-
-  // Reserve space in the memory segment of the desired |size| and |type_id|.
-  // A return value of zero indicates the allocation failed, otherwise the
-  // returned reference can be used by any process to get a real pointer via
-  // the GetAsObject() call.
-  Reference Allocate(size_t size, uint32_t type_id);
-
-  // Allocate and construct an object in persistent memory. The type must have
-  // both (size_t) kExpectedInstanceSize and (uint32_t) kPersistentTypeId
-  // static constexpr fields that are used to ensure compatibility between
-  // software versions. An optional size parameter can be specified to force
-  // the allocation to be bigger than the size of the object; this is useful
-  // when the last field is actually variable length.
-  template <typename T>
-  T* AllocateObject(size_t size) {
-    if (size < sizeof(T))
-      size = sizeof(T);
-    Reference ref = Allocate(size, T::kPersistentTypeId);
-    void* mem =
-        const_cast<void*>(GetBlockData(ref, T::kPersistentTypeId, size));
-    if (!mem)
-      return nullptr;
-    DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(mem) & (ALIGNOF(T) - 1));
-    return new (mem) T();
-  }
-  template <typename T>
-  T* AllocateObject() {
-    return AllocateObject<T>(sizeof(T));
-  }
-
-  // Deletes an object by destructing it and then changing the type to a
-  // different value (default 0).
-  template <typename T>
-  void DeleteObject(T* obj, uint32_t new_type) {
-    // Get the reference for the object.
-    Reference ref = GetAsReference<T>(obj);
-    // First change the type to "transitioning" so there is no race condition
-    // where another thread could find the object through iteration while it
-    // is been destructed. This will "acquire" the memory so no changes get
-    // reordered before it. It will fail if |ref| is invalid.
-    if (!ChangeType(ref, kReferenceTransitioning, T::kPersistentTypeId))
-      return;
-    // Destruct the object.
-    obj->~T();
-    // Finally change the type to the desired value. This will "release" all
-    // the changes above.
-    bool success = ChangeType(ref, new_type, kReferenceTransitioning);
-    DCHECK(success);
-  }
-  template <typename T>
-  void DeleteObject(T* obj) {
-    DeleteObject<T>(obj, 0);
-  }
+  bool ChangeType(Reference ref,
+                  uint32_t to_type_id,
+                  uint32_t from_type_id,
+                  bool clear);
 
   // Allocated objects can be added to an internal list that can then be
   // iterated over by other processes. If an allocated object can be found
@@ -510,12 +422,6 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // change; new iterable objects will always be added after it in the series.
   // Changing the type does not alter its "iterable" status.
   void MakeIterable(Reference ref);
-
-  // As above but works with an object allocated from persistent memory.
-  template <typename T>
-  void MakeIterable(const T* obj) {
-    MakeIterable(GetAsReference<T>(obj));
-  }
 
   // Get the information about the amount of free space in the allocator. The
   // amount of free space should be treated as approximate due to extras from
@@ -540,6 +446,113 @@ class BASE_EXPORT PersistentMemoryAllocator {
   // operation, such as how much memory is currently used. This should be
   // called before such information is to be displayed or uploaded.
   void UpdateTrackingHistograms();
+
+  // While the above works much like malloc & free, these next methods provide
+  // an "object" interface similar to new and delete.
+
+  // Reserve space in the memory segment of the desired |size| and |type_id|.
+  // A return value of zero indicates the allocation failed, otherwise the
+  // returned reference can be used by any process to get a real pointer via
+  // the GetAsObject() or GetAsArray calls.
+  Reference Allocate(size_t size, uint32_t type_id);
+
+  // Allocate and construct an object in persistent memory. The type must have
+  // both (size_t) kExpectedInstanceSize and (uint32_t) kPersistentTypeId
+  // static constexpr fields that are used to ensure compatibility between
+  // software versions. An optional size parameter can be specified to force
+  // the allocation to be bigger than the size of the object; this is useful
+  // when the last field is actually variable length.
+  template <typename T>
+  T* New(size_t size) {
+    if (size < sizeof(T))
+      size = sizeof(T);
+    Reference ref = Allocate(size, T::kPersistentTypeId);
+    void* mem =
+        const_cast<void*>(GetBlockData(ref, T::kPersistentTypeId, size));
+    if (!mem)
+      return nullptr;
+    DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(mem) & (ALIGNOF(T) - 1));
+    return new (mem) T();
+  }
+  template <typename T>
+  T* New() {
+    return New<T>(sizeof(T));
+  }
+
+  // Similar to New, above, but construct the object out of an existing memory
+  // block and of an expected type. If |clear| is true, memory will be zeroed
+  // before construction. Though this is not standard object behavior, it
+  // is present to match with new allocations that always come from zeroed
+  // memory. Anything previously present simply ceases to exist; no destructor
+  // is called for it so explicitly Delete() the old object first if need be.
+  // Calling this will not invalidate existing pointers to the object, either
+  // in this process or others, so changing the object could have unpredictable
+  // results. USE WITH CARE!
+  template <typename T>
+  T* New(Reference ref, uint32_t from_type_id, bool clear) {
+    DCHECK_LE(sizeof(T), GetAllocSize(ref)) << "alloc not big enough for obj";
+    // Make sure the memory is appropriate. This won't be used until after
+    // the type is changed but checking first avoids the possibility of having
+    // to change the type back.
+    void* mem = const_cast<void*>(GetBlockData(ref, 0, sizeof(T)));
+    if (!mem)
+      return nullptr;
+    // Ensure the allocator's internal alignment is sufficient for this object.
+    // This protects against coding errors in the allocator.
+    DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(mem) & (ALIGNOF(T) - 1));
+    // Change the type, clearing the memory if so desired. The new type is
+    // "transitioning" so that there is no race condition with the construction
+    // of the object should another thread be simultaneously iterating over
+    // data. This will "acquire" the memory so no changes get reordered before
+    // it.
+    if (!ChangeType(ref, kTypeIdTransitioning, from_type_id, clear))
+      return nullptr;
+    // Construct an object of the desired type on this memory, just as if
+    // New() had been called to create it.
+    T* obj = new (mem) T();
+    // Finally change the type to the desired one. This will "release" all of
+    // the changes above and so provide a consistent view to other threads.
+    bool success =
+        ChangeType(ref, T::kPersistentTypeId, kTypeIdTransitioning, false);
+    DCHECK(success);
+    return obj;
+  }
+
+  // Deletes an object by destructing it and then changing the type to a
+  // different value (default 0).
+  template <typename T>
+  void Delete(T* obj, uint32_t new_type) {
+    // Get the reference for the object.
+    Reference ref = GetAsReference<T>(obj);
+    // First change the type to "transitioning" so there is no race condition
+    // where another thread could find the object through iteration while it
+    // is been destructed. This will "acquire" the memory so no changes get
+    // reordered before it. It will fail if |ref| is invalid.
+    if (!ChangeType(ref, kTypeIdTransitioning, T::kPersistentTypeId, false))
+      return;
+    // Destruct the object.
+    obj->~T();
+    // Finally change the type to the desired value. This will "release" all
+    // the changes above.
+    bool success = ChangeType(ref, new_type, kTypeIdTransitioning, false);
+    DCHECK(success);
+  }
+  template <typename T>
+  void Delete(T* obj) {
+    Delete<T>(obj, 0);
+  }
+
+  // As above but works with objects allocated from persistent memory.
+  template <typename T>
+  Reference GetAsReference(const T* obj) const {
+    return GetAsReference(obj, T::kPersistentTypeId);
+  }
+
+  // As above but works with an object allocated from persistent memory.
+  template <typename T>
+  void MakeIterable(const T* obj) {
+    MakeIterable(GetAsReference<T>(obj));
+  }
 
  protected:
   enum MemoryType {

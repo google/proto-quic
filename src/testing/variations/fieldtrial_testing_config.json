@@ -1,4 +1,24 @@
 {
+    "AlternateComponentUrls": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "AlternateComponentUrls",
+                    "enable_features": [
+                        "AlternateComponentUrls"
+                    ]
+                }
+            ]
+        }
+    ],
     "AndroidAIAFetching": [
         {
             "platforms": [
@@ -86,6 +106,24 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "AutofillCreditCardDropdownVariations": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "LastUsedDateAndExpDate_Experiment",
+                    "params": {
+                        "show_expiration_date": "true"
+                    },
+                    "enable_features": [
+                        "AutofillCreditCardLastUsedDateDisplay"
+                    ]
                 }
             ]
         }
@@ -206,6 +244,28 @@
                     },
                     "enable_features": [
                         "AutomaticTabDiscarding"
+                    ]
+                }
+            ]
+        }
+    ],
+    "BackgroundVideoOptimizations": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "BackgroundOptimizationEnabled5sOrLess",
+                    "params": {
+                        "max_keyframe_distance_ms": "5000"
+                    },
+                    "enable_features": [
+                        "BackgroundVideoTrackOptimization"
                     ]
                 }
             ]
@@ -724,6 +784,21 @@
             ]
         }
     ],
+    "EnableWelcomeWin10": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Inline",
+                    "enable_features": [
+                        "EnableWelcomeWin10"
+                    ]
+                }
+            ]
+        }
+    ],
     "ExpectCTReporting": [
         {
             "platforms": [
@@ -907,18 +982,6 @@
             ]
         }
     ],
-    "IconNTP": [
-        {
-            "platforms": [
-                "win"
-            ],
-            "experiments": [
-                {
-                    "name": "Default"
-                }
-            ]
-        }
-    ],
     "ImportantSitesInCBD": [
         {
             "platforms": [
@@ -929,6 +992,22 @@
                     "name": "DialogEnabled",
                     "enable_features": [
                         "ImportantSitesInCBD"
+                    ]
+                }
+            ]
+        }
+    ],
+    "ImprovedRecoveryComponent": [
+        {
+            "platforms": [
+                "win",
+                "mac"
+            ],
+            "experiments": [
+                {
+                    "name": "ImprovedRecoveryComponent",
+                    "enable_features": [
+                        "ImprovedRecoveryComponent"
                     ]
                 }
             ]
@@ -987,6 +1066,24 @@
                 },
                 {
                     "name": "Disabled"
+                }
+            ]
+        }
+    ],
+    "LazyParseCSS": [
+        {
+            "platforms": [
+                "linux",
+                "mac",
+                "win",
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "LazyParseCSS"
+                    ]
                 }
             ]
         }
@@ -1203,6 +1300,24 @@
             ]
         }
     ],
+    "NTPTilesInInstantService": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "NTPTilesInInstantService"
+                    ]
+                }
+            ]
+        }
+    ],
     "NetDelayableH2AndQuicRequests": [
         {
             "platforms": [
@@ -1272,6 +1387,25 @@
                         "WiFi.DefaultMedianRTTMsec": "168",
                         "correlation_logging_probability": "0.001"
                     }
+                }
+            ]
+        }
+    ],
+    "NetworkSchedulerYielding": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win",
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "NetworkSchedulerYielding"
+                    ]
                 }
             ]
         }
@@ -1482,6 +1616,26 @@
             "experiments": [
                 {
                     "name": "Enable"
+                }
+            ]
+        }
+    ],
+    "PasswordMetadataFilling": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "PasswordMetadataFilling"
+                    ]
                 }
             ]
         }
@@ -2258,7 +2412,7 @@
             ]
         }
     ],
-    "SiteIsolationForExtensions": [
+    "SiteIsolationExtensions": [
         {
             "platforms": [
                 "chromeos",
@@ -2307,6 +2461,26 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "SyncUSSAutocomplete": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "SyncUSSAutocomplete"
+                    ]
                 }
             ]
         }
@@ -2421,6 +2595,43 @@
                     "name": "TranslateRankerLogging",
                     "enable_features": [
                         "TranslateRankerLogging"
+                    ]
+                }
+            ]
+        }
+    ],
+    "TranslateServerStudy": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "ios",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "SmartRendering",
+                    "params": {
+                        "server_params": "smrd"
+                    }
+                }
+            ]
+        }
+    ],
+    "TranslateUI2016Q2": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "TranslateUI2016Q2OnGroup",
+                    "enable_features": [
+                        "TranslateUI2016Q2"
                     ]
                 }
             ]
@@ -2681,7 +2892,7 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
+                    "name": "TunedClippingLevelMin070",
                     "enable_features": [
                         "TunedClippingLevelMin70"
                     ]

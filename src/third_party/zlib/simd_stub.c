@@ -7,7 +7,7 @@
 #include "deflate.h"
 #include "x86.h"
 
-int x86_cpu_enable_simd = 0;
+int ZLIB_INTERNAL x86_cpu_enable_simd = 0;
 
 void ZLIB_INTERNAL crc_fold_init(deflate_state *const s) {
     assert(0);

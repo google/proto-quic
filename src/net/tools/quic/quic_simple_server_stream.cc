@@ -152,8 +152,10 @@ void QuicSimpleServerStream::SendResponse() {
     return;
   }
 
-  // Examing response status, if it was not pure integer as typical h2 response
-  // status, send error response.
+  // Examing response status, if it was not pure integer as typical h2
+  // response status, send error response. Notice that
+  // QuicHttpResponseCache push urls are strictly authority + path only,
+  // scheme is not included (see |QuicHttpResponseCache::GetKey()|).
   string request_url = request_headers_[":authority"].as_string() +
                        request_headers_[":path"].as_string();
   int response_code;

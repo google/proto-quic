@@ -75,6 +75,9 @@ class SpdyFramerDecoderAdapter {
   // has responded with an HTTP/1.1 (or earlier) response.
   virtual bool probable_http_response() const = 0;
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  virtual size_t EstimateMemoryUsage() const = 0;
+
  private:
   SpdyFramerVisitorInterface* visitor_ = nullptr;
   SpdyFramerDebugVisitorInterface* debug_visitor_ = nullptr;

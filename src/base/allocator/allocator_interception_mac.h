@@ -8,6 +8,7 @@
 #include <malloc/malloc.h>
 #include <stddef.h>
 
+#include "base/base_export.h"
 #include "third_party/apple_apsl/malloc.h"
 
 namespace base {
@@ -58,6 +59,8 @@ void StoreFunctionsForDefaultZone(MallocZoneFunctions* functions);
 // |functions|.
 void ReplaceFunctionsForDefaultZone(const MallocZoneFunctions* functions);
 
+extern bool g_replaced_default_zone;
+
 // Calls the original implementation of malloc/calloc prior to interception.
 bool UncheckedMallocMac(size_t size, void** result);
 bool UncheckedCallocMac(size_t num_items, size_t size, void** result);
@@ -66,7 +69,7 @@ bool UncheckedCallocMac(size_t num_items, size_t size, void** result);
 // Foundation and Objective-C allocations.
 // Has no effect on the default malloc zone if the allocator shim already
 // performs that interception.
-void InterceptAllocationsMac();
+BASE_EXPORT void InterceptAllocationsMac();
 }  // namespace allocator
 }  // namespace base
 

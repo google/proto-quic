@@ -514,6 +514,10 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
     DCHECK_NE(header_stream_id_, SpdyFramer::kInvalidStream);
   }
 
+  void set_extension_visitor(ExtensionVisitorInterface* extension) {
+    framer_.set_extension_visitor(extension);
+  }
+
   // Override the default buffer size (16K). Call before using the framer!
   void set_header_buffer_size(size_t header_buffer_size) {
     header_buffer_size_ = header_buffer_size;
@@ -556,7 +560,7 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
   SpdyStreamId last_push_promise_stream_;
   SpdyStreamId last_push_promise_promised_stream_;
   int data_bytes_;
-  int fin_frame_count_;  // The count of RST_STREAM type frames received.
+  int fin_frame_count_;      // The count of RST_STREAM type frames received.
   int fin_flag_count_;       // The count of frames with the FIN flag set.
   int end_of_stream_count_;  // The count of zero-length data frames.
   int control_frame_header_data_count_;  // The count of chunks received.
@@ -579,6 +583,38 @@ class TestSpdyVisitor : public SpdyFramerVisitorInterface,
   bool header_has_priority_;
   SpdyStreamId header_parent_stream_id_;
   bool header_exclusive_;
+};
+
+class TestExtension : public ExtensionVisitorInterface {
+ public:
+  void OnSetting(uint16_t id, uint32_t value) override {
+    settings_received_.push_back({id, value});
+  }
+
+  // Called when non-standard frames are received.
+  bool OnFrameHeader(SpdyStreamId stream_id,
+                     size_t length,
+                     uint8_t type,
+                     uint8_t flags) override {
+    stream_id_ = stream_id;
+    length_ = length;
+    type_ = type;
+    flags_ = flags;
+    return true;
+  }
+
+  // The payload for a single frame may be delivered as multiple calls to
+  // OnFramePayload.
+  void OnFramePayload(const char* data, size_t len) override {
+    payload_.append(data, len);
+  }
+
+  std::vector<std::pair<uint16_t, uint32_t>> settings_received_;
+  SpdyStreamId stream_id_ = 0;
+  size_t length_ = 0;
+  uint8_t type_ = 0;
+  uint8_t flags_ = 0;
+  string payload_;
 };
 
 // Retrieves serialized headers from a HEADERS frame.
@@ -610,15 +646,15 @@ class SpdyFramerTest
     switch (std::get<0>(param)) {
       case DECODER_SELF:
         FLAGS_use_nested_spdy_framer_decoder = false;
-        FLAGS_use_http2_frame_decoder_adapter = false;
+        FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = false;
         break;
       case DECODER_NESTED:
         FLAGS_use_nested_spdy_framer_decoder = true;
-        FLAGS_use_http2_frame_decoder_adapter = false;
+        FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = false;
         break;
       case DECODER_HTTP2:
         FLAGS_use_nested_spdy_framer_decoder = false;
-        FLAGS_use_http2_frame_decoder_adapter = true;
+        FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = true;
         break;
     }
     switch (std::get<1>(param)) {
@@ -2854,6 +2890,38 @@ TEST_P(SpdyFramerTest, ReadUnknownSettingsId) {
   EXPECT_EQ(0, visitor.error_count_);
 }
 
+TEST_P(SpdyFramerTest, ReadUnknownSettingsWithExtension) {
+  if (std::get<0>(GetParam()) != DECODER_SELF) {
+    // TODO(jamessynge): Implement extension support for the new decoder.
+    return;
+  }
+
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
+  const unsigned char kH2FrameData[] = {
+      0x00, 0x00, 0x0c,        // Length: 12
+      0x04,                    //   Type: SETTINGS
+      0x00,                    //  Flags: none
+      0x00, 0x00, 0x00, 0x00,  // Stream: 0
+      0x00, 0x10,              //  Param: 16
+      0x00, 0x00, 0x00, 0x02,  //  Value: 2
+      0x00, 0x5f,              //  Param: 95
+      0x00, 0x01, 0x00, 0x02,  //  Value: 65538
+  };
+
+  TestSpdyVisitor visitor(SpdyFramer::DISABLE_COMPRESSION);
+  TestExtension extension;
+  visitor.set_extension_visitor(&extension);
+  visitor.SimulateInFramer(kH2FrameData, sizeof(kH2FrameData));
+
+  // In HTTP/2, we ignore unknown settings because of extensions.
+  EXPECT_EQ(0, visitor.setting_count_);
+  EXPECT_EQ(0, visitor.error_count_);
+
+  EXPECT_THAT(
+      extension.settings_received_,
+      testing::ElementsAre(testing::Pair(16, 2), testing::Pair(95, 65538)));
+}
+
 // Tests handling of SETTINGS frame with entries out of order.
 TEST_P(SpdyFramerTest, ReadOutOfOrderSettings) {
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
@@ -3170,6 +3238,52 @@ TEST_P(SpdyFramerTest, ReceiveUnknownMidContinuation) {
   TestSpdyVisitor visitor(SpdyFramer::DISABLE_COMPRESSION);
   // Assume the unknown frame is allowed
   visitor.on_unknown_frame_result_ = true;
+  framer.set_visitor(&visitor);
+  visitor.SimulateInFramer(kInput, sizeof(kInput));
+
+  EXPECT_EQ(1, visitor.error_count_);
+  EXPECT_EQ(SpdyFramer::SPDY_UNEXPECTED_FRAME,
+            visitor.framer_.spdy_framer_error())
+      << SpdyFramer::SpdyFramerErrorToString(
+             visitor.framer_.spdy_framer_error());
+  EXPECT_EQ(1, visitor.headers_frame_count_);
+  EXPECT_EQ(0, visitor.continuation_count_);
+  EXPECT_EQ(0u, visitor.header_buffer_length_);
+}
+
+// Receiving an unknown frame when a continuation is expected should
+// result in a SPDY_UNEXPECTED_FRAME error
+TEST_P(SpdyFramerTest, ReceiveUnknownMidContinuationWithExtension) {
+  if (std::get<0>(GetParam()) != DECODER_SELF) {
+    // TODO(jamessynge): Implement extension support for the new decoder.
+    return;
+  }
+
+  const unsigned char kInput[] = {
+      0x00, 0x00, 0x10,        // Length: 16
+      0x01,                    //   Type: HEADERS
+      0x00,                    //  Flags: none
+      0x00, 0x00, 0x00, 0x01,  // Stream: 1
+      0x00, 0x06, 0x63, 0x6f,  // HPACK
+      0x6f, 0x6b, 0x69, 0x65,  //
+      0x07, 0x66, 0x6f, 0x6f,  //
+      0x3d, 0x62, 0x61, 0x72,  //
+
+      0x00, 0x00, 0x14,        // Length: 20
+      0xa9,                    //   Type: UnknownFrameType(169)
+      0x00,                    //  Flags: none
+      0x00, 0x00, 0x00, 0x01,  // Stream: 1
+      0x00, 0x06, 0x63, 0x6f,  // Payload
+      0x6f, 0x6b, 0x69, 0x65,  //
+      0x08, 0x62, 0x61, 0x7a,  //
+      0x3d, 0x62, 0x69, 0x6e,  //
+      0x67, 0x00, 0x06, 0x63,  //
+  };
+
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
+  TestSpdyVisitor visitor(SpdyFramer::DISABLE_COMPRESSION);
+  TestExtension extension;
+  visitor.set_extension_visitor(&extension);
   framer.set_visitor(&visitor);
   visitor.SimulateInFramer(kInput, sizeof(kInput));
 
@@ -3927,8 +4041,8 @@ TEST_P(SpdyFramerTest, OnBlocked) {
       << SpdyFramer::SpdyFramerErrorToString(framer.spdy_framer_error());
 }
 
-TEST_P(SpdyFramerTest, OnAltSvc) {
-  const SpdyStreamId kStreamId = 1;
+TEST_P(SpdyFramerTest, OnAltSvcWithOrigin) {
+  const SpdyStreamId kStreamId = 0;  // Stream id must be zero if origin given.
 
   testing::StrictMock<test::MockSpdyFramerVisitor> visitor;
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
@@ -3944,7 +4058,7 @@ TEST_P(SpdyFramerTest, OnAltSvc) {
   EXPECT_CALL(visitor,
               OnAltSvc(kStreamId, StringPiece("o_r|g!n"), altsvc_vector));
 
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(kStreamId);
   altsvc_ir.set_origin("o_r|g!n");
   altsvc_ir.add_altsvc(altsvc1);
   altsvc_ir.add_altsvc(altsvc2);
@@ -3972,7 +4086,7 @@ TEST_P(SpdyFramerTest, OnAltSvcNoOrigin) {
   altsvc_vector.push_back(altsvc2);
   EXPECT_CALL(visitor, OnAltSvc(kStreamId, StringPiece(""), altsvc_vector));
 
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(kStreamId);
   altsvc_ir.add_altsvc(altsvc1);
   altsvc_ir.add_altsvc(altsvc2);
   SpdySerializedFrame frame(framer.SerializeFrame(altsvc_ir));
@@ -3984,13 +4098,15 @@ TEST_P(SpdyFramerTest, OnAltSvcNoOrigin) {
 }
 
 TEST_P(SpdyFramerTest, OnAltSvcEmptyProtocolId) {
+  const SpdyStreamId kStreamId = 0;  // Stream id must be zero if origin given.
+
   testing::StrictMock<test::MockSpdyFramerVisitor> visitor;
   SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
   framer.set_visitor(&visitor);
 
   EXPECT_CALL(visitor, OnError(testing::Eq(&framer)));
 
-  SpdyAltSvcIR altsvc_ir(1);
+  SpdyAltSvcIR altsvc_ir(kStreamId);
   altsvc_ir.set_origin("o1");
   altsvc_ir.add_altsvc(SpdyAltSvcWireFormat::AlternativeService(
       "pid1", "host", 443, 5, SpdyAltSvcWireFormat::VersionVector()));

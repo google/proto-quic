@@ -13,6 +13,8 @@ test("libfuzzer_tests") {
   ]
   deps = [
     ":test_config_and_dict",
+    ":test_config_and_seed_corpus",
+    ":test_config_and_seed_corpuses",
     ":test_config_only",
     ":test_dict_from_subdir",
     ":test_dict_only",
@@ -23,6 +25,7 @@ test("libfuzzer_tests") {
   ]
   data_deps = [
     ":check_fuzzer_config",
+    ":check_seed_corpus_archive",
   ]
 }
 
@@ -55,6 +58,31 @@ fuzzer_test("test_config_and_dict") {
   ]
 }
 
+fuzzer_test("test_config_and_seed_corpus") {
+  sources = [
+    "../fuzzers/empty_fuzzer.cc",
+  ]
+  seed_corpus = "test_corpus"
+  libfuzzer_options = [
+    "some_test_option=test_value",
+    "max_len=1024",
+  ]
+}
+
+fuzzer_test("test_config_and_seed_corpuses") {
+  sources = [
+    "../fuzzers/empty_fuzzer.cc",
+  ]
+  seed_corpuses = [
+    "test_corpus",
+    "test_corpus_2",
+  ]
+  libfuzzer_options = [
+    "some_test_option=another_test_value",
+    "max_len=1337",
+  ]
+}
+
 fuzzer_test("test_dict_from_subdir") {
   sources = [
     "../fuzzers/empty_fuzzer.cc",
@@ -68,5 +96,14 @@ copy("check_fuzzer_config") {
   ]
   outputs = [
     "$root_build_dir/check_fuzzer_config.py",
+  ]
+}
+
+copy("check_seed_corpus_archive") {
+  sources = [
+    "check_seed_corpus_archive.py",
+  ]
+  outputs = [
+    "$root_build_dir/check_seed_corpus_archive.py",
   ]
 }

@@ -5,6 +5,7 @@
 #include "net/http2/hpack/decoder/hpack_whole_entry_buffer.h"
 
 #include "base/logging.h"
+#include "base/trace_event/memory_usage_estimator.h"
 
 using base::StringPiece;
 
@@ -30,6 +31,11 @@ void HpackWholeEntryBuffer::set_max_string_size_bytes(
 void HpackWholeEntryBuffer::BufferStringsIfUnbuffered() {
   name_.BufferStringIfUnbuffered();
   value_.BufferStringIfUnbuffered();
+}
+
+size_t HpackWholeEntryBuffer::EstimateMemoryUsage() const {
+  return base::trace_event::EstimateMemoryUsage(name_) +
+         base::trace_event::EstimateMemoryUsage(value_);
 }
 
 void HpackWholeEntryBuffer::OnIndexedHeader(size_t index) {

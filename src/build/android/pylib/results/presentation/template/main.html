@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="../../../../../../../default.css" type="text/css">
+    <style>
+      table, th, td {
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 5px;
+      }
+      th {
+        cursor: pointer;
+      }
+      table {
+        width: 100%;
+      }
+      .center {
+        text-align: center;
+      }
+      .left {
+        text-align: left;
+      }
+      a {
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .row_block:hover {
+        background-color: #F6F6F6;
+      }
+      .skipped, .success, .failure {
+        border-color: #000000;
+      }
+    </style>
+    <script type="text/javascript">
+      {% include "javascript/main_html.js" %}
+    </script>
+  </head>
+  <body class="interface">
+    <div class="content">
+      <h2 id="summary-header"></h2>
+      {% for tb_value in tb_values %}
+        {% include 'template/table.html' %}
+      {% endfor %}
+    </div>
+  </br>
+    <a onclick="reportIssues();"><b>Feedback</b></a>
+  </body>
+  <script>
+    loadPage();
+    // Enable sorting for each column of tables.
+    Array.prototype.slice.call(document.getElementsByTagName('th'))
+        .forEach(function(head) {
+            head.addEventListener(
+                "click",
+                function() { sortByColumn(head); });
+        }
+    );
+  </script>
+</html>

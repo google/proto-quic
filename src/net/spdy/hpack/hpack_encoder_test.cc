@@ -17,8 +17,6 @@ namespace net {
 
 using base::StringPiece;
 using std::string;
-using std::vector;
-using std::pair;
 using testing::ElementsAre;
 
 namespace test {
@@ -206,7 +204,7 @@ class HpackEncoderTest : public ::testing::TestWithParam<bool> {
   const HpackEntry* cookie_c_;
 
   UnsafeArena headers_storage_;
-  vector<pair<StringPiece, StringPiece>> headers_observed_;
+  std::vector<std::pair<StringPiece, StringPiece>> headers_observed_;
 
   HpackOutputStream expected_;
   bool use_incremental_;

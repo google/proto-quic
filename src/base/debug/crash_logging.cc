@@ -45,7 +45,7 @@ size_t NumChunksForLength(size_t length) {
 }
 
 // The longest max_length allowed by the system.
-const size_t kLargestValueAllowed = 1024;
+const size_t kLargestValueAllowed = 2048;
 
 }  // namespace
 

@@ -5,9 +5,11 @@
 #ifndef BASE_TASK_SCHEDULER_POST_TASK_H_
 #define BASE_TASK_SCHEDULER_POST_TASK_H_
 
+#include <utility>
+
 #include "base/base_export.h"
 #include "base/bind.h"
-#include "base/callback_forward.h"
+#include "base/callback.h"
 #include "base/location.h"
 #include "base/memory/ref_counted.h"
 #include "base/post_task_and_reply_with_result_internal.h"
@@ -81,8 +83,8 @@ BASE_EXPORT void PostDelayedTask(const tracked_objects::Location& from_here,
 // PostTaskWithTraitsAndReply with plain TaskTraits. Can only be called when
 // SequencedTaskRunnerHandle::IsSet().
 BASE_EXPORT void PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  const Closure& task,
-                                  const Closure& reply);
+                                  Closure task,
+                                  Closure reply);
 
 // Posts |task| to the TaskScheduler and posts |reply| with the return value of
 // |task| as argument on the caller's execution context (i.e. same sequence or
@@ -91,9 +93,10 @@ BASE_EXPORT void PostTaskAndReply(const tracked_objects::Location& from_here,
 // TaskTraits. Can only be called when SequencedTaskRunnerHandle::IsSet().
 template <typename TaskReturnType, typename ReplyArgType>
 void PostTaskAndReplyWithResult(const tracked_objects::Location& from_here,
-                                const Callback<TaskReturnType(void)>& task,
-                                const Callback<void(ReplyArgType)>& reply) {
-  PostTaskWithTraitsAndReplyWithResult(from_here, TaskTraits(), task, reply);
+                                Callback<TaskReturnType(void)> task,
+                                Callback<void(ReplyArgType)> reply) {
+  PostTaskWithTraitsAndReplyWithResult(from_here, TaskTraits(), std::move(task),
+                                       std::move(reply));
 }
 
 // Posts |task| with specific |traits| to the TaskScheduler.
@@ -119,8 +122,8 @@ BASE_EXPORT void PostDelayedTaskWithTraits(
 BASE_EXPORT void PostTaskWithTraitsAndReply(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    const Closure& task,
-    const Closure& reply);
+    Closure task,
+    Closure reply);
 
 // Posts |task| with specific |traits| to the TaskScheduler and posts |reply|
 // with the return value of |task| as argument on the caller's execution context
@@ -130,14 +133,14 @@ template <typename TaskReturnType, typename ReplyArgType>
 void PostTaskWithTraitsAndReplyWithResult(
     const tracked_objects::Location& from_here,
     const TaskTraits& traits,
-    const Callback<TaskReturnType(void)>& task,
-    const Callback<void(ReplyArgType)>& reply) {
+    Callback<TaskReturnType()> task,
+    Callback<void(ReplyArgType)> reply) {
   TaskReturnType* result = new TaskReturnType();
   return PostTaskWithTraitsAndReply(
-      from_here, traits,
-      Bind(&internal::ReturnAsParamAdapter<TaskReturnType>, task, result),
-      Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>, reply,
-           Owned(result)));
+      from_here, traits, Bind(&internal::ReturnAsParamAdapter<TaskReturnType>,
+                              std::move(task), result),
+      Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
+           std::move(reply), Owned(result)));
 }
 
 // Returns a TaskRunner whose PostTask invocations result in scheduling tasks

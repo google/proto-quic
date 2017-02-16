@@ -106,6 +106,8 @@ bool PerformAIAFetchAndAddResultToVector(scoped_refptr<CertNetFetcher> fetcher,
   Error error;
   std::vector<uint8_t> aia_fetch_bytes;
   request->WaitForResult(&error, &aia_fetch_bytes);
+  UMA_HISTOGRAM_SPARSE_SLOWLY("Net.Certificate.AndroidAIAFetchError",
+                              std::abs(error));
   if (error != OK)
     return false;
   CertErrors errors;

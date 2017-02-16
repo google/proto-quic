@@ -715,15 +715,17 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_TestKnownRoot) {
   int flags = 0;
   CertVerifyResult verify_result;
   // This will blow up, May 9th, 2016. Sorry! Please disable and file a bug
-  // against agl. See also PublicKeyHashes.
+  // against agl.
   int error = Verify(cert_chain.get(), "twitter.com", flags, NULL,
                      CertificateList(), &verify_result);
   EXPECT_THAT(error, IsOk());
   EXPECT_TRUE(verify_result.is_issued_by_known_root);
 }
 
-// TODO(crbug.com/610546): Fix and re-enable this test.
-TEST_P(CertVerifyProcInternalTest, DISABLED_PublicKeyHashes) {
+// This tests that on successful certificate verification,
+// CertVerifyResult::public_key_hashes is filled with a SHA1 and SHA256 hash
+// for each of the certificates in the chain.
+TEST_P(CertVerifyProcInternalTest, PublicKeyHashes) {
   if (!SupportsReturningVerifiedChain()) {
     LOG(INFO) << "Skipping this test in this platform.";
     return;
@@ -731,49 +733,49 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_PublicKeyHashes) {
 
   base::FilePath certs_dir = GetTestCertsDirectory();
   CertificateList certs = CreateCertificateListFromFile(
-      certs_dir, "twitter-chain.pem", X509Certificate::FORMAT_AUTO);
+      certs_dir, "x509_verify_results.chain.pem", X509Certificate::FORMAT_AUTO);
   ASSERT_EQ(3U, certs.size());
 
   X509Certificate::OSCertHandles intermediates;
   intermediates.push_back(certs[1]->os_cert_handle());
+  intermediates.push_back(certs[2]->os_cert_handle());
 
+  ScopedTestRoot scoped_root(certs[2].get());
   scoped_refptr<X509Certificate> cert_chain = X509Certificate::CreateFromHandle(
       certs[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(cert_chain);
+  ASSERT_EQ(2U, cert_chain->GetIntermediateCertificates().size());
+
   int flags = 0;
   CertVerifyResult verify_result;
-
-  // This will blow up, May 9th, 2016. Sorry! Please disable and file a bug
-  // against agl. See also TestKnownRoot.
-  int error = Verify(cert_chain.get(), "twitter.com", flags, NULL,
+  int error = Verify(cert_chain.get(), "127.0.0.1", flags, NULL,
                      CertificateList(), &verify_result);
   EXPECT_THAT(error, IsOk());
-  ASSERT_LE(3U, verify_result.public_key_hashes.size());
 
-  HashValueVector sha1_hashes;
-  for (size_t i = 0; i < verify_result.public_key_hashes.size(); ++i) {
-    if (verify_result.public_key_hashes[i].tag != HASH_VALUE_SHA1)
-      continue;
-    sha1_hashes.push_back(verify_result.public_key_hashes[i]);
-  }
-  ASSERT_LE(3u, sha1_hashes.size());
+  // There are 2 hashes each of the 3 certificates in the verified chain.
+  EXPECT_EQ(6u, verify_result.public_key_hashes.size());
 
-  for (size_t i = 0; i < 3; ++i) {
-    EXPECT_EQ(HexEncode(kTwitterSPKIs[i], base::kSHA1Length),
-              HexEncode(sha1_hashes[i].data(), base::kSHA1Length));
-  }
+  // Convert |public_key_hashes| to strings for ease of comparison.
+  std::vector<std::string> public_key_hash_strings;
+  for (const auto& public_key_hash : verify_result.public_key_hashes)
+    public_key_hash_strings.push_back(public_key_hash.ToString());
 
-  HashValueVector sha256_hashes;
-  for (size_t i = 0; i < verify_result.public_key_hashes.size(); ++i) {
-    if (verify_result.public_key_hashes[i].tag != HASH_VALUE_SHA256)
-      continue;
-    sha256_hashes.push_back(verify_result.public_key_hashes[i]);
-  }
-  ASSERT_LE(3u, sha256_hashes.size());
+  std::vector<std::string> expected_public_key_hashes = {
+      // Target
+      "sha1/fSQl8GTgpmark/9mDK9qzIIGfFE=",
+      "sha256/5I5+4ndAhwDiWd1WqfBgDkKAAIEhsq0MfAx25Hoc+dA=",
 
-  for (size_t i = 0; i < 3; ++i) {
-    EXPECT_EQ(HexEncode(kTwitterSPKIsSHA256[i], crypto::kSHA256Length),
-              HexEncode(sha256_hashes[i].data(), crypto::kSHA256Length));
-  }
+      // Intermediate
+      "sha1/7+0Ms07hEkAc6zVPOo+uLtMEwfU=",
+      "sha256/MtnqgdSwAIgEjse7SpxnmyKoo/RTiL9CDIWwFnz4nas=",
+
+      // Trust anchor
+      "sha1/dJwvO4gEVIZvretArGyBNggjlrQ=",
+      "sha256/z7x1Szes+eQOqJp6rBK3u/tQMs55FYojZHUCFiBcjuc="};
+
+  // |public_key_hashes| does not have an ordering guarantee.
+  EXPECT_THAT(expected_public_key_hashes,
+              testing::UnorderedElementsAreArray(public_key_hash_strings));
 }
 
 // A regression test for http://crbug.com/70293.

@@ -6,6 +6,7 @@
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -74,6 +75,10 @@ std::string HpackEntry::GetDebugString() const {
          base::SizeTToString(insertion_index_) +
          (IsStatic() ? " static" : (IsLookup() ? " lookup" : " dynamic")) +
          " }";
+}
+
+size_t HpackEntry::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(name_) + SpdyEstimateMemoryUsage(value_);
 }
 
 }  // namespace net

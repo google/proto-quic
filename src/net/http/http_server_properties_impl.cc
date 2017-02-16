@@ -46,7 +46,7 @@ HttpServerPropertiesImpl::HttpServerPropertiesImpl()
 HttpServerPropertiesImpl::~HttpServerPropertiesImpl() {
 }
 
-void HttpServerPropertiesImpl::InitializeSpdyServers(
+void HttpServerPropertiesImpl::SetSpdyServers(
     std::vector<std::string>* spdy_servers,
     bool support_spdy) {
   DCHECK(CalledOnValidThread());
@@ -73,7 +73,7 @@ void HttpServerPropertiesImpl::InitializeSpdyServers(
   }
 }
 
-void HttpServerPropertiesImpl::InitializeAlternativeServiceServers(
+void HttpServerPropertiesImpl::SetAlternativeServiceServers(
     AlternativeServiceMap* alternative_service_map) {
   int32_t size_diff =
       alternative_service_map->size() - alternative_service_map_.size();
@@ -135,12 +135,12 @@ void HttpServerPropertiesImpl::InitializeAlternativeServiceServers(
   }
 }
 
-void HttpServerPropertiesImpl::InitializeSupportsQuic(IPAddress* last_address) {
+void HttpServerPropertiesImpl::SetSupportsQuic(IPAddress* last_address) {
   if (last_address)
     last_quic_address_ = *last_address;
 }
 
-void HttpServerPropertiesImpl::InitializeServerNetworkStats(
+void HttpServerPropertiesImpl::SetServerNetworkStats(
     ServerNetworkStatsMap* server_network_stats_map) {
   // Add the entries from persisted data.
   ServerNetworkStatsMap new_server_network_stats_map(
@@ -164,7 +164,7 @@ void HttpServerPropertiesImpl::InitializeServerNetworkStats(
   }
 }
 
-void HttpServerPropertiesImpl::InitializeQuicServerInfoMap(
+void HttpServerPropertiesImpl::SetQuicServerInfoMap(
     QuicServerInfoMap* quic_server_info_map) {
   // Add the entries from persisted data.
   QuicServerInfoMap temp_map(QuicServerInfoMap::NO_AUTO_EVICT);
@@ -622,6 +622,11 @@ void HttpServerPropertiesImpl::SetMaxServerConfigsStoredInProperties(
   }
 
   quic_server_info_map_.Swap(temp_map);
+}
+
+bool HttpServerPropertiesImpl::IsInitialized() const {
+  // No initialization is needed.
+  return true;
 }
 
 AlternativeServiceMap::const_iterator

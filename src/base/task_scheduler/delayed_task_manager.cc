@@ -9,7 +9,7 @@
 #include "base/bind.h"
 #include "base/logging.h"
 #include "base/task_runner.h"
-#include "base/task_scheduler/scheduler_worker_pool.h"
+#include "base/task_scheduler/task.h"
 
 namespace base {
 namespace internal {
@@ -22,13 +22,10 @@ DelayedTaskManager::DelayedTaskManager(
 
 DelayedTaskManager::~DelayedTaskManager() = default;
 
-void DelayedTaskManager::AddDelayedTask(std::unique_ptr<Task> task,
-                                        scoped_refptr<Sequence> sequence,
-                                        SchedulerWorker* worker,
-                                        SchedulerWorkerPool* worker_pool) {
+void DelayedTaskManager::AddDelayedTask(
+    std::unique_ptr<Task> task,
+    const PostTaskNowCallback& post_task_now_callback) {
   DCHECK(task);
-  DCHECK(sequence);
-  DCHECK(worker_pool);
 
   const TimeDelta delay = task->delay;
   DCHECK(!delay.is_zero());
@@ -36,10 +33,7 @@ void DelayedTaskManager::AddDelayedTask(std::unique_ptr<Task> task,
   // TODO(fdoray): Use |task->delayed_run_time| on the service thread
   // MessageLoop rather than recomputing it from |delay|.
   service_thread_task_runner_->PostDelayedTask(
-      FROM_HERE, Bind(&SchedulerWorkerPool::PostTaskWithSequenceNow,
-                      Unretained(worker_pool), Passed(std::move(task)),
-                      std::move(sequence), Unretained(worker)),
-      delay);
+      FROM_HERE, Bind(post_task_now_callback, Passed(std::move(task))), delay);
 }
 
 }  // namespace internal

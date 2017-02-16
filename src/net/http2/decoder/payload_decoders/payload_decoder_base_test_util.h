@@ -21,6 +21,7 @@
 #include "net/http2/http2_constants.h"
 #include "net/http2/http2_constants_test_util.h"
 #include "net/http2/http2_structures.h"
+#include "net/http2/platform/api/http2_reconstruct_object.h"
 #include "net/http2/tools/http2_frame_builder.h"
 #include "net/http2/tools/random_decoder_test.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -120,7 +121,6 @@ template <class Decoder,
           class Listener,
           bool SupportedFrameType = true>
 class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
-
  protected:
   // An ApproveSize function returns true to approve decoding the specified
   // size of payload, else false to skip that size. Typically used for negative
@@ -161,8 +161,7 @@ class AbstractPayloadDecoderTest : public PayloadDecoderBaseTest {
   }
 
   void PreparePayloadDecoder() override {
-    payload_decoder_.~Decoder();
-    new (&payload_decoder_) Decoder;
+    Http2DefaultReconstructObject(&payload_decoder_, RandomPtr());
   }
 
   Http2FrameDecoderListener* PrepareListener() override {

@@ -60,10 +60,6 @@ class NET_EXPORT URLRequestSimpleJob : public URLRangeRequestJob {
                                 scoped_refptr<base::RefCountedMemory>* data,
                                 const CompletionCallback& callback) const;
 
-  // Returns the task runner used by ReadRawData. This method is virtual so
-  // that it can be overridden in tests.
-  virtual base::TaskRunner* GetTaskRunner() const;
-
   void StartAsync();
 
  private:
@@ -74,7 +70,6 @@ class NET_EXPORT URLRequestSimpleJob : public URLRangeRequestJob {
   std::string charset_;
   scoped_refptr<base::RefCountedMemory> data_;
   int64_t next_data_offset_;
-  scoped_refptr<base::TaskRunner> task_runner_;
   base::WeakPtrFactory<URLRequestSimpleJob> weak_factory_;
 };
 

@@ -82,7 +82,7 @@ class QuicChromiumClientSessionTest
     : public ::testing::TestWithParam<QuicVersion> {
  protected:
   QuicChromiumClientSessionTest()
-      : crypto_config_(CryptoTestUtils::ProofVerifierForTesting()),
+      : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         default_read_(new MockRead(SYNCHRONOUS, ERR_IO_PENDING, 0)),
         socket_data_(
             new SequencedSocketData(default_read_.get(), 1, nullptr, 0)),
@@ -121,7 +121,7 @@ class QuicChromiumClientSessionTest
         &transport_security_state_,
         base::WrapUnique(static_cast<QuicServerInfo*>(nullptr)),
         QuicServerId(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED),
-        kQuicYieldAfterPacketsRead,
+        /*require_confirmation=*/false, kQuicYieldAfterPacketsRead,
         QuicTime::Delta::FromMilliseconds(kQuicYieldAfterDurationMilliseconds),
         /*cert_verify_flags=*/0, DefaultQuicConfig(), &crypto_config_,
         "CONNECTION_UNKNOWN", base::TimeTicks::Now(), base::TimeTicks::Now(),
@@ -143,7 +143,7 @@ class QuicChromiumClientSessionTest
   }
 
   void CompleteCryptoHandshake() {
-    ASSERT_THAT(session_->CryptoConnect(false, callback_.callback()), IsOk());
+    ASSERT_THAT(session_->CryptoConnect(callback_.callback()), IsOk());
   }
 
   QuicChromiumPacketWriter* CreateQuicChromiumPacketWriter(

@@ -197,7 +197,7 @@ void URLFetcherCore::SetChunkedUpload(const std::string& content_type) {
   DCHECK(!content_type.empty());
 
   upload_content_type_ = content_type;
-  upload_content_.clear();
+  base::STLClearObject(&upload_content_);
   is_chunked_upload_ = true;
 }
 

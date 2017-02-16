@@ -37,21 +37,34 @@ template("fuzzer_test") {
       test_deps += invoker.deps
     }
 
-    if (defined(invoker.seed_corpus)) {
+    if (defined(invoker.seed_corpus) || defined(invoker.seed_corpuses)) {
+      assert(!(defined(invoker.seed_corpus) && defined(invoker.seed_corpuses)),
+             "Do not use both seed_corpus and seed_corpuses for $target_name.")
+
       out = "$root_build_dir/$target_name" + "_seed_corpus.zip"
 
       action(target_name + "_seed_corpus") {
         script = "//testing/libfuzzer/archive_corpus.py"
+
         args = [
-          "--corpus",
-          rebase_path(invoker.seed_corpus),
           "--output",
           rebase_path(out),
         ]
 
+        if (defined(invoker.seed_corpus)) {
+          args += [ rebase_path(invoker.seed_corpus) ]
+        }
+
+        if (defined(invoker.seed_corpuses)) {
+          foreach(seed_corpus_path, invoker.seed_corpuses) {
+            args += [ rebase_path(seed_corpus_path) ]
+          }
+        }
+
         outputs = [
           out,
         ]
+
         deps = [
           "//testing/libfuzzer:seed_corpus",
         ]
@@ -141,6 +154,9 @@ template("fuzzer_test") {
     }
     if (defined(invoker.seed_corpus)) {
       assert(invoker.seed_corpus == [] || invoker.seed_corpus != [])
+    }
+    if (defined(invoker.seed_corpuses)) {
+      assert(invoker.seed_corpuses == [] || invoker.seed_corpuses != [])
     }
     assert(!defined(invoker.check_includes) || invoker.check_includes != [])
     assert(!defined(invoker.include_dirs) || invoker.include_dirs != [])

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/http2/tools/http2_bug_tracker.h"
 
 using base::StringPiece;
@@ -222,6 +223,10 @@ void HpackDecoderStringBuffer::OutputDebugStringTo(std::ostream& out) const {
     }
   }
   out << "}";
+}
+
+size_t HpackDecoderStringBuffer::EstimateMemoryUsage() const {
+  return base::trace_event::EstimateMemoryUsage(buffer_);
 }
 
 std::ostream& operator<<(std::ostream& out, const HpackDecoderStringBuffer& v) {

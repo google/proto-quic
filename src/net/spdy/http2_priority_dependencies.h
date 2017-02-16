@@ -47,6 +47,9 @@ class NET_EXPORT_PRIVATE Http2PriorityDependencies {
   std::vector<DependencyUpdate> OnStreamUpdate(SpdyStreamId id,
                                                SpdyPriority new_priority);
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // The requirements for the internal data structure for this class are:
   //     a) Constant time insertion of entries at the end of the list,

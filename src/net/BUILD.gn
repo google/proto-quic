@@ -358,6 +358,7 @@ component("net") {
 
   public_deps = [
     ":net_quic_proto",
+    ":traffic_annotation",
     "//crypto",
     "//crypto:platform",
   ]
@@ -950,6 +951,8 @@ component("net") {
       "http2/http2_constants.h",
       "http2/http2_structures.cc",
       "http2/http2_structures.h",
+      "http2/platform/api/http2_reconstruct_object.h",
+      "http2/platform/impl/http2_reconstruct_object_impl.h",
       "http2/tools/http2_bug_tracker.h",
       "log/file_net_log_observer.cc",
       "log/file_net_log_observer.h",
@@ -1324,6 +1327,8 @@ component("net") {
       "quic/platform/api/quic_clock.h",
       "quic/platform/api/quic_containers.h",
       "quic/platform/api/quic_export.h",
+      "quic/platform/api/quic_hostname_utils.cc",
+      "quic/platform/api/quic_hostname_utils.h",
       "quic/platform/api/quic_ip_address.cc",
       "quic/platform/api/quic_ip_address.h",
       "quic/platform/api/quic_ip_address_family.h",
@@ -1339,6 +1344,8 @@ component("net") {
       "quic/platform/api/quic_stack_trace.h",
       "quic/platform/api/quic_str_cat.h",
       "quic/platform/api/quic_text_utils.h",
+      "quic/platform/api/quic_url.cc",
+      "quic/platform/api/quic_url.h",
       "quic/platform/api/quic_url_utils.cc",
       "quic/platform/api/quic_url_utils.h",
       "quic/platform/impl/quic_aligned_impl.h",
@@ -1347,6 +1354,8 @@ component("net") {
       "quic/platform/impl/quic_chromium_clock.h",
       "quic/platform/impl/quic_containers_impl.h",
       "quic/platform/impl/quic_export_impl.h",
+      "quic/platform/impl/quic_hostname_utils_impl.cc",
+      "quic/platform/impl/quic_hostname_utils_impl.h",
       "quic/platform/impl/quic_ip_address_impl.cc",
       "quic/platform/impl/quic_ip_address_impl.h",
       "quic/platform/impl/quic_logging_impl.h",
@@ -1361,6 +1370,8 @@ component("net") {
       "quic/platform/impl/quic_stack_trace_impl.h",
       "quic/platform/impl/quic_str_cat_impl.h",
       "quic/platform/impl/quic_text_utils_impl.h",
+      "quic/platform/impl/quic_url_impl.cc",
+      "quic/platform/impl/quic_url_impl.h",
       "quic/platform/impl/quic_url_utils_impl.cc",
       "quic/platform/impl/quic_url_utils_impl.h",
       "quic/quartc/quartc_alarm_factory.cc",
@@ -1489,6 +1500,8 @@ component("net") {
       "spdy/multiplexed_http_stream.h",
       "spdy/multiplexed_session.cc",
       "spdy/multiplexed_session.h",
+      "spdy/platform/api/spdy_estimate_memory_usage.h",
+      "spdy/platform/impl/spdy_estimate_memory_usage_impl.h",
       "spdy/priority_write_scheduler.h",
       "spdy/server_push_delegate.h",
       "spdy/spdy_alt_svc_wire_format.cc",
@@ -1537,6 +1550,7 @@ component("net") {
       "spdy/spdy_write_queue.cc",
       "spdy/spdy_write_queue.h",
       "spdy/write_scheduler.h",
+      "spdy/zero_copy_output_buffer.h",
       "ssl/client_cert_store.h",
       "ssl/client_cert_store_mac.cc",
       "ssl/client_cert_store_mac.h",
@@ -2355,6 +2369,8 @@ static_library("test_support") {
     "proxy/proxy_config_service_common_unittest.h",
     "socket/socket_test_util.cc",
     "socket/socket_test_util.h",
+    "spdy/spdy_test_util_common.cc",
+    "spdy/spdy_test_util_common.h",
     "test/cert_test_util.cc",
     "test/cert_test_util.h",
     "test/cert_test_util_nss.cc",
@@ -2395,6 +2411,7 @@ static_library("test_support") {
     "test/url_request/url_request_mock_data_job.h",
     "test/url_request/url_request_slow_download_job.cc",
     "test/url_request/url_request_slow_download_job.h",
+    "traffic_annotation/network_traffic_annotation_test_helper.h",
     "url_request/test_url_fetcher_factory.cc",
     "url_request/test_url_fetcher_factory.h",
     "url_request/url_request_test_util.cc",
@@ -2420,6 +2437,7 @@ static_library("test_support") {
   ]
 
   public_deps = [
+    ":traffic_annotation",
     "//base",
     "//base/test:test_support",
     "//crypto",
@@ -2973,6 +2991,13 @@ source_set("simple_quic_tools") {
     "//base/third_party/dynamic_annotations",
     "//url",
   ]
+}
+
+source_set("traffic_annotation") {
+  sources = [
+    "traffic_annotation/network_traffic_annotation.h",
+  ]
+  deps = []
 }
 
 if (!is_ios) {
@@ -4349,6 +4374,7 @@ test("net_unittests") {
     "nqe/network_quality_estimator_unittest.cc",
     "nqe/network_quality_store_unittest.cc",
     "nqe/observation_buffer_unittest.cc",
+    "nqe/socket_watcher_unittest.cc",
     "nqe/throughput_analyzer_unittest.cc",
     "proxy/dhcp_proxy_script_adapter_fetcher_win_unittest.cc",
     "proxy/dhcp_proxy_script_fetcher_factory_unittest.cc",
@@ -4481,12 +4507,15 @@ test("net_unittests") {
     "quic/core/quic_versions_test.cc",
     "quic/core/quic_write_blocked_list_test.cc",
     "quic/core/spdy_utils_test.cc",
+    "quic/platform/api/quic_estimate_memory_usage.h",
+    "quic/platform/api/quic_hostname_utils_test.cc",
     "quic/platform/api/quic_lru_cache_test.cc",
     "quic/platform/api/quic_reference_counted_test.cc",
     "quic/platform/api/quic_str_cat_test.cc",
     "quic/platform/api/quic_text_utils_test.cc",
-    "quic/platform/api/quic_url_utils_test.cc",
+    "quic/platform/api/quic_url_test.cc",
     "quic/platform/impl/quic_chromium_clock_test.cc",
+    "quic/platform/impl/quic_estimate_memory_usage_impl.h",
     "quic/quartc/quartc_alarm_factory_test.cc",
     "quic/quartc/quartc_session_test.cc",
     "quic/quartc/quartc_stream_test.cc",
@@ -4606,6 +4635,8 @@ test("net_unittests") {
     "socket/unix_domain_server_socket_posix_unittest.cc",
     "socket/websocket_endpoint_lock_manager_unittest.cc",
     "socket/websocket_transport_client_socket_pool_unittest.cc",
+    "spdy/array_output_buffer.cc",
+    "spdy/array_output_buffer.h",
     "spdy/bidirectional_stream_spdy_impl_unittest.cc",
     "spdy/buffered_spdy_framer_unittest.cc",
     "spdy/fuzzing/hpack_fuzz_util_test.cc",
@@ -4656,8 +4687,6 @@ test("net_unittests") {
     "spdy/spdy_stream_test_util.cc",
     "spdy/spdy_stream_test_util.h",
     "spdy/spdy_stream_unittest.cc",
-    "spdy/spdy_test_util_common.cc",
-    "spdy/spdy_test_util_common.h",
     "spdy/spdy_test_utils.cc",
     "spdy/spdy_test_utils.h",
     "spdy/spdy_write_queue_unittest.cc",
@@ -5664,6 +5693,20 @@ fuzzer_test("net_http_server_fuzzer") {
   ]
   dict = "data/fuzzer_dictionaries/net_http_server_fuzzer.dict"
   seed_corpus = "data/fuzzer_data/http_server_requests/"
+}
+
+fuzzer_test("net_spdy_session_fuzzer") {
+  sources = [
+    "spdy/spdy_session_fuzzer.cc",
+  ]
+  deps = [
+    ":net_fuzzer_test_support",
+    ":test_support",
+    "//base",
+    "//net",
+  ]
+  dict = "data/fuzzer_dictionaries/net_spdy_session_fuzzer.dict"
+  seed_corpus = "data/fuzzer_data/net_spdy_session_fuzzer/"
 }
 
 if (host_toolchain == current_toolchain && !is_proto_quic) {

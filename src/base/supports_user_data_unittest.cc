@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "base/memory/ptr_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace base {
@@ -30,8 +31,8 @@ struct UsesItself : public SupportsUserData::Data {
 TEST(SupportsUserDataTest, ClearWorksRecursively) {
   TestSupportsUserData supports_user_data;
   char key = 0;
-  supports_user_data.SetUserData(&key,
-                                 new UsesItself(&supports_user_data, &key));
+  supports_user_data.SetUserData(
+      &key, base::MakeUnique<UsesItself>(&supports_user_data, &key));
   // Destruction of supports_user_data runs the actual test.
 }
 

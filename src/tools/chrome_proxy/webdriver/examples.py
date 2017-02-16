@@ -10,7 +10,7 @@ from common import TestDriver
 from common import IntegrationTest
 
 
-class SimpleSmoke(IntegrationTest):
+class Examples(IntegrationTest):
 
   # Simple example integration test.
   def testCheckPageWithProxy(self):

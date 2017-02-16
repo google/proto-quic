@@ -1,225 +1,660 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.",
     "archives": {
-        "2012Q3_000.wpr" : [
-            "http://www.facebook.com/barackobama",
-            "https://www.google.com/search?q=barack%20obama",
-            "http://youtube.com",
-            "http://yahoo.com",
-            "http://www.baidu.com/s?wd=barack+obama",
-            "http://en.wikipedia.org/wiki/Wikipedia",
-            "http://qq.com",
-            "http://www.amazon.com/Kindle-Fire-Amazon-Tablet/dp/B0051VVOB2",
-            "http://googleblog.blogspot.com/",
-            "http://taobao.com",
-            "http://www.linkedin.com/in/linustorvalds",
-            "http://yahoo.co.jp",
-            "http://sina.com.cn",
-            "http://msn.com",
-            "http://yandex.ru/yandsearch?text=barack+obama",
-            "http://translation.babylon.com/",
-            "http://www.bing.com/search?q=barack+obama",
-            "http://wordpress.org/news/",
-            "http://www.ebay.com/sch/i.html?_nkw=antiques",
-            "http://163.com",
-            "http://www.soso.com/q?w=barack+obama",
-            "http://www.microsoft.com/en-us/default.aspx",
-            "http://go.mail.ru/search?mailru=1&mg=1&q=barack+obama",
-            "http://vk.com/id118712387",
-            "http://staff.tumblr.com/",
-            "http://sohu.com",
-            "http://sfbay.craigslist.org/mis/",
-            "http://www.ask.com/web?q=barack+obama&search=&qsrc=0&o=0&l=dir",
-            "http://www.apple.com/ipodtouch/",
-            "http://blog.pinterest.com/",
-            "http://pinterest.com/backdrophome/",
-            "http://paypal.com",
-            "http://bbc.co.uk",
-            "http://www.avg.com/us-en/avg-premium-security",
-            "http://googlesystem.blogspot.com/",
-            "http://tudou.com",
-            "http://blog.fc2.com/en/",
-            "http://imdb.com",
-            "http://youku.com",
-            "http://www.flickr.com/photos/thomashawk/",
-            "http://www.flickr.com/photos/thomashawk/sets/72157600284219965/detail/",
-            "http://search.yahoo.com/search?ei=UTF-8&trackingType=go_search_home&p=barack+obama&fr=hsusgo1&sa.x=0&sa.y=0",
-            "http://www.conduit.com/",
-            "http://ifeng.com",
-            "http://tmall.com",
-            "http://hao123.com",
-            "http://aol.com",
-            "http://zedo.com",
-            "http://search.mywebsearch.com/mywebsearch/GGmain.jhtml?searchfor=barack+obama",
-            "http://cnn.com",
-            "http://portal.ebay.de/deutschland-schraubt-angebote",
-            "http://www.adobe.com/products/photoshopfamily.html?promoid=JOLIW",
-            "http://global.rakuten.com/us/",
-            "http://laundry.about.com/od/kidsandlaundry/f/How-Do-I-Wash-A-Backpack.htm",
-            "http://thepiratebay.se/search/barack%20obama/0/99/0",
-            "http://360buy.com",
-            "http://huffingtonpost.com",
-            "http://alibaba.com",
-            "http://chinaz.com",
-            "http://www.sogou.com/web?query=barack+obama",
-            "http://www.amazon.de/gp/product/B0051QVF7A/ref=amb_link_170625867_1/275-4711375-4099801?ie=UTF8&nav_sdd=aps&pf_rd_m=A3JWKAKR8XB7XF&pf_rd_s=center-1&pf_rd_r=1C0XDBPB12WHDM63V11R&pf_rd_t=101&pf_rd_p=320475427&pf_rd_i=301128",
-            "http://google.pl",
-            "http://mediafire.com",
-            "http://espn.go.com",
-            "http://uol.com.br",
-            "http://www.godaddy.com/products/secure-hosting.aspx?ci=72738",
-            "http://imgur.com/gallery/b90ZE",
-            "http://home.alipay.com/bank/paymentKJ.htm",
-            "http://amazon.co.jp",
-            "http://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-an-unsorted-array",
-            "http://www.google.com/doubleclick/",
-            "http://search.4shared.com/q/CCAD/1/barack%20obama",
-            "http://dailymotion.com",
-            "http://globo.com",
-            "http://instagram.com/developer/",
-            "http://livedoor.com",
-            "http://wordpress.org/showcase/",
-            "http://bp.blogspot.com",
-            "http://wigetmedia.com/advertisers",
-            "http://www.search-results.com/web?&q=barack%20obama",
-            "http://cnet.com",
-            "http://nytimes.com",
-            "http://torrentz.eu/search?f=barack+obama",
-            "http://livejournal.com",
-            "http://douban.com",
-            "http://www.weather.com/weather/right-now/Mountain+View+CA+94043",
-            "http://dailymail.co.uk",
-            "http://www.tianya.cn/bbs/index.shtml",
-            "http://ehow.com",
-            "http://theproject.badoo.com/final.phtml",
-            "http://www.bankofamerica.com/deposits/checksave/index.cfm?template=check_eBanking",
-            "http://vimeo.com",
-            "http://360.cn",
-            "http://indiatimes.com",
-            "http://deviantart.com",
-            "http://reddit.com",
-            "http://aweber.com",
-            "http://warriorforum.com",
-            "http://spiegel.de",
-            "http://pconline.com.cn",
-            "http://mozilla.org",
-            "http://booking.com",
-            "http://goo.ne.jp",
-            "https://www.chase.com/online/Home-Lending/mortgages.htm",
-            "http://addthis.com",
-            "http://56.com",
-            "http://news.blogfa.com/",
-            "http://www.stumbleupon.com/jobs",
-            "https://www.dropbox.com/about",
-            "http://www.clicksor.com/publishers/adformat",
-            "http://answers.com",
-            "http://en.softonic.com/",
-            "http://walmart.com",
-            "http://pengyou.com",
-            "http://outbrain.com",
-            "http://comcast.net",
-            "http://foxnews.com",
-            "http://photobucket.com/findstuff/photography%20styles/",
-            "http://bleach.wikia.com/?redirect=no",
-            "http://sourceforge.net/projects/xoops/?source=frontpage&position=1",
-            "http://onet.pl",
-            "http://guardian.co.uk",
-            "https://www.wellsfargo.com/jump/enterprise/doublediscount?msc=5589&mplx=10918-70119-3408-64",
-            "http://wikimediafoundation.org/wiki/Home",
-            "http://xunlei.com",
-            "http://as.58.com/shuma/",
-            "http://skype.com",
-            "http://etsy.com",
-            "http://bild.de",
-            "http://search.naver.com/search.naver?where=nexearch&query=barack+obama&sm=top_hty&fbm=0&ie=utf8",
-            "http://statcounter.com/features/?PHPSESSID=bbjcvjr681bcul4vqvgq2qgmo7",
-            "http://iqiyi.com",
-            "http://fbcdn.net",
-            "http://www.myspace.com/browse/people",
-            "http://allegro.pl/antyki-i-sztuka",
-            "http://yesky.com",
-            "http://justbeenpaid.com",
-            "http://adultfriendfinder.com",
-            "http://fiverr.com",
-            "http://www.leboncoin.fr/annonces/offres/centre/",
-            "http://dictionary.reference.com/",
-            "http://realtime.rediff.com/instasearch#!barack%20obama",
-            "http://zol.com.cn",
-            "http://optmd.com",
-            "http://www.filestube.com/search.html?q=barack+obama&select=All",
-            "http://xinhuanet.com",
-            "http://www.salesforce.com/sales-cloud/overview/",
-            "http://www.squidoo.com/make-cards-and-gift-bags-with-antique-photos",
-            "http://www.domaintools.com/research/",
-            "http://download.cnet.com/windows/?tag=hdr;brandnav",
-            "https://rapidshare.com/#!shop",
-            "http://people.com.cn",
-            "http://ucoz.ru",
-            "http://free.fr",
-            "http://nicovideo.jp",
-            "http://www.yelp.com/search?find_desc=food&find_loc=San+Jose%2C+CA&ns=1",
-            "http://slideshare.net",
-            "http://archive.org/web/web.php",
-            "http://www.cntv.cn/index.shtml",
-            "http://english.cntv.cn/01/index.shtml",
-            "http://abonnez-vous.orange.fr/residentiel/accueil/accueil.aspx",
-            "http://v.it168.com/",
-            "http://nbcolympics.com",
-            "http://hootsuite.com",
-            "http://www.scribd.com/doc/52210329/The-Masters-Augusta-National-s-Amen-Corner-up-close",
-            "http://themeforest.net",
-            "http://4399.com",
-            "http://www.soku.com/v?keyword=barack%20obama",
-            "http://google.se",
-            "http://funmoods.com",
-            "http://csdn.net",
-            "http://telegraph.co.uk",
-            "http://taringa.net",
-            "http://www.tripadvisor.com/Tourism-g32701-Mendocino_California-Vacations.html",
-            "http://pof.com",
-            "http://wp.pl",
-            "http://soundcloud.com/flosstradamus/tracks",
-            "http://w3schools.com/html/default.asp",
-            "http://ameblo.jp/staff/",
-            "http://wsj.com",
-            "http://web.de",
-            "http://sweetim.com",
-            "http://rambler.ru",
-            "http://gmx.net",
-            "http://www.indeed.com/jobs?q=software&l=Mountain+View%2C+CA",
-            "http://ilivid.com",
-            "http://www.xing.com/search/people?search%5Bq%5D=lufthansa",
-            "http://reuters.com",
-            "http://hostgator.com",
-            "http://www.ikea.com/us/en/catalog/categories/departments/living_room/",
-            "http://www.kaixin001.com/award2012/wenming/index.php",
-            "http://ku6.com",
-            "http://libero.it",
-            "http://samsung.com",
-            "http://hudong.com",
-            "http://espncricinfo.com",
-            "http://china.com",
-            "http://www.ups.com/content/us/en/bussol/browse/smallbiz/new-to-ups.html?WT.svl=SolExp",
-            "http://letv.com",
-            "http://ero-advertising.com",
-            "http://mashable.com",
-            "http://iminent.com",
-            "http://rutracker.org",
-            "http://www.shopping.hp.com/en_US/home-office/-/products/Laptops/Laptops",
-            "http://www.clickbank.com/buy_products.htm?dores=true&mainCategoryId=1340&sortField=POPULARITY&b1=1340",
-            "http://b.hatena.ne.jp/",
-            "http://www.youdao.com/search?q=barack+obama&ue=utf8&keyfrom=web.index",
-            "http://forbes.com",
-            "http://nbcnews.com",
-            "http://bitauto.com",
-            "http://php.net",
-            "http://www.target.com/c/women/-/N-5xtd3#?lnk=nav_t_spc_1_0",
-            "http://dianxin.cn",
-            "http://www.aizhan.com/siteall/www.youboy.com/",
-            "http://veiculos-home.mercadolivre.com.br/",
-            "http://kakaku.com",
-            "http://flipkart.com",
-            "http://paipai.com"
-        ]
-    }
+        "http://163.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://360.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://360buy.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://4399.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://56.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://abonnez-vous.orange.fr/residentiel/accueil/accueil.aspx": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://addthis.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://adultfriendfinder.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://alibaba.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://allegro.pl/antyki-i-sztuka": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://amazon.co.jp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ameblo.jp/staff/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://answers.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://aol.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://archive.org/web/web.php": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://as.58.com/shuma/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://aweber.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://b.hatena.ne.jp/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://bbc.co.uk": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://bild.de": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://bitauto.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://bleach.wikia.com/?redirect=no": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://blog.fc2.com/en/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://blog.pinterest.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://booking.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://bp.blogspot.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://china.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://chinaz.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://cnet.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://cnn.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://comcast.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://csdn.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://dailymail.co.uk": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://dailymotion.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://deviantart.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://dianxin.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://dictionary.reference.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://douban.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://download.cnet.com/windows/?tag=hdr;brandnav": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ehow.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://en.softonic.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://en.wikipedia.org/wiki/Wikipedia": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://english.cntv.cn/01/index.shtml": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ero-advertising.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://espn.go.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://espncricinfo.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://etsy.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://fbcdn.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://fiverr.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://flipkart.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://forbes.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://foxnews.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://free.fr": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://funmoods.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://global.rakuten.com/us/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://globo.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://gmx.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://go.mail.ru/search?mailru=1&mg=1&q=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://goo.ne.jp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://google.pl": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://google.se": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://googleblog.blogspot.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://googlesystem.blogspot.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://guardian.co.uk": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://hao123.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://home.alipay.com/bank/paymentKJ.htm": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://hootsuite.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://hostgator.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://hudong.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://huffingtonpost.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ifeng.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ilivid.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://imdb.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://imgur.com/gallery/b90ZE": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://iminent.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://indiatimes.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://instagram.com/developer/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://iqiyi.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://justbeenpaid.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://kakaku.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ku6.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://laundry.about.com/od/kidsandlaundry/f/How-Do-I-Wash-A-Backpack.htm": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://letv.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://libero.it": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://livedoor.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://livejournal.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://mashable.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://mediafire.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://mozilla.org": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://msn.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://nbcnews.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://nbcolympics.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://news.blogfa.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://nicovideo.jp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://nytimes.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://onet.pl": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://optmd.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://outbrain.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://paipai.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://paypal.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://pconline.com.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://pengyou.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://people.com.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://photobucket.com/findstuff/photography%20styles/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://php.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://pinterest.com/backdrophome/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://pof.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://portal.ebay.de/deutschland-schraubt-angebote": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://qq.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://rambler.ru": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://realtime.rediff.com/instasearch#!barack%20obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://reddit.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://reuters.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://rutracker.org": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://samsung.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://search.4shared.com/q/CCAD/1/barack%20obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://search.mywebsearch.com/mywebsearch/GGmain.jhtml?searchfor=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://search.naver.com/search.naver?where=nexearch&query=barack+obama&sm=top_hty&fbm=0&ie=utf8": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://search.yahoo.com/search?ei=UTF-8&trackingType=go_search_home&p=barack+obama&fr=hsusgo1&sa.x=0&sa.y=0": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://sfbay.craigslist.org/mis/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://sina.com.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://skype.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://slideshare.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://sohu.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://soundcloud.com/flosstradamus/tracks": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://sourceforge.net/projects/xoops/?source=frontpage&position=1": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://spiegel.de": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-an-unsorted-array": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://staff.tumblr.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://statcounter.com/features/?PHPSESSID=bbjcvjr681bcul4vqvgq2qgmo7": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://sweetim.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://taobao.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://taringa.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://telegraph.co.uk": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://themeforest.net": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://thepiratebay.se/search/barack%20obama/0/99/0": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://theproject.badoo.com/final.phtml": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://tmall.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://torrentz.eu/search?f=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://translation.babylon.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://tudou.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://ucoz.ru": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://uol.com.br": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://v.it168.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://veiculos-home.mercadolivre.com.br/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://vimeo.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://vk.com/id118712387": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://w3schools.com/html/default.asp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://walmart.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://warriorforum.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://web.de": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wigetmedia.com/advertisers": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wikimediafoundation.org/wiki/Home": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wordpress.org/news/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wordpress.org/showcase/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wp.pl": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://wsj.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.adobe.com/products/photoshopfamily.html?promoid=JOLIW": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.aizhan.com/siteall/www.youboy.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.amazon.com/Kindle-Fire-Amazon-Tablet/dp/B0051VVOB2": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.amazon.de/gp/product/B0051QVF7A/ref=amb_link_170625867_1/275-4711375-4099801?ie=UTF8&nav_sdd=aps&pf_rd_m=A3JWKAKR8XB7XF&pf_rd_s=center-1&pf_rd_r=1C0XDBPB12WHDM63V11R&pf_rd_t=101&pf_rd_p=320475427&pf_rd_i=301128": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.apple.com/ipodtouch/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.ask.com/web?q=barack+obama&search=&qsrc=0&o=0&l=dir": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.avg.com/us-en/avg-premium-security": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.bankofamerica.com/deposits/checksave/index.cfm?template=check_eBanking": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.bing.com/search?q=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.clickbank.com/buy_products.htm?dores=true&mainCategoryId=1340&sortField=POPULARITY&b1=1340": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.clicksor.com/publishers/adformat": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.cntv.cn/index.shtml": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.conduit.com/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.domaintools.com/research/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.ebay.com/sch/i.html?_nkw=antiques": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.facebook.com/barackobama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.filestube.com/search.html?q=barack+obama&select=All": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.flickr.com/photos/thomashawk/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.flickr.com/photos/thomashawk/sets/72157600284219965/detail/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.godaddy.com/products/secure-hosting.aspx?ci=72738": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.google.com/doubleclick/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.ikea.com/us/en/catalog/categories/departments/living_room/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.indeed.com/jobs?q=software&l=Mountain+View%2C+CA": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.kaixin001.com/award2012/wenming/index.php": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.leboncoin.fr/annonces/offres/centre/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.linkedin.com/in/linustorvalds": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.microsoft.com/en-us/default.aspx": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.myspace.com/browse/people": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.salesforce.com/sales-cloud/overview/": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.scribd.com/doc/52210329/The-Masters-Augusta-National-s-Amen-Corner-up-close": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.search-results.com/web?&q=barack%20obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.shopping.hp.com/en_US/home-office/-/products/Laptops/Laptops": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.sogou.com/web?query=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.soku.com/v?keyword=barack%20obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.soso.com/q?w=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.squidoo.com/make-cards-and-gift-bags-with-antique-photos": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.stumbleupon.com/jobs": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.target.com/c/women/-/N-5xtd3#?lnk=nav_t_spc_1_0": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.tianya.cn/bbs/index.shtml": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.tripadvisor.com/Tourism-g32701-Mendocino_California-Vacations.html": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.ups.com/content/us/en/bussol/browse/smallbiz/new-to-ups.html?WT.svl=SolExp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.weather.com/weather/right-now/Mountain+View+CA+94043": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.xing.com/search/people?search%5Bq%5D=lufthansa": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.yelp.com/search?find_desc=food&find_loc=San+Jose%2C+CA&ns=1": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://www.youdao.com/search?q=barack+obama&ue=utf8&keyfrom=web.index": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://xinhuanet.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://xunlei.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://yahoo.co.jp": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://yahoo.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://yandex.ru/yandsearch?text=barack+obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://yesky.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://youku.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://youtube.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://zedo.com": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "http://zol.com.cn": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "https://rapidshare.com/#!shop": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "https://www.chase.com/online/Home-Lending/mortgages.htm": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "https://www.dropbox.com/about": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "https://www.google.com/search?q=barack%20obama": {
+            "DEFAULT": "2012Q3_000.wpr"
+        },
+        "https://www.wellsfargo.com/jump/enterprise/doublediscount?msc=5589&mplx=10918-70119-3408-64": {
+            "DEFAULT": "2012Q3_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

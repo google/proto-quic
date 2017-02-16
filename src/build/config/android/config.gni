@@ -56,14 +56,22 @@ if (is_android) {
     default_android_keystore_password = "chromium"
   }
 
+  # TODO(paulmiller): Remove; superseded by google_play_services_package.
   if (!defined(google_play_services_library)) {
     google_play_services_library =
         "//third_party/android_tools:google_play_services_default_java"
   }
 
+  # TODO(paulmiller): Remove; superseded by google_play_services_package.
   if (!defined(google_play_services_resources)) {
     google_play_services_resources =
         "//third_party/android_tools:google_play_services_default_resources"
+  }
+
+  # google_play_services_package contains the path where individual client
+  # targets (e.g. google_play_services_base_java) are located.
+  if (!defined(google_play_services_package)) {
+    google_play_services_package = "//third_party/android_tools"
   }
 
   webview_public_framework_jar =

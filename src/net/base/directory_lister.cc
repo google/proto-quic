@@ -14,6 +14,7 @@
 #include "base/location.h"
 #include "base/logging.h"
 #include "base/task_runner.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
@@ -79,8 +80,11 @@ DirectoryLister::~DirectoryLister() {
   Cancel();
 }
 
-bool DirectoryLister::Start(base::TaskRunner* dir_task_runner) {
-  return dir_task_runner->PostTask(FROM_HERE, base::Bind(&Core::Start, core_));
+void DirectoryLister::Start() {
+  base::PostTaskWithTraits(
+      FROM_HERE, base::TaskTraits().MayBlock().WithShutdownBehavior(
+                     base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      base::Bind(&Core::Start, core_));
 }
 
 void DirectoryLister::Cancel() {

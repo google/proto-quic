@@ -1,133 +1,186 @@
 {
     "archives": {
-        "system_health_mobile_000.wpr": [
-            "load:search:amazon",
-            "load:search:baidu",
-            "load:search:yandex",
-            "load:search:taobao",
-            "load:search:ebay",
-            "load:search:yahoo"
-        ],
-        "system_health_mobile_001.wpr": [
-            "load:social:tumblr",
-            "load:social:pinterest",
-            "load:social:instagram"
-        ],
-        "system_health_mobile_002.wpr": [
-            "load:news:sohu",
-            "load:news:bbc",
-            "load:news:wikipedia"
-        ],
-        "system_health_mobile_003.wpr": [
-            "load:media:9gag",
-            "load:media:google_images",
-            "load:media:soundcloud",
-            "load:media:youtube",
-            "load:media:dailymotion",
-            "load:media:flickr"
-        ],
-        "system_health_mobile_004.wpr": [
-            "load:tools:maps",
-            "load:tools:stackoverflow",
-            "load:tools:dropbox",
-            "load:tools:weather",
-            "load:tools:drive",
-            "load:tools:docs"
-        ],
-        "system_health_mobile_005.wpr": [
-            "load:games:lazors",
-            "load:games:bubbles",
-            "load:games:spychase"
-        ],
-        "system_health_mobile_006.wpr": [
-            "load:news:cnn"
-        ],
-        "system_health_mobile_008.wpr": [
-            "load:news:hackernews"
-        ],
-        "system_health_mobile_009.wpr": [
-            "load:news:nytimes"
-        ],
-        "system_health_mobile_010.wpr": [
-            "load:news:qq"
-        ],
-        "system_health_mobile_011.wpr": [
-            "load:news:reddit"
-        ],
-        "system_health_mobile_013.wpr": [
-            "load:news:washingtonpost"
-        ],
-        "system_health_mobile_014.wpr": [
-            "browse:news:cnn"
-        ],
-        "system_health_mobile_016.wpr": [
-            "browse:news:hackernews"
-        ],
-        "system_health_mobile_017.wpr": [
-            "browse:news:nytimes"
-        ],
-        "system_health_mobile_018.wpr": [
-            "browse:news:qq"
-        ],
-        "system_health_mobile_021.wpr": [
-            "browse:news:washingtonpost"
-        ],
-        "system_health_mobile_022.wpr": [
-            "load:social:twitter"
-        ],
-        "system_health_mobile_023.wpr": [
-            "browse:social:twitter"
-        ],
-        "system_health_mobile_024.wpr": [
-            "load:news:flipboard"
-        ],
-        "system_health_mobile_025.wpr": [
-            "browse:news:flipboard"
-        ],
-        "system_health_mobile_027.wpr": [
-            "browse:news:reddit"
-        ],
-        "system_health_mobile_028.wpr": [
-            "load:social:facebook",
-            "browse:social:facebook"
-        ],
-        "system_health_mobile_029.wpr": [
-            "load:search:google",
-            "search:portal:google"
-        ],
-        "system_health_mobile_035.wpr": [
-            "browse:media:imgur",
-            "load:media:imgur"
-        ],
-        "system_health_mobile_037.wpr": [
-            "browse:media:youtube"
-        ],
-        "system_health_mobile_040.wpr": [
-            "load:media:facebook_photos",
-            "browse:media:facebook_photos"
-        ],
-        "system_health_mobile_042.wpr": [
-            "long_running:tools:gmail-foreground",
-            "long_running:tools:gmail-background"
-        ],
-        "system_health_mobile_043.wpr": [
-            "background:tools:gmail"
-        ],
-        "system_health_mobile_044.wpr": [
-            "background:search:google"
-        ],
-        "system_health_mobile_045.wpr": [
-            "background:social:facebook"
-        ],
-        "system_health_mobile_047.wpr": [
-            "background:media:imgur"
-        ],
-        "system_health_mobile_048.wpr": [
-            "load:tools:gmail"
-        ],
-        "system_health_mobile_052.wpr": [
-            "background:news:nytimes"
-        ]
+        "background:media:imgur": {
+            "DEFAULT": "system_health_mobile_047.wpr"
+        },
+        "background:news:nytimes": {
+            "DEFAULT": "system_health_mobile_052.wpr"
+        },
+        "background:search:google": {
+            "DEFAULT": "system_health_mobile_044.wpr"
+        },
+        "background:social:facebook": {
+            "DEFAULT": "system_health_mobile_045.wpr"
+        },
+        "background:tools:gmail": {
+            "DEFAULT": "system_health_mobile_043.wpr"
+        },
+        "browse:media:facebook_photos": {
+            "DEFAULT": "system_health_mobile_040.wpr"
+        },
+        "browse:media:imgur": {
+            "DEFAULT": "system_health_mobile_035.wpr"
+        },
+        "browse:media:youtube": {
+            "DEFAULT": "system_health_mobile_037.wpr"
+        },
+        "browse:news:cnn": {
+            "DEFAULT": "system_health_mobile_014.wpr"
+        },
+        "browse:news:flipboard": {
+            "DEFAULT": "system_health_mobile_025.wpr"
+        },
+        "browse:news:hackernews": {
+            "DEFAULT": "system_health_mobile_016.wpr"
+        },
+        "browse:news:nytimes": {
+            "DEFAULT": "system_health_mobile_017.wpr"
+        },
+        "browse:news:qq": {
+            "DEFAULT": "system_health_mobile_018.wpr"
+        },
+        "browse:news:reddit": {
+            "DEFAULT": "system_health_mobile_027.wpr"
+        },
+        "browse:news:washingtonpost": {
+            "DEFAULT": "system_health_mobile_021.wpr"
+        },
+        "browse:social:facebook": {
+            "DEFAULT": "system_health_mobile_028.wpr"
+        },
+        "browse:social:twitter": {
+            "DEFAULT": "system_health_mobile_023.wpr"
+        },
+        "load:games:bubbles": {
+            "DEFAULT": "system_health_mobile_005.wpr"
+        },
+        "load:games:lazors": {
+            "DEFAULT": "system_health_mobile_005.wpr"
+        },
+        "load:games:spychase": {
+            "DEFAULT": "system_health_mobile_005.wpr"
+        },
+        "load:media:9gag": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:media:dailymotion": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:media:facebook_photos": {
+            "DEFAULT": "system_health_mobile_040.wpr"
+        },
+        "load:media:flickr": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:media:google_images": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:media:imgur": {
+            "DEFAULT": "system_health_mobile_035.wpr"
+        },
+        "load:media:soundcloud": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:media:youtube": {
+            "DEFAULT": "system_health_mobile_003.wpr"
+        },
+        "load:news:bbc": {
+            "DEFAULT": "system_health_mobile_002.wpr"
+        },
+        "load:news:cnn": {
+            "DEFAULT": "system_health_mobile_006.wpr"
+        },
+        "load:news:flipboard": {
+            "DEFAULT": "system_health_mobile_024.wpr"
+        },
+        "load:news:hackernews": {
+            "DEFAULT": "system_health_mobile_008.wpr"
+        },
+        "load:news:nytimes": {
+            "DEFAULT": "system_health_mobile_009.wpr"
+        },
+        "load:news:qq": {
+            "DEFAULT": "system_health_mobile_010.wpr"
+        },
+        "load:news:reddit": {
+            "DEFAULT": "system_health_mobile_011.wpr"
+        },
+        "load:news:sohu": {
+            "DEFAULT": "system_health_mobile_002.wpr"
+        },
+        "load:news:washingtonpost": {
+            "DEFAULT": "system_health_mobile_013.wpr"
+        },
+        "load:news:wikipedia": {
+            "DEFAULT": "system_health_mobile_002.wpr"
+        },
+        "load:search:amazon": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:search:baidu": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:search:ebay": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:search:google": {
+            "DEFAULT": "system_health_mobile_029.wpr"
+        },
+        "load:search:taobao": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:search:yahoo": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:search:yandex": {
+            "DEFAULT": "system_health_mobile_000.wpr"
+        },
+        "load:social:facebook": {
+            "DEFAULT": "system_health_mobile_028.wpr"
+        },
+        "load:social:instagram": {
+            "DEFAULT": "system_health_mobile_001.wpr"
+        },
+        "load:social:pinterest": {
+            "DEFAULT": "system_health_mobile_001.wpr"
+        },
+        "load:social:tumblr": {
+            "DEFAULT": "system_health_mobile_001.wpr"
+        },
+        "load:social:twitter": {
+            "DEFAULT": "system_health_mobile_022.wpr"
+        },
+        "load:tools:docs": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "load:tools:drive": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "load:tools:dropbox": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "load:tools:gmail": {
+            "DEFAULT": "system_health_mobile_048.wpr"
+        },
+        "load:tools:maps": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "load:tools:stackoverflow": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "load:tools:weather": {
+            "DEFAULT": "system_health_mobile_004.wpr"
+        },
+        "long_running:tools:gmail-background": {
+            "DEFAULT": "system_health_mobile_042.wpr"
+        },
+        "long_running:tools:gmail-foreground": {
+            "DEFAULT": "system_health_mobile_042.wpr"
+        },
+        "search:portal:google": {
+            "DEFAULT": "system_health_mobile_029.wpr"
+        }
     },
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

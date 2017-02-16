@@ -31,7 +31,7 @@ struct StaticData {
 };
 
 StaticData* GetStaticData() {
-  static auto static_data = new StaticData();
+  static auto* static_data = new StaticData();
   return static_data;
 }
 

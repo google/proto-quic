@@ -11,6 +11,7 @@
 #include "base/format_macros.h"
 #include "base/logging.h"
 #include "base/strings/stringprintf.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 #if defined(COMPILER_GCC)
 #define PRETTY_THIS base::StringPrintf("%s@%p ", __PRETTY_FUNCTION__, this)
@@ -230,6 +231,10 @@ class NestedSpdyFramerDecoder : public SpdyFramerDecoderAdapter {
   SpdyFramer::SpdyState state() const override { return framer_.state(); }
   bool probable_http_response() const override {
     return framer_.probable_http_response();
+  }
+  size_t EstimateMemoryUsage() const override {
+    // Skip |visitor_adapter_| because it doesn't allocate.
+    return SpdyEstimateMemoryUsage(framer_);
   }
 
  private:

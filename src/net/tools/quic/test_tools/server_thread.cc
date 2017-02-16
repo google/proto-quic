@@ -37,9 +37,8 @@ void ServerThread::Initialize() {
 
   server_->CreateUDPSocketAndListen(address_);
 
-  port_lock_.Acquire();
+  QuicWriterMutexLock lock(&port_lock_);
   port_ = server_->port();
-  port_lock_.Release();
 
   initialized_ = true;
 }
@@ -63,9 +62,8 @@ void ServerThread::Run() {
 }
 
 int ServerThread::GetPort() {
-  port_lock_.Acquire();
+  QuicReaderMutexLock lock(&port_lock_);
   int rc = port_;
-  port_lock_.Release();
   return rc;
 }
 

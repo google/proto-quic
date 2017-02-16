@@ -49,6 +49,9 @@ class NET_EXPORT_PRIVATE SpdySessionKey {
     return privacy_mode_;
   }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   HostPortProxyPair host_port_proxy_pair_;
   // If enabled, then session cannot be tracked by the server.

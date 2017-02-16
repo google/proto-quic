@@ -125,6 +125,9 @@
   "chrome/browser/resources/translate_internals_resources.grd": {
     "includes": [12560],
   },
+  "chrome/browser/resources/webapks_ui_resources.grd": {
+    "includes": [12570],
+  },
   # END chrome/browser section.
 
   # START chrome/ miscellaneous section.

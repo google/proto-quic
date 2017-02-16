@@ -11,8 +11,6 @@
 #ifndef NET_TOOLS_QUIC_QUIC_SERVER_H_
 #define NET_TOOLS_QUIC_QUIC_SERVER_H_
 
-#include <stddef.h>
-
 #include <memory>
 
 #include "base/macros.h"

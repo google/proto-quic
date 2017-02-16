@@ -77,10 +77,6 @@ class TestTaskScheduler : public TaskScheduler {
   std::unique_ptr<MessageLoop> message_loop_owned_;
   MessageLoop* message_loop_;
 
-  // The SingleThreadTaskRunner associated with |message_loop_|.
-  const scoped_refptr<SingleThreadTaskRunner> message_loop_task_runner_ =
-      message_loop_->task_runner();
-
   // Handles shutdown behaviors and sets up the environment to run a task.
   internal::TaskTracker task_tracker_;
 
@@ -186,7 +182,7 @@ bool TestTaskScheduler::PostTask(std::unique_ptr<internal::Task> task,
   if (!task_tracker_.WillPostTask(task.get()))
     return false;
   internal::Task* const task_ptr = task.get();
-  return message_loop_task_runner_->PostDelayedTask(
+  return message_loop_->task_runner()->PostDelayedTask(
       task_ptr->posted_from, Bind(&TestTaskScheduler::RunTask, Unretained(this),
                                   Passed(&task), sequence_token),
       task_ptr->delay);
@@ -196,6 +192,8 @@ void TestTaskScheduler::RunTask(std::unique_ptr<internal::Task> task,
                                 const SequenceToken& sequence_token) {
   // Clear the MessageLoop TaskRunner to allow TaskTracker to register its own
   // Thread/SequencedTaskRunnerHandle as appropriate.
+  scoped_refptr<SingleThreadTaskRunner> saved_task_runner =
+      MessageLoop::current()->task_runner();
   MessageLoop::current()->ClearTaskRunnerForTesting();
 
   // Run the task.
@@ -204,11 +202,11 @@ void TestTaskScheduler::RunTask(std::unique_ptr<internal::Task> task,
                                              : SequenceToken::Create());
 
   // Restore the MessageLoop TaskRunner.
-  MessageLoop::current()->SetTaskRunner(message_loop_task_runner_);
+  MessageLoop::current()->SetTaskRunner(saved_task_runner);
 }
 
 bool TestTaskScheduler::RunsTasksOnCurrentThread() const {
-  return message_loop_task_runner_->RunsTasksOnCurrentThread();
+  return message_loop_->task_runner()->RunsTasksOnCurrentThread();
 }
 
 TestTaskSchedulerTaskRunner::TestTaskSchedulerTaskRunner(

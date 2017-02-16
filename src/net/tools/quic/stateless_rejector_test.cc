@@ -74,10 +74,10 @@ std::vector<TestParams> GetTestParams() {
 class StatelessRejectorTest : public ::testing::TestWithParam<TestParams> {
  public:
   StatelessRejectorTest()
-      : proof_source_(CryptoTestUtils::ProofSourceForTesting()),
+      : proof_source_(crypto_test_utils::ProofSourceForTesting()),
         config_(QuicCryptoServerConfig::TESTING,
                 QuicRandom::GetInstance(),
-                CryptoTestUtils::ProofSourceForTesting()),
+                crypto_test_utils::ProofSourceForTesting()),
         config_peer_(&config_),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
@@ -170,11 +170,9 @@ INSTANTIATE_TEST_CASE_P(Flags,
 
 TEST_P(StatelessRejectorTest, InvalidChlo) {
   // clang-format off
-  const CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
-      "CHLO",
-      "PDMD", "X509",
-      "COPT", "SREJ",
-      nullptr);
+  const CryptoHandshakeMessage client_hello = crypto_test_utils::CreateCHLO(
+      {{"PDMD", "X509"},
+       {"COPT", "SREJ"}});
   // clang-format on
   rejector_->OnChlo(GetParam().version, kConnectionId,
                     kServerDesignateConnectionId, client_hello);
@@ -195,16 +193,14 @@ TEST_P(StatelessRejectorTest, InvalidChlo) {
 
 TEST_P(StatelessRejectorTest, ValidChloWithoutSrejSupport) {
   // clang-format off
-  const CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
-      "CHLO",
-      "PDMD", "X509",
-      "AEAD", "AESG",
-      "KEXS", "C255",
-      "PUBS", pubs_hex_.c_str(),
-      "NONC", nonc_hex_.c_str(),
-      "VER\0", ver_hex_.c_str(),
-      "$padding", static_cast<int>(kClientHelloMinimumSize),
-      nullptr);
+  const CryptoHandshakeMessage client_hello = crypto_test_utils::CreateCHLO(
+      {{"PDMD", "X509"},
+       {"AEAD", "AESG"},
+       {"KEXS", "C255"},
+       {"PUBS", pubs_hex_},
+       {"NONC", nonc_hex_},
+       {"VER\0", ver_hex_}},
+      kClientHelloMinimumSize);
   // clang-format on
 
   rejector_->OnChlo(GetParam().version, kConnectionId,
@@ -214,19 +210,17 @@ TEST_P(StatelessRejectorTest, ValidChloWithoutSrejSupport) {
 
 TEST_P(StatelessRejectorTest, RejectChlo) {
   // clang-format off
-  const CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
-      "CHLO",
-      "PDMD", "X509",
-      "AEAD", "AESG",
-      "KEXS", "C255",
-      "COPT", "SREJ",
-      "SCID", scid_hex_.c_str(),
-      "PUBS", pubs_hex_.c_str(),
-      "NONC", nonc_hex_.c_str(),
-      "#004b5453", stk_hex_.c_str(),
-      "VER\0", ver_hex_.c_str(),
-      "$padding", static_cast<int>(kClientHelloMinimumSize),
-      nullptr);
+  const CryptoHandshakeMessage client_hello = crypto_test_utils::CreateCHLO(
+      {{"PDMD", "X509"},
+       {"AEAD", "AESG"},
+       {"KEXS", "C255"},
+       {"COPT", "SREJ"},
+       {"SCID", scid_hex_},
+       {"PUBS", pubs_hex_},
+       {"NONC", nonc_hex_},
+       {"#004b5453", stk_hex_},
+       {"VER\0", ver_hex_}},
+      kClientHelloMinimumSize);
   // clang-format on
 
   rejector_->OnChlo(GetParam().version, kConnectionId,
@@ -254,25 +248,23 @@ TEST_P(StatelessRejectorTest, RejectChlo) {
 }
 
 TEST_P(StatelessRejectorTest, AcceptChlo) {
-  const uint64_t xlct = CryptoTestUtils::LeafCertHashForTesting();
+  const uint64_t xlct = crypto_test_utils::LeafCertHashForTesting();
   const string xlct_hex =
       "#" + QuicTextUtils::HexEncode(reinterpret_cast<const char*>(&xlct),
                                      sizeof(xlct));
   // clang-format off
-  const CryptoHandshakeMessage client_hello = CryptoTestUtils::Message(
-      "CHLO",
-      "PDMD", "X509",
-      "AEAD", "AESG",
-      "KEXS", "C255",
-      "COPT", "SREJ",
-      "SCID", scid_hex_.c_str(),
-      "PUBS", pubs_hex_.c_str(),
-      "NONC", nonc_hex_.c_str(),
-      "#004b5453", stk_hex_.c_str(),
-      "VER\0", ver_hex_.c_str(),
-      "XLCT", xlct_hex.c_str(),
-      "$padding", static_cast<int>(kClientHelloMinimumSize),
-      nullptr);
+  const CryptoHandshakeMessage client_hello = crypto_test_utils::CreateCHLO(
+      {{"PDMD", "X509"},
+       {"AEAD", "AESG"},
+       {"KEXS", "C255"},
+       {"COPT", "SREJ"},
+       {"SCID", scid_hex_},
+       {"PUBS", pubs_hex_},
+       {"NONC", nonc_hex_},
+       {"#004b5453", stk_hex_},
+       {"VER\0", ver_hex_},
+       {"XLCT", xlct_hex}},
+      kClientHelloMinimumSize);
   // clang-format on
 
   rejector_->OnChlo(GetParam().version, kConnectionId,

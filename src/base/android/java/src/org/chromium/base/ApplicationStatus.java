@@ -4,6 +4,7 @@
 
 package org.chromium.base;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Application.ActivityLifecycleCallbacks;
@@ -187,7 +188,13 @@ public class ApplicationStatus {
         int oldApplicationState = getStateForApplication();
 
         if (newState == ActivityState.CREATED) {
-            assert !sActivityInfo.containsKey(activity);
+            // TODO(tedchoc): crbug/691100.  The timing of application callback lifecycles were
+            //                changed in O and the activity info may have been lazily created
+            //                on first access to avoid a crash on startup.  This should be removed
+            //                once the new lifecycle APIs are available.
+            if (!BuildInfo.isAtLeastO()) {
+                assert !sActivityInfo.containsKey(activity);
+            }
             sActivityInfo.put(activity, new ActivityInfo());
         }
 
@@ -351,11 +358,19 @@ public class ApplicationStatus {
      * @param listener Listener to receive state changes.
      * @param activity Activity to track or {@code null} to track all activities.
      */
+    @SuppressLint("NewApi")
     public static void registerStateListenerForActivity(ActivityStateListener listener,
             Activity activity) {
         assert activity != null;
 
         ActivityInfo info = sActivityInfo.get(activity);
+        // TODO(tedchoc): crbug/691100.  The timing of application callback lifecycles were changed
+        //                in O and the activity info may need to be lazily created if the onCreate
+        //                event has not yet been received.
+        if (BuildInfo.isAtLeastO() && info == null && !activity.isDestroyed()) {
+            info = new ActivityInfo();
+            sActivityInfo.put(activity, info);
+        }
         assert info != null && info.getStatus() != ActivityState.DESTROYED;
         info.getListeners().addObserver(listener);
     }

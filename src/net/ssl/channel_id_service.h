@@ -16,15 +16,12 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
+#include "base/task_runner.h"
 #include "base/threading/non_thread_safe.h"
 #include "base/time/time.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_export.h"
 #include "net/ssl/channel_id_store.h"
-
-namespace base {
-class TaskRunner;
-}  // namespace base
 
 namespace crypto {
 class ECPrivateKey;

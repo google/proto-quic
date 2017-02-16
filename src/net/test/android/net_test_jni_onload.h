@@ -10,7 +10,7 @@
 namespace net {
 namespace test {
 
-bool OnJNIOnLoadRegisterJNI(JavaVM* vm);
+bool OnJNIOnLoadRegisterJNI(JNIEnv* env);
 bool OnJNIOnLoadInit();
 
 }  // namespace test

@@ -39,8 +39,7 @@ DecodeStatus PayloadDecoderBaseTest::StartDecoding(DecodeBuffer* db) {
 
   // Reconstruct the FrameDecoderState, prepare the listener, and add it to
   // the FrameDecoderState.
-  frame_decoder_state_.~FrameDecoderState();
-  new (&frame_decoder_state_) FrameDecoderState;
+  Http2DefaultReconstructObject(&frame_decoder_state_, RandomPtr());
   frame_decoder_state_.set_listener(PrepareListener());
 
   // Make sure that a listener was provided.

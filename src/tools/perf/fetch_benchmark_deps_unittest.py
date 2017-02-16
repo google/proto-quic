@@ -44,7 +44,7 @@ class FetchBenchmarkDepsUnittest(unittest.TestCase):
     """
     sys.argv[1] = benchmark_name
     output = StringIO.StringIO()
-    with mock.patch('telemetry.wpr.archive_info.WprArchiveInfo'
+    with mock.patch('telemetry.wpr.archive_info2.WprArchiveInfo'
                     '.DownloadArchivesIfNeeded') as mock_download:
       with mock.patch('py_utils.cloud_storage'
                       '.GetFilesInDirectoryIfChanged') as mock_get:

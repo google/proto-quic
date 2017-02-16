@@ -23,7 +23,7 @@ HistogramTester::HistogramTester() {
   // be subtracted later.
   StatisticsRecorder::Histograms histograms;
   StatisticsRecorder::GetSnapshot(std::string(), &histograms);
-  for (const auto& histogram : histograms) {
+  for (const auto* histogram : histograms) {
     histograms_snapshot_[histogram->histogram_name()] =
         histogram->SnapshotSamples();
   }

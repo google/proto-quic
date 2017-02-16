@@ -97,7 +97,7 @@
 
     'chromium.fyi': {
       'Afl Upload Linux ASan': 'release_afl_asan',
-      'Android Builder (dbg)': 'android_debug_static_bot_vr_shell',
+      'Android Builder (dbg)': 'android_debug_static_bot',
       'Android Builder Goma Canary (dbg)': 'android_debug_bot',
       'Android deterministic': 'android_without_codecs_release_bot_minimal_symbols',
       'Android deterministic (dbg)': 'android_debug_bot',
@@ -175,7 +175,7 @@
       'EarlGreyiOS': 'ios',
       'GomaCanaryiOS': 'ios',
       'ios-simulator': 'ios',
-      'Headless Linux (dbg)': '//build/args/bots/chromium.fyi/headless_linux_dbg.gn',
+      'Headless Linux (dbg)': 'headless_linux_debug_bot',
       'MD Top Chrome ChromeOS material-hybrid': 'chromeos_with_codecs_debug_bot',
       'MD Top Chrome ChromeOS non-material': 'chromeos_with_codecs_debug_bot',
       'MD Top Chrome Win material': 'debug_bot',
@@ -270,6 +270,7 @@
       'Linux Builder Trusty (dbg)': 'debug_bot',
       'Linux Builder Trusty (dbg)(32)': 'debug_bot_x86',
       'Linux Builder Trusty': 'release_bot',
+      'Linux Deterministic': 'release_bot',
     },
 
     'chromium.lkgr': {
@@ -302,6 +303,7 @@
       'ios-device-xcode-clang': 'ios',
       'ios-simulator': 'ios',
       'ios-simulator-cronet': 'ios',
+      'ios-simulator-eg': 'ios',
       'ios-simulator-xcode-clang': 'ios',
     },
 
@@ -338,6 +340,14 @@
       'Android Builder FYI': 'official_goma_minimal_symbols_android',
       'Win Builder FYI': 'official_goma',
       'Win Clang Builder': 'official_goma_minimal_symbols_clang',
+      'Battor Agent Linux': 'debug_bot',
+    },
+
+    'chromium.swarm': {
+      'Android Swarm': 'android_without_codecs_release_bot_minimal_symbols',
+      'Linux Swarm': 'release_bot',
+      'Mac Swarm': 'release_bot_mac_strip',
+      'Windows Swarm': 'release_bot_x86',
     },
 
     'client.nacl.sdk': {
@@ -536,6 +546,7 @@
       'linux_chromium_chromeos_msan_rel_ng': 'chromeos_msan_release_bot',
       'linux_chromium_chromeos_ozone_rel_ng': 'chromeos_with_codecs_ozone_release_trybot',
       'linux_chromium_chromeos_rel_ng': 'chromeos_with_codecs_release_trybot',
+      'linux_chromium_clobber_deterministic': 'release_trybot',
       'linux_chromium_clobber_rel_ng': 'release_trybot',
       'linux_chromium_compile_dbg_32_ng': 'debug_trybot_x86',
       'linux_chromium_compile_dbg_ng': 'debug_trybot',
@@ -543,8 +554,7 @@
       'linux_chromium_dbg_32_ng': 'debug_trybot_x86',
       'linux_chromium_dbg_ng': 'debug_trybot',
       'linux_chromium_gn_upload': 'gn_linux_upload',
-      'linux_chromium_headless_dbg': '//build/args/bots/tryserver.chromium.linux/linux_chromium_headless_dbg.gn',
-      'linux_chromium_headless_rel': '//build/args/bots/tryserver.chromium.linux/linux_chromium_headless_rel.gn',
+      'linux_chromium_headless_rel': 'headless_linux_release_trybot',
       'linux_chromium_ozone_compile_only_ng': 'ozone_linux_release_trybot',
 
       # This is intentionally a release_bot and not a release_trybot;
@@ -594,6 +604,7 @@
       'ios-device': 'ios',
       'ios-device-xcode-clang': 'ios',
       'ios-simulator': 'ios',
+      'ios-simulator-eg': 'ios',
       'ios-simulator-cronet': 'ios',
       'ios-simulator-xcode-clang': 'ios',
       'mac_chromium_10.10_rel_ng': 'gpu_tests_release_trybot',
@@ -829,10 +840,6 @@
 
     'android_debug_static_bot_x86': [
       'android', 'debug_static_bot', 'x86',
-    ],
-
-    'android_debug_static_bot_vr_shell': [
-      'android', 'debug_static_bot', 'vr_shell',
     ],
 
     'android_debug_static_minimal_symbols_mipsel': [
@@ -1261,6 +1268,14 @@
 
     'gn_linux_upload': [
       'gn_linux_upload', 'official', 'goma',
+    ],
+
+    'headless_linux_debug_bot': [
+      'debug_bot', 'headless',
+    ],
+
+    'headless_linux_release_trybot': [
+      'release_trybot', 'headless',
     ],
 
     # The 'ios' config is just used for auditing. iOS bots
@@ -1714,6 +1729,10 @@
       'gn_args': 'use_system_xcode=false',
     },
 
+    'headless': {
+      'args_file': '//build/args/headless.gn',
+    },
+
     'hybrid': {
       'gn_args': 'v8_target_cpu="arm" target_cpu="x86"',
       'mixins': ['disable_nacl'],
@@ -1795,7 +1814,8 @@
     'ozone_linux': {
       'gn_args': ('ozone_auto_platforms=false ozone_platform_wayland=true '
                   'ozone_platform_x11=true ozone_platform_gbm=true '
-                  'enable_package_mash_services=true use_ash=false'),
+                  'enable_package_mash_services=true use_ash=false '
+                  'use_jessie_sysroot=true use_xkbcommon=true'),
     },
 
     'pdf_xfa': {
@@ -1874,10 +1894,6 @@
 
     'v8_heap': {
       'gn_args': 'v8_enable_verify_heap=true',
-    },
-
-    'vr_shell': {
-      'gn_args': 'enable_vr_shell=true',
     },
 
     'win_analyze': {

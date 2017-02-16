@@ -23,6 +23,7 @@
 #include "net/http/http_server_properties.h"
 #include "net/http/transport_security_state.h"
 #include "net/ssl/ssl_config_service.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "net/url_request/url_request.h"
 
 namespace base {
@@ -71,14 +72,28 @@ class NET_EXPORT URLRequestContext
   // session.
   const HttpNetworkSession::Params* GetNetworkSessionParams() const;
 
+  // This function should not be used in Chromium, please use the version with
+  // NetworkTrafficAnnotationTag in the future.
   std::unique_ptr<URLRequest> CreateRequest(
       const GURL& url,
       RequestPriority priority,
       URLRequest::Delegate* delegate) const;
 
-  NetLog* net_log() const {
-    return net_log_;
-  }
+  // |traffic_annotation| is metadata about the network traffic send via this
+  // URLRequest, see net::DefineNetworkTrafficAnnotation. Note that:
+  // - net provides the API for tagging requests with an opaque identifier.
+  // - tools/traffic_annotation/traffic_annotation.proto contains the Chrome
+  // specific .proto describing the verbose annotation format that Chrome's
+  // callsites are expected to follow.
+  // - tools/traffic_annotation/ contains sample and template for annotation and
+  // tools will be added for verification following crbug.com/690323.
+  std::unique_ptr<URLRequest> CreateRequest(
+      const GURL& url,
+      RequestPriority priority,
+      URLRequest::Delegate* delegate,
+      NetworkTrafficAnnotationTag traffic_annotation) const;
+
+  NetLog* net_log() const { return net_log_; }
 
   void set_net_log(NetLog* net_log) {
     net_log_ = net_log;

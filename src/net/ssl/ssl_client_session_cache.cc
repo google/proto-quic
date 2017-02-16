@@ -177,22 +177,8 @@ void SSLClientSessionCache::OnMemoryPressure(
   }
 }
 
-void SSLClientSessionCache::OnMemoryStateChange(base::MemoryState state) {
-  // TODO(hajimehoshi): When the state changes, adjust the sizes of the caches
-  // to reduce the limits. SSLClientSessionCache doesn't have the ability to
-  // limit at present.
-  switch (state) {
-    case base::MemoryState::NORMAL:
-      break;
-    case base::MemoryState::THROTTLED:
-      Flush();
-      break;
-    case base::MemoryState::SUSPENDED:
-    // Note: Not supported at present. Fall through.
-    case base::MemoryState::UNKNOWN:
-      NOTREACHED();
-      break;
-  }
+void SSLClientSessionCache::OnPurgeMemory() {
+  Flush();
 }
 
 }  // namespace net

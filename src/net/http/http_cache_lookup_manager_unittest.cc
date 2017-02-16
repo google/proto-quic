@@ -25,7 +25,7 @@ class MockServerPushHelper : public ServerPushDelegate::ServerPushHelper {
  public:
   explicit MockServerPushHelper(const GURL& url) : request_url_(url) {}
 
-  const GURL& GetURL() override { return request_url_; }
+  const GURL& GetURL() const override { return request_url_; }
 
   MOCK_METHOD0(Cancel, void());
 
@@ -84,8 +84,7 @@ void PopulateCacheEntry(HttpCache* cache, const GURL& request_url) {
 
 TEST(HttpCacheLookupManagerTest, ServerPushMissCache) {
   MockHttpCache mock_cache;
-  HttpCacheLookupManager push_delegate(mock_cache.http_cache(),
-                                       NetLogWithSource());
+  HttpCacheLookupManager push_delegate(mock_cache.http_cache());
   GURL request_url("http://www.example.com/pushed.jpg");
 
   std::unique_ptr<MockServerPushHelper> push_helper =
@@ -94,7 +93,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushMissCache) {
 
   // Receive a server push and should not cancel the push.
   EXPECT_CALL(*push_helper_ptr, Cancel()).Times(0);
-  push_delegate.OnPush(std::move(push_helper));
+  push_delegate.OnPush(std::move(push_helper), NetLogWithSource());
   base::RunLoop().RunUntilIdle();
 
   // Make sure no network transaction is created.
@@ -105,8 +104,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushMissCache) {
 
 TEST(HttpCacheLookupManagerTest, ServerPushDoNotCreateCacheEntry) {
   MockHttpCache mock_cache;
-  HttpCacheLookupManager push_delegate(mock_cache.http_cache(),
-                                       NetLogWithSource());
+  HttpCacheLookupManager push_delegate(mock_cache.http_cache());
   GURL request_url("http://www.example.com/pushed.jpg");
 
   std::unique_ptr<MockServerPushHelper> push_helper =
@@ -115,7 +113,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushDoNotCreateCacheEntry) {
 
   // Receive a server push and should not cancel the push.
   EXPECT_CALL(*push_helper_ptr, Cancel()).Times(0);
-  push_delegate.OnPush(std::move(push_helper));
+  push_delegate.OnPush(std::move(push_helper), NetLogWithSource());
   base::RunLoop().RunUntilIdle();
 
   // Receive another server push for the same url.
@@ -123,7 +121,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushDoNotCreateCacheEntry) {
       base::MakeUnique<MockServerPushHelper>(request_url);
   MockServerPushHelper* push_helper_ptr2 = push_helper2.get();
   EXPECT_CALL(*push_helper_ptr2, Cancel()).Times(0);
-  push_delegate.OnPush(std::move(push_helper2));
+  push_delegate.OnPush(std::move(push_helper2), NetLogWithSource());
   base::RunLoop().RunUntilIdle();
 
   // Verify no network transaction is created.
@@ -135,8 +133,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushDoNotCreateCacheEntry) {
 
 TEST(HttpCacheLookupManagerTest, ServerPushHitCache) {
   MockHttpCache mock_cache;
-  HttpCacheLookupManager push_delegate(mock_cache.http_cache(),
-                                       NetLogWithSource());
+  HttpCacheLookupManager push_delegate(mock_cache.http_cache());
   GURL request_url("http://www.example.com/pushed.jpg");
 
   // Populate the cache entry so that the cache lookup for server push hits.
@@ -157,7 +154,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushHitCache) {
 
   // Receive a server push and should cancel the push.
   EXPECT_CALL(*push_helper_ptr, Cancel()).Times(1);
-  push_delegate.OnPush(std::move(push_helper));
+  push_delegate.OnPush(std::move(push_helper), NetLogWithSource());
   base::RunLoop().RunUntilIdle();
 
   // Make sure no new net layer transaction is created.
@@ -173,8 +170,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushHitCache) {
 // send a new lookup transaction and should not be canceled.
 TEST(HttpCacheLookupManagerTest, ServerPushPendingLookup) {
   MockHttpCache mock_cache;
-  HttpCacheLookupManager push_delegate(mock_cache.http_cache(),
-                                       NetLogWithSource());
+  HttpCacheLookupManager push_delegate(mock_cache.http_cache());
   GURL request_url("http://www.example.com/pushed.jpg");
 
   // Populate the cache entry so that the cache lookup for server push hits.
@@ -195,7 +191,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushPendingLookup) {
 
   // Receive a server push and should cancel the push eventually.
   EXPECT_CALL(*push_helper_ptr, Cancel()).Times(1);
-  push_delegate.OnPush(std::move(push_helper));
+  push_delegate.OnPush(std::move(push_helper), NetLogWithSource());
 
   std::unique_ptr<MockServerPushHelper> push_helper2 =
       base::MakeUnique<MockServerPushHelper>(request_url);
@@ -203,7 +199,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushPendingLookup) {
 
   // Receive another server push and should not cancel the push.
   EXPECT_CALL(*push_helper_ptr2, Cancel()).Times(0);
-  push_delegate.OnPush(std::move(push_helper2));
+  push_delegate.OnPush(std::move(push_helper2), NetLogWithSource());
 
   base::RunLoop().RunUntilIdle();
 
@@ -218,8 +214,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushPendingLookup) {
 // Test the server push lookup is based on the full url.
 TEST(HttpCacheLookupManagerTest, ServerPushLookupOnUrl) {
   MockHttpCache mock_cache;
-  HttpCacheLookupManager push_delegate(mock_cache.http_cache(),
-                                       NetLogWithSource());
+  HttpCacheLookupManager push_delegate(mock_cache.http_cache());
   GURL request_url("http://www.example.com/pushed.jpg?u=0");
   GURL request_url2("http://www.example.com/pushed.jpg?u=1");
 
@@ -241,7 +236,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushLookupOnUrl) {
 
   // Receive a server push and should cancel the push eventually.
   EXPECT_CALL(*push_helper_ptr, Cancel()).Times(1);
-  push_delegate.OnPush(std::move(push_helper));
+  push_delegate.OnPush(std::move(push_helper), NetLogWithSource());
   // Run until the lookup transaction finishes for the first server push.
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(1, mock_cache.network_layer()->transaction_count());
@@ -257,7 +252,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushLookupOnUrl) {
   MockServerPushHelper* push_helper_ptr2 = push_helper2.get();
 
   EXPECT_CALL(*push_helper_ptr2, Cancel()).Times(1);
-  push_delegate.OnPush(std::move(push_helper2));
+  push_delegate.OnPush(std::move(push_helper2), NetLogWithSource());
   // Run until the lookup transaction finishes for the second server push.
   base::RunLoop().RunUntilIdle();
   EXPECT_EQ(1, mock_cache.network_layer()->transaction_count());
@@ -275,7 +270,7 @@ TEST(HttpCacheLookupManagerTest, ServerPushLookupOnUrl) {
   MockServerPushHelper* push_helper_ptr3 = push_helper3.get();
 
   EXPECT_CALL(*push_helper_ptr3, Cancel()).Times(0);
-  push_delegate.OnPush(std::move(push_helper3));
+  push_delegate.OnPush(std::move(push_helper3), NetLogWithSource());
 
   base::RunLoop().RunUntilIdle();
   // Make sure no new net layer transaction is created.

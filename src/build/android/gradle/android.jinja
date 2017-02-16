@@ -10,8 +10,18 @@
                 "{{ path }}",
 {% endfor %}
             ]
+            java.filter.exclude(
+{% for path in variables.java_excludes %}
+                "{{ path }}",
+{% endfor %}
+            )
             jniLibs.srcDirs = [
 {% for path in variables.jni_libs %}
+                "{{ path }}",
+{% endfor %}
+            ]
+            res.srcDirs = [
+{% for path in variables.res_dirs %}
                 "{{ path }}",
 {% endfor %}
             ]
@@ -30,6 +40,8 @@ android {
     compileSdkVersion {{ compile_sdk_version }}
     buildToolsVersion "{{ build_tools_version }}"
     publishNonDefault true
+    // Multiple targets use the package name "dummy.package"
+    enforceUniquePackageName false
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_7
@@ -67,7 +79,9 @@ afterEvaluate {
     def tasksToDisable = tasks.findAll {
         return (it.name.equals('generateDebugSources')  // causes unwanted AndroidManifest.java
                 || it.name.equals('generateReleaseSources')
+{% if not use_gradle_process_resources %}
                 || it.name.endsWith('Assets')
+{% endif %}
                 || it.name.endsWith('BuildConfig')  // causes unwanted BuildConfig.java
 {% if not use_gradle_process_resources %}
                 || it.name.endsWith('Resources')

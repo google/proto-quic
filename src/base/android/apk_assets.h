@@ -8,8 +8,8 @@
 #include <string>
 
 #include "base/android/jni_android.h"
+#include "base/files/file_path.h"
 #include "base/files/memory_mapped_file.h"
-#include "base/posix/global_descriptors.h"
 
 namespace base {
 namespace android {
@@ -26,11 +26,12 @@ BASE_EXPORT int OpenApkAsset(
     const std::string& file_path,
     base::MemoryMappedFile::Region* region);
 
-// Registers an uncompressed asset from within the apk with GlobalDescriptors.
+// Registers an uncompressed asset from within the apk in the
+// FileDescriptorStore.
 // Returns: true in case of success, false otherwise.
-BASE_EXPORT bool RegisterApkAssetWithGlobalDescriptors(
-    base::GlobalDescriptors::Key key,
-    const std::string& file_path);
+BASE_EXPORT bool RegisterApkAssetWithFileDescriptorStore(
+    const std::string& key,
+    const base::FilePath& file_path);
 
 }  // namespace android
 }  // namespace base

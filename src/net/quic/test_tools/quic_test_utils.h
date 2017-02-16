@@ -7,9 +7,6 @@
 #ifndef NET_QUIC_TEST_TOOLS_QUIC_TEST_UTILS_H_
 #define NET_QUIC_TEST_TOOLS_QUIC_TEST_UTILS_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -18,7 +15,6 @@
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
-#include "net/base/ip_address.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
@@ -26,16 +22,12 @@
 #include "net/quic/core/quic_connection_close_delegate_interface.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_iovector.h"
-#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 #include "net/quic/core/quic_server_session_base.h"
-#include "net/quic/core/quic_session.h"
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
-#include "net/spdy/spdy_framer.h"
 #include "net/test/gtest_util.h"
-#include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 #include "net/tools/quic/test_tools/mock_quic_session_visitor.h"
 #include "testing/gmock/include/gmock/gmock.h"
@@ -72,15 +64,6 @@ QuicVersion QuicVersionMax();
 
 // Lower limit on versions we support.
 QuicVersion QuicVersionMin();
-
-// Returns an address for 127.0.0.1.
-IPAddress Loopback4();
-
-// Returns an address for ::1.
-IPAddress Loopback6();
-
-// Returns an address for 0.0.0.0.
-IPAddress Any4();
 
 // Create an encrypted packet for testing.
 // If versions == nullptr, uses &AllSupportedVersions().
@@ -152,7 +135,6 @@ QuicReceivedPacket* ConstructReceivedPacket(
 QuicEncryptedPacket* ConstructMisFramedEncryptedPacket(
     QuicConnectionId connection_id,
     bool version_flag,
-    bool multipath_flag,
     bool reset_flag,
     QuicPathId path_id,
     QuicPacketNumber packet_number,
@@ -173,7 +155,6 @@ void CompareCharArraysWithHexError(const std::string& description,
 // of bytes of stream data that will fit in such a packet.
 size_t GetPacketLengthForOneStream(QuicVersion version,
                                    bool include_version,
-                                   bool include_path_id,
                                    bool include_diversification_nonce,
                                    QuicConnectionIdLength connection_id_length,
                                    QuicPacketNumberLength packet_number_length,
@@ -672,8 +653,11 @@ class TestQuicSpdyServerSession : public QuicServerSessionBase {
   DISALLOW_COPY_AND_ASSIGN(TestQuicSpdyServerSession);
 };
 
+// A test implementation of QuicClientPushPromiseIndex::Delegate.
 class TestPushPromiseDelegate : public QuicClientPushPromiseIndex::Delegate {
  public:
+  // |match| sets the validation result for checking whether designated header
+  // fields match for promise request and client request.
   explicit TestPushPromiseDelegate(bool match);
 
   bool CheckVary(const SpdyHeaderBlock& client_request,

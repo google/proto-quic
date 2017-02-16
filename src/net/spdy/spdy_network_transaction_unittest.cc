@@ -509,6 +509,37 @@ class SpdyNetworkTransactionTest : public ::testing::Test {
     VerifyStreamsClosed(helper);
   }
 
+  void RunBrokenPushTest(SequencedSocketData* data, int expected_rv) {
+    NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
+                                       NetLogWithSource(), nullptr);
+    helper.RunPreTestSetup();
+    helper.AddData(data);
+
+    HttpNetworkTransaction* trans = helper.trans();
+
+    // Start the transaction with basic parameters.
+    TestCompletionCallback callback;
+    int rv = trans->Start(&CreateGetRequest(), callback.callback(),
+                          NetLogWithSource());
+    EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
+    rv = callback.WaitForResult();
+    EXPECT_EQ(expected_rv, rv);
+
+    // Finish async network reads/writes.
+    base::RunLoop().RunUntilIdle();
+
+    // Verify that we consumed all test data.
+    EXPECT_TRUE(data->AllReadDataConsumed());
+    EXPECT_TRUE(data->AllWriteDataConsumed());
+
+    if (expected_rv == OK) {
+      // Expected main request to succeed, even if push failed.
+      HttpResponseInfo response = *trans->GetResponseInfo();
+      EXPECT_TRUE(response.headers);
+      EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
+    }
+  }
+
   static void DeleteSessionCallback(NormalSpdyTransactionHelper* helper,
                                     int result) {
     helper->ResetTrans();
@@ -2861,6 +2892,37 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushMultipleDataFrameInterrupted) {
   EXPECT_EQ("HTTP/1.1 200", response2.headers->GetStatusLine());
 }
 
+TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidUrl) {
+  // Coverage on how a non-empty invalid GURL in a PUSH_PROMISE is handled.
+  SpdyHeaderBlock headers(spdy_util_.ConstructGetHeaderBlock(kDefaultUrl));
+  SpdySerializedFrame req(
+      spdy_util_.ConstructSpdyHeaders(1, std::move(headers), LOWEST, true));
+
+  // Can't use ConstructSpdyPush here since it wants to parse a URL and
+  // split it into the appropriate :header pieces. So we have to hand-fill
+  // those pieces in.
+  SpdyFramer response_spdy_framer(SpdyFramer::ENABLE_COMPRESSION);
+  SpdyHeaderBlock push_promise_header_block;
+  push_promise_header_block[spdy_util_.GetHostKey()] = "";
+  push_promise_header_block[spdy_util_.GetSchemeKey()] = "";
+  push_promise_header_block[spdy_util_.GetPathKey()] = "/index.html";
+
+  SpdyPushPromiseIR push_promise(1, 2, std::move(push_promise_header_block));
+  SpdySerializedFrame push_promise_frame(
+      response_spdy_framer.SerializeFrame(push_promise));
+
+  SpdySerializedFrame stream2_rst(
+      spdy_util_.ConstructSpdyRstStream(2, ERROR_CODE_PROTOCOL_ERROR));
+
+  MockWrite writes[] = {CreateMockWrite(req, 0),
+                        CreateMockWrite(stream2_rst, 2)};
+  MockRead reads[] = {
+      CreateMockRead(push_promise_frame, 1), MockRead(ASYNC, 0, 3) /* EOF */
+  };
+  SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
+  RunBrokenPushTest(&data, ERR_CONNECTION_CLOSED);
+}
+
 TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID0) {
   SpdySerializedFrame stream1_syn(
       spdy_util_.ConstructSpdyGet(nullptr, 0, 1, LOWEST, true));
@@ -2877,35 +2939,8 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID0) {
   MockRead reads[] = {
       CreateMockRead(stream1_reply, 1), CreateMockRead(stream2_syn, 2),
   };
-
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), nullptr);
-
-  helper.RunPreTestSetup();
-  helper.AddData(&data);
-
-  HttpNetworkTransaction* trans = helper.trans();
-
-  // Start the transaction with basic parameters.
-  TestCompletionCallback callback;
-  int rv = trans->Start(&CreateGetRequest(), callback.callback(),
-                        NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  rv = callback.WaitForResult();
-  EXPECT_THAT(rv, IsOk());
-
-  // Finish async network reads/writes.
-  base::RunLoop().RunUntilIdle();
-
-  // Verify that we consumed all test data.
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-
-  // Verify the response headers.
-  HttpResponseInfo response = *trans->GetResponseInfo();
-  EXPECT_TRUE(response.headers);
-  EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
+  RunBrokenPushTest(&data, OK);
 }
 
 TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID9) {
@@ -2929,33 +2964,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushInvalidAssociatedStreamID9) {
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), nullptr);
-
-  helper.RunPreTestSetup();
-  helper.AddData(&data);
-
-  HttpNetworkTransaction* trans = helper.trans();
-
-  // Start the transaction with basic parameters.
-  TestCompletionCallback callback;
-  int rv = trans->Start(&CreateGetRequest(), callback.callback(),
-                        NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  rv = callback.WaitForResult();
-  EXPECT_THAT(rv, IsOk());
-
-  // Finish async network reads/writes.
-  base::RunLoop().RunUntilIdle();
-
-  // Verify that we consumed all test data.
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-
-  // Verify the response headers.
-  HttpResponseInfo response = *trans->GetResponseInfo();
-  EXPECT_TRUE(response.headers);
-  EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
+  RunBrokenPushTest(&data, OK);
 }
 
 TEST_F(SpdyNetworkTransactionTest, ServerPushNoURL) {
@@ -2982,33 +2991,7 @@ TEST_F(SpdyNetworkTransactionTest, ServerPushNoURL) {
   };
 
   SequencedSocketData data(reads, arraysize(reads), writes, arraysize(writes));
-  NormalSpdyTransactionHelper helper(CreateGetRequest(), DEFAULT_PRIORITY,
-                                     NetLogWithSource(), nullptr);
-
-  helper.RunPreTestSetup();
-  helper.AddData(&data);
-
-  HttpNetworkTransaction* trans = helper.trans();
-
-  // Start the transaction with basic parameters.
-  TestCompletionCallback callback;
-  int rv = trans->Start(&CreateGetRequest(), callback.callback(),
-                        NetLogWithSource());
-  EXPECT_THAT(rv, IsError(ERR_IO_PENDING));
-  rv = callback.WaitForResult();
-  EXPECT_THAT(rv, IsOk());
-
-  // Finish async network reads/writes.
-  base::RunLoop().RunUntilIdle();
-
-  // Verify that we consumed all test data.
-  EXPECT_TRUE(data.AllReadDataConsumed());
-  EXPECT_TRUE(data.AllWriteDataConsumed());
-
-  // Verify the response headers.
-  HttpResponseInfo response = *trans->GetResponseInfo();
-  EXPECT_TRUE(response.headers);
-  EXPECT_EQ("HTTP/1.1 200", response.headers->GetStatusLine());
+  RunBrokenPushTest(&data, OK);
 }
 
 // PUSH_PROMISE on a server-initiated stream should trigger GOAWAY.

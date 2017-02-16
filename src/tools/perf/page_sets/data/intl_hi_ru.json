@@ -1,18 +1,39 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "intl_hi_ru_000.wpr": [
-            "http://www.rambler.ru/", 
-            "http://apeha.ru/", 
-            "http://yandex.ru/yandsearch?lr=102567&text=%D0%9F%D0%BE%D0%B3%D0%BE%D0%B4%D0%B0", 
-            "http://photofile.ru/", 
-            "http://ru.wikipedia.org/", 
-            "http://narod.yandex.ru/", 
-            "http://rutracker.org/forum/index.php", 
-            "http://hindi.webdunia.com/", 
-            "http://hindi.oneindia.in/", 
-            "http://www.indiatimes.com/", 
-            "http://news.google.co.in/nwshp?tab=in&hl=hi"
-        ]
-    }
+        "http://apeha.ru/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://hindi.oneindia.in/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://hindi.webdunia.com/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://narod.yandex.ru/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://news.google.co.in/nwshp?tab=in&hl=hi": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://photofile.ru/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://ru.wikipedia.org/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://rutracker.org/forum/index.php": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://www.indiatimes.com/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://www.rambler.ru/": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        },
+        "http://yandex.ru/yandsearch?lr=102567&text=%D0%9F%D0%BE%D0%B3%D0%BE%D0%B4%D0%B0": {
+            "DEFAULT": "intl_hi_ru_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

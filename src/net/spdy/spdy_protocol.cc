@@ -4,6 +4,8 @@
 
 #include "net/spdy/spdy_protocol.h"
 
+#include <ostream>
+
 #include "base/memory/ptr_util.h"
 #include "net/spdy/spdy_bug_tracker.h"
 
@@ -11,6 +13,10 @@ namespace net {
 
 const char* const kHttp2ConnectionHeaderPrefix =
     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+
+std::ostream& operator<<(std::ostream& out, SpdySettingsIds id) {
+  return out << static_cast<uint16_t>(id);
+}
 
 SpdyPriority ClampSpdy3Priority(SpdyPriority priority) {
   if (priority < kV3HighestPriority) {
@@ -48,12 +54,11 @@ SpdyPriority Http2WeightToSpdy3Priority(int weight) {
   return static_cast<SpdyPriority>(7.f - (weight - 1) / kSteps);
 }
 
-bool IsDefinedFrameType(int frame_type_field) {
-  return frame_type_field >= MIN_FRAME_TYPE &&
-         frame_type_field <= MAX_FRAME_TYPE;
+bool IsDefinedFrameType(uint8_t frame_type_field) {
+  return frame_type_field <= MAX_FRAME_TYPE;
 }
 
-SpdyFrameType ParseFrameType(int frame_type_field) {
+SpdyFrameType ParseFrameType(uint8_t frame_type_field) {
   SPDY_BUG_IF(!IsDefinedFrameType(frame_type_field))
       << "Frame type not defined: " << static_cast<int>(frame_type_field);
   return static_cast<SpdyFrameType>(frame_type_field);
@@ -113,18 +118,14 @@ const char* FrameTypeToString(SpdyFrameType frame_type) {
       return "ALTSVC";
     case BLOCKED:
       return "BLOCKED";
+    case EXTENSION:
+      return "EXTENSION (unspecified)";
   }
   return "UNKNOWN_FRAME_TYPE";
 }
 
-bool ParseSettingsId(int wire_setting_id, SpdySettingsIds* setting_id) {
-  // HEADER_TABLE_SIZE is the first defined setting id.
-  if (wire_setting_id < SETTINGS_MIN) {
-    return false;
-  }
-
-  // MAX_HEADER_LIST_SIZE is the last defined setting id.
-  if (wire_setting_id > SETTINGS_MAX) {
+bool ParseSettingsId(uint16_t wire_setting_id, SpdySettingsIds* setting_id) {
+  if (wire_setting_id < SETTINGS_MIN || wire_setting_id > SETTINGS_MAX) {
     return false;
   }
 

@@ -1,22 +1,27 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "infinite_scroll_001.wpr": [
-            "facebook"
-        ], 
-        "infinite_scroll_004.wpr": [
-            "discourse"
-        ], 
-        "infinite_scroll_003.wpr": [
-            "flickr"
-        ], 
-        "infinite_scroll_000.wpr": [
-            "twitter", 
-            "espn", 
-            "yahoo"
-        ], 
-        "infinite_scroll_002.wpr": [
-            "tumblr"
-        ]
-    }
+        "discourse": {
+            "DEFAULT": "infinite_scroll_004.wpr"
+        },
+        "espn": {
+            "DEFAULT": "infinite_scroll_000.wpr"
+        },
+        "facebook": {
+            "DEFAULT": "infinite_scroll_001.wpr"
+        },
+        "flickr": {
+            "DEFAULT": "infinite_scroll_003.wpr"
+        },
+        "tumblr": {
+            "DEFAULT": "infinite_scroll_002.wpr"
+        },
+        "twitter": {
+            "DEFAULT": "infinite_scroll_000.wpr"
+        },
+        "yahoo": {
+            "DEFAULT": "infinite_scroll_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

@@ -95,6 +95,9 @@ class NET_EXPORT_PRIVATE Http2HpackDecoder {
   // Was an error detected?
   bool error_detected();
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   friend class test::Http2HpackDecoderPeer;
 

@@ -4,8 +4,6 @@
 
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 
-#include <cstdarg>
-
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -97,44 +95,19 @@ string QuicCryptoServerConfigPeer::NewServerNonce(QuicRandom* rand,
   return server_config_->NewServerNonce(rand, now);
 }
 
-void QuicCryptoServerConfigPeer::CheckConfigs(const char* server_config_id1,
-                                              ...) {
-  va_list ap;
-  va_start(ap, server_config_id1);
-
-  std::vector<std::pair<ServerConfigID, bool>> expected;
-  bool first = true;
-  for (;;) {
-    const char* server_config_id;
-    if (first) {
-      server_config_id = server_config_id1;
-      first = false;
-    } else {
-      server_config_id = va_arg(ap, const char*);
-    }
-
-    if (!server_config_id) {
-      break;
-    }
-
-    // varargs will promote the value to an int so we have to read that from
-    // the stack and cast down.
-    const bool is_primary = static_cast<bool>(va_arg(ap, int));
-    expected.push_back(std::make_pair(server_config_id, is_primary));
-  }
-
-  va_end(ap);
-
+void QuicCryptoServerConfigPeer::CheckConfigs(
+    std::vector<std::pair<string, bool>> expected_ids_and_status) {
   QuicReaderMutexLock locked(&server_config_->configs_lock_);
 
-  ASSERT_EQ(expected.size(), server_config_->configs_.size()) << ConfigsDebug();
+  ASSERT_EQ(expected_ids_and_status.size(), server_config_->configs_.size())
+      << ConfigsDebug();
 
   for (const std::pair<
            const ServerConfigID,
            QuicReferenceCountedPointer<QuicCryptoServerConfig::Config>>& i :
        server_config_->configs_) {
     bool found = false;
-    for (std::pair<ServerConfigID, bool>& j : expected) {
+    for (std::pair<ServerConfigID, bool>& j : expected_ids_and_status) {
       if (i.first == j.first && i.second->is_primary == j.second) {
         found = true;
         j.first.clear();

@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "sunspider_000.wpr": [
-            "http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html"
-        ]
-    }
+        "http://www.webkit.org/perf/sunspider-1.0.2/sunspider-1.0.2/driver.html": {
+            "DEFAULT": "sunspider_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

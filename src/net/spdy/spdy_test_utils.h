@@ -93,7 +93,8 @@ class TestServerPushDelegate : public ServerPushDelegate {
   explicit TestServerPushDelegate();
   ~TestServerPushDelegate() override;
 
-  void OnPush(std::unique_ptr<ServerPushHelper> push_helper) override;
+  void OnPush(std::unique_ptr<ServerPushHelper> push_helper,
+              const NetLogWithSource& session_net_log) override;
 
   bool CancelPush(GURL url);
 

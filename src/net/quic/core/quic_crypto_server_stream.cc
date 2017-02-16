@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include "crypto/secure_hash.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/crypto_utils.h"
 #include "net/quic/core/crypto/quic_crypto_server_config.h"
@@ -18,6 +17,7 @@
 #include "net/quic/core/quic_session.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_text_utils.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::StringPiece;
 using std::string;
@@ -284,55 +284,27 @@ void QuicCryptoServerStream::SendServerConfigUpdate(
     return;
   }
 
-  if (FLAGS_quic_reloadable_flag_enable_async_get_proof) {
-    if (send_server_config_update_cb_ != nullptr) {
-      QUIC_DVLOG(1)
-          << "Skipped server config update since one is already in progress";
-      return;
-    }
-
-    std::unique_ptr<SendServerConfigUpdateCallback> cb(
-        new SendServerConfigUpdateCallback(this));
-    send_server_config_update_cb_ = cb.get();
-
-    crypto_config_->BuildServerConfigUpdateMessage(
-        session()->connection()->version(), chlo_hash_,
-        previous_source_address_tokens_,
-        session()->connection()->self_address(),
-        session()->connection()->peer_address().host(),
-        session()->connection()->clock(),
-        session()->connection()->random_generator(), compressed_certs_cache_,
-        *crypto_negotiated_params_, cached_network_params,
-        (session()->config()->HasReceivedConnectionOptions()
-             ? session()->config()->ReceivedConnectionOptions()
-             : QuicTagVector()),
-        std::move(cb));
+  if (send_server_config_update_cb_ != nullptr) {
+    QUIC_DVLOG(1)
+        << "Skipped server config update since one is already in progress";
     return;
   }
 
-  CryptoHandshakeMessage server_config_update_message;
-  if (!crypto_config_->BuildServerConfigUpdateMessage(
-          session()->connection()->version(), chlo_hash_,
-          previous_source_address_tokens_,
-          session()->connection()->self_address(),
-          session()->connection()->peer_address().host(),
-          session()->connection()->clock(),
-          session()->connection()->random_generator(), compressed_certs_cache_,
-          *crypto_negotiated_params_, cached_network_params,
-          (session()->config()->HasReceivedConnectionOptions()
-               ? session()->config()->ReceivedConnectionOptions()
-               : QuicTagVector()),
-          &server_config_update_message)) {
-    QUIC_DVLOG(1) << "Server: Failed to build server config update (SCUP)!";
-    return;
-  }
+  std::unique_ptr<SendServerConfigUpdateCallback> cb(
+      new SendServerConfigUpdateCallback(this));
+  send_server_config_update_cb_ = cb.get();
 
-  QUIC_DVLOG(1) << "Server: Sending server config update: "
-                << server_config_update_message.DebugString();
-  const QuicData& data = server_config_update_message.GetSerialized();
-  WriteOrBufferData(StringPiece(data.data(), data.length()), false, nullptr);
-
-  ++num_server_config_update_messages_sent_;
+  crypto_config_->BuildServerConfigUpdateMessage(
+      session()->connection()->version(), chlo_hash_,
+      previous_source_address_tokens_, session()->connection()->self_address(),
+      session()->connection()->peer_address().host(),
+      session()->connection()->clock(),
+      session()->connection()->random_generator(), compressed_certs_cache_,
+      *crypto_negotiated_params_, cached_network_params,
+      (session()->config()->HasReceivedConnectionOptions()
+           ? session()->config()->ReceivedConnectionOptions()
+           : QuicTagVector()),
+      std::move(cb));
 }
 
 QuicCryptoServerStream::SendServerConfigUpdateCallback::
@@ -417,11 +389,9 @@ bool QuicCryptoServerStream::GetBase64SHA256ClientChannelID(
   }
 
   const string& channel_id(crypto_negotiated_params_->channel_id);
-  std::unique_ptr<crypto::SecureHash> hash(
-      crypto::SecureHash::Create(crypto::SecureHash::SHA256));
-  hash->Update(channel_id.data(), channel_id.size());
-  uint8_t digest[32];
-  hash->Finish(digest, sizeof(digest));
+  uint8_t digest[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t*>(channel_id.data()), channel_id.size(),
+         digest);
 
   QuicTextUtils::Base64Encode(digest, arraysize(digest), output);
   return true;

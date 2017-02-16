@@ -120,7 +120,7 @@ const size_t kMaxStreamsForTest = 10;
 class QuicServerSessionBaseTest : public ::testing::TestWithParam<QuicVersion> {
  protected:
   QuicServerSessionBaseTest()
-      : QuicServerSessionBaseTest(CryptoTestUtils::ProofSourceForTesting()) {}
+      : QuicServerSessionBaseTest(crypto_test_utils::ProofSourceForTesting()) {}
 
   explicit QuicServerSessionBaseTest(std::unique_ptr<ProofSource> proof_source)
       : crypto_config_(QuicCryptoServerConfig::TESTING,
@@ -602,14 +602,13 @@ INSTANTIATE_TEST_CASE_P(StreamMemberLifetimeTests,
 // ProofSource::GetProof.  Delay the completion of the operation until after the
 // stream has been destroyed, and verify that there are no memory bugs.
 TEST_P(StreamMemberLifetimeTest, Basic) {
-  FLAGS_quic_reloadable_flag_enable_async_get_proof = true;
   FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = true;
   FLAGS_quic_reloadable_flag_quic_use_cheap_stateless_rejects = true;
   FLAGS_quic_reloadable_flag_quic_create_session_after_insertion = true;
 
   const QuicClock* clock = helper_.GetClock();
   QuicVersion version = AllSupportedVersions().front();
-  CryptoHandshakeMessage chlo = CryptoTestUtils::GenerateDefaultInchoateCHLO(
+  CryptoHandshakeMessage chlo = crypto_test_utils::GenerateDefaultInchoateCHLO(
       clock, version, &crypto_config_);
   chlo.SetVector(kCOPT, QuicTagVector{kSREJ});
   std::vector<QuicVersion> packet_version_list = {version};

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_buffer.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_stream.h"
@@ -31,6 +32,10 @@ SpdyWriteQueue::PendingWrite::~PendingWrite() {}
 SpdyWriteQueue::PendingWrite::PendingWrite(PendingWrite&& other) = default;
 SpdyWriteQueue::PendingWrite& SpdyWriteQueue::PendingWrite::operator=(
     PendingWrite&& other) = default;
+
+size_t SpdyWriteQueue::PendingWrite::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(frame_producer);
+}
 
 SpdyWriteQueue::SpdyWriteQueue() : removing_writes_(false) {}
 
@@ -153,6 +158,10 @@ void SpdyWriteQueue::Clear() {
     queue_[i].clear();
   }
   removing_writes_ = false;
+}
+
+size_t SpdyWriteQueue::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(queue_);
 }
 
 }  // namespace net

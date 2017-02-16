@@ -21,7 +21,7 @@ using std::string;
 namespace net {
 
 #define ENDPOINT \
-  (perspective() == Perspective::IS_SERVER ? "Server: " : " Client: ")
+  (perspective() == Perspective::IS_SERVER ? "Server: " : "Client: ")
 
 QuicSession::QuicSession(QuicConnection* connection,
                          Visitor* owner,

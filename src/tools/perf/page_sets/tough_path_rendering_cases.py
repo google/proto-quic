@@ -6,7 +6,6 @@ from telemetry import story
 
 
 class ToughPathRenderingCasesPage(page_module.Page):
-
   def RunPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('ClickStart'):
       action_runner.Wait(10)
@@ -31,12 +30,18 @@ class ToughPathRenderingCasesPageSet(story.StorySet):
       archive_data_file='data/tough_path_rendering_cases.json',
       cloud_storage_bucket=story.PARTNER_BUCKET)
 
-    urls_list = [
-      'http://www.craftymind.com/factory/guimark2/HTML5ChartingTest.html'
+    page_list = [
+      ('GUIMark Vector Chart Test',
+      'http://www.craftymind.com/factory/guimark2/HTML5ChartingTest.html'),
+      ('MotionMark Canvas Fill Shapes',
+      'http://rawgit.com/WebKit/webkit/master/PerformanceTests/MotionMark/developer.html?test-name=Fillshapes&test-interval=20&display=minimal&tiles=big&controller=fixed&frame-rate=50&kalman-process-error=1&kalman-measurement-error=4&time-measurement=performance&suite-name=Canvassuite&complexity=1000'), # pylint: disable=line-too-long
+      ('MotionMark Canvas Stroke Shapes',
+      'http://rawgit.com/WebKit/webkit/master/PerformanceTests/MotionMark/developer.html?test-name=Strokeshapes&test-interval=20&display=minimal&tiles=big&controller=fixed&frame-rate=50&kalman-process-error=1&kalman-measurement-error=4&time-measurement=performance&suite-name=Canvassuite&complexity=1000'), # pylint: disable=line-too-long
     ]
 
-    for url in urls_list:
-      self.AddStory(ToughPathRenderingCasesPage(url, self))
+    for name, url in page_list:
+      self.AddStory(ToughPathRenderingCasesPage(name=name, url=url,
+          page_set=self))
 
     # Chalkboard content linked from
     # http://ie.microsoft.com/testdrive/Performance/Chalkboard/.

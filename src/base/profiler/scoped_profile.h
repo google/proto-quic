@@ -16,28 +16,38 @@
 #include "base/location.h"
 #include "base/macros.h"
 #include "base/profiler/tracked_time.h"
+#include "base/trace_event/heap_profiler.h"
 #include "base/tracked_objects.h"
 
-#define PASTE_LINE_NUMBER_ON_NAME(name, line) name##line
+// Two level indirection is required for correct macro substitution.
+#define PASTE_COUNTER_ON_NAME2(name, counter) name##counter
+#define PASTE_COUNTER_ON_NAME(name, counter) \
+  PASTE_COUNTER_ON_NAME2(name, counter)
 
-#define LINE_BASED_VARIABLE_NAME_FOR_PROFILING                                 \
-    PASTE_LINE_NUMBER_ON_NAME(some_profiler_variable_, __LINE__)
+#define COUNTER_BASED_VARIABLE_NAME_FOR_PROFILING \
+  PASTE_COUNTER_ON_NAME(some_profiler_variable_, __COUNTER__)
 
 // Defines the containing scope as a profiled region. This allows developers to
 // profile their code and see results on their about:profiler page, as well as
-// on the UMA dashboard.
-#define TRACK_RUN_IN_THIS_SCOPED_REGION(dispatch_function_name)            \
-  ::tracked_objects::ScopedProfile LINE_BASED_VARIABLE_NAME_FOR_PROFILING( \
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(#dispatch_function_name),           \
-      ::tracked_objects::ScopedProfile::ENABLED)
+// on the UMA dashboard and heap profiler.
+#define TRACK_RUN_IN_THIS_SCOPED_REGION(dispatch_function_name)               \
+  const ::tracked_objects::Location& location =                               \
+      FROM_HERE_WITH_EXPLICIT_FUNCTION(#dispatch_function_name);              \
+  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION                               \
+  COUNTER_BASED_VARIABLE_NAME_FOR_PROFILING(location.file_name());            \
+  ::tracked_objects::ScopedProfile COUNTER_BASED_VARIABLE_NAME_FOR_PROFILING( \
+      location, ::tracked_objects::ScopedProfile::ENABLED)
 
 // Same as TRACK_RUN_IN_THIS_SCOPED_REGION except that there's an extra param
 // which is concatenated with the function name for better filtering.
-#define TRACK_SCOPED_REGION(category_name, dispatch_function_name)         \
-  ::tracked_objects::ScopedProfile LINE_BASED_VARIABLE_NAME_FOR_PROFILING( \
-      FROM_HERE_WITH_EXPLICIT_FUNCTION(                                    \
-          "[" category_name "]" dispatch_function_name),                   \
-      ::tracked_objects::ScopedProfile::ENABLED)
+#define TRACK_SCOPED_REGION(category_name, dispatch_function_name)            \
+  const ::tracked_objects::Location& location =                               \
+      FROM_HERE_WITH_EXPLICIT_FUNCTION("[" category_name                      \
+                                       "]" dispatch_function_name);           \
+  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION                               \
+  COUNTER_BASED_VARIABLE_NAME_FOR_PROFILING(location.file_name());            \
+  ::tracked_objects::ScopedProfile COUNTER_BASED_VARIABLE_NAME_FOR_PROFILING( \
+      location, ::tracked_objects::ScopedProfile::ENABLED)
 
 namespace tracked_objects {
 class Births;

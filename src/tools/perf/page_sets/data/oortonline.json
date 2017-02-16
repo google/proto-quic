@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "oortonline_000.wpr": [
-            "http://oortonline.gl/#run"
-        ]
-    }
+        "http://oortonline.gl/#run": {
+            "DEFAULT": "oortonline_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

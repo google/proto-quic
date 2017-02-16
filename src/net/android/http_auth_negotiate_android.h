@@ -18,6 +18,10 @@
 #include "net/base/net_export.h"
 #include "net/http/http_auth.h"
 
+namespace base {
+class TaskRunner;
+}
+
 namespace net {
 
 class HttpAuthChallengeTokenizer;

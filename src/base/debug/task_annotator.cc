@@ -4,6 +4,8 @@
 
 #include "base/debug/task_annotator.h"
 
+#include <array>
+
 #include "base/debug/activity_tracker.h"
 #include "base/debug/alias.h"
 #include "base/pending_task.h"
@@ -41,13 +43,18 @@ void TaskAnnotator::RunTask(const char* queue_function,
       TRACE_ID_MANGLE(GetTaskTraceID(*pending_task)), TRACE_EVENT_FLAG_FLOW_IN,
       "queue_duration", queue_duration.InMilliseconds());
 
-  // Before running the task, store the program counter where it was posted
-  // and deliberately alias it to ensure it is on the stack if the task
-  // crashes. Be careful not to assume that the variable itself will have the
-  // expected value when displayed by the optimizer in an optimized build.
-  // Look at a memory dump of the stack.
-  const void* program_counter = pending_task->posted_from.program_counter();
-  debug::Alias(&program_counter);
+  // Before running the task, store the task backtrace with the chain of
+  // PostTasks that resulted in this call and deliberately alias it to ensure
+  // it is on the stack if the task crashes. Be careful not to assume that the
+  // variable itself will have the expected value when displayed by the
+  // optimizer in an optimized build. Look at a memory dump of the stack.
+  static constexpr int kStackTaskTraceSnapshotSize =
+      std::tuple_size<decltype(pending_task->task_backtrace)>::value + 1;
+  std::array<const void*, kStackTaskTraceSnapshotSize> task_backtrace;
+  task_backtrace[0] = pending_task->posted_from.program_counter();
+  std::copy(pending_task->task_backtrace.begin(),
+            pending_task->task_backtrace.end(), task_backtrace.begin() + 1);
+  debug::Alias(&task_backtrace);
 
   std::move(pending_task->task).Run();
 

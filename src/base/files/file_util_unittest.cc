@@ -7,11 +7,15 @@
 
 #include <algorithm>
 #include <fstream>
+#include <initializer_list>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "base/base_paths.h"
+#include "base/bind.h"
+#include "base/bind_helpers.h"
+#include "base/callback_helpers.h"
 #include "base/environment.h"
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
@@ -244,6 +248,30 @@ std::wstring ReadTextFile(const FilePath& filename) {
   file.getline(contents, arraysize(contents));
   file.close();
   return std::wstring(contents);
+}
+
+// Sets |is_inheritable| to indicate whether or not |stream| is set up to be
+// inerhited into child processes (i.e., HANDLE_FLAG_INHERIT is set on the
+// underlying handle on Windows, or FD_CLOEXEC is not set on the underlying file
+// descriptor on POSIX). Calls to this function must be wrapped with
+// ASSERT_NO_FATAL_FAILURE to properly abort tests in case of fatal failure.
+void GetIsInheritable(FILE* stream, bool* is_inheritable) {
+#if defined(OS_WIN)
+  HANDLE handle = reinterpret_cast<HANDLE>(_get_osfhandle(_fileno(stream)));
+  ASSERT_NE(INVALID_HANDLE_VALUE, handle);
+
+  DWORD info = 0;
+  ASSERT_EQ(TRUE, ::GetHandleInformation(handle, &info));
+  *is_inheritable = ((info & HANDLE_FLAG_INHERIT) != 0);
+#elif defined(OS_POSIX)
+  int fd = fileno(stream);
+  ASSERT_NE(-1, fd);
+  int flags = fcntl(fd, F_GETFD, 0);
+  ASSERT_NE(-1, flags);
+  *is_inheritable = ((flags & FD_CLOEXEC) == 0);
+#else
+#error Not implemented
+#endif
 }
 
 TEST_F(FileUtilTest, FileAndDirectorySize) {
@@ -1710,6 +1738,26 @@ TEST_F(FileUtilTest, GetTempDirTest) {
   }
 }
 #endif  // OS_WIN
+
+// Test that files opened by OpenFile are not set up for inheritance into child
+// procs.
+TEST_F(FileUtilTest, OpenFileNoInheritance) {
+  FilePath file_path(temp_dir_.GetPath().Append(FPL("a_file")));
+
+  for (const char* mode : {"wb", "r,ccs=UNICODE"}) {
+    SCOPED_TRACE(mode);
+    ASSERT_NO_FATAL_FAILURE(CreateTextFile(file_path, L"Geepers"));
+    FILE* file = OpenFile(file_path, mode);
+    ASSERT_NE(nullptr, file);
+    {
+      ScopedClosureRunner file_closer(Bind(IgnoreResult(&CloseFile), file));
+      bool is_inheritable = true;
+      ASSERT_NO_FATAL_FAILURE(GetIsInheritable(file, &is_inheritable));
+      EXPECT_FALSE(is_inheritable);
+    }
+    ASSERT_TRUE(DeleteFile(file_path, false));
+  }
+}
 
 TEST_F(FileUtilTest, CreateTemporaryFileTest) {
   FilePath temp_files[3];

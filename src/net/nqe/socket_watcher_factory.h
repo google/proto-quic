@@ -12,10 +12,12 @@
 #include "base/memory/weak_ptr.h"
 #include "base/single_thread_task_runner.h"
 #include "base/threading/thread_checker.h"
+#include "base/time/time.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_performance_watcher_factory.h"
 
 namespace base {
+class TickClock;
 class TimeDelta;
 }  // namespace base
 
@@ -38,9 +40,14 @@ class SocketWatcherFactory : public SocketPerformanceWatcherFactory {
   // Creates a SocketWatcherFactory.  All socket watchers created by
   // SocketWatcherFactory call |updated_rtt_observation_callback| on
   // |task_runner| every time a new RTT observation is available.
+  // |min_notification_interval| is the minimum interval betweeen consecutive
+  // notifications to the socket watchers created by this factory. |tick_clock|
+  // is guaranteed to be non-null.
   SocketWatcherFactory(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-      OnUpdatedRTTAvailableCallback updated_rtt_observation_callback);
+      base::TimeDelta min_notification_interval,
+      OnUpdatedRTTAvailableCallback updated_rtt_observation_callback,
+      base::TickClock* tick_clock);
 
   ~SocketWatcherFactory() override;
 
@@ -51,8 +58,14 @@ class SocketWatcherFactory : public SocketPerformanceWatcherFactory {
  private:
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
 
+  // Minimum interval betweeen consecutive notifications to the socket watchers
+  // created by this factory.
+  const base::TimeDelta min_notification_interval_;
+
   // Called every time a new RTT observation is available.
   OnUpdatedRTTAvailableCallback updated_rtt_observation_callback_;
+
+  base::TickClock* tick_clock_;
 
   DISALLOW_COPY_AND_ASSIGN(SocketWatcherFactory);
 };

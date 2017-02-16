@@ -65,7 +65,7 @@ void RunVerification(ProofVerifier* verifier,
   bool ok;
   string error_details;
   std::unique_ptr<ProofVerifyContext> verify_context(
-      CryptoTestUtils::ProofVerifyContextForTesting());
+      crypto_test_utils::ProofVerifyContextForTesting());
   std::unique_ptr<TestProofVerifierCallback> callback(
       new TestProofVerifierCallback(&comp_callback, &ok, &error_details));
 
@@ -124,9 +124,10 @@ INSTANTIATE_TEST_CASE_P(QuicVersion,
 
 // TODO(rtenneti): Enable testing of ProofVerifier. See http://crbug.com/514468.
 TEST_P(ProofTest, DISABLED_Verify) {
-  std::unique_ptr<ProofSource> source(CryptoTestUtils::ProofSourceForTesting());
+  std::unique_ptr<ProofSource> source(
+      crypto_test_utils::ProofSourceForTesting());
   std::unique_ptr<ProofVerifier> verifier(
-      CryptoTestUtils::ProofVerifierForTesting());
+      crypto_test_utils::ProofVerifierForTesting());
 
   const string server_config = "server config bytes";
   const string hostname = "test.example.com";
@@ -135,18 +136,30 @@ TEST_P(ProofTest, DISABLED_Verify) {
   const string second_chlo_hash = "first chlo hash bytes";
   const QuicVersion quic_version = GetParam();
 
+  bool called = false;
+  bool first_called = false;
+  bool ok, first_ok;
   QuicReferenceCountedPointer<ProofSource::Chain> chain;
   QuicReferenceCountedPointer<ProofSource::Chain> first_chain;
   string error_details;
   QuicCryptoProof proof, first_proof;
   QuicSocketAddress server_addr;
 
-  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
-                               quic_version, first_chlo_hash, QuicTagVector(),
-                               &first_chain, &first_proof));
-  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
-                               quic_version, second_chlo_hash, QuicTagVector(),
-                               &chain, &proof));
+  std::unique_ptr<ProofSource::Callback> cb(
+      new TestCallback(&called, &ok, &chain, &proof));
+  std::unique_ptr<ProofSource::Callback> first_cb(
+      new TestCallback(&first_called, &first_ok, &first_chain, &first_proof));
+
+  // GetProof here expects the async method to invoke the callback
+  // synchronously.
+  source->GetProof(server_addr, hostname, server_config, quic_version,
+                   first_chlo_hash, QuicTagVector(), std::move(first_cb));
+  source->GetProof(server_addr, hostname, server_config, quic_version,
+                   second_chlo_hash, QuicTagVector(), std::move(cb));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(first_called);
+  ASSERT_TRUE(ok);
+  ASSERT_TRUE(first_ok);
 
   // Check that the proof source is caching correctly:
   ASSERT_EQ(first_chain->certs, chain->certs);
@@ -176,53 +189,28 @@ TEST_P(ProofTest, DISABLED_Verify) {
                   first_chlo_hash, wrong_certs, corrupt_signature, false);
 }
 
-TEST_P(ProofTest, VerifySourceAsync) {
-  std::unique_ptr<ProofSource> source(CryptoTestUtils::ProofSourceForTesting());
-
-  const string server_config = "server config bytes";
-  const string hostname = "test.example.com";
-  const string first_chlo_hash = "first chlo hash bytes";
-  const string second_chlo_hash = "first chlo hash bytes";
-  const QuicVersion quic_version = GetParam();
-  QuicSocketAddress server_addr;
-
-  // Call synchronous version
-  QuicReferenceCountedPointer<ProofSource::Chain> expected_chain;
-  QuicCryptoProof expected_proof;
-  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config,
-                               quic_version, first_chlo_hash, QuicTagVector(),
-                               &expected_chain, &expected_proof));
-
-  // Call asynchronous version and compare results
-  bool called = false;
-  bool ok;
-  QuicReferenceCountedPointer<ProofSource::Chain> chain;
-  QuicCryptoProof proof;
-  std::unique_ptr<ProofSource::Callback> cb(
-      new TestCallback(&called, &ok, &chain, &proof));
-  source->GetProof(server_addr, hostname, server_config, quic_version,
-                   first_chlo_hash, QuicTagVector(), std::move(cb));
-  // TODO(gredner): whan GetProof really invokes the callback asynchronously,
-  // figure out what to do here.
-  ASSERT_TRUE(called);
-  ASSERT_TRUE(ok);
-  EXPECT_THAT(chain->certs, ::testing::ContainerEq(expected_chain->certs));
-  EXPECT_EQ(proof.leaf_cert_scts, expected_proof.leaf_cert_scts);
-}
-
 TEST_P(ProofTest, UseAfterFree) {
-  std::unique_ptr<ProofSource> source(CryptoTestUtils::ProofSourceForTesting());
+  std::unique_ptr<ProofSource> source(
+      crypto_test_utils::ProofSourceForTesting());
 
   const string server_config = "server config bytes";
   const string hostname = "test.example.com";
   const string chlo_hash = "proof nonce bytes";
+  bool called = false;
+  bool ok;
   QuicReferenceCountedPointer<ProofSource::Chain> chain;
   string error_details;
   QuicCryptoProof proof;
   QuicSocketAddress server_addr;
+  std::unique_ptr<ProofSource::Callback> cb(
+      new TestCallback(&called, &ok, &chain, &proof));
 
-  ASSERT_TRUE(source->GetProof(server_addr, hostname, server_config, GetParam(),
-                               chlo_hash, QuicTagVector(), &chain, &proof));
+  // GetProof here expects the async method to invoke the callback
+  // synchronously.
+  source->GetProof(server_addr, hostname, server_config, GetParam(), chlo_hash,
+                   QuicTagVector(), std::move(cb));
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(ok);
 
   // Make sure we can safely access results after deleting where they came from.
   EXPECT_FALSE(chain->HasOneRef());

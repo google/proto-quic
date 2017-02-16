@@ -68,8 +68,8 @@ class NET_EXPORT DirectoryLister  {
   // Will invoke Cancel().
   ~DirectoryLister();
 
-  // Call this method to start the directory enumeration thread.
-  bool Start(base::TaskRunner* dir_task_runner);
+  // Call this method to start the asynchronous directory enumeration.
+  void Start();
 
   // Call this method to asynchronously stop directory enumeration.  The
   // delegate will not be called back.

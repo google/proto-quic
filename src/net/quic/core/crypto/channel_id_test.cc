@@ -283,7 +283,7 @@ TEST(ChannelIDTest, VerifyKnownAnswerTest) {
 
 TEST(ChannelIDTest, SignAndVerify) {
   std::unique_ptr<ChannelIDSource> source(
-      CryptoTestUtils::ChannelIDSourceForTesting());
+      crypto_test_utils::ChannelIDSourceForTesting());
 
   const string signed_data = "signed data";
   const string hostname = "foo.example.com";

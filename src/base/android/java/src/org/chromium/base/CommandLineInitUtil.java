@@ -71,7 +71,7 @@ public final class CommandLineInitUtil {
                 new File(COMMAND_LINE_FILE_PATH_DEBUG_APP, fileName);
         if (!alternativeCommandLineFile.exists()) return null;
         try {
-            if ("eng".equals(Build.TYPE) || "userdebug".equals(Build.TYPE)) {
+            if (BuildInfo.isDebugAndroid()) {
                 return alternativeCommandLineFile;
             }
 

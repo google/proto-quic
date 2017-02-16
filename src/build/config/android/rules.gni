@@ -1115,9 +1115,6 @@ if (enable_java_templates) {
   #   output_name: File name for the output .jar (not including extension).
   #     Defaults to the input .jar file name.
   #
-  #   proguard_preprocess: If true, proguard preprocessing will be run. This can
-  #     be used to remove unwanted parts of the library.
-  #   proguard_preprocess_config: Path to the proguard config for preprocessing.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
   #
@@ -1171,9 +1168,6 @@ if (enable_java_templates) {
   #     entrypoint.
   #   output_name: File name for the output .jar (not including extension).
   #     Defaults to the input .jar file name.
-  #   proguard_preprocess: If true, proguard preprocessing will be run. This can
-  #     be used to remove unwanted parts of the library.
-  #   proguard_preprocess_config: Path to the proguard config for preprocessing.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
   #   supports_android: If true, Android targets (android_library, android_apk)
@@ -1303,9 +1297,6 @@ if (enable_java_templates) {
   #   jar_excluded_patterns: List of patterns of .class files to exclude from the
   #     final jar.
   #
-  #   proguard_preprocess: If true, proguard preprocessing will be run. This can
-  #     be used to remove unwanted parts of the library.
-  #   proguard_preprocess_config: Path to the proguard config for preprocessing.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
   #
@@ -1398,9 +1389,6 @@ if (enable_java_templates) {
   #   jar_path: Path to the prebuilt jar.
   #   output_name: File name for the output .jar (not including extension).
   #     Defaults to the input .jar file name.
-  #   proguard_preprocess: If true, proguard preprocessing will be run. This can
-  #     be used to remove unwanted parts of the library.
-  #   proguard_preprocess_config: Path to the proguard config for preprocessing.
   #   proguard_configs: List of proguard configs to use in final apk step for
   #     any apk that depends on this library.
   #

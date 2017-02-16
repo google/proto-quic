@@ -783,14 +783,6 @@ void ThreadData::EnsureTlsInitialization() {
   // we get the lock earlier in this method.
   base::subtle::Release_Store(&status_, kInitialStartupState);
   DCHECK(base::subtle::NoBarrier_Load(&status_) != UNINITIALIZED);
-
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
-  // Make sure heap tracking is enabled ASAP if the default state is active.
-  if (kInitialStartupState == PROFILING_ACTIVE &&
-      !base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled()) {
-    base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
-  }
-#endif  // BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
 }
 
 // static
@@ -800,14 +792,9 @@ void ThreadData::InitializeAndSetTrackingStatus(Status status) {
 
   EnsureTlsInitialization();  // No-op if already initialized.
 
-  if (status > DEACTIVATED) {
+  if (status > DEACTIVATED)
     status = PROFILING_ACTIVE;
 
-#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
-    if (!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
-      base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
-#endif  // BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
-  }
   base::subtle::Release_Store(&status_, status);
 }
 

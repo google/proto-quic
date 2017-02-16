@@ -10,6 +10,7 @@ import time
 
 from devil.android import device_errors
 from devil.android import flag_changer
+from devil.android.sdk import shared_prefs
 from devil.utils import reraiser_thread
 from pylib import valgrind_tools
 from pylib.android import logdog_logcat_monitor
@@ -109,6 +110,30 @@ class LocalDeviceInstrumentationTestRun(
                                   self._test_instance.package_info.package],
                                 check_return=True)
 
+      def edit_shared_prefs():
+        for pref in self._test_instance.edit_shared_prefs:
+          prefs = shared_prefs.SharedPrefs(dev, pref['package'],
+                                           pref['filename'])
+          prefs.Load()
+          for key in pref.get('remove', []):
+            try:
+              prefs.Remove(key)
+            except KeyError:
+              logging.warning("Attempted to remove non-existent key %s", key)
+          for key, value in pref.get('set', {}).iteritems():
+            if isinstance(value, bool):
+              prefs.SetBoolean(key, value)
+            elif isinstance(value, basestring):
+              prefs.SetString(key, value)
+            elif isinstance(value, long) or isinstance(value, int):
+              prefs.SetLong(key, value)
+            elif isinstance(value, list):
+              prefs.SetStringSet(key, value)
+            else:
+              raise ValueError("Given invalid value type %s for key %s" % (
+                  str(type(value)), key))
+          prefs.Commit()
+
       def push_test_data():
         device_root = posixpath.join(dev.GetExternalStoragePath(),
                                      'chromium_tests_root')
@@ -139,7 +164,8 @@ class LocalDeviceInstrumentationTestRun(
         valgrind_tools.SetChromeTimeoutScale(
             dev, self._test_instance.timeout_scale)
 
-      steps = (install_apk, push_test_data, create_flag_changer)
+      steps = (install_apk, edit_shared_prefs, push_test_data,
+               create_flag_changer)
       if self._env.concurrent_adb:
         reraiser_thread.RunAsync(steps)
       else:
@@ -257,7 +283,6 @@ class LocalDeviceInstrumentationTestRun(
       device.RunShellCommand(
           ['log', '-p', 'i', '-t', _TAG, 'START %s' % test_name],
           check_return=True)
-      logcat_url = None
       time_ms = lambda: int(time.time() * 1e3)
       start_ms = time_ms()
 
@@ -265,16 +290,16 @@ class LocalDeviceInstrumentationTestRun(
           test_name.replace('#', '.'),
           time.strftime('%Y%m%dT%H%M%S', time.localtime()),
           device.serial)
+      logmon = logdog_logcat_monitor.LogdogLogcatMonitor(
+          device.adb, stream_name)
       with contextlib_ext.Optional(
-          logdog_logcat_monitor.LogdogLogcatMonitor(device.adb, stream_name),
-          self._test_instance.should_save_logcat) as logmon:
+          logmon, self._test_instance.should_save_logcat):
         with contextlib_ext.Optional(
             trace_event.trace(test_name),
             self._env.trace_output):
           output = device.StartInstrumentation(
               target, raw=True, extras=extras, timeout=timeout, retries=0)
-        if logmon:
-          logcat_url = logmon.GetLogcatURL()
+      logcat_url = logmon.GetLogcatURL()
     finally:
       device.RunShellCommand(
           ['log', '-p', 'i', '-t', _TAG, 'END %s' % test_name],
@@ -293,7 +318,8 @@ class LocalDeviceInstrumentationTestRun(
     results = self._test_instance.GenerateTestResults(
         result_code, result_bundle, statuses, start_ms, duration_ms)
     for result in results:
-      result.SetLink('logcat', logcat_url)
+      if logcat_url:
+        result.SetLink('logcat', logcat_url)
 
     # Update the result name if the test used flags.
     if flags:

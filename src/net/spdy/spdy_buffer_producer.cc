@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_buffer.h"
 #include "net/spdy/spdy_protocol.h"
 
@@ -24,6 +25,10 @@ SimpleBufferProducer::~SimpleBufferProducer() {}
 std::unique_ptr<SpdyBuffer> SimpleBufferProducer::ProduceBuffer() {
   DCHECK(buffer_);
   return std::move(buffer_);
+}
+
+size_t SimpleBufferProducer::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(buffer_);
 }
 
 }  // namespace net

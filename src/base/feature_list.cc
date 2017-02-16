@@ -165,7 +165,7 @@ void FeatureList::AddFeaturesToAllocator(PersistentMemoryAllocator* allocator) {
       pickle.WriteString(override.second.field_trial->trial_name());
 
     size_t total_size = sizeof(FeatureEntry) + pickle.size();
-    FeatureEntry* entry = allocator->AllocateObject<FeatureEntry>(total_size);
+    FeatureEntry* entry = allocator->New<FeatureEntry>(total_size);
     if (!entry)
       return;
 

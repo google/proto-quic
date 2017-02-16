@@ -181,6 +181,8 @@ void BlinkGCPluginConsumer::CheckClass(RecordInfo* info) {
     return;
 
   if (CXXMethodDecl* trace = info->GetTraceMethod()) {
+    if (options_.warn_stack_allocated_trace_method && info->IsStackAllocated())
+      reporter_.TraceMethodForStackAllocatedClass(info, trace);
     if (trace->isPure())
       reporter_.ClassDeclaresPureVirtualTrace(info, trace);
   } else if (info->RequiresTraceMethod()) {

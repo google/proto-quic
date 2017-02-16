@@ -1,13 +1,24 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "mobile_memory_018.wpr": [
-            "http://techcrunch.com/2014/02/17/pixel-brings-brings-old-school-video-game-art-to-life-in-your-home/", 
-            "http://techcrunch.com/2014/02/15/kickstarter-coins-2/", 
-            "http://techcrunch.com/2014/02/15/was-y-combinator-worth-it/", 
-            "https://mail.google.com/mail/mu", 
-            "http://techcrunch.com", 
-            "https://www.google.com/search?site=&tbm=isch&q=google"
-        ]
-    }
+        "http://techcrunch.com": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        },
+        "http://techcrunch.com/2014/02/15/kickstarter-coins-2/": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        },
+        "http://techcrunch.com/2014/02/15/was-y-combinator-worth-it/": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        },
+        "http://techcrunch.com/2014/02/17/pixel-brings-brings-old-school-video-game-art-to-life-in-your-home/": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        },
+        "https://mail.google.com/mail/mu": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        },
+        "https://www.google.com/search?site=&tbm=isch&q=google": {
+            "DEFAULT": "mobile_memory_018.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

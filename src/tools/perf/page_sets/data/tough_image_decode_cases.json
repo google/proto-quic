@@ -1,9 +1,12 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_image_decode_cases_000.wpr": [
-            "http://localhost:9000/cats-unscaled.html", 
-            "http://localhost:9000/cats-viewport-width.html"
-        ]
-    }
+        "http://localhost:9000/cats-unscaled.html": {
+            "DEFAULT": "tough_image_decode_cases_000.wpr"
+        },
+        "http://localhost:9000/cats-viewport-width.html": {
+            "DEFAULT": "tough_image_decode_cases_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

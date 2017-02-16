@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "webrtc_peerconnection_cases_003.wpr": [
-            "720p_call_45s"
-        ]
-    }
+        "720p_call_45s": {
+            "DEFAULT": "webrtc_peerconnection_cases_003.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

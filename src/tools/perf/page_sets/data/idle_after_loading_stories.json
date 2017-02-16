@@ -1,22 +1,51 @@
 {
     "archives": {
-        "idle_after_loading_stories_002.wpr": [
-            "http://bbc.com/news/uk/",
-            "http://www.labradortraininghq.com/labrador-training/how-to-crate-train-a-puppy/#How_Long_DoesIt_Take_To_Crate_Train_A_Puppy",
-            "http://www.microsoft.com",
-            "http://www.indiatimes.com",
-            "http://bgr.com",
-            "http://abcnews.go.com/",
-            "http://www.w3schools.com/html/default.asp",
-            "http://www.slideshare.net/patrickmeenan",
-            "http://tumblr.all-that-is-interesting.com/",
-            "https://twitter.com/katyperry",
-            "https://instagram.com/cnn/",
-            "http://capitalone.com",
-            "http://www.sina.com.cn",
-            "http://www.androidpolice.com/2014/10/20/animation-bonanza-android-5-0-lollipop-in-gifs/",
-            "http://www.uol.com.br"
-        ]
+        "http://abcnews.go.com/": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://bbc.com/news/uk/": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://bgr.com": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://capitalone.com": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://tumblr.all-that-is-interesting.com/": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.androidpolice.com/2014/10/20/animation-bonanza-android-5-0-lollipop-in-gifs/": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.indiatimes.com": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.labradortraininghq.com/labrador-training/how-to-crate-train-a-puppy/#How_Long_DoesIt_Take_To_Crate_Train_A_Puppy": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.microsoft.com": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.sina.com.cn": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.slideshare.net/patrickmeenan": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.uol.com.br": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "http://www.w3schools.com/html/default.asp": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "https://instagram.com/cnn/": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        },
+        "https://twitter.com/katyperry": {
+            "DEFAULT": "idle_after_loading_stories_002.wpr"
+        }
     },
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

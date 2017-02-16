@@ -1,16 +1,33 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "polymer_001.wpr": [
-            "http://www.polymer-project.org/components/paper-fab/demo.html", 
-            "http://www.polymer-project.org/components/paper-shadow/demo.html", 
-            "http://www.polymer-project.org/components/paper-button/demo.html", 
-            "http://www.polymer-project.org/components/paper-icon-button/demo.html", 
-            "http://www.polymer-project.org/components/core-scroll-header-panel/demo.html", 
-            "http://www.polymer-project.org/components/paper-tabs/demo.html", 
-            "http://www.polymer-project.org/components/paper-calculator/demo.html", 
-            "http://www.polymer-project.org/components/paper-toggle-button/demo.html", 
-            "http://www.polymer-project.org/components/paper-checkbox/demo.html"
-        ]
-    }
+        "http://www.polymer-project.org/components/core-scroll-header-panel/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-button/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-calculator/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-checkbox/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-fab/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-icon-button/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-shadow/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-tabs/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        },
+        "http://www.polymer-project.org/components/paper-toggle-button/demo.html": {
+            "DEFAULT": "polymer_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

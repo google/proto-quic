@@ -9,6 +9,7 @@
 #include "base/logging.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_static_table.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_flags.h"
 
 namespace net {
@@ -272,6 +273,12 @@ void HpackHeaderTable::DebugLogTableState() const {
   for (const auto it : dynamic_name_index_) {
     DVLOG(2) << "  " << it.first << ": " << it.second->GetDebugString();
   }
+}
+
+size_t HpackHeaderTable::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(dynamic_entries_) +
+         SpdyEstimateMemoryUsage(dynamic_index_) +
+         SpdyEstimateMemoryUsage(dynamic_name_index_);
 }
 
 }  // namespace net

@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include "base/macros.h"
+
 namespace net {
 
 namespace transport_security_state {
@@ -39,9 +41,6 @@ class BitWriter {
   const std::vector<uint8_t>& bytes() const { return bytes_; }
 
  private:
-  // Returns the minimum number of bits needed to represent |input|.
-  uint8_t BitLength(uint32_t input) const;
-
   // Buffers bits until they fill a whole byte.
   uint8_t current_byte_ = 0;
 
@@ -52,6 +51,8 @@ class BitWriter {
   uint32_t position_ = 0;
 
   std::vector<uint8_t> bytes_;
+
+  DISALLOW_COPY_AND_ASSIGN(BitWriter);
 };
 
 }  // namespace transport_security_state

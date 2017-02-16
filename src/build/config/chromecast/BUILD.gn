@@ -37,6 +37,13 @@ config("ldconfig") {
     "-Wl,-rpath=\$ORIGIN/lib",
     "-Wl,-rpath=\$ORIGIN",
   ]
+
+  # Binaries which don't live in the same directory as Chrome component
+  # libraries may still depend on them. Explicitly add the component library
+  # directory to the rpath for the component build.
+  if (is_component_build) {
+    ldflags += [ "-Wl,-rpath=/system/chrome" ]
+  }
 }
 
 config("executable_config") {

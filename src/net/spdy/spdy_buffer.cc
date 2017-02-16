@@ -11,6 +11,7 @@
 #include "base/logging.h"
 #include "base/macros.h"
 #include "net/base/io_buffer.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_protocol.h"
 
 namespace net {
@@ -95,6 +96,11 @@ void SpdyBuffer::Consume(size_t consume_size) {
 
 IOBuffer* SpdyBuffer::GetIOBufferForRemainingData() {
   return new SharedFrameIOBuffer(shared_frame_, offset_);
+}
+
+size_t SpdyBuffer::EstimateMemoryUsage() const {
+  // TODO(xunjieli): Estimate |consume_callbacks_|. https://crbug.com/669108.
+  return SpdyEstimateMemoryUsage(shared_frame_->data);
 }
 
 void SpdyBuffer::ConsumeHelper(size_t consume_size,

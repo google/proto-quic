@@ -777,7 +777,9 @@ class OCSPErrorTestDelegate : public TestDelegate {
 // Inherit PlatformTest since we require the autorelease pool on Mac OS X.
 class URLRequestTest : public PlatformTest {
  public:
-  URLRequestTest() : default_context_(true) {
+  URLRequestTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()),
+        default_context_(true) {
     default_context_.set_network_delegate(&default_network_delegate_);
     default_context_.set_net_log(&net_log_);
     job_factory_impl_ = new URLRequestJobFactoryImpl();
@@ -823,6 +825,9 @@ class URLRequestTest : public PlatformTest {
                                           base::WrapUnique(protocol_handler_));
     return protocol_handler_;
   }
+
+ private:
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
 
  protected:
   TestNetLog net_log_;
@@ -3450,8 +3455,7 @@ class TestSSLConfigService : public SSLConfigService {
 #if !defined(OS_IOS)
 class TokenBindingURLRequestTest : public URLRequestTestHTTP {
  public:
-  TokenBindingURLRequestTest()
-      : scoped_task_scheduler_(base::MessageLoop::current()) {}
+  TokenBindingURLRequestTest() = default;
 
   void SetUp() override {
     default_context_.set_ssl_config_service(
@@ -3463,8 +3467,6 @@ class TokenBindingURLRequestTest : public URLRequestTestHTTP {
   }
 
  protected:
-  // Required by ChannelIDService.
-  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   std::unique_ptr<ChannelIDService> channel_id_service_;
 };
 
@@ -7769,7 +7771,8 @@ TEST_F(URLRequestTest, QuicServerInfoFactoryTest) {
       new HttpNetworkLayer(&session));
 
   HttpCache main_cache(std::move(network_layer1),
-                       HttpCache::DefaultBackend::InMemory(0), true);
+                       HttpCache::DefaultBackend::InMemory(0),
+                       true /* is_main_cache */);
 
   EXPECT_TRUE(session.quic_stream_factory()->has_quic_server_info_factory());
 
@@ -7864,7 +7867,7 @@ TEST_F(URLRequestTestHTTP, NetworkSuspendTest) {
 
   HttpCache http_cache(std::move(network_layer),
                        HttpCache::DefaultBackend::InMemory(0),
-                       false /* set_up_quic_server_info_factory */);
+                       false /* is_main_cache */);
 
   TestURLRequestContext context(true);
   context.set_http_transaction_factory(&http_cache);
@@ -9205,8 +9208,9 @@ TEST_F(HTTPSRequestTest, SSLSessionCacheShardTest) {
   params.http_server_properties = default_context_.http_server_properties();
 
   HttpNetworkSession network_session(params);
-  std::unique_ptr<HttpCache> cache(new HttpCache(
-      &network_session, HttpCache::DefaultBackend::InMemory(0), false));
+  std::unique_ptr<HttpCache> cache(
+      new HttpCache(&network_session, HttpCache::DefaultBackend::InMemory(0),
+                    false /* is_main_cache */));
 
   default_context_.set_http_transaction_factory(cache.get());
 

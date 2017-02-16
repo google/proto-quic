@@ -1,10 +1,15 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "android_acceptance_000.wpr": [
-            "http://www.amazon.com", 
-            "http://www.cnn.com", 
-            "http://www.msn.com"
-        ]
-    }
+        "http://www.amazon.com": {
+            "DEFAULT": "android_acceptance_000.wpr"
+        },
+        "http://www.cnn.com": {
+            "DEFAULT": "android_acceptance_000.wpr"
+        },
+        "http://www.msn.com": {
+            "DEFAULT": "android_acceptance_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

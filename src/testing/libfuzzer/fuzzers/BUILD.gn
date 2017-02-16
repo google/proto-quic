@@ -172,7 +172,11 @@ fuzzer_test("gfx_png_image_fuzzer") {
     "//ui/gfx",
   ]
   dict = "dicts/png.dict"
-  seed_corpus = "//cc/test/data"
+  seed_corpuses = [
+    "//cc/test/data",
+    "//third_party/WebKit/LayoutTests/images/png-suite/samples",
+    "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
+  ]
 }
 
 fuzzer_test("zlib_uncompress_fuzzer") {
@@ -203,6 +207,11 @@ fuzzer_test("libpng_read_fuzzer") {
     "//third_party/libpng",
   ]
   dict = "dicts/png.dict"
+  seed_corpuses = [
+    "//cc/test/data",
+    "//third_party/WebKit/LayoutTests/images/png-suite/samples",
+    "//third_party/WebKit/LayoutTests/images/resources/pngfuzz",
+  ]
 }
 
 fuzzer_test("v8_script_parser_fuzzer") {
@@ -322,16 +331,6 @@ fuzzer_test("v8_wasm_types_section_fuzzer") {
     "//v8:wasm_types_section_fuzzer",
   ]
   libfuzzer_options = [ "max_len=500" ]
-}
-
-fuzzer_test("third_party_re2_fuzzer") {
-  sources = [
-    "re2_fuzzer.cc",
-  ]
-  deps = [
-    "//third_party/re2:re2",
-  ]
-  libfuzzer_options = [ "max_len=32" ]
 }
 
 fuzzer_test("libxml_xml_regexp_compile_fuzzer") {

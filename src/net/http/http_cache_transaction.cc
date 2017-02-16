@@ -1160,6 +1160,9 @@ int HttpCache::Transaction::DoAddToEntryComplete(int result) {
   }
 
   if (result == ERR_CACHE_LOCK_TIMEOUT) {
+    if (mode_ == READ)
+      return ERR_CACHE_MISS;
+
     // The cache is busy, bypass it for this transaction.
     mode_ = NONE;
     next_state_ = STATE_SEND_REQUEST;

@@ -87,7 +87,7 @@ if (symbol_level == -1) {
     # With instrumentation enabled, debug info puts libchrome.so over 4gb, which
     # causes the linker to produce an invalid ELF. http://crbug.com/574476
     symbol_level = 0
-  } else if (is_android && !is_component_build && !is_clang &&
+  } else if (is_android && !is_component_build &&
              !(android_64bit_target_cpu && !build_apk_secondary_abi)) {
     # Reduce symbol level when it will cause invalid elf files to be created
     # (due to file size). https://crbug.com/648948.
@@ -101,9 +101,9 @@ if (symbol_level == -1) {
     symbol_level = 1
   } else if ((!is_nacl && !is_linux) || is_debug || is_official_build ||
              is_chromecast) {
-    # Linux is slowed by having symbols as part of the target binary, whereas
-    # Mac and Windows have them separate, so in Release Linux, default them off,
-    # but keep them on for Official builds and Chromecast builds.
+    # Linux builds slower by having symbols as part of the target binary,
+    # whereas Mac and Windows have them separate, so in Release Linux, default
+    # them off, but keep them on for Official builds and Chromecast builds.
     symbol_level = 2
   } else if (using_sanitizer) {
     # Sanitizers require symbols for filename suppressions to work.
@@ -116,8 +116,8 @@ if (symbol_level == -1) {
 # Assert that the configuration isn't going to hit https://crbug.com/648948.
 assert(ignore_elf32_limitations || !is_android ||
            (android_64bit_target_cpu && !build_apk_secondary_abi) ||
-           is_component_build || symbol_level < 2 || is_clang,
-       "Android 32-bit non-component, non-clang builds cannot have " +
-           "symbol_level=2 due to 4GiB file size limit, see " +
-           "https://crbug.com/648948. If you really want to try this out, " +
+           is_component_build || symbol_level < 2,
+       "Android 32-bit non-component builds cannot have symbol_level=2 " +
+           "due to 4GiB file size limit, see https://crbug.com/648948. " +
+           "If you really want to try this out, " +
            "set ignore_elf32_limitations=true.")

@@ -9,6 +9,27 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace {
+
+const char* GetTag(RenameCategory category) {
+  switch (category) {
+    case RenameCategory::kEnumValue:
+      return "enum";
+    case RenameCategory::kField:
+      return "var";
+    case RenameCategory::kFunction:
+      return "func";
+    case RenameCategory::kUnresolved:
+      return "unresolved";
+    case RenameCategory::kVariable:
+      return "var";
+  }
+}
+
+}  // namespace
+
+EditTracker::EditTracker(RenameCategory category) : category_(category) {}
+
 void EditTracker::Add(const clang::SourceManager& source_manager,
                       clang::SourceLocation location,
                       llvm::StringRef original_text,
@@ -30,8 +51,8 @@ void EditTracker::Add(const clang::SourceManager& source_manager,
   result.first->getValue().filenames.try_emplace(filename);
 }
 
-void EditTracker::SerializeTo(llvm::StringRef tag,
-                              llvm::raw_ostream& output) const {
+void EditTracker::SerializeTo(llvm::raw_ostream& output) const {
+  const char* tag = GetTag(category_);
   for (const auto& edit : tracked_edits_) {
     for (const auto& filename : edit.getValue().filenames) {
       output << filename.getKey() << ":" << tag << ":" << edit.getKey() << ":"

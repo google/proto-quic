@@ -124,3 +124,41 @@ class ExtractComponentsTest(unittest.TestCase):
     output = saved_output.getvalue()
     self.assertIn('src/OWNERS has no COMPONENT tag', output)
 
+  @mock_file_tree({
+      'src': 'boss@chromium.org\n',
+      'src/dummydir1': 'dummy@chromium.org\n'
+                       '# TEAM: dummy-team@chromium.org\n'
+                       '# COMPONENT: Dummy>Component',
+      'src/dummydir2': 'dummy2@chromium.org\n'
+                       '# COMPONENT: Dummy>Component',
+      'src/dummydir1/innerdir1': 'dummy@chromium.org\n'
+                                 '# TEAM: dummy-specialist-team@chromium.org\n'
+                                 '# COMPONENT: Dummy>Component>Subcomponent'})
+  def testCoverage(self):
+    saved_output = StringIO()
+    with mock.patch('sys.stdout', saved_output):
+      extract_components.main(['%prog', '-s 2'])
+    output = saved_output.getvalue()
+    self.assertIn('4 OWNERS files in total.', output)
+    self.assertIn('3 (75.00%) OWNERS files have COMPONENT', output)
+    self.assertIn('2 (50.00%) OWNERS files have TEAM and COMPONENT', output)
+
+  @mock_file_tree({
+      'src': 'boss@chromium.org\n',
+      'src/dummydir1': 'dummy@chromium.org\n'
+                       '# TEAM: dummy-team@chromium.org\n'
+                       '# COMPONENT: Dummy>Component',
+      'src/dummydir2': 'dummy2@chromium.org\n'
+                       '# COMPONENT: Dummy>Component',
+      'src/dummydir1/innerdir1': 'dummy@chromium.org\n'
+                                 '# TEAM: dummy-specialist-team@chromium.org\n'
+                                 '# COMPONENT: Dummy>Component>Subcomponent'})
+  def testCompleteCoverage(self):
+    saved_output = StringIO()
+    with mock.patch('sys.stdout', saved_output):
+      extract_components.main(['%prog', '-c'])
+    output = saved_output.getvalue()
+    self.assertIn('4 OWNERS files in total.', output)
+    self.assertIn('3 (75.00%) OWNERS files have COMPONENT', output)
+    self.assertIn('2 (50.00%) OWNERS files have TEAM and COMPONENT', output)
+    self.assertIn('4 OWNERS files at depth 0', output)

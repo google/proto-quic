@@ -175,7 +175,7 @@ class QuicPacketCreatorTest : public ::testing::TestWithParam<TestParams> {
   size_t GetPacketHeaderOverhead(QuicVersion version) {
     return GetPacketHeaderSize(
         version, creator_.connection_id_length(), kIncludeVersion,
-        !kIncludePathId, !kIncludeDiversificationNonce,
+        !kIncludeDiversificationNonce,
         QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
   }
 
@@ -720,7 +720,6 @@ TEST_P(QuicPacketCreatorTest, ConsumeDataLargerThanOneStreamFrame) {
   creator_.SetMaxPacketLength(GetPacketLengthForOneStream(
       client_framer_.version(),
       QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
-      QuicPacketCreatorPeer::SendPathIdInPacket(&creator_),
       !kIncludeDiversificationNonce, creator_.connection_id_length(),
       PACKET_1BYTE_PACKET_NUMBER, &payload_length));
   QuicFrame frame;
@@ -750,7 +749,6 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
                 GetPacketHeaderSize(
                     client_framer_.version(), creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
-                    QuicPacketCreatorPeer::SendPathIdInPacket(&creator_),
                     !kIncludeDiversificationNonce, PACKET_1BYTE_PACKET_NUMBER),
             creator_.BytesFree());
 
@@ -792,8 +790,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
                 GetPacketHeaderSize(
                     client_framer_.version(), creator_.connection_id_length(),
                     QuicPacketCreatorPeer::SendVersionInPacket(&creator_),
-                    /*include_path_id=*/false, !kIncludeDiversificationNonce,
-                    PACKET_1BYTE_PACKET_NUMBER),
+                    !kIncludeDiversificationNonce, PACKET_1BYTE_PACKET_NUMBER),
             creator_.BytesFree());
 }
 
@@ -821,109 +818,6 @@ TEST_P(QuicPacketCreatorTest, SerializeAndSendStreamFrame) {
   DeleteSerializedPacket();
 
   EXPECT_FALSE(creator_.HasPendingFrames());
-}
-
-TEST_P(QuicPacketCreatorTest, SetCurrentPath) {
-  // Current path is the default path.
-  EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_EQ(0u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  // Add a stream frame to the creator.
-  QuicFrame frame;
-  QuicIOVector io_vector(MakeIOVectorFromStringPiece("test"));
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
-                                   false, &frame));
-  ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->data_length;
-  EXPECT_EQ(4u, consumed);
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  EXPECT_EQ(0u, creator_.packet_number());
-
-  // Change current path.
-  QuicPathId kPathId1 = 1;
-  EXPECT_QUIC_BUG(creator_.SetCurrentPath(kPathId1, 1, 0),
-                  "Unable to change paths when a packet is under construction");
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .Times(1)
-      .WillRepeatedly(
-          Invoke(this, &QuicPacketCreatorTest::ClearSerializedPacketForTests));
-  creator_.Flush();
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  creator_.SetCurrentPath(kPathId1, 1, 0);
-  EXPECT_EQ(kPathId1, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  EXPECT_EQ(0u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-
-  // Change current path back.
-  creator_.SetCurrentPath(kDefaultPathId, 2, 1);
-  EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_EQ(1u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-  // Add a stream frame to the creator.
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
-                                   false, &frame));
-  ASSERT_TRUE(frame.stream_frame);
-  consumed = frame.stream_frame->data_length;
-  EXPECT_EQ(4u, consumed);
-  EXPECT_TRUE(creator_.HasPendingFrames());
-
-  // Does not change current path.
-  creator_.SetCurrentPath(kDefaultPathId, 2, 0);
-  EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  EXPECT_EQ(1u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-}
-
-TEST_P(QuicPacketCreatorTest, SerializePacketOnDifferentPath) {
-  // Current path is the default path.
-  EXPECT_EQ(kDefaultPathId, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_EQ(0u, creator_.packet_number());
-  // Add a stream frame to the creator and flush the packet.
-  QuicFrame frame;
-  QuicIOVector io_vector(MakeIOVectorFromStringPiece("test"));
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
-                                   false, &frame));
-  ASSERT_TRUE(frame.stream_frame);
-  size_t consumed = frame.stream_frame->data_length;
-  EXPECT_EQ(4u, consumed);
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  EXPECT_EQ(0u, creator_.packet_number());
-  EXPECT_CALL(delegate_, OnSerializedPacket(_))
-      .WillRepeatedly(
-          Invoke(this, &QuicPacketCreatorTest::SaveSerializedPacket));
-  creator_.Flush();
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  EXPECT_EQ(1u, creator_.packet_number());
-  // Verify serialized data packet's path id.
-  EXPECT_EQ(kDefaultPathId, serialized_packet_.path_id);
-  DeleteSerializedPacket();
-
-  // Change to path 1.
-  QuicPathId kPathId1 = 1;
-  creator_.SetCurrentPath(kPathId1, 1, 0);
-  EXPECT_EQ(kPathId1, QuicPacketCreatorPeer::GetCurrentPath(&creator_));
-  EXPECT_FALSE(creator_.HasPendingFrames());
-  EXPECT_EQ(0u, creator_.packet_number());
-  EXPECT_EQ(PACKET_1BYTE_PACKET_NUMBER,
-            QuicPacketCreatorPeer::GetPacketNumberLength(&creator_));
-
-  // Add a stream frame to the creator and flush the packet.
-  ASSERT_TRUE(creator_.ConsumeData(kCryptoStreamId, io_vector, 0u, 0u, false,
-                                   false, &frame));
-  ASSERT_TRUE(frame.stream_frame);
-  consumed = frame.stream_frame->data_length;
-  EXPECT_EQ(4u, consumed);
-  EXPECT_TRUE(creator_.HasPendingFrames());
-  creator_.Flush();
-  // Verify serialized data packet's path id.
-  EXPECT_EQ(kPathId1, serialized_packet_.path_id);
-  DeleteSerializedPacket();
 }
 
 TEST_P(QuicPacketCreatorTest, AddUnencryptedStreamDataClosesConnection) {

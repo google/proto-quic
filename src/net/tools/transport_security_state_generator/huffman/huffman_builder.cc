@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
 
 namespace net {
 
@@ -54,7 +55,8 @@ HuffmanBuilder::HuffmanBuilder() {}
 HuffmanBuilder::~HuffmanBuilder() {}
 
 void HuffmanBuilder::RecordUsage(uint8_t character) {
-  counts_[character] += 1;
+  DCHECK(character < 128);
+  counts_[character & 127] += 1;
 }
 
 HuffmanRepresentationTable HuffmanBuilder::ToTable() {
@@ -99,7 +101,7 @@ uint32_t HuffmanBuilder::WriteToVector(HuffmanNode* node,
     left_value = 128 | node->left()->value();
   } else {
     child_position = WriteToVector(node->left().get(), vector);
-    CHECK(child_position < 512) << "huffman tree too large";
+    DCHECK(child_position < 512) << "huffman tree too large";
     left_value = child_position / 2;
   }
 
@@ -107,7 +109,7 @@ uint32_t HuffmanBuilder::WriteToVector(HuffmanNode* node,
     right_value = 128 | node->right()->value();
   } else {
     child_position = WriteToVector(node->right().get(), vector);
-    CHECK(child_position < 512) << "huffman tree to large";
+    DCHECK(child_position < 512) << "huffman tree to large";
     right_value = child_position / 2;
   }
 
@@ -122,15 +124,20 @@ std::unique_ptr<HuffmanNode> HuffmanBuilder::BuildTree() {
   nodes.reserve(counts_.size());
 
   for (const auto& item : counts_) {
-    if (item.second > 0) {
-      std::unique_ptr<HuffmanNode> node(
-          new HuffmanNode(item.first, item.second, nullptr, nullptr));
-      nodes.push_back(std::move(node));
-    }
+    nodes.push_back(base::MakeUnique<HuffmanNode>(item.first, item.second,
+                                                  nullptr, nullptr));
   }
 
-  if (nodes.size() < 2) {
-    return std::move(nodes[0]);
+  // At least 2 entries are required for everything to work properly. Add
+  // arbitrary values to fill the tree.
+  for (uint8_t i = 0; nodes.size() < 2 && i < 2; ++i) {
+    for (const auto& node : nodes) {
+      if (node->value() == i) {
+        break;
+      }
+    }
+
+    nodes.push_back(base::MakeUnique<HuffmanNode>(i, 0, nullptr, nullptr));
   }
 
   std::stable_sort(nodes.begin(), nodes.end(), CompareNodes);

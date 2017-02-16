@@ -13,8 +13,8 @@ QuicSimpleCryptoServerStreamHelper::QuicSimpleCryptoServerStreamHelper(
 QuicSimpleCryptoServerStreamHelper::~QuicSimpleCryptoServerStreamHelper() {}
 
 QuicConnectionId
-    QuicSimpleCryptoServerStreamHelper::GenerateConnectionIdForReject(
-        QuicConnectionId /*connection_id*/) const {
+QuicSimpleCryptoServerStreamHelper::GenerateConnectionIdForReject(
+    QuicConnectionId /*connection_id*/) const {
   return random_->RandUint64();
 }
 

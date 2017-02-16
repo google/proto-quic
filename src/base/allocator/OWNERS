@@ -3,3 +3,5 @@ wfh@chromium.org
 
 # For changes to tcmalloc it is advisable to ask jar@chromium.org
 # before proceeding.
+
+# COMPONENT: Internals

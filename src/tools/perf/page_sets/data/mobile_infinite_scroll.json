@@ -1,15 +1,24 @@
 {
     "archives": {
-        "mobile_infinite_scroll_000.wpr": [
-            "facebook",
-            "flickr",
-            "tumblr",
-            "discourse",
-            "twitter"
-        ],
-        "mobile_infinite_scroll_001.wpr": [
-            "pinterest"
-        ]
+        "discourse": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "facebook": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "flickr": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "pinterest": {
+            "DEFAULT": "mobile_infinite_scroll_001.wpr"
+        },
+        "tumblr": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        },
+        "twitter": {
+            "DEFAULT": "mobile_infinite_scroll_000.wpr"
+        }
     },
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

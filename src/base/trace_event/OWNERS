@@ -4,3 +4,6 @@ oysteine@chromium.org
 primiano@chromium.org
 simonhatch@chromium.org
 per-file trace_event_android.cc=wangxianzhu@chromium.org
+
+# TEAM: tracing@chromium.org
+# COMPONENT: Speed>Tracing

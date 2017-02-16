@@ -189,7 +189,7 @@ def GetStaticInitializers(so_path):
   return output.splitlines()
 
 
-def _NormalizeResourcesArsc(apk_path, num_supported_configs):
+def _NormalizeResourcesArsc(apk_path):
   """Estimates the expected overhead of untranslated strings in resources.arsc.
 
   See http://crbug.com/677966 for why this is necessary.
@@ -201,8 +201,10 @@ def _NormalizeResourcesArsc(apk_path, num_supported_configs):
   en_strings = _CreateResourceIdValueMap(aapt_output, 'en-rGB')
   fr_strings = _CreateResourceIdValueMap(aapt_output, 'fr')
 
-  # en-US and en-GB configs will never be translated.
-  config_count = num_supported_configs - 2
+  # Chrome supports 44 locales (en-US and en-GB will never be translated).
+  # This can be changed to |translations.GetNumEntries()| when Chrome and
+  # WebView support the same set of locales (http://crbug.com/369218).
+  config_count = 42
 
   size = 0
   for res_id, string_val in en_strings.iteritems():
@@ -435,8 +437,7 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
     # is relative to the average locale .pak.
     normalized_apk_size += int(
         english_pak.compress_size * num_translations * 1.17)
-    normalized_apk_size += int(
-        _NormalizeResourcesArsc(apk_filename, num_translations))
+    normalized_apk_size += int(_NormalizeResourcesArsc(apk_filename))
 
   ReportPerfResult(chartjson, apk_basename + '_Specifics',
                    'normalized apk size', normalized_apk_size, 'bytes')
@@ -520,23 +521,41 @@ def PrintPakAnalysis(apk_filename, min_pak_resource_size):
       total_resource_size)
   print
 
-  resource_id_name_map = _GetResourceIdNameMap()
+  resource_id_name_map, resources_id_header_map = _AnnotatePakResources()
 
   # Output the table of details about all resources across pak files.
   print
   print '%56s %5s %17s' % ('RESOURCE', 'COUNT', 'UNCOMPRESSED SIZE')
   for i in sorted(resource_size_map, key=resource_size_map.get,
                   reverse=True):
-    if resource_size_map[i] >= min_pak_resource_size:
-      print '%56s %5s %9s %6.2f%%' % (
-          resource_id_name_map.get(i, i),
-          resource_count_map[i],
-          _FormatBytes(resource_size_map[i]),
-          100.0 * resource_size_map[i] / total_resource_size)
+    if resource_size_map[i] < min_pak_resource_size:
+      break
+
+    print '%56s %5s %9s %6.2f%%' % (
+        resource_id_name_map.get(i, i),
+        resource_count_map[i],
+        _FormatBytes(resource_size_map[i]),
+        100.0 * resource_size_map[i] / total_resource_size)
+
+  # Print breakdown on a per-grd file basis.
+  size_by_header = collections.defaultdict(int)
+  for resid, size in resource_size_map.iteritems():
+    size_by_header[resources_id_header_map.get(resid, 'unknown')] += size
+
+  print
+  print '%80s %17s' % ('HEADER', 'UNCOMPRESSED SIZE')
+  for header in sorted(size_by_header, key=size_by_header.get, reverse=True):
+    if size_by_header[header] < min_pak_resource_size:
+      break
+
+    print '%80s %9s %6.2f%%' % (
+        header,
+        _FormatBytes(size_by_header[header]),
+        100.0 * size_by_header[header] / total_resource_size)
 
 
-def _GetResourceIdNameMap():
-  """Returns a map of {resource_id: resource_name}."""
+def _AnnotatePakResources():
+  """Returns a pair of maps: id_name_map, id_header_map."""
   out_dir = constants.GetOutDirectory()
   assert os.path.isdir(out_dir), 'Failed to locate out dir at %s' % out_dir
   print 'Looking at resources in: %s' % out_dir
@@ -548,6 +567,7 @@ def _GetResourceIdNameMap():
   assert grit_headers, 'Failed to find grit headers in %s' % out_dir
 
   id_name_map = {}
+  id_header_map = {}
   for header in grit_headers:
     with open(header, 'r') as f:
       for line in f.readlines():
@@ -559,7 +579,8 @@ def _GetResourceIdNameMap():
             print 'WARNING: Resource ID conflict %s (%s vs %s)' % (
                 i, id_name_map[i], name)
           id_name_map[i] = name
-  return id_name_map
+          id_header_map[i] = os.path.relpath(header, out_dir)
+  return id_name_map, id_header_map
 
 
 def _PrintStaticInitializersCountFromApk(apk_filename, chartjson=None):

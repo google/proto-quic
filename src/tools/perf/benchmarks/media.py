@@ -74,7 +74,7 @@ class MediaNetworkSimulation(perf_benchmark.PerfBenchmark):
     return 'media.media_cns_cases'
 
 
-@benchmark.Disabled('android')  # crbug.com/671628, WebView: crbug.com/419689.
+@benchmark.Disabled('l', 'android-webview')  # WebView: crbug.com/419689.
 class MediaAndroid(perf_benchmark.PerfBenchmark):
   """Obtains media metrics for key user scenarios on Android."""
   test = media.Media
@@ -85,18 +85,9 @@ class MediaAndroid(perf_benchmark.PerfBenchmark):
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
-    # crbug.com/672059
     if possible_browser.platform.GetOSName() != "android":
       return True
-    # crbug.com/448092
-    if cls.IsSvelte(possible_browser):
-        return True
-
-    # crbug.com/647372
-    if possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X':
-      return True
-
-    return False
+    return cls.IsSvelte(possible_browser)
 
   @classmethod
   def Name(cls):

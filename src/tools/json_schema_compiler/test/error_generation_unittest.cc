@@ -5,6 +5,7 @@
 #include "tools/json_schema_compiler/test/error_generation.h"
 
 #include "base/json/json_writer.h"
+#include "base/memory/ptr_util.h"
 #include "base/strings/utf_string_conversions.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "tools/json_schema_compiler/test/test_util.h"
@@ -39,7 +40,7 @@ TEST(JsonSchemaCompilerErrorTest, RequiredPropertyPopulate) {
     EXPECT_TRUE(EqualsUtf16("", GetPopulateError<TestType>(*value)));
   }
   {
-    std::unique_ptr<base::BinaryValue> value(new base::BinaryValue());
+    auto value = base::MakeUnique<base::Value>(base::Value::Type::BINARY);
     EXPECT_TRUE(EqualsUtf16("expected dictionary, got binary",
         GetPopulateError<TestType>(*value)));
   }
@@ -52,7 +53,7 @@ TEST(JsonSchemaCompilerErrorTest, UnexpectedTypePopulation) {
         GetPopulateError<ChoiceType::Integers>(*value)));
   }
   {
-    std::unique_ptr<base::BinaryValue> value(new base::BinaryValue());
+    auto value = base::MakeUnique<base::Value>(base::Value::Type::BINARY);
     EXPECT_TRUE(EqualsUtf16("expected integers or integer, got binary",
         GetPopulateError<ChoiceType::Integers>(*value)));
   }
@@ -178,7 +179,7 @@ TEST(JsonSchemaCompilerErrorTest, UnableToPopulateArray) {
 TEST(JsonSchemaCompilerErrorTest, BinaryTypeExpected) {
   {
     std::unique_ptr<base::DictionaryValue> value =
-        Dictionary("data", new base::BinaryValue());
+        Dictionary("data", new base::Value(base::Value::Type::BINARY));
     EXPECT_TRUE(EqualsUtf16("", GetPopulateError<BinaryData>(*value)));
   }
   {
@@ -244,7 +245,7 @@ TEST(JsonSchemaCompilerErrorTest, WarnOnOptionalFailure) {
 TEST(JsonSchemaCompilerErrorTest, OptionalBinaryTypeFailure) {
   {
     std::unique_ptr<base::DictionaryValue> value =
-        Dictionary("data", new base::BinaryValue());
+        Dictionary("data", new base::Value(base::Value::Type::BINARY));
     EXPECT_TRUE(EqualsUtf16("", GetPopulateError<OptionalBinaryData>(*value)));
   }
   {

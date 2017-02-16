@@ -5,8 +5,6 @@
 #ifndef NET_TOOLS_QUIC_TEST_TOOLS_LIMITED_MTU_TEST_WRITER_H_
 #define NET_TOOLS_QUIC_TEST_TOOLS_LIMITED_MTU_TEST_WRITER_H_
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/tools/quic/quic_packet_writer_wrapper.h"

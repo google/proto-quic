@@ -14,7 +14,6 @@
 
 #include "base/command_line.h"
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_spdy_stream.h"
@@ -96,7 +95,7 @@ class QuicClient : public QuicClientBase,
   }
 
  private:
-  friend class net::test::QuicClientPeer;
+  friend class test::QuicClientPeer;
 
   // Actually clean up |fd|.
   void CleanUpUDPSocketImpl(int fd);

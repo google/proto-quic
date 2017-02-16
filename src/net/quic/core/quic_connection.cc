@@ -343,10 +343,7 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
     ack_decimation_delay_ = kShortAckDecimationDelay;
   }
   if (config.HasClientSentConnectionOption(k5RTO, perspective_)) {
-    if (perspective_ == Perspective::IS_CLIENT ||
-        !FLAGS_quic_reloadable_flag_quic_only_5rto_client_side) {
-      close_connection_after_five_rtos_ = true;
-    }
+    close_connection_after_five_rtos_ = true;
   }
 }
 

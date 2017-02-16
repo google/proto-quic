@@ -218,11 +218,11 @@ bool AllocationContextTracker::GetContextSnapshot(AllocationContext* ctx) {
 
         // Copy frames backwards
         size_t backtrace_capacity = backtrace_end - backtrace;
-        size_t top_frame_index = (backtrace_capacity >= frame_count) ?
-            0 :
-            frame_count - backtrace_capacity;
-        for (size_t i = frame_count; i > top_frame_index;) {
-          const void* frame = frames[--i];
+        int32_t top_frame_index = (backtrace_capacity >= frame_count)
+                                      ? 0
+                                      : frame_count - backtrace_capacity;
+        for (int32_t i = frame_count - 1; i >= top_frame_index; --i) {
+          const void* frame = frames[i];
           *backtrace++ = StackFrame::FromProgramCounter(frame);
         }
         break;

@@ -37,6 +37,8 @@
 
 #include <stdint.h>
 
+#include <utility>
+
 #include "base/base_export.h"
 #include "base/bind.h"
 #include "base/callback.h"
@@ -74,25 +76,21 @@ class BASE_EXPORT CancelableTaskTracker {
 
   TaskId PostTaskAndReply(base::TaskRunner* task_runner,
                           const tracked_objects::Location& from_here,
-                          const base::Closure& task,
-                          const base::Closure& reply);
+                          base::Closure task,
+                          base::Closure reply);
 
   template <typename TaskReturnType, typename ReplyArgType>
-  TaskId PostTaskAndReplyWithResult(
-      base::TaskRunner* task_runner,
-      const tracked_objects::Location& from_here,
-      const base::Callback<TaskReturnType(void)>& task,
-      const base::Callback<void(ReplyArgType)>& reply) {
+  TaskId PostTaskAndReplyWithResult(base::TaskRunner* task_runner,
+                                    const tracked_objects::Location& from_here,
+                                    base::Callback<TaskReturnType()> task,
+                                    base::Callback<void(ReplyArgType)> reply) {
     TaskReturnType* result = new TaskReturnType();
     return PostTaskAndReply(
-        task_runner,
-        from_here,
+        task_runner, from_here,
         base::Bind(&base::internal::ReturnAsParamAdapter<TaskReturnType>,
-                   task,
-                   base::Unretained(result)),
+                   std::move(task), base::Unretained(result)),
         base::Bind(&base::internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
-                   reply,
-                   base::Owned(result)));
+                   std::move(reply), base::Owned(result)));
   }
 
   // Creates a tracked TaskId and an associated IsCanceledCallback. Client can

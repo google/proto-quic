@@ -35,13 +35,15 @@ struct NumberHolder {
 
 }  // namespace
 
-@interface CountVonCount : NSObject<NSCopying>
+@interface PropertyReleaser_CountVonCount : NSObject<NSCopying>
+
+typedef PropertyReleaser_CountVonCount CountVonCount;
 
 + (CountVonCount*)countVonCount;
 
-@end  // @interface CountVonCount
+@end  // @interface PropertyReleaser_CountVonCount
 
-@implementation CountVonCount
+@implementation PropertyReleaser_CountVonCount
 
 + (CountVonCount*)countVonCount {
   return [[[CountVonCount alloc] init] autorelease];
@@ -61,9 +63,9 @@ struct NumberHolder {
   return [[CountVonCount allocWithZone:zone] init];
 }
 
-@end  // @implementation CountVonCount
+@end  // @implementation PropertyReleaser_CountVonCount
 
-@interface ObjCPropertyTestBase : NSObject {
+@interface PropertyReleaser_ObjCPropertyTestBase : NSObject {
  @private
   CountVonCount* baseCvcRetain_;
   CountVonCount* baseCvcCopy_;
@@ -78,6 +80,8 @@ struct NumberHolder {
 
   base::mac::ObjCPropertyReleaser propertyReleaser_ObjCPropertyTestBase_;
 }
+
+typedef PropertyReleaser_ObjCPropertyTestBase ObjCPropertyTestBase;
 
 @property(retain, nonatomic) CountVonCount* baseCvcRetain;
 @property(copy, nonatomic) CountVonCount* baseCvcCopy;
@@ -95,7 +99,7 @@ struct NumberHolder {
 
 @end  // @interface ObjCPropertyTestBase
 
-@implementation ObjCPropertyTestBase
+@implementation PropertyReleaser_ObjCPropertyTestBase
 
 @synthesize baseCvcRetain = baseCvcRetain_;
 @synthesize baseCvcCopy = baseCvcCopy_;
@@ -130,7 +134,7 @@ struct NumberHolder {
 
 @end  // @implementation ObjCPropertyTestBase
 
-@protocol ObjCPropertyTestProtocol
+@protocol PropertyReleaser_ObjCPropertyTestProtocol
 
 @property(retain, nonatomic) CountVonCount* protoCvcRetain;
 @property(copy, nonatomic) CountVonCount* protoCvcCopy;
@@ -144,10 +148,10 @@ struct NumberHolder {
 @property(assign, nonatomic) void* protoPointer;
 @property(assign, nonatomic) NumberHolder protoStruct;
 
-@end  // @protocol ObjCPropertyTestProtocol
+@end  // @protocol PropertyReleaser_ObjCPropertyTestProtocol
 
-@interface ObjCPropertyTestDerived
-    : ObjCPropertyTestBase<ObjCPropertyTestProtocol> {
+@interface PropertyReleaser_ObjCPropertyTestDerived
+    : ObjCPropertyTestBase<PropertyReleaser_ObjCPropertyTestProtocol> {
  @private
   CountVonCount* derivedCvcRetain_;
   CountVonCount* derivedCvcCopy_;
@@ -173,6 +177,8 @@ struct NumberHolder {
   base::mac::ObjCPropertyReleaser propertyReleaser_ObjCPropertyTestDerived_;
 }
 
+typedef PropertyReleaser_ObjCPropertyTestDerived ObjCPropertyTestDerived;
+
 @property(retain, nonatomic) CountVonCount* derivedCvcRetain;
 @property(copy, nonatomic) CountVonCount* derivedCvcCopy;
 @property(assign, nonatomic) CountVonCount* derivedCvcAssign;
@@ -189,7 +195,7 @@ struct NumberHolder {
 
 @end  // @interface ObjCPropertyTestDerived
 
-@implementation ObjCPropertyTestDerived
+@implementation PropertyReleaser_ObjCPropertyTestDerived
 
 @synthesize derivedCvcRetain = derivedCvcRetain_;
 @synthesize derivedCvcCopy = derivedCvcCopy_;

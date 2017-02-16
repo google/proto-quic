@@ -321,6 +321,9 @@ class NET_EXPORT HttpServerProperties {
   virtual void SetMaxServerConfigsStoredInProperties(
       size_t max_server_configs_stored_in_properties) = 0;
 
+  // Returns whether HttpServerProperties is initialized.
+  virtual bool IsInitialized() const = 0;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(HttpServerProperties);
 };

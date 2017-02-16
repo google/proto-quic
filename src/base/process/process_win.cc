@@ -82,6 +82,11 @@ bool Process::CanBackgroundProcesses() {
   return true;
 }
 
+// static
+void Process::TerminateCurrentProcessImmediately(int exit_code) {
+  ::TerminateProcess(GetCurrentProcess(), exit_code);
+}
+
 bool Process::IsValid() const {
   return process_.IsValid() || is_current();
 }

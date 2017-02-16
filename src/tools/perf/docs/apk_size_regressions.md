@@ -1,6 +1,6 @@
 # How to Deal with Android Size Alerts
 
-*Most alerts should not have a bug created for them. Please read on...*
+*Not all alerts should not have a bug created for them. Please read on...*
 
 ### If the alert is for "other lib size" or "Unknown files size":
  * File a bug against agrieve@ to fix
@@ -18,9 +18,10 @@
     * Via `git log --format=fuller` (be sure to look at `CommitDate` and not
       `AuthorDate`)
 
-### If the alert is for a roll:
+### If the alert is for a roll, or has multiple commits listed:
  * Use a bisect to try and determine a more precise commit.
     * Except don't. Bisects for these alerts [are currently broken](https://bugs.chromium.org/p/chromium/issues/detail?id=678338).
+    * Until this is fixed, just file a bug and assign to agrieve@.
 
 ### What to do once the commit is identified:
  * If the code seems to justify the size increase:
@@ -35,8 +36,13 @@
       to document the increase (also Update the "Themes / Thoughts" tab if
       applicable).
  * If the code might not justify the size increase:
-    1. File a bug and assign to the author to follow-up (and link them to
-       [Debugging Apk Size Increase](https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase)).
+    1. File a bug and assign to the author to follow-up.
+        * Change the bug's title from X% to XXkb
+        * Paste in link to commit or review URL that is at fault.
+        * Paste in link to [https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase](https://chromium.googlesource.com/chromium/src/+/master/tools/perf/docs/apk_size_regressions.md#Debugging-Apk-Size-Increase).
+        * Remove label: `Restrict-View-Google`
+        * Add label: `binary-size`
+        * TODO(agrieve): [https://github.com/catapult-project/catapult/issues/3150](Change bug template to match these instructions)
     2. Add an entry to
       [this spreadsheet](https://docs.google.com/spreadsheets/d/1GrRkszV7Oy5pVsaMb5Eb6s8izW9t4dElBxIH3iGq93o/edit#gid=1894856744)
       to document the increase.

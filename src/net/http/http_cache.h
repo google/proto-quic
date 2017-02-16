@@ -123,17 +123,18 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory,
   //
   // The HttpCache must be destroyed before the HttpNetworkSession.
   //
-  // If |set_up_quic_server_info| is true, configures the cache to track
+  // If |is_main_cache| is true, configures the cache to track
   // information about servers supporting QUIC.
+  // TODO(zhongyi): remove |is_main_cache| when we get rid of cache split.
   HttpCache(HttpNetworkSession* session,
             std::unique_ptr<BackendFactory> backend_factory,
-            bool set_up_quic_server_info);
+            bool is_main_cache);
 
   // Initialize the cache from its component parts. |network_layer| and
   // |backend_factory| will be destroyed when the HttpCache is.
   HttpCache(std::unique_ptr<HttpTransactionFactory> network_layer,
             std::unique_ptr<BackendFactory> backend_factory,
-            bool set_up_quic_server_info);
+            bool is_main_cache);
 
   ~HttpCache() override;
 
@@ -188,11 +189,9 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory,
   // referred to by |url| and |http_method|.
   void OnExternalCacheHit(const GURL& url, const std::string& http_method);
 
-  // Causes all transactions created after this point to effectively bypass
-  // the cache lock whenever there is lock contention.
-  void BypassLockForTest() {
-    bypass_lock_for_test_ = true;
-  }
+  // Causes all transactions created after this point to simulate lock timeout
+  // and effectively bypass the cache lock whenever there is lock contention.
+  void SimulateCacheLockTimeout() { bypass_lock_for_test_ = true; }
 
   // Causes all transactions created after this point to generate a failure
   // when attempting to conditionalize a network request.

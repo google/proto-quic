@@ -47,6 +47,22 @@ int GlobalDescriptors::MaybeGet(Key key) const {
   return -1;
 }
 
+base::ScopedFD GlobalDescriptors::TakeFD(
+    Key key,
+    base::MemoryMappedFile::Region* region) {
+  base::ScopedFD fd;
+  for (Mapping::iterator i = descriptors_.begin(); i != descriptors_.end();
+       ++i) {
+    if (i->key == key) {
+      *region = i->region;
+      fd.reset(i->fd);
+      descriptors_.erase(i);
+      break;
+    }
+  }
+  return fd;
+}
+
 void GlobalDescriptors::Set(Key key, int fd) {
   Set(key, fd, base::MemoryMappedFile::Region::kWholeFile);
 }

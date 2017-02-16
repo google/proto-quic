@@ -6,6 +6,7 @@
 
 #include <stdint.h>
 #include <algorithm>
+#include <limits>
 #include <new>
 #include <type_traits>
 
@@ -30,8 +31,11 @@ using base::allocator::AllocatorDispatch;
 
 ThreadLocalStorage::StaticSlot g_thread_allocator_usage = TLS_INITIALIZER;
 
-ThreadHeapUsage* const kInitializingSentinel =
-    reinterpret_cast<ThreadHeapUsage*>(-1);
+const uintptr_t kSentinelMask = std::numeric_limits<uintptr_t>::max() - 1;
+ThreadHeapUsage* const kInitializationSentinel =
+    reinterpret_cast<ThreadHeapUsage*>(kSentinelMask);
+ThreadHeapUsage* const kTeardownSentinel =
+    reinterpret_cast<ThreadHeapUsage*>(kSentinelMask | 1);
 
 bool g_heap_tracking_enabled = false;
 
@@ -172,21 +176,16 @@ AllocatorDispatch allocator_dispatch = {&AllocFn,
                                         nullptr};
 
 ThreadHeapUsage* GetOrCreateThreadUsage() {
-  ThreadHeapUsage* allocator_usage =
-      static_cast<ThreadHeapUsage*>(g_thread_allocator_usage.Get());
-  if (allocator_usage == kInitializingSentinel)
+  auto tls_ptr = reinterpret_cast<uintptr_t>(g_thread_allocator_usage.Get());
+  if ((tls_ptr & kSentinelMask) == kSentinelMask)
     return nullptr;  // Re-entrancy case.
 
+  auto* allocator_usage = reinterpret_cast<ThreadHeapUsage*>(tls_ptr);
   if (allocator_usage == nullptr) {
     // Prevent reentrancy due to the allocation below.
-    g_thread_allocator_usage.Set(kInitializingSentinel);
+    g_thread_allocator_usage.Set(kInitializationSentinel);
 
-    // Delegate the allocation of the per-thread structure to the underlying
-    // heap shim, for symmetry with the deallocation. Otherwise interposing
-    // shims may mis-attribute or mis-direct this allocation.
-    const AllocatorDispatch* next = allocator_dispatch.next;
-    allocator_usage = new (next->alloc_function(next, sizeof(ThreadHeapUsage)))
-        ThreadHeapUsage();
+    allocator_usage = new ThreadHeapUsage();
     static_assert(std::is_pod<ThreadHeapUsage>::value,
                   "AllocatorDispatch must be POD");
     memset(allocator_usage, 0, sizeof(*allocator_usage));
@@ -297,12 +296,22 @@ ThreadHeapUsageTracker::GetDispatchForTesting() {
 
 void ThreadHeapUsageTracker::EnsureTLSInitialized() {
   if (!g_thread_allocator_usage.initialized()) {
-    g_thread_allocator_usage.Initialize([](void* allocator_usage) {
-      // Delegate the freeing of the per-thread structure to the next-lower
-      // heap shim. Otherwise this free will re-initialize the TLS on thread
-      // exit.
-      allocator_dispatch.next->free_function(allocator_dispatch.next,
-                                             allocator_usage);
+    g_thread_allocator_usage.Initialize([](void* thread_heap_usage) {
+      // This destructor will be called twice. Once to destroy the actual
+      // ThreadHeapUsage instance and a second time, immediately after, for the
+      // sentinel. Re-setting the TLS slow (below) does re-initialize the TLS
+      // slot. The ThreadLocalStorage code is designed to deal with this use
+      // case (see comments in ThreadHeapUsageTracker::EnsureTLSInitialized) and
+      // will re-call the destructor with the kTeardownSentinel as arg.
+      if (thread_heap_usage == kTeardownSentinel)
+        return;
+      DCHECK(thread_heap_usage != kInitializationSentinel);
+
+      // Deleting the ThreadHeapUsage TLS object will re-enter the shim and hit
+      // RecordFree() above. The sentinel prevents RecordFree() from re-creating
+      // another ThreadHeapUsage object.
+      g_thread_allocator_usage.Set(kTeardownSentinel);
+      delete static_cast<ThreadHeapUsage*>(thread_heap_usage);
     });
   }
 }

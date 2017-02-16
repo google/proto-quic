@@ -13,7 +13,6 @@
 #include "net/quic/core/crypto/crypto_utils.h"
 
 using base::CommandLine;
-using base::StringToUint;
 using net::HandshakeFailureReason;
 using net::CryptoUtils;
 using net::MAX_FAILURE_REASON;
@@ -31,7 +30,7 @@ int main(int argc, char* argv[]) {
   }
 
   uint32_t packed_error = 0;
-  if (!StringToUint(args[0], &packed_error)) {
+  if (!base::StringToUint(args[0], &packed_error)) {
     cerr << "Unable to parse: " << args[0] << "\n";
     return 2;
   }

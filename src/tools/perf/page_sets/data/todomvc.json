@@ -1,16 +1,33 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "todomvc_000.wpr": [
-            "Dart", 
-            "Ember.js", 
-            "React", 
-            "AngularJS", 
-            "Closure", 
-            "Backbone.js", 
-            "Vanilla JS", 
-            "Polymer", 
-            "GWT"
-        ]
-    }
+        "AngularJS": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Backbone.js": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Closure": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Dart": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Ember.js": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "GWT": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Polymer": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "React": {
+            "DEFAULT": "todomvc_000.wpr"
+        },
+        "Vanilla JS": {
+            "DEFAULT": "todomvc_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

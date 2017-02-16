@@ -51,24 +51,6 @@ def FlattenPolicies(policy_definitions, policy_list):
       policy_list.append(policy)
 
 
-def ParsePlaceholders(text):
-  """Parse placeholders in |text|, making it more human-readable. The format of
-  |text| is exactly the same as in captions in policy_templates.json: it can
-  contain XML tags (ph, ex) and $1-like substitutions. Note that this function
-  does only a very simple parsing that is not fully correct, but should be
-  enough for all practical situations.
-
-  Args:
-    text: A string containing placeholders.
-
-  Returns:
-    |text| with placeholders removed or replaced by readable text.
-  """
-  text = re.sub(r'\$\d+', '', text)    # Remove $1-like substitutions.
-  text = re.sub(r'<[^>]+>', '', text)  # Remove XML tags.
-  return text
-
-
 def UpdateHistogramDefinitions(policy_templates, doc):
   """Sets the children of <enum name="EnterprisePolicies" ...> node in |doc| to
   values generated from policy ids contained in |policy_templates|.
@@ -103,7 +85,7 @@ def UpdateHistogramDefinitions(policy_templates, doc):
   for policy in ordered_policies:
     node = doc.createElement('int')
     node.attributes['value'] = str(policy['id'])
-    node.attributes['label'] = ParsePlaceholders(policy['caption'])
+    node.attributes['label'] = policy['name']
     policy_enum_node.appendChild(node)
 
 

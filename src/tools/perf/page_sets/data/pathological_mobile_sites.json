@@ -1,25 +1,36 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "pathological_mobile_sites_009.wpr": [
-            "https://www.linkedin.com/in/linustorvalds"
-        ], 
-        "pathological_mobile_sites_000.wpr": [
-            "http://edition.cnn.com", 
-            "http://www.latimes.com", 
-            "http://recode.net", 
-            "http://www.pbs.org/newshour/bb/much-really-cost-live-city-like-seattle/#the-rundown", 
-            "http://www.zdnet.com", 
-            "http://m.espn.go.com/nhl/rankings"
-        ], 
-        "pathological_mobile_sites_008.wpr": [
-            "http://www.wowwiki.com/World_of_Warcraft:_Mists_of_Pandaria"
-        ], 
-        "pathological_mobile_sites_010.wpr": [
-            "http://www.theguardian.com/politics/2015/mar/09/ed-balls-tory-spending-plans-nhs-charging"
-        ],
-        "pathological_mobile_sites_001.wpr": [
-            "http://sports.yahoo.com/"
-        ]
-    }
+        "http://edition.cnn.com": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "http://m.espn.go.com/nhl/rankings": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "http://recode.net": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "http://sports.yahoo.com/": {
+            "DEFAULT": "pathological_mobile_sites_001.wpr"
+        },
+        "http://www.latimes.com": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "http://www.pbs.org/newshour/bb/much-really-cost-live-city-like-seattle/#the-rundown": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "http://www.theguardian.com/politics/2015/mar/09/ed-balls-tory-spending-plans-nhs-charging": {
+            "DEFAULT": "pathological_mobile_sites_010.wpr"
+        },
+        "http://www.wowwiki.com/World_of_Warcraft:_Mists_of_Pandaria": {
+            "DEFAULT": "pathological_mobile_sites_008.wpr"
+        },
+        "http://www.zdnet.com": {
+            "DEFAULT": "pathological_mobile_sites_000.wpr"
+        },
+        "https://www.linkedin.com/in/linustorvalds": {
+            "DEFAULT": "pathological_mobile_sites_009.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

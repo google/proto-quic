@@ -372,6 +372,9 @@ class NET_EXPORT_PRIVATE SpdyStream {
   // GURL() if it is unknown.
   const GURL& GetUrlFromHeaders() const { return url_from_header_block_; }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   class HeadersBufferProducer;
 

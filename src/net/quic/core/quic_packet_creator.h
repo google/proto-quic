@@ -82,7 +82,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
       QuicVersion version,
       QuicConnectionIdLength connection_id_length,
       bool include_version,
-      bool include_path_id,
       bool include_diversification_nonce,
       QuicPacketNumberLength packet_number_length,
       QuicStreamOffset offset);
@@ -206,14 +205,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // Sets the maximum packet length.
   void SetMaxPacketLength(QuicByteCount length);
 
-  // Sets the path on which subsequent packets will be created. It is the
-  // caller's responsibility to guarantee no packet is under construction before
-  // calling this function. If |path_id| is different from current_path_,
-  // next_packet_number_length_ is recalculated.
-  void SetCurrentPath(QuicPathId path_id,
-                      QuicPacketNumber least_packet_awaited_by_peer,
-                      QuicPacketCount max_packets_in_flight);
-
   void set_debug_delegate(DebugDelegate* debug_delegate) {
     debug_delegate_ = debug_delegate;
   }
@@ -281,8 +272,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
 
   // Controls whether version should be included while serializing the packet.
   bool send_version_in_packet_;
-  // Controls whether path id should be included while serializing the packet.
-  bool send_path_id_in_packet_;
   // Staging variable to hold next packet number length. When sequence
   // number length is to be changed, this variable holds the new length until
   // a packet boundary, when the creator's packet_number_length_ can be changed

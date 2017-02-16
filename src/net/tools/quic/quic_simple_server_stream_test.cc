@@ -8,11 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
-#include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
@@ -21,23 +17,19 @@
 #include "net/quic/test_tools/quic_stream_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/test/gtest_util.h"
-#include "net/tools/epoll_server/epoll_server.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
 
 using base::StringPiece;
 using std::string;
 using testing::_;
 using testing::AnyNumber;
 using testing::Invoke;
-using testing::InvokeArgument;
 using testing::InSequence;
 using testing::Return;
 using testing::StrictMock;
-using testing::WithArgs;
 
 namespace net {
 namespace test {
@@ -186,7 +178,7 @@ class QuicSimpleServerStreamTest
         crypto_config_(new QuicCryptoServerConfig(
             QuicCryptoServerConfig::TESTING,
             QuicRandom::GetInstance(),
-            ::net::test::CryptoTestUtils::ProofSourceForTesting())),
+            crypto_test_utils::ProofSourceForTesting())),
         compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         session_(connection_,
@@ -210,8 +202,8 @@ class QuicSimpleServerStreamTest
         kInitialStreamFlowControlWindowForTest);
     session_.config()->SetInitialSessionFlowControlWindowToSend(
         kInitialSessionFlowControlWindowForTest);
-    stream_ = new QuicSimpleServerStreamPeer(::net::test::kClientDataStreamId1,
-                                             &session_, &response_cache_);
+    stream_ = new QuicSimpleServerStreamPeer(kClientDataStreamId1, &session_,
+                                             &response_cache_);
     // Register stream_ in dynamic_stream_map_ and pass ownership to session_.
     session_.ActivateStream(QuicWrapUnique(stream_));
   }
@@ -433,9 +425,8 @@ TEST_P(QuicSimpleServerStreamTest, SendReponseWithPushResources) {
   string host = "www.google.com";
   string request_path = "/foo";
   string body = "Yummm";
-  string url = host + "/bar";
   QuicHttpResponseCache::ServerPushInfo push_info(
-      GURL(url), SpdyHeaderBlock(), kDefaultPriority, "Push body");
+      QuicUrl(host, "/bar"), SpdyHeaderBlock(), kDefaultPriority, "Push body");
   std::list<QuicHttpResponseCache::ServerPushInfo> push_resources;
   push_resources.push_back(push_info);
   response_cache_.AddSimpleResponseWithServerPushResources(
@@ -449,9 +440,8 @@ TEST_P(QuicSimpleServerStreamTest, SendReponseWithPushResources) {
 
   stream_->set_fin_received(true);
   InSequence s;
-  EXPECT_CALL(session_,
-              PromisePushResourcesMock(host + request_path, _,
-                                       ::net::test::kClientDataStreamId1, _));
+  EXPECT_CALL(session_, PromisePushResourcesMock(host + request_path, _,
+                                                 kClientDataStreamId1, _));
   EXPECT_CALL(session_, WriteHeadersMock(stream_->id(), _, false, _, _));
   EXPECT_CALL(session_, WritevData(_, _, _, _, _, _))
       .Times(1)
@@ -615,27 +605,27 @@ TEST_P(QuicSimpleServerStreamTest,
 
 TEST_P(QuicSimpleServerStreamTest, InvalidHeadersWithFin) {
   char arr[] = {
-      0x3a,   0x68, 0x6f, 0x73,  // :hos
-      0x74,   0x00, 0x00, 0x00,  // t...
-      0x00,   0x00, 0x00, 0x00,  // ....
-      0x07,   0x3a, 0x6d, 0x65,  // .:me
-      0x74,   0x68, 0x6f, 0x64,  // thod
-      0x00,   0x00, 0x00, 0x03,  // ....
-      0x47,   0x45, 0x54, 0x00,  // GET.
-      0x00,   0x00, 0x05, 0x3a,  // ...:
-      0x70,   0x61, 0x74, 0x68,  // path
-      0x00,   0x00, 0x00, 0x04,  // ....
-      0x2f,   0x66, 0x6f, 0x6f,  // /foo
-      0x00,   0x00, 0x00, 0x07,  // ....
-      0x3a,   0x73, 0x63, 0x68,  // :sch
-      0x65,   0x6d, 0x65, 0x00,  // eme.
-      0x00,   0x00, 0x00, 0x00,  // ....
-      0x00,   0x00, 0x08, 0x3a,  // ...:
-      0x76,   0x65, 0x72, 0x73,  // vers
-      '\x96', 0x6f, 0x6e, 0x00,  // <i(69)>on.
-      0x00,   0x00, 0x08, 0x48,  // ...H
-      0x54,   0x54, 0x50, 0x2f,  // TTP/
-      0x31,   0x2e, 0x31,        // 1.1
+      0x3a, 0x68, 0x6f, 0x73,  // :hos
+      0x74, 0x00, 0x00, 0x00,  // t...
+      0x00, 0x00, 0x00, 0x00,  // ....
+      0x07, 0x3a, 0x6d, 0x65,  // .:me
+      0x74, 0x68, 0x6f, 0x64,  // thod
+      0x00, 0x00, 0x00, 0x03,  // ....
+      0x47, 0x45, 0x54, 0x00,  // GET.
+      0x00, 0x00, 0x05, 0x3a,  // ...:
+      0x70, 0x61, 0x74, 0x68,  // path
+      0x00, 0x00, 0x00, 0x04,  // ....
+      0x2f, 0x66, 0x6f, 0x6f,  // /foo
+      0x00, 0x00, 0x00, 0x07,  // ....
+      0x3a, 0x73, 0x63, 0x68,  // :sch
+      0x65, 0x6d, 0x65, 0x00,  // eme.
+      0x00, 0x00, 0x00, 0x00,  // ....
+      0x00, 0x00, 0x08, 0x3a,  // ...:
+      0x76, 0x65, 0x72, 0x73,  // vers
+      0x96, 0x6f, 0x6e, 0x00,  // <i(69)>on.
+      0x00, 0x00, 0x08, 0x48,  // ...H
+      0x54, 0x54, 0x50, 0x2f,  // TTP/
+      0x31, 0x2e, 0x31,        // 1.1
   };
   StringPiece data(arr, arraysize(arr));
   QuicStreamFrame frame(stream_->id(), true, 0, data);

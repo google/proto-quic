@@ -26,7 +26,6 @@ class QuicCryptoServerConfig;
 class QuicCryptoServerStreamBase;
 
 namespace test {
-class CryptoTestUtils;
 class QuicCryptoServerStreamPeer;
 }  // namespace test
 
@@ -139,7 +138,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerStream
   virtual void OverrideQuicConfigDefaults(QuicConfig* config);
 
  private:
-  friend class test::CryptoTestUtils;
   friend class test::QuicCryptoServerStreamPeer;
 
   class ValidateCallback : public ValidateClientHelloResultCallback {

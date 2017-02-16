@@ -33,6 +33,8 @@ class BlinkGCPluginAction : public PluginASTAction {
     for (const auto& arg : args) {
       if (arg == "dump-graph") {
         options_.dump_graph = true;
+      } else if (arg == "warn-stack-allocated-trace-method") {
+        options_.warn_stack_allocated_trace_method = true;
       } else if (arg == "warn-unneeded-finalizer") {
         options_.warn_unneeded_finalizer = true;
       } else if (arg == "use-chromium-style-naming") {

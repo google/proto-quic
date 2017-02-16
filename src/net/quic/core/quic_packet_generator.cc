@@ -329,12 +329,4 @@ void QuicPacketGenerator::SetEncrypter(EncryptionLevel level,
   packet_creator_.SetEncrypter(level, encrypter);
 }
 
-void QuicPacketGenerator::SetCurrentPath(
-    QuicPathId path_id,
-    QuicPacketNumber least_packet_awaited_by_peer,
-    QuicPacketCount max_packets_in_flight) {
-  packet_creator_.SetCurrentPath(path_id, least_packet_awaited_by_peer,
-                                 max_packets_in_flight);
-}
-
 }  // namespace net

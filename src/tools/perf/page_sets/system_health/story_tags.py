@@ -25,6 +25,11 @@ IMAGES = Tag(
 INTERNATIONAL = Tag(
     'international', 'Story has navigations to websites with content in non '
     'English languages.')
+JAVASCRIPT_HEAVY = Tag(
+    'javascript-heavy', 'Story has navigations to websites with heavy usages '
+    'of JavaScript. The story uses 20Mb+ memory for javascript and local '
+    'run with "v8" category enabled also shows the trace has js slices across '
+    'the whole run.')
 SCROLL = Tag(
     'scroll', 'Story has scroll gestures & scroll animation.')
 PINCH_ZOOM = Tag(

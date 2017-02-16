@@ -17,6 +17,7 @@
 #include "net/base/net_export.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_protocol.h"
+#include "net/spdy/zero_copy_output_buffer.h"
 
 namespace net {
 
@@ -33,6 +34,8 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
  public:
   // Initializes a SpdyFrameBuilder with a buffer of given size
   explicit SpdyFrameBuilder(size_t size);
+  // Doesn't take ownership of output.
+  SpdyFrameBuilder(size_t size, ZeroCopyOutputBuffer* output);
 
   ~SpdyFrameBuilder();
 
@@ -61,6 +64,8 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
   // Takes the buffer from the SpdyFrameBuilder.
   SpdySerializedFrame take() {
+    SPDY_BUG_IF(output_ != nullptr) << "ZeroCopyOutputBuffer is used to build "
+                                    << "frames. take() shouldn't be called";
     SPDY_BUG_IF(kMaxFrameSizeLimit < length_)
         << "Frame length " << length_
         << " is longer than the maximum possible allowed length.";
@@ -107,6 +112,8 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
 
  private:
   FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableBuffer);
+  FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableOutput);
+  FRIEND_TEST_ALL_PREFIXES(SpdyFrameBuilderTest, GetWritableOutputNegative);
 
   // Returns a writeable buffer of given size in bytes, to be appended to the
   // currently written frame. Does bounds checking on length but does not
@@ -115,12 +122,19 @@ class NET_EXPORT_PRIVATE SpdyFrameBuilder {
   // In general, consumers should use Write*() calls instead of this.
   // Returns NULL on failure.
   char* GetWritableBuffer(size_t length);
+  char* GetWritableOutput(size_t desired_length, size_t* actual_length);
 
   // Checks to make sure that there is an appropriate amount of space for a
   // write of given size, in bytes.
   bool CanWrite(size_t length) const;
 
+  // A buffer to be created whenever a new frame needs to be written. Used only
+  // if |output_| is nullptr.
   std::unique_ptr<char[]> buffer_;
+  // A pre-allocated buffer. If not-null, serialized frame data is written to
+  // this buffer.
+  ZeroCopyOutputBuffer* output_ = nullptr;  // Does not own.
+
   size_t capacity_;  // Allocation size of payload, set by constructor.
   size_t length_;    // Length of the latest frame in the buffer.
   size_t offset_;    // Position at which the latest frame begins.

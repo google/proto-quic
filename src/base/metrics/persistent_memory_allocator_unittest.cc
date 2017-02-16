@@ -112,7 +112,7 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
 
   // Validate allocation of test object and make sure it can be referenced
   // and all metadata looks correct.
-  TestObject1* obj1 = allocator_->AllocateObject<TestObject1>();
+  TestObject1* obj1 = allocator_->New<TestObject1>();
   ASSERT_TRUE(obj1);
   Reference block1 = allocator_->GetAsReference(obj1);
   ASSERT_NE(0U, block1);
@@ -152,7 +152,7 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
 
   // Create second test-object and ensure everything is good and it cannot
   // be confused with test-object of another type.
-  TestObject2* obj2 = allocator_->AllocateObject<TestObject2>();
+  TestObject2* obj2 = allocator_->New<TestObject2>();
   ASSERT_TRUE(obj2);
   Reference block2 = allocator_->GetAsReference(obj2);
   ASSERT_NE(0U, block2);
@@ -223,9 +223,9 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
 
   // Check that an object's type can be changed.
   EXPECT_EQ(2U, allocator_->GetType(block2));
-  allocator_->ChangeType(block2, 3, 2);
+  allocator_->ChangeType(block2, 3, 2, false);
   EXPECT_EQ(3U, allocator_->GetType(block2));
-  allocator_->ChangeObject<TestObject2>(block2, 3);
+  allocator_->New<TestObject2>(block2, 3, false);
   EXPECT_EQ(2U, allocator_->GetType(block2));
 
   // Create second allocator (read/write) using the same memory segment.
@@ -272,7 +272,7 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   EXPECT_EQ(nullptr, iter1d.GetNextOfObject<TestObject2>());
 
   // Ensure that deleting an object works.
-  allocator_->DeleteObject(obj2);
+  allocator_->Delete(obj2);
   PersistentMemoryAllocator::Iterator iter1z(allocator_.get());
   EXPECT_EQ(nullptr, iter1z.GetNextOfObject<TestObject2>());
 }
@@ -587,7 +587,7 @@ TEST(SharedPersistentMemoryAllocatorTest, CreationTest) {
     r456 = local.Allocate(456, 456);
     r789 = local.Allocate(789, 789);
     local.MakeIterable(r123);
-    local.ChangeType(r456, 654, 456);
+    local.ChangeType(r456, 654, 456, false);
     local.MakeIterable(r789);
     local.GetMemoryInfo(&meminfo1);
     EXPECT_FALSE(local.IsFull());
@@ -656,6 +656,25 @@ TEST(SharedPersistentMemoryAllocatorTest, CreationTest) {
   shalloc3.MakeIterable(obj);
   EXPECT_EQ(obj, iter2.GetNext(&type));
   EXPECT_EQ(42U, type);
+
+  // Clear-on-change test.
+  Reference data_ref = shalloc3.Allocate(sizeof(int) * 4, 911);
+  int* data = shalloc3.GetAsArray<int>(data_ref, 911, 4);
+  ASSERT_TRUE(data);
+  data[0] = 0;
+  data[1] = 1;
+  data[2] = 2;
+  data[3] = 3;
+  ASSERT_TRUE(shalloc3.ChangeType(data_ref, 119, 911, false));
+  EXPECT_EQ(0, data[0]);
+  EXPECT_EQ(1, data[1]);
+  EXPECT_EQ(2, data[2]);
+  EXPECT_EQ(3, data[3]);
+  ASSERT_TRUE(shalloc3.ChangeType(data_ref, 191, 119, true));
+  EXPECT_EQ(0, data[0]);
+  EXPECT_EQ(0, data[1]);
+  EXPECT_EQ(0, data[2]);
+  EXPECT_EQ(0, data[3]);
 }
 
 
@@ -676,7 +695,7 @@ TEST(FilePersistentMemoryAllocatorTest, CreationTest) {
     r456 = local.Allocate(456, 456);
     r789 = local.Allocate(789, 789);
     local.MakeIterable(r123);
-    local.ChangeType(r456, 654, 456);
+    local.ChangeType(r456, 654, 456, false);
     local.MakeIterable(r789);
     local.GetMemoryInfo(&meminfo1);
     EXPECT_FALSE(local.IsFull());

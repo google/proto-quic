@@ -30,7 +30,7 @@ shared_library("libmemconsumer") {
     "memconsumer_hook.cc",
   ]
   libs = [ "log" ]
-  configs -= [ "//build/config/android:hide_native_jni_exports" ]
+  configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
 
   configs -= [ "//build/config/compiler:chromium_code" ]
   configs += [ "//build/config/compiler:no_chromium_code" ]

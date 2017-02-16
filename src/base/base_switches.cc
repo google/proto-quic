@@ -24,6 +24,12 @@ const char kEnableHeapProfiling[]           = "enable-heap-profiling";
 // derived from trace events are reported.
 const char kEnableHeapProfilingModeNative[] = "native";
 
+// Report per-task heap usage and churn in the task profiler.
+// Does not keep track of individual allocations unlike the default and native
+// mode. Keeps only track of summarized churn stats in the task profiler
+// (chrome://profiler).
+const char kEnableHeapProfilingTaskProfiler[] = "task-profiler";
+
 // Generates full memory crash dump.
 const char kFullMemoryCrashReport[]         = "full-memory-crash-report";
 

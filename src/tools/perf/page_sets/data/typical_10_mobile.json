@@ -1,19 +1,36 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
     "archives": {
-        "typical_10_mobile_000.wpr": [
-            "http://m.ynet.co.il",
-            "http://m.facebook.com/barackobama",
-            "http://m.chiebukuro.yahoo.co.jp/detail/q10136829180",
-            "http://m.ebay.com/itm/351157205404",
-            "http://siriuslymeg.tumblr.com/",
-            "http://www.rg.ru/2014/10/21/cska-site.html",
-            "http://wapbaike.baidu.com/",
-            "http://m.huffpost.com/us/entry/6004486",
-            "http://www.cnn.com/2014/03/31/showbiz/tv/himym-finale/index.html"
-        ],
-        "typical_10_mobile_001.wpr": [
-            "http://de.m.wikipedia.org/wiki/K%C3%B6lner_Dom"
-        ]
-    }
+        "http://de.m.wikipedia.org/wiki/K%C3%B6lner_Dom": {
+            "DEFAULT": "typical_10_mobile_001.wpr"
+        },
+        "http://m.chiebukuro.yahoo.co.jp/detail/q10136829180": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://m.ebay.com/itm/351157205404": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://m.facebook.com/barackobama": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://m.huffpost.com/us/entry/6004486": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://m.ynet.co.il": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://siriuslymeg.tumblr.com/": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://wapbaike.baidu.com/": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://www.cnn.com/2014/03/31/showbiz/tv/himym-finale/index.html": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        },
+        "http://www.rg.ru/2014/10/21/cska-site.html": {
+            "DEFAULT": "typical_10_mobile_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

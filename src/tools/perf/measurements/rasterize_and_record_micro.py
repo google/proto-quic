@@ -52,7 +52,9 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
         record_repeat_count=self._record_repeat,
         rasterize_repeat_count=self._rasterize_repeat)
 
-    benchmark_id = tab.EvaluateJavaScript2('window.benchmark_results.id')
+    # Evaluating this expression usually takes between 60 and 90 seconds.
+    benchmark_id = tab.EvaluateJavaScript2(
+        'window.benchmark_results.id', timeout=self._timeout)
     if not benchmark_id:
       raise legacy_page_test.MeasurementFailure(
           'Failed to schedule rasterize_and_record_micro')

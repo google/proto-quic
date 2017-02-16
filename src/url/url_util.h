@@ -15,8 +15,6 @@
 #include "url/url_constants.h"
 #include "url/url_export.h"
 
-class GURL;
-
 namespace url {
 
 // Init ------------------------------------------------------------------------
@@ -98,6 +96,19 @@ URL_EXPORT const std::vector<std::string>& GetNoAccessSchemes();
 URL_EXPORT void AddCORSEnabledScheme(const char* new_scheme);
 URL_EXPORT const std::vector<std::string>& GetCORSEnabledSchemes();
 
+// Adds an application-defined scheme to the list of web schemes that can be
+// used by web to store data (e.g. cookies, local storage, ...). This is
+// to differentiate them from schemes that can store data but are not used on
+// web (e.g. application's internal schemes) or schemes that are used on web but
+// cannot store data.
+URL_EXPORT void AddWebStorageScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetWebStorageSchemes();
+
+// Adds an application-defined scheme to the list of schemes that can bypass the
+// Content-Security-Policy(CSP) checks.
+URL_EXPORT void AddCSPBypassingScheme(const char* new_scheme);
+URL_EXPORT const std::vector<std::string>& GetCSPBypassingSchemes();
+
 // Sets a flag to prevent future calls to Add*Scheme from succeeding.
 //
 // This is designed to help prevent errors for multithreaded applications.
@@ -154,10 +165,6 @@ URL_EXPORT bool IsReferrerScheme(const char* spec, const Component& scheme);
 URL_EXPORT bool GetStandardSchemeType(const char* spec,
                                       const Component& scheme,
                                       SchemeType* type);
-
-// Check whether the url is of the form about:blank, about:blank?foo or
-// about:blank/#foo.
-URL_EXPORT bool IsAboutBlank(const GURL& url);
 
 // Hosts  ----------------------------------------------------------------------
 

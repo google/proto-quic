@@ -9,11 +9,9 @@
 
 namespace net {
 
+class QuicClient;
 class QuicCryptoClientConfig;
 class QuicPacketWriter;
-
-
-class QuicClient;
 
 namespace test {
 

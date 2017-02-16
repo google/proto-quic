@@ -158,6 +158,9 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
     spdy_framer_.set_max_decode_buffer_size_bytes(max_decode_buffer_size_bytes);
   }
 
+  void set_max_uncompressed_header_bytes(
+      size_t set_max_uncompressed_header_bytes);
+
  protected:
   // Override CreateIncomingDynamicStream() and CreateOutgoingDynamicStream()
   // with QuicSpdyStream return type to make sure that all data streams are
@@ -196,9 +199,6 @@ class QUIC_EXPORT_PRIVATE QuicSpdySession : public QuicSession {
   // Called when SETTINGS_ENABLE_PUSH is received, only supported on
   // server side.
   void UpdateEnableServerPush(bool value);
-
-  void set_max_uncompressed_header_bytes(
-      size_t set_max_uncompressed_header_bytes);
 
   bool IsConnected() { return connection()->connected(); }
 

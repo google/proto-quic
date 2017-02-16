@@ -2452,7 +2452,7 @@ void HostResolverImpl::OnIPAddressChanged() {
   // Abandon all ProbeJobs.
   probe_weak_ptr_factory_.InvalidateWeakPtrs();
   if (cache_.get()) {
-    cache_->clear();
+    cache_->OnNetworkChange();
     cache_hit_callbacks_.clear();
   }
 #if defined(OS_POSIX) && !defined(OS_MACOSX) && !defined(OS_ANDROID)

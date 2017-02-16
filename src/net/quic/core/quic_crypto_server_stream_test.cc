@@ -59,7 +59,8 @@ const uint16_t kServerPort = 443;
 class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
  public:
   QuicCryptoServerStreamTest()
-      : QuicCryptoServerStreamTest(CryptoTestUtils::ProofSourceForTesting()) {}
+      : QuicCryptoServerStreamTest(crypto_test_utils::ProofSourceForTesting()) {
+  }
 
   explicit QuicCryptoServerStreamTest(std::unique_ptr<ProofSource> proof_source)
       : server_crypto_config_(QuicCryptoServerConfig::TESTING,
@@ -68,7 +69,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
         server_compressed_certs_cache_(
             QuicCompressedCertsCache::kQuicCompressedCertsCacheSize),
         server_id_(kServerHostname, kServerPort, PRIVACY_MODE_DISABLED),
-        client_crypto_config_(CryptoTestUtils::ProofVerifierForTesting()) {
+        client_crypto_config_(crypto_test_utils::ProofVerifierForTesting()) {
     FLAGS_quic_reloadable_flag_enable_quic_stateless_reject_support = false;
   }
 
@@ -96,9 +97,9 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
         &server_connection_, &server_session);
     CHECK(server_session);
     server_session_.reset(server_session);
-    CryptoTestUtils::FakeServerOptions options;
+    crypto_test_utils::FakeServerOptions options;
     options.token_binding_params = QuicTagVector{kTB10};
-    CryptoTestUtils::SetupCryptoServerConfigForTest(
+    crypto_test_utils::SetupCryptoServerConfigForTest(
         server_connection_->clock(), server_connection_->random_generator(),
         &server_crypto_config_, options);
   }
@@ -134,7 +135,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
   int CompleteCryptoHandshake() {
     CHECK(server_connection_);
     CHECK(server_session_ != nullptr);
-    return CryptoTestUtils::HandshakeWithFakeClient(
+    return crypto_test_utils::HandshakeWithFakeClient(
         helpers_.back().get(), alarm_factories_.back().get(),
         server_connection_, server_stream(), server_id_, client_options_);
   }
@@ -147,8 +148,8 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
 
     EXPECT_CALL(*client_session_, OnProofValid(_)).Times(testing::AnyNumber());
     client_stream()->CryptoConnect();
-    CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(), 0,
-                                      server_connection_, server_stream(), 0);
+    crypto_test_utils::AdvanceHandshake(client_connection_, client_stream(), 0,
+                                        server_connection_, server_stream(), 0);
   }
 
  protected:
@@ -174,7 +175,7 @@ class QuicCryptoServerStreamTest : public ::testing::TestWithParam<bool> {
 
   CryptoHandshakeMessage message_;
   std::unique_ptr<QuicData> message_data_;
-  CryptoTestUtils::FakeClientOptions client_options_;
+  crypto_test_utils::FakeClientOptions client_options_;
 
   // Which QUIC versions the client and server support.
   QuicVersionVector supported_versions_ = AllSupportedVersions();
@@ -339,7 +340,7 @@ TEST_P(QuicCryptoServerStreamTest, ZeroRTT) {
 
   client_stream()->CryptoConnect();
 
-  CryptoTestUtils::CommunicateHandshakeMessages(
+  crypto_test_utils::CommunicateHandshakeMessages(
       client_connection_, client_stream(), server_connection_, server_stream());
 
   EXPECT_EQ(1, client_stream()->num_sent_client_hellos());
@@ -417,7 +418,7 @@ TEST_P(QuicCryptoServerStreamTest, OnlySendSCUPAfterHandshakeComplete) {
 TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
   // Do not send MAX_HEADER_LIST_SIZE SETTING frame.
   // TODO(fayang): This SETTING frame cannot be decrypted and
-  // CryptoTestUtils::MovePackets stops processing parsing following packets.
+  // crypto_test_utils::MovePackets stops processing parsing following packets.
   // Actually, crypto stream test should use QuicSession instead of
   // QuicSpdySession (b/32366134).
   FLAGS_quic_reloadable_flag_quic_send_max_header_list_size = false;
@@ -437,8 +438,8 @@ TEST_P(QuicCryptoServerStreamTest, SendSCUPAfterHandshakeComplete) {
   // Send a SCUP message and ensure that the client was able to verify it.
   EXPECT_CALL(*client_connection_, CloseConnection(_, _, _)).Times(0);
   server_stream()->SendServerConfigUpdate(nullptr);
-  CryptoTestUtils::AdvanceHandshake(client_connection_, client_stream(), 1,
-                                    server_connection_, server_stream(), 1);
+  crypto_test_utils::AdvanceHandshake(client_connection_, client_stream(), 1,
+                                      server_connection_, server_stream(), 1);
 
   EXPECT_EQ(1, server_stream()->NumServerConfigUpdateMessagesSent());
   EXPECT_EQ(1, client_stream()->num_scup_messages_received());

@@ -50,4 +50,8 @@ auto_raw_pointer.cpp:49:3: warning: [chromium-style] auto variable type must not
   const auto&& const_int_ptr_rref = static_cast<int*&&>(int_ptr);
   ^~~~~~~~~~~~
   auto* const
-13 warnings generated.
+auto_raw_pointer.cpp:51:3: warning: [chromium-style] auto variable type must not deduce to a raw pointer type.
+  static auto static_ptr = new int;
+  ^~~~~~~~~~~
+  static auto*
+14 warnings generated.

@@ -12,8 +12,9 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
-#include "base/threading/thread_task_runner_handle.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "net/base/filename_util.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -41,8 +42,8 @@ class TestJobFactory : public URLRequestJobFactory {
       const std::string& scheme,
       URLRequest* request,
       NetworkDelegate* network_delegate) const override {
-    URLRequestJob* job = new URLRequestFileDirJob(
-        request, network_delegate, path_, base::ThreadTaskRunnerHandle::Get());
+    URLRequestJob* job =
+        new URLRequestFileDirJob(request, network_delegate, path_);
 
     return job;
   }
@@ -97,9 +98,12 @@ class TestDirectoryURLRequestDelegate : public TestDelegate {
 
 class URLRequestFileDirTest : public testing::Test {
  public:
-  URLRequestFileDirTest() : buffer_(new IOBuffer(kBufferSize)) {}
+  URLRequestFileDirTest()
+      : scoped_task_scheduler_(base::MessageLoop::current()),
+        buffer_(new IOBuffer(kBufferSize)) {}
 
  protected:
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
   TestURLRequestContext context_;
   TestDirectoryURLRequestDelegate delegate_;
   scoped_refptr<IOBuffer> buffer_;

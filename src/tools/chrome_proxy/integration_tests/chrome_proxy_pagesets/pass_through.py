@@ -17,13 +17,13 @@ class PassThroughPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(PassThroughPage, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
         (function() {
           var request = new XMLHttpRequest();
-          request.open("GET", "%s");
+          request.open("GET", {{ url }});
           request.setRequestHeader("Chrome-Proxy-Accept-Transform", "identity");
           request.send(null);
-        })();''' % (self.url))
+        })();''', url=self.url)
     action_runner.Wait(1)
 
 

@@ -19,6 +19,7 @@
 #include "net/log/net_log_source.h"
 #include "net/quic/chromium/quic_http_utils.h"
 #include "net/quic/core/quic_client_promised_info.h"
+#include "net/quic/core/quic_stream_sequencer.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/spdy/spdy_frame_builder.h"
@@ -376,7 +377,10 @@ int64_t QuicHttpStream::GetTotalReceivedBytes() const {
   // bytes. Change this to include QUIC overhead as well.
   int64_t total_received_bytes = headers_bytes_received_;
   if (stream_) {
-    total_received_bytes += stream_->stream_bytes_read();
+    DCHECK_LE(stream_->sequencer()->NumBytesConsumed(),
+              stream_->stream_bytes_read());
+    // Only count the uniquely received bytes.
+    total_received_bytes += stream_->sequencer()->NumBytesConsumed();
   } else {
     total_received_bytes += closed_stream_received_bytes_;
   }
@@ -812,7 +816,10 @@ void QuicHttpStream::ResetStream() {
   }
   if (!stream_)
     return;
-  closed_stream_received_bytes_ = stream_->stream_bytes_read();
+  DCHECK_LE(stream_->sequencer()->NumBytesConsumed(),
+            stream_->stream_bytes_read());
+  // Only count the uniquely received bytes.
+  closed_stream_received_bytes_ = stream_->sequencer()->NumBytesConsumed();
   closed_stream_sent_bytes_ = stream_->stream_bytes_written();
   closed_is_first_stream_ = stream_->IsFirstStream();
   stream_ = nullptr;

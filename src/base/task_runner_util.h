@@ -5,8 +5,11 @@
 #ifndef BASE_TASK_RUNNER_UTIL_H_
 #define BASE_TASK_RUNNER_UTIL_H_
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/callback.h"
 #include "base/logging.h"
 #include "base/post_task_and_reply_with_result_internal.h"
 #include "base/task_runner.h"
@@ -28,20 +31,18 @@ namespace base {
 //     Bind(&DoWorkAndReturn),
 //     Bind(&Callback));
 template <typename TaskReturnType, typename ReplyArgType>
-bool PostTaskAndReplyWithResult(
-    TaskRunner* task_runner,
-    const tracked_objects::Location& from_here,
-    const Callback<TaskReturnType(void)>& task,
-    const Callback<void(ReplyArgType)>& reply) {
+bool PostTaskAndReplyWithResult(TaskRunner* task_runner,
+                                const tracked_objects::Location& from_here,
+                                Callback<TaskReturnType()> task,
+                                Callback<void(ReplyArgType)> reply) {
   DCHECK(task);
   DCHECK(reply);
   TaskReturnType* result = new TaskReturnType();
   return task_runner->PostTaskAndReply(
-      from_here,
-      base::Bind(&internal::ReturnAsParamAdapter<TaskReturnType>, task,
-                 result),
-      base::Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>, reply,
-                 base::Owned(result)));
+      from_here, base::Bind(&internal::ReturnAsParamAdapter<TaskReturnType>,
+                            std::move(task), result),
+      base::Bind(&internal::ReplyAdapter<TaskReturnType, ReplyArgType>,
+                 std::move(reply), base::Owned(result)));
 }
 
 }  // namespace base

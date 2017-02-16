@@ -87,8 +87,8 @@ TEST_F(QuicCryptoStreamTest, ProcessRawData) {
   const CryptoHandshakeMessage& message = (*stream_.messages())[0];
   EXPECT_EQ(kSHLO, message.tag());
   EXPECT_EQ(2u, message.tag_value_map().size());
-  EXPECT_EQ("abc", CryptoTestUtils::GetValueForTag(message, 1));
-  EXPECT_EQ("def", CryptoTestUtils::GetValueForTag(message, 2));
+  EXPECT_EQ("abc", crypto_test_utils::GetValueForTag(message, 1));
+  EXPECT_EQ("def", crypto_test_utils::GetValueForTag(message, 2));
 }
 
 TEST_F(QuicCryptoStreamTest, ProcessBadData) {

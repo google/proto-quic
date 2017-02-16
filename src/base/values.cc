@@ -78,7 +78,7 @@ bool IsAssignmentSafe(Value::Type lhs, Value::Type rhs) {
   auto IsImplemented = [](Value::Type type) {
     return type == Value::Type::NONE || type == Value::Type::BOOLEAN ||
            type == Value::Type::INTEGER || type == Value::Type::DOUBLE ||
-           type == Value::Type::STRING;
+           type == Value::Type::STRING || type == Value::Type::BINARY;
   };
 
   return lhs == rhs || (IsImplemented(lhs) && IsImplemented(rhs));
@@ -89,6 +89,13 @@ bool IsAssignmentSafe(Value::Type lhs, Value::Type rhs) {
 // static
 std::unique_ptr<Value> Value::CreateNullValue() {
   return WrapUnique(new Value(Type::NONE));
+}
+
+// static
+std::unique_ptr<BinaryValue> BinaryValue::CreateWithCopiedBuffer(
+    const char* buffer,
+    size_t size) {
+  return MakeUnique<BinaryValue>(std::vector<char>(buffer, buffer + size));
 }
 
 Value::Value(const Value& that) {
@@ -119,10 +126,12 @@ Value::Value(Type type) : type_(type) {
     case Type::STRING:
       string_value_.Init();
       return;
+    case Type::BINARY:
+      binary_value_.Init();
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
@@ -165,6 +174,14 @@ Value::Value(const string16& in_string) : type_(Type::STRING) {
 }
 
 Value::Value(StringPiece in_string) : Value(in_string.as_string()) {}
+
+Value::Value(const std::vector<char>& in_blob) : type_(Type::BINARY) {
+  binary_value_.Init(in_blob);
+}
+
+Value::Value(std::vector<char>&& in_blob) : type_(Type::BINARY) {
+  binary_value_.Init(std::move(in_blob));
+}
 
 Value& Value::operator=(const Value& that) {
   if (this != &that) {
@@ -229,6 +246,19 @@ const std::string& Value::GetString() const {
   return *string_value_;
 }
 
+const std::vector<char>& Value::GetBlob() const {
+  CHECK(is_blob());
+  return *binary_value_;
+}
+
+size_t Value::GetSize() const {
+  return GetBlob().size();
+}
+
+const char* Value::GetBuffer() const {
+  return GetBlob().data();
+}
+
 bool Value::GetAsBoolean(bool* out_value) const {
   if (out_value && is_bool()) {
     *out_value = bool_value_;
@@ -290,7 +320,11 @@ bool Value::GetAsString(StringPiece* out_value) const {
 }
 
 bool Value::GetAsBinary(const BinaryValue** out_value) const {
-  return false;
+  if (out_value && is_blob()) {
+    *out_value = this;
+    return true;
+  }
+  return is_blob();
 }
 
 bool Value::GetAsList(ListValue** out_value) {
@@ -328,6 +362,10 @@ Value* Value::DeepCopy() const {
     // Value when that code is deleted.
     case Type::STRING:
       return new StringValue(*string_value_);
+    // For now, make BinaryValues for backward-compatibility. Convert to
+    // Value when that code is deleted.
+    case Type::BINARY:
+      return new BinaryValue(*binary_value_);
 
     default:
       // All other types should be handled by subclasses.
@@ -355,6 +393,8 @@ bool Value::Equals(const Value* other) const {
       return double_value_ == other->double_value_;
     case Type::STRING:
       return *string_value_ == *(other->string_value_);
+    case Type::BINARY:
+      return *binary_value_ == *(other->binary_value_);
     default:
       // This method should only be getting called for the above types -- all
       // subclasses need to provide their own implementation;.
@@ -405,10 +445,12 @@ void Value::InternalCopyConstructFrom(const Value& that) {
     case Type::STRING:
       string_value_.Init(*that.string_value_);
       return;
+    case Type::BINARY:
+      binary_value_.Init(*that.binary_value_);
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
@@ -429,10 +471,12 @@ void Value::InternalMoveConstructFrom(Value&& that) {
     case Type::STRING:
       string_value_.InitFromMove(std::move(that.string_value_));
       return;
+    case Type::BINARY:
+      binary_value_.InitFromMove(std::move(that.binary_value_));
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
@@ -453,10 +497,12 @@ void Value::InternalCopyAssignFrom(const Value& that) {
     case Type::STRING:
       *string_value_ = *that.string_value_;
       return;
+    case Type::BINARY:
+      *binary_value_ = *that.binary_value_;
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
@@ -477,10 +523,12 @@ void Value::InternalMoveAssignFrom(Value&& that) {
     case Type::STRING:
       *string_value_ = std::move(*that.string_value_);
       return;
+    case Type::BINARY:
+      *binary_value_ = std::move(*that.binary_value_);
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
@@ -499,52 +547,16 @@ void Value::InternalCleanup() {
     case Type::STRING:
       string_value_.Destroy();
       return;
+    case Type::BINARY:
+      binary_value_.Destroy();
+      return;
 
     // TODO(crbug.com/646113): Implement these once the corresponding derived
     // classes are removed.
-    case Type::BINARY:
     case Type::LIST:
     case Type::DICTIONARY:
       return;
   }
-}
-
-///////////////////// BinaryValue ////////////////////
-
-BinaryValue::BinaryValue() : Value(Type::BINARY), size_(0) {}
-
-BinaryValue::BinaryValue(std::unique_ptr<char[]> buffer, size_t size)
-    : Value(Type::BINARY), buffer_(std::move(buffer)), size_(size) {}
-
-BinaryValue::~BinaryValue() {
-}
-
-// static
-std::unique_ptr<BinaryValue> BinaryValue::CreateWithCopiedBuffer(
-    const char* buffer,
-    size_t size) {
-  std::unique_ptr<char[]> buffer_copy(new char[size]);
-  memcpy(buffer_copy.get(), buffer, size);
-  return MakeUnique<BinaryValue>(std::move(buffer_copy), size);
-}
-
-bool BinaryValue::GetAsBinary(const BinaryValue** out_value) const {
-  if (out_value)
-    *out_value = this;
-  return true;
-}
-
-BinaryValue* BinaryValue::DeepCopy() const {
-  return CreateWithCopiedBuffer(buffer_.get(), size_).release();
-}
-
-bool BinaryValue::Equals(const Value* other) const {
-  if (other->GetType() != GetType())
-    return false;
-  const BinaryValue* other_binary = static_cast<const BinaryValue*>(other);
-  if (other_binary->size_ != size_)
-    return false;
-  return !memcmp(GetBuffer(), other_binary->GetBuffer(), size_);
 }
 
 ///////////////////// DictionaryValue ////////////////////
@@ -768,7 +780,7 @@ bool DictionaryValue::GetBinary(StringPiece path,
     return false;
 
   if (out_value)
-    *out_value = static_cast<const BinaryValue*>(value);
+    *out_value = value;
 
   return true;
 }
@@ -1162,7 +1174,7 @@ bool ListValue::GetBinary(size_t index, const BinaryValue** out_value) const {
     return false;
 
   if (out_value)
-    *out_value = static_cast<const BinaryValue*>(value);
+    *out_value = value;
 
   return true;
 }

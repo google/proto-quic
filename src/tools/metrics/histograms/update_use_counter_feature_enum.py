@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
   source_path = 'third_party/WebKit/Source/core/frame/UseCounter.h'
 
-  START_MARKER = '^enum Feature {'
+  START_MARKER = '^enum Feature : uint32_t {'
   END_MARKER = '^NumberOfFeatures'
 
   if options.dashboard:

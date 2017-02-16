@@ -22,6 +22,7 @@ import (
 )
 
 var errNoCertificateAlert = errors.New("tls: no certificate alert")
+var errEndOfEarlyDataAlert = errors.New("tls: end of early data alert")
 
 // A Conn represents a secured connection.
 // It implements the net.Conn interface.
@@ -38,7 +39,7 @@ type Conn struct {
 	haveVers             bool       // version has been negotiated
 	config               *Config    // configuration passed to constructor
 	handshakeComplete    bool
-	skipEarlyData        bool
+	skipEarlyData        bool // On a server, indicates that the client is sending early data that must be skipped over.
 	didResume            bool // whether this connection was a session resumption
 	extendedMasterSecret bool // whether this session used an extended master secret
 	cipherSuite          *cipherSuite
@@ -220,6 +221,14 @@ func (hc *halfConn) useTrafficSecret(version uint16, suite *cipherSuite, secret 
 		hc.cipher = nullCipher{}
 	}
 	hc.trafficSecret = secret
+	hc.incEpoch()
+}
+
+// resetCipher changes the cipher state back to no encryption to be able
+// to send an unencrypted ClientHello in response to HelloRetryRequest
+// after 0-RTT data was rejected.
+func (hc *halfConn) resetCipher() {
+	hc.cipher = nil
 	hc.incEpoch()
 }
 
@@ -876,7 +885,7 @@ func (c *Conn) readRecord(want recordType) error {
 			return c.in.setErrorLocked(errors.New("tls: handshake or ChangeCipherSpec requested after handshake complete"))
 		}
 	case recordTypeApplicationData:
-		if !c.handshakeComplete && !c.config.Bugs.ExpectFalseStart && len(c.config.Bugs.ExpectHalfRTTData) == 0 {
+		if !c.handshakeComplete && !c.config.Bugs.ExpectFalseStart && len(c.config.Bugs.ExpectHalfRTTData) == 0 && len(c.config.Bugs.ExpectEarlyData) == 0 {
 			c.sendAlert(alertInternalError)
 			return c.in.setErrorLocked(errors.New("tls: application data record requested before handshake complete"))
 		}
@@ -920,6 +929,10 @@ Again:
 			if alert(data[1]) == alertNoCertificate {
 				c.in.freeBlock(b)
 				return errNoCertificateAlert
+			}
+			if alert(data[1]) == alertEndOfEarlyData {
+				c.in.freeBlock(b)
+				return errEndOfEarlyDataAlert
 			}
 
 			// drop on the floor
@@ -990,7 +1003,7 @@ func (c *Conn) sendAlertLocked(level byte, err alert) error {
 // L < c.out.Mutex.
 func (c *Conn) sendAlert(err alert) error {
 	level := byte(alertLevelError)
-	if err == alertNoRenegotiation || err == alertCloseNotify || err == alertNoCertificate {
+	if err == alertNoRenegotiation || err == alertCloseNotify || err == alertNoCertificate || err == alertEndOfEarlyData {
 		level = alertLevelWarning
 	}
 	return c.SendAlert(level, err)
@@ -1471,7 +1484,7 @@ func (c *Conn) handlePostHandshakeMessage() error {
 				return errors.New("tls: no GREASE ticket extension found")
 			}
 
-			if c.config.Bugs.ExpectTicketEarlyDataInfo && newSessionTicket.earlyDataInfo == 0 {
+			if c.config.Bugs.ExpectTicketEarlyDataInfo && newSessionTicket.maxEarlyDataSize == 0 {
 				return errors.New("tls: no ticket_early_data_info extension found")
 			}
 
@@ -1494,6 +1507,7 @@ func (c *Conn) handlePostHandshakeMessage() error {
 				ticketCreationTime: c.config.time(),
 				ticketExpiration:   c.config.time().Add(time.Duration(newSessionTicket.ticketLifetime) * time.Second),
 				ticketAgeAdd:       newSessionTicket.ticketAgeAdd,
+				maxEarlyDataSize:   newSessionTicket.maxEarlyDataSize,
 			}
 
 			cacheKey := clientSessionCacheKey(c.conn.RemoteAddr(), c.config)
@@ -1789,10 +1803,10 @@ func (c *Conn) SendNewSessionTicket() error {
 	m := &newSessionTicketMsg{
 		version:                c.vers,
 		ticketLifetime:         uint32(24 * time.Hour / time.Second),
-		earlyDataInfo:          c.config.Bugs.SendTicketEarlyDataInfo,
 		duplicateEarlyDataInfo: c.config.Bugs.DuplicateTicketEarlyDataInfo,
 		customExtension:        c.config.Bugs.CustomTicketExtension,
 		ticketAgeAdd:           ticketAgeAdd,
+		maxEarlyDataSize:       c.config.MaxEarlyDataSize,
 	}
 
 	if c.config.Bugs.SendTicketLifetime != 0 {

@@ -17,15 +17,27 @@ namespace android {
 
 void InitJavaExceptionReporter() {
   JNIEnv* env = base::android::AttachCurrentThread();
-  Java_JavaExceptionReporter_installHandler(env);
+  constexpr bool crash_after_report = false;
+  Java_JavaExceptionReporter_installHandler(env, crash_after_report);
+}
+
+void InitJavaExceptionReporterForChildProcess() {
+  JNIEnv* env = base::android::AttachCurrentThread();
+  constexpr bool crash_after_report = true;
+  Java_JavaExceptionReporter_installHandler(env, crash_after_report);
 }
 
 void ReportJavaException(JNIEnv* env,
                          const JavaParamRef<jclass>& jcaller,
+                         jboolean crash_after_report,
                          const JavaParamRef<jthrowable>& e) {
+  std::string exception_info = base::android::GetJavaExceptionInfo(env, e);
   // Set the exception_string in BuildInfo so that breakpad can read it.
-  base::android::BuildInfo::GetInstance()->SetJavaExceptionInfo(
-      base::android::GetJavaExceptionInfo(env, e));
+  base::android::BuildInfo::GetInstance()->SetJavaExceptionInfo(exception_info);
+  if (crash_after_report) {
+    LOG(ERROR) << exception_info;
+    LOG(FATAL) << "Uncaught exception";
+  }
   base::debug::DumpWithoutCrashing();
   base::android::BuildInfo::GetInstance()->ClearJavaExceptionInfo();
 }

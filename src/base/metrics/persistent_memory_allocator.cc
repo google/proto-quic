@@ -511,16 +511,50 @@ uint32_t PersistentMemoryAllocator::GetType(Reference ref) const {
 
 bool PersistentMemoryAllocator::ChangeType(Reference ref,
                                            uint32_t to_type_id,
-                                           uint32_t from_type_id) {
+                                           uint32_t from_type_id,
+                                           bool clear) {
   DCHECK(!readonly_);
   volatile BlockHeader* const block = GetBlock(ref, 0, 0, false, false);
   if (!block)
     return false;
 
-  // This is a "strong" exchange because there is no loop that can retry in
-  // the wake of spurious failures possible with "weak" exchanges. Make this
-  // an "acquire-release" so no memory accesses can be reordered either before
-  // or after since changes based on type could happen on either side.
+  // "Strong" exchanges are used below because there is no loop that can retry
+  // in the wake of spurious failures possible with "weak" exchanges. It is,
+  // in aggregate, an "acquire-release" operation so no memory accesses can be
+  // reordered either before or after this method (since changes based on type
+  // could happen on either side).
+
+  if (clear) {
+    // If clearing the memory, first change it to the "transitioning" type so
+    // there can be no confusion by other threads. After the memory is cleared,
+    // it can be changed to its final type.
+    if (!block->type_id.compare_exchange_strong(
+            from_type_id, kTypeIdTransitioning, std::memory_order_acquire,
+            std::memory_order_acquire)) {
+      // Existing type wasn't what was expected: fail (with no changes)
+      return false;
+    }
+
+    // Clear the memory while the type doesn't match either "from" or "to".
+    memset(const_cast<char*>(reinterpret_cast<volatile char*>(block) +
+                             sizeof(BlockHeader)),
+           0, block->size - sizeof(BlockHeader));
+
+    // If the destination type is "transitioning" then skip the final exchange.
+    if (to_type_id == kTypeIdTransitioning)
+      return true;
+
+    // Finish the change to the desired type.
+    from_type_id = kTypeIdTransitioning;  // Exchange needs modifiable original.
+    bool success = block->type_id.compare_exchange_strong(
+        from_type_id, to_type_id, std::memory_order_release,
+        std::memory_order_relaxed);
+    DCHECK(success);  // Should never fail.
+    return success;
+  }
+
+  // One step change to the new type. Will return false if the existing value
+  // doesn't match what is expected.
   return block->type_id.compare_exchange_strong(from_type_id, to_type_id,
                                                 std::memory_order_acq_rel,
                                                 std::memory_order_acquire);

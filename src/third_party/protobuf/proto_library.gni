@@ -63,6 +63,12 @@
 #       If adding protobuf library would be required, adds protobuf_full to deps
 #       instead of protobuf_lite.
 #
+#   import_dirs (optional)
+#       A list of extra import directories to be passed to protoc compiler. The
+#       default case is just proto_in_dir.
+#       WARNING: This options should not be used in Chrome code until
+#       http://crbug.com/691451 is resolved.
+#
 # Parameters for compiling the generated code:
 #
 #   component_build_force_source_set (Default=false)
@@ -274,6 +280,12 @@ template("proto_library") {
           "--plugin-options",
           invoker.generator_plugin_options,
         ]
+      }
+    }
+
+    if (defined(invoker.import_dirs)) {
+      foreach(path, invoker.import_dirs) {
+        args += ["--import-dir=" + rebase_path(path, root_build_dir)]
       }
     }
 

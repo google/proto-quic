@@ -9,6 +9,7 @@
 #include <limits>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "base/memory/ptr_util.h"
 #include "base/strings/string16.h"
@@ -82,6 +83,12 @@ TEST(ValuesTest, ConstructStringFromStringPiece) {
   EXPECT_EQ("foobar", value.GetString());
 }
 
+TEST(ValuesTest, ConstructBinary) {
+  BinaryValue value(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
+  EXPECT_EQ(Value::Type::BINARY, value.type());
+  EXPECT_EQ(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}), value.GetBlob());
+}
+
 // Group of tests for the copy constructors and copy-assigmnent. For equality
 // checks comparisons of the interesting fields are done instead of relying on
 // Equals being correct.
@@ -146,6 +153,19 @@ TEST(ValuesTest, CopyString) {
   EXPECT_EQ(value.GetString(), blank.GetString());
 }
 
+TEST(ValuesTest, CopyBinary) {
+  BinaryValue value(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}));
+  BinaryValue copied_value(value);
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(value.GetBlob(), copied_value.GetBlob());
+
+  Value blank;
+
+  blank = value;
+  EXPECT_EQ(value.type(), blank.type());
+  EXPECT_EQ(value.GetBlob(), blank.GetBlob());
+}
+
 // Group of tests for the move constructors and move-assigmnent.
 TEST(ValuesTest, MoveBool) {
   FundamentalValue true_value(true);
@@ -206,6 +226,20 @@ TEST(ValuesTest, MoveString) {
   blank = StringValue("foobar");
   EXPECT_EQ(Value::Type::STRING, blank.type());
   EXPECT_EQ("foobar", blank.GetString());
+}
+
+TEST(ValuesTest, MoveBinary) {
+  const std::vector<char> buffer = {0xF, 0x0, 0x0, 0xB, 0xA, 0x2};
+  BinaryValue value(buffer);
+  BinaryValue moved_value(std::move(value));
+  EXPECT_EQ(Value::Type::BINARY, moved_value.type());
+  EXPECT_EQ(buffer, moved_value.GetBlob());
+
+  Value blank;
+
+  blank = BinaryValue(buffer);
+  EXPECT_EQ(Value::Type::BINARY, blank.type());
+  EXPECT_EQ(buffer, blank.GetBlob());
 }
 
 TEST(ValuesTest, Basic) {
@@ -301,16 +335,15 @@ TEST(ValuesTest, List) {
 }
 
 TEST(ValuesTest, BinaryValue) {
-  // Default constructor creates a BinaryValue with a null buffer and size 0.
-  std::unique_ptr<BinaryValue> binary(new BinaryValue());
+  // Default constructor creates a BinaryValue with a buffer of size 0.
+  auto binary = MakeUnique<Value>(Value::Type::BINARY);
   ASSERT_TRUE(binary.get());
-  ASSERT_EQ(NULL, binary->GetBuffer());
   ASSERT_EQ(0U, binary->GetSize());
 
   // Test the common case of a non-empty buffer
-  std::unique_ptr<char[]> buffer(new char[15]);
-  char* original_buffer = buffer.get();
-  binary.reset(new BinaryValue(std::move(buffer), 15));
+  std::vector<char> buffer(15);
+  char* original_buffer = buffer.data();
+  binary.reset(new BinaryValue(std::move(buffer)));
   ASSERT_TRUE(binary.get());
   ASSERT_TRUE(binary->GetBuffer());
   ASSERT_EQ(original_buffer, binary->GetBuffer());
@@ -608,10 +641,9 @@ TEST(ValuesTest, DeepCopy) {
   StringValue* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
-  std::unique_ptr<char[]> original_buffer(new char[42]);
-  memset(original_buffer.get(), '!', 42);
+  std::vector<char> original_buffer(42, '!');
   std::unique_ptr<BinaryValue> scoped_binary(
-      new BinaryValue(std::move(original_buffer), 42));
+      new BinaryValue(std::move(original_buffer)));
   BinaryValue* original_binary = scoped_binary.get();
   original_dict.Set("binary", std::move(scoped_binary));
 
@@ -697,13 +729,10 @@ TEST(ValuesTest, DeepCopy) {
   ASSERT_TRUE(copy_binary);
   ASSERT_NE(copy_binary, original_binary);
   ASSERT_TRUE(copy_binary->IsType(Value::Type::BINARY));
-  ASSERT_NE(original_binary->GetBuffer(),
-    static_cast<BinaryValue*>(copy_binary)->GetBuffer());
-  ASSERT_EQ(original_binary->GetSize(),
-    static_cast<BinaryValue*>(copy_binary)->GetSize());
-  ASSERT_EQ(0, memcmp(original_binary->GetBuffer(),
-               static_cast<BinaryValue*>(copy_binary)->GetBuffer(),
-               original_binary->GetSize()));
+  ASSERT_NE(original_binary->GetBuffer(), copy_binary->GetBuffer());
+  ASSERT_EQ(original_binary->GetSize(), copy_binary->GetSize());
+  ASSERT_EQ(0, memcmp(original_binary->GetBuffer(), copy_binary->GetBuffer(),
+                      original_binary->GetSize()));
 
   Value* copy_value = NULL;
   ASSERT_TRUE(copy_dict->Get("list", &copy_value));
@@ -829,10 +858,9 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   Value* original_string16 = scoped_string16.get();
   original_dict.Set("string16", std::move(scoped_string16));
 
-  std::unique_ptr<char[]> original_buffer(new char[42]);
-  memset(original_buffer.get(), '!', 42);
+  std::vector<char> original_buffer(42, '!');
   std::unique_ptr<BinaryValue> scoped_binary(
-      new BinaryValue(std::move(original_buffer), 42));
+      new BinaryValue(std::move(original_buffer)));
   Value* original_binary = scoped_binary.get();
   original_dict.Set("binary", std::move(scoped_binary));
 
@@ -1069,7 +1097,7 @@ TEST(ValuesTest, GetWithNullOutValue) {
   FundamentalValue int_value(1234);
   FundamentalValue double_value(12.34567);
   StringValue string_value("foo");
-  BinaryValue binary_value;
+  BinaryValue binary_value(Value::Type::BINARY);
   DictionaryValue dict_value;
   ListValue list_value;
 

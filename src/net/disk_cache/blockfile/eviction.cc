@@ -329,8 +329,8 @@ void Eviction::TrimCacheV2(bool empty) {
   int list = Rankings::LAST_ELEMENT;
 
   // Get a node from each list.
+  bool done = false;
   for (int i = 0; i < kListsToSearch; i++) {
-    bool done = false;
     next[i].set_rankings(rankings_);
     if (done)
       continue;

@@ -4,10 +4,8 @@
 
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 
-#include "base/stl_util.h"
 #include "net/quic/core/congestion_control/loss_detection_interface.h"
 #include "net/quic/core/congestion_control/send_algorithm_interface.h"
-#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_sent_packet_manager.h"
 
@@ -90,8 +88,8 @@ QuicTime QuicSentPacketManagerPeer::GetSentTime(
     QuicPacketNumber packet_number) {
   DCHECK(sent_packet_manager->unacked_packets_.IsUnacked(packet_number));
 
-  return sent_packet_manager->unacked_packets_.GetTransmissionInfo(
-                                                  packet_number)
+  return sent_packet_manager->unacked_packets_
+      .GetTransmissionInfo(packet_number)
       .sent_time;
 }
 

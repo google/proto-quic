@@ -33,7 +33,6 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
       framer_(framer),
       buffer_allocator_(buffer_allocator),
       send_version_in_packet_(framer->perspective() == Perspective::IS_CLIENT),
-      send_path_id_in_packet_(false),
       next_packet_number_length_(PACKET_1BYTE_PACKET_NUMBER),
       have_diversification_nonce_(false),
       max_packet_length_(0),
@@ -167,12 +166,11 @@ size_t QuicPacketCreator::StreamFramePacketOverhead(
     QuicVersion version,
     QuicConnectionIdLength connection_id_length,
     bool include_version,
-    bool include_path_id,
     bool include_diversification_nonce,
     QuicPacketNumberLength packet_number_length,
     QuicStreamOffset offset) {
   return GetPacketHeaderSize(version, connection_id_length, include_version,
-                             include_path_id, include_diversification_nonce,
+                             include_diversification_nonce,
                              packet_number_length) +
          // Assumes this is a stream with a single lone packet.
          QuicFramer::GetMinStreamFrameSize(1u, offset, true);
@@ -184,11 +182,11 @@ void QuicPacketCreator::CreateStreamFrame(QuicStreamId id,
                                           QuicStreamOffset offset,
                                           bool fin,
                                           QuicFrame* frame) {
-  DCHECK_GT(max_packet_length_,
-            StreamFramePacketOverhead(framer_->version(), connection_id_length_,
-                                      kIncludeVersion, kIncludePathId,
-                                      IncludeNonceInPublicHeader(),
-                                      PACKET_6BYTE_PACKET_NUMBER, offset));
+  DCHECK_GT(
+      max_packet_length_,
+      StreamFramePacketOverhead(framer_->version(), connection_id_length_,
+                                kIncludeVersion, IncludeNonceInPublicHeader(),
+                                PACKET_6BYTE_PACKET_NUMBER, offset));
 
   QUIC_BUG_IF(!HasRoomForStreamFrame(id, offset))
       << "No room for Stream frame, BytesFree: " << BytesFree()
@@ -445,8 +443,7 @@ size_t QuicPacketCreator::PacketSize() {
   }
   packet_size_ = GetPacketHeaderSize(
       framer_->version(), connection_id_length_, send_version_in_packet_,
-      send_path_id_in_packet_, IncludeNonceInPublicHeader(),
-      packet_.packet_number_length);
+      IncludeNonceInPublicHeader(), packet_.packet_number_length);
   return packet_size_;
 }
 
@@ -537,7 +534,7 @@ SerializedPacket QuicPacketCreator::NoPacket() {
 void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
   header->public_header.connection_id = connection_id_;
   header->public_header.connection_id_length = connection_id_length_;
-  header->public_header.multipath_flag = send_path_id_in_packet_;
+  header->public_header.multipath_flag = false;
   header->public_header.reset_flag = false;
   header->public_header.version_flag = send_version_in_packet_;
   if (IncludeNonceInPublicHeader()) {
@@ -627,32 +624,6 @@ void QuicPacketCreator::MaybeAddPadding() {
   bool success =
       AddFrame(QuicFrame(QuicPaddingFrame(packet_.num_padding_bytes)), false);
   DCHECK(success);
-}
-
-void QuicPacketCreator::SetCurrentPath(
-    QuicPathId path_id,
-    QuicPacketNumber least_packet_awaited_by_peer,
-    QuicPacketCount max_packets_in_flight) {
-  if (packet_.path_id == path_id) {
-    return;
-  }
-
-  if (HasPendingFrames()) {
-    QUIC_BUG << "Unable to change paths when a packet is under construction.";
-    return;
-  }
-  // Save current packet number and load switching path's packet number.
-  multipath_packet_number_[packet_.path_id] = packet_.packet_number;
-  std::unordered_map<QuicPathId, QuicPacketNumber>::iterator it =
-      multipath_packet_number_.find(path_id);
-  // If path_id is not in the map, it's a new path. Set packet_number to 0.
-  packet_.packet_number = it == multipath_packet_number_.end() ? 0 : it->second;
-  packet_.path_id = path_id;
-  DCHECK(packet_.path_id != kInvalidPathId);
-  // Send path in packet if current path is not the default path.
-  send_path_id_in_packet_ = packet_.path_id != kDefaultPathId ? true : false;
-  // Switching path needs to update packet number length.
-  UpdatePacketNumberLength(least_packet_awaited_by_peer, max_packets_in_flight);
 }
 
 bool QuicPacketCreator::IncludeNonceInPublicHeader() {

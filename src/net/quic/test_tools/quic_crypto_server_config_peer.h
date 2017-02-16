@@ -60,24 +60,25 @@ class QuicCryptoServerConfigPeer {
   std::string NewServerNonce(QuicRandom* rand, QuicWallTime now) const;
 
   // CheckConfigs compares the state of the Configs in |server_config_| to the
-  // description given as arguments. The arguments are given as
-  // nullptr-terminated pairs. The first of each pair is the server config ID of
-  // a Config. The second is a boolean describing whether the config is the
-  // primary. For example:
-  //   CheckConfigs(nullptr);  // checks that no Configs are loaded.
+  // description given as arguments.
+  // The first of each pair is the server config ID of a Config. The second is a
+  // boolean describing whether the config is the primary. For example:
+  //   CheckConfigs(std::vector<std::pair<ServerConfigID, bool>>());  // checks
+  //   that no Configs are loaded.
   //
   //   // Checks that exactly three Configs are loaded with the given IDs and
   //   // status.
   //   CheckConfigs(
-  //     "id1", false,
-  //     "id2", true,
-  //     "id3", false,
-  //     nullptr);
-  void CheckConfigs(const char* server_config_id1, ...);
+  //     {{"id1", false},
+  //      {"id2", true},
+  //      {"id3", false}});
+  void CheckConfigs(
+      std::vector<std::pair<ServerConfigID, bool>> expected_ids_and_status);
 
   // ConfigsDebug returns a string that contains debugging information about
   // the set of Configs loaded in |server_config_| and their status.
-  std::string ConfigsDebug();
+  std::string ConfigsDebug()
+      SHARED_LOCKS_REQUIRED(server_config_->configs_lock_);
 
   void SelectNewPrimaryConfig(int seconds);
 

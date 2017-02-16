@@ -1748,7 +1748,7 @@ TEST(HttpCache, SimpleGET_ManyWriters_BypassCache) {
 // lock to continue.
 TEST(HttpCache, SimpleGET_WriterTimeout) {
   MockHttpCache cache;
-  cache.BypassCacheLock();
+  cache.SimulateCacheLockTimeout();
 
   MockHttpRequest request(kSimpleGET_Transaction);
   Context c1, c2;
@@ -1763,6 +1763,34 @@ TEST(HttpCache, SimpleGET_WriterTimeout) {
 
   c2.callback.WaitForResult();
   ReadAndVerifyTransaction(c2.trans.get(), kSimpleGET_Transaction);
+
+  // Complete the first transaction.
+  c1.callback.WaitForResult();
+  ReadAndVerifyTransaction(c1.trans.get(), kSimpleGET_Transaction);
+}
+
+// Tests that a (simulated) timeout allows transactions waiting on the cache
+// lock to continue but read only transactions to error out.
+TEST(HttpCache, SimpleGET_WriterTimeoutReadOnlyError) {
+  MockHttpCache cache;
+
+  // Simulate timeout.
+  cache.SimulateCacheLockTimeout();
+
+  MockHttpRequest request(kSimpleGET_Transaction);
+  Context c1, c2;
+  ASSERT_THAT(cache.CreateTransaction(&c1.trans), IsOk());
+  ASSERT_EQ(ERR_IO_PENDING, c1.trans->Start(&request, c1.callback.callback(),
+                                            NetLogWithSource()));
+
+  request.load_flags = LOAD_ONLY_FROM_CACHE;
+  ASSERT_THAT(cache.CreateTransaction(&c2.trans), IsOk());
+  ASSERT_EQ(ERR_IO_PENDING, c2.trans->Start(&request, c2.callback.callback(),
+                                            NetLogWithSource()));
+
+  // The second request is queued after the first one.
+  int res = c2.callback.WaitForResult();
+  ASSERT_EQ(ERR_CACHE_MISS, res);
 
   // Complete the first transaction.
   c1.callback.WaitForResult();
@@ -6786,6 +6814,46 @@ TEST(HttpCache, WriteMetadata_Fail) {
   EXPECT_EQ(1, cache.network_layer()->transaction_count());
   EXPECT_EQ(2, cache.disk_cache()->open_count());
   EXPECT_EQ(1, cache.disk_cache()->create_count());
+}
+
+// Tests that if a metadata writer transaction hits cache lock timeout, it will
+// error out.
+TEST(HttpCache, WriteMetadata_CacheLockTimeout) {
+  MockHttpCache cache;
+
+  // Write to the cache
+  HttpResponseInfo response;
+  RunTransactionTestWithResponseInfo(cache.http_cache(), kSimpleGET_Transaction,
+                                     &response);
+  EXPECT_FALSE(response.metadata.get());
+
+  MockHttpRequest request(kSimpleGET_Transaction);
+  Context c1;
+  ASSERT_THAT(cache.CreateTransaction(&c1.trans), IsOk());
+  ASSERT_EQ(ERR_IO_PENDING, c1.trans->Start(&request, c1.callback.callback(),
+                                            NetLogWithSource()));
+
+  cache.SimulateCacheLockTimeout();
+
+  // Write meta data to the same entry.
+  scoped_refptr<IOBufferWithSize> buf(new IOBufferWithSize(50));
+  memset(buf->data(), 0, buf->size());
+  base::strlcpy(buf->data(), "Hi there", buf->size());
+  cache.http_cache()->WriteMetadata(GURL(kSimpleGET_Transaction.url),
+                                    DEFAULT_PRIORITY, response.response_time,
+                                    buf.get(), buf->size());
+
+  // Release the buffer before the operation takes place.
+  buf = NULL;
+
+  // Makes sure we finish pending operations.
+  base::RunLoop().RunUntilIdle();
+
+  RunTransactionTestWithResponseInfo(cache.http_cache(), kSimpleGET_Transaction,
+                                     &response);
+
+  // The writer transaction should fail due to cache lock timeout.
+  ASSERT_FALSE(response.metadata.get());
 }
 
 // Tests that we ignore VARY checks when writing metadata since the request

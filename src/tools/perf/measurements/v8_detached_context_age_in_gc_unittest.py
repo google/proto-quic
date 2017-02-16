@@ -27,11 +27,16 @@ class FakeTab(object):
     self.histograms = histograms
     self.current_histogram_index = 0
 
-  def EvaluateJavaScript(self, script):
-    if 'V8.DetachedContextAgeInGC' in script:
+  def EvaluateJavaScript(self, script, **kwargs):
+    histogram_name = 'V8.DetachedContextAgeInGC'
+    if kwargs.get('name') == histogram_name or histogram_name in script:
       self.current_histogram_index += 1
       return self.histograms[self.current_histogram_index - 1]
     return '{}'
+
+  # TODO(catapult:3028): Remove after migration to new JS API completed.
+  def EvaluateJavaScript2(self, script, **kwargs):
+    return self.EvaluateJavaScript(script, **kwargs)
 
   def CollectGarbage(self):
     pass

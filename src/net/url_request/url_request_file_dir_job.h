@@ -11,7 +11,6 @@
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "base/memory/weak_ptr.h"
-#include "base/threading/worker_pool.h"
 #include "net/base/directory_lister.h"
 #include "net/base/net_errors.h"
 #include "net/base/net_export.h"
@@ -26,11 +25,6 @@ class NET_EXPORT_PRIVATE URLRequestFileDirJob
   URLRequestFileDirJob(URLRequest* request,
                        NetworkDelegate* network_delegate,
                        const base::FilePath& dir_path);
-
-  URLRequestFileDirJob(URLRequest* request,
-                       NetworkDelegate* network_delegate,
-                       const base::FilePath& dir_path,
-                       const scoped_refptr<base::TaskRunner>& dir_task_runner);
 
   void StartAsync();
   // Overridden from URLRequestJob:
@@ -59,8 +53,6 @@ class NET_EXPORT_PRIVATE URLRequestFileDirJob
 
   DirectoryLister lister_;
   base::FilePath dir_path_;
-
-  const scoped_refptr<base::TaskRunner> dir_task_runner_;
 
   std::string data_;
   bool canceled_;

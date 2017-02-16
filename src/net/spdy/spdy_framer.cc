@@ -21,12 +21,14 @@
 #include "base/memory/ptr_util.h"
 #include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_decoder.h"
 #include "net/spdy/hpack/hpack_decoder2.h"
 #include "net/spdy/hpack/hpack_decoder3.h"
 #include "net/spdy/http2_frame_decoder_adapter.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_bitmasks.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_flags.h"
@@ -69,14 +71,20 @@ void UnpackStreamDependencyValues(uint32_t packed,
 std::unique_ptr<SpdyFramerDecoderAdapter> DecoderAdapterFactory(
     SpdyFramer* outer) {
   if (FLAGS_use_nested_spdy_framer_decoder) {
-    if (FLAGS_use_http2_frame_decoder_adapter) {
-      SPDY_BUG << "Two SpdyFramerDecoderAdapter are enabled!";
+    // Since chromium_reloadable_flag_spdy_use_http2_frame_decoder_adapter can
+    // be flipped on in any test when all the feature flags are on,
+    // it can unintentionally override use_nested_spdy_framer_decoder which is
+    // used to validate that the adapter technique is working. Therefore, we
+    // give precedence to use_nested_spdy_framer_decoder.
+    if (FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter) {
+      VLOG(1) << "Both NestedSpdyFramerDecoder and Http2FrameDecoderAdapter "
+              << "are enabled. NestedSpdyFramerDecoder selected.";
     }
     DVLOG(1) << "Creating NestedSpdyFramerDecoder.";
     return CreateNestedSpdyFramerDecoder(outer);
   }
 
-  if (FLAGS_use_http2_frame_decoder_adapter) {
+  if (FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter) {
     DVLOG(1) << "Creating Http2FrameDecoderAdapter.";
     return CreateHttp2FrameDecoderAdapter(outer);
   }
@@ -138,6 +146,7 @@ SpdyFramer::SpdyFramer(SpdyFramer::DecoderAdapterFactoryFn adapter_factory,
     : current_frame_buffer_(kControlFrameBufferSize),
       expect_continuation_(0),
       visitor_(nullptr),
+      extension_(nullptr),
       debug_visitor_(nullptr),
       header_handler_(nullptr),
       compression_option_(option),
@@ -157,8 +166,7 @@ SpdyFramer::SpdyFramer(SpdyFramer::DecoderAdapterFactoryFn adapter_factory,
 SpdyFramer::SpdyFramer(CompressionOption option)
     : SpdyFramer(&DecoderAdapterFactory, option) {}
 
-SpdyFramer::~SpdyFramer() {
-}
+SpdyFramer::~SpdyFramer() {}
 
 void SpdyFramer::Reset() {
   if (decoder_adapter_ != nullptr) {
@@ -184,6 +192,10 @@ void SpdyFramer::set_visitor(SpdyFramerVisitorInterface* visitor) {
     decoder_adapter_->set_visitor(visitor);
   }
   visitor_ = visitor;
+}
+
+void SpdyFramer::set_extension_visitor(ExtensionVisitorInterface* extension) {
+  extension_ = extension;
 }
 
 void SpdyFramer::set_debug_visitor(
@@ -527,6 +539,13 @@ size_t SpdyFramer::ProcessInput(const char* data, size_t len) {
         break;
       }
 
+      case SPDY_EXTENSION_FRAME_PAYLOAD: {
+        size_t bytes_read = ProcessExtensionFramePayload(data, len);
+        len -= bytes_read;
+        data += bytes_read;
+        break;
+      }
+
       default:
         SPDY_BUG << "Invalid value for framer state: " << state_;
         // This ensures that we don't infinite-loop if state_ gets an
@@ -562,6 +581,10 @@ void SpdyFramer::CharBuffer::Rewind() {
   len_ = 0;
 }
 
+size_t SpdyFramer::CharBuffer::EstimateMemoryUsage() const {
+  return capacity_;
+}
+
 SpdyFramer::SpdySettingsScratch::SpdySettingsScratch()
     : buffer(8), last_setting_id(-1) {}
 
@@ -570,26 +593,40 @@ void SpdyFramer::SpdySettingsScratch::Reset() {
   last_setting_id = -1;
 }
 
+size_t SpdyFramer::SpdySettingsScratch::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(buffer);
+}
+
 SpdyFrameType SpdyFramer::ValidateFrameHeader(bool is_control_frame,
-                                              int frame_type_field,
+                                              uint8_t frame_type_field,
                                               size_t payload_length_field) {
   if (!IsDefinedFrameType(frame_type_field)) {
-    // We ignore unknown frame types for extensibility, as long as
-    // the rest of the control frame header is valid.
-    // We rely on the visitor to check validity of current_frame_stream_id_.
-    bool valid_stream =
-        visitor_->OnUnknownFrame(current_frame_stream_id_, frame_type_field);
     if (expect_continuation_) {
       // Report an unexpected frame error and close the connection
       // if we expect a continuation and receive an unknown frame.
       DLOG(ERROR) << "The framer was expecting to receive a CONTINUATION "
                   << "frame, but instead received an unknown frame of type "
-                  << frame_type_field;
+                  << base::StringPrintf("%x", frame_type_field);
       set_error(SPDY_UNEXPECTED_FRAME);
-    } else if (!valid_stream) {
+      return DATA;
+    }
+    if (extension_ != nullptr) {
+      if (extension_->OnFrameHeader(current_frame_stream_id_,
+                                    payload_length_field, frame_type_field,
+                                    current_frame_flags_)) {
+        return EXTENSION;
+      }
+    }
+    // We ignore unknown frame types for extensibility, as long as
+    // the rest of the control frame header is valid.
+    // We rely on the visitor to check validity of current_frame_stream_id_.
+    bool valid_stream =
+        visitor_->OnUnknownFrame(current_frame_stream_id_, frame_type_field);
+    if (!valid_stream) {
       // Report an invalid frame error and close the stream if the
       // stream_id is not valid.
-      DLOG(WARNING) << "Unknown control frame type " << frame_type_field
+      DLOG(WARNING) << "Unknown control frame type "
+                    << base::StringPrintf("%x", frame_type_field)
                     << " received on invalid stream "
                     << current_frame_stream_id_;
       set_error(SPDY_INVALID_CONTROL_FRAME);
@@ -652,18 +689,16 @@ size_t SpdyFramer::ProcessCommonHeader(const char* data, size_t len) {
                          current_frame_buffer_.len());
   bool is_control_frame = false;
 
-  int control_frame_type_field = kDataFrameType;
   uint32_t length_field = 0;
   bool successful_read = reader.ReadUInt24(&length_field);
   DCHECK(successful_read);
 
-  uint8_t control_frame_type_field_uint8;
-  successful_read = reader.ReadUInt8(&control_frame_type_field_uint8);
+  uint8_t control_frame_type_field = 0;
+  successful_read = reader.ReadUInt8(&control_frame_type_field);
   DCHECK(successful_read);
   // We check control_frame_type_field's validity in
   // ValidateFrameHeader().
-  control_frame_type_field = control_frame_type_field_uint8;
-  is_control_frame = control_frame_type_field != kDataFrameType;
+  is_control_frame = control_frame_type_field != DATA;
 
   current_frame_length_ = length_field + GetFrameHeaderSize();
 
@@ -861,6 +896,10 @@ void SpdyFramer::ProcessControlFrameHeader() {
         current_frame_flags_ = 0;
       }
       break;
+    case EXTENSION:
+      // No particular requirements on frames handled by the registered
+      // extension.
+      break;
     default:
       LOG(WARNING) << "Valid control frame with unhandled type: "
                    << current_frame_type_;
@@ -911,6 +950,9 @@ void SpdyFramer::ProcessControlFrameHeader() {
     case CONTINUATION:
       frame_size_without_variable_data = GetContinuationMinimumSize();
       break;
+    case EXTENSION:
+      frame_size_without_variable_data = GetFrameHeaderSize();
+      break;
     default:
       frame_size_without_variable_data = -1;
       break;
@@ -938,6 +980,8 @@ void SpdyFramer::ProcessControlFrameHeader() {
 
     if (current_frame_type_ == SETTINGS) {
       CHANGE_STATE(SPDY_SETTINGS_FRAME_HEADER);
+    } else if (current_frame_type_ == EXTENSION) {
+      CHANGE_STATE(SPDY_EXTENSION_FRAME_PAYLOAD);
     } else {
       CHANGE_STATE(SPDY_CONTROL_FRAME_BEFORE_HEADER_BLOCK);
     }
@@ -1267,14 +1311,19 @@ size_t SpdyFramer::ProcessSettingsFramePayload(const char* data,
 bool SpdyFramer::ProcessSetting(const char* data) {
   // Extract fields.
   // Maintain behavior of old SPDY 2 bug with byte ordering of flags/id.
-  int id_field = base::NetToHost16(*(reinterpret_cast<const uint16_t*>(data)));
-  int32_t value =
+  uint16_t id_field =
+      base::NetToHost16(*(reinterpret_cast<const uint16_t*>(data)));
+  uint32_t value =
       base::NetToHost32(*(reinterpret_cast<const uint32_t*>(data + 2)));
 
   // Validate id.
   SpdySettingsIds setting_id;
   if (!ParseSettingsId(id_field, &setting_id)) {
-    DLOG(WARNING) << "Unknown SETTINGS ID: " << id_field;
+    if (extension_ == nullptr) {
+      DLOG(WARNING) << "Unknown SETTINGS ID: " << id_field;
+    } else {
+      extension_->OnSetting(id_field, value);
+    }
     // Ignore unknown settings for extensibility.
     return true;
   }
@@ -1344,6 +1393,15 @@ size_t SpdyFramer::ProcessControlFramePayload(const char* data, size_t len) {
         visitor_->OnPriority(current_frame_stream_id_, parent_stream_id, weight,
                              exclusive);
       } break;
+      case EXTENSION:
+        if (extension_ == nullptr) {
+          SPDY_BUG << "Reached EXTENSION frame processing with a null "
+                   << "extension!";
+          break;
+        }
+        extension_->OnFramePayload(current_frame_buffer_.data(),
+                                   current_frame_buffer_.len());
+        break;
       default:
         // Unreachable.
         LOG(FATAL) << "Unhandled control frame " << current_frame_type_;
@@ -1532,6 +1590,26 @@ size_t SpdyFramer::ProcessDataFramePayload(const char* data, size_t len) {
 
   if (remaining_data_length_ == remaining_padding_payload_length_) {
     CHANGE_STATE(SPDY_CONSUME_PADDING);
+  }
+  return original_len - len;
+}
+
+size_t SpdyFramer::ProcessExtensionFramePayload(const char* data, size_t len) {
+  DCHECK_EQ(SPDY_EXTENSION_FRAME_PAYLOAD, state_);
+  DCHECK(extension_ != nullptr);
+  size_t original_len = len;
+  if (remaining_data_length_ > 0) {
+    size_t amount_to_forward = std::min(remaining_data_length_, len);
+    if (amount_to_forward && state_ != SPDY_IGNORE_REMAINING_PAYLOAD) {
+      // Only inform the visitor if there is data.
+      extension_->OnFramePayload(data, amount_to_forward);
+    }
+    remaining_data_length_ -= amount_to_forward;
+    len -= amount_to_forward;
+  }
+
+  if (remaining_data_length_ == 0) {
+    CHANGE_STATE(SPDY_FRAME_COMPLETE);
   }
   return original_len - len;
 }
@@ -2349,6 +2427,15 @@ void SpdyFramer::SetDecoderHeaderTableDebugVisitor(
 void SpdyFramer::SetEncoderHeaderTableDebugVisitor(
     std::unique_ptr<HpackHeaderTable::DebugVisitorInterface> visitor) {
   GetHpackEncoder()->SetHeaderTableDebugVisitor(std::move(visitor));
+}
+
+size_t SpdyFramer::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(current_frame_buffer_) +
+         SpdyEstimateMemoryUsage(settings_scratch_) +
+         SpdyEstimateMemoryUsage(altsvc_scratch_) +
+         SpdyEstimateMemoryUsage(hpack_encoder_) +
+         SpdyEstimateMemoryUsage(hpack_decoder_) +
+         SpdyEstimateMemoryUsage(decoder_adapter_);
 }
 
 void SpdyFramer::UpdateHeaderEncoderTableSize(uint32_t value) {

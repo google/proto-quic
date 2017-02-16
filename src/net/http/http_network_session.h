@@ -319,7 +319,7 @@ class NET_EXPORT HttpNetworkSession
       base::MemoryPressureListener::MemoryPressureLevel memory_pressure_level);
 
   // base::MemoryCoordinatorClient implementation:
-  void OnMemoryStateChange(base::MemoryState state) override;
+  void OnPurgeMemory() override;
 
   NetLog* const net_log_;
   HttpServerProperties* const http_server_properties_;

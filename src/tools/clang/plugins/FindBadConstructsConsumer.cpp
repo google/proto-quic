@@ -112,13 +112,14 @@ std::set<FunctionDecl*> GetLateParsedFunctionDecls(TranslationUnitDecl* decl) {
   return v.late_parsed_decls;
 }
 
-std::string GetAutoReplacementTypeAsString(QualType type) {
+std::string GetAutoReplacementTypeAsString(QualType type,
+                                           StorageClass storage_class) {
   QualType non_reference_type = type.getNonReferenceType();
   if (!non_reference_type->isPointerType())
-    return "auto";
+    return storage_class == SC_Static ? "static auto" : "auto";
 
-  std::string result =
-      GetAutoReplacementTypeAsString(non_reference_type->getPointeeType());
+  std::string result = GetAutoReplacementTypeAsString(
+      non_reference_type->getPointeeType(), storage_class);
   result += "*";
   if (non_reference_type.isLocalConstQualified())
     result += " const";
@@ -1016,7 +1017,8 @@ void FindBadConstructsConsumer::CheckVarDecl(clang::VarDecl* var_decl) {
                                           diag_auto_deduced_to_a_pointer_type_)
                 << FixItHint::CreateReplacement(
                        range,
-                       GetAutoReplacementTypeAsString(var_decl->getType()));
+                       GetAutoReplacementTypeAsString(
+                           var_decl->getType(), var_decl->getStorageClass()));
           }
         }
       }

@@ -66,6 +66,9 @@ class NET_EXPORT_PRIVATE HpackDecoderInterface {
   // of individual transport buffers.
   virtual void set_max_decode_buffer_size_bytes(
       size_t max_decode_buffer_size_bytes) = 0;
+
+  // Returns the estimate of dynamically allocated memory in bytes.
+  virtual size_t EstimateMemoryUsage() const = 0;
 };
 
 }  // namespace net

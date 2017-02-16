@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "webrtc_datachannel_cases_001.wpr": [
-            "30s_datachannel_transfer"
-        ]
-    }
+        "30s_datachannel_transfer": {
+            "DEFAULT": "webrtc_datachannel_cases_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

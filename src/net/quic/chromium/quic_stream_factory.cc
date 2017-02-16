@@ -207,7 +207,7 @@ class ServerIdOriginFilter : public QuicCryptoClientConfig::ServerIdFilter {
 
 // Returns the estimate of dynamically allocated memory of |server_id|.
 size_t EstimateServerIdMemoryUsage(const QuicServerId& server_id) {
-  return HostPortPair::EstimateMemoryUsage(server_id.host_port_pair());
+  return base::trace_event::EstimateMemoryUsage(server_id.host_port_pair());
 }
 
 }  // namespace
@@ -588,10 +588,13 @@ int QuicStreamFactory::Job::DoLoadServerInfoComplete(int rv) {
 int QuicStreamFactory::Job::DoConnect() {
   io_state_ = STATE_CONNECT_COMPLETE;
 
-  int rv =
-      factory_->CreateSession(key_, cert_verify_flags_, std::move(server_info_),
-                              address_list_, dns_resolution_start_time_,
-                              dns_resolution_end_time_, net_log_, &session_);
+  bool require_confirmation = factory_->require_confirmation() ||
+                              was_alternative_service_recently_broken_;
+
+  int rv = factory_->CreateSession(
+      key_, cert_verify_flags_, std::move(server_info_), require_confirmation,
+      address_list_, dns_resolution_start_time_, dns_resolution_end_time_,
+      net_log_, &session_);
   if (rv != OK) {
     DCHECK(rv != ERR_IO_PENDING);
     DCHECK(!session_);
@@ -604,11 +607,8 @@ int QuicStreamFactory::Job::DoConnect() {
   session_->StartReading();
   if (!session_->connection()->connected())
     return ERR_QUIC_PROTOCOL_ERROR;
-  bool require_confirmation = factory_->require_confirmation() ||
-                              was_alternative_service_recently_broken_;
 
   rv = session_->CryptoConnect(
-      require_confirmation,
       base::Bind(&QuicStreamFactory::Job::OnIOComplete, GetWeakPtr()));
 
   if (!session_->connection()->connected() &&
@@ -1093,7 +1093,7 @@ bool QuicStreamFactory::QuicSessionKey::operator==(
 }
 
 size_t QuicStreamFactory::QuicSessionKey::EstimateMemoryUsage() const {
-  return HostPortPair::EstimateMemoryUsage(destination_) +
+  return base::trace_event::EstimateMemoryUsage(destination_) +
          EstimateServerIdMemoryUsage(server_id_);
 }
 
@@ -1650,6 +1650,7 @@ int QuicStreamFactory::CreateSession(
     const QuicSessionKey& key,
     int cert_verify_flags,
     std::unique_ptr<QuicServerInfo> server_info,
+    bool require_confirmation,
     const AddressList& address_list,
     base::TimeTicks dns_resolution_start_time,
     base::TimeTicks dns_resolution_end_time,
@@ -1730,11 +1731,11 @@ int QuicStreamFactory::CreateSession(
   *session = new QuicChromiumClientSession(
       connection, std::move(socket), this, quic_crypto_client_stream_factory_,
       clock_.get(), transport_security_state_, std::move(server_info),
-      server_id, yield_after_packets_, yield_after_duration_, cert_verify_flags,
-      config, &crypto_config_, network_connection_.connection_description(),
-      dns_resolution_start_time, dns_resolution_end_time, &push_promise_index_,
-      push_delegate_, task_runner_, std::move(socket_performance_watcher),
-      net_log.net_log());
+      server_id, require_confirmation, yield_after_packets_,
+      yield_after_duration_, cert_verify_flags, config, &crypto_config_,
+      network_connection_.connection_description(), dns_resolution_start_time,
+      dns_resolution_end_time, &push_promise_index_, push_delegate_,
+      task_runner_, std::move(socket_performance_watcher), net_log.net_log());
 
   all_sessions_[*session] = key;  // owning pointer
   writer->set_delegate(*session);

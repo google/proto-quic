@@ -4,6 +4,7 @@
 
 import os
 import re
+import time
 from util import build_utils
 
 
@@ -184,6 +185,7 @@ class ProguardCmdBuilder(object):
     if not self._verbose:
       stdout_filter = _ProguardOutputFilter()
       stderr_filter = _ProguardOutputFilter()
+    start_time = time.time()
     build_utils.CheckOutput(self._cmd, print_stdout=True,
                             print_stderr=True,
                             stdout_filter=stdout_filter,
@@ -193,6 +195,7 @@ class ProguardCmdBuilder(object):
       'inputs': self._injars,
       'configs': self._configs,
       'mapping': self._outjar + '.mapping',
+      'elapsed_time': round(time.time() - start_time),
     }
 
     build_utils.WriteJson(this_info, self._outjar + '.info')

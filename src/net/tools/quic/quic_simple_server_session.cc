@@ -9,11 +9,9 @@
 #include "net/quic/core/proto/cached_network_parameters.pb.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_flags.h"
-#include "net/quic/core/quic_spdy_session.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/tools/quic/quic_simple_server_stream.h"
-#include "url/gurl.h"
 
 using std::string;
 
@@ -154,13 +152,13 @@ SpdyHeaderBlock QuicSimpleServerSession::SynthesizePushRequestHeaders(
     string request_url,
     QuicHttpResponseCache::ServerPushInfo resource,
     const SpdyHeaderBlock& original_request_headers) {
-  GURL push_request_url = resource.request_url;
-  string path = push_request_url.path();
+  QuicUrl push_request_url = resource.request_url;
 
   SpdyHeaderBlock spdy_headers = original_request_headers.Clone();
   // :authority could be different from original request.
   spdy_headers[":authority"] = push_request_url.host();
-  spdy_headers[":path"] = path;
+  spdy_headers[":path"] = push_request_url.path();
+  ;
   // Push request always use GET.
   spdy_headers[":method"] = "GET";
   spdy_headers["referer"] = request_url;
@@ -198,7 +196,7 @@ void QuicSimpleServerSession::HandlePromisedPushRequests() {
     QuicSimpleServerStream* promised_stream =
         static_cast<QuicSimpleServerStream*>(
             CreateOutgoingDynamicStream(promised_info.priority));
-    DCHECK(promised_stream != nullptr);
+    DCHECK_NE(promised_stream, nullptr);
     DCHECK_EQ(promised_info.stream_id, promised_stream->id());
     QUIC_DLOG(INFO) << "created server push stream " << promised_stream->id();
 

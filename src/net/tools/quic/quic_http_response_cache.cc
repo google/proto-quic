@@ -23,11 +23,10 @@ using std::string;
 
 namespace net {
 
-QuicHttpResponseCache::ServerPushInfo::ServerPushInfo(
-    GURL request_url,
-    SpdyHeaderBlock headers,
-    net::SpdyPriority priority,
-    string body)
+QuicHttpResponseCache::ServerPushInfo::ServerPushInfo(QuicUrl request_url,
+                                                      SpdyHeaderBlock headers,
+                                                      SpdyPriority priority,
+                                                      string body)
     : request_url(request_url),
       headers(std::move(headers)),
       priority(priority),
@@ -44,6 +43,12 @@ QuicHttpResponseCache::Response::Response()
     : response_type_(REGULAR_RESPONSE) {}
 
 QuicHttpResponseCache::Response::~Response() {}
+
+QuicHttpResponseCache::ResourceFile::ResourceFile(
+    const base::FilePath& file_name)
+    : file_name_(file_name), file_name_string_(file_name.AsUTF8Unsafe()) {}
+
+QuicHttpResponseCache::ResourceFile::~ResourceFile() {}
 
 void QuicHttpResponseCache::ResourceFile::Read() {
   base::ReadFileToString(FilePath(file_name_), &file_contents_);
@@ -122,12 +127,6 @@ void QuicHttpResponseCache::ResourceFile::Read() {
   body_ =
       StringPiece(file_contents_.data() + start, file_contents_.size() - start);
 }
-
-QuicHttpResponseCache::ResourceFile::ResourceFile(
-    const base::FilePath& file_name)
-    : file_name_(file_name), file_name_string_(file_name.AsUTF8Unsafe()) {}
-
-QuicHttpResponseCache::ResourceFile::~ResourceFile() {}
 
 void QuicHttpResponseCache::ResourceFile::SetHostPathFromBase(
     StringPiece base) {
@@ -270,14 +269,14 @@ void QuicHttpResponseCache::InitializeFromDirectory(
   for (const auto& resource_file : resource_files) {
     std::list<ServerPushInfo> push_resources;
     for (const auto& push_url : resource_file->push_urls()) {
-      GURL url(push_url);
+      QuicUrl url(push_url);
       const Response* response = GetResponse(url.host(), url.path());
       if (!response) {
         QUIC_BUG << "Push URL '" << push_url << "' not found.";
         return;
       }
       push_resources.push_back(ServerPushInfo(url, response->headers().Clone(),
-                                              net::kV3LowestPriority,
+                                              kV3LowestPriority,
                                               response->body().as_string()));
     }
     MaybeAddServerPushResources(resource_file->host(), resource_file->path(),
@@ -320,7 +319,7 @@ void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
     QUIC_BUG << "Response for '" << key << "' already exists!";
     return;
   }
-  std::unique_ptr<Response> new_response = QuicMakeUnique<Response>();
+  auto new_response = QuicMakeUnique<Response>();
   new_response->set_response_type(response_type);
   new_response->set_headers(std::move(response_headers));
   new_response->set_body(response_body);
@@ -345,7 +344,8 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
     }
 
     QUIC_DVLOG(1) << "Add request-resource association: request url "
-                  << request_url << " push url " << push_resource.request_url
+                  << request_url << " push url "
+                  << push_resource.request_url.ToString()
                   << " response headers "
                   << push_resource.headers.DebugString();
     {
@@ -380,7 +380,8 @@ bool QuicHttpResponseCache::PushResourceExistsInCache(
       server_push_resources_.equal_range(original_request_url);
   for (auto it = resource_range.first; it != resource_range.second; ++it) {
     ServerPushInfo push_resource = it->second;
-    if (push_resource.request_url.spec() == resource.request_url.spec()) {
+    if (push_resource.request_url.ToString() ==
+        resource.request_url.ToString()) {
       return true;
     }
   }

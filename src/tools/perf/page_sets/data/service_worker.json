@@ -1,15 +1,24 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "service_worker_038.wpr": [
-            "https://jakearchibald.github.io/trained-to-thrill/"
-        ], 
-        "service_worker_040.wpr": [
-            "third_load", 
-            "svgomg_second_load", 
-            "first_load", 
-            "svgomg_first_load", 
-            "second_load"
-        ]
-    }
+        "first_load": {
+            "DEFAULT": "service_worker_040.wpr"
+        },
+        "https://jakearchibald.github.io/trained-to-thrill/": {
+            "DEFAULT": "service_worker_038.wpr"
+        },
+        "second_load": {
+            "DEFAULT": "service_worker_040.wpr"
+        },
+        "svgomg_first_load": {
+            "DEFAULT": "service_worker_040.wpr"
+        },
+        "svgomg_second_load": {
+            "DEFAULT": "service_worker_040.wpr"
+        },
+        "third_load": {
+            "DEFAULT": "service_worker_040.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

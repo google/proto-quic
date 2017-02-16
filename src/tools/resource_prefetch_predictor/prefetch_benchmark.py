@@ -100,8 +100,6 @@ def _RunOnce(device, database_filename, url, prefetch_delay_ms,
   # Startup tracing to ease debugging.
   chrome_args = (customtabs_benchmark.CHROME_ARGS
                  + ['--trace-startup', '--trace-startup-duration=20'])
-  if not disable_prefetch:
-    chrome_args.append(_EXTERNAL_PREFETCH_FLAG)
 
   chrome_controller = controller.RemoteChromeController(device)
   device.ForceStop(OPTIONS.ChromePackage().package)

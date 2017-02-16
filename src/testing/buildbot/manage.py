@@ -201,6 +201,7 @@ SKIP_GN_ISOLATE_MAP_TARGETS = {
   # isolate is currently too slow for this target.
   # http://crbug.com/524758
   'webkit_layout_tests',
+  'webkit_layout_tests_exparchive',
 }
 
 

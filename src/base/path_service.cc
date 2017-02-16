@@ -129,7 +129,7 @@ struct PathData {
 };
 
 static PathData* GetPathData() {
-  static auto path_data = new PathData();
+  static auto* path_data = new PathData();
   return path_data;
 }
 

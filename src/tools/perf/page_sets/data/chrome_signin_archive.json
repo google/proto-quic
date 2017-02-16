@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "chrome_signin_archive_000.wpr": [
-            "chrome://signin-internals"
-        ]
-    }
+        "chrome://signin-internals": {
+            "DEFAULT": "chrome_signin_archive_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

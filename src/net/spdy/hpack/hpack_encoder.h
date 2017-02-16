@@ -101,6 +101,9 @@ class NET_EXPORT_PRIVATE HpackEncoder {
 
   void DisableCompression() { enable_compression_ = false; }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   friend class test::HpackEncoderPeer;
 

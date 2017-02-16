@@ -87,6 +87,13 @@ BASE_I18N_EXPORT string16 TimeFormatFriendlyDateAndTime(const Time& time);
 // "Monday, March 6, 2008".
 BASE_I18N_EXPORT string16 TimeFormatFriendlyDate(const Time& time);
 
+// Formats a time using a skeleton to produce a format for different locales
+// when an unusual time format is needed, e.g. "Feb. 2, 18:00".
+//
+// See http://userguide.icu-project.org/formatparse/datetime for details.
+BASE_I18N_EXPORT string16 TimeFormatWithPattern(const Time& time,
+                                                const char* pattern);
+
 // Formats a time duration of hours and minutes into various formats, e.g.,
 // "3:07" or "3 hours, 7 minutes".  See DurationFormatWidth for details.
 //

@@ -8,19 +8,12 @@
 #ifndef NET_TOOLS_QUIC_QUIC_CLIENT_BASE_H_
 #define NET_TOOLS_QUIC_QUIC_CLIENT_BASE_H_
 
-#include <memory>
 #include <string>
 
 #include "base/macros.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
-#include "net/quic/core/crypto/quic_crypto_client_config.h"
-#include "net/quic/core/quic_alarm_factory.h"
-#include "net/quic/core/quic_bandwidth.h"
 #include "net/quic/core/quic_client_push_promise_index.h"
 #include "net/quic/core/quic_config.h"
-#include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_packet_writer.h"
-#include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/tools/quic/quic_client_session.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
@@ -45,17 +38,14 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   // The client uses these objects to keep track of any data to resend upon
   // receipt of a stateless reject.  Recall that the client API allows callers
-  // to optimistically send data to the server prior to
-  // handshake-confirmation.
+  // to optimistically send data to the server prior to handshake-confirmation.
   // If the client subsequently receives a stateless reject, it must tear down
-  // its existing session, create a new session, and resend all previously
-  // sent
+  // its existing session, create a new session, and resend all previously sent
   // data.  It uses these objects to keep track of all the sent data, and to
   // resend the data upon a subsequent connection.
   class QuicDataToResend {
    public:
-    // |headers| may be null, since it's possible to send data without
-    // headers.
+    // |headers| may be null, since it's possible to send data without headers.
     QuicDataToResend(std::unique_ptr<SpdyHeaderBlock> headers,
                      base::StringPiece body,
                      bool fin);
@@ -97,8 +87,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   bool Connect();
 
   // Start the crypto handshake.  This can be done in place of the synchronous
-  // Connect(), but callers are responsible for making sure the crypto
-  // handshake
+  // Connect(), but callers are responsible for making sure the crypto handshake
   // completes.
   void StartConnect();
 
@@ -106,8 +95,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   void Disconnect();
 
   // Returns true if the crypto handshake has yet to establish encryption.
-  // Returns false if encryption is active (even if the server hasn't
-  // confirmed
+  // Returns false if encryption is active (even if the server hasn't confirmed
   // the handshake) or if the connection has been closed.
   bool EncryptionBeingEstablished();
 
@@ -166,12 +154,10 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   }
 
   // UseTokenBinding enables token binding negotiation in the client.  This
-  // should only be called before the initial Connect().  The client will
-  // still
+  // should only be called before the initial Connect().  The client will still
   // need to check that token binding is negotiated with the server, and add
   // token binding headers to requests if so.  server, and add token binding
-  // headers to requests if so.  The negotiated token binding parameters can
-  // be
+  // headers to requests if so.  The negotiated token binding parameters can be
   // found on the QuicCryptoNegotiatedParameters object in
   // token_binding_key_param.
   void UseTokenBinding() {
@@ -190,8 +176,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   QuicCryptoClientConfig* crypto_config() { return &crypto_config_; }
 
-  // Change the initial maximum packet size of the connection.  Has to be
-  // called
+  // Change the initial maximum packet size of the connection.  Has to be called
   // before Connect()/StartConnect() in order to have any effect.
   void set_initial_max_packet_length(QuicByteCount initial_max_packet_length) {
     initial_max_packet_length_ = initial_max_packet_length;
@@ -209,8 +194,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // instead.
   int GetNumSentClientHellos();
 
-  // Gather the stats for the last session and update the stats for the
-  // overall
+  // Gather the stats for the last session and update the stats for the overall
   // connection.
   void UpdateStats();
 
@@ -271,6 +255,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   size_t latest_response_code() const;
   const std::string& latest_response_headers() const;
+  const std::string& preliminary_response_headers() const;
   const SpdyHeaderBlock& latest_response_header_block() const;
   const std::string& latest_response_body() const;
   const std::string& latest_response_trailers() const;
@@ -306,8 +291,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // Runs one iteration of the event loop.
   virtual void RunEventLoop() = 0;
 
-  // Used during initialization: creates the UDP socket FD, sets socket
-  // options,
+  // Used during initialization: creates the UDP socket FD, sets socket options,
   // and binds the socket to our address.
   virtual bool CreateUDPSocketAndBind(QuicSocketAddress server_address,
                                       QuicIpAddress bind_to_address,
@@ -325,8 +309,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // returned.  Otherwise, the next random ID will be returned.
   QuicConnectionId GetNextConnectionId();
 
-  // Returns the next server-designated ConnectionId from the cached config
-  // for
+  // Returns the next server-designated ConnectionId from the cached config for
   // |server_id_|, if it exists.  Otherwise, returns 0.
   QuicConnectionId GetNextServerDesignatedConnectionId();
 
@@ -410,8 +393,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // Alarm factory to be used by created connections. Must outlive |session_|.
   std::unique_ptr<QuicAlarmFactory> alarm_factory_;
 
-  // Writer used to actually send packets to the wire. Must outlive
-  // |session_|.
+  // Writer used to actually send packets to the wire. Must outlive |session_|.
   std::unique_ptr<QuicPacketWriter> writer_;
 
   // Index of pending promised streams. Must outlive |session_|.
@@ -421,8 +403,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   std::unique_ptr<QuicClientSession> session_;
 
   // This vector contains QUIC versions which we currently support.
-  // This should be ordered such that the highest supported version is the
-  // first
+  // This should be ordered such that the highest supported version is the first
   // element, with subsequent elements in descending order (versions can be
   // skipped as necessary). We will always pick supported_versions_[0] as the
   // initial version to use.
@@ -434,10 +415,8 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
 
   // The number of stateless rejects received during the current/latest
   // connection.
-  // TODO(jokulik): Consider some consistent naming scheme (or other) for
-  // member
-  // variables that are kept per-request, per-connection, and over the
-  // client's
+  // TODO(jokulik): Consider some consistent naming scheme (or other) for member
+  // variables that are kept per-request, per-connection, and over the client's
   // lifetime.
   int num_stateless_rejects_received_;
 
@@ -448,8 +427,7 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   // opposed to that associated with the last session object).
   QuicErrorCode connection_error_;
 
-  // True when the client is attempting to connect or re-connect the session
-  // (in
+  // True when the client is attempting to connect or re-connect the session (in
   // the case of a stateless reject).  Set to false  between a call to
   // Disconnect() and the subsequent call to StartConnect().  When
   // connected_or_attempting_connect_ is false, the session object corresponds
@@ -462,6 +440,8 @@ class QuicClientBase : public QuicClientPushPromiseIndex::Delegate,
   int latest_response_code_;
   // HTTP/2 headers from most recent response.
   std::string latest_response_headers_;
+  // preliminary 100 Continue HTTP/2 headers from most recent response, if any.
+  std::string preliminary_response_headers_;
   // HTTP/2 headers from most recent response.
   SpdyHeaderBlock latest_response_header_block_;
   // Body of most recent response.
