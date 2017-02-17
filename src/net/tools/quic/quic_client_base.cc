@@ -5,6 +5,7 @@
 #include "net/tools/quic/quic_client_base.h"
 
 #include "net/quic/core/crypto/quic_random.h"
+#include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
@@ -72,6 +73,8 @@ void QuicClientBase::OnClose(QuicSpdyStream* stream) {
       QUIC_LOG(ERROR) << "Invalid response headers";
     }
     latest_response_headers_ = response_headers.DebugString();
+    preliminary_response_headers_ =
+        client_stream->preliminary_headers().DebugString();
     latest_response_header_block_ = response_headers.Clone();
     latest_response_body_ = client_stream->data();
     latest_response_trailers_ =
@@ -467,6 +470,11 @@ size_t QuicClientBase::latest_response_code() const {
 const string& QuicClientBase::latest_response_headers() const {
   QUIC_BUG_IF(!store_response_) << "Response not stored!";
   return latest_response_headers_;
+}
+
+const string& QuicClientBase::preliminary_response_headers() const {
+  QUIC_BUG_IF(!store_response_) << "Response not stored!";
+  return preliminary_response_headers_;
 }
 
 const SpdyHeaderBlock& QuicClientBase::latest_response_header_block() const {

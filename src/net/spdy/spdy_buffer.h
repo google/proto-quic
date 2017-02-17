@@ -83,6 +83,9 @@ class NET_EXPORT_PRIVATE SpdyBuffer {
   // http://crbug.com/249725 .)
   IOBuffer* GetIOBufferForRemainingData();
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   void ConsumeHelper(size_t consume_size, ConsumeSource consume_source);
 

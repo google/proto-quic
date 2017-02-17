@@ -1,10 +1,15 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "power_cases_002.wpr": [
-            "https://www.youtube.com/watch?v=3KANI2dpXLw?autoplay=1", 
-            "https://webkit.org/blog-files/3d-transforms/poster-circle.html", 
-            "about:blank"
-        ]
-    }
+        "about:blank": {
+            "DEFAULT": "power_cases_002.wpr"
+        },
+        "https://webkit.org/blog-files/3d-transforms/poster-circle.html": {
+            "DEFAULT": "power_cases_002.wpr"
+        },
+        "https://www.youtube.com/watch?v=3KANI2dpXLw?autoplay=1": {
+            "DEFAULT": "power_cases_002.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

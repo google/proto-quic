@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.",
     "archives": {
-        "robohornet_pro_000.wpr" : [
-            "http://ie.microsoft.com/testdrive/performance/robohornetpro/"
-        ]
-    }
+        "http://ie.microsoft.com/testdrive/performance/robohornetpro/": {
+            "DEFAULT": "robohornet_pro_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

@@ -38,7 +38,6 @@ bool NullDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
 }
 
 bool NullDecrypter::DecryptPacket(QuicVersion version,
-                                  QuicPathId /*path_id*/,
                                   QuicPacketNumber /*packet_number*/,
                                   StringPiece associated_data,
                                   StringPiece ciphertext,

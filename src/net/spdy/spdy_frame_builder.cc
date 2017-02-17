@@ -4,34 +4,61 @@
 
 #include "net/spdy/spdy_frame_builder.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <limits>
 
 #include "base/logging.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/spdy/spdy_protocol.h"
+#include "net/spdy/zero_copy_output_buffer.h"
 
 namespace net {
 
 SpdyFrameBuilder::SpdyFrameBuilder(size_t size)
     : buffer_(new char[size]), capacity_(size), length_(0), offset_(0) {}
 
+SpdyFrameBuilder::SpdyFrameBuilder(size_t size, ZeroCopyOutputBuffer* output)
+    : buffer_(output == nullptr ? new char[size] : nullptr),
+      output_(output),
+      capacity_(size),
+      length_(0),
+      offset_(0) {}
+
 SpdyFrameBuilder::~SpdyFrameBuilder() {
 }
 
 char* SpdyFrameBuilder::GetWritableBuffer(size_t length) {
   if (!CanWrite(length)) {
-    return NULL;
+    return nullptr;
   }
   return buffer_.get() + offset_ + length_;
+}
+
+char* SpdyFrameBuilder::GetWritableOutput(size_t length,
+                                          size_t* actual_length) {
+  char* dest = nullptr;
+  int size = 0;
+
+  if (!CanWrite(length)) {
+    return nullptr;
+  }
+  output_->Next(&dest, &size);
+  *actual_length = std::min(length, (size_t)size);
+  return dest;
 }
 
 bool SpdyFrameBuilder::Seek(size_t length) {
   if (!CanWrite(length)) {
     return false;
   }
-
-  length_ += length;
+  if (output_ == nullptr) {
+    length_ += length;
+  } else {
+    output_->AdvanceWritePtr(length);
+    length_ += length;
+  }
   return true;
 }
 
@@ -114,9 +141,29 @@ bool SpdyFrameBuilder::WriteBytes(const void* data, uint32_t data_len) {
     return false;
   }
 
-  char* dest = GetWritableBuffer(data_len);
-  memcpy(dest, data, data_len);
-  Seek(data_len);
+  if (output_ == nullptr) {
+    char* dest = GetWritableBuffer(data_len);
+    memcpy(dest, data, data_len);
+    Seek(data_len);
+  } else {
+    char* dest = nullptr;
+    size_t size = 0;
+    size_t total_written = 0;
+    const char* data_ptr = reinterpret_cast<const char*>(data);
+    while (data_len > 0) {
+      dest = GetWritableOutput(data_len, &size);
+      if (dest == nullptr || size == 0) {
+        // Unable to make progress.
+        return false;
+      }
+      uint32_t to_copy = std::min((size_t)data_len, size);
+      const char* src = data_ptr + total_written;
+      memcpy(dest, src, to_copy);
+      Seek(to_copy);
+      data_len -= to_copy;
+      total_written += to_copy;
+    }
+  }
   return true;
 }
 
@@ -139,9 +186,16 @@ bool SpdyFrameBuilder::CanWrite(size_t length) const {
     return false;
   }
 
-  if (offset_ + length_ + length > capacity_) {
-    DCHECK(false);
-    return false;
+  if (output_ == nullptr) {
+    if (offset_ + length_ + length > capacity_) {
+      DLOG(FATAL) << "Requested: " << length << " capacity: " << capacity_
+                  << " used: " << offset_ + length_;
+      return false;
+    }
+  } else {
+    if (length > output_->BytesFree()) {
+      return false;
+    }
   }
 
   return true;

@@ -170,9 +170,6 @@ class NET_EXPORT_PRIVATE QuicHttpStream
 
   bool response_headers_received_;
 
-  // Serialized HTTP request.
-  std::string request_;
-
   // Number of bytes received by the headers stream on behalf of this stream.
   int64_t headers_bytes_received_;
   // Number of bytes sent by the headers stream on behalf of this stream.

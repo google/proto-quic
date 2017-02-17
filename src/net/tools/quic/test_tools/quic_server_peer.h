@@ -9,7 +9,6 @@
 
 namespace net {
 
-
 class QuicDispatcher;
 class QuicServer;
 class QuicPacketReader;

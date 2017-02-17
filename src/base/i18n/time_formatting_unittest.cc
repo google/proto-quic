@@ -224,6 +224,29 @@ TEST(TimeFormattingTest, MAYBE_TimeFormatDateGB) {
             TimeFormatFriendlyDate(time));
 }
 
+TEST(TimeFormattingTest, TimeFormatWithPattern) {
+  test::ScopedRestoreICUDefaultLocale restore_locale;
+
+  Time time;
+  EXPECT_TRUE(Time::FromLocalExploded(kTestDateTimeExploded, &time));
+
+  i18n::SetICUDefaultLocale("en_US");
+  EXPECT_EQ(ASCIIToUTF16("Apr 30, 2011"), TimeFormatWithPattern(time, "yMMMd"));
+  EXPECT_EQ(ASCIIToUTF16("April 30, 3:42:07 PM"),
+            TimeFormatWithPattern(time, "MMMMdjmmss"));
+
+  i18n::SetICUDefaultLocale("en_GB");
+  EXPECT_EQ(ASCIIToUTF16("30 Apr 2011"), TimeFormatWithPattern(time, "yMMMd"));
+  EXPECT_EQ(ASCIIToUTF16("30 April, 15:42:07"),
+            TimeFormatWithPattern(time, "MMMMdjmmss"));
+
+  i18n::SetICUDefaultLocale("ja_JP");
+  EXPECT_EQ(WideToUTF16(L"2011年4月30日"),
+            TimeFormatWithPattern(time, "yMMMd"));
+  EXPECT_EQ(WideToUTF16(L"4月30日") + ASCIIToUTF16(" 15:42:07"),
+            TimeFormatWithPattern(time, "MMMMdjmmss"));
+}
+
 TEST(TimeFormattingTest, TimeDurationFormat) {
   test::ScopedRestoreICUDefaultLocale restore_locale;
   TimeDelta delta = TimeDelta::FromMinutes(15 * 60 + 42);

@@ -126,6 +126,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
       TransportSecurityState* transport_security_state,
       std::unique_ptr<QuicServerInfo> server_info,
       const QuicServerId& server_id,
+      bool require_confirmation,
       int yield_after_packets,
       QuicTime::Delta yield_after_duration,
       int cert_verify_flags,
@@ -213,8 +214,7 @@ class NET_EXPORT_PRIVATE QuicChromiumClientSession
                                  std::vector<uint8_t>* out) override;
 
   // Performs a crypto handshake with the server.
-  int CryptoConnect(bool require_confirmation,
-                    const CompletionCallback& callback);
+  int CryptoConnect(const CompletionCallback& callback);
 
   // Resumes a crypto handshake with the server after a timeout.
   int ResumeCryptoConnect(const CompletionCallback& callback);

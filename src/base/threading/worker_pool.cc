@@ -4,6 +4,8 @@
 
 #include "base/threading/worker_pool.h"
 
+#include <utility>
+
 #include "base/bind.h"
 #include "base/compiler_specific.h"
 #include "base/debug/leak_annotations.h"
@@ -100,8 +102,8 @@ struct TaskRunnerHolder {
 }  // namespace
 
 bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
-                                  const Closure& task,
-                                  const Closure& reply,
+                                  Closure task,
+                                  Closure reply,
                                   bool task_is_slow) {
   // Do not report PostTaskAndReplyRelay leaks in tests. There's nothing we can
   // do about them because WorkerPool doesn't have a flushing API.
@@ -109,14 +111,14 @@ bool WorkerPool::PostTaskAndReply(const tracked_objects::Location& from_here,
   // http://crbug.com/290897
   // Note: this annotation does not cover tasks posted through a TaskRunner.
   ANNOTATE_SCOPED_MEMORY_LEAK;
-  return PostTaskAndReplyWorkerPool(task_is_slow).PostTaskAndReply(
-      from_here, task, reply);
+  return PostTaskAndReplyWorkerPool(task_is_slow)
+      .PostTaskAndReply(from_here, std::move(task), std::move(reply));
 }
 
 // static
 const scoped_refptr<TaskRunner>&
 WorkerPool::GetTaskRunner(bool tasks_are_slow) {
-  static auto task_runner_holder = new TaskRunnerHolder();
+  static auto* task_runner_holder = new TaskRunnerHolder();
   return task_runner_holder->taskrunners_[tasks_are_slow];
 }
 

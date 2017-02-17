@@ -14,6 +14,10 @@
 #include <malloc.h>
 #endif
 
+#if defined(OS_MACOSX)
+#include "base/allocator/allocator_interception_mac.h"
+#endif
+
 namespace base {
 namespace allocator {
 
@@ -28,6 +32,9 @@ bool IsAllocatorInitialized() {
 #define TC_MALLOPT_IS_OVERRIDDEN_BY_TCMALLOC 0xbeef42
   return (mallopt(TC_MALLOPT_IS_OVERRIDDEN_BY_TCMALLOC, 0) ==
           TC_MALLOPT_IS_OVERRIDDEN_BY_TCMALLOC);
+#elif defined(OS_MACOSX) && !defined(MEMORY_TOOL_REPLACES_ALLOCATOR)
+  // From allocator_interception_mac.mm.
+  return base::allocator::g_replaced_default_zone;
 #else
   return true;
 #endif

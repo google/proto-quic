@@ -10,6 +10,7 @@
 #include "base/base_switches.h"
 #include "base/build_time.h"
 #include "base/command_line.h"
+#include "base/debug/activity_tracker.h"
 #include "base/logging.h"
 #include "base/metrics/field_trial_param_associator.h"
 #include "base/process/memory.h"
@@ -982,6 +983,15 @@ void FieldTrialList::NotifyFieldTrialGroupSelection(FieldTrial* field_trial) {
       ActivateFieldTrialEntryWhileLocked(field_trial);
   }
 
+  // Recording for stability debugging has to be done inline as a task posted
+  // to an observer may not get executed before a crash.
+  base::debug::GlobalActivityTracker* tracker =
+      base::debug::GlobalActivityTracker::Get();
+  if (tracker) {
+    tracker->RecordFieldTrial(field_trial->trial_name(),
+                              field_trial->group_name_internal());
+  }
+
   global_->observer_list_->Notify(
       FROM_HERE, &FieldTrialList::Observer::OnFieldTrialGroupFinalized,
       field_trial->trial_name(), field_trial->group_name_internal());
@@ -1068,7 +1078,7 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
     pickle.WriteString(group_name);
     size_t total_size = sizeof(FieldTrial::FieldTrialEntry) + pickle.size();
     FieldTrial::FieldTrialEntry* new_entry =
-        allocator->AllocateObject<FieldTrial::FieldTrialEntry>(total_size);
+        allocator->New<FieldTrial::FieldTrialEntry>(total_size);
     subtle::NoBarrier_Store(&new_entry->activated,
                             subtle::NoBarrier_Load(&prev_entry->activated));
     new_entry->pickle_size = pickle.size();
@@ -1088,7 +1098,8 @@ void FieldTrialList::ClearParamsFromSharedMemoryForTesting() {
 
     // Mark the existing entry as unused.
     allocator->ChangeType(prev_ref, 0,
-                          FieldTrial::FieldTrialEntry::kPersistentTypeId);
+                          FieldTrial::FieldTrialEntry::kPersistentTypeId,
+                          /*clear=*/false);
   }
 
   for (const auto& ref : new_refs) {

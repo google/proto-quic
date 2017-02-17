@@ -47,4 +47,6 @@ int main() {
   const auto& const_int_ptr_ref = int_ptr;
   auto&& int_ptr_rref = static_cast<int*&&>(int_ptr);
   const auto&& const_int_ptr_rref = static_cast<int*&&>(int_ptr);
+
+  static auto static_ptr = new int;
 }

@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 
+#include "base/logging.h"
 #include "base/memory/ref_counted.h"
 #include "base/strings/string_number_conversions.h"
 #include "net/base/request_priority.h"
@@ -59,6 +60,11 @@ class RequeingBufferProducer : public SpdyBufferProducer {
 
   std::unique_ptr<SpdyBuffer> ProduceBuffer() override {
     return std::move(buffer_);
+  }
+
+  size_t EstimateMemoryUsage() const override {
+    NOTREACHED();
+    return 0;
   }
 
   static void ConsumeCallback(SpdyWriteQueue* queue,

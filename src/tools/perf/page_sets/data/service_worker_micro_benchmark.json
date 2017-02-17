@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "service_worker_micro_benchmark_004.wpr": [
-            "http://localhost:8091/index.html"
-        ]
-    }
+        "http://localhost:8091/index.html": {
+            "DEFAULT": "service_worker_micro_benchmark_004.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

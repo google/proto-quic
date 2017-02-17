@@ -66,7 +66,7 @@ class HttpServerPropertiesImplTest : public testing::Test {
 
 typedef HttpServerPropertiesImplTest SpdyServerPropertiesTest;
 
-TEST_F(SpdyServerPropertiesTest, InitializeWithSchemeHostPort) {
+TEST_F(SpdyServerPropertiesTest, SetWithSchemeHostPort) {
   // Check spdy servers are correctly set with SchemeHostPort key.
   url::SchemeHostPort https_www_server("https", "www.google.com", 443);
   url::SchemeHostPort http_photo_server("http", "photos.google.com", 80);
@@ -84,7 +84,7 @@ TEST_F(SpdyServerPropertiesTest, InitializeWithSchemeHostPort) {
   std::vector<std::string> spdy_servers1;
   spdy_servers1.push_back(spdy_server_g);  // Will be 0th index.
   spdy_servers1.push_back(spdy_server_p);  // Will be 1st index.
-  impl_.InitializeSpdyServers(&spdy_servers1, true);
+  impl_.SetSpdyServers(&spdy_servers1, true);
   EXPECT_TRUE(impl_.SupportsRequestPriority(http_photo_server));
   EXPECT_TRUE(impl_.SupportsRequestPriority(https_www_server));
   EXPECT_FALSE(impl_.SupportsRequestPriority(http_google_server));
@@ -92,7 +92,7 @@ TEST_F(SpdyServerPropertiesTest, InitializeWithSchemeHostPort) {
   EXPECT_TRUE(impl_.SupportsRequestPriority(valid_google_server));
 }
 
-TEST_F(SpdyServerPropertiesTest, Initialize) {
+TEST_F(SpdyServerPropertiesTest, Set) {
   url::SchemeHostPort spdy_server_google("https", "www.google.com", 443);
   std::string spdy_server_g = spdy_server_google.Serialize();
 
@@ -106,12 +106,12 @@ TEST_F(SpdyServerPropertiesTest, Initialize) {
   std::string spdy_server_m = spdy_server_mail.Serialize();
 
   // Check by initializing NULL spdy servers.
-  impl_.InitializeSpdyServers(NULL, true);
+  impl_.SetSpdyServers(NULL, true);
   EXPECT_FALSE(impl_.SupportsRequestPriority(spdy_server_google));
 
   // Check by initializing empty spdy servers.
   std::vector<std::string> spdy_servers;
-  impl_.InitializeSpdyServers(&spdy_servers, true);
+  impl_.SetSpdyServers(&spdy_servers, true);
   EXPECT_FALSE(impl_.SupportsRequestPriority(spdy_server_google));
 
   // Check by initializing www.google.com:443 and photos.google.com:443 as spdy
@@ -119,7 +119,7 @@ TEST_F(SpdyServerPropertiesTest, Initialize) {
   std::vector<std::string> spdy_servers1;
   spdy_servers1.push_back(spdy_server_g);  // Will be 0th index.
   spdy_servers1.push_back(spdy_server_p);  // Will be 1st index.
-  impl_.InitializeSpdyServers(&spdy_servers1, true);
+  impl_.SetSpdyServers(&spdy_servers1, true);
   EXPECT_TRUE(impl_.SupportsRequestPriority(spdy_server_photos));
   EXPECT_TRUE(impl_.SupportsRequestPriority(spdy_server_google));
 
@@ -139,7 +139,7 @@ TEST_F(SpdyServerPropertiesTest, Initialize) {
   std::vector<std::string> spdy_servers2;
   spdy_servers2.push_back(spdy_server_m);  // Will be 2nd index.
   spdy_servers2.push_back(spdy_server_d);  // Will be 3rd index.
-  impl_.InitializeSpdyServers(&spdy_servers2, true);
+  impl_.SetSpdyServers(&spdy_servers2, true);
 
   // Verify all the servers are in the list in the same order.
   spdy_server_list.Clear();
@@ -170,7 +170,7 @@ TEST_F(SpdyServerPropertiesTest, Initialize) {
   std::vector<std::string> spdy_servers3;
   spdy_servers3.push_back(spdy_server_m);
   spdy_servers3.push_back(spdy_server_p);
-  impl_.InitializeSpdyServers(&spdy_servers3, false);
+  impl_.SetSpdyServers(&spdy_servers3, false);
 
   // Verify the entries are in the same order.
   ASSERT_TRUE(spdy_server_list.GetString(0, &string_value_g));
@@ -388,9 +388,9 @@ TEST_F(AlternateProtocolServerPropertiesTest, ExcludeOrigin) {
   EXPECT_EQ(alternative_service4, alternative_service_vector[2]);
 }
 
-TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
+TEST_F(AlternateProtocolServerPropertiesTest, Set) {
   // |test_server1| has an alternative service, which will not be
-  // affected by InitializeAlternativeServiceServers(), because
+  // affected by SetAlternativeServiceServers(), because
   // |alternative_service_map| does not have an entry for
   // |test_server1|.
   url::SchemeHostPort test_server1("http", "foo1", 80);
@@ -401,7 +401,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
   impl_.SetAlternativeService(test_server1, alternative_service1, expiration1);
 
   // |test_server2| has an alternative service, which will be
-  // overwritten by InitializeAlternativeServiceServers(), because
+  // overwritten by SetAlternativeServiceServers(), because
   // |alternative_service_map| has an entry for
   // |test_server2|.
   AlternativeServiceInfoVector alternative_service_info_vector;
@@ -414,7 +414,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
   impl_.SetAlternativeServices(test_server2, alternative_service_info_vector);
 
   // Prepare |alternative_service_map| to be loaded by
-  // InitializeAlternativeServiceServers().
+  // SetAlternativeServiceServers().
   AlternativeServiceMap alternative_service_map(
       AlternativeServiceMap::NO_AUTO_EVICT);
   const AlternativeService alternative_service3(kProtoHTTP2, "bar3", 123);
@@ -438,7 +438,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
       AlternativeServiceInfoVector(/*size=*/1, alternative_service_info2));
 
   // MRU list will be test_server2, test_server1, test_server3.
-  impl_.InitializeAlternativeServiceServers(&alternative_service_map);
+  impl_.SetAlternativeServiceServers(&alternative_service_map);
 
   // Verify alternative_service_map.
   const AlternativeServiceMap& map = impl_.alternative_service_map();
@@ -462,9 +462,9 @@ TEST_F(AlternateProtocolServerPropertiesTest, Initialize) {
 }
 
 // Regression test for https://crbug.com/504032:
-// InitializeAlternativeServiceServers() should not crash if there is an empty
+// SetAlternativeServiceServers() should not crash if there is an empty
 // hostname is the mapping.
-TEST_F(AlternateProtocolServerPropertiesTest, InitializeWithEmptyHostname) {
+TEST_F(AlternateProtocolServerPropertiesTest, SetWithEmptyHostname) {
   url::SchemeHostPort server("https", "foo", 443);
   const AlternativeService alternative_service_with_empty_hostname(kProtoHTTP2,
                                                                    "", 1234);
@@ -475,7 +475,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, InitializeWithEmptyHostname) {
 
   AlternativeServiceMap alternative_service_map(
       AlternativeServiceMap::NO_AUTO_EVICT);
-  impl_.InitializeAlternativeServiceServers(&alternative_service_map);
+  impl_.SetAlternativeServiceServers(&alternative_service_map);
 
   EXPECT_TRUE(
       impl_.IsAlternativeServiceBroken(alternative_service_with_foo_hostname));
@@ -503,7 +503,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, EmptyVector) {
 
   // Prepare |alternative_service_map_| with a single key that has a single
   // AlternativeServiceInfo with identical hostname and port.
-  impl_.InitializeAlternativeServiceServers(&alternative_service_map);
+  impl_.SetAlternativeServiceServers(&alternative_service_map);
 
   // GetAlternativeServices() should remove such AlternativeServiceInfo from
   // |alternative_service_map_|, emptying the AlternativeServiceInfoVector
@@ -539,7 +539,7 @@ TEST_F(AlternateProtocolServerPropertiesTest, EmptyVectorForCanonical) {
 
   // Prepare |alternative_service_map_| with a single key that has a single
   // AlternativeServiceInfo with identical hostname and port.
-  impl_.InitializeAlternativeServiceServers(&alternative_service_map);
+  impl_.SetAlternativeServiceServers(&alternative_service_map);
 
   // GetAlternativeServices() should remove such AlternativeServiceInfo from
   // |alternative_service_map_|, emptying the AlternativeServiceInfoVector
@@ -983,12 +983,12 @@ TEST_F(AlternateProtocolServerPropertiesTest, RemoveExpiredBrokenAltSvc) {
 
 typedef HttpServerPropertiesImplTest SupportsQuicServerPropertiesTest;
 
-TEST_F(SupportsQuicServerPropertiesTest, Initialize) {
+TEST_F(SupportsQuicServerPropertiesTest, Set) {
   HostPortPair quic_server_google("www.google.com", 443);
 
   // Check by initializing empty address.
   IPAddress initial_address;
-  impl_.InitializeSupportsQuic(&initial_address);
+  impl_.SetSupportsQuic(&initial_address);
 
   IPAddress address;
   EXPECT_FALSE(impl_.GetSupportsQuic(&address));
@@ -996,7 +996,7 @@ TEST_F(SupportsQuicServerPropertiesTest, Initialize) {
 
   // Check by initializing with a valid address.
   initial_address = IPAddress::IPv4Localhost();
-  impl_.InitializeSupportsQuic(&initial_address);
+  impl_.SetSupportsQuic(&initial_address);
 
   EXPECT_TRUE(impl_.GetSupportsQuic(&address));
   EXPECT_EQ(initial_address, address);
@@ -1020,13 +1020,13 @@ TEST_F(SupportsQuicServerPropertiesTest, SetSupportsQuic) {
 
 typedef HttpServerPropertiesImplTest ServerNetworkStatsServerPropertiesTest;
 
-TEST_F(ServerNetworkStatsServerPropertiesTest, Initialize) {
+TEST_F(ServerNetworkStatsServerPropertiesTest, Set) {
   url::SchemeHostPort google_server("https", "www.google.com", 443);
 
   // Check by initializing empty ServerNetworkStats.
   ServerNetworkStatsMap init_server_network_stats_map(
       ServerNetworkStatsMap::NO_AUTO_EVICT);
-  impl_.InitializeServerNetworkStats(&init_server_network_stats_map);
+  impl_.SetServerNetworkStats(&init_server_network_stats_map);
   const ServerNetworkStats* stats = impl_.GetServerNetworkStats(google_server);
   EXPECT_EQ(NULL, stats);
 
@@ -1035,7 +1035,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Initialize) {
   stats_google.srtt = base::TimeDelta::FromMicroseconds(10);
   stats_google.bandwidth_estimate = QuicBandwidth::FromBitsPerSecond(100);
   init_server_network_stats_map.Put(google_server, stats_google);
-  impl_.InitializeServerNetworkStats(&init_server_network_stats_map);
+  impl_.SetServerNetworkStats(&init_server_network_stats_map);
 
   // Verify data for www.google.com:443.
   ASSERT_EQ(1u, impl_.server_network_stats_map().size());
@@ -1044,7 +1044,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Initialize) {
   // Test recency order and overwriting of data.
   //
   // |docs_server| has a ServerNetworkStats, which will be overwritten by
-  // InitializeServerNetworkStats(), because |server_network_stats_map| has an
+  // SetServerNetworkStats(), because |server_network_stats_map| has an
   // entry for |docs_server|.
   url::SchemeHostPort docs_server("https", "docs.google.com", 443);
   ServerNetworkStats stats_docs;
@@ -1054,7 +1054,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Initialize) {
   impl_.SetServerNetworkStats(docs_server, stats_docs);
 
   // Prepare |server_network_stats_map| to be loaded by
-  // InitializeServerNetworkStats().
+  // SetServerNetworkStats().
   ServerNetworkStatsMap server_network_stats_map(
       ServerNetworkStatsMap::NO_AUTO_EVICT);
 
@@ -1071,7 +1071,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, Initialize) {
   server_network_stats_map.Put(mail_server, stats_mail);
 
   // Recency order will be |docs_server|, |google_server| and |mail_server|.
-  impl_.InitializeServerNetworkStats(&server_network_stats_map);
+  impl_.SetServerNetworkStats(&server_network_stats_map);
 
   const ServerNetworkStatsMap& map = impl_.server_network_stats_map();
   ASSERT_EQ(3u, map.size());
@@ -1112,7 +1112,7 @@ TEST_F(ServerNetworkStatsServerPropertiesTest, SetServerNetworkStats) {
 
 typedef HttpServerPropertiesImplTest QuicServerInfoServerPropertiesTest;
 
-TEST_F(QuicServerInfoServerPropertiesTest, Initialize) {
+TEST_F(QuicServerInfoServerPropertiesTest, Set) {
   HostPortPair google_server("www.google.com", 443);
   QuicServerId google_quic_server_id(google_server, PRIVACY_MODE_ENABLED);
 
@@ -1123,13 +1123,13 @@ TEST_F(QuicServerInfoServerPropertiesTest, Initialize) {
 
   // Check empty map.
   QuicServerInfoMap init_quic_server_info_map(QuicServerInfoMap::NO_AUTO_EVICT);
-  impl_.InitializeQuicServerInfoMap(&init_quic_server_info_map);
+  impl_.SetQuicServerInfoMap(&init_quic_server_info_map);
   EXPECT_EQ(0u, impl_.quic_server_info_map().size());
 
   // Check by initializing with www.google.com:443.
   std::string google_server_info("google_quic_server_info");
   init_quic_server_info_map.Put(google_quic_server_id, google_server_info);
-  impl_.InitializeQuicServerInfoMap(&init_quic_server_info_map);
+  impl_.SetQuicServerInfoMap(&init_quic_server_info_map);
 
   // Verify data for www.google.com:443.
   EXPECT_EQ(1u, impl_.quic_server_info_map().size());
@@ -1139,7 +1139,7 @@ TEST_F(QuicServerInfoServerPropertiesTest, Initialize) {
   // Test recency order and overwriting of data.
   //
   // |docs_server| has a QuicServerInfo, which will be overwritten by
-  // InitializeQuicServerInfoMap(), because |quic_server_info_map| has an
+  // SetQuicServerInfoMap(), because |quic_server_info_map| has an
   // entry for |docs_server|.
   HostPortPair docs_server("docs.google.com", 443);
   QuicServerId docs_quic_server_id(docs_server, PRIVACY_MODE_ENABLED);
@@ -1157,7 +1157,7 @@ TEST_F(QuicServerInfoServerPropertiesTest, Initialize) {
   EXPECT_EQ(google_server_info, map_it->second);
 
   // Prepare |quic_server_info_map| to be loaded by
-  // InitializeQuicServerInfoMap().
+  // SetQuicServerInfoMap().
   QuicServerInfoMap quic_server_info_map(QuicServerInfoMap::NO_AUTO_EVICT);
   // Change the values for |docs_server|.
   std::string new_docs_server_info("new_docs_quic_server_info");
@@ -1167,7 +1167,7 @@ TEST_F(QuicServerInfoServerPropertiesTest, Initialize) {
   QuicServerId mail_quic_server_id(mail_server, PRIVACY_MODE_ENABLED);
   std::string mail_server_info("mail_quic_server_info");
   quic_server_info_map.Put(mail_quic_server_id, mail_server_info);
-  impl_.InitializeQuicServerInfoMap(&quic_server_info_map);
+  impl_.SetQuicServerInfoMap(&quic_server_info_map);
 
   // Recency order will be |docs_server|, |google_server| and |mail_server|.
   const QuicServerInfoMap& memory_map = impl_.quic_server_info_map();

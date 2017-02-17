@@ -482,22 +482,8 @@ void HttpNetworkSession::OnMemoryPressure(
   }
 }
 
-void HttpNetworkSession::OnMemoryStateChange(base::MemoryState state) {
-  // TODO(hajimehoshi): When the state changes, adjust the sizes of the caches
-  // to reduce the limits. HttpNetworkSession doesn't have the ability to limit
-  // at present.
-  switch (state) {
-    case base::MemoryState::NORMAL:
-      break;
-    case base::MemoryState::THROTTLED:
-      CloseIdleConnections();
-      break;
-    case base::MemoryState::SUSPENDED:
-    // Note: Not supported at present. Fall through.
-    case base::MemoryState::UNKNOWN:
-      NOTREACHED();
-      break;
-  }
+void HttpNetworkSession::OnPurgeMemory() {
+  CloseIdleConnections();
 }
 
 }  // namespace net

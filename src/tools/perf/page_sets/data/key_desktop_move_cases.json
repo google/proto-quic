@@ -1,11 +1,12 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "key_desktop_move_cases_001.wpr": [
-            "https://mail.google.com/mail/"
-        ],
-        "key_desktop_move_cases_000.wpr": [
-            "Maps"
-        ]
-    }
+        "Maps": {
+            "DEFAULT": "key_desktop_move_cases_000.wpr"
+        },
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "key_desktop_move_cases_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

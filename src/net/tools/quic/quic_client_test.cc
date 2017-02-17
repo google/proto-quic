@@ -55,21 +55,18 @@ QuicClient* CreateAndInitializeQuicClient(EpollServer* eps, uint16_t port) {
   QuicVersionVector versions = AllSupportedVersions();
   QuicClient* client =
       new QuicClient(server_address, server_id, versions, eps,
-                     CryptoTestUtils::ProofVerifierForTesting());
+                     crypto_test_utils::ProofVerifierForTesting());
   EXPECT_TRUE(client->Initialize());
   return client;
 }
 
-TEST(QuicClientTest, DoNotLeakFDs) {
+TEST(QuicClientTest, DoNotLeakSocketFDs) {
   // Make sure that the QuicClient doesn't leak socket FDs. Doing so could cause
   // port exhaustion in long running processes which repeatedly create clients.
 
   // Create a ProofVerifier before counting the number of open FDs to work
   // around some ASAN weirdness.
-  CryptoTestUtils::ProofVerifierForTesting().reset();
-
-  // Make sure that the QuicClient doesn't leak FDs. Doing so could cause port
-  // exhaustion in long running processes which repeatedly create clients.
+  crypto_test_utils::ProofVerifierForTesting().reset();
 
   // Record initial number of FDs, after creation of EpollServer.
   EpollServer eps;
@@ -93,7 +90,7 @@ TEST(QuicClientTest, DoNotLeakFDs) {
 TEST(QuicClientTest, CreateAndCleanUpUDPSockets) {
   // Create a ProofVerifier before counting the number of open FDs to work
   // around some ASAN weirdness.
-  CryptoTestUtils::ProofVerifierForTesting().reset();
+  crypto_test_utils::ProofVerifierForTesting().reset();
 
   EpollServer eps;
   size_t number_of_open_fds = NumOpenSocketFDs();

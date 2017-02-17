@@ -231,6 +231,10 @@ class HttpStreamFactoryImpl::JobController
   // |alternative_job_| has failed or |main_job_wait_time_| elapsed.
   void MaybeResumeMainJob(Job* job, const base::TimeDelta& delay);
 
+  // Posts a task to resume the main job after |delay|.
+  void ResumeMainJobLater(const base::TimeDelta& delay);
+
+  // Resumes the main job immediately.
   void ResumeMainJob();
 
   // Returns true if QUIC is whitelisted for |host|.
@@ -304,6 +308,10 @@ class HttpStreamFactoryImpl::JobController
   // True if the main job has to wait for the alternative job: i.e., the main
   // job must not create a connection until it is resumed.
   bool main_job_is_blocked_;
+
+  // True if the main job was blocked and has been resumed in ResumeMainJob().
+  bool main_job_is_resumed_;
+
   // Waiting time for the main job before it is resumed.
   base::TimeDelta main_job_wait_time_;
 

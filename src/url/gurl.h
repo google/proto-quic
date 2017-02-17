@@ -203,6 +203,10 @@ class URL_EXPORT GURL {
   // by calling SchemeIsFile[System].
   bool IsStandard() const;
 
+  // Returns true when the url is of the form about:blank, about:blank?foo or
+  // about:blank/#foo.
+  bool IsAboutBlank() const;
+
   // Returns true if the given parameter (should be lower-case ASCII to match
   // the canonicalized scheme) is the scheme for this URL. Do not include a
   // colon.
@@ -384,6 +388,10 @@ class URL_EXPORT GURL {
   // whether host has the specific domain or not because no copies or
   // object constructions are done.
   bool DomainIs(base::StringPiece lower_ascii_domain) const;
+
+  // Checks whether or not two URLs are differing only in the ref (the part
+  // after the # character).
+  bool EqualsIgnoringRef(const GURL& other) const;
 
   // Swaps the contents of this GURL object with |other|, without doing
   // any memory allocations.

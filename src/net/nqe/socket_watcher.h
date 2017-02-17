@@ -5,15 +5,20 @@
 #ifndef NET_NQE_SOCKET_WATCHER_H_
 #define NET_NQE_SOCKET_WATCHER_H_
 
+#include <memory>
+
 #include "base/callback.h"
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/threading/thread_checker.h"
+#include "base/time/time.h"
+#include "net/base/net_export.h"
 #include "net/socket/socket_performance_watcher.h"
 #include "net/socket/socket_performance_watcher_factory.h"
 
 namespace base {
 class SingleThreadTaskRunner;
+class TickClock;
 class TimeDelta;
 }  // namespace base
 
@@ -30,15 +35,19 @@ namespace nqe {
 namespace internal {
 
 // SocketWatcher implements SocketPerformanceWatcher, and is not thread-safe.
-class SocketWatcher : public SocketPerformanceWatcher {
+class NET_EXPORT_PRIVATE SocketWatcher : public SocketPerformanceWatcher {
  public:
   // Creates a SocketWatcher which can be used to watch a socket that uses
   // |protocol| as the transport layer protocol. The socket watcher will call
   // |updated_rtt_observation_callback| on |task_runner| every time a new RTT
-  // observation is available.
+  // observation is available. |min_notification_interval| is the minimum
+  // interval betweeen consecutive notifications to this socket watcher.
+  // |tick_clock| is guaranteed to be non-null.
   SocketWatcher(SocketPerformanceWatcherFactory::Protocol protocol,
+                base::TimeDelta min_notification_interval,
                 scoped_refptr<base::SingleThreadTaskRunner> task_runner,
-                OnUpdatedRTTAvailableCallback updated_rtt_observation_callback);
+                OnUpdatedRTTAvailableCallback updated_rtt_observation_callback,
+                base::TickClock* tick_clock);
 
   ~SocketWatcher() override;
 
@@ -55,6 +64,14 @@ class SocketWatcher : public SocketPerformanceWatcher {
 
   // Called every time a new RTT observation is available.
   OnUpdatedRTTAvailableCallback updated_rtt_observation_callback_;
+
+  // Minimum interval betweeen consecutive incoming notifications.
+  const base::TimeDelta rtt_notifications_minimum_interval_;
+
+  // Time when this was last notified of updated RTT.
+  base::TimeTicks last_rtt_notification_;
+
+  base::TickClock* tick_clock_;
 
   base::ThreadChecker thread_checker_;
 

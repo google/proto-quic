@@ -18,11 +18,12 @@ namespace net {
 class NET_EXPORT_PRIVATE HttpCacheLookupManager : public ServerPushDelegate {
  public:
   // |http_cache| MUST outlive the HttpCacheLookupManager.
-  HttpCacheLookupManager(HttpCache* http_cache,
-                         const NetLogWithSource& net_log);
+  explicit HttpCacheLookupManager(HttpCache* http_cache);
   ~HttpCacheLookupManager() override;
 
-  void OnPush(std::unique_ptr<ServerPushHelper> push_helper) override;
+  // ServerPushDelegate implementation.
+  void OnPush(std::unique_ptr<ServerPushHelper> push_helper,
+              const NetLogWithSource& session_net_log) override;
 
   // Invoked when the HttpCache::Transaction for |url| finishes to cancel the
   // server push if the response to the server push is found cached.
@@ -34,24 +35,25 @@ class NET_EXPORT_PRIVATE HttpCacheLookupManager : public ServerPushDelegate {
   // push.
   class LookupTransaction {
    public:
-    LookupTransaction(std::unique_ptr<ServerPushHelper> push_helper);
+    LookupTransaction(std::unique_ptr<ServerPushHelper> push_helper,
+                      NetLog* net_log);
     ~LookupTransaction();
 
     // Issues an HttpCache::Transaction to lookup whether the response is cached
     // without header validation.
     int StartLookup(HttpCache* cache,
                     const CompletionCallback& callback,
-                    const NetLogWithSource& net_log);
+                    const NetLogWithSource& session_net_log);
 
-    void CancelPush();
+    void OnLookupComplete(int result);
 
    private:
     std::unique_ptr<ServerPushHelper> push_helper_;
     std::unique_ptr<HttpRequestInfo> request_;
     std::unique_ptr<HttpTransaction> transaction_;
+    const NetLogWithSource net_log_;
   };
 
-  NetLogWithSource net_log_;
   // HttpCache must outlive the HttpCacheLookupManager.
   HttpCache* http_cache_;
   std::map<GURL, std::unique_ptr<LookupTransaction>> lookup_transactions_;

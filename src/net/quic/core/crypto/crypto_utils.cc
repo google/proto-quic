@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "crypto/hkdf.h"
-#include "crypto/secure_hash.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/crypto/quic_decrypter.h"
@@ -17,6 +16,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "third_party/boringssl/src/include/openssl/sha.h"
 
 using base::StringPiece;
 using std::string;
@@ -295,12 +295,10 @@ const char* CryptoUtils::HandshakeFailureReasonToString(
 void CryptoUtils::HashHandshakeMessage(const CryptoHandshakeMessage& message,
                                        string* output) {
   const QuicData& serialized = message.GetSerialized();
-  std::unique_ptr<crypto::SecureHash> hash(
-      crypto::SecureHash::Create(crypto::SecureHash::SHA256));
-  hash->Update(serialized.data(), serialized.length());
-  uint8_t digest[32];
-  hash->Finish(digest, sizeof(digest));
-  output->assign(reinterpret_cast<const char*>(&digest), sizeof(digest));
+  uint8_t digest[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t*>(serialized.data()),
+         serialized.length(), digest);
+  output->assign(reinterpret_cast<const char*>(digest), sizeof(digest));
 }
 
 }  // namespace net

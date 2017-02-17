@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_TEST_TOOLS_QUIC_PACKET_CREATOR_PEER_H_
 #define NET_QUIC_TEST_TOOLS_QUIC_PACKET_CREATOR_PEER_H_
 
-#include <stddef.h>
-
 #include "base/macros.h"
 #include "net/quic/core/quic_iovector.h"
 #include "net/quic/core/quic_packets.h"
@@ -19,12 +17,9 @@ namespace test {
 class QuicPacketCreatorPeer {
  public:
   static bool SendVersionInPacket(QuicPacketCreator* creator);
-  static bool SendPathIdInPacket(QuicPacketCreator* creator);
 
   static void SetSendVersionInPacket(QuicPacketCreator* creator,
                                      bool send_version_in_packet);
-  static void SetSendPathIdInPacket(QuicPacketCreator* creator,
-                                    bool send_path_id_in_packet);
   static void SetPacketNumberLength(
       QuicPacketCreator* creator,
       QuicPacketNumberLength packet_number_length);

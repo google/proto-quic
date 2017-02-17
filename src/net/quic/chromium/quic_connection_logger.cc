@@ -686,7 +686,8 @@ void QuicConnectionLogger::OnRttChanged(QuicTime::Delta rtt) const {
     return;
 
   int64_t microseconds = rtt.ToMicroseconds();
-  if (microseconds != 0) {
+  if (microseconds != 0 &&
+      socket_performance_watcher_->ShouldNotifyUpdatedRTT()) {
     socket_performance_watcher_->OnUpdatedRTTAvailable(
         base::TimeDelta::FromMicroseconds(rtt.ToMicroseconds()));
   }

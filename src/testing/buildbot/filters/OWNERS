@@ -9,3 +9,5 @@ per-file browser-side-navigation*=jam@chromium.org
 per-file browser-side-navigation*=nasko@chromium.org
 per-file browser-side-navigation*=scottmg@chromium.org
 per-file browser-side-navigation*=yzshen@chromium.org
+
+# COMPONENT: Infra>Platform>Buildbot

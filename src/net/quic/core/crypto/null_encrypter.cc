@@ -26,7 +26,6 @@ bool NullEncrypter::SetNoncePrefix(StringPiece nonce_prefix) {
 }
 
 bool NullEncrypter::EncryptPacket(QuicVersion version,
-                                  QuicPathId /*path_id*/,
                                   QuicPacketNumber /*packet_number*/,
                                   StringPiece associated_data,
                                   StringPiece plaintext,

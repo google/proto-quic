@@ -28,30 +28,22 @@ class DummyProofSource : public net::ProofSource {
   ~DummyProofSource() override {}
 
   // ProofSource override.
-  bool GetProof(
-      const net::QuicSocketAddress& server_addr,
-      const std::string& hostname,
-      const std::string& server_config,
-      net::QuicVersion quic_version,
-      base::StringPiece chlo_hash,
-      const net::QuicTagVector& connection_options,
-      net::QuicReferenceCountedPointer<net::ProofSource::Chain>* out_chain,
-      net::QuicCryptoProof* proof) override {
-    std::vector<std::string> certs;
-    certs.push_back("Dummy cert");
-    *out_chain = new ProofSource::Chain(certs);
-    proof->signature = "Dummy signature";
-    proof->leaf_cert_scts = "Dummy timestamp";
-    return true;
-  }
-
   void GetProof(const net::QuicSocketAddress& server_addr,
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,
                 base::StringPiece chlo_hash,
                 const net::QuicTagVector& connection_options,
-                std::unique_ptr<Callback> callback) override {}
+                std::unique_ptr<Callback> callback) override {
+    net::QuicReferenceCountedPointer<net::ProofSource::Chain> chain;
+    net::QuicCryptoProof proof;
+    std::vector<std::string> certs;
+    certs.push_back("Dummy cert");
+    chain = new ProofSource::Chain(certs);
+    proof.signature = "Dummy signature";
+    proof.leaf_cert_scts = "Dummy timestamp";
+    callback->Run(true, chain, proof, nullptr /* details */);
+  }
 };
 
 // Used by QuicCryptoClientConfig to ignore the peer's credentials

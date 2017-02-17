@@ -5,8 +5,6 @@
 #ifndef NET_QUIC_TEST_TOOLS_QUIC_CONFIG_PEER_H_
 #define NET_QUIC_TEST_TOOLS_QUIC_CONFIG_PEER_H_
 
-#include <stdint.h>
-
 #include "base/macros.h"
 #include "net/quic/core/quic_config.h"
 #include "net/quic/core/quic_packets.h"
@@ -33,6 +31,7 @@ class QuicConfigPeer {
 
   static void SetReceivedBytesForConnectionId(QuicConfig* config,
                                               uint32_t bytes);
+
   static void SetReceivedDisableConnectionMigration(QuicConfig* config);
 
   static void SetReceivedMaxIncomingDynamicStreams(QuicConfig* config,
@@ -42,9 +41,6 @@ class QuicConfigPeer {
                                          const QuicTagVector& options);
 
   static void SetReceivedForceHolBlocking(QuicConfig* config);
-
-  static void SetReceivedAlternateServerAddress(QuicConfig* config,
-                                                QuicSocketAddress addr);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConfigPeer);

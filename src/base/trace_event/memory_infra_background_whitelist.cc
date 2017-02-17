@@ -35,6 +35,7 @@ const char* const kDumpProviderWhitelist[] = {
     "V8Isolate",
     "WinHeap",
     "SyncDirectory",
+    "TabRestoreServiceHelper",
     nullptr  // End of list marker.
 };
 
@@ -68,6 +69,7 @@ const char* const kAllocatorDumpNameWhitelist[] = {
     "web_cache/Other_resources",
     "partition_alloc/allocated_objects",
     "partition_alloc/partitions",
+    "partition_alloc/partitions/array_buffer",
     "partition_alloc/partitions/buffer",
     "partition_alloc/partitions/fast_malloc",
     "partition_alloc/partitions/layout",
@@ -124,6 +126,9 @@ const char* const kAllocatorDumpNameWhitelist[] = {
     "sync/0x?/model_type/TYPED_URL",
     "sync/0x?/model_type/WALLET_METADATA",
     "sync/0x?/model_type/WIFI_CREDENTIAL",
+    "tab_restore/service_helper_0x?/entries",
+    "tab_restore/service_helper_0x?/entries/tab_0x?",
+    "tab_restore/service_helper_0x?/entries/window_0x?",
     nullptr  // End of list marker.
 };
 

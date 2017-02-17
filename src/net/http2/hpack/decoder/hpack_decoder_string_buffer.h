@@ -62,6 +62,9 @@ class NET_EXPORT_PRIVATE HpackDecoderStringBuffer {
   Backing backing_for_testing() const { return backing_; }
   void OutputDebugStringTo(std::ostream& out) const;
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // Storage for the string being buffered, if buffering is necessary
   // (e.g. if Huffman encoded, buffer_ is storage for the decoded string).

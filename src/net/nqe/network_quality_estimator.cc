@@ -326,8 +326,10 @@ NetworkQualityEstimator::NetworkQualityEstimator(
 
   watcher_factory_.reset(new nqe::internal::SocketWatcherFactory(
       base::ThreadTaskRunnerHandle::Get(),
+      nqe::internal::GetMinSocketWatcherNotificationInterval(variation_params),
       base::Bind(&NetworkQualityEstimator::OnUpdatedRTTAvailable,
-                 base::Unretained(this))));
+                 base::Unretained(this)),
+      tick_clock_.get()));
 
   // Record accuracy after a 15 second interval. The values used here must
   // remain in sync with the suffixes specified in

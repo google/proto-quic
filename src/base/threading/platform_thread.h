@@ -18,6 +18,8 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
+#elif defined(OS_MACOSX)
+#include <mach/mach_types.h>
 #elif defined(OS_POSIX)
 #include <pthread.h>
 #include <unistd.h>
@@ -28,6 +30,8 @@ namespace base {
 // Used for logging. Always an integer value.
 #if defined(OS_WIN)
 typedef DWORD PlatformThreadId;
+#elif defined(OS_MACOSX)
+typedef mach_port_t PlatformThreadId;
 #elif defined(OS_POSIX)
 typedef pid_t PlatformThreadId;
 #endif

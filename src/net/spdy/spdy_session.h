@@ -191,6 +191,9 @@ class NET_EXPORT_PRIVATE SpdyStreamRequest {
   // set a delegate for the returned stream (except for test code).
   base::WeakPtr<SpdyStream> ReleaseStream();
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   friend class SpdySession;
 
@@ -242,6 +245,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
       PushedStreamInfo(SpdyStreamId stream_id, base::TimeTicks creation_time)
           : stream_id(stream_id), creation_time(creation_time) {}
       ~PushedStreamInfo() {}
+      size_t EstimateMemoryUsage() const { return 0; }
 
       SpdyStreamId stream_id;
       base::TimeTicks creation_time;
@@ -270,6 +274,8 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
                     const GURL& url,
                     SpdyStreamId stream_id,
                     const base::TimeTicks& creation_time);
+
+    size_t EstimateMemoryUsage() const;
 
    private:
     SpdySession* spdy_session_;
@@ -565,8 +571,10 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   // indicate whether session is active.
   // |stats| can be assumed as being default initialized upon entry.
   // Implementation overrides fields in |stats|.
-  void DumpMemoryStats(StreamSocket::SocketMemoryStats* stats,
-                       bool* is_session_active) const;
+  // Returns the estimate of dynamically allocated memory in bytes, which
+  // includes the size attributed to the underlying socket.
+  size_t DumpMemoryStats(StreamSocket::SocketMemoryStats* stats,
+                         bool* is_session_active) const;
 
  private:
   friend class test::SpdyStreamTest;

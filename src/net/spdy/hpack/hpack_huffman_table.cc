@@ -12,6 +12,7 @@
 #include "base/numerics/safe_conversions.h"
 #include "net/spdy/hpack/hpack_input_stream.h"
 #include "net/spdy/hpack/hpack_output_stream.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -316,6 +317,13 @@ bool HpackHuffmanTable::GenericDecodeString(HpackInputStream* in,
   }
   NOTREACHED();
   return false;
+}
+
+size_t HpackHuffmanTable::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(decode_tables_) +
+         SpdyEstimateMemoryUsage(decode_entries_) +
+         SpdyEstimateMemoryUsage(code_by_id_) +
+         SpdyEstimateMemoryUsage(length_by_id_);
 }
 
 }  // namespace net

@@ -56,6 +56,11 @@ const size_t kTestBucketIndex = kRealAllocSize >> kBucketShift;
 const char* type_name = nullptr;
 
 void TestSetup() {
+  // Zero the allocator structs to clear out traces
+  // from previous test.
+  memset(&allocator, 0, sizeof(allocator));
+  memset(&generic_allocator, 0, sizeof(generic_allocator));
+
   allocator.init();
   generic_allocator.init();
 }
@@ -1286,25 +1291,19 @@ static void DoReturnNullTest(size_t allocSize) {
   EXPECT_TRUE(ClearAddressSpaceLimit());
 }
 
-// Tests that if an allocation fails in "return null" mode, repeating it doesn't
-// crash, and still returns null. The test tries to allocate 6 GB of memory in
-// 512 kB blocks. On 64-bit POSIX systems, the address space is limited to 6 GB
-// using setrlimit() first.
+// Unit tests that check if an allocation fails in "return null" mode,
+// repeating it doesn't crash, and still returns null. The tests need to
+// stress memory subsystem limits to do so, hence they try to allocate
+// 6 GB of memory, each with a different per-allocation block sizes.
 //
-// Disable this test on Android because, due to its allocation-heavy behavior,
-// it tends to get OOM-killed rather than pass.
-#if defined(OS_MACOSX) || defined(OS_ANDROID)
-#define MAYBE_RepeatedReturnNull DISABLED_RepeatedReturnNull
-#else
-#define MAYBE_RepeatedReturnNull RepeatedReturnNull
-#endif
-TEST(PartitionAllocTest, MAYBE_RepeatedReturnNull) {
-  // A single-slot but non-direct-mapped allocation size.
-  DoReturnNullTest(512 * 1024);
-}
+// On 64-bit POSIX systems, the address space is limited to 6 GB using
+// setrlimit() first.
 
-// Another "return null" test but for larger, direct-mapped allocations.
-//
+// Test "return null" for larger, direct-mapped allocations first. As a
+// direct-mapped allocation's pages are unmapped and freed on release, this
+// test is performd first for these "return null" tests in order to leave
+// sufficient unreserved virtual memory around for the later one(s).
+
 // Disable this test on Android because, due to its allocation-heavy behavior,
 // it tends to get OOM-killed rather than pass.
 #if defined(OS_MACOSX) || defined(OS_ANDROID)
@@ -1315,6 +1314,20 @@ TEST(PartitionAllocTest, MAYBE_RepeatedReturnNull) {
 TEST(PartitionAllocTest, MAYBE_RepeatedReturnNullDirect) {
   // A direct-mapped allocation size.
   DoReturnNullTest(32 * 1024 * 1024);
+}
+
+// Test "return null" with a 512 kB block size.
+
+// Disable this test on Android because, due to its allocation-heavy behavior,
+// it tends to get OOM-killed rather than pass.
+#if defined(OS_MACOSX) || defined(OS_ANDROID)
+#define MAYBE_RepeatedReturnNull DISABLED_RepeatedReturnNull
+#else
+#define MAYBE_RepeatedReturnNull RepeatedReturnNull
+#endif
+TEST(PartitionAllocTest, MAYBE_RepeatedReturnNull) {
+  // A single-slot but non-direct-mapped allocation size.
+  DoReturnNullTest(512 * 1024);
 }
 
 #endif  // !defined(ARCH_CPU_64_BITS) || defined(OS_POSIX)

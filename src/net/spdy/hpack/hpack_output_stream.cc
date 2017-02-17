@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/logging.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -90,6 +91,10 @@ void HpackOutputStream::BoundedTakeString(size_t max_size, string* output) {
   } else {
     TakeString(output);
   }
+}
+
+size_t HpackOutputStream::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(buffer_);
 }
 
 }  // namespace net

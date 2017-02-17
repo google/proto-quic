@@ -20,7 +20,7 @@ namespace trace_event {
 // Captures the reason why a memory dump is being requested. This is to allow
 // selective enabling of dumps, filtering and post-processing. Important: this
 // must be kept consistent with
-// services/memory_infra/public/cpp/memory_infra_traits.cc.
+// services/resource_coordinator/public/cpp/memory/memory_infra_traits.cc.
 enum class MemoryDumpType {
   PERIODIC_INTERVAL,     // Dumping memory at periodic intervals.
   EXPLICITLY_TRIGGERED,  // Non maskable dump request.
@@ -30,7 +30,7 @@ enum class MemoryDumpType {
 
 // Tells the MemoryDumpProvider(s) how much detailed their dumps should be.
 // Important: this must be kept consistent with
-// services/memory_infra/public/cpp/memory_infra_traits.cc.
+// services/resource_Coordinator/public/cpp/memory/memory_infra_traits.cc.
 enum class MemoryDumpLevelOfDetail : uint32_t {
   FIRST,
 

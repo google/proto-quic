@@ -22,11 +22,19 @@ struct EditInfo {
   llvm::StringSet<> filenames;
 };
 
+enum class RenameCategory {
+  kEnumValue,
+  kField,
+  kFunction,
+  kUnresolved,
+  kVariable,
+};
+
 // Simple class that tracks the edits made by path. Used to dump the databaes
 // used by the Blink rebase helper.
 class EditTracker {
  public:
-  EditTracker() = default;
+  explicit EditTracker(RenameCategory category);
 
   void Add(const clang::SourceManager& source_manager,
            clang::SourceLocation location,
@@ -36,7 +44,7 @@ class EditTracker {
   // Serializes the tracked edits to |output|. Emits:
   // <filename>:<tag>:<original text>:<new text>
   // for each distinct filename for each tracked edit.
-  void SerializeTo(llvm::StringRef tag, llvm::raw_ostream& output) const;
+  void SerializeTo(llvm::raw_ostream& output) const;
 
  private:
   EditTracker(const EditTracker&) = delete;
@@ -44,6 +52,8 @@ class EditTracker {
 
   // The string key is the original text.
   llvm::StringMap<EditInfo> tracked_edits_;
+
+  RenameCategory category_;
 };
 
 #endif  // #define TOOLS_CLANG_REWRITE_TO_CHROME_STYLE_EDIT_TRACKER_H_

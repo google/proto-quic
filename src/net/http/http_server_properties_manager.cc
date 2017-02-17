@@ -16,7 +16,7 @@
 #include "base/values.h"
 #include "net/base/ip_address.h"
 #include "net/base/port_util.h"
-#include "net/quic/platform/api/quic_url_utils.h"
+#include "net/quic/platform/api/quic_hostname_utils.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -79,6 +79,7 @@ HttpServerPropertiesManager::HttpServerPropertiesManager(
     : pref_task_runner_(pref_task_runner),
       pref_delegate_(pref_delegate),
       setting_prefs_(false),
+      is_initialized_(false),
       network_task_runner_(network_task_runner) {
   DCHECK(pref_delegate_);
   pref_weak_ptr_factory_.reset(
@@ -98,16 +99,22 @@ HttpServerPropertiesManager::~HttpServerPropertiesManager() {
 
 void HttpServerPropertiesManager::InitializeOnNetworkThread() {
   DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+
   network_weak_ptr_factory_.reset(
       new base::WeakPtrFactory<HttpServerPropertiesManager>(this));
   http_server_properties_impl_.reset(new HttpServerPropertiesImpl());
 
   network_prefs_update_timer_.reset(new base::OneShotTimer);
   network_prefs_update_timer_->SetTaskRunner(network_task_runner_);
-  pref_task_runner_->PostTask(
+  // UpdateCacheFromPrefsOnPrefThread() will post a task to network thread to
+  // update server properties. SetInitialized() will be run after that task is
+  // run as |network_task_runner_| is single threaded.
+  pref_task_runner_->PostTaskAndReply(
       FROM_HERE,
       base::Bind(&HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefThread,
-                 pref_weak_ptr_));
+                 pref_weak_ptr_),
+      base::Bind(&HttpServerPropertiesManager::SetInitialized,
+                 network_weak_ptr_factory_->GetWeakPtr()));
 }
 
 void HttpServerPropertiesManager::ShutdownOnPrefThread() {
@@ -353,6 +360,12 @@ void HttpServerPropertiesManager::SetMaxServerConfigsStoredInProperties(
       max_server_configs_stored_in_properties);
 }
 
+bool HttpServerPropertiesManager::IsInitialized() const {
+  DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+
+  return is_initialized_;
+}
+
 //
 // Update the HttpServerPropertiesImpl's cache with data from preferences.
 //
@@ -362,17 +375,8 @@ void HttpServerPropertiesManager::ScheduleUpdateCacheOnPrefThread() {
   if (pref_cache_update_timer_->IsRunning())
     return;
 
-  StartCacheUpdateTimerOnPrefThread(
-      base::TimeDelta::FromMilliseconds(kUpdateCacheDelayMs));
-}
-
-void HttpServerPropertiesManager::StartCacheUpdateTimerOnPrefThread(
-    base::TimeDelta delay) {
-  DCHECK(pref_task_runner_->RunsTasksOnCurrentThread());
   pref_cache_update_timer_->Start(
-      FROM_HERE,
-      delay,
-      this,
+      FROM_HERE, base::TimeDelta::FromMilliseconds(kUpdateCacheDelayMs), this,
       &HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefThread);
 }
 
@@ -716,7 +720,8 @@ bool HttpServerPropertiesManager::AddToQuicServerInfoMap(
     // Get quic_server_id.
     const std::string& quic_server_id_str = it.key();
     QuicServerId quic_server_id;
-    QuicUrlUtils::StringToQuicServerId(quic_server_id_str, &quic_server_id);
+    QuicHostnameUtils::StringToQuicServerId(quic_server_id_str,
+                                            &quic_server_id);
     if (quic_server_id.host().empty()) {
       DVLOG(1) << "Malformed http_server_properties for quic server: "
                << quic_server_id_str;
@@ -757,22 +762,20 @@ void HttpServerPropertiesManager::UpdateCacheFromPrefsOnNetworkThread(
   DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
 
   UMA_HISTOGRAM_COUNTS("Net.CountOfSpdyServers", spdy_servers->size());
-  http_server_properties_impl_->InitializeSpdyServers(spdy_servers, true);
+  http_server_properties_impl_->SetSpdyServers(spdy_servers, true);
 
   // Update the cached data and use the new alternative service list from
   // preferences.
   UMA_HISTOGRAM_COUNTS("Net.CountOfAlternateProtocolServers",
                        alternative_service_map->size());
-  http_server_properties_impl_->InitializeAlternativeServiceServers(
+  http_server_properties_impl_->SetAlternativeServiceServers(
       alternative_service_map);
 
-  http_server_properties_impl_->InitializeSupportsQuic(last_quic_address);
+  http_server_properties_impl_->SetSupportsQuic(last_quic_address);
 
-  http_server_properties_impl_->InitializeServerNetworkStats(
-      server_network_stats_map);
+  http_server_properties_impl_->SetServerNetworkStats(server_network_stats_map);
 
-  http_server_properties_impl_->InitializeQuicServerInfoMap(
-      quic_server_info_map);
+  http_server_properties_impl_->SetQuicServerInfoMap(quic_server_info_map);
 
   // Update the prefs with what we have read (delete all corrupted prefs).
   if (detected_corrupted_prefs)
@@ -789,22 +792,13 @@ void HttpServerPropertiesManager::ScheduleUpdatePrefsOnNetworkThread(
   if (network_prefs_update_timer_->IsRunning())
     return;
 
-  StartPrefsUpdateTimerOnNetworkThread(
-      base::TimeDelta::FromMilliseconds(kUpdatePrefsDelayMs));
+  network_prefs_update_timer_->Start(
+      FROM_HERE, base::TimeDelta::FromMilliseconds(kUpdatePrefsDelayMs), this,
+      &HttpServerPropertiesManager::UpdatePrefsFromCacheOnNetworkThread);
+
   // TODO(rtenneti): Delete the following histogram after collecting some data.
   UMA_HISTOGRAM_ENUMERATION("Net.HttpServerProperties.UpdatePrefs", location,
                             HttpServerPropertiesManager::NUM_LOCATIONS);
-}
-
-void HttpServerPropertiesManager::StartPrefsUpdateTimerOnNetworkThread(
-    base::TimeDelta delay) {
-  DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
-  // This is overridden in tests to post the task without the delay.
-  network_prefs_update_timer_->Start(
-      FROM_HERE,
-      delay,
-      this,
-      &HttpServerPropertiesManager::UpdatePrefsFromCacheOnNetworkThread);
 }
 
 // This is required so we can set this as the callback for a timer.
@@ -1127,6 +1121,11 @@ void HttpServerPropertiesManager::OnHttpServerPropertiesChanged() {
   DCHECK(pref_task_runner_->RunsTasksOnCurrentThread());
   if (!setting_prefs_)
     ScheduleUpdateCacheOnPrefThread();
+}
+
+void HttpServerPropertiesManager::SetInitialized() {
+  DCHECK(network_task_runner_->RunsTasksOnCurrentThread());
+  is_initialized_ = true;
 }
 
 }  // namespace net

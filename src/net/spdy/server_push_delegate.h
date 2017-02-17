@@ -6,6 +6,7 @@
 #define NET_SPDY_SERVER_PUSH_DELEGATE_H_
 
 #include "net/base/net_export.h"
+#include "net/log/net_log_with_source.h"
 #include "url/gurl.h"
 
 namespace net {
@@ -23,13 +24,14 @@ class NET_EXPORT_PRIVATE ServerPushDelegate {
     virtual void Cancel() = 0;
 
     // Gets the URL of the pushed request.
-    virtual const GURL& GetURL() = 0;
+    virtual const GURL& GetURL() const = 0;
   };
 
   virtual ~ServerPushDelegate() {}
 
   // Invoked by session when a push promise has been received.
-  virtual void OnPush(std::unique_ptr<ServerPushHelper> push_helper) = 0;
+  virtual void OnPush(std::unique_ptr<ServerPushHelper> push_helper,
+                      const NetLogWithSource& session_net_log) = 0;
 };
 
 }  // namespace net

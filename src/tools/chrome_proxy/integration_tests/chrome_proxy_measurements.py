@@ -47,7 +47,8 @@ class ChromeProxyDataSaving(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     # Wait for the load event.
-    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    tab.WaitForJavaScriptCondition2(
+        'performance.timing.loadEventStart', timeout=300)
     self._metrics.Stop(page, tab)
     self._metrics.AddResultsForDataSaving(tab, results)
 
@@ -123,7 +124,7 @@ class ChromeProxyCorsBypass(ChromeProxyValidation):
   def ValidateAndMeasurePage(self, page, tab, results):
     # The test page sets window.xhrRequestCompleted to true when the XHR fetch
     # finishes.
-    tab.WaitForJavaScriptExpression('window.xhrRequestCompleted', 300)
+    tab.WaitForJavaScriptCondition2('window.xhrRequestCompleted', timeout=300)
     super(ChromeProxyCorsBypass,
           self).ValidateAndMeasurePage(page, tab, results)
 
@@ -365,7 +366,7 @@ class ChromeProxyCacheLoFiDisabled(ChromeProxyValidation):
 
   def DidNavigateToPage(self, page, tab):
     if not self._is_lo_fi_enabled:
-      tab.ExecuteJavaScript('window.location.reload()')
+      tab.ExecuteJavaScript2('window.location.reload()')
       util.WaitFor(tab.HasReachedQuiescence, 3)
 
 class ChromeProxyCacheProxyDisabled(ChromeProxyValidation):
@@ -412,7 +413,7 @@ class ChromeProxyCacheProxyDisabled(ChromeProxyValidation):
 
   def DidNavigateToPage(self, page, tab):
     if not self._is_chrome_proxy_enabled:
-      tab.ExecuteJavaScript('window.location.reload()')
+      tab.ExecuteJavaScript2('window.location.reload()')
       util.WaitFor(tab.HasReachedQuiescence, 3)
 
 class ChromeProxyLitePage(ChromeProxyValidation):
@@ -501,7 +502,8 @@ class ChromeProxyHTTPToDirectFallback(ChromeProxyValidation):
     # cause a proxy fallback, and have this test run starting from the HTTP
     # fallback proxy.
     tab.Navigate(_TEST_SERVER_DEFAULT_URL)
-    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    tab.WaitForJavaScriptCondition2(
+        'performance.timing.loadEventStart', timeout=300)
 
   def AddResults(self, tab, results):
     self._metrics.AddResultsForHTTPToDirectFallback(tab, results, _TEST_SERVER)
@@ -602,7 +604,8 @@ class ChromeProxyQuicSmoke(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     # Wait for the load event.
-    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    tab.WaitForJavaScriptCondition2(
+        'performance.timing.loadEventStart', timeout=300)
     self._metrics.Stop(page, tab)
     page_to_metrics = {
         'header validation': [self._metrics.AddResultsForHeaderValidation],
@@ -800,6 +803,7 @@ class ChromeProxyQuicTransaction(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     # Wait for the load event.
-    tab.WaitForJavaScriptExpression('performance.timing.loadEventStart', 300)
+    tab.WaitForJavaScriptCondition2(
+        'performance.timing.loadEventStart', timeout=300)
     self._metrics.Stop(page, tab)
     self._metrics.AddResultsForQuicTransaction(tab, results)

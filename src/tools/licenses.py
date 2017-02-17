@@ -20,6 +20,12 @@ import cgi
 import os
 import sys
 
+# TODO(agrieve): Move build_utils.WriteDepFile into a non-android directory.
+_REPOSITORY_ROOT = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(_REPOSITORY_ROOT, 'build/android/gyp/util'))
+import build_utils
+
+
 # Paths from the root of the tree to directories to skip.
 PRUNE_PATHS = set([
     # Placeholder directory only, not third-party code.
@@ -476,7 +482,8 @@ def ScanThirdPartyDirs(root=None):
 
 
 def GenerateCredits(
-        file_template_file, entry_template_file, output_file, target_os):
+        file_template_file, entry_template_file, output_file, target_os,
+        depfile=None):
     """Generate about:credits."""
 
     def EvaluateTemplate(template, env, escape=True):
@@ -488,22 +495,22 @@ def GenerateCredits(
             template = template.replace('{{%s}}' % key, val)
         return template
 
-    root = os.path.join(os.path.dirname(__file__), '..')
-    third_party_dirs = FindThirdPartyDirs(PRUNE_PATHS, root)
+    third_party_dirs = FindThirdPartyDirs(PRUNE_PATHS, _REPOSITORY_ROOT)
 
     if not file_template_file:
-        file_template_file = os.path.join(root, 'components', 'about_ui',
-                                          'resources', 'about_credits.tmpl')
+        file_template_file = os.path.join(_REPOSITORY_ROOT, 'components',
+                                          'about_ui', 'resources',
+                                          'about_credits.tmpl')
     if not entry_template_file:
-        entry_template_file = os.path.join(root, 'components', 'about_ui',
-                                           'resources',
+        entry_template_file = os.path.join(_REPOSITORY_ROOT, 'components',
+                                           'about_ui', 'resources',
                                            'about_credits_entry.tmpl')
 
     entry_template = open(entry_template_file).read()
     entries = []
     for path in third_party_dirs:
         try:
-            metadata = ParseDir(path, root)
+            metadata = ParseDir(path, _REPOSITORY_ROOT)
         except LicenseError:
             # TODO(phajdan.jr): Convert to fatal error (http://crbug.com/39240).
             continue
@@ -521,6 +528,7 @@ def GenerateCredits(
         entry = {
             'name': metadata['Name'],
             'content': EvaluateTemplate(entry_template, env),
+            'license_file': metadata['License File'],
         }
         entries.append(entry)
 
@@ -538,6 +546,19 @@ def GenerateCredits(
     else:
       print template_contents
 
+    if depfile:
+      assert output_file
+      # Add in build.ninja so that the target will be considered dirty whenever
+      # gn gen is run. Otherwise, it will fail to notice new files being added.
+      # This is still no perfect, as it will fail if no build files are changed,
+      # but a new README.chromium / LICENSE is added. This shouldn't happen in
+      # practice however.
+      license_file_list = (entry['license_file'] for entry in entries)
+      license_file_list = (os.path.relpath(p) for p in license_file_list)
+      license_file_list = sorted(set(license_file_list))
+      build_utils.WriteDepfile(depfile, output_file,
+                               license_file_list + ['build.ninja'])
+
     return True
 
 
@@ -551,6 +572,7 @@ def main():
                         help='OS that this build is targeting.')
     parser.add_argument('command', choices=['help', 'scan', 'credits'])
     parser.add_argument('output_file', nargs='?')
+    build_utils.AddDepfileOption(parser)
     args = parser.parse_args()
 
     if args.command == 'scan':
@@ -558,7 +580,7 @@ def main():
             return 1
     elif args.command == 'credits':
         if not GenerateCredits(args.file_template, args.entry_template,
-                               args.output_file, args.target_os):
+                               args.output_file, args.target_os, args.depfile):
             return 1
     else:
         print __doc__

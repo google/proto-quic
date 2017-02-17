@@ -20,18 +20,21 @@ import org.chromium.base.annotations.MainDex;
 @JNINamespace("base::android")
 @MainDex
 public class JavaExceptionReporter implements Thread.UncaughtExceptionHandler {
-    private Thread.UncaughtExceptionHandler mParent;
+    private final Thread.UncaughtExceptionHandler mParent;
+    private final boolean mCrashAfterReport;
     private boolean mHandlingException;
 
-    private JavaExceptionReporter(Thread.UncaughtExceptionHandler parent) {
+    private JavaExceptionReporter(
+            Thread.UncaughtExceptionHandler parent, boolean crashAfterReport) {
         mParent = parent;
+        mCrashAfterReport = crashAfterReport;
     }
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
         if (!mHandlingException) {
             mHandlingException = true;
-            nativeReportJavaException(e);
+            nativeReportJavaException(mCrashAfterReport, e);
         }
         if (mParent != null) {
             mParent.uncaughtException(t, e);
@@ -52,11 +55,11 @@ public class JavaExceptionReporter implements Thread.UncaughtExceptionHandler {
     }
 
     @CalledByNative
-    private static void installHandler() {
-        Thread.setDefaultUncaughtExceptionHandler(
-                new JavaExceptionReporter(Thread.getDefaultUncaughtExceptionHandler()));
+    private static void installHandler(boolean crashAfterReport) {
+        Thread.setDefaultUncaughtExceptionHandler(new JavaExceptionReporter(
+                Thread.getDefaultUncaughtExceptionHandler(), crashAfterReport));
     }
 
-    private static native void nativeReportJavaException(Throwable e);
+    private static native void nativeReportJavaException(boolean crashAfterReport, Throwable e);
     private static native void nativeReportJavaStackTrace(String stackTrace);
 }

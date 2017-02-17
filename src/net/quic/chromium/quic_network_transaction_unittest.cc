@@ -153,11 +153,15 @@ class HeadersHandler {
 
 class TestSocketPerformanceWatcher : public SocketPerformanceWatcher {
  public:
-  explicit TestSocketPerformanceWatcher(bool* rtt_notification_received)
-      : rtt_notification_received_(rtt_notification_received) {}
+  TestSocketPerformanceWatcher(bool* should_notify_updated_rtt,
+                               bool* rtt_notification_received)
+      : should_notify_updated_rtt_(should_notify_updated_rtt),
+        rtt_notification_received_(rtt_notification_received) {}
   ~TestSocketPerformanceWatcher() override {}
 
-  bool ShouldNotifyUpdatedRTT() const override { return true; }
+  bool ShouldNotifyUpdatedRTT() const override {
+    return *should_notify_updated_rtt_;
+  }
 
   void OnUpdatedRTTAvailable(const base::TimeDelta& rtt) override {
     *rtt_notification_received_ = true;
@@ -166,6 +170,7 @@ class TestSocketPerformanceWatcher : public SocketPerformanceWatcher {
   void OnConnectionChanged() override {}
 
  private:
+  bool* should_notify_updated_rtt_;
   bool* rtt_notification_received_;
 
   DISALLOW_COPY_AND_ASSIGN(TestSocketPerformanceWatcher);
@@ -175,7 +180,9 @@ class TestSocketPerformanceWatcherFactory
     : public SocketPerformanceWatcherFactory {
  public:
   TestSocketPerformanceWatcherFactory()
-      : watcher_count_(0u), rtt_notification_received_(false) {}
+      : watcher_count_(0u),
+        should_notify_updated_rtt_(true),
+        rtt_notification_received_(false) {}
   ~TestSocketPerformanceWatcherFactory() override {}
 
   // SocketPerformanceWatcherFactory implementation:
@@ -186,15 +193,21 @@ class TestSocketPerformanceWatcherFactory
     }
     ++watcher_count_;
     return std::unique_ptr<SocketPerformanceWatcher>(
-        new TestSocketPerformanceWatcher(&rtt_notification_received_));
+        new TestSocketPerformanceWatcher(&should_notify_updated_rtt_,
+                                         &rtt_notification_received_));
   }
 
   size_t watcher_count() const { return watcher_count_; }
 
   bool rtt_notification_received() const { return rtt_notification_received_; }
 
+  void set_should_notify_updated_rtt(bool should_notify_updated_rtt) {
+    should_notify_updated_rtt_ = should_notify_updated_rtt;
+  }
+
  private:
   size_t watcher_count_;
+  bool should_notify_updated_rtt_;
   bool rtt_notification_received_;
 
   DISALLOW_COPY_AND_ASSIGN(TestSocketPerformanceWatcherFactory);
@@ -754,6 +767,68 @@ INSTANTIATE_TEST_CASE_P(Version,
                         QuicNetworkTransactionTest,
                         ::testing::ValuesIn(AllSupportedVersions()));
 
+TEST_P(QuicNetworkTransactionTest, SocketWatcherEnabled) {
+  params_.origins_to_force_quic_on.insert(
+      HostPortPair::FromString("mail.example.org:443"));
+
+  MockQuicData mock_quic_data;
+  QuicStreamOffset header_stream_offset = 0;
+  mock_quic_data.AddWrite(ConstructSettingsPacket(
+      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize,
+      &header_stream_offset));
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      2, kClientDataStreamId1, true, true,
+      GetRequestHeaders("GET", "https", "/"), &header_stream_offset));
+  mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
+      1, kClientDataStreamId1, false, false, GetResponseHeaders("200 OK")));
+  mock_quic_data.AddRead(ConstructServerDataPacket(2, kClientDataStreamId1,
+                                                   false, true, 0, "hello!"));
+  mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1));
+  mock_quic_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);  // No more data to read
+
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  CreateSession();
+  test_socket_performance_watcher_factory_.set_should_notify_updated_rtt(true);
+
+  EXPECT_FALSE(
+      test_socket_performance_watcher_factory_.rtt_notification_received());
+  SendRequestAndExpectQuicResponse("hello!");
+  EXPECT_TRUE(
+      test_socket_performance_watcher_factory_.rtt_notification_received());
+}
+
+TEST_P(QuicNetworkTransactionTest, SocketWatcherDisabled) {
+  params_.origins_to_force_quic_on.insert(
+      HostPortPair::FromString("mail.example.org:443"));
+
+  MockQuicData mock_quic_data;
+  QuicStreamOffset header_stream_offset = 0;
+  mock_quic_data.AddWrite(ConstructSettingsPacket(
+      1, SETTINGS_MAX_HEADER_LIST_SIZE, kDefaultMaxUncompressedHeaderSize,
+      &header_stream_offset));
+  mock_quic_data.AddWrite(ConstructClientRequestHeadersPacket(
+      2, kClientDataStreamId1, true, true,
+      GetRequestHeaders("GET", "https", "/"), &header_stream_offset));
+  mock_quic_data.AddRead(ConstructServerResponseHeadersPacket(
+      1, kClientDataStreamId1, false, false, GetResponseHeaders("200 OK")));
+  mock_quic_data.AddRead(ConstructServerDataPacket(2, kClientDataStreamId1,
+                                                   false, true, 0, "hello!"));
+  mock_quic_data.AddWrite(ConstructClientAckPacket(3, 2, 1));
+  mock_quic_data.AddRead(SYNCHRONOUS, ERR_IO_PENDING);  // No more data to read
+
+  mock_quic_data.AddSocketDataToFactory(&socket_factory_);
+
+  CreateSession();
+  test_socket_performance_watcher_factory_.set_should_notify_updated_rtt(false);
+
+  EXPECT_FALSE(
+      test_socket_performance_watcher_factory_.rtt_notification_received());
+  SendRequestAndExpectQuicResponse("hello!");
+  EXPECT_FALSE(
+      test_socket_performance_watcher_factory_.rtt_notification_received());
+}
+
 TEST_P(QuicNetworkTransactionTest, ForceQuic) {
   params_.origins_to_force_quic_on.insert(
       HostPortPair::FromString("mail.example.org:443"));
@@ -777,11 +852,7 @@ TEST_P(QuicNetworkTransactionTest, ForceQuic) {
 
   CreateSession();
 
-  EXPECT_FALSE(
-      test_socket_performance_watcher_factory_.rtt_notification_received());
   SendRequestAndExpectQuicResponse("hello!");
-  EXPECT_TRUE(
-      test_socket_performance_watcher_factory_.rtt_notification_received());
 
   // Check that the NetLog was filled reasonably.
   TestNetLogEntry::List entries;
@@ -2798,7 +2869,7 @@ TEST_P(QuicNetworkTransactionTest, QuicForceHolBlocking) {
       GetRequestHeaders("POST", "https", "/"), &offset));
 
   std::unique_ptr<QuicEncryptedPacket> packet;
-  if (version_ > QUIC_VERSION_35) {
+  if (version_ == QUIC_VERSION_36) {
     packet = ConstructClientForceHolDataPacket(3, kClientDataStreamId1, true,
                                                true, &offset, "1");
   } else {

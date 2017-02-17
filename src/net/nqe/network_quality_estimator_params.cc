@@ -379,6 +379,13 @@ bool persistent_cache_reading_enabled(
   return true;
 }
 
+base::TimeDelta GetMinSocketWatcherNotificationInterval(
+    const std::map<std::string, std::string>& variation_params) {
+  // Use 1000 milliseconds as the default value.
+  return base::TimeDelta::FromMilliseconds(GetValueForVariationParam(
+      variation_params, "min_socket_watcher_notification_interval_msec", 1000));
+}
+
 }  // namespace internal
 
 }  // namespace nqe

@@ -2004,9 +2004,9 @@ TEST_F(SpdySessionTest, NetLogOnSessionGoaway) {
   int unclaimed_streams;
   ASSERT_TRUE(entry.GetIntegerValue("unclaimed_streams", &unclaimed_streams));
   EXPECT_EQ(0, unclaimed_streams);
-  int error_code;
-  ASSERT_TRUE(entry.GetIntegerValue("error_code", &error_code));
-  EXPECT_EQ(ERROR_CODE_ENHANCE_YOUR_CALM, static_cast<uint32_t>(error_code));
+  std::string error_code;
+  ASSERT_TRUE(entry.GetStringValue("error_code", &error_code));
+  EXPECT_EQ("11 (ENHANCE_YOUR_CALM)", error_code);
   std::string debug_data;
   ASSERT_TRUE(entry.GetStringValue("debug_data", &debug_data));
   EXPECT_EQ("foo", debug_data);

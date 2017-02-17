@@ -168,7 +168,8 @@ TestServerPushDelegate::TestServerPushDelegate() {}
 TestServerPushDelegate::~TestServerPushDelegate() {}
 
 void TestServerPushDelegate::OnPush(
-    std::unique_ptr<ServerPushHelper> push_helper) {
+    std::unique_ptr<ServerPushHelper> push_helper,
+    const NetLogWithSource& session_net_log) {
   push_helpers[push_helper->GetURL()] = std::move(push_helper);
 }
 

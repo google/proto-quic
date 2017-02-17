@@ -1,20 +1,45 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "intl_ko_th_vi_000.wpr": [
-            "http://us.24h.com.vn/", 
-            "http://vnexpress.net/", 
-            "http://vietnamnet.vn/", 
-            "http://news.zing.vn/the-gioi/ba-dam-thep-margaret-thatcher-qua-doi/a312895.html#home_noibat1", 
-            "http://kenh14.vn/home.chn", 
-            "http://www.naver.com/", 
-            "http://www.daum.net/", 
-            "http://www.donga.com/", 
-            "http://www.chosun.com/", 
-            "http://www.danawa.com/", 
-            "http://www.sanook.com/", 
-            "http://pantip.com/", 
-            "http://thaimisc.com/"
-        ]
-    }
+        "http://kenh14.vn/home.chn": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://news.zing.vn/the-gioi/ba-dam-thep-margaret-thatcher-qua-doi/a312895.html#home_noibat1": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://pantip.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://thaimisc.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://us.24h.com.vn/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://vietnamnet.vn/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://vnexpress.net/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.chosun.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.danawa.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.daum.net/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.donga.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.naver.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        },
+        "http://www.sanook.com/": {
+            "DEFAULT": "intl_ko_th_vi_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

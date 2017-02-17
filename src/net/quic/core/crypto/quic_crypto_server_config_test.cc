@@ -30,7 +30,7 @@ namespace test {
 TEST(QuicCryptoServerConfigTest, ServerConfig) {
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
+                                crypto_test_utils::ProofSourceForTesting());
   MockClock clock;
 
   std::unique_ptr<CryptoHandshakeMessage> message(server.AddDefaultConfig(
@@ -52,7 +52,7 @@ TEST(QuicCryptoServerConfigTest, CompressCerts) {
 
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
+                                crypto_test_utils::ProofSourceForTesting());
   QuicCryptoServerConfigPeer peer(&server);
 
   std::vector<string> certs = {"testcert"};
@@ -71,7 +71,7 @@ TEST(QuicCryptoServerConfigTest, CompressSameCertsTwice) {
 
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
+                                crypto_test_utils::ProofSourceForTesting());
   QuicCryptoServerConfigPeer peer(&server);
 
   // Compress the certs for the first time.
@@ -100,7 +100,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
 
   QuicRandom* rand = QuicRandom::GetInstance();
   QuicCryptoServerConfig server(QuicCryptoServerConfig::TESTING, rand,
-                                CryptoTestUtils::ProofSourceForTesting());
+                                crypto_test_utils::ProofSourceForTesting());
   QuicCryptoServerConfigPeer peer(&server);
 
   std::vector<string> certs = {"testcert"};
@@ -124,7 +124,7 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
   // Compress a similar certs which only differs in common certs field.
   static const uint64_t set_hash = 42;
   std::unique_ptr<CommonCertSets> common_sets(
-      CryptoTestUtils::MockCommonCertSets(certs[0], set_hash, 1));
+      crypto_test_utils::MockCommonCertSets(certs[0], set_hash, 1));
   StringPiece different_common_certs(reinterpret_cast<const char*>(&set_hash),
                                      sizeof(set_hash));
   string compressed3 = QuicCryptoServerConfigPeer::CompressChain(
@@ -143,7 +143,7 @@ class SourceAddressTokenTest : public ::testing::Test {
         rand_(QuicRandom::GetInstance()),
         server_(QuicCryptoServerConfig::TESTING,
                 rand_,
-                CryptoTestUtils::ProofSourceForTesting()),
+                crypto_test_utils::ProofSourceForTesting()),
         peer_(&server_) {
     // Advance the clock to some non-zero time.
     clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1000000));
@@ -281,7 +281,7 @@ class CryptoServerConfigsTest : public ::testing::Test {
       : rand_(QuicRandom::GetInstance()),
         config_(QuicCryptoServerConfig::TESTING,
                 rand_,
-                CryptoTestUtils::ProofSourceForTesting()),
+                crypto_test_utils::ProofSourceForTesting()),
         test_peer_(&config_) {}
 
   void SetUp() override {
@@ -289,49 +289,42 @@ class CryptoServerConfigsTest : public ::testing::Test {
   }
 
   // SetConfigs constructs suitable config protobufs and calls SetConfigs on
-  // |config_|. The arguments are given as nullptr-terminated pairs. The first
-  // of each pair is the server config ID of a Config. The second is the
-  // |primary_time| of that Config, given in epoch seconds. (Although note that,
-  // in these tests, time is set to 1000 seconds since the epoch.) For example:
-  //   SetConfigs(nullptr);  // calls |config_.SetConfigs| with no protobufs.
+  // |config_|.
+  // Each struct in the input vector contains 3 elements.
+  // The first is the server config ID of a Config. The second is
+  // the |primary_time| of that Config, given in epoch seconds. (Although note
+  // that, in these tests, time is set to 1000 seconds since the epoch.).
+  // The third is the priority.
+  //
+  // For example:
+  //   SetConfigs(std::vector<ServerConfigIDWithTimeAndPriority>());  // calls
+  //   |config_.SetConfigs| with no protobufs.
   //
   //   // Calls |config_.SetConfigs| with two protobufs: one for a Config with
   //   // a |primary_time| of 900 and priority 1, and another with
   //   // a |primary_time| of 1000 and priority 2.
 
   //   CheckConfigs(
-  //     "id1", 900, 1,
-  //     "id2", 1000, 2,
-  //     nullptr);
+  //     {{"id1", 900,  1},
+  //      {"id2", 1000, 2}});
   //
   // If the server config id starts with "INVALID" then the generated protobuf
   // will be invalid.
-  void SetConfigs(const char* server_config_id1, ...) {
+  struct ServerConfigIDWithTimeAndPriority {
+    ServerConfigID server_config_id;
+    int primary_time;
+    int priority;
+  };
+  void SetConfigs(std::vector<ServerConfigIDWithTimeAndPriority> configs) {
     const char kOrbit[] = "12345678";
 
-    va_list ap;
-    va_start(ap, server_config_id1);
     bool has_invalid = false;
-    bool is_empty = true;
 
     std::vector<std::unique_ptr<QuicServerConfigProtobuf>> protobufs;
-    bool first = true;
-    for (;;) {
-      const char* server_config_id;
-      if (first) {
-        server_config_id = server_config_id1;
-        first = false;
-      } else {
-        server_config_id = va_arg(ap, const char*);
-      }
-
-      if (!server_config_id) {
-        break;
-      }
-
-      is_empty = false;
-      int primary_time = va_arg(ap, int);
-      int priority = va_arg(ap, int);
+    for (const auto& config : configs) {
+      const ServerConfigID& server_config_id = config.server_config_id;
+      const int primary_time = config.primary_time;
+      const int priority = config.priority;
 
       QuicCryptoServerConfig::ConfigOptions options;
       options.id = server_config_id;
@@ -347,7 +340,7 @@ class CryptoServerConfigsTest : public ::testing::Test {
       protobufs.push_back(std::move(protobuf));
     }
 
-    ASSERT_EQ(!has_invalid && !is_empty,
+    ASSERT_EQ(!has_invalid && !configs.empty(),
               config_.SetConfigs(protobufs, clock_.WallNow()));
   }
 
@@ -359,104 +352,104 @@ class CryptoServerConfigsTest : public ::testing::Test {
 };
 
 TEST_F(CryptoServerConfigsTest, NoConfigs) {
-  test_peer_.CheckConfigs(nullptr);
+  test_peer_.CheckConfigs(std::vector<std::pair<string, bool>>());
 }
 
 TEST_F(CryptoServerConfigsTest, MakePrimaryFirst) {
   // Make sure that "b" is primary even though "a" comes first.
-  SetConfigs("a", 1100, 1, "b", 900, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, nullptr);
+  SetConfigs({{"a", 1100, 1}, {"b", 900, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, MakePrimarySecond) {
   // Make sure that a remains primary after b is added.
-  SetConfigs("a", 900, 1, "b", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("a", true, "b", false, nullptr);
+  SetConfigs({{"a", 900, 1}, {"b", 1100, 1}});
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}});
 }
 
 TEST_F(CryptoServerConfigsTest, Delete) {
   // Ensure that configs get deleted when removed.
-  SetConfigs("a", 800, 1, "b", 900, 1, "c", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, "c", false, nullptr);
-  SetConfigs("b", 900, 1, "c", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("b", true, "c", false, nullptr);
+  SetConfigs({{"a", 800, 1}, {"b", 900, 1}, {"c", 1100, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}, {"c", false}});
+  SetConfigs({{"b", 900, 1}, {"c", 1100, 1}});
+  test_peer_.CheckConfigs({{"b", true}, {"c", false}});
 }
 
 TEST_F(CryptoServerConfigsTest, DeletePrimary) {
   // Ensure that deleting the primary config works.
-  SetConfigs("a", 800, 1, "b", 900, 1, "c", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, "c", false, nullptr);
-  SetConfigs("a", 800, 1, "c", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("a", true, "c", false, nullptr);
+  SetConfigs({{"a", 800, 1}, {"b", 900, 1}, {"c", 1100, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}, {"c", false}});
+  SetConfigs({{"a", 800, 1}, {"c", 1100, 1}});
+  test_peer_.CheckConfigs({{"a", true}, {"c", false}});
 }
 
 TEST_F(CryptoServerConfigsTest, FailIfDeletingAllConfigs) {
   // Ensure that configs get deleted when removed.
-  SetConfigs("a", 800, 1, "b", 900, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, nullptr);
-  SetConfigs(nullptr);
+  SetConfigs({{"a", 800, 1}, {"b", 900, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}});
+  SetConfigs(std::vector<ServerConfigIDWithTimeAndPriority>());
   // Config change is rejected, still using old configs.
-  test_peer_.CheckConfigs("a", false, "b", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, ChangePrimaryTime) {
   // Check that updates to primary time get picked up.
-  SetConfigs("a", 400, 1, "b", 800, 1, "c", 1200, 1, nullptr);
+  SetConfigs({{"a", 400, 1}, {"b", 800, 1}, {"c", 1200, 1}});
   test_peer_.SelectNewPrimaryConfig(500);
-  test_peer_.CheckConfigs("a", true, "b", false, "c", false, nullptr);
-  SetConfigs("a", 1200, 1, "b", 800, 1, "c", 400, 1, nullptr);
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}, {"c", false}});
+  SetConfigs({{"a", 1200, 1}, {"b", 800, 1}, {"c", 400, 1}});
   test_peer_.SelectNewPrimaryConfig(500);
-  test_peer_.CheckConfigs("a", false, "b", false, "c", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", false}, {"c", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, AllConfigsInThePast) {
   // Check that the most recent config is selected.
-  SetConfigs("a", 400, 1, "b", 800, 1, "c", 1200, 1, nullptr);
+  SetConfigs({{"a", 400, 1}, {"b", 800, 1}, {"c", 1200, 1}});
   test_peer_.SelectNewPrimaryConfig(1500);
-  test_peer_.CheckConfigs("a", false, "b", false, "c", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", false}, {"c", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, AllConfigsInTheFuture) {
   // Check that the first config is selected.
-  SetConfigs("a", 400, 1, "b", 800, 1, "c", 1200, 1, nullptr);
+  SetConfigs({{"a", 400, 1}, {"b", 800, 1}, {"c", 1200, 1}});
   test_peer_.SelectNewPrimaryConfig(100);
-  test_peer_.CheckConfigs("a", true, "b", false, "c", false, nullptr);
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}, {"c", false}});
 }
 
 TEST_F(CryptoServerConfigsTest, SortByPriority) {
   // Check that priority is used to decide on a primary config when
   // configs have the same primary time.
-  SetConfigs("a", 900, 1, "b", 900, 2, "c", 900, 3, nullptr);
-  test_peer_.CheckConfigs("a", true, "b", false, "c", false, nullptr);
+  SetConfigs({{"a", 900, 1}, {"b", 900, 2}, {"c", 900, 3}});
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}, {"c", false}});
   test_peer_.SelectNewPrimaryConfig(800);
-  test_peer_.CheckConfigs("a", true, "b", false, "c", false, nullptr);
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}, {"c", false}});
   test_peer_.SelectNewPrimaryConfig(1000);
-  test_peer_.CheckConfigs("a", true, "b", false, "c", false, nullptr);
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}, {"c", false}});
 
   // Change priorities and expect sort order to change.
-  SetConfigs("a", 900, 2, "b", 900, 1, "c", 900, 0, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", false, "c", true, nullptr);
+  SetConfigs({{"a", 900, 2}, {"b", 900, 1}, {"c", 900, 0}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", false}, {"c", true}});
   test_peer_.SelectNewPrimaryConfig(800);
-  test_peer_.CheckConfigs("a", false, "b", false, "c", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", false}, {"c", true}});
   test_peer_.SelectNewPrimaryConfig(1000);
-  test_peer_.CheckConfigs("a", false, "b", false, "c", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", false}, {"c", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, AdvancePrimary) {
   // Check that a new primary config is enabled at the right time.
-  SetConfigs("a", 900, 1, "b", 1100, 1, nullptr);
+  SetConfigs({{"a", 900, 1}, {"b", 1100, 1}});
   test_peer_.SelectNewPrimaryConfig(1000);
-  test_peer_.CheckConfigs("a", true, "b", false, nullptr);
+  test_peer_.CheckConfigs({{"a", true}, {"b", false}});
   test_peer_.SelectNewPrimaryConfig(1101);
-  test_peer_.CheckConfigs("a", false, "b", true, nullptr);
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}});
 }
 
 TEST_F(CryptoServerConfigsTest, InvalidConfigs) {
   // Ensure that invalid configs don't change anything.
-  SetConfigs("a", 800, 1, "b", 900, 1, "c", 1100, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, "c", false, nullptr);
-  SetConfigs("a", 800, 1, "c", 1100, 1, "INVALID1", 1000, 1, nullptr);
-  test_peer_.CheckConfigs("a", false, "b", true, "c", false, nullptr);
+  SetConfigs({{"a", 800, 1}, {"b", 900, 1}, {"c", 1100, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}, {"c", false}});
+  SetConfigs({{"a", 800, 1}, {"c", 1100, 1}, {"INVALID1", 1000, 1}});
+  test_peer_.CheckConfigs({{"a", false}, {"b", true}, {"c", false}});
 }
 
 }  // namespace test

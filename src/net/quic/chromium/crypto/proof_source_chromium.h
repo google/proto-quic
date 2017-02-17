@@ -33,15 +33,6 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                   const base::FilePath& sct_path);
 
   // ProofSource interface
-  bool GetProof(const QuicSocketAddress& server_ip,
-                const std::string& hostname,
-                const std::string& server_config,
-                QuicVersion quic_version,
-                base::StringPiece chlo_hash,
-                const QuicTagVector& connection_options,
-                QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
-                QuicCryptoProof* proof) override;
-
   void GetProof(const QuicSocketAddress& server_ip,
                 const std::string& hostname,
                 const std::string& server_config,
@@ -51,6 +42,15 @@ class NET_EXPORT_PRIVATE ProofSourceChromium : public ProofSource {
                 std::unique_ptr<Callback> callback) override;
 
  private:
+  bool GetProofInner(const QuicSocketAddress& server_ip,
+                     const std::string& hostname,
+                     const std::string& server_config,
+                     QuicVersion quic_version,
+                     base::StringPiece chlo_hash,
+                     const QuicTagVector& connection_options,
+                     QuicReferenceCountedPointer<ProofSource::Chain>* out_chain,
+                     QuicCryptoProof* proof);
+
   std::unique_ptr<crypto::RSAPrivateKey> private_key_;
   QuicReferenceCountedPointer<ProofSource::Chain> chain_;
   std::string signed_certificate_timestamp_;

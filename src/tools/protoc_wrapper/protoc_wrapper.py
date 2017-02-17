@@ -89,7 +89,9 @@ def main(argv):
                       help="Standard C++ generator options.")
   parser.add_argument("--include",
                       help="Name of include to insert into generated headers.")
-
+  parser.add_argument("--import-dir", action="append", default=[],
+                      help="Extra import directory for protos, can be repeated."
+  )
   parser.add_argument("protos", nargs="+",
                       help="Input protobuf definition file(s).")
 
@@ -121,7 +123,11 @@ def main(argv):
     ]
 
   protoc_cmd += ["--proto_path", proto_dir]
+  for path in options.import_dir:
+    protoc_cmd += ["--proto_path", path]
+
   protoc_cmd += [os.path.join(proto_dir, name) for name in protos]
+
   ret = subprocess.call(protoc_cmd)
   if ret != 0:
     raise RuntimeError("Protoc has returned non-zero status: "

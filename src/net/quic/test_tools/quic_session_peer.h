@@ -5,8 +5,7 @@
 #ifndef NET_QUIC_TEST_TOOLS_QUIC_SESSION_PEER_H_
 #define NET_QUIC_TEST_TOOLS_QUIC_SESSION_PEER_H_
 
-#include <stdint.h>
-
+#include <cstdint>
 #include <map>
 #include <memory>
 

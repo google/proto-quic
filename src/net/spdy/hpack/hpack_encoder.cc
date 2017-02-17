@@ -13,6 +13,7 @@
 #include "net/spdy/hpack/hpack_header_table.h"
 #include "net/spdy/hpack/hpack_huffman_table.h"
 #include "net/spdy/hpack/hpack_output_stream.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -130,6 +131,12 @@ void HpackEncoder::ApplyHeaderTableSizeSetting(size_t size_setting) {
   }
   header_table_.SetSettingsHeaderTableSize(size_setting);
   should_emit_table_size_ = true;
+}
+
+size_t HpackEncoder::EstimateMemoryUsage() const {
+  // |huffman_table_| is a singleton. It's accounted for in spdy_session_pool.cc
+  return SpdyEstimateMemoryUsage(header_table_) +
+         SpdyEstimateMemoryUsage(output_stream_);
 }
 
 void HpackEncoder::EncodeRepresentations(RepresentationIterator* iter,

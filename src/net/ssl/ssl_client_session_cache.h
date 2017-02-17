@@ -80,7 +80,7 @@ class NET_EXPORT SSLClientSessionCache : public base::MemoryCoordinatorClient {
   };
 
   // base::MemoryCoordinatorClient implementation:
-  void OnMemoryStateChange(base::MemoryState state) override;
+  void OnPurgeMemory() override;
 
   // Returns true if |entry| is expired as of |now|.
   bool IsExpired(SSL_SESSION* session, time_t now);

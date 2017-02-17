@@ -60,6 +60,9 @@ class NET_EXPORT_PRIVATE HpackWholeEntryBuffer
   // no further callbacks will be made to the listener.
   bool error_detected() const { return error_detected_; }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
   // Implement the HpackEntryDecoderListener methods.
 
   void OnIndexedHeader(size_t index) override;

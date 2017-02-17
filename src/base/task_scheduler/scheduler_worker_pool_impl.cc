@@ -349,8 +349,15 @@ bool SchedulerWorkerPoolImpl::PostTaskWithSequence(
   if (task->delayed_run_time.is_null()) {
     PostTaskWithSequenceNow(std::move(task), std::move(sequence), worker);
   } else {
-    delayed_task_manager_->AddDelayedTask(std::move(task), std::move(sequence),
-                                          worker, this);
+    delayed_task_manager_->AddDelayedTask(
+        std::move(task),
+        Bind(
+            [](scoped_refptr<Sequence> sequence, SchedulerWorker* worker,
+               SchedulerWorkerPool* worker_pool, std::unique_ptr<Task> task) {
+              worker_pool->PostTaskWithSequenceNow(std::move(task),
+                                                   std::move(sequence), worker);
+            },
+            std::move(sequence), Unretained(worker), Unretained(this)));
   }
 
   return true;

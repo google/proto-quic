@@ -39,7 +39,7 @@ class HuffmanBuilder {
   ~HuffmanBuilder();
 
   // Will increase the count for |character| by one, indicating it has been
-  // used.
+  // used. |character| must be in the range 0-127.
   void RecordUsage(uint8_t character);
 
   // Returns a HuffmanRepresentationTable based on the usage data collected
@@ -69,7 +69,8 @@ class HuffmanBuilder {
   // See ToVector() for more information on the format.
   uint32_t WriteToVector(HuffmanNode* node, std::vector<uint8_t>* vector);
 
-  // Constructs a Huffman tree based on |counts_|.
+  // Constructs a Huffman tree based on |counts_|. Appends additional nodes to
+  // the tree until it contains at least 2 leafs.
   std::unique_ptr<HuffmanNode> BuildTree();
 
   // Holds usage information for the tracked characters. Maps the character to

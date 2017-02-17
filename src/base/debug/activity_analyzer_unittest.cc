@@ -289,7 +289,7 @@ TEST_F(ActivityAnalyzerTest, GlobalUserDataTest) {
   GlobalActivityAnalyzer global_analyzer(MakeUnique<PersistentMemoryAllocator>(
       const_cast<void*>(allocator->data()), allocator->size(), 0, 0, "", true));
 
-  ActivityUserData& global_data = GlobalActivityTracker::Get()->user_data();
+  ActivityUserData& global_data = GlobalActivityTracker::Get()->global_data();
   global_data.Set("raw", "foo", 3);
   global_data.SetString("string", "bar");
   global_data.SetChar("char", '9');

@@ -161,7 +161,7 @@ class NET_EXPORT SdchOwner : public SdchObserver,
   };
 
   // base::MemoryCoordinatorClient implementation:
-  void OnMemoryStateChange(base::MemoryState state) override;
+  void OnPurgeMemory() override;
 
   void OnMemoryPressure(
       base::MemoryPressureListener::MemoryPressureLevel level);

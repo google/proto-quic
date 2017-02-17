@@ -9,7 +9,6 @@
 
 #include <string>
 
-#include "base/callback.h"
 #include "base/files/file_path.h"
 #include "base/strings/string16.h"
 
@@ -17,9 +16,8 @@ class GURL;
 
 namespace net {
 
-typedef base::Callback<
-    void(base::FilePath::StringType* file_name, char replace_char)>
-    ReplaceIllegalCharactersCallback;
+using ReplaceIllegalCharactersFunction =
+    void (*)(base::FilePath::StringType* file_name, char replace_char);
 
 void SanitizeGeneratedFileName(base::FilePath::StringType* filename,
                                bool replace_trailing);
@@ -32,7 +30,7 @@ void EnsureSafeExtension(const std::string& mime_type,
 
 bool FilePathToString16(const base::FilePath& path, base::string16* converted);
 
-// Similar to GetSuggestedFilename(), but takes callback to replace illegal
+// Similar to GetSuggestedFilename(), but takes a function to replace illegal
 // characters.
 base::string16 GetSuggestedFilenameImpl(
     const GURL& url,
@@ -41,9 +39,9 @@ base::string16 GetSuggestedFilenameImpl(
     const std::string& suggested_name,
     const std::string& mime_type,
     const std::string& default_name,
-    ReplaceIllegalCharactersCallback replace_illegal_characters_callback);
+    ReplaceIllegalCharactersFunction replace_illegal_characters_function);
 
-// Similar to GenerateFileName(), but takes callback to replace illegal
+// Similar to GenerateFileName(), but takes a function to replace illegal
 // characters.
 base::FilePath GenerateFileNameImpl(
     const GURL& url,
@@ -52,7 +50,7 @@ base::FilePath GenerateFileNameImpl(
     const std::string& suggested_name,
     const std::string& mime_type,
     const std::string& default_name,
-    ReplaceIllegalCharactersCallback replace_illegal_characters_callback);
+    ReplaceIllegalCharactersFunction replace_illegal_characters_function);
 
 }  // namespace net
 

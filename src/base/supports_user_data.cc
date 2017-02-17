@@ -23,8 +23,13 @@ SupportsUserData::Data* SupportsUserData::GetUserData(const void* key) const {
 }
 
 void SupportsUserData::SetUserData(const void* key, Data* data) {
+  SetUserData(key, WrapUnique(data));
+}
+
+void SupportsUserData::SetUserData(const void* key,
+                                   std::unique_ptr<Data> data) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
-  user_data_[key] = WrapUnique(data);
+  user_data_[key] = std::move(data);
 }
 
 void SupportsUserData::RemoveUserData(const void* key) {

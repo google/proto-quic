@@ -318,9 +318,10 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
   }
 
   QuicTestClient* CreateQuicClient(QuicPacketWriterWrapper* writer) {
-    QuicTestClient* client = new QuicTestClient(
-        server_address_, server_hostname_, client_config_,
-        client_supported_versions_, CryptoTestUtils::ProofVerifierForTesting());
+    QuicTestClient* client =
+        new QuicTestClient(server_address_, server_hostname_, client_config_,
+                           client_supported_versions_,
+                           crypto_test_utils::ProofVerifierForTesting());
     client->UseWriter(writer);
     client->Connect();
     return client;
@@ -439,7 +440,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
         GetParam().use_cheap_stateless_reject;
 
     auto test_server = new QuicTestServer(
-        CryptoTestUtils::ProofSourceForTesting(), server_config_,
+        crypto_test_utils::ProofSourceForTesting(), server_config_,
         server_supported_versions_, &response_cache_);
     server_thread_.reset(new ServerThread(test_server, server_address_));
     if (chlo_multiplier_ != 0) {
@@ -2637,7 +2638,7 @@ class EndToEndTestServerPush : public EndToEndTest {
     std::list<QuicHttpResponseCache::ServerPushInfo> push_resources;
     for (size_t i = 0; i < num_resources; ++i) {
       string url = push_urls[i];
-      GURL resource_url(url);
+      QuicUrl resource_url(url);
       string body =
           use_large_response
               ? large_resource

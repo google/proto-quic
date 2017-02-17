@@ -7,6 +7,7 @@
 
 import argparse
 import codecs
+import glob
 import logging
 import os
 import re
@@ -30,10 +31,10 @@ from util import build_utils
 _DEFAULT_ANDROID_MANIFEST_PATH = os.path.join(
     host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'AndroidManifest.xml')
 _FILE_DIR = os.path.dirname(__file__)
-_JAVA_SUBDIR = 'symlinked-java'
 _SRCJARS_SUBDIR = 'extracted-srcjars'
 _JNI_LIBS_SUBDIR = 'symlinked-libs'
 _ARMEABI_SUBDIR = 'armeabi'
+_RES_SUBDIR = 'extracted-res'
 
 _DEFAULT_TARGETS = [
     # TODO(agrieve): Requires alternate android.jar to compile.
@@ -61,6 +62,8 @@ def _RebasePath(path_or_list, new_cwd=None, old_cwd=None):
   If new_cwd is not specified, absolute paths are returned.
   If old_cwd is not specified, constants.GetOutDirectory() is assumed.
   """
+  if path_or_list is None:
+    return []
   if not isinstance(path_or_list, basestring):
     return [_RebasePath(p, new_cwd, old_cwd) for p in path_or_list]
   if old_cwd is None:
@@ -172,9 +175,15 @@ class _ProjectEntry(object):
   def Gradle(self):
     return self.BuildConfig()['gradle']
 
+  def Javac(self):
+    return self.BuildConfig()['javac']
+
   def GetType(self):
     """Returns the target type from its .build_config."""
     return self.DepsInfo()['type']
+
+  def ResZips(self):
+    return self.DepsInfo().get('owned_resources_zips')
 
   def JavaFiles(self):
     if self._java_files is None:
@@ -189,9 +198,12 @@ class _ProjectEntry(object):
 
 class _ProjectContextGenerator(object):
   """Helper class to generate gradle build files"""
-  def __init__(self, project_dir, use_gradle_process_resources):
+  def __init__(self, project_dir, build_vars, use_gradle_process_resources,
+      jinja_processor):
     self.project_dir = project_dir
+    self.build_vars = build_vars
     self.use_gradle_process_resources = use_gradle_process_resources
+    self.jinja_processor = jinja_processor
 
   def _GenJniLibs(self, entry):
     native_section = entry.BuildConfig().get('native')
@@ -204,13 +216,43 @@ class _ProjectContextGenerator(object):
     return jni_libs
 
   def _GenJavaDirs(self, entry):
-    java_dirs = _CreateJavaSourceDir(
-        constants.GetOutDirectory(), self.EntryOutputDir(entry),
-        entry.JavaFiles())
+    java_dirs, excludes = _CreateJavaSourceDir(
+        constants.GetOutDirectory(), entry.JavaFiles())
     if self.Srcjars(entry):
       java_dirs.append(
           os.path.join(self.EntryOutputDir(entry), _SRCJARS_SUBDIR))
-    return java_dirs
+    return java_dirs, excludes
+
+  def _GenResDirs(self, entry):
+    res_dirs = list(entry.DepsInfo().get('owned_resources_dirs', []))
+    if entry.ResZips():
+      res_dirs.append(os.path.join(self.EntryOutputDir(entry), _RES_SUBDIR))
+    return res_dirs
+
+  def _GenCustomManifest(self, entry):
+    """Returns the path to the generated AndroidManifest.xml."""
+    javac = entry.Javac()
+    resource_packages = javac['resource_packages']
+    output_file = os.path.join(
+        self.EntryOutputDir(entry), 'AndroidManifest.xml')
+
+    if not resource_packages:
+      logging.error('Target ' + entry.GnTarget() + ' includes resources from '
+          'unknown package. Unable to process with gradle.')
+      return _DEFAULT_ANDROID_MANIFEST_PATH
+    elif len(resource_packages) > 1:
+      logging.error('Target ' + entry.GnTarget() + ' includes resources from '
+          'multiple packages. Unable to process with gradle.')
+      return _DEFAULT_ANDROID_MANIFEST_PATH
+
+    variables = {}
+    variables['compile_sdk_version'] = self.build_vars['android_sdk_version']
+    variables['package'] = resource_packages[0]
+
+    data = self.jinja_processor.Render(_TemplatePath('manifest'), variables)
+    _WriteFile(output_file, data)
+
+    return output_file
 
   def _Relativize(self, entry, paths):
     return _RebasePath(paths, self.EntryOutputDir(entry))
@@ -227,6 +269,7 @@ class _ProjectContextGenerator(object):
   def GeneratedInputs(self, entry):
     generated_inputs = []
     generated_inputs.extend(self.Srcjars(entry))
+    generated_inputs.extend(_RebasePath(entry.ResZips()))
     generated_inputs.extend(
         p for p in entry.JavaFiles() if not p.startswith('..'))
     generated_inputs.extend(entry.Gradle()['dependent_prebuilt_jars'])
@@ -234,12 +277,22 @@ class _ProjectContextGenerator(object):
 
   def Generate(self, entry):
     variables = {}
-    android_test_manifest = entry.Gradle().get(
-        'android_manifest', _DEFAULT_ANDROID_MANIFEST_PATH)
-    variables['android_manifest'] = self._Relativize(
-        entry, android_test_manifest)
-    variables['java_dirs'] = self._Relativize(entry, self._GenJavaDirs(entry))
+    java_dirs, excludes = self._GenJavaDirs(entry)
+    variables['java_dirs'] = self._Relativize(entry, java_dirs)
+    variables['java_excludes'] = excludes
     variables['jni_libs'] = self._Relativize(entry, self._GenJniLibs(entry))
+    variables['res_dirs'] = self._Relativize(entry, self._GenResDirs(entry))
+    android_manifest = entry.Gradle().get('android_manifest')
+    if not android_manifest:
+      # Gradle uses package id from manifest when generating R.class. So, we
+      # need to generate a custom manifest if we let gradle process resources.
+      # We cannot simply set android.defaultConfig.applicationId because it is
+      # not supported for library targets.
+      if variables['res_dirs']:
+        android_manifest = self._GenCustomManifest(entry)
+      else:
+        android_manifest = _DEFAULT_ANDROID_MANIFEST_PATH
+    variables['android_manifest'] = self._Relativize(entry, android_manifest)
     deps = [_ProjectEntry.FromBuildConfigPath(p)
             for p in entry.Gradle()['dependent_android_projects']]
     variables['android_project_deps'] = [d.ProjectName() for d in deps]
@@ -254,8 +307,8 @@ class _ProjectContextGenerator(object):
 
 
 def _ComputeJavaSourceDirs(java_files):
-  """Returns the list of source directories for the given files."""
-  found_roots = set()
+  """Returns a dictionary of source dirs with each given files in one."""
+  found_roots = {}
   for path in java_files:
     path_root = path
     # Recognize these tokens as top-level.
@@ -268,8 +321,68 @@ def _ComputeJavaSourceDirs(java_files):
       if basename in ('javax', 'org', 'com'):
         path_root = os.path.dirname(path_root)
         break
-    found_roots.add(path_root)
-  return list(found_roots)
+    if path_root not in found_roots:
+      found_roots[path_root] = []
+    found_roots[path_root].append(path)
+  return found_roots
+
+
+def _ComputeExcludeFilters(wanted_files, unwanted_files, parent_dir):
+  """Returns exclude patters to exclude unwanted files but keep wanted files.
+
+  - Shortens exclude list by globbing if possible.
+  - Exclude patterns are relative paths from the parent directory.
+  """
+  excludes = []
+  files_to_include = set(wanted_files)
+  files_to_exclude = set(unwanted_files)
+  while files_to_exclude:
+    unwanted_file = files_to_exclude.pop()
+    target_exclude = os.path.join(
+        os.path.dirname(unwanted_file), '*.java')
+    found_files = set(glob.glob(target_exclude))
+    valid_files = found_files & files_to_include
+    if valid_files:
+      excludes.append(os.path.relpath(unwanted_file, parent_dir))
+    else:
+      excludes.append(os.path.relpath(target_exclude, parent_dir))
+      files_to_exclude -= found_files
+  return excludes
+
+
+def _CreateJavaSourceDir(output_dir, java_files):
+  """Computes the list of java source directories and exclude patterns.
+
+  1. Computes the root java source directories from the list of files.
+  2. Compute exclude patterns that exclude all extra files only.
+  3. Returns the list of java source directories and exclude patterns.
+  """
+  java_dirs = []
+  excludes = []
+  if java_files:
+    java_files = _RebasePath(java_files)
+    computed_dirs = _ComputeJavaSourceDirs(java_files)
+    java_dirs = computed_dirs.keys()
+    all_found_java_files = set()
+
+    for directory, files in computed_dirs.iteritems():
+      found_java_files = build_utils.FindInDirectory(directory, '*.java')
+      all_found_java_files.update(found_java_files)
+      unwanted_java_files = set(found_java_files) - set(files)
+      if unwanted_java_files:
+        logging.debug('Directory requires excludes: %s', directory)
+        excludes.extend(
+            _ComputeExcludeFilters(files, unwanted_java_files, directory))
+
+    missing_java_files = set(java_files) - all_found_java_files
+    # Warn only about non-generated files that are missing.
+    missing_java_files = [p for p in missing_java_files
+                          if not p.startswith(output_dir)]
+    if missing_java_files:
+      logging.warning(
+          'Some java files were not found: %s', missing_java_files)
+
+  return java_dirs, excludes
 
 
 def _CreateRelativeSymlink(target_path, link_path):
@@ -277,60 +390,6 @@ def _CreateRelativeSymlink(target_path, link_path):
   relpath = os.path.relpath(target_path, link_dir)
   logging.debug('Creating symlink %s -> %s', link_path, relpath)
   os.symlink(relpath, link_path)
-
-
-def _CreateSymlinkTree(entry_output_dir, symlink_dir, desired_files,
-                       parent_dirs):
-  """Creates a directory tree of symlinks to the given files.
-
-  The idea here is to replicate a directory tree while leaving out files within
-  it not listed by |desired_files|.
-  """
-  assert _IsSubpathOf(symlink_dir, entry_output_dir)
-
-  for target_path in desired_files:
-    prefix = next(d for d in parent_dirs if target_path.startswith(d))
-    subpath = os.path.relpath(target_path, prefix)
-    symlinked_path = os.path.join(symlink_dir, subpath)
-    symlinked_dir = os.path.dirname(symlinked_path)
-    if not os.path.exists(symlinked_dir):
-      os.makedirs(symlinked_dir)
-    _CreateRelativeSymlink(target_path, symlinked_path)
-
-
-def _CreateJavaSourceDir(output_dir, entry_output_dir, java_files):
-  """Computes and constructs when necessary the list of java source directories.
-
-  1. Computes the root java source directories from the list of files.
-  2. Determines whether there are any .java files in them that are not included
-     in |java_files|.
-  3. If not, returns the list of java source directories. If so, constructs a
-     tree of symlinks within |entry_output_dir| of all files in |java_files|.
-  """
-  java_dirs = []
-  if java_files:
-    java_files = _RebasePath(java_files)
-    java_dirs = _ComputeJavaSourceDirs(java_files)
-
-    found_java_files = build_utils.FindInDirectories(java_dirs, '*.java')
-    unwanted_java_files = set(found_java_files) - set(java_files)
-    missing_java_files = set(java_files) - set(found_java_files)
-    # Warn only about non-generated files that are missing.
-    missing_java_files = [p for p in missing_java_files
-                          if not p.startswith(output_dir)]
-
-    symlink_dir = os.path.join(entry_output_dir, _JAVA_SUBDIR)
-    shutil.rmtree(symlink_dir, True)
-
-    if unwanted_java_files:
-      logging.debug('Target requires .java symlinks: %s', entry_output_dir)
-      _CreateSymlinkTree(entry_output_dir, symlink_dir, java_files, java_dirs)
-      java_dirs = [symlink_dir]
-
-    if missing_java_files:
-      logging.warning('Some java files were not found: %s', missing_java_files)
-
-  return java_dirs
 
 
 def _CreateJniLibsDir(output_dir, entry_output_dir, so_files):
@@ -429,17 +488,21 @@ def _GenerateSettingsGradle(project_entries):
   return '\n'.join(lines)
 
 
-def _ExtractSrcjars(entry_output_dir, srcjar_tuples):
+def _ExtractFile(zip_path, extracted_path):
+  logging.info('Extracting %s to %s', zip_path, extracted_path)
+  with zipfile.ZipFile(zip_path) as z:
+    z.extractall(extracted_path)
+
+
+def _ExtractZips(entry_output_dir, zip_tuples):
   """Extracts all srcjars to the directory given by the tuples."""
-  extracted_paths = set(s[1] for s in srcjar_tuples)
+  extracted_paths = set(s[1] for s in zip_tuples)
   for extracted_path in extracted_paths:
     assert _IsSubpathOf(extracted_path, entry_output_dir)
     shutil.rmtree(extracted_path, True)
 
-  for srcjar_path, extracted_path in srcjar_tuples:
-    logging.info('Extracting %s to %s', srcjar_path, extracted_path)
-    with zipfile.ZipFile(srcjar_path) as z:
-      z.extractall(extracted_path)
+  for zip_path, extracted_path in zip_tuples:
+    _ExtractFile(zip_path, extracted_path)
 
 
 def _FindAllProjectEntries(main_entries):
@@ -519,8 +582,10 @@ def main():
 
   _gradle_output_dir = os.path.abspath(
       args.project_dir.replace('$CHROMIUM_OUTPUT_DIR', output_dir))
-  generator = _ProjectContextGenerator(
-      _gradle_output_dir, args.use_gradle_process_resources)
+  jinja_processor = jinja_template.JinjaProcessor(_FILE_DIR)
+  build_vars = _ReadBuildVars(output_dir)
+  generator = _ProjectContextGenerator(_gradle_output_dir, build_vars,
+      args.use_gradle_process_resources, jinja_processor)
   logging.warning('Creating project at: %s', generator.project_dir)
 
   if args.all:
@@ -551,10 +616,8 @@ def main():
   logging.info('Creating %d projects for targets.', len(entries))
 
   logging.warning('Writing .gradle files...')
-  jinja_processor = jinja_template.JinjaProcessor(_FILE_DIR)
-  build_vars = _ReadBuildVars(output_dir)
   project_entries = []
-  srcjar_tuples = []
+  zip_tuples = []
   generated_inputs = []
   for entry in entries:
     if entry.GetType() not in ('android_apk', 'java_library', 'java_binary'):
@@ -565,9 +628,12 @@ def main():
       project_entries.append(entry)
       # Build all paths references by .gradle that exist within output_dir.
       generated_inputs.extend(generator.GeneratedInputs(entry))
-      srcjar_tuples.extend(
+      zip_tuples.extend(
           (s, os.path.join(generator.EntryOutputDir(entry), _SRCJARS_SUBDIR))
           for s in generator.Srcjars(entry))
+      zip_tuples.extend(
+          (s, os.path.join(generator.EntryOutputDir(entry), _RES_SUBDIR))
+          for s in _RebasePath(entry.ResZips()))
       _WriteFile(
           os.path.join(generator.EntryOutputDir(entry), 'build.gradle'), data)
 
@@ -586,8 +652,8 @@ def main():
     targets = _RebasePath(generated_inputs, output_dir)
     _RunNinja(output_dir, targets)
 
-  if srcjar_tuples:
-    _ExtractSrcjars(generator.project_dir, srcjar_tuples)
+  if zip_tuples:
+    _ExtractZips(generator.project_dir, zip_tuples)
 
   logging.warning('Project created! (%d subprojects)', len(project_entries))
   logging.warning('Generated projects work best with Android Studio 2.2')

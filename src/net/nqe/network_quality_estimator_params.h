@@ -78,6 +78,11 @@ EffectiveConnectionType forced_effective_connection_type(
 bool persistent_cache_reading_enabled(
     const std::map<std::string, std::string>& variation_params);
 
+// Returns the the minimum interval betweeen consecutive notifications to a
+// single socket watcher.
+base::TimeDelta GetMinSocketWatcherNotificationInterval(
+    const std::map<std::string, std::string>& variation_params);
+
 }  // namespace internal
 
 }  // namespace nqe

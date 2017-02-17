@@ -17,7 +17,7 @@ class BlockOncePage(page_module.Page):
     super(BlockOncePage, self).RunNavigateSteps(action_runner)
     # Test block-once on a POST request.
     # Ensure that a subsequent request uses the data reduction proxy.
-    action_runner.ExecuteJavaScript('''
+    action_runner.ExecuteJavaScript2('''
       (function() {
         window.post_request_completed = false;
         var request = new XMLHttpRequest();
@@ -35,8 +35,8 @@ class BlockOncePage(page_module.Page):
         request.send();
       })();
     ''')
-    action_runner.WaitForJavaScriptCondition(
-        "window.post_request_completed == true", timeout_in_seconds=30)
+    action_runner.WaitForJavaScriptCondition2(
+        "window.post_request_completed == true", timeout=30)
 
 class BlockOnceStorySet(story.StorySet):
 

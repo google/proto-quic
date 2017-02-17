@@ -5,6 +5,7 @@
 #ifndef BASE_PENDING_TASK_H_
 #define BASE_PENDING_TASK_H_
 
+#include <array>
 #include <queue>
 
 #include "base/base_export.h"
@@ -36,6 +37,9 @@ struct BASE_EXPORT PendingTask : public TrackingInfo {
 
   // The site this PendingTask was posted from.
   tracked_objects::Location posted_from;
+
+  // Task backtrace.
+  std::array<const void*, 4> task_backtrace;
 
   // Secondary sort key for run time.
   int sequence_num;

@@ -1,11 +1,18 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "webrtc_audio_cases_001.wpr": [
-            "audio_call_isac16k_10s", 
-            "audio_call_opus_10s", 
-            "audio_call_g722_10s", 
-            "audio_call_pcmu_10s"
-        ]
-    }
+        "audio_call_g722_10s": {
+            "DEFAULT": "webrtc_audio_cases_001.wpr"
+        },
+        "audio_call_isac16k_10s": {
+            "DEFAULT": "webrtc_audio_cases_001.wpr"
+        },
+        "audio_call_opus_10s": {
+            "DEFAULT": "webrtc_audio_cases_001.wpr"
+        },
+        "audio_call_pcmu_10s": {
+            "DEFAULT": "webrtc_audio_cases_001.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

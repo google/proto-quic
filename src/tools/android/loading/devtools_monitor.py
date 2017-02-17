@@ -288,6 +288,11 @@ class DevToolsConnection(object):
     Returns:
       The return value from the JavaScript expression.
     """
+    # Note: Clients may be tempted to do naive string interpolation to inject
+    # Python values into the JavaScript expression, which could lead to syntax
+    # errors during evaluation (e.g. injecting strings with special characters).
+    # If this becomes an issue, consider extending the interface of this method
+    # as in: https://github.com/catapult-project/catapult/issues/3028
     response = self.SyncRequest('Runtime.evaluate', {
         'expression': expression,
         'returnByValue': True})

@@ -1,58 +1,111 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_ad_cases_005.wpr": [
-            "http://androidpolice.com"
-        ], 
-        "tough_ad_cases_001.wpr": [
-            "http://mashable.com", 
-            "http://latimes.com", 
-            "http://m.tmz.com", 
-            "http://time.com/3977891/donald-trump-debate-republican/", 
-            "http://www.androidauthority.com/reduce-data-use-turn-on-data-compression-in-chrome-630064/", 
-            "http://www.cnn.com/2015/01/09/politics/nebraska-keystone-pipeline/index.html", 
-            "http://androidcentral.com"
-        ], 
-        "tough_ad_cases_003.wpr": [
-            "http://www.forbes.com/sites/parmyolson/2015/07/29/jana-mobile-data-facebook-internet-org/"
-        ], 
-        "tough_ad_cases_004.wpr": [
-            "swiffy_collection.html"
-        ], 
-        "tough_ad_cases_006.wpr": [
-            "http://www.latimes.com"
-        ], 
-        "tough_ad_cases_000.wpr": [
-            "http://localhost:8000/CICAgKCN39CopQEQoAEY2AQoATIID59gK5hjjIg.swiffy72.html", 
-            "http://localhost:8000/CICAgICQ15a9NxDIARjIASgBMghBC1XuTk8ezw.swiffy72.html", 
-            "http://localhost:8000/shapes-CK7ptO3F8bi2KxDQAhiYAigBMgij6QBQtD2gyA.swiffy72.html", 
-            "http://localhost:8000/CNP2xe_LmqPEKBCsAhj6ASgBMggnyMqth81h8Q.swiffy72.html", 
-            "http://localhost:8000/CICAgMDOrcnRGRB4GNgEKAEyCP_ZBSfwUFsj.swiffy72.html", 
-            "http://localhost:8000/clip-paths-CICAgMDO7Ye9-gEQ2AUYWigBMgjZxDii6aoK9w.swiffy72.html", 
-            "http://localhost:8000/filters-CNLa0t2T47qJ_wEQoAEY2AQoATIIFaIdc7VMBr4.swiffy72.html", 
-            "http://localhost:8000/clip-paths-CILZhLqO_-27bxB4GNgEKAEyCC46kMLBXnMT.swiffy72.html", 
-            "http://localhost:8000/shapes-CICAgMDO7cfIzwEQ1AMYPCgBMghqY8tqyRCArQ.swiffy72.html", 
-            "http://localhost:8000/CICAgIDQ2Pb-MxCsAhj6ASgBMgi5DLoSO0gPbQ.swiffy72.html", 
-            "http://localhost:8000/CICAgKCNj4HgyAEQeBjYBCgBMgjQpPkOjyWNdw.1.swiffy72.html"
-        ], 
-        "tough_ad_cases_002.wpr": [
-            "http://www.theguardian.com/uk"
-        ], 
-        "tough_ad_cases_011.wpr": [
-            "swiffy_webgl_collection.html"
-        ], 
-        "tough_ad_cases_009.wpr": [
-            "http://localhost:8000/CICAgIDQ2Pb-MxCsAhj6ASgBMgi5DLoSO0gPbQ.swf.webglbeta.html", 
-            "http://localhost:8000/CICAgKCN39CopQEQoAEY2AQoATIID59gK5hjjIg.swf.webglbeta.html", 
-            "http://localhost:8000/CICAgMDOrcnRGRB4GNgEKAEyCP_ZBSfwUFsj.swf.webglbeta.html", 
-            "http://localhost:8000/CICAgICQ15a9NxDIARjIASgBMghBC1XuTk8ezw.swf.webglbeta.html", 
-            "http://localhost:8000/shapes-CK7ptO3F8bi2KxDQAhiYAigBMgij6QBQtD2gyA.swf.webglbeta.html", 
-            "http://localhost:8000/clip-paths-CILZhLqO_-27bxB4GNgEKAEyCC46kMLBXnMT.swf.webglbeta.html", 
-            "http://localhost:8000/CNP2xe_LmqPEKBCsAhj6ASgBMggnyMqth81h8Q.swf.webglbeta.html", 
-            "http://localhost:8000/clip-paths-CICAgMDO7Ye9-gEQ2AUYWigBMgjZxDii6aoK9w.swf.webglbeta.html", 
-            "http://localhost:8000/CICAgKCNj4HgyAEQeBjYBCgBMgjQpPkOjyWNdw.1.swf.webglbeta.html", 
-            "http://localhost:8000/filters-CNLa0t2T47qJ_wEQoAEY2AQoATIIFaIdc7VMBr4.swf.webglbeta.html", 
-            "http://localhost:8000/shapes-CICAgMDO7cfIzwEQ1AMYPCgBMghqY8tqyRCArQ.swf.webglbeta.html"
-        ]
-    }
+        "http://androidcentral.com": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://androidpolice.com": {
+            "DEFAULT": "tough_ad_cases_005.wpr"
+        },
+        "http://latimes.com": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://localhost:8000/CICAgICQ15a9NxDIARjIASgBMghBC1XuTk8ezw.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CICAgICQ15a9NxDIARjIASgBMghBC1XuTk8ezw.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/CICAgIDQ2Pb-MxCsAhj6ASgBMgi5DLoSO0gPbQ.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CICAgIDQ2Pb-MxCsAhj6ASgBMgi5DLoSO0gPbQ.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/CICAgKCN39CopQEQoAEY2AQoATIID59gK5hjjIg.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CICAgKCN39CopQEQoAEY2AQoATIID59gK5hjjIg.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/CICAgKCNj4HgyAEQeBjYBCgBMgjQpPkOjyWNdw.1.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CICAgKCNj4HgyAEQeBjYBCgBMgjQpPkOjyWNdw.1.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/CICAgMDOrcnRGRB4GNgEKAEyCP_ZBSfwUFsj.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CICAgMDOrcnRGRB4GNgEKAEyCP_ZBSfwUFsj.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/CNP2xe_LmqPEKBCsAhj6ASgBMggnyMqth81h8Q.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/CNP2xe_LmqPEKBCsAhj6ASgBMggnyMqth81h8Q.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/clip-paths-CICAgMDO7Ye9-gEQ2AUYWigBMgjZxDii6aoK9w.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/clip-paths-CICAgMDO7Ye9-gEQ2AUYWigBMgjZxDii6aoK9w.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/clip-paths-CILZhLqO_-27bxB4GNgEKAEyCC46kMLBXnMT.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/clip-paths-CILZhLqO_-27bxB4GNgEKAEyCC46kMLBXnMT.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/filters-CNLa0t2T47qJ_wEQoAEY2AQoATIIFaIdc7VMBr4.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/filters-CNLa0t2T47qJ_wEQoAEY2AQoATIIFaIdc7VMBr4.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/shapes-CICAgMDO7cfIzwEQ1AMYPCgBMghqY8tqyRCArQ.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/shapes-CICAgMDO7cfIzwEQ1AMYPCgBMghqY8tqyRCArQ.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://localhost:8000/shapes-CK7ptO3F8bi2KxDQAhiYAigBMgij6QBQtD2gyA.swf.webglbeta.html": {
+            "DEFAULT": "tough_ad_cases_009.wpr"
+        },
+        "http://localhost:8000/shapes-CK7ptO3F8bi2KxDQAhiYAigBMgij6QBQtD2gyA.swiffy72.html": {
+            "DEFAULT": "tough_ad_cases_000.wpr"
+        },
+        "http://m.tmz.com": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://mashable.com": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://time.com/3977891/donald-trump-debate-republican/": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://www.androidauthority.com/reduce-data-use-turn-on-data-compression-in-chrome-630064/": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://www.cnn.com/2015/01/09/politics/nebraska-keystone-pipeline/index.html": {
+            "DEFAULT": "tough_ad_cases_001.wpr"
+        },
+        "http://www.forbes.com/sites/parmyolson/2015/07/29/jana-mobile-data-facebook-internet-org/": {
+            "DEFAULT": "tough_ad_cases_003.wpr"
+        },
+        "http://www.latimes.com": {
+            "DEFAULT": "tough_ad_cases_006.wpr"
+        },
+        "http://www.theguardian.com/uk": {
+            "DEFAULT": "tough_ad_cases_002.wpr"
+        },
+        "swiffy_collection.html": {
+            "DEFAULT": "tough_ad_cases_004.wpr"
+        },
+        "swiffy_webgl_collection.html": {
+            "DEFAULT": "tough_ad_cases_011.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

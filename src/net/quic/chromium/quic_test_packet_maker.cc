@@ -118,9 +118,8 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckAndRstPacket(
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
-                                                header.packet_number, *packet,
-                                                buffer, kMaxPacketSize);
+  size_t encrypted_size = framer.EncryptPayload(
+      ENCRYPTION_NONE, header.packet_number, *packet, buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, QuicTime::Zero(), false);
   return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
@@ -170,9 +169,8 @@ QuicTestPacketMaker::MakeAckAndConnectionClosePacket(
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
-                                                header.packet_number, *packet,
-                                                buffer, kMaxPacketSize);
+  size_t encrypted_size = framer.EncryptPayload(
+      ENCRYPTION_NONE, header.packet_number, *packet, buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
   return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
@@ -259,9 +257,8 @@ std::unique_ptr<QuicReceivedPacket> QuicTestPacketMaker::MakeAckPacket(
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
-                                                header.packet_number, *packet,
-                                                buffer, kMaxPacketSize);
+  size_t encrypted_size = framer.EncryptPayload(
+      ENCRYPTION_NONE, header.packet_number, *packet, buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
   return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());
@@ -617,9 +614,8 @@ QuicTestPacketMaker::MakeMultipleFramesPacket(const QuicPacketHeader& header,
   std::unique_ptr<QuicPacket> packet(
       BuildUnsizedDataPacket(&framer, header, frames));
   char buffer[kMaxPacketSize];
-  size_t encrypted_size = framer.EncryptPayload(ENCRYPTION_NONE, /*path_id=*/0u,
-                                                header.packet_number, *packet,
-                                                buffer, kMaxPacketSize);
+  size_t encrypted_size = framer.EncryptPayload(
+      ENCRYPTION_NONE, header.packet_number, *packet, buffer, kMaxPacketSize);
   EXPECT_NE(0u, encrypted_size);
   QuicReceivedPacket encrypted(buffer, encrypted_size, clock_->Now(), false);
   return std::unique_ptr<QuicReceivedPacket>(encrypted.Clone());

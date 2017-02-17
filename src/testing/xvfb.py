@@ -69,9 +69,12 @@ def run_executable(cmd, env):
         kill(xcompmgr_proc)
     else:
       env['_CHROMIUM_INSIDE_XVFB'] = '1'
+      xvfb_script = __file__
+      if xvfb_script.endswith('.pyc'):
+        xvfb_script = xvfb_script[:-1]
       return subprocess.call(['xvfb-run', '-a', "--server-args=-screen 0 "
                               "1280x800x24 -ac -nolisten tcp -dpi 96",
-                              __file__] + cmd, env=env)
+                              xvfb_script] + cmd, env=env)
   else:
     return test_env.run_executable(cmd, env)
 

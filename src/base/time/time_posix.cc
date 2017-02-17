@@ -35,7 +35,7 @@ namespace {
 // This prevents a crash on traversing the environment global and looking up
 // the 'TZ' variable in libc. See: crbug.com/390567.
 base::Lock* GetSysTimeToTimeStructLock() {
-  static auto lock = new base::Lock();
+  static auto* lock = new base::Lock();
   return lock;
 }
 

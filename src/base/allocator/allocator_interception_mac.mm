@@ -27,6 +27,8 @@
 
 #include <new>
 
+#include "base/allocator/allocator_shim.h"
+#include "base/allocator/features.h"
 #include "base/logging.h"
 #include "base/mac/mac_util.h"
 #include "base/mac/mach_logging.h"
@@ -38,12 +40,13 @@
 namespace base {
 namespace allocator {
 
+bool g_replaced_default_zone = false;
+
 MallocZoneFunctions::MallocZoneFunctions() {}
 
 namespace {
 
 bool g_oom_killer_enabled;
-bool g_replaced_default_zone = false;
 
 // Starting with Mac OS X 10.7, the zone allocators set up by the system are
 // read-only, to prevent them from being overwritten in an attack. However,
@@ -202,12 +205,6 @@ void* oom_killer_memalign_purgeable(struct _malloc_zone_t* zone,
 }
 
 #endif  // !defined(ADDRESS_SANITIZER)
-
-// === C++ operator new ===
-
-void oom_killer_new() {
-  TerminateBecauseOutOfMemory(0);
-}
 
 #if !defined(ADDRESS_SANITIZER)
 
@@ -440,13 +437,6 @@ void InterceptAllocationsMac() {
   // to batch_malloc is malloc_zone_batch_malloc, which is specific to the
   // system's malloc implementation. It's unlikely that anyone's even heard of
   // it.
-
-  // === C++ operator new ===
-
-  // Yes, operator new does call through to malloc, but this will catch failures
-  // that our imperfect handling of malloc cannot.
-
-  std::set_new_handler(oom_killer_new);
 
 #ifndef ADDRESS_SANITIZER
   // === Core Foundation CFAllocators ===

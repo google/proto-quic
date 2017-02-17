@@ -27,6 +27,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/location.h"
 #include "base/metrics/persistent_memory_allocator.h"
+#include "base/strings/string_piece.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_checker.h"
@@ -342,7 +343,7 @@ class BASE_EXPORT ActivityUserData {
   using Snapshot = std::map<std::string, TypedValue>;
 
   ActivityUserData(void* memory, size_t size);
-  ~ActivityUserData();
+  virtual ~ActivityUserData();
 
   // Gets the unique ID number for this user data. If this changes then the
   // contents have been overwritten by another thread. The return value is
@@ -404,6 +405,12 @@ class BASE_EXPORT ActivityUserData {
   // Gets the base memory address used for storing data.
   const void* GetBaseAddress();
 
+ protected:
+  virtual void Set(StringPiece name,
+                   ValueType type,
+                   const void* memory,
+                   size_t size);
+
  private:
   FRIEND_TEST_ALL_PREFIXES(ActivityTrackerTest, UserDataTest);
 
@@ -437,7 +444,6 @@ class BASE_EXPORT ActivityUserData {
     size_t extent;                    // The total storage of the value,
   };                                  // typically rounded up for alignment.
 
-  void Set(StringPiece name, ValueType type, const void* memory, size_t size);
   void SetReference(StringPiece name,
                     ValueType type,
                     const void* memory,
@@ -460,8 +466,6 @@ class BASE_EXPORT ActivityUserData {
 
   // A pointer to the unique ID for this instance.
   std::atomic<uint32_t>* const id_;
-
-  base::ThreadChecker thread_checker_;
 
   // This ID is used to create unique indentifiers for user data so that it's
   // possible to tell if the information has been overwritten.
@@ -744,7 +748,7 @@ class BASE_EXPORT GlobalActivityTracker {
   // Gets the global activity-tracker or null if none exists.
   static GlobalActivityTracker* Get() {
     return reinterpret_cast<GlobalActivityTracker*>(
-        subtle::NoBarrier_Load(&g_tracker_));
+        subtle::Acquire_Load(&g_tracker_));
   }
 
   // Gets the persistent-memory-allocator in which data is stored. Callers
@@ -784,8 +788,13 @@ class BASE_EXPORT GlobalActivityTracker {
   // even with the same information.
   void RecordModuleInfo(const ModuleInfo& info);
 
+  // Record field trial information. This call is thread-safe. In addition to
+  // this, construction of a GlobalActivityTracker will cause all existing
+  // active field trials to be fetched and recorded.
+  void RecordFieldTrial(const std::string& trial_name, StringPiece group_name);
+
   // Accesses the global data record for storing arbitrary key/value pairs.
-  ActivityUserData& user_data() { return user_data_; }
+  ActivityUserData& global_data() { return global_data_; }
 
  private:
   friend class GlobalActivityAnalyzer;
@@ -798,6 +807,25 @@ class BASE_EXPORT GlobalActivityTracker {
     kMaxThreadCount = 100,
     kCachedThreadMemories = 10,
     kCachedUserDataMemories = 10,
+  };
+
+  // A wrapper around ActivityUserData that is thread-safe and thus can be used
+  // in the global scope without the requirement of being called from only one
+  // thread.
+  class GlobalUserData : public ActivityUserData {
+   public:
+    GlobalUserData(void* memory, size_t size);
+    ~GlobalUserData() override;
+
+   private:
+    void Set(StringPiece name,
+             ValueType type,
+             const void* memory,
+             size_t size) override;
+
+    Lock data_lock_;
+
+    DISALLOW_COPY_AND_ASSIGN(GlobalUserData);
   };
 
   // State of a module as stored in persistent memory. This supports a single
@@ -904,7 +932,7 @@ class BASE_EXPORT GlobalActivityTracker {
 
   // An object for holding global arbitrary key value pairs. Values must always
   // be written from the main UI thread.
-  ActivityUserData user_data_;
+  GlobalUserData global_data_;
 
   // A map of global module information, keyed by module path.
   std::map<const std::string, ModuleInfoRecord*> modules_;

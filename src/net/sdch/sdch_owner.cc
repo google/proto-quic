@@ -680,22 +680,8 @@ void SdchOwner::OnMemoryPressure(
   ClearData();
 }
 
-void SdchOwner::OnMemoryStateChange(base::MemoryState state) {
-  // TODO(hajimehoshi): When the state changes, adjust the sizes of the caches
-  // to reduce the limits. SdchOwner doesn't have the ability to limit at
-  // present.
-  switch (state) {
-    case base::MemoryState::NORMAL:
-      break;
-    case base::MemoryState::THROTTLED:
-      ClearData();
-      break;
-    case base::MemoryState::SUSPENDED:
-    // Note: Not supported at present. Fall through.
-    case base::MemoryState::UNKNOWN:
-      NOTREACHED();
-      break;
-  }
+void SdchOwner::OnPurgeMemory() {
+  ClearData();
 }
 
 void SdchOwner::ClearData() {

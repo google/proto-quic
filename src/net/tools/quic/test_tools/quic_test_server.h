@@ -5,10 +5,6 @@
 #ifndef NET_TOOLS_QUIC_TEST_TOOLS_QUIC_TEST_SERVER_H_
 #define NET_TOOLS_QUIC_TEST_TOOLS_QUIC_TEST_SERVER_H_
 
-#include <memory>
-#include <string>
-
-#include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_session.h"
 #include "net/tools/quic/quic_dispatcher.h"
 #include "net/tools/quic/quic_server.h"
@@ -16,7 +12,6 @@
 #include "net/tools/quic/quic_simple_server_stream.h"
 
 namespace net {
-
 
 namespace test {
 
@@ -106,7 +101,6 @@ class ImmediateGoAwaySession : public QuicSimpleServerSession {
 };
 
 }  // namespace test
-
 
 }  // namespace net
 

@@ -1,19 +1,36 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_layout_cases_001.wpr": [
-            "http://oilevent.com"
-        ],
-        "tough_layout_cases_000.wpr": [
-            "http://www.muzoboss.ru", 
-            "http://natunkantha.com", 
-            "http://www.mossiella.com", 
-            "http://bookish.com", 
-            "http://mydiyclub.com", 
-            "http://amarchoti.blogspot.com", 
-            "http://picarisimo.es", 
-            "http://chinaapache.com", 
-            "http://indoritel.com"
-        ]
-    }
+        "http://amarchoti.blogspot.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://bookish.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://chinaapache.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://indoritel.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://mydiyclub.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://natunkantha.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://oilevent.com": {
+            "DEFAULT": "tough_layout_cases_001.wpr"
+        },
+        "http://picarisimo.es": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://www.mossiella.com": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        },
+        "http://www.muzoboss.ru": {
+            "DEFAULT": "tough_layout_cases_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

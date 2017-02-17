@@ -1,7 +1,7 @@
-diff --git a/third_party/zlib/contrib/minizip/ioapi.h b/third_party/zlib/contrib/minizip/ioapi.h
-index 8dcbdb0..c1b7a54 100644
---- a/third_party/zlib/contrib/minizip/ioapi.h
-+++ b/third_party/zlib/contrib/minizip/ioapi.h
+diff --git a/contrib/minizip/ioapi.h b/contrib/minizip/ioapi.h
+index 8dcbdb06e35a..c1b7a54847f5 100644
+--- a/contrib/minizip/ioapi.h
++++ b/contrib/minizip/ioapi.h
 @@ -43,7 +43,7 @@
  
  #include <stdio.h>
@@ -11,10 +11,34 @@ index 8dcbdb0..c1b7a54 100644
  
  #if defined(USE_FILE32API)
  #define fopen64 fopen
-diff --git a/third_party/zlib/contrib/minizip/mztools.c b/third_party/zlib/contrib/minizip/mztools.c
-index 96891c2..8bf9cca 100644
---- a/third_party/zlib/contrib/minizip/mztools.c
-+++ b/third_party/zlib/contrib/minizip/mztools.c
+diff --git a/contrib/minizip/iowin32.c b/contrib/minizip/iowin32.c
+index 274f39eb1dd2..246ceb91a139 100644
+--- a/contrib/minizip/iowin32.c
++++ b/contrib/minizip/iowin32.c
+@@ -26,12 +26,19 @@
+ #endif
+ 
+ 
++#ifdef _WIN32_WINNT
++#undef _WIN32_WINNT
++#define _WIN32_WINNT 0x601
++#endif
++
++#if _WIN32_WINNT >= _WIN32_WINNT_WIN8
+ // see Include/shared/winapifamily.h in the Windows Kit
+ #if defined(WINAPI_FAMILY_PARTITION) && (!(defined(IOWIN32_USING_WINRT_API)))
+ #if WINAPI_FAMILY_ONE_PARTITION(WINAPI_FAMILY, WINAPI_PARTITION_APP)
+ #define IOWIN32_USING_WINRT_API 1
+ #endif
+ #endif
++#endif
+ 
+ voidpf  ZCALLBACK win32_open_file_func  OF((voidpf opaque, const char* filename, int mode));
+ uLong   ZCALLBACK win32_read_file_func  OF((voidpf opaque, voidpf stream, void* buf, uLong size));
+diff --git a/contrib/minizip/mztools.c b/contrib/minizip/mztools.c
+index 96891c2e0b71..8bf9cca32633 100644
+--- a/contrib/minizip/mztools.c
++++ b/contrib/minizip/mztools.c
 @@ -8,7 +8,7 @@
  #include <stdio.h>
  #include <stdlib.h>
@@ -24,10 +48,10 @@ index 96891c2..8bf9cca 100644
  #include "unzip.h"
  
  #define READ_8(adr)  ((unsigned char)*(adr))
-diff --git a/third_party/zlib/contrib/minizip/mztools.h b/third_party/zlib/contrib/minizip/mztools.h
-index a49a426..f295ffe 100644
---- a/third_party/zlib/contrib/minizip/mztools.h
-+++ b/third_party/zlib/contrib/minizip/mztools.h
+diff --git a/contrib/minizip/mztools.h b/contrib/minizip/mztools.h
+index a49a426ec2fc..f295ffeda6af 100644
+--- a/contrib/minizip/mztools.h
++++ b/contrib/minizip/mztools.h
 @@ -12,7 +12,7 @@ extern "C" {
  #endif
  
@@ -37,10 +61,10 @@ index a49a426..f295ffe 100644
  #endif
  
  #include "unzip.h"
-diff --git a/third_party/zlib/contrib/minizip/unzip.c b/third_party/zlib/contrib/minizip/unzip.c
-index 9093504..2d5f0b1 100644
---- a/third_party/zlib/contrib/minizip/unzip.c
-+++ b/third_party/zlib/contrib/minizip/unzip.c
+diff --git a/contrib/minizip/unzip.c b/contrib/minizip/unzip.c
+index bcfb9416ec35..199b4723fcfc 100644
+--- a/contrib/minizip/unzip.c
++++ b/contrib/minizip/unzip.c
 @@ -72,7 +72,7 @@
          #define NOUNCRYPT
  #endif
@@ -62,10 +86,10 @@ index 9093504..2d5f0b1 100644
      if ((len>pfile_in_zip_read_info->rest_read_compressed+
             pfile_in_zip_read_info->stream.avail_in) &&
           (pfile_in_zip_read_info->raw))
-diff --git a/third_party/zlib/contrib/minizip/unzip.h b/third_party/zlib/contrib/minizip/unzip.h
-index 2104e39..3c01435 100644
---- a/third_party/zlib/contrib/minizip/unzip.h
-+++ b/third_party/zlib/contrib/minizip/unzip.h
+diff --git a/contrib/minizip/unzip.h b/contrib/minizip/unzip.h
+index 2104e3915074..3c0143529b91 100644
+--- a/contrib/minizip/unzip.h
++++ b/contrib/minizip/unzip.h
 @@ -48,7 +48,7 @@ extern "C" {
  #endif
  
@@ -75,10 +99,10 @@ index 2104e39..3c01435 100644
  #endif
  
  #ifndef  _ZLIBIOAPI_H
-diff --git a/third_party/zlib/contrib/minizip/zip.c b/third_party/zlib/contrib/minizip/zip.c
-index ea54853..aaf6961 100644
---- a/third_party/zlib/contrib/minizip/zip.c
-+++ b/third_party/zlib/contrib/minizip/zip.c
+diff --git a/contrib/minizip/zip.c b/contrib/minizip/zip.c
+index 44e88a9cb989..65c0c7251843 100644
+--- a/contrib/minizip/zip.c
++++ b/contrib/minizip/zip.c
 @@ -26,7 +26,7 @@
  #include <stdlib.h>
  #include <string.h>
@@ -88,10 +112,10 @@ index ea54853..aaf6961 100644
  #include "zip.h"
  
  #ifdef STDC
-diff --git a/third_party/zlib/contrib/minizip/zip.h b/third_party/zlib/contrib/minizip/zip.h
-index 8aaebb6..8c06c0a 100644
---- a/third_party/zlib/contrib/minizip/zip.h
-+++ b/third_party/zlib/contrib/minizip/zip.h
+diff --git a/contrib/minizip/zip.h b/contrib/minizip/zip.h
+index 8aaebb623430..8c06c0aa7bb0 100644
+--- a/contrib/minizip/zip.h
++++ b/contrib/minizip/zip.h
 @@ -47,7 +47,7 @@ extern "C" {
  //#define HAVE_BZIP2
  
@@ -101,221 +125,198 @@ index 8aaebb6..8c06c0a 100644
  #endif
  
  #ifndef _ZLIBIOAPI_H
-diff --git a/third_party/zlib/gzread.c b/third_party/zlib/gzread.c
-index bf4538e..4e11246 100644
---- a/third_party/zlib/gzread.c
-+++ b/third_party/zlib/gzread.c
-@@ -383,7 +383,11 @@ int ZEXPORT gzread(file, buf, len)
+diff --git a/gzread.c b/gzread.c
+index 956b91ea7d9e..832d3ef98c59 100644
+--- a/gzread.c
++++ b/gzread.c
+@@ -443,7 +443,11 @@ z_size_t ZEXPORT gzfread(buf, size, nitems, file)
  #  undef z_gzgetc
  #else
  #  undef gzgetc
-+#  ifdef MOZZCONF_H
-+#    define gzgetc MOZ_Z_gzgetc
++#  ifdef Z_CR_PREFIX_SET
++#    define gzgetc Cr_z_gzgetc
 +#  endif
  #endif
 +
  int ZEXPORT gzgetc(file)
      gzFile file;
  {
-diff --git a/third_party/zlib/mozzconf.h b/third_party/zlib/mozzconf.h
+diff --git a/names.h b/names.h
 new file mode 100644
-index 0000000..80994c9
+index 000000000000..f18df5684dc5
 --- /dev/null
-+++ b/third_party/zlib/mozzconf.h
-@@ -0,0 +1,178 @@
-+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-+/* ***** BEGIN LICENSE BLOCK *****
-+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
++++ b/names.h
+@@ -0,0 +1,155 @@
++/* Copyright 2017 The Chromium Authors. All rights reserved.
++ * Use of this source code is governed by a BSD-style license that can be
++ * found in the LICENSE file. */
++
++#ifndef THIRD_PARTY_ZLIB_NAMES_H_
++#define THIRD_PARTY_ZLIB_NAMES_H_
++
++/* Rename all zlib names with a Cr_z_ prefix. This is based on the Z_PREFIX
++ * option from zconf.h, but with a custom prefix. Where zconf.h would rename
++ * both a macro and its underscore-suffixed internal implementation (such as
++ * deflateInit2 and deflateInit2_), only the implementation is renamed here.
++ * The Byte type is also omitted.
 + *
-+ * The contents of this file are subject to the Mozilla Public License Version
-+ * 1.1 (the "License"); you may not use this file except in compliance with
-+ * the License. You may obtain a copy of the License at
-+ * http://www.mozilla.org/MPL/
++ * To generate this list, run
++ * sed -rn -e 's/^# *define +([^ ]+) +(z_[^ ]+)$/#define \1 Cr_\2/p' zconf.h
++ * (use -E instead of -r on macOS).
 + *
-+ * Software distributed under the License is distributed on an "AS IS" basis,
-+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-+ * for the specific language governing rights and limitations under the
-+ * License.
-+ *
-+ * The Original Code is the mozilla zlib configuration.
-+ *
-+ * The Initial Developer of the Original Code is IBM Corporation.
-+ * Portions created by the Initial Developer are Copyright (C) 2004
-+ * the Initial Developer. All Rights Reserved.
-+ *
-+ * Contributor(s):
-+ *
-+ * Alternatively, the contents of this file may be used under the terms of
-+ * either of the GNU General Public License Version 2 or later (the "GPL"),
-+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-+ * in which case the provisions of the GPL or the LGPL are applicable instead
-+ * of those above. If you wish to allow use of your version of this file only
-+ * under the terms of either the GPL or the LGPL, and not to allow others to
-+ * use your version of this file under the terms of the MPL, indicate your
-+ * decision by deleting the provisions above and replace them with the notice
-+ * and other provisions required by the GPL or the LGPL. If you do not delete
-+ * the provisions above, a recipient may use your version of this file under
-+ * the terms of any one of the MPL, the GPL or the LGPL.
-+ *
-+ * ***** END LICENSE BLOCK ***** */
++ * gzread is also addressed by modifications in gzread.c and zlib.h. */
 +
-+#ifndef MOZZCONF_H
-+#define MOZZCONF_H
++#define Z_CR_PREFIX_SET
 +
-+#if defined(XP_WIN) && defined(ZLIB_DLL) && !defined(MOZ_ENABLE_LIBXUL)
-+#undef ZLIB_DLL
-+#endif
++#define _dist_code Cr_z__dist_code
++#define _length_code Cr_z__length_code
++#define _tr_align Cr_z__tr_align
++#define _tr_flush_bits Cr_z__tr_flush_bits
++#define _tr_flush_block Cr_z__tr_flush_block
++#define _tr_init Cr_z__tr_init
++#define _tr_stored_block Cr_z__tr_stored_block
++#define _tr_tally Cr_z__tr_tally
++#define adler32 Cr_z_adler32
++#define adler32_combine Cr_z_adler32_combine
++#define adler32_combine64 Cr_z_adler32_combine64
++#define adler32_z Cr_z_adler32_z
++#define compress Cr_z_compress
++#define compress2 Cr_z_compress2
++#define compressBound Cr_z_compressBound
++#define crc32 Cr_z_crc32
++#define crc32_combine Cr_z_crc32_combine
++#define crc32_combine64 Cr_z_crc32_combine64
++#define crc32_z Cr_z_crc32_z
++#define deflate Cr_z_deflate
++#define deflateBound Cr_z_deflateBound
++#define deflateCopy Cr_z_deflateCopy
++#define deflateEnd Cr_z_deflateEnd
++#define deflateGetDictionary Cr_z_deflateGetDictionary
++/* #undef deflateInit */
++/* #undef deflateInit2 */
++#define deflateInit2_ Cr_z_deflateInit2_
++#define deflateInit_ Cr_z_deflateInit_
++#define deflateParams Cr_z_deflateParams
++#define deflatePending Cr_z_deflatePending
++#define deflatePrime Cr_z_deflatePrime
++#define deflateReset Cr_z_deflateReset
++#define deflateResetKeep Cr_z_deflateResetKeep
++#define deflateSetDictionary Cr_z_deflateSetDictionary
++#define deflateSetHeader Cr_z_deflateSetHeader
++#define deflateTune Cr_z_deflateTune
++#define deflate_copyright Cr_z_deflate_copyright
++#define get_crc_table Cr_z_get_crc_table
++#define gz_error Cr_z_gz_error
++#define gz_intmax Cr_z_gz_intmax
++#define gz_strwinerror Cr_z_gz_strwinerror
++#define gzbuffer Cr_z_gzbuffer
++#define gzclearerr Cr_z_gzclearerr
++#define gzclose Cr_z_gzclose
++#define gzclose_r Cr_z_gzclose_r
++#define gzclose_w Cr_z_gzclose_w
++#define gzdirect Cr_z_gzdirect
++#define gzdopen Cr_z_gzdopen
++#define gzeof Cr_z_gzeof
++#define gzerror Cr_z_gzerror
++#define gzflush Cr_z_gzflush
++#define gzfread Cr_z_gzfread
++#define gzfwrite Cr_z_gzfwrite
++#define gzgetc Cr_z_gzgetc
++#define gzgetc_ Cr_z_gzgetc_
++#define gzgets Cr_z_gzgets
++#define gzoffset Cr_z_gzoffset
++#define gzoffset64 Cr_z_gzoffset64
++#define gzopen Cr_z_gzopen
++#define gzopen64 Cr_z_gzopen64
++#define gzopen_w Cr_z_gzopen_w
++#define gzprintf Cr_z_gzprintf
++#define gzputc Cr_z_gzputc
++#define gzputs Cr_z_gzputs
++#define gzread Cr_z_gzread
++#define gzrewind Cr_z_gzrewind
++#define gzseek Cr_z_gzseek
++#define gzseek64 Cr_z_gzseek64
++#define gzsetparams Cr_z_gzsetparams
++#define gztell Cr_z_gztell
++#define gztell64 Cr_z_gztell64
++#define gzungetc Cr_z_gzungetc
++#define gzvprintf Cr_z_gzvprintf
++#define gzwrite Cr_z_gzwrite
++#define inflate Cr_z_inflate
++#define inflateBack Cr_z_inflateBack
++#define inflateBackEnd Cr_z_inflateBackEnd
++/* #undef inflateBackInit */
++#define inflateBackInit_ Cr_z_inflateBackInit_
++#define inflateCodesUsed Cr_z_inflateCodesUsed
++#define inflateCopy Cr_z_inflateCopy
++#define inflateEnd Cr_z_inflateEnd
++#define inflateGetDictionary Cr_z_inflateGetDictionary
++#define inflateGetHeader Cr_z_inflateGetHeader
++/* #undef inflateInit */
++/* #undef inflateInit2 */
++#define inflateInit2_ Cr_z_inflateInit2_
++#define inflateInit_ Cr_z_inflateInit_
++#define inflateMark Cr_z_inflateMark
++#define inflatePrime Cr_z_inflatePrime
++#define inflateReset Cr_z_inflateReset
++#define inflateReset2 Cr_z_inflateReset2
++#define inflateResetKeep Cr_z_inflateResetKeep
++#define inflateSetDictionary Cr_z_inflateSetDictionary
++#define inflateSync Cr_z_inflateSync
++#define inflateSyncPoint Cr_z_inflateSyncPoint
++#define inflateUndermine Cr_z_inflateUndermine
++#define inflateValidate Cr_z_inflateValidate
++#define inflate_copyright Cr_z_inflate_copyright
++#define inflate_fast Cr_z_inflate_fast
++#define inflate_table Cr_z_inflate_table
++#define uncompress Cr_z_uncompress
++#define uncompress2 Cr_z_uncompress2
++#define zError Cr_z_zError
++#define zcalloc Cr_z_zcalloc
++#define zcfree Cr_z_zcfree
++#define zlibCompileFlags Cr_z_zlibCompileFlags
++#define zlibVersion Cr_z_zlibVersion
++/* #undef Byte */
++#define Bytef Cr_z_Bytef
++#define alloc_func Cr_z_alloc_func
++#define charf Cr_z_charf
++#define free_func Cr_z_free_func
++#define gzFile Cr_z_gzFile
++#define gz_header Cr_z_gz_header
++#define gz_headerp Cr_z_gz_headerp
++#define in_func Cr_z_in_func
++#define intf Cr_z_intf
++#define out_func Cr_z_out_func
++#define uInt Cr_z_uInt
++#define uIntf Cr_z_uIntf
++#define uLong Cr_z_uLong
++#define uLongf Cr_z_uLongf
++#define voidp Cr_z_voidp
++#define voidpc Cr_z_voidpc
++#define voidpf Cr_z_voidpf
++#define gz_header_s Cr_z_gz_header_s
++#define internal_state Cr_z_internal_state
++/* #undef z_off64_t */
 +
-+#ifdef HAVE_VISIBILITY_ATTRIBUTE
-+#define ZEXTERN __attribute__((visibility ("default"))) extern
-+#endif
++/* An exported symbol that isn't handled by Z_PREFIX in zconf.h */
++#define z_errmsg Cr_z_z_errmsg
 +
-+/* Exported Symbols */
-+#define zlibVersion MOZ_Z_zlibVersion
-+#define deflate MOZ_Z_deflate
-+#define deflateEnd MOZ_Z_deflateEnd
-+#define inflate MOZ_Z_inflate
-+#define inflateEnd MOZ_Z_inflateEnd
-+#define deflateSetDictionary MOZ_Z_deflateSetDictionary
-+#define deflateCopy MOZ_Z_deflateCopy
-+#define deflateReset MOZ_Z_deflateReset
-+#define deflateParams MOZ_Z_deflateParams
-+#define deflateBound MOZ_Z_deflateBound
-+#define deflatePrime MOZ_Z_deflatePrime
-+#define inflateSetDictionary MOZ_Z_inflateSetDictionary
-+#define inflateSync MOZ_Z_inflateSync
-+#define inflateCopy MOZ_Z_inflateCopy
-+#define inflateReset MOZ_Z_inflateReset
-+#define inflateBack MOZ_Z_inflateBack
-+#define inflateBackEnd MOZ_Z_inflateBackEnd
-+#define zlibCompileFlags MOZ_Z_zlibCompileFlags
-+#define compress MOZ_Z_compress
-+#define compress2 MOZ_Z_compress2
-+#define compressBound MOZ_Z_compressBound
-+#define uncompress MOZ_Z_uncompress
-+#define gzopen MOZ_Z_gzopen
-+#define gzdopen MOZ_Z_gzdopen
-+#define gzsetparams MOZ_Z_gzsetparams
-+#define gzread MOZ_Z_gzread
-+#define gzwrite MOZ_Z_gzwrite
-+#define gzprintf MOZ_Z_gzprintf
-+#define gzvprintf MOZ_Z_gzvprintf
-+#define gzputs MOZ_Z_gzputs
-+#define gzgets MOZ_Z_gzgets
-+#define gzputc MOZ_Z_gzputc
-+#define gzgetc MOZ_Z_gzgetc
-+#define gzgetc_ MOZ_Z_gzgetc_
-+#define gzungetc MOZ_Z_gzungetc
-+#define gzflush MOZ_Z_gzflush
-+#define gzseek MOZ_Z_gzseek
-+#define gzrewind MOZ_Z_gzrewind
-+#define gztell MOZ_Z_gztell
-+#define gzeof MOZ_Z_gzeof
-+#define gzclose MOZ_Z_gzclose
-+#define gzerror MOZ_Z_gzerror
-+#define gzclearerr MOZ_Z_gzclearerr
-+#define adler32 MOZ_Z_adler32
-+#define crc32 MOZ_Z_crc32
-+#define deflateInit_ MOZ_Z_deflateInit_
-+#define deflateInit2_ MOZ_Z_deflateInit2_
-+#define inflateInit_ MOZ_Z_inflateInit_
-+#define inflateInit2_ MOZ_Z_inflateInit2_
-+#define inflateBackInit_ MOZ_Z_inflateBackInit_
-+#define inflateSyncPoint MOZ_Z_inflateSyncPoint
-+#define get_crc_table MOZ_Z_get_crc_table
-+#define zError MOZ_Z_zError
-+
-+/* Extra global symbols */
-+#define _dist_code MOZ_Z__dist_code
-+#define _length_code MOZ_Z__length_code
-+#define _tr_align MOZ_Z__tr_align
-+#define _tr_flush_block MOZ_Z__tr_flush_block
-+#define _tr_init MOZ_Z__tr_init
-+#define _tr_stored_block MOZ_Z__tr_stored_block
-+#define _tr_tally MOZ_Z__tr_tally
-+#define deflate_copyright MOZ_Z_deflate_copyright
-+#define inflate_copyright MOZ_Z_inflate_copyright
-+#define inflate_fast MOZ_Z_inflate_fast
-+#define inflate_table MOZ_Z_inflate_table
-+#define z_errmsg MOZ_Z_z_errmsg
-+#define zcalloc MOZ_Z_zcalloc
-+#define zcfree MOZ_Z_zcfree
-+#define alloc_func MOZ_Z_alloc_func
-+#define free_func MOZ_Z_free_func
-+#define in_func MOZ_Z_in_func
-+#define out_func MOZ_Z_out_func
-+
-+/* New as of libpng-1.2.3 */
-+#define adler32_combine MOZ_Z_adler32_combine
-+#define crc32_combine MOZ_Z_crc32_combine
-+#define deflateSetHeader MOZ_Z_deflateSetHeader
-+#define deflateTune MOZ_Z_deflateTune
-+#define gzdirect MOZ_Z_gzdirect
-+#define inflatePrime MOZ_Z_inflatePrime
-+#define inflateGetHeader MOZ_Z_inflateGetHeader
-+
-+/* New as of zlib 1.2.5 */
-+#define gzoffset MOZ_Z_gzoffset
-+#define gzopen64 MOZ_Z_gzopen64
-+#define gzseek64 MOZ_Z_gzseek64
-+#define gztell64 MOZ_Z_gztell64
-+#define gzoffset64 MOZ_Z_gzoffset64
-+#define adler32_combine64 MOZ_Z_adler32_combine64
-+#define crc32_combine64 MOZ_Z_crc32_combine64
-+#define gz_error MOZ_Z_gz_error
-+#define gz_intmax MOZ_Z_gz_intmax
-+#define gz_strwinerror MOZ_Z_gz_strwinerror
-+#define gzbuffer MOZ_Z_gzbuffer
-+#define gzclose_r MOZ_Z_gzclose_r
-+#define gzclose_w MOZ_Z_gzclose_w
-+#define inflateMark MOZ_Z_inflateMark
-+#define inflateReset2 MOZ_Z_inflateReset2
-+#define inflateUndermine MOZ_Z_inflateUndermine
-+#define charf MOZ_Z_charf
-+#define gzFile MOZ_Z_gzFile
-+#define gz_header MOZ_Z_gz_header
-+#define gz_headerp MOZ_Z_gz_headerp
-+#define intf MOZ_Z_intf
-+#define uInt MOZ_Z_uInt
-+#define uIntf MOZ_Z_uIntf
-+#define uLong MOZ_Z_uLong
-+#define uLongf MOZ_Z_uLongf
-+#define voidp MOZ_Z_voidp
-+#define voidpc MOZ_Z_voidpc
-+#define voidpf MOZ_Z_voidpf
-+#define gz_header_s MOZ_Z_gz_header_s
-+#define internal_state MOZ_Z_internal_state
-+
-+/* New as of zlib 1.2.8 */
-+#define _tr_flush_bits MOZ_Z__tr_flush_bits
-+#define deflateResetKeep MOZ_Z_deflateResetKeep
-+#define deflatePending MOZ_Z_deflatePending
-+#define inflateGetDictionary MOZ_Z_inflateGetDictionary
-+#define inflateResetKeep MOZ_Z_inflateResetKeep
-+#define gzopen_w MOZ_Z_gzopen_w
-+
-+/* Mangle Byte types except on Mac. */
-+#if !defined(__MACTYPES__)
-+#define Byte MOZ_Z_Byte
-+#define Bytef MOZ_Z_Bytef
-+#endif
-+
-+#endif
-diff --git a/third_party/zlib/zconf.h b/third_party/zlib/zconf.h
-index 9987a77..1b1d88b 100644
---- a/third_party/zlib/zconf.h
-+++ b/third_party/zlib/zconf.h
++#endif  /* THIRD_PARTY_ZLIB_NAMES_H_ */
+diff --git a/zconf.h b/zconf.h
+index 5e1d68a004e9..a7a815f575a7 100644
+--- a/zconf.h
++++ b/zconf.h
 @@ -8,6 +8,9 @@
  #ifndef ZCONF_H
  #define ZCONF_H
  
 +/* This include does prefixing as below, but with an updated set of names */
-+#include "mozzconf.h"
++#include "names.h"
 +
  /*
   * If you *really* need a unique prefix for all types and library functions,
   * compile with -DZ_PREFIX. The "standard" zlib should be compiled without it.
-@@ -408,7 +411,7 @@ typedef uLong FAR uLongf;
+@@ -431,7 +434,7 @@ typedef uLong FAR uLongf;
     typedef unsigned long z_crc_t;
  #endif
  
@@ -324,27 +325,23 @@ index 9987a77..1b1d88b 100644
  #  define Z_HAVE_UNISTD_H
  #endif
  
-diff --git a/third_party/zlib/zlib.h b/third_party/zlib/zlib.h
-index 3e0c767..36c73af 100644
---- a/third_party/zlib/zlib.h
-+++ b/third_party/zlib/zlib.h
-@@ -1678,8 +1678,14 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
+diff --git a/zlib.h b/zlib.h
+index f09cdaf1e054..99fd467f6b1a 100644
+--- a/zlib.h
++++ b/zlib.h
+@@ -1824,6 +1824,11 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
+ #  undef z_gzgetc
  #  define z_gzgetc(g) \
-           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
- #else
--#  define gzgetc(g) \
-+#  ifdef MOZZCONF_H
+           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : (gzgetc)(g))
++#elif defined(Z_CR_PREFIX_SET)
 +#    undef gzgetc
 +#    define gzgetc(g) \
-+          ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : MOZ_Z_gzgetc(g))
-+#  else
-+#    define gzgetc(g) \
-           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : gzgetc(g))
-+#  endif
- #endif
- 
- /* provide 64-bit offset functions if _LARGEFILE64_SOURCE defined, and/or
-@@ -1706,11 +1712,29 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
++          ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) \
++                     : (Cr_z_gzgetc)(g))
+ #else
+ #  define gzgetc(g) \
+           ((g)->have ? ((g)->have--, (g)->pos++, *((g)->next)++) : (gzgetc)(g))
+@@ -1853,11 +1858,29 @@ ZEXTERN int ZEXPORT gzgetc_ OF((gzFile file));  /* backward compatibility */
  #    define z_adler32_combine z_adler32_combine64
  #    define z_crc32_combine z_crc32_combine64
  #  else
@@ -374,10 +371,10 @@ index 3e0c767..36c73af 100644
  #    define crc32_combine crc32_combine64
  #  endif
  #  ifndef Z_LARGE64
-diff --git a/third_party/zlib/zutil.h b/third_party/zlib/zutil.h
-index 24ab06b..fe9e53c 100644
---- a/third_party/zlib/zutil.h
-+++ b/third_party/zlib/zutil.h
+diff --git a/zutil.h b/zutil.h
+index b079ea6a80f5..80375b8b6109 100644
+--- a/zutil.h
++++ b/zutil.h
 @@ -28,6 +28,21 @@
  #  include <string.h>
  #  include <stdlib.h>
@@ -400,19 +397,3 @@ index 24ab06b..fe9e53c 100644
  
  #ifdef Z_SOLO
     typedef long ptrdiff_t;  /* guess -- will be caught if guess is wrong */
-@@ -135,6 +150,12 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
- #  define OS_CODE  0x0a
- #endif
- 
-+#ifdef _MSC_VER
-+#define zalign(x) __declspec(align(x))
-+#else
-+#define zalign(x) __attribute__((aligned((x))))
-+#endif
-+
- #ifdef WIN32
- #  ifndef __CYGWIN__  /* Cygwin is Unix, not Win32 */
- #    define OS_CODE  0x0b
--- 
-2.7.4
-

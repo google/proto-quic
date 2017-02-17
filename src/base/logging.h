@@ -289,6 +289,41 @@ typedef bool (*LogMessageHandlerFunction)(int severity,
 BASE_EXPORT void SetLogMessageHandler(LogMessageHandlerFunction handler);
 BASE_EXPORT LogMessageHandlerFunction GetLogMessageHandler();
 
+// ANALYZER_ASSUME_TRUE(...) generates compiler-specific annotations which
+// prevent the static analyzer from analyzing the code using hypothetical
+// values that are asserted to be impossible.
+// The value of the condition passed to ANALYZER_ASSUME_TRUE() is returned
+// directly.
+#if defined(__clang_analyzer__)
+
+inline void AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {}
+
+template <typename TVal>
+inline constexpr TVal AnalysisAssumeTrue(TVal arg) {
+  if (!arg) {
+    AnalyzerNoReturn();
+  }
+  return arg;
+}
+
+#define ANALYZER_ASSUME_TRUE(val) ::logging::AnalysisAssumeTrue(val)
+
+#elif defined(_PREFAST_) && defined(OS_WIN)
+
+template <typename TVal>
+inline constexpr TVal AnalysisAssumeTrue(TVal arg) {
+  __analysis_assume(!!arg);
+  return arg;
+}
+
+#define ANALYZER_ASSUME_TRUE(val) ::logging::AnalysisAssumeTrue(val)
+
+#else  // !_PREFAST_ & !__clang_analyzer__
+
+#define ANALYZER_ASSUME_TRUE(val) (val)
+
+#endif  // !_PREFAST_ & !__clang_analyzer__
+
 typedef int LogSeverity;
 const LogSeverity LOG_VERBOSE = -1;  // This is level 1 verbosity
 // Note: the log severities are used to index into the array of names,
@@ -408,8 +443,9 @@ const LogSeverity LOG_0 = LOG_ERROR;
 
 // TODO(akalin): Add more VLOG variants, e.g. VPLOG.
 
-#define LOG_ASSERT(condition)  \
-  LOG_IF(FATAL, !(condition)) << "Assert failed: " #condition ". "
+#define LOG_ASSERT(condition)                     \
+  LOG_IF(FATAL, !ANALYZER_ASSUME_TRUE(condition)) \
+      << "Assert failed: " #condition ". "
 
 #if defined(OS_WIN)
 #define PLOG_STREAM(severity) \
@@ -461,10 +497,12 @@ class CheckOpResult {
 };
 
 // Crashes in the fastest, simplest possible way with no attempt at logging.
-#if defined(COMPILER_GCC) || defined(__clang__)
+#if defined(COMPILER_GCC)
 #define IMMEDIATE_CRASH() __builtin_trap()
+#elif defined(COMPILER_MSVC)
+#define IMMEDIATE_CRASH() __debugbreak()
 #else
-#define IMMEDIATE_CRASH() ((void)(*(volatile char*)0 = 0))
+#error Port
 #endif
 
 // CHECK dies with a fatal error if condition is not true.  It is *not*
@@ -491,36 +529,14 @@ class CheckOpResult {
 
 #else  // !(OFFICIAL_BUILD && NDEBUG)
 
-#if defined(_PREFAST_) && defined(OS_WIN)
-// Use __analysis_assume to tell the VC++ static analysis engine that
-// assert conditions are true, to suppress warnings.  The LAZY_STREAM
-// parameter doesn't reference 'condition' in /analyze builds because
-// this evaluation confuses /analyze. The !! before condition is because
-// __analysis_assume gets confused on some conditions:
-// http://randomascii.wordpress.com/2011/09/13/analyze-for-visual-studio-the-ugly-part-5/
-
-#define CHECK(condition)                \
-  __analysis_assume(!!(condition)),     \
-  LAZY_STREAM(LOG_STREAM(FATAL), false) \
-  << "Check failed: " #condition ". "
-
-#define PCHECK(condition)                \
-  __analysis_assume(!!(condition)),      \
-  LAZY_STREAM(PLOG_STREAM(FATAL), false) \
-  << "Check failed: " #condition ". "
-
-#else  // _PREFAST_
-
 // Do as much work as possible out of line to reduce inline code size.
 #define CHECK(condition)                                                      \
   LAZY_STREAM(::logging::LogMessage(__FILE__, __LINE__, #condition).stream(), \
-              !(condition))
+              !ANALYZER_ASSUME_TRUE(condition))
 
-#define PCHECK(condition)                       \
-  LAZY_STREAM(PLOG_STREAM(FATAL), !(condition)) \
-  << "Check failed: " #condition ". "
-
-#endif  // _PREFAST_
+#define PCHECK(condition)                                           \
+  LAZY_STREAM(PLOG_STREAM(FATAL), !ANALYZER_ASSUME_TRUE(condition)) \
+      << "Check failed: " #condition ". "
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use CHECK_EQ et al below.
@@ -614,16 +630,20 @@ std::string* MakeCheckOpString<std::string, std::string>(
 // The (int, int) specialization works around the issue that the compiler
 // will not instantiate the template version of the function on values of
 // unnamed enum type - see comment below.
-#define DEFINE_CHECK_OP_IMPL(name, op) \
-  template <class t1, class t2> \
-  inline std::string* Check##name##Impl(const t1& v1, const t2& v2, \
-                                        const char* names) { \
-    if (v1 op v2) return NULL; \
-    else return ::logging::MakeCheckOpString(v1, v2, names);    \
-  } \
+#define DEFINE_CHECK_OP_IMPL(name, op)                                       \
+  template <class t1, class t2>                                              \
+  inline std::string* Check##name##Impl(const t1& v1, const t2& v2,          \
+                                        const char* names) {                 \
+    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
+      return NULL;                                                           \
+    else                                                                     \
+      return ::logging::MakeCheckOpString(v1, v2, names);                    \
+  }                                                                          \
   inline std::string* Check##name##Impl(int v1, int v2, const char* names) { \
-    if (v1 op v2) return NULL; \
-    else return ::logging::MakeCheckOpString(v1, v2, names);    \
+    if (ANALYZER_ASSUME_TRUE(v1 op v2))                                      \
+      return NULL;                                                           \
+    else                                                                     \
+      return ::logging::MakeCheckOpString(v1, v2, names);                    \
   }
 DEFINE_CHECK_OP_IMPL(EQ, ==)
 DEFINE_CHECK_OP_IMPL(NE, !=)
@@ -717,58 +737,24 @@ const LogSeverity LOG_DCHECK = LOG_INFO;
 // DCHECK_IS_ON() is true. When DCHECK_IS_ON() is false, the macros use
 // EAT_STREAM_PARAMETERS to avoid expressions that would create temporaries.
 
-#if defined(_PREFAST_) && defined(OS_WIN)
-// See comments on the previous use of __analysis_assume.
-
-#define DCHECK(condition)                                               \
-  __analysis_assume(!!(condition)),                                     \
-  LAZY_STREAM(LOG_STREAM(DCHECK), false)                                \
-  << "Check failed: " #condition ". "
-
-#define DPCHECK(condition)                                              \
-  __analysis_assume(!!(condition)),                                     \
-  LAZY_STREAM(PLOG_STREAM(DCHECK), false)                               \
-  << "Check failed: " #condition ". "
-
-#elif defined(__clang_analyzer__)
-
-// Keeps the static analyzer from proceeding along the current codepath,
-// otherwise false positive errors may be generated  by null pointer checks.
-inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
-  return false;
-}
-
-#define DCHECK(condition)                                                     \
-  LAZY_STREAM(                                                                \
-      LOG_STREAM(DCHECK),                                                     \
-      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
-      << "Check failed: " #condition ". "
-
-#define DPCHECK(condition)                                                    \
-  LAZY_STREAM(                                                                \
-      PLOG_STREAM(DCHECK),                                                    \
-      DCHECK_IS_ON() ? (logging::AnalyzerNoReturn() || !(condition)) : false) \
-      << "Check failed: " #condition ". "
-
-#else
-
 #if DCHECK_IS_ON()
 
-#define DCHECK(condition)                       \
-  LAZY_STREAM(LOG_STREAM(DCHECK), !(condition)) \
+#define DCHECK(condition)                                           \
+  LAZY_STREAM(LOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
       << "Check failed: " #condition ". "
-#define DPCHECK(condition)                       \
-  LAZY_STREAM(PLOG_STREAM(DCHECK), !(condition)) \
+#define DPCHECK(condition)                                           \
+  LAZY_STREAM(PLOG_STREAM(DCHECK), !ANALYZER_ASSUME_TRUE(condition)) \
       << "Check failed: " #condition ". "
 
 #else  // DCHECK_IS_ON()
 
-#define DCHECK(condition) EAT_STREAM_PARAMETERS << !(condition)
-#define DPCHECK(condition) EAT_STREAM_PARAMETERS << !(condition)
+#define DCHECK(condition) \
+  EAT_STREAM_PARAMETERS << !ANALYZER_ASSUME_TRUE(condition)
+#define DPCHECK(condition) \
+  EAT_STREAM_PARAMETERS << !ANALYZER_ASSUME_TRUE(condition)
 
 #endif  // DCHECK_IS_ON()
 
-#endif
 
 // Helper macro for binary operators.
 // Don't use this macro directly in your code, use DCHECK_EQ et al below.
@@ -804,7 +790,7 @@ inline constexpr bool AnalyzerNoReturn() __attribute__((analyzer_noreturn)) {
                                 ::logging::g_swallow_stream, val1), \
                             ::logging::MakeCheckOpValueString(      \
                                 ::logging::g_swallow_stream, val2), \
-                            (val1)op(val2))
+                            ANALYZER_ASSUME_TRUE((val1)op(val2)))
 
 #endif  // DCHECK_IS_ON()
 
@@ -993,7 +979,7 @@ BASE_EXPORT void RawLog(int level, const char* message);
 
 #define RAW_CHECK(condition)                               \
   do {                                                     \
-    if (!(condition))                                      \
+    if (!ANALYZER_ASSUME_TRUE(condition))                  \
       ::logging::RawLog(::logging::LOG_FATAL,              \
                         "Check failed: " #condition "\n"); \
   } while (0)

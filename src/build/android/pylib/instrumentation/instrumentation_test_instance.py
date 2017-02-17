@@ -4,6 +4,7 @@
 
 import collections
 import copy
+import json
 import logging
 import os
 import pickle
@@ -500,6 +501,9 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._should_save_logcat = None
     self._initializeLogAttributes(args)
 
+    self._edit_shared_prefs = []
+    self._initializeEditPrefsAttributes(args)
+
   def _initializeApkAttributes(self, args, error_func):
     if args.apk_under_test:
       apk_under_test_path = args.apk_under_test
@@ -675,6 +679,28 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   def _initializeLogAttributes(self, args):
     self._should_save_logcat = bool(args.json_results_file)
 
+  def _initializeEditPrefsAttributes(self, args):
+    if not hasattr(args, 'shared_prefs_file'):
+      return
+    if not isinstance(args.shared_prefs_file, str):
+      logging.warning("Given non-string for a filepath")
+      return
+
+    # json.load() loads strings as unicode, which causes issues when trying
+    # to edit string values in preference files, so convert to Python strings
+    def unicode_to_str(data):
+      if isinstance(data, dict):
+        return {unicode_to_str(key): unicode_to_str(value)
+                for key, value in data.iteritems()}
+      elif isinstance(data, list):
+        return [unicode_to_str(element) for element in data]
+      elif isinstance(data, unicode):
+        return data.encode('utf-8')
+      return data
+
+    with open(args.shared_prefs_file) as prefs_file:
+      self._edit_shared_prefs = unicode_to_str(json.load(prefs_file))
+
   @property
   def additional_apks(self):
     return self._additional_apks
@@ -702,6 +728,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def driver_name(self):
     return self._driver_name
+
+  @property
+  def edit_shared_prefs(self):
+    return self._edit_shared_prefs
 
   @property
   def flags(self):

@@ -1,28 +1,69 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_pinch_zoom_cases_000.wpr": [
-            "https://www.google.com/#hl=en&q=barack+obama", 
-            "https://mail.google.com/mail/", 
-            "https://www.google.com/calendar/", 
-            "https://www.google.com/search?q=cats&tbm=isch", 
-            "https://plus.google.com/+BarackObama/posts", 
-            "http://www.youtube.com", 
-            "Blogger", 
-            "Facebook", 
-            "LinkedIn", 
-            "Wikipedia (1 tab)", 
-            "Twitter", 
-            "ESPN", 
-            "http://news.yahoo.com", 
-            "http://www.cnn.com", 
-            "Weather.com", 
-            "http://www.amazon.com", 
-            "http://www.ebay.com", 
-            "http://games.yahoo.com", 
-            "http://booking.com", 
-            "http://answers.yahoo.com", 
-            "http://sports.yahoo.com/"
-        ]
-    }
+        "Blogger": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "ESPN": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "Facebook": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "LinkedIn": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "Twitter": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "Weather.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "Wikipedia (1 tab)": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://answers.yahoo.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://booking.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://games.yahoo.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://news.yahoo.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://sports.yahoo.com/": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://www.amazon.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://www.cnn.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://www.ebay.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "http://www.youtube.com": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "https://plus.google.com/+BarackObama/posts": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "https://www.google.com/#hl=en&q=barack+obama": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "https://www.google.com/calendar/": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        },
+        "https://www.google.com/search?q=cats&tbm=isch": {
+            "DEFAULT": "tough_pinch_zoom_cases_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

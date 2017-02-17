@@ -4356,11 +4356,13 @@ should be able to be added at any place in this file.
   <description>
     Count of Flash plugin instances that use JavaScript.
   </description>
+  <obsolete>Deprecated 02/2017.</obsolete>
 </action>
 
 <action name="Flash.PluginInstanceCreated" not_user_triggered="true">
   <owner>thestig@chromium.org</owner>
   <description>Count of Flash plugin instances.</description>
+  <obsolete>Deprecated 02/2017.</obsolete>
 </action>
 
 <action name="FocusAppMenu">
@@ -8916,11 +8918,13 @@ should be able to be added at any place in this file.
 <action name="Media.Audible.AddTab">
   <owner>mlamouri@chromium.org</owner>
   <description>A tab became audible.</description>
+  <obsolete>Removed 02/2017</obsolete>
 </action>
 
 <action name="Media.Audible.RemoveTab">
   <owner>mlamouri@chromium.org</owner>
   <description>A tab is no longer audible.</description>
+  <obsolete>Removed 02/2017</obsolete>
 </action>
 
 <action name="Media.Controls.Cast">
@@ -13905,6 +13909,7 @@ should be able to be added at any place in this file.
 <action name="SSL.DisplayedInsecureContent" not_user_triggered="true">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>
+  <obsolete>Deprecated 02/2017</obsolete>
 </action>
 
 <action name="SSL.RanInsecureContent" not_user_triggered="true">

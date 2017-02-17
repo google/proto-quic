@@ -37,8 +37,11 @@ class BASE_EXPORT SupportsUserData {
   // Multiple user data values can be stored under different keys.
   // This object will TAKE OWNERSHIP of the given data pointer, and will
   // delete the object if it is changed or the object is destroyed.
+  // TODO: remove the raw ptr version of SetUserData once everything uses
+  // the unique_ptr version, see crbug.com/690937.
   Data* GetUserData(const void* key) const;
   void SetUserData(const void* key, Data* data);
+  void SetUserData(const void* key, std::unique_ptr<Data> data);
   void RemoveUserData(const void* key);
 
   // SupportsUserData is not thread-safe, and on debug build will assert it is

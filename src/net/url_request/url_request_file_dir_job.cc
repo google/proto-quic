@@ -26,20 +26,9 @@ namespace net {
 URLRequestFileDirJob::URLRequestFileDirJob(URLRequest* request,
                                            NetworkDelegate* network_delegate,
                                            const base::FilePath& dir_path)
-    : URLRequestFileDirJob(request,
-                           network_delegate,
-                           dir_path,
-                           base::WorkerPool::GetTaskRunner(true)) {}
-
-URLRequestFileDirJob::URLRequestFileDirJob(
-    URLRequest* request,
-    NetworkDelegate* network_delegate,
-    const base::FilePath& dir_path,
-    const scoped_refptr<base::TaskRunner>& dir_task_runner)
     : URLRequestJob(request, network_delegate),
       lister_(dir_path, this),
       dir_path_(dir_path),
-      dir_task_runner_(dir_task_runner),
       canceled_(false),
       list_complete_(false),
       wrote_header_(false),
@@ -48,8 +37,7 @@ URLRequestFileDirJob::URLRequestFileDirJob(
       weak_factory_(this) {}
 
 void URLRequestFileDirJob::StartAsync() {
-  lister_.Start(dir_task_runner_.get());
-
+  lister_.Start();
   NotifyHeadersComplete();
 }
 

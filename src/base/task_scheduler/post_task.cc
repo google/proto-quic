@@ -4,6 +4,8 @@
 
 #include "base/task_scheduler/post_task.h"
 
+#include <utility>
+
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/threading/post_task_and_reply_impl.h"
 
@@ -40,9 +42,10 @@ void PostDelayedTask(const tracked_objects::Location& from_here,
 }
 
 void PostTaskAndReply(const tracked_objects::Location& from_here,
-                      const Closure& task,
-                      const Closure& reply) {
-  PostTaskWithTraitsAndReply(from_here, TaskTraits(), task, reply);
+                      Closure task,
+                      Closure reply) {
+  PostTaskWithTraitsAndReply(from_here, TaskTraits(), std::move(task),
+                             std::move(reply));
 }
 
 void PostTaskWithTraits(const tracked_objects::Location& from_here,
@@ -61,9 +64,10 @@ void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
 
 void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
                                 const TaskTraits& traits,
-                                const Closure& task,
-                                const Closure& reply) {
-  PostTaskAndReplyTaskRunner(traits).PostTaskAndReply(from_here, task, reply);
+                                Closure task,
+                                Closure reply) {
+  PostTaskAndReplyTaskRunner(traits).PostTaskAndReply(
+      from_here, std::move(task), std::move(reply));
 }
 
 scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(const TaskTraits& traits) {

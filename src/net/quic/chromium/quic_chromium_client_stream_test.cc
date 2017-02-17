@@ -168,7 +168,7 @@ class QuicChromiumClientStreamTest
     : public ::testing::TestWithParam<QuicVersion> {
  public:
   QuicChromiumClientStreamTest()
-      : crypto_config_(CryptoTestUtils::ProofVerifierForTesting()),
+      : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         session_(new MockQuicConnection(&helper_,
                                         &alarm_factory_,
                                         Perspective::IS_CLIENT,

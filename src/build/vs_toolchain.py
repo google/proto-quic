@@ -314,6 +314,28 @@ def CopyDlls(target_dir, configuration, target_cpu):
   if configuration == 'Debug':
     _CopyRuntime(target_dir, runtime_dir, target_cpu, debug=True)
 
+  _CopyDebugger(target_dir, target_cpu)
+
+
+def _CopyDebugger(target_dir, target_cpu):
+  """Copy cdb.exe into the requested directory as needed.
+
+  target_cpu is one of 'x86' or 'x64'.
+
+  This is used for the GN build.
+  """
+  win_sdk_dir = SetEnvironmentAndGetSDKDir()
+  if not win_sdk_dir:
+    return
+
+  debugger_files = (
+        'cdb.exe', 'dbgeng.dll', 'dbghelp.dll', 'dbgmodel.dll', 'dbgcore.dll')
+
+  for debug_file in debugger_files:
+    full_path = os.path.join(win_sdk_dir, 'Debuggers', target_cpu, debug_file)
+    target_path = os.path.join(target_dir, debug_file)
+    _CopyRuntimeImpl(target_path, full_path)
+
 
 def _GetDesiredVsToolchainHashes():
   """Load a list of SHA1s corresponding to the toolchains that we want installed
@@ -378,8 +400,8 @@ def NormalizePath(path):
   return path
 
 
-def GetToolchainDir():
-  """Gets location information about the current toolchain (must have been
+def SetEnvironmentAndGetSDKDir():
+  """Gets location information about the current sdk (must have been
   previously updated by 'update'). This is used for the GN build."""
   runtime_dll_dirs = SetEnvironmentAndGetRuntimeDllDirs()
 
@@ -389,6 +411,15 @@ def GetToolchainDir():
     if os.path.isdir(default_sdk_path):
       os.environ['WINDOWSSDKDIR'] = default_sdk_path
 
+  return NormalizePath(os.environ['WINDOWSSDKDIR'])
+
+
+def GetToolchainDir():
+  """Gets location information about the current toolchain (must have been
+  previously updated by 'update'). This is used for the GN build."""
+  runtime_dll_dirs = SetEnvironmentAndGetRuntimeDllDirs()
+  win_sdk_dir = SetEnvironmentAndGetSDKDir()
+
   print '''vs_path = "%s"
 sdk_path = "%s"
 vs_version = "%s"
@@ -396,7 +427,7 @@ wdk_dir = "%s"
 runtime_dirs = "%s"
 ''' % (
       NormalizePath(os.environ['GYP_MSVS_OVERRIDE_PATH']),
-      NormalizePath(os.environ['WINDOWSSDKDIR']),
+      win_sdk_dir,
       GetVisualStudioVersion(),
       NormalizePath(os.environ.get('WDK_DIR', '')),
       os.path.pathsep.join(runtime_dll_dirs or ['None']))

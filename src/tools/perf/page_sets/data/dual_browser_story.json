@@ -1,34 +1,75 @@
 {
     "archives": {
-        "dual_browser_story_000.wpr": [
-            "https_www_google_com_hl_en_q_science"
-        ],
-        "dual_browser_story_001.wpr": [
-            "http_m_taobao_com_channel_act_mobile_20131111_women_html",
-            "https_www_google_ca_hl_en_q_science"
-        ],
-        "dual_browser_story_002.wpr": [
-            "http_www_amazon_com_gp_aw_s_k_nexus",
-            "http_m_youtube_com_results_q_science",
-            "google_weather_94110",
-            "google_tom_hanks",
-            "http_search_yahoo_com_search__ylt_p_google",
-            "google_sfo_jfk_flights",
-            "google_goog",
-            "https_mobile_twitter_com_justinbieber_skip_interstitial_true",
-            "http_m_intl_taobao_com_group_purchase_html",
-            "https_www_google_co_uk_hl_en_q_science",
-            "google_population_of_california",
-            "https_m_facebook_com_rihanna",
-            "http_yandex_ru_touchsearch_text_science",
-            "google_cat_pictures",
-            "google_movies_94110",
-            "google_science",
-            "http_en_m_wikipedia_org_wiki_Science",
-            "google_1600_amphitheatre_pkwy_mountain_view_ca",
-            "google_tip_on_100_bill",
-            "http_www_baidu_com_s_word_google"
-        ]
+        "google_1600_amphitheatre_pkwy_mountain_view_ca": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_cat_pictures": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_goog": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_movies_94110": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_population_of_california": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_science": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_sfo_jfk_flights": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_tip_on_100_bill": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_tom_hanks": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "google_weather_94110": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_en_m_wikipedia_org_wiki_Science": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_m_intl_taobao_com_group_purchase_html": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_m_taobao_com_channel_act_mobile_20131111_women_html": {
+            "DEFAULT": "dual_browser_story_001.wpr"
+        },
+        "http_m_youtube_com_results_q_science": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_search_yahoo_com_search__ylt_p_google": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_www_amazon_com_gp_aw_s_k_nexus": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_www_baidu_com_s_word_google": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "http_yandex_ru_touchsearch_text_science": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "https_m_facebook_com_rihanna": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "https_mobile_twitter_com_justinbieber_skip_interstitial_true": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "https_www_google_ca_hl_en_q_science": {
+            "DEFAULT": "dual_browser_story_001.wpr"
+        },
+        "https_www_google_co_uk_hl_en_q_science": {
+            "DEFAULT": "dual_browser_story_002.wpr"
+        },
+        "https_www_google_com_hl_en_q_science": {
+            "DEFAULT": "dual_browser_story_000.wpr"
+        }
     },
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

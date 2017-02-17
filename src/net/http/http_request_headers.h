@@ -73,9 +73,11 @@ class NET_EXPORT HttpRequestHeaders {
   static const char kCookie[];
   static const char kContentLength[];
   static const char kHost[];
+  static const char kIfMatch[];
   static const char kIfModifiedSince[];
   static const char kIfNoneMatch[];
   static const char kIfRange[];
+  static const char kIfUnmodifiedSince[];
   static const char kOrigin[];
   static const char kPragma[];
   static const char kProxyAuthorization[];

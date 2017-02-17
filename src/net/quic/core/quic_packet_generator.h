@@ -172,11 +172,6 @@ class QUIC_EXPORT_PRIVATE QuicPacketGenerator {
   // when there are frames queued in the creator.
   void SetMaxPacketLength(QuicByteCount length);
 
-  // Sets |path_id| to be the path on which next packet is generated.
-  void SetCurrentPath(QuicPathId path_id,
-                      QuicPacketNumber least_packet_awaited_by_peer,
-                      QuicPacketCount max_packets_in_flight);
-
   void set_debug_delegate(QuicPacketCreator::DebugDelegate* debug_delegate) {
     packet_creator_.set_debug_delegate(debug_delegate);
   }

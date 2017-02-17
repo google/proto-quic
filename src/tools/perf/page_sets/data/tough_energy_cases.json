@@ -1,22 +1,51 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_energy_cases_004.wpr": [
-            "http://codepen.io/testificate364/debug/DLbxg", 
-            "http://codepen.io/testificate364/debug/kFvpd", 
-            "http://codepen.io/testificate364/debug/Kvdxs", 
-            "http://codepen.io/testificate364/debug/nrbDc", 
-            "http://codepen.io/testificate364/debug/lEhyw", 
-            "http://codepen.io/testificate364/debug/fhKCg", 
-            "http://codepen.io/testificate364/debug/HdIgr", 
-            "http://codepen.io/testificate364/debug/paJhg", 
-            "http://codepen.io/testificate364/debug/lJAiH", 
-            "http://codepen.io/testificate364/debug/jetyn", 
-            "http://codepen.io/testificate364/debug/EFceH", 
-            "http://codepen.io/testificate364/debug/yaosK", 
-            "https://mail.google.com/mail/", 
-            "http://codepen.io/testificate364/debug/zhgBD", 
-            "http://codepen.io/testificate364/debug/slBue"
-        ]
-    }
+        "http://codepen.io/testificate364/debug/DLbxg": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/EFceH": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/HdIgr": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/Kvdxs": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/fhKCg": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/jetyn": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/kFvpd": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/lEhyw": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/lJAiH": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/nrbDc": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/paJhg": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/slBue": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/yaosK": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "http://codepen.io/testificate364/debug/zhgBD": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        },
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "tough_energy_cases_004.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

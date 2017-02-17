@@ -4,28 +4,15 @@
 
 #include "net/tools/quic/test_tools/quic_test_server.h"
 
-#include "base/logging.h"
-#include "base/run_loop.h"
-#include "base/synchronization/lock.h"
-#include "base/threading/thread_task_runner_handle.h"
-#include "net/base/net_errors.h"
-#include "net/quic/chromium/quic_chromium_connection_helper.h"
-#include "net/quic/core/crypto/crypto_handshake.h"
-#include "net/quic/core/crypto/quic_crypto_server_config.h"
-#include "net/quic/core/crypto/quic_random.h"
-#include "net/quic/core/quic_config.h"
-#include "net/quic/core/quic_connection.h"
-#include "net/quic/core/quic_packet_writer.h"
-#include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/tools/quic/quic_epoll_alarm_factory.h"
 #include "net/tools/quic/quic_epoll_connection_helper.h"
 #include "net/tools/quic/quic_simple_crypto_server_stream_helper.h"
 #include "net/tools/quic/quic_simple_dispatcher.h"
 #include "net/tools/quic/quic_simple_server_session.h"
-#include "net/tools/quic/quic_simple_server_stream.h"
 
 namespace net {
+
 namespace test {
 
 class CustomStreamSession : public QuicSimpleServerSession {
@@ -220,4 +207,5 @@ void ImmediateGoAwaySession::OnStreamFrame(const QuicStreamFrame& frame) {
 }
 
 }  // namespace test
+
 }  // namespace net

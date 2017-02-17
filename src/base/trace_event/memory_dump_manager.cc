@@ -14,6 +14,7 @@
 #include "base/compiler_specific.h"
 #include "base/debug/debugging_flags.h"
 #include "base/debug/stack_trace.h"
+#include "base/debug/thread_heap_usage_tracker.h"
 #include "base/memory/ptr_util.h"
 #include "base/threading/thread.h"
 #include "base/threading/thread_task_runner_handle.h"
@@ -53,8 +54,6 @@ MemoryDumpManager* g_instance_for_testing = nullptr;
 // TODO(ssid): Fix all the dump providers to unregister if needed and clear the
 // blacklist, crbug.com/643438.
 const char* const kStrictThreadCheckBlacklist[] = {
-    "AndroidGraphics",
-    "BrowserGpuMemoryBufferManager",
     "ClientDiscardableSharedMemoryManager",
     "ContextProviderCommandBuffer",
     "DiscardableSharedMemoryManager",
@@ -65,17 +64,12 @@ const char* const kStrictThreadCheckBlacklist[] = {
     "ThreadLocalEventBuffer",
     "TraceLog",
     "URLRequestContext",
-    "V8Isolate",
     "VpxVideoDecoder",
-    "cc::ResourcePool",
-    "cc::ResourceProvider",
     "cc::SoftwareImageDecodeCache",
     "cc::StagingBufferPool",
     "gpu::BufferManager",
     "gpu::MappedMemoryManager",
     "gpu::RenderbufferManager",
-    "gpu::TransferBufferManager",
-    "sql::Connection",
     "BlacklistTestDumpProvider"  // for testing
 };
 
@@ -193,18 +187,20 @@ void MemoryDumpManager::EnableHeapProfilingIfNeeded() {
   if (profiling_mode == "") {
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::PSEUDO_STACK);
-  }
-  else if (profiling_mode == switches::kEnableHeapProfilingModeNative) {
 #if HAVE_TRACE_STACK_FRAME_POINTERS && \
     (BUILDFLAG(ENABLE_PROFILING) || !defined(NDEBUG))
+  } else if (profiling_mode == switches::kEnableHeapProfilingModeNative) {
     // We need frame pointers for native tracing to work, and they are
     // enabled in profiling and debug builds.
     AllocationContextTracker::SetCaptureMode(
         AllocationContextTracker::CaptureMode::NATIVE_STACK);
-#else
-    CHECK(false) << "'" << profiling_mode << "' mode for "
-                 << switches::kEnableHeapProfiling << " flag is not supported "
-                 << "for this platform / build type.";
+#endif
+#if BUILDFLAG(ENABLE_MEMORY_TASK_PROFILER)
+  } else if (profiling_mode == switches::kEnableHeapProfilingTaskProfiler) {
+    // Enable heap tracking, which in turn enables capture of heap usage
+    // tracking in tracked_objects.cc.
+    if (!base::debug::ThreadHeapUsageTracker::IsHeapTrackingEnabled())
+      base::debug::ThreadHeapUsageTracker::EnableHeapTracking();
 #endif
   } else {
     CHECK(false) << "Invalid mode '" << profiling_mode << "' for "

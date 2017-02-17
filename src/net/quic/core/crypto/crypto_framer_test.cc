@@ -274,8 +274,8 @@ TEST(CryptoFramerTest, ProcessInput) {
   const CryptoHandshakeMessage& message = visitor.messages_[0];
   EXPECT_EQ(0xFFAA7733, message.tag());
   EXPECT_EQ(2u, message.tag_value_map().size());
-  EXPECT_EQ("abcdef", CryptoTestUtils::GetValueForTag(message, 0x12345678));
-  EXPECT_EQ("ghijk", CryptoTestUtils::GetValueForTag(message, 0x12345679));
+  EXPECT_EQ("abcdef", crypto_test_utils::GetValueForTag(message, 0x12345678));
+  EXPECT_EQ("ghijk", crypto_test_utils::GetValueForTag(message, 0x12345679));
 }
 
 TEST(CryptoFramerTest, ProcessInputWithThreeKeys) {
@@ -318,9 +318,9 @@ TEST(CryptoFramerTest, ProcessInputWithThreeKeys) {
   const CryptoHandshakeMessage& message = visitor.messages_[0];
   EXPECT_EQ(0xFFAA7733, message.tag());
   EXPECT_EQ(3u, message.tag_value_map().size());
-  EXPECT_EQ("abcdef", CryptoTestUtils::GetValueForTag(message, 0x12345678));
-  EXPECT_EQ("ghijk", CryptoTestUtils::GetValueForTag(message, 0x12345679));
-  EXPECT_EQ("lmnopqr", CryptoTestUtils::GetValueForTag(message, 0x1234567A));
+  EXPECT_EQ("abcdef", crypto_test_utils::GetValueForTag(message, 0x12345678));
+  EXPECT_EQ("ghijk", crypto_test_utils::GetValueForTag(message, 0x12345679));
+  EXPECT_EQ("lmnopqr", crypto_test_utils::GetValueForTag(message, 0x1234567A));
 }
 
 TEST(CryptoFramerTest, ProcessInputIncrementally) {
@@ -357,8 +357,8 @@ TEST(CryptoFramerTest, ProcessInputIncrementally) {
   const CryptoHandshakeMessage& message = visitor.messages_[0];
   EXPECT_EQ(0xFFAA7733, message.tag());
   EXPECT_EQ(2u, message.tag_value_map().size());
-  EXPECT_EQ("abcdef", CryptoTestUtils::GetValueForTag(message, 0x12345678));
-  EXPECT_EQ("ghijk", CryptoTestUtils::GetValueForTag(message, 0x12345679));
+  EXPECT_EQ("abcdef", crypto_test_utils::GetValueForTag(message, 0x12345678));
+  EXPECT_EQ("ghijk", crypto_test_utils::GetValueForTag(message, 0x12345679));
 }
 
 TEST(CryptoFramerTest, ProcessInputTagsOutOfOrder) {

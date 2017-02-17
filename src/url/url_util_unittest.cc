@@ -6,7 +6,6 @@
 
 #include "base/macros.h"
 #include "testing/gtest/include/gtest/gtest.h"
-#include "url/gurl.h"
 #include "url/third_party/mozilla/url_parse.h"
 #include "url/url_canon.h"
 #include "url/url_canon_stdstring.h"
@@ -416,21 +415,6 @@ TEST(URLUtilTest, TestDomainIs) {
         test_case.expected_domain_is,
         DomainIs(test_case.canonicalized_host, test_case.lower_ascii_domain));
   }
-}
-
-TEST(URLUtilTest, IsAboutBlank) {
-  const std::string kAboutBlankUrls[] = {"about:blank", "about:blank?foo",
-                                         "about:blank/#foo",
-                                         "about:blank?foo#foo"};
-  for (const auto& url : kAboutBlankUrls)
-    EXPECT_TRUE(IsAboutBlank(GURL(url)));
-
-  const std::string kNotAboutBlankUrls[] = {
-      "http:blank",      "about:blan",          "about://blank",
-      "about:blank/foo", "about://:8000/blank", "about://foo:foo@/blank",
-      "foo@about:blank", "foo:bar@about:blank", "about:blank:8000"};
-  for (const auto& url : kNotAboutBlankUrls)
-    EXPECT_FALSE(IsAboutBlank(GURL(url)));
 }
 
 }  // namespace url

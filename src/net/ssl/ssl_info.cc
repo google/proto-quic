@@ -5,6 +5,7 @@
 #include "net/ssl/ssl_info.h"
 
 #include "base/pickle.h"
+#include "base/stl_util.h"
 #include "net/cert/cert_status_flags.h"
 #include "net/cert/ct_policy_status.h"
 #include "net/cert/signed_certificate_timestamp.h"
@@ -63,9 +64,9 @@ void SSLInfo::Reset() {
   token_binding_negotiated = false;
   token_binding_key_param = TB_PARAM_ECDSAP256;
   handshake_type = HANDSHAKE_UNKNOWN;
-  public_key_hashes.clear();
-  pinning_failure_log.clear();
-  signed_certificate_timestamps.clear();
+  base::STLClearObject(&public_key_hashes);
+  base::STLClearObject(&pinning_failure_log);
+  base::STLClearObject(&signed_certificate_timestamps);
   ct_compliance_details_available = false;
   ct_ev_policy_compliance = ct::EVPolicyCompliance::EV_POLICY_DOES_NOT_APPLY;
   ct_cert_policy_compliance =

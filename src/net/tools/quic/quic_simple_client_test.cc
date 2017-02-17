@@ -18,7 +18,7 @@ TEST(QuicSimpleClientTest, Initialize) {
                          PRIVACY_MODE_DISABLED);
   QuicVersionVector versions = AllSupportedVersions();
   QuicSimpleClient client(server_address, server_id, versions,
-                          CryptoTestUtils::ProofVerifierForTesting());
+                          crypto_test_utils::ProofVerifierForTesting());
   EXPECT_TRUE(client.Initialize());
 }
 

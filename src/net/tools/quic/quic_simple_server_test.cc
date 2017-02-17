@@ -24,7 +24,7 @@ class QuicChromeServerDispatchPacketTest : public ::testing::Test {
   QuicChromeServerDispatchPacketTest()
       : crypto_config_("blah",
                        QuicRandom::GetInstance(),
-                       CryptoTestUtils::ProofSourceForTesting()),
+                       crypto_test_utils::ProofSourceForTesting()),
         version_manager_(AllSupportedVersions()),
         dispatcher_(
             config_,

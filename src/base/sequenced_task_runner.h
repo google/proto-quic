@@ -122,9 +122,8 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   template <class T>
   bool DeleteSoon(const tracked_objects::Location& from_here,
                   const T* object) {
-    return
-        subtle::DeleteHelperInternal<T, bool>::DeleteViaSequencedTaskRunner(
-            this, from_here, object);
+    return DeleteOrReleaseSoonInternal(from_here, &DeleteHelper<T>::DoDelete,
+                                       object);
   }
 
   // Submits a non-nestable task to release the given object.  Returns
@@ -132,26 +131,18 @@ class BASE_EXPORT SequencedTaskRunner : public TaskRunner {
   // and false if the object definitely will not be released.
   template <class T>
   bool ReleaseSoon(const tracked_objects::Location& from_here,
-                   T* object) {
-    return
-        subtle::ReleaseHelperInternal<T, bool>::ReleaseViaSequencedTaskRunner(
-            this, from_here, object);
+                   const T* object) {
+    return DeleteOrReleaseSoonInternal(from_here, &ReleaseHelper<T>::DoRelease,
+                                       object);
   }
 
  protected:
   ~SequencedTaskRunner() override {}
 
  private:
-  template <class T, class R> friend class subtle::DeleteHelperInternal;
-  template <class T, class R> friend class subtle::ReleaseHelperInternal;
-
-  bool DeleteSoonInternal(const tracked_objects::Location& from_here,
-                          void(*deleter)(const void*),
-                          const void* object);
-
-  bool ReleaseSoonInternal(const tracked_objects::Location& from_here,
-                           void(*releaser)(const void*),
-                           const void* object);
+  bool DeleteOrReleaseSoonInternal(const tracked_objects::Location& from_here,
+                                   void (*deleter)(const void*),
+                                   const void* object);
 };
 
 struct BASE_EXPORT OnTaskRunnerDeleter {

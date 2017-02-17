@@ -51,7 +51,7 @@ class MemoryPressureObserver {
 };
 
 MemoryPressureObserver* GetMemoryPressureObserver() {
-  static auto observer = new MemoryPressureObserver();
+  static auto* observer = new MemoryPressureObserver();
   return observer;
 }
 

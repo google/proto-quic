@@ -9,8 +9,9 @@
  */
 
 #include "x86.h"
+#include "zutil.h"
 
-int x86_cpu_enable_simd = 0;
+int ZLIB_INTERNAL x86_cpu_enable_simd = 0;
 
 #ifndef _MSC_VER
 #include <pthread.h>

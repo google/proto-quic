@@ -380,6 +380,7 @@ ssl_sources = [
   "src/include/openssl/ssl.h",
   "src/include/openssl/ssl3.h",
   "src/include/openssl/tls1.h",
+  "src/ssl/bio_ssl.c",
   "src/ssl/custom_extensions.c",
   "src/ssl/d1_both.c",
   "src/ssl/d1_lib.c",

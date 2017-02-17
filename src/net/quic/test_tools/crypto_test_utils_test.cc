@@ -112,7 +112,7 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
   MockClock clock;
   QuicCryptoServerConfig crypto_config(
       QuicCryptoServerConfig::TESTING, QuicRandom::GetInstance(),
-      CryptoTestUtils::ProofSourceForTesting());
+      crypto_test_utils::ProofSourceForTesting());
   QuicSocketAddress server_addr;
   QuicSocketAddress client_addr(QuicIpAddress::Loopback4(), 1);
   QuicReferenceCountedPointer<QuicSignedServerConfig> signed_config(
@@ -148,23 +148,19 @@ TEST(CryptoTestUtilsTest, TestGenerateFullCHLO) {
       "#" + QuicTextUtils::HexEncode(public_value, sizeof(public_value));
 
   QuicVersion version(AllSupportedVersions().front());
-  // clang-format off
-  CryptoHandshakeMessage inchoate_chlo = CryptoTestUtils::Message(
-    "CHLO",
-    "PDMD", "X509",
-    "AEAD", "AESG",
-    "KEXS", "C255",
-    "COPT", "SREJ",
-    "PUBS", pub_hex.c_str(),
-    "NONC", nonce_hex.c_str(),
-    "VER\0", QuicTagToString(QuicVersionToQuicTag(version)).c_str(),
-    "$padding", static_cast<int>(kClientHelloMinimumSize),
-    nullptr);
-  // clang-format on
+  CryptoHandshakeMessage inchoate_chlo = crypto_test_utils::CreateCHLO(
+      {{"PDMD", "X509"},
+       {"AEAD", "AESG"},
+       {"KEXS", "C255"},
+       {"COPT", "SREJ"},
+       {"PUBS", pub_hex},
+       {"NONC", nonce_hex},
+       {"VER\0", QuicTagToString(QuicVersionToQuicTag(version))}},
+      kClientHelloMinimumSize);
 
-  CryptoTestUtils::GenerateFullCHLO(inchoate_chlo, &crypto_config, server_addr,
-                                    client_addr, version, &clock, signed_config,
-                                    &compressed_certs_cache, &full_chlo);
+  crypto_test_utils::GenerateFullCHLO(
+      inchoate_chlo, &crypto_config, server_addr, client_addr, version, &clock,
+      signed_config, &compressed_certs_cache, &full_chlo);
   // Verify that full_chlo can pass crypto_config's verification.
   ShloVerifier shlo_verifier(&crypto_config, server_addr, client_addr, &clock,
                              signed_config, &compressed_certs_cache);

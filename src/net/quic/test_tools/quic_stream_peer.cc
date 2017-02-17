@@ -93,8 +93,13 @@ void QuicStreamPeer::WriteOrBufferData(
 }
 
 // static
-net::QuicStreamSequencer* QuicStreamPeer::sequencer(QuicStream* stream) {
+QuicStreamSequencer* QuicStreamPeer::sequencer(QuicStream* stream) {
   return &(stream->sequencer_);
+}
+
+// static
+QuicSession* QuicStreamPeer::session(QuicStream* stream) {
+  return stream->session();
 }
 
 }  // namespace test

@@ -61,8 +61,11 @@ class NET_EXPORT CertVerifyResult {
   bool has_sha1_leaf;
 
   // If the certificate was successfully verified then this contains the
-  // hashes, in several hash algorithms, of the SubjectPublicKeyInfos of the
-  // chain.
+  // hashes for all of the SubjectPublicKeyInfos of the chain (target,
+  // intermediates, and trust anchor)
+  //
+  // The ordering of the hashes in this vector is unspecified. Both the SHA1
+  // and SHA256 hash will be present for each certificate.
   HashValueVector public_key_hashes;
 
   // is_issued_by_known_root is true if we recognise the root CA as a standard

@@ -1,33 +1,78 @@
 {
     "archives": {
-        "memory_top_10_mobile_000.wpr": [
-            "https_www_google_com_hl_en_q_science",
-            "after_https_www_google_com_hl_en_q_science",
-            "after_http_m_taobao_com_channel_act_mobile_20131111_women_html",
-            "http_m_taobao_com_channel_act_mobile_20131111_women_html"
-        ],
-        "memory_top_10_mobile_001.wpr": [
-            "after_http_m_intl_taobao_com_group_purchase_html",
-            "http_m_youtube_com_results_q_science",
-            "https_m_facebook_com_rihanna",
-            "http_m_intl_taobao_com_group_purchase_html",
-            "after_http_en_m_wikipedia_org_wiki_Science",
-            "after_http_m_youtube_com_results_q_science",
-            "http_search_yahoo_com_search__ylt_p_google",
-            "after_http_www_baidu_com_s_word_google",
-            "after_http_www_amazon_com_gp_aw_s_k_nexus",
-            "after_https_www_google_co_uk_hl_en_q_science",
-            "after_http_yandex_ru_touchsearch_text_science",
-            "http_en_m_wikipedia_org_wiki_Science",
-            "http_www_baidu_com_s_word_google",
-            "http_www_amazon_com_gp_aw_s_k_nexus",
-            "after_http_search_yahoo_com_search__ylt_p_google",
-            "http_yandex_ru_touchsearch_text_science",
-            "after_https_m_facebook_com_rihanna",
-            "https_www_google_co_uk_hl_en_q_science",
-            "after_https_mobile_twitter_com_justinbieber_skip_interstitial_true",
-            "https_mobile_twitter_com_justinbieber_skip_interstitial_true"
-        ]
+        "after_http_en_m_wikipedia_org_wiki_Science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_m_intl_taobao_com_group_purchase_html": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_m_taobao_com_channel_act_mobile_20131111_women_html": {
+            "DEFAULT": "memory_top_10_mobile_000.wpr"
+        },
+        "after_http_m_youtube_com_results_q_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_search_yahoo_com_search__ylt_p_google": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_www_amazon_com_gp_aw_s_k_nexus": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_www_baidu_com_s_word_google": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_http_yandex_ru_touchsearch_text_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_https_m_facebook_com_rihanna": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_https_mobile_twitter_com_justinbieber_skip_interstitial_true": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_https_www_google_co_uk_hl_en_q_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "after_https_www_google_com_hl_en_q_science": {
+            "DEFAULT": "memory_top_10_mobile_000.wpr"
+        },
+        "http_en_m_wikipedia_org_wiki_Science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_m_intl_taobao_com_group_purchase_html": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_m_taobao_com_channel_act_mobile_20131111_women_html": {
+            "DEFAULT": "memory_top_10_mobile_000.wpr"
+        },
+        "http_m_youtube_com_results_q_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_search_yahoo_com_search__ylt_p_google": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_www_amazon_com_gp_aw_s_k_nexus": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_www_baidu_com_s_word_google": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "http_yandex_ru_touchsearch_text_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "https_m_facebook_com_rihanna": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "https_mobile_twitter_com_justinbieber_skip_interstitial_true": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "https_www_google_co_uk_hl_en_q_science": {
+            "DEFAULT": "memory_top_10_mobile_001.wpr"
+        },
+        "https_www_google_com_hl_en_q_science": {
+            "DEFAULT": "memory_top_10_mobile_000.wpr"
+        }
     },
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating."
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

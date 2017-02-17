@@ -60,27 +60,27 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     # TODO(bustamante): This is a hack to workaround crbug.com/467174,
     #   once fixed just pull down window.performance.timing object and
     #   reference that everywhere.
-    load_event_start = tab.EvaluateJavaScript(
+    load_event_start = tab.EvaluateJavaScript2(
         'window.performance.timing.loadEventStart')
-    navigation_start = tab.EvaluateJavaScript(
+    navigation_start = tab.EvaluateJavaScript2(
         'window.performance.timing.navigationStart')
-    dom_content_loaded_event_start = tab.EvaluateJavaScript(
+    dom_content_loaded_event_start = tab.EvaluateJavaScript2(
         'window.performance.timing.domContentLoadedEventStart')
-    fetch_start = tab.EvaluateJavaScript(
+    fetch_start = tab.EvaluateJavaScript2(
         'window.performance.timing.fetchStart')
-    request_start = tab.EvaluateJavaScript(
+    request_start = tab.EvaluateJavaScript2(
         'window.performance.timing.requestStart')
-    domain_lookup_end = tab.EvaluateJavaScript(
+    domain_lookup_end = tab.EvaluateJavaScript2(
         'window.performance.timing.domainLookupEnd')
-    domain_lookup_start = tab.EvaluateJavaScript(
+    domain_lookup_start = tab.EvaluateJavaScript2(
         'window.performance.timing.domainLookupStart')
-    connect_end = tab.EvaluateJavaScript(
+    connect_end = tab.EvaluateJavaScript2(
         'window.performance.timing.connectEnd')
-    connect_start = tab.EvaluateJavaScript(
+    connect_start = tab.EvaluateJavaScript2(
         'window.performance.timing.connectStart')
-    response_end = tab.EvaluateJavaScript(
+    response_end = tab.EvaluateJavaScript2(
         'window.performance.timing.responseEnd')
-    response_start = tab.EvaluateJavaScript(
+    response_start = tab.EvaluateJavaScript2(
         'window.performance.timing.responseStart')
 
     # NavigationStart relative markers in milliseconds.

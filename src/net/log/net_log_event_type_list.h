@@ -1055,6 +1055,14 @@ EVENT_TYPE(HTTP_STREAM_REQUEST)
 //   }
 EVENT_TYPE(HTTP_STREAM_JOB)
 
+// Measures the time and HttpStreamFactoryImpl::Job spends waiting for
+// another job.
+// The event parameters are:
+//   {
+//      "should_wait": <True if the job needs to wait>,
+//   }
+EVENT_TYPE(HTTP_STREAM_JOB_WAITING)
+
 // Identifies the NetLogSource() for a Job started by the Request.
 // The event parameters are:
 //   {
@@ -1095,11 +1103,17 @@ EVENT_TYPE(HTTP_STREAM_REQUEST_PROTO)
 // Job. The orphaned Job will continue to run to completion.
 EVENT_TYPE(HTTP_STREAM_JOB_ORPHANED)
 
-// Emitted when a job is asked to resume after non-zero microseconds.
+// Emitted when a job is delayed.
 //   {
-//     "resume_after_ms": <Number of milliseconds until job will be unblocked>
+//     "delay_ms": <Number of milliseconds until job will be resumed>
 //   }
 EVENT_TYPE(HTTP_STREAM_JOB_DELAYED)
+
+// Emitted when a job is asked to resume after non-zero microseconds.
+//   {
+//     "delay_ms": <Number of milliseconds the job was delayed before resuming>
+//   }
+EVENT_TYPE(HTTP_STREAM_JOB_RESUMED)
 
 // Marks the start/end of a HttpStreamFactoryImpl::JobController.
 // The following parameters are attached:
@@ -1303,6 +1317,26 @@ EVENT_TYPE(BIDIRECTIONAL_STREAM_READY)
 EVENT_TYPE(BIDIRECTIONAL_STREAM_FAILED)
 
 // ------------------------------------------------------------------------
+// SERVER_PUSH_LOOKUP_TRANSACTION
+// ------------------------------------------------------------------------
+
+// The start/end of a push lookup transaction for server push.
+//
+// The START event has the parameters:
+//   {
+//     "source_dependency": <Source identifier for the server push lookp.
+//                           It can be a QUIC_SESSION or a HTTP2_SESSION>,
+//     "pushed_url": <The url that has been pushed and looked up>,
+//   }
+//
+// If the transaction doesn't find the resource in cache, then the END phase
+// has these parameters:
+//   {
+//     "net_error": <Net error code integer>,
+//   }
+EVENT_TYPE(SERVER_PUSH_LOOKUP_TRANSACTION)
+
+// ------------------------------------------------------------------------
 // SpdySession
 // ------------------------------------------------------------------------
 
@@ -1352,8 +1386,6 @@ EVENT_TYPE(HTTP2_SESSION_SEND_SETTINGS)
 // The following parameters are attached:
 //   {
 //     "host": <The host-port string>,
-//     "clear_persisted": <Boolean indicating whether to clear all persisted
-//                         settings data for the given host>,
 //   }
 EVENT_TYPE(HTTP2_SESSION_RECV_SETTINGS)
 
@@ -1361,7 +1393,6 @@ EVENT_TYPE(HTTP2_SESSION_RECV_SETTINGS)
 // The following parameters are attached:
 //   {
 //     "id":    <The setting id>,
-//     "flags": <The setting flags>,
 //     "value": <The setting value>,
 //   }
 EVENT_TYPE(HTTP2_SESSION_RECV_SETTING)
@@ -1369,17 +1400,16 @@ EVENT_TYPE(HTTP2_SESSION_RECV_SETTING)
 // The receipt of a RST_STREAM frame.
 // The following parameters are attached:
 //   {
-//     "stream_id": <The stream ID for the window update>,
-//     "status": <The reason for the RST_STREAM>,
+//     "stream_id":  <The stream ID for the RST_STREAM>,
+//     "error_code": <Error code>,
 //   }
 EVENT_TYPE(HTTP2_SESSION_RECV_RST_STREAM)
 
 // Sending of a RST_STREAM
 // The following parameters are attached:
 //   {
-//     "stream_id": <The stream ID for the window update>,
-//     "status": <The reason for the RST_STREAM>,
-//     "description": <The textual description for the RST_STREAM>,
+//     "stream_id":  <The stream ID for the RST_STREAM>,
+//     "error_code": <Error code>,
 //   }
 EVENT_TYPE(HTTP2_SESSION_SEND_RST_STREAM)
 
@@ -1397,7 +1427,8 @@ EVENT_TYPE(HTTP2_SESSION_PING)
 //     "last_accepted_stream_id": <Last stream id accepted by the server, duh>,
 //     "active_streams":          <Number of active streams>,
 //     "unclaimed_streams":       <Number of unclaimed push streams>,
-//     "status":                  <The reason for the GOAWAY>,
+//     "error_code":              <Error code>,
+//     "debug_data":              <Additional debug data>,
 //   }
 EVENT_TYPE(HTTP2_SESSION_RECV_GOAWAY)
 

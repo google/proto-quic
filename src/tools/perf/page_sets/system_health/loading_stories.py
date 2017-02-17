@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 from page_sets.system_health import platforms
+from page_sets.system_health import story_tags
 from page_sets.system_health import system_health_story
 
 from page_sets.login_helpers import dropbox_login
@@ -30,6 +31,7 @@ class LoadGoogleStory(_LoadingStory):
 class LoadBaiduStory(_LoadingStory):
   NAME = 'load:search:baidu'
   URL = 'https://www.baidu.com/s?word=google'
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadYahooStory(_LoadingStory):
@@ -46,6 +48,7 @@ class LoadTaobaoDesktopStory(_LoadingStory):
   NAME = 'load:search:taobao'
   URL = 'https://world.taobao.com/'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadTaobaoMobileStory(_LoadingStory):
@@ -53,11 +56,13 @@ class LoadTaobaoMobileStory(_LoadingStory):
   # "ali_trackid" in the URL suppresses "Download app" interstitial.
   URL = 'http://m.intl.taobao.com/?ali_trackid'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadYandexStory(_LoadingStory):
   NAME = 'load:search:yandex'
   URL = 'https://yandex.ru/touchsearch?text=science'
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadEbayStory(_LoadingStory):
@@ -90,6 +95,7 @@ class LoadVkStory(_LoadingStory):
   # indefinitely on mobile
   # (see https://github.com/chromium/web-page-replay/issues/71).
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadInstagramStory(_LoadingStory):
@@ -100,12 +106,14 @@ class LoadInstagramStory(_LoadingStory):
 class LoadPinterestStory(_LoadingStory):
   NAME = 'load:social:pinterest'
   URL = 'https://uk.pinterest.com/categories/popular/'
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class LoadTumblrStory(_LoadingStory):
   NAME = 'load:social:tumblr'
   # Redirects to the "http://" version.
   URL = 'https://50thousand.tumblr.com/'
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 ################################################################################
@@ -123,6 +131,7 @@ class LoadCnnStory(_LoadingStory):
   NAME = 'load:news:cnn'
   # Using "https://" shows "Your connection is not private".
   URL = 'http://edition.cnn.com'
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class LoadFlipboardStory(_LoadingStory):
@@ -151,6 +160,7 @@ class LoadQqMobileStory(_LoadingStory):
   NAME = 'load:news:qq'
   # Using "https://" hangs and shows "This site can't be reached".
   URL = 'http://news.qq.com'
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadRedditDesktopStory(_LoadingStory):
@@ -174,6 +184,7 @@ class LoadSohuMobileStory(_LoadingStory):
   # always fails to completely load due to
   # https://github.com/chromium/web-page-replay/issues/74.
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class LoadWashingtonPostMobileStory(_LoadingStory):
@@ -208,6 +219,7 @@ class LoadYouTubeStory(_LoadingStory):
   # No way to disable autoplay on desktop.
   NAME = 'load:media:youtube'
   URL = 'https://www.youtube.com/watch?v=QGfhS1hfTWw&autoplay=false'
+  PLATFORM_SPECIFIC = True
 
 
 class LoadDailymotionStory(_LoadingStory):
@@ -341,11 +353,13 @@ class LoadDropboxStory(_LoadingStory):
 class LoadWeatherStory(_LoadingStory):
   NAME = 'load:tools:weather'
   URL = 'https://weather.com/en-GB/weather/today/l/USCA0286:1:US'
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class LoadDriveStory(_LoadingStory):
   NAME = 'load:tools:drive'
   URL = 'https://drive.google.com/drive/my-drive'
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
   def _Login(self, action_runner):
     google_login.LoginGoogleAccount(action_runner, 'googletest',

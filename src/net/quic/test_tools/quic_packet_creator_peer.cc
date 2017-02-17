@@ -15,21 +15,10 @@ bool QuicPacketCreatorPeer::SendVersionInPacket(QuicPacketCreator* creator) {
 }
 
 // static
-bool QuicPacketCreatorPeer::SendPathIdInPacket(QuicPacketCreator* creator) {
-  return creator->send_path_id_in_packet_;
-}
-
-// static
 void QuicPacketCreatorPeer::SetSendVersionInPacket(
     QuicPacketCreator* creator,
     bool send_version_in_packet) {
   creator->send_version_in_packet_ = send_version_in_packet;
-}
-
-// static
-void QuicPacketCreatorPeer::SetSendPathIdInPacket(QuicPacketCreator* creator,
-                                                  bool send_path_id_in_packet) {
-  creator->send_path_id_in_packet_ = send_path_id_in_packet;
 }
 
 // static

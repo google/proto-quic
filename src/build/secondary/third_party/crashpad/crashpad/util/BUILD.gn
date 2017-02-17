@@ -35,8 +35,15 @@ if (is_mac) {
     args = [ "{{source}}" ]
     args += rebase_path(outputs, root_build_dir)
     if (!use_system_xcode) {
-      args += [ hermetic_xcode_path ]
+      args += [
+        "--developer-dir",
+        hermetic_xcode_path,
+      ]
     }
+    args += [
+      "--sdk",
+      mac_sdk_path,
+    ]
   }
 }
 

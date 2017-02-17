@@ -49,7 +49,6 @@ class QUIC_EXPORT_PRIVATE QuicEncrypter {
   // |associated_data|. If |output| overlaps with |plaintext| then
   // |plaintext| must be <= |output|.
   virtual bool EncryptPacket(QuicVersion version,
-                             QuicPathId path_id,
                              QuicPacketNumber packet_number,
                              base::StringPiece associated_data,
                              base::StringPiece plaintext,

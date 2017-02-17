@@ -5,8 +5,7 @@
 #ifndef NET_NQE_EFFECTIVE_CONNECTION_TYPE_H_
 #define NET_NQE_EFFECTIVE_CONNECTION_TYPE_H_
 
-#include <string>
-
+#include "base/strings/string_piece.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -62,7 +61,7 @@ NET_EXPORT const char* GetNameForEffectiveConnectionType(
 // EFFECTIVE_CONNECTION_TYPE_UNKNOWN. |effective_connection_type| must be
 // non-null.
 NET_EXPORT bool GetEffectiveConnectionTypeForName(
-    const std::string& connection_type_name,
+    base::StringPiece connection_type_name,
     EffectiveConnectionType* effective_connection_type);
 
 }  // namespace net

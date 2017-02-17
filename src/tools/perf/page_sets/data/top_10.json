@@ -1,20 +1,39 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "top_10_001.wpr": [
-            "Facebook"
-        ], 
-        "top_10_000.wpr": [
-            "https://www.google.com/#hl=en&q=barack+obama", 
-            "https://mail.google.com/mail/", 
-            "https://www.google.com/calendar/", 
-            "http://www.youtube.com", 
-            "http://www.facebook.com/barackobama", 
-            "http://en.wikipedia.org/wiki/Wikipedia", 
-            "http://www.amazon.com", 
-            "http://www.yahoo.com/", 
-            "http://www.bing.com/", 
-            "http://www.ask.com/"
-        ]
-    }
+        "Facebook": {
+            "DEFAULT": "top_10_001.wpr"
+        },
+        "http://en.wikipedia.org/wiki/Wikipedia": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.amazon.com": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.ask.com/": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.bing.com/": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.facebook.com/barackobama": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.yahoo.com/": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "http://www.youtube.com": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "https://www.google.com/#hl=en&q=barack+obama": {
+            "DEFAULT": "top_10_000.wpr"
+        },
+        "https://www.google.com/calendar/": {
+            "DEFAULT": "top_10_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

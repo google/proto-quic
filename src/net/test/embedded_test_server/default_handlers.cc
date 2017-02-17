@@ -70,7 +70,7 @@ std::unique_ptr<HttpResponse> HandleCacheTime(const HttpRequest& request) {
   return std::move(http_response);
 }
 
-// /echoheader | /echoheadercache
+// /echoheader?HEADERS | /echoheadercache?HEADERS
 // Responds with the headers echoed in the message body.
 // echoheader does not cache the results, while echoheadercache does.
 std::unique_ptr<HttpResponse> HandleEchoHeader(const std::string& url,
@@ -82,15 +82,24 @@ std::unique_ptr<HttpResponse> HandleEchoHeader(const std::string& url,
   std::unique_ptr<BasicHttpResponse> http_response(new BasicHttpResponse);
 
   GURL request_url = request.GetURL();
-  if (request_url.has_query()) {
-    std::string header_name = request_url.query();
-    http_response->AddCustomHeader("Vary", header_name);
+  std::string vary;
+  std::string content;
+  RequestQuery headers = ParseQuery(request_url);
+  for (const auto& header : headers) {
+    std::string header_name = header.first;
+    std::string header_value = "None";
     if (request.headers.find(header_name) != request.headers.end())
-      http_response->set_content(request.headers.at(header_name));
-    else
-      http_response->set_content("None");
+      header_value = request.headers.at(header_name);
+    if (!vary.empty())
+      vary += ",";
+    vary += header_name;
+    if (!content.empty())
+      content += "\n";
+    content += header_value;
   }
 
+  http_response->AddCustomHeader("Vary", vary);
+  http_response->set_content(content);
   http_response->set_content_type("text/plain");
   http_response->AddCustomHeader("Cache-Control", cache_control);
   return std::move(http_response);

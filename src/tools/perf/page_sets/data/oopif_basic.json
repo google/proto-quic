@@ -1,14 +1,27 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "oopif_basic_000.wpr": [
-            "http://www.cnn.com", 
-            "http://www.ebay.com", 
-            "http://booking.com", 
-            "http://www.rei.com/", 
-            "http://www.fifa.com/", 
-            "http://arstechnica.com/", 
-            "http://www.nationalgeographic.com/"
-        ]
-    }
+        "http://arstechnica.com/": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://booking.com": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://www.cnn.com": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://www.ebay.com": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://www.fifa.com/": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://www.nationalgeographic.com/": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        },
+        "http://www.rei.com/": {
+            "DEFAULT": "oopif_basic_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

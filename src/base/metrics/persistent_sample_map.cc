@@ -165,7 +165,7 @@ PersistentSampleMap::CreatePersistentRecord(
     PersistentMemoryAllocator* allocator,
     uint64_t sample_map_id,
     Sample value) {
-  SampleRecord* record = allocator->AllocateObject<SampleRecord>();
+  SampleRecord* record = allocator->New<SampleRecord>();
   if (!record) {
     NOTREACHED() << "full=" << allocator->IsFull()
                  << ", corrupt=" << allocator->IsCorrupt();

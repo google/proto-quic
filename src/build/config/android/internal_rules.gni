@@ -1042,9 +1042,6 @@ if (enable_java_templates) {
                               invoker.strip_resource_classes
     _filter_jar = _jar_excluded_patterns != [] || _strip_resource_classes
 
-    _proguard_preprocess =
-        defined(invoker.proguard_preprocess) && invoker.proguard_preprocess
-
     _enable_assert =
         defined(invoker.supports_android) && invoker.supports_android &&
         (is_java_debug || dcheck_always_on)
@@ -1091,43 +1088,6 @@ if (enable_java_templates) {
       _deps = []
       _deps = [ ":$_filter_target" ]
       _previous_output_jar = _filter_output_jar
-    }
-
-    if (_proguard_preprocess) {
-      _proguard_target = "${target_name}__proguard_process"
-      _proguard_input_jar = _previous_output_jar
-      _proguard_output_jar = "$target_out_dir/$target_name-proguarded.jar"
-      _proguard_config_path = invoker.proguard_preprocess_config
-
-      proguard(_proguard_target) {
-        deps = _deps
-        if (defined(invoker.deps)) {
-          deps += invoker.deps
-        }
-        if (defined(invoker.public_deps)) {
-          public_deps = invoker.public_deps
-        }
-        inputs = [
-          _build_config,
-          _proguard_config_path,
-          _proguard_input_jar,
-        ]
-        output_jar_path = _proguard_output_jar
-
-        _rebased_input_paths =
-            [ rebase_path(_proguard_input_jar, root_build_dir) ]
-        _rebased_proguard_configs =
-            [ rebase_path(_proguard_config_path, root_build_dir) ]
-        args = [
-          "--input-paths=$_rebased_input_paths",
-          "--proguard-configs=$_rebased_proguard_configs",
-          "--classpath=@FileArg($_rebased_build_config:javac:classpath)",
-        ]
-      }
-
-      _deps = []
-      _deps = [ ":$_proguard_target" ]
-      _previous_output_jar = _proguard_output_jar
     }
 
     if (_enable_assert) {
@@ -1889,8 +1849,6 @@ if (enable_java_templates) {
       forward_variables_from(invoker,
                              [
                                "jar_excluded_patterns",
-                               "proguard_preprocess",
-                               "proguard_preprocess_config",
                                "strip_resource_classes",
                              ])
 
@@ -1911,22 +1869,11 @@ if (enable_java_templates) {
     }
 
     generate_interface_jar(_ijar_target_name) {
-      if (!defined(invoker.proguard_preprocess) ||
-          !invoker.proguard_preprocess) {
-        # Always used the unfiltered .jar to create the interface jar so that
-        # other targets will resolve filtered classes when depending on
-        # BuildConfig, NativeLibraries, etc.
-        input_jar = invoker.jar_path
-        deps = _deps + _jar_deps
-      } else {
-        # However, still apply pre-proguarding, since ignoring that can break
-        # compiles.
-        input_jar = _jar_path
-        deps = [
-          ":$_process_jar_target_name",
-        ]
-      }
-
+      # Always used the unfiltered .jar to create the interface jar so that
+      # other targets will resolve filtered classes when depending on
+      # BuildConfig, NativeLibraries, etc.
+      input_jar = invoker.jar_path
+      deps = _deps + _jar_deps
       output_jar = _ijar_path
     }
 
@@ -2190,12 +2137,7 @@ if (enable_java_templates) {
     }
 
     process_java_prebuilt(_process_prebuilt_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "jar_excluded_patterns",
-                               "proguard_preprocess",
-                               "proguard_preprocess_config",
-                             ])
+      forward_variables_from(invoker, [ "jar_excluded_patterns" ])
       supports_android = _supports_android
       build_config = _build_config
       input_jar_path = _javac_jar_path
@@ -2229,23 +2171,13 @@ if (enable_java_templates) {
     }
 
     generate_interface_jar(_ijar_target_name) {
-      if (!defined(invoker.proguard_preprocess) ||
-          !invoker.proguard_preprocess) {
-        # Always used the unfiltered .jar to create the interface jar so that
-        # other targets will resolve filtered classes when depending on
-        # BuildConfig, NativeLibraries, etc.
-        input_jar = _javac_jar_path
-        deps = [
-          ":$_javac_target_name",
-        ]
-      } else {
-        # However, still apply pre-proguarding, since ignoring that can break
-        # compiles.
-        input_jar = _process_prebuilt_jar_path
-        deps = [
-          ":$_process_prebuilt_target_name",
-        ]
-      }
+      # Always used the unfiltered .jar to create the interface jar so that
+      # other targets will resolve filtered classes when depending on
+      # BuildConfig, NativeLibraries, etc.
+      input_jar = _javac_jar_path
+      deps = [
+        ":$_javac_target_name",
+      ]
       output_jar = _final_ijar_path
     }
 
@@ -2441,8 +2373,6 @@ if (enable_java_templates) {
                                "manifest_entries",
                                "processors_javac",
                                "processor_args_javac",
-                               "proguard_preprocess_config",
-                               "proguard_preprocess",
                                "provider_configurations",
                              ])
       jar_path = _jar_path

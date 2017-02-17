@@ -292,6 +292,9 @@ class SSLClientSocketImpl::SSLContext {
 
     SSL_CTX_set_grease_enabled(ssl_ctx_.get(), 1);
 
+    // Deduplicate all certificates minted from the SSL_CTX in memory.
+    SSL_CTX_set0_buffer_pool(ssl_ctx_.get(), x509_util::GetBufferPool());
+
     if (base::FeatureList::IsEnabled(kShortRecordHeaderFeature)) {
       SSL_CTX_set_short_header_enabled(ssl_ctx_.get(), 1);
     }
@@ -1042,6 +1045,12 @@ int SSLClientSocketImpl::Init() {
   if (cert_verifier_->SupportsOCSPStapling())
     SSL_enable_ocsp_stapling(ssl_.get());
 
+  // Configure BoringSSL to allow renegotiations. Once the initial handshake
+  // completes, if renegotiations are not allowed, the default reject value will
+  // be restored. This is done in this order to permit a BoringSSL
+  // optimization. See https://crbug.com/boringssl/123.
+  SSL_set_renegotiate_mode(ssl_.get(), ssl_renegotiate_freely);
+
   return OK;
 }
 
@@ -1180,8 +1189,8 @@ int SSLClientSocketImpl::DoHandshakeComplete(int result) {
   SSL_get0_signed_cert_timestamp_list(ssl_.get(), &sct_list, &sct_list_len);
   set_signed_cert_timestamps_received(sct_list_len != 0);
 
-  if (IsRenegotiationAllowed())
-    SSL_set_renegotiate_mode(ssl_.get(), ssl_renegotiate_freely);
+  if (!IsRenegotiationAllowed())
+    SSL_set_renegotiate_mode(ssl_.get(), ssl_renegotiate_never);
 
   uint16_t signature_algorithm = SSL_get_peer_signature_algorithm(ssl_.get());
   if (signature_algorithm != 0) {

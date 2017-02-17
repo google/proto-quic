@@ -23,6 +23,7 @@
 #include "net/log/net_log.h"
 #include "net/log/net_log_capture_mode.h"
 #include "net/log/net_log_event_type.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_buffer_producer.h"
 #include "net/spdy/spdy_http_utils.h"
 #include "net/spdy/spdy_session.h"
@@ -112,6 +113,7 @@ class SpdyStream::HeadersBufferProducer : public SpdyBufferProducer {
     return std::unique_ptr<SpdyBuffer>(
         new SpdyBuffer(stream_->ProduceHeadersFrame()));
   }
+  size_t EstimateMemoryUsage() const override { return 0; }
 
  private:
   const base::WeakPtr<SpdyStream> stream_;
@@ -818,6 +820,16 @@ bool SpdyStream::GetLoadTimingInfo(LoadTimingInfo* load_timing_info) const {
       load_timing_info->push_end = recv_last_byte_time_;
   }
   return result;
+}
+
+size_t SpdyStream::EstimateMemoryUsage() const {
+  // TODO(xunjieli): https://crbug.com/669108. Estimate |pending_send_data_|
+  // once scoped_refptr support is in.
+  return SpdyEstimateMemoryUsage(url_) +
+         SpdyEstimateMemoryUsage(request_headers_) +
+         SpdyEstimateMemoryUsage(url_from_header_block_) +
+         SpdyEstimateMemoryUsage(pending_recv_data_) +
+         SpdyEstimateMemoryUsage(response_headers_);
 }
 
 void SpdyStream::UpdateHistograms() {

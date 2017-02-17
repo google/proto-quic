@@ -11,6 +11,7 @@
 #include "base/location.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/single_thread_task_runner.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/threading/worker_pool.h"
 #include "net/base/io_buffer.h"
@@ -36,7 +37,6 @@ URLRequestSimpleJob::URLRequestSimpleJob(URLRequest* request,
                                          NetworkDelegate* network_delegate)
     : URLRangeRequestJob(request, network_delegate),
       next_data_offset_(0),
-      task_runner_(base::WorkerPool::GetTaskRunner(false)),
       weak_factory_(this) {
 }
 
@@ -71,18 +71,17 @@ int URLRequestSimpleJob::ReadRawData(IOBuffer* buf, int buf_size) {
   if (buf_size == 0)
     return 0;
 
-  // Do memory copy on a background thread. See crbug.com/422489.
-  GetTaskRunner()->PostTaskAndReply(
-      FROM_HERE, base::Bind(&CopyData, make_scoped_refptr(buf), buf_size, data_,
-                            next_data_offset_),
+  // Do memory copy asynchronously on a thread that is not the network thread.
+  // See crbug.com/422489.
+  base::PostTaskWithTraitsAndReply(
+      FROM_HERE, base::TaskTraits().WithShutdownBehavior(
+                     base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      base::Bind(&CopyData, make_scoped_refptr(buf), buf_size, data_,
+                 next_data_offset_),
       base::Bind(&URLRequestSimpleJob::ReadRawDataComplete,
                  weak_factory_.GetWeakPtr(), buf_size));
   next_data_offset_ += buf_size;
   return ERR_IO_PENDING;
-}
-
-base::TaskRunner* URLRequestSimpleJob::GetTaskRunner() const {
-  return task_runner_.get();
 }
 
 int URLRequestSimpleJob::GetData(std::string* mime_type,

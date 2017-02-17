@@ -1,11 +1,12 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "gmail_refresh_001.wpr": [
-            "https://mail.google.com/mail/"
-        ], 
-        "gmail_refresh_000.wpr": [
-            "https://www.google.com/calendar/"
-        ]
-    }
+        "https://mail.google.com/mail/": {
+            "DEFAULT": "gmail_refresh_001.wpr"
+        },
+        "https://www.google.com/calendar/": {
+            "DEFAULT": "gmail_refresh_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

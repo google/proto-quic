@@ -33,7 +33,9 @@ MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
                                  proxy_ssl_config,
                                  destination,
                                  origin_url,
-                                 net_log) {}
+                                 net_log) {
+  DCHECK(!is_waiting());
+}
 
 MockHttpStreamFactoryImplJob::MockHttpStreamFactoryImplJob(
     HttpStreamFactoryImpl::Job::Delegate* delegate,

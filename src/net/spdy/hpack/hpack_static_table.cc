@@ -7,6 +7,7 @@
 #include "base/logging.h"
 #include "net/spdy/hpack/hpack_constants.h"
 #include "net/spdy/hpack/hpack_entry.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -37,6 +38,12 @@ void HpackStaticTable::Initialize(const HpackStaticEntry* static_entry_table,
 
 bool HpackStaticTable::IsInitialized() const {
   return !static_entries_.empty();
+}
+
+size_t HpackStaticTable::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(static_entries_) +
+         SpdyEstimateMemoryUsage(static_index_) +
+         SpdyEstimateMemoryUsage(static_name_index_);
 }
 
 }  // namespace net

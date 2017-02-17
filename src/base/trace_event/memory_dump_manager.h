@@ -117,6 +117,9 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   void OnTraceLogEnabled() override;
   void OnTraceLogDisabled() override;
 
+  // Enable heap profiling if kEnableHeapProfiling is specified.
+  void EnableHeapProfilingIfNeeded();
+
   // Returns true if the dump mode is allowed for current tracing session.
   bool IsDumpModeAllowed(MemoryDumpLevelOfDetail dump_mode);
 
@@ -308,9 +311,6 @@ class BASE_EXPORT MemoryDumpManager : public TraceLog::EnabledStateObserver {
   static void SetInstanceForTesting(MemoryDumpManager* instance);
   static void FinalizeDumpAndAddToTrace(
       std::unique_ptr<ProcessMemoryDumpAsyncState> pmd_async_state);
-
-  // Enable heap profiling if kEnableHeapProfiling is specified.
-  void EnableHeapProfilingIfNeeded();
 
   // Internal, used only by MemoryDumpManagerDelegate.
   // Creates a memory dump for the current process and appends it to the trace.

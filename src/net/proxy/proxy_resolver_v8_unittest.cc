@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "net/proxy/proxy_resolver_v8.h"
 #include "base/compiler_specific.h"
 #include "base/files/file_util.h"
 #include "base/path_service.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/test/scoped_async_task_scheduler.h"
 #include "net/base/completion_callback.h"
 #include "net/base/net_errors.h"
 #include "net/proxy/proxy_info.h"
 #include "net/proxy/proxy_resolver_script_data.h"
-#include "net/proxy/proxy_resolver_v8.h"
 #include "net/test/gtest_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
@@ -136,6 +137,10 @@ class ProxyResolverV8Test : public testing::Test {
   MockJSBindings* bindings() { return &js_bindings_; }
 
  private:
+  // Required by gin::V8Platform::CallOnBackgroundThread(). Can't be a
+  // ScopedTaskScheduler because v8 synchronously waits for tasks to run.
+  base::test::ScopedAsyncTaskScheduler scoped_async_task_scheduler;
+
   MockJSBindings js_bindings_;
   std::unique_ptr<ProxyResolverV8> resolver_;
 };

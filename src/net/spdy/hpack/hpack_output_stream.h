@@ -59,6 +59,9 @@ class NET_EXPORT_PRIVATE HpackOutputStream {
   // Size in bytes of stream's internal buffer.
   size_t size() const { return buffer_.size(); }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // The internal bit buffer.
   std::string buffer_;

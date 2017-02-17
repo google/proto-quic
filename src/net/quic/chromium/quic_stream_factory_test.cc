@@ -5312,7 +5312,7 @@ TEST_P(QuicStreamFactoryTest, ForceHolBlockingEnabled) {
   EXPECT_EQ(OK, callback_.WaitForResult());
 
   QuicChromiumClientSession* session = GetActiveSession(host_port_pair_);
-  if (session->connection()->version() > QUIC_VERSION_35) {
+  if (session->connection()->version() == QUIC_VERSION_36) {
     EXPECT_TRUE(session->force_hol_blocking());
   } else {
     EXPECT_FALSE(session->force_hol_blocking());

@@ -327,29 +327,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
       QuicByteCount chlo_packet_size,
       std::unique_ptr<ProcessClientHelloResultCallback> done_cb) const;
 
-  // BuildServerConfigUpdateMessage sets |out| to be a SCUP message containing
-  // the current primary config, an up to date source-address token, and cert
-  // chain and proof in the case of secure QUIC. Returns true if successfully
-  // filled |out|.
-  //
-  // |cached_network_params| is optional, and can be nullptr.
-  //
-  // TODO(gredner): remove this when
-  // FLAGS_quic_reloadable_flag_enable_async_get_proof is removed.
-  bool BuildServerConfigUpdateMessage(
-      QuicVersion version,
-      base::StringPiece chlo_hash,
-      const SourceAddressTokens& previous_source_address_tokens,
-      const QuicSocketAddress& server_address,
-      const QuicIpAddress& client_ip,
-      const QuicClock* clock,
-      QuicRandom* rand,
-      QuicCompressedCertsCache* compressed_certs_cache,
-      const QuicCryptoNegotiatedParameters& params,
-      const CachedNetworkParameters* cached_network_params,
-      const QuicTagVector& connection_options,
-      CryptoHandshakeMessage* out) const;
-
   // BuildServerConfigUpdateMessage invokes |cb| with a SCUP message containing
   // the current primary config, an up to date source-address token, and cert
   // chain and proof in the case of secure QUIC. Passes true to |cb| if the
@@ -357,9 +334,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
   // assumes ownership of |cb|.
   //
   // |cached_network_params| is optional, and can be nullptr.
-  //
-  // TODO(gredner): This method is an async version of the above.  The
-  // synchronous version will eventually be removed.
   void BuildServerConfigUpdateMessage(
       QuicVersion version,
       base::StringPiece chlo_hash,

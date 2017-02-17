@@ -4,8 +4,6 @@
 
 #include "net/quic/test_tools/mock_quic_spdy_client_stream.h"
 
-using net::QuicClientSession;
-
 namespace net {
 namespace test {
 

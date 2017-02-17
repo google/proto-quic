@@ -1,20 +1,39 @@
 {
-    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "tough_webgl_cases_000.wpr": [
-            "http://montagestudio.com/demos/eco-homes/", 
-            "http://helloracer.com/racer-s/"
-        ], 
-        "tough_webgl_cases_005.wpr": [
-            "http://webglsamples.org/aquarium/aquarium.html", 
-            "http://webglsamples.org/blob/blob.html", 
-            "http://webglsamples.org/dynamic-cubemap/dynamic-cubemap.html", 
-            "http://www.khronos.org/registry/webgl/sdk/demos/webkit/ManyPlanetsDeep.html", 
-            "http://www.khronos.org/registry/webgl/sdk/demos/webkit/Earth.html", 
-            "http://kenrussell.github.io/webgl-animometer/Animometer/tests/3d/webgl.html", 
-            "http://www.khronos.org/registry/webgl/sdk/demos/google/nvidia-vertex-buffer-object/index.html", 
-            "http://www.khronos.org/registry/webgl/sdk/demos/google/particles/index.html", 
-            "http://www.khronos.org/registry/webgl/sdk/demos/google/san-angeles/index.html"
-        ]
-    }
+        "http://helloracer.com/racer-s/": {
+            "DEFAULT": "tough_webgl_cases_000.wpr"
+        },
+        "http://kenrussell.github.io/webgl-animometer/Animometer/tests/3d/webgl.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://montagestudio.com/demos/eco-homes/": {
+            "DEFAULT": "tough_webgl_cases_000.wpr"
+        },
+        "http://webglsamples.org/aquarium/aquarium.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://webglsamples.org/blob/blob.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://webglsamples.org/dynamic-cubemap/dynamic-cubemap.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://www.khronos.org/registry/webgl/sdk/demos/google/nvidia-vertex-buffer-object/index.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://www.khronos.org/registry/webgl/sdk/demos/google/particles/index.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://www.khronos.org/registry/webgl/sdk/demos/google/san-angeles/index.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://www.khronos.org/registry/webgl/sdk/demos/webkit/Earth.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        },
+        "http://www.khronos.org/registry/webgl/sdk/demos/webkit/ManyPlanetsDeep.html": {
+            "DEFAULT": "tough_webgl_cases_005.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

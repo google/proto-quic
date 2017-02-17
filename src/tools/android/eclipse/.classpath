@@ -225,6 +225,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="third_party/bouncycastle/lib/bcprov-jdk16-1.46.jar"/>
     <classpathentry kind="lib" path="third_party/byte_buddy/lib/byte-buddy-1.4.17.jar"/>
     <classpathentry kind="lib" path="third_party/findbugs/lib/findbugs.jar"/>
+    <classpathentry kind="lib" path="third_party/hamcrest/lib/hamcrest-library-1.3.jar"/>
     <classpathentry kind="lib" path="third_party/intellij/lib/annotations-12.0.jar"/>
     <classpathentry kind="lib" path="third_party/junit/src/lib/hamcrest-core-1.3.jar" sourcepath="third_party/junit/src/lib/hamcrest-core-1.3-sources.jar"/>
     <classpathentry kind="lib" path="third_party/objenesis/lib/objenesis-2.4.jar"/>

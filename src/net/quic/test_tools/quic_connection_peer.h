@@ -6,7 +6,6 @@
 #define NET_QUIC_TEST_TOOLS_QUIC_CONNECTION_PEER_H_
 
 #include "base/macros.h"
-#include "net/base/ip_endpoint.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_packets.h"

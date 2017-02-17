@@ -284,8 +284,6 @@ BASE_EXPORT bool ContainsOnlyChars(const StringPiece16& input,
 BASE_EXPORT bool IsStringUTF8(const StringPiece& str);
 BASE_EXPORT bool IsStringASCII(const StringPiece& str);
 BASE_EXPORT bool IsStringASCII(const StringPiece16& str);
-// A convenience adaptor for WebStrings, as they don't convert into
-// StringPieces directly.
 BASE_EXPORT bool IsStringASCII(const string16& str);
 #if defined(WCHAR_T_IS_UTF32)
 BASE_EXPORT bool IsStringASCII(const std::wstring& str);

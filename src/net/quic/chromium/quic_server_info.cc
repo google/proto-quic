@@ -7,6 +7,7 @@
 #include <limits>
 
 #include "base/pickle.h"
+#include "base/stl_util.h"
 
 using std::string;
 
@@ -23,12 +24,12 @@ QuicServerInfo::State::State() {}
 QuicServerInfo::State::~State() {}
 
 void QuicServerInfo::State::Clear() {
-  server_config.clear();
-  source_address_token.clear();
-  cert_sct.clear();
-  chlo_hash.clear();
-  server_config_sig.clear();
-  certs.clear();
+  base::STLClearObject(&server_config);
+  base::STLClearObject(&source_address_token);
+  base::STLClearObject(&cert_sct);
+  base::STLClearObject(&chlo_hash);
+  base::STLClearObject(&server_config_sig);
+  base::STLClearObject(&certs);
 }
 
 QuicServerInfo::QuicServerInfo(const QuicServerId& server_id)

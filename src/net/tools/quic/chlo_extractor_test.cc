@@ -63,9 +63,9 @@ class ChloExtractorTest : public ::testing::Test {
     std::unique_ptr<QuicPacket> packet(
         BuildUnsizedDataPacket(&framer, header_, frames));
     EXPECT_TRUE(packet != nullptr);
-    size_t encrypted_length = framer.EncryptPayload(
-        ENCRYPTION_NONE, header_.path_id, header_.packet_number, *packet,
-        buffer_, arraysize(buffer_));
+    size_t encrypted_length =
+        framer.EncryptPayload(ENCRYPTION_NONE, header_.packet_number, *packet,
+                              buffer_, arraysize(buffer_));
     ASSERT_NE(0u, encrypted_length);
     packet_.reset(new QuicEncryptedPacket(buffer_, encrypted_length));
     EXPECT_TRUE(packet_ != nullptr);

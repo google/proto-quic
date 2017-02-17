@@ -65,18 +65,11 @@ QUIC_FLAG(bool,
 // If true, re-enables QUIC_VERSION_36.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_36_v3, true)
 
-// If true, use async codepaths to invoke ProofSource::GetProof.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_enable_async_get_proof, true)
-
 // If true, only open limited number of quic sessions per epoll event. Leave the
 // rest to next event.
 QUIC_FLAG(bool,
           FLAGS_quic_reloadable_flag_quic_limit_num_new_sessions_per_epoll_loop,
           true)
-
-// Only close the connection on the 5th RTO client side when the 5RTO option
-// is enabled.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_only_5rto_client_side, false)
 
 // If true, QUIC server push will enabled by default.
 QUIC_FLAG(bool,
@@ -136,13 +129,6 @@ QUIC_FLAG(
     FLAGS_quic_reloadable_flag_quic_headers_stream_release_sequencer_buffer,
     true)
 
-// Set the retransmission alarm only when there are unacked
-// retransmittable packets.
-QUIC_FLAG(
-    bool,
-    FLAGS_quic_reloadable_flag_quic_more_conservative_retransmission_alarm,
-    true)
-
 // Enable QUIC force HOL blocking experiment.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_force_hol_blocking, true)
 
@@ -173,7 +159,7 @@ QUIC_FLAG(bool,
 
 // If true, QUIC cubic code will use the event time when adjusting CWND after an
 // ACK instead of the clock\'s current approximate time.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_event_time, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_use_event_time, true)
 
 // If true, lazy allocate and early release memeory used in
 // QuicStreamSequencerBuffer to buffer incoming data.
@@ -184,16 +170,16 @@ QUIC_FLAG(
 
 // If true, Makes GFE respect the connection options for initial flow control
 // window larger than 32 KB.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_large_ifw_options, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_large_ifw_options, true)
 
 // If true, fix Cubic\'s use of kBetaLastMax for n-connection emulation.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_beta_last_max, false)
 
 // If true, enable QUIC v37.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_37, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_version_37, true)
 
 // If true, disables QUIC v34.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_34, false)
+QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_disable_version_34, true)
 
 // Allow quic to properly support proxying 100 Continue responses.
 QUIC_FLAG(bool, FLAGS_quic_restart_flag_quic_supports_100_continue, false)
@@ -204,3 +190,10 @@ QUIC_FLAG(bool, FLAGS_quic_enable_version_38, false)
 // When true, ensures the session's flow control window is always at least 1.5x
 // larger than the largest stream flow control window.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_flow_control_invariant, false)
+
+// If greater than zero, mean RTT variation is multiplied by the specified
+// factor and added to the congestion window limit.
+QUIC_FLAG(double, FLAGS_quic_bbr_rtt_variation_weight, 0.0f)
+
+// Congestion window gain for QUIC BBR during PROBE_BW phase.
+QUIC_FLAG(double, FLAGS_quic_bbr_cwnd_gain, 2.0f)

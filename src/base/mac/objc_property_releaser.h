@@ -16,6 +16,9 @@
 namespace base {
 namespace mac {
 
+// Deprecated: Use base::mac::ReleaseProperties instead.
+// ---
+
 // ObjCPropertyReleaser is a C++ class that can automatically release
 // synthesized Objective-C properties marked "retain" or "copy". The expected
 // use is to place an ObjCPropertyReleaser object within an Objective-C class

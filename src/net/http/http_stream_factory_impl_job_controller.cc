@@ -28,14 +28,9 @@
 
 namespace net {
 
-// Returns parameters associated with the delay of the HTTP stream job.
-std::unique_ptr<base::Value> NetLogHttpStreamJobDelayCallback(
-    base::TimeDelta delay,
-    NetLogCaptureMode /* capture_mode */) {
-  std::unique_ptr<base::DictionaryValue> dict(new base::DictionaryValue());
-  dict->SetInteger("resume_after_ms", static_cast<int>(delay.InMilliseconds()));
-  return std::move(dict);
-}
+// The maximum time to wait for the alternate job to complete before resuming
+// the main job.
+const int kMaxDelayTimeForMainJobSecs = 3;
 
 std::unique_ptr<base::Value> NetLogJobControllerCallback(
     const GURL* url,
@@ -63,6 +58,7 @@ HttpStreamFactoryImpl::JobController::JobController(
       alternative_job_net_error_(OK),
       job_bound_(false),
       main_job_is_blocked_(false),
+      main_job_is_resumed_(false),
       bound_job_(nullptr),
       can_start_alternative_proxy_job_(false),
       privacy_mode_(PRIVACY_MODE_DISABLED),
@@ -546,10 +542,25 @@ void HttpStreamFactoryImpl::JobController::AddConnectionAttemptsToRequest(
   request_->AddConnectionAttempts(attempts);
 }
 
+void HttpStreamFactoryImpl::JobController::ResumeMainJobLater(
+    const base::TimeDelta& delay) {
+  net_log_.AddEvent(NetLogEventType::HTTP_STREAM_JOB_DELAYED,
+                    NetLog::Int64Callback("delay", delay.InMilliseconds()));
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&HttpStreamFactoryImpl::JobController::ResumeMainJob,
+                 ptr_factory_.GetWeakPtr()),
+      delay);
+}
+
 void HttpStreamFactoryImpl::JobController::ResumeMainJob() {
+  if (main_job_is_resumed_)
+    return;
+
+  main_job_is_resumed_ = true;
   main_job_->net_log().AddEvent(
-      NetLogEventType::HTTP_STREAM_JOB_DELAYED,
-      base::Bind(&NetLogHttpStreamJobDelayCallback, main_job_wait_time_));
+      NetLogEventType::HTTP_STREAM_JOB_RESUMED,
+      NetLog::Int64Callback("delay", main_job_wait_time_.InMilliseconds()));
 
   main_job_->Resume();
   main_job_wait_time_ = base::TimeDelta();
@@ -558,21 +569,26 @@ void HttpStreamFactoryImpl::JobController::ResumeMainJob() {
 void HttpStreamFactoryImpl::JobController::MaybeResumeMainJob(
     Job* job,
     const base::TimeDelta& delay) {
+  DCHECK(delay == base::TimeDelta() || delay == main_job_wait_time_);
   DCHECK(job == main_job_.get() || job == alternative_job_.get());
 
-  if (!main_job_is_blocked_ || job != alternative_job_.get() || !main_job_)
+  if (job != alternative_job_.get() || !main_job_)
     return;
 
   main_job_is_blocked_ = false;
 
-  if (!main_job_->is_waiting())
+  if (!main_job_->is_waiting()) {
+    // There are two cases where the main job is not in WAIT state:
+    //   1) The main job hasn't got to waiting state, do not yet post a task to
+    //      resume since that will happen in ShouldWait().
+    //   2) The main job has passed waiting state, so the main job does not need
+    //      to be resumed.
     return;
+  }
 
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&HttpStreamFactoryImpl::JobController::ResumeMainJob,
-                 ptr_factory_.GetWeakPtr()),
-      main_job_wait_time_);
+  main_job_wait_time_ = delay;
+
+  ResumeMainJobLater(main_job_wait_time_);
 }
 
 void HttpStreamFactoryImpl::JobController::OnConnectionInitialized(Job* job,
@@ -595,12 +611,7 @@ bool HttpStreamFactoryImpl::JobController::ShouldWait(Job* job) {
   if (main_job_wait_time_.is_zero())
     return false;
 
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&HttpStreamFactoryImpl::JobController::ResumeMainJob,
-                 ptr_factory_.GetWeakPtr()),
-      main_job_wait_time_);
-
+  ResumeMainJobLater(main_job_wait_time_);
   return true;
 }
 
@@ -652,8 +663,10 @@ const NetLogWithSource* HttpStreamFactoryImpl::JobController::GetNetLog(
 
 void HttpStreamFactoryImpl::JobController::MaybeSetWaitTimeForMainJob(
     const base::TimeDelta& delay) {
-  if (main_job_is_blocked_)
-    main_job_wait_time_ = delay;
+  if (main_job_is_blocked_) {
+    main_job_wait_time_ = std::min(
+        delay, base::TimeDelta::FromSeconds(kMaxDelayTimeForMainJobSecs));
+  }
 }
 
 bool HttpStreamFactoryImpl::JobController::HasPendingMainJob() const {

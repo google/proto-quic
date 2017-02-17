@@ -383,6 +383,7 @@ void StackDumpSignalHandler(int signal, siginfo_t* info, void* void_context) {
   // Non-Mac OSes should probably reraise the signal as well, but the Linux
   // sandbox tests break on CrOS devices.
   // https://code.google.com/p/chromium/issues/detail?id=551681
+  PrintToStderr("Calling _exit(1). Core file will not be generated.\n");
   _exit(1);
 #endif  // defined(OS_MACOSX) && !defined(OS_IOS)
 }

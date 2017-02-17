@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <iosfwd>
 #include <limits>
 #include <map>
 #include <memory>
@@ -67,10 +68,9 @@ const int32_t kPaddingSizePerFrame = 256;
 NET_EXPORT_PRIVATE extern const char* const kHttp2ConnectionHeaderPrefix;
 const int kHttp2ConnectionHeaderPrefixSize = 24;
 
-// Types of HTTP2 frames.
-enum SpdyFrameType {
+// Wire values for HTTP2 frame types.
+enum SpdyFrameType : uint8_t {
   DATA = 0x00,
-  MIN_FRAME_TYPE = DATA,
   HEADERS = 0x01,
   PRIORITY = 0x02,
   RST_STREAM = 0x03,
@@ -80,10 +80,15 @@ enum SpdyFrameType {
   GOAWAY = 0x07,
   WINDOW_UPDATE = 0x08,
   CONTINUATION = 0x09,
-  // ALTSVC and BLOCKED are recognized extensions.
+  // ALTSVC is a public extension.
   ALTSVC = 0x0a,
+  // BLOCKED was never standardized, and should be deleted.
   BLOCKED = 0x0b,
-  MAX_FRAME_TYPE = BLOCKED
+  MAX_FRAME_TYPE = BLOCKED,
+  // The specific value of EXTENSION is meaningless; it is a placeholder used
+  // within SpdyFramer's state machine when handling unknown frames via an
+  // extension API.
+  EXTENSION = 0xff
 };
 
 // Flags on data packets.
@@ -125,7 +130,8 @@ enum Http2SettingsControlFlags {
   SETTINGS_FLAG_ACK = 0x01,
 };
 
-enum SpdySettingsIds {
+// Wire values of HTTP/2 setting identifiers.
+enum SpdySettingsIds : uint16_t {
   // HPACK header table maximum size.
   SETTINGS_HEADER_TABLE_SIZE = 0x1,
   SETTINGS_MIN = SETTINGS_HEADER_TABLE_SIZE,
@@ -141,6 +147,11 @@ enum SpdySettingsIds {
   SETTINGS_MAX_HEADER_LIST_SIZE = 0x6,
   SETTINGS_MAX = SETTINGS_MAX_HEADER_LIST_SIZE
 };
+
+// This explicit operator is needed, otherwise compiler finds
+// overloaded operator to be ambiguous.
+NET_EXPORT_PRIVATE std::ostream& operator<<(std::ostream& out,
+                                            SpdySettingsIds id);
 
 using SettingsMap = std::map<SpdySettingsIds, uint32_t>;
 
@@ -204,12 +215,12 @@ typedef uint64_t SpdyPingId;
 
 // Returns true if a given on-the-wire enumeration of a frame type is defined
 // in a standardized HTTP/2 specification, false otherwise.
-NET_EXPORT_PRIVATE bool IsDefinedFrameType(int frame_type_field);
+NET_EXPORT_PRIVATE bool IsDefinedFrameType(uint8_t frame_type_field);
 
 // Parses a frame type from an on-the-wire enumeration.
 // Behavior is undefined for invalid frame type fields; consumers should first
 // use IsValidFrameType() to verify validity of frame type fields.
-NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(int frame_type_field);
+NET_EXPORT_PRIVATE SpdyFrameType ParseFrameType(uint8_t frame_type_field);
 
 // (HTTP/2) All standard frame types except WINDOW_UPDATE are
 // (stream-specific xor connection-level). Returns false iff we know
@@ -223,7 +234,7 @@ const char* FrameTypeToString(SpdyFrameType frame_type);
 
 // If |wire_setting_id| is the on-the-wire representation of a defined SETTINGS
 // parameter, parse it to |*setting_id| and return true.
-NET_EXPORT_PRIVATE bool ParseSettingsId(int wire_setting_id,
+NET_EXPORT_PRIVATE bool ParseSettingsId(uint16_t wire_setting_id,
                                         SpdySettingsIds* setting_id);
 
 // Return if |id| corresponds to a defined setting;
@@ -240,8 +251,6 @@ NET_EXPORT_PRIVATE SpdyErrorCode ParseErrorCode(uint32_t wire_error_code);
 // for logging/debugging.
 const char* ErrorCodeToString(SpdyErrorCode error_code);
 
-// Frame type for non-control (i.e. data) frames.
-const int kDataFrameType = 0;
 // Number of octets in the frame header.
 const size_t kFrameHeaderSize = 9;
 // Size, in bytes, of the data frame header.
@@ -857,6 +866,9 @@ class SpdySerializedFrame {
     *this = SpdySerializedFrame();
     return buffer;
   }
+
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const { return owns_buffer_ ? size_ : 0; }
 
  protected:
   char* frame_;

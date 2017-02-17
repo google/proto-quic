@@ -78,8 +78,11 @@ class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
     if 'memory:chrome' in value.name:
       return ('renderer_processes' in value.name and
               not _IGNORED_MEMORY_STATS_RE.search(value.name))
-    return (_V8_GC_HIGH_LEVEL_STATS_RE.search(value.name) and
-            not _IGNORED_V8_STATS_RE.search(value.name))
+    if 'v8-gc' in value.name:
+      return (_V8_GC_HIGH_LEVEL_STATS_RE.search(value.name) and
+              not _IGNORED_V8_STATS_RE.search(value.name))
+    # Allow all other non-GC metrics.
+    return 'v8' in value.name
 
   @classmethod
   def ShouldTearDownStateAfterEachStoryRun(cls):

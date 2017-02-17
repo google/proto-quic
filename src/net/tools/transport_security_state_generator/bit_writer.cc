@@ -33,19 +33,11 @@ void BitWriter::WriteBit(uint8_t bit) {
 }
 
 void BitWriter::Flush() {
+  position_ += (8 - used_);
   bytes_.push_back(current_byte_);
 
   used_ = 0;
   current_byte_ = 0;
-}
-
-uint8_t BitWriter::BitLength(uint32_t input) const {
-  uint8_t number_of_bits = 0;
-  while (input != 0) {
-    number_of_bits++;
-    input >>= 1;
-  }
-  return number_of_bits;
 }
 
 }  // namespace transport_security_state

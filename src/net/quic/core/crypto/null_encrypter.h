@@ -27,7 +27,6 @@ class QUIC_EXPORT_PRIVATE NullEncrypter : public QuicEncrypter {
   bool SetKey(base::StringPiece key) override;
   bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
   bool EncryptPacket(QuicVersion version,
-                     QuicPathId path_id,
                      QuicPacketNumber packet_number,
                      base::StringPiece associated_data,
                      base::StringPiece plaintext,

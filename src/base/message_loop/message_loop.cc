@@ -39,7 +39,7 @@ namespace {
 // A lazily created thread local storage for quick access to a thread's message
 // loop, if one exists.
 base::ThreadLocalPointer<MessageLoop>* GetTLSMessageLoop() {
-  static auto lazy_tls_ptr = new base::ThreadLocalPointer<MessageLoop>();
+  static auto* lazy_tls_ptr = new base::ThreadLocalPointer<MessageLoop>();
   return lazy_tls_ptr;
 }
 MessageLoop::MessagePumpFactory* message_pump_for_ui_factory_ = NULL;
@@ -320,7 +320,8 @@ MessageLoop::MessageLoop(Type type, MessagePumpFactoryCallback pump_factory)
 #endif
       nestable_tasks_allowed_(true),
       pump_factory_(pump_factory),
-      run_loop_(NULL),
+      run_loop_(nullptr),
+      current_pending_task_(nullptr),
       incoming_task_queue_(new internal::IncomingTaskQueue(this)),
       unbound_task_runner_(
           new internal::MessageLoopTaskRunner(incoming_task_queue_)),
@@ -403,6 +404,7 @@ bool MessageLoop::ProcessNextDelayedNonNestableTask() {
 
 void MessageLoop::RunTask(PendingTask* pending_task) {
   DCHECK(nestable_tasks_allowed_);
+  current_pending_task_ = pending_task;
 
 #if defined(OS_WIN)
   if (pending_task->is_high_res) {
@@ -423,6 +425,8 @@ void MessageLoop::RunTask(PendingTask* pending_task) {
     observer.DidProcessTask(*pending_task);
 
   nestable_tasks_allowed_ = true;
+
+  current_pending_task_ = nullptr;
 }
 
 bool MessageLoop::DeferOrRunPendingTask(PendingTask pending_task) {

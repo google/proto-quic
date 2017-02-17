@@ -264,6 +264,11 @@ bool Process::CanBackgroundProcesses() {
 }
 #endif  // !defined(OS_LINUX) && !defined(OS_MACOSX)
 
+// static
+void Process::TerminateCurrentProcessImmediately(int exit_code) {
+  _exit(exit_code);
+}
+
 bool Process::IsValid() const {
   return process_ != kNullProcessHandle;
 }

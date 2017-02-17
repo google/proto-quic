@@ -49,12 +49,23 @@ please put this warning by the enum definition:
 ```
 // These values are written to logs.  New enum values can be added, but existing
 // enums must never be renumbered or deleted and reused.
+enum NEW_TAB_PAGE_ACTION {
+  USE_OMNIBOX = 0,
+  CLICK_TILE = 1,
+  OPEN_BOOKMARK = 2,
+  NEW_TAB_PAGE_ACTION_MAX
+};
 ```
 
 Also, please explicitly set enum values `= 0`, `= 1`, `= 2`, etc.  This makes
 clearer that the actual values are important.  In addition, it helps confirm
 the values align between the enum definition and
-[histograms.xml](./histograms.xml).
+[histograms.xml](./histograms.xml).  If a "max" value is included it
+should not include an explicit value.
+
+If your enum histogram has a catch-all / miscellaneous bucket, put that bucket
+first (`= 0`).  This will make the bucket easy to find on the dashboard if
+later you add additional buckets to your histogram.
 
 ### Count Histograms
 
@@ -162,7 +173,7 @@ on Mac.
 Histogram descriptions should clearly state when the histogram is emitted
 (profile open? network request received? etc.).
 
-### Owners 
+### Owners
 
 Histograms need to be owned by a person or set of people. These indicate who
 the current experts on this metric are. Being the owner means you are

@@ -125,6 +125,9 @@ class NET_EXPORT_PRIVATE HpackHeaderTable {
     debug_visitor_ = std::move(visitor);
   }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // Returns number of evictions required to enter |name| & |value|.
   size_t EvictionCountForEntry(base::StringPiece name,

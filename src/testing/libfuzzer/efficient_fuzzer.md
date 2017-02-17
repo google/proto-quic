@@ -58,6 +58,19 @@ fuzzer_test("my_protocol_fuzzer") {
 }
 ```
 
+You may specify multiple seed corpus directories via `seed_corpuses` attribute:
+
+```
+fuzzer_test("my_protocol_fuzzer") {
+  ...
+  seed_corpuses = [ "src/fuzz/testcases", "src/unittest/data" ]
+  ...
+}
+```
+
+All files found in the directories and their subdirectories will be archived
+into `%YOUR_FUZZER_NAME%_seed_corpus.zip` output archive.
+
 If you don't want to store seed corpus in Chromium repository, you can upload
 corpus to Google Cloud Storage bucket used by ClusterFuzz:
 

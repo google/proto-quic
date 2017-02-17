@@ -75,9 +75,8 @@ class QUIC_EXPORT_PRIVATE ProofSource {
 
   virtual ~ProofSource() {}
 
-  // GetProof finds a certificate chain for |hostname|, sets |out_chain| to
-  // point to it (in leaf-first order), calculates a signature of
-  // |server_config| using that chain and puts the result in |out_signature|.
+  // GetProof finds a certificate chain for |hostname| (in leaf-first order),
+  // and calculates a signature of |server_config| using that chain.
   //
   // The signature uses SHA-256 as the hash function and PSS padding when the
   // key is RSA.
@@ -85,36 +84,15 @@ class QUIC_EXPORT_PRIVATE ProofSource {
   // The signature uses SHA-256 as the hash function when the key is ECDSA.
   // The signature may use an ECDSA key.
   //
-  // |out_chain| is reference counted to avoid the (assumed) expense of copying
-  // out the certificates.
-  //
-  // The number of certificate chains is expected to be small and fixed, thus
-  // the ProofSource retains ownership of the contents of |out_chain|. The
-  // expectation is that they will be cached forever.
-  //
   // The signature depends on |chlo_hash| which means that the signature can not
-  // be cached. The caller takes ownership of |*out_signature|.
+  // be cached.
   //
   // |hostname| may be empty to signify that a default certificate should be
   // used.
   //
-  // |out_leaf_cert_sct| points to the signed timestamp (RFC6962) of the leaf
-  // cert.
-  //
   // This function may be called concurrently.
-  virtual bool GetProof(const QuicSocketAddress& server_address,
-                        const std::string& hostname,
-                        const std::string& server_config,
-                        QuicVersion quic_version,
-                        base::StringPiece chlo_hash,
-                        const QuicTagVector& connection_options,
-                        QuicReferenceCountedPointer<Chain>* out_chain,
-                        QuicCryptoProof* out_proof) = 0;
-
-  // Async version of GetProof with identical semantics, except that the results
-  // are delivered to |callback|.  Callers should expect that |callback| might
-  // be invoked synchronously.  The ProofSource takes ownership of |callback| in
-  // any case.
+  //
+  // Callers should expect that |callback| might be invoked synchronously.
   virtual void GetProof(const QuicSocketAddress& server_address,
                         const std::string& hostname,
                         const std::string& server_config,

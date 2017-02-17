@@ -60,6 +60,9 @@ char kLSanDefaultSuppressions[] =
 // Leaks in swrast_dri.so. http://crbug.com/540042
 "leak:swrast_dri.so\n"
 
+// Leak in glibc's gconv caused by fopen(..., "r,ccs=UNICODE")
+"leak:__gconv_lookup_cache\n"
+
 // ================ Leaks in Chromium code ================
 // PLEASE DO NOT ADD SUPPRESSIONS FOR NEW LEAKS.
 // Instead, commits that introduce memory leaks should be reverted. Suppressing

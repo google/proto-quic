@@ -60,7 +60,7 @@ static_library("zlib") {
     "inflate.h",
     "inftrees.c",
     "inftrees.h",
-    "mozzconf.h",
+    "names.h",
     "trees.c",
     "trees.h",
     "uncompr.c",

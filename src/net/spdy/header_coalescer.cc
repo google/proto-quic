@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/strings/string_util.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -68,6 +69,10 @@ SpdyHeaderBlock HeaderCoalescer::release_headers() {
   DCHECK(headers_valid_);
   headers_valid_ = false;
   return std::move(headers_);
+}
+
+size_t HeaderCoalescer::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(headers_);
 }
 
 }  // namespace net

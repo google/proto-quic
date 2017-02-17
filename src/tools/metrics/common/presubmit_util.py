@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import os
-import sys
+import difflib
 import logging
+import os
 import shutil
+import sys
 
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -29,8 +30,17 @@ def DoPresubmitMain(argv, original_filename, backup_filename, script_name,
   Returns:
     An exit status.  Non-zero indicates errors.
   """
-  logging.basicConfig(level=logging.INFO)
+  # interactive: Print log info messages and prompt user to accept the diff.
+  interactive = ('--non-interactive' not in argv)
+  # presubmit: Simply print a message if the input is not formatted correctly.
   presubmit = ('--presubmit' in argv)
+  # diff: Print diff to stdout rather than modifying files.
+  diff = ('--diff' in argv)
+
+  if interactive:
+    logging.basicConfig(level=logging.INFO)
+  else:
+    logging.basicConfig(level=logging.ERROR)
 
   # If there is a description xml in the current working directory, use that.
   # Otherwise, use the one residing in the same directory as this script.
@@ -60,16 +70,23 @@ def DoPresubmitMain(argv, original_filename, backup_filename, script_name,
   if original_xml == pretty:
     logging.info('%s is correctly pretty-printed.', original_filename)
     sys.exit(0)
+
   if presubmit:
     logging.error('%s is not formatted correctly; run %s to fix.',
                   original_filename, script_name)
     sys.exit(1)
 
   # Prompt user to consent on the change.
-  if not diff_util.PromptUserToAcceptDiff(
+  if interactive and not diff_util.PromptUserToAcceptDiff(
       original_xml, pretty, 'Is the new version acceptable?'):
     logging.error('Diff not accepted. Aborting.')
     sys.exit(1)
+
+  if diff:
+    for line in difflib.unified_diff(original_xml.splitlines(),
+                                     pretty.splitlines()):
+      print line
+    sys.exit(0)
 
   logging.info('Creating backup file: %s', backup_filename)
   shutil.move(xml_path, os.path.join(xml_dir, backup_filename))

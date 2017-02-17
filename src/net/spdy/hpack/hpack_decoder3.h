@@ -50,6 +50,7 @@ class NET_EXPORT_PRIVATE HpackDecoder3 : public HpackDecoderInterface {
       override;
   void set_max_decode_buffer_size_bytes(
       size_t max_decode_buffer_size_bytes) override;
+  size_t EstimateMemoryUsage() const override;
 
  private:
   class NET_EXPORT_PRIVATE ListenerAdapter

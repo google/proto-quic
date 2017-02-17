@@ -6,6 +6,7 @@
 
 #include "base/android/base_jni_onload.h"
 #include "base/android/base_jni_registrar.h"
+#include "base/android/jni_android.h"
 #include "base/bind.h"
 #include "net/test/embedded_test_server/android/embedded_test_server_android.h"
 
@@ -19,23 +20,15 @@ bool RegisterJNI(JNIEnv* env) {
       RegisterEmbeddedTestServerAndroid(env);
 }
 
-bool Init() {
-  return true;
-}
-
 }  // namesapce
 
-bool OnJNIOnLoadRegisterJNI(JavaVM* vm) {
-  std::vector<base::android::RegisterCallback> register_callbacks;
-  register_callbacks.push_back(base::Bind(&RegisterJNI));
-  register_callbacks.push_back(base::Bind(&base::android::RegisterJni));
-  return base::android::OnJNIOnLoadRegisterJNI(vm, register_callbacks);
+bool OnJNIOnLoadRegisterJNI(JNIEnv* env) {
+  return base::android::OnJNIOnLoadRegisterJNI(env) &&
+         base::android::RegisterJni(env) && RegisterJNI(env);
 }
 
 bool OnJNIOnLoadInit() {
-  std::vector<base::android::InitCallback> init_callbacks;
-  init_callbacks.push_back(base::Bind(&Init));
-  return base::android::OnJNIOnLoadInit(init_callbacks);
+  return base::android::OnJNIOnLoadInit();
 }
 
 }  // namespace test

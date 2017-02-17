@@ -1,507 +1,1506 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "profile_safe_urls_000.wpr": [
-            "http://maps.yandex.ru", 
-            "https://www.stackoverflow.com/questions/tagged/php", 
-            "http://www.wsj.com/public/page/new-york-main.html", 
-            "https://www.stackoverflow.com/questions/29637985/how-to-rename-a-bucket-in-couchbase/?lastactivity", 
-            "http://www.digg.com/", 
-            "http://www.huffingtonpost.com/shelley-emling/17-things-i-want-my-son-to-know-on-his-17th-birthday_b_7034756.html", 
-            "https://www.imdb.com/name/nm0000598?ref_=hm_nw_tp1_lk1", 
-            "http://www.wsj.com/public/page/email-setup.html", 
-            "https://fj.wikipedia.org/", 
-            "http://www.yahoo.co.jp/r/c12", 
-            "https://www.amazon.com/Samsung-Galaxy-S6-Sapphire-Wireless/dp/B00V7FXLNA", 
-            "http://zen-emma.deviantart.com/", 
-            "https://www.youtube.com/user/movieclipsTRAILERS", 
-            "https://www.stackoverflow.com/questions/tagged/cordova", 
-            "http://www.huffingtonpost.com/dl-cade", 
-            "http://www.baidu.com/s?usm=1&wd=holy+cow&ie=utf-8&rsv_cq=cow&rsv_dl=0_left_dict3_85_18695", 
-            "http://sta.sh/0173o5y7gti6", 
-            "http://www.wsj.com/public/page/email-setup.html?mod=WSJ_footer", 
-            "https://twitter.com/dpsahoo/status/588051373901512704", 
-            "http://www.google.com/history/optout?hl=en", 
-            "https://zea.wikipedia.org/", 
-            "http://security.stackexchange.com/questions/85963/what-is-the-purpose-of-frequently-rotating-tls-certificates-without-changing-und", 
-            "http://www.cnn.com/2015/04/14/entertainment/feat-pink-weight-response-hln/index.html", 
-            "http://www.huffingtonpost.com/tavis-smiley", 
-            "https://news.yandex.ru/", 
-            "http://www.huffingtonpost.com/2015/04/14/kylie-jenner-lips_n_7064364.html?utm_hp_ref=mostpopular", 
-            "https://www.youtube.com/watch?v=oiJWrNWDXvM", 
-            "http://www.trulia.com/sell?ts=CNN&tscamp=home_page_sell&ecampaign=partner_cnn_sell", 
-            "http://www.wsj.com/articles/imf-slowing-emerging-market-growth-is-sapping-global-economic-prospects-1429016407?mod=WSJ_hp_LEFTWhatsNewsCollection", 
-            "https://www.stackoverflow.com/users/1571407/niton", 
-            "https://www.imdb.com/title/tt3318750?ref_=hm_cs_t4", 
-            "http://online.wsj.com/conferences?mod=WSJ_footer", 
-            "https://www.stackoverflow.com/questions/tagged/geocode", 
-            "https://www.stackoverflow.com/users/4643092/nrh", 
-            "https://www.stackoverflow.com/questions/tagged/worklight", 
-            "https://www.imdb.com/name/nm1113550?ref_=hm_brn_i_1", 
-            "https://www.stackoverflow.com/questions/29639384/c-weird-folder-locking-for-child-process", 
-            "http://techgnotic.deviantart.com/journal/Watch-The-Throne-S5-E1-The-Wars-To-Come-526718761", 
-            "https://www.stackoverflow.com/questions/29639401/lisp-compiler-design-for-embedded-systems", 
-            "http://offers.lendingtree.com/splitter/splitter.ashx?id=CNN_Article_Credit2&800num=hide&siteid=credit&hpt=hp_bn17", 
-            "http://www.baidu.com/s?wd=cow%20gate%E5%AE%98%E7%BD%91&rsp=3&f=1&oq=cow&ie=utf-8&usm=1&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE&rsv_ers=xdt0&rs_src=0&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE", 
-            "http://www.cnn.com/2015/04/14/world/cnnphotos-boragaon-landfill-india/index.html", 
-            "http://www.huffingtonpost.com/2015/04/13/house-vote-on-iran_n_7056150.html", 
-            "https://www.imdb.com/news/ni58506924?ref_=hm_nw_tv4", 
-            "http://sports.yahoo.com/mlb/teams/cin", 
-            "http://www.huffingtonpost.com/news/michelle-obama", 
-            "http://declanshalvey.deviantart.com/art/PUISHER-V-DAREDEVIL-colour-183351045", 
-            "https://www.stackoverflow.com/questions/29637516/projecting-domain-model-child-count-onto-view-model-without-extra-queries", 
-            "http://wolftamer358.deviantart.com", 
-            "https://sv.wikipedia.org/", 
-            "http://www.huffingtonpost.com/p/ariannas-tv-appearances.html", 
-            "https://www.stackoverflow.com/questions/7385228/serial-port-rs232-communication-with-visual-c-2010", 
-            "https://got.wikipedia.org/", 
-            "http://www.baidu.com/s?usm=5&wd=%E6%9C%80%E9%95%BF%E7%9A%84%E8%8B%B1%E6%96%87%E5%8D%95%E8%AF%8D&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u5176\u4ed6\u4eba\u8fd8\u641c&recid=20826&euri=657095", 
-            "https://www.stackoverflow.com/users/2251200/cdell", 
-            "https://www.stackoverflow.com/questions/tagged/compiler-construction", 
-            "http://www.huffingtonpost.com/2015/04/13/funny-tombstones_n_7051048.html?ir=Comedy", 
-            "http://www.huffingtonpost.com/divorce/", 
-            "http://news.yahoo.com/lightbox/dilbert-slideshow/20150414-dt150414-gif-photo-050305838.html", 
-            "https://www.imdb.com/title/tt3132632?ref_=hm_cs_t2", 
-            "http://www.deviantart.com/tag/procrastination", 
-            "http://www.cnn.com/interactive/2014/05/specials/city-of-tomorrow/index.html", 
-            "https://www.imdb.com/media/index/rg1176148480?ref_=nv_tp_ph_3", 
-            "http://www.cnn.com/", 
-            "https://www.imdb.com/title/tt0944947?ref_=hm_nw_tv1_lk1", 
-            "http://quotes.wsj.com/index/IN/1", 
-            "https://www.amazon.com/Samsung-Galaxy-S6-Platinum-128GB/dp/B00V5M072I", 
-            "http://bymyimagination.deviantart.com?connect", 
-            "http://www.cnn.com/interactive/2014/12/us/cnn-guns-project/index.html", 
-            "https://careers.stackoverflow.com?utm_source=stackoverflow.com&utm_medium=site-ui&utm_campaign=multicollider", 
-            "http://www.huffingtonpost.com/matt_green", 
-            "https://www.twitter.com?lang=ro", 
-            "http://www.huffingtonpost.com/charles-t-rubin/", 
-            "http://quotes.wsj.com/index/HK/HSI", 
-            "https://www.imdb.com/title/tt2364582?ref_=hm_ontv_t1", 
-            "http://www.wsj.com/articles/good-mental-health-away-from-home-starts-before-college-1428944477#articleTabs%3Dcomments", 
-            "https://www.twitter.com?lang=ru", 
-            "https://www.twitter.com/about", 
-            "https://www.imdb.com/x-ray/?ref_=nv_sf_xray_4", 
-            "https://www.youtube.com/t/terms", 
-            "http://www.slate.com/blogs/weigel.html", 
-            "http://www.huffingtonpost.com/syndication", 
-            "http://www.huffingtonpost.com/dana-beyer", 
-            "http://moonbeam13.deviantart.com/", 
-            "https://als.wikipedia.org/", 
-            "http://www.flickr.com/photos/flickr/galleries/72157649608126894/with/14523607768/lightbox/?yc=https://www.yahoo.com", 
-            "http://www.yandex.ru/themes", 
-            "https://www.amazon.com/The-Hunger-Games-Catching-Fire/dp/B00I2TV3NO", 
-            "https://www.amazon.com/s?_encoding=UTF8&node=2858778011%2C7613704011&search-alias=prime-instant-video", 
-            "http://image.baidu.com/i?tn=baiduimage&ct=201326592&lm=-1&cl=2&word=rice&&fr=ala&ori_query=rice&ala=0&alatpl=sp&pos=3", 
-            "https://www.amazon.com/Big-Hero-Blu-ray-DVD-Digital/dp/B00O4ZC57I", 
-            "http://techgnotic.deviantart.com/art/Today-s-Headlines-From-The-News-Desk-4-14-15-526757199#Scream-Trailer", 
-            "http://www.huffingtonpost.com/news/sleep/", 
-            "http://www.huffingtonpost.com/horoscopes/", 
-            "https://www.amazon.com/Xbox-360-Wireless-Controller-Glossy-Black/dp/B003ZSP0WW", 
-            "https://www.yahoo.com/health", 
-            "http://www.deviantart.com/tag/mcdonalds", 
-            "http://www.wsj.com/articles/fare-increase-of-9-proposed-for-nj-transit-1429025661?mod=WSJ_hpp_sections_newyork", 
-            "http://www.baidu.com/s?usm=5&wd=%E6%96%B0%E4%B8%9C%E6%96%B9%E5%9C%A8%E7%BA%BF&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=2225295", 
-            "https://www.stackoverflow.com/questions/tagged/python", 
-            "http://www.wsjlocal.com?mod=WSJ_footer", 
-            "http://www.people.com/people", 
-            "https://homes.yahoo.com/", 
-            "https://screen.yahoo.com/", 
-            "http://www.huffingtonpost.com/2015/04/14/tom-brady-first-pitch_n_7062180.html#comments", 
-            "https://www.youtube.com/watch?v=fPg3jWn6Nn0", 
-            "https://www.stackoverflow.com/questions/29639331/how-to-use-graphics2d-g-scale-on-only-some-things-but-not-others", 
-            "http://www.yahoo.co.jp/r/plh1", 
-            "https://www.imdb.com/search/name?gender=male,female&ref_=nv_tp_cel_1", 
-            "http://help.baidu.com/question", 
-            "http://www.baidu.com/s?wd=cow&pn=30&oq=cow&ie=utf-8&usm=1&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE", 
-            "http://www.baidu.com/s?usm=5&wd=rice%E5%8C%96%E5%A6%86%E5%93%81&ie=utf-8&rsv_rq=2&rsv_cq=rice", 
-            "http://www.baidu.com/s?usm=5&wd=%E6%B2%AA%E6%B1%9F%E8%8B%B1%E8%AF%AD&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=405084", 
-            "http://www.deviantart.com/tag/teslamotors", 
-            "http://www.cnn.com/2015/04/13/politics/nra-convention-2015-2016-elections/index.html", 
-            "http://www.huffingtonpost.com/p/huffington-post.html", 
-            "http://sports.yahoo.com/mlb/teams/chc", 
-            "https://www.stackoverflow.com/questions/tagged/machine-learning", 
-            "https://www.amazon.com/My-Old-Lady-Kevin-Kline/dp/B00S65W70M", 
-            "http://www.marketwatch.com/Game/", 
-            "http://www.baidu.com/s?usm=5&wd=91%E5%A4%96%E6%95%99%E7%BD%91&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=10142484", 
-            "http://yahoo.match.com?trackingid=526100&bannerid=673168", 
-            "http://www.juancole.com/", 
-            "https://www.stackoverflow.com/questions/tagged/java", 
-            "http://www.huffingtonpost.com/2015/04/14/ka-holt-house-arrest-poems_n_7058066.html", 
-            "https://www.flickr.com/photos/19716902@N00/2289844848", 
-            "http://www.baidu.com/link?url=nV4HENY9ckVeSVWwFshKgaY3DvOnJrVd_g_0qMg-UUM9GcmCeqxG96TLk-X5jzWFhsp5fJQ91LvyGlZG-76XyedyYEgtdpilkS7ymmWpLVl1gMQ_JWi4BBdIvKo0t2AL3P7O5NOjZD9qPUVSOTvglyNfYK81dItwR5Wdr0nczt2qXnuSEUsigTyqhFtr_6d_", 
-            "http://www.cnn.com/shows/wonder-list", 
-            "https://www.stackoverflow.com/questions/29639284/expected-before-token-c", 
-            "http://www.huffingtonpost.com/green/", 
-            "http://www.wsj.com/public/page/designtech-wsjModuleHome.html?mod=WSJ_footer", 
-            "https://www.stackoverflow.com/questions/tagged/applet", 
-            "http://www.cnn.com/2015/04/14/entertainment/feat-stephen-hawking-sings-galaxy-song/index.html", 
-            "http://www.dailymotion.com/video/x2mo9bq_gentlemen-lobsters-what-really-happens-at-coachella_lifestyle", 
-            "http://www.huffingtonpost.com/2015/04/14/marco-rubio-nicki-minaj_n_7062232.html", 
-            "http://www.huffingtonpost.com/2015/04/14/rikers-island-de-blasio-justice-reboot_n_7065438.html#comments", 
-            "http://www.wsj.com/articles/a-to-be-renovated-westchester-house-is-listing-for-29-5-million-1428605768?mod=WSJ_hpp_sections_realestate", 
-            "https://www.stackoverflow.com/questions/tagged/maven", 
-            "https://bar.wikipedia.org/", 
-            "http://blender.stackexchange.com/questions/28473/how-to-avoid-particle-data-being-stored-in-blend-file-to-make-it-smaller", 
-            "https://species.wikimedia.org/", 
-            "http://marthig.deviantart.com/", 
-            "https://www.stackoverflow.com/users/2669425/david-hall", 
-            "http://www.deviantart.com/browse/undiscovered/", 
-            "https://www.stackoverflow.com/questions/29638020/transposing-items-with-prices-to-separate-section/?lastactivity", 
-            "http://www.trulia.com/?ecampaign=partner_cnn_home_title", 
-            "http://swampland.time.com/", 
-            "https://www.bing.com/search?q=Mount+Yoshino+&form=hpcapt&filters=HpDate%3a%2220150414_0700%22", 
-            "http://www.wsj.com/public/page/news-world-business.html", 
-            "http://www.deviantart.com/browse/whatshot ", 
-            "http://www.bookdepository.com/", 
-            "http://www.cnn.com/2015/04/13/europe/italy-oldest-neanderthal-dna-sample-altamura/index.html", 
-            "http://www.ndnblog.com", 
-            "http://www.eastdane.com/welcome", 
-            "http://poldhannahms.deviantart.com/art/Tender-Kiss-66694744", 
-            "https://www.amazon.com/Flashlight-Modes-Torch-Adjustable-Focus/dp/B006E0QAFY", 
-            "https://www.stackoverflow.com/users/165198/davidk01", 
-            "https://www.youtube.com/watch?v=VSYjs5RnlRo", 
-            "http://www.huffingtonpost.com/2015/04/14/summer-movie-preview-2015_n_7058302.html", 
-            "http://jnkboy.deviantart.com/", 
-            "http://www.deviantart.com/", 
-            "http://www.huffingtonpost.com/news/third-metric/", 
-            "http://www.wsj.com/articles/a-churchs-light-inspires-a-jewelry-designer-from-afar-1429036012?mod=WSJ_hp_EditorsPicks", 
-            "http://market.yandex.ru/catalog?hid=7812191&clid=514&utm_source=face&utm_medium=cpc&utm_term=shoes&utm_campaign=world", 
-            "http://www.huffingtonpost.com/p/ariannas-radio-and-podcas.html", 
-            "http://blogs.wsj.com/speakeasy/2015/04/14/rb-pioneer-percy-sledge-dies-at-73/?mod=WSJ_hp_EditorsPicks", 
-            "https://sg.wikipedia.org/", 
-            "http://company.yandex.ru", 
-            "http://www.yahoo.co.jp/r/c53", 
-            "https://arc.wikipedia.org/", 
-            "http://www.wsj.com/articles/spacex-rocket-fails-to-survive-landing-1429045616?mod=trending_now_4", 
-            "https://bo.wikipedia.org/", 
-            "https://www.amazon.com/Schlage-FE595-16-234-10-027-Lock/dp/B0097GTAMC", 
-            "https://be-x-old.wikipedia.org/", 
-            "https://classifieds.wsj.com/ad/Residential-Real-Estate-Ads?mod=WSJ_footer", 
-            "http://www.salon.com/", 
-            "https://www.dailymotion.com/archived/index.html", 
-            "https://kv.wikipedia.org/", 
-            "https://www.imdb.com/news/ni58504454?ref_=hm_nw_cel3", 
-            "http://celebrity.yahoo.com/blogs/celeb-news/kimora-lee-simmons-gives-birth-boy-203354029.html", 
-            "http://itunes.apple.com/us/app/the-huffington-post/id306621789?mt=8", 
-            "https://www.dailymotion.com/LocalNews-GrabNetworks", 
-            "https://ny.wikipedia.org/", 
-            "https://www.google.com/intl/en/policies/privacy/", 
-            "https://www.amazon.com/Lytro-Light-Field-Camera-16GB/dp/B0099QUUBU", 
-            "http://www.baidu.com/s?usm=5&wd=rice%E5%A4%A7%E5%AD%A6&ie=utf-8&rsv_rq=2&rsv_cq=rice", 
-            "http://www.huffingtonpost.com/susan-brink", 
-            "https://uk.wikipedia.org/", 
-            "http://twpictures.deviantart.com/", 
-            "http://www.huffingtonpost.com/teen/", 
-            "http://www.huffingtonpost.com/2015/04/13/watch-spacex-launch-rocket-landing_n_7055812.html#comments", 
-            "http://www.baidu.com/s?usm=1&wd=dairy+cattle&ie=utf-8&rsv_crq=7&bs=cow", 
-            "http://www.cnn.com/2015/04/13/us/cleveland-zoo-cheetah-fall/index.html", 
-            "https://www.stackoverflow.com/users/4208583/grender", 
-            "http://www.huffingtonpost.com/2015/04/14/jon-stewart-hillary-clinton-announcement_n_7060206.html", 
-            "http://translate.yandex.ru/", 
-            "https://www.amazon.com/Samsung-GC200-Galaxy-Camera-Touchscreen/dp/B00R3DGKWY", 
-            "http://www.baidu.com/tools?url=http%3A%2F%2Fwww.baidu.com%2Flink%3Furl%3DxIVPE7l3aIThwsbTHHUhIO_jc890BBOkQnDcd7ivNnZKOihdfpF4ZNHKcHdiVvVA&jump=http%3A%2F%2Fkoubei.baidu.com%2Fwomc%2Fp%2Fsentry%3Ftitle%3D%01%22%02cow%03%22%01%E6%98%AF%01%E4%BB%80%E4%B9%88%01%E6%84%8F%E6%80%9D%01-%01%22%02cow%03%22%01%E7%BF%BB%E8%AF%91%01_%02cow%03%E7%9A%84%01%E5%8F%91%E9%9F%B3%01%E3%80%81%01%E7%BF%BB%E8%AF%91%01%E3%80%81%01%E5%8F%82%E8%80%83%01%E4%BE%8B%E5%8F%A5%01-%01%E5%8F%AF%E5%8F%AF%01%E6%9F%A5%01%E8%AF%8D%01%26q%3Dcow&key=surl", 
-            "http://reiq.deviantart.com/art/Sherry-Patreon-Commish-526710915", 
-            "https://www.wikidata.org/", 
-            "http://www.deviantart.com/tag/fastandfurious", 
-            "http://techgnotic.deviantart.com/journal/Furious-7-Have-Car-Chases-Finally-Jumped-The-Shark-513488584", 
-            "https://pam.wikipedia.org/", 
-            "http://www.dailymotion.com/video/x2mlh4k_things-that-go-wrong-when-trying-to-watch-netflix_lifestyle", 
-            "http://www.huffingtonpost.com/2015/04/09/finding-a-partner_n_7030736.html#comments", 
-            "https://www.amazon.com/Sony-Walkman-NWZW273S-Waterproof-Swimming/dp/B00I05EFO4", 
-            "https://www.imdb.com/tribeca/?ref_=nv_ev_tri_4", 
-            "https://secure.imdb.com/register-imdb/form-v2?ref_=ft_reg", 
-            "https://sq.wikipedia.org/", 
-            "http://news.yahoo.com/n-korea-first-lady-appears-public-first-time-034036151.html", 
-            "http://rabota.yandex.ru/salary.xml?from=morda&_openstat=yandex;text;salary;salaryStatall", 
-            "https://www.dailymotion.com/oddsquadtumblr--", 
-            "http://www.baidu.com/s?usm=5&wd=%E7%99%BE%E8%AF%8D%E6%96%A9&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=9089046", 
-            "http://www.huffingtonpost.com/2015/04/14/ibrahim-al-rubaish-killed-yemen_n_7062758.html#comments", 
-            "https://mobile.yahoo.com/yahoo/?src=gta", 
-            "http://www.wsj.com/public/page/cookie-policy.html?mod=WSJ_footer", 
-            "http://www.cnn.com/specials/more/cnn-leadership", 
-            "http://www.cnn.com/specials/impact-your-world", 
-            "http://www.baidu.com/link?url=MiBQS6vM7KZu_dzfdpvtlB4jfCo1J7LNeOPza0gMz6hzxnUxLIgtDHIyL1D1HScDRvTmAOsl0tvrtYMtTGsmHa", 
-            "https://se.wikipedia.org/", 
-            "https://www.stackoverflow.com/questions/tagged/systems-programming", 
-            "https://www.google.com/services/", 
-            "https://search.yahoo.com/search?p=Alexis+Roderick&fr=fp-tts-901&fr2=ps&woeid=12587712&fp=1", 
-            "http://sports.yahoo.com", 
-            "http://www.huffingtonpost.com/news/climate-change/", 
-            "https://www.dailymotion.com/us/users/no-explicit/list/recommended/1", 
-            "http://www.wsj.com/public/page/news-opinion-commentary.html?mod=WSJ_hpp_sections_opinion", 
-            "http://topics.wsj.com/?mod=WSJ_footer", 
-            "https://www.amazon.com/Samsung-2-5-Inch-Internal-MZ-75E250B-AM/dp/B00OAJ412U", 
-            "http://www.baidu.com/link?url=E_410vcScg2dOp6vwBY4WLNHpMFVnXDpG6_NgiFwj2FwmGRF3a9I8tKmTHYriXJ4JK4uGv7cjn2kyH_HtwZCNa", 
-            "https://www.youtube.com/yt/about/", 
-            "http://techgnotic.deviantart.com/journal/Chasing-The-Sun-Solar-Power-Is-The-Next-Big-Thing-526784981", 
-            "http://www.flickr.com/photos/flickr/galleries/72157649608126894/with/16301542813/lightbox/?yc=https://www.yahoo.com", 
-            "http://www.huffingtonpost.com/2015/04/14/manufactured-housing-republicans_n_7065810.html#comments", 
-            "https://www.stackoverflow.com/questions/tagged/moq", 
-            "https://www.youtube.com/watch?v=cqmG5JWLRag", 
-            "https://maps.yandex.ru/?index&ll=43.506343%2C55.219296&spn=22.434082%2C7.001578&z=6&l=map%2Cstv%2Csta&hint=zaglpano", 
-            "http://www.baidu.com/link?url=3hOFcy9XXCTbBiNXtU7Gaf9PSvxUi-Ni25gGeym_GMGppjHQEpHFyEfmgBdDCR1p", 
-            "https://www.amazon.com/SanDisk-Sansa-Clip-Player-Black/dp/B002MAPS6W", 
-            "http://www.thenation.com/", 
-            "http://www.wsj.com/articles/chinese-drone-maker-dji-in-talks-to-raise-funding-at-valuation-of-10-billion-1429050685?mod=WSJ_hpp_MIDDLENexttoWhatsNewsThird", 
-            "https://www.stackoverflow.com/questions/29639169/xml-schema-element-is-not-declared", 
-            "https://www.stackoverflow.com/questions/tagged/c%23-4.0", 
-            "http://www.huffingtonpost.com/2015/04/14/brad-gooch-smash-cut_n_7058084.html#comments", 
-            "https://www.imdb.com/title/tt0478970?ref_=hm_hp_i_2", 
-            "http://www.huffingtonpost.com/joshua-l-schank-phd", 
-            "https://www.amazon.com/Samsung-Galaxy-S6-Edge-Sapphire/dp/B00V7FY076", 
-            "http://headlines.yahoo.co.jp/hl?a=20150415-00000009-san-l28.view-000", 
-            "http://www.deviantart.com/?day=2015-04-13", 
-            "http://www.baidu.com/link?url=AL-zsBN7Wl1skmBFU4Btrgr_nU66vqigpOhaSI-BDnqO5_eSF4bZxW2wQienf5qC3qm3TleOiLRfYMtRaaPeX-lczbwVge_ILsgx09uo56u", 
-            "http://www.newyorker.com/", 
-            "http://quotes.wsj.com/futures/GOLD", 
-            "http://www.huffingtonpost.com/2015/04/14/republicans-push-269-bill_n_7061458.html#comments", 
-            "https://szl.wikipedia.org/", 
-            "http://www.wsj.com/mdc/public/npage/2_3023_creditdervs.html?mod=topnav_2_3000", 
-            "https://www.stackoverflow.com/questions/tagged/c%2b%2b", 
-            "http://www.huffingtonpost.com/social/", 
-            "http://metrika.yandex.ru/", 
-            "http://www.cnn.com/2015/04/14/us/florida-panama-city-gang-rape-case/index.html", 
-            "http://www.baidu.com/s?usm=1&wd=%E7%99%BE%E8%AF%8D%E6%96%A9&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=9089046", 
-            "http://www.baidu.com/link?url=7hk-Iao0WutqX5osf6LjfZ53ONWYZV1lecGvT1HEupLm76juUIY13-Ay61JXIGjcDLd0_YH_ZAGrugaQVTaB0_", 
-            "https://www.deviantart.com/", 
-            "http://www.dailymotion.com/video/x2mow8y_rihanna-wants-you-to-know-she-s-not-using-cocaine-in-this-video_news", 
-            "http://www.deviantart.com/tag/dart", 
-            "http://www.huffingtonpost.com/comment/policy/", 
-            "https://www.stackoverflow.com/questions/29639396/sequence-contains-no-matching-element-error-using-boolean", 
-            "http://www.huffingtonpost.com/news/icon-next/", 
-            "https://www.stackoverflow.com/users/1151334/soleil", 
-            "https://www.imdb.com/name/nm0000234?ref_=hm_nw_cel1_lk1", 
-            "https://www.stackoverflow.com/questions/29639427/openam-unable-to-get-application-sso-token", 
-            "http://maxromanchak.deviantart.com/art/Kingpin-206522937", 
-            "https://www.stackoverflow.com/questions/tagged/mysql", 
-            "https://www.facebook.com/mobile/?ref=pf", 
-            "https://it-it.facebook.com/", 
-            "https://www.imdb.com/title/tt1810683?ref_=hm_cs_t1", 
-            "http://www.wsj.com/articles/matomy-media-to-acquire-70-of-avenlo-1429052401?mod=WSJ_hp_LEFTWhatsNewsCollection", 
-            "https://www.imdb.com/help/show_article?conditions", 
-            "http://thrive.huffingtonpost.com/events/", 
-            "https://www.twitter.com/i/cricket", 
-            "http://www.huffingtonpost.com/2015/04/14/jeb-bushs-administration-_n_7062336.html#comments", 
-            "http://www.deviantart.com/tag/cosplay", 
-            "http://online.wsj.com/public/search?article-doc-type=%7BThe+10-Point%7D&HEADER_TEXT=the+10-point", 
-            "http://www.deviantart.com/tag/photography", 
-            "http://www.huffingtonpost.com/2015/04/14/eu-google-antitrust-annou_n_7066634.html", 
-            "https://www.deviantart.com/#skins", 
-            "https://www.facebook.com/", 
-            "https://www.stackoverflow.com/questions/29639204/generating-at-runtime-autogenerate-spring-mvc-controllers-services-etc", 
-            "https://www.imdb.com/movies-in-theaters/?ref_=ft_inth", 
-            "https://www.imdb.com/title/tt1935302?ref_=hm_otw_t8", 
-            "http://quotes.wsj.com/fx/AUDUSD", 
-            "https://www.stackoverflow.com/questions/29639223/custom-file-owner-of-a-nib-file-leaks-in-os-x-swift", 
-            "https://www.stackoverflow.com/users/774575/mins", 
-            "http://www.amazon.de/", 
-            "https://vi.wikipedia.org/", 
-            "https://www.stackoverflow.com/questions/tagged/c%23", 
-            "https://www.stackoverflow.com/questions/tagged/android-studio", 
-            "http://news.yandex.ru/yandsearch?cl4url=www.vz.ru/news/2015/4/15/740016.html&lang=ru&lr=102567", 
-            "http://sta.sh/writer", 
-            "https://uz.wikipedia.org/", 
-            "https://www.stackoverflow.com/questions/tagged/dynamic", 
-            "http://wallpaper.deviantart.com/?q=", 
-            "http://www.baidu.com/s?wd=rice&pn=90&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc", 
-            "http://www.baidu.com/s?usm=1&wd=cow%E6%B4%97%E9%9D%A2%E5%A5%B6&ie=utf-8&rsv_cq=cow&rsv_dl=0_left_dict3_85_18695", 
-            "https://www.imdb.com/chart/?ref_=hm_cht_sm", 
-            "http://www.ew.com/ew/", 
-            "http://www.huffingtonpost.com/tavis-smiley/", 
-            "http://www.msnbc.com/maddowblog", 
-            "http://www.huffingtonpost.com/davidhalperin/video-in-iowa-clinton-str_b_7065662.html", 
-            "https://www.stackoverflow.com/questions/ask", 
-            "http://www.tenmarks.com/", 
-            "http://www.wsj.com/public/page/news-personal-finance.html?mod=WSJ_hpp_sections_yourmoney", 
-            "https://dev.twitter.com", 
-            "https://www.amazon.com/Samsung-Galaxy-S6-Gold-Platinum/dp/B00V5M04OE", 
-            "http://enigma-fotos.deviantart.com/art/Myranda-526722461", 
-            "http://www.huffingtonpost.com/2015/04/13/lena-dunham-mental-health_n_7053556.html?ir=Entertainment", 
-            "https://www.twitter.com#supported_languages", 
-            "https://www.stackoverflow.com/questions/29639316/display-variable-content-not-varialbe-namein-ruby-on-rails", 
-            "http://www.huffingtonpost.com/news/smarter-ideas/", 
-            "https://www.facebook.com/careers/?ref=pf", 
-            "https://www.youtube.com/user/VanossGaming", 
-            "http://www.wsj.com/articles/webs-most-maniacal-bargain-hunters-1428619524?mod=WSJ_hpp_sections_smallbusiness", 
-            "http://www.imdb.com/", 
-            "https://superuser.com", 
-            "https://www.dailymotion.com/HollyscoopTV", 
-            "https://www.stackoverflow.com/questions/tagged/django", 
-            "https://www.youtube.com/channel/SBAaOjE-GIlRI", 
-            "http://www.huffingtonpost.com/valerie-plame-wilson/", 
-            "http://www.wsj.com/public/page/data-policy.html?mod=WSJ_footer", 
-            "http://moviefone.com", 
-            "https://www.stackoverflow.com/questions/29639150/complex-0-1-backpack-with-multiple-compartments", 
-            "https://www.amazon.com/The-Brothers-Grimm-Matt-Damon/dp/B008Y6U5AM", 
-            "http://www.wsj.com/articles/eu-to-file-antitrust-charges-against-google-1429039881?mod=WSJ_hp_LEFTTopStories", 
-            "http://time.yandex.ru", 
-            "http://www.baidu.com/s?usm=1&wd=basketball%E7%9A%84%E9%9F%B3%E6%A0%87&ie=utf-8&rsv_crq=7&bs=cow", 
-            "http://blog.yandex.ru", 
-            "https://www.stackoverflow.com/questions/tagged/phpunit", 
-            "https://www.imdb.com/news/ns0000151?ref_=hm_nw_tp5_src", 
-            "https://www.stackoverflow.com/users/337134/knows-not-much", 
-            "http://sta.sh", 
-            "https://kbd.wikipedia.org/", 
-            "http://live.huffingtonpost.com/", 
-            "http://maddog197x.deviantart.com/journal/FNAF-Do-You-Wanna-Make-a-Pizza-Parody-526610047", 
-            "http://www.cnn.com/2015/04/13/travel/gallery/game-of-thrones-locations-gallery/index.html", 
-            "http://www.GlobalPost.com", 
-            "https://mail.yahoo.com?.src=ym&.intl=us", 
-            "http://www.baidu.com/link?url=nV4HENY9ckVeSVWwFshKgaY3DvOnJrVd_g_0qMg-UUM9GcmCeqxG96TLk-X5jzWFJfhE82mQTApIiYKXF1VUbk_jTcDmMJkInnaHgl86ZSDhXkkZabhN5wh7BDJc7FEWtWM1Ud1pWKfIQ0mLfbE57zV4vbzuiwdyRHJQ7DWtcti", 
-            "http://www.wsj.com/articles/at-t-sues-to-overturn-fccs-net-neutrality-rules-1429052166?mod=WSJ_hp_LEFTWhatsNewsCollection", 
-            "https://www.stackoverflow.com/questions/tagged/oop", 
-            "http://www.dpreview.com/", 
-            "https://judaism.stackexchange.com", 
-            "http://www.baidu.com/s?usm=1&wd=%E4%B8%AD%E5%BC%8F%E8%8B%B1%E8%AF%AD&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u5176\u4ed6\u4eba\u8fd8\u641c&recid=20826&euri=300085", 
-            "http://www.imdb.com/seen/ls076901727/?ref_=hm_poll_lk2", 
-            "http://quotes.wsj.com/index/DJI", 
-            "https://play.google.com/store/apps/details?id=com.huffingtonpost.android&hl=en", 
-            "https://www.amazon.com/ap/signin?_encoding=UTF8&openid.assoc_handle=usflex&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.ns.pape=http%3A%2F%2Fspecs.openid.net%2Fextensions%2Fpape%2F1.0&openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2Fgp%2Fyourstore%2Fhome%3Fie%3DUTF8%26ref_%3Dnav_ya_signin", 
-            "https://www.bing.com/videos/search?q=Mount+Yoshino&form=hphot2#view=detail&mid=662667328FC2B5E200A0662667328FC2B5E200A0", 
-            "http://www.huffingtonpost.com/2015/04/13/dixon-white-redneck_n_7059414.html?ir=Media", 
-            "http://www.baidu.com/link?url=xIVPE7l3aIThwsbTHHUhIO_jc890BBOkQnDcd7ivNnZKOihdfpF4ZNHKcHdiVvVA", 
-            "https://www.amazon.com#gw-ftGr-desktop-hero-5", 
-            "http://www.wsj.com/articles/the-cia-needs-an-iran-team-b-1429052586?mod=WSJ_hpp_sections_opinion", 
-            "https://www.imdb.com/title/tt4294382/synopsis?ref_=hm_tvr_cap_pri_1", 
-            "https://www.stackoverflow.com/questions/tagged/uicollectionview", 
-            "http://online.wsj.com/10point", 
-            "http://news.yandex.ru/yandsearch?cl4url=sport.rbc.ru/article/254275/&lang=ru&lr=102567", 
-            "http://www.huffingtonpost.com/2015/04/14/fiduciary-standard-retirement-fees_n_7065110.html", 
-            "https://smallbusiness.yahoo.com/?s_fptrough=ysb_acq_fp", 
-            "https://gaming.stackexchange.com", 
-            "http://www.huffingtonpost.com/rev-al-sharpton/-will-the-south-teach-the_b_7055866.html?utm_hp_ref=yahoo&ir=Yahoo", 
-            "http://www.thismodernworld.com/", 
-            "https://www.imdb.com/offsite/?page-action=ft-amzn-aud&token=BCYslYPVtgdBjNCAXnFH31o4XJ-U1p2Tm3QbdVdbsV-3eI0E3kTM1p8RUOPAT1CvKZgA1qdlbf6Q%0D%0AAmJLsgt0NfMb6VxcLJHkW5zgMj7Uww0ZP_-5vlA0DLzPjKx2klilqhyOoUfhWQ44pnz1bUDEc9j0%0D%0AkHAVo0YZrFGxZ6HN4y5HnUYHSP-VbE3wM_1QdPAzyG2f%0D%0A", 
-            "http://www.cnn.com/2015/03/09/world/gallery/sites-damaged-by-isis/index.html", 
-            "http://www.wsj.com/articles/french-government-weighs-in-on-nokia-alcatel-lucent-deal-1429007493", 
-            "http://www.dailymotion.com/video/x2ma90d_sadqay-tumhare-last-episode-27-in-high-quality-10th-april-2015_shortfilms", 
-            "https://mathoverflow.net", 
-            "https://www.twitter.com?lang=no", 
-            "https://www.imdb.com/news/ni58504376?ref_=hm_nw_tp2", 
-            "https://www.facebook.com/help/cookies/?ref=sitefooter", 
-            "http://www.deviantart.com/tag/stars", 
-            "http://www.deviantart.com/tag/kingslanding", 
-            "http://bleacherreport.com/?utm_source=cnn.com&utm_medium=referral&utm_campaign=editorial", 
-            "https://www.stackoverflow.com/questions/tagged/algorithm", 
-            "https://www.imdb.com/imdbpicks/imdbtv-summer-premieres?ref_=hm_eds_cap_pri_1", 
-            "https://www.youtube.com/watch?v=09R8_2nJtjg", 
-            "http://ajgiel.deviantart.com/", 
-            "http://www.huffingtonpost.com/faq/", 
-            "http://dj.wsj.com/rt/pages/dash?mod=ProdX_MktgHub", 
-            "https://www.twitter.com?lang=pl", 
-            "https://www.dailymotion.com/us/channel/tech", 
-            "https://ang.wikipedia.org/", 
-            "https://www.amazon.com/Amazon-Kindle-Paperwhite-Special-Offers/dp/B00JG8GOWU", 
-            "http://sports.yahoo.com/news/klay-thompson-scores-42-warriors-down-memphis-111-050505414--nba.html", 
-            "https://www.stackoverflow.com/questions/tagged/cgroups", 
-            "http://finance.yahoo.com/q?s=^GSPC", 
-            "https://ko.wikipedia.org/", 
-            "http://www.wsj.com/portuguese", 
-            "http://www.huffingtonpost.com/margee-ensign", 
-            "https://www.amazon.com/Annie-HD-Albert-Finney/dp/B009V5KI98", 
-            "http://www.deviantart.com/today/", 
-            "http://bleacherreport.com/articles/2429504-tom-brady-bounces-1st-pitch-at-red-sox-game?utm_source=cnn.com&utm_medium=referral&utm_campaign=editorial", 
-            "http://www.cnn.com/videos/business/2014/10/24/cnn-orig-what-is-inversion-cristina-alesci.cnn", 
-            "https://www.imdb.com/tvgrid/?ref_=hm_ontv_sm", 
-            "https://www.yahoo.com/movies", 
-            "https://electronics.stackexchange.com", 
-            "https://www.imdb.com/showtimes?ref_=hm_sh_lk1", 
-            "https://na.wikipedia.org/", 
-            "http://www.huffingtonpost.com/2015/04/14/jesse-williams-support-police-shootings_n_7063512.html", 
-            "http://www.baidu.com/s?wd=rice%20shine&rsp=3&f=1&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc&rsv_ers=xdt0&rs_src=0&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc", 
-            "https://www.dailymotion.com/video/x2mldhx_5-star-s-brandon-jones-nacogdoches-tx_sport", 
-            "http://www.baidu.com/s?wd=shine&rsp=0&f=1&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc&rsv_ers=xdt0&rs_src=0&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc", 
-            "http://tune.yandex.ru/?retpath=http%3A%2F%2Fwww.yandex.ru%2F%3Fdomredir%3D1", 
-            "http://www.huffingtonpost.com/sports/", 
-            "http://www.huffingtonpost.com/50/", 
-            "http://www.wsj.com/articles/the-hillary-pay-ratio-1429054250?mod=WSJ_hpp_sections_opinion", 
-            "https://fy.wikipedia.org/", 
-            "http://www.dailymotion.com/video/x2mogov_flawed-perceptions-of-chris-paul_sport", 
-            "https://www.stackoverflow.com/users/1908292/tim-hauser", 
-            "http://www.baidu.com/s?usm=1&wd=%E6%9C%89%E9%81%93%E8%AF%8D%E5%85%B8&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u7ffb\u8bd1&recid=20826&euri=1641307", 
-            "http://www.wsj.com/articles/mogadishu-ukraine-hillary-china-wsj-photos-of-the-day-1429045997", 
-            "http://www.healthgrades.com/right-care/diabetes/7-celebrities-living-with-diabetes?cid=t1_rss1d&amp;sr=C53310a10", 
-            "http://www.huffingtonpost.com/2015/04/14/sentence-teacher-scandal_n_7063296.html", 
-            "https://www.facebook.com/pages/create/?ref_type=sitefooter", 
-            "http://www.washingtonpost.com/ej-dionne-jr/2011/02/24/ABhJNkM_page.html", 
-            "https://yandex.ru/jobs", 
-            "http://live.wsj.com/?category=news hub am", 
-            "https://www.dailymotion.com/us/channel/videogames", 
-            "http://sports.yahoo.com/mlb/teams/pit", 
-            "https://search.yahoo.com/search?p=Nina+Dobrev&fr=fp-tts-901&fr2=ps&woeid=12587712&fp=1", 
-            "http://www.baidu.com/s?usm=5&wd=rice%E5%8F%AF%E6%95%B0%E5%90%97&ie=utf-8&rsv_cq=rice&rsv_dl=0_left_dict3_85_18695", 
-            "http://www.nydailynews.com/", 
-            "http://www.huffingtonpost.com/?country=JP", 
-            "https://www.amazon.com/Schlage-FE595-PLY-505-FLA/dp/B002057UWO", 
-            "https://www.deviantart.com/join/?joinpoint=header", 
-            "https://www.dailymotion.com/carefreecooking", 
-            "http://www.huffingtonpost.com/news/own-eating/", 
-            "http://www.huffingtonpost.com/news/nasa/", 
-            "https://th.wikipedia.org/", 
-            "http://www.huffingtonpost.com/dana-beyer/", 
-            "https://www.imdb.com/news/ni58507004?ref_=hm_nw_cel4", 
-            "http://www.deviantart.com/today", 
-            "https://www.stackoverflow.com/questions/tagged/jradiobutton", 
-            "http://www.dailymotion.com/video/x2m5eo2_new-latest-punjabi-song-2015-jeevan-leather-life-sad-top-hit-2014-indian-pakistani-rock-movies-bolly_music", 
-            "http://www.deviantart.com/tag/gnomes", 
-            "https://www.youtube.com/watch?v=qDc_5zpBj7s", 
-            "http://slovari.yandex.ru/", 
-            "https://udm.wikipedia.org/", 
-            "https://www.amazon.com/Interstellar-Blu-ray-Matthew-McConaughey/dp/B00SI7GCJK", 
-            "https://www.twitter.com?lang=uk", 
-            "https://www.amazon.com/The-Last-Legion-HD-weinstein/dp/B009TGWVRG", 
-            "http://www.deviantart.com/tag/thehandmaidstale", 
-            "http://pubads.g.doubleclick.net/gampad/clk?id=189483626&iu=/2/interactive.wsj.com/default", 
-            "http://www.huffingtonpost.com/marlothomas/", 
-            "http://www.huffingtonpost.com/2015/04/14/edward-snowden-bust-nypd_n_7065936.html#comments", 
-            "http://www.tripadvisor.com/smartdeals?geo=60763&m=21194", 
-            "https://oc.wikipedia.org/", 
-            "http://www.huffingtonpost.com/2015/04/14/cuba-terror-list_n_7064762.html", 
-            "https://pfl.wikipedia.org/", 
-            "https://www.imdb.com/poll/mXFsH63S28Y/?ref_=hm_poll_sm", 
-            "http://voces.huffingtonpost.com/", 
-            "https://www.stackoverflow.com/questions/822841/android-recent-apps-seem-to-have-google-provided-ads-is-there-some-new-api-for/?lastactivity", 
-            "https://www.stackoverflow.com/users/2258616/samirman", 
-            "http://www.wsj.com/public/page/news-interactive-features-trends.html?mod=WSJ_footer", 
-            "http://www.baidu.com/s?usm=1&wd=91%E5%A4%96%E6%95%99%E7%BD%91&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=10142484", 
-            "http://www.cnn.com/videos/tech/2015/04/13/apps-aim-catch-police-camera-orig.cnn", 
-            "http://minhtrucdiep.deviantart.com?connect", 
-            "https://www.imdb.com/title/tt3107288?ref_=hm_ontv_t0", 
-            "https://www.facebook.com/games/", 
-            "https://www.twitter.com/JaredLeto/status/549847390342361088", 
-            "https://www.flickr.com/photos/86665756@N00/7980261511", 
-            "http://www.baidu.com/s?usm=5&wd=rice%E6%98%AF%E5%8F%AF%E6%95%B0%E5%90%8D%E8%AF%8D%E5%90%97&ie=utf-8&rsv_cq=rice&rsv_dl=0_left_dict3_85_18695", 
-            "http://info.yahoo.com/privacy/us/yahoo/relevantads.html", 
-            "http://www.baidu.com/link?url=5uns9UowL1ZepzZm8E26sOL3uJezwjIT3mfcNR7_FPkYt2IbV1UMvsBT_n0hqEjs", 
-            "https://www.stackoverflow.com/questions/29638454/c-sharp-linq-to-sql-query-not-returning-results-but-generated-sql-works-fine/?lastactivity", 
-            "http://www.wsj.com/articles/from-kale-to-chia-plot-the-arc-of-a-food-fad-1429034489#articleTabs%3Dcomments", 
-            "http://www.huffingtonpost.com/2015/04/14/france-anorexia-bill_n_7066084.html", 
-            "https://www.amazon.com/Kindle-Glare-Free-Touchscreen-Display-Wi-Fi/dp/B00I15SB16", 
-            "https://ku.wikipedia.org/", 
-            "https://scifi.stackexchange.com", 
-            "https://bcl.wikipedia.org/", 
-            "https://www.twitter.com?lang=id", 
-            "http://www.huffingtonpost.com/2015/04/14/fiduciary-standard-retirement-fees_n_7065110.html#comments", 
-            "http://www.wsj.com/articles/spacex-rocket-fails-to-survive-landing-1429045616#articleTabs%3Dcomments", 
-            "https://ab.wikipedia.org/", 
-            "https://www.stackoverflow.com/questions/29638020/transposing-items-with-prices-to-separate-section", 
-            "https://christianity.stackexchange.com", 
-            "https://www.stackoverflow.com/users/1045881/toddmo", 
-            "https://ux.stackexchange.com", 
-            "https://www.amazon.com/Canon-EOS-Rebel-T5-Professional/dp/B00J34YO92", 
-            "http://www.huffingtonpost.com/news/nypd/", 
-            "http://www.baidu.com/s?usm=5&wd=damien+rice&ie=utf-8&rsv_rq=2&rsv_cq=rice", 
-            "http://www.huffingtonpost.com/2015/04/12/moti-device_n_7028556.html?ir=Technology", 
-            "https://drupal.stackexchange.com", 
-            "https://www.stackoverflow.com/questions/29638454/c-sharp-linq-to-sql-query-not-returning-results-but-generated-sql-works-fine", 
-            "http://sports.yahoo.com/mlb/teams/sdg", 
-            "https://www.amazon.com/Fire-HD-Display-Wi-Fi-GB/dp/B00KC6I06S", 
-            "https://www.amazon.com/The-Hohng-Company-Catistry/dp/B00JBN7TUQ", 
-            "https://mzn.wikipedia.org/", 
-            "http://news.baidu.com/ns?cl=2&rn=20&tn=news&word=rice", 
-            "https://www.youtube.com/user/destinygame", 
-            "https://www.youtube.com/watch?v=kt0g4dWxEBo", 
-            "http://www.amazon.com.au"
-        ]
-    }
+        "http://ajgiel.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://bleacherreport.com/?utm_source=cnn.com&utm_medium=referral&utm_campaign=editorial": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://bleacherreport.com/articles/2429504-tom-brady-bounces-1st-pitch-at-red-sox-game?utm_source=cnn.com&utm_medium=referral&utm_campaign=editorial": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://blender.stackexchange.com/questions/28473/how-to-avoid-particle-data-being-stored-in-blend-file-to-make-it-smaller": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://blog.yandex.ru": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://blogs.wsj.com/speakeasy/2015/04/14/rb-pioneer-percy-sledge-dies-at-73/?mod=WSJ_hp_EditorsPicks": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://bymyimagination.deviantart.com?connect": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://celebrity.yahoo.com/blogs/celeb-news/kimora-lee-simmons-gives-birth-boy-203354029.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://company.yandex.ru": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://declanshalvey.deviantart.com/art/PUISHER-V-DAREDEVIL-colour-183351045": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://dj.wsj.com/rt/pages/dash?mod=ProdX_MktgHub": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://enigma-fotos.deviantart.com/art/Myranda-526722461": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://finance.yahoo.com/q?s=^GSPC": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://headlines.yahoo.co.jp/hl?a=20150415-00000009-san-l28.view-000": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://help.baidu.com/question": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://image.baidu.com/i?tn=baiduimage&ct=201326592&lm=-1&cl=2&word=rice&&fr=ala&ori_query=rice&ala=0&alatpl=sp&pos=3": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://info.yahoo.com/privacy/us/yahoo/relevantads.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://itunes.apple.com/us/app/the-huffington-post/id306621789?mt=8": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://jnkboy.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://live.huffingtonpost.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://live.wsj.com/?category=news hub am": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://maddog197x.deviantart.com/journal/FNAF-Do-You-Wanna-Make-a-Pizza-Parody-526610047": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://maps.yandex.ru": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://market.yandex.ru/catalog?hid=7812191&clid=514&utm_source=face&utm_medium=cpc&utm_term=shoes&utm_campaign=world": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://marthig.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://maxromanchak.deviantart.com/art/Kingpin-206522937": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://metrika.yandex.ru/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://minhtrucdiep.deviantart.com?connect": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://moonbeam13.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://moviefone.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://news.baidu.com/ns?cl=2&rn=20&tn=news&word=rice": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://news.yahoo.com/lightbox/dilbert-slideshow/20150414-dt150414-gif-photo-050305838.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://news.yahoo.com/n-korea-first-lady-appears-public-first-time-034036151.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://news.yandex.ru/yandsearch?cl4url=sport.rbc.ru/article/254275/&lang=ru&lr=102567": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://news.yandex.ru/yandsearch?cl4url=www.vz.ru/news/2015/4/15/740016.html&lang=ru&lr=102567": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://offers.lendingtree.com/splitter/splitter.ashx?id=CNN_Article_Credit2&800num=hide&siteid=credit&hpt=hp_bn17": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://online.wsj.com/10point": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://online.wsj.com/conferences?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://online.wsj.com/public/search?article-doc-type=%7BThe+10-Point%7D&HEADER_TEXT=the+10-point": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://poldhannahms.deviantart.com/art/Tender-Kiss-66694744": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://pubads.g.doubleclick.net/gampad/clk?id=189483626&iu=/2/interactive.wsj.com/default": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://quotes.wsj.com/futures/GOLD": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://quotes.wsj.com/fx/AUDUSD": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://quotes.wsj.com/index/DJI": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://quotes.wsj.com/index/HK/HSI": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://quotes.wsj.com/index/IN/1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://rabota.yandex.ru/salary.xml?from=morda&_openstat=yandex;text;salary;salaryStatall": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://reiq.deviantart.com/art/Sherry-Patreon-Commish-526710915": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://security.stackexchange.com/questions/85963/what-is-the-purpose-of-frequently-rotating-tls-certificates-without-changing-und": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://slovari.yandex.ru/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com/mlb/teams/chc": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com/mlb/teams/cin": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com/mlb/teams/pit": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com/mlb/teams/sdg": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sports.yahoo.com/news/klay-thompson-scores-42-warriors-down-memphis-111-050505414--nba.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sta.sh": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sta.sh/0173o5y7gti6": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://sta.sh/writer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://swampland.time.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://techgnotic.deviantart.com/art/Today-s-Headlines-From-The-News-Desk-4-14-15-526757199#Scream-Trailer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://techgnotic.deviantart.com/journal/Chasing-The-Sun-Solar-Power-Is-The-Next-Big-Thing-526784981": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://techgnotic.deviantart.com/journal/Furious-7-Have-Car-Chases-Finally-Jumped-The-Shark-513488584": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://techgnotic.deviantart.com/journal/Watch-The-Throne-S5-E1-The-Wars-To-Come-526718761": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://thrive.huffingtonpost.com/events/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://time.yandex.ru": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://topics.wsj.com/?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://translate.yandex.ru/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://tune.yandex.ru/?retpath=http%3A%2F%2Fwww.yandex.ru%2F%3Fdomredir%3D1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://twpictures.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://voces.huffingtonpost.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://wallpaper.deviantart.com/?q=": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://wolftamer358.deviantart.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.GlobalPost.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.amazon.com.au": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.amazon.de/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=3hOFcy9XXCTbBiNXtU7Gaf9PSvxUi-Ni25gGeym_GMGppjHQEpHFyEfmgBdDCR1p": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=5uns9UowL1ZepzZm8E26sOL3uJezwjIT3mfcNR7_FPkYt2IbV1UMvsBT_n0hqEjs": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=7hk-Iao0WutqX5osf6LjfZ53ONWYZV1lecGvT1HEupLm76juUIY13-Ay61JXIGjcDLd0_YH_ZAGrugaQVTaB0_": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=AL-zsBN7Wl1skmBFU4Btrgr_nU66vqigpOhaSI-BDnqO5_eSF4bZxW2wQienf5qC3qm3TleOiLRfYMtRaaPeX-lczbwVge_ILsgx09uo56u": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=E_410vcScg2dOp6vwBY4WLNHpMFVnXDpG6_NgiFwj2FwmGRF3a9I8tKmTHYriXJ4JK4uGv7cjn2kyH_HtwZCNa": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=MiBQS6vM7KZu_dzfdpvtlB4jfCo1J7LNeOPza0gMz6hzxnUxLIgtDHIyL1D1HScDRvTmAOsl0tvrtYMtTGsmHa": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=nV4HENY9ckVeSVWwFshKgaY3DvOnJrVd_g_0qMg-UUM9GcmCeqxG96TLk-X5jzWFJfhE82mQTApIiYKXF1VUbk_jTcDmMJkInnaHgl86ZSDhXkkZabhN5wh7BDJc7FEWtWM1Ud1pWKfIQ0mLfbE57zV4vbzuiwdyRHJQ7DWtcti": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=nV4HENY9ckVeSVWwFshKgaY3DvOnJrVd_g_0qMg-UUM9GcmCeqxG96TLk-X5jzWFhsp5fJQ91LvyGlZG-76XyedyYEgtdpilkS7ymmWpLVl1gMQ_JWi4BBdIvKo0t2AL3P7O5NOjZD9qPUVSOTvglyNfYK81dItwR5Wdr0nczt2qXnuSEUsigTyqhFtr_6d_": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/link?url=xIVPE7l3aIThwsbTHHUhIO_jc890BBOkQnDcd7ivNnZKOihdfpF4ZNHKcHdiVvVA": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=%E4%B8%AD%E5%BC%8F%E8%8B%B1%E8%AF%AD&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u5176\u4ed6\u4eba\u8fd8\u641c&recid=20826&euri=300085": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=%E6%9C%89%E9%81%93%E8%AF%8D%E5%85%B8&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u7ffb\u8bd1&recid=20826&euri=1641307": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=%E7%99%BE%E8%AF%8D%E6%96%A9&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=9089046": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=91%E5%A4%96%E6%95%99%E7%BD%91&ie=utf-8&rsv_cq=cow&rsv_dl=0_right_recommends_merge_20826&cq=cow&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=10142484": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=basketball%E7%9A%84%E9%9F%B3%E6%A0%87&ie=utf-8&rsv_crq=7&bs=cow": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=cow%E6%B4%97%E9%9D%A2%E5%A5%B6&ie=utf-8&rsv_cq=cow&rsv_dl=0_left_dict3_85_18695": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=dairy+cattle&ie=utf-8&rsv_crq=7&bs=cow": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=1&wd=holy+cow&ie=utf-8&rsv_cq=cow&rsv_dl=0_left_dict3_85_18695": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=%E6%96%B0%E4%B8%9C%E6%96%B9%E5%9C%A8%E7%BA%BF&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=2225295": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=%E6%9C%80%E9%95%BF%E7%9A%84%E8%8B%B1%E6%96%87%E5%8D%95%E8%AF%8D&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u5176\u4ed6\u4eba\u8fd8\u641c&recid=20826&euri=657095": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=%E6%B2%AA%E6%B1%9F%E8%8B%B1%E8%AF%AD&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=405084": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=%E7%99%BE%E8%AF%8D%E6%96%A9&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=9089046": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=91%E5%A4%96%E6%95%99%E7%BD%91&ie=utf-8&rsv_cq=rice&rsv_dl=0_right_recommends_merge_20826&cq=rice&srcid=20910&rt=\u82f1\u8bed\u5b66\u4e60\u52a9\u624b&recid=20826&euri=10142484": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=damien+rice&ie=utf-8&rsv_rq=2&rsv_cq=rice": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=rice%E5%8C%96%E5%A6%86%E5%93%81&ie=utf-8&rsv_rq=2&rsv_cq=rice": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=rice%E5%8F%AF%E6%95%B0%E5%90%97&ie=utf-8&rsv_cq=rice&rsv_dl=0_left_dict3_85_18695": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=rice%E5%A4%A7%E5%AD%A6&ie=utf-8&rsv_rq=2&rsv_cq=rice": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?usm=5&wd=rice%E6%98%AF%E5%8F%AF%E6%95%B0%E5%90%8D%E8%AF%8D%E5%90%97&ie=utf-8&rsv_cq=rice&rsv_dl=0_left_dict3_85_18695": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=cow%20gate%E5%AE%98%E7%BD%91&rsp=3&f=1&oq=cow&ie=utf-8&usm=1&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE&rsv_ers=xdt0&rs_src=0&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=cow&pn=30&oq=cow&ie=utf-8&usm=1&rsv_pq=f537508b0000092e&rsv_t=3ba1NEgMEGYo0PYSwo6tX5sslRvA81yOlYQgEie8eSwiLaHYIF5Lq9ZSeFE": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=rice%20shine&rsp=3&f=1&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc&rsv_ers=xdt0&rs_src=0&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=rice&pn=90&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/s?wd=shine&rsp=0&f=1&oq=rice&ie=utf-8&usm=5&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc&rsv_ers=xdt0&rs_src=0&rsv_pq=b8b471d5000008a5&rsv_t=3453uWIvu2sbVpZ6oCuwvXflyrudK42UZQILLesFKD54VodI4hsL52diKkc": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.baidu.com/tools?url=http%3A%2F%2Fwww.baidu.com%2Flink%3Furl%3DxIVPE7l3aIThwsbTHHUhIO_jc890BBOkQnDcd7ivNnZKOihdfpF4ZNHKcHdiVvVA&jump=http%3A%2F%2Fkoubei.baidu.com%2Fwomc%2Fp%2Fsentry%3Ftitle%3D%01%22%02cow%03%22%01%E6%98%AF%01%E4%BB%80%E4%B9%88%01%E6%84%8F%E6%80%9D%01-%01%22%02cow%03%22%01%E7%BF%BB%E8%AF%91%01_%02cow%03%E7%9A%84%01%E5%8F%91%E9%9F%B3%01%E3%80%81%01%E7%BF%BB%E8%AF%91%01%E3%80%81%01%E5%8F%82%E8%80%83%01%E4%BE%8B%E5%8F%A5%01-%01%E5%8F%AF%E5%8F%AF%01%E6%9F%A5%01%E8%AF%8D%01%26q%3Dcow&key=surl": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.bookdepository.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/03/09/world/gallery/sites-damaged-by-isis/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/13/europe/italy-oldest-neanderthal-dna-sample-altamura/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/13/politics/nra-convention-2015-2016-elections/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/13/travel/gallery/game-of-thrones-locations-gallery/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/13/us/cleveland-zoo-cheetah-fall/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/14/entertainment/feat-pink-weight-response-hln/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/14/entertainment/feat-stephen-hawking-sings-galaxy-song/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/14/us/florida-panama-city-gang-rape-case/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/2015/04/14/world/cnnphotos-boragaon-landfill-india/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/interactive/2014/05/specials/city-of-tomorrow/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/interactive/2014/12/us/cnn-guns-project/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/shows/wonder-list": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/specials/impact-your-world": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/specials/more/cnn-leadership": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/videos/business/2014/10/24/cnn-orig-what-is-inversion-cristina-alesci.cnn": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.cnn.com/videos/tech/2015/04/13/apps-aim-catch-police-camera-orig.cnn": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2m5eo2_new-latest-punjabi-song-2015-jeevan-leather-life-sad-top-hit-2014-indian-pakistani-rock-movies-bolly_music": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2ma90d_sadqay-tumhare-last-episode-27-in-high-quality-10th-april-2015_shortfilms": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2mlh4k_things-that-go-wrong-when-trying-to-watch-netflix_lifestyle": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2mo9bq_gentlemen-lobsters-what-really-happens-at-coachella_lifestyle": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2mogov_flawed-perceptions-of-chris-paul_sport": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dailymotion.com/video/x2mow8y_rihanna-wants-you-to-know-she-s-not-using-cocaine-in-this-video_news": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/?day=2015-04-13": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/browse/undiscovered/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/browse/whatshot ": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/cosplay": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/dart": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/fastandfurious": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/gnomes": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/kingslanding": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/mcdonalds": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/photography": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/procrastination": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/stars": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/teslamotors": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/tag/thehandmaidstale": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/today": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.deviantart.com/today/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.digg.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.dpreview.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.eastdane.com/welcome": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.ew.com/ew/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.flickr.com/photos/flickr/galleries/72157649608126894/with/14523607768/lightbox/?yc=https://www.yahoo.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.flickr.com/photos/flickr/galleries/72157649608126894/with/16301542813/lightbox/?yc=https://www.yahoo.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.google.com/history/optout?hl=en": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.healthgrades.com/right-care/diabetes/7-celebrities-living-with-diabetes?cid=t1_rss1d&amp;sr=C53310a10": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/09/finding-a-partner_n_7030736.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/12/moti-device_n_7028556.html?ir=Technology": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/13/dixon-white-redneck_n_7059414.html?ir=Media": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/13/funny-tombstones_n_7051048.html?ir=Comedy": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/13/house-vote-on-iran_n_7056150.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/13/lena-dunham-mental-health_n_7053556.html?ir=Entertainment": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/13/watch-spacex-launch-rocket-landing_n_7055812.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/brad-gooch-smash-cut_n_7058084.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/cuba-terror-list_n_7064762.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/edward-snowden-bust-nypd_n_7065936.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/eu-google-antitrust-annou_n_7066634.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/fiduciary-standard-retirement-fees_n_7065110.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/fiduciary-standard-retirement-fees_n_7065110.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/france-anorexia-bill_n_7066084.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/ibrahim-al-rubaish-killed-yemen_n_7062758.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/jeb-bushs-administration-_n_7062336.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/jesse-williams-support-police-shootings_n_7063512.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/jon-stewart-hillary-clinton-announcement_n_7060206.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/ka-holt-house-arrest-poems_n_7058066.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/kylie-jenner-lips_n_7064364.html?utm_hp_ref=mostpopular": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/manufactured-housing-republicans_n_7065810.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/marco-rubio-nicki-minaj_n_7062232.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/republicans-push-269-bill_n_7061458.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/rikers-island-de-blasio-justice-reboot_n_7065438.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/sentence-teacher-scandal_n_7063296.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/summer-movie-preview-2015_n_7058302.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/2015/04/14/tom-brady-first-pitch_n_7062180.html#comments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/50/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/?country=JP": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/charles-t-rubin/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/comment/policy/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/dana-beyer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/dana-beyer/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/davidhalperin/video-in-iowa-clinton-str_b_7065662.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/divorce/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/dl-cade": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/faq/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/green/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/horoscopes/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/joshua-l-schank-phd": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/margee-ensign": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/marlothomas/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/matt_green": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/climate-change/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/icon-next/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/michelle-obama": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/nasa/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/nypd/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/own-eating/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/sleep/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/smarter-ideas/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/news/third-metric/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/p/ariannas-radio-and-podcas.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/p/ariannas-tv-appearances.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/p/huffington-post.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/rev-al-sharpton/-will-the-south-teach-the_b_7055866.html?utm_hp_ref=yahoo&ir=Yahoo": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/shelley-emling/17-things-i-want-my-son-to-know-on-his-17th-birthday_b_7034756.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/social/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/sports/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/susan-brink": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/syndication": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/tavis-smiley": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/tavis-smiley/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/teen/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.huffingtonpost.com/valerie-plame-wilson/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.imdb.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.imdb.com/seen/ls076901727/?ref_=hm_poll_lk2": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.juancole.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.marketwatch.com/Game/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.msnbc.com/maddowblog": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.ndnblog.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.newyorker.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.nydailynews.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.people.com/people": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.salon.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.slate.com/blogs/weigel.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.tenmarks.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.thenation.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.thismodernworld.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.tripadvisor.com/smartdeals?geo=60763&m=21194": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.trulia.com/?ecampaign=partner_cnn_home_title": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.trulia.com/sell?ts=CNN&tscamp=home_page_sell&ecampaign=partner_cnn_sell": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.washingtonpost.com/ej-dionne-jr/2011/02/24/ABhJNkM_page.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/a-churchs-light-inspires-a-jewelry-designer-from-afar-1429036012?mod=WSJ_hp_EditorsPicks": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/a-to-be-renovated-westchester-house-is-listing-for-29-5-million-1428605768?mod=WSJ_hpp_sections_realestate": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/at-t-sues-to-overturn-fccs-net-neutrality-rules-1429052166?mod=WSJ_hp_LEFTWhatsNewsCollection": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/chinese-drone-maker-dji-in-talks-to-raise-funding-at-valuation-of-10-billion-1429050685?mod=WSJ_hpp_MIDDLENexttoWhatsNewsThird": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/eu-to-file-antitrust-charges-against-google-1429039881?mod=WSJ_hp_LEFTTopStories": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/fare-increase-of-9-proposed-for-nj-transit-1429025661?mod=WSJ_hpp_sections_newyork": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/french-government-weighs-in-on-nokia-alcatel-lucent-deal-1429007493": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/from-kale-to-chia-plot-the-arc-of-a-food-fad-1429034489#articleTabs%3Dcomments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/good-mental-health-away-from-home-starts-before-college-1428944477#articleTabs%3Dcomments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/imf-slowing-emerging-market-growth-is-sapping-global-economic-prospects-1429016407?mod=WSJ_hp_LEFTWhatsNewsCollection": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/matomy-media-to-acquire-70-of-avenlo-1429052401?mod=WSJ_hp_LEFTWhatsNewsCollection": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/mogadishu-ukraine-hillary-china-wsj-photos-of-the-day-1429045997": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/spacex-rocket-fails-to-survive-landing-1429045616#articleTabs%3Dcomments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/spacex-rocket-fails-to-survive-landing-1429045616?mod=trending_now_4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/the-cia-needs-an-iran-team-b-1429052586?mod=WSJ_hpp_sections_opinion": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/the-hillary-pay-ratio-1429054250?mod=WSJ_hpp_sections_opinion": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/articles/webs-most-maniacal-bargain-hunters-1428619524?mod=WSJ_hpp_sections_smallbusiness": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/mdc/public/npage/2_3023_creditdervs.html?mod=topnav_2_3000": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/portuguese": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/cookie-policy.html?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/data-policy.html?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/designtech-wsjModuleHome.html?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/email-setup.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/email-setup.html?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/new-york-main.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/news-interactive-features-trends.html?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/news-opinion-commentary.html?mod=WSJ_hpp_sections_opinion": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/news-personal-finance.html?mod=WSJ_hpp_sections_yourmoney": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsj.com/public/page/news-world-business.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.wsjlocal.com?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.yahoo.co.jp/r/c12": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.yahoo.co.jp/r/c53": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.yahoo.co.jp/r/plh1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://www.yandex.ru/themes": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://yahoo.match.com?trackingid=526100&bannerid=673168": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "http://zen-emma.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ab.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://als.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ang.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://arc.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://bar.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://bcl.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://be-x-old.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://bo.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://careers.stackoverflow.com?utm_source=stackoverflow.com&utm_medium=site-ui&utm_campaign=multicollider": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://christianity.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://classifieds.wsj.com/ad/Residential-Real-Estate-Ads?mod=WSJ_footer": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://dev.twitter.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://drupal.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://electronics.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://fj.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://fy.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://gaming.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://got.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://homes.yahoo.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://it-it.facebook.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://judaism.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://kbd.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ko.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ku.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://kv.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://mail.yahoo.com?.src=ym&.intl=us": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://maps.yandex.ru/?index&ll=43.506343%2C55.219296&spn=22.434082%2C7.001578&z=6&l=map%2Cstv%2Csta&hint=zaglpano": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://mathoverflow.net": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://mobile.yahoo.com/yahoo/?src=gta": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://mzn.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://na.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://news.yandex.ru/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ny.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://oc.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://pam.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://pfl.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://play.google.com/store/apps/details?id=com.huffingtonpost.android&hl=en": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://scifi.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://screen.yahoo.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://se.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://search.yahoo.com/search?p=Alexis+Roderick&fr=fp-tts-901&fr2=ps&woeid=12587712&fp=1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://search.yahoo.com/search?p=Nina+Dobrev&fr=fp-tts-901&fr2=ps&woeid=12587712&fp=1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://secure.imdb.com/register-imdb/form-v2?ref_=ft_reg": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://sg.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://smallbusiness.yahoo.com/?s_fptrough=ysb_acq_fp": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://species.wikimedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://sq.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://superuser.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://sv.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://szl.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://th.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://twitter.com/dpsahoo/status/588051373901512704": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://udm.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://uk.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://ux.stackexchange.com": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://uz.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://vi.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com#gw-ftGr-desktop-hero-5": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Amazon-Kindle-Paperwhite-Special-Offers/dp/B00JG8GOWU": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Annie-HD-Albert-Finney/dp/B009V5KI98": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Big-Hero-Blu-ray-DVD-Digital/dp/B00O4ZC57I": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Canon-EOS-Rebel-T5-Professional/dp/B00J34YO92": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Fire-HD-Display-Wi-Fi-GB/dp/B00KC6I06S": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Flashlight-Modes-Torch-Adjustable-Focus/dp/B006E0QAFY": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Interstellar-Blu-ray-Matthew-McConaughey/dp/B00SI7GCJK": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Kindle-Glare-Free-Touchscreen-Display-Wi-Fi/dp/B00I15SB16": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Lytro-Light-Field-Camera-16GB/dp/B0099QUUBU": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/My-Old-Lady-Kevin-Kline/dp/B00S65W70M": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-2-5-Inch-Internal-MZ-75E250B-AM/dp/B00OAJ412U": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-GC200-Galaxy-Camera-Touchscreen/dp/B00R3DGKWY": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-Galaxy-S6-Edge-Sapphire/dp/B00V7FY076": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-Galaxy-S6-Gold-Platinum/dp/B00V5M04OE": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-Galaxy-S6-Platinum-128GB/dp/B00V5M072I": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Samsung-Galaxy-S6-Sapphire-Wireless/dp/B00V7FXLNA": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/SanDisk-Sansa-Clip-Player-Black/dp/B002MAPS6W": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Schlage-FE595-16-234-10-027-Lock/dp/B0097GTAMC": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Schlage-FE595-PLY-505-FLA/dp/B002057UWO": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Sony-Walkman-NWZW273S-Waterproof-Swimming/dp/B00I05EFO4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/The-Brothers-Grimm-Matt-Damon/dp/B008Y6U5AM": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/The-Hohng-Company-Catistry/dp/B00JBN7TUQ": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/The-Hunger-Games-Catching-Fire/dp/B00I2TV3NO": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/The-Last-Legion-HD-weinstein/dp/B009TGWVRG": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/Xbox-360-Wireless-Controller-Glossy-Black/dp/B003ZSP0WW": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/ap/signin?_encoding=UTF8&openid.assoc_handle=usflex&openid.claimed_id=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.identity=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0%2Fidentifier_select&openid.mode=checkid_setup&openid.ns=http%3A%2F%2Fspecs.openid.net%2Fauth%2F2.0&openid.ns.pape=http%3A%2F%2Fspecs.openid.net%2Fextensions%2Fpape%2F1.0&openid.pape.max_auth_age=0&openid.return_to=https%3A%2F%2Fwww.amazon.com%2Fgp%2Fyourstore%2Fhome%3Fie%3DUTF8%26ref_%3Dnav_ya_signin": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.amazon.com/s?_encoding=UTF8&node=2858778011%2C7613704011&search-alias=prime-instant-video": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.bing.com/search?q=Mount+Yoshino+&form=hpcapt&filters=HpDate%3a%2220150414_0700%22": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.bing.com/videos/search?q=Mount+Yoshino&form=hphot2#view=detail&mid=662667328FC2B5E200A0662667328FC2B5E200A0": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/HollyscoopTV": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/LocalNews-GrabNetworks": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/archived/index.html": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/carefreecooking": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/oddsquadtumblr--": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/us/channel/tech": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/us/channel/videogames": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/us/users/no-explicit/list/recommended/1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.dailymotion.com/video/x2mldhx_5-star-s-brandon-jones-nacogdoches-tx_sport": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.deviantart.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.deviantart.com/#skins": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.deviantart.com/join/?joinpoint=header": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/careers/?ref=pf": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/games/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/help/cookies/?ref=sitefooter": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/mobile/?ref=pf": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.facebook.com/pages/create/?ref_type=sitefooter": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.flickr.com/photos/19716902@N00/2289844848": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.flickr.com/photos/86665756@N00/7980261511": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.google.com/intl/en/policies/privacy/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.google.com/services/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/chart/?ref_=hm_cht_sm": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/help/show_article?conditions": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/imdbpicks/imdbtv-summer-premieres?ref_=hm_eds_cap_pri_1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/media/index/rg1176148480?ref_=nv_tp_ph_3": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/movies-in-theaters/?ref_=ft_inth": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/name/nm0000234?ref_=hm_nw_cel1_lk1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/name/nm0000598?ref_=hm_nw_tp1_lk1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/name/nm1113550?ref_=hm_brn_i_1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/news/ni58504376?ref_=hm_nw_tp2": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/news/ni58504454?ref_=hm_nw_cel3": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/news/ni58506924?ref_=hm_nw_tv4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/news/ni58507004?ref_=hm_nw_cel4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/news/ns0000151?ref_=hm_nw_tp5_src": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/offsite/?page-action=ft-amzn-aud&token=BCYslYPVtgdBjNCAXnFH31o4XJ-U1p2Tm3QbdVdbsV-3eI0E3kTM1p8RUOPAT1CvKZgA1qdlbf6Q%0D%0AAmJLsgt0NfMb6VxcLJHkW5zgMj7Uww0ZP_-5vlA0DLzPjKx2klilqhyOoUfhWQ44pnz1bUDEc9j0%0D%0AkHAVo0YZrFGxZ6HN4y5HnUYHSP-VbE3wM_1QdPAzyG2f%0D%0A": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/poll/mXFsH63S28Y/?ref_=hm_poll_sm": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/search/name?gender=male,female&ref_=nv_tp_cel_1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/showtimes?ref_=hm_sh_lk1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt0478970?ref_=hm_hp_i_2": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt0944947?ref_=hm_nw_tv1_lk1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt1810683?ref_=hm_cs_t1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt1935302?ref_=hm_otw_t8": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt2364582?ref_=hm_ontv_t1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt3107288?ref_=hm_ontv_t0": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt3132632?ref_=hm_cs_t2": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt3318750?ref_=hm_cs_t4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/title/tt4294382/synopsis?ref_=hm_tvr_cap_pri_1": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/tribeca/?ref_=nv_ev_tri_4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/tvgrid/?ref_=hm_ontv_sm": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.imdb.com/x-ray/?ref_=nv_sf_xray_4": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29637516/projecting-domain-model-child-count-onto-view-model-without-extra-queries": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29637985/how-to-rename-a-bucket-in-couchbase/?lastactivity": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29638020/transposing-items-with-prices-to-separate-section": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29638020/transposing-items-with-prices-to-separate-section/?lastactivity": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29638454/c-sharp-linq-to-sql-query-not-returning-results-but-generated-sql-works-fine": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29638454/c-sharp-linq-to-sql-query-not-returning-results-but-generated-sql-works-fine/?lastactivity": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639150/complex-0-1-backpack-with-multiple-compartments": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639169/xml-schema-element-is-not-declared": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639204/generating-at-runtime-autogenerate-spring-mvc-controllers-services-etc": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639223/custom-file-owner-of-a-nib-file-leaks-in-os-x-swift": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639284/expected-before-token-c": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639316/display-variable-content-not-varialbe-namein-ruby-on-rails": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639331/how-to-use-graphics2d-g-scale-on-only-some-things-but-not-others": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639384/c-weird-folder-locking-for-child-process": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639396/sequence-contains-no-matching-element-error-using-boolean": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639401/lisp-compiler-design-for-embedded-systems": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/29639427/openam-unable-to-get-application-sso-token": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/7385228/serial-port-rs232-communication-with-visual-c-2010": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/822841/android-recent-apps-seem-to-have-google-provided-ads-is-there-some-new-api-for/?lastactivity": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/ask": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/algorithm": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/android-studio": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/applet": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/c%23": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/c%23-4.0": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/c%2b%2b": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/cgroups": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/compiler-construction": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/cordova": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/django": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/dynamic": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/geocode": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/java": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/jradiobutton": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/machine-learning": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/maven": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/moq": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/mysql": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/oop": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/php": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/phpunit": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/python": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/systems-programming": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/uicollectionview": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/questions/tagged/worklight": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/1045881/toddmo": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/1151334/soleil": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/1571407/niton": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/165198/davidk01": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/1908292/tim-hauser": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/2251200/cdell": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/2258616/samirman": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/2669425/david-hall": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/337134/knows-not-much": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/4208583/grender": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/4643092/nrh": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.stackoverflow.com/users/774575/mins": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com#supported_languages": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com/JaredLeto/status/549847390342361088": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com/about": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com/i/cricket": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=id": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=no": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=pl": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=ro": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=ru": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.twitter.com?lang=uk": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.wikidata.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.yahoo.com/health": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.yahoo.com/movies": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/channel/SBAaOjE-GIlRI": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/t/terms": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/user/VanossGaming": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/user/destinygame": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/user/movieclipsTRAILERS": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=09R8_2nJtjg": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=VSYjs5RnlRo": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=cqmG5JWLRag": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=fPg3jWn6Nn0": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=kt0g4dWxEBo": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=oiJWrNWDXvM": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/watch?v=qDc_5zpBj7s": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://www.youtube.com/yt/about/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://yandex.ru/jobs": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        },
+        "https://zea.wikipedia.org/": {
+            "DEFAULT": "profile_safe_urls_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

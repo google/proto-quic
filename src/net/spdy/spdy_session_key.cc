@@ -7,6 +7,8 @@
 #include <tuple>
 
 #include "base/logging.h"
+#include "net/base/host_port_pair.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
 
@@ -47,6 +49,10 @@ bool SpdySessionKey::Equals(const SpdySessionKey& other) const {
   return privacy_mode_ == other.privacy_mode_ &&
       host_port_proxy_pair_.first.Equals(other.host_port_proxy_pair_.first) &&
       host_port_proxy_pair_.second == other.host_port_proxy_pair_.second;
+}
+
+size_t SpdySessionKey::EstimateMemoryUsage() const {
+  return SpdyEstimateMemoryUsage(host_port_proxy_pair_);
 }
 
 }  // namespace net

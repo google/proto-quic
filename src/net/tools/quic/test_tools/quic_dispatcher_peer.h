@@ -5,10 +5,8 @@
 #ifndef NET_TOOLS_QUIC_TEST_TOOLS_QUIC_DISPATCHER_PEER_H_
 #define NET_TOOLS_QUIC_TEST_TOOLS_QUIC_DISPATCHER_PEER_H_
 
-#include "net/tools/quic/quic_dispatcher.h"
-
 #include "base/macros.h"
-#include "net/base/ip_endpoint.h"
+#include "net/tools/quic/quic_dispatcher.h"
 
 namespace net {
 

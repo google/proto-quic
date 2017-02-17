@@ -5,8 +5,6 @@
 #ifndef NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_STREAM_H_
 #define NET_TOOLS_QUIC_QUIC_SIMPLE_SERVER_STREAM_H_
 
-#include <stddef.h>
-
 #include <string>
 
 #include "base/macros.h"
@@ -17,7 +15,6 @@
 #include "net/tools/quic/quic_spdy_server_stream_base.h"
 
 namespace net {
-
 
 namespace test {
 class QuicSimpleServerStreamPeer;

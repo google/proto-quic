@@ -238,7 +238,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
       const QuicEncryptedPacket& encrypted,
       QuicConnectionIdLength connection_id_length,
       bool includes_version,
-      bool includes_path_id,
       bool includes_diversification_nonce,
       QuicPacketNumberLength packet_number_length);
 
@@ -309,7 +308,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   // Returns the length of the data encrypted into |buffer| if |buffer_len| is
   // long enough, and otherwise 0.
   size_t EncryptPayload(EncryptionLevel level,
-                        QuicPathId path_id,
                         QuicPacketNumber packet_number,
                         const QuicPacket& packet,
                         char* buffer,

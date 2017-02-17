@@ -21,7 +21,6 @@
 namespace net {
 
 namespace test {
-class CryptoTestUtils;
 class QuicChromiumClientSessionPeer;
 }  // namespace test
 
@@ -142,7 +141,6 @@ class QUIC_EXPORT_PRIVATE QuicCryptoClientStream
     QuicCryptoClientStream* stream_;
   };
 
-  friend class test::CryptoTestUtils;
   friend class test::QuicChromiumClientSessionPeer;
 
   enum State {

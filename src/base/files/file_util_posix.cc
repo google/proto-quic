@@ -185,6 +185,19 @@ bool DetermineDevShmExecutable() {
 #endif  // defined(OS_LINUX)
 #endif  // !defined(OS_NACL_NONSFI)
 
+#if !defined(OS_MACOSX)
+// Appends |mode_char| to |mode| before the optional character set encoding; see
+// https://www.gnu.org/software/libc/manual/html_node/Opening-Streams.html for
+// details.
+std::string AppendModeCharacter(StringPiece mode, char mode_char) {
+  std::string result(mode.as_string());
+  size_t comma_pos = result.find(',');
+  result.insert(comma_pos == std::string::npos ? result.length() : comma_pos, 1,
+                mode_char);
+  return result;
+}
+#endif
+
 }  // namespace
 
 #if !defined(OS_NACL_NONSFI)
@@ -710,11 +723,29 @@ bool GetFileInfo(const FilePath& file_path, File::Info* results) {
 #endif  // !defined(OS_NACL_NONSFI)
 
 FILE* OpenFile(const FilePath& filename, const char* mode) {
+  // 'e' is unconditionally added below, so be sure there is not one already
+  // present before a comma in |mode|.
+  DCHECK(
+      strchr(mode, 'e') == nullptr ||
+      (strchr(mode, ',') != nullptr && strchr(mode, 'e') > strchr(mode, ',')));
   ThreadRestrictions::AssertIOAllowed();
   FILE* result = NULL;
+#if defined(OS_MACOSX)
+  // macOS does not provide a mode character to set O_CLOEXEC; see
+  // https://developer.apple.com/legacy/library/documentation/Darwin/Reference/ManPages/man3/fopen.3.html.
+  const char* the_mode = mode;
+#else
+  std::string mode_with_e(AppendModeCharacter(mode, 'e'));
+  const char* the_mode = mode_with_e.c_str();
+#endif
   do {
-    result = fopen(filename.value().c_str(), mode);
+    result = fopen(filename.value().c_str(), the_mode);
   } while (!result && errno == EINTR);
+#if defined(OS_MACOSX)
+  // Mark the descriptor as close-on-exec.
+  if (result)
+    SetCloseOnExec(fileno(result));
+#endif
   return result;
 }
 

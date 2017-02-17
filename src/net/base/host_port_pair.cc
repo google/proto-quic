@@ -49,10 +49,6 @@ HostPortPair HostPortPair::FromString(const std::string& str) {
   return host_port_pair;
 }
 
-size_t HostPortPair::EstimateMemoryUsage(const HostPortPair& pair) {
-  return base::trace_event::EstimateMemoryUsage(pair.host());
-}
-
 std::string HostPortPair::ToString() const {
   std::string ret(HostForURL());
   ret += ':';
@@ -77,6 +73,10 @@ std::string HostPortPair::HostForURL() const {
   }
 
   return host_;
+}
+
+size_t HostPortPair::EstimateMemoryUsage() const {
+  return base::trace_event::EstimateMemoryUsage(host_);
 }
 
 }  // namespace net

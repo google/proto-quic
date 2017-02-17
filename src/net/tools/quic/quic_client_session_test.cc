@@ -65,7 +65,7 @@ class TestQuicClientSession : public QuicClientSession {
 class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
  protected:
   QuicClientSessionTest()
-      : crypto_config_(CryptoTestUtils::ProofVerifierForTesting()),
+      : crypto_config_(crypto_test_utils::ProofVerifierForTesting()),
         promised_stream_id_(kServerDataStreamId1),
         associated_stream_id_(kClientDataStreamId1) {
     Initialize();
@@ -104,11 +104,11 @@ class QuicClientSessionTest : public ::testing::TestWithParam<QuicVersion> {
     session_->CryptoConnect();
     QuicCryptoClientStream* stream =
         static_cast<QuicCryptoClientStream*>(session_->GetCryptoStream());
-    CryptoTestUtils::FakeServerOptions options;
+    crypto_test_utils::FakeServerOptions options;
     QuicConfig config = DefaultQuicConfig();
     config.SetMaxIncomingDynamicStreamsToSend(server_max_incoming_streams);
-    CryptoTestUtils::HandshakeWithFakeServer(&config, &helper_, &alarm_factory_,
-                                             connection_, stream, options);
+    crypto_test_utils::HandshakeWithFakeServer(
+        &config, &helper_, &alarm_factory_, connection_, stream, options);
   }
 
   QuicCryptoClientConfig crypto_config_;
@@ -151,7 +151,7 @@ TEST_P(QuicClientSessionTest, NoEncryptionAfterInitialEncryption) {
   // an inchoate CHLO to be sent and will leave the encryption level
   // at NONE.
   CryptoHandshakeMessage rej;
-  CryptoTestUtils::FillInDummyReject(&rej, /* stateless */ false);
+  crypto_test_utils::FillInDummyReject(&rej, /* stateless */ false);
   EXPECT_TRUE(session_->IsEncryptionEstablished());
   session_->GetCryptoStream()->OnHandshakeMessage(rej);
   EXPECT_FALSE(session_->IsEncryptionEstablished());
@@ -293,7 +293,7 @@ TEST_P(QuicClientSessionTest, InvalidFramedPacketReceived) {
   QuicConnectionId connection_id = session_->connection()->connection_id();
   QuicVersionVector versions = {GetParam()};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructMisFramedEncryptedPacket(
-      connection_id, false, false, false, kDefaultPathId, 100, "data",
+      connection_id, false, false, kDefaultPathId, 100, "data",
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER, &versions,
       Perspective::IS_SERVER));
   std::unique_ptr<QuicReceivedPacket> received(

@@ -44,20 +44,19 @@ class NET_EXPORT HttpServerPropertiesImpl
   HttpServerPropertiesImpl();
   ~HttpServerPropertiesImpl() override;
 
-  // Initializes |spdy_servers_map_| with the servers (host/port) from
+  // Sets |spdy_servers_map_| with the servers (host/port) from
   // |spdy_servers| that either support SPDY or not.
-  void InitializeSpdyServers(std::vector<std::string>* spdy_servers,
-                             bool support_spdy);
+  void SetSpdyServers(std::vector<std::string>* spdy_servers,
+                      bool support_spdy);
 
-  void InitializeAlternativeServiceServers(
+  void SetAlternativeServiceServers(
       AlternativeServiceMap* alternate_protocol_servers);
 
-  void InitializeSupportsQuic(IPAddress* last_address);
+  void SetSupportsQuic(IPAddress* last_address);
 
-  void InitializeServerNetworkStats(
-      ServerNetworkStatsMap* server_network_stats_map);
+  void SetServerNetworkStats(ServerNetworkStatsMap* server_network_stats_map);
 
-  void InitializeQuicServerInfoMap(QuicServerInfoMap* quic_server_info_map);
+  void SetQuicServerInfoMap(QuicServerInfoMap* quic_server_info_map);
 
   // Get the list of servers (host/port) that support SPDY. The max_size is the
   // number of MRU servers that support SPDY that are to be returned.
@@ -120,6 +119,7 @@ class NET_EXPORT HttpServerPropertiesImpl
   size_t max_server_configs_stored_in_properties() const override;
   void SetMaxServerConfigsStoredInProperties(
       size_t max_server_configs_stored_in_properties) override;
+  bool IsInitialized() const override;
 
  private:
   friend class HttpServerPropertiesImplPeer;

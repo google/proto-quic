@@ -21,8 +21,9 @@ void DestroyTrace(void);
 
 // Simple class to handle the trace buffer lifetime. Any object interested in
 // tracing should keep a reference to the object returned by GetTraceObject().
-class TraceObject : public base::RefCounted<TraceObject> {
-  friend class base::RefCounted<TraceObject>;
+class TraceObject : public base::RefCountedThreadSafe<TraceObject> {
+  friend class base::RefCountedThreadSafe<TraceObject>;
+
  public:
   static TraceObject* GetTraceObject();
   void EnableTracing(bool enable);

@@ -6,10 +6,12 @@
 
 #include <utility>
 
+#include "base/at_exit.h"
 #include "base/process/kill.h"
 #include "base/test/multiprocess_test.h"
 #include "base/test/test_timeouts.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/thread_local.h"
 #include "build/build_config.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/multiprocess_func_list.h"
@@ -146,6 +148,52 @@ TEST_F(ProcessTest, Terminate) {
   // The POSIX implementation actually ignores the exit_code.
   EXPECT_EQ(kExpectedExitCode, exit_code);
 #endif
+}
+
+void AtExitHandler(void*) {
+  // At-exit handler should not be called at
+  // Process::TerminateCurrentProcessImmediately.
+  DCHECK(false);
+}
+
+class ThreadLocalObject {
+  ~ThreadLocalObject() {
+    // Thread-local storage should not be destructed at
+    // Process::TerminateCurrentProcessImmediately.
+    DCHECK(false);
+  }
+};
+
+MULTIPROCESS_TEST_MAIN(TerminateCurrentProcessImmediatelyWithCode0) {
+  base::ThreadLocalPointer<ThreadLocalObject> object;
+  base::AtExitManager::RegisterCallback(&AtExitHandler, NULL);
+  Process::TerminateCurrentProcessImmediately(0);
+  NOTREACHED();
+  return 42;
+}
+
+TEST_F(ProcessTest, TerminateCurrentProcessImmediatelyWithZeroExitCode) {
+  Process process(SpawnChild("TerminateCurrentProcessImmediatelyWithCode0"));
+  ASSERT_TRUE(process.IsValid());
+  int exit_code = 42;
+  ASSERT_TRUE(process.WaitForExitWithTimeout(TestTimeouts::action_max_timeout(),
+                                             &exit_code));
+  EXPECT_EQ(0, exit_code);
+}
+
+MULTIPROCESS_TEST_MAIN(TerminateCurrentProcessImmediatelyWithCode250) {
+  Process::TerminateCurrentProcessImmediately(250);
+  NOTREACHED();
+  return 42;
+}
+
+TEST_F(ProcessTest, TerminateCurrentProcessImmediatelyWithNonZeroExitCode) {
+  Process process(SpawnChild("TerminateCurrentProcessImmediatelyWithCode250"));
+  ASSERT_TRUE(process.IsValid());
+  int exit_code = 42;
+  ASSERT_TRUE(process.WaitForExitWithTimeout(TestTimeouts::action_max_timeout(),
+                                             &exit_code));
+  EXPECT_EQ(250, exit_code);
 }
 
 MULTIPROCESS_TEST_MAIN(FastSleepyChildProcess) {

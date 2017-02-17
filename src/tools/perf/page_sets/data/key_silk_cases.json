@@ -1,109 +1,210 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "key_silk_cases_009.wpr": [
-            "http://jsfiddle.net/TLXLu/2/embedded/result/"
-        ], 
-        "key_silk_cases_005.wpr": [
-            "http://jsfiddle.net/3yDKh/4/embedded/result", 
-            "http://jsfiddle.net/3yDKh/6/embedded/result"
-        ], 
-        "key_silk_cases_018.wpr": [
-            "https://polymer-topeka.appspot.com/"
-        ], 
-        "key_silk_cases_015.wpr": [
-            "http://jsfiddle.net/bNp2h/3/show/"
-        ], 
-        "key_silk_cases_000.wpr": [
-            "http://staff.tumblr.com/", 
-            "http://jsfiddle.net/mdxJ7/3/show", 
-            "http://jsfiddle.net/3yDKh/1/show", 
-            "http://jsfiddle.net/3yDKh/3/show"
-        ], 
-        "key_silk_cases_004.wpr": [
-            "http://jankfree.org/silk/text-mask.html", 
-            "http://jankfree.org/silk/rectangle_transition.html"
-        ], 
-        "key_silk_cases_001.wpr": [
-            "http://groupcloned.com/test/plain/list-recycle-transform.html", 
-            "http://groupcloned.com/test/plain/list-animation-simple.html", 
-            "http://www.polymer-project.org/polymer-all/labs/list/static-scroll-display.html", 
-            "http://www.polymer-project.org/polymer-all/labs/list/virtual-scroll-examples.html", 
-            "http://groupcloned.com/test/plain/sticky-using-webkit-backface-visibility.html", 
-            "http://pr.gg/scroll6_even_faster.html", 
-            "http://jsfiddle.net/mdxJ7/3/embedded/result/", 
-            "http://jsfiddle.net/3yDKh/1/embedded/result", 
-            "http://jsfiddle.net/3yDKh/3/embedded/result", 
-            "http://jsfiddle.net/R8DX9/1/embedded/result/", 
-            "http://jsfiddle.net/rF9Gh/1/embedded/result/", 
-            "http://jsfiddle.net/uHqN9/embedded/result/", 
-            "http://jsfiddle.net/humper/yEX8u/3/embedded/result/", 
-            "http://jsfiddle.net/humper/cKB9D/3/embedded/result/", 
-            "http://jsfiddle.net/vBQHH/3/embedded/result/", 
-            "http://www.google.com/nexus/5/#/", 
-            "https://play.google.com/store/devices/details/Nexus_5_16GB_White?id=nexus_5_white_16gb", 
-            "http://jsfiddle.net/426x6/2/embedded/result", 
-            "http://jsfiddle.net/FtR7p/42/embedded/result/", 
-            "http://jsfiddle.net/ugkd4/9/embedded/result/"
-        ], 
-        "key_silk_cases_007.wpr": [
-            "http://jsfiddle.net/jx5De/12/embedded/result"
-        ], 
-        "key_silk_cases_013.wpr": [
-            "http://jsfiddle.net/bNp2h/1/embedded/result/"
-        ], 
-        "key_silk_cases_011.wpr": [
-            "http://jsfiddle.net/vBQHH/10/embedded/result/"
-        ], 
-        "key_silk_cases_002.wpr": [
-            "http://forecast.io?scroll", 
-            "http://www.google.com/#q=google", 
-            "http://forecast.io?swipe", 
-            "http://pr.gg/scroll6.html", 
-            "http://plus.google.com/app/basic/stream", 
-            "http://forecast.io?tap", 
-            "http://jsbin.com/UVIgUTa/6/quiet", 
-            "http://mobile-news.sandbox.google.com/news/pt1", 
-            "http://mobile-news.sandbox.google.com/news/pt0?scroll", 
-            "http://mobile-news.sandbox.google.com/news/pt0?swipe", 
-            "http://s.codepen.io/befamous/fullpage/pFsqb?scroll", 
-            "http://s.codepen.io/befamous/fullpage/pFsqb?flip", 
-            "http://s.codepen.io/befamous/fullpage/kbxnH?scroll", 
-            "http://s.codepen.io/befamous/fullpage/kbxnH?select", 
-            "http://famo.us?scroll", 
-            "http://famo.us?tap"
-        ], 
-        "key_silk_cases_006.wpr": [
-            "http://jsfiddle.net/rF9Gh/3/embedded/result/"
-        ], 
-        "key_silk_cases_008.wpr": [
-            "http://jsfiddle.net/jx5De/13/embedded/result"
-        ], 
-        "key_silk_cases_014.wpr": [
-            "http://jsfiddle.net/3yDKh/15/show/", 
-            "http://jsfiddle.net/jx5De/14/show/", 
-            "http://jsfiddle.net/3yDKh/16/show/", 
-            "http://jsfiddle.net/R8DX9/4/show/", 
-            "http://jsfiddle.net/rF9Gh/7/show/", 
-            "http://jsfiddle.net/TLXLu/3/show/", 
-            "http://jsfiddle.net/cKB9D/7/show/", 
-            "http://jsfiddle.net/vBQHH/11/show/", 
-            "http://jsfiddle.net/ugkd4/10/show/", 
-            "http://jsfiddle.net/xLuvC/1/show/", 
-            "http://jsfiddle.net/bNp2h/2/show/", 
-            "http://jsbin.com/UVIgUTa/38/quiet"
-        ], 
-        "key_silk_cases_017.wpr": [
-            "https://www.google.com/search?hl=en&q=define%3Aboogie"
-        ], 
-        "key_silk_cases_012.wpr": [
-            "http://jsfiddle.net/xLuvC/embedded/result/"
-        ], 
-        "key_silk_cases_010.wpr": [
-            "http://jsfiddle.net/cKB9D/6/embedded/result/"
-        ], 
-        "key_silk_cases_016.wpr": [
-            "http://wiltzius.github.io/shape-shifter/"
-        ]
-    }
+        "http://famo.us?scroll": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://famo.us?tap": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://forecast.io?scroll": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://forecast.io?swipe": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://forecast.io?tap": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://groupcloned.com/test/plain/list-animation-simple.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://groupcloned.com/test/plain/list-recycle-transform.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://groupcloned.com/test/plain/sticky-using-webkit-backface-visibility.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jankfree.org/silk/rectangle_transition.html": {
+            "DEFAULT": "key_silk_cases_004.wpr"
+        },
+        "http://jankfree.org/silk/text-mask.html": {
+            "DEFAULT": "key_silk_cases_004.wpr"
+        },
+        "http://jsbin.com/UVIgUTa/38/quiet": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsbin.com/UVIgUTa/6/quiet": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/1/embedded/result": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/1/show": {
+            "DEFAULT": "key_silk_cases_000.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/15/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/16/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/3/embedded/result": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/3/show": {
+            "DEFAULT": "key_silk_cases_000.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/4/embedded/result": {
+            "DEFAULT": "key_silk_cases_005.wpr"
+        },
+        "http://jsfiddle.net/3yDKh/6/embedded/result": {
+            "DEFAULT": "key_silk_cases_005.wpr"
+        },
+        "http://jsfiddle.net/426x6/2/embedded/result": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/FtR7p/42/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/R8DX9/1/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/R8DX9/4/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/TLXLu/2/embedded/result/": {
+            "DEFAULT": "key_silk_cases_009.wpr"
+        },
+        "http://jsfiddle.net/TLXLu/3/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/bNp2h/1/embedded/result/": {
+            "DEFAULT": "key_silk_cases_013.wpr"
+        },
+        "http://jsfiddle.net/bNp2h/2/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/bNp2h/3/show/": {
+            "DEFAULT": "key_silk_cases_015.wpr"
+        },
+        "http://jsfiddle.net/cKB9D/6/embedded/result/": {
+            "DEFAULT": "key_silk_cases_010.wpr"
+        },
+        "http://jsfiddle.net/cKB9D/7/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/humper/cKB9D/3/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/humper/yEX8u/3/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/jx5De/12/embedded/result": {
+            "DEFAULT": "key_silk_cases_007.wpr"
+        },
+        "http://jsfiddle.net/jx5De/13/embedded/result": {
+            "DEFAULT": "key_silk_cases_008.wpr"
+        },
+        "http://jsfiddle.net/jx5De/14/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/mdxJ7/3/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/mdxJ7/3/show": {
+            "DEFAULT": "key_silk_cases_000.wpr"
+        },
+        "http://jsfiddle.net/rF9Gh/1/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/rF9Gh/3/embedded/result/": {
+            "DEFAULT": "key_silk_cases_006.wpr"
+        },
+        "http://jsfiddle.net/rF9Gh/7/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/uHqN9/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/ugkd4/10/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/ugkd4/9/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/vBQHH/10/embedded/result/": {
+            "DEFAULT": "key_silk_cases_011.wpr"
+        },
+        "http://jsfiddle.net/vBQHH/11/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/vBQHH/3/embedded/result/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://jsfiddle.net/xLuvC/1/show/": {
+            "DEFAULT": "key_silk_cases_014.wpr"
+        },
+        "http://jsfiddle.net/xLuvC/embedded/result/": {
+            "DEFAULT": "key_silk_cases_012.wpr"
+        },
+        "http://mobile-news.sandbox.google.com/news/pt0?scroll": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://mobile-news.sandbox.google.com/news/pt0?swipe": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://mobile-news.sandbox.google.com/news/pt1": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://plus.google.com/app/basic/stream": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://pr.gg/scroll6.html": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://pr.gg/scroll6_even_faster.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://s.codepen.io/befamous/fullpage/kbxnH?scroll": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://s.codepen.io/befamous/fullpage/kbxnH?select": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://s.codepen.io/befamous/fullpage/pFsqb?flip": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://s.codepen.io/befamous/fullpage/pFsqb?scroll": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://staff.tumblr.com/": {
+            "DEFAULT": "key_silk_cases_000.wpr"
+        },
+        "http://wiltzius.github.io/shape-shifter/": {
+            "DEFAULT": "key_silk_cases_016.wpr"
+        },
+        "http://www.google.com/#q=google": {
+            "DEFAULT": "key_silk_cases_002.wpr"
+        },
+        "http://www.google.com/nexus/5/#/": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://www.polymer-project.org/polymer-all/labs/list/static-scroll-display.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "http://www.polymer-project.org/polymer-all/labs/list/virtual-scroll-examples.html": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "https://play.google.com/store/devices/details/Nexus_5_16GB_White?id=nexus_5_white_16gb": {
+            "DEFAULT": "key_silk_cases_001.wpr"
+        },
+        "https://polymer-topeka.appspot.com/": {
+            "DEFAULT": "key_silk_cases_018.wpr"
+        },
+        "https://www.google.com/search?hl=en&q=define%3Aboogie": {
+            "DEFAULT": "key_silk_cases_017.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

@@ -227,6 +227,7 @@ class V8MobileInfiniteScroll(_InfiniteScrollBenchmark):
               possible_browser.platform.GetDeviceTypeName() == 'Nexus 5X')
 
 
+@benchmark.Enabled('android')
 class V8MobileInfiniteScrollTurbo(V8MobileInfiniteScroll):
   """Measures V8 GC metrics and memory usage while scrolling the top mobile
   web pages and running Ignition+TurboFan.

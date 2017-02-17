@@ -31,7 +31,6 @@ source_set("content_browsertests_filters") {
   testonly = true
 
   data = [
-    "//testing/buildbot/filters/browser-side-navigation.linux.content_browsertests.filter",
     "//testing/buildbot/filters/cast-linux.content_browsertests.filter",
     "//testing/buildbot/filters/isolate-extensions.content_browsertests.filter",
     "//testing/buildbot/filters/site-per-process.content_browsertests.filter",

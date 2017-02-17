@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 from page_sets.system_health import platforms
+from page_sets.system_health import story_tags
 from page_sets.system_health import system_health_story
 
 from page_sets.login_helpers import pinterest_login
@@ -99,6 +100,7 @@ class CnnStory(_NewsBrowsingStory):
   URL = 'http://edition.cnn.com/'
   ITEM_SELECTOR = '.cd__content > h3 > a'
   ITEMS_TO_VISIT = 2
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class FacebookMobileStory(_NewsBrowsingStory):
@@ -175,6 +177,7 @@ class QqMobileStory(_NewsBrowsingStory):
   URL = 'http://news.qq.com'
   ITEM_SELECTOR = '.list .full a'
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
 
 class RedditDesktopStory(_NewsBrowsingStory):
@@ -309,6 +312,7 @@ class GoogleIndiaDesktopStory(_NewsBrowsingStory):
   _SEARCH_BUTTON_SELECTOR = 'button[aria-label="Google Search"]'
   _SEARCH_PAGE_2_SELECTOR = 'a[aria-label=\'Page 2\']'
   SUPPORTED_PLATFORMS = platforms.DESKTOP_ONLY
+  TAGS = [story_tags.INTERNATIONAL]
 
   def _DidLoadDocument(self, action_runner):
     action_runner.Wait(2)
@@ -394,6 +398,7 @@ class YouTubeMobileStory(_MediaBrowsingStory):
   SUPPORTED_PLATFORMS = platforms.MOBILE_ONLY
   IS_SINGLE_PAGE_APP = True
   ITEM_SELECTOR_INDEX = 3
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class YouTubeDesktopStory(_MediaBrowsingStory):
@@ -406,6 +411,8 @@ class YouTubeDesktopStory(_MediaBrowsingStory):
   ITEM_VIEW_TIME_IN_SECONDS = 5
   ITEMS_TO_VISIT = 8
   ITEM_SELECTOR_INDEX = 3
+  PLATFORM_SPECIFIC = True
+  TAGS = [story_tags.JAVASCRIPT_HEAVY]
 
 
 class FacebookPhotosMobileStory(_MediaBrowsingStory):

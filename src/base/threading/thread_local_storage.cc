@@ -92,7 +92,7 @@ struct TlsVectorEntry {
 // This lock isn't needed until after we've constructed the per-thread TLS
 // vector, so it's safe to use.
 base::Lock* GetTLSMetadataLock() {
-  static auto lock = new base::Lock();
+  static auto* lock = new base::Lock();
   return lock;
 }
 TlsMetadata g_tls_metadata[kThreadLocalStorageSize];

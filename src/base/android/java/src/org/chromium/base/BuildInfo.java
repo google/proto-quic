@@ -136,6 +136,13 @@ public class BuildInfo {
         return Build.TYPE;
     }
 
+    /**
+     * Check if this is a debuggable build of Android. Use this to enable developer-only features.
+     */
+    public static boolean isDebugAndroid() {
+        return "eng".equals(Build.TYPE) || "userdebug".equals(Build.TYPE);
+    }
+
     @CalledByNative
     public static int getSdkInt() {
         return Build.VERSION.SDK_INT;

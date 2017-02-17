@@ -74,8 +74,8 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTask(
 CancelableTaskTracker::TaskId CancelableTaskTracker::PostTaskAndReply(
     TaskRunner* task_runner,
     const tracked_objects::Location& from_here,
-    const Closure& task,
-    const Closure& reply) {
+    Closure task,
+    Closure reply) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
   // We need a SequencedTaskRunnerHandle to run |reply|.
@@ -87,15 +87,12 @@ CancelableTaskTracker::TaskId CancelableTaskTracker::PostTaskAndReply(
   TaskId id = next_id_;
   next_id_++;  // int64_t is big enough that we ignore the potential overflow.
 
-  const Closure& untrack_closure =
+  Closure untrack_closure =
       Bind(&CancelableTaskTracker::Untrack, weak_factory_.GetWeakPtr(), id);
-  bool success =
-      task_runner->PostTaskAndReply(from_here,
-                                    Bind(&RunIfNotCanceled, flag, task),
-                                    Bind(&RunIfNotCanceledThenUntrack,
-                                         base::Owned(flag),
-                                         reply,
-                                         untrack_closure));
+  bool success = task_runner->PostTaskAndReply(
+      from_here, Bind(&RunIfNotCanceled, flag, std::move(task)),
+      Bind(&RunIfNotCanceledThenUntrack, base::Owned(flag), std::move(reply),
+           std::move(untrack_closure)));
 
   if (!success)
     return kBadTaskId;

@@ -41,7 +41,6 @@ QUIC_EXPORT_PRIVATE size_t
 GetPacketHeaderSize(QuicVersion version,
                     QuicConnectionIdLength connection_id_length,
                     bool include_version,
-                    bool include_path_id,
                     bool include_diversification_nonce,
                     QuicPacketNumberLength packet_number_length);
 
@@ -53,7 +52,6 @@ QUIC_EXPORT_PRIVATE size_t
 GetStartOfEncryptedData(QuicVersion version,
                         QuicConnectionIdLength connection_id_length,
                         bool include_version,
-                        bool include_path_id,
                         bool include_diversification_nonce,
                         QuicPacketNumberLength packet_number_length);
 
@@ -128,7 +126,7 @@ class QUIC_EXPORT_PRIVATE QuicData {
 
 class QUIC_EXPORT_PRIVATE QuicPacket : public QuicData {
  public:
-  // TODO(fayang): 4 fields from public header are passed in as arguments.
+  // TODO(fayang): 3 fields from public header are passed in as arguments.
   // Consider to add a convenience method which directly accepts the entire
   // public header.
   QuicPacket(char* buffer,
@@ -136,7 +134,6 @@ class QUIC_EXPORT_PRIVATE QuicPacket : public QuicData {
              bool owns_buffer,
              QuicConnectionIdLength connection_id_length,
              bool includes_version,
-             bool includes_path_id,
              bool includes_diversification_nonce,
              QuicPacketNumberLength packet_number_length);
 
@@ -149,7 +146,6 @@ class QUIC_EXPORT_PRIVATE QuicPacket : public QuicData {
   char* buffer_;
   const QuicConnectionIdLength connection_id_length_;
   const bool includes_version_;
-  const bool includes_path_id_;
   const bool includes_diversification_nonce_;
   const QuicPacketNumberLength packet_number_length_;
 

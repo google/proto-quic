@@ -19,6 +19,10 @@ private:
 
 class StackObject {
     STACK_ALLOCATED();
+
+    // Redundant trace() method, warning/error expected.
+    void trace(Visitor* visitor) { visitor->trace(m_obj); }
+
 private:
     Member<HeapObject> m_obj; // Does not need tracing.
 };

@@ -32,6 +32,27 @@ std::unique_ptr<URLFetcher> URLFetcher::Create(
 }
 
 // static
+std::unique_ptr<URLFetcher> URLFetcher::Create(
+    const GURL& url,
+    URLFetcher::RequestType request_type,
+    URLFetcherDelegate* d,
+    NetworkTrafficAnnotationTag traffic_annotation) {
+  return URLFetcher::Create(0, url, request_type, d, traffic_annotation);
+}
+
+// static
+std::unique_ptr<URLFetcher> URLFetcher::Create(
+    int id,
+    const GURL& url,
+    URLFetcher::RequestType request_type,
+    URLFetcherDelegate* d,
+    NetworkTrafficAnnotationTag traffic_annotation) {
+  // traffic_annotation is just a tag that is extracted during static
+  // code analysis and can be ignored here.
+  return Create(id, url, request_type, d);
+}
+
+// static
 void URLFetcher::CancelAll() {
   URLFetcherImpl::CancelAll();
 }

@@ -14,17 +14,12 @@
 namespace base {
 namespace android {
 
-// Returns whether JNI registration succeeded. Caller shall put the
-// RegisterCallback into |callbacks| in reverse order.
+// Returns whether JNI registration succeeded.
 typedef base::Callback<bool(JNIEnv*)> RegisterCallback;
-BASE_EXPORT bool OnJNIOnLoadRegisterJNI(
-    JavaVM* vm,
-    std::vector<RegisterCallback> callbacks);
+BASE_EXPORT bool OnJNIOnLoadRegisterJNI(JNIEnv* env);
 
-// Returns whether initialization succeeded. Caller shall put the
-// InitCallback into |callbacks| in reverse order.
-typedef base::Callback<bool(void)> InitCallback;
-BASE_EXPORT bool OnJNIOnLoadInit(std::vector<InitCallback> callbacks);
+// Returns whether initialization succeeded.
+BASE_EXPORT bool OnJNIOnLoadInit();
 
 }  // namespace android
 }  // namespace base

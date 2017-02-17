@@ -62,6 +62,8 @@ class DiagnosticsReporter {
                                      clang::CXXRecordDecl* base);
   void BaseClassMustDeclareVirtualTrace(RecordInfo* derived,
                                               clang::CXXRecordDecl* base);
+  void TraceMethodForStackAllocatedClass(RecordInfo* parent,
+                                         clang::CXXMethodDecl* trace);
 
   void NoteManualDispatchMethod(clang::CXXMethodDecl* dispatch);
   void NoteBaseRequiresTracing(BasePoint* base);
@@ -136,6 +138,7 @@ class DiagnosticsReporter {
   unsigned diag_overridden_non_virtual_trace_note_;
   unsigned diag_manual_dispatch_method_note_;
   unsigned diag_iterator_to_gc_managed_collection_note_;
+  unsigned diag_trace_method_of_stack_allocated_parent_;
 };
 
 #endif // TOOLS_BLINK_GC_PLUGIN_DIAGNOSTICS_REPORTER_H_

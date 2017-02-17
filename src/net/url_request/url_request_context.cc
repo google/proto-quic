@@ -101,6 +101,16 @@ std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
       new URLRequest(url, priority, delegate, this, network_delegate_));
 }
 
+std::unique_ptr<URLRequest> URLRequestContext::CreateRequest(
+    const GURL& url,
+    RequestPriority priority,
+    URLRequest::Delegate* delegate,
+    NetworkTrafficAnnotationTag traffic_annotation) const {
+  // |traffic_annotation| is just a tag that is extracted during static
+  // code analysis and can be ignored here.
+  return CreateRequest(url, priority, delegate);
+}
+
 void URLRequestContext::set_cookie_store(CookieStore* cookie_store) {
   cookie_store_ = cookie_store;
 }

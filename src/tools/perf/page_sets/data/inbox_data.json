@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a user story set. Don't edit by hand! Use record_wpr for updating.", 
     "archives": {
-        "inbox_data_000.wpr": [
-            "Inbox"
-        ]
-    }
+        "Inbox": {
+            "DEFAULT": "inbox_data_000.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

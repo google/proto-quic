@@ -55,8 +55,13 @@ class FuzzedSocketFactory : public ClientSocketFactory {
 
   void ClearSSLSessionCache() override;
 
+  // Sets whether Connect()ions on returned sockets can be asynchronously
+  // delayed or outright fail. Defaults to true.
+  void set_fuzz_connect_result(bool v) { fuzz_connect_result_ = v; }
+
  private:
   base::FuzzedDataProvider* data_provider_;
+  bool fuzz_connect_result_;
 
   DISALLOW_COPY_AND_ASSIGN(FuzzedSocketFactory);
 };

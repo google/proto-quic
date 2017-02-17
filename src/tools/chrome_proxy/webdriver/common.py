@@ -127,6 +127,8 @@ class TestDriver:
     _driver: A reference to the driver object from the Chrome Driver library.
     _chrome_args: A set of string arguments to start Chrome with.
     _url: The string URL that Chrome will navigate to for this test.
+    _has_logs: Boolean flag set when a page is loaded and cleared when logs are
+      fetched.
   """
 
   def __init__(self):
@@ -135,6 +137,7 @@ class TestDriver:
     self._chrome_args = set()
     self._url = ''
     self._logger = GetLogger(name='TestDriver')
+    self._has_logs = False
 
   def __enter__(self):
     return self
@@ -283,6 +286,7 @@ class TestDriver:
     self._logger.debug('Set page load timeout to %f seconds', timeout)
     self._driver.get(self._url)
     self._logger.debug('Loaded page %s', url)
+    self._has_logs = True
 
   def ExecuteJavascript(self, script, timeout=30):
     """Executes the given javascript in the browser's current page in an
@@ -355,7 +359,8 @@ class TestDriver:
     return result
 
   def GetPerformanceLogs(self, method_filter=r'Network\.responseReceived'):
-    """Returns all logged Performance events from Chrome.
+    """Returns all logged Performance events from Chrome. Raises an Exception if
+    no pages have been loaded since the last time this function was called.
 
     Args:
       method_filter: A regex expression to match the method of logged events
@@ -364,6 +369,8 @@ class TestDriver:
       Performance logs as a list of dicts, since the last time this function was
       called.
     """
+    if not self._has_logs:
+      raise Exception('No pages loaded since last Network log query!')
     all_messages = []
     for log in self._driver.execute('getLog', {'type': 'performance'})['value']:
       message = json.loads(log['message'])['message']
@@ -372,6 +379,7 @@ class TestDriver:
         all_messages.append(message)
     self._logger.info('Got %d performance logs with filter method=%s',
       len(all_messages), method_filter)
+    self._has_logs = False
     return all_messages
 
   def GetHTTPResponses(self, include_favicon=False, skip_domainless_pages=True):
@@ -379,7 +387,8 @@ class TestDriver:
 
     Use caution when calling this function  multiple times. Only responses
     since the last time this function was called are returned (or since Chrome
-    started, whichever is later).
+    started, whichever is later). An Exception will be raised if no page was
+    loaded since the last time this function was called.
 
     Args:
       include_favicon: A bool that if True will include responses for favicons.

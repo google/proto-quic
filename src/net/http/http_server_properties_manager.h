@@ -160,6 +160,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   size_t max_server_configs_stored_in_properties() const override;
   void SetMaxServerConfigsStoredInProperties(
       size_t max_server_configs_stored_in_properties) override;
+  bool IsInitialized() const override;
 
  protected:
   // The location where ScheduleUpdatePrefsOnNetworkThread was called.
@@ -189,10 +190,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // execute only one update per simultaneous prefs changes.
   void ScheduleUpdateCacheOnPrefThread();
 
-  // Starts the timers to update the cached prefs. This are overridden in tests
-  // to prevent the delay.
-  virtual void StartCacheUpdateTimerOnPrefThread(base::TimeDelta delay);
-
   // Update cached prefs in |http_server_properties_impl_| with data from
   // preferences. It gets the data on pref thread and calls
   // UpdateSpdyServersFromPrefsOnNetworkThread() to perform the update on
@@ -214,10 +211,6 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // simultaneous spdy_servers or spdy_settings or alternative_service changes.
   // |location| specifies where this method is called from. Virtual for testing.
   virtual void ScheduleUpdatePrefsOnNetworkThread(Location location);
-
-  // Starts the timers to update the prefs from cache. This are overridden in
-  // tests to prevent the delay.
-  virtual void StartPrefsUpdateTimerOnNetworkThread(base::TimeDelta delay);
 
   // Update prefs::kHttpServerProperties in preferences with the cached data
   // from |http_server_properties_impl_|. This gets the data on network thread
@@ -283,6 +276,7 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   void SaveQuicServerInfoMapToServerPrefs(
       QuicServerInfoMap* quic_server_info_map,
       base::DictionaryValue* http_server_properties_dict);
+  void SetInitialized();
 
   // -----------
   // Pref thread
@@ -301,6 +295,9 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
   // --------------
   // Network thread
   // --------------
+
+  // Whether InitializeOnNetworkThread() has completed.
+  bool is_initialized_;
 
   const scoped_refptr<base::SingleThreadTaskRunner> network_task_runner_;
 

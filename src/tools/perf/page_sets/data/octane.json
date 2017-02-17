@@ -1,8 +1,9 @@
 {
-    "description": "Describes the Web Page Replay archives for a page set. Don't edit by hand! Use record_wpr for updating.",
     "archives": {
-        "octane_002.wpr": [
-            "http://chromium.github.io/octane/index.html?auto=1"
-        ]
-    }
+        "http://chromium.github.io/octane/index.html?auto=1": {
+            "DEFAULT": "octane_002.wpr"
+        }
+    },
+    "description": "Describes the Web Page Replay archives for a story set. Don't edit by hand! Use record_wpr for updating.",
+    "platform_specific": true
 }

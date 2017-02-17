@@ -249,8 +249,7 @@
       },
       {
         "args": [
-          "--enable-browser-side-navigation",
-          "--test-launcher-filter-file=../../testing/buildbot/filters/browser-side-navigation.linux.content_browsertests.filter"
+          "--enable-browser-side-navigation"
         ],
         "swarming": {
           "can_use_on_swarming_builders": true
@@ -279,8 +278,7 @@
     "scripts": [
       {
         "args": [
-          "content_browsertests",
-          "../../testing/buildbot/filters/browser-side-navigation.linux.content_browsertests.filter"
+          "content_browsertests"
         ],
         "name": "count_filtered_tests_content_browsertests",
         "script": "count_filtered_tests.py"
@@ -11357,17 +11355,13 @@
     "gtest_tests": [
       {
         "args": [
-          "--ozone-platform=headless",
-          "--override-use-gl-with-osmesa-for-tests",
-          "--run-in-mash",
-          "--service-overrides=src/chrome/app/mash/mash_service_overrides.json",
-          "--test-launcher-filter-file=src/testing/buildbot/filters/mojo.fyi.browser_tests.filter",
-          "--use-test-config"
+          "--test-launcher-filter-file=../../testing/buildbot/filters/mojo.fyi.browser_tests.filter"
         ],
+        "hard_timeout": 60,
         "swarming": {
-          "can_use_on_swarming_builders": false
+          "can_use_on_swarming_builders": true
         },
-        "test": "browser_tests"
+        "test": "mash_browser_tests"
       }
     ]
   },
@@ -11376,18 +11370,6 @@
       "mash:all"
     ],
     "gtest_tests": [
-      {
-        "args": [
-          "--override-use-gl-with-osmesa-for-tests",
-          "--run-in-mash",
-          "--service-overrides=src/chrome/app/mash/mash_service_overrides.json",
-          "--test-launcher-filter-file=src/testing/buildbot/filters/mojo.fyi.browser_tests.filter"
-        ],
-        "swarming": {
-          "can_use_on_swarming_builders": false
-        },
-        "test": "browser_tests"
-      },
       {
         "swarming": {
           "can_use_on_swarming_builders": false
@@ -11526,7 +11508,8 @@
           "--test-launcher-filter-file=../../testing/buildbot/filters/site-per-process.browser_tests.filter"
         ],
         "swarming": {
-          "can_use_on_swarming_builders": true
+          "can_use_on_swarming_builders": true,
+          "shards": 5
         },
         "test": "browser_tests"
       },
@@ -12458,6 +12441,42 @@
           "can_use_on_swarming_builders": false
         },
         "test": "wtf_unittests"
+      }
+    ]
+  },
+  "WebKit Linux - RandomOrder": {
+    "isolated_scripts": [
+      {
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests_exparchive",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 1
+        }
+      }
+    ]
+  },
+  "WebKit Mac - RandomOrder": {
+    "isolated_scripts": [
+      {
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests_exparchive",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 1
+        }
+      }
+    ]
+  },
+  "WebKit Win - RandomOrder": {
+    "isolated_scripts": [
+      {
+        "isolate_name": "webkit_layout_tests_exparchive",
+        "name": "webkit_layout_tests_exparchive",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "shards": 1
+        }
       }
     ]
   },

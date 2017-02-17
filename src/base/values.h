@@ -36,12 +36,12 @@
 
 namespace base {
 
-class BinaryValue;
 class DictionaryValue;
 class ListValue;
 class Value;
 using FundamentalValue = Value;
 using StringValue = Value;
+using BinaryValue = Value;
 
 // The Value class is the base class for Values. A Value can be instantiated
 // via the Create*Value() factory methods, or by directly creating instances of
@@ -64,6 +64,14 @@ class BASE_EXPORT Value {
 
   static std::unique_ptr<Value> CreateNullValue();
 
+  // For situations where you want to keep ownership of your buffer, this
+  // factory method creates a new BinaryValue by copying the contents of the
+  // buffer that's passed in.
+  // DEPRECATED, use MakeUnique<Value>(const std::vector<char>&) instead.
+  // TODO(crbug.com/646113): Delete this and migrate callsites.
+  static std::unique_ptr<BinaryValue> CreateWithCopiedBuffer(const char* buffer,
+                                                             size_t size);
+
   Value(const Value& that);
   Value(Value&& that);
   Value();  // A null value.
@@ -84,6 +92,9 @@ class BASE_EXPORT Value {
   explicit Value(const char16* in_string);
   explicit Value(const string16& in_string);
   explicit Value(StringPiece in_string);
+
+  explicit Value(const std::vector<char>& in_blob);
+  explicit Value(std::vector<char>&& in_blob);
 
   Value& operator=(const Value& that);
   Value& operator=(Value&& that);
@@ -116,6 +127,10 @@ class BASE_EXPORT Value {
   int GetInt() const;
   double GetDouble() const;  // Implicitly converts from int if necessary.
   const std::string& GetString() const;
+  const std::vector<char>& GetBlob() const;
+
+  size_t GetSize() const;         // DEPRECATED, use GetBlob().size() instead.
+  const char* GetBuffer() const;  // DEPRECATED, use GetBlob().data() instead.
 
   // These methods allow the convenient retrieval of the contents of the Value.
   // If the current object can be converted into the given type, the value is
@@ -167,42 +182,8 @@ class BASE_EXPORT Value {
     int int_value_;
     double double_value_;
     ManualConstructor<std::string> string_value_;
+    ManualConstructor<std::vector<char>> binary_value_;
   };
-};
-
-class BASE_EXPORT BinaryValue: public Value {
- public:
-  // Creates a BinaryValue with a null buffer and size of 0.
-  BinaryValue();
-
-  // Creates a BinaryValue, taking ownership of the bytes pointed to by
-  // |buffer|.
-  BinaryValue(std::unique_ptr<char[]> buffer, size_t size);
-
-  ~BinaryValue() override;
-
-  // For situations where you want to keep ownership of your buffer, this
-  // factory method creates a new BinaryValue by copying the contents of the
-  // buffer that's passed in.
-  static std::unique_ptr<BinaryValue> CreateWithCopiedBuffer(const char* buffer,
-                                                             size_t size);
-
-  size_t GetSize() const { return size_; }
-
-  // May return NULL.
-  char* GetBuffer() { return buffer_.get(); }
-  const char* GetBuffer() const { return buffer_.get(); }
-
-  // Overridden from Value:
-  bool GetAsBinary(const BinaryValue** out_value) const override;
-  BinaryValue* DeepCopy() const override;
-  bool Equals(const Value* other) const override;
-
- private:
-  std::unique_ptr<char[]> buffer_;
-  size_t size_;
-
-  DISALLOW_COPY_AND_ASSIGN(BinaryValue);
 };
 
 // DictionaryValue provides a key-value dictionary with (optional) "path"

@@ -134,8 +134,8 @@ public abstract class CommandLine {
      * @param file The fully qualified command line file.
      */
     public static void initFromFile(String file) {
-        // Arbitrary clamp of 8k on the amount of file we read in.
-        char[] buffer = readUtf8FileFully(file, 8 * 1024);
+        // Arbitrary clamp of 16k on the amount of file we read in.
+        char[] buffer = readUtf8FileFullyCrashIfTooBig(file, 16 * 1024);
         init(buffer == null ? null : tokenizeQuotedAruments(buffer));
     }
 
@@ -238,10 +238,10 @@ public abstract class CommandLine {
     /**
      * @param fileName the file to read in.
      * @param sizeLimit cap on the file size.
-     * @return Array of chars read from the file, or null if the file cannot be read
-     *         or if its length exceeds |sizeLimit|.
+     * @return Array of chars read from the file, or null if the file cannot be read.
+     * @throws RuntimeException if the file size exceeds |sizeLimit|.
      */
-    private static char[] readUtf8FileFully(String fileName, int sizeLimit) {
+    private static char[] readUtf8FileFullyCrashIfTooBig(String fileName, int sizeLimit) {
         Reader reader = null;
         File f = new File(fileName);
         long fileLength = f.length();
@@ -251,9 +251,8 @@ public abstract class CommandLine {
         }
 
         if (fileLength > sizeLimit) {
-            Log.w(TAG, "File " + fileName + " length " + fileLength + " exceeds limit "
-                    + sizeLimit);
-            return null;
+            throw new RuntimeException(
+                    "File " + fileName + " length " + fileLength + " exceeds limit " + sizeLimit);
         }
 
         try {

@@ -94,6 +94,9 @@ class NET_EXPORT_PRIVATE HpackHuffmanTable {
   bool GenericDecodeString(HpackInputStream* in,
                            std::string* out) const;
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   // Expects symbols ordered on length & ID ascending.
   void BuildDecodeTables(const std::vector<Symbol>& symbols);

@@ -7,8 +7,10 @@
 
 #include "base/memory/ptr_util.h"
 #include "base/memory/singleton.h"
+#include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
 #include "base/test/fuzzed_data_provider.h"
+#include "base/test/scoped_task_scheduler.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "net/http/http_request_headers.h"
 #include "net/url_request/data_protocol_handler.h"
@@ -29,7 +31,9 @@ const size_t kMaxLengthForFuzzedRange = 32;
 class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
  public:
   URLRequestDataJobFuzzerHarness()
-      : context_(true), task_runner_(base::ThreadTaskRunnerHandle::Get()) {
+      : scoped_task_scheduler_(base::MessageLoop::current()),
+        task_runner_(base::ThreadTaskRunnerHandle::Get()),
+        context_(true) {
     job_factory_.SetProtocolHandler(
         "data", base::MakeUnique<net::DataProtocolHandler>());
     context_.set_job_factory(&job_factory_);
@@ -155,11 +159,13 @@ class URLRequestDataJobFuzzerHarness : public net::URLRequest::Delegate {
  private:
   friend struct base::DefaultSingletonTraits<URLRequestDataJobFuzzerHarness>;
 
+  base::test::ScopedTaskScheduler scoped_task_scheduler_;
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+
   net::TestURLRequestContext context_;
   net::URLRequestJobFactoryImpl job_factory_;
   std::vector<size_t> read_lengths_;
   scoped_refptr<net::IOBuffer> buf_;
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::RunLoop* read_loop_;
 
   DISALLOW_COPY_AND_ASSIGN(URLRequestDataJobFuzzerHarness);

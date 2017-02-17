@@ -27,7 +27,6 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 
 import org.chromium.base.ApplicationState;
 import org.chromium.base.ApplicationStatus;
@@ -1016,7 +1015,6 @@ public class NetworkChangeNotifierAutoDetect extends BroadcastReceiver {
 
         mConnectionType = newConnectionType;
         mWifiSSID = newWifiSSID;
-        Log.d(TAG, "Network connectivity changed, type is: " + mConnectionType);
         mObserver.onConnectionTypeChanged(newConnectionType);
     }
 

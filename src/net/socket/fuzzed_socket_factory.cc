@@ -129,7 +129,7 @@ class FailingSSLClientSocket : public SSLClientSocket {
 
 FuzzedSocketFactory::FuzzedSocketFactory(
     base::FuzzedDataProvider* data_provider)
-    : data_provider_(data_provider) {}
+    : data_provider_(data_provider), fuzz_connect_result_(true) {}
 
 FuzzedSocketFactory::~FuzzedSocketFactory() {}
 
@@ -149,7 +149,7 @@ std::unique_ptr<StreamSocket> FuzzedSocketFactory::CreateTransportClientSocket(
     const NetLogSource& source) {
   std::unique_ptr<FuzzedSocket> socket(
       new FuzzedSocket(data_provider_, net_log));
-  socket->set_fuzz_connect_result(true);
+  socket->set_fuzz_connect_result(fuzz_connect_result_);
   // Just use the first address.
   socket->set_remote_address(*addresses.begin());
   return std::move(socket);

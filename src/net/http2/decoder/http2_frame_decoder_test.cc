@@ -14,6 +14,7 @@
 #include "net/http2/decoder/frame_parts.h"
 #include "net/http2/decoder/frame_parts_collector_listener.h"
 #include "net/http2/http2_constants.h"
+#include "net/http2/platform/api/http2_reconstruct_object.h"
 #include "net/http2/tools/failure.h"
 #include "net/http2/tools/http2_random.h"
 #include "net/http2/tools/random_decoder_test.h"
@@ -36,7 +37,6 @@ class Http2FrameDecoderPeer {
 namespace {
 
 class Http2FrameDecoderTest : public RandomDecoderTest {
-
  protected:
   void SetUp() override {
     // On any one run of this suite, we'll always choose the same value for
@@ -101,12 +101,10 @@ class Http2FrameDecoderTest : public RandomDecoderTest {
 
     // Alternate which constructor is used.
     if (use_default_reconstruct_) {
-      decoder_.~Http2FrameDecoder();
-      new (&decoder_) Http2FrameDecoder;
+      Http2DefaultReconstructObject(&decoder_, RandomPtr());
       decoder_.set_listener(&collector_);
     } else {
-      decoder_.~Http2FrameDecoder();
-      new (&decoder_) Http2FrameDecoder(&collector_);
+      Http2ReconstructObject(&decoder_, RandomPtr(), &collector_);
     }
     decoder_.set_maximum_payload_size(maximum_payload_size);
 

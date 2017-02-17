@@ -28,6 +28,7 @@
 #include "net/http2/http2_structures.h"
 #include "net/spdy/hpack/hpack_decoder_interface.h"
 #include "net/spdy/hpack/hpack_header_table.h"
+#include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_alt_svc_wire_format.h"
 #include "net/spdy/spdy_bug_tracker.h"
 #include "net/spdy/spdy_frame_builder.h"
@@ -52,7 +53,7 @@ bool IsPaddable(Http2FrameType type) {
 }
 
 SpdyFrameType ToSpdyFrameType(Http2FrameType type) {
-  return ParseFrameType(static_cast<int>(type));
+  return ParseFrameType(static_cast<uint8_t>(type));
 }
 
 uint64_t ToSpdyPingId(const Http2PingFields& ping) {
@@ -143,6 +144,12 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     return latched_probable_http_response_;
   }
 
+  size_t EstimateMemoryUsage() const override {
+    // Skip |frame_decoder_|, |frame_header_| and |hpack_first_frame_header_| as
+    // they don't allocate.
+    return SpdyEstimateMemoryUsage(alt_svc_origin_) +
+           SpdyEstimateMemoryUsage(alt_svc_value_);
+  }
   // ===========================================================================
   // Implementations of the methods declared by Http2FrameDecoderListener.
 
@@ -155,13 +162,16 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     if (!latched_probable_http_response_) {
       latched_probable_http_response_ = header.IsProbableHttpResponse();
     }
+    const uint8_t raw_frame_type = static_cast<uint8_t>(header.type);
+    visitor()->OnCommonHeader(header.stream_id, header.payload_length,
+                              raw_frame_type, header.flags);
     if (!IsSupportedHttp2FrameType(header.type) &&
         header.type != kFrameTypeBlocked) {
       // In HTTP2 we ignore unknown frame types for extensibility, as long as
       // the rest of the control frame header is valid.
       // We rely on the visitor to check validity of stream_id.
-      bool valid_stream = visitor()->OnUnknownFrame(
-          header.stream_id, static_cast<uint8_t>(header.type));
+      bool valid_stream =
+          visitor()->OnUnknownFrame(header.stream_id, raw_frame_type);
       if (has_expected_frame_type_ && header.type != expected_frame_type_) {
         // Report an unexpected frame error and close the connection if we
         // expect a known frame type (probably CONTINUATION) and receive an
@@ -369,7 +379,7 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
   void OnSetting(const Http2SettingFields& setting_fields) override {
     DVLOG(1) << "OnSetting: " << setting_fields;
     SpdySettingsIds setting_id;
-    if (!ParseSettingsId(static_cast<int>(setting_fields.parameter),
+    if (!ParseSettingsId(static_cast<uint16_t>(setting_fields.parameter),
                          &setting_id)) {
       DVLOG(1) << "Ignoring invalid setting id: " << setting_fields;
       return;
@@ -466,12 +476,18 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     DVLOG(1) << "OnAltSvcStart: " << header
              << "; origin_length: " << origin_length
              << "; value_length: " << value_length;
-    if (IsOkToStartFrame(header) && HasRequiredStreamId(header)) {
-      frame_header_ = header;
-      has_frame_header_ = true;
-      alt_svc_origin_.clear();
-      alt_svc_value_.clear();
+    if (!IsOkToStartFrame(header)) {
+      return;
     }
+    // Per RFC7838, origin_length must be zero IFF the stream id is non-zero.
+    if ((origin_length == 0 && !HasRequiredStreamId(header)) ||
+        (origin_length != 0 && !HasRequiredStreamIdZero(header))) {
+      return;
+    }
+    frame_header_ = header;
+    has_frame_header_ = true;
+    alt_svc_origin_.clear();
+    alt_svc_value_.clear();
   }
 
   void OnAltSvcOriginData(const char* data, size_t len) override {

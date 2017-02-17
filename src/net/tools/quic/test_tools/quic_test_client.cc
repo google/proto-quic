@@ -8,20 +8,16 @@
 #include <utility>
 #include <vector>
 
-#include "base/memory/ptr_util.h"
-#include "base/time/time.h"
-#include "net/base/completion_callback.h"
-#include "net/base/net_errors.h"
-#include "net/cert/cert_verify_result.h"
-#include "net/cert/x509_certificate.h"
 #include "net/quic/core/crypto/proof_verifier.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_stack_trace.h"
 #include "net/quic/platform/api/quic_text_utils.h"
+#include "net/quic/platform/api/quic_url.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
@@ -31,13 +27,9 @@
 #include "net/tools/quic/quic_packet_writer_wrapper.h"
 #include "net/tools/quic/quic_spdy_client_stream.h"
 #include "net/tools/quic/test_tools/quic_client_peer.h"
-#include "url/gurl.h"
+#include "third_party/boringssl/src/include/openssl/x509.h"
 
 using base::StringPiece;
-using net::QuicServerId;
-using net::test::QuicConnectionPeer;
-using net::test::QuicSpdySessionPeer;
-using net::test::QuicStreamPeer;
 using std::string;
 using testing::_;
 using testing::Invoke;
@@ -102,9 +94,9 @@ class RecordingProofVerifier : public ProofVerifier {
   QuicAsyncStatus VerifyCertChain(
       const std::string& hostname,
       const std::vector<std::string>& certs,
-      const ProofVerifyContext* verify_context,
+      const ProofVerifyContext* context,
       std::string* error_details,
-      std::unique_ptr<ProofVerifyDetails>* verify_details,
+      std::unique_ptr<ProofVerifyDetails>* details,
       std::unique_ptr<ProofVerifierCallback> callback) override {
     return QUIC_SUCCESS;
   }
@@ -157,7 +149,7 @@ MockableQuicClient::MockableQuicClient(
                  supported_versions,
                  config,
                  epoll_server,
-                 base::WrapUnique(
+                 QuicWrapUnique(
                      new RecordingProofVerifier(std::move(proof_verifier)))),
       override_connection_id_(0),
       test_writer_(nullptr),
@@ -167,8 +159,9 @@ void MockableQuicClient::ProcessPacket(const QuicSocketAddress& self_address,
                                        const QuicSocketAddress& peer_address,
                                        const QuicReceivedPacket& packet) {
   QuicClient::ProcessPacket(self_address, peer_address, packet);
-  if (track_last_incoming_packet_)
+  if (track_last_incoming_packet_) {
     last_incoming_packet_ = packet.Clone();
+  }
 }
 
 MockableQuicClient::~MockableQuicClient() {
@@ -360,10 +353,10 @@ ssize_t QuicTestClient::SendMessage(const SpdyHeaderBlock& headers,
 
   // If we're not connected, try to find an sni hostname.
   if (!connected()) {
-    GURL url(SpdyUtils::GetUrlFromHeaderBlock(headers));
+    QuicUrl url(SpdyUtils::GetUrlFromHeaderBlock(headers));
     if (override_sni_set_) {
-      client_->set_server_id(QuicServerId(override_sni_, url.EffectiveIntPort(),
-                                          PRIVACY_MODE_DISABLED));
+      client_->set_server_id(
+          QuicServerId(override_sni_, url.port(), PRIVACY_MODE_DISABLED));
     }
   }
 
