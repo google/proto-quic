@@ -133,14 +133,25 @@ size_t GetProcStatsFieldAsSizeT(const std::vector<std::string>& proc_stats,
   return StringToSizeT(proc_stats[field_num], &value) ? value : 0;
 }
 
-int64_t ReadProcStatsAndGetFieldAsInt64(pid_t pid, ProcStatsFields field_num) {
+int64_t ReadStatFileAndGetFieldAsInt64(const FilePath& stat_file,
+                                       ProcStatsFields field_num) {
   std::string stats_data;
-  if (!ReadProcStats(pid, &stats_data))
+  if (!ReadProcFile(stat_file, &stats_data))
     return 0;
   std::vector<std::string> proc_stats;
   if (!ParseProcStats(stats_data, &proc_stats))
     return 0;
   return GetProcStatsFieldAsInt64(proc_stats, field_num);
+}
+
+int64_t ReadProcStatsAndGetFieldAsInt64(pid_t pid, ProcStatsFields field_num) {
+  FilePath stat_file = internal::GetProcPidDir(pid).Append(kStatFile);
+  return ReadStatFileAndGetFieldAsInt64(stat_file, field_num);
+}
+
+int64_t ReadProcSelfStatsAndGetFieldAsInt64(ProcStatsFields field_num) {
+  FilePath stat_file = FilePath(kProcDir).Append("self").Append(kStatFile);
+  return ReadStatFileAndGetFieldAsInt64(stat_file, field_num);
 }
 
 size_t ReadProcStatsAndGetFieldAsSizeT(pid_t pid,

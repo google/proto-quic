@@ -51,9 +51,6 @@ bool NET_EXPORT ParseDate(ASN1_TIME* x509_time, base::Time* time);
 // after the first call to this function.
 bool NET_EXPORT GetDER(X509* x509, base::StringPiece* out_der);
 
-// Returns a CRYPTO_BUFFER_POOL for deduplicating certificates.
-CRYPTO_BUFFER_POOL* GetBufferPool();
-
 } // namespace x509_util
 
 } // namespace net

@@ -21,6 +21,8 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="android_webview/javatests/src"/>
     <classpathentry kind="src" path="android_webview/test/shell/src"/>
     <classpathentry kind="src" path="android_webview/unittestjava/src"/>
+    <classpathentry kind="src" path="android_webview/tools/system_webview_shell/apk/src"/>
+    <classpathentry kind="src" path="android_webview/tools/system_webview_shell/layout_tests/src"/>
     <classpathentry kind="src" path="base/android/java/src"/>
     <classpathentry kind="src" path="base/android/javatests/src"/>
     <classpathentry kind="src" path="base/test/android/javatests/src"/>
@@ -66,6 +68,9 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="src" path="components/url_formatter/android/java/src"/>
     <classpathentry kind="src" path="components/variations/android/java/src"/>
     <classpathentry kind="src" path="components/web_contents_delegate_android/android/java/src"/>
+    <classpathentry kind="src" path="components/web_restrictions/browser/java/src"/>
+    <classpathentry kind="src" path="components/web_restrictions/browser/javatests/src"/>
+    <classpathentry kind="src" path="components/web_restrictions/browser/junit/src"/>
     <classpathentry kind="src" path="content/public/android/java/src"/>
     <classpathentry kind="src" path="content/public/android/javatests/src"/>
     <classpathentry kind="src" path="content/public/android/junit/src"/>
@@ -222,6 +227,7 @@ to the classpath for downstream development. See "additional_entries" below.
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/recyclerview/libs/android-support-v7-recyclerview.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v13/android-support-v13.jar" sourcepath="third_party/android_tools/sdk/sources"/>
     <classpathentry kind="lib" path="third_party/android_tools/sdk/extras/android/support/v7/appcompat/libs/android-support-v7-appcompat.jar" sourcepath="third_party/android_tools/sdk/sources"/>
+    <classpathentry kind="lib" path="third_party/android_support_test_runner/lib/runner-0.5-release-no-dep.jar"/>
     <classpathentry kind="lib" path="third_party/bouncycastle/lib/bcprov-jdk16-1.46.jar"/>
     <classpathentry kind="lib" path="third_party/byte_buddy/lib/byte-buddy-1.4.17.jar"/>
     <classpathentry kind="lib" path="third_party/findbugs/lib/findbugs.jar"/>

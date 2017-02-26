@@ -217,6 +217,7 @@ template("test") {
       ]
     }
   } else if (is_ios) {
+    import("//build/config/ios/ios_sdk.gni")
     import("//build/config/ios/rules.gni")
 
     _test_target = target_name
@@ -245,11 +246,9 @@ template("test") {
         info_plist = "//testing/gtest_ios/unittest-Info.plist"
       }
 
-      _bundle_id_suffix = target_name
-      if (ios_automatically_manage_certs) {
-        # Use the same bundle identifier for all unit tests when managing
-        # certificates automatically as the number of free certs is limited.
-        _bundle_id_suffix = "generic-unit-test"
+      _bundle_id_suffix = ios_generic_test_bundle_id_suffix
+      if (!ios_automatically_manage_certs) {
+        _bundle_id_suffix = "${target_name}"
       }
       if (!defined(extra_substitutions)) {
         extra_substitutions = []

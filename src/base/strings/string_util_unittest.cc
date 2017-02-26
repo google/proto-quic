@@ -707,6 +707,92 @@ TEST(StringUtilTest, JoinString16) {
   EXPECT_EQ(ASCIIToUTF16("a|b|c|| "), JoinString(parts, ASCIIToUTF16("|")));
 }
 
+TEST(StringUtilTest, JoinStringPiece) {
+  std::string separator(", ");
+  std::vector<base::StringPiece> parts;
+  EXPECT_EQ(base::StringPiece(), JoinString(parts, separator));
+
+  parts.push_back("a");
+  EXPECT_EQ("a", JoinString(parts, separator));
+
+  parts.push_back("b");
+  parts.push_back("c");
+  EXPECT_EQ("a, b, c", JoinString(parts, separator));
+
+  parts.push_back(base::StringPiece());
+  EXPECT_EQ("a, b, c, ", JoinString(parts, separator));
+  parts.push_back(" ");
+  EXPECT_EQ("a|b|c|| ", JoinString(parts, "|"));
+}
+
+TEST(StringUtilTest, JoinStringPiece16) {
+  string16 separator = ASCIIToUTF16(", ");
+  std::vector<base::StringPiece16> parts;
+  EXPECT_EQ(base::StringPiece16(), JoinString(parts, separator));
+
+  const string16 kA = ASCIIToUTF16("a");
+  parts.push_back(kA);
+  EXPECT_EQ(ASCIIToUTF16("a"), JoinString(parts, separator));
+
+  const string16 kB = ASCIIToUTF16("b");
+  parts.push_back(kB);
+  const string16 kC = ASCIIToUTF16("c");
+  parts.push_back(kC);
+  EXPECT_EQ(ASCIIToUTF16("a, b, c"), JoinString(parts, separator));
+
+  parts.push_back(base::StringPiece16());
+  EXPECT_EQ(ASCIIToUTF16("a, b, c, "), JoinString(parts, separator));
+  const string16 kSpace = ASCIIToUTF16(" ");
+  parts.push_back(kSpace);
+  EXPECT_EQ(ASCIIToUTF16("a|b|c|| "), JoinString(parts, ASCIIToUTF16("|")));
+}
+
+TEST(StringUtilTest, JoinStringInitializerList) {
+  std::string separator(", ");
+  EXPECT_EQ(base::StringPiece(), JoinString({}, separator));
+
+  // With const char*s.
+  EXPECT_EQ("a", JoinString({"a"}, separator));
+  EXPECT_EQ("a, b, c", JoinString({"a", "b", "c"}, separator));
+  EXPECT_EQ("a, b, c, ", JoinString({"a", "b", "c", ""}, separator));
+  EXPECT_EQ("a|b|c|| ", JoinString({"a", "b", "c", "", " "}, "|"));
+
+  // With std::strings.
+  const std::string kA = "a";
+  const std::string kB = "b";
+  EXPECT_EQ("a, b", JoinString({kA, kB}, separator));
+
+  // With StringPieces.
+  const StringPiece kPieceA = kA;
+  const StringPiece kPieceB = kB;
+  EXPECT_EQ("a, b", JoinString({kPieceA, kPieceB}, separator));
+}
+
+TEST(StringUtilTest, JoinStringInitializerList16) {
+  string16 separator = ASCIIToUTF16(", ");
+  EXPECT_EQ(base::StringPiece16(), JoinString({}, separator));
+
+  // With string16s.
+  const string16 kA = ASCIIToUTF16("a");
+  EXPECT_EQ(ASCIIToUTF16("a"), JoinString({kA}, separator));
+
+  const string16 kB = ASCIIToUTF16("b");
+  const string16 kC = ASCIIToUTF16("c");
+  EXPECT_EQ(ASCIIToUTF16("a, b, c"), JoinString({kA, kB, kC}, separator));
+
+  const string16 kEmpty = ASCIIToUTF16("");
+  EXPECT_EQ(ASCIIToUTF16("a, b, c, "),
+            JoinString({kA, kB, kC, kEmpty}, separator));
+  const string16 kSpace = ASCIIToUTF16(" ");
+  EXPECT_EQ(ASCIIToUTF16("a|b|c|| "),
+            JoinString({kA, kB, kC, kEmpty, kSpace}, ASCIIToUTF16("|")));
+
+  // With StringPiece16s.
+  const StringPiece16 kPieceA = kA;
+  const StringPiece16 kPieceB = kB;
+  EXPECT_EQ(ASCIIToUTF16("a, b"), JoinString({kPieceA, kPieceB}, separator));
+}
+
 TEST(StringUtilTest, StartsWith) {
   EXPECT_TRUE(StartsWith("javascript:url", "javascript",
                          base::CompareCase::SENSITIVE));

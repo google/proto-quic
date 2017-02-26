@@ -739,7 +739,7 @@ TEST(MessageLoopTest, FileDescriptorWatcherOutlivesMessageLoop) {
   int fd = pipefds[1];
   {
     // Arrange for controller to live longer than message loop.
-    MessageLoopForIO::FileDescriptorWatcher controller;
+    MessageLoopForIO::FileDescriptorWatcher controller(FROM_HERE);
     {
       MessageLoopForIO message_loop;
 
@@ -766,7 +766,7 @@ TEST(MessageLoopTest, FileDescriptorWatcherDoubleStop) {
     // Arrange for message loop to live longer than controller.
     MessageLoopForIO message_loop;
     {
-      MessageLoopForIO::FileDescriptorWatcher controller;
+      MessageLoopForIO::FileDescriptorWatcher controller(FROM_HERE);
 
       QuitDelegate delegate;
       message_loop.WatchFileDescriptor(fd,

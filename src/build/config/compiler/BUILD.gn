@@ -92,6 +92,9 @@ declare_args() {
   # Optimize for coverage guided fuzzing (balance between speed and number of
   # branches)
   optimize_for_fuzzing = false
+
+  # Optimize symbol files for maximizing goma cache hit rate.
+  strip_absolute_paths_from_debug_symbols = false
 }
 
 if (is_clang && !is_nacl) {
@@ -425,7 +428,7 @@ config("compiler") {
   # clang-cl (used if is_win) doesn't expose this flag.
   # Currently disabled for nacl since its toolchain lacks this flag (too old).
   # TODO(zforman): Once nacl's toolchain is updated, remove check.
-  if (is_clang && is_linux) {
+  if (is_clang && is_linux && strip_absolute_paths_from_debug_symbols) {
     absolute_path = rebase_path("//.")
     cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
   }
@@ -1081,7 +1084,10 @@ config("default_warnings") {
         "-Wno-shift-negative-value",
       ]
     }
-    if (!is_nacl && !use_xcode_clang) {
+
+    # use_xcode_clang only refers to the iOS toolchain, host binaries use
+    # chromium's clang always.
+    if (!is_nacl && (!use_xcode_clang || current_toolchain == host_toolchain)) {
       # Flags NaCl (Clang 3.7) and Xcode 7.3 (Clang clang-703.0.31) do not
       # recognize.
       cflags += [
@@ -1096,16 +1102,13 @@ config("default_warnings") {
 
         # TODO(thakis): Consider turning this on, https://crbug.com/691120
         "-Wno-block-capture-autoreleasing",
-      ]
-      if (llvm_force_head_revision) {
-        cflags += [
-          # TODO(hans): https://crbug.com/681136
-          "-Wno-unused-lambda-capture",
 
-          # TODO(thakis ): https://crbug.com/683349
-          "-Wno-user-defined-warnings",
-        ]
-      }
+        # TODO(hans): https://crbug.com/681136
+        "-Wno-unused-lambda-capture",
+
+        # TODO(thakis ): https://crbug.com/683349
+        "-Wno-user-defined-warnings",
+      ]
     }
   }
 }
@@ -1599,7 +1602,12 @@ config("afdo") {
 # Full symbols.
 config("symbols") {
   if (is_win) {
-    cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+    if (use_goma) {
+      # Note that this requires is_win_fastlink, enforced elsewhere.
+      cflags = [ "/Z7" ]  # Debug information in the .obj files.
+    } else {
+      cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+    }
 
     if (is_win_fastlink) {
       # Tell VS 2015+ to create a PDB that references debug

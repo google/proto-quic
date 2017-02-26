@@ -6,13 +6,14 @@
 
 namespace base {
 
-MessagePumpIOSForIO::FileDescriptorWatcher::FileDescriptorWatcher()
+MessagePumpIOSForIO::FileDescriptorWatcher::FileDescriptorWatcher(
+    const tracked_objects::Location& from_here)
     : is_persistent_(false),
       fdref_(NULL),
       callback_types_(0),
       fd_source_(NULL),
-      watcher_(NULL) {
-}
+      watcher_(NULL),
+      created_from_location_(from_here) {}
 
 MessagePumpIOSForIO::FileDescriptorWatcher::~FileDescriptorWatcher() {
   StopWatchingFileDescriptor();

@@ -21,6 +21,12 @@ namespace test {
 // thread where the ScopedTaskScheduler lives. The destructor runs remaining
 // BLOCK_SHUTDOWN tasks synchronously.
 //
+// Note: ScopedTaskScheduler intentionally breaks the TaskScheduler contract of
+// always running its tasks on threads it owns, instead opting to run its tasks
+// on the main thread for determinism in tests. Components that depend on
+// TaskScheduler using independent threads should use ScopedAsyncTaskScheduler
+// for testing.
+//
 // Example usage:
 //
 // In this snippet, RunUntilIdle() returns after "A" is run.

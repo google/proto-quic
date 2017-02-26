@@ -168,6 +168,9 @@ TEST_F(QuicSpdyClientStreamTest, DISABLED_TestFramingExtraData) {
 }
 
 TEST_F(QuicSpdyClientStreamTest, TestNoBidirectionalStreaming) {
+  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    return;
+  }
   QuicStreamFrame frame(kClientDataStreamId1, false, 3, StringPiece("asd"));
 
   EXPECT_FALSE(stream_->write_side_closed());
@@ -196,9 +199,14 @@ TEST_F(QuicSpdyClientStreamTest, ReceivingTrailers) {
 
   // Now send the body, which should close the stream as the FIN has been
   // received, as well as all data.
-  EXPECT_CALL(session_, CloseStream(stream_->id()));
+  if (!FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    EXPECT_CALL(session_, CloseStream(stream_->id()));
+  }
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
+  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    EXPECT_TRUE(stream_->reading_stopped());
+  }
 }
 
 }  // namespace

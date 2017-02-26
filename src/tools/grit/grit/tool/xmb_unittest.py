@@ -12,6 +12,7 @@ if __name__ == '__main__':
 
 import unittest
 import StringIO
+import xml.sax
 
 from grit import grd_reader
 from grit import util
@@ -103,6 +104,25 @@ class XmbUnittest(unittest.TestCase):
     output = self.xmb_file.getvalue()
     self.failUnless(output.count('OK ? </msg>'))
 
+  def testDisallowedChars(self):
+    # Validate that the invalid unicode is not accepted. Since it's not valid,
+    # we can't specify it in a string literal, so write as a byte sequence.
+    bad_xml = StringIO.StringIO()
+    bad_xml.write('''<?xml version="1.0" encoding="UTF-8"?>
+      <grit latest_public_release="2" source_lang_id="en-US"
+            current_release="3" base_dir=".">
+        <release seq="3">
+          <messages>
+            <message name="ID_FOO">''')
+    # UTF-8 corresponding to to \U00110000
+    # http://apps.timwhitlock.info/unicode/inspect/hex/110000
+    bad_xml.write(b'\xF4\x90\x80\x80')
+    bad_xml.write('''</message>
+          </messages>
+        </release>
+      </grit>''')
+    bad_xml.seek(0)
+    self.assertRaises(xml.sax.SAXParseException, grd_reader.Parse, bad_xml, '.')
 
 if __name__ == '__main__':
   unittest.main()

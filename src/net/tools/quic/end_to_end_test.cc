@@ -439,7 +439,7 @@ class EndToEndTest : public ::testing::TestWithParam<TestParams> {
     FLAGS_quic_reloadable_flag_quic_use_cheap_stateless_rejects =
         GetParam().use_cheap_stateless_reject;
 
-    auto test_server = new QuicTestServer(
+    auto* test_server = new QuicTestServer(
         crypto_test_utils::ProofSourceForTesting(), server_config_,
         server_supported_versions_, &response_cache_);
     server_thread_.reset(new ServerThread(test_server, server_address_));
@@ -1824,7 +1824,7 @@ TEST_P(EndToEndTest, FlowControlsSynced) {
   QuicSpdySession* const client_session = client_->client()->session();
   QuicDispatcher* dispatcher =
       QuicServerPeer::GetDispatcher(server_thread_->server());
-  auto server_session = static_cast<QuicSpdySession*>(
+  auto* server_session = static_cast<QuicSpdySession*>(
       dispatcher->session_map().begin()->second.get());
   ExpectFlowControlsSynced(client_session->flow_controller(),
                            server_session->flow_controller());
@@ -2549,6 +2549,13 @@ TEST_P(EndToEndTest, LargePostEarlyResponse) {
   set_server_initial_session_flow_control_receive_window(kWindowSize);
 
   ASSERT_TRUE(Initialize());
+  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    // This test is testing the same behavior as
+    // EarlyResponseWithQuicStreamNoError, except for the additional final check
+    // that the stream is reset on early response. Once this flag is deprecated
+    // the tests will be the same and this one can be removed.
+    return;
+  }
 
   EXPECT_TRUE(client_->client()->WaitForCryptoHandshakeConfirmed());
 

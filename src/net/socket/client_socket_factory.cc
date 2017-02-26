@@ -33,7 +33,7 @@ class DefaultClientSocketFactory : public ClientSocketFactory,
     CertDatabase::GetInstance()->RemoveObserver(this);
   }
 
-  void OnCertDBChanged(const X509Certificate* cert) override {
+  void OnCertDBChanged() override {
     // Flush sockets whenever CA trust changes.
     ClearSSLSessionCache();
   }

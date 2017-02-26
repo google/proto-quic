@@ -109,6 +109,7 @@ if (current_toolchain != default_toolchain) {
   is_ubsan_vptr = false
   msan_track_origins = 0
   sanitizer_coverage_flags = ""
+  use_afl = false
   use_cfi_diag = false
   use_custom_libcxx = false
   use_drfuzz = false

@@ -293,6 +293,7 @@ def main(argv):
                     help='Path to JAR that contains java resources. Everything '
                     'from this JAR except meta-inf/ content and .class files '
                     'will be added to the final APK.')
+  parser.add_option('--bootclasspath', help='Path to custom android.jar/rt.jar')
 
   # android library options
   parser.add_option('--dex-path', help='Path to target\'s dex output.')
@@ -419,6 +420,8 @@ def main(argv):
     gradle['dependent_java_projects'] = []
     gradle['dependent_prebuilt_jars'] = deps.GradlePrebuiltJarPaths()
 
+    if options.bootclasspath:
+      gradle['bootclasspath'] = options.bootclasspath
     if options.main_class:
       gradle['main_class'] = options.main_class
 

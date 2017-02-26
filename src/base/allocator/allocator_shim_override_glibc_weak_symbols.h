@@ -39,19 +39,19 @@ extern "C" {
 namespace {
 
 void* GlibcMallocHook(size_t size, const void* caller) {
-  return ShimMalloc(size);
+  return ShimMalloc(size, nullptr);
 }
 
 void* GlibcReallocHook(void* ptr, size_t size, const void* caller) {
-  return ShimRealloc(ptr, size);
+  return ShimRealloc(ptr, size, nullptr);
 }
 
 void GlibcFreeHook(void* ptr, const void* caller) {
-  return ShimFree(ptr);
+  return ShimFree(ptr, nullptr);
 }
 
 void* GlibcMemalignHook(size_t align, size_t size, const void* caller) {
-  return ShimMemalign(align, size);
+  return ShimMemalign(align, size, nullptr);
 }
 
 }  // namespace

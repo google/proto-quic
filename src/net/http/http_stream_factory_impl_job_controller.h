@@ -65,7 +65,7 @@ class HttpStreamFactoryImpl::JobController
 
   // Called to resume the HttpStream creation process when necessary
   // Proxy authentication credentials are collected.
-  int RestartTunnelWithProxyAuth(const AuthCredentials& credentials) override;
+  int RestartTunnelWithProxyAuth() override;
 
   // Called when the priority of transaction changes.
   void SetPriority(RequestPriority priority) override;

@@ -48,7 +48,23 @@ _INCLUDE_RE = lazy_re.compile(
     '(\s*</include>)?',
     re.DOTALL)
 _SRC_RE = lazy_re.compile(
-    r'<(?!script)(?:[^>]+?\s)src=(?P<quote>")(?!\[\[|{{)(?P<filename>[^"\']*)\1',
+    r'<(?!script)(?:[^>]+?\s)src="(?!\[\[|{{)(?P<filename>[^"\']*)"',
+    re.MULTILINE)
+# This re matches '<img srcset="..."'
+_SRCSET_RE = lazy_re.compile(
+    r'<img\b(?:[^>]*?\s)srcset="(?!\[\[|{{)(?P<srcset>[^"\']*)"',
+    re.MULTILINE)
+# This re is for splitting srcset value string into "image candidate strings".
+# Notes:
+# - HTML 5.2 states that URL cannot start with comma.
+# - the "descriptor" is either "width descriptor" or "pixel density descriptor".
+#   The first one consists of "valid non-negative integer + letter 'x'",
+#   the second one is formed of "positive valid floating-point number +
+#   letter 'w'". As a reasonable compromise, we match a list of characters
+#   that form both of them.
+# Matches for example "img2.png 2x" or "img9.png 11E-2w".
+_SRCSET_ENTRY_RE = lazy_re.compile(
+    r'\s*(?P<url>[^,]\S+)\s+(?P<descriptor>[\deE.-]+[wx])\s*',
     re.MULTILINE)
 _ICON_RE = lazy_re.compile(
     r'<link rel="icon"\s(?:[^>]+?\s)?'
@@ -69,20 +85,17 @@ def GetDistribution():
       distribution = distribution[1:].lower()
   return distribution
 
+def ConvertFileToDataURL(filename, base_path, distribution, inlined_files,
+    names_only):
+  """Convert filename to inlined data URI.
 
-def SrcInlineAsDataURL(
-    src_match, base_path, distribution, inlined_files, names_only=False,
-    filename_expansion_function=None):
-  """regex replace function.
-
-  Takes a regex match for src="filename", attempts to read the file
-  at 'filename' and returns the src attribute with the file inlined
-  as a data URI. If it finds DIST_SUBSTR string in file name, replaces
-  it with distribution.
+  Takes a filename from ether "src" or "srcset", and attempts to read the file
+  at 'filename'. Returns data URI as string with given file inlined.
+  If it finds DIST_SUBSTR string in file name, replaces it with distribution.
+  If filename contains ':', it is considered URL and not translated.
 
   Args:
-    src_match: regex match object with 'filename' and 'quote' named capturing
-               groups
+    filename: filename string from ether src or srcset attributes.
     base_path: path that to look for files in
     distribution: string that should replace DIST_SUBSTR
     inlined_files: The name of the opened file is appended to this list.
@@ -92,14 +105,9 @@ def SrcInlineAsDataURL(
   Returns:
     string
   """
-  filename = src_match.group('filename')
-  if filename_expansion_function:
-    filename = filename_expansion_function(filename)
-  quote = src_match.group('quote')
-
   if filename.find(':') != -1:
     # filename is probably a URL, which we don't want to bother inlining
-    return src_match.group(0)
+    return filename
 
   filename = filename.replace(DIST_SUBSTR , distribution)
   filepath = os.path.normpath(os.path.join(base_path, filename))
@@ -113,11 +121,122 @@ def SrcInlineAsDataURL(
     raise Exception('%s is of an an unknown type and '
                     'cannot be stored in a data url.' % filename)
   inline_data = base64.standard_b64encode(util.ReadFile(filepath, util.BINARY))
+  return 'data:%s;base64,%s' % (mimetype, inline_data)
+
+
+def SrcInlineAsDataURL(
+    src_match, base_path, distribution, inlined_files, names_only=False,
+    filename_expansion_function=None):
+  """regex replace function.
+
+  Takes a regex match for src="filename", attempts to read the file
+  at 'filename' and returns the src attribute with the file inlined
+  as a data URI. If it finds DIST_SUBSTR string in file name, replaces
+  it with distribution.
+
+  Args:
+    src_match: regex match object with 'filename' named capturing group
+    base_path: path that to look for files in
+    distribution: string that should replace DIST_SUBSTR
+    inlined_files: The name of the opened file is appended to this list.
+    names_only: If true, the function will not read the file but just return "".
+                It will still add the filename to |inlined_files|.
+
+  Returns:
+    string
+  """
+  filename = src_match.group('filename')
+  if filename_expansion_function:
+    filename = filename_expansion_function(filename)
+
+  data_url = ConvertFileToDataURL(filename, base_path, distribution,
+                                  inlined_files, names_only)
+
+  if not data_url:
+    return data_url
 
   prefix = src_match.string[src_match.start():src_match.start('filename')]
   suffix = src_match.string[src_match.end('filename'):src_match.end()]
-  return '%sdata:%s;base64,%s%s' % (prefix, mimetype, inline_data, suffix)
+  return prefix + data_url + suffix
 
+def SrcsetInlineAsDataURL(
+    srcset_match, base_path, distribution, inlined_files, names_only=False,
+    filename_expansion_function=None):
+  """regex replace function to inline files in srcset="..." attributes
+
+  Takes a regex match for srcset="filename 1x, filename 2x, ...", attempts to
+  read the files referenced by filenames and returns the srcset attribute with
+  the files inlined as a data URI. If it finds DIST_SUBSTR string in file name,
+  replaces it with distribution.
+
+  Args:
+    srcset_match: regex match object with 'srcset' named capturing group
+    base_path: path that to look for files in
+    distribution: string that should replace DIST_SUBSTR
+    inlined_files: The name of the opened file is appended to this list.
+    names_only: If true, the function will not read the file but just return "".
+                It will still add the filename to |inlined_files|.
+
+  Returns:
+    string
+  """
+  srcset = srcset_match.group('srcset')
+
+  if not srcset:
+    return srcset_match.group(0)
+
+  # HTML 5.2 defines srcset as a list of "image candidate strings".
+  # Each of them consists of URL and descriptor.
+  # _SRCSET_ENTRY_RE splits srcset into a list of URLs, descriptors and
+  # commas.
+  parts = _SRCSET_ENTRY_RE.split(srcset)
+
+  if not parts:
+    return srcset_match.group(0)
+
+  # List of image candidate strings that will form new srcset="..."
+  new_candidates = []
+
+  # When iterating over split srcset we fill this parts of a single image
+  # candidate string: [url, descriptor]
+  candidate = [];
+
+  for part in parts:
+    if not part:
+      continue
+
+    if part == ',':
+      # There must be no URL without a descriptor.
+      assert not candidate, "Bad srcset format in '%s'" % srcset_match.group(0)
+      continue
+
+    if candidate:
+      # descriptor found
+      if candidate[0]:
+        # This is not "names_only" mode.
+        candidate.append(part)
+        new_candidates.append(" ".join(candidate))
+
+      candidate = []
+      continue
+
+    if filename_expansion_function:
+      filename = filename_expansion_function(part)
+    else:
+      filename = part
+
+    data_url = ConvertFileToDataURL(filename, base_path, distribution,
+                                    inlined_files, names_only)
+
+    candidate.append(data_url)
+
+  # There must be no URL without a descriptor
+  assert not candidate, "Bad srcset ending in '%s' " % srcset_match.group(0)
+
+  prefix = srcset_match.string[srcset_match.start():
+      srcset_match.start('srcset')]
+  suffix = srcset_match.string[srcset_match.end('srcset'):srcset_match.end()]
+  return prefix + ','.join(new_candidates) + suffix
 
 class InlinedData:
   """Helper class holding the results from DoInline().
@@ -166,6 +285,16 @@ def DoInline(
     """Helper function to provide SrcInlineAsDataURL with the base file path"""
     return SrcInlineAsDataURL(
         src_match, filepath, distribution, inlined_files, names_only=names_only,
+        filename_expansion_function=filename_expansion_function)
+
+  def SrcsetReplace(srcset_match, filepath=input_filepath,
+                 inlined_files=inlined_files):
+    """Helper function to provide SrcsetInlineAsDataURL with the base file
+    path.
+    """
+    return SrcsetInlineAsDataURL(
+        srcset_match, filepath, distribution, inlined_files,
+        names_only=names_only,
         filename_expansion_function=filename_expansion_function)
 
   def GetFilepath(src_match, base_path = input_filepath):
@@ -369,6 +498,7 @@ def DoInline(
     if rewrite_function:
       flat_text = rewrite_function(input_filepath, flat_text, distribution)
     flat_text = _SRC_RE.sub(SrcReplace, flat_text)
+    flat_text = _SRCSET_RE.sub(SrcsetReplace, flat_text)
 
     # TODO(arv): Only do this inside <style> tags.
     flat_text = InlineCSSImages(flat_text)

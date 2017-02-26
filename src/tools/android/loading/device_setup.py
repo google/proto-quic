@@ -234,16 +234,12 @@ def _VerifySilentWprHost(record, network_condition_name):
                                       ' without a specified archive.')
 
 
-def _FormatWPRRelatedChromeArgumentFor(http_port, https_port, escape):
+def _FormatWPRRelatedChromeArgumentFor(http_port, https_port):
   HOST_RULES='MAP * 127.0.0.1,EXCLUDE localhost'
-  chrome_args = [
+  return [
       '--testing-fixed-http-port={}'.format(http_port),
-      '--testing-fixed-https-port={}'.format(https_port)]
-  if escape:
-    chrome_args.append('--host-resolver-rules="{}"'.format(HOST_RULES))
-  else:
-    chrome_args.append('--host-resolver-rules={}'.format(HOST_RULES))
-  return chrome_args
+      '--testing-fixed-https-port={}'.format(https_port),
+      '--host-resolver-rules={}'.format(HOST_RULES)]
 
 
 @contextlib.contextmanager
@@ -286,8 +282,7 @@ def LocalWprHost(wpr_archive_path, record=False,
         disable_script_injection=disable_script_injection,
         wpr_ca_cert_path=private_ca_cert_path,
         out_log_path=out_log_path) as (http_port, https_port):
-      chrome_args = _FormatWPRRelatedChromeArgumentFor(http_port, https_port,
-                                                       escape=False)
+      chrome_args = _FormatWPRRelatedChromeArgumentFor(http_port, https_port)
       yield WprAttribute(chrome_args=chrome_args,
                          chrome_env_override={'HOME': temp_home_dir})
 
@@ -340,8 +335,7 @@ def RemoteWprHost(device, wpr_archive_path, record=False,
       device_https_port = forwarder.Forwarder.DevicePortForHostPort(https_port)
       try:
         chrome_args = _FormatWPRRelatedChromeArgumentFor(device_http_port,
-                                                         device_https_port,
-                                                         escape=True)
+                                                         device_https_port)
         yield WprAttribute(chrome_args=chrome_args, chrome_env_override={})
       finally:
         # Tear down the forwarder.

@@ -46,14 +46,14 @@ class Bypass(IntegrationTest):
       t.LoadURL('http://check.googlezip.net/test.html')
       responses = t.GetHTTPResponses()
       self.assertEqual(2, len(responses))
-      for response in t.GetHTTPResponses():
+      for response in responses:
         self.assertHasChromeProxyViaHeader(response)
 
       # Load HTTPS page and check that Data Saver is not used.
       t.LoadURL('https://check.googlezip.net/test.html')
       responses = t.GetHTTPResponses()
       self.assertEqual(2, len(responses))
-      for response in t.GetHTTPResponses():
+      for response in responses:
         self.assertNotHasChromeProxyViaHeader(response)
 
   # Verify that CORS requests receive a block-once from the data reduction
@@ -81,6 +81,27 @@ class Bypass(IntegrationTest):
       # Verify that both CORS and same origin requests were seen.
       self.assertNotEqual(0, same_origin_requests)
       self.assertNotEqual(0, cors_requests)
+
+  # Verify that when an origin times out using Data Saver, the request is
+  # fetched directly and data saver is bypassed only for one request.
+  def testOriginTimeoutBlockOnce(self):
+    with TestDriver() as test_driver:
+      test_driver.AddChromeArg('--enable-spdy-proxy-auth')
+
+      # Load URL that times out when the proxy server tries to access it.
+      test_driver.LoadURL('http://chromeproxy-test.appspot.com/blackhole')
+      responses = test_driver.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+          self.assertNotHasChromeProxyViaHeader(response)
+
+      # Load HTTP page and check that Data Saver is used.
+      test_driver.LoadURL('http://check.googlezip.net/test.html')
+      responses = test_driver.GetHTTPResponses()
+      self.assertNotEqual(0, len(responses))
+      for response in responses:
+        self.assertHasChromeProxyViaHeader(response)
+
 
 if __name__ == '__main__':
   IntegrationTest.RunAllTests()

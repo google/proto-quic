@@ -51,7 +51,7 @@ size_t HpackHuffmanTable::DecodeTable::size() const {
   return size_t(1) << indexed_length;
 }
 
-HpackHuffmanTable::HpackHuffmanTable() {}
+HpackHuffmanTable::HpackHuffmanTable() : pad_bits_(0), failed_symbol_id_(0) {}
 
 HpackHuffmanTable::~HpackHuffmanTable() {}
 

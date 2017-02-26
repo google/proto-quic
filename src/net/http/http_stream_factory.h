@@ -30,7 +30,6 @@ class ProcessMemoryDump;
 
 namespace net {
 
-class AuthCredentials;
 class BidirectionalStreamImpl;
 class HostMappingRules;
 class HttpAuthController;
@@ -169,8 +168,7 @@ class NET_EXPORT_PRIVATE HttpStreamRequest {
   // will have been called.  It now becomes the delegate's responsibility
   // to collect the necessary credentials, and then call this method to
   // resume the HttpStream creation process.
-  virtual int RestartTunnelWithProxyAuth(
-      const AuthCredentials& credentials) = 0;
+  virtual int RestartTunnelWithProxyAuth() = 0;
 
   // Called when the priority of the parent transaction changes.
   virtual void SetPriority(RequestPriority priority) = 0;

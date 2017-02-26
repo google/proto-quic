@@ -535,7 +535,6 @@ TEST_F(QuicDispatcherTest, TooBigSeqNoPacketToTimeWaitListManager) {
 TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
   static_assert(arraysize(kSupportedQuicVersions) == 5u,
                 "Supported versions out of sync");
-  FLAGS_quic_reloadable_flag_quic_fix_version_manager = true;
   FLAGS_quic_reloadable_flag_quic_disable_version_34 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_36_v3 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_37 = true;

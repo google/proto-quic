@@ -79,21 +79,44 @@ def FormatDefines(root, output_all_resource_defines=True,
 _cached_ids = {}
 
 
+_predetermined_tids = {}
+
+
+def SetPredeterminedIdsFile(predetermined_ids_file):
+  global _predetermined_tids
+  if predetermined_ids_file:
+    _predetermined_tids = _ReadIdsFromFile(predetermined_ids_file)
+  else:
+    _predetermined_tids = {}
+
+
+def _ReadIdsFromFile(path):
+  with open(path, "r") as f:
+    content = f.readlines()
+  tids = {}  # Maps textual id to numeric id
+  for line in content:
+    tid, id = line.split()
+    tids[tid] = int(id)
+  return tids
+
+
 def GetIds(root):
   '''Return a dictionary mapping textual ids to numeric ids for the given tree.
 
   Args:
     root: A GritNode.
   '''
+  global _cached_ids
+  global _predetermined_tids
   # TODO(benrg): Since other formatters use this, it might make sense to move it
   # and _ComputeIds to GritNode and store the cached ids as an attribute. On the
   # other hand, GritNode has too much random stuff already.
   if root not in _cached_ids:
-    _cached_ids[root] = _ComputeIds(root)
+    _cached_ids[root] = _ComputeIds(root, _predetermined_tids)
   return _cached_ids[root]
 
 
-def _ComputeIds(root):
+def _ComputeIds(root, predetermined_tids):
   from grit.node import empty, include, message, misc, structure
 
   ids = {}  # Maps numeric id to textual id
@@ -101,6 +124,8 @@ def _ComputeIds(root):
   id_reasons = {}  # Maps numeric id to text id and a human-readable explanation
   group = None
   last_id = None
+  predetermined_ids = {value: key
+                       for key, value in predetermined_tids.iteritems()}
 
   for item in root:
     if isinstance(item, empty.GroupingNode):
@@ -129,9 +154,13 @@ def _ComputeIds(root):
       if tid in tids:
         continue
 
+      if predetermined_tids and tid in predetermined_tids:
+        id = predetermined_tids[tid]
+        reason = "from predetermined_tids map"
+
       # Some identifier nodes can provide their own id,
       # and we use that id in the generated header in that case.
-      if hasattr(item, 'GetId') and item.GetId():
+      elif hasattr(item, 'GetId') and item.GetId():
         id = long(item.GetId())
         reason = 'returned by GetId() method'
 
@@ -196,6 +225,10 @@ def _ComputeIds(root):
       if id < 101:
         print ('WARNING: Numeric resource IDs should be greater than 100 to\n'
                'avoid conflicts with system-defined resource IDs.')
+
+      if tid not in predetermined_tids and id in predetermined_ids:
+        raise exception.IdRangeOverlap('ID %d overlaps between %s and %s'
+                                       % (id, tid, predetermined_ids[tid]))
 
       ids[id] = tid
       tids[tid] = id

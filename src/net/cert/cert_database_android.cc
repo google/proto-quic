@@ -18,7 +18,7 @@ CertDatabase::CertDatabase()
 CertDatabase::~CertDatabase() {}
 
 void CertDatabase::OnAndroidKeyStoreChanged() {
-  NotifyObserversCertDBChanged(NULL);
+  NotifyObserversCertDBChanged();
   // Dump the OpenSSLClientKeyStore to drop references to now disconnected
   // PrivateKeys stored in the in-memory key store. Note: this assumes that
   // every SSLClientAuthCache is dumped as part of notifying
@@ -28,7 +28,7 @@ void CertDatabase::OnAndroidKeyStoreChanged() {
 }
 
 void CertDatabase::OnAndroidKeyChainChanged() {
-  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged, nullptr);
+  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged);
 }
 
 }  // namespace net

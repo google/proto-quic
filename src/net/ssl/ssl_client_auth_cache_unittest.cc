@@ -194,7 +194,7 @@ TEST(SSLClientAuthCacheTest, OnCertDBChanged) {
   EXPECT_TRUE(cache.Lookup(server2, &cached_cert, &cached_pkey));
   EXPECT_EQ(nullptr, cached_cert.get());
 
-  cache.OnCertDBChanged(nullptr);
+  cache.OnCertDBChanged();
 
   // Check that we no longer have entries for either server.
   EXPECT_FALSE(cache.Lookup(server1, &cached_cert, &cached_pkey));

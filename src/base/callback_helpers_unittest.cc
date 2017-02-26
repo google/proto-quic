@@ -14,6 +14,24 @@ void Increment(int* value) {
   (*value)++;
 }
 
+TEST(CallbackHelpersTest, TestResetAndReturn) {
+  int run_count = 0;
+
+  base::Closure cb = base::Bind(&Increment, &run_count);
+  EXPECT_EQ(0, run_count);
+  base::ResetAndReturn(&cb).Run();
+  EXPECT_EQ(1, run_count);
+  EXPECT_FALSE(cb);
+
+  run_count = 0;
+
+  base::OnceClosure cb2 = base::BindOnce(&Increment, &run_count);
+  EXPECT_EQ(0, run_count);
+  base::ResetAndReturn(&cb2).Run();
+  EXPECT_EQ(1, run_count);
+  EXPECT_FALSE(cb2);
+}
+
 TEST(CallbackHelpersTest, TestScopedClosureRunnerExitScope) {
   int run_count = 0;
   {

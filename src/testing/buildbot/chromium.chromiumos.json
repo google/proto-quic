@@ -220,6 +220,8 @@
       },
       {
         "args": [
+          "--ozone-platform=headless",
+          "--override-use-software-gl-for-tests",
           "--test-launcher-filter-file=../../testing/buildbot/filters/mash.browser_tests.filter"
         ],
         "hard_timeout": 60,

@@ -27,14 +27,14 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '289944'
+CLANG_REVISION = '295793'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
   CLANG_REVISION = 'HEAD'
 
 # This is incremented when pushing a new build of Clang at the same revision.
-CLANG_SUB_REVISION=2
+CLANG_SUB_REVISION=1
 
 PACKAGE_VERSION = "%s-%s" % (CLANG_REVISION, CLANG_SUB_REVISION)
 
@@ -71,7 +71,7 @@ BINUTILS_BIN_DIR = os.path.join(BINUTILS_DIR, BINUTILS_DIR,
                                 'Linux_x64', 'Release', 'bin')
 BFD_PLUGINS_DIR = os.path.join(BINUTILS_DIR, 'Linux_x64', 'Release',
                                'lib', 'bfd-plugins')
-VERSION = '4.0.0'
+VERSION = '5.0.0'
 ANDROID_NDK_DIR = os.path.join(
     CHROMIUM_DIR, 'third_party', 'android_tools', 'ndk')
 
@@ -336,7 +336,7 @@ def AddGnuWinToPath():
     return
 
   gnuwin_dir = os.path.join(LLVM_BUILD_TOOLS_DIR, 'gnuwin')
-  GNUWIN_VERSION = '5'
+  GNUWIN_VERSION = '6'
   GNUWIN_STAMP = os.path.join(gnuwin_dir, 'stamp')
   if ReadStampFile(GNUWIN_STAMP) == GNUWIN_VERSION:
     print 'GNU Win tools already up to date.'
@@ -862,28 +862,10 @@ def main():
     args.lto_gold_plugin = False
 
   if args.if_needed:
-    is_clang_required = False
-    # clang is always used on Mac and Linux.
-    if sys.platform == 'darwin' or sys.platform.startswith('linux'):
-      is_clang_required = True
-    # clang requested via $GYP_DEFINES.
-    if re.search(r'\b(clang|asan|lsan|msan|tsan)=1',
-                 os.environ.get('GYP_DEFINES', '')):
-      is_clang_required = True
-    # clang previously downloaded, keep it up to date.
-    # If you don't want this, delete third_party/llvm-build on your machine.
-    if os.path.isdir(LLVM_BUILD_DIR):
-      is_clang_required = True
-    if not is_clang_required:
-      return 0
+    # TODO(thakis): Can probably remove this and --if-needed altogether.
     if re.search(r'\b(make_clang_dir)=', os.environ.get('GYP_DEFINES', '')):
       print 'Skipping Clang update (make_clang_dir= was set in GYP_DEFINES).'
       return 0
-
-  if use_head_revision:
-    # TODO(hans): Trunk was updated; remove after the next roll.
-    global VERSION
-    VERSION = '5.0.0'
 
   global CLANG_REVISION, PACKAGE_VERSION
   if args.print_revision:

@@ -28,24 +28,37 @@ std::unique_ptr<base::SimpleTestClock> MakeTestClock() {
   return clock;
 }
 
-bssl::UniquePtr<SSL_SESSION> MakeTestSession(base::Time now,
-                                             base::TimeDelta timeout) {
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
-  SSL_SESSION_set_time(session.get(), now.ToTimeT());
-  SSL_SESSION_set_timeout(session.get(), timeout.InSeconds());
-  return session;
-}
+class SSLClientSessionCacheTest : public testing::Test {
+ public:
+  SSLClientSessionCacheTest() : ssl_ctx_(SSL_CTX_new(TLS_method())) {}
+
+ protected:
+  bssl::UniquePtr<SSL_SESSION> NewSSLSession() {
+    return bssl::UniquePtr<SSL_SESSION>(SSL_SESSION_new(ssl_ctx_.get()));
+  }
+
+  bssl::UniquePtr<SSL_SESSION> MakeTestSession(base::Time now,
+                                               base::TimeDelta timeout) {
+    bssl::UniquePtr<SSL_SESSION> session = NewSSLSession();
+    SSL_SESSION_set_time(session.get(), now.ToTimeT());
+    SSL_SESSION_set_timeout(session.get(), timeout.InSeconds());
+    return session;
+  }
+
+ private:
+  bssl::UniquePtr<SSL_CTX> ssl_ctx_;
+};
 
 }  // namespace
 
 // Test basic insertion and lookup operations.
-TEST(SSLClientSessionCacheTest, Basic) {
+TEST_F(SSLClientSessionCacheTest, Basic) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session2 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session3 = NewSSLSession();
   EXPECT_EQ(1u, session1->references);
   EXPECT_EQ(1u, session2->references);
   EXPECT_EQ(1u, session3->references);
@@ -89,12 +102,12 @@ TEST(SSLClientSessionCacheTest, Basic) {
 
 // Test that pairs of calls to Lookup/ResetLookupCount appropriately log to
 // UMA.
-TEST(SSLClientSessionCacheTest, LookupCountUMA) {
+TEST_F(SSLClientSessionCacheTest, LookupCountUMA) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session2 = NewSSLSession();
   cache.Insert("key1", session1.get());
   cache.Insert("key2", session2.get());
 
@@ -128,11 +141,11 @@ TEST(SSLClientSessionCacheTest, LookupCountUMA) {
 
 // Test that a session may be inserted at two different keys. This should never
 // be necessary, but the API doesn't prohibit it.
-TEST(SSLClientSessionCacheTest, DoubleInsert) {
+TEST_F(SSLClientSessionCacheTest, DoubleInsert) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session = NewSSLSession();
   EXPECT_EQ(1u, session->references);
 
   EXPECT_EQ(nullptr, cache.Lookup("key1", nullptr).get());
@@ -162,15 +175,15 @@ TEST(SSLClientSessionCacheTest, DoubleInsert) {
 }
 
 // Tests that the session cache's size is correctly bounded.
-TEST(SSLClientSessionCacheTest, MaxEntries) {
+TEST_F(SSLClientSessionCacheTest, MaxEntries) {
   SSLClientSessionCache::Config config;
   config.max_entries = 3;
   SSLClientSessionCache cache(config);
 
-  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session4(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session2 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session3 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session4 = NewSSLSession();
 
   // Insert three entries.
   cache.Insert("key1", session1.get());
@@ -200,7 +213,7 @@ TEST(SSLClientSessionCacheTest, MaxEntries) {
 }
 
 // Tests that session expiration works properly.
-TEST(SSLClientSessionCacheTest, Expiration) {
+TEST_F(SSLClientSessionCacheTest, Expiration) {
   const size_t kNumEntries = 20;
   const size_t kExpirationCheckCount = 10;
   const base::TimeDelta kTimeout = base::TimeDelta::FromSeconds(1000);
@@ -248,7 +261,7 @@ TEST(SSLClientSessionCacheTest, Expiration) {
 
 // Tests that Lookup performs an expiration check before returning a cached
 // session.
-TEST(SSLClientSessionCacheTest, LookupExpirationCheck) {
+TEST_F(SSLClientSessionCacheTest, LookupExpirationCheck) {
   // kExpirationCheckCount is set to a suitably large number so the automated
   // pruning never triggers.
   const size_t kExpirationCheckCount = 1000;
@@ -296,7 +309,7 @@ TEST(SSLClientSessionCacheTest, LookupExpirationCheck) {
 }
 
 // Test that SSL cache is flushed on low memory notifications
-TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
+TEST_F(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
   // kExpirationCheckCount is set to a suitably large number so the automated
   // pruning never triggers.
   const size_t kExpirationCheckCount = 1000;
@@ -341,14 +354,25 @@ TEST(SSLClientSessionCacheTest, TestFlushOnMemoryNotifications) {
   EXPECT_EQ(0u, cache.size());
 }
 
+class SSLClientSessionCacheMemoryDumpTest
+    : public SSLClientSessionCacheTest,
+      public testing::WithParamInterface<
+          base::trace_event::MemoryDumpLevelOfDetail> {};
+
+INSTANTIATE_TEST_CASE_P(
+    /* no prefix */,
+    SSLClientSessionCacheMemoryDumpTest,
+    ::testing::Values(base::trace_event::MemoryDumpLevelOfDetail::DETAILED,
+                      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND));
+
 // Basic test for dumping memory stats.
-TEST(SSLClientSessionCacheTest, TestDumpMemoryStats) {
+TEST_P(SSLClientSessionCacheMemoryDumpTest, TestDumpMemoryStats) {
   SSLClientSessionCache::Config config;
   SSLClientSessionCache cache(config);
 
-  bssl::UniquePtr<SSL_SESSION> session1(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session2(SSL_SESSION_new());
-  bssl::UniquePtr<SSL_SESSION> session3(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_SESSION> session1 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session2 = NewSSLSession();
+  bssl::UniquePtr<SSL_SESSION> session3 = NewSSLSession();
 
   // Insert three entries.
   cache.Insert("key1", session1.get());
@@ -359,8 +383,7 @@ TEST(SSLClientSessionCacheTest, TestDumpMemoryStats) {
   EXPECT_EQ(session3.get(), cache.Lookup("key3", nullptr).get());
   EXPECT_EQ(3u, cache.size());
 
-  base::trace_event::MemoryDumpArgs dump_args = {
-      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
   cache.DumpMemoryStats(process_memory_dump.get());
@@ -373,7 +396,9 @@ TEST(SSLClientSessionCacheTest, TestDumpMemoryStats) {
   base::DictionaryValue* attrs;
   ASSERT_TRUE(raw_attrs->GetAsDictionary(&attrs));
   ASSERT_TRUE(attrs->HasKey("cert_count"));
-  ASSERT_TRUE(attrs->HasKey("serialized_cert_size"));
+  ASSERT_TRUE(attrs->HasKey("cert_size"));
+  ASSERT_TRUE(attrs->HasKey("undeduped_cert_size"));
+  ASSERT_TRUE(attrs->HasKey("undeduped_cert_count"));
   ASSERT_TRUE(attrs->HasKey(base::trace_event::MemoryAllocatorDump::kNameSize));
 }
 

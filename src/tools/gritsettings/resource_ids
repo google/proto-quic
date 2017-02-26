@@ -113,6 +113,9 @@
   "chrome/browser/resources/quota_internals_resources.grd": {
     "includes": [11990],
   },
+  "chrome/browser/resources/settings/settings_resources_vulcanized.grd": {
+    "includes": [12010],
+  },
   "chrome/browser/resources/settings/settings_resources.grd": {
     "structures": [12020],
   },

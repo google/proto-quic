@@ -36,7 +36,7 @@ _PAGE_LOAD_TIMEOUT = 40
 _LEARNING_FLAGS = [
     '--force-fieldtrials=trial/group',
     '--force-fieldtrial-params=trial.group:mode/learning',
-    '--enable-features="SpeculativeResourcePrefetching<trial"']
+    '--enable-features=SpeculativeResourcePrefetching<trial']
 
 
 def _CreateArgumentParser():

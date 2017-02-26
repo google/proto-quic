@@ -119,7 +119,7 @@ def GenerateBenchmarkOptions(benchmark_class):
   benchmark_module.ProcessCommandLineArgs(None, options)
   # Only measure a single story so that this test cycles reasonably quickly.
   options.pageset_repeat = 1
-  options.page_repeat = 1
+
   # Enable browser logging in the smoke test only. Hopefully, this will detect
   # all crashes and hence remove the need to enable logging in actual perf
   # benchmarks.

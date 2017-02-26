@@ -506,6 +506,60 @@ class HtmlInlineUnittest(unittest.TestCase):
     self.failUnlessEqual(expected_inlined,
                          util.FixLineEnd(result.inlined_data, '\n'))
 
+  def testImgSrcset(self):
+    '''Tests that img srcset="" attributes are converted.'''
+
+    # Note that there is no space before "img10.png"
+    files = {
+      'index.html': '''
+      <html>
+      <img src="img1.png" srcset="img2.png 1x, img3.png 2x">
+      <img src="img4.png" srcset=" img5.png   1x , img6.png 2x ">
+      <img src="chrome://theme/img11.png" srcset="img7.png 1x, '''\
+          '''chrome://theme/img13.png 2x">
+      <img srcset="img8.png 300w, img9.png 11E-2w,img10.png -1e2w">
+      </html>
+      ''',
+      'img1.png': '''a1''',
+      'img2.png': '''a2''',
+      'img3.png': '''a3''',
+      'img4.png': '''a4''',
+      'img5.png': '''a5''',
+      'img6.png': '''a6''',
+      'img7.png': '''a7''',
+      'img8.png': '''a8''',
+      'img9.png': '''a9''',
+      'img10.png': '''a10''',
+    }
+
+    expected_inlined = '''
+      <html>
+      <img src="data:image/png;base64,YTE=" srcset="data:image/png;base64,'''\
+          '''YTI= 1x,data:image/png;base64,YTM= 2x">
+      <img src="data:image/png;base64,YTQ=" srcset="data:image/png;base64,'''\
+          '''YTU= 1x,data:image/png;base64,YTY= 2x">
+      <img src="chrome://theme/img11.png" srcset="data:image/png;base64,'''\
+          '''YTc= 1x,chrome://theme/img13.png 2x">
+      <img srcset="data:image/png;base64,YTg= 300w,data:image/png;base64,'''\
+          '''YTk= 11E-2w,data:image/png;base64,YTEw -1e2w">
+      </html>
+      '''
+
+    source_resources = set()
+    tmp_dir = util.TempDir(files)
+    for filename in files:
+      source_resources.add(tmp_dir.GetPath(filename))
+
+    # Test normal inlining.
+    result = html_inline.DoInline(
+        tmp_dir.GetPath('index.html'),
+        None)
+    resources = result.inlined_files
+    resources.add(tmp_dir.GetPath('index.html'))
+    self.failUnlessEqual(resources, source_resources)
+    self.failUnlessEqual(expected_inlined,
+                         util.FixLineEnd(result.inlined_data, '\n'))
+
 
 if __name__ == '__main__':
   unittest.main()

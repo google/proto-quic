@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include "base/allocator/oom.h"
+#include "base/allocator/partition_allocator/oom.h"
 #include "base/compiler_specific.h"
 #include "base/synchronization/spin_lock.h"
 

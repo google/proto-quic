@@ -61,8 +61,8 @@ void QuicSimpleServerStream::OnDataAvailable() {
       // No more data to read.
       break;
     }
-    QUIC_DVLOG(1) << "Processed " << iov.iov_len << " bytes for stream "
-                  << id();
+    QUIC_DVLOG(1) << "Stream " << id() << " processed " << iov.iov_len
+                  << " bytes.";
     body_.append(static_cast<char*>(iov.iov_base), iov.iov_len);
 
     if (content_length_ >= 0 &&
@@ -100,7 +100,7 @@ void QuicSimpleServerStream::PushResponse(
   request_headers_ = std::move(push_request_headers);
   content_length_ = 0;
   QUIC_DVLOG(1) << "Stream " << id()
-                << ": Ready to receive server push response.";
+                << " ready to receive server push response.";
 
   // Set as if stream decompresed the headers and received fin.
   QuicSpdyStream::OnInitialHeadersComplete(/*fin=*/true, 0, QuicHeaderList());
@@ -188,8 +188,8 @@ void QuicSimpleServerStream::SendResponse() {
   }
   std::list<QuicHttpResponseCache::ServerPushInfo> resources =
       response_cache_->GetServerPushResources(request_url);
-  QUIC_DVLOG(1) << "Found " << resources.size() << " push resources for stream "
-                << id();
+  QUIC_DVLOG(1) << "Stream " << id() << " found " << resources.size()
+                << " push resources.";
 
   if (!resources.empty()) {
     QuicSimpleServerSession* session =
@@ -198,13 +198,13 @@ void QuicSimpleServerStream::SendResponse() {
                                   request_headers_);
   }
 
-  QUIC_DVLOG(1) << "Sending response for stream " << id();
+  QUIC_DVLOG(1) << "Stream " << id() << " sending response.";
   SendHeadersAndBodyAndTrailers(response->headers().Clone(), response->body(),
                                 response->trailers().Clone());
 }
 
 void QuicSimpleServerStream::SendNotFoundResponse() {
-  QUIC_DVLOG(1) << "Sending not found response for stream " << id();
+  QUIC_DVLOG(1) << "Stream " << id() << " sending not found response.";
   SpdyHeaderBlock headers;
   headers[":status"] = "404";
   headers["content-length"] =
@@ -213,7 +213,7 @@ void QuicSimpleServerStream::SendNotFoundResponse() {
 }
 
 void QuicSimpleServerStream::SendErrorResponse() {
-  QUIC_DVLOG(1) << "Sending error response for stream " << id();
+  QUIC_DVLOG(1) << "Stream " << id() << " sending error response.";
   SpdyHeaderBlock headers;
   headers[":status"] = "500";
   headers["content-length"] =
@@ -238,7 +238,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
 
   // Send the headers, with a FIN if there's nothing else to send.
   bool send_fin = (body.empty() && response_trailers.empty());
-  QUIC_DLOG(INFO) << "Writing headers (fin = " << send_fin
+  QUIC_DLOG(INFO) << "Stream " << id() << " writing headers (fin = " << send_fin
                   << ") : " << response_headers.DebugString();
   WriteHeaders(std::move(response_headers), send_fin, nullptr);
   if (send_fin) {
@@ -248,7 +248,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
 
   // Send the body, with a FIN if there's no trailers to send.
   send_fin = response_trailers.empty();
-  QUIC_DLOG(INFO) << "Writing body (fin = " << send_fin
+  QUIC_DLOG(INFO) << "Stream " << id() << " writing body (fin = " << send_fin
                   << ") with size: " << body.size();
   if (!body.empty() || send_fin) {
     WriteOrBufferData(body, send_fin, nullptr);
@@ -259,7 +259,7 @@ void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
   }
 
   // Send the trailers. A FIN is always sent with trailers.
-  QUIC_DLOG(INFO) << "Writing trailers (fin = true): "
+  QUIC_DLOG(INFO) << "Stream " << id() << " writing trailers (fin = true): "
                   << response_trailers.DebugString();
   WriteTrailers(std::move(response_trailers), nullptr);
 }

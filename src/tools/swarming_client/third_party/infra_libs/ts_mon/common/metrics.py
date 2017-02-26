@@ -119,32 +119,30 @@ class Metric(object):
     self._populate_value_type(data_set)
     self._populate_field_descriptors(data_set, fields)
 
-  def _populate_data(self, data_set, start_time, end_time, fields, value):
-    """Add a new metrics_pb2.MetricsData to data_set
+  def _populate_data(self, data, start_time, end_time, fields, value):
+    """Populate a new metrics_pb2.MetricsData.
 
     Args:
-      data_set (new_metrics_pb2.MetricsDataSet): protocol buffer into
-        which to add the current metric values.
+      data_ (new_metrics_pb2.MetricsData): protocol buffer into
+        which to populate the current metric values.
       start_time (int): timestamp in microseconds since UNIX epoch.
     """
-    data = data_set.data.add()
     data.start_timestamp.seconds = int(start_time)
     data.end_timestamp.seconds = int(end_time)
 
     self._populate_fields_new(data, fields)
     self._populate_value_new(data, value)
 
-  def serialize_to(self, collection_pb, start_time, fields, value, target):
+  def serialize_to(self, metric_pb, start_time, fields, value, target):
     """Generate metrics_pb2.MetricsData messages for this metric.
 
     Args:
-      collection_pb (metrics_pb2.MetricsCollection): protocol buffer into which
-        to add the current metric values.
+      metric_pb (metrics_pb2.MetricsData): protocol buffer into which
+        to serialize the current metric values.
       start_time (int): timestamp in microseconds since UNIX epoch.
       target (Target): a Target to use.
     """
 
-    metric_pb = collection_pb.data.add()
     metric_pb.metric_name_prefix = interface.state.metric_name_prefix
     metric_pb.name = self._name
     if self._description is not None:
@@ -551,8 +549,8 @@ class DistributionMetric(Metric):
       pb.linear_buckets.offset = 0.0
       pb.linear_buckets.num_finite_buckets = value.bucketer.num_finite_buckets
 
-    # Copy the distribution bucket values.  Only include the finite buckets, not
-    # the overflow buckets on each end.
+    # Copy the distribution bucket values.  Include the overflow buckets on
+    # either end.
     pb.bucket_count.extend(
         value.buckets.get(i, 0) for i in
         xrange(0, value.bucketer.total_buckets))

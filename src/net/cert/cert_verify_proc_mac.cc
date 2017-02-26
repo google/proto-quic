@@ -35,6 +35,7 @@
 #include "net/cert/test_keychain_search_list_mac.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 #include "net/cert/x509_util_mac.h"
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.
@@ -295,8 +296,8 @@ void GetCandidateEVPolicy(const X509Certificate* cert_input,
     return;
   }
 
-  scoped_refptr<ParsedCertificate> cert(
-      ParsedCertificate::Create(der_cert, {}, nullptr));
+  scoped_refptr<ParsedCertificate> cert(ParsedCertificate::Create(
+      x509_util::CreateCryptoBuffer(der_cert), {}, nullptr));
   if (!cert)
     return;
 
@@ -346,7 +347,8 @@ bool CheckCertChainEV(const X509Certificate* cert,
     if (!X509Certificate::GetDEREncoded(os_cert_chain[i], &der_cert))
       return false;
     scoped_refptr<ParsedCertificate> intermediate_cert(
-        ParsedCertificate::Create(der_cert, {}, nullptr));
+        ParsedCertificate::Create(x509_util::CreateCryptoBuffer(der_cert), {},
+                                  nullptr));
     if (!intermediate_cert)
       return false;
     if (!HasPolicyOrAnyPolicy(intermediate_cert.get(), ev_policy_oid))

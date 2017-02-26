@@ -303,6 +303,16 @@ TEST_F(StackTraceTest, MAYBE_TraceStackFramePointers) {
   ExpectStackFramePointers<kDepth>(frames, kDepth);
 }
 
+#if defined(OS_ANDROID) || defined(OS_MACOSX)
+#define MAYBE_StackEnd StackEnd
+#else
+#define MAYBE_StackEnd DISABLED_StackEnd
+#endif
+
+TEST_F(StackTraceTest, MAYBE_StackEnd) {
+  EXPECT_NE(0u, GetStackEnd());
+}
+
 #endif  // HAVE_TRACE_STACK_FRAME_POINTERS
 
 }  // namespace debug

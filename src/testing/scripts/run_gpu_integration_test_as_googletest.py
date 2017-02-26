@@ -87,7 +87,7 @@ def main():
     rc = 0
     try:
       rc = common.run_command([sys.executable] + rest_args + sharding_args + [
-        '--write-abbreviated-json-results-to', args.isolated_script_test_output,
+        '--write-full-results-to', args.isolated_script_test_output
       ], env=env)
     except Exception:
       traceback.print_exc()

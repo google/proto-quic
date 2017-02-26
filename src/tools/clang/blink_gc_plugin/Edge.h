@@ -143,13 +143,13 @@ class RawPtr : public PtrEdge {
   {
   }
 
-  bool IsRawPtr() { return true; }
-  LivenessKind Kind() { return kWeak; }
-  bool NeedsFinalization() { return false; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsRawPtr() override { return true; }
+  LivenessKind Kind() override { return kWeak; }
+  bool NeedsFinalization() override { return false; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Illegal();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitRawPtr(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitRawPtr(this); }
 
   bool HasReferenceType() { return is_ref_type_; }
  private:
@@ -159,83 +159,83 @@ class RawPtr : public PtrEdge {
 class RefPtr : public PtrEdge {
  public:
   explicit RefPtr(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsRefPtr() { return true; }
-  LivenessKind Kind() { return kStrong; }
-  bool NeedsFinalization() { return true; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsRefPtr() override { return true; }
+  LivenessKind Kind() override { return kStrong; }
+  bool NeedsFinalization() override { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Illegal();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitRefPtr(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitRefPtr(this); }
 };
 
 class OwnPtr : public PtrEdge {
  public:
   explicit OwnPtr(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsOwnPtr() { return true; }
-  LivenessKind Kind() { return kStrong; }
-  bool NeedsFinalization() { return true; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsOwnPtr() override { return true; }
+  LivenessKind Kind() override { return kStrong; }
+  bool NeedsFinalization() override { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Illegal();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitOwnPtr(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitOwnPtr(this); }
 };
 
 class UniquePtr : public PtrEdge {
  public:
   explicit UniquePtr(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsUniquePtr() { return true; }
-  LivenessKind Kind() { return kStrong; }
-  bool NeedsFinalization() { return true; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsUniquePtr() override { return true; }
+  LivenessKind Kind() override { return kStrong; }
+  bool NeedsFinalization() override { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Illegal();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitUniquePtr(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitUniquePtr(this); }
 };
 
 class Member : public PtrEdge {
  public:
   explicit Member(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsMember() { return true; }
-  LivenessKind Kind() { return kStrong; }
-  bool NeedsFinalization() { return false; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsMember() override { return true; }
+  LivenessKind Kind() override { return kStrong; }
+  bool NeedsFinalization() override { return false; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Needed();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitMember(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitMember(this); }
 };
 
 class WeakMember : public PtrEdge {
  public:
   explicit WeakMember(Edge* ptr) : PtrEdge(ptr) { }
-  bool IsWeakMember() { return true; }
-  LivenessKind Kind() { return kWeak; }
-  bool NeedsFinalization() { return false; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool IsWeakMember() override { return true; }
+  LivenessKind Kind() override { return kWeak; }
+  bool NeedsFinalization() override { return false; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Needed();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitWeakMember(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitWeakMember(this); }
 };
 
 class Persistent : public PtrEdge {
  public:
   explicit Persistent(Edge* ptr) : PtrEdge(ptr) { }
-  LivenessKind Kind() { return kRoot; }
-  bool NeedsFinalization() { return true; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  LivenessKind Kind() override { return kRoot; }
+  bool NeedsFinalization() override { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Unneeded();
   }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitPersistent(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitPersistent(this); }
 };
 
 class CrossThreadPersistent : public PtrEdge {
  public:
   explicit CrossThreadPersistent(Edge* ptr) : PtrEdge(ptr) { }
-  LivenessKind Kind() { return kRoot; }
-  bool NeedsFinalization() { return true; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  LivenessKind Kind() override { return kRoot; }
+  bool NeedsFinalization() override { return true; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     return TracingStatus::Illegal();
   }
-  void Accept(EdgeVisitor* visitor) {
+  void Accept(EdgeVisitor* visitor) override {
     visitor->VisitCrossThreadPersistent(this);
   }
 };
@@ -253,18 +253,18 @@ class Collection : public Edge {
       delete *it;
     }
   }
-  bool IsCollection() { return true; }
-  LivenessKind Kind() { return is_root_ ? kRoot : kStrong; }
+  bool IsCollection() override { return true; }
+  LivenessKind Kind() override { return is_root_ ? kRoot : kStrong; }
   bool on_heap() { return on_heap_; }
   bool is_root() { return is_root_; }
   Members& members() { return members_; }
-  void Accept(EdgeVisitor* visitor) { visitor->VisitCollection(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitCollection(this); }
   void AcceptMembers(EdgeVisitor* visitor) {
     for (Members::iterator it = members_.begin(); it != members_.end(); ++it)
       (*it)->Accept(visitor);
   }
-  bool NeedsFinalization();
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool NeedsFinalization() override;
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     if (is_root_)
       return TracingStatus::Unneeded();
     if (on_heap_)
@@ -292,10 +292,10 @@ class Iterator : public Edge {
       : info_(info), on_heap_(on_heap), is_unsafe_(is_unsafe) {}
   ~Iterator() {}
 
-  void Accept(EdgeVisitor* visitor) { visitor->VisitIterator(this); }
+  void Accept(EdgeVisitor* visitor) override { visitor->VisitIterator(this); }
   LivenessKind Kind() override { return kStrong; }
-  bool NeedsFinalization() { return false; }
-  TracingStatus NeedsTracing(NeedsTracingOption) {
+  bool NeedsFinalization() override { return false; }
+  TracingStatus NeedsTracing(NeedsTracingOption) override {
     if (on_heap_)
       return TracingStatus::Needed();
     return TracingStatus::Unneeded();

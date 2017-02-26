@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "base/memory/ptr_util.h"
+#include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/proxy/proxy_config_service_fixed.h"
 #include "net/url_request/url_request_context_builder.h"
@@ -14,10 +15,19 @@
 
 namespace net {
 
+class URLRequestContextMemoryDumpTest
+    : public testing::TestWithParam<
+          base::trace_event::MemoryDumpLevelOfDetail> {};
+
+INSTANTIATE_TEST_CASE_P(
+    /* no prefix */,
+    URLRequestContextMemoryDumpTest,
+    ::testing::Values(base::trace_event::MemoryDumpLevelOfDetail::DETAILED,
+                      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND));
+
 // Checks if the dump provider runs without crashing and dumps root objects.
-TEST(URLRequestContextTest, MemoryDumpProvider) {
-  base::trace_event::MemoryDumpArgs dump_args = {
-      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+TEST_P(URLRequestContextMemoryDumpTest, MemoryDumpProvider) {
+  base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
   URLRequestContextBuilder builder;

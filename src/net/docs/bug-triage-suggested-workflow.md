@@ -90,7 +90,7 @@ For each alert that fires, determine if it's a real alert and file a bug if so.
   job is done, though you should still ask for a net-internals dump if it seems
   likely to be useful.
 
-* Note that ChromeOS-specific network-related code (Captive portal detection,
+* Note that Chrome-OS-specific network-related code (Captive portal detection,
   connectivity detection, login, etc) may not all have appropriate more
   specific subcomponents, but are not in areas handled by the network stack
   team. Just make sure those have the OS-Chrome label, and any more specific

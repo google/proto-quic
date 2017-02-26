@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "net/quic/core/quic_connection_stats.h"
-#include "net/quic/test_tools/quic_received_packet_manager_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
 namespace net {
@@ -68,8 +67,7 @@ TEST_P(QuicReceivedPacketManagerTest, DontWaitForPacketsBefore) {
   received_manager_.RecordPacketReceived(header, QuicTime::Zero());
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(3u));
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(6u));
-  EXPECT_TRUE(QuicReceivedPacketManagerPeer::DontWaitForPacketsBefore(
-      &received_manager_, 4));
+  received_manager_.DontWaitForPacketsBefore(4);
   EXPECT_FALSE(received_manager_.IsAwaitingPacket(3u));
   EXPECT_TRUE(received_manager_.IsAwaitingPacket(6u));
 }

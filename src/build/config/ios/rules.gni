@@ -1386,8 +1386,17 @@ template("ios_xctest_test") {
     ios_info_plist(_xctest_info_plist_target) {
       visibility = [ ":$_xctest_info_plist_bundle" ]
       info_plist = "//build/config/ios/Module-Info.plist"
-      extra_substitutions = [ "MODULE_NAME=$_xctest_output" ]
       executable_name = _host_output
+      if (ios_automatically_manage_certs) {
+        # Use the same bundle identifier for EarlGrey tests as for unit tests
+        # when managing certificates as the number of free certs is limited.
+        extra_substitutions = [
+          "EXECUTABLE_NAME=gtest.${ios_generic_test_bundle_id_suffix}",
+          "MODULE_NAME=${ios_generic_test_bundle_id_suffix}-module",
+        ]
+      } else {
+        extra_substitutions = [ "MODULE_NAME=$_xctest_output" ]
+      }
     }
 
     bundle_data(_xctest_info_plist_bundle) {
@@ -1454,6 +1463,15 @@ template("ios_xctest_test") {
 
     if (!defined(invoker.info_plist) && !defined(invoker.info_plist_target)) {
       info_plist = "//build/config/ios/Host-Info.plist"
+      if (ios_automatically_manage_certs) {
+        # Use the same bundle identifier for EarlGrey tests as for unit tests
+        # when managing certificates as the number of free certs is limited.
+        if (!defined(extra_substitutions)) {
+          extra_substitutions = []
+        }
+        extra_substitutions +=
+            [ "EXECUTABLE_NAME=gtest.${ios_generic_test_bundle_id_suffix}" ]
+      }
     }
 
     # Xcode needs those two framework installed in the application (and signed)

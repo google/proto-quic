@@ -135,11 +135,9 @@
             ],
             "experiments": [
                 {
-                    "name": "IconAtStartAndIncreaseDropdownItemHeight",
+                    "name": "IncreaseDropdownItemHeight",
                     "params": {
-                        "dropdown_item_height": "56",
-                        "is_credit_card_icon_at_start": "true",
-                        "margin": "18"
+                        "dropdown_item_height": "56"
                     },
                     "enable_features": [
                         "AutofillCreditCardPopupLayout"
@@ -470,7 +468,10 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled"
+                    "name": "Enabled_Warmup",
+                    "params": {
+                        "enable_warmup": "true"
+                    }
                 }
             ]
         }
@@ -1261,6 +1262,21 @@
             ]
         }
     ],
+    "NTPPreferAmpUrls": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "NTPPreferAmpUrls"
+                    ]
+                }
+            ]
+        }
+    ],
     "NTPRecentForeignTabs": [
         {
             "platforms": [
@@ -1457,6 +1473,28 @@
             ]
         }
     ],
+    "NoStatePrefetchValidation": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "mode": "no_state_prefetch"
+                    },
+                    "enable_features": [
+                        "NoStatePrefetch"
+                    ]
+                }
+            ]
+        }
+    ],
     "OfferUploadCreditCards": [
         {
             "platforms": [
@@ -1500,6 +1538,22 @@
                         "OfflinePagesAsyncDownload",
                         "OfflinePagesSvelte"
                     ]
+                }
+            ]
+        }
+    ],
+    "OmniboxBundledExperimentV1": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Beta_Android_PhysWeb_QuerySuggest_Experiment",
+                    "params": {
+                        "PhysicalWebAfterTyping": "true",
+                        "PhysicalWebZeroSuggest": "true"
+                    }
                 }
             ]
         }
@@ -1791,6 +1845,21 @@
             ]
         }
     ],
+    "PhysicalWebEnabled": [
+        {
+            "platforms": [
+                "ios"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "PhysicalWebEnabled"
+                    ]
+                }
+            ]
+        }
+    ],
     "PointerEvent": [
         {
             "platforms": [
@@ -1817,7 +1886,7 @@
             ],
             "experiments": [
                 {
-                    "name": "EnabledCGRUV20",
+                    "name": "EnabledCGRUV20b",
                     "params": {
                         "config_url": "https://www.gstatic.com/chrome/wifiprefetch/precache_config_g20"
                     }
@@ -2186,7 +2255,7 @@
             ],
             "experiments": [
                 {
-                    "name": "CanShowScoutOptInGroup",
+                    "name": "CanShowScoutOptInGroup2",
                     "enable_features": [
                         "CanShowScoutOptIn"
                     ]
@@ -2198,7 +2267,7 @@
                     ]
                 },
                 {
-                    "name": "Control",
+                    "name": "Control2",
                     "disable_features": [
                         "CanShowScoutOptIn",
                         "OnlyShowScoutOptIn"

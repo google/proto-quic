@@ -43,36 +43,35 @@ class NET_EXPORT_PRIVATE HttpAuthController
   // value is a net error code. |OK| will be returned both in the case that
   // a token is correctly generated synchronously, as well as when no tokens
   // were necessary.
-  virtual int MaybeGenerateAuthToken(const HttpRequestInfo* request,
-                                     const CompletionCallback& callback,
-                                     const NetLogWithSource& net_log);
+  int MaybeGenerateAuthToken(const HttpRequestInfo* request,
+                             const CompletionCallback& callback,
+                             const NetLogWithSource& net_log);
 
   // Adds either the proxy auth header, or the origin server auth header,
   // as specified by |target_|.
-  virtual void AddAuthorizationHeader(
-      HttpRequestHeaders* authorization_headers);
+  void AddAuthorizationHeader(HttpRequestHeaders* authorization_headers);
 
   // Checks for and handles HTTP status code 401 or 407.
   // |HandleAuthChallenge()| returns OK on success, or a network error code
   // otherwise. It may also populate |auth_info_|.
-  virtual int HandleAuthChallenge(scoped_refptr<HttpResponseHeaders> headers,
-                                  const SSLInfo& ssl_info,
-                                  bool do_not_send_server_auth,
-                                  bool establishing_tunnel,
-                                  const NetLogWithSource& net_log);
+  int HandleAuthChallenge(scoped_refptr<HttpResponseHeaders> headers,
+                          const SSLInfo& ssl_info,
+                          bool do_not_send_server_auth,
+                          bool establishing_tunnel,
+                          const NetLogWithSource& net_log);
 
   // Store the supplied credentials and prepare to restart the auth.
-  virtual void ResetAuth(const AuthCredentials& credentials);
+  void ResetAuth(const AuthCredentials& credentials);
 
-  virtual bool HaveAuthHandler() const;
+  bool HaveAuthHandler() const;
 
-  virtual bool HaveAuth() const;
+  bool HaveAuth() const;
 
-  virtual scoped_refptr<AuthChallengeInfo> auth_info();
+  scoped_refptr<AuthChallengeInfo> auth_info();
 
-  virtual bool IsAuthSchemeDisabled(HttpAuth::Scheme scheme) const;
-  virtual void DisableAuthScheme(HttpAuth::Scheme scheme);
-  virtual void DisableEmbeddedIdentity();
+  bool IsAuthSchemeDisabled(HttpAuth::Scheme scheme) const;
+  void DisableAuthScheme(HttpAuth::Scheme scheme);
+  void DisableEmbeddedIdentity();
 
  private:
   // Actions for InvalidateCurrentHandler()

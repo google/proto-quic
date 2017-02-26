@@ -5,10 +5,13 @@
 
 import sys
 import os
-import exceptions
 import itertools
 import re
 
+try:
+  from exceptions import RuntimeError
+except ImportError:
+  pass
 
 def GetNinjaOutputDirectory(chrome_root):
   """Returns <chrome_root>/<output_dir>/(Release|Debug|<other>).
@@ -62,10 +65,10 @@ def GetNinjaOutputDirectory(chrome_root):
   try:
     return max(generate_paths(), key=approx_directory_mtime)
   except ValueError:
-    raise exceptions.RuntimeError(
+    raise RuntimeError(
       'Unable to find a valid ninja output directory.')
 
 if __name__ == '__main__':
   if len(sys.argv) != 2:
-    raise exceptions.RuntimeError('Expected a single path argument.')
-  print GetNinjaOutputDirectory(sys.argv[1])
+    raise RuntimeError('Expected a single path argument.')
+  print(GetNinjaOutputDirectory(sys.argv[1]))

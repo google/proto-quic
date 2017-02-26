@@ -85,6 +85,12 @@ class NET_EXPORT ClientSocketHandle {
            PoolType* pool,
            const NetLogWithSource& net_log);
 
+  // Changes the priority of the ClientSocketHandle to the passed value.
+  // This function is a no-op if |priority| is the same as the current
+  // priority, of if Init() has not been called since the last time
+  // the ClientSocketHandle was reset.
+  void SetPriority(RequestPriority priority);
+
   // An initialized handle can be reset, which causes it to return to the
   // un-initialized state.  This releases the underlying socket, which in the
   // case of a socket that still has an established connection, indicates that

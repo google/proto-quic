@@ -15,7 +15,6 @@ namespace net {
 
 namespace test {
 class QuicConnectionPeer;
-class QuicReceivedPacketManagerPeer;
 }  // namespace test
 
 struct QuicConnectionStats;
@@ -43,9 +42,10 @@ class QUIC_EXPORT_PRIVATE QuicReceivedPacketManager {
   // another packet is received, or it will change.
   const QuicFrame GetUpdatedAckFrame(QuicTime approximate_now);
 
-  // Updates internal state based on |stop_waiting|.
-  virtual void UpdatePacketInformationSentByPeer(
-      const QuicStopWaitingFrame& stop_waiting);
+  // Deletes all missing packets before least unacked. The connection won't
+  // process any packets with packet number before |least_unacked| that it
+  // received after this call.
+  void DontWaitForPacketsBefore(QuicPacketNumber least_unacked);
 
   // Returns true if there are any missing packets.
   bool HasMissingPackets() const;
@@ -67,13 +67,6 @@ class QUIC_EXPORT_PRIVATE QuicReceivedPacketManager {
 
  private:
   friend class test::QuicConnectionPeer;
-  friend class test::QuicReceivedPacketManagerPeer;
-
-  // Deletes all missing packets before least unacked. The connection won't
-  // process any packets with packet number before |least_unacked| that it
-  // received after this call. Returns true if there were missing packets before
-  // |least_unacked| unacked, false otherwise.
-  bool DontWaitForPacketsBefore(QuicPacketNumber least_unacked);
 
   // Least packet number of the the packet sent by the peer for which it
   // hasn't received an ack.

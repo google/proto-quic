@@ -14,7 +14,7 @@ import goma_stats_pb2
 DESCRIPTOR = _descriptor.FileDescriptor(
   name='chrome_infra_log.proto',
   package='crit_event.proto',
-  serialized_pb='\n\x16\x63hrome_infra_log.proto\x12\x10\x63rit_event.proto\x1a\x10goma_stats.proto\"\xcb\x10\n\x07\x43QEvent\x12\x30\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32 .crit_event.proto.CQEvent.Action\x12\x34\n\x08verifier\x18\x02 \x01(\x0e\x32\".crit_event.proto.CQEvent.Verifier\x12\x0f\n\x07\x63q_name\x18\x03 \x01(\t\x12\r\n\x05issue\x18\x04 \x01(\t\x12\x10\n\x08patchset\x18\x05 \x01(\t\x12\x1a\n\x12\x61ttempt_start_usec\x18\x06 \x01(\x03\x12\x34\n\x06status\x18\x07 \x01(\x0e\x32 .crit_event.proto.CQEvent.StatusB\x02\x18\x01\x12\x0c\n\x04\x64one\x18\x08 \x01(\x08\x12?\n\x0e\x66\x61ilure_reason\x18\t \x01(\x0b\x32\'.crit_event.proto.CQEvent.FailureReason\x12\x0f\n\x07\x64ry_run\x18\n \x01(\x08\x12\x1a\n\x12global_retry_quota\x18\x0b \x01(\x05\x12\x44\n\x11triggered_tryjobs\x18\x0c \x03(\x0b\x32).crit_event.proto.CQEvent.TriggeredTryJob\x12\r\n\x05\x66iles\x18\r \x03(\t\x12\x1b\n\x13\x63odereview_hostname\x18\x0e \x01(\t\x12\x17\n\x0f\x63onfig_revision\x18\x0f \x01(\t\x1a\xa9\x06\n\rFailureReason\x12\x34\n\x08verifier\x18\x01 \x01(\x0e\x32\".crit_event.proto.CQEvent.Verifier\x12\x43\n\tfail_type\x18\x02 \x01(\x0e\x32\x30.crit_event.proto.CQEvent.FailureReason.FailType\x12M\n\x0f\x66\x61iled_try_jobs\x18\x03 \x03(\x0b\x32\x34.crit_event.proto.CQEvent.FailureReason.FailedTryJob\x1a{\n\x0c\x46\x61iledTryJob\x12\x0e\n\x06master\x18\x01 \x01(\t\x12\x0f\n\x07\x62uilder\x18\x02 \x01(\t\x12\x10\n\x08\x62uild_id\x18\x03 \x01(\x03\x12\x38\n\tfail_type\x18\x05 \x01(\x0e\x32%.crit_event.proto.BuildEvent.FailType\"\xd0\x03\n\x08\x46\x61ilType\x12\x15\n\x11UNKNOWN_FAIL_TYPE\x10\x00\x12\x18\n\x14\x46\x41ILED_PRESUBMIT_BOT\x10\x01\x12\x1e\n\x1a\x46\x41ILED_PRESUBMIT_BOT_INFRA\x10\x11\x12\x0f\n\x0b\x46\x41ILED_JOBS\x10\x02\x12\x18\n\x14RETRY_QUOTA_EXCEEDED\x10\x03\x12\x0c\n\x08NOT_LGTM\x10\x04\x12\x10\n\x0cMISSING_LGTM\x10\x05\x12\x0e\n\nNO_SIGNCLA\x10\x06\x12\x1a\n\x16\x46\x41ILED_SIGNCLA_REQUEST\x10\x07\x12\x11\n\rMANUAL_CANCEL\x10\x08\x12\x10\n\x0c\x43OMMIT_FALSE\x10\t\x12\x13\n\x0fOPEN_DEPENDENCY\x10\n\x12\x15\n\x11INVALID_DELIMITER\x10\x0b\x12\x1f\n\x1b\x46\x41ILED_REMOTE_REF_PRESUBMIT\x10\x0c\x12\x1a\n\x16\x46\x41ILED_TO_TRIGGER_JOBS\x10\x12\x12\x1a\n\x16UNSUPPORTED_CQ_FEATURE\x10\x13\x12\x13\n\x0f\x46\x41ILED_CHECKOUT\x10\r\x12\x11\n\rFAILED_COMMIT\x10\x0e\x12\x10\n\x0c\x46\x41ILED_PATCH\x10\x0f\x12\x18\n\x14\x46\x41ILED_REQUEST_PATCH\x10\x10\x1a\x41\n\x0fTriggeredTryJob\x12\x0e\n\x06master\x18\x01 \x01(\t\x12\x0f\n\x07\x62uilder\x18\x02 \x01(\t\x12\r\n\x05tests\x18\x03 \x03(\t\"\xc8\x03\n\x06\x41\x63tion\x12\x12\n\x0eUNKNOWN_ACTION\x10\x00\x12\x0c\n\x08\x43Q_START\x10\x01\x12\x0b\n\x07\x43Q_STOP\x10\x02\x12\x13\n\x0fPATCH_COMMITTED\x10\x03\x12\x14\n\x10PATCH_COMMITTING\x10\x04\x12\x10\n\x0cPATCH_FAILED\x10\x05\x12\x19\n\x15PATCH_READY_TO_COMMIT\x10\x06\x12\x0f\n\x0bPATCH_START\x10\x07\x12\x0e\n\nPATCH_STOP\x10\x08\x12\x13\n\x0fPATCH_THROTTLED\x10\t\x12\x15\n\x11PATCH_TREE_CLOSED\x10\n\x12\x1b\n\x17VERIFIER_CUSTOM_TRYBOTS\x10\x0b\x12\x12\n\x0eVERIFIER_ERROR\x10\x0c\x12\x11\n\rVERIFIER_FAIL\x10\r\x12\x18\n\x14VERIFIER_JOBS_UPDATE\x10\x0e\x12\x11\n\rVERIFIER_PASS\x10\x0f\x12\x12\n\x0eVERIFIER_RETRY\x10\x10\x12\x11\n\rVERIFIER_SKIP\x10\x11\x12\x12\n\x0eVERIFIER_START\x10\x12\x12\x14\n\x10VERIFIER_TIMEOUT\x10\x13\x12\x14\n\x10VERIFIER_TRIGGER\x10\x14\x12\x12\n\x0eVERIFIER_NOTRY\x10\x15\"\x7f\n\x08Verifier\x12\x14\n\x10UNKNOWN_VERIFIER\x10\x00\x12\x11\n\rREVIEWER_LGTM\x10\x01\x12\x0c\n\x08SIGN_CLA\x10\x02\x12\x0f\n\x0bTREE_STATUS\x10\x03\x12\x1e\n\x1aTRIGGER_EXPERIMENT_TRY_JOB\x10\x04\x12\x0b\n\x07TRY_JOB\x10\x05\"\x91\x01\n\x06Status\x12\x12\n\x0eUNKNOWN_STATUS\x10\x00\x12\t\n\x05START\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\x13\n\x0fREADY_TO_COMMIT\x10\x03\x12\x0e\n\nCOMMITTING\x10\x04\x12\r\n\tCOMMITTED\x10\x05\x12\n\n\x06\x46\x41ILED\x10\x06\x12\r\n\tTHROTTLED\x10\x07\x12\x0f\n\x0bTREE_CLOSED\x10\x08\"y\n\x0b\x43odeVersion\x12\x12\n\nsource_url\x18\x01 \x01(\t\x12\r\n\x05\x64irty\x18\x02 \x01(\x08\x12\x0f\n\x07version\x18\x03 \x01(\t\x12\x10\n\x08git_hash\x18\x04 \x01(\t\x12\x14\n\x0csvn_revision\x18\x05 \x01(\x05\x12\x0e\n\x06\x62ranch\x18\x06 \x01(\t\"\x82\x02\n\x0cServiceEvent\x12\x46\n\x04type\x18\x01 \x01(\x0e\x32/.crit_event.proto.ServiceEvent.ServiceEventType:\x07UNKNOWN\x12\x33\n\x0c\x63ode_version\x18\x02 \x03(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12\x13\n\x0bstack_trace\x18\x03 \x01(\t\"`\n\x10ServiceEventType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05START\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\n\n\x06UPDATE\x10\x03\x12\x13\n\x0f\x43URRENT_VERSION\x10\x04\x12\t\n\x05\x43RASH\x10\x05\"\xd1\n\n\nBuildEvent\x12\x39\n\x04type\x18\x01 \x01(\x0e\x32+.crit_event.proto.BuildEvent.BuildEventType\x12\x11\n\thost_name\x18\x02 \x01(\t\x12\x12\n\nbuild_name\x18\x03 \x01(\t\x12\x14\n\x0c\x62uild_number\x18\x04 \x01(\x05\x12 \n\x18\x62uild_scheduling_time_ms\x18\x05 \x01(\x03\x12\x11\n\tstep_name\x18\x06 \x01(\t\x12\x11\n\tstep_text\x18\x13 \x01(\t\x12\x13\n\x0bstep_number\x18\x07 \x01(\x05\x12\x41\n\x06result\x18\x08 \x01(\x0e\x32(.crit_event.proto.BuildEvent.BuildResult:\x07UNKNOWN\x12\x19\n\x11\x65xtra_result_code\x18\n \x03(\t\x12,\n\ngoma_stats\x18\t \x01(\x0b\x32\x18.devtools_goma.GomaStats\x12M\n\ngoma_error\x18\x11 \x01(\x0e\x32*.crit_event.proto.BuildEvent.GomaErrorType:\rGOMA_ERROR_OK\x12\x1c\n\x14goma_crash_report_id\x18\x12 \x01(\t\x12\x0f\n\x07project\x18\x0b \x01(\t\x12\x34\n\rhead_revision\x18\x0c \x01(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12/\n\x08revision\x18\r \x03(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12\x11\n\tpatch_url\x18\x0e \x01(\t\x12\x10\n\x08\x62uildset\x18\x18 \x01(\t\x12\x37\n\x08\x63\x61tegory\x18\x14 \x01(\x0e\x32%.crit_event.proto.BuildEvent.Category\x12\x12\n\nbbucket_id\x18\x0f \x01(\x03\x12\x1a\n\x12\x62\x62ucket_user_agent\x18\x10 \x01(\t\x12\x38\n\tfail_type\x18\x15 \x01(\x0e\x32%.crit_event.proto.BuildEvent.FailType\x12\x12\n\ncq_project\x18\x16 \x01(\t\x12\x15\n\rcq_subproject\x18\x17 \x01(\t\"4\n\x0e\x42uildEventType\x12\r\n\tSCHEDULER\x10\x00\x12\t\n\x05\x42UILD\x10\x01\x12\x08\n\x04STEP\x10\x02\"l\n\x0b\x42uildResult\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07SUCCESS\x10\x01\x12\x0b\n\x07\x46\x41ILURE\x10\x02\x12\x11\n\rINFRA_FAILURE\x10\x03\x12\x0b\n\x07WARNING\x10\x04\x12\x0b\n\x07SKIPPED\x10\x05\x12\t\n\x05RETRY\x10\x06\"l\n\rGomaErrorType\x12\x11\n\rGOMA_ERROR_OK\x10\x00\x12\x16\n\x12GOMA_ERROR_UNKNOWN\x10\x01\x12\x16\n\x12GOMA_ERROR_CRASHED\x10\x02\x12\x18\n\x14GOMA_ERROR_LOG_FATAL\x10\x03\"h\n\x08\x43\x61tegory\x12\x14\n\x10\x43\x41TEGORY_UNKNOWN\x10\x00\x12\x0f\n\x0b\x43\x41TEGORY_CQ\x10\x01\x12\x1c\n\x18\x43\x41TEGORY_CQ_EXPERIMENTAL\x10\x02\x12\x17\n\x13\x43\x41TEGORY_GIT_CL_TRY\x10\x03\"\x8d\x01\n\x08\x46\x61ilType\x12\x15\n\x11\x46\x41IL_TYPE_UNKNOWN\x10\x00\x12\x13\n\x0f\x46\x41IL_TYPE_INFRA\x10\x01\x12\x15\n\x11\x46\x41IL_TYPE_COMPILE\x10\x02\x12\x12\n\x0e\x46\x41IL_TYPE_TEST\x10\x03\x12\x15\n\x11\x46\x41IL_TYPE_INVALID\x10\x04\x12\x13\n\x0f\x46\x41IL_TYPE_PATCH\x10\x05\"S\n\x10InfraEventSource\x12\x11\n\thost_name\x18\x01 \x01(\t\x12\x16\n\x0e\x61ppengine_name\x18\x02 \x01(\t\x12\x14\n\x0cservice_name\x18\x03 \x01(\t\"\x83\x05\n\x10TestResultsEvent\x12\x13\n\x0bmaster_name\x18\x01 \x01(\t\x12\x14\n\x0c\x62uilder_name\x18\x02 \x01(\t\x12\x14\n\x0c\x62uild_number\x18\x03 \x01(\x05\x12\x11\n\ttest_type\x18\x04 \x01(\t\x12\x13\n\x0binterrupted\x18\x05 \x01(\x08\x12\x0f\n\x07version\x18\x06 \x01(\x05\x12\x18\n\x10usec_since_epoch\x18\x07 \x01(\x03\x12<\n\x05tests\x18\x08 \x03(\x0b\x32-.crit_event.proto.TestResultsEvent.TestResult\x1a\xb5\x01\n\nTestResult\x12\x11\n\ttest_name\x18\x01 \x01(\t\x12\x41\n\x06\x61\x63tual\x18\x02 \x03(\x0e\x32\x31.crit_event.proto.TestResultsEvent.TestResultType\x12\x43\n\x08\x65xpected\x18\x03 \x03(\x0e\x32\x31.crit_event.proto.TestResultsEvent.TestResultType\x12\x0c\n\x04\x62ugs\x18\x04 \x03(\t\"\xe4\x01\n\x0eTestResultType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x08\n\x04SKIP\x10\x01\x12\x08\n\x04PASS\x10\x02\x12\x08\n\x04\x46\x41IL\x10\x03\x12\t\n\x05\x43RASH\x10\x04\x12\x0b\n\x07TIMEOUT\x10\x05\x12\x0b\n\x07MISSING\x10\x06\x12\x08\n\x04LEAK\x10\x07\x12\x08\n\x04SLOW\x10\x08\x12\x08\n\x04TEXT\x10\t\x12\t\n\x05\x41UDIO\x10\n\x12\t\n\x05IMAGE\x10\x0b\x12\x0e\n\nIMAGE_TEXT\x10\x0c\x12\x0e\n\nREBASELINE\x10\r\x12\x13\n\x0fNEEDSREBASELINE\x10\x0e\x12\x19\n\x15NEEDSMANUALREBASELINE\x10\x0f\"\xef\x08\n\x14MachineProviderEvent\x12X\n\x11gce_backend_state\x18\x01 \x01(\x0e\x32=.crit_event.proto.MachineProviderEvent.GCEBackendMachineState\x12\x64\n\x1bgce_backend_deletion_reason\x18\x02 \x01(\x0e\x32?.crit_event.proto.MachineProviderEvent.GCEBackendDeletionReason\x12\x62\n\x16machine_provider_state\x18\x03 \x01(\x0e\x32\x42.crit_event.proto.MachineProviderEvent.MachineProviderMachineState\x12\x1b\n\x13pubsub_subscription\x18\x04 \x01(\t\x12\x1b\n\x13lease_expiration_ts\x18\x05 \x01(\x03\x12W\n\rmachine_state\x18\x06 \x01(\x0e\x32@.crit_event.proto.MachineProviderEvent.MachineProviderAgentState\x12\x17\n\x0fswarming_server\x18\x07 \x01(\t\"\xea\x02\n\x16GCEBackendMachineState\x12\x0f\n\x0bGCE_UNKNOWN\x10\x00\x12\x0b\n\x07\x43REATED\x10\x01\x12\r\n\tCATALOGED\x10\x02\x12\x19\n\x15SUBSCRIPTION_RECEIVED\x10\x03\x12\x1c\n\x18METADATA_UPDATE_PROPOSED\x10\x04\x12\x19\n\x15METADATA_UPDATE_READY\x10\x05\x12\x1d\n\x19METADATA_UPDATE_SCHEDULED\x10\x06\x12\x1a\n\x16METADATA_UPDATE_FAILED\x10\x07\x12\x1d\n\x19METADATA_UPDATE_SUCCEEDED\x10\x08\x12\x12\n\x0eLEASE_RECEIVED\x10\t\x12\r\n\tRECLAIMED\x10\n\x12\x15\n\x11\x44\x45LETION_PROPOSED\x10\x0b\x12\x16\n\x12\x44\x45LETION_SCHEDULED\x10\x0c\x12\x16\n\x12\x44\x45LETION_SUCCEEDED\x10\r\x12\x0b\n\x07\x44\x45LETED\x10\x0e\"8\n\x18GCEBackendDeletionReason\x12\x0f\n\x0bRECLAMATION\x10\x01\x12\x0b\n\x07\x44RAINED\x10\x02\"{\n\x1bMachineProviderMachineState\x12\x0e\n\nMP_UNKNOWN\x10\x00\x12\x0c\n\x08RECEIVED\x10\x01\x12\x0e\n\nSUBSCRIBED\x10\x02\x12\n\n\x06LEASED\x10\x03\x12\x11\n\rLEASE_EXPIRED\x10\x04\x12\x0f\n\x0bUNCATALOGED\x10\x05\"c\n\x19MachineProviderAgentState\x12\x11\n\rAGENT_UNKNOWN\x10\x00\x12\x0b\n\x07POLLING\x10\x01\x12\r\n\tALLOCATED\x10\x02\x12\x17\n\x13SWARMING_CONFIGURED\x10\x03\"\xf2\x03\n\x0c\x41nalyzeEvent\x12\x13\n\x0bmaster_name\x18\x01 \x01(\t\x12\x14\n\x0c\x62uilder_name\x18\x02 \x01(\t\x12\x10\n\x08\x62uild_id\x18\x03 \x01(\t\x12\x16\n\x0e\x61\x66\x66\x65\x63ted_files\x18\x04 \x03(\t\x12\x1a\n\x12input_test_targets\x18\x05 \x03(\t\x12\x1d\n\x15input_compile_targets\x18\x06 \x03(\t\x12\x45\n\x06result\x18\x07 \x01(\x0e\x32,.crit_event.proto.AnalyzeEvent.AnalyzeResult:\x07UNKNOWN\x12\x1b\n\x13output_test_targets\x18\x08 \x03(\t\x12\x1e\n\x16output_compile_targets\x18\t \x03(\t\x12\x17\n\x0finvalid_targets\x18\n \x03(\t\"\xb4\x01\n\rAnalyzeResult\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x12\x18\n\x14NO_COMPILE_NECESSARY\x10\x02\x12\x15\n\x11\x41LL_FILES_IGNORED\x10\x03\x12\x15\n\x11MATCHED_EXCLUSION\x10\x04\x12\x14\n\x10\x46OUND_DEPENDENCY\x10\x05\x12\x18\n\x14\x46OUND_DEPENDENCY_ALL\x10\x06\x12\x13\n\x0fINVALID_TARGETS\x10\x07\"\xf4\x0e\n\x11SwarmingTaskEvent\x12\n\n\x02id\x18\x01 \x01(\t\x12@\n\x07request\x18\x02 \x01(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.TaskRequest\x12\x41\n\x05state\x18\x03 \x01(\x0e\x32).crit_event.proto.SwarmingTaskEvent.State:\x07UNKNOWN\x12\x0e\n\x06\x62ot_id\x18\x04 \x01(\t\x12\x13\n\x0b\x62ot_version\x18\x05 \x01(\t\x12\x46\n\x0e\x62ot_dimensions\x18\x06 \x01(\x0b\x32..crit_event.proto.SwarmingTaskEvent.Dimensions\x12\x17\n\x0fserver_versions\x18\x07 \x03(\t\x12\x1f\n\x10internal_failure\x18\x08 \x01(\x08:\x05\x66\x61lse\x12\x11\n\texit_code\x18\t \x01(\x05\x12\x12\n\nstarted_ts\x18\n \x01(\x03\x12\x14\n\x0c\x63ompleted_ts\x18\x0b \x01(\x03\x12\x14\n\x0c\x61\x62\x61ndoned_ts\x18\x0c \x01(\x03\x12\x19\n\x11\x63hildren_task_ids\x18\r \x03(\t\x12\x41\n\x0boutputs_ref\x18\x0e \x01(\x0b\x32,.crit_event.proto.SwarmingTaskEvent.FilesRef\x12\x10\n\x08\x63ost_usd\x18\x0f \x01(\x02\x12\x16\n\x0e\x63ost_saved_usd\x18\x10 \x01(\x02\x12\x14\n\x0c\x64\x65\x64uped_from\x18\x11 \x01(\t\x12\x12\n\ntry_number\x18\x12 \x01(\x03\x1a\xc1\x01\n\nDimensions\x12\x0b\n\x03\x63pu\x18\x01 \x03(\t\x12\r\n\x05\x63ores\x18\x02 \x03(\x03\x12\x0b\n\x03gpu\x18\x03 \x03(\t\x12\n\n\x02os\x18\x04 \x03(\t\x12\x0c\n\x04pool\x18\x05 \x03(\t\x12\r\n\x05hidpi\x18\x06 \x03(\t\x12\x14\n\x0cmachine_type\x18\x07 \x03(\t\x12\x0c\n\x04zone\x18\x08 \x03(\t\x12\x13\n\x0b\x64\x65vice_type\x18\t \x03(\t\x12\x11\n\tdevice_os\x18\n \x03(\t\x12\x15\n\rxcode_version\x18\x0b \x03(\t\x1a\xbd\x01\n\x04Tags\x12\x0c\n\x04name\x18\x01 \x03(\t\x12\x0f\n\x07project\x18\x02 \x03(\t\x12\x15\n\rpatch_project\x18\x03 \x03(\t\x12\x0f\n\x07purpose\x18\x04 \x03(\t\x12\x0e\n\x06master\x18\x05 \x03(\t\x12\x13\n\x0b\x62uildername\x18\x06 \x03(\t\x12\x10\n\x08\x62uild_id\x18\x07 \x03(\t\x12\x10\n\x08stepname\x18\x08 \x03(\t\x12\x11\n\tslavename\x18\t \x03(\t\x12\x12\n\ncodereview\x18\n \x03(\t\x1aG\n\x08\x46ilesRef\x12\x10\n\x08isolated\x18\x01 \x01(\t\x12\x16\n\x0eisolatedserver\x18\x02 \x01(\t\x12\x11\n\tnamespace\x18\x03 \x01(\t\x1a\x42\n\x0b\x43ipdPackage\x12\x14\n\x0cpackage_name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x1a\xa7\x01\n\tCipdInput\x12\x0e\n\x06server\x18\x01 \x01(\t\x12G\n\x0e\x63lient_package\x18\x02 \x01(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.CipdPackage\x12\x41\n\x08packages\x18\x03 \x03(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.CipdPackage\x1a\xb8\x02\n\x0eTaskProperties\x12@\n\ninputs_ref\x18\x01 \x01(\x0b\x32,.crit_event.proto.SwarmingTaskEvent.FilesRef\x12\x41\n\ncipd_input\x18\x02 \x01(\x0b\x32-.crit_event.proto.SwarmingTaskEvent.CipdInput\x12\x42\n\ndimensions\x18\x03 \x01(\x0b\x32..crit_event.proto.SwarmingTaskEvent.Dimensions\x12\x1b\n\x13\x65xecution_timeout_s\x18\x04 \x01(\x03\x12\x16\n\x0egrace_period_s\x18\x05 \x01(\x03\x12\x14\n\x0cio_timeout_s\x18\x06 \x01(\x03\x12\x12\n\nidempotent\x18\x07 \x01(\x08\x1a\xce\x01\n\x0bTaskRequest\x12\x16\n\x0eparent_task_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\ncreated_ts\x18\x03 \x01(\x03\x12\x15\n\rexpiration_ts\x18\x04 \x01(\x03\x12\x10\n\x08priority\x18\x05 \x01(\x03\x12\x14\n\x0cpubsub_topic\x18\x06 \x01(\t\x12\x46\n\nproperties\x18\x07 \x01(\x0b\x32\x32.crit_event.proto.SwarmingTaskEvent.TaskProperties\"[\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\r\n\tCOMPLETED\x10\x01\x12\x0c\n\x08\x43\x41NCELED\x10\x02\x12\x0c\n\x08\x42OT_DIED\x10\x03\x12\r\n\tTIMED_OUT\x10\x04\x12\x0b\n\x07\x45XPIRED\x10\x05\"\xa4\x05\n\x10\x43hromeInfraEvent\x12Q\n\x0etimestamp_kind\x18\x01 \x01(\x0e\x32\x30.crit_event.proto.ChromeInfraEvent.TimestampKind:\x07UNKNOWN\x12\x10\n\x08trace_id\x18\x02 \x01(\t\x12\x0f\n\x07span_id\x18\x03 \x01(\t\x12\x11\n\tparent_id\x18\x04 \x01(\t\x12\x38\n\x0c\x65vent_source\x18\x05 \x01(\x0b\x32\".crit_event.proto.InfraEventSource\x12\x35\n\rservice_event\x18\x06 \x01(\x0b\x32\x1e.crit_event.proto.ServiceEvent\x12\x31\n\x0b\x62uild_event\x18\x08 \x01(\x0b\x32\x1c.crit_event.proto.BuildEvent\x12+\n\x08\x63q_event\x18\t \x01(\x0b\x32\x19.crit_event.proto.CQEvent\x12\x38\n\x0ctest_results\x18\n \x01(\x0b\x32\".crit_event.proto.TestResultsEvent\x12\x46\n\x16machine_provider_event\x18\x0b \x01(\x0b\x32&.crit_event.proto.MachineProviderEvent\x12\x35\n\ranalyze_event\x18\x0c \x01(\x0b\x32\x1e.crit_event.proto.AnalyzeEvent\x12@\n\x13swarming_task_event\x18\r \x01(\x0b\x32#.crit_event.proto.SwarmingTaskEvent\";\n\rTimestampKind\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05POINT\x10\x01\x12\t\n\x05\x42\x45GIN\x10\x02\x12\x07\n\x03\x45ND\x10\x03')
+  serialized_pb='\n\x16\x63hrome_infra_log.proto\x12\x10\x63rit_event.proto\x1a\x10goma_stats.proto\"\xcb\x10\n\x07\x43QEvent\x12\x30\n\x06\x61\x63tion\x18\x01 \x01(\x0e\x32 .crit_event.proto.CQEvent.Action\x12\x34\n\x08verifier\x18\x02 \x01(\x0e\x32\".crit_event.proto.CQEvent.Verifier\x12\x0f\n\x07\x63q_name\x18\x03 \x01(\t\x12\r\n\x05issue\x18\x04 \x01(\t\x12\x10\n\x08patchset\x18\x05 \x01(\t\x12\x1a\n\x12\x61ttempt_start_usec\x18\x06 \x01(\x03\x12\x34\n\x06status\x18\x07 \x01(\x0e\x32 .crit_event.proto.CQEvent.StatusB\x02\x18\x01\x12\x0c\n\x04\x64one\x18\x08 \x01(\x08\x12?\n\x0e\x66\x61ilure_reason\x18\t \x01(\x0b\x32\'.crit_event.proto.CQEvent.FailureReason\x12\x0f\n\x07\x64ry_run\x18\n \x01(\x08\x12\x1a\n\x12global_retry_quota\x18\x0b \x01(\x05\x12\x44\n\x11triggered_tryjobs\x18\x0c \x03(\x0b\x32).crit_event.proto.CQEvent.TriggeredTryJob\x12\r\n\x05\x66iles\x18\r \x03(\t\x12\x1b\n\x13\x63odereview_hostname\x18\x0e \x01(\t\x12\x17\n\x0f\x63onfig_revision\x18\x0f \x01(\t\x1a\xa9\x06\n\rFailureReason\x12\x34\n\x08verifier\x18\x01 \x01(\x0e\x32\".crit_event.proto.CQEvent.Verifier\x12\x43\n\tfail_type\x18\x02 \x01(\x0e\x32\x30.crit_event.proto.CQEvent.FailureReason.FailType\x12M\n\x0f\x66\x61iled_try_jobs\x18\x03 \x03(\x0b\x32\x34.crit_event.proto.CQEvent.FailureReason.FailedTryJob\x1a{\n\x0c\x46\x61iledTryJob\x12\x0e\n\x06master\x18\x01 \x01(\t\x12\x0f\n\x07\x62uilder\x18\x02 \x01(\t\x12\x10\n\x08\x62uild_id\x18\x03 \x01(\x03\x12\x38\n\tfail_type\x18\x05 \x01(\x0e\x32%.crit_event.proto.BuildEvent.FailType\"\xd0\x03\n\x08\x46\x61ilType\x12\x15\n\x11UNKNOWN_FAIL_TYPE\x10\x00\x12\x18\n\x14\x46\x41ILED_PRESUBMIT_BOT\x10\x01\x12\x1e\n\x1a\x46\x41ILED_PRESUBMIT_BOT_INFRA\x10\x11\x12\x0f\n\x0b\x46\x41ILED_JOBS\x10\x02\x12\x18\n\x14RETRY_QUOTA_EXCEEDED\x10\x03\x12\x0c\n\x08NOT_LGTM\x10\x04\x12\x10\n\x0cMISSING_LGTM\x10\x05\x12\x0e\n\nNO_SIGNCLA\x10\x06\x12\x1a\n\x16\x46\x41ILED_SIGNCLA_REQUEST\x10\x07\x12\x11\n\rMANUAL_CANCEL\x10\x08\x12\x10\n\x0c\x43OMMIT_FALSE\x10\t\x12\x13\n\x0fOPEN_DEPENDENCY\x10\n\x12\x15\n\x11INVALID_DELIMITER\x10\x0b\x12\x1f\n\x1b\x46\x41ILED_REMOTE_REF_PRESUBMIT\x10\x0c\x12\x1a\n\x16\x46\x41ILED_TO_TRIGGER_JOBS\x10\x12\x12\x1a\n\x16UNSUPPORTED_CQ_FEATURE\x10\x13\x12\x13\n\x0f\x46\x41ILED_CHECKOUT\x10\r\x12\x11\n\rFAILED_COMMIT\x10\x0e\x12\x10\n\x0c\x46\x41ILED_PATCH\x10\x0f\x12\x18\n\x14\x46\x41ILED_REQUEST_PATCH\x10\x10\x1a\x41\n\x0fTriggeredTryJob\x12\x0e\n\x06master\x18\x01 \x01(\t\x12\x0f\n\x07\x62uilder\x18\x02 \x01(\t\x12\r\n\x05tests\x18\x03 \x03(\t\"\xc8\x03\n\x06\x41\x63tion\x12\x12\n\x0eUNKNOWN_ACTION\x10\x00\x12\x0c\n\x08\x43Q_START\x10\x01\x12\x0b\n\x07\x43Q_STOP\x10\x02\x12\x13\n\x0fPATCH_COMMITTED\x10\x03\x12\x14\n\x10PATCH_COMMITTING\x10\x04\x12\x10\n\x0cPATCH_FAILED\x10\x05\x12\x19\n\x15PATCH_READY_TO_COMMIT\x10\x06\x12\x0f\n\x0bPATCH_START\x10\x07\x12\x0e\n\nPATCH_STOP\x10\x08\x12\x13\n\x0fPATCH_THROTTLED\x10\t\x12\x15\n\x11PATCH_TREE_CLOSED\x10\n\x12\x1b\n\x17VERIFIER_CUSTOM_TRYBOTS\x10\x0b\x12\x12\n\x0eVERIFIER_ERROR\x10\x0c\x12\x11\n\rVERIFIER_FAIL\x10\r\x12\x18\n\x14VERIFIER_JOBS_UPDATE\x10\x0e\x12\x11\n\rVERIFIER_PASS\x10\x0f\x12\x12\n\x0eVERIFIER_RETRY\x10\x10\x12\x11\n\rVERIFIER_SKIP\x10\x11\x12\x12\n\x0eVERIFIER_START\x10\x12\x12\x14\n\x10VERIFIER_TIMEOUT\x10\x13\x12\x14\n\x10VERIFIER_TRIGGER\x10\x14\x12\x12\n\x0eVERIFIER_NOTRY\x10\x15\"\x7f\n\x08Verifier\x12\x14\n\x10UNKNOWN_VERIFIER\x10\x00\x12\x11\n\rREVIEWER_LGTM\x10\x01\x12\x0c\n\x08SIGN_CLA\x10\x02\x12\x0f\n\x0bTREE_STATUS\x10\x03\x12\x1e\n\x1aTRIGGER_EXPERIMENT_TRY_JOB\x10\x04\x12\x0b\n\x07TRY_JOB\x10\x05\"\x91\x01\n\x06Status\x12\x12\n\x0eUNKNOWN_STATUS\x10\x00\x12\t\n\x05START\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\x13\n\x0fREADY_TO_COMMIT\x10\x03\x12\x0e\n\nCOMMITTING\x10\x04\x12\r\n\tCOMMITTED\x10\x05\x12\n\n\x06\x46\x41ILED\x10\x06\x12\r\n\tTHROTTLED\x10\x07\x12\x0f\n\x0bTREE_CLOSED\x10\x08\"y\n\x0b\x43odeVersion\x12\x12\n\nsource_url\x18\x01 \x01(\t\x12\r\n\x05\x64irty\x18\x02 \x01(\x08\x12\x0f\n\x07version\x18\x03 \x01(\t\x12\x10\n\x08git_hash\x18\x04 \x01(\t\x12\x14\n\x0csvn_revision\x18\x05 \x01(\x05\x12\x0e\n\x06\x62ranch\x18\x06 \x01(\t\"\x82\x02\n\x0cServiceEvent\x12\x46\n\x04type\x18\x01 \x01(\x0e\x32/.crit_event.proto.ServiceEvent.ServiceEventType:\x07UNKNOWN\x12\x33\n\x0c\x63ode_version\x18\x02 \x03(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12\x13\n\x0bstack_trace\x18\x03 \x01(\t\"`\n\x10ServiceEventType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05START\x10\x01\x12\x08\n\x04STOP\x10\x02\x12\n\n\x06UPDATE\x10\x03\x12\x13\n\x0f\x43URRENT_VERSION\x10\x04\x12\t\n\x05\x43RASH\x10\x05\"\xd1\n\n\nBuildEvent\x12\x39\n\x04type\x18\x01 \x01(\x0e\x32+.crit_event.proto.BuildEvent.BuildEventType\x12\x11\n\thost_name\x18\x02 \x01(\t\x12\x12\n\nbuild_name\x18\x03 \x01(\t\x12\x14\n\x0c\x62uild_number\x18\x04 \x01(\x05\x12 \n\x18\x62uild_scheduling_time_ms\x18\x05 \x01(\x03\x12\x11\n\tstep_name\x18\x06 \x01(\t\x12\x11\n\tstep_text\x18\x13 \x01(\t\x12\x13\n\x0bstep_number\x18\x07 \x01(\x05\x12\x41\n\x06result\x18\x08 \x01(\x0e\x32(.crit_event.proto.BuildEvent.BuildResult:\x07UNKNOWN\x12\x19\n\x11\x65xtra_result_code\x18\n \x03(\t\x12,\n\ngoma_stats\x18\t \x01(\x0b\x32\x18.devtools_goma.GomaStats\x12M\n\ngoma_error\x18\x11 \x01(\x0e\x32*.crit_event.proto.BuildEvent.GomaErrorType:\rGOMA_ERROR_OK\x12\x1c\n\x14goma_crash_report_id\x18\x12 \x01(\t\x12\x0f\n\x07project\x18\x0b \x01(\t\x12\x34\n\rhead_revision\x18\x0c \x01(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12/\n\x08revision\x18\r \x03(\x0b\x32\x1d.crit_event.proto.CodeVersion\x12\x11\n\tpatch_url\x18\x0e \x01(\t\x12\x10\n\x08\x62uildset\x18\x18 \x01(\t\x12\x37\n\x08\x63\x61tegory\x18\x14 \x01(\x0e\x32%.crit_event.proto.BuildEvent.Category\x12\x12\n\nbbucket_id\x18\x0f \x01(\x03\x12\x1a\n\x12\x62\x62ucket_user_agent\x18\x10 \x01(\t\x12\x38\n\tfail_type\x18\x15 \x01(\x0e\x32%.crit_event.proto.BuildEvent.FailType\x12\x12\n\ncq_project\x18\x16 \x01(\t\x12\x15\n\rcq_subproject\x18\x17 \x01(\t\"4\n\x0e\x42uildEventType\x12\r\n\tSCHEDULER\x10\x00\x12\t\n\x05\x42UILD\x10\x01\x12\x08\n\x04STEP\x10\x02\"l\n\x0b\x42uildResult\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x0b\n\x07SUCCESS\x10\x01\x12\x0b\n\x07\x46\x41ILURE\x10\x02\x12\x11\n\rINFRA_FAILURE\x10\x03\x12\x0b\n\x07WARNING\x10\x04\x12\x0b\n\x07SKIPPED\x10\x05\x12\t\n\x05RETRY\x10\x06\"l\n\rGomaErrorType\x12\x11\n\rGOMA_ERROR_OK\x10\x00\x12\x16\n\x12GOMA_ERROR_UNKNOWN\x10\x01\x12\x16\n\x12GOMA_ERROR_CRASHED\x10\x02\x12\x18\n\x14GOMA_ERROR_LOG_FATAL\x10\x03\"h\n\x08\x43\x61tegory\x12\x14\n\x10\x43\x41TEGORY_UNKNOWN\x10\x00\x12\x0f\n\x0b\x43\x41TEGORY_CQ\x10\x01\x12\x1c\n\x18\x43\x41TEGORY_CQ_EXPERIMENTAL\x10\x02\x12\x17\n\x13\x43\x41TEGORY_GIT_CL_TRY\x10\x03\"\x8d\x01\n\x08\x46\x61ilType\x12\x15\n\x11\x46\x41IL_TYPE_UNKNOWN\x10\x00\x12\x13\n\x0f\x46\x41IL_TYPE_INFRA\x10\x01\x12\x15\n\x11\x46\x41IL_TYPE_COMPILE\x10\x02\x12\x12\n\x0e\x46\x41IL_TYPE_TEST\x10\x03\x12\x15\n\x11\x46\x41IL_TYPE_INVALID\x10\x04\x12\x13\n\x0f\x46\x41IL_TYPE_PATCH\x10\x05\"S\n\x10InfraEventSource\x12\x11\n\thost_name\x18\x01 \x01(\t\x12\x16\n\x0e\x61ppengine_name\x18\x02 \x01(\t\x12\x14\n\x0cservice_name\x18\x03 \x01(\t\"\x83\x05\n\x10TestResultsEvent\x12\x13\n\x0bmaster_name\x18\x01 \x01(\t\x12\x14\n\x0c\x62uilder_name\x18\x02 \x01(\t\x12\x14\n\x0c\x62uild_number\x18\x03 \x01(\x05\x12\x11\n\ttest_type\x18\x04 \x01(\t\x12\x13\n\x0binterrupted\x18\x05 \x01(\x08\x12\x0f\n\x07version\x18\x06 \x01(\x05\x12\x18\n\x10usec_since_epoch\x18\x07 \x01(\x03\x12<\n\x05tests\x18\x08 \x03(\x0b\x32-.crit_event.proto.TestResultsEvent.TestResult\x1a\xb5\x01\n\nTestResult\x12\x11\n\ttest_name\x18\x01 \x01(\t\x12\x41\n\x06\x61\x63tual\x18\x02 \x03(\x0e\x32\x31.crit_event.proto.TestResultsEvent.TestResultType\x12\x43\n\x08\x65xpected\x18\x03 \x03(\x0e\x32\x31.crit_event.proto.TestResultsEvent.TestResultType\x12\x0c\n\x04\x62ugs\x18\x04 \x03(\t\"\xe4\x01\n\x0eTestResultType\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x08\n\x04SKIP\x10\x01\x12\x08\n\x04PASS\x10\x02\x12\x08\n\x04\x46\x41IL\x10\x03\x12\t\n\x05\x43RASH\x10\x04\x12\x0b\n\x07TIMEOUT\x10\x05\x12\x0b\n\x07MISSING\x10\x06\x12\x08\n\x04LEAK\x10\x07\x12\x08\n\x04SLOW\x10\x08\x12\x08\n\x04TEXT\x10\t\x12\t\n\x05\x41UDIO\x10\n\x12\t\n\x05IMAGE\x10\x0b\x12\x0e\n\nIMAGE_TEXT\x10\x0c\x12\x0e\n\nREBASELINE\x10\r\x12\x13\n\x0fNEEDSREBASELINE\x10\x0e\x12\x19\n\x15NEEDSMANUALREBASELINE\x10\x0f\"\xef\x08\n\x14MachineProviderEvent\x12X\n\x11gce_backend_state\x18\x01 \x01(\x0e\x32=.crit_event.proto.MachineProviderEvent.GCEBackendMachineState\x12\x64\n\x1bgce_backend_deletion_reason\x18\x02 \x01(\x0e\x32?.crit_event.proto.MachineProviderEvent.GCEBackendDeletionReason\x12\x62\n\x16machine_provider_state\x18\x03 \x01(\x0e\x32\x42.crit_event.proto.MachineProviderEvent.MachineProviderMachineState\x12\x1b\n\x13pubsub_subscription\x18\x04 \x01(\t\x12\x1b\n\x13lease_expiration_ts\x18\x05 \x01(\x03\x12W\n\rmachine_state\x18\x06 \x01(\x0e\x32@.crit_event.proto.MachineProviderEvent.MachineProviderAgentState\x12\x17\n\x0fswarming_server\x18\x07 \x01(\t\"\xea\x02\n\x16GCEBackendMachineState\x12\x0f\n\x0bGCE_UNKNOWN\x10\x00\x12\x0b\n\x07\x43REATED\x10\x01\x12\r\n\tCATALOGED\x10\x02\x12\x19\n\x15SUBSCRIPTION_RECEIVED\x10\x03\x12\x1c\n\x18METADATA_UPDATE_PROPOSED\x10\x04\x12\x19\n\x15METADATA_UPDATE_READY\x10\x05\x12\x1d\n\x19METADATA_UPDATE_SCHEDULED\x10\x06\x12\x1a\n\x16METADATA_UPDATE_FAILED\x10\x07\x12\x1d\n\x19METADATA_UPDATE_SUCCEEDED\x10\x08\x12\x12\n\x0eLEASE_RECEIVED\x10\t\x12\r\n\tRECLAIMED\x10\n\x12\x15\n\x11\x44\x45LETION_PROPOSED\x10\x0b\x12\x16\n\x12\x44\x45LETION_SCHEDULED\x10\x0c\x12\x16\n\x12\x44\x45LETION_SUCCEEDED\x10\r\x12\x0b\n\x07\x44\x45LETED\x10\x0e\"8\n\x18GCEBackendDeletionReason\x12\x0f\n\x0bRECLAMATION\x10\x01\x12\x0b\n\x07\x44RAINED\x10\x02\"{\n\x1bMachineProviderMachineState\x12\x0e\n\nMP_UNKNOWN\x10\x00\x12\x0c\n\x08RECEIVED\x10\x01\x12\x0e\n\nSUBSCRIBED\x10\x02\x12\n\n\x06LEASED\x10\x03\x12\x11\n\rLEASE_EXPIRED\x10\x04\x12\x0f\n\x0bUNCATALOGED\x10\x05\"c\n\x19MachineProviderAgentState\x12\x11\n\rAGENT_UNKNOWN\x10\x00\x12\x0b\n\x07POLLING\x10\x01\x12\r\n\tALLOCATED\x10\x02\x12\x17\n\x13SWARMING_CONFIGURED\x10\x03\"\xf2\x03\n\x0c\x41nalyzeEvent\x12\x13\n\x0bmaster_name\x18\x01 \x01(\t\x12\x14\n\x0c\x62uilder_name\x18\x02 \x01(\t\x12\x10\n\x08\x62uild_id\x18\x03 \x01(\t\x12\x16\n\x0e\x61\x66\x66\x65\x63ted_files\x18\x04 \x03(\t\x12\x1a\n\x12input_test_targets\x18\x05 \x03(\t\x12\x1d\n\x15input_compile_targets\x18\x06 \x03(\t\x12\x45\n\x06result\x18\x07 \x01(\x0e\x32,.crit_event.proto.AnalyzeEvent.AnalyzeResult:\x07UNKNOWN\x12\x1b\n\x13output_test_targets\x18\x08 \x03(\t\x12\x1e\n\x16output_compile_targets\x18\t \x03(\t\x12\x17\n\x0finvalid_targets\x18\n \x03(\t\"\xb4\x01\n\rAnalyzeResult\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x12\x18\n\x14NO_COMPILE_NECESSARY\x10\x02\x12\x15\n\x11\x41LL_FILES_IGNORED\x10\x03\x12\x15\n\x11MATCHED_EXCLUSION\x10\x04\x12\x14\n\x10\x46OUND_DEPENDENCY\x10\x05\x12\x18\n\x14\x46OUND_DEPENDENCY_ALL\x10\x06\x12\x13\n\x0fINVALID_TARGETS\x10\x07\"\xac\x0f\n\x11SwarmingTaskEvent\x12\n\n\x02id\x18\x01 \x01(\t\x12@\n\x07request\x18\x02 \x01(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.TaskRequest\x12\x41\n\x05state\x18\x03 \x01(\x0e\x32).crit_event.proto.SwarmingTaskEvent.State:\x07UNKNOWN\x12\x0e\n\x06\x62ot_id\x18\x04 \x01(\t\x12\x13\n\x0b\x62ot_version\x18\x05 \x01(\t\x12\x46\n\x0e\x62ot_dimensions\x18\x06 \x01(\x0b\x32..crit_event.proto.SwarmingTaskEvent.Dimensions\x12\x17\n\x0fserver_versions\x18\x07 \x03(\t\x12\x1f\n\x10internal_failure\x18\x08 \x01(\x08:\x05\x66\x61lse\x12\x11\n\texit_code\x18\t \x01(\x05\x12\x12\n\nstarted_ts\x18\n \x01(\x03\x12\x14\n\x0c\x63ompleted_ts\x18\x0b \x01(\x03\x12\x14\n\x0c\x61\x62\x61ndoned_ts\x18\x0c \x01(\x03\x12\x19\n\x11\x63hildren_task_ids\x18\r \x03(\t\x12\x41\n\x0boutputs_ref\x18\x0e \x01(\x0b\x32,.crit_event.proto.SwarmingTaskEvent.FilesRef\x12\x10\n\x08\x63ost_usd\x18\x0f \x01(\x02\x12\x16\n\x0e\x63ost_saved_usd\x18\x10 \x01(\x02\x12\x14\n\x0c\x64\x65\x64uped_from\x18\x11 \x01(\t\x12\x12\n\ntry_number\x18\x12 \x01(\x03\x12\x36\n\x04tags\x18\x13 \x01(\x0b\x32(.crit_event.proto.SwarmingTaskEvent.Tags\x1a\xc1\x01\n\nDimensions\x12\x0b\n\x03\x63pu\x18\x01 \x03(\t\x12\r\n\x05\x63ores\x18\x02 \x03(\x03\x12\x0b\n\x03gpu\x18\x03 \x03(\t\x12\n\n\x02os\x18\x04 \x03(\t\x12\x0c\n\x04pool\x18\x05 \x03(\t\x12\r\n\x05hidpi\x18\x06 \x03(\t\x12\x14\n\x0cmachine_type\x18\x07 \x03(\t\x12\x0c\n\x04zone\x18\x08 \x03(\t\x12\x13\n\x0b\x64\x65vice_type\x18\t \x03(\t\x12\x11\n\tdevice_os\x18\n \x03(\t\x12\x15\n\rxcode_version\x18\x0b \x03(\t\x1a\xbd\x01\n\x04Tags\x12\x0c\n\x04name\x18\x01 \x03(\t\x12\x0f\n\x07project\x18\x02 \x03(\t\x12\x15\n\rpatch_project\x18\x03 \x03(\t\x12\x0f\n\x07purpose\x18\x04 \x03(\t\x12\x0e\n\x06master\x18\x05 \x03(\t\x12\x13\n\x0b\x62uildername\x18\x06 \x03(\t\x12\x10\n\x08\x62uild_id\x18\x07 \x03(\t\x12\x10\n\x08stepname\x18\x08 \x03(\t\x12\x11\n\tslavename\x18\t \x03(\t\x12\x12\n\ncodereview\x18\n \x03(\t\x1aG\n\x08\x46ilesRef\x12\x10\n\x08isolated\x18\x01 \x01(\t\x12\x16\n\x0eisolatedserver\x18\x02 \x01(\t\x12\x11\n\tnamespace\x18\x03 \x01(\t\x1a\x42\n\x0b\x43ipdPackage\x12\x14\n\x0cpackage_name\x18\x01 \x01(\t\x12\x0f\n\x07version\x18\x02 \x01(\t\x12\x0c\n\x04path\x18\x03 \x01(\t\x1a\xa7\x01\n\tCipdInput\x12\x0e\n\x06server\x18\x01 \x01(\t\x12G\n\x0e\x63lient_package\x18\x02 \x01(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.CipdPackage\x12\x41\n\x08packages\x18\x03 \x03(\x0b\x32/.crit_event.proto.SwarmingTaskEvent.CipdPackage\x1a\xb8\x02\n\x0eTaskProperties\x12@\n\ninputs_ref\x18\x01 \x01(\x0b\x32,.crit_event.proto.SwarmingTaskEvent.FilesRef\x12\x41\n\ncipd_input\x18\x02 \x01(\x0b\x32-.crit_event.proto.SwarmingTaskEvent.CipdInput\x12\x42\n\ndimensions\x18\x03 \x01(\x0b\x32..crit_event.proto.SwarmingTaskEvent.Dimensions\x12\x1b\n\x13\x65xecution_timeout_s\x18\x04 \x01(\x03\x12\x16\n\x0egrace_period_s\x18\x05 \x01(\x03\x12\x14\n\x0cio_timeout_s\x18\x06 \x01(\x03\x12\x12\n\nidempotent\x18\x07 \x01(\x08\x1a\xce\x01\n\x0bTaskRequest\x12\x16\n\x0eparent_task_id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x12\n\ncreated_ts\x18\x03 \x01(\x03\x12\x15\n\rexpiration_ts\x18\x04 \x01(\x03\x12\x10\n\x08priority\x18\x05 \x01(\x03\x12\x14\n\x0cpubsub_topic\x18\x06 \x01(\t\x12\x46\n\nproperties\x18\x07 \x01(\x0b\x32\x32.crit_event.proto.SwarmingTaskEvent.TaskProperties\"[\n\x05State\x12\x0b\n\x07UNKNOWN\x10\x00\x12\r\n\tCOMPLETED\x10\x01\x12\x0c\n\x08\x43\x41NCELED\x10\x02\x12\x0c\n\x08\x42OT_DIED\x10\x03\x12\r\n\tTIMED_OUT\x10\x04\x12\x0b\n\x07\x45XPIRED\x10\x05\"`\n\x06\x42inary\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x16\n\x0einfra_revision\x18\x02 \x01(\t\x12\x18\n\x10luci_go_revision\x18\x03 \x01(\t\x12\x16\n\x0eversion_number\x18\x04 \x01(\t\"\xae\x04\n\x12IsolateClientEvent\x12(\n\x06\x62inary\x18\x01 \x01(\x0b\x32\x18.crit_event.proto.Binary\x12\x41\n\toperation\x18\x02 \x01(\x0e\x32..crit_event.proto.IsolateClientEvent.Operation\x12L\n\x0f\x61rchive_details\x18\x03 \x01(\x0b\x32\x33.crit_event.proto.IsolateClientEvent.ArchiveDetails\x12\x0e\n\x06master\x18\x04 \x01(\t\x12\x0f\n\x07\x62uilder\x18\x05 \x01(\t\x12\x10\n\x08\x62uild_id\x18\x06 \x01(\t\x12\r\n\x05slave\x18\x07 \x01(\t\x12\x15\n\rstart_ts_usec\x18\x08 \x01(\x03\x12\x13\n\x0b\x65nd_ts_usec\x18\t \x01(\x03\x1a\xc3\x01\n\x0e\x41rchiveDetails\x12\x11\n\thit_count\x18\x01 \x01(\x03\x12\x11\n\thit_bytes\x18\x02 \x01(\x03\x12\x12\n\nmiss_count\x18\x03 \x01(\x03\x12\x12\n\nmiss_bytes\x18\x04 \x01(\x03\x12\x1c\n\x14upload_success_count\x18\x05 \x01(\x03\x12\x19\n\x11upload_fail_count\x18\x06 \x01(\x03\x12\x14\n\x0cupload_bytes\x18\x07 \x01(\x03\x12\x14\n\x0cisolate_hash\x18\x08 \x03(\t\")\n\tOperation\x12\x0f\n\x0bUNSPECIFIED\x10\x00\x12\x0b\n\x07\x41RCHIVE\x10\x01\"\xe8\x05\n\x10\x43hromeInfraEvent\x12Q\n\x0etimestamp_kind\x18\x01 \x01(\x0e\x32\x30.crit_event.proto.ChromeInfraEvent.TimestampKind:\x07UNKNOWN\x12\x10\n\x08trace_id\x18\x02 \x01(\t\x12\x0f\n\x07span_id\x18\x03 \x01(\t\x12\x11\n\tparent_id\x18\x04 \x01(\t\x12\x38\n\x0c\x65vent_source\x18\x05 \x01(\x0b\x32\".crit_event.proto.InfraEventSource\x12\x35\n\rservice_event\x18\x06 \x01(\x0b\x32\x1e.crit_event.proto.ServiceEvent\x12\x31\n\x0b\x62uild_event\x18\x08 \x01(\x0b\x32\x1c.crit_event.proto.BuildEvent\x12+\n\x08\x63q_event\x18\t \x01(\x0b\x32\x19.crit_event.proto.CQEvent\x12\x38\n\x0ctest_results\x18\n \x01(\x0b\x32\".crit_event.proto.TestResultsEvent\x12\x46\n\x16machine_provider_event\x18\x0b \x01(\x0b\x32&.crit_event.proto.MachineProviderEvent\x12\x35\n\ranalyze_event\x18\x0c \x01(\x0b\x32\x1e.crit_event.proto.AnalyzeEvent\x12@\n\x13swarming_task_event\x18\r \x01(\x0b\x32#.crit_event.proto.SwarmingTaskEvent\x12\x42\n\x14isolate_client_event\x18\x0e \x01(\x0b\x32$.crit_event.proto.IsolateClientEvent\";\n\rTimestampKind\x12\x0b\n\x07UNKNOWN\x10\x00\x12\t\n\x05POINT\x10\x01\x12\t\n\x05\x42\x45GIN\x10\x02\x12\x07\n\x03\x45ND\x10\x03')
 
 
 
@@ -811,8 +811,29 @@ _SWARMINGTASKEVENT_STATE = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=8124,
-  serialized_end=8215,
+  serialized_start=8180,
+  serialized_end=8271,
+)
+
+_ISOLATECLIENTEVENT_OPERATION = _descriptor.EnumDescriptor(
+  name='Operation',
+  full_name='crit_event.proto.IsolateClientEvent.Operation',
+  filename=None,
+  file=DESCRIPTOR,
+  values=[
+    _descriptor.EnumValueDescriptor(
+      name='UNSPECIFIED', index=0, number=0,
+      options=None,
+      type=None),
+    _descriptor.EnumValueDescriptor(
+      name='ARCHIVE', index=1, number=1,
+      options=None,
+      type=None),
+  ],
+  containing_type=None,
+  options=None,
+  serialized_start=8889,
+  serialized_end=8930,
 )
 
 _CHROMEINFRAEVENT_TIMESTAMPKIND = _descriptor.EnumDescriptor(
@@ -840,8 +861,8 @@ _CHROMEINFRAEVENT_TIMESTAMPKIND = _descriptor.EnumDescriptor(
   ],
   containing_type=None,
   options=None,
-  serialized_start=8835,
-  serialized_end=8894,
+  serialized_start=9618,
+  serialized_end=9677,
 )
 
 
@@ -1832,8 +1853,8 @@ _SWARMINGTASKEVENT_DIMENSIONS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=6902,
-  serialized_end=7095,
+  serialized_start=6958,
+  serialized_end=7151,
 )
 
 _SWARMINGTASKEVENT_TAGS = _descriptor.Descriptor(
@@ -1922,8 +1943,8 @@ _SWARMINGTASKEVENT_TAGS = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7098,
-  serialized_end=7287,
+  serialized_start=7154,
+  serialized_end=7343,
 )
 
 _SWARMINGTASKEVENT_FILESREF = _descriptor.Descriptor(
@@ -1963,8 +1984,8 @@ _SWARMINGTASKEVENT_FILESREF = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7289,
-  serialized_end=7360,
+  serialized_start=7345,
+  serialized_end=7416,
 )
 
 _SWARMINGTASKEVENT_CIPDPACKAGE = _descriptor.Descriptor(
@@ -2004,8 +2025,8 @@ _SWARMINGTASKEVENT_CIPDPACKAGE = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7362,
-  serialized_end=7428,
+  serialized_start=7418,
+  serialized_end=7484,
 )
 
 _SWARMINGTASKEVENT_CIPDINPUT = _descriptor.Descriptor(
@@ -2045,8 +2066,8 @@ _SWARMINGTASKEVENT_CIPDINPUT = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7431,
-  serialized_end=7598,
+  serialized_start=7487,
+  serialized_end=7654,
 )
 
 _SWARMINGTASKEVENT_TASKPROPERTIES = _descriptor.Descriptor(
@@ -2114,8 +2135,8 @@ _SWARMINGTASKEVENT_TASKPROPERTIES = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7601,
-  serialized_end=7913,
+  serialized_start=7657,
+  serialized_end=7969,
 )
 
 _SWARMINGTASKEVENT_TASKREQUEST = _descriptor.Descriptor(
@@ -2183,8 +2204,8 @@ _SWARMINGTASKEVENT_TASKREQUEST = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=7916,
-  serialized_end=8122,
+  serialized_start=7972,
+  serialized_end=8178,
 )
 
 _SWARMINGTASKEVENT = _descriptor.Descriptor(
@@ -2320,6 +2341,13 @@ _SWARMINGTASKEVENT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='tags', full_name='crit_event.proto.SwarmingTaskEvent.tags', index=18,
+      number=19, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -2331,7 +2359,217 @@ _SWARMINGTASKEVENT = _descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=6307,
-  serialized_end=8215,
+  serialized_end=8271,
+)
+
+
+_BINARY = _descriptor.Descriptor(
+  name='Binary',
+  full_name='crit_event.proto.Binary',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='name', full_name='crit_event.proto.Binary.name', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='infra_revision', full_name='crit_event.proto.Binary.infra_revision', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='luci_go_revision', full_name='crit_event.proto.Binary.luci_go_revision', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='version_number', full_name='crit_event.proto.Binary.version_number', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=8273,
+  serialized_end=8369,
+)
+
+
+_ISOLATECLIENTEVENT_ARCHIVEDETAILS = _descriptor.Descriptor(
+  name='ArchiveDetails',
+  full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='hit_count', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.hit_count', index=0,
+      number=1, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='hit_bytes', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.hit_bytes', index=1,
+      number=2, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='miss_count', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.miss_count', index=2,
+      number=3, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='miss_bytes', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.miss_bytes', index=3,
+      number=4, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='upload_success_count', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.upload_success_count', index=4,
+      number=5, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='upload_fail_count', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.upload_fail_count', index=5,
+      number=6, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='upload_bytes', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.upload_bytes', index=6,
+      number=7, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='isolate_hash', full_name='crit_event.proto.IsolateClientEvent.ArchiveDetails.isolate_hash', index=7,
+      number=8, type=9, cpp_type=9, label=3,
+      has_default_value=False, default_value=[],
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=8692,
+  serialized_end=8887,
+)
+
+_ISOLATECLIENTEVENT = _descriptor.Descriptor(
+  name='IsolateClientEvent',
+  full_name='crit_event.proto.IsolateClientEvent',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='binary', full_name='crit_event.proto.IsolateClientEvent.binary', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='operation', full_name='crit_event.proto.IsolateClientEvent.operation', index=1,
+      number=2, type=14, cpp_type=8, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='archive_details', full_name='crit_event.proto.IsolateClientEvent.archive_details', index=2,
+      number=3, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='master', full_name='crit_event.proto.IsolateClientEvent.master', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='builder', full_name='crit_event.proto.IsolateClientEvent.builder', index=4,
+      number=5, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='build_id', full_name='crit_event.proto.IsolateClientEvent.build_id', index=5,
+      number=6, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='slave', full_name='crit_event.proto.IsolateClientEvent.slave', index=6,
+      number=7, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=unicode("", "utf-8"),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='start_ts_usec', full_name='crit_event.proto.IsolateClientEvent.start_ts_usec', index=7,
+      number=8, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+    _descriptor.FieldDescriptor(
+      name='end_ts_usec', full_name='crit_event.proto.IsolateClientEvent.end_ts_usec', index=8,
+      number=9, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
+  ],
+  extensions=[
+  ],
+  nested_types=[_ISOLATECLIENTEVENT_ARCHIVEDETAILS, ],
+  enum_types=[
+    _ISOLATECLIENTEVENT_OPERATION,
+  ],
+  options=None,
+  is_extendable=False,
+  extension_ranges=[],
+  serialized_start=8372,
+  serialized_end=8930,
 )
 
 
@@ -2426,6 +2664,13 @@ _CHROMEINFRAEVENT = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
+    _descriptor.FieldDescriptor(
+      name='isolate_client_event', full_name='crit_event.proto.ChromeInfraEvent.isolate_client_event', index=12,
+      number=14, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None),
   ],
   extensions=[
   ],
@@ -2436,8 +2681,8 @@ _CHROMEINFRAEVENT = _descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=8218,
-  serialized_end=8894,
+  serialized_start=8933,
+  serialized_end=9677,
 )
 
 _CQEVENT_FAILUREREASON_FAILEDTRYJOB.fields_by_name['fail_type'].enum_type = _BUILDEVENT_FAILTYPE
@@ -2504,7 +2749,13 @@ _SWARMINGTASKEVENT.fields_by_name['request'].message_type = _SWARMINGTASKEVENT_T
 _SWARMINGTASKEVENT.fields_by_name['state'].enum_type = _SWARMINGTASKEVENT_STATE
 _SWARMINGTASKEVENT.fields_by_name['bot_dimensions'].message_type = _SWARMINGTASKEVENT_DIMENSIONS
 _SWARMINGTASKEVENT.fields_by_name['outputs_ref'].message_type = _SWARMINGTASKEVENT_FILESREF
+_SWARMINGTASKEVENT.fields_by_name['tags'].message_type = _SWARMINGTASKEVENT_TAGS
 _SWARMINGTASKEVENT_STATE.containing_type = _SWARMINGTASKEVENT;
+_ISOLATECLIENTEVENT_ARCHIVEDETAILS.containing_type = _ISOLATECLIENTEVENT;
+_ISOLATECLIENTEVENT.fields_by_name['binary'].message_type = _BINARY
+_ISOLATECLIENTEVENT.fields_by_name['operation'].enum_type = _ISOLATECLIENTEVENT_OPERATION
+_ISOLATECLIENTEVENT.fields_by_name['archive_details'].message_type = _ISOLATECLIENTEVENT_ARCHIVEDETAILS
+_ISOLATECLIENTEVENT_OPERATION.containing_type = _ISOLATECLIENTEVENT;
 _CHROMEINFRAEVENT.fields_by_name['timestamp_kind'].enum_type = _CHROMEINFRAEVENT_TIMESTAMPKIND
 _CHROMEINFRAEVENT.fields_by_name['event_source'].message_type = _INFRAEVENTSOURCE
 _CHROMEINFRAEVENT.fields_by_name['service_event'].message_type = _SERVICEEVENT
@@ -2514,6 +2765,7 @@ _CHROMEINFRAEVENT.fields_by_name['test_results'].message_type = _TESTRESULTSEVEN
 _CHROMEINFRAEVENT.fields_by_name['machine_provider_event'].message_type = _MACHINEPROVIDEREVENT
 _CHROMEINFRAEVENT.fields_by_name['analyze_event'].message_type = _ANALYZEEVENT
 _CHROMEINFRAEVENT.fields_by_name['swarming_task_event'].message_type = _SWARMINGTASKEVENT
+_CHROMEINFRAEVENT.fields_by_name['isolate_client_event'].message_type = _ISOLATECLIENTEVENT
 _CHROMEINFRAEVENT_TIMESTAMPKIND.containing_type = _CHROMEINFRAEVENT;
 DESCRIPTOR.message_types_by_name['CQEvent'] = _CQEVENT
 DESCRIPTOR.message_types_by_name['CodeVersion'] = _CODEVERSION
@@ -2524,6 +2776,8 @@ DESCRIPTOR.message_types_by_name['TestResultsEvent'] = _TESTRESULTSEVENT
 DESCRIPTOR.message_types_by_name['MachineProviderEvent'] = _MACHINEPROVIDEREVENT
 DESCRIPTOR.message_types_by_name['AnalyzeEvent'] = _ANALYZEEVENT
 DESCRIPTOR.message_types_by_name['SwarmingTaskEvent'] = _SWARMINGTASKEVENT
+DESCRIPTOR.message_types_by_name['Binary'] = _BINARY
+DESCRIPTOR.message_types_by_name['IsolateClientEvent'] = _ISOLATECLIENTEVENT
 DESCRIPTOR.message_types_by_name['ChromeInfraEvent'] = _CHROMEINFRAEVENT
 
 class CQEvent(_message.Message):
@@ -2645,6 +2899,24 @@ class SwarmingTaskEvent(_message.Message):
   DESCRIPTOR = _SWARMINGTASKEVENT
 
   # @@protoc_insertion_point(class_scope:crit_event.proto.SwarmingTaskEvent)
+
+class Binary(_message.Message):
+  __metaclass__ = _reflection.GeneratedProtocolMessageType
+  DESCRIPTOR = _BINARY
+
+  # @@protoc_insertion_point(class_scope:crit_event.proto.Binary)
+
+class IsolateClientEvent(_message.Message):
+  __metaclass__ = _reflection.GeneratedProtocolMessageType
+
+  class ArchiveDetails(_message.Message):
+    __metaclass__ = _reflection.GeneratedProtocolMessageType
+    DESCRIPTOR = _ISOLATECLIENTEVENT_ARCHIVEDETAILS
+
+    # @@protoc_insertion_point(class_scope:crit_event.proto.IsolateClientEvent.ArchiveDetails)
+  DESCRIPTOR = _ISOLATECLIENTEVENT
+
+  # @@protoc_insertion_point(class_scope:crit_event.proto.IsolateClientEvent)
 
 class ChromeInfraEvent(_message.Message):
   __metaclass__ = _reflection.GeneratedProtocolMessageType

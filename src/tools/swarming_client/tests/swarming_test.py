@@ -90,6 +90,7 @@ def gen_request_data(properties=None, **kwargs):
     'parent_task_id': '',
     'priority': 101,
     'properties': {
+      'caches': [],
       'cipd_input': None,
       'command': None,
       'dimensions': [
@@ -312,6 +313,7 @@ class TestSwarmingTrigger(NetTestCase):
         parent_task_id=None,
         priority=101,
         properties=swarming.TaskProperties(
+            caches=[],
             cipd_input=None,
             command=['a', 'b'],
             dimensions={'foo': 'bar', 'os': 'Mac'},
@@ -382,6 +384,7 @@ class TestSwarmingTrigger(NetTestCase):
         parent_task_id='123',
         priority=101,
         properties=swarming.TaskProperties(
+            caches=[],
             cipd_input=None,
             command=['a', 'b'],
             dimensions={'foo': 'bar', 'os': 'Mac'},
@@ -437,6 +440,7 @@ class TestSwarmingTrigger(NetTestCase):
         parent_task_id='123',
         priority=101,
         properties=swarming.TaskProperties(
+            caches=[],
             cipd_input=swarming.CipdInput(
                 client_package=None,
                 packages=[
@@ -843,6 +847,7 @@ class TestMain(NetTestCase):
       'parent_task_id': '',
       'priority': 100,
       'properties': {
+        'caches': [],
         'cipd_input': None,
         'command': ['python', '-c', 'print(\'hi\')'],
         'dimensions': [
@@ -898,6 +903,7 @@ class TestMain(NetTestCase):
       'parent_task_id': '',
       'priority': 100,
       'properties': {
+        'caches': [],
         'cipd_input': None,
         'command': ['python', '-c', 'print(\'hi\')'],
         'dimensions': [
@@ -1084,6 +1090,7 @@ class TestMain(NetTestCase):
             'parent_task_id': '',
             'priority': 101,
             'properties': {
+              'caches': [],
               'cipd_input': None,
               'command': None,
               'dimensions': [

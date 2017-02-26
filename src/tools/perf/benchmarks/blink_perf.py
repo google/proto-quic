@@ -193,7 +193,6 @@ class BlinkPerfDOM(_BlinkPerfBenchmark):
   subdir = 'DOM'
 
 
-@benchmark.Disabled('win')  # http://crbug.com/588819
 class BlinkPerfEvents(_BlinkPerfBenchmark):
   tag = 'events'
   subdir = 'Events'

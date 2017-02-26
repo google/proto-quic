@@ -136,7 +136,7 @@ class TestNetworkStreamThrottler : public NetworkThrottleManager {
 
   void UnthrottleAllRequests() {
     std::set<TestThrottle*> outstanding_throttles_copy(outstanding_throttles_);
-    for (auto& throttle : outstanding_throttles_copy) {
+    for (auto* throttle : outstanding_throttles_copy) {
       if (throttle->IsBlocked())
         throttle->Unthrottle();
     }
@@ -14904,7 +14904,7 @@ class FakeStreamRequest : public HttpStreamRequest,
     return weak_stream;
   }
 
-  int RestartTunnelWithProxyAuth(const AuthCredentials& credentials) override {
+  int RestartTunnelWithProxyAuth() override {
     ADD_FAILURE();
     return ERR_UNEXPECTED;
   }

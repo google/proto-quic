@@ -31,6 +31,17 @@ ClientSocketHandle::~ClientSocketHandle() {
   Reset();
 }
 
+void ClientSocketHandle::SetPriority(RequestPriority priority) {
+  if (socket_) {
+    // The priority of the handle is no longer relevant to the socket pool;
+    // just return.
+    return;
+  }
+
+  if (pool_)
+    pool_->SetPriority(group_name_, this, priority);
+}
+
 void ClientSocketHandle::Reset() {
   ResetInternal(true);
   ResetErrorState();

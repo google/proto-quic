@@ -35,17 +35,20 @@ namespace {
 
 using allocator::AllocatorDispatch;
 
-void* HookAlloc(const AllocatorDispatch* self, size_t size) {
+void* HookAlloc(const AllocatorDispatch* self, size_t size, void* context) {
   const AllocatorDispatch* const next = self->next;
-  void* ptr = next->alloc_function(next, size);
+  void* ptr = next->alloc_function(next, size, context);
   if (ptr)
     MallocDumpProvider::GetInstance()->InsertAllocation(ptr, size);
   return ptr;
 }
 
-void* HookZeroInitAlloc(const AllocatorDispatch* self, size_t n, size_t size) {
+void* HookZeroInitAlloc(const AllocatorDispatch* self,
+                        size_t n,
+                        size_t size,
+                        void* context) {
   const AllocatorDispatch* const next = self->next;
-  void* ptr = next->alloc_zero_initialized_function(next, n, size);
+  void* ptr = next->alloc_zero_initialized_function(next, n, size, context);
   if (ptr)
     MallocDumpProvider::GetInstance()->InsertAllocation(ptr, n * size);
   return ptr;
@@ -53,42 +56,49 @@ void* HookZeroInitAlloc(const AllocatorDispatch* self, size_t n, size_t size) {
 
 void* HookllocAligned(const AllocatorDispatch* self,
                       size_t alignment,
-                      size_t size) {
+                      size_t size,
+                      void* context) {
   const AllocatorDispatch* const next = self->next;
-  void* ptr = next->alloc_aligned_function(next, alignment, size);
+  void* ptr = next->alloc_aligned_function(next, alignment, size, context);
   if (ptr)
     MallocDumpProvider::GetInstance()->InsertAllocation(ptr, size);
   return ptr;
 }
 
-void* HookRealloc(const AllocatorDispatch* self, void* address, size_t size) {
+void* HookRealloc(const AllocatorDispatch* self,
+                  void* address,
+                  size_t size,
+                  void* context) {
   const AllocatorDispatch* const next = self->next;
-  void* ptr = next->realloc_function(next, address, size);
+  void* ptr = next->realloc_function(next, address, size, context);
   MallocDumpProvider::GetInstance()->RemoveAllocation(address);
   if (size > 0)  // realloc(size == 0) means free().
     MallocDumpProvider::GetInstance()->InsertAllocation(ptr, size);
   return ptr;
 }
 
-void HookFree(const AllocatorDispatch* self, void* address) {
+void HookFree(const AllocatorDispatch* self, void* address, void* context) {
   if (address)
     MallocDumpProvider::GetInstance()->RemoveAllocation(address);
   const AllocatorDispatch* const next = self->next;
-  next->free_function(next, address);
+  next->free_function(next, address, context);
 }
 
-size_t HookGetSizeEstimate(const AllocatorDispatch* self, void* address) {
+size_t HookGetSizeEstimate(const AllocatorDispatch* self,
+                           void* address,
+                           void* context) {
   const AllocatorDispatch* const next = self->next;
-  return next->get_size_estimate_function(next, address);
+  return next->get_size_estimate_function(next, address, context);
 }
 
 unsigned HookBatchMalloc(const AllocatorDispatch* self,
                          size_t size,
                          void** results,
-                         unsigned num_requested) {
+                         unsigned num_requested,
+                         void* context) {
   const AllocatorDispatch* const next = self->next;
   unsigned count =
-      next->batch_malloc_function(next, size, results, num_requested);
+      next->batch_malloc_function(next, size, results, num_requested, context);
   for (unsigned i = 0; i < count; ++i) {
     MallocDumpProvider::GetInstance()->InsertAllocation(results[i], size);
   }
@@ -97,21 +107,23 @@ unsigned HookBatchMalloc(const AllocatorDispatch* self,
 
 void HookBatchFree(const AllocatorDispatch* self,
                    void** to_be_freed,
-                   unsigned num_to_be_freed) {
+                   unsigned num_to_be_freed,
+                   void* context) {
   const AllocatorDispatch* const next = self->next;
   for (unsigned i = 0; i < num_to_be_freed; ++i) {
     MallocDumpProvider::GetInstance()->RemoveAllocation(to_be_freed[i]);
   }
-  next->batch_free_function(next, to_be_freed, num_to_be_freed);
+  next->batch_free_function(next, to_be_freed, num_to_be_freed, context);
 }
 
 void HookFreeDefiniteSize(const AllocatorDispatch* self,
                           void* ptr,
-                          size_t size) {
+                          size_t size,
+                          void* context) {
   if (ptr)
     MallocDumpProvider::GetInstance()->RemoveAllocation(ptr);
   const AllocatorDispatch* const next = self->next;
-  next->free_definite_size_function(next, ptr, size);
+  next->free_definite_size_function(next, ptr, size, context);
 }
 
 AllocatorDispatch g_allocator_hooks = {

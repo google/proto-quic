@@ -863,6 +863,7 @@ class SettingGetterImplKDE : public ProxyConfigServiceLinux::SettingGetter,
  public:
   explicit SettingGetterImplKDE(base::Environment* env_var_getter)
       : inotify_fd_(-1),
+        inotify_watcher_(FROM_HERE),
         notify_delegate_(nullptr),
         debounce_timer_(new base::OneShotTimer()),
         indirect_manual_(false),

@@ -124,23 +124,6 @@ TEST_F(QuicMultipathReceivedPacketManagerTest, IsAwaitingPacket) {
       "Check whether a packet is awaited on a non-existent path");
 }
 
-TEST_F(QuicMultipathReceivedPacketManagerTest,
-       UpdatePacketInformationSentByPeer) {
-  std::vector<QuicStopWaitingFrame> stop_waitings;
-  QuicStopWaitingFrame stop_waiting_0;
-  QuicStopWaitingFrame stop_waiting_1;
-  QuicStopWaitingFrame stop_waiting_2;
-  stop_waiting_0.path_id = kDefaultPathId;
-  stop_waiting_1.path_id = kPathId1;
-  stop_waiting_2.path_id = kPathId2;
-  stop_waitings.push_back(stop_waiting_0);
-  stop_waitings.push_back(stop_waiting_1);
-  stop_waitings.push_back(stop_waiting_2);
-  EXPECT_CALL(*manager_0_, UpdatePacketInformationSentByPeer(_)).Times(1);
-  EXPECT_CALL(*manager_1_, UpdatePacketInformationSentByPeer(_)).Times(1);
-  multipath_manager_.UpdatePacketInformationSentByPeer(stop_waitings);
-}
-
 TEST_F(QuicMultipathReceivedPacketManagerTest, HasNewMissingPackets) {
   EXPECT_CALL(*manager_0_, HasNewMissingPackets()).WillOnce(Return(true));
   EXPECT_CALL(*manager_1_, HasNewMissingPackets()).WillOnce(Return(false));

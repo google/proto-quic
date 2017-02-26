@@ -775,6 +775,9 @@ void HttpServerPropertiesManager::UpdateCacheFromPrefsOnNetworkThread(
 
   http_server_properties_impl_->SetServerNetworkStats(server_network_stats_map);
 
+  UMA_HISTOGRAM_COUNTS_1000("Net.CountOfQuicServerInfos",
+                            quic_server_info_map->size());
+
   http_server_properties_impl_->SetQuicServerInfoMap(quic_server_info_map);
 
   // Update the prefs with what we have read (delete all corrupted prefs).

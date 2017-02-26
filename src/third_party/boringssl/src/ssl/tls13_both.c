@@ -102,7 +102,7 @@ int tls13_handshake(SSL_HANDSHAKE *hs) {
 }
 
 int tls13_get_cert_verify_signature_input(
-    SSL *ssl, uint8_t **out, size_t *out_len,
+    SSL_HANDSHAKE *hs, uint8_t **out, size_t *out_len,
     enum ssl_cert_verify_context_t cert_verify_context) {
   CBB cbb;
   if (!CBB_init(&cbb, 64 + 33 + 1 + 2 * EVP_MAX_MD_SIZE)) {
@@ -140,7 +140,8 @@ int tls13_get_cert_verify_signature_input(
 
   uint8_t context_hash[EVP_MAX_MD_SIZE];
   size_t context_hash_len;
-  if (!tls13_get_context_hash(ssl, context_hash, &context_hash_len) ||
+  if (!SSL_TRANSCRIPT_get_hash(&hs->transcript, context_hash,
+                               &context_hash_len) ||
       !CBB_add_bytes(&cbb, context_hash, context_hash_len) ||
       !CBB_finish(&cbb, out, out_len)) {
     goto err;
@@ -232,7 +233,7 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, int allow_anonymous) {
         {TLSEXT_TYPE_certificate_timestamp, &have_sct, &sct},
     };
 
-    uint8_t alert;
+    uint8_t alert = SSL_AD_DECODE_ERROR;
     if (!ssl_parse_extensions(&extensions, &alert, ext_types,
                               OPENSSL_ARRAY_SIZE(ext_types),
                               0 /* reject unknown */)) {
@@ -306,7 +307,7 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, int allow_anonymous) {
   ssl->s3->new_session->certs = certs;
   certs = NULL;
 
-  if (!ssl_session_x509_cache_objects(ssl->s3->new_session)) {
+  if (!ssl->ctx->x509_method->session_cache_objects(ssl->s3->new_session)) {
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
     goto err;
@@ -372,7 +373,7 @@ int tls13_process_certificate_verify(SSL_HANDSHAKE *hs) {
   ssl->s3->new_session->peer_signature_algorithm = signature_algorithm;
 
   if (!tls13_get_cert_verify_signature_input(
-          ssl, &msg, &msg_len,
+          hs, &msg, &msg_len,
           ssl->server ? ssl_cert_verify_client : ssl_cert_verify_server)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
     goto err;
@@ -451,13 +452,14 @@ int tls13_add_certificate(SSL_HANDSHAKE *hs) {
     goto err;
   }
 
-  if (hs->scts_requested && ssl->signed_cert_timestamp_list != NULL) {
+  if (hs->scts_requested && ssl->cert->signed_cert_timestamp_list != NULL) {
     CBB contents;
     if (!CBB_add_u16(&extensions, TLSEXT_TYPE_certificate_timestamp) ||
         !CBB_add_u16_length_prefixed(&extensions, &contents) ||
-        !CBB_add_bytes(&contents,
-                       CRYPTO_BUFFER_data(ssl->signed_cert_timestamp_list),
-                       CRYPTO_BUFFER_len(ssl->signed_cert_timestamp_list)) ||
+        !CBB_add_bytes(
+            &contents,
+            CRYPTO_BUFFER_data(ssl->cert->signed_cert_timestamp_list),
+            CRYPTO_BUFFER_len(ssl->cert->signed_cert_timestamp_list)) ||
         !CBB_flush(&extensions)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       goto err;
@@ -465,14 +467,15 @@ int tls13_add_certificate(SSL_HANDSHAKE *hs) {
   }
 
   if (hs->ocsp_stapling_requested &&
-      ssl->ocsp_response != NULL) {
+      ssl->cert->ocsp_response != NULL) {
     CBB contents, ocsp_response;
     if (!CBB_add_u16(&extensions, TLSEXT_TYPE_status_request) ||
         !CBB_add_u16_length_prefixed(&extensions, &contents) ||
         !CBB_add_u8(&contents, TLSEXT_STATUSTYPE_ocsp) ||
         !CBB_add_u24_length_prefixed(&contents, &ocsp_response) ||
-        !CBB_add_bytes(&ocsp_response, CRYPTO_BUFFER_data(ssl->ocsp_response),
-                       CRYPTO_BUFFER_len(ssl->ocsp_response)) ||
+        !CBB_add_bytes(&ocsp_response,
+                       CRYPTO_BUFFER_data(ssl->cert->ocsp_response),
+                       CRYPTO_BUFFER_len(ssl->cert->ocsp_response)) ||
         !CBB_flush(&extensions)) {
       OPENSSL_PUT_ERROR(SSL, ERR_R_INTERNAL_ERROR);
       goto err;
@@ -536,7 +539,7 @@ enum ssl_private_key_result_t tls13_add_certificate_verify(SSL_HANDSHAKE *hs,
   enum ssl_private_key_result_t sign_result;
   if (is_first_run) {
     if (!tls13_get_cert_verify_signature_input(
-            ssl, &msg, &msg_len,
+            hs, &msg, &msg_len,
             ssl->server ? ssl_cert_verify_server : ssl_cert_verify_client)) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
       goto err;

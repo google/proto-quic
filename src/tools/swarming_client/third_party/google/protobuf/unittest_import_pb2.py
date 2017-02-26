@@ -24,7 +24,8 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_pb=_b('\n%google/protobuf/unittest_import.proto\x12\x18protobuf_unittest_import\x1a,google/protobuf/unittest_import_public.proto\"\x1a\n\rImportMessage\x12\t\n\x01\x64\x18\x01 \x01(\x05*<\n\nImportEnum\x12\x0e\n\nIMPORT_FOO\x10\x07\x12\x0e\n\nIMPORT_BAR\x10\x08\x12\x0e\n\nIMPORT_BAZ\x10\t*1\n\x10ImportEnumForMap\x12\x0b\n\x07UNKNOWN\x10\x00\x12\x07\n\x03\x46OO\x10\x01\x12\x07\n\x03\x42\x41R\x10\x02\x42\x1f\n\x18\x63om.google.protobuf.testH\x01\xf8\x01\x01P\x00')
   ,
-  dependencies=[google_dot_protobuf_dot_unittest__import__public__pb2.DESCRIPTOR,])
+  dependencies=[google_dot_protobuf_dot_unittest__import__public__pb2.DESCRIPTOR,],
+  public_dependencies=[google_dot_protobuf_dot_unittest__import__public__pb2.DESCRIPTOR,])
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 _IMPORTENUM = _descriptor.EnumDescriptor(

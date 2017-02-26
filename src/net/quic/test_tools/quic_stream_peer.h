@@ -27,12 +27,7 @@ class QuicStreamPeer {
   static void CloseReadSide(QuicStream* stream);
 
   static bool FinSent(QuicStream* stream);
-  static bool FinReceived(QuicStream* stream);
   static bool RstSent(QuicStream* stream);
-  static bool RstReceived(QuicStream* stream);
-
-  static bool ReadSideClosed(QuicStream* stream);
-  static bool WriteSideClosed(QuicStream* stream);
 
   static uint32_t SizeOfQueuedData(QuicStream* stream);
 

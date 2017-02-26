@@ -215,6 +215,10 @@ class NET_EXPORT_PRIVATE SSLClientSocketPool
                       int num_sockets,
                       const NetLogWithSource& net_log) override;
 
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) override;
+
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
 

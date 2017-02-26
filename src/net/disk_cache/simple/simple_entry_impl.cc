@@ -20,6 +20,7 @@
 #include "base/task_runner_util.h"
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/net_log_parameters.h"
@@ -148,6 +149,13 @@ using base::Closure;
 using base::FilePath;
 using base::Time;
 using base::TaskRunner;
+
+// Static function called by base::trace_event::EstimateMemoryUsage() to
+// estimate the memory of SimpleEntryOperation.
+// This needs to be in disk_cache namespace.
+size_t EstimateMemoryUsage(const SimpleEntryOperation& op) {
+  return 0;
+}
 
 // A helper class to insure that RunNextOperationIfNeeded() is called when
 // exiting the current stack frame.
@@ -541,6 +549,15 @@ int SimpleEntryImpl::ReadyForSparseIO(const CompletionCallback& callback) {
   // entry, so there's no need to coordinate which object is performing sparse
   // I/O.  Therefore, CancelSparseIO and ReadyForSparseIO succeed instantly.
   return net::OK;
+}
+
+size_t SimpleEntryImpl::EstimateMemoryUsage() const {
+  // TODO(xunjieli): crbug.com/669108. It'd be nice to have the rest of |entry|
+  // measured, but the ownership of SimpleSynchronousEntry isn't straightforward
+  return sizeof(SimpleSynchronousEntry) +
+         base::trace_event::EstimateMemoryUsage(pending_operations_) +
+         base::trace_event::EstimateMemoryUsage(executing_operation_) +
+         (stream_0_data_ ? stream_0_data_->capacity() : 0);
 }
 
 SimpleEntryImpl::~SimpleEntryImpl() {

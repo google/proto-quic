@@ -365,6 +365,19 @@ CRYPTO_BUFFER_POOL* GetBufferPool() {
   return g_buffer_pool_singleton.Get().pool();
 }
 
+bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(const uint8_t* data,
+                                                  size_t length) {
+  return bssl::UniquePtr<CRYPTO_BUFFER>(
+      CRYPTO_BUFFER_new(data, length, GetBufferPool()));
+}
+
+bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
+    const base::StringPiece& data) {
+  return bssl::UniquePtr<CRYPTO_BUFFER>(
+      CRYPTO_BUFFER_new(reinterpret_cast<const uint8_t*>(data.data()),
+                        data.size(), GetBufferPool()));
+}
+
 }  // namespace x509_util
 
 }  // namespace net

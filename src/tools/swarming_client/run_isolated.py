@@ -32,6 +32,7 @@ __version__ = '0.9'
 import argparse
 import base64
 import collections
+import contextlib
 import json
 import logging
 import optparse
@@ -117,6 +118,7 @@ def get_as_zip_package(executable=True):
   assert BASE_DIR
   package = zip_package.ZipPackage(root=BASE_DIR)
   package.add_python_file(THIS_FILE_PATH, '__main__.py' if executable else None)
+  package.add_python_file(os.path.join(BASE_DIR, 'isolate_storage.py'))
   package.add_python_file(os.path.join(BASE_DIR, 'isolated_format.py'))
   package.add_python_file(os.path.join(BASE_DIR, 'isolateserver.py'))
   package.add_python_file(os.path.join(BASE_DIR, 'auth.py'))
@@ -194,7 +196,35 @@ def process_command(command, out_dir, bot_file):
   return [fix(arg) for arg in command]
 
 
-def run_command(command, cwd, tmp_dir, hard_timeout, grace_period):
+def get_command_env(tmp_dir, cipd_info):
+  """Returns full OS environment to run a command in.
+
+  Sets up TEMP, puts directory with cipd binary in front of PATH, and exposes
+  CIPD_CACHE_DIR env var.
+
+  Args:
+    tmp_dir: temp directory.
+    cipd_info: CipdInfo object is cipd client is used, None if not.
+  """
+  def to_fs_enc(s):
+    if isinstance(s, str):
+      return s
+    return s.encode(sys.getfilesystemencoding())
+
+  env = os.environ.copy()
+
+  key = {'darwin': 'TMPDIR', 'win32': 'TEMP'}.get(sys.platform, 'TMP')
+  env[key] = to_fs_enc(tmp_dir)
+
+  if cipd_info:
+    bin_dir = os.path.dirname(cipd_info.client.binary_path)
+    env['PATH'] = '%s%s%s' % (to_fs_enc(bin_dir), os.pathsep, env['PATH'])
+    env['CIPD_CACHE_DIR'] = to_fs_enc(cipd_info.cache_dir)
+
+  return env
+
+
+def run_command(command, cwd, env, hard_timeout, grace_period):
   """Runs the command.
 
   Returns:
@@ -202,13 +232,6 @@ def run_command(command, cwd, tmp_dir, hard_timeout, grace_period):
   """
   logging.info('run_command(%s, %s)' % (command, cwd))
 
-  env = os.environ.copy()
-  if sys.platform == 'darwin':
-    env['TMPDIR'] = tmp_dir.encode(sys.getfilesystemencoding())
-  elif sys.platform == 'win32':
-    env['TEMP'] = tmp_dir.encode(sys.getfilesystemencoding())
-  else:
-    env['TMP'] = tmp_dir.encode(sys.getfilesystemencoding())
   exit_code = None
   had_hard_timeout = False
   with tools.Profiler('RunTest'):
@@ -306,8 +329,7 @@ def link_outputs_to_outdir(run_dir, out_dir, outputs):
           os.path.join(run_dir, o),
           file_path.HARDLINK_WITH_FALLBACK)
     except OSError as e:
-      # TODO(aludwin): surface this error
-      sys.stderr.write('<Could not return file %s: %s>' % (o, e))
+      logging.info("Couldn't collect output file %s: %s", o, e)
 
 
 def delete_and_upload(storage, out_dir, leak_temp_dir):
@@ -371,7 +393,7 @@ def delete_and_upload(storage, out_dir, leak_temp_dir):
 
 
 def map_and_run(
-    command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
+    command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
     leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file, extra_args,
     install_packages_fn, use_symlinks):
   """Runs a command with optional isolated input/output.
@@ -431,52 +453,52 @@ def map_and_run(
   cwd = run_dir
 
   try:
-    cipd_info = install_packages_fn(run_dir)
-    if cipd_info:
-      result['stats']['cipd'] = cipd_info['stats']
-      result['cipd_pins'] = cipd_info['cipd_pins']
+    with install_packages_fn(run_dir) as cipd_info:
+      if cipd_info:
+        result['stats']['cipd'] = cipd_info.stats
+        result['cipd_pins'] = cipd_info.pins
 
-    if isolated_hash:
-      isolated_stats = result['stats'].setdefault('isolated', {})
-      bundle, isolated_stats['download'] = fetch_and_map(
-          isolated_hash=isolated_hash,
-          storage=storage,
-          cache=isolate_cache,
-          outdir=run_dir,
-          use_symlinks=use_symlinks)
-      if not bundle.command:
-        # Handle this as a task failure, not an internal failure.
-        sys.stderr.write(
-            '<The .isolated doesn\'t declare any command to run!>\n'
-            '<Check your .isolate for missing \'command\' variable>\n')
-        if os.environ.get('SWARMING_TASK_ID'):
-          # Give an additional hint when running as a swarming task.
-          sys.stderr.write('<This occurs at the \'isolate\' step>\n')
-        result['exit_code'] = 1
-        return result
+      if isolated_hash:
+        isolated_stats = result['stats'].setdefault('isolated', {})
+        bundle, isolated_stats['download'] = fetch_and_map(
+            isolated_hash=isolated_hash,
+            storage=storage,
+            cache=isolate_cache,
+            outdir=run_dir,
+            use_symlinks=use_symlinks)
+        if not bundle.command:
+          # Handle this as a task failure, not an internal failure.
+          sys.stderr.write(
+              '<The .isolated doesn\'t declare any command to run!>\n'
+              '<Check your .isolate for missing \'command\' variable>\n')
+          if os.environ.get('SWARMING_TASK_ID'):
+            # Give an additional hint when running as a swarming task.
+            sys.stderr.write('<This occurs at the \'isolate\' step>\n')
+          result['exit_code'] = 1
+          return result
 
-      change_tree_read_only(run_dir, bundle.read_only)
-      cwd = os.path.normpath(os.path.join(cwd, bundle.relative_cwd))
-      command = bundle.command + extra_args
+        change_tree_read_only(run_dir, bundle.read_only)
+        cwd = os.path.normpath(os.path.join(cwd, bundle.relative_cwd))
+        command = bundle.command + extra_args
 
-    # If we have an explicit list of files to return, make sure their
-    # directories exist now.
-    if storage and outputs:
-      isolateserver.create_directories(run_dir, outputs)
+      # If we have an explicit list of files to return, make sure their
+      # directories exist now.
+      if storage and outputs:
+        isolateserver.create_directories(run_dir, outputs)
 
-    command = tools.fix_python_path(command)
-    command = process_command(command, out_dir, bot_file)
-    file_path.ensure_command_has_abs_path(command, cwd)
+      command = tools.fix_python_path(command)
+      command = process_command(command, out_dir, bot_file)
+      file_path.ensure_command_has_abs_path(command, cwd)
 
-    init_name_caches(run_dir)
-
-    sys.stdout.flush()
-    start = time.time()
-    try:
-      result['exit_code'], result['had_hard_timeout'] = run_command(
-          command, cwd, tmp_dir, hard_timeout, grace_period)
-    finally:
-      result['duration'] = max(time.time() - start, 0)
+      with init_named_caches(run_dir):
+        sys.stdout.flush()
+        start = time.time()
+        try:
+          result['exit_code'], result['had_hard_timeout'] = run_command(
+              command, cwd, get_command_env(tmp_dir, cipd_info),
+              hard_timeout, grace_period)
+        finally:
+          result['duration'] = max(time.time() - start, 0)
   except Exception as e:
     # An internal error occurred. Report accordingly so the swarming task will
     # be retried automatically.
@@ -547,7 +569,7 @@ def map_and_run(
 
 
 def run_tha_test(
-    command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
+    command, isolated_hash, storage, isolate_cache, outputs, init_named_caches,
     leak_temp_dir, result_json, root_dir, hard_timeout, grace_period, bot_file,
     extra_args, install_packages_fn, use_symlinks):
   """Runs an executable and records execution metadata.
@@ -575,8 +597,8 @@ def run_tha_test(
     isolate_cache: an isolateserver.LocalCache to keep from retrieving the
                    same objects constantly by caching the objects retrieved.
                    Can be on-disk or in-memory.
-    init_name_caches: a function (run_dir) => void that creates symlinks for
-                      named caches in |run_dir|.
+    init_named_caches: a function (run_dir) => context manager that creates
+                      symlinks for named caches in |run_dir|.
     leak_temp_dir: if true, the temporary directory will be deliberately leaked
                    for later examination.
     result_json: file path to dump result metadata into. If set, the process
@@ -588,8 +610,7 @@ def run_tha_test(
     grace_period: number of seconds to wait between SIGTERM and SIGKILL.
     extra_args: optional arguments to add to the command stated in the .isolate
                 file. Ignored if isolate_hash is empty.
-    install_packages_fn: function (dir) => {"stats": cipd_stats, "pins":
-                         cipd_pins}. Installs packages.
+    install_packages_fn: context manager dir => CipdInfo, see install_packages.
     use_symlinks: create tree with symlinks instead of hardlinks.
 
   Returns:
@@ -614,9 +635,9 @@ def run_tha_test(
 
   # run_isolated exit code. Depends on if result_json is used or not.
   result = map_and_run(
-      command, isolated_hash, storage, isolate_cache, outputs, init_name_caches,
-      leak_temp_dir, root_dir, hard_timeout, grace_period, bot_file, extra_args,
-      install_packages_fn, use_symlinks)
+      command, isolated_hash, storage, isolate_cache, outputs,
+      init_named_caches, leak_temp_dir, root_dir, hard_timeout, grace_period,
+      bot_file, extra_args, install_packages_fn, use_symlinks)
   logging.info('Result:\n%s', tools.format_json(result, dense=True))
 
   if result_json:
@@ -642,27 +663,51 @@ def run_tha_test(
   return result['exit_code'] or int(bool(result['internal_failure']))
 
 
+# Yielded by 'install_packages'.
+CipdInfo = collections.namedtuple('CipdInfo', [
+  'client',     # cipd.CipdClient object
+  'cache_dir',  # absolute path to bot-global cipd tag and instance cache
+  'stats',      # dict with stats to return to the server
+  'pins',       # dict with installed cipd pins to return to the server
+])
+
+
+@contextlib.contextmanager
+def noop_install_packages(_run_dir):
+  """Placeholder for 'install_packages' if cipd is disabled."""
+  yield None
+
+
+@contextlib.contextmanager
 def install_packages(
     run_dir, packages, service_url, client_package_name,
-    client_version, cache_dir=None, timeout=None):
-  """Installs packages. Returns stats, cipd client info and pins.
+    client_version, cache_dir, timeout=None):
+  """Bootstraps CIPD client and installs CIPD packages.
 
-  pins and the cipd client info are in the form of:
+  Yields CipdClient, stats, client info and pins (as single CipdInfo object).
+
+  Pins and the CIPD client info are in the form of:
     [
       {
         "path": path, "package_name": package_name, "version": version,
       },
       ...
     ]
-  (the cipd client info is a single dictionary instead of a list)
+  (the CIPD client info is a single dictionary instead of a list)
 
   such that they correspond 1:1 to all input package arguments from the command
   line. These dictionaries make their all the way back to swarming, where they
   become the arguments of CipdPackage.
 
+  If 'packages' list is empty, will bootstrap CIPD client, but won't install
+  any packages.
+
+  The bootstrapped client (regardless whether 'packages' list is empty or not),
+  will be made available to the task via $PATH.
+
   Args:
     run_dir (str): root of installation.
-    packages: packages to install, list [(path, package_name, version), ...]
+    packages: packages to install, list [(path, package_name, version), ...].
     service_url (str): CIPD server url, e.g.
       "https://chrome-infra-packages.appspot.com."
     client_package_name (str): CIPD package name of CIPD client.
@@ -671,14 +716,14 @@ def install_packages(
     timeout: max duration in seconds that this function can take.
   """
   assert cache_dir
-  if not packages:
-    return None
 
   timeoutfn = tools.sliding_timeout(timeout)
   start = time.time()
-  cache_dir = os.path.abspath(cache_dir)
 
+  cache_dir = os.path.abspath(cache_dir)
+  cipd_cache_dir = os.path.join(cache_dir, 'cache')  # tag and instance caches
   run_dir = os.path.abspath(run_dir)
+  packages = packages or []
 
   package_pins = [None]*len(packages)
   def insert_pin(path, name, version, idx):
@@ -715,28 +760,29 @@ def install_packages(
       file_path.ensure_tree(site_root, 0770)
       pins = client.ensure(
           site_root, [(name, vers) for name, vers, _ in pkgs],
-          cache_dir=os.path.join(cache_dir, 'cipd_internal'),
+          cache_dir=cipd_cache_dir,
           timeout=timeoutfn())
-      for i, pin in enumerate(pins):
+      for i, pin in enumerate(pins[""]):
         insert_pin(path, pin[0], pin[1], pkgs[i][2])
       file_path.make_tree_files_read_only(site_root)
 
-  total_duration = time.time() - start
-  logging.info(
-      'Installing CIPD client and packages took %d seconds', total_duration)
+    total_duration = time.time() - start
+    logging.info(
+        'Installing CIPD client and packages took %d seconds', total_duration)
 
-  assert None not in package_pins
+    assert None not in package_pins
 
-  return {
-    'stats': {
-      'duration': total_duration,
-      'get_client_duration': get_client_duration,
-    },
-    'cipd_pins': {
-      'client_package': client_package,
-      'packages': package_pins,
-    }
-  }
+    yield CipdInfo(
+      client=client,
+      cache_dir=cipd_cache_dir,
+      stats={
+        'duration': total_duration,
+        'get_client_duration': get_client_duration,
+      },
+      pins={
+        'client_package': client_package,
+        'packages': package_pins,
+      })
 
 
 def clean_caches(options, isolate_cache, named_cache_manager):
@@ -907,14 +953,24 @@ def main(args):
 
   cipd.validate_cipd_options(parser, options)
 
-  install_packages_fn = lambda run_dir: install_packages(
-      run_dir, cipd.parse_package_args(options.cipd_packages),
-      options.cipd_server, options.cipd_client_package,
-      options.cipd_client_version, cache_dir=options.cipd_cache)
+  install_packages_fn = noop_install_packages
+  if options.cipd_enabled:
+    install_packages_fn = lambda run_dir: install_packages(
+        run_dir, cipd.parse_package_args(options.cipd_packages),
+        options.cipd_server, options.cipd_client_package,
+        options.cipd_client_version, cache_dir=options.cipd_cache)
 
+  @contextlib.contextmanager
   def init_named_caches(run_dir):
+    # WARNING: this function depends on "options" variable defined in the outer
+    # function.
     with named_cache_manager.open():
       named_cache_manager.create_symlinks(run_dir, options.named_caches)
+    try:
+      yield
+    finally:
+      if not options.leak_temp_dir:
+        named_cache_manager.delete_symlinks(run_dir, options.named_caches)
 
   try:
     command = [] if options.isolated else args

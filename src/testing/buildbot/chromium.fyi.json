@@ -222,6 +222,29 @@
   "Android VR Tests": {
     "gtest_tests": [
       {
+        "args": [
+          "--shared-prefs-file=chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
+          "--additional-apk=third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
+        ],
+        "name": "nonddready-cardboard-current_chrome_public_test_vr_apk",
+        "override_compile_targets": [
+          "chrome_public_test_vr_apk"
+        ],
+        "override_isolate_target": "chrome_public_test_vr_apk",
+        "swarming": {
+          "can_use_on_swarming_builders": true,
+          "dimension_sets": [
+            {
+              "android_devices": "1",
+              "device_os": "NRD91N",
+              "device_type": "bullhead"
+            }
+          ],
+          "hard_timeout": 960
+        },
+        "test": "chrome_public_test_vr_apk"
+      },
+      {
         "swarming": {
           "can_use_on_swarming_builders": false
         },
@@ -230,6 +253,17 @@
     ],
     "instrumentation_tests": [
       {
+        "args": [
+          "--shared-prefs-file=chrome/android/shared_preference_files/test/vr_cardboard_skipdon_setupcomplete.json",
+          "--additional-apk=third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
+        ],
+        "test": "chrome_public_test_vr_apk"
+      },
+      {
+        "args": [
+          "--shared-prefs-file=chrome/android/shared_preference_files/test/vr_ddview_skipdon_setupcomplete.json",
+          "--additional-apk=third_party/gvr-android-sdk/test-apks/vr_services/vr_services_current.apk"
+        ],
         "test": "chrome_public_test_vr_apk"
       }
     ]
@@ -273,15 +307,6 @@
           "can_use_on_swarming_builders": true
         },
         "test": "unit_tests"
-      }
-    ],
-    "scripts": [
-      {
-        "args": [
-          "content_browsertests"
-        ],
-        "name": "count_filtered_tests_content_browsertests",
-        "script": "count_filtered_tests.py"
       }
     ]
   },
@@ -10222,6 +10247,11 @@
       }
     ]
   },
+  "Linux Clang Analyzer": {
+    "additional_compile_targets": [
+      "all"
+    ]
+  },
   "Linux Trusty": {
     "gtest_tests": [
       {
@@ -11355,6 +11385,7 @@
     "gtest_tests": [
       {
         "args": [
+          "--override-use-software-gl-for-tests",
           "--test-launcher-filter-file=../../testing/buildbot/filters/mojo.fyi.browser_tests.filter"
         ],
         "hard_timeout": 60,

@@ -10,6 +10,7 @@
 #include "crypto/nss_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
+#include "net/cert/x509_util.h"
 
 namespace net {
 
@@ -40,7 +41,9 @@ void CertIssuerSourceNSS::SyncGetIssuersOf(const ParsedCertificate* cert,
        !CERT_LIST_END(node, found_certs); node = CERT_LIST_NEXT(node)) {
     CertErrors errors;
     scoped_refptr<ParsedCertificate> issuer_cert = ParsedCertificate::Create(
-        node->cert->derCert.data, node->cert->derCert.len, {}, &errors);
+        x509_util::CreateCryptoBuffer(node->cert->derCert.data,
+                                      node->cert->derCert.len),
+        {}, &errors);
     if (!issuer_cert) {
       // TODO(crbug.com/634443): return errors better.
       LOG(ERROR) << "Error parsing issuer certificate:\n"

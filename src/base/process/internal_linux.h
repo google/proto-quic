@@ -72,9 +72,12 @@ int64_t GetProcStatsFieldAsInt64(const std::vector<std::string>& proc_stats,
 size_t GetProcStatsFieldAsSizeT(const std::vector<std::string>& proc_stats,
                                 ProcStatsFields field_num);
 
-// Convenience wrapper around GetProcStatsFieldAsInt64(), ParseProcStats() and
+// Convenience wrappers around GetProcStatsFieldAsInt64(), ParseProcStats() and
 // ReadProcStats(). See GetProcStatsFieldAsInt64() for details.
+int64_t ReadStatsFilendGetFieldAsInt64(const FilePath& stat_file,
+                                       ProcStatsFields field_num);
 int64_t ReadProcStatsAndGetFieldAsInt64(pid_t pid, ProcStatsFields field_num);
+int64_t ReadProcSelfStatsAndGetFieldAsInt64(ProcStatsFields field_num);
 
 // Same as ReadProcStatsAndGetFieldAsInt64() but for size_t values.
 size_t ReadProcStatsAndGetFieldAsSizeT(pid_t pid,

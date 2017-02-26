@@ -98,6 +98,8 @@ if (symbol_level == -1) {
     # by visual studio (repeated in every .obj file) makes linker
     # memory consumption and link times unsustainable (crbug.com/630074).
     # Clang on windows does not have this issue.
+    # If you use is_win_fastlink = true then you can set symbol_level = 2 when
+    # using goma.
     symbol_level = 1
   } else if ((!is_nacl && !is_linux) || is_debug || is_official_build ||
              is_chromecast) {
@@ -110,6 +112,12 @@ if (symbol_level == -1) {
     symbol_level = 1
   } else {
     symbol_level = 0
+  }
+} else if (symbol_level == 2) {
+  if (is_win) {
+    # See crbug.com/630074
+    assert(is_win_fastlink || !use_goma,
+           "Goma builds that use symbol_level 2 must use is_win_fastlink.")
   }
 }
 

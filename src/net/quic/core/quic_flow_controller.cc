@@ -54,8 +54,8 @@ QuicFlowController::QuicFlowController(
 
 void QuicFlowController::AddBytesConsumed(QuicByteCount bytes_consumed) {
   bytes_consumed_ += bytes_consumed;
-  QUIC_DVLOG(1) << ENDPOINT << "Stream " << id_
-                << " consumed: " << bytes_consumed_;
+  QUIC_DVLOG(1) << ENDPOINT << "Stream " << id_ << " consumed "
+                << bytes_consumed_ << " bytes.";
 
   MaybeSendWindowUpdate();
 }
@@ -68,7 +68,7 @@ bool QuicFlowController::UpdateHighestReceivedOffset(
   }
 
   QUIC_DVLOG(1) << ENDPOINT << "Stream " << id_
-                << " highest byte offset increased from: "
+                << " highest byte offset increased from "
                 << highest_received_byte_offset_ << " to " << new_offset;
   highest_received_byte_offset_ = new_offset;
   return true;
@@ -91,7 +91,8 @@ void QuicFlowController::AddBytesSent(QuicByteCount bytes_sent) {
   }
 
   bytes_sent_ += bytes_sent;
-  QUIC_DVLOG(1) << ENDPOINT << "Stream " << id_ << " sent: " << bytes_sent_;
+  QUIC_DVLOG(1) << ENDPOINT << "Stream " << id_ << " sent " << bytes_sent_
+                << " bytes.";
 }
 
 bool QuicFlowController::FlowControlViolation() {

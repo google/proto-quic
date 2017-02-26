@@ -12,7 +12,8 @@
         "browse:media:youtube": {
             "DEFAULT": "system_health_desktop_026.wpr",
             "linux": "system_health_desktop_026.wpr",
-            "mac": "system_health_desktop_040.wpr"
+            "mac": "system_health_desktop_040.wpr",
+            "win": "system_health_desktop_047.wpr"
         },
         "browse:news:cnn": {
             "DEFAULT": "system_health_desktop_013.wpr"
@@ -74,7 +75,8 @@
         "load:media:youtube": {
             "DEFAULT": "system_health_desktop_003.wpr",
             "linux": "system_health_desktop_003.wpr",
-            "mac": "system_health_desktop_040.wpr"
+            "mac": "system_health_desktop_040.wpr",
+            "win": "system_health_desktop_047.wpr"
         },
         "load:news:bbc": {
             "DEFAULT": "system_health_desktop_002.wpr"

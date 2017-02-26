@@ -130,13 +130,12 @@ class SchedulerSequencedTaskRunner : public SequencedTaskRunner {
 };
 
 // Only used in DCHECKs.
-bool ContainsWorker(
-    const std::vector<std::unique_ptr<SchedulerWorker>>& workers,
-    const SchedulerWorker* worker) {
+bool ContainsWorker(const std::vector<scoped_refptr<SchedulerWorker>>& workers,
+                    const SchedulerWorker* worker) {
   auto it = std::find_if(workers.begin(), workers.end(),
-      [worker](const std::unique_ptr<SchedulerWorker>& i) {
-        return i.get() == worker;
-      });
+                         [worker](const scoped_refptr<SchedulerWorker>& i) {
+                           return i.get() == worker;
+                         });
   return it != workers.end();
 }
 
@@ -697,7 +696,7 @@ bool SchedulerWorkerPoolImpl::Initialize(
         (index == 0 && !is_standby_lazy)
             ? SchedulerWorker::InitialState::ALIVE
             : SchedulerWorker::InitialState::DETACHED;
-    std::unique_ptr<SchedulerWorker> worker = SchedulerWorker::Create(
+    scoped_refptr<SchedulerWorker> worker = SchedulerWorker::Create(
         params.priority_hint(),
         MakeUnique<SchedulerWorkerDelegateImpl>(
             this, re_enqueue_sequence_callback, &shared_priority_queue_, index),

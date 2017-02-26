@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/logging.h"
 #include "base/task_scheduler/task_scheduler.h"
 #include "base/threading/post_task_and_reply_impl.h"
 
@@ -58,6 +59,8 @@ void PostDelayedTaskWithTraits(const tracked_objects::Location& from_here,
                                const TaskTraits& traits,
                                const Closure& task,
                                TimeDelta delay) {
+  DCHECK(TaskScheduler::GetInstance())
+      << "Ref. Prerequisite section of post_task.h";
   TaskScheduler::GetInstance()->PostDelayedTaskWithTraits(from_here, traits,
                                                           task, delay);
 }
@@ -71,17 +74,23 @@ void PostTaskWithTraitsAndReply(const tracked_objects::Location& from_here,
 }
 
 scoped_refptr<TaskRunner> CreateTaskRunnerWithTraits(const TaskTraits& traits) {
+  DCHECK(TaskScheduler::GetInstance())
+      << "Ref. Prerequisite section of post_task.h";
   return TaskScheduler::GetInstance()->CreateTaskRunnerWithTraits(traits);
 }
 
 scoped_refptr<SequencedTaskRunner> CreateSequencedTaskRunnerWithTraits(
     const TaskTraits& traits) {
+  DCHECK(TaskScheduler::GetInstance())
+      << "Ref. Prerequisite section of post_task.h";
   return TaskScheduler::GetInstance()->CreateSequencedTaskRunnerWithTraits(
       traits);
 }
 
 scoped_refptr<SingleThreadTaskRunner> CreateSingleThreadTaskRunnerWithTraits(
     const TaskTraits& traits) {
+  DCHECK(TaskScheduler::GetInstance())
+      << "Ref. Prerequisite section of post_task.h";
   return TaskScheduler::GetInstance()->CreateSingleThreadTaskRunnerWithTraits(
       traits);
 }

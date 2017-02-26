@@ -38,9 +38,9 @@ declare_args() {
   override_build_date = "N/A"
 
   # Turn on memory profiling in the task profiler when the heap shim is
-  # available, except for official builds for now.
-  enable_memory_task_profiler =
-      use_experimental_allocator_shim && (!is_official_build || is_syzyasan)
+  # available. Profiling can then be enabled at runtime by passing the command
+  # line flag --enable-heap-profiling=task-profiler.
+  enable_memory_task_profiler = use_experimental_allocator_shim
 
   # Partition alloc is included by default except iOS.
   use_partition_alloc = !is_ios
@@ -152,7 +152,8 @@ component("base") {
     "allocator/allocator_interception_mac.h",
     "allocator/allocator_interception_mac.mm",
     "allocator/allocator_shim.h",
-    "allocator/oom.h",
+    "allocator/malloc_zone_functions_mac.cc",
+    "allocator/malloc_zone_functions_mac.h",
     "android/animation_frame_time_histogram.cc",
     "android/animation_frame_time_histogram.h",
     "android/apk_assets.cc",
@@ -988,6 +989,8 @@ component("base") {
     "trace_event/memory_dump_provider.h",
     "trace_event/memory_dump_request_args.cc",
     "trace_event/memory_dump_request_args.h",
+    "trace_event/memory_dump_scheduler.cc",
+    "trace_event/memory_dump_scheduler.h",
     "trace_event/memory_dump_session_state.cc",
     "trace_event/memory_dump_session_state.h",
     "trace_event/memory_infra_background_whitelist.cc",
@@ -1305,6 +1308,7 @@ component("base") {
         # PartitionAlloc uses SpinLock, which doesn't work in NaCl (see below).
         "allocator/partition_allocator/address_space_randomization.cc",
         "allocator/partition_allocator/address_space_randomization.h",
+        "allocator/partition_allocator/oom.h",
         "allocator/partition_allocator/page_allocator.cc",
         "allocator/partition_allocator/page_allocator.h",
         "allocator/partition_allocator/partition_alloc.cc",
@@ -1883,6 +1887,7 @@ if (is_ios || is_mac) {
 
 test("base_unittests") {
   sources = [
+    "allocator/malloc_zone_functions_mac_unittest.cc",
     "allocator/tcmalloc_unittest.cc",
     "android/application_status_listener_unittest.cc",
     "android/content_uri_utils_unittest.cc",
@@ -2004,6 +2009,7 @@ test("base_unittests") {
     "message_loop/message_loop_unittest.cc",
     "message_loop/message_pump_glib_unittest.cc",
     "message_loop/message_pump_io_ios_unittest.cc",
+    "message_loop/message_pump_mac_unittest.cc",
     "metrics/bucket_ranges_unittest.cc",
     "metrics/field_trial_params_unittest.cc",
     "metrics/field_trial_unittest.cc",

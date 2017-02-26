@@ -23,6 +23,7 @@
 #include "base/task_runner.h"
 #include "base/threading/worker_pool.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/net_errors.h"
 #include "net/disk_cache/simple/simple_entry_format.h"
 #include "net/disk_cache/simple/simple_histogram_macros.h"
@@ -266,6 +267,11 @@ uint64_t SimpleIndex::GetCacheSizeBetween(base::Time initial_time,
       size += metadata.GetEntrySize();
   }
   return size;
+}
+
+size_t SimpleIndex::EstimateMemoryUsage() const {
+  return base::trace_event::EstimateMemoryUsage(entries_set_) +
+         base::trace_event::EstimateMemoryUsage(removed_entries_);
 }
 
 void SimpleIndex::Insert(uint64_t entry_hash) {

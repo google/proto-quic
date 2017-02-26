@@ -4,6 +4,8 @@
 
 #include "net/http/http_network_session.h"
 
+#include <inttypes.h>
+
 #include <utility>
 
 #include "base/atomic_sequence_num.h"
@@ -423,7 +425,8 @@ void HttpNetworkSession::GetSSLConfig(const HttpRequestInfo& request,
 void HttpNetworkSession::DumpMemoryStats(
     base::trace_event::ProcessMemoryDump* pmd,
     const std::string& parent_absolute_name) const {
-  std::string name = base::StringPrintf("net/http_network_session_%p", this);
+  std::string name = base::StringPrintf("net/http_network_session_0x%" PRIxPTR,
+                                        reinterpret_cast<uintptr_t>(this));
   base::trace_event::MemoryAllocatorDump* http_network_session_dump =
       pmd->GetAllocatorDump(name);
   if (http_network_session_dump == nullptr) {
@@ -439,6 +442,7 @@ void HttpNetworkSession::DumpMemoryStats(
     quic_stream_factory_.DumpMemoryStats(
         pmd, http_network_session_dump->absolute_name());
   }
+
   // Create an empty row under parent's dump so size can be attributed correctly
   // if |this| is shared between URLRequestContexts.
   base::trace_event::MemoryAllocatorDump* empty_row_dump =

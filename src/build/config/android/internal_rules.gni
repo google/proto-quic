@@ -353,6 +353,12 @@ template("write_build_config") {
         invoker.main_class,
       ]
     }
+    if (defined(invoker.alternative_android_sdk_ijar)) {
+      args += [
+        "--bootclasspath",
+        rebase_path(invoker.alternative_android_sdk_ijar, root_build_dir),
+      ]
+    }
     if (current_toolchain != default_toolchain) {
       # This has to be a built-time error rather than a GN assert because many
       # packages have a mix of java and non-java targets. For example, the
@@ -2307,6 +2313,7 @@ if (enable_java_templates) {
       write_build_config(build_config_target_name) {
         forward_variables_from(invoker,
                                [
+                                 "alternative_android_sdk_ijar",
                                  "gradle_treat_as_prebuilt",
                                  "input_jars_paths",
                                  "main_class",

@@ -4,6 +4,7 @@
 
 #include "net/base/sdch_manager.h"
 
+#include <inttypes.h>
 #include <limits.h>
 
 #include <utility>
@@ -335,7 +336,8 @@ void SdchManager::DumpMemoryStats(
   size_t total_count = dictionaries_.size();
   if (total_count == 0)
     return;
-  std::string name = base::StringPrintf("net/sdch_manager_%p", this);
+  std::string name = base::StringPrintf("net/sdch_manager_0x%" PRIxPTR,
+                                        reinterpret_cast<uintptr_t>(this));
   base::trace_event::MemoryAllocatorDump* dump = pmd->GetAllocatorDump(name);
   if (dump == nullptr) {
     dump = pmd->CreateAllocatorDump(name);
@@ -350,6 +352,7 @@ void SdchManager::DumpMemoryStats(
                     base::trace_event::MemoryAllocatorDump::kUnitsObjects,
                     total_count);
   }
+
   // Create an empty row under parent's dump so size can be attributed correctly
   // if |this| is shared between URLRequestContexts.
   base::trace_event::MemoryAllocatorDump* empty_row_dump =

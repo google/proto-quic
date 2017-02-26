@@ -8,6 +8,7 @@
 #include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/internal/verify_name_match.h"
 #include "net/der/parser.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -24,73 +25,51 @@ WARN_UNUSED_RESULT bool GetSequenceValue(const der::Input& tlv,
 ParsedCertificate::ParsedCertificate() {}
 ParsedCertificate::~ParsedCertificate() {}
 
+// static
 scoped_refptr<ParsedCertificate> ParsedCertificate::Create(
-    const uint8_t* data,
-    size_t length,
+    bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
     const ParseCertificateOptions& options,
     CertErrors* errors) {
-  return CreateInternal(data, length, DataSource::INTERNAL_COPY, options,
-                        errors);
+  return CreateInternal(std::move(cert_data), der::Input(), options, errors);
 }
 
-scoped_refptr<ParsedCertificate> ParsedCertificate::Create(
-    const base::StringPiece& data,
-    const ParseCertificateOptions& options,
-    CertErrors* errors) {
-  return ParsedCertificate::Create(
-      reinterpret_cast<const uint8_t*>(data.data()), data.size(), options,
-      errors);
-}
-
+// static
 bool ParsedCertificate::CreateAndAddToVector(
-    const uint8_t* data,
-    size_t length,
+    bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
     const ParseCertificateOptions& options,
-    ParsedCertificateList* chain,
+    std::vector<scoped_refptr<net::ParsedCertificate>>* chain,
     CertErrors* errors) {
-  scoped_refptr<ParsedCertificate> cert(Create(data, length, options, errors));
+  scoped_refptr<ParsedCertificate> cert(
+      Create(std::move(cert_data), options, errors));
   if (!cert)
     return false;
   chain->push_back(std::move(cert));
   return true;
 }
 
-bool ParsedCertificate::CreateAndAddToVector(
-    const base::StringPiece& data,
-    const ParseCertificateOptions& options,
-    ParsedCertificateList* chain,
-    CertErrors* errors) {
-  return CreateAndAddToVector(reinterpret_cast<const uint8_t*>(data.data()),
-                              data.size(), options, chain, errors);
-}
-
+// static
 scoped_refptr<ParsedCertificate> ParsedCertificate::CreateWithoutCopyingUnsafe(
     const uint8_t* data,
     size_t length,
     const ParseCertificateOptions& options,
     CertErrors* errors) {
-  return CreateInternal(data, length, DataSource::EXTERNAL_REFERENCE, options,
-                        errors);
+  return CreateInternal(nullptr, der::Input(data, length), options, errors);
 }
 
+// static
 scoped_refptr<ParsedCertificate> ParsedCertificate::CreateInternal(
-    const uint8_t* data,
-    size_t length,
-    DataSource source,
+    bssl::UniquePtr<CRYPTO_BUFFER> backing_data,
+    der::Input static_data,
     const ParseCertificateOptions& options,
     CertErrors* errors) {
   // TODO(crbug.com/634443): Add errors
   scoped_refptr<ParsedCertificate> result(new ParsedCertificate);
-
-  switch (source) {
-    case DataSource::INTERNAL_COPY:
-      result->cert_data_.assign(data, data + length);
-      result->cert_ =
-          der::Input(result->cert_data_.data(), result->cert_data_.size());
-      break;
-    case DataSource::EXTERNAL_REFERENCE:
-      result->cert_ = der::Input(data, length);
-      break;
+  if (backing_data) {
+    result->cert_data_ = std::move(backing_data);
+    result->cert_ = der::Input(CRYPTO_BUFFER_data(result->cert_data_.get()),
+                               CRYPTO_BUFFER_len(result->cert_data_.get()));
+  } else {
+    result->cert_ = static_data;
   }
 
   if (!ParseCertificate(result->cert_, &result->tbs_certificate_tlv_,

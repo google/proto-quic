@@ -21,12 +21,14 @@ Still reading?
   Note: PRODUCT_DIR will be substituted at run-time with actual
   directory path (e.g. out/Debug)
 -->
+  <!-- AllowBackup defaults to true, and causes a lint warning if not explicitly set. -->
   <issue id="AllowBackup">
     <ignore path="AndroidManifest.xml"/>
   </issue>
+  <!-- We use asserts in Chromium. See https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Asserts -->
   <issue id="Assert" severity="ignore"/>
-  <!-- TODO(crbug.com/635567): Fix this properly. -->
   <issue id="BadHostnameVerifier" severity="Error">
+    <!-- Safe, used in test only. -->
     <ignore regexp="net/test/android/javatests/src/org/chromium/net/test/util/TestWebServer.java"/>
   </issue>
   <issue id="ButtonOrder" severity="Error">
@@ -73,12 +75,6 @@ Still reading?
   </issue>
   <issue id="HandlerLeak">
     <ignore regexp="android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java" />
-    <!-- TODO(crbug.com/635567): Fix this properly. -->
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/compositor/overlays/strip/StripLayoutHelper.java"/>
-    <!-- TODO(crbug.com/635567): Fix this properly. -->
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/gsa/GSAServiceClient.java"/>
-    <!-- TODO(crbug.com/635567): Fix this properly. -->
-    <ignore regexp="chrome/android/java/src/org/chromium/chrome/browser/tab/Tab.java"/>
     <ignore regexp="chromecast/internal" />
     <ignore regexp="remoting/android/java/src/org/chromium/chromoting/TapGestureDetector.java" />
   </issue>
