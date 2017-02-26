@@ -52,6 +52,7 @@ class NSSCertDatabaseChromeOSTest : public testing::Test,
   NSSCertDatabaseChromeOSTest()
       : scoped_task_scheduler_(base::MessageLoop::current()),
         observer_added_(false),
+        db_changed_count_(0),
         user_1_("user1"),
         user_2_("user2") {}
 
@@ -88,16 +89,13 @@ class NSSCertDatabaseChromeOSTest : public testing::Test,
   }
 
   // CertDatabase::Observer:
-  void OnCertDBChanged(const X509Certificate* cert) override {
-    added_ca_.push_back(cert ? cert->os_cert_handle() : NULL);
-  }
+  void OnCertDBChanged() override { db_changed_count_++; }
 
  protected:
   base::test::ScopedTaskScheduler scoped_task_scheduler_;
 
   bool observer_added_;
-  // Certificates that were passed to the CertDatabase observers.
-  std::vector<CERTCertificate*> added_ca_;
+  int db_changed_count_;
 
   crypto::ScopedTestNSSChromeOSUser user_1_;
   crypto::ScopedTestNSSChromeOSUser user_2_;
@@ -179,11 +177,7 @@ TEST_F(NSSCertDatabaseChromeOSTest, ImportCACerts) {
   // Run the message loop so the observer notifications get processed.
   base::RunLoop().RunUntilIdle();
   // Should have gotten two OnCertDBChanged notifications.
-  ASSERT_EQ(2U, added_ca_.size());
-  // TODO(mattm): make NSSCertDatabase actually pass the cert to the callback,
-  // and enable these checks:
-  // EXPECT_EQ(certs_1[0]->os_cert_handle(), added_ca_[0]);
-  // EXPECT_EQ(certs_2[0]->os_cert_handle(), added_ca_[1]);
+  ASSERT_EQ(2, db_changed_count_);
 
   // Tests that the new certs are loaded by async ListCerts method.
   CertificateList user_1_certlist_async;
@@ -247,7 +241,7 @@ TEST_F(NSSCertDatabaseChromeOSTest, ImportServerCert) {
   base::RunLoop().RunUntilIdle();
   // TODO(mattm): ImportServerCert doesn't actually cause any observers to
   // fire. Is that correct?
-  EXPECT_EQ(0U, added_ca_.size());
+  EXPECT_EQ(0, db_changed_count_);
 
   // Tests that the new certs are loaded by async ListCerts method.
   CertificateList user_1_certlist_async;

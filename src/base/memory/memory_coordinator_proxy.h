@@ -12,14 +12,26 @@
 
 namespace base {
 
+// The MemoryCoordinator interface. See comments in MemoryCoordinatorProxy for
+// method descriptions.
+class BASE_EXPORT MemoryCoordinator {
+ public:
+  virtual ~MemoryCoordinator() {}
+
+  virtual MemoryState GetCurrentMemoryState() const = 0;
+  virtual void SetCurrentMemoryStateForTesting(MemoryState memory_state) = 0;
+};
+
 // The proxy of MemoryCoordinator to be accessed from components that are not
 // in content/browser e.g. net.
 class BASE_EXPORT MemoryCoordinatorProxy {
  public:
-  using GetCurrentMemoryStateCallback = base::Callback<MemoryState()>;
-  using SetCurrentMemoryStateCallback = base::Callback<void(MemoryState)>;
-
   static MemoryCoordinatorProxy* GetInstance();
+
+  // Sets an implementation of MemoryCoordinator. MemoryCoordinatorProxy doesn't
+  // take the ownership of |coordinator|. It must outlive this proxy.
+  // This should be called before any components starts using this proxy.
+  static void SetMemoryCoordinator(MemoryCoordinator* coordinator);
 
   // Returns the current memory state.
   MemoryState GetCurrentMemoryState() const;
@@ -27,21 +39,11 @@ class BASE_EXPORT MemoryCoordinatorProxy {
   // Sets the current memory state. This function is for testing only.
   void SetCurrentMemoryStateForTesting(MemoryState memory_state);
 
-  // Sets state-getter callback.
-  void SetGetCurrentMemoryStateCallback(GetCurrentMemoryStateCallback callback);
-
-  // Sets state-setter callback.
-  void SetSetCurrentMemoryStateForTestingCallback(
-      SetCurrentMemoryStateCallback callback);
-
  private:
   friend struct base::DefaultSingletonTraits<MemoryCoordinatorProxy>;
 
   MemoryCoordinatorProxy();
   virtual ~MemoryCoordinatorProxy();
-
-  GetCurrentMemoryStateCallback getter_callback_;
-  SetCurrentMemoryStateCallback setter_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(MemoryCoordinatorProxy);
 };

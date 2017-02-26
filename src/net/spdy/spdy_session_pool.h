@@ -154,7 +154,7 @@ class NET_EXPORT SpdySessionPool
 
   // We perform the same flushing as described above when certificate database
   // is changed.
-  void OnCertDBChanged(const X509Certificate* cert) override;
+  void OnCertDBChanged() override;
 
   void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
                        const std::string& parent_dump_absolute_name) const;

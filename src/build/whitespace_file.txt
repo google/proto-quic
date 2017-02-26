@@ -131,7 +131,9 @@ their outdated binaries. In clobberus, veritas.
 As the git approaches, light begins to shine through the SCM thrice again...
 However, the git, is, after all, quite stupid.
 
-Suddenly Domo-Kun found itself in a room filled with dazzling mirrors.
+Suddenly Domo-Kun found itself in a room filled with dazzling mirrors. As
+Domo-Kun looked around, it realized that some of the mirrors were actually but
+pale reflections of true reality.
 
 A herd of wild gits appears!  Time for CQ :D
 And one more for sizes.py...
@@ -163,3 +165,4 @@ No, really, I couldn't eat another bit.
 When I hunger I think of you, and a pastrami sandwich.
 Do make a terrible mistake every once in a while.
 I just made two.
+Mistakes are the best sometimes

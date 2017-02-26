@@ -57,10 +57,6 @@ class MockableQuicClient : public QuicClient {
   QuicConnectionId GenerateNewConnectionId() override;
   void UseWriter(QuicPacketWriterWrapper* writer);
   void UseConnectionId(QuicConnectionId connection_id);
-  void SendCachedNetworkParamaters(
-      const CachedNetworkParameters& cached_network_params) {
-    cached_network_paramaters_ = cached_network_params;
-  }
   const QuicReceivedPacket* last_incoming_packet() {
     return last_incoming_packet_.get();
   }
@@ -242,8 +238,6 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
   void set_allow_bidirectional_data(bool value) {
     allow_bidirectional_data_ = value;
   }
-
-  bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
 
   size_t num_requests() const { return num_requests_; }
 

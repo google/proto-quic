@@ -21,7 +21,6 @@ class SingleThreadTaskRunner;
 namespace net {
 
 class NetLogCaptureMode;
-class URLRequestContext;
 
 // FileNetLogObserver watches the NetLog event stream and sends all entries to
 // either a group of files in a directory (bounded mode) or to a single file
@@ -42,23 +41,18 @@ class URLRequestContext;
 // The entire JSON object is put into one file. There is no size limit to how
 // large this file can grow; all events added will be written to the file.
 //
-// The consumer must call StartObservingBounded/StartObservingUnbounded before
-// calling StopObserving, and must call each method exactly once in the lifetime
-// of the observer. StartObservingBounded/StartObservingUnbounded and
-// StopObserving must be called on the same thread, but there is no restriction
-// on which thread is used.
+// The consumer must call StartObserving before calling StopObserving, and must
+// call each method exactly once in the lifetime of the observer. StartObserving
+// and StopObserving must be called on the same thread, but there is no
+// restriction on which thread is used.
 class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
  public:
+  // Creates a FileNetLogObserver in bounded mode.
+  //
   // |file_task_runner| indicates the task runner that should be used to post
   // tasks from the main thread to the file thread.
-  explicit FileNetLogObserver(
-      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner);
-
-  ~FileNetLogObserver() override;
-
-  // Starts observing |net_log| in bounded mode and writes output files to
-  // |directory|.
-  // May only be called once in the lifetime of the object.
+  //
+  // |directory| is the directory where the log files will be.
   //
   // |max_total_size| is the approximate limit on the cumulative size of all
   // netlog files.
@@ -69,48 +63,44 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   // |constants| is an optional legend for decoding constant values used in
   // the log. It should generally be a modified version of GetNetConstants().
   // If not present, the output of GetNetConstants() will be used.
-  //
-  // |url_request_context| is an optional URLRequestContext that will be used
-  // to pre-populate the log with information about in-progress events. If the
-  // context is non-NULL, StartObservingBounded() must be called on the
-  // context's thread.
-  void StartObservingBounded(NetLog* net_log,
-                             NetLogCaptureMode capture_mode,
-                             const base::FilePath& directory,
-                             std::unique_ptr<base::Value> constants,
-                             URLRequestContext* url_request_context,
-                             size_t max_total_size,
-                             size_t total_num_files);
+  static std::unique_ptr<FileNetLogObserver> CreateBounded(
+      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+      const base::FilePath& directory,
+      size_t max_total_size,
+      size_t total_num_files,
+      std::unique_ptr<base::Value> constants);
 
-  // Starts observing |net_log| in unbounded mode and writes to the file at
-  // |filepath|.
-  // May only be called once in the lifetime of the object.
+  // Creates a FileNetLogObserver in unbounded mode.
+  //
+  // |file_task_runner| indicates the task runner that should be used to post
+  // tasks from the main thread to the file thread.
+  //
+  // |log_path| is where the log file will be.
   //
   // |constants| is an optional legend for decoding constant values used in
   // the log. It should generally be a modified version of GetNetConstants().
   // If not present, the output of GetNetConstants() will be used.
-  //
-  // |url_request_context| is an optional URLRequestContext that will be used
-  // to pre-populate the log with information about in-progress events. If the
-  // context is non-NULL, StartObservingUnbounded() must be called on
-  // the context's thread.
-  void StartObservingUnbounded(NetLog* net_log,
-                               NetLogCaptureMode capture_mode,
-                               const base::FilePath& filepath,
-                               std::unique_ptr<base::Value> constants,
-                               URLRequestContext* url_request_context);
+  static std::unique_ptr<FileNetLogObserver> CreateUnbounded(
+      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+      const base::FilePath& log_path,
+      std::unique_ptr<base::Value> constants);
 
-  // Stops observing net_log(). Must be called after StartObservingBounded/
-  // StartObservingUnbounded. Should be called before destruction of the
+  ~FileNetLogObserver() override;
+
+  // Attaches this observer to |net_log| and begins observing events.
+  void StartObserving(NetLog* net_log, NetLogCaptureMode capture_mode);
+
+  // Stops observing net_log() and closes the output file(s). Must be called
+  // after StartObserving. Should be called before destruction of the
   // FileNetLogObserver and the NetLog, or the NetLog files will be deleted when
   // the observer is destroyed.
+  //
+  // |polled_data| is an optional argument used to add additional network stack
+  // state to the log.
   //
   // |callback| will be run on whichever thread StopObserving() was called on
   // once all file writing is complete and the netlog files can be accessed
   // safely.
-  //
-  // |polled_data| is an optional argument used to add additional network stack
-  // state to the log.
   void StopObserving(std::unique_ptr<base::Value> polled_data,
                      const base::Closure& callback);
 
@@ -123,12 +113,11 @@ class NET_EXPORT FileNetLogObserver : public NetLog::ThreadSafeObserver {
   class BoundedFileWriter;
   class UnboundedFileWriter;
 
-  // Performs tasks common to both StartObservingBounded() and
-  // StartObservingUnbounded().
-  void StartObservingHelper(NetLog* net_log,
-                            NetLogCaptureMode capture_mode,
-                            std::unique_ptr<base::Value> constants,
-                            URLRequestContext* url_request_context);
+  FileNetLogObserver(
+      scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+      std::unique_ptr<FileWriter> file_writer,
+      scoped_refptr<WriteQueue> write_queue,
+      std::unique_ptr<base::Value> constants);
 
   scoped_refptr<base::SingleThreadTaskRunner> file_task_runner_;
 

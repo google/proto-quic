@@ -543,6 +543,12 @@ void TransportClientSocketPool::RequestSockets(
   base_.RequestSockets(group_name, *casted_params, num_sockets, net_log);
 }
 
+void TransportClientSocketPool::SetPriority(const std::string& group_name,
+                                            ClientSocketHandle* handle,
+                                            RequestPriority priority) {
+  base_.SetPriority(group_name, handle, priority);
+}
+
 void TransportClientSocketPool::CancelRequest(
     const std::string& group_name,
     ClientSocketHandle* handle) {

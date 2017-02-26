@@ -84,6 +84,8 @@ $code=<<___;
 .type	bn_mul_mont,\@function,6
 .align	16
 bn_mul_mont:
+	mov	${num}d,${num}d
+	mov	%rsp,%rax
 	test	\$3,${num}d
 	jnz	.Lmul_enter
 	cmp	\$8,${num}d
@@ -108,14 +110,37 @@ $code.=<<___;
 	push	%r14
 	push	%r15
 
-	mov	${num}d,${num}d
-	lea	2($num),%r10
+	neg	$num
 	mov	%rsp,%r11
-	neg	%r10
-	lea	(%rsp,%r10,8),%rsp	# tp=alloca(8*(num+2))
-	and	\$-1024,%rsp		# minimize TLB usage
+	lea	-16(%rsp,$num,8),%r10	# future alloca(8*(num+2))
+	neg	$num			# restore $num
+	and	\$-1024,%r10		# minimize TLB usage
 
-	mov	%r11,8(%rsp,$num,8)	# tp[num+1]=%rsp
+	# An OS-agnostic version of __chkstk.
+	#
+	# Some OSes (Windows) insist on stack being "wired" to
+	# physical memory in strictly sequential manner, i.e. if stack
+	# allocation spans two pages, then reference to farmost one can
+	# be punishable by SEGV. But page walking can do good even on
+	# other OSes, because it guarantees that villain thread hits
+	# the guard page before it can make damage to innocent one...
+	sub	%r10,%r11
+	and	\$-4096,%r11
+	lea	(%r10,%r11),%rsp
+	mov	(%rsp),%r11
+	cmp	%r10,%rsp
+	ja	.Lmul_page_walk
+	jmp	.Lmul_page_walk_done
+
+.align	16
+.Lmul_page_walk:
+	lea	-4096(%rsp),%rsp
+	mov	(%rsp),%r11
+	cmp	%r10,%rsp
+	ja	.Lmul_page_walk
+.Lmul_page_walk_done:
+
+	mov	%rax,8(%rsp,$num,8)	# tp[num+1]=%rsp
 .Lmul_body:
 	mov	$bp,%r12		# reassign $bp
 ___
@@ -265,34 +290,35 @@ $code.=<<___;
 	mov	%rax,($rp,$i,8)		# rp[i]=tp[i]-np[i]
 	mov	8($ap,$i,8),%rax	# tp[i+1]
 	lea	1($i),$i		# i++
-	dec	$j			# doesn't affect CF!
+	dec	$j			# doesnn't affect CF!
 	jnz	.Lsub
 
 	sbb	\$0,%rax		# handle upmost overflow bit
 	xor	$i,$i
+	and	%rax,$ap
+	not	%rax
+	mov	$rp,$np
+	and	%rax,$np
 	mov	$num,$j			# j=num
+	or	$np,$ap			# ap=borrow?tp:rp
 .align	16
 .Lcopy:					# copy or in-place refresh
-	mov	(%rsp,$i,8),$ap
-	mov	($rp,$i,8),$np
-	xor	$np,$ap			# conditional select:
-	and	%rax,$ap		# ((ap ^ np) & %rax) ^ np
-	xor	$np,$ap			# ap = borrow?tp:rp
+	mov	($ap,$i,8),%rax
 	mov	$i,(%rsp,$i,8)		# zap temporary vector
-	mov	$ap,($rp,$i,8)		# rp[i]=tp[i]
+	mov	%rax,($rp,$i,8)		# rp[i]=tp[i]
 	lea	1($i),$i
 	sub	\$1,$j
 	jnz	.Lcopy
 
 	mov	8(%rsp,$num,8),%rsi	# restore %rsp
 	mov	\$1,%rax
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lmul_epilogue:
 	ret
 .size	bn_mul_mont,.-bn_mul_mont
@@ -304,6 +330,8 @@ $code.=<<___;
 .type	bn_mul4x_mont,\@function,6
 .align	16
 bn_mul4x_mont:
+	mov	${num}d,${num}d
+	mov	%rsp,%rax
 .Lmul4x_enter:
 ___
 $code.=<<___ if ($addx);
@@ -319,14 +347,28 @@ $code.=<<___;
 	push	%r14
 	push	%r15
 
-	mov	${num}d,${num}d
-	lea	4($num),%r10
+	neg	$num
 	mov	%rsp,%r11
-	neg	%r10
-	lea	(%rsp,%r10,8),%rsp	# tp=alloca(8*(num+4))
-	and	\$-1024,%rsp		# minimize TLB usage
+	lea	-32(%rsp,$num,8),%r10	# future alloca(8*(num+4))
+	neg	$num			# restore
+	and	\$-1024,%r10		# minimize TLB usage
 
-	mov	%r11,8(%rsp,$num,8)	# tp[num+1]=%rsp
+	sub	%r10,%r11
+	and	\$-4096,%r11
+	lea	(%r10,%r11),%rsp
+	mov	(%rsp),%r11
+	cmp	%r10,%rsp
+	ja	.Lmul4x_page_walk
+	jmp	.Lmul4x_page_walk_done
+
+.Lmul4x_page_walk:
+	lea	-4096(%rsp),%rsp
+	mov	(%rsp),%r11
+	cmp	%r10,%rsp
+	ja	.Lmul4x_page_walk
+.Lmul4x_page_walk_done:
+
+	mov	%rax,8(%rsp,$num,8)	# tp[num+1]=%rsp
 .Lmul4x_body:
 	mov	$rp,16(%rsp,$num,8)	# tp[num+2]=$rp
 	mov	%rdx,%r12		# reassign $bp
@@ -634,6 +676,7 @@ my @ri=("%rax","%rdx",$m0,$m1);
 $code.=<<___;
 	mov	16(%rsp,$num,8),$rp	# restore $rp
 	mov	0(%rsp),@ri[0]		# tp[0]
+	pxor	%xmm0,%xmm0
 	mov	8(%rsp),@ri[1]		# tp[1]
 	shr	\$2,$num		# num/=4
 	lea	(%rsp),$ap		# borrow ap for tp
@@ -671,48 +714,47 @@ $code.=<<___;
 	mov	@ri[2],16($rp,$i,8)	# rp[i]=tp[i]-np[i]
 
 	sbb	\$0,@ri[0]		# handle upmost overflow bit
-	mov	@ri[0],%xmm0
-	punpcklqdq %xmm0,%xmm0		# extend mask to 128 bits
 	mov	@ri[3],24($rp,$i,8)	# rp[i]=tp[i]-np[i]
 	xor	$i,$i			# i=0
+	and	@ri[0],$ap
+	not	@ri[0]
+	mov	$rp,$np
+	and	@ri[0],$np
+	lea	-1($num),$j
+	or	$np,$ap			# ap=borrow?tp:rp
 
-	mov	$num,$j
-	pxor	%xmm5,%xmm5
+	movdqu	($ap),%xmm1
+	movdqa	%xmm0,(%rsp)
+	movdqu	%xmm1,($rp)
 	jmp	.Lcopy4x
 .align	16
-.Lcopy4x:				# copy or in-place refresh
-	movdqu	(%rsp,$i),%xmm2
-	movdqu  16(%rsp,$i),%xmm4
-	movdqu	($rp,$i),%xmm1
-	movdqu	16($rp,$i),%xmm3
-	pxor	%xmm1,%xmm2		# conditional select
-	pxor	%xmm3,%xmm4
-	pand	%xmm0,%xmm2
-	pand	%xmm0,%xmm4
-	pxor	%xmm1,%xmm2
-	pxor	%xmm3,%xmm4
-	movdqu	%xmm2,($rp,$i)
-	movdqu  %xmm4,16($rp,$i)
-	movdqa	%xmm5,(%rsp,$i)		# zap temporary vectors
-	movdqa	%xmm5,16(%rsp,$i)
-
+.Lcopy4x:					# copy or in-place refresh
+	movdqu	16($ap,$i),%xmm2
+	movdqu	32($ap,$i),%xmm1
+	movdqa	%xmm0,16(%rsp,$i)
+	movdqu	%xmm2,16($rp,$i)
+	movdqa	%xmm0,32(%rsp,$i)
+	movdqu	%xmm1,32($rp,$i)
 	lea	32($i),$i
 	dec	$j
 	jnz	.Lcopy4x
 
 	shl	\$2,$num
+	movdqu	16($ap,$i),%xmm2
+	movdqa	%xmm0,16(%rsp,$i)
+	movdqu	%xmm2,16($rp,$i)
 ___
 }
 $code.=<<___;
 	mov	8(%rsp,$num,8),%rsi	# restore %rsp
 	mov	\$1,%rax
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lmul4x_epilogue:
 	ret
 .size	bn_mul4x_mont,.-bn_mul4x_mont
@@ -742,14 +784,15 @@ $code.=<<___;
 .type	bn_sqr8x_mont,\@function,6
 .align	32
 bn_sqr8x_mont:
-.Lsqr8x_enter:
 	mov	%rsp,%rax
+.Lsqr8x_enter:
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
+.Lsqr8x_prologue:
 
 	mov	${num}d,%r10d
 	shl	\$3,${num}d		# convert $num to bytes
@@ -762,25 +805,43 @@ bn_sqr8x_mont:
 	# do its job.
 	#
 	lea	-64(%rsp,$num,2),%r11
+	mov	%rsp,%rbp
 	mov	($n0),$n0		# *n0
 	sub	$aptr,%r11
 	and	\$4095,%r11
 	cmp	%r11,%r10
 	jb	.Lsqr8x_sp_alt
-	sub	%r11,%rsp		# align with $aptr
-	lea	-64(%rsp,$num,2),%rsp	# alloca(frame+2*$num)
+	sub	%r11,%rbp		# align with $aptr
+	lea	-64(%rbp,$num,2),%rbp	# future alloca(frame+2*$num)
 	jmp	.Lsqr8x_sp_done
 
 .align	32
 .Lsqr8x_sp_alt:
 	lea	4096-64(,$num,2),%r10	# 4096-frame-2*$num
-	lea	-64(%rsp,$num,2),%rsp	# alloca(frame+2*$num)
+	lea	-64(%rbp,$num,2),%rbp	# future alloca(frame+2*$num)
 	sub	%r10,%r11
 	mov	\$0,%r10
 	cmovc	%r10,%r11
-	sub	%r11,%rsp
+	sub	%r11,%rbp
 .Lsqr8x_sp_done:
-	and	\$-64,%rsp
+	and	\$-64,%rbp
+	mov	%rsp,%r11
+	sub	%rbp,%r11
+	and	\$-4096,%r11
+	lea	(%rbp,%r11),%rsp
+	mov	(%rsp),%r10
+	cmp	%rbp,%rsp
+	ja	.Lsqr8x_page_walk
+	jmp	.Lsqr8x_page_walk_done
+
+.align	16
+.Lsqr8x_page_walk:
+	lea	-4096(%rsp),%rsp
+	mov	(%rsp),%r10
+	cmp	%rbp,%rsp
+	ja	.Lsqr8x_page_walk
+.Lsqr8x_page_walk_done:
+
 	mov	$num,%r10
 	neg	$num
 
@@ -903,23 +964,40 @@ $code.=<<___;
 .type	bn_mulx4x_mont,\@function,6
 .align	32
 bn_mulx4x_mont:
-.Lmulx4x_enter:
 	mov	%rsp,%rax
+.Lmulx4x_enter:
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
+.Lmulx4x_prologue:
 
 	shl	\$3,${num}d		# convert $num to bytes
-	.byte	0x67
 	xor	%r10,%r10
 	sub	$num,%r10		# -$num
 	mov	($n0),$n0		# *n0
-	lea	-72(%rsp,%r10),%rsp	# alloca(frame+$num+8)
+	lea	-72(%rsp,%r10),%rbp	# future alloca(frame+$num+8)
+	and	\$-128,%rbp
+	mov	%rsp,%r11
+	sub	%rbp,%r11
+	and	\$-4096,%r11
+	lea	(%rbp,%r11),%rsp
+	mov	(%rsp),%r10
+	cmp	%rbp,%rsp
+	ja	.Lmulx4x_page_walk
+	jmp	.Lmulx4x_page_walk_done
+
+.align	16
+.Lmulx4x_page_walk:
+	lea	-4096(%rsp),%rsp
+	mov	(%rsp),%r10
+	cmp	%rbp,%rsp
+	ja	.Lmulx4x_page_walk
+.Lmulx4x_page_walk_done:
+
 	lea	($bp,$num),%r10
-	and	\$-128,%rsp
 	##############################################################
 	# Stack layout
 	# +0	num
@@ -1277,22 +1355,8 @@ mul_handler:
 
 	mov	192($context),%r10	# pull $num
 	mov	8(%rax,%r10,8),%rax	# pull saved stack pointer
-	lea	48(%rax),%rax
 
-	mov	-8(%rax),%rbx
-	mov	-16(%rax),%rbp
-	mov	-24(%rax),%r12
-	mov	-32(%rax),%r13
-	mov	-40(%rax),%r14
-	mov	-48(%rax),%r15
-	mov	%rbx,144($context)	# restore context->Rbx
-	mov	%rbp,160($context)	# restore context->Rbp
-	mov	%r12,216($context)	# restore context->R12
-	mov	%r13,224($context)	# restore context->R13
-	mov	%r14,232($context)	# restore context->R14
-	mov	%r15,240($context)	# restore context->R15
-
-	jmp	.Lcommon_seh_tail
+	jmp	.Lcommon_pop_regs
 .size	mul_handler,.-mul_handler
 
 .type	sqr_handler,\@abi-omnipotent
@@ -1320,15 +1384,21 @@ sqr_handler:
 	cmp	%r10,%rbx		# context->Rip<.Lsqr_body
 	jb	.Lcommon_seh_tail
 
+	mov	4(%r11),%r10d		# HandlerData[1]
+	lea	(%rsi,%r10),%r10	# body label
+	cmp	%r10,%rbx		# context->Rip>=.Lsqr_epilogue
+	jb	.Lcommon_pop_regs
+
 	mov	152($context),%rax	# pull context->Rsp
 
-	mov	4(%r11),%r10d		# HandlerData[1]
+	mov	8(%r11),%r10d		# HandlerData[2]
 	lea	(%rsi,%r10),%r10	# epilogue label
 	cmp	%r10,%rbx		# context->Rip>=.Lsqr_epilogue
 	jae	.Lcommon_seh_tail
 
 	mov	40(%rax),%rax		# pull saved stack pointer
 
+.Lcommon_pop_regs:
 	mov	-8(%rax),%rbx
 	mov	-16(%rax),%rbp
 	mov	-24(%rax),%r12
@@ -1415,13 +1485,15 @@ $code.=<<___;
 .LSEH_info_bn_sqr8x_mont:
 	.byte	9,0,0,0
 	.rva	sqr_handler
-	.rva	.Lsqr8x_body,.Lsqr8x_epilogue	# HandlerData[]
+	.rva	.Lsqr8x_prologue,.Lsqr8x_body,.Lsqr8x_epilogue		# HandlerData[]
+.align	8
 ___
 $code.=<<___ if ($addx);
 .LSEH_info_bn_mulx4x_mont:
 	.byte	9,0,0,0
 	.rva	sqr_handler
-	.rva	.Lmulx4x_body,.Lmulx4x_epilogue	# HandlerData[]
+	.rva	.Lmulx4x_prologue,.Lmulx4x_body,.Lmulx4x_epilogue	# HandlerData[]
+.align	8
 ___
 }
 

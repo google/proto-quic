@@ -37,6 +37,16 @@ config("find_bad_constructs") {
       "find-bad-constructs",
     ]
 
+    # TODO(vmpstr): We need to enable this everywhere. crbug.com/554600
+    if (is_linux && !is_chromeos && !is_chromecast) {
+      cflags += [
+        "-Xclang",
+        "-plugin-arg-find-bad-constructs",
+        "-Xclang",
+        "check-auto-raw-pointer",
+      ]
+    }
+
     if ((is_linux || is_android) && !is_chromecast) {
       cflags += [
         "-Xclang",

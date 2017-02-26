@@ -4,11 +4,13 @@
 
 #include "net/nqe/network_qualities_prefs_manager.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 
 #include "base/macros.h"
 #include "base/run_loop.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/test/histogram_tester.h"
 #include "base/threading/thread_checker.h"
 #include "base/values.h"
@@ -136,6 +138,7 @@ TEST(NetworkQualitiesPrefManager, WriteWithPeriodInNetworkID) {
 }
 
 TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
+  static const size_t kMaxCacheSize = 10u;
   TestNetworkQualityEstimator estimator;
 
   std::unique_ptr<TestPrefDelegate> prefs_delegate(new TestPrefDelegate());
@@ -145,7 +148,7 @@ TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
   base::RunLoop().RunUntilIdle();
 
   estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN, "test");
+      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test");
 
   EXPECT_EQ(0u, manager.ForceReadPrefsForTesting().size());
 
@@ -159,74 +162,37 @@ TEST(NetworkQualitiesPrefManager, WriteAndReadWithMultipleNetworkIDs) {
   // written to the prefs.
   EXPECT_EQ(1u, manager.ForceReadPrefsForTesting().size());
 
-  // Chnage the network ID.
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_2G, "test");
-  estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_2G);
-  estimator.RunOneRequest();
-  base::RunLoop().RunUntilIdle();
-  EXPECT_EQ(2u, manager.ForceReadPrefsForTesting().size());
+  // Change the network ID.
+  for (size_t i = 0; i < kMaxCacheSize; ++i) {
+    estimator.SimulateNetworkChange(
+        NetworkChangeNotifier::ConnectionType::CONNECTION_2G,
+        "test" + base::IntToString(i));
 
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_3G, "test");
-  estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_3G);
-  estimator.RunOneRequest();
-  base::RunLoop().RunUntilIdle();
-  EXPECT_EQ(3u, manager.ForceReadPrefsForTesting().size());
+    estimator.RunOneRequest();
+    base::RunLoop().RunUntilIdle();
 
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_4G, "test");
-  estimator.set_recent_effective_connection_type(EFFECTIVE_CONNECTION_TYPE_4G);
-  estimator.RunOneRequest();
-  base::RunLoop().RunUntilIdle();
-  // Size of prefs must not exceed 3.
-  EXPECT_EQ(3u, manager.ForceReadPrefsForTesting().size());
+    EXPECT_EQ(std::min(i + 2, kMaxCacheSize),
+              manager.ForceReadPrefsForTesting().size());
+  }
 
-  estimator.SimulateNetworkChange(
-      NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, "test");
-  estimator.set_recent_effective_connection_type(
-      EFFECTIVE_CONNECTION_TYPE_SLOW_2G);
-  estimator.RunOneRequest();
-  base::RunLoop().RunUntilIdle();
   std::map<nqe::internal::NetworkID, nqe::internal::CachedNetworkQuality>
       read_prefs = manager.ForceReadPrefsForTesting();
-  EXPECT_EQ(3u, read_prefs.size());
 
   // Verify the contents of the prefs.
   for (std::map<nqe::internal::NetworkID,
                 nqe::internal::CachedNetworkQuality>::const_iterator it =
            read_prefs.begin();
        it != read_prefs.end(); ++it) {
-    EXPECT_EQ("test", it->first.id);
-    switch (it->first.type) {
-      case NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN:
-        EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
-                  it->second.effective_connection_type());
-        break;
-      case NetworkChangeNotifier::ConnectionType::CONNECTION_2G:
-        EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_2G,
-                  it->second.effective_connection_type());
-        break;
-      case NetworkChangeNotifier::ConnectionType::CONNECTION_3G:
-        EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_3G,
-                  it->second.effective_connection_type());
-        break;
-      case NetworkChangeNotifier::ConnectionType::CONNECTION_4G:
-        EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_4G,
-                  it->second.effective_connection_type());
-        break;
-      case NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI:
-        EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
-                  it->second.effective_connection_type());
-        break;
-      default:
-        NOTREACHED();
-    }
+    EXPECT_EQ(0u, it->first.id.find("test", 0u));
+    EXPECT_EQ(NetworkChangeNotifier::ConnectionType::CONNECTION_2G,
+              it->first.type);
+    EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_SLOW_2G,
+              it->second.effective_connection_type());
   }
 
   base::HistogramTester histogram_tester;
   estimator.OnPrefsRead(read_prefs);
-  histogram_tester.ExpectUniqueSample("NQE.Prefs.ReadSize", 3, 1);
+  histogram_tester.ExpectUniqueSample("NQE.Prefs.ReadSize", kMaxCacheSize, 1);
 
   manager.ShutdownOnPrefThread();
 }

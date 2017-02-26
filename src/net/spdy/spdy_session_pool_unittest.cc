@@ -671,7 +671,18 @@ TEST_F(SpdySessionPoolTest, FindAvailableSession) {
   spdy_session_pool_->CloseCurrentSessions(ERR_ABORTED);
 }
 
-TEST_F(SpdySessionPoolTest, DumpMemoryStats) {
+class SpdySessionMemoryDumpTest
+    : public SpdySessionPoolTest,
+      public testing::WithParamInterface<
+          base::trace_event::MemoryDumpLevelOfDetail> {};
+
+INSTANTIATE_TEST_CASE_P(
+    /* no prefix */,
+    SpdySessionMemoryDumpTest,
+    ::testing::Values(base::trace_event::MemoryDumpLevelOfDetail::DETAILED,
+                      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND));
+
+TEST_P(SpdySessionMemoryDumpTest, DumpMemoryStats) {
   SpdySessionKey key(HostPortPair("https://www.example.org", 443),
                      ProxyServer::Direct(), PRIVACY_MODE_DISABLED);
 
@@ -692,12 +703,12 @@ TEST_F(SpdySessionPoolTest, DumpMemoryStats) {
   base::RunLoop().RunUntilIdle();
 
   EXPECT_TRUE(HasSpdySession(spdy_session_pool_, key));
-  base::trace_event::MemoryDumpArgs dump_args = {
-      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   std::unique_ptr<base::trace_event::ProcessMemoryDump> process_memory_dump(
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
   base::trace_event::MemoryAllocatorDump* parent_dump =
-      process_memory_dump->CreateAllocatorDump("parent");
+      process_memory_dump->CreateAllocatorDump(
+          "net/http_network_session_0x123");
   spdy_session_pool_->DumpMemoryStats(process_memory_dump.get(),
                                       parent_dump->absolute_name());
 

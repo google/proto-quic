@@ -8,6 +8,8 @@
 
 .p2align	4
 _bn_mul_mont:
+	movl	%r9d,%r9d
+	movq	%rsp,%rax
 	testl	$3,%r9d
 	jnz	L$mul_enter
 	cmpl	$8,%r9d
@@ -27,14 +29,37 @@ L$mul_enter:
 	pushq	%r14
 	pushq	%r15
 
-	movl	%r9d,%r9d
-	leaq	2(%r9),%r10
+	negq	%r9
 	movq	%rsp,%r11
-	negq	%r10
-	leaq	(%rsp,%r10,8),%rsp
-	andq	$-1024,%rsp
+	leaq	-16(%rsp,%r9,8),%r10
+	negq	%r9
+	andq	$-1024,%r10
 
-	movq	%r11,8(%rsp,%r9,8)
+
+
+
+
+
+
+
+
+	subq	%r10,%r11
+	andq	$-4096,%r11
+	leaq	(%r10,%r11,1),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	L$mul_page_walk
+	jmp	L$mul_page_walk_done
+
+.p2align	4
+L$mul_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	L$mul_page_walk
+L$mul_page_walk_done:
+
+	movq	%rax,8(%rsp,%r9,8)
 L$mul_body:
 	movq	%rdx,%r12
 	movq	(%r8),%r8
@@ -186,35 +211,38 @@ L$sub:	sbbq	(%rcx,%r14,8),%rax
 
 	sbbq	$0,%rax
 	xorq	%r14,%r14
+	andq	%rax,%rsi
+	notq	%rax
+	movq	%rdi,%rcx
+	andq	%rax,%rcx
 	movq	%r9,%r15
+	orq	%rcx,%rsi
 .p2align	4
 L$copy:
-	movq	(%rsp,%r14,8),%rsi
-	movq	(%rdi,%r14,8),%rcx
-	xorq	%rcx,%rsi
-	andq	%rax,%rsi
-	xorq	%rcx,%rsi
+	movq	(%rsi,%r14,8),%rax
 	movq	%r14,(%rsp,%r14,8)
-	movq	%rsi,(%rdi,%r14,8)
+	movq	%rax,(%rdi,%r14,8)
 	leaq	1(%r14),%r14
 	subq	$1,%r15
 	jnz	L$copy
 
 	movq	8(%rsp,%r9,8),%rsi
 	movq	$1,%rax
-	movq	(%rsi),%r15
-	movq	8(%rsi),%r14
-	movq	16(%rsi),%r13
-	movq	24(%rsi),%r12
-	movq	32(%rsi),%rbp
-	movq	40(%rsi),%rbx
-	leaq	48(%rsi),%rsp
+	movq	-48(%rsi),%r15
+	movq	-40(%rsi),%r14
+	movq	-32(%rsi),%r13
+	movq	-24(%rsi),%r12
+	movq	-16(%rsi),%rbp
+	movq	-8(%rsi),%rbx
+	leaq	(%rsi),%rsp
 L$mul_epilogue:
 	.byte	0xf3,0xc3
 
 
 .p2align	4
 bn_mul4x_mont:
+	movl	%r9d,%r9d
+	movq	%rsp,%rax
 L$mul4x_enter:
 	pushq	%rbx
 	pushq	%rbp
@@ -223,14 +251,28 @@ L$mul4x_enter:
 	pushq	%r14
 	pushq	%r15
 
-	movl	%r9d,%r9d
-	leaq	4(%r9),%r10
+	negq	%r9
 	movq	%rsp,%r11
-	negq	%r10
-	leaq	(%rsp,%r10,8),%rsp
-	andq	$-1024,%rsp
+	leaq	-32(%rsp,%r9,8),%r10
+	negq	%r9
+	andq	$-1024,%r10
 
-	movq	%r11,8(%rsp,%r9,8)
+	subq	%r10,%r11
+	andq	$-4096,%r11
+	leaq	(%r10,%r11,1),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	L$mul4x_page_walk
+	jmp	L$mul4x_page_walk_done
+
+L$mul4x_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	L$mul4x_page_walk
+L$mul4x_page_walk_done:
+
+	movq	%rax,8(%rsp,%r9,8)
 L$mul4x_body:
 	movq	%rdi,16(%rsp,%r9,8)
 	movq	%rdx,%r12
@@ -531,6 +573,7 @@ L$inner4x:
 	jb	L$outer4x
 	movq	16(%rsp,%r9,8),%rdi
 	movq	0(%rsp),%rax
+	pxor	%xmm0,%xmm0
 	movq	8(%rsp),%rdx
 	shrq	$2,%r9
 	leaq	(%rsp),%rsi
@@ -568,45 +611,44 @@ L$sub4x:
 	movq	%rbx,16(%rdi,%r14,8)
 
 	sbbq	$0,%rax
-	movq	%rax,%xmm0
-	punpcklqdq	%xmm0,%xmm0
 	movq	%rbp,24(%rdi,%r14,8)
 	xorq	%r14,%r14
+	andq	%rax,%rsi
+	notq	%rax
+	movq	%rdi,%rcx
+	andq	%rax,%rcx
+	leaq	-1(%r9),%r15
+	orq	%rcx,%rsi
 
-	movq	%r9,%r15
-	pxor	%xmm5,%xmm5
+	movdqu	(%rsi),%xmm1
+	movdqa	%xmm0,(%rsp)
+	movdqu	%xmm1,(%rdi)
 	jmp	L$copy4x
 .p2align	4
 L$copy4x:
-	movdqu	(%rsp,%r14,1),%xmm2
-	movdqu	16(%rsp,%r14,1),%xmm4
-	movdqu	(%rdi,%r14,1),%xmm1
-	movdqu	16(%rdi,%r14,1),%xmm3
-	pxor	%xmm1,%xmm2
-	pxor	%xmm3,%xmm4
-	pand	%xmm0,%xmm2
-	pand	%xmm0,%xmm4
-	pxor	%xmm1,%xmm2
-	pxor	%xmm3,%xmm4
-	movdqu	%xmm2,(%rdi,%r14,1)
-	movdqu	%xmm4,16(%rdi,%r14,1)
-	movdqa	%xmm5,(%rsp,%r14,1)
-	movdqa	%xmm5,16(%rsp,%r14,1)
-
+	movdqu	16(%rsi,%r14,1),%xmm2
+	movdqu	32(%rsi,%r14,1),%xmm1
+	movdqa	%xmm0,16(%rsp,%r14,1)
+	movdqu	%xmm2,16(%rdi,%r14,1)
+	movdqa	%xmm0,32(%rsp,%r14,1)
+	movdqu	%xmm1,32(%rdi,%r14,1)
 	leaq	32(%r14),%r14
 	decq	%r15
 	jnz	L$copy4x
 
 	shlq	$2,%r9
+	movdqu	16(%rsi,%r14,1),%xmm2
+	movdqa	%xmm0,16(%rsp,%r14,1)
+	movdqu	%xmm2,16(%rdi,%r14,1)
 	movq	8(%rsp,%r9,8),%rsi
 	movq	$1,%rax
-	movq	(%rsi),%r15
-	movq	8(%rsi),%r14
-	movq	16(%rsi),%r13
-	movq	24(%rsi),%r12
-	movq	32(%rsi),%rbp
-	movq	40(%rsi),%rbx
-	leaq	48(%rsi),%rsp
+	movq	-48(%rsi),%r15
+	movq	-40(%rsi),%r14
+	movq	-32(%rsi),%r13
+	movq	-24(%rsi),%r12
+	movq	-16(%rsi),%rbp
+	movq	-8(%rsi),%rbx
+	leaq	(%rsi),%rsp
 L$mul4x_epilogue:
 	.byte	0xf3,0xc3
 
@@ -615,14 +657,15 @@ L$mul4x_epilogue:
 
 .p2align	5
 bn_sqr8x_mont:
-L$sqr8x_enter:
 	movq	%rsp,%rax
+L$sqr8x_enter:
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
 	pushq	%r13
 	pushq	%r14
 	pushq	%r15
+L$sqr8x_prologue:
 
 	movl	%r9d,%r10d
 	shll	$3,%r9d
@@ -635,25 +678,43 @@ L$sqr8x_enter:
 
 
 	leaq	-64(%rsp,%r9,2),%r11
+	movq	%rsp,%rbp
 	movq	(%r8),%r8
 	subq	%rsi,%r11
 	andq	$4095,%r11
 	cmpq	%r11,%r10
 	jb	L$sqr8x_sp_alt
-	subq	%r11,%rsp
-	leaq	-64(%rsp,%r9,2),%rsp
+	subq	%r11,%rbp
+	leaq	-64(%rbp,%r9,2),%rbp
 	jmp	L$sqr8x_sp_done
 
 .p2align	5
 L$sqr8x_sp_alt:
 	leaq	4096-64(,%r9,2),%r10
-	leaq	-64(%rsp,%r9,2),%rsp
+	leaq	-64(%rbp,%r9,2),%rbp
 	subq	%r10,%r11
 	movq	$0,%r10
 	cmovcq	%r10,%r11
-	subq	%r11,%rsp
+	subq	%r11,%rbp
 L$sqr8x_sp_done:
-	andq	$-64,%rsp
+	andq	$-64,%rbp
+	movq	%rsp,%r11
+	subq	%rbp,%r11
+	andq	$-4096,%r11
+	leaq	(%r11,%rbp,1),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	L$sqr8x_page_walk
+	jmp	L$sqr8x_page_walk_done
+
+.p2align	4
+L$sqr8x_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	L$sqr8x_page_walk
+L$sqr8x_page_walk_done:
+
 	movq	%r9,%r10
 	negq	%r9
 

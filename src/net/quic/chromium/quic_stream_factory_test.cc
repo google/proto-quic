@@ -4360,7 +4360,7 @@ TEST_P(QuicStreamFactoryTest, OnCertDBChanged) {
                                          net_log_, CompletionCallback()));
 
   // Change the CA cert and verify that stream saw the event.
-  factory_->OnCertDBChanged(nullptr);
+  factory_->OnCertDBChanged();
   EXPECT_EQ(ERR_CERT_DATABASE_CHANGED,
             stream->ReadResponseHeaders(callback_.callback()));
   EXPECT_FALSE(factory_->require_confirmation());

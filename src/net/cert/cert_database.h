@@ -43,7 +43,7 @@ class NET_EXPORT CertDatabase {
     // Typically, this will be in response to a CA certificate being added,
     // removed, or its trust changed, but may also signal on client
     // certificate events when they can be reliably detected.
-    virtual void OnCertDBChanged(const X509Certificate* cert) {}
+    virtual void OnCertDBChanged() {}
 
    protected:
     Observer() {}
@@ -86,7 +86,7 @@ class NET_EXPORT CertDatabase {
   // Synthetically injects notifications to all observers. In general, this
   // should only be called by the creator of the CertDatabase. Used to inject
   // notifcations from other DB interfaces.
-  void NotifyObserversCertDBChanged(const X509Certificate* cert);
+  void NotifyObserversCertDBChanged();
 
  private:
   friend struct base::DefaultSingletonTraits<CertDatabase>;

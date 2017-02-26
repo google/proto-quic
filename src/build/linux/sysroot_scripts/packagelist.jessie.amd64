@@ -152,6 +152,8 @@ main/libx/libxxf86vm/libxxf86vm1_1.1.3-1+b1_amd64.deb
 main/l/linux/linux-libc-dev_3.16.7-ckt25-2_amd64.deb
 main/m/mesa/libegl1-mesa_10.3.2-1+deb8u1_amd64.deb
 main/m/mesa/libegl1-mesa-dev_10.3.2-1+deb8u1_amd64.deb
+main/m/mesa/libgbm1_10.3.2-1+deb8u1_amd64.deb
+main/m/mesa/libgbm-dev_10.3.2-1+deb8u1_amd64.deb
 main/m/mesa/libgl1-mesa-dev_10.3.2-1+deb8u1_amd64.deb
 main/m/mesa/libgl1-mesa-glx_10.3.2-1+deb8u1_amd64.deb
 main/m/mesa/libglapi-mesa_10.3.2-1+deb8u1_amd64.deb

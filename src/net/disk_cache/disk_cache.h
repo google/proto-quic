@@ -174,6 +174,9 @@ class NET_EXPORT Backend {
   // Called whenever an external cache in the system reuses the resource
   // referred to by |key|.
   virtual void OnExternalCacheHit(const std::string& key) = 0;
+
+  // Returns the estimate of dynamically allocated memory in bytes.
+  virtual size_t EstimateMemoryUsage() const = 0;
 };
 
 // This interface represents an entry in the disk cache.

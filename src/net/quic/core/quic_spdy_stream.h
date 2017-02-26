@@ -181,7 +181,10 @@ class QUIC_EXPORT_PRIVATE QuicSpdyStream : public QuicStream {
     allow_bidirectional_data_ = value;
   }
 
-  bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
+  bool allow_bidirectional_data() const {
+    return FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming ||
+           allow_bidirectional_data_;
+  }
 
   using QuicStream::CloseWriteSide;
 

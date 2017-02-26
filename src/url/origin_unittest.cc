@@ -262,7 +262,7 @@ TEST(OriginTest, SuboriginSerialization) {
       "https-so://.", "https-so://foo", "https-so://.foo", "https-so://foo.",
   };
 
-  for (const auto& test_case : failure_cases) {
+  for (auto* test_case : failure_cases) {
     SCOPED_TRACE(test_case);
     GURL url(test_case);
     EXPECT_TRUE(url.is_valid());

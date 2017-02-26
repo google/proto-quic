@@ -136,10 +136,6 @@ QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_force_hol_blocking, true)
 // allow CHLO packets to be buffered until next iteration of the event loop.
 QUIC_FLAG(bool, FLAGS_quic_allow_chlo_buffering, true)
 
-// If true, fix version manager bug, in which version flag does not really
-// help.
-QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_fix_version_manager, true)
-
 // Add a new client connection options field to QuicOptions which is only used
 // to configure client side features, such as congestion control.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_client_connection_options, true)
@@ -197,3 +193,8 @@ QUIC_FLAG(double, FLAGS_quic_bbr_rtt_variation_weight, 0.0f)
 
 // Congestion window gain for QUIC BBR during PROBE_BW phase.
 QUIC_FLAG(double, FLAGS_quic_bbr_cwnd_gain, 2.0f)
+
+// If true, bidi streaming is always enabled in QUIC.
+QUIC_FLAG(bool,
+          FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming,
+          false)

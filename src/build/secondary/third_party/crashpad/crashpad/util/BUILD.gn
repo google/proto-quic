@@ -92,8 +92,12 @@ static_library("util") {
     "misc/tri_state.h",
     "misc/uuid.cc",
     "misc/uuid.h",
+    "misc/zlib.cc",
+    "misc/zlib.h",
     "net/http_body.cc",
     "net/http_body.h",
+    "net/http_body_gzip.cc",
+    "net/http_body_gzip.h",
     "net/http_headers.cc",
     "net/http_headers.h",
     "net/http_multipart_builder.cc",
@@ -179,6 +183,8 @@ static_library("util") {
     "win/scoped_local_alloc.h",
     "win/scoped_process_suspend.cc",
     "win/scoped_process_suspend.h",
+    "win/session_end_watcher.cc",
+    "win/session_end_watcher.h",
     "win/termination_codes.h",
     "win/time.cc",
     "win/time.h",
@@ -235,6 +241,7 @@ static_library("util") {
   deps = [
     "//base",
     "//third_party/crashpad/crashpad/compat",
+    "//third_party/crashpad/crashpad/third_party/zlib",
   ]
 
   if (is_win) {

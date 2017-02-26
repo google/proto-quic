@@ -9,6 +9,7 @@
 #include "net/cert/internal/test_helpers.h"
 #include "net/der/input.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -35,8 +36,10 @@ scoped_refptr<ParsedCertificate> ParseCertificateFromFile(
   EXPECT_TRUE(ReadTestDataFromPemFile(test_file_path, mappings));
 
   CertErrors errors;
-  scoped_refptr<ParsedCertificate> cert =
-      ParsedCertificate::Create(data, {}, &errors);
+  scoped_refptr<ParsedCertificate> cert = ParsedCertificate::Create(
+      bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+          reinterpret_cast<const uint8_t*>(data.data()), data.size(), nullptr)),
+      {}, &errors);
 
   EXPECT_EQ(expected_errors, errors.ToDebugString()) << "Test file: "
                                                      << test_file_path;

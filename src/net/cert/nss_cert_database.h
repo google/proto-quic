@@ -41,10 +41,9 @@ class NET_EXPORT NSSCertDatabase {
    public:
     virtual ~Observer() {}
 
-    // Will be called when a CA certificate is changed.
-    // Called with |cert| == NULL after importing a list of certificates
-    // in ImportCACerts().
-    virtual void OnCertDBChanged(const X509Certificate* cert) {}
+    // Will be called when a certificate is added, removed, or trust settings
+    // are changed.
+    virtual void OnCertDBChanged() {}
 
    protected:
     Observer() {}
@@ -246,7 +245,7 @@ class NET_EXPORT NSSCertDatabase {
 
  protected:
   // Broadcasts notifications to all registered observers.
-  void NotifyObserversCertDBChanged(const X509Certificate* cert);
+  void NotifyObserversCertDBChanged();
 
  private:
   // Registers |observer| to receive notifications of certificate changes.  The
@@ -261,10 +260,9 @@ class NET_EXPORT NSSCertDatabase {
   // on the same thread on which AddObserver() was called.
   void RemoveObserver(Observer* observer);
 
-  // Notifies observers of the removal of |cert| and calls |callback| with
+  // Notifies observers of the removal of a cert and calls |callback| with
   // |success| as argument.
-  void NotifyCertRemovalAndCallBack(scoped_refptr<X509Certificate> cert,
-                                    const DeleteCertCallback& callback,
+  void NotifyCertRemovalAndCallBack(const DeleteCertCallback& callback,
                                     bool success);
 
   // Certificate removal implementation used by |DeleteCertAndKey*|. Static so

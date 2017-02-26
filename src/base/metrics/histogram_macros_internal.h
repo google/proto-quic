@@ -96,9 +96,17 @@
         base::Histogram::FactoryGet(name, min, max, bucket_count, flag))
 
 // This is a helper macro used by other macros and shouldn't be used directly.
-// One additional bucket is created in the LinearHistogram for the illegal
-// values >= boundary_value so that mistakes in calling the UMA enumeration
-// macros can be detected.
+// For an enumeration with N items, recording values in the range [0, N - 1],
+// this macro creates a linear histogram with N + 1 buckets:
+//   [0, 1), [1, 2), ..., [N - 1, N), and an overflow bucket [N, infinity).
+// Code should never emit to the overflow bucket; only to the other N buckets.
+// This allows future versions of Chrome to safely append new entries to the
+// enumeration. Otherwise, the histogram would have [N - 1, infinity) as its
+// overflow bucket, and so the maximal value (N - 1) would be emitted to this
+// overflow bucket. But, if an additional enumerated value were later added, the
+// bucket label for the value (N - 1) would change to [N - 1, N), which would
+// result in different versions of Chrome using different bucket labels for
+// identical data.
 #define INTERNAL_HISTOGRAM_ENUMERATION_WITH_FLAG(name, sample, boundary, flag) \
   do {                                                                         \
     static_assert(                                                             \

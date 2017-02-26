@@ -16,45 +16,56 @@ namespace base {
 
 namespace {
 
-base::LazyInstance<base::ThreadLocalPointer<SequencedTaskRunnerHandle>>::Leaky
+LazyInstance<ThreadLocalPointer<SequencedTaskRunnerHandle>>::Leaky
     lazy_tls_ptr = LAZY_INSTANCE_INITIALIZER;
 
 }  // namespace
 
 // static
 scoped_refptr<SequencedTaskRunner> SequencedTaskRunnerHandle::Get() {
+  // Return the registered SingleThreadTaskRunner, if any. This must be at the
+  // top so that a SingleThreadTaskRunner has priority over a
+  // SequencedTaskRunner (RLZ registers both on the same thread despite that
+  // being prevented by DCHECKs).
+  // TODO(fdoray): Move this to the bottom once RLZ stops registering a
+  // SingleThreadTaskRunner and a SequencedTaskRunner on the same thread.
+  // https://crbug.com/618530#c14
+  if (ThreadTaskRunnerHandle::IsSet()) {
+    // Various modes of setting SequencedTaskRunnerHandle don't combine.
+    DCHECK(!lazy_tls_ptr.Pointer()->Get());
+    DCHECK(!SequencedWorkerPool::GetSequenceTokenForCurrentThread().IsValid());
+
+    return ThreadTaskRunnerHandle::Get();
+  }
+
   // Return the registered SequencedTaskRunner, if any.
   const SequencedTaskRunnerHandle* handle = lazy_tls_ptr.Pointer()->Get();
   if (handle) {
     // Various modes of setting SequencedTaskRunnerHandle don't combine.
-    DCHECK(!base::ThreadTaskRunnerHandle::IsSet());
     DCHECK(!SequencedWorkerPool::GetSequenceTokenForCurrentThread().IsValid());
+
     return handle->task_runner_;
   }
 
   // If we are on a worker thread for a SequencedBlockingPool that is running a
   // sequenced task, return a SequencedTaskRunner for it.
-  scoped_refptr<base::SequencedWorkerPool> pool =
+  scoped_refptr<SequencedWorkerPool> pool =
       SequencedWorkerPool::GetWorkerPoolForCurrentThread();
-  if (pool) {
-    SequencedWorkerPool::SequenceToken sequence_token =
-        SequencedWorkerPool::GetSequenceTokenForCurrentThread();
-    DCHECK(sequence_token.IsValid());
-    scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
-        pool->GetSequencedTaskRunner(sequence_token));
-    DCHECK(sequenced_task_runner->RunsTasksOnCurrentThread());
-    return sequenced_task_runner;
-  }
-
-  // Return the SingleThreadTaskRunner for the current thread otherwise.
-  return base::ThreadTaskRunnerHandle::Get();
+  DCHECK(pool);
+  SequencedWorkerPool::SequenceToken sequence_token =
+      SequencedWorkerPool::GetSequenceTokenForCurrentThread();
+  DCHECK(sequence_token.IsValid());
+  scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
+      pool->GetSequencedTaskRunner(sequence_token));
+  DCHECK(sequenced_task_runner->RunsTasksOnCurrentThread());
+  return sequenced_task_runner;
 }
 
 // static
 bool SequencedTaskRunnerHandle::IsSet() {
   return lazy_tls_ptr.Pointer()->Get() ||
          SequencedWorkerPool::GetSequenceTokenForCurrentThread().IsValid() ||
-         base::ThreadTaskRunnerHandle::IsSet();
+         ThreadTaskRunnerHandle::IsSet();
 }
 
 SequencedTaskRunnerHandle::SequencedTaskRunnerHandle(

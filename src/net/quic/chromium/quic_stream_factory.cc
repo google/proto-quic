@@ -1558,7 +1558,7 @@ void QuicStreamFactory::OnSSLConfigChanged() {
   CloseAllSessions(ERR_CERT_DATABASE_CHANGED, QUIC_CONNECTION_CANCELLED);
 }
 
-void QuicStreamFactory::OnCertDBChanged(const X509Certificate* cert) {
+void QuicStreamFactory::OnCertDBChanged() {
   // We should flush the sessions if we removed trust from a
   // cert, because a previously trusted server may have become
   // untrusted.

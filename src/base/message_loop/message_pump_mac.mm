@@ -69,7 +69,48 @@ const CFTimeInterval kCFTimeIntervalMax =
 // Set to true if MessagePumpMac::Create() is called before NSApp is
 // initialized.  Only accessed from the main thread.
 bool g_not_using_cr_app = false;
+
+// Various CoreFoundation definitions.
+typedef struct __CFRuntimeBase {
+  uintptr_t _cfisa;
+  uint8_t _cfinfo[4];
+#if __LP64__
+  uint32_t _rc;
 #endif
+} CFRuntimeBase;
+
+#if defined(__BIG_ENDIAN__)
+#define __CF_BIG_ENDIAN__ 1
+#define __CF_LITTLE_ENDIAN__ 0
+#endif
+
+#if defined(__LITTLE_ENDIAN__)
+#define __CF_LITTLE_ENDIAN__ 1
+#define __CF_BIG_ENDIAN__ 0
+#endif
+
+#define CF_INFO_BITS (!!(__CF_BIG_ENDIAN__)*3)
+
+#define __CFBitfieldMask(N1, N2) \
+  ((((UInt32)~0UL) << (31UL - (N1) + (N2))) >> (31UL - N1))
+#define __CFBitfieldSetValue(V, N1, N2, X)   \
+  ((V) = ((V) & ~__CFBitfieldMask(N1, N2)) | \
+         (((X) << (N2)) & __CFBitfieldMask(N1, N2)))
+
+// Marking timers as invalid at the right time by flipping their valid bit helps
+// significantly reduce power use (see the explanation in
+// RunDelayedWorkTimer()), however there is no public API for doing so.
+// CFRuntime.h states that CFRuntimeBase can change from release to release
+// and should not be accessed directly. The last known change of this struct
+// occurred in 2008 in CF-476 / 10.5; unfortunately the source for 10.11 and
+// 10.12 is not available for inspection at this time.
+// CanInvalidateCFRunLoopTimers() will at least prevent us from invalidating
+// timers if this function starts flipping the wrong bit on a future OS release.
+void __ChromeCFRunLoopTimerSetValid(CFRunLoopTimerRef timer, bool valid) {
+  __CFBitfieldSetValue(((CFRuntimeBase*)timer)->_cfinfo[CF_INFO_BITS], 3, 3,
+                       valid);
+}
+#endif  // !defined(OS_IOS)
 
 }  // namespace
 
@@ -93,6 +134,47 @@ class MessagePumpScopedAutoreleasePool {
   NSAutoreleasePool* pool_;
   DISALLOW_COPY_AND_ASSIGN(MessagePumpScopedAutoreleasePool);
 };
+
+#if !defined(OS_IOS)
+// This function uses private API to modify a test timer's valid state and
+// uses public API to confirm that the private API changed the correct bit.
+// static
+bool MessagePumpCFRunLoopBase::CanInvalidateCFRunLoopTimers() {
+  CFRunLoopTimerContext timer_context = CFRunLoopTimerContext();
+  timer_context.info = nullptr;
+  ScopedCFTypeRef<CFRunLoopTimerRef> test_timer(
+      CFRunLoopTimerCreate(NULL,                // allocator
+                           kCFTimeIntervalMax,  // fire time
+                           kCFTimeIntervalMax,  // interval
+                           0,                   // flags
+                           0,                   // priority
+                           nullptr, &timer_context));
+  // Should be valid from the start.
+  if (!CFRunLoopTimerIsValid(test_timer)) {
+    return false;
+  }
+  // Confirm that the private API can mark the timer invalid.
+  __ChromeCFRunLoopTimerSetValid(test_timer, false);
+  if (CFRunLoopTimerIsValid(test_timer)) {
+    return false;
+  }
+  // Confirm that the private API can mark the timer valid.
+  __ChromeCFRunLoopTimerSetValid(test_timer, true);
+  return CFRunLoopTimerIsValid(test_timer);
+}
+#endif  // !defined(OS_IOS)
+
+// static
+void MessagePumpCFRunLoopBase::ChromeCFRunLoopTimerSetValid(
+    CFRunLoopTimerRef timer,
+    bool valid) {
+#if !defined(OS_IOS)
+  static bool can_invalidate_timers = CanInvalidateCFRunLoopTimers();
+  if (can_invalidate_timers) {
+    __ChromeCFRunLoopTimerSetValid(timer, valid);
+  }
+#endif  // !defined(OS_IOS)
+}
 
 // Must be called on the run loop thread.
 MessagePumpCFRunLoopBase::MessagePumpCFRunLoopBase()
@@ -243,6 +325,17 @@ void MessagePumpCFRunLoopBase::ScheduleDelayedWork(
     const TimeTicks& delayed_work_time) {
   TimeDelta delta = delayed_work_time - TimeTicks::Now();
   delayed_work_fire_time_ = CFAbsoluteTimeGetCurrent() + delta.InSecondsF();
+
+  // Flip the timer's validation bit just before setting the new fire time. Do
+  // this now because CFRunLoopTimerSetNextFireDate() likely checks the validity
+  // of a timer before proceeding to set its fire date. Making the timer valid
+  // now won't have any side effects (such as a premature firing of the timer)
+  // because we're only flipping a bit.
+  //
+  // Please see the comment in RunDelayedWorkTimer() for more info on the whys
+  // of invalidation.
+  ChromeCFRunLoopTimerSetValid(delayed_work_timer_, true);
+
   CFRunLoopTimerSetNextFireDate(delayed_work_timer_, delayed_work_fire_time_);
   if (timer_slack_ == TIMER_SLACK_MAXIMUM) {
     CFRunLoopTimerSetTolerance(delayed_work_timer_, delta.InSecondsF() * 0.5);
@@ -263,6 +356,31 @@ void MessagePumpCFRunLoopBase::RunDelayedWorkTimer(CFRunLoopTimerRef timer,
 
   // The timer won't fire again until it's reset.
   self->delayed_work_fire_time_ = kCFTimeIntervalMax;
+
+  // The message pump's timer needs to fire at changing and unpredictable
+  // intervals. Creating a new timer for each firing time is very expensive, so
+  // the message pump instead uses a repeating timer with a very large repeat
+  // rate. After each firing of the timer, the run loop sets the timer's next
+  // firing time to the distant future, essentially pausing the timer until the
+  // pump sets the next firing time. This is the solution recommended by Apple.
+  //
+  // It turns out, however, that scheduling timers is also quite expensive, and
+  // that every one of the message pump's timer firings incurs two
+  // reschedulings. The first rescheduling occurs in ScheduleDelayedWork(),
+  // which sets the desired next firing time. The second comes after exiting
+  // this method (the timer's callback method), when the run loop sets the
+  // timer's next firing time to far in the future.
+  //
+  // The code in __CFRunLoopDoTimer() inside CFRunLoop.c calls the timer's
+  // callback, confirms that the timer is valid, and then sets its future
+  // firing time based on its repeat frequency. Flipping the valid bit here
+  // causes the __CFRunLoopDoTimer() to skip setting the future firing time.
+  // Note that there's public API to invalidate a timer but it goes beyond
+  // flipping the valid bit, making the timer unusable in the future.
+  //
+  // ScheduleDelayedWork() flips the valid bit back just before setting the
+  // timer's new firing time.
+  ChromeCFRunLoopTimerSetValid(self->delayed_work_timer_, false);
 
   // CFRunLoopTimers fire outside of the priority scheme for CFRunLoopSources.
   // In order to establish the proper priority in which work and delayed work

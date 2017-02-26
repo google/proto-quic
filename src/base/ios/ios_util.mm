@@ -28,10 +28,6 @@ std::string* g_icudtl_path_override = nullptr;
 namespace base {
 namespace ios {
 
-bool IsRunningOnIOS9OrLater() {
-  return IsRunningOnOrLater(9, 0, 0);
-}
-
 bool IsRunningOnIOS10OrLater() {
   return IsRunningOnOrLater(10, 0, 0);
 }

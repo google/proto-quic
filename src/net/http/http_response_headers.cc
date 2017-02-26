@@ -460,60 +460,6 @@ void HttpResponseHeaders::Parse(const std::string& raw_input) {
   DCHECK_EQ('\0', raw_headers_[raw_headers_.size() - 1]);
 }
 
-// Append all of our headers to the final output string.
-void HttpResponseHeaders::GetNormalizedHeaders(std::string* output) const {
-  // copy up to the null byte.  this just copies the status line.
-  output->assign(raw_headers_.c_str());
-
-  // headers may appear multiple times (not necessarily in succession) in the
-  // header data, so we build a map from header name to generated header lines.
-  // to preserve the order of the original headers, the actual values are kept
-  // in a separate list.  finally, the list of headers is flattened to form
-  // the normalized block of headers.
-  //
-  // NOTE: We take special care to preserve the whitespace around any commas
-  // that may occur in the original response headers.  Because our consumer may
-  // be a web app, we cannot be certain of the semantics of commas despite the
-  // fact that RFC 2616 says that they should be regarded as value separators.
-  //
-  using HeadersMap = std::unordered_map<std::string, size_t>;
-  HeadersMap headers_map;
-  HeadersMap::iterator iter = headers_map.end();
-
-  std::vector<std::string> headers;
-
-  for (size_t i = 0; i < parsed_.size(); ++i) {
-    DCHECK(!parsed_[i].is_continuation());
-
-    std::string name(parsed_[i].name_begin, parsed_[i].name_end);
-    std::string lower_name = base::ToLowerASCII(name);
-
-    iter = headers_map.find(lower_name);
-    if (iter == headers_map.end()) {
-      iter = headers_map.insert(
-          HeadersMap::value_type(lower_name, headers.size())).first;
-      headers.push_back(name + ": ");
-    } else {
-      headers[iter->second].append(", ");
-    }
-
-    std::string::const_iterator value_begin = parsed_[i].value_begin;
-    std::string::const_iterator value_end = parsed_[i].value_end;
-    while (++i < parsed_.size() && parsed_[i].is_continuation())
-      value_end = parsed_[i].value_end;
-    --i;
-
-    headers[iter->second].append(value_begin, value_end);
-  }
-
-  for (size_t i = 0; i < headers.size(); ++i) {
-    output->push_back('\n');
-    output->append(headers[i]);
-  }
-
-  output->push_back('\n');
-}
-
 bool HttpResponseHeaders::GetNormalizedHeader(const std::string& name,
                                               std::string* value) const {
   // If you hit this assertion, please use EnumerateHeader instead!

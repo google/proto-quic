@@ -488,6 +488,69 @@ TEST(HostCacheTest, Stale) {
   EXPECT_EQ(3, stale.stale_hits);
 }
 
+TEST(HostCacheTest, EvictStale) {
+  HostCache cache(2);
+
+  base::TimeTicks now;
+  HostCache::EntryStaleness stale;
+
+  HostCache::Key key1 = Key("foobar.com");
+  HostCache::Key key2 = Key("foobar2.com");
+  HostCache::Key key3 = Key("foobar3.com");
+  HostCache::Entry entry = HostCache::Entry(OK, AddressList());
+
+  EXPECT_EQ(0u, cache.size());
+  EXPECT_FALSE(cache.Lookup(key1, now));
+  EXPECT_FALSE(cache.Lookup(key2, now));
+  EXPECT_FALSE(cache.Lookup(key3, now));
+
+  // |key1| expires in 10 seconds.
+  cache.Set(key1, entry, now, base::TimeDelta::FromSeconds(10));
+  EXPECT_EQ(1u, cache.size());
+  EXPECT_TRUE(cache.Lookup(key1, now));
+  EXPECT_FALSE(cache.Lookup(key2, now));
+  EXPECT_FALSE(cache.Lookup(key3, now));
+
+  // Simulate network change, expiring the cache.
+  cache.OnNetworkChange();
+
+  EXPECT_EQ(1u, cache.size());
+  EXPECT_FALSE(cache.Lookup(key1, now));
+  EXPECT_TRUE(cache.LookupStale(key1, now, &stale));
+  EXPECT_EQ(1, stale.network_changes);
+
+  // Advance to t=1.
+  now += base::TimeDelta::FromSeconds(1);
+
+  // |key2| expires before |key1| would originally have expired.
+  cache.Set(key2, entry, now, base::TimeDelta::FromSeconds(5));
+  EXPECT_EQ(2u, cache.size());
+  EXPECT_FALSE(cache.Lookup(key1, now));
+  EXPECT_TRUE(cache.LookupStale(key1, now, &stale));
+  EXPECT_TRUE(cache.Lookup(key2, now));
+  EXPECT_FALSE(cache.Lookup(key3, now));
+
+  // |key1| should be chosen for eviction, since it is stale.
+  cache.Set(key3, entry, now, base::TimeDelta::FromSeconds(1));
+  EXPECT_EQ(2u, cache.size());
+  EXPECT_FALSE(cache.Lookup(key1, now));
+  EXPECT_FALSE(cache.LookupStale(key1, now, &stale));
+  EXPECT_TRUE(cache.Lookup(key2, now));
+  EXPECT_TRUE(cache.Lookup(key3, now));
+
+  // Advance to t=6.
+  now += base::TimeDelta::FromSeconds(5);
+
+  // Insert |key1| again. |key3| should be evicted.
+  cache.Set(key1, entry, now, base::TimeDelta::FromSeconds(10));
+  EXPECT_EQ(2u, cache.size());
+  EXPECT_TRUE(cache.Lookup(key1, now));
+  EXPECT_FALSE(cache.Lookup(key2, now));
+  EXPECT_TRUE(cache.LookupStale(key2, now, &stale));
+  EXPECT_FALSE(cache.Lookup(key3, now));
+  EXPECT_FALSE(cache.LookupStale(key3, now, &stale));
+}
+
 // Tests the less than and equal operators for HostCache::Key work.
 TEST(HostCacheTest, KeyComparators) {
   struct {

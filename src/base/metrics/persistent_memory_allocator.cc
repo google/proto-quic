@@ -449,10 +449,15 @@ void PersistentMemoryAllocator::CreateTrackingHistograms(
     return;
   std::string name_string = name.as_string();
 
+#if 0
+  // This histogram wasn't being used so has been disabled. It is left here
+  // in case development of a new use of the allocator could benefit from
+  // recording (temporarily and locally) the allocation sizes.
   DCHECK(!allocs_histogram_);
   allocs_histogram_ = Histogram::FactoryGet(
       "UMA.PersistentAllocator." + name_string + ".Allocs", 1, 10000, 50,
       HistogramBase::kUmaTargetedHistogramFlag);
+#endif
 
   DCHECK(!used_histogram_);
   used_histogram_ = LinearHistogram::FactoryGet(

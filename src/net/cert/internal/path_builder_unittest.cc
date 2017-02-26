@@ -20,6 +20,7 @@
 #include "net/test/test_certificate_data.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -101,7 +102,10 @@ class AsyncCertIssuerSourceStatic : public CertIssuerSource {
   if (!r)
     return r;
   CertErrors errors;
-  *result = ParsedCertificate::Create(der, {}, &errors);
+  *result = ParsedCertificate::Create(
+      bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+          reinterpret_cast<const uint8_t*>(der.data()), der.size(), nullptr)),
+      {}, &errors);
   if (!*result) {
     return ::testing::AssertionFailure()
            << "ParseCertificate::Create() failed:\n"
@@ -785,8 +789,11 @@ TEST_F(PathBuilderKeyRolloverTest,
 TEST_F(PathBuilderKeyRolloverTest, TestDuplicateIntermediates) {
   // Create a separate copy of oldintermediate.
   scoped_refptr<ParsedCertificate> oldintermediate_dupe(
-      ParsedCertificate::Create(oldintermediate_->der_cert().AsStringPiece(),
-                                {}, nullptr));
+      ParsedCertificate::Create(
+          bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+              oldintermediate_->der_cert().UnsafeData(),
+              oldintermediate_->der_cert().Length(), nullptr)),
+          {}, nullptr));
 
   // Only newroot is a trusted root.
   TrustStoreInMemory trust_store;
@@ -847,7 +854,10 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateIntermediates) {
 TEST_F(PathBuilderKeyRolloverTest, TestDuplicateIntermediateAndRoot) {
   // Create a separate copy of newroot.
   scoped_refptr<ParsedCertificate> newroot_dupe(ParsedCertificate::Create(
-      newroot_->der_cert().AsStringPiece(), {}, nullptr));
+      bssl::UniquePtr<CRYPTO_BUFFER>(
+          CRYPTO_BUFFER_new(newroot_->der_cert().UnsafeData(),
+                            newroot_->der_cert().Length(), nullptr)),
+      {}, nullptr));
 
   // Only newroot is a trusted root.
   TrustStoreInMemory trust_store;
@@ -1034,8 +1044,11 @@ TEST_F(PathBuilderKeyRolloverTest, TestDuplicateAsyncIntermediates) {
   }
 
   scoped_refptr<ParsedCertificate> oldintermediate_dupe(
-      ParsedCertificate::Create(oldintermediate_->der_cert().AsStringPiece(),
-                                {}, nullptr));
+      ParsedCertificate::Create(
+          bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+              oldintermediate_->der_cert().UnsafeData(),
+              oldintermediate_->der_cert().Length(), nullptr)),
+          {}, nullptr));
 
   EXPECT_CALL(*target_issuers_req, GetNext(_))
       // First async batch: return oldintermediate_.

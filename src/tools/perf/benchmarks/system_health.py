@@ -39,7 +39,11 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options.config.chrome_trace_config.category_filter.AddFilterString('rail')
     options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
-    options.SetTimelineBasedMetrics(['clockSyncLatencyMetric', 'powerMetric'])
+    options.SetTimelineBasedMetrics([
+        'clockSyncLatencyMetric',
+        'powerMetric',
+        'tracingMetric'
+    ])
     page_cycler_v2.AugmentOptionsForLoadingMetrics(options)
     return options
 
@@ -61,9 +65,7 @@ class DesktopCommonSystemHealth(_CommonSystemHealthBenchmark):
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/624355 (reference builds).
-    return (possible_browser.platform.GetDeviceTypeName() != 'Desktop' or
-            possible_browser.browser_type == 'reference')
+    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
 @benchmark.Enabled('android')
 class MobileCommonSystemHealth(_CommonSystemHealthBenchmark):
@@ -116,9 +118,7 @@ class DesktopMemorySystemHealth(_MemorySystemHealthBenchmark):
 
   @classmethod
   def ShouldDisable(cls, possible_browser):
-    # http://crbug.com/624355 (reference builds).
-    return (possible_browser.platform.GetDeviceTypeName() != 'Desktop' or
-            possible_browser.browser_type == 'reference')
+    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
 
 
 @benchmark.Enabled('android')

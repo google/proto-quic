@@ -11,7 +11,8 @@
 
 namespace net {
 
-NotifyWatcherMac::NotifyWatcherMac() : notify_fd_(-1), notify_token_(-1) {}
+NotifyWatcherMac::NotifyWatcherMac()
+    : notify_fd_(-1), notify_token_(-1), watcher_(FROM_HERE) {}
 
 NotifyWatcherMac::~NotifyWatcherMac() {
   Cancel();

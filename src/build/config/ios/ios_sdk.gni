@@ -57,6 +57,8 @@ assert(custom_toolchain == "" || additional_target_cpus == [],
 
 use_ios_simulator = current_cpu == "x86" || current_cpu == "x64"
 
+ios_generic_test_bundle_id_suffix = "generic-unit-test"
+
 # Initialize additional_toolchains from additional_target_cpus. Assert here
 # that the list does not contains $target_cpu nor duplicates as this would
 # cause weird errors during the build.

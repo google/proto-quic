@@ -787,6 +787,14 @@ should be able to be added at any place in this file.
   <description>Please enter the description of this user action.</description>
 </action>
 
+<action name="Accel_SelectNumberedTab">
+  <owner>calamity@chromium.org</owner>
+  <description>
+    Logged when a user press Ctrl/Command + 1-9 to change to a tab in a browser
+    window.
+  </description>
+</action>
+
 <action name="Accel_SelectPreviousTab">
   <owner>Please list the metric's owners. Add more owner tags as needed.</owner>
   <description>Please enter the description of this user action.</description>

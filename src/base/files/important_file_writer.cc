@@ -103,6 +103,7 @@ bool ImportantFileWriter::WriteFileAtomically(const FilePath& path,
   File tmp_file(tmp_file_path, File::FLAG_OPEN | File::FLAG_WRITE);
   if (!tmp_file.IsValid()) {
     LogFailure(path, FAILED_OPENING, "could not open temporary file");
+    DeleteFile(tmp_file_path, false);
     return false;
   }
 

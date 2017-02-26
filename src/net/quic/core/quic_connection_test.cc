@@ -4249,15 +4249,6 @@ TEST_P(QuicConnectionTest, Blocked) {
   EXPECT_EQ(0u, connection_.GetStats().blocked_frames_sent);
 }
 
-TEST_P(QuicConnectionTest, PathClose) {
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-
-  QuicPathCloseFrame path_close = QuicPathCloseFrame(1);
-  ProcessPathClosePacket(&path_close);
-  EXPECT_TRUE(QuicFramerPeer::IsPathClosed(
-      QuicConnectionPeer::GetFramer(&connection_), 1));
-}
-
 TEST_P(QuicConnectionTest, ZeroBytePacket) {
   // Don't close the connection for zero byte packets.
   EXPECT_CALL(visitor_, OnConnectionClosed(_, _, _)).Times(0);
@@ -4891,13 +4882,6 @@ TEST_P(QuicConnectionTest, EnableMultipathNegotiation) {
 
   connection_.SetFromConfig(config);
   EXPECT_TRUE(QuicConnectionPeer::IsMultipathEnabled(&connection_));
-}
-
-TEST_P(QuicConnectionTest, ClosePath) {
-  QuicPathId kTestPathId = 1;
-  connection_.SendPathClose(kTestPathId);
-  EXPECT_TRUE(QuicFramerPeer::IsPathClosed(
-      QuicConnectionPeer::GetFramer(&connection_), kTestPathId));
 }
 
 TEST_P(QuicConnectionTest, OnPathDegrading) {

@@ -498,6 +498,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
     self._store_tombstones = False
     self._initializeTombstonesAttributes(args)
 
+    self._should_save_images = None
     self._should_save_logcat = None
     self._initializeLogAttributes(args)
 
@@ -678,6 +679,7 @@ class InstrumentationTestInstance(test_instance.TestInstance):
 
   def _initializeLogAttributes(self, args):
     self._should_save_logcat = bool(args.json_results_file)
+    self._should_save_images = bool(args.json_results_file)
 
   def _initializeEditPrefsAttributes(self, args):
     if not hasattr(args, 'shared_prefs_file'):
@@ -736,6 +738,10 @@ class InstrumentationTestInstance(test_instance.TestInstance):
   @property
   def flags(self):
     return self._flags
+
+  @property
+  def should_save_images(self):
+    return self._should_save_images
 
   @property
   def should_save_logcat(self):

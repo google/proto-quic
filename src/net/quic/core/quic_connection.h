@@ -794,10 +794,6 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   // Attempts to process any queued undecryptable packets.
   void MaybeProcessUndecryptablePackets();
 
-  void ProcessAckFrame(const QuicAckFrame& incoming_ack);
-
-  void ProcessStopWaitingFrame(const QuicStopWaitingFrame& stop_waiting);
-
   // Sends any packets which are a response to the last packet, including both
   // acks and pending writes if an ack opened the congestion window.
   void MaybeSendInResponseToPacket();
@@ -833,15 +829,6 @@ class QUIC_EXPORT_PRIVATE QuicConnection
   // underlying writer, connection, or protocol.
   QuicByteCount GetLimitedMaxPacketSize(
       QuicByteCount suggested_max_packet_size);
-
-  // Called when |path_id| is considered as closed because either a PATH_CLOSE
-  // frame is sent or received. Stops receiving packets on closed path. Drops
-  // receive side of a closed path, and packets with retransmittable frames on a
-  // closed path are marked as retransmissions which will be transmitted on
-  // other paths.
-  // TODO(fayang): complete OnPathClosed once QuicMultipathSentPacketManager and
-  // QuicMultipathReceivedPacketManager are landed in QuicConnection.
-  void OnPathClosed(QuicPathId path_id);
 
   // Do any work which logically would be done in OnPacket but can not be
   // safely done until the packet is validated. Returns true if packet can be

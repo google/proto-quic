@@ -253,8 +253,11 @@ void HostCache::EvictOneEntry(base::TimeTicks now) {
 
   auto oldest_it = entries_.begin();
   for (auto it = entries_.begin(); it != entries_.end(); ++it) {
-    if (it->second.expires() < oldest_it->second.expires())
+    if ((it->second.expires() < oldest_it->second.expires()) &&
+        (it->second.IsStale(now, network_changes_) ||
+         !oldest_it->second.IsStale(now, network_changes_))) {
       oldest_it = it;
+    }
   }
 
   if (!eviction_callback_.is_null())

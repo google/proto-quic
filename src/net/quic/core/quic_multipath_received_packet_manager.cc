@@ -85,7 +85,7 @@ void QuicMultipathReceivedPacketManager::UpdatePacketInformationSentByPeer(
     QuicReceivedPacketManager* manager =
         path_managers_[stop_waiting.path_id].get();
     if (manager != nullptr) {
-      manager->UpdatePacketInformationSentByPeer(stop_waiting);
+      manager->DontWaitForPacketsBefore(stop_waiting.least_unacked);
     }
   }
 }

@@ -21,6 +21,7 @@
 #include "net/cert/internal/signature_policy.h"
 #include "net/cert/internal/trust_store_collection.h"
 #include "net/cert/internal/trust_store_in_memory.h"
+#include "net/cert/x509_util.h"
 #include "net/cert_net/cert_net_fetcher_impl.h"
 #include "net/tools/cert_verify_tool/cert_verify_tool_util.h"
 #include "net/url_request/url_request_context.h"
@@ -158,8 +159,8 @@ void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
 
 scoped_refptr<net::ParsedCertificate> ParseCertificate(const CertInput& input) {
   net::CertErrors errors;
-  scoped_refptr<net::ParsedCertificate> cert =
-      net::ParsedCertificate::Create(input.der_cert, {}, &errors);
+  scoped_refptr<net::ParsedCertificate> cert = net::ParsedCertificate::Create(
+      net::x509_util::CreateCryptoBuffer(input.der_cert), {}, &errors);
   if (!cert) {
     PrintCertError("ERROR: ParsedCertificate failed:", input);
     std::cout << errors.ToDebugString() << "\n";

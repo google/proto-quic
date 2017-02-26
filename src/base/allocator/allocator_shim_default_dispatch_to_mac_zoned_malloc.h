@@ -5,8 +5,6 @@
 #ifndef BASE_ALLOCATOR_ALLOCATOR_SHIM_DEFAULT_DISPATCH_TO_ZONED_MALLOC_H_
 #define BASE_ALLOCATOR_ALLOCATOR_SHIM_DEFAULT_DISPATCH_TO_ZONED_MALLOC_H_
 
-#include "base/allocator/allocator_interception_mac.h"
-
 namespace base {
 namespace allocator {
 

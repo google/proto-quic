@@ -1333,6 +1333,11 @@ void BackendImpl::OnExternalCacheHit(const std::string& key) {
   background_queue_.OnExternalCacheHit(key);
 }
 
+size_t BackendImpl::EstimateMemoryUsage() const {
+  // TODO(xunjieli): Implement this. crbug.com/669108.
+  return 0;
+}
+
 // ------------------------------------------------------------------------
 
 // We just created a new file so we're going to write the header and set the

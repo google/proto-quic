@@ -49,7 +49,7 @@ gn gen out/Default --args='target_os="android"'
 (We don't have to specify target\_cpu because of the conditionals
 mentioned above).
 
-And, to do a 64-bit MIPS ChromeOS cross-compile:
+And, to do a 64-bit MIPS Chrome OS cross-compile:
 
 ```
 gn gen out/Default --args='target_os="chromeos" target_cpu="mips64el"'

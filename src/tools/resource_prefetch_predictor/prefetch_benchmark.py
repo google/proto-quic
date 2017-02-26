@@ -59,7 +59,7 @@ def _CreateArgumentParser():
 
 def _Setup(device, database_filename):
   """Sets up a device and returns an instance of RemoteChromeController."""
-  chrome_controller = prefetch_predictor_common.Setup(device, [''])
+  chrome_controller = prefetch_predictor_common.Setup(device)
   chrome_package = OPTIONS.ChromePackage()
   device.ForceStop(chrome_package.package)
   chrome_controller.ResetBrowserState()
@@ -68,9 +68,8 @@ def _Setup(device, database_filename):
 
   # Make sure that the speculative prefetch predictor is enabled to ensure
   # that the disk database is re-created.
-  command_line_path = '/data/local/tmp/chrome-command-line'
   with device_setup.FlagReplacer(
-      device, command_line_path, ['--disable-fre']):
+      device, chrome_package.cmdline_file, ['--disable-fre']):
     # Launch Chrome for the first time to recreate the local state.
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',
@@ -100,6 +99,11 @@ def _RunOnce(device, database_filename, url, prefetch_delay_ms,
   # Startup tracing to ease debugging.
   chrome_args = (customtabs_benchmark.CHROME_ARGS
                  + ['--trace-startup', '--trace-startup-duration=20'])
+  # Speculative Prefetch is enabled through an experiment.
+  chrome_args.extend([
+      '--force-fieldtrials=trial/group',
+      '--force-fieldtrial-params=trial.group:mode/external-prefetching',
+      '--enable-features=SpeculativeResourcePrefetching<trial'])
 
   chrome_controller = controller.RemoteChromeController(device)
   device.ForceStop(OPTIONS.ChromePackage().package)

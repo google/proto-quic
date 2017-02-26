@@ -11,6 +11,7 @@
 #include "crypto/nss_util.h"
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
+#include "net/cert/x509_util.h"
 
 // TODO(mattm): structure so that supporting ChromeOS multi-profile stuff is
 // doable (Have a TrustStoreChromeOS which uses net::NSSProfileFilterChromeOS,
@@ -56,7 +57,9 @@ void TrustStoreNSS::FindTrustAnchorsForCert(
 
     CertErrors errors;
     scoped_refptr<ParsedCertificate> anchor_cert = ParsedCertificate::Create(
-        node->cert->derCert.data, node->cert->derCert.len, {}, &errors);
+        x509_util::CreateCryptoBuffer(node->cert->derCert.data,
+                                      node->cert->derCert.len),
+        {}, &errors);
     if (!anchor_cert) {
       // TODO(crbug.com/634443): return errors better.
       LOG(ERROR) << "Error parsing issuer certificate:\n"

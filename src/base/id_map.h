@@ -81,9 +81,8 @@ class IDMap final {
     }
   }
 
-  // Replaces the value for |id| with |new_data| and returns the existing value
-  // (as a unique_ptr<> if in IDMapOwnPointer mode).  Should only be called with
-  // an already added id.
+  // Replaces the value for |id| with |new_data| and returns the existing value.
+  // Should only be called with an already added id.
   V Replace(KeyType id, V new_data) {
     DCHECK(sequence_checker_.CalledOnValidSequence());
     DCHECK(!check_on_null_data_ || new_data);

@@ -51,13 +51,13 @@ struct Outputs {
 
 LabelSet LabelsFor(const TargetSet& targets) {
   LabelSet labels;
-  for (const auto& target : targets)
+  for (auto* target : targets)
     labels.insert(target->label());
   return labels;
 }
 
 bool AnyBuildFilesWereModified(const SourceFileSet& source_files) {
-  for (const auto& file : source_files) {
+  for (auto* file : source_files) {
     if (base::EndsWith(file->value(), ".gn", base::CompareCase::SENSITIVE) ||
         base::EndsWith(file->value(), ".gni", base::CompareCase::SENSITIVE))
       return true;
@@ -287,7 +287,7 @@ std::string Analyzer::Analyze(const std::string& input, Err* err) const {
 
   TargetSet compile_targets = TargetsFor(inputs.compile_labels);
   if (inputs.compile_included_all) {
-    for (auto& root : roots_)
+    for (auto* root : roots_)
       compile_targets.insert(root);
   }
   TargetSet filtered_targets = Filter(compile_targets);
@@ -307,10 +307,10 @@ std::string Analyzer::Analyze(const std::string& input, Err* err) const {
 TargetSet Analyzer::AllAffectedTargets(
     const SourceFileSet& source_files) const {
   TargetSet direct_matches;
-  for (const auto& source_file : source_files)
+  for (auto* source_file : source_files)
     AddTargetsDirectlyReferringToFileTo(source_file, &direct_matches);
   TargetSet all_matches;
-  for (const auto& match : direct_matches)
+  for (auto* match : direct_matches)
     AddAllRefsTo(match, &all_matches);
   return all_matches;
 }
@@ -392,7 +392,7 @@ bool Analyzer::TargetRefersToFile(const Target* target,
 
 void Analyzer::AddTargetsDirectlyReferringToFileTo(const SourceFile* file,
                                                    TargetSet* matches) const {
-  for (const auto& target : all_targets_) {
+  for (auto* target : all_targets_) {
     // Only handles targets in the default toolchain.
     if ((target->label().GetToolchainLabel() == default_toolchain_) &&
         TargetRefersToFile(target, file))

@@ -515,6 +515,10 @@ void MockDiskCache::GetStats(base::StringPairs* stats) {
 void MockDiskCache::OnExternalCacheHit(const std::string& key) {
 }
 
+size_t MockDiskCache::EstimateMemoryUsage() const {
+  return 0;
+}
+
 void MockDiskCache::ReleaseAll() {
   EntryMap::iterator it = entries_.begin();
   for (; it != entries_.end(); ++it)

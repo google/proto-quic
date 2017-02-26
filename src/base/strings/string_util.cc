@@ -64,6 +64,21 @@ static bool CompareParameter(const ReplacementOffset& elem1,
   return elem1.parameter < elem2.parameter;
 }
 
+// Overloaded function to append one string onto the end of another. Having a
+// separate overload for |source| as both string and StringPiece allows for more
+// efficient usage from functions templated to work with either type (avoiding a
+// redundant call to the BasicStringPiece constructor in both cases).
+template <typename string_type>
+inline void AppendToString(string_type* target, const string_type& source) {
+  target->append(source);
+}
+
+template <typename string_type>
+inline void AppendToString(string_type* target,
+                           const BasicStringPiece<string_type>& source) {
+  source.AppendToString(target);
+}
+
 // Assuming that a pointer is the size of a "machine word", then
 // uintptr_t is an integer type that is also a machine word.
 typedef uintptr_t MachineWord;
@@ -853,19 +868,28 @@ char16* WriteInto(string16* str, size_t length_with_null) {
   return WriteIntoT(str, length_with_null);
 }
 
-template<typename STR>
-static STR JoinStringT(const std::vector<STR>& parts,
-                       BasicStringPiece<STR> sep) {
-  if (parts.empty())
-    return STR();
-
-  STR result(parts[0]);
+// Generic version for all JoinString overloads. |list_type| must be a sequence
+// (std::vector or std::initializer_list) of strings/StringPieces (std::string,
+// string16, StringPiece or StringPiece16). |string_type| is either std::string
+// or string16.
+template <typename list_type, typename string_type>
+static string_type JoinStringT(const list_type& parts,
+                               BasicStringPiece<string_type> sep) {
   auto iter = parts.begin();
+  // Early-exit to avoid bad access to the first element.
+  if (iter == parts.end())
+    return string_type();
+
+  // Begin constructing the result from the first element.
+  string_type result(iter->data(), iter->size());
   ++iter;
 
   for (; iter != parts.end(); ++iter) {
     sep.AppendToString(&result);
-    result += *iter;
+    // Using the overloaded AppendToString allows this template function to work
+    // on both strings and StringPieces without creating an intermediate
+    // StringPiece object.
+    AppendToString(&result, *iter);
   }
 
   return result;
@@ -877,6 +901,26 @@ std::string JoinString(const std::vector<std::string>& parts,
 }
 
 string16 JoinString(const std::vector<string16>& parts,
+                    StringPiece16 separator) {
+  return JoinStringT(parts, separator);
+}
+
+std::string JoinString(const std::vector<StringPiece>& parts,
+                       StringPiece separator) {
+  return JoinStringT(parts, separator);
+}
+
+string16 JoinString(const std::vector<StringPiece16>& parts,
+                    StringPiece16 separator) {
+  return JoinStringT(parts, separator);
+}
+
+std::string JoinString(std::initializer_list<StringPiece> parts,
+                       StringPiece separator) {
+  return JoinStringT(parts, separator);
+}
+
+string16 JoinString(std::initializer_list<StringPiece16> parts,
                     StringPiece16 separator) {
   return JoinStringT(parts, separator);
 }

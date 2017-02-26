@@ -45,6 +45,11 @@ namespace debug {
 // done in official builds because it has security implications).
 BASE_EXPORT bool EnableInProcessStackDumping();
 
+// Returns end of the stack, or 0 if we couldn't get it.
+#if HAVE_TRACE_STACK_FRAME_POINTERS
+BASE_EXPORT uintptr_t GetStackEnd();
+#endif
+
 // A stacktrace can be helpful in debugging. For example, you can include a
 // stacktrace member in a object (probably around #ifndef NDEBUG) so that you
 // can later see where the given object was created from.

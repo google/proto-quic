@@ -691,7 +691,13 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   if (send_alarm_->IsSet()) {
     send_alarm_->Cancel();
   }
-  ProcessAckFrame(incoming_ack);
+  largest_seen_packet_with_ack_ = last_header_.packet_number;
+  sent_packet_manager_.OnIncomingAck(incoming_ack,
+                                     time_of_last_received_packet_);
+  // Always reset the retransmission alarm when an ack comes in, since we now
+  // have a better estimate of the current rtt than when it was set.
+  SetRetransmissionAlarm();
+
   // If the incoming ack's packets set expresses missing packets: peer is still
   // waiting for a packet lower than a packet that we are no longer planning to
   // send.
@@ -706,21 +712,6 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   }
 
   return connected_;
-}
-
-void QuicConnection::ProcessAckFrame(const QuicAckFrame& incoming_ack) {
-  largest_seen_packet_with_ack_ = last_header_.packet_number;
-  sent_packet_manager_.OnIncomingAck(incoming_ack,
-                                     time_of_last_received_packet_);
-  // Always reset the retransmission alarm when an ack comes in, since we now
-  // have a better estimate of the current rtt than when it was set.
-  SetRetransmissionAlarm();
-}
-
-void QuicConnection::ProcessStopWaitingFrame(
-    const QuicStopWaitingFrame& stop_waiting) {
-  largest_seen_packet_with_stop_waiting_ = last_header_.packet_number;
-  received_packet_manager_.UpdatePacketInformationSentByPeer(stop_waiting);
 }
 
 bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
@@ -743,7 +734,8 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
     debug_visitor_->OnStopWaitingFrame(frame);
   }
 
-  ProcessStopWaitingFrame(frame);
+  largest_seen_packet_with_stop_waiting_ = last_header_.packet_number;
+  received_packet_manager_.DontWaitForPacketsBefore(frame.least_unacked);
   return connected_;
 }
 
@@ -908,7 +900,6 @@ bool QuicConnection::OnPathCloseFrame(const QuicPathCloseFrame& frame) {
   }
   QUIC_DLOG(INFO) << ENDPOINT
                   << "PATH_CLOSE_FRAME received for path: " << frame.path_id;
-  OnPathClosed(frame.path_id);
   return connected_;
 }
 
@@ -1144,7 +1135,6 @@ void QuicConnection::SendPathClose(QuicPathId path_id) {
   // Opportunistically bundle an ack with this outgoing packet.
   ScopedPacketBundler ack_bundler(this, SEND_ACK_IF_PENDING);
   packet_generator_.AddControlFrame(QuicFrame(new QuicPathCloseFrame(path_id)));
-  OnPathClosed(path_id);
 }
 
 const QuicConnectionStats& QuicConnection::GetStats() {
@@ -2335,11 +2325,6 @@ void QuicConnection::StartPeerMigration(
   // OnConnectionMigration methods to OnPeerMigration.
   visitor_->OnConnectionMigration(peer_migration_type);
   sent_packet_manager_.OnConnectionMigration(peer_migration_type);
-}
-
-void QuicConnection::OnPathClosed(QuicPathId path_id) {
-  // Stop receiving packets on this path.
-  framer_.OnPathClosed(path_id);
 }
 
 bool QuicConnection::ack_frame_updated() const {

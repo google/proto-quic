@@ -18,6 +18,7 @@
 #include "base/threading/platform_thread.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/threading/thread_task_runner_handle.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/cache_type.h"
 #include "net/base/io_buffer.h"
 #include "net/base/net_errors.h"
@@ -323,6 +324,9 @@ void DiskCacheBackendTest::BackendBasics() {
   ASSERT_TRUE(NULL != entry1);
   entry1->Close();
   entry1 = NULL;
+  // base::trace_event::EstimateMemoryUsage(cache_) is added to make sure
+  // tracking memory doesn't introduce crashes.
+  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   ASSERT_THAT(OpenEntry("the first key", &entry1), IsOk());
   ASSERT_TRUE(NULL != entry1);
@@ -336,18 +340,20 @@ void DiskCacheBackendTest::BackendBasics() {
   ASSERT_TRUE(NULL != entry1);
   ASSERT_TRUE(NULL != entry2);
   EXPECT_EQ(2, cache_->GetEntryCount());
+  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   disk_cache::Entry* entry3 = NULL;
   ASSERT_THAT(OpenEntry("some other key", &entry3), IsOk());
   ASSERT_TRUE(NULL != entry3);
   EXPECT_TRUE(entry2 == entry3);
-  EXPECT_EQ(2, cache_->GetEntryCount());
+  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   EXPECT_THAT(DoomEntry("some other key"), IsOk());
   EXPECT_EQ(1, cache_->GetEntryCount());
   entry1->Close();
   entry2->Close();
   entry3->Close();
+  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 
   EXPECT_THAT(DoomEntry("the first key"), IsOk());
   EXPECT_EQ(0, cache_->GetEntryCount());
@@ -359,6 +365,7 @@ void DiskCacheBackendTest::BackendBasics() {
   EXPECT_THAT(DoomEntry("some other key"), IsOk());
   EXPECT_EQ(0, cache_->GetEntryCount());
   entry2->Close();
+  EXPECT_LT(0u, base::trace_event::EstimateMemoryUsage(cache_));
 }
 
 TEST_F(DiskCacheBackendTest, Basics) {

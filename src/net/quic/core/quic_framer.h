@@ -9,8 +9,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "base/macros.h"
 #include "base/strings/string_piece.h"
@@ -332,9 +330,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
 
   Perspective perspective() const { return perspective_; }
 
-  // Called when a PATH_CLOSED frame has been sent/received on |path_id|.
-  void OnPathClosed(QuicPathId path_id);
-
   QuicTag last_version_tag() { return last_version_tag_; }
 
  private:
@@ -406,12 +401,6 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
                       char* decrypted_buffer,
                       size_t buffer_length,
                       size_t* decrypted_length);
-
-  // Checks if |path_id| is a viable path to receive packets on. Returns true
-  // and sets |base_packet_number| to the packet number to calculate the
-  // incoming packet number from if the path is not closed. Returns false
-  // otherwise.
-  bool IsValidPath(QuicPathId path_id, QuicPacketNumber* base_packet_number);
 
   // Sets last_packet_number_. This can only be called after the packet is
   // successfully decrypted.
@@ -491,20 +480,10 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
   std::string detailed_error_;
   QuicFramerVisitorInterface* visitor_;
   QuicErrorCode error_;
-  // Set of closed paths. A path is considered as closed if a PATH_CLOSED frame
-  // has been sent/received.
-  // TODO(fayang): this set is never cleaned up. A possible improvement is to
-  // use intervals.
-  std::unordered_set<QuicPathId> closed_paths_;
   // Updated by ProcessPacketHeader when it succeeds.
   QuicPacketNumber last_packet_number_;
-  // Map mapping path id to packet number of largest successfully decrypted
-  // received packet.
-  std::unordered_map<QuicPathId, QuicPacketNumber> largest_packet_numbers_;
   // Updated by ProcessPacketHeader when it succeeds decrypting a larger packet.
   QuicPacketNumber largest_packet_number_;
-  // The path on which last successfully decrypted packet was received.
-  QuicPathId last_path_id_;
   // Updated by WritePacketHeader.
   QuicConnectionId last_serialized_connection_id_;
   // The last QUIC version tag received.

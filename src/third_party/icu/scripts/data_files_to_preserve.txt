@@ -24,4 +24,4 @@ lang/an.txt
 lang/ku.txt
 lang/tg.txt
 lang/wa.txt
-translit/css3transform.txt
+translit/root_subset.txt

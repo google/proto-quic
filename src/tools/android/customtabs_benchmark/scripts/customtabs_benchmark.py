@@ -35,7 +35,7 @@ import device_setup
 
 # Local build of Chrome (not Chromium).
 _CHROME_PACKAGE = 'com.google.android.apps.chrome'
-_COMMAND_LINE_PATH = '/data/local/tmp/chrome-command-line'
+_COMMAND_LINE_FILE = 'chrome-command-line'
 _TEST_APP_PACKAGE_NAME = 'org.chromium.customtabsclient.test'
 _INVALID_VALUE = -1
 
@@ -99,7 +99,7 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
   logcat_timeout = int(timeout_s + delay_to_may_launch_url / 1000.
                        + delay_to_launch_url / 1000.) + 3;
 
-  with device_setup.FlagReplacer(device, _COMMAND_LINE_PATH, chrome_args):
+  with device_setup.FlagReplacer(device, _COMMAND_LINE_FILE, chrome_args):
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',
         package=_TEST_APP_PACKAGE_NAME,
@@ -186,13 +186,13 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
           chrome_args.extend([
               '--force-fieldtrials=trial/group',
               '--force-fieldtrial-params=trial.group:mode/no_state_prefetch',
-              '--enable-features="NoStatePrefetch<trial"'])
+              '--enable-features=NoStatePrefetch<trial'])
         elif config['speculation_mode'] == 'speculative_prefetch':
           # Speculative Prefetch is enabled through an experiment.
           chrome_args.extend([
               '--force-fieldtrials=trial/group',
               '--force-fieldtrial-params=trial.group:mode/external-prefetching',
-              '--enable-features="SpeculativeResourcePrefetching<trial"'])
+              '--enable-features=SpeculativeResourcePrefetching<trial'])
 
         result = RunOnce(device, config['url'], config['warmup'],
                          config['speculation_mode'],

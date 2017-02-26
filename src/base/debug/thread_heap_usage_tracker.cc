@@ -43,20 +43,25 @@ bool g_heap_tracking_enabled = false;
 // lower shim.
 ThreadHeapUsage* GetOrCreateThreadUsage();
 
-size_t GetAllocSizeEstimate(const AllocatorDispatch* next, void* ptr) {
+size_t GetAllocSizeEstimate(const AllocatorDispatch* next,
+                            void* ptr,
+                            void* context) {
   if (ptr == nullptr)
     return 0U;
 
-  return next->get_size_estimate_function(next, ptr);
+  return next->get_size_estimate_function(next, ptr, context);
 }
 
-void RecordAlloc(const AllocatorDispatch* next, void* ptr, size_t size) {
+void RecordAlloc(const AllocatorDispatch* next,
+                 void* ptr,
+                 size_t size,
+                 void* context) {
   ThreadHeapUsage* usage = GetOrCreateThreadUsage();
   if (usage == nullptr)
     return;
 
   usage->alloc_ops++;
-  size_t estimate = GetAllocSizeEstimate(next, ptr);
+  size_t estimate = GetAllocSizeEstimate(next, ptr, context);
   if (size && estimate) {
     // Only keep track of the net number of bytes allocated in the scope if the
     // size estimate function returns sane values, e.g. non-zero.
@@ -75,92 +80,107 @@ void RecordAlloc(const AllocatorDispatch* next, void* ptr, size_t size) {
   }
 }
 
-void RecordFree(const AllocatorDispatch* next, void* ptr) {
+void RecordFree(const AllocatorDispatch* next, void* ptr, void* context) {
   ThreadHeapUsage* usage = GetOrCreateThreadUsage();
   if (usage == nullptr)
     return;
 
-  size_t estimate = GetAllocSizeEstimate(next, ptr);
+  size_t estimate = GetAllocSizeEstimate(next, ptr, context);
   usage->free_ops++;
   usage->free_bytes += estimate;
 }
 
-void* AllocFn(const AllocatorDispatch* self, size_t size) {
-  void* ret = self->next->alloc_function(self->next, size);
+void* AllocFn(const AllocatorDispatch* self, size_t size, void* context) {
+  void* ret = self->next->alloc_function(self->next, size, context);
   if (ret != nullptr)
-    RecordAlloc(self->next, ret, size);
+    RecordAlloc(self->next, ret, size, context);
 
   return ret;
 }
 
 void* AllocZeroInitializedFn(const AllocatorDispatch* self,
                              size_t n,
-                             size_t size) {
-  void* ret = self->next->alloc_zero_initialized_function(self->next, n, size);
+                             size_t size,
+                             void* context) {
+  void* ret =
+      self->next->alloc_zero_initialized_function(self->next, n, size, context);
   if (ret != nullptr)
-    RecordAlloc(self->next, ret, size);
+    RecordAlloc(self->next, ret, size, context);
 
   return ret;
 }
 
 void* AllocAlignedFn(const AllocatorDispatch* self,
                      size_t alignment,
-                     size_t size) {
-  void* ret = self->next->alloc_aligned_function(self->next, alignment, size);
+                     size_t size,
+                     void* context) {
+  void* ret =
+      self->next->alloc_aligned_function(self->next, alignment, size, context);
   if (ret != nullptr)
-    RecordAlloc(self->next, ret, size);
+    RecordAlloc(self->next, ret, size, context);
 
   return ret;
 }
 
-void* ReallocFn(const AllocatorDispatch* self, void* address, size_t size) {
+void* ReallocFn(const AllocatorDispatch* self,
+                void* address,
+                size_t size,
+                void* context) {
   if (address != nullptr)
-    RecordFree(self->next, address);
+    RecordFree(self->next, address, context);
 
-  void* ret = self->next->realloc_function(self->next, address, size);
+  void* ret = self->next->realloc_function(self->next, address, size, context);
   if (ret != nullptr && size != 0)
-    RecordAlloc(self->next, ret, size);
+    RecordAlloc(self->next, ret, size, context);
 
   return ret;
 }
 
-void FreeFn(const AllocatorDispatch* self, void* address) {
+void FreeFn(const AllocatorDispatch* self, void* address, void* context) {
   if (address != nullptr)
-    RecordFree(self->next, address);
-  self->next->free_function(self->next, address);
+    RecordFree(self->next, address, context);
+  self->next->free_function(self->next, address, context);
 }
 
-size_t GetSizeEstimateFn(const AllocatorDispatch* self, void* address) {
-  return self->next->get_size_estimate_function(self->next, address);
+size_t GetSizeEstimateFn(const AllocatorDispatch* self,
+                         void* address,
+                         void* context) {
+  return self->next->get_size_estimate_function(self->next, address, context);
 }
 
 unsigned BatchMallocFn(const AllocatorDispatch* self,
                        size_t size,
                        void** results,
-                       unsigned num_requested) {
+                       unsigned num_requested,
+                       void* context) {
   unsigned count = self->next->batch_malloc_function(self->next, size, results,
-                                                     num_requested);
+                                                     num_requested, context);
   for (unsigned i = 0; i < count; ++i) {
-    RecordAlloc(self->next, results[i], size);
+    RecordAlloc(self->next, results[i], size, context);
   }
   return count;
 }
 
 void BatchFreeFn(const AllocatorDispatch* self,
                  void** to_be_freed,
-                 unsigned num_to_be_freed) {
+                 unsigned num_to_be_freed,
+                 void* context) {
   for (unsigned i = 0; i < num_to_be_freed; ++i) {
     if (to_be_freed[i] != nullptr) {
-      RecordFree(self->next, to_be_freed[i]);
+      RecordFree(self->next, to_be_freed[i], context);
     }
   }
-  self->next->batch_free_function(self->next, to_be_freed, num_to_be_freed);
+  self->next->batch_free_function(self->next, to_be_freed, num_to_be_freed,
+                                  context);
 }
 
-void FreeDefiniteSizeFn(const AllocatorDispatch* self, void* ptr, size_t size) {
+void FreeDefiniteSizeFn(const AllocatorDispatch* self,
+                        void* ptr,
+                        size_t size,
+                        void* context) {
   if (ptr != nullptr)
-    RecordFree(self->next, ptr);
-  self->next->free_definite_size_function(self->next, ptr, size);
+    RecordFree(self->next, ptr, context);
+  self->next->free_definite_size_function(self->next, ptr, size, context);
 }
 
 // The allocator dispatch used to intercept heap operations.

@@ -149,8 +149,8 @@ they fall largely outside the purview of the network stack team:
 
 * **OS>Systems>Network** / **OS>Systems>Mobile** / **OS>Systems>Bluetooth**
 
-    These should be used for issues with ChromeOS's platform network code, and
-    not net/ issues on ChromeOS.
+    These should be used for issues with Chrome OS's platform network code, and
+    not net/ issues on Chrome OS.
 
 * **Blink>SecurityFeature**
 

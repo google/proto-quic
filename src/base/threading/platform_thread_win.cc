@@ -10,6 +10,7 @@
 #include "base/debug/alias.h"
 #include "base/debug/profiler.h"
 #include "base/logging.h"
+#include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_id_name_manager.h"
 #include "base/threading/thread_restrictions.h"
 #include "base/tracked_objects.h"
@@ -29,6 +30,10 @@ typedef struct tagTHREADNAME_INFO {
   DWORD dwThreadID;  // Thread ID (-1=caller thread).
   DWORD dwFlags;  // Reserved for future use, must be zero.
 } THREADNAME_INFO;
+
+// The SetThreadDescription API was brought in version 1607 of Windows 10.
+typedef HRESULT(WINAPI* SetThreadDescription)(HANDLE hThread,
+                                              PCWSTR lpThreadDescription);
 
 // This function has try handling, so it is separated out of its caller.
 void SetNameInternal(PlatformThreadId thread_id, const char* name) {
@@ -171,6 +176,15 @@ void PlatformThread::SetName(const std::string& name) {
   // impact is not terrible, but there is no reason to do initialize it.
   if (name != "BrokerEvent")
     tracked_objects::ThreadData::InitializeThreadContext(name);
+
+  // The SetThreadDescription API works even if no debugger is attached.
+  auto set_thread_description_func =
+      reinterpret_cast<SetThreadDescription>(::GetProcAddress(
+          ::GetModuleHandle(L"Kernel32.dll"), "SetThreadDescription"));
+  if (set_thread_description_func) {
+    set_thread_description_func(::GetCurrentThread(),
+                                base::UTF8ToWide(name).c_str());
+  }
 
   // The debugger needs to be around to catch the name in the exception.  If
   // there isn't a debugger, we are just needlessly throwing an exception.

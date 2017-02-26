@@ -157,6 +157,14 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
+  /* The PRF hash is now known. Set up the key schedule and hash the
+   * ClientHello. */
+  if (!tls13_init_key_schedule(hs) ||
+      !ssl_hash_current_message(hs)) {
+    return ssl_hs_error;
+  }
+
+
   /* Decode the ticket if we agree on a PSK key exchange mode. */
   uint8_t alert = SSL_AD_DECODE_ERROR;
   SSL_SESSION *session = NULL;
@@ -207,7 +215,7 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
     }
   } else {
     /* Check the PSK binder. */
-    if (!tls13_verify_psk_binder(ssl, session, &binders)) {
+    if (!tls13_verify_psk_binder(hs, session, &binders)) {
       SSL_SESSION_free(session);
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECRYPT_ERROR);
       return ssl_hs_error;
@@ -237,18 +245,21 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
 
   /* HTTP/2 negotiation depends on the cipher suite, so ALPN negotiation was
    * deferred. Complete it now. */
+  alert = SSL_AD_DECODE_ERROR;
   if (!ssl_negotiate_alpn(hs, &alert, &client_hello)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     return ssl_hs_error;
   }
 
-  /* The PRF hash is now known. Set up the key schedule and hash the
-   * ClientHello. */
-  size_t hash_len =
-      EVP_MD_size(ssl_get_handshake_digest(ssl_get_algorithm_prf(ssl)));
-  if (!tls13_init_key_schedule(hs) ||
-      !ssl_hash_current_message(ssl)) {
-    return ssl_hs_error;
+  /* Store the initial negotiated ALPN in the session. */
+  if (ssl->s3->alpn_selected != NULL) {
+    ssl->s3->new_session->early_alpn =
+        BUF_memdup(ssl->s3->alpn_selected, ssl->s3->alpn_selected_len);
+    if (ssl->s3->new_session->early_alpn == NULL) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+      return ssl_hs_error;
+    }
+    ssl->s3->new_session->early_alpn_len = ssl->s3->alpn_selected_len;
   }
 
   /* Incorporate the PSK into the running secret. */
@@ -257,7 +268,7 @@ static enum ssl_hs_wait_t do_select_parameters(SSL_HANDSHAKE *hs) {
                                     ssl->s3->new_session->master_key_length)) {
       return ssl_hs_error;
     }
-  } else if (!tls13_advance_key_schedule(hs, kZeroes, hash_len)) {
+  } else if (!tls13_advance_key_schedule(hs, kZeroes, hs->hash_len)) {
     return ssl_hs_error;
   }
 
@@ -322,7 +333,7 @@ static enum ssl_hs_wait_t do_process_second_client_hello(SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
-  if (!ssl_hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -484,7 +495,7 @@ static enum ssl_hs_wait_t do_process_client_certificate(SSL_HANDSHAKE *hs) {
 
   if (!ssl_check_message_type(ssl, SSL3_MT_CERTIFICATE) ||
       !tls13_process_certificate(hs, allow_anonymous) ||
-      !ssl_hash_current_message(ssl)) {
+      !ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -495,7 +506,7 @@ static enum ssl_hs_wait_t do_process_client_certificate(SSL_HANDSHAKE *hs) {
 static enum ssl_hs_wait_t do_process_client_certificate_verify(
     SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (ssl->s3->new_session->x509_peer == NULL) {
+  if (sk_CRYPTO_BUFFER_num(ssl->s3->new_session->certs) == 0) {
     /* Skip this state. */
     hs->tls13_state = state_process_channel_id;
     return ssl_hs_ok;
@@ -503,7 +514,7 @@ static enum ssl_hs_wait_t do_process_client_certificate_verify(
 
   if (!ssl_check_message_type(ssl, SSL3_MT_CERTIFICATE_VERIFY) ||
       !tls13_process_certificate_verify(hs) ||
-      !ssl_hash_current_message(ssl)) {
+      !ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -512,15 +523,14 @@ static enum ssl_hs_wait_t do_process_client_certificate_verify(
 }
 
 static enum ssl_hs_wait_t do_process_channel_id(SSL_HANDSHAKE *hs) {
-  SSL *const ssl = hs->ssl;
-  if (!ssl->s3->tlsext_channel_id_valid) {
+  if (!hs->ssl->s3->tlsext_channel_id_valid) {
     hs->tls13_state = state_process_client_finished;
     return ssl_hs_ok;
   }
 
-  if (!ssl_check_message_type(ssl, SSL3_MT_CHANNEL_ID) ||
-      !tls1_verify_channel_id(ssl) ||
-      !ssl_hash_current_message(ssl)) {
+  if (!ssl_check_message_type(hs->ssl, SSL3_MT_CHANNEL_ID) ||
+      !tls1_verify_channel_id(hs) ||
+      !ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -532,7 +542,7 @@ static enum ssl_hs_wait_t do_process_client_finished(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   if (!ssl_check_message_type(ssl, SSL3_MT_FINISHED) ||
       !tls13_process_finished(hs) ||
-      !ssl_hash_current_message(ssl) ||
+      !ssl_hash_current_message(hs) ||
       /* evp_aead_seal keys have already been switched. */
       !tls13_set_traffic_key(ssl, evp_aead_open, hs->client_traffic_secret_0,
                              hs->hash_len) ||

@@ -248,7 +248,7 @@ class SpdyFramerPeer {
     SpdySerializedFrame serialized_headers_old_version =
         framer->SerializeHeaders(headers);
     framer->hpack_encoder_.reset(nullptr);
-    auto saved_debug_visitor = framer->debug_visitor_;
+    auto* saved_debug_visitor = framer->debug_visitor_;
     framer->debug_visitor_ = nullptr;
 
     std::vector<SpdySerializedFrame> frame_list;

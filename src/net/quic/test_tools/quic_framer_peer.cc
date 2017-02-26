@@ -77,15 +77,5 @@ QuicPacketNumber QuicFramerPeer::GetLastPacketNumber(QuicFramer* framer) {
   return framer->last_packet_number_;
 }
 
-// static
-QuicPathId QuicFramerPeer::GetLastPathId(QuicFramer* framer) {
-  return framer->last_path_id_;
-}
-
-// static
-bool QuicFramerPeer::IsPathClosed(QuicFramer* framer, QuicPathId path_id) {
-  return QuicContainsKey(framer->closed_paths_, path_id);
-}
-
 }  // namespace test
 }  // namespace net

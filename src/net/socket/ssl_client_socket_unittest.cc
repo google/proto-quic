@@ -3603,8 +3603,8 @@ TEST_F(SSLClientSocketTest, DumpMemoryStats) {
   sock_->DumpMemoryStats(&stats);
   EXPECT_EQ(0u, stats.buffer_size);
   EXPECT_EQ(1u, stats.cert_count);
-  EXPECT_LT(0u, stats.serialized_cert_size);
-  EXPECT_EQ(stats.serialized_cert_size, stats.total_size);
+  EXPECT_LT(0u, stats.cert_size);
+  EXPECT_EQ(stats.cert_size, stats.total_size);
 
   // Read the response without writing a request, so the read will be pending.
   TestCompletionCallback read_callback;
@@ -3617,7 +3617,7 @@ TEST_F(SSLClientSocketTest, DumpMemoryStats) {
   sock_->DumpMemoryStats(&stats2);
   EXPECT_EQ(17 * 1024u, stats2.buffer_size);
   EXPECT_EQ(1u, stats2.cert_count);
-  EXPECT_LT(0u, stats2.serialized_cert_size);
+  EXPECT_LT(0u, stats2.cert_size);
   EXPECT_LT(17 * 1024u, stats2.total_size);
 }
 

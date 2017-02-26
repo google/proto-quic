@@ -634,7 +634,12 @@ static bool TestSSL_SESSIONEncoding(const char *input_b64) {
   }
 
   // Verify the SSL_SESSION decodes.
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_from_bytes(input.data(), input.size()));
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
+  bssl::UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(input.data(), input.size(), ssl_ctx.get()));
   if (!session) {
     fprintf(stderr, "SSL_SESSION_from_bytes failed\n");
     return false;
@@ -703,7 +708,12 @@ static bool TestBadSSL_SESSIONEncoding(const char *input_b64) {
   }
 
   // Verify that the SSL_SESSION fails to decode.
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_from_bytes(input.data(), input.size()));
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
+  bssl::UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(input.data(), input.size(), ssl_ctx.get()));
   if (session) {
     fprintf(stderr, "SSL_SESSION_from_bytes unexpectedly succeeded\n");
     return false;
@@ -795,8 +805,13 @@ static bssl::UniquePtr<SSL_SESSION> CreateSessionWithTicket(uint16_t version,
   if (!DecodeBase64(&der, kOpenSSLSession)) {
     return nullptr;
   }
+
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return nullptr;
+  }
   bssl::UniquePtr<SSL_SESSION> session(
-      SSL_SESSION_from_bytes(der.data(), der.size()));
+      SSL_SESSION_from_bytes(der.data(), der.size(), ssl_ctx.get()));
   if (!session) {
     return nullptr;
   }
@@ -989,7 +1004,11 @@ static bool ExpectCache(SSL_CTX *ctx,
 }
 
 static bssl::UniquePtr<SSL_SESSION> CreateTestSession(uint32_t number) {
-  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return nullptr;
+  }
+  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new(ssl_ctx.get()));
   if (!ret) {
     return nullptr;
   }
@@ -1484,8 +1503,7 @@ TEST(SSLTest, SessionDuplication) {
   ASSERT_TRUE(SSL_SESSION_to_bytes(session1.get(), &s1_bytes, &s1_len));
   bssl::UniquePtr<uint8_t> free_s1(s1_bytes);
 
-  ASSERT_EQ(s0_len, s1_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(s0_bytes, s1_bytes, s0_len));
+  EXPECT_EQ(Bytes(s0_bytes, s0_len), Bytes(s1_bytes, s1_len));
 }
 
 static void ExpectFDs(const SSL *ssl, int rfd, int wfd) {
@@ -2166,8 +2184,12 @@ static bool GetServerTicketTime(long *out, const SSL_SESSION *session) {
   len = static_cast<size_t>(len1 + len2);
 #endif
 
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
   bssl::UniquePtr<SSL_SESSION> server_session(
-      SSL_SESSION_from_bytes(plaintext.get(), len));
+      SSL_SESSION_from_bytes(plaintext.get(), len, ssl_ctx.get()));
   if (!server_session) {
     return false;
   }
@@ -2393,6 +2415,9 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   // Test that switching the |SSL_CTX| at the SNI callback behaves correctly.
   static const uint16_t kECDSAWithSHA256 = SSL_SIGN_ECDSA_SECP256R1_SHA256;
 
+  static const uint8_t kSCTList[] = {0, 6, 0, 4, 5, 6, 7, 8};
+  static const uint8_t kOCSPResponse[] = {1, 2, 3, 4};
+
   bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
   bssl::UniquePtr<SSL_CTX> server_ctx2(SSL_CTX_new(method));
   bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
@@ -2401,6 +2426,10 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
       !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
       !SSL_CTX_use_certificate(server_ctx2.get(), cert2.get()) ||
       !SSL_CTX_use_PrivateKey(server_ctx2.get(), key2.get()) ||
+      !SSL_CTX_set_signed_cert_timestamp_list(server_ctx2.get(), kSCTList,
+                                              sizeof(kSCTList)) ||
+      !SSL_CTX_set_ocsp_response(server_ctx2.get(), kOCSPResponse,
+                                 sizeof(kOCSPResponse)) ||
       // Historically signing preferences would be lost in some cases with the
       // SNI callback, which triggers the TLS 1.2 SHA-1 default. To ensure
       // this doesn't happen when |version| is TLS 1.2, configure the private
@@ -2419,6 +2448,9 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   SSL_CTX_set_tlsext_servername_callback(server_ctx.get(), SwitchContext);
   SSL_CTX_set_tlsext_servername_arg(server_ctx.get(), server_ctx2.get());
 
+  SSL_CTX_enable_signed_cert_timestamps(client_ctx.get());
+  SSL_CTX_enable_ocsp_stapling(client_ctx.get());
+
   bssl::UniquePtr<SSL> client, server;
   if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
                               server_ctx.get(), nullptr)) {
@@ -2430,6 +2462,22 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(client.get()));
   if (!peer || X509_cmp(peer.get(), cert2.get()) != 0) {
     fprintf(stderr, "Incorrect certificate received.\n");
+    return false;
+  }
+
+  // The client should have received |server_ctx2|'s SCT list.
+  const uint8_t *data;
+  size_t len;
+  SSL_get0_signed_cert_timestamp_list(client.get(), &data, &len);
+  if (Bytes(kSCTList) != Bytes(data, len)) {
+    fprintf(stderr, "Incorrect SCT list received.\n");
+    return false;
+  }
+
+  // The client should have received |server_ctx2|'s OCSP response.
+  SSL_get0_ocsp_response(client.get(), &data, &len);
+  if (Bytes(kOCSPResponse) != Bytes(data, len)) {
+    fprintf(stderr, "Incorrect OCSP response received.\n");
     return false;
   }
 
@@ -3053,10 +3101,8 @@ TEST(SSLTest, GetCertificate) {
   bssl::UniquePtr<uint8_t> free_der3(der3);
 
   // They must also encode identically.
-  ASSERT_EQ(der2_len, der_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(der, der2, static_cast<size_t>(der_len)));
-  ASSERT_EQ(der3_len, der_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(der, der3, static_cast<size_t>(der_len)));
+  EXPECT_EQ(Bytes(der, der_len), Bytes(der2, der2_len));
+  EXPECT_EQ(Bytes(der, der_len), Bytes(der3, der3_len));
 }
 
 // TODO(davidben): Convert this file to GTest properly.

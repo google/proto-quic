@@ -53,7 +53,7 @@ partial dictionary MyDictInherit : Foo {};
  *Dictionary(MyDictBig)
  *  Key(setString)
  *    Type()
- *      PrimitiveType(DOMString)
+ *      StringType(DOMString)
  *    Default(Foo)
  *  Key(setLong)
  *    Type()
@@ -88,7 +88,7 @@ dictionary {
  *Dictionary(MyDictionaryInvalidOptional)
  *  Key(mandatory)
  *    Type()
- *      PrimitiveType(DOMString)
+ *      StringType(DOMString)
  *  Error(Unexpected keyword "optional" after ">".)
  */
 dictionary MyDictionaryInvalidOptional {
@@ -105,7 +105,7 @@ dictionary ForParent NoColon {
  *Dictionary(MyDictNull)
  *  Key(setString)
  *    Type()
- *      PrimitiveType(DOMString)
+ *      StringType(DOMString)
  *    Default(NULL)
  */
 dictionary MyDictNull {

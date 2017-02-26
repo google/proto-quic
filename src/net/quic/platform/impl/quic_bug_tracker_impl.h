@@ -6,9 +6,6 @@
 
 #include "net/quic/platform/api/quic_logging.h"
 
-// For external QUIC, QUIC_BUG should be #defined to QUIC_LOG(DFATAL) and
-// QUIC_BUG_IF(condition) to QUIC LOG_IF(DFATAL, condition) as client-side log
-// rate limiting is less important and chrome doesn't QUIC_LOG_FIRST_N anyway.
 #define QUIC_BUG_IMPL QUIC_LOG(DFATAL)
 #define QUIC_BUG_IF_IMPL(condition) QUIC_LOG_IF(DFATAL, condition)
 

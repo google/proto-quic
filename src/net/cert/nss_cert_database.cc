@@ -51,9 +51,7 @@ class CertNotificationForwarder : public NSSCertDatabase::Observer {
 
   ~CertNotificationForwarder() override {}
 
-  void OnCertDBChanged(const X509Certificate* cert) override {
-    cert_db_->NotifyObserversCertDBChanged(cert);
-  }
+  void OnCertDBChanged() override { cert_db_->NotifyObserversCertDBChanged(); }
 
  private:
   CertDatabase* cert_db_;
@@ -184,7 +182,7 @@ int NSSCertDatabase::ImportFromPKCS12(PK11SlotInfo* slot_info,
                                         is_extractable,
                                         imported_certs);
   if (result == OK)
-    NotifyObserversCertDBChanged(NULL);
+    NotifyObserversCertDBChanged();
 
   return result;
 }
@@ -226,7 +224,7 @@ int NSSCertDatabase::ImportUserCert(const std::string& data) {
   int result = psm::ImportUserCert(certificates);
 
   if (result == OK)
-    NotifyObserversCertDBChanged(NULL);
+    NotifyObserversCertDBChanged();
 
   return result;
 }
@@ -237,7 +235,7 @@ int NSSCertDatabase::ImportUserCert(X509Certificate* certificate) {
   int result = psm::ImportUserCert(certificates);
 
   if (result == OK)
-    NotifyObserversCertDBChanged(NULL);
+    NotifyObserversCertDBChanged();
 
   return result;
 }
@@ -250,7 +248,7 @@ bool NSSCertDatabase::ImportCACerts(const CertificateList& certificates,
   bool success = psm::ImportCACerts(
       slot.get(), certificates, root, trust_bits, not_imported);
   if (success)
-    NotifyObserversCertDBChanged(NULL);
+    NotifyObserversCertDBChanged();
 
   return success;
 }
@@ -368,7 +366,7 @@ bool NSSCertDatabase::SetCertTrust(const X509Certificate* cert,
                                 TrustBits trust_bits) {
   bool success = psm::SetCertTrust(cert, type, trust_bits);
   if (success)
-    NotifyObserversCertDBChanged(cert);
+    NotifyObserversCertDBChanged();
 
   return success;
 }
@@ -376,7 +374,7 @@ bool NSSCertDatabase::SetCertTrust(const X509Certificate* cert,
 bool NSSCertDatabase::DeleteCertAndKey(X509Certificate* cert) {
   if (!DeleteCertAndKeyImpl(cert))
     return false;
-  NotifyObserversCertDBChanged(cert);
+  NotifyObserversCertDBChanged();
   return true;
 }
 
@@ -390,7 +388,7 @@ void NSSCertDatabase::DeleteCertAndKeyAsync(
                      .MayBlock(),
       base::Bind(&NSSCertDatabase::DeleteCertAndKeyImpl, cert),
       base::Bind(&NSSCertDatabase::NotifyCertRemovalAndCallBack,
-                 weak_factory_.GetWeakPtr(), cert, callback));
+                 weak_factory_.GetWeakPtr(), callback));
 }
 
 bool NSSCertDatabase::IsReadOnly(const X509Certificate* cert) const {
@@ -432,18 +430,15 @@ void NSSCertDatabase::ListCertsImpl(crypto::ScopedPK11Slot slot,
 }
 
 void NSSCertDatabase::NotifyCertRemovalAndCallBack(
-    scoped_refptr<X509Certificate> cert,
     const DeleteCertCallback& callback,
     bool success) {
   if (success)
-    NotifyObserversCertDBChanged(cert.get());
+    NotifyObserversCertDBChanged();
   callback.Run(success);
 }
 
-void NSSCertDatabase::NotifyObserversCertDBChanged(
-    const X509Certificate* cert) {
-  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged,
-                         base::RetainedRef(cert));
+void NSSCertDatabase::NotifyObserversCertDBChanged() {
+  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged);
 }
 
 // static

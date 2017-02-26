@@ -9,8 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
-import android.os.Handler;
-import android.os.Looper;
 
 import org.chromium.base.annotations.CalledByNative;
 import org.chromium.base.annotations.JNINamespace;
@@ -20,19 +18,15 @@ import org.chromium.base.annotations.JNINamespace;
  */
 @JNINamespace("base::android")
 public class PowerMonitor  {
-    private static class LazyHolder {
-        private static final PowerMonitor INSTANCE = new PowerMonitor();
-    }
     private static PowerMonitor sInstance;
 
     private boolean mIsBatteryPower;
-    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     public static void createForTests() {
         // Applications will create this once the JNI side has been fully wired up both sides. For
         // tests, we just need native -> java, that is, we don't need to notify java -> native on
         // creation.
-        sInstance = LazyHolder.INSTANCE;
+        sInstance = new PowerMonitor();
     }
 
     /**
@@ -44,7 +38,7 @@ public class PowerMonitor  {
         if (sInstance != null) return;
 
         Context context = ContextUtils.getApplicationContext();
-        sInstance = LazyHolder.INSTANCE;
+        sInstance = new PowerMonitor();
         IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
         Intent batteryStatusIntent = context.registerReceiver(null, ifilter);
         if (batteryStatusIntent != null) onBatteryChargingChanged(batteryStatusIntent);

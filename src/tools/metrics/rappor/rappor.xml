@@ -1334,6 +1334,27 @@ now we are only interested in H264, VP8 and VP9.
   </summary>
 </rappor-metric>
 
+<rappor-metric name="Media.Video.Autoplay.Muted.Attribute.Frame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the frame URL that has an autoplay muted video by attribute.
+  </summary>
+</rappor-metric>
+
+<rappor-metric name="Media.Video.Autoplay.Muted.PlayMethod.Frame"
+    type="ETLD_PLUS_ONE">
+  <owner>avayvod@chromium.org</owner>
+  <owner>mlamouri@chromium.org</owner>
+  <owner>zqzhang@chromium.org</owner>
+  <summary>
+    The eTLD+1 of the frame URL that has an autoplay muted video by play()
+    method.
+  </summary>
+</rappor-metric>
+
 <rappor-metric name="NTP.ExplicitUserAction.PageNavigation.NTPTileClick"
     type="UMA_RAPPOR_TYPE">
   <owner>knn@chromium.org</owner>

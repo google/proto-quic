@@ -37,7 +37,9 @@ _ARMEABI_SUBDIR = 'armeabi'
 _RES_SUBDIR = 'extracted-res'
 
 _DEFAULT_TARGETS = [
-    # TODO(agrieve): Requires alternate android.jar to compile.
+    # TODO(agrieve): .build_config seem not quite right for this target
+    # because it has resources as deps of android_apk() rather than using an
+    #  android_library() intermediate target.
     # '//android_webview:system_webview_apk',
     '//android_webview/test:android_webview_apk',
     '//android_webview/test:android_webview_test_apk',
@@ -119,14 +121,25 @@ def _QueryForAllGnTargets(output_dir):
 
 class _ProjectEntry(object):
   """Helper class for project entries."""
+
+  _cached_entries = {}
+
   def __init__(self, gn_target):
-    assert gn_target.startswith('//'), gn_target
-    if ':' not in gn_target:
-      gn_target = '%s:%s' % (gn_target, os.path.basename(gn_target))
+    # Use _ProjectEntry.FromGnTarget instead for caching.
     self._gn_target = gn_target
     self._build_config = None
     self._java_files = None
+    self._all_entries = None
     self.android_test_entry = None
+
+  @classmethod
+  def FromGnTarget(cls, gn_target):
+    assert gn_target.startswith('//'), gn_target
+    if ':' not in gn_target:
+      gn_target = '%s:%s' % (gn_target, os.path.basename(gn_target))
+    if gn_target not in cls._cached_entries:
+      cls._cached_entries[gn_target] = cls(gn_target)
+    return cls._cached_entries[gn_target]
 
   @classmethod
   def FromBuildConfigPath(cls, path):
@@ -134,7 +147,8 @@ class _ProjectEntry(object):
     suffix = '.build_config'
     assert path.startswith(prefix) and path.endswith(suffix), path
     subdir = path[len(prefix):-len(suffix)]
-    return cls('//%s:%s' % (os.path.split(subdir)))
+    gn_target = '//%s:%s' % (os.path.split(subdir))
+    return cls.FromGnTarget(gn_target)
 
   def __hash__(self):
     return hash(self._gn_target)
@@ -195,6 +209,29 @@ class _ProjectEntry(object):
       self._java_files = java_files
     return self._java_files
 
+  def GeneratedJavaFiles(self):
+    return [p for p in self.JavaFiles() if not p.startswith('..')]
+
+  def PrebuiltJars(self):
+    return self.Gradle()['dependent_prebuilt_jars']
+
+  def AllEntries(self):
+    """Returns a list of all entries that the current entry depends on.
+
+    This includes the entry itself to make iterating simpler."""
+    if self._all_entries is None:
+      logging.debug('Generating entries for %s', self.GnTarget())
+      deps = [_ProjectEntry.FromBuildConfigPath(p)
+          for p in self.Gradle()['dependent_android_projects']]
+      deps.extend(_ProjectEntry.FromBuildConfigPath(p)
+          for p in self.Gradle()['dependent_java_projects'])
+      all_entries = set()
+      for dep in deps:
+        all_entries.update(dep.AllEntries())
+      all_entries.add(self)
+      self._all_entries = list(all_entries)
+    return self._all_entries
+
 
 class _ProjectContextGenerator(object):
   """Helper class to generate gradle build files"""
@@ -216,7 +253,7 @@ class _ProjectContextGenerator(object):
     return jni_libs
 
   def _GenJavaDirs(self, entry):
-    java_dirs, excludes = _CreateJavaSourceDir(
+    java_dirs, excludes = _ComputeJavaSourceDirsAndExcludes(
         constants.GetOutDirectory(), entry.JavaFiles())
     if self.Srcjars(entry):
       java_dirs.append(
@@ -230,18 +267,19 @@ class _ProjectContextGenerator(object):
     return res_dirs
 
   def _GenCustomManifest(self, entry):
-    """Returns the path to the generated AndroidManifest.xml."""
-    javac = entry.Javac()
-    resource_packages = javac['resource_packages']
-    output_file = os.path.join(
-        self.EntryOutputDir(entry), 'AndroidManifest.xml')
+    """Returns the path to the generated AndroidManifest.xml.
 
+    Gradle uses package id from manifest when generating R.class. So, we need
+    to generate a custom manifest if we let gradle process resources. We cannot
+    simply set android.defaultConfig.applicationId because it is not supported
+    for library targets."""
+    resource_packages = entry.Javac().get('resource_packages')
     if not resource_packages:
-      logging.error('Target ' + entry.GnTarget() + ' includes resources from '
+      logging.debug('Target ' + entry.GnTarget() + ' includes resources from '
           'unknown package. Unable to process with gradle.')
       return _DEFAULT_ANDROID_MANIFEST_PATH
     elif len(resource_packages) > 1:
-      logging.error('Target ' + entry.GnTarget() + ' includes resources from '
+      logging.debug('Target ' + entry.GnTarget() + ' includes resources from '
           'multiple packages. Unable to process with gradle.')
       return _DEFAULT_ANDROID_MANIFEST_PATH
 
@@ -249,6 +287,8 @@ class _ProjectContextGenerator(object):
     variables['compile_sdk_version'] = self.build_vars['android_sdk_version']
     variables['package'] = resource_packages[0]
 
+    output_file = os.path.join(
+        self.EntryOutputDir(entry), 'AndroidManifest.xml')
     data = self.jinja_processor.Render(_TemplatePath('manifest'), variables)
     _WriteFile(output_file, data)
 
@@ -270,9 +310,8 @@ class _ProjectContextGenerator(object):
     generated_inputs = []
     generated_inputs.extend(self.Srcjars(entry))
     generated_inputs.extend(_RebasePath(entry.ResZips()))
-    generated_inputs.extend(
-        p for p in entry.JavaFiles() if not p.startswith('..'))
-    generated_inputs.extend(entry.Gradle()['dependent_prebuilt_jars'])
+    generated_inputs.extend(entry.GeneratedJavaFiles())
+    generated_inputs.extend(entry.PrebuiltJars())
     return generated_inputs
 
   def Generate(self, entry):
@@ -284,22 +323,14 @@ class _ProjectContextGenerator(object):
     variables['res_dirs'] = self._Relativize(entry, self._GenResDirs(entry))
     android_manifest = entry.Gradle().get('android_manifest')
     if not android_manifest:
-      # Gradle uses package id from manifest when generating R.class. So, we
-      # need to generate a custom manifest if we let gradle process resources.
-      # We cannot simply set android.defaultConfig.applicationId because it is
-      # not supported for library targets.
-      if variables['res_dirs']:
-        android_manifest = self._GenCustomManifest(entry)
-      else:
-        android_manifest = _DEFAULT_ANDROID_MANIFEST_PATH
+      android_manifest = self._GenCustomManifest(entry)
     variables['android_manifest'] = self._Relativize(entry, android_manifest)
+    # TODO(agrieve): Add an option to use interface jars and see if that speeds
+    # things up at all.
+    variables['prebuilts'] = self._Relativize(entry, entry.PrebuiltJars())
     deps = [_ProjectEntry.FromBuildConfigPath(p)
             for p in entry.Gradle()['dependent_android_projects']]
     variables['android_project_deps'] = [d.ProjectName() for d in deps]
-    # TODO(agrieve): Add an option to use interface jars and see if that speeds
-    # things up at all.
-    variables['prebuilts'] = self._Relativize(
-        entry, entry.Gradle()['dependent_prebuilt_jars'])
     deps = [_ProjectEntry.FromBuildConfigPath(p)
             for p in entry.Gradle()['dependent_java_projects']]
     variables['java_project_deps'] = [d.ProjectName() for d in deps]
@@ -350,7 +381,7 @@ def _ComputeExcludeFilters(wanted_files, unwanted_files, parent_dir):
   return excludes
 
 
-def _CreateJavaSourceDir(output_dir, java_files):
+def _ComputeJavaSourceDirsAndExcludes(output_dir, java_files):
   """Computes the list of java source directories and exclude patterns.
 
   1. Computes the root java source directories from the list of files.
@@ -458,9 +489,17 @@ def _GenerateGradleFile(entry, generator, build_vars, jinja_processor):
       build_vars['android_sdk_build_tools_version'])
   variables['compile_sdk_version'] = build_vars['android_sdk_version']
   variables['main'] = generator.Generate(entry)
+  bootclasspath = gradle.get('bootclasspath')
+  if bootclasspath:
+    # Must use absolute path here.
+    variables['bootclasspath'] = _RebasePath(bootclasspath)
   if entry.android_test_entry:
     variables['android_test'] = generator.Generate(
         entry.android_test_entry)
+    for key, value in variables['android_test'].iteritems():
+      if isinstance(value, list):
+        variables['android_test'][key] = list(
+            set(value) - set(variables['main'][key]))
 
   return jinja_processor.Render(
       _TemplatePath(target_type.split('_')[0]), variables)
@@ -600,7 +639,7 @@ def main():
     targets = [re.sub(r'_junit_tests$', '_junit_tests__java_binary', t)
                for t in targets]
 
-  main_entries = [_ProjectEntry(t) for t in targets]
+  main_entries = [_ProjectEntry.FromGnTarget(t) for t in targets]
 
   logging.warning('Building .build_config files...')
   _RunNinja(output_dir, [e.NinjaBuildConfigTarget() for e in main_entries])

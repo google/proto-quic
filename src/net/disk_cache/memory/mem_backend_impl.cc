@@ -283,6 +283,11 @@ void MemBackendImpl::OnExternalCacheHit(const std::string& key) {
     it->second->UpdateStateOnUse(MemEntryImpl::ENTRY_WAS_NOT_MODIFIED);
 }
 
+size_t MemBackendImpl::EstimateMemoryUsage() const {
+  // TODO(xunjieli): Implement this. crbug.com/669108.
+  return 0;
+}
+
 void MemBackendImpl::EvictIfNeeded() {
   if (current_size_ <= max_size_)
     return;
