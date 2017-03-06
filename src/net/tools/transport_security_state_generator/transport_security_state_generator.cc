@@ -12,7 +12,9 @@
 #include "base/command_line.h"
 #include "base/files/file_util.h"
 #include "base/json/json_reader.h"
+#include "base/logging.h"
 #include "base/path_service.h"
+#include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
@@ -40,7 +42,7 @@ namespace {
 // Print the command line help.
 void PrintHelp() {
   std::cout << "transport_security_state_generator <json-file> <pins-file>"
-            << " <template-file> <output-file> [-v]" << std::endl;
+            << " <template-file> <output-file> [--v=1]" << std::endl;
 }
 
 // Parses the |json| string and copies the items under the "entries" key to
@@ -56,20 +58,21 @@ bool ParseJSON(const std::string& json,
   std::unique_ptr<base::Value> value = base::JSONReader::Read(json);
   base::DictionaryValue* dict_value = nullptr;
   if (!value.get() || !value->GetAsDictionary(&dict_value)) {
-    std::cerr << "Could not parse the input JSON" << std::endl;
+    LOG(ERROR) << "Could not parse the input JSON file";
     return false;
   }
 
   const base::ListValue* preload_entries = nullptr;
   if (!dict_value->GetList("entries", &preload_entries)) {
-    std::cerr << "Could not parse the entries in the input JSON" << std::endl;
+    LOG(ERROR) << "Could not parse the entries in the input JSON";
     return false;
   }
 
   for (size_t i = 0; i < preload_entries->GetSize(); ++i) {
     const base::DictionaryValue* parsed = nullptr;
     if (!preload_entries->GetDictionary(i, &parsed)) {
-      std::cerr << "Could not parse entry " << i << std::endl;
+      LOG(ERROR) << "Could not parse entry " << base::SizeTToString(i)
+                 << " in the input JSON";
       return false;
     }
 
@@ -77,7 +80,8 @@ bool ParseJSON(const std::string& json,
         new TransportSecurityStateEntry());
 
     if (!parsed->GetString("name", &entry->hostname)) {
-      std::cerr << "Could not extract the name for entry " << i << std::endl;
+      LOG(ERROR) << "Could not extract the hostname for entry "
+                 << base::SizeTToString(i) << " from the input JSON";
       return false;
     }
 
@@ -101,20 +105,22 @@ bool ParseJSON(const std::string& json,
 
   const base::ListValue* pinsets_list = nullptr;
   if (!dict_value->GetList("pinsets", &pinsets_list)) {
-    std::cerr << "Could not parse the pinsets in the input JSON" << std::endl;
+    LOG(ERROR) << "Could not parse the pinsets in the input JSON";
     return false;
   }
 
   for (size_t i = 0; i < pinsets_list->GetSize(); ++i) {
     const base::DictionaryValue* parsed = nullptr;
     if (!pinsets_list->GetDictionary(i, &parsed)) {
-      std::cerr << "Could not parse pinset " << i << std::endl;
+      LOG(ERROR) << "Could not parse pinset " << base::SizeTToString(i)
+                 << " in the input JSON";
       return false;
     }
 
     std::string name;
     if (!parsed->GetString("name", &name)) {
-      std::cerr << "Could not extract the name for pinset " << i << std::endl;
+      LOG(ERROR) << "Could not extract the name for pinset "
+                 << base::SizeTToString(i) << " from the input JSON";
       return false;
     }
 
@@ -149,7 +155,7 @@ bool ParseJSON(const std::string& json,
   // https://crbug.com/661206.
   const base::ListValue* domain_ids_list = nullptr;
   if (!dict_value->GetList("domain_ids", &domain_ids_list)) {
-    std::cerr << "Failed parsing JSON (domain_ids)" << std::endl;
+    LOG(ERROR) << "Could not parse the domain IDs in the input JSON";
     return false;
   }
 
@@ -193,7 +199,8 @@ bool MatchCertificateName(base::StringPiece name, base::StringPiece pin_name) {
   std::vector<base::StringPiece> words = base::SplitStringPiece(
       name, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   if (words.empty()) {
-    std::cerr << "no words in certificate name" << std::endl;
+    LOG(ERROR) << "No words in certificate name for pin "
+               << pin_name.as_string();
     return false;
   }
   base::StringPiece first_word = words[0];
@@ -217,7 +224,8 @@ bool MatchCertificateName(base::StringPiece name, base::StringPiece pin_name) {
   }
 
   if (first_word.empty()) {
-    std::cerr << "first word of certificate name is empty" << std::endl;
+    LOG(ERROR) << "First word of certificate name (" << name.as_string()
+               << ") is empty";
     return false;
   }
 
@@ -225,10 +233,10 @@ bool MatchCertificateName(base::StringPiece name, base::StringPiece pin_name) {
   first_word = filtered_word;
   if (!base::EqualsCaseInsensitiveASCII(pin_name.substr(0, first_word.size()),
                                         first_word)) {
-    std::cerr << "the first word of the certificate name ("
-              << first_word.as_string()
-              << ") isn't a prefix of the variable name ("
-              << pin_name.as_string() << ")" << std::endl;
+    LOG(ERROR) << "The first word of the certificate name ("
+               << first_word.as_string()
+               << ") isn't a prefix of the variable name ("
+               << pin_name.as_string() << ")";
     return false;
   }
 
@@ -240,21 +248,25 @@ bool MatchCertificateName(base::StringPiece name, base::StringPiece pin_name) {
 
       size_t pos = pin_name.find(class_name);
       if (pos == std::string::npos) {
-        std::cerr << "class specification doesn't appear in the variable name"
-                  << std::endl;
+        LOG(ERROR)
+            << "Certficate class specification doesn't appear in the variable "
+               "name ("
+            << pin_name.as_string() << ")";
         return false;
       }
     } else if (word.size() == 1 && word[0] >= '0' && word[0] <= '9') {
       size_t pos = pin_name.find(word);
       if (pos == std::string::npos) {
-        std::cerr << "number doesn't appear in the variable name" << std::endl;
+        LOG(ERROR) << "Number doesn't appear in the certificate variable name ("
+                   << pin_name.as_string() << ")";
         return false;
       }
     } else if (IsImportantWordInCertificateName(word)) {
       size_t pos = pin_name.find(word);
       if (pos == std::string::npos) {
-        std::cerr << word.as_string() << " doesn't appear in the variable name"
-                  << std::endl;
+        LOG(ERROR) << word.as_string() +
+                          " doesn't appear in the certificate variable name ("
+                   << pin_name.as_string() << ")";
         return false;
       }
     }
@@ -324,7 +336,7 @@ bool ParseCertificatesFile(const std::string& certs_input, Pinsets* pinsets) {
     switch (current_state) {
       case CertificateParserState::PRE_NAME:
         if (!IsValidName(line)) {
-          std::cerr << "Invalid name in certificates file: " << line;
+          LOG(ERROR) << "Invalid name in pins file: " << line;
           return false;
         }
         name = line;
@@ -333,8 +345,7 @@ bool ParseCertificatesFile(const std::string& certs_input, Pinsets* pinsets) {
       case CertificateParserState::POST_NAME:
         if (base::StartsWith(line, kStartOfSHA256, compare_mode)) {
           if (!hash.FromString(line)) {
-            std::cerr << "Invalid hash value in certificate file for " << name
-                      << std::endl;
+            LOG(ERROR) << "Invalid hash value in pins file for " << name;
             return false;
           }
 
@@ -347,8 +358,7 @@ bool ParseCertificatesFile(const std::string& certs_input, Pinsets* pinsets) {
           buffer = line + '\n';
           current_state = CertificateParserState::IN_PUBLIC_KEY;
         } else {
-          std::cerr << "Invalid value in certificates file for " << name
-                    << std::endl;
+          LOG(ERROR) << "Invalid value in pins file for " << name;
           return false;
         }
         break;
@@ -360,26 +370,24 @@ bool ParseCertificatesFile(const std::string& certs_input, Pinsets* pinsets) {
 
         certificate = GetX509CertificateFromPEM(buffer);
         if (!certificate) {
-          std::cerr << "Could not parse certificate " << name << std::endl;
+          LOG(ERROR) << "Could not parse certificate " << name;
           return false;
         }
 
         if (!CalculateSPKIHashFromCertificate(certificate.get(), &hash)) {
-          std::cerr << "Could not extract SPKI from certificate " << name
-                    << std::endl;
+          LOG(ERROR) << "Could not extract SPKI from certificate " << name;
           return false;
         }
 
         if (!ExtractSubjectNameFromCertificate(certificate.get(),
                                                &subject_name)) {
-          std::cerr << "Could not extract name from certificate " << name
-                    << std::endl;
+          LOG(ERROR) << "Could not extract name from certificate " << name;
           return false;
         }
 
         if (!MatchCertificateName(subject_name, name)) {
-          std::cerr << name << " is not a reasonable name for " << subject_name
-                    << std::endl;
+          LOG(ERROR) << name << " is not a reasonable name for "
+                     << subject_name;
           return false;
         }
 
@@ -393,8 +401,7 @@ bool ParseCertificatesFile(const std::string& certs_input, Pinsets* pinsets) {
         }
 
         if (!CalculateSPKIHashFromKey(buffer, &hash)) {
-          std::cerr << "Parsing of the public key " << name << " failed"
-                    << std::endl;
+          LOG(ERROR) << "Could not parse the public key for " << name;
           return false;
         }
 
@@ -416,7 +423,7 @@ bool CheckForDuplicatePins(const Pinsets& pinsets) {
 
   for (const auto& pin : pinsets.spki_hashes()) {
     if (seen_names.find(pin.first) != seen_names.cend()) {
-      std::cerr << "Duplicate pin name " << pin.first << std::endl;
+      LOG(ERROR) << "Duplicate pin name " << pin.first << " in pins file";
       return false;
     }
     seen_names.insert(pin.first);
@@ -425,8 +432,8 @@ bool CheckForDuplicatePins(const Pinsets& pinsets) {
         std::string(pin.second.data(), pin.second.data() + pin.second.size());
     std::map<std::string, std::string>::iterator it = seen_hashes.find(hash);
     if (it != seen_hashes.cend()) {
-      std::cerr << "Duplicate pin hash for " << pin.first
-                << ", already seen as " << it->second << std::endl;
+      LOG(ERROR) << "Duplicate pin hash for " << pin.first
+                 << ", already seen as " << it->second;
       return false;
     }
     seen_hashes.insert(std::pair<std::string, std::string>(hash, pin.first));
@@ -447,8 +454,7 @@ bool CheckCertificatesInPinsets(const Pinsets& pinsets) {
   std::set<std::string> pinset_names;
   for (const auto& pinset : pinsets.pinsets()) {
     if (pinset_names.find(pinset.second->name()) != pinset_names.cend()) {
-      std::cerr << "Duplicate pinset name " << pinset.second->name()
-                << std::endl;
+      LOG(ERROR) << "Duplicate pinset name " << pinset.second->name();
       return false;
     }
     pinset_names.insert(pinset.second->name());
@@ -467,7 +473,8 @@ bool CheckCertificatesInPinsets(const Pinsets& pinsets) {
 
     for (const auto& pin_name : all_pin_names) {
       if (pin_names.find(pin_name) == pin_names.cend()) {
-        std::cerr << "Unknown pin: " << pin_name << std::endl;
+        LOG(ERROR) << "Pinset " << pinset.second->name()
+                   << " references pin " + pin_name << " which doesn't exist";
         return false;
       }
       used_pin_names.insert(pin_name);
@@ -476,7 +483,7 @@ bool CheckCertificatesInPinsets(const Pinsets& pinsets) {
 
   for (const auto& pin_name : pin_names) {
     if (used_pin_names.find(pin_name) == used_pin_names.cend()) {
-      std::cerr << "Unused pin: " << pin_name << std::endl;
+      LOG(ERROR) << "Pin " << pin_name << " is unused.";
       return false;
     }
   }
@@ -489,7 +496,7 @@ bool CheckDuplicateEntries(const TransportSecurityStateEntries& entries) {
   std::set<std::string> seen_entries;
   for (const auto& entry : entries) {
     if (seen_entries.find(entry->hostname) != seen_entries.cend()) {
-      std::cerr << "Duplicate entry for " << entry->hostname << std::endl;
+      LOG(ERROR) << "Duplicate entry for " << entry->hostname;
       return false;
     }
     seen_entries.insert(entry->hostname);
@@ -507,10 +514,9 @@ bool CheckNoopEntries(const TransportSecurityStateEntries& entries) {
         continue;
       }
 
-      std::cerr
-          << "Entry for " + entry->hostname +
-                 " has no mode, no pins and is not expect-CT or expect-staple"
-          << std::endl;
+      LOG(ERROR)
+          << "Entry for " << entry->hostname
+          << " has no mode, no pins and is not expect-CT or expect-staple";
       return false;
     }
   }
@@ -521,10 +527,9 @@ bool CheckNoopEntries(const TransportSecurityStateEntries& entries) {
 bool CheckSubdomainsFlags(const TransportSecurityStateEntries& entries) {
   for (const auto& entry : entries) {
     if (entry->include_subdomains && entry->hpkp_include_subdomains) {
-      std::cerr << "Entry for \"" << entry->hostname
-                << "\" sets include_subdomains_for_pinning but also sets "
-                   "include_subdomains, which implies it"
-                << std::endl;
+      LOG(ERROR) << "Entry for " << entry->hostname
+                 << " sets include_subdomains_for_pinning but also sets "
+                    "include_subdomains, which implies it";
       return false;
     }
   }
@@ -540,6 +545,10 @@ int main(int argc, char* argv[]) {
   const base::CommandLine& command_line =
       *base::CommandLine::ForCurrentProcess();
 
+  logging::LoggingSettings settings;
+  settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+  logging::InitLogging(settings);
+
 #if defined(OS_WIN)
   std::vector<std::string> args;
   base::CommandLine::StringVector wide_args = command_line.GetArgs();
@@ -554,31 +563,29 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  bool verbose = command_line.HasSwitch("v");
-
   base::FilePath json_filepath = base::FilePath::FromUTF8Unsafe(argv[1]);
   if (!base::PathExists(json_filepath)) {
-    std::cerr << "Input JSON file doesn't exist." << std::endl;
+    LOG(ERROR) << "Input JSON file doesn't exist.";
     return 1;
   }
   json_filepath = base::MakeAbsoluteFilePath(json_filepath);
 
   std::string json_input;
   if (!base::ReadFileToString(json_filepath, &json_input)) {
-    std::cerr << "Could not read input JSON file." << std::endl;
+    LOG(ERROR) << "Could not read input JSON file.";
     return 1;
   }
 
   base::FilePath pins_filepath = base::FilePath::FromUTF8Unsafe(argv[2]);
   if (!base::PathExists(pins_filepath)) {
-    std::cerr << "Input pins file doesn't exist." << std::endl;
+    LOG(ERROR) << "Input pins file doesn't exist.";
     return 1;
   }
   pins_filepath = base::MakeAbsoluteFilePath(pins_filepath);
 
   std::string certs_input;
   if (!base::ReadFileToString(pins_filepath, &certs_input)) {
-    std::cerr << "Could not read input pins file." << std::endl;
+    LOG(ERROR) << "Could not read input pins file.";
     return 1;
   }
 
@@ -586,48 +593,53 @@ int main(int argc, char* argv[]) {
   Pinsets pinsets;
   DomainIDList domain_ids;
 
-  if (!ParseCertificatesFile(certs_input, &pinsets)) {
-    std::cerr << "Error while parsing the pins file." << std::endl;
-    return 1;
-  }
-  if (!ParseJSON(json_input, &entries, &pinsets, &domain_ids)) {
-    std::cerr << "Error while parsing the JSON file." << std::endl;
+  if (!ParseCertificatesFile(certs_input, &pinsets) ||
+      !ParseJSON(json_input, &entries, &pinsets, &domain_ids)) {
+    LOG(ERROR) << "Error while parsing the input files.";
     return 1;
   }
 
   if (!CheckDuplicateEntries(entries) || !CheckNoopEntries(entries) ||
       !CheckSubdomainsFlags(entries) || !CheckForDuplicatePins(pinsets) ||
       !CheckCertificatesInPinsets(pinsets)) {
-    std::cerr << "Checks failed. Aborting." << std::endl;
+    LOG(ERROR) << "Checks failed. Aborting.";
     return 1;
   }
 
   base::FilePath template_path = base::FilePath::FromUTF8Unsafe(argv[3]);
   if (!base::PathExists(template_path)) {
-    std::cerr << "Template file doesn't exist." << std::endl;
+    LOG(ERROR) << "Template file doesn't exist.";
     return 1;
   }
   template_path = base::MakeAbsoluteFilePath(template_path);
 
   std::string preload_template;
   if (!base::ReadFileToString(template_path, &preload_template)) {
-    std::cerr << "Could not read template file." << std::endl;
+    LOG(ERROR) << "Could not read template file.";
     return 1;
   }
 
-  std::string result;
+  std::string output;
   PreloadedStateGenerator generator;
-  result = generator.Generate(preload_template, entries, domain_ids, pinsets,
-                              verbose);
+  output = generator.Generate(preload_template, entries, domain_ids, pinsets);
+  if (output.empty()) {
+    LOG(ERROR) << "Trie generation failed.";
+    return 1;
+  }
 
   base::FilePath output_path;
   output_path = base::FilePath::FromUTF8Unsafe(argv[4]);
 
-  if (base::WriteFile(output_path, result.c_str(),
-                      static_cast<uint32_t>(result.size())) <= 0) {
-    std::cerr << "Failed to write output." << std::endl;
+  if (base::WriteFile(output_path, output.c_str(),
+                      static_cast<uint32_t>(output.size())) <= 0) {
+    LOG(ERROR) << "Failed to write output.";
     return 1;
   }
+
+  VLOG(1) << "Wrote trie containing " << entries.size()
+          << " entries, referencing " << pinsets.size() << " pinsets and "
+          << domain_ids.size() << " domain IDs to "
+          << output_path.AsUTF8Unsafe() << std::endl;
 
   return 0;
 }

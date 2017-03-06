@@ -67,7 +67,7 @@ CONTENTS = {
           print >> sys.stderr, 'Unexpected content: %s' % actual
           sys.exit(1)
       print('Success')""",
-  'archive': (
+  'ar_archive': (
       '!<arch>\n'
       '#1/5            '
       '1447140471  1000  1000  100640  '
@@ -80,6 +80,7 @@ CONTENTS = {
       '12        '
       '\x60\n'
       'More content'),
+  'tar_archive': open(os.path.join(ROOT_DIR, 'tests', 'archive.tar')).read(),
   'archive_files.py': """if True:
       import os, sys
       ROOT_DIR = os.path.dirname(os.path.abspath(
@@ -152,14 +153,27 @@ CONTENTS['manifest2.isolated'] = json.dumps(
     })
 
 
-CONTENTS['archive.isolated'] = json.dumps(
+CONTENTS['ar_archive.isolated'] = json.dumps(
     {
       'command': ['python', 'archive_files.py'],
       'files': {
         'archive': {
-          'h': isolateserver_mock.hash_content(CONTENTS['archive']),
-          's': len(CONTENTS['archive']),
+          'h': isolateserver_mock.hash_content(CONTENTS['ar_archive']),
+          's': len(CONTENTS['ar_archive']),
           't': 'ar',
+        },
+        'archive_files.py': file_meta('archive_files.py'),
+      },
+    })
+
+CONTENTS['tar_archive.isolated'] = json.dumps(
+    {
+      'command': ['python', 'archive_files.py'],
+      'files': {
+        'archive': {
+          'h': isolateserver_mock.hash_content(CONTENTS['tar_archive']),
+          's': len(CONTENTS['tar_archive']),
+          't': 'tar',
         },
         'archive_files.py': file_meta('archive_files.py'),
       },
@@ -389,13 +403,29 @@ class RunIsolatedTest(unittest.TestCase):
     actual = list_files_tree(self.cache)
     self.assertEqual(sorted(expected), actual)
 
-  def test_archive(self):
+  def test_ar_archive(self):
     # Loads an .isolated that includes an ar archive.
-    isolated_hash = self._store('archive.isolated')
+    isolated_hash = self._store('ar_archive.isolated')
     expected = [
       'state.json',
       isolated_hash,
-      self._store('archive'),
+      self._store('ar_archive'),
+      self._store('archive_files.py'),
+    ]
+    out, err, returncode = self._run(self._cmd_args(isolated_hash))
+    self.assertEqual('', err)
+    self.assertEqual('Success\n', out)
+    self.assertEqual(0, returncode)
+    actual = list_files_tree(self.cache)
+    self.assertEqual(sorted(expected), actual)
+
+  def test_tar_archive(self):
+    # Loads an .isolated that includes an ar archive.
+    isolated_hash = self._store('tar_archive.isolated')
+    expected = [
+      'state.json',
+      isolated_hash,
+      self._store('tar_archive'),
       self._store('archive_files.py'),
     ]
     out, err, returncode = self._run(self._cmd_args(isolated_hash))

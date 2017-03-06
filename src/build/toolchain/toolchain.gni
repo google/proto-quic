@@ -50,12 +50,7 @@ hermetic_xcode_path =
 declare_args() {
   if (is_clang) {
     # Clang compiler version. Clang files are placed at version-dependent paths.
-    if (llvm_force_head_revision) {
-      clang_version = "5.0.0"
-    } else {
-      # TODO(thakis): Remove this branch the next time clang rolls.
-      clang_version = "4.0.0"
-    }
+    clang_version = "5.0.0"
   }
 }
 

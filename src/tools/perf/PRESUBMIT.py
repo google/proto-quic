@@ -18,6 +18,7 @@ def _CommonChecks(input_api, output_api):
 
   results.extend(_CheckWprShaFiles(input_api, output_api))
   results.extend(_CheckJson(input_api, output_api))
+  results.extend(_CheckPerfJsonUpToDate(input_api, output_api))
   results.extend(input_api.RunTests(input_api.canned_checks.GetPylint(
       input_api, output_api, extra_paths_list=_GetPathsToPrepend(input_api),
       pylintrc='pylintrc')))
@@ -36,6 +37,26 @@ def _GetPathsToPrepend(input_api):
       input_api.os_path.join(telemetry_dir, 'third_party', 'mock'),
       experimental_dir,
   ]
+
+
+def _RunArgs(args, input_api):
+  p = input_api.subprocess.Popen(args, stdout=input_api.subprocess.PIPE,
+                                 stderr=input_api.subprocess.STDOUT)
+  out, _ = p.communicate()
+  return (out, p.returncode)
+
+
+def _CheckPerfJsonUpToDate(input_api, output_api):
+  results = []
+  perf_dir = input_api.PresubmitLocalPath()
+  out, return_code = _RunArgs([
+      input_api.python_executable,
+      input_api.os_path.join(perf_dir, 'generate_perf_json.py'),
+      '--validate-only'], input_api)
+  if return_code:
+      results.append(output_api.PresubmitError(
+          'Validating Perf JSON configs failed.', long_text=out))
+  return results
 
 
 def _CheckWprShaFiles(input_api, output_api):

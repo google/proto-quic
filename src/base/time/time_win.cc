@@ -97,7 +97,7 @@ bool g_high_res_timer_enabled = false;
 uint32_t g_high_res_timer_count = 0;
 // The lock to control access to the above two variables.
 base::Lock* GetHighResLock() {
-  static auto lock = new base::Lock();
+  static auto* lock = new base::Lock();
   return lock;
 }
 

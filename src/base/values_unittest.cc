@@ -20,23 +20,23 @@ namespace base {
 
 // Group of tests for the value constructors.
 TEST(ValuesTest, ConstructBool) {
-  FundamentalValue true_value(true);
+  Value true_value(true);
   EXPECT_EQ(Value::Type::BOOLEAN, true_value.type());
   EXPECT_TRUE(true_value.GetBool());
 
-  FundamentalValue false_value(false);
+  Value false_value(false);
   EXPECT_EQ(Value::Type::BOOLEAN, false_value.type());
   EXPECT_FALSE(false_value.GetBool());
 }
 
 TEST(ValuesTest, ConstructInt) {
-  FundamentalValue value(-37);
+  Value value(-37);
   EXPECT_EQ(Value::Type::INTEGER, value.type());
   EXPECT_EQ(-37, value.GetInt());
 }
 
 TEST(ValuesTest, ConstructDouble) {
-  FundamentalValue value(-4.655);
+  Value value(-4.655);
   EXPECT_EQ(Value::Type::DOUBLE, value.type());
   EXPECT_EQ(-4.655, value.GetDouble());
 }
@@ -89,17 +89,27 @@ TEST(ValuesTest, ConstructBinary) {
   EXPECT_EQ(std::vector<char>({0xF, 0x0, 0x0, 0xB, 0xA, 0x2}), value.GetBlob());
 }
 
+TEST(ValuesTest, ConstructDict) {
+  DictionaryValue value;
+  EXPECT_EQ(Value::Type::DICTIONARY, value.type());
+}
+
+TEST(ValuesTest, ConstructList) {
+  ListValue value;
+  EXPECT_EQ(Value::Type::LIST, value.type());
+}
+
 // Group of tests for the copy constructors and copy-assigmnent. For equality
 // checks comparisons of the interesting fields are done instead of relying on
 // Equals being correct.
 TEST(ValuesTest, CopyBool) {
-  FundamentalValue true_value(true);
-  FundamentalValue copied_true_value(true_value);
+  Value true_value(true);
+  Value copied_true_value(true_value);
   EXPECT_EQ(true_value.type(), copied_true_value.type());
   EXPECT_EQ(true_value.GetBool(), copied_true_value.GetBool());
 
-  FundamentalValue false_value(false);
-  FundamentalValue copied_false_value(false_value);
+  Value false_value(false);
+  Value copied_false_value(false_value);
   EXPECT_EQ(false_value.type(), copied_false_value.type());
   EXPECT_EQ(false_value.GetBool(), copied_false_value.GetBool());
 
@@ -115,8 +125,8 @@ TEST(ValuesTest, CopyBool) {
 }
 
 TEST(ValuesTest, CopyInt) {
-  FundamentalValue value(74);
-  FundamentalValue copied_value(value);
+  Value value(74);
+  Value copied_value(value);
   EXPECT_EQ(value.type(), copied_value.type());
   EXPECT_EQ(value.GetInt(), copied_value.GetInt());
 
@@ -128,8 +138,8 @@ TEST(ValuesTest, CopyInt) {
 }
 
 TEST(ValuesTest, CopyDouble) {
-  FundamentalValue value(74.896);
-  FundamentalValue copied_value(value);
+  Value value(74.896);
+  Value copied_value(value);
   EXPECT_EQ(value.type(), copied_value.type());
   EXPECT_EQ(value.GetDouble(), copied_value.GetDouble());
 
@@ -166,51 +176,95 @@ TEST(ValuesTest, CopyBinary) {
   EXPECT_EQ(value.GetBlob(), blank.GetBlob());
 }
 
+TEST(ValuesTest, CopyDictionary) {
+  // TODO(crbug.com/646113): Clean this up once DictionaryValue switched to
+  // value semantics.
+  int copy;
+  DictionaryValue value;
+  value.SetInteger("Int", 123);
+
+  DictionaryValue copied_value(value);
+  copied_value.GetInteger("Int", &copy);
+
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(123, copy);
+
+  auto blank = MakeUnique<Value>();
+
+  *blank = value;
+  EXPECT_EQ(Value::Type::DICTIONARY, blank->type());
+
+  static_cast<DictionaryValue*>(blank.get())->GetInteger("Int", &copy);
+  EXPECT_EQ(123, copy);
+}
+
+TEST(ValuesTest, CopyList) {
+  // TODO(crbug.com/646113): Clean this up once ListValue switched to
+  // value semantics.
+  int copy;
+  ListValue value;
+  value.AppendInteger(123);
+
+  ListValue copied_value(value);
+  copied_value.GetInteger(0, &copy);
+
+  EXPECT_EQ(value.type(), copied_value.type());
+  EXPECT_EQ(123, copy);
+
+  auto blank = MakeUnique<Value>();
+
+  *blank = value;
+  EXPECT_EQ(Value::Type::LIST, blank->type());
+
+  static_cast<ListValue*>(blank.get())->GetInteger(0, &copy);
+  EXPECT_EQ(123, copy);
+}
+
 // Group of tests for the move constructors and move-assigmnent.
 TEST(ValuesTest, MoveBool) {
-  FundamentalValue true_value(true);
-  FundamentalValue moved_true_value(std::move(true_value));
+  Value true_value(true);
+  Value moved_true_value(std::move(true_value));
   EXPECT_EQ(Value::Type::BOOLEAN, moved_true_value.type());
   EXPECT_TRUE(moved_true_value.GetBool());
 
-  FundamentalValue false_value(false);
-  FundamentalValue moved_false_value(std::move(false_value));
+  Value false_value(false);
+  Value moved_false_value(std::move(false_value));
   EXPECT_EQ(Value::Type::BOOLEAN, moved_false_value.type());
   EXPECT_FALSE(moved_false_value.GetBool());
 
   Value blank;
 
-  blank = FundamentalValue(true);
+  blank = Value(true);
   EXPECT_EQ(Value::Type::BOOLEAN, blank.type());
   EXPECT_TRUE(blank.GetBool());
 
-  blank = FundamentalValue(false);
+  blank = Value(false);
   EXPECT_EQ(Value::Type::BOOLEAN, blank.type());
   EXPECT_FALSE(blank.GetBool());
 }
 
 TEST(ValuesTest, MoveInt) {
-  FundamentalValue value(74);
-  FundamentalValue moved_value(std::move(value));
+  Value value(74);
+  Value moved_value(std::move(value));
   EXPECT_EQ(Value::Type::INTEGER, moved_value.type());
   EXPECT_EQ(74, moved_value.GetInt());
 
   Value blank;
 
-  blank = FundamentalValue(47);
+  blank = Value(47);
   EXPECT_EQ(Value::Type::INTEGER, blank.type());
   EXPECT_EQ(47, blank.GetInt());
 }
 
 TEST(ValuesTest, MoveDouble) {
-  FundamentalValue value(74.896);
-  FundamentalValue moved_value(std::move(value));
+  Value value(74.896);
+  Value moved_value(std::move(value));
   EXPECT_EQ(Value::Type::DOUBLE, moved_value.type());
   EXPECT_EQ(74.896, moved_value.GetDouble());
 
   Value blank;
 
-  blank = FundamentalValue(654.38);
+  blank = Value(654.38);
   EXPECT_EQ(Value::Type::DOUBLE, blank.type());
   EXPECT_EQ(654.38, blank.GetDouble());
 }
@@ -240,6 +294,44 @@ TEST(ValuesTest, MoveBinary) {
   blank = BinaryValue(buffer);
   EXPECT_EQ(Value::Type::BINARY, blank.type());
   EXPECT_EQ(buffer, blank.GetBlob());
+}
+
+TEST(ValuesTest, MoveDictionary) {
+  // TODO(crbug.com/646113): Clean this up once DictionaryValue switched to
+  // value semantics.
+  int move;
+  DictionaryValue value;
+  value.SetInteger("Int", 123);
+
+  DictionaryValue moved_value(std::move(value));
+  moved_value.GetInteger("Int", &move);
+
+  EXPECT_EQ(Value::Type::DICTIONARY, moved_value.type());
+  EXPECT_EQ(123, move);
+
+  Value blank;
+
+  blank = DictionaryValue();
+  EXPECT_EQ(Value::Type::DICTIONARY, blank.type());
+}
+
+TEST(ValuesTest, MoveList) {
+  // TODO(crbug.com/646113): Clean this up once ListValue switched to
+  // value semantics.
+  int move;
+  ListValue value;
+  value.AppendInteger(123);
+
+  ListValue moved_value(std::move(value));
+  moved_value.GetInteger(0, &move);
+
+  EXPECT_EQ(Value::Type::LIST, moved_value.type());
+  EXPECT_EQ(123, move);
+
+  Value blank;
+
+  blank = ListValue();
+  EXPECT_EQ(Value::Type::LIST, blank.type());
 }
 
 TEST(ValuesTest, Basic) {
@@ -287,9 +379,9 @@ TEST(ValuesTest, Basic) {
 
 TEST(ValuesTest, List) {
   std::unique_ptr<ListValue> mixed_list(new ListValue());
-  mixed_list->Set(0, MakeUnique<FundamentalValue>(true));
-  mixed_list->Set(1, MakeUnique<FundamentalValue>(42));
-  mixed_list->Set(2, MakeUnique<FundamentalValue>(88.8));
+  mixed_list->Set(0, MakeUnique<Value>(true));
+  mixed_list->Set(1, MakeUnique<Value>(42));
+  mixed_list->Set(2, MakeUnique<Value>(88.8));
   mixed_list->Set(3, MakeUnique<StringValue>("foo"));
   ASSERT_EQ(4u, mixed_list->GetSize());
 
@@ -325,8 +417,8 @@ TEST(ValuesTest, List) {
   ASSERT_EQ("foo", string_value);
 
   // Try searching in the mixed list.
-  base::FundamentalValue sought_value(42);
-  base::FundamentalValue not_found_value(false);
+  base::Value sought_value(42);
+  base::Value not_found_value(false);
 
   ASSERT_NE(mixed_list->end(), mixed_list->Find(sought_value));
   ASSERT_TRUE((*mixed_list->Find(sought_value))->GetAsInteger(&int_value));
@@ -399,61 +491,20 @@ TEST(ValuesTest, StringValue) {
                   static_cast<const StringValue**>(NULL)));
 }
 
-// This is a Value object that allows us to tell if it's been
-// properly deleted by modifying the value of external flag on destruction.
-class DeletionTestValue : public Value {
- public:
-  explicit DeletionTestValue(bool* deletion_flag) : Value(Type::NONE) {
-    Init(deletion_flag);  // Separate function so that we can use ASSERT_*
-  }
-
-  void Init(bool* deletion_flag) {
-    ASSERT_TRUE(deletion_flag);
-    deletion_flag_ = deletion_flag;
-    *deletion_flag_ = false;
-  }
-
-  ~DeletionTestValue() override { *deletion_flag_ = true; }
-
- private:
-  bool* deletion_flag_;
-};
-
 TEST(ValuesTest, ListDeletion) {
-  bool deletion_flag = true;
-
-  {
-    ListValue list;
-    list.Append(MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-  }
-  EXPECT_TRUE(deletion_flag);
-
-  {
-    ListValue list;
-    list.Append(MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-    list.Clear();
-    EXPECT_TRUE(deletion_flag);
-  }
-
-  {
-    ListValue list;
-    list.Append(MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-    EXPECT_TRUE(list.Set(0, Value::CreateNullValue()));
-    EXPECT_TRUE(deletion_flag);
-  }
+  ListValue list;
+  list.Append(MakeUnique<Value>());
+  EXPECT_FALSE(list.empty());
+  list.Clear();
+  EXPECT_TRUE(list.empty());
 }
 
 TEST(ValuesTest, ListRemoval) {
-  bool deletion_flag = true;
   std::unique_ptr<Value> removed_item;
 
   {
     ListValue list;
-    list.Append(MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
+    list.Append(MakeUnique<Value>());
     EXPECT_EQ(1U, list.GetSize());
     EXPECT_FALSE(list.Remove(std::numeric_limits<size_t>::max(),
                              &removed_item));
@@ -462,88 +513,55 @@ TEST(ValuesTest, ListRemoval) {
     ASSERT_TRUE(removed_item);
     EXPECT_EQ(0U, list.GetSize());
   }
-  EXPECT_FALSE(deletion_flag);
   removed_item.reset();
-  EXPECT_TRUE(deletion_flag);
 
   {
     ListValue list;
-    list.Append(MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
+    list.Append(MakeUnique<Value>());
     EXPECT_TRUE(list.Remove(0, NULL));
-    EXPECT_TRUE(deletion_flag);
     EXPECT_EQ(0U, list.GetSize());
   }
 
   {
     ListValue list;
-    std::unique_ptr<DeletionTestValue> value(
-        new DeletionTestValue(&deletion_flag));
-    DeletionTestValue* original_value = value.get();
+    auto value = MakeUnique<Value>();
+    Value* original_value = value.get();
     list.Append(std::move(value));
-    EXPECT_FALSE(deletion_flag);
     size_t index = 0;
     list.Remove(*original_value, &index);
     EXPECT_EQ(0U, index);
-    EXPECT_TRUE(deletion_flag);
     EXPECT_EQ(0U, list.GetSize());
   }
 }
 
 TEST(ValuesTest, DictionaryDeletion) {
   std::string key = "test";
-  bool deletion_flag = true;
-
-  {
-    DictionaryValue dict;
-    dict.Set(key, MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-  }
-  EXPECT_TRUE(deletion_flag);
-
-  {
-    DictionaryValue dict;
-    dict.Set(key, MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-    dict.Clear();
-    EXPECT_TRUE(deletion_flag);
-  }
-
-  {
-    DictionaryValue dict;
-    dict.Set(key, MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
-    dict.Set(key, Value::CreateNullValue());
-    EXPECT_TRUE(deletion_flag);
-  }
+  DictionaryValue dict;
+  dict.Set(key, MakeUnique<Value>());
+  EXPECT_FALSE(dict.empty());
+  dict.Clear();
+  EXPECT_TRUE(dict.empty());
 }
 
 TEST(ValuesTest, DictionaryRemoval) {
   std::string key = "test";
-  bool deletion_flag = true;
   std::unique_ptr<Value> removed_item;
 
   {
     DictionaryValue dict;
-    dict.Set(key, MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
+    dict.Set(key, MakeUnique<Value>());
     EXPECT_TRUE(dict.HasKey(key));
     EXPECT_FALSE(dict.Remove("absent key", &removed_item));
     EXPECT_TRUE(dict.Remove(key, &removed_item));
     EXPECT_FALSE(dict.HasKey(key));
     ASSERT_TRUE(removed_item);
   }
-  EXPECT_FALSE(deletion_flag);
-  removed_item.reset();
-  EXPECT_TRUE(deletion_flag);
 
   {
     DictionaryValue dict;
-    dict.Set(key, MakeUnique<DeletionTestValue>(&deletion_flag));
-    EXPECT_FALSE(deletion_flag);
+    dict.Set(key, MakeUnique<Value>());
     EXPECT_TRUE(dict.HasKey(key));
     EXPECT_TRUE(dict.Remove(key, NULL));
-    EXPECT_TRUE(deletion_flag);
     EXPECT_FALSE(dict.HasKey(key));
   }
 }
@@ -624,14 +642,14 @@ TEST(ValuesTest, DeepCopy) {
   std::unique_ptr<Value> scoped_null = Value::CreateNullValue();
   Value* original_null = scoped_null.get();
   original_dict.Set("null", std::move(scoped_null));
-  std::unique_ptr<FundamentalValue> scoped_bool(new FundamentalValue(true));
-  FundamentalValue* original_bool = scoped_bool.get();
+  std::unique_ptr<Value> scoped_bool(new Value(true));
+  Value* original_bool = scoped_bool.get();
   original_dict.Set("bool", std::move(scoped_bool));
-  std::unique_ptr<FundamentalValue> scoped_int(new FundamentalValue(42));
-  FundamentalValue* original_int = scoped_int.get();
+  std::unique_ptr<Value> scoped_int(new Value(42));
+  Value* original_int = scoped_int.get();
   original_dict.Set("int", std::move(scoped_int));
-  std::unique_ptr<FundamentalValue> scoped_double(new FundamentalValue(3.14));
-  FundamentalValue* original_double = scoped_double.get();
+  std::unique_ptr<Value> scoped_double(new Value(3.14));
+  Value* original_double = scoped_double.get();
   original_dict.Set("double", std::move(scoped_double));
   std::unique_ptr<StringValue> scoped_string(new StringValue("hello"));
   StringValue* original_string = scoped_string.get();
@@ -649,12 +667,10 @@ TEST(ValuesTest, DeepCopy) {
 
   std::unique_ptr<ListValue> scoped_list(new ListValue());
   Value* original_list = scoped_list.get();
-  std::unique_ptr<FundamentalValue> scoped_list_element_0(
-      new FundamentalValue(0));
+  std::unique_ptr<Value> scoped_list_element_0(new Value(0));
   Value* original_list_element_0 = scoped_list_element_0.get();
   scoped_list->Append(std::move(scoped_list_element_0));
-  std::unique_ptr<FundamentalValue> scoped_list_element_1(
-      new FundamentalValue(1));
+  std::unique_ptr<Value> scoped_list_element_1(new Value(1));
   Value* original_list_element_1 = scoped_list_element_1.get();
   scoped_list->Append(std::move(scoped_list_element_1));
   original_dict.Set("list", std::move(scoped_list));
@@ -777,7 +793,7 @@ TEST(ValuesTest, Equals) {
   EXPECT_NE(null1.get(), null2.get());
   EXPECT_TRUE(null1->Equals(null2.get()));
 
-  FundamentalValue boolean(false);
+  Value boolean(false);
   EXPECT_FALSE(null1->Equals(&boolean));
 
   DictionaryValue dv;
@@ -802,7 +818,7 @@ TEST(ValuesTest, Equals) {
   copy->Set("f", std::move(list_copy));
   EXPECT_TRUE(dv.Equals(copy.get()));
 
-  original_list->Append(MakeUnique<FundamentalValue>(true));
+  original_list->Append(MakeUnique<Value>(true));
   EXPECT_FALSE(dv.Equals(copy.get()));
 
   // Check if Equals detects differences in only the keys.
@@ -819,9 +835,9 @@ TEST(ValuesTest, StaticEquals) {
   EXPECT_TRUE(Value::Equals(null1.get(), null2.get()));
   EXPECT_TRUE(Value::Equals(NULL, NULL));
 
-  std::unique_ptr<Value> i42(new FundamentalValue(42));
-  std::unique_ptr<Value> j42(new FundamentalValue(42));
-  std::unique_ptr<Value> i17(new FundamentalValue(17));
+  std::unique_ptr<Value> i42(new Value(42));
+  std::unique_ptr<Value> j42(new Value(42));
+  std::unique_ptr<Value> i17(new Value(17));
   EXPECT_TRUE(Value::Equals(i42.get(), i42.get()));
   EXPECT_TRUE(Value::Equals(j42.get(), i42.get()));
   EXPECT_TRUE(Value::Equals(i42.get(), j42.get()));
@@ -841,13 +857,13 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
   std::unique_ptr<Value> scoped_null(Value::CreateNullValue());
   Value* original_null = scoped_null.get();
   original_dict.Set("null", std::move(scoped_null));
-  std::unique_ptr<FundamentalValue> scoped_bool(new FundamentalValue(true));
+  std::unique_ptr<Value> scoped_bool(new Value(true));
   Value* original_bool = scoped_bool.get();
   original_dict.Set("bool", std::move(scoped_bool));
-  std::unique_ptr<FundamentalValue> scoped_int(new FundamentalValue(42));
+  std::unique_ptr<Value> scoped_int(new Value(42));
   Value* original_int = scoped_int.get();
   original_dict.Set("int", std::move(scoped_int));
-  std::unique_ptr<FundamentalValue> scoped_double(new FundamentalValue(3.14));
+  std::unique_ptr<Value> scoped_double(new Value(3.14));
   Value* original_double = scoped_double.get();
   original_dict.Set("double", std::move(scoped_double));
   std::unique_ptr<StringValue> scoped_string(new StringValue("hello"));
@@ -866,11 +882,9 @@ TEST(ValuesTest, DeepCopyCovariantReturnTypes) {
 
   std::unique_ptr<ListValue> scoped_list(new ListValue());
   Value* original_list = scoped_list.get();
-  std::unique_ptr<FundamentalValue> scoped_list_element_0(
-      new FundamentalValue(0));
+  std::unique_ptr<Value> scoped_list_element_0(new Value(0));
   scoped_list->Append(std::move(scoped_list_element_0));
-  std::unique_ptr<FundamentalValue> scoped_list_element_1(
-      new FundamentalValue(1));
+  std::unique_ptr<Value> scoped_list_element_1(new Value(1));
   scoped_list->Append(std::move(scoped_list_element_1));
   original_dict.Set("list", std::move(scoped_list));
 
@@ -1093,9 +1107,9 @@ TEST(ValuesTest, GetWithNullOutValue) {
   DictionaryValue main_dict;
   ListValue main_list;
 
-  FundamentalValue bool_value(false);
-  FundamentalValue int_value(1234);
-  FundamentalValue double_value(12.34567);
+  Value bool_value(false);
+  Value int_value(1234);
+  Value double_value(12.34567);
   StringValue string_value("foo");
   BinaryValue binary_value(Value::Type::BINARY);
   DictionaryValue dict_value;

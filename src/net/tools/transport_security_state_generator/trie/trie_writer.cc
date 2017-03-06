@@ -64,10 +64,12 @@ TrieWriter::TrieWriter(const HuffmanRepresentationTable& huffman_table,
 
 TrieWriter::~TrieWriter() {}
 
-uint32_t TrieWriter::WriteEntries(
-    const TransportSecurityStateEntries& entries) {
-  ReversedEntries reversed_entries;
+bool TrieWriter::WriteEntries(const TransportSecurityStateEntries& entries,
+                              uint32_t* root_position) {
+  if (entries.empty())
+    return false;
 
+  ReversedEntries reversed_entries;
   for (auto const& entry : entries) {
     std::unique_ptr<ReversedEntry> reversed_entry(
         new ReversedEntry(ReverseName(entry->hostname), entry.get()));
@@ -77,11 +79,13 @@ uint32_t TrieWriter::WriteEntries(
   std::stable_sort(reversed_entries.begin(), reversed_entries.end(),
                    CompareReversedEntries);
 
-  return WriteDispatchTables(reversed_entries.begin(), reversed_entries.end());
+  return WriteDispatchTables(reversed_entries.begin(), reversed_entries.end(),
+                             root_position);
 }
 
-uint32_t TrieWriter::WriteDispatchTables(ReversedEntries::iterator start,
-                                         ReversedEntries::iterator end) {
+bool TrieWriter::WriteDispatchTables(ReversedEntries::iterator start,
+                                     ReversedEntries::iterator end,
+                                     uint32_t* position) {
   DCHECK(start != end) << "No entries passed to WriteDispatchTables";
 
   TrieBitBuffer writer;
@@ -114,13 +118,20 @@ uint32_t TrieWriter::WriteDispatchTables(ReversedEntries::iterator start,
     writer.WriteChar(candidate, huffman_table_, huffman_builder_);
 
     if (candidate == kTerminalValue) {
-      DCHECK((sub_entries_end - start) == 1)
-          << "Multiple values with the same name";
-      WriteEntry((*start)->entry, &writer);
+      if (sub_entries_end - start != 1) {
+        return false;
+      }
+      if (!WriteEntry((*start)->entry, &writer)) {
+        return false;
+      }
     } else {
       RemovePrefix(1, start, sub_entries_end);
-      uint32_t position = WriteDispatchTables(start, sub_entries_end);
-      writer.WritePosition(position, &last_position);
+      uint32_t table_position;
+      if (!WriteDispatchTables(start, sub_entries_end, &table_position)) {
+        return false;
+      }
+
+      writer.WritePosition(table_position, &last_position);
     }
 
     start = sub_entries_end;
@@ -128,13 +139,13 @@ uint32_t TrieWriter::WriteDispatchTables(ReversedEntries::iterator start,
 
   writer.WriteChar(kEndOfTableValue, huffman_table_, huffman_builder_);
 
-  uint32_t position = buffer_.position();
+  *position = buffer_.position();
   writer.Flush();
   writer.WriteToBitWriter(&buffer_);
-  return position;
+  return true;
 }
 
-void TrieWriter::WriteEntry(const TransportSecurityStateEntry* entry,
+bool TrieWriter::WriteEntry(const TransportSecurityStateEntry* entry,
                             TrieBitBuffer* writer) {
   uint8_t include_subdomains = 0;
   if (entry->include_subdomains) {
@@ -150,17 +161,30 @@ void TrieWriter::WriteEntry(const TransportSecurityStateEntry* entry,
 
   if (entry->pinset.size()) {
     writer->WriteBit(1);
+
     NameIDMap::const_iterator pin_id_it = pinsets_map_.find(entry->pinset);
-    DCHECK(pin_id_it != pinsets_map_.cend()) << "invalid pinset";
+    if (pin_id_it == pinsets_map_.cend()) {
+      return false;
+    }
+
     const uint8_t& pin_id = pin_id_it->second;
-    DCHECK(pin_id <= 16) << "too many pinsets";
+    if (pin_id > 15) {
+      return false;
+    }
+
     writer->WriteBits(pin_id, 4);
 
     NameIDMap::const_iterator domain_id_it =
         domain_ids_map_.find(DomainConstant(entry->hostname));
-    DCHECK(domain_id_it != domain_ids_map_.cend()) << "invalid domain id";
+    if (domain_id_it == domain_ids_map_.cend()) {
+      return false;
+    }
+
     uint32_t domain_id = domain_id_it->second;
-    DCHECK(domain_id < 512) << "too many domain ids";
+    if (domain_id > 511) {
+      return false;
+    }
+
     writer->WriteBits(domain_id, 9);
 
     if (!entry->include_subdomains) {
@@ -178,11 +202,14 @@ void TrieWriter::WriteEntry(const TransportSecurityStateEntry* entry,
     writer->WriteBit(1);
     NameIDMap::const_iterator expect_ct_report_uri_it =
         expect_ct_report_uri_map_.find(entry->expect_ct_report_uri);
-    DCHECK(expect_ct_report_uri_it != expect_ct_report_uri_map_.cend())
-        << "invalid expect-ct report-uri";
-    const uint8_t& expect_ct_report_id = expect_ct_report_uri_it->second;
+    if (expect_ct_report_uri_it == expect_ct_report_uri_map_.cend()) {
+      return false;
+    }
 
-    DCHECK(expect_ct_report_id < 16) << "too many expect-ct ids";
+    const uint8_t& expect_ct_report_id = expect_ct_report_uri_it->second;
+    if (expect_ct_report_id > 15) {
+      return false;
+    }
 
     writer->WriteBits(expect_ct_report_id, 4);
   } else {
@@ -200,16 +227,22 @@ void TrieWriter::WriteEntry(const TransportSecurityStateEntry* entry,
 
     NameIDMap::const_iterator expect_staple_report_uri_it =
         expect_staple_report_uri_map_.find(entry->expect_staple_report_uri);
-    DCHECK(expect_staple_report_uri_it != expect_staple_report_uri_map_.cend())
-        << "invalid expect-ct report-uri";
+    if (expect_staple_report_uri_it == expect_staple_report_uri_map_.cend()) {
+      return false;
+    }
+
     const uint8_t& expect_staple_report_id =
         expect_staple_report_uri_it->second;
-    DCHECK(expect_staple_report_id < 16) << "too many expect-staple ids";
+    if (expect_staple_report_id > 15) {
+      return false;
+    }
 
     writer->WriteBits(expect_staple_report_id, 4);
   } else {
     writer->WriteBit(0);
   }
+
+  return true;
 }
 
 void TrieWriter::RemovePrefix(size_t length,
@@ -222,8 +255,8 @@ void TrieWriter::RemovePrefix(size_t length,
 }
 
 std::vector<uint8_t> TrieWriter::LongestCommonPrefix(
-    ReversedEntries::iterator start,
-    ReversedEntries::iterator end) const {
+    ReversedEntries::const_iterator start,
+    ReversedEntries::const_iterator end) const {
   if (start == end) {
     return std::vector<uint8_t>();
   }
@@ -240,7 +273,7 @@ std::vector<uint8_t> TrieWriter::LongestCommonPrefix(
     }
 
     bool ok = true;
-    for (ReversedEntries::iterator it = start + 1; it != end; ++it) {
+    for (ReversedEntries::const_iterator it = start + 1; it != end; ++it) {
       if (i > (*it)->reversed_name.size() ||
           (*it)->reversed_name.at(i) != candidate) {
         ok = false;

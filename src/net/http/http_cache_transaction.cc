@@ -577,6 +577,11 @@ void HttpCache::Transaction::GetConnectionAttempts(
               old_connection_attempts_.end());
 }
 
+size_t HttpCache::Transaction::EstimateMemoryUsage() const {
+  // TODO(xunjieli): Consider improving the coverage. crbug.com/669108.
+  return 0;
+}
+
 //-----------------------------------------------------------------------------
 
 // A few common patterns: (Foo* means Foo -> FooComplete)

@@ -44,7 +44,7 @@ def LoginChromeAccount(action_runner, credential,
     raise RuntimeError('Can not find GAIA webview context for sign in.')
   gaia_action_runner = action_runner_module.ActionRunner(gaia_context)
 
-  new_flow = gaia_action_runner.EvaluateJavaScript2(
+  new_flow = gaia_action_runner.EvaluateJavaScript(
       'document.querySelector("#gaia_firsform") != null')
   gaia_form_id = 'gaia_firstform' if new_flow else 'gaia_loginform'
   login_utils.InputForm(gaia_action_runner, account_name, input_id='Email',

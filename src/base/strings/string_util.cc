@@ -64,6 +64,21 @@ static bool CompareParameter(const ReplacementOffset& elem1,
   return elem1.parameter < elem2.parameter;
 }
 
+// Overloaded function to append one string onto the end of another. Having a
+// separate overload for |source| as both string and StringPiece allows for more
+// efficient usage from functions templated to work with either type (avoiding a
+// redundant call to the BasicStringPiece constructor in both cases).
+template <typename string_type>
+inline void AppendToString(string_type* target, const string_type& source) {
+  target->append(source);
+}
+
+template <typename string_type>
+inline void AppendToString(string_type* target,
+                           const BasicStringPiece<string_type>& source) {
+  source.AppendToString(target);
+}
+
 // Assuming that a pointer is the size of a "machine word", then
 // uintptr_t is an integer type that is also a machine word.
 typedef uintptr_t MachineWord;
@@ -853,20 +868,39 @@ char16* WriteInto(string16* str, size_t length_with_null) {
   return WriteIntoT(str, length_with_null);
 }
 
-template<typename STR>
-static STR JoinStringT(const std::vector<STR>& parts,
-                       BasicStringPiece<STR> sep) {
-  if (parts.empty())
-    return STR();
+// Generic version for all JoinString overloads. |list_type| must be a sequence
+// (std::vector or std::initializer_list) of strings/StringPieces (std::string,
+// string16, StringPiece or StringPiece16). |string_type| is either std::string
+// or string16.
+template <typename list_type, typename string_type>
+static string_type JoinStringT(const list_type& parts,
+                               BasicStringPiece<string_type> sep) {
+  if (parts.size() == 0)
+    return string_type();
 
-  STR result(parts[0]);
+  // Pre-allocate the eventual size of the string. Start with the size of all of
+  // the separators (note that this *assumes* parts.size() > 0).
+  size_t total_size = (parts.size() - 1) * sep.size();
+  for (const auto& part : parts)
+    total_size += part.size();
+  string_type result;
+  result.reserve(total_size);
+
   auto iter = parts.begin();
+  DCHECK(iter != parts.end());
+  AppendToString(&result, *iter);
   ++iter;
 
   for (; iter != parts.end(); ++iter) {
     sep.AppendToString(&result);
-    result += *iter;
+    // Using the overloaded AppendToString allows this template function to work
+    // on both strings and StringPieces without creating an intermediate
+    // StringPiece object.
+    AppendToString(&result, *iter);
   }
+
+  // Sanity-check that we pre-allocated correctly.
+  DCHECK_EQ(total_size, result.size());
 
   return result;
 }
@@ -877,6 +911,26 @@ std::string JoinString(const std::vector<std::string>& parts,
 }
 
 string16 JoinString(const std::vector<string16>& parts,
+                    StringPiece16 separator) {
+  return JoinStringT(parts, separator);
+}
+
+std::string JoinString(const std::vector<StringPiece>& parts,
+                       StringPiece separator) {
+  return JoinStringT(parts, separator);
+}
+
+string16 JoinString(const std::vector<StringPiece16>& parts,
+                    StringPiece16 separator) {
+  return JoinStringT(parts, separator);
+}
+
+std::string JoinString(std::initializer_list<StringPiece> parts,
+                       StringPiece separator) {
+  return JoinStringT(parts, separator);
+}
+
+string16 JoinString(std::initializer_list<StringPiece16> parts,
                     StringPiece16 separator) {
   return JoinStringT(parts, separator);
 }

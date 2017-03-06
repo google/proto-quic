@@ -248,7 +248,7 @@ class SpdyFramerPeer {
     SpdySerializedFrame serialized_headers_old_version =
         framer->SerializeHeaders(headers);
     framer->hpack_encoder_.reset(nullptr);
-    auto saved_debug_visitor = framer->debug_visitor_;
+    auto* saved_debug_visitor = framer->debug_visitor_;
     framer->debug_visitor_ = nullptr;
 
     std::vector<SpdySerializedFrame> frame_list;
@@ -4169,6 +4169,65 @@ TEST_P(SpdyFramerTest, ReadChunkedAltSvcFrame) {
   ASSERT_EQ(2u, visitor.test_altsvc_ir_.altsvc_vector().size());
   EXPECT_TRUE(visitor.test_altsvc_ir_.altsvc_vector()[0] == altsvc1);
   EXPECT_TRUE(visitor.test_altsvc_ir_.altsvc_vector()[1] == altsvc2);
+}
+
+// While RFC7838 Section 4 says that an ALTSVC frame on stream 0 with empty
+// origin MUST be ignored, it is not implemented at the framer level: instead,
+// such frames are passed on to the consumer.
+TEST_P(SpdyFramerTest, ReadAltSvcFrame) {
+  struct {
+    uint32_t stream_id;
+    const char* origin;
+  } test_cases[] = {{0, ""},
+                    {1, ""},
+                    {0, "https://www.example.com"},
+                    {1, "https://www.example.com"}};
+  for (auto test_case : test_cases) {
+    SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
+    SpdyAltSvcIR altsvc_ir(test_case.stream_id);
+    SpdyAltSvcWireFormat::AlternativeService altsvc(
+        "pid1", "host", 443, 5, SpdyAltSvcWireFormat::VersionVector());
+    altsvc_ir.add_altsvc(altsvc);
+    altsvc_ir.set_origin(test_case.origin);
+    SpdySerializedFrame frame(framer.SerializeAltSvc(altsvc_ir));
+
+    TestSpdyVisitor visitor(SpdyFramer::ENABLE_COMPRESSION);
+    framer.set_visitor(&visitor);
+    framer.ProcessInput(frame.data(), frame.size());
+
+    EXPECT_EQ(0, visitor.error_count_);
+    EXPECT_EQ(1, visitor.altsvc_count_);
+    EXPECT_EQ(SpdyFramer::SPDY_READY_FOR_FRAME, framer.state());
+    EXPECT_EQ(SpdyFramer::SPDY_NO_ERROR, framer.spdy_framer_error())
+        << SpdyFramer::SpdyFramerErrorToString(framer.spdy_framer_error());
+  }
+}
+
+// An ALTSVC frame with invalid Alt-Svc-Field-Value results in an error.
+TEST_P(SpdyFramerTest, ErrorOnAltSvcFrameWithInvalidValue) {
+  // Alt-Svc-Field-Value must be "clear" or must contain an "=" character
+  // per RFC7838 Section 3.
+  const char kFrameData[] = {
+      0x00, 0x00, 0x16,        //     Length: 22
+      0x0a,                    //       Type: ALTSVC
+      0x00,                    //      Flags: none
+      0x00, 0x00, 0x00, 0x01,  //     Stream: 1
+      0x00, 0x00,              // Origin-Len: 0
+      0x74, 0x68, 0x69, 0x73,  // thisisnotavalidvalue
+      0x69, 0x73, 0x6e, 0x6f, 0x74, 0x61, 0x76, 0x61,
+      0x6c, 0x69, 0x64, 0x76, 0x61, 0x6c, 0x75, 0x65,
+  };
+
+  SpdyFramer framer(SpdyFramer::ENABLE_COMPRESSION);
+  TestSpdyVisitor visitor(SpdyFramer::ENABLE_COMPRESSION);
+  framer.set_visitor(&visitor);
+  framer.ProcessInput(kFrameData, sizeof(kFrameData));
+
+  EXPECT_EQ(1, visitor.error_count_);
+  EXPECT_EQ(0, visitor.altsvc_count_);
+  EXPECT_EQ(SpdyFramer::SPDY_ERROR, framer.state());
+  EXPECT_EQ(SpdyFramer::SPDY_INVALID_CONTROL_FRAME, framer.spdy_framer_error())
+      << SpdyFramer::SpdyFramerErrorToString(framer.spdy_framer_error());
 }
 
 // Tests handling of PRIORITY frames.

@@ -22,7 +22,7 @@ class ChromeProxyLatencyBase(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     # Wait for the load event.
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=300)
     self._metrics.Stop(page, tab)
     self._metrics.AddResultsForLatency(tab, results)
@@ -62,7 +62,7 @@ class ChromeProxyDataSavingBase(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     # Wait for the load event.
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=300)
     self._metrics.Stop(page, tab)
     self._metrics.AddResultsForDataSaving(tab, results)

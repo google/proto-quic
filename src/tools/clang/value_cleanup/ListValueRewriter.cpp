@@ -351,25 +351,25 @@ void ListValueRewriter::RegisterMatchers(MatchFinder* match_finder) {
       callee(cxxMethodDecl(hasName("::base::ListValue::Append"))),
       argumentCountIs(1));
 
-  // base::ListValue::Append(new base::FundamentalValue(bool))
+  // base::ListValue::Append(new base::Value(bool))
   //     => base::ListValue::AppendBoolean()
   match_finder->addMatcher(
       id("callExpr",
          cxxMemberCallExpr(
              is_list_append,
              hasArgument(
-                 0, ignoringParenImpCasts(id(
-                        "newExpr",
-                        cxxNewExpr(has(cxxConstructExpr(
-                            hasDeclaration(cxxMethodDecl(hasName(
-                                "::base::FundamentalValue::FundamentalValue"))),
-                            argumentCountIs(1),
-                            hasArgument(
-                                0, id("argExpr",
-                                      expr(hasType(booleanType())))))))))))),
+                 0, ignoringParenImpCasts(
+                        id("newExpr",
+                           cxxNewExpr(has(cxxConstructExpr(
+                               hasDeclaration(cxxMethodDecl(
+                                   hasName("::base::Value::FundamentalValue"))),
+                               argumentCountIs(1),
+                               hasArgument(
+                                   0, id("argExpr",
+                                         expr(hasType(booleanType())))))))))))),
       &append_boolean_callback_);
 
-  // base::ListValue::Append(new base::FundamentalValue(int))
+  // base::ListValue::Append(new base::Value(int))
   //     => base::ListValue::AppendInteger()
   match_finder->addMatcher(
       id("callExpr",
@@ -380,8 +380,8 @@ void ListValueRewriter::RegisterMatchers(MatchFinder* match_finder) {
                  ignoringParenImpCasts(id(
                      "newExpr",
                      cxxNewExpr(has(cxxConstructExpr(
-                         hasDeclaration(cxxMethodDecl(hasName(
-                             "::base::FundamentalValue::FundamentalValue"))),
+                         hasDeclaration(cxxMethodDecl(
+                             hasName("::base::Value::FundamentalValue"))),
                          argumentCountIs(1),
                          hasArgument(0, id("argExpr",
                                            expr(hasType(isInteger()),
@@ -389,7 +389,7 @@ void ListValueRewriter::RegisterMatchers(MatchFinder* match_finder) {
                                                     booleanType()))))))))))))),
       &append_integer_callback_);
 
-  // base::ListValue::Append(new base::FundamentalValue(double))
+  // base::ListValue::Append(new base::Value(double))
   //     => base::ListValue::AppendDouble()
   match_finder->addMatcher(
       id("callExpr",
@@ -399,8 +399,8 @@ void ListValueRewriter::RegisterMatchers(MatchFinder* match_finder) {
                  0, ignoringParenImpCasts(id(
                         "newExpr",
                         cxxNewExpr(has(cxxConstructExpr(
-                            hasDeclaration(cxxMethodDecl(hasName(
-                                "::base::FundamentalValue::FundamentalValue"))),
+                            hasDeclaration(cxxMethodDecl(
+                                hasName("::base::Value::FundamentalValue"))),
                             argumentCountIs(1),
                             hasArgument(
                                 0, id("argExpr",

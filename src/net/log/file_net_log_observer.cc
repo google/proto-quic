@@ -216,9 +216,50 @@ class FileNetLogObserver::UnboundedFileWriter
   DISALLOW_COPY_AND_ASSIGN(UnboundedFileWriter);
 };
 
-FileNetLogObserver::FileNetLogObserver(
-    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner)
-    : file_task_runner_(file_task_runner) {}
+std::unique_ptr<FileNetLogObserver> FileNetLogObserver::CreateBounded(
+    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+    const base::FilePath& directory,
+    size_t max_total_size,
+    size_t total_num_files,
+    std::unique_ptr<base::Value> constants) {
+  DCHECK_GT(total_num_files, 0u);
+  // The BoundedFileWriter uses a soft limit to write events to file that allows
+  // the size of the file to exceed the limit, but the WriteQueue uses a hard
+  // limit which the size of |WriteQueue::queue_| cannot exceed. Thus, the
+  // BoundedFileWriter may write more events to file than can be contained by
+  // the WriteQueue if they have the same size limit. The maximum size of the
+  // WriteQueue is doubled to allow |WriteQueue::queue_| to hold enough events
+  // for the BoundedFileWriter to fill all files. As long as all events have
+  // sizes <= the size of an individual event file, the discrepancy between the
+  // hard limit and the soft limit will not cause an issue.
+  // TODO(dconnol): Handle the case when the WriteQueue  still doesn't
+  // contain enough events to fill all files, because of very large events
+  // relative to file size.
+  std::unique_ptr<FileWriter> file_writer(
+      new BoundedFileWriter(directory, max_total_size / total_num_files,
+                            total_num_files, file_task_runner));
+
+  scoped_refptr<WriteQueue> write_queue(new WriteQueue(max_total_size * 2));
+
+  return std::unique_ptr<FileNetLogObserver>(
+      new FileNetLogObserver(file_task_runner, std::move(file_writer),
+                             std::move(write_queue), std::move(constants)));
+}
+
+std::unique_ptr<FileNetLogObserver> FileNetLogObserver::CreateUnbounded(
+    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+    const base::FilePath& log_path,
+    std::unique_ptr<base::Value> constants) {
+  std::unique_ptr<FileWriter> file_writer(
+      new UnboundedFileWriter(log_path, file_task_runner));
+
+  scoped_refptr<WriteQueue> write_queue(
+      new WriteQueue(std::numeric_limits<size_t>::max()));
+
+  return std::unique_ptr<FileNetLogObserver>(
+      new FileNetLogObserver(file_task_runner, std::move(file_writer),
+                             std::move(write_queue), std::move(constants)));
+}
 
 FileNetLogObserver::~FileNetLogObserver() {
   if (net_log()) {
@@ -228,75 +269,11 @@ FileNetLogObserver::~FileNetLogObserver() {
                               base::Unretained(file_writer_)));
     net_log()->DeprecatedRemoveObserver(this);
   }
-
   file_task_runner_->DeleteSoon(FROM_HERE, file_writer_);
 }
 
-void FileNetLogObserver::StartObservingBounded(
-    NetLog* net_log,
-    NetLogCaptureMode capture_mode,
-    const base::FilePath& directory,
-    std::unique_ptr<base::Value> constants,
-    URLRequestContext* url_request_context,
-    size_t max_total_size,
-    size_t total_num_files) {
-  DCHECK_GT(total_num_files, 0u);
-
-  file_writer_ =
-      new BoundedFileWriter(directory, max_total_size / total_num_files,
-                            total_num_files, file_task_runner_);
-
-  // The |file_writer_| uses a soft limit to write events to file that allows
-  // the size of the file to exceed the limit, but the |write_queue_| uses a
-  // hard limit which the size of the |queue_| cannot exceed. Thus, the
-  // |file_writer_| may write more events to file than can be contained by the
-  // |write_queue_| if they have the same size limit. The maximum size of the
-  // |write_queue_| is doubled to allow the |queue_| to hold enough events for
-  // the |file_writer_| to fill all files. As long as all events have sizes <=
-  // the size of an individual event file, the discrepancy between the hard
-  // limit and the soft limit will not cause an issue.
-  // TODO(dconnol): Handle the case when the |write_queue_| still doesn't
-  // contain enough events to fill all files, because of very large events
-  // relative to file size.
-  write_queue_ = new WriteQueue(max_total_size * 2);
-
-  StartObservingHelper(net_log, capture_mode, std::move(constants),
-                       url_request_context);
-}
-
-void FileNetLogObserver::StartObservingUnbounded(
-    NetLog* net_log,
-    NetLogCaptureMode capture_mode,
-    const base::FilePath& filepath,
-    std::unique_ptr<base::Value> constants,
-    URLRequestContext* url_request_context) {
-  file_writer_ = new UnboundedFileWriter(filepath, file_task_runner_);
-
-  write_queue_ = new WriteQueue(std::numeric_limits<size_t>::max());
-
-  StartObservingHelper(net_log, capture_mode, std::move(constants),
-                       url_request_context);
-}
-
-void FileNetLogObserver::StartObservingHelper(
-    NetLog* net_log,
-    NetLogCaptureMode capture_mode,
-    std::unique_ptr<base::Value> constants,
-    URLRequestContext* url_request_context) {
-  if (!constants)
-    constants = GetNetConstants();
-  file_task_runner_->PostTask(
-      FROM_HERE,
-      base::Bind(&FileNetLogObserver::FileWriter::Initialize,
-                 base::Unretained(file_writer_), base::Passed(&constants)));
-
-  if (url_request_context) {
-    DCHECK(url_request_context->CalledOnValidThread());
-    std::set<URLRequestContext*> contexts;
-    contexts.insert(url_request_context);
-    CreateNetLogEntriesForActiveObjects(contexts, this);
-  }
-
+void FileNetLogObserver::StartObserving(NetLog* net_log,
+                                        NetLogCaptureMode capture_mode) {
   net_log->DeprecatedAddObserver(this, capture_mode);
 }
 
@@ -329,6 +306,22 @@ void FileNetLogObserver::OnAddEntry(const NetLogEntry& entry) {
         FROM_HERE, base::Bind(&FileNetLogObserver::FileWriter::Flush,
                               base::Unretained(file_writer_), write_queue_));
   }
+}
+
+FileNetLogObserver::FileNetLogObserver(
+    scoped_refptr<base::SingleThreadTaskRunner> file_task_runner,
+    std::unique_ptr<FileWriter> file_writer,
+    scoped_refptr<WriteQueue> write_queue,
+    std::unique_ptr<base::Value> constants)
+    : file_task_runner_(std::move(file_task_runner)),
+      write_queue_(std::move(write_queue)),
+      file_writer_(file_writer.release()) {
+  if (!constants)
+    constants = GetNetConstants();
+  file_task_runner_->PostTask(
+      FROM_HERE,
+      base::Bind(&FileNetLogObserver::FileWriter::Initialize,
+                 base::Unretained(file_writer_), base::Passed(&constants)));
 }
 
 FileNetLogObserver::WriteQueue::WriteQueue(size_t memory_max)

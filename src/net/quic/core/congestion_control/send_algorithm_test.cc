@@ -11,6 +11,7 @@
 #include "net/quic/core/quic_types.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
@@ -116,21 +117,37 @@ const char* CongestionControlTypeToString(CongestionControlType cc_type) {
 }
 
 struct TestParams {
-  explicit TestParams(CongestionControlType congestion_control_type)
-      : congestion_control_type(congestion_control_type) {}
+  explicit TestParams(CongestionControlType congestion_control_type,
+                      bool fix_convex_mode,
+                      bool fix_cubic_quantization,
+                      bool fix_beta_last_max)
+      : congestion_control_type(congestion_control_type),
+        fix_convex_mode(fix_convex_mode),
+        fix_cubic_quantization(fix_cubic_quantization),
+        fix_beta_last_max(fix_beta_last_max) {}
 
   friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
     os << "{ congestion_control_type: "
        << CongestionControlTypeToString(p.congestion_control_type);
+    os << "  fix_convex_mode: " << p.fix_convex_mode
+       << "  fix_cubic_quantization: " << p.fix_cubic_quantization
+       << "  fix_beta_last_max: " << p.fix_beta_last_max;
     os << " }";
     return os;
   }
 
   CongestionControlType congestion_control_type;
+  bool fix_convex_mode;
+  bool fix_cubic_quantization;
+  bool fix_beta_last_max;
 };
 
 string TestParamToString(const testing::TestParamInfo<TestParams>& params) {
-  return CongestionControlTypeToString(params.param.congestion_control_type);
+  return QuicStrCat(
+      CongestionControlTypeToString(params.param.congestion_control_type), "_",
+      "convex_mode_", params.param.fix_convex_mode, "_", "cubic_quantization_",
+      params.param.fix_cubic_quantization, "_", "beta_last_max_",
+      params.param.fix_beta_last_max);
 }
 
 // Constructs various test permutations.
@@ -138,7 +155,33 @@ std::vector<TestParams> GetTestParams() {
   std::vector<TestParams> params;
   for (const CongestionControlType congestion_control_type :
        {kBBR, kCubic, kCubicBytes, kReno, kRenoBytes}) {
-    params.push_back(TestParams(congestion_control_type));
+    if (congestion_control_type != kCubic &&
+        congestion_control_type != kCubicBytes) {
+      params.push_back(
+          TestParams(congestion_control_type, false, false, false));
+      continue;
+    }
+    for (bool fix_convex_mode : {true, false}) {
+      for (bool fix_cubic_quantization : {true, false}) {
+        for (bool fix_beta_last_max : {true, false}) {
+          if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
+              fix_convex_mode) {
+            continue;
+          }
+          if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization &&
+              fix_cubic_quantization) {
+            continue;
+          }
+          if (!FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
+              fix_beta_last_max) {
+            continue;
+          }
+          TestParams param(congestion_control_type, fix_convex_mode,
+                           fix_cubic_quantization, fix_beta_last_max);
+          params.push_back(param);
+        }
+      }
+    }
   }
   return params;
 }
@@ -185,16 +228,14 @@ class SendAlgorithmTest : public ::testing::TestWithParam<TestParams> {
   void SetExperimentalOptionsInServerConfig() {
     QuicConfig client_config;
     QuicTagVector options;
-    if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode) {
+    if (GetParam().fix_convex_mode) {
       options.push_back(kCCVX);
     }
-    if (FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
-        FLAGS_quic_reloadable_flag_quic_fix_cubic_bytes_quantization) {
-      options.push_back(kCCVX);
+    if (GetParam().fix_cubic_quantization) {
       options.push_back(kCBQT);
     }
 
-    if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
+    if (GetParam().fix_beta_last_max) {
       options.push_back(kBLMX);
     }
 

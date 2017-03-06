@@ -2,7 +2,7 @@ This folder contains clang-format scripts. The binaries will be automatically
 downloaded from Google Storage by gclient runhooks for the current platform.
 
 For a walkthrough on how to maintain these binaries:
-  https://code.google.com/p/chromium/wiki/UpdatingClangFormatBinaries
+  https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang_format_binaries.md
 
 To upload a file:
   python ~/depot_tools/upload_to_google_storage.py -b chromium-clang-format <FILENAME>

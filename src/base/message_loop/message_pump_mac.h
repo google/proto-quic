@@ -78,9 +78,11 @@ class AutoreleasePoolType;
 typedef NSAutoreleasePool AutoreleasePoolType;
 #endif  // !defined(__OBJC__) || __has_feature(objc_arc)
 
-class MessagePumpCFRunLoopBase : public MessagePump {
+class BASE_EXPORT MessagePumpCFRunLoopBase : public MessagePump {
   // Needs access to CreateAutoreleasePool.
   friend class MessagePumpScopedAutoreleasePool;
+  friend class TestMessagePumpCFRunLoopBase;
+
  public:
   MessagePumpCFRunLoopBase();
   ~MessagePumpCFRunLoopBase() override;
@@ -113,6 +115,21 @@ class MessagePumpCFRunLoopBase : public MessagePump {
   virtual AutoreleasePoolType* CreateAutoreleasePool();
 
  private:
+  // Marking timers as invalid at the right time helps significantly reduce
+  // power use (see the comment in RunDelayedWorkTimer()), however there is no
+  // public API for doing so. CFRuntime.h states that CFRuntimeBase, upon which
+  // the above timer invalidation functions are based, can change from release
+  // to release and should not be accessed directly (this struct last changed at
+  // least in 2008 in CF-476).
+  //
+  // This function uses private API to modify a test timer's valid state and
+  // uses public API to confirm that the private API changed the right bit.
+  static bool CanInvalidateCFRunLoopTimers();
+
+  // Sets a Core Foundation object's "invalid" bit to |valid|. Based on code
+  // from CFRunLoop.c.
+  static void ChromeCFRunLoopTimerSetValid(CFRunLoopTimerRef timer, bool valid);
+
   // Timer callback scheduled by ScheduleDelayedWork.  This does not do any
   // work, but it signals work_source_ so that delayed work can be performed
   // within the appropriate priority constraints.

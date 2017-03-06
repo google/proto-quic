@@ -15,13 +15,19 @@ if sys.platform == 'win32':
 
 
   import ctypes
-  GetFileAttributesW = ctypes.windll.kernel32.GetFileAttributesW
-  GetFileAttributesW.argtypes = (ctypes.c_wchar_p,)
-  GetFileAttributesW.restype = ctypes.c_uint
   CreateSymbolicLinkW = ctypes.windll.kernel32.CreateSymbolicLinkW
   CreateSymbolicLinkW.argtypes = (
       ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
   CreateSymbolicLinkW.restype = ctypes.c_ubyte
+  DeleteFile = ctypes.windll.kernel32.DeleteFileW
+  DeleteFile.argtypes = (ctypes.c_wchar_p,)
+  DeleteFile.restype = ctypes.c_bool
+  GetFileAttributesW = ctypes.windll.kernel32.GetFileAttributesW
+  GetFileAttributesW.argtypes = (ctypes.c_wchar_p,)
+  GetFileAttributesW.restype = ctypes.c_uint
+  RemoveDirectory = ctypes.windll.kernel32.RemoveDirectoryW
+  RemoveDirectory.argtypes = (ctypes.c_wchar_p,)
+  RemoveDirectory.restype = ctypes.c_bool
 
 
   def extend(path):
@@ -75,6 +81,33 @@ if sys.platform == 'win32':
       raise WindowsError()  # pylint: disable=undefined-variable
 
 
+  def unlink(path):
+    """Removes a symlink on Windows 7 and later.
+
+    Does not delete the link source.
+
+    If path is not a link, but a non-empty directory, will fail with a
+    WindowsError.
+
+    Useful material:
+    CreateSymbolicLinkW:
+      https://msdn.microsoft.com/library/windows/desktop/aa363866.aspx
+    DeleteFileW:
+      https://msdn.microsoft.com/en-us/library/windows/desktop/aa363915(v=vs.85).aspx
+    RemoveDirectoryW:
+      https://msdn.microsoft.com/en-us/library/windows/desktop/aa365488(v=vs.85).aspx
+    """
+    path = extend(path)
+    if os.path.isdir(path):
+      if not RemoveDirectory(path):
+        # pylint: disable=undefined-variable
+        raise WindowsError('could not remove directory "%s"' % path)
+    else:
+      if not DeleteFile(path):
+        # pylint: disable=undefined-variable
+        raise WindowsError('could not delete file "%s"' % path)
+
+
   def walk(top, *args, **kwargs):
     return os.walk(extend(top), *args, **kwargs)
 
@@ -107,6 +140,8 @@ else:
   def symlink(source, link_name):
     return os.symlink(source, extend(link_name))
 
+  def unlink(path):
+    return os.unlink(extend(path))
 
   def walk(top, *args, **kwargs):
     for root, dirs, files in os.walk(extend(top), *args, **kwargs):

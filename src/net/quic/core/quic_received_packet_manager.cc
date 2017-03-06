@@ -26,6 +26,7 @@ const size_t kMaxPacketsAfterNewMissing = 4;
 QuicReceivedPacketManager::QuicReceivedPacketManager(QuicConnectionStats* stats)
     : peer_least_packet_awaiting_ack_(0),
       ack_frame_updated_(false),
+      max_ack_ranges_(0),
       time_largest_observed_(QuicTime::Zero()),
       stats_(stats) {
   ack_frame_.largest_observed = 0;
@@ -87,6 +88,10 @@ const QuicFrame QuicReceivedPacketManager::GetUpdatedAckFrame(
                                     ? QuicTime::Delta::Zero()
                                     : approximate_now - time_largest_observed_;
   }
+  while (max_ack_ranges_ > 0 &&
+         ack_frame_.packets.NumIntervals() > max_ack_ranges_) {
+    ack_frame_.packets.RemoveSmallestInterval();
+  }
 
   // Clear all packet times if any are too far from largest observed.
   // It's expected this is extremely rare.
@@ -103,18 +108,13 @@ const QuicFrame QuicReceivedPacketManager::GetUpdatedAckFrame(
   return QuicFrame(&ack_frame_);
 }
 
-bool QuicReceivedPacketManager::DontWaitForPacketsBefore(
+void QuicReceivedPacketManager::DontWaitForPacketsBefore(
     QuicPacketNumber least_unacked) {
-  peer_least_packet_awaiting_ack_ = least_unacked;
-  return ack_frame_.packets.RemoveUpTo(least_unacked);
-}
-
-void QuicReceivedPacketManager::UpdatePacketInformationSentByPeer(
-    const QuicStopWaitingFrame& stop_waiting) {
   // ValidateAck() should fail if peer_least_packet_awaiting_ack shrinks.
-  DCHECK_LE(peer_least_packet_awaiting_ack_, stop_waiting.least_unacked);
-  if (stop_waiting.least_unacked > peer_least_packet_awaiting_ack_) {
-    bool packets_updated = DontWaitForPacketsBefore(stop_waiting.least_unacked);
+  DCHECK_LE(peer_least_packet_awaiting_ack_, least_unacked);
+  if (least_unacked > peer_least_packet_awaiting_ack_) {
+    peer_least_packet_awaiting_ack_ = least_unacked;
+    bool packets_updated = ack_frame_.packets.RemoveUpTo(least_unacked);
     if (packets_updated) {
       // Ack frame gets updated because packets set is updated because of stop
       // waiting frame.

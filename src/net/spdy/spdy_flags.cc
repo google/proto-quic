@@ -18,13 +18,9 @@ bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2 = false;
 // Use //net/http2/hpack/decoder as complete HPACK decoder.
 bool FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3 = true;
 
-// If true, increase HPACK table size up to optimal size kOptTableSize if
-// clients allow it.
-bool FLAGS_chromium_reloadable_flag_increase_hpack_table_size = false;
-
 // Use Http2FrameDecoderAdapter.
 // TODO(jamessynge): Remove flag once no longer set by scripts.
-bool FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = false;
+bool FLAGS_chromium_http2_flag_spdy_use_http2_frame_decoder_adapter = true;
 
 // Use NestedSpdyFramerDecoder.
 bool FLAGS_use_nested_spdy_framer_decoder = false;

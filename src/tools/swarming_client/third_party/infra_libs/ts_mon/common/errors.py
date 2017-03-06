@@ -106,6 +106,17 @@ class MonitoringNoConfiguredTargetError(MonitoringError):
     return 'Metric "%s" was sent with no Target configured.' % (self.metric)
 
 
+class MonitoringFailedToFlushAllMetricsError(MonitoringError):
+  """Raised when some error is encountered in flushing specific metrics."""
+
+  def __init__(self, error_count):
+    self.error_count = error_count
+
+  def __str__(self):
+    return ('Failed to flush %d metrics. See tracebacks above' %
+            (self.error_count))
+
+
 class UnknownModificationTypeError(MonitoringError):
   """Raised when using a Modification with an unknown type value."""
 

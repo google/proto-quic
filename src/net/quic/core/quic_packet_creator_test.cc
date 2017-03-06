@@ -753,7 +753,7 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
             creator_.BytesFree());
 
   // Add a variety of frame types and then a padding frame.
-  QuicAckFrame ack_frame(MakeAckFrame(0u));
+  QuicAckFrame ack_frame(MakeAckFrame(10u));
   EXPECT_TRUE(creator_.AddSavedFrame(QuicFrame(&ack_frame)));
   EXPECT_TRUE(creator_.HasPendingFrames());
 
@@ -783,6 +783,10 @@ TEST_P(QuicPacketCreatorTest, AddFrameAndFlush) {
   ASSERT_EQ(1u, retransmittable.size());
   EXPECT_EQ(STREAM_FRAME, retransmittable[0].type);
   ASSERT_TRUE(retransmittable[0].stream_frame);
+  EXPECT_TRUE(serialized_packet_.has_ack);
+  if (FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames) {
+    EXPECT_EQ(10u, serialized_packet_.largest_acked);
+  }
   DeleteSerializedPacket();
 
   EXPECT_FALSE(creator_.HasPendingFrames());

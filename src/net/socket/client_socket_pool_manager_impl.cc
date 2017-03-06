@@ -356,7 +356,7 @@ ClientSocketPoolManagerImpl::SocketPoolInfoToValue() const {
   return std::move(list);
 }
 
-void ClientSocketPoolManagerImpl::OnCertDBChanged(const X509Certificate* cert) {
+void ClientSocketPoolManagerImpl::OnCertDBChanged() {
   FlushSocketPoolsWithError(ERR_NETWORK_CHANGED);
 }
 

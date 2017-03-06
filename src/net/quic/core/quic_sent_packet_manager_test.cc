@@ -28,7 +28,6 @@ using testing::_;
 namespace net {
 namespace test {
 namespace {
-
 // Default packet length.
 const uint32_t kDefaultLength = 1000;
 
@@ -192,9 +191,8 @@ class QuicSentPacketManagerTest : public ::testing::Test {
 
   SerializedPacket CreatePacket(QuicPacketNumber packet_number,
                                 bool retransmittable) {
-    SerializedPacket packet(kDefaultPathId, packet_number,
-                            PACKET_6BYTE_PACKET_NUMBER, nullptr, kDefaultLength,
-                            false, false);
+    SerializedPacket packet(packet_number, PACKET_6BYTE_PACKET_NUMBER, nullptr,
+                            kDefaultLength, false, false);
     if (retransmittable) {
       packet.retransmittable_frames.push_back(
           QuicFrame(new QuicStreamFrame(kStreamId, false, 0, StringPiece())));
@@ -226,13 +224,15 @@ class QuicSentPacketManagerTest : public ::testing::Test {
                           HAS_RETRANSMITTABLE_DATA);
   }
 
-  void SendAckPacket(QuicPacketNumber packet_number) {
+  void SendAckPacket(QuicPacketNumber packet_number,
+                     QuicPacketNumber largest_acked) {
     EXPECT_CALL(*send_algorithm_,
                 OnPacketSent(_, BytesInFlight(), packet_number, kDefaultLength,
                              NO_RETRANSMITTABLE_DATA))
         .Times(1)
         .WillOnce(Return(false));
     SerializedPacket packet(CreatePacket(packet_number, false));
+    packet.largest_acked = largest_acked;
     manager_.OnPacketSent(&packet, 0, clock_.Now(), NOT_RETRANSMISSION,
                           NO_RETRANSMITTABLE_DATA);
   }
@@ -536,8 +536,10 @@ TEST_F(QuicSentPacketManagerTest, GetLeastUnackedUnacked) {
 }
 
 TEST_F(QuicSentPacketManagerTest, AckAckAndUpdateRtt) {
+  FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames = true;
+  EXPECT_EQ(0u, manager_.largest_packet_peer_knows_is_acked());
   SendDataPacket(1);
-  SendAckPacket(2);
+  SendAckPacket(2, 1);
 
   // Now ack the ack and expect an RTT update.
   QuicAckFrame ack_frame = InitAckFrame(2);
@@ -545,13 +547,15 @@ TEST_F(QuicSentPacketManagerTest, AckAckAndUpdateRtt) {
 
   ExpectAck(1);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
+  EXPECT_EQ(1u, manager_.largest_packet_peer_knows_is_acked());
 
-  SendAckPacket(3);
+  SendAckPacket(3, 3);
 
   // Now ack the ack and expect only an RTT update.
   ack_frame = InitAckFrame(3);
   ExpectUpdatedRtt(3);
   manager_.OnIncomingAck(ack_frame, clock_.Now());
+  EXPECT_EQ(3u, manager_.largest_packet_peer_knows_is_acked());
 }
 
 TEST_F(QuicSentPacketManagerTest, Rtt) {
@@ -1109,7 +1113,6 @@ TEST_F(QuicSentPacketManagerTest, GetTransmissionTimeCryptoHandshake) {
 
 TEST_F(QuicSentPacketManagerTest,
        GetConservativeTransmissionTimeCryptoHandshake) {
-  FLAGS_quic_reloadable_flag_quic_conservative_handshake_retransmits = true;
   QuicConfig config;
   QuicTagVector options;
   options.push_back(kCONH);
@@ -1403,7 +1406,6 @@ TEST_F(QuicSentPacketManagerTest, NegotiateCongestionControlFromOptions) {
 
 TEST_F(QuicSentPacketManagerTest, NegotiateClientCongestionControlFromOptions) {
   FLAGS_quic_reloadable_flag_quic_allow_new_bbr = true;
-  FLAGS_quic_reloadable_flag_quic_client_connection_options = true;
   QuicConfig config;
   QuicTagVector options;
 
@@ -1718,8 +1720,8 @@ TEST_F(QuicSentPacketManagerTest, PathMtuIncreased) {
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, BytesInFlight(), 1, _, _))
       .Times(1)
       .WillOnce(Return(true));
-  SerializedPacket packet(kDefaultPathId, 1, PACKET_6BYTE_PACKET_NUMBER,
-                          nullptr, kDefaultLength + 100, false, false);
+  SerializedPacket packet(1, PACKET_6BYTE_PACKET_NUMBER, nullptr,
+                          kDefaultLength + 100, false, false);
   manager_.OnPacketSent(&packet, 0, clock_.Now(), NOT_RETRANSMISSION,
                         HAS_RETRANSMITTABLE_DATA);
 

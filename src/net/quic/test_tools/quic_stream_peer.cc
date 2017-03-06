@@ -41,28 +41,8 @@ bool QuicStreamPeer::FinSent(QuicStream* stream) {
 }
 
 // static
-bool QuicStreamPeer::FinReceived(QuicStream* stream) {
-  return stream->fin_received_;
-}
-
-// static
 bool QuicStreamPeer::RstSent(QuicStream* stream) {
   return stream->rst_sent_;
-}
-
-// static
-bool QuicStreamPeer::RstReceived(QuicStream* stream) {
-  return stream->rst_received_;
-}
-
-// static
-bool QuicStreamPeer::ReadSideClosed(QuicStream* stream) {
-  return stream->read_side_closed_;
-}
-
-// static
-bool QuicStreamPeer::WriteSideClosed(QuicStream* stream) {
-  return stream->write_side_closed_;
 }
 
 // static

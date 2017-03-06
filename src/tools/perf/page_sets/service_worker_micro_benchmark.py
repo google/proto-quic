@@ -11,7 +11,7 @@ class ServiceWorkerBenchmarkPage(page.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(ServiceWorkerBenchmarkPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2('window.done')
+    action_runner.WaitForJavaScriptCondition('window.done')
 
 
 class ServiceWorkerMicroBenchmarkPageSet(story.StorySet):

@@ -474,9 +474,9 @@ TEST_P(QuicServerSessionBaseTest, BandwidthEstimates) {
 
   // Bandwidth estimate has now changed sufficiently, enough time has passed,
   // and enough packets have been sent.
-  SerializedPacket packet(
-      kDefaultPathId, 1 + kMinPacketsBetweenServerConfigUpdates,
-      PACKET_6BYTE_PACKET_NUMBER, nullptr, 1000, false, false);
+  SerializedPacket packet(1 + kMinPacketsBetweenServerConfigUpdates,
+                          PACKET_6BYTE_PACKET_NUMBER, nullptr, 1000, false,
+                          false);
   sent_packet_manager->OnPacketSent(&packet, 0, now, NOT_RETRANSMISSION,
                                     HAS_RETRANSMITTABLE_DATA);
 
@@ -613,7 +613,7 @@ TEST_P(StreamMemberLifetimeTest, Basic) {
   chlo.SetVector(kCOPT, QuicTagVector{kSREJ});
   std::vector<QuicVersion> packet_version_list = {version};
   std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
-      1, true, false, false, kDefaultPathId, 1,
+      1, true, false, false, 1,
       chlo.GetSerialized().AsStringPiece().as_string(),
       PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
       &packet_version_list));

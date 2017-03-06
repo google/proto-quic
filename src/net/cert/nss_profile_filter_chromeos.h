@@ -7,8 +7,8 @@
 
 #include <memory>
 
+#include "base/memory/ref_counted.h"
 #include "crypto/scoped_nss_types.h"
-#include "net/base/crypto_module.h"
 #include "net/base/net_export.h"
 
 namespace net {
@@ -57,7 +57,7 @@ class NET_EXPORT NSSProfileFilterChromeOS {
    public:
     explicit ModuleNotAllowedForProfilePredicate(
         const NSSProfileFilterChromeOS& filter);
-    bool operator()(const scoped_refptr<CryptoModule>& module) const;
+    bool operator()(const crypto::ScopedPK11Slot& module) const;
 
    private:
     const NSSProfileFilterChromeOS& filter_;

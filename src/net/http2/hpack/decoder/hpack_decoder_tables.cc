@@ -10,7 +10,7 @@ namespace net {
 namespace {
 
 std::vector<HpackStringPair>* MakeStaticTable() {
-  auto ptr = new std::vector<HpackStringPair>();
+  auto* ptr = new std::vector<HpackStringPair>();
   ptr->reserve(kFirstDynamicTableIndex);
   ptr->emplace_back("", "");
 

@@ -85,6 +85,17 @@ Options:
   -o OUTPUTDIR      Specify what directory output paths are relative to.
                     Defaults to the current directory.
 
+  -p FILE           Specify a file containing a pre-determined mapping from
+                    resource names to resource ids which will be used to assign
+                    resource ids to those resources. Resources not found in this
+                    file will be assigned ids normally. The motivation is to run
+                    your app's startup and have it dump the resources it loads,
+                    and then pass these via this flag. This will pack startup
+                    resources together, thus reducing paging while all other
+                    resources are unperturbed. The file should have the format:
+                      RESOURCE_ONE_NAME 123
+                      RESOURCE_TWO_NAME 124
+
   -D NAME[=VAL]     Specify a C-preprocessor-like define NAME with optional
                     value VAL (defaults to 1) which will be used to control
                     conditional inclusion of resources.
@@ -146,6 +157,7 @@ are exported to translation interchange files (e.g. XMB files), etc.
   def Run(self, opts, args):
     self.output_directory = '.'
     first_ids_file = None
+    predetermined_ids_file = None
     whitelist_filenames = []
     assert_output_files = []
     target_platform = None
@@ -157,7 +169,7 @@ are exported to translation interchange files (e.g. XMB files), etc.
     depend_on_stamp = False
     js_minifier = None
     replace_ellipsis = True
-    (own_opts, args) = getopt.getopt(args, 'a:o:D:E:f:w:t:h:',
+    (own_opts, args) = getopt.getopt(args, 'a:p:o:D:E:f:w:t:h:',
         ('depdir=','depfile=','assert-file-list=',
          'output-all-resource-defines',
          'no-output-all-resource-defines',
@@ -192,6 +204,8 @@ are exported to translation interchange files (e.g. XMB files), etc.
         output_all_resource_defines = False
       elif key == '--no-replace-ellipsis':
         replace_ellipsis = False
+      elif key == '-p':
+        predetermined_ids_file = val
       elif key == '-t':
         target_platform = val
       elif key == '-h':
@@ -233,6 +247,7 @@ are exported to translation interchange files (e.g. XMB files), etc.
     self.res = grd_reader.Parse(opts.input,
                                 debug=opts.extra_verbose,
                                 first_ids_file=first_ids_file,
+                                predetermined_ids_file=predetermined_ids_file,
                                 defines=self.defines,
                                 target_platform=target_platform)
 

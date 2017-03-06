@@ -37,7 +37,8 @@ class TaskTracker;
 // guidance from the delegate.
 //
 // This class is thread-safe.
-class BASE_EXPORT SchedulerWorker {
+class BASE_EXPORT SchedulerWorker
+    : public RefCountedThreadSafe<SchedulerWorker> {
  public:
   // Delegate interface for SchedulerWorker. The methods are always called from
   // the thread managed by the SchedulerWorker instance.
@@ -95,19 +96,15 @@ class BASE_EXPORT SchedulerWorker {
   // |worker_state| is DETACHED, the thread will be created upon a WakeUp().
   // Returns nullptr if creating the underlying platform thread fails during
   // Create(). |backward_compatibility| indicates whether backward compatibility
-  // is enabled.
-  static std::unique_ptr<SchedulerWorker> Create(
+  // is enabled. Either JoinForTesting() or Cleanup() must be called before
+  // releasing the last external reference.
+  static scoped_refptr<SchedulerWorker> Create(
       ThreadPriority priority_hint,
       std::unique_ptr<Delegate> delegate,
       TaskTracker* task_tracker,
       InitialState initial_state,
       SchedulerBackwardCompatibility backward_compatibility =
           SchedulerBackwardCompatibility::DISABLED);
-
-  // Destroying a SchedulerWorker in production is not allowed; it is always
-  // leaked. In tests, it can only be destroyed after JoinForTesting() has
-  // returned.
-  ~SchedulerWorker();
 
   // Wakes up this SchedulerWorker if it wasn't already awake. After this
   // is called, this SchedulerWorker will run Tasks from Sequences
@@ -129,27 +126,55 @@ class BASE_EXPORT SchedulerWorker {
   // Returns true if the worker is alive.
   bool ThreadAliveForTesting() const;
 
+  // Makes a request to cleanup the worker. This may be called from any thread.
+  // The caller is expected to release its reference to this object after
+  // calling Cleanup(). Further method calls after Cleanup() returns are
+  // undefined.
+  //
+  // Expected Usage:
+  //   scoped_refptr<SchedulerWorker> worker_ = /* Existing Worker */
+  //   worker_->Cleanup();
+  //   worker_ = nullptr;
+  void Cleanup();
+
  private:
+  friend class RefCountedThreadSafe<SchedulerWorker>;
   class Thread;
+  enum class DetachNotify {
+    // Do not notify any component.
+    SILENT,
+    // Notify the delegate.
+    DELEGATE,
+  };
 
   SchedulerWorker(ThreadPriority thread_priority,
                   std::unique_ptr<Delegate> delegate,
                   TaskTracker* task_tracker,
                   SchedulerBackwardCompatibility backward_compatibility);
+  ~SchedulerWorker();
 
-  // Returns the thread instance if the detach was successful so that it can be
-  // freed upon termination of the thread.
-  // If the detach is not possible, returns nullptr.
-  std::unique_ptr<SchedulerWorker::Thread> Detach();
+  // Returns ownership of the thread instance when appropriate so that it can be
+  // freed upon termination of the thread. If ownership transfer is not
+  // possible, returns nullptr.
+  std::unique_ptr<SchedulerWorker::Thread> DetachThreadObject(
+      DetachNotify detach_notify);
 
   void CreateThread();
 
   void CreateThreadAssertSynchronized();
 
-  // Synchronizes access to |thread_|.
+  bool ShouldExit();
+
+  // Synchronizes access to |thread_| (read+write) as well as |should_exit_|
+  // (write-only). See Cleanup() for details.
   mutable SchedulerLock thread_lock_;
 
+  AtomicFlag should_exit_;
+
   // The underlying thread for this SchedulerWorker.
+  // The thread object will be cleaned up by the running thread unless we join
+  // against the thread. Joining requires the thread object to remain alive for
+  // the Thread::Join() call.
   std::unique_ptr<Thread> thread_;
 
   const ThreadPriority priority_hint_;
@@ -162,7 +187,7 @@ class BASE_EXPORT SchedulerWorker {
 #endif
 
   // Set once JoinForTesting() has been called.
-  AtomicFlag should_exit_for_testing_;
+  AtomicFlag join_called_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(SchedulerWorker);
 };

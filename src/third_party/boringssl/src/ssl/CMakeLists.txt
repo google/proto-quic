@@ -5,16 +5,15 @@ add_library(
 
   bio_ssl.c
   custom_extensions.c
-  handshake_server.c
-  handshake_client.c
   d1_both.c
   d1_lib.c
   d1_pkt.c
   d1_srtp.c
   dtls_method.c
   dtls_record.c
+  handshake_client.c
+  handshake_server.c
   s3_both.c
-  s3_enc.c
   s3_lib.c
   s3_pkt.c
   ssl_aead_ctx.c
@@ -25,10 +24,11 @@ add_library(
   ssl_ecdh.c
   ssl_file.c
   ssl_lib.c
-  ssl_rsa.c
-  ssl_rsa_cc.cc
+  ssl_privkey.c
+  ssl_privkey_cc.cc
   ssl_session.c
   ssl_stat.c
+  ssl_transcript.c
   ssl_x509.c
   t1_enc.c
   t1_lib.c

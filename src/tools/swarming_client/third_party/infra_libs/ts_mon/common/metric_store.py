@@ -78,8 +78,8 @@ class MetricStore(object):
   def get_all(self):
     """Returns an iterator over all the metrics present in the store.
 
-    The iterator yields 4-tuples:
-      (target, metric, start_time, field_values)
+    The iterator yields 5-tuples:
+      (target, metric, start_time, end_time, field_values)
     """
     raise NotImplementedError
 

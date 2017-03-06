@@ -56,6 +56,14 @@ std::unique_ptr<base::Value> MappedHostResolver::GetDnsConfigAsValue() const {
   return impl_->GetDnsConfigAsValue();
 }
 
+void MappedHostResolver::SetDefaultAddressFamily(AddressFamily address_family) {
+  impl_->SetDefaultAddressFamily(address_family);
+}
+
+AddressFamily MappedHostResolver::GetDefaultAddressFamily() const {
+  return impl_->GetDefaultAddressFamily();
+}
+
 int MappedHostResolver::ApplyRules(RequestInfo* info) const {
   HostPortPair host_port(info->host_port_pair());
   if (rules_.RewriteHost(&host_port)) {

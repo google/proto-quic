@@ -38,6 +38,9 @@ class GURL;
 
 namespace base {
 class SingleThreadTaskRunner;
+namespace trace_event {
+class ProcessMemoryDump;
+}
 }  // namespace base
 
 namespace disk_cache {
@@ -215,6 +218,11 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory,
   SetHttpNetworkTransactionFactoryForTesting(
       std::unique_ptr<HttpTransactionFactory> new_network_layer);
 
+  // Dumps memory allocation stats. |parent_dump_absolute_name| is the name
+  // used by the parent MemoryAllocatorDump in the memory dump hierarchy.
+  void DumpMemoryStats(base::trace_event::ProcessMemoryDump* pmd,
+                       const std::string& parent_absolute_name) const;
+
  private:
   // Types --------------------------------------------------------------------
 
@@ -236,16 +244,21 @@ class NET_EXPORT HttpCache : public HttpTransactionFactory,
   friend class ViewCacheHelper;
   struct PendingOp;  // Info for an entry under construction.
 
-  typedef std::list<Transaction*> TransactionList;
+  using TransactionList = std::list<Transaction*>;
+  using TransactionSet = std::unordered_set<Transaction*>;
   typedef std::list<std::unique_ptr<WorkItem>> WorkItemList;
 
   struct ActiveEntry {
     explicit ActiveEntry(disk_cache::Entry* entry);
     ~ActiveEntry();
+    size_t EstimateMemoryUsage() const;
+
+    // Returns true if no transactions are associated with this entry.
+    bool HasNoTransactions();
 
     disk_cache::Entry* disk_entry;
     Transaction*       writer;
-    TransactionList    readers;
+    TransactionSet readers;
     TransactionList    pending_queue;
     bool               will_process_pending_queue;
     bool               doomed;

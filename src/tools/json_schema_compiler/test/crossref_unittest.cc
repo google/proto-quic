@@ -16,10 +16,10 @@ namespace {
 
 std::unique_ptr<base::DictionaryValue> CreateTestTypeValue() {
   std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-  value->Set("number", new base::FundamentalValue(1.1));
-  value->Set("integer", new base::FundamentalValue(4));
+  value->Set("number", new base::Value(1.1));
+  value->Set("integer", new base::Value(4));
   value->Set("string", new base::StringValue("bling"));
-  value->Set("boolean", new base::FundamentalValue(true));
+  value->Set("boolean", new base::Value(true));
   return value;
 }
 
@@ -89,7 +89,7 @@ TEST(JsonSchemaCompilerCrossrefTest, TestTypeInObjectParamsCreate) {
     std::unique_ptr<base::DictionaryValue> param_object_value(
         new base::DictionaryValue());
     param_object_value->Set("testType", CreateTestTypeValue().release());
-    param_object_value->Set("boolean", new base::FundamentalValue(true));
+    param_object_value->Set("boolean", new base::Value(true));
     params_value->Append(std::move(param_object_value));
     std::unique_ptr<crossref::TestTypeInObject::Params> params(
         crossref::TestTypeInObject::Params::Create(*params_value));
@@ -103,7 +103,7 @@ TEST(JsonSchemaCompilerCrossrefTest, TestTypeInObjectParamsCreate) {
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     std::unique_ptr<base::DictionaryValue> param_object_value(
         new base::DictionaryValue());
-    param_object_value->Set("boolean", new base::FundamentalValue(true));
+    param_object_value->Set("boolean", new base::Value(true));
     params_value->Append(std::move(param_object_value));
     std::unique_ptr<crossref::TestTypeInObject::Params> params(
         crossref::TestTypeInObject::Params::Create(*params_value));
@@ -116,7 +116,7 @@ TEST(JsonSchemaCompilerCrossrefTest, TestTypeInObjectParamsCreate) {
     std::unique_ptr<base::DictionaryValue> param_object_value(
         new base::DictionaryValue());
     param_object_value->Set("testType", new base::StringValue("invalid"));
-    param_object_value->Set("boolean", new base::FundamentalValue(true));
+    param_object_value->Set("boolean", new base::Value(true));
     params_value->Append(std::move(param_object_value));
     std::unique_ptr<crossref::TestTypeInObject::Params> params(
         crossref::TestTypeInObject::Params::Create(*params_value));

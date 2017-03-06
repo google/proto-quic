@@ -6,7 +6,7 @@
 """Makes sure that files include headers from allowed directories.
 
 Checks DEPS files in the source tree for rules, and applies those rules to
-"#include" and "import" directives in the .cpp and .java source files.
+"#include" and "import" directives in the .cpp, .java, and .proto source files.
 Any source file including something not permitted by the DEPS files will fail.
 
 See builddeps.py for a detailed description of the DEPS format.
@@ -17,6 +17,7 @@ import optparse
 import re
 import sys
 
+import proto_checker
 import cpp_checker
 import java_checker
 import results
@@ -54,7 +55,8 @@ class DepsChecker(DepsBuilder):
       ignore_temp_rules: Ignore rules that start with Rule.TEMP_ALLOW ("!").
     """
     DepsBuilder.__init__(
-        self, base_directory, extra_repos, verbose, being_tested, ignore_temp_rules)
+        self, base_directory, extra_repos, verbose, being_tested,
+        ignore_temp_rules)
 
     self._skip_tests = skip_tests
     self._resolve_dotdot = resolve_dotdot
@@ -80,9 +82,11 @@ class DepsChecker(DepsBuilder):
     java = java_checker.JavaChecker(self.base_directory, self.verbose)
     cpp = cpp_checker.CppChecker(
         self.verbose, self._resolve_dotdot, self.base_directory)
+    proto = proto_checker.ProtoChecker(
+        self.verbose, self._resolve_dotdot, self.base_directory)
     checkers = dict(
         (extension, checker)
-        for checker in [java, cpp] for extension in checker.EXTENSIONS)
+        for checker in [java, cpp, proto] for extension in checker.EXTENSIONS)
 
     for rules, file_paths in self.GetAllRulesAndFiles(start_dir):
       for full_name in file_paths:
@@ -102,7 +106,7 @@ class DepsChecker(DepsBuilder):
 
     Args:
       added_lines: ((file_path, (changed_line, changed_line, ...), ...)
-      checker: CppChecker/JavaChecker checker instance
+      checker: CppChecker/JavaChecker/ProtoChecker checker instance
 
     Return:
       A list of tuples, (bad_file_path, rule_type, rule_description)
@@ -159,6 +163,22 @@ class DepsChecker(DepsBuilder):
     return self.CheckIncludesAndImports(
         added_imports,
         java_checker.JavaChecker(self.base_directory, self.verbose))
+
+  def CheckAddedProtoImports(self, added_imports):
+    """This is used from PRESUBMIT.py to check new #import statements added in
+    the change being presubmit checked.
+
+    Args:
+      added_imports : ((file_path, (import_line, import_line, ...), ...)
+
+    Return:
+      A list of tuples, (bad_file_path, rule_type, rule_description)
+      where rule_type is one of Rule.DISALLOW or Rule.TEMP_ALLOW and
+      rule_description is human-readable. Empty if no problems.
+    """
+    return self.CheckIncludesAndImports(
+        added_imports, proto_checker.ProtoChecker(
+            verbose=self.verbose, root_dir=self.base_directory))
 
 def PrintUsage():
   print """Usage: python checkdeps.py [--root <root>] [tocheck]

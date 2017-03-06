@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "base/macros.h"
 #include "net/tools/transport_security_state_generator/huffman/huffman_builder.h"
 
 namespace net {
@@ -49,8 +50,8 @@ class TrieBitBuffer {
   // at before the buffer was written to it.
   uint32_t WriteToBitWriter(BitWriter* writer);
 
-  // Appends the buffered bits in |current_byte_| to |elements_|. Empty bits
-  // are filled with zero's.
+  // Appends the buffered bits in |current_byte_| to |elements_|. No padding
+  // will occur.
   void Flush();
 
  private:
@@ -76,6 +77,8 @@ class TrieBitBuffer {
   uint32_t used_ = 0;
 
   std::vector<BitsOrPosition> elements_;
+
+  DISALLOW_COPY_AND_ASSIGN(TrieBitBuffer);
 };
 
 }  // namespace transport_security_state

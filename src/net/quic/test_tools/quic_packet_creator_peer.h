@@ -40,7 +40,6 @@ class QuicPacketCreatorPeer {
                                              char* buffer,
                                              size_t buffer_len);
   static EncryptionLevel GetEncryptionLevel(QuicPacketCreator* creator);
-  static QuicPathId GetCurrentPath(QuicPacketCreator* creator);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreatorPeer);

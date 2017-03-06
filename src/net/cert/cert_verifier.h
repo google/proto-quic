@@ -79,6 +79,11 @@ class NET_EXPORT CertVerifier {
     // If set, certificates with SHA-1 signatures will be allowed, but only if
     // they are issued by non-public trust anchors.
     VERIFY_ENABLE_SHA1_LOCAL_ANCHORS = 1 << 5,
+
+    // If set, certificates which lack a subjectAltName will be allowed to
+    // match against the commonName of the certificate, but only if they are
+    // issued by non-public trust anchors.
+    VERIFY_ENABLE_COMMON_NAME_FALLBACK_LOCAL_ANCHORS = 1 << 6,
   };
 
   // Parameters to verify |certificate| against the supplied

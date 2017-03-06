@@ -153,8 +153,8 @@ NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate::
     : filter_(filter) {}
 
 bool NSSProfileFilterChromeOS::ModuleNotAllowedForProfilePredicate::operator()(
-    const scoped_refptr<CryptoModule>& module) const {
-  return !filter_.IsModuleAllowed(module->os_module_handle());
+    const crypto::ScopedPK11Slot& module) const {
+  return !filter_.IsModuleAllowed(module.get());
 }
 
 }  // namespace net

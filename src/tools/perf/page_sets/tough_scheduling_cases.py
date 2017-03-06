@@ -377,16 +377,16 @@ class SecondBatchJsPage(ToughSchedulingCasesPage):
     action_runner.TapElement(selector='div[id="spinner"]')
     # Begin the action immediately because we want the page to update smoothly
     # even while resources are being loaded.
-    action_runner.WaitForJavaScriptCondition2('window.__ready !== undefined')
+    action_runner.WaitForJavaScriptCondition('window.__ready !== undefined')
 
     with action_runner.CreateGestureInteraction('LoadAction'):
-      action_runner.ExecuteJavaScript2('kickOffLoading()')
-      action_runner.WaitForJavaScriptCondition2('window.__ready')
+      action_runner.ExecuteJavaScript('kickOffLoading()')
+      action_runner.WaitForJavaScriptCondition('window.__ready')
       # Click one second after the resources have finished loading.
       action_runner.Wait(1)
       action_runner.TapElement(selector='input[id="run"]')
       # Wait for the test to complete.
-      action_runner.WaitForJavaScriptCondition2('window.__finished')
+      action_runner.WaitForJavaScriptCondition('window.__finished')
 
 
 class ToughSchedulingCasesPageSet(story.StorySet):

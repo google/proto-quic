@@ -9,7 +9,7 @@ The lexer uses the PLY library to build a tokenizer which understands both
 WebIDL and Pepper tokens.
 
 WebIDL, and WebIDL regular expressions can be found at:
-   http://www.w3.org/TR/2012/CR-WebIDL-20120419/
+   http://heycam.github.io/webidl/
 PLY can be found at:
    http://www.dabeaz.com/ply/
 """
@@ -17,20 +17,10 @@ PLY can be found at:
 import os.path
 import sys
 
-#
-# Try to load the ply module, if not, then assume it is in the third_party
-# directory.
-#
-try:
-  # Disable lint check which fails to find the ply module.
-  # pylint: disable=F0401
-  from ply import lex
-except ImportError:
-  module_path, module_name = os.path.split(__file__)
-  third_party = os.path.join(module_path, '..', '..', 'third_party')
-  sys.path.append(third_party)
-  # pylint: disable=F0401
-  from ply import lex
+SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+sys.path.insert(0, os.path.join(SRC_DIR, 'third_party'))
+from ply import lex
+
 
 #
 # IDL Lexer
@@ -101,6 +91,7 @@ class IDLLexer(object):
     'Promise' : 'PROMISE',
     'readonly' : 'READONLY',
     'RegExp' : 'REGEXP',
+    'record' : 'RECORD',
     'required' : 'REQUIRED',
     'sequence' : 'SEQUENCE',
     'serializer' : 'SERIALIZER',
@@ -113,6 +104,7 @@ class IDLLexer(object):
     'true' : 'TRUE',
     'unsigned' : 'UNSIGNED',
     'unrestricted' : 'UNRESTRICTED',
+    'USVString' : 'USVSTRING',
     'void' : 'VOID'
   }
 

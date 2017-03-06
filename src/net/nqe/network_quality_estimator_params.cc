@@ -306,7 +306,7 @@ void ObtainEffectiveConnectionTypeModelParams(
       continue;
 
     std::string connection_type_name = std::string(
-        GetNameForEffectiveConnectionType(effective_connection_type));
+        DeprecatedGetNameForEffectiveConnectionType(effective_connection_type));
 
     connection_thresholds[i].set_http_rtt(
         base::TimeDelta::FromMilliseconds(GetValueForVariationParam(

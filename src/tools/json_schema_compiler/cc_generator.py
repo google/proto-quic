@@ -650,7 +650,7 @@ class _Generator(object):
       if underlying_type.property_type == PropertyType.STRING:
         return 'base::MakeUnique<base::StringValue>(%s)' % var
       else:
-        return 'base::MakeUnique<base::FundamentalValue>(%s)' % var
+        return 'base::MakeUnique<base::Value>(%s)' % var
     else:
       raise NotImplementedError('Conversion of %s to base::Value not '
                                 'implemented' % repr(type_.type_))

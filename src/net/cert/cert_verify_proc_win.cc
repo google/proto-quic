@@ -1193,13 +1193,6 @@ int CertVerifyProcWin::VerifyInternal(
   // compatible with WinHTTP, which doesn't report this error (bug 3004).
   verify_result->cert_status &= ~CERT_STATUS_NO_REVOCATION_MECHANISM;
 
-  // Perform hostname verification independent of
-  // CertVerifyCertificateChainPolicy.
-  if (!cert->VerifyNameMatch(hostname,
-                             &verify_result->common_name_fallback_used)) {
-    verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
-  }
-
   if (!rev_checking_enabled) {
     // If we didn't do online revocation checking then Windows will report
     // CERT_UNABLE_TO_CHECK_REVOCATION unless it had cached OCSP or CRL

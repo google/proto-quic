@@ -57,16 +57,13 @@ class MockableQuicClient : public QuicClient {
   QuicConnectionId GenerateNewConnectionId() override;
   void UseWriter(QuicPacketWriterWrapper* writer);
   void UseConnectionId(QuicConnectionId connection_id);
-  void SendCachedNetworkParamaters(
-      const CachedNetworkParameters& cached_network_params) {
-    cached_network_paramaters_ = cached_network_params;
-  }
   const QuicReceivedPacket* last_incoming_packet() {
     return last_incoming_packet_.get();
   }
   void set_track_last_incoming_packet(bool track) {
     track_last_incoming_packet_ = track;
   }
+  void set_peer_address(const QuicSocketAddress& address);
 
  private:
   QuicConnectionId override_connection_id_;  // ConnectionId to use, if nonzero
@@ -243,14 +240,16 @@ class QuicTestClient : public QuicSpdyStream::Visitor,
     allow_bidirectional_data_ = value;
   }
 
-  bool allow_bidirectional_data() const { return allow_bidirectional_data_; }
-
   size_t num_requests() const { return num_requests_; }
 
   size_t num_responses() const { return num_responses_; }
 
   void set_server_address(const QuicSocketAddress& server_address) {
     client_->set_server_address(server_address);
+  }
+
+  void set_peer_address(const QuicSocketAddress& address) {
+    client_->set_peer_address(address);
   }
 
   // Explicitly set the SNI value for this client, overriding the default

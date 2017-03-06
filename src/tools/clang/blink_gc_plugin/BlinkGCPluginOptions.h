@@ -12,9 +12,6 @@
 struct BlinkGCPluginOptions {
   bool dump_graph = false;
 
-  // If |true|, emit warning if stack allocated class types provide
-  // a trace method.
-  bool warn_stack_allocated_trace_method = false;
   // If |true|, emit warning for class types which derive from from
   // GarbageCollectedFinalized<> when just GarbageCollected<> will do.
   bool warn_unneeded_finalizer = false;

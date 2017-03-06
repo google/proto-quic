@@ -206,8 +206,8 @@ void WontCompile() {
 #elif defined(NCTEST_DISALLOW_CAPTURING_LAMBDA)  // [r"fatal error: implicit instantiation of undefined template 'base::internal::FunctorTraits<\(lambda at (\.\./)+base/bind_unittest.nc:[0-9]+:[0-9]+\), void>'"]
 
 void WontCompile() {
-  int i = 0;
-  Bind([i]() {});
+  int i = 0, j = 0;
+  Bind([i,&j]() {j = i;});
 }
 
 #elif defined(NCTEST_DISALLOW_BINDING_ONCE_CALLBACK_WITH_NO_ARGS)  // [r"static_assert failed \"Attempting to bind a base::Callback with no additional arguments: save a heap allocation and use the original base::Callback object\""]

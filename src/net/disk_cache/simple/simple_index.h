@@ -166,6 +166,9 @@ class NET_EXPORT_PRIVATE SimpleIndex
 
   IndexInitMethod init_method() const { return init_method_; }
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   friend class SimpleIndexTest;
   FRIEND_TEST_ALL_PREFIXES(SimpleIndexTest, IndexSizeCorrectOnMerge);

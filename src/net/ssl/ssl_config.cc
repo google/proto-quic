@@ -24,6 +24,7 @@ SSLConfig::SSLConfig()
     : rev_checking_enabled(false),
       rev_checking_required_local_anchors(false),
       sha1_local_anchors_enabled(true),
+      common_name_fallback_local_anchors_enabled(true),
       version_min(kDefaultSSLVersionMin),
       version_max(kDefaultSSLVersionMax),
       deprecated_cipher_suites_enabled(false),
@@ -64,6 +65,8 @@ int SSLConfig::GetCertVerifyFlags() const {
     flags |= CertVerifier::VERIFY_REV_CHECKING_REQUIRED_LOCAL_ANCHORS;
   if (sha1_local_anchors_enabled)
     flags |= CertVerifier::VERIFY_ENABLE_SHA1_LOCAL_ANCHORS;
+  if (common_name_fallback_local_anchors_enabled)
+    flags |= CertVerifier::VERIFY_ENABLE_COMMON_NAME_FALLBACK_LOCAL_ANCHORS;
   return flags;
 }
 

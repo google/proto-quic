@@ -80,6 +80,7 @@ try openssl req \
   -config aia-test.cnf
 
 CA_COMMON_NAME="AIA Test Intermediate CA" \
+  HOST_NAME="aia-host.invalid" \
   CA_DIR=out \
   CA_NAME=aia-test-intermediate \
   AIA_URL=http://aia-test.invalid \

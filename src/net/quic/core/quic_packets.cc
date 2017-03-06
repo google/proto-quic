@@ -64,11 +64,10 @@ QuicPacketPublicHeader::QuicPacketPublicHeader(
 
 QuicPacketPublicHeader::~QuicPacketPublicHeader() {}
 
-QuicPacketHeader::QuicPacketHeader()
-    : packet_number(0), path_id(kDefaultPathId) {}
+QuicPacketHeader::QuicPacketHeader() : packet_number(0) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketPublicHeader& header)
-    : public_header(header), packet_number(0), path_id(kDefaultPathId) {}
+    : public_header(header), packet_number(0) {}
 
 QuicPacketHeader::QuicPacketHeader(const QuicPacketHeader& other) = default;
 
@@ -98,8 +97,7 @@ std::ostream& operator<<(std::ostream& os, const QuicPacketHeader& header) {
               StringPiece(header.public_header.nonce->data(),
                           header.public_header.nonce->size()));
   }
-  os << ", path_id: " << static_cast<int>(header.path_id)
-     << ", packet_number: " << header.packet_number << " }\n";
+  os << ", packet_number: " << header.packet_number << " }\n";
   return os;
 }
 
@@ -200,8 +198,7 @@ StringPiece QuicPacket::Plaintext(QuicVersion version) const {
                      length() - start_of_encrypted_data);
 }
 
-SerializedPacket::SerializedPacket(QuicPathId path_id,
-                                   QuicPacketNumber packet_number,
+SerializedPacket::SerializedPacket(QuicPacketNumber packet_number,
                                    QuicPacketNumberLength packet_number_length,
                                    const char* encrypted_buffer,
                                    QuicPacketLength encrypted_length,
@@ -211,14 +208,14 @@ SerializedPacket::SerializedPacket(QuicPathId path_id,
       encrypted_length(encrypted_length),
       has_crypto_handshake(NOT_HANDSHAKE),
       num_padding_bytes(0),
-      path_id(path_id),
       packet_number(packet_number),
       packet_number_length(packet_number_length),
       encryption_level(ENCRYPTION_NONE),
       has_ack(has_ack),
       has_stop_waiting(has_stop_waiting),
       transmission_type(NOT_RETRANSMISSION),
-      original_packet_number(0) {}
+      original_packet_number(0),
+      largest_acked(0) {}
 
 SerializedPacket::SerializedPacket(const SerializedPacket& other) = default;
 
@@ -230,6 +227,7 @@ void ClearSerializedPacket(SerializedPacket* serialized_packet) {
   }
   serialized_packet->encrypted_buffer = nullptr;
   serialized_packet->encrypted_length = 0;
+  serialized_packet->largest_acked = 0;
 }
 
 char* CopyBuffer(const SerializedPacket& packet) {

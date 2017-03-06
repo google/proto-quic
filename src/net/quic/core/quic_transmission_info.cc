@@ -16,7 +16,8 @@ QuicTransmissionInfo::QuicTransmissionInfo()
       is_unackable(false),
       has_crypto_handshake(false),
       num_padding_bytes(0),
-      retransmission(0) {}
+      retransmission(0),
+      largest_acked(0) {}
 
 QuicTransmissionInfo::QuicTransmissionInfo(
     EncryptionLevel level,
@@ -35,7 +36,8 @@ QuicTransmissionInfo::QuicTransmissionInfo(
       is_unackable(false),
       has_crypto_handshake(has_crypto_handshake),
       num_padding_bytes(num_padding_bytes),
-      retransmission(0) {}
+      retransmission(0),
+      largest_acked(0) {}
 
 QuicTransmissionInfo::QuicTransmissionInfo(const QuicTransmissionInfo& other) =
     default;

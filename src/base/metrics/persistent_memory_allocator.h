@@ -286,7 +286,6 @@ class BASE_EXPORT PersistentMemoryAllocator {
   //
   // IMPORTANT: Callers must update tools/metrics/histograms/histograms.xml
   // with the following histograms:
-  //    UMA.PersistentAllocator.name.Allocs
   //    UMA.PersistentAllocator.name.Errors
   //    UMA.PersistentAllocator.name.UsedPct
   void CreateTrackingHistograms(base::StringPiece name);

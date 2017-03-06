@@ -167,12 +167,11 @@ TEST(X509CertificateTest, WebkitCertParsing) {
   EXPECT_EQ("webkit.org", dns_names[1]);
 
   // Test that the wildcard cert matches properly.
-  bool unused = false;
-  EXPECT_TRUE(webkit_cert->VerifyNameMatch("www.webkit.org", &unused));
-  EXPECT_TRUE(webkit_cert->VerifyNameMatch("foo.webkit.org", &unused));
-  EXPECT_TRUE(webkit_cert->VerifyNameMatch("webkit.org", &unused));
-  EXPECT_FALSE(webkit_cert->VerifyNameMatch("www.webkit.com", &unused));
-  EXPECT_FALSE(webkit_cert->VerifyNameMatch("www.foo.webkit.com", &unused));
+  EXPECT_TRUE(webkit_cert->VerifyNameMatch("www.webkit.org", false));
+  EXPECT_TRUE(webkit_cert->VerifyNameMatch("foo.webkit.org", false));
+  EXPECT_TRUE(webkit_cert->VerifyNameMatch("webkit.org", false));
+  EXPECT_FALSE(webkit_cert->VerifyNameMatch("www.webkit.com", false));
+  EXPECT_FALSE(webkit_cert->VerifyNameMatch("www.foo.webkit.com", false));
 }
 
 TEST(X509CertificateTest, ThawteCertParsing) {
@@ -933,6 +932,10 @@ struct CertificateNameVerifyTestData {
   // Comma separated list of certificate IP Addresses to match against. Each
   // address is x prefixed 16 byte hex code for v6 or dotted-decimals for v4.
   const char* ip_addrs;
+  // Whether to disable matching against the commonName. This is a negative
+  // condition so that tests can omit one or more of the above fields and
+  // allow default initialization to handle this case.
+  bool disable_fallback;
 };
 
 // GTest 'magic' pretty-printer, so that if/when a test fails, it knows how
@@ -946,7 +949,8 @@ void PrintTo(const CertificateNameVerifyTestData& data, std::ostream* os) {
       << "; hostname: " << data.hostname
       << "; common_name: " << data.common_name
       << "; dns_names: " << base::StringPiece(data.dns_names)
-      << "; ip_addrs: " << base::StringPiece(data.ip_addrs);
+      << "; ip_addrs: " << base::StringPiece(data.ip_addrs)
+      << "; disable_fallback: " << data.disable_fallback;
 }
 
 const CertificateNameVerifyTestData kNameVerifyTestData[] = {
@@ -975,12 +979,15 @@ const CertificateNameVerifyTestData kNameVerifyTestData[] = {
     { true, "ww%57.foo.com", "", "www.foo.com" },
     { true, "www&.foo.com", "www%26.foo.com" },
     // Common name must not be used if subject alternative name was provided.
-    { false, "www.test.co.jp",  "www.test.co.jp",
+    { false, "www.test.co.jp", "www.test.co.jp",
         "*.test.de,*.jp,www.test.co.uk,www.*.co.jp" },
     { false, "www.bar.foo.com", "www.bar.foo.com",
       "*.foo.com,*.*.foo.com,*.*.bar.foo.com,*..bar.foo.com," },
     { false, "www.bath.org", "www.bath.org", "", "20.30.40.50" },
-    { false, "66.77.88.99", "www.bath.org", "www.bath.org" },
+    { false, "66.77.88.99", "66.77.88.99", "www.bath.org" },
+    // Common name must not be used if fallback is disabled.
+    { false, "www.test.com", "www.test.com", nullptr, nullptr, true },
+    { false, "127.0.0.1", "127.0.0.1", nullptr, nullptr, true },
     // IDN tests
     { true, "xn--poema-9qae5a.com.br", "xn--poema-9qae5a.com.br" },
     { true, "www.xn--poema-9qae5a.com.br", "*.xn--poema-9qae5a.com.br" },
@@ -1143,9 +1150,10 @@ TEST_P(X509CertificateNameVerifyTest, VerifyHostname) {
     }
   }
 
-  bool unused = false;
-  EXPECT_EQ(test_data.expected, X509Certificate::VerifyHostname(
-      test_data.hostname, common_name, dns_names, ip_addressses, &unused));
+  EXPECT_EQ(test_data.expected,
+            X509Certificate::VerifyHostname(test_data.hostname, common_name,
+                                            dns_names, ip_addressses,
+                                            !test_data.disable_fallback));
 }
 
 INSTANTIATE_TEST_CASE_P(, X509CertificateNameVerifyTest,

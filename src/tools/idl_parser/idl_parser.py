@@ -36,22 +36,11 @@ import time
 from idl_lexer import IDLLexer
 from idl_node import IDLAttribute, IDLNode
 
-#
-# Try to load the ply module, if not, then assume it is in the third_party
-# directory.
-#
-try:
-  # Disable lint check which fails to find the ply module.
-  # pylint: disable=F0401
-  from ply import lex
-  from ply import yacc
-except ImportError:
-  module_path, module_name = os.path.split(__file__)
-  third_party = os.path.join(module_path, os.par, os.par, 'third_party')
-  sys.path.append(third_party)
-  # pylint: disable=F0401
-  from ply import lex
-  from ply import yacc
+SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
+sys.path.insert(0, os.path.join(SRC_DIR, 'third_party'))
+from ply import lex
+from ply import yacc
+
 
 #
 # ERROR_REMAP
@@ -903,7 +892,8 @@ class IDLParser(object):
                   | PromiseType Null
                   | identifier TypeSuffix
                   | SEQUENCE '<' Type '>' Null
-                  | FROZENARRAY '<' Type '>' Null"""
+                  | FROZENARRAY '<' Type '>' Null
+                  | RecordType Null"""
     if len(p) == 3:
       if type(p[1]) == str:
         typeref = self.BuildNamed('Typeref', p, 1)
@@ -928,15 +918,14 @@ class IDLParser(object):
       p[0] = p[1]
 
 
-  # [81] Added BYTESTRING, DOMSTRING, OBJECT, DATE, REGEXP
+  # [81] Added StringType, OBJECT, DATE, REGEXP
   def p_PrimitiveType(self, p):
     """PrimitiveType : UnsignedIntegerType
                      | UnrestrictedFloatType
+                     | StringType
                      | BOOLEAN
                      | BYTE
                      | OCTET
-                     | BYTESTRING
-                     | DOMSTRING
                      | OBJECT
                      | DATE
                      | REGEXP"""
@@ -1087,6 +1076,23 @@ class IDLParser(object):
     value = self.BuildNamed('Call', p, 3, args)
     p[0] = self.BuildNamed('ExtAttribute', p, 1, value)
 
+  # [99]
+  def p_StringType(self, p):
+    """StringType : BYTESTRING
+                  | DOMSTRING
+                  | USVSTRING"""
+    p[0] = self.BuildNamed('StringType', p, 1)
+
+  # [100]
+  def p_RecordType(self, p):
+    """RecordType : RECORD '<' StringType ',' Type '>'"""
+    p[0] = self.BuildProduction('Record', p, 2, ListFromConcat(p[3], p[5]))
+
+  # [100.1] Error recovery for RecordType.
+  def p_RecordTypeError(self, p):
+    """RecordType : RECORD '<' error ',' Type '>'"""
+    p[0] = self.BuildError(p, 'RecordType')
+
 #
 # Parser Errors
 #
@@ -1149,9 +1155,9 @@ class IDLParser(object):
 # Production is the set of items sent to a grammar rule resulting in a new
 # item being returned.
 #
+# cls - The type of item being producted
 # p - Is the Yacc production object containing the stack of items
 # index - Index into the production of the name for the item being produced.
-# cls - The type of item being producted
 # childlist - The children of the new item
   def BuildProduction(self, cls, p, index, childlist=None):
     try:

@@ -1099,7 +1099,7 @@ CookieList CookieMonster::GetAllCookies() {
 
   CookieList cookie_list;
   cookie_list.reserve(cookie_ptrs.size());
-  for (const auto& cookie_ptr : cookie_ptrs)
+  for (auto* cookie_ptr : cookie_ptrs)
     cookie_list.push_back(*cookie_ptr);
 
   return cookie_list;

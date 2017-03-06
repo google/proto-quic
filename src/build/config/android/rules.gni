@@ -1464,6 +1464,9 @@ if (enable_java_templates) {
   #   testonly: Marks this target as "test-only".
   #   write_asset_list: Adds an extra file to the assets, which contains a list of
   #     all other asset files.
+  #   generate_buildconfig_java: If defined and false, skip generating the
+  #     BuildConfig java class describing the build configuration. The default
+  #     is true for non-test APKs.
   #   requires_sdk_api_level_23: If defined and true, the apk is intended for
   #     installation only on Android M or later. In these releases the system
   #     linker does relocation unpacking, so we can enable it unconditionally.
@@ -1675,6 +1678,10 @@ if (enable_java_templates) {
         defined(invoker.create_density_splits) && invoker.create_density_splits
     _create_language_splits =
         defined(invoker.language_splits) && invoker.language_splits != []
+    _generate_buildconfig_java = !defined(invoker.apk_under_test)
+    if (defined(invoker.generate_buildconfig_java)) {
+      _generate_buildconfig_java = invoker.generate_buildconfig_java
+    }
 
     # Help GN understand that _create_abi_split is not unused (bug in GN).
     assert(_create_abi_split || true)
@@ -1835,7 +1842,7 @@ if (enable_java_templates) {
       _srcjar_deps += [ ":${_template_name}__native_libraries_java" ]
     }
 
-    if (!defined(invoker.apk_under_test)) {
+    if (_generate_buildconfig_java) {
       java_cpp_template("${_template_name}__build_config_java") {
         package_name = "org/chromium/base"
         sources = [

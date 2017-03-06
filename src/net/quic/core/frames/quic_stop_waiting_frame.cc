@@ -8,8 +8,7 @@
 
 namespace net {
 
-QuicStopWaitingFrame::QuicStopWaitingFrame()
-    : path_id(kDefaultPathId), least_unacked(0) {}
+QuicStopWaitingFrame::QuicStopWaitingFrame() : least_unacked(0) {}
 
 QuicStopWaitingFrame::~QuicStopWaitingFrame() {}
 

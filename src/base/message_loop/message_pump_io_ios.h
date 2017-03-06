@@ -6,6 +6,7 @@
 #define BASE_MESSAGE_LOOP_MESSAGE_PUMP_IO_IOS_H_
 
 #include "base/base_export.h"
+#include "base/location.h"
 #include "base/mac/scoped_cffiledescriptorref.h"
 #include "base/mac/scoped_cftyperef.h"
 #include "base/macros.h"
@@ -36,7 +37,7 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
   // Object returned by WatchFileDescriptor to manage further watching.
   class FileDescriptorWatcher {
    public:
-    FileDescriptorWatcher();
+    explicit FileDescriptorWatcher(const tracked_objects::Location& from_here);
     ~FileDescriptorWatcher();  // Implicitly calls StopWatchingFileDescriptor.
 
     // NOTE: These methods aren't called StartWatching()/StopWatching() to
@@ -45,6 +46,10 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
     // Stop watching the FD, always safe to call.  No-op if there's nothing
     // to do.
     bool StopWatchingFileDescriptor();
+
+    const tracked_objects::Location& created_from_location() {
+      return created_from_location_;
+    }
 
    private:
     friend class MessagePumpIOSForIO;
@@ -71,6 +76,8 @@ class BASE_EXPORT MessagePumpIOSForIO : public MessagePumpNSRunLoop {
     base::ScopedCFTypeRef<CFRunLoopSourceRef> fd_source_;
     base::WeakPtr<MessagePumpIOSForIO> pump_;
     Watcher* watcher_;
+
+    tracked_objects::Location created_from_location_;
 
     DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
   };

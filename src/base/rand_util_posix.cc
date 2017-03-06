@@ -13,6 +13,7 @@
 #include "base/files/file_util.h"
 #include "base/lazy_instance.h"
 #include "base/logging.h"
+#include "base/posix/eintr_wrapper.h"
 
 namespace {
 
@@ -22,7 +23,7 @@ namespace {
 // we can use LazyInstance to handle opening it on the first access.
 class URandomFd {
  public:
-  URandomFd() : fd_(open("/dev/urandom", O_RDONLY)) {
+  URandomFd() : fd_(HANDLE_EINTR(open("/dev/urandom", O_RDONLY | O_CLOEXEC))) {
     DCHECK_GE(fd_, 0) << "Cannot open /dev/urandom: " << errno;
   }
 

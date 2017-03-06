@@ -17,7 +17,7 @@ namespace base {
 namespace {
 
 ThreadLocalBoolean* GetWorkerPoolRunningOnThisThread() {
-  static auto thread_local_boolean = new ThreadLocalBoolean();
+  static auto* thread_local_boolean = new ThreadLocalBoolean();
   return thread_local_boolean;
 }
 

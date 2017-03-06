@@ -161,25 +161,22 @@ class BASE_EXPORT StackSamplingProfiler {
 
   // Represents parameters that configure the sampling.
   struct BASE_EXPORT SamplingParams {
-    SamplingParams();
+    // Time to delay before first samples are taken.
+    TimeDelta initial_delay = TimeDelta::FromMilliseconds(0);
 
-    // Time to delay before first samples are taken. Defaults to 0.
-    TimeDelta initial_delay;
-
-    // Number of sampling bursts to perform. Defaults to 1.
-    int bursts;
+    // Number of sampling bursts to perform.
+    int bursts = 1;
 
     // Interval between sampling bursts. This is the desired duration from the
-    // start of one burst to the start of the next burst. Defaults to 10s.
-    TimeDelta burst_interval;
+    // start of one burst to the start of the next burst.
+    TimeDelta burst_interval = TimeDelta::FromSeconds(10);
 
-    // Number of samples to record per burst. Defaults to 300.
-    int samples_per_burst;
+    // Number of samples to record per burst.
+    int samples_per_burst = 300;
 
     // Interval between samples during a sampling burst. This is the desired
-    // duration from the start of one sample to the start of the next
-    // sample. Defaults to 100ms.
-    TimeDelta sampling_interval;
+    // duration from the start of one sample to the start of the next sample.
+    TimeDelta sampling_interval = TimeDelta::FromMilliseconds(100);
   };
 
   // The callback type used to collect completed profiles. The passed |profiles|

@@ -12,8 +12,8 @@
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task_scheduler/post_task.h"
 #include "base/threading/thread_restrictions.h"
-#include "base/threading/worker_pool.h"
 
 namespace {
 
@@ -136,8 +136,13 @@ bool DelayedCacheCleanup(const base::FilePath& full_path) {
     return false;
   }
 
-  base::WorkerPool::PostTask(
-      FROM_HERE, base::Bind(&CleanupCallback, path, name_str), true);
+  base::PostTaskWithTraits(
+      FROM_HERE, base::TaskTraits()
+                     .MayBlock()
+                     .WithPriority(base::TaskPriority::BACKGROUND)
+                     .WithShutdownBehavior(
+                         base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN),
+      base::Bind(&CleanupCallback, path, name_str));
   return true;
 }
 

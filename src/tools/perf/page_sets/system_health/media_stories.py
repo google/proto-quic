@@ -45,7 +45,7 @@ class _MediaStory(system_health_story.SystemHealthStory):
           self.PLAY_DURATION - self._GetTimeInSeconds(action_runner))
 
   def _GetTimeInSeconds(self, action_runner):
-    minutes, seconds = action_runner.EvaluateJavaScript2(
+    minutes, seconds = action_runner.EvaluateJavaScript(
         'document.querySelector({{ selector }}).textContent',
         selector=self.TIME_SELECTOR).split(':')
     return int(minutes * 60 + seconds)

@@ -67,9 +67,9 @@ class TaskSchedulerWorkerStackTest : public testing::Test {
     worker_c_->JoinForTesting();
   }
 
-  std::unique_ptr<SchedulerWorker> worker_a_;
-  std::unique_ptr<SchedulerWorker> worker_b_;
-  std::unique_ptr<SchedulerWorker> worker_c_;
+  scoped_refptr<SchedulerWorker> worker_a_;
+  scoped_refptr<SchedulerWorker> worker_b_;
+  scoped_refptr<SchedulerWorker> worker_c_;
 
  private:
   TaskTracker task_tracker_;

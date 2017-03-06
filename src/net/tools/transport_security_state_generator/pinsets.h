@@ -13,7 +13,6 @@
 #include "base/strings/string_piece.h"
 #include "net/tools/transport_security_state_generator/cert_util.h"
 #include "net/tools/transport_security_state_generator/pinset.h"
-#include "net/tools/transport_security_state_generator/pinsets.h"
 #include "net/tools/transport_security_state_generator/spki_hash.h"
 
 namespace net {

@@ -35,7 +35,7 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
     time.sleep(self._start_wait_time)
 
     # Enqueue benchmark
-    tab.ExecuteJavaScript2("""
+    tab.ExecuteJavaScript("""
         window.benchmark_results = {};
         window.benchmark_results.done = false;
         window.benchmark_results.id =
@@ -53,16 +53,16 @@ class RasterizeAndRecordMicro(legacy_page_test.LegacyPageTest):
         rasterize_repeat_count=self._rasterize_repeat)
 
     # Evaluating this expression usually takes between 60 and 90 seconds.
-    benchmark_id = tab.EvaluateJavaScript2(
+    benchmark_id = tab.EvaluateJavaScript(
         'window.benchmark_results.id', timeout=self._timeout)
     if not benchmark_id:
       raise legacy_page_test.MeasurementFailure(
           'Failed to schedule rasterize_and_record_micro')
 
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'window.benchmark_results.done', timeout=self._timeout)
 
-    data = tab.EvaluateJavaScript2('window.benchmark_results.results')
+    data = tab.EvaluateJavaScript('window.benchmark_results.results')
 
     pixels_recorded = data['pixels_recorded']
     record_time = data['record_time_ms']

@@ -145,6 +145,23 @@ TEST(QuicFramesTest, IsAwaitingPacket) {
   EXPECT_TRUE(IsAwaitingPacket(ack_frame2, 50u, 20u));
 }
 
+TEST(QuicFramesTest, RemoveSmallestInterval) {
+  QuicAckFrame ack_frame1;
+  ack_frame1.largest_observed = 100u;
+  ack_frame1.packets.Add(51, 60);
+  ack_frame1.packets.Add(71, 80);
+  ack_frame1.packets.Add(91, 100);
+  ack_frame1.packets.RemoveSmallestInterval();
+  EXPECT_EQ(2u, ack_frame1.packets.NumIntervals());
+  EXPECT_EQ(71u, ack_frame1.packets.Min());
+  EXPECT_EQ(99u, ack_frame1.packets.Max());
+
+  ack_frame1.packets.RemoveSmallestInterval();
+  EXPECT_EQ(1u, ack_frame1.packets.NumIntervals());
+  EXPECT_EQ(91u, ack_frame1.packets.Min());
+  EXPECT_EQ(99u, ack_frame1.packets.Max());
+}
+
 // Tests that a queue contains the expected data after calls to Add().
 TEST(PacketNumberQueueTest, AddRange) {
   PacketNumberQueue queue;

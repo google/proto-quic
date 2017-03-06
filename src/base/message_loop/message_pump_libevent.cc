@@ -43,12 +43,13 @@
 
 namespace base {
 
-MessagePumpLibevent::FileDescriptorWatcher::FileDescriptorWatcher()
+MessagePumpLibevent::FileDescriptorWatcher::FileDescriptorWatcher(
+    const tracked_objects::Location& from_here)
     : event_(NULL),
       pump_(NULL),
       watcher_(NULL),
-      was_destroyed_(NULL) {
-}
+      was_destroyed_(NULL),
+      created_from_location_(from_here) {}
 
 MessagePumpLibevent::FileDescriptorWatcher::~FileDescriptorWatcher() {
   if (event_) {
@@ -315,8 +316,11 @@ void MessagePumpLibevent::OnLibeventNotification(int fd,
   FileDescriptorWatcher* controller =
       static_cast<FileDescriptorWatcher*>(context);
   DCHECK(controller);
-  TRACE_EVENT1("toplevel", "MessagePumpLibevent::OnLibeventNotification",
-               "fd", fd);
+  TRACE_EVENT2("toplevel", "MessagePumpLibevent::OnLibeventNotification",
+               "src_file", controller->created_from_location().file_name(),
+               "src_func", controller->created_from_location().function_name());
+  TRACE_HEAP_PROFILER_API_SCOPED_TASK_EXECUTION heap_profiler_scope(
+      controller->created_from_location().file_name());
 
   MessagePumpLibevent* pump = controller->pump();
   pump->processed_io_events_ = true;

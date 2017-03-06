@@ -89,6 +89,54 @@ class _V8BrowsingBenchmark(perf_benchmark.PerfBenchmark):
     return True
 
 
+class _V8RuntimeStatsBrowsingBenchmark(perf_benchmark.PerfBenchmark):
+  """Base class for V8 browsing benchmarks that measure RuntimeStats.
+  RuntimeStats measure the time spent by v8 in different phases like
+  compile, JS execute, runtime etc.,
+  See browsing_stories._BrowsingStory for workload description.
+  """
+
+  def CreateTimelineBasedMeasurementOptions(self):
+    categories = [
+      # Disable all categories by default.
+      '-*',
+      # Memory categories.
+      'disabled-by-default-memory-infra',
+      # UE categories requred by runtimeStatsTotalMetric to bucket
+      # runtimeStats by UE.
+      'rail',
+      # V8 categories.
+      'blink.console',
+      'disabled-by-default-v8.gc',
+      'renderer.scheduler',
+      'v8',
+      'webkit.console',
+      'disabled-by-default-v8.runtime_stats',
+    ]
+    options = timeline_based_measurement.Options(
+        chrome_trace_category_filter.ChromeTraceCategoryFilter(
+            ','.join(categories)))
+    options.config.enable_android_graphics_memtrack = True
+    # Trigger periodic light memory dumps every 1000 ms.
+    memory_dump_config = chrome_trace_config.MemoryDumpConfig()
+    memory_dump_config.AddTrigger('light', 1000)
+    options.config.chrome_trace_config.SetMemoryDumpConfig(memory_dump_config)
+
+    options.SetTimelineBasedMetrics(['runtimeStatsTotalMetric', 'gcMetric'])
+    return options
+
+  def CreateStorySet(self, options):
+    return page_sets.SystemHealthStorySet(platform=self.PLATFORM, case='browse')
+
+  @classmethod
+  def Name(cls):
+    return 'v8.runtimestats.browsing_%s%s' % (cls.PLATFORM, cls.TEST_SUFFIX)
+
+  @classmethod
+  def ShouldTearDownStateAfterEachStoryRun(cls):
+    return True
+
+
 class _V8DesktopBrowsingBenchmark(_V8BrowsingBenchmark):
 
   @classmethod
@@ -158,4 +206,56 @@ class V8MobileTurboBrowsingBenchmark(_V8MobileBrowsingBenchmark):
   def SetExtraBrowserOptions(self, options):
     super(V8MobileTurboBrowsingBenchmark, self).SetExtraBrowserOptions(
         options)
+
+
+class V8RuntimeStatsDesktopBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'desktop'
+  TEST_SUFFIX = ''
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
+
+
+class V8RuntimeStatsDesktopTurboBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'desktop'
+  TEST_SUFFIX = '_turbo'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8RuntimeStatsDesktopTurboBrowsingBenchmark,
+        self).SetExtraBrowserOptions(options)
     v8_helper.EnableTurbo(options)
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() != 'Desktop'
+
+
+@benchmark.Disabled('reference')  # http://crbug.com/694658
+class V8RuntimeStatsMobileBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'mobile'
+  TEST_SUFFIX = ''
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
+
+
+@benchmark.Disabled('reference')  # http://crbug.com/694658
+class V8RuntimeStatsMobileTurboBrowsingBenchmark(
+    _V8RuntimeStatsBrowsingBenchmark):
+  PLATFORM = 'mobile'
+  TEST_SUFFIX = '_turbo'
+
+  def SetExtraBrowserOptions(self, options):
+    super(V8RuntimeStatsMobileTurboBrowsingBenchmark,
+        self).SetExtraBrowserOptions(options)
+    v8_helper.EnableTurbo(options)
+
+  @classmethod
+  def ShouldDisable(cls, possible_browser):
+    return possible_browser.platform.GetDeviceTypeName() == 'Desktop'
+

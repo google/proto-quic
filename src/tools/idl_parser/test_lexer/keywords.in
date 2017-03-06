@@ -34,6 +34,7 @@ OR or
 PARTIAL partial
 PROMISE Promise
 READONLY readonly
+RECORD record
 REGEXP RegExp
 REQUIRED required
 SEQUENCE sequence
@@ -47,4 +48,5 @@ TYPEDEF typedef
 TRUE true
 UNSIGNED unsigned
 UNRESTRICTED unrestricted
+USVSTRING USVString
 VOID void

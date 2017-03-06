@@ -42,10 +42,38 @@ TEST(EffectiveConnectionTypeTest, NameConnectionTypeConversion) {
         GetNameForEffectiveConnectionType(effective_connection_type));
     EXPECT_FALSE(connection_type_name.empty());
 
+    if (effective_connection_type != EFFECTIVE_CONNECTION_TYPE_SLOW_2G) {
+      // For all effective connection types except Slow2G,
+      // DeprecatedGetNameForEffectiveConnectionType should return the same
+      // name as GetNameForEffectiveConnectionType.
+      EXPECT_EQ(connection_type_name,
+                DeprecatedGetNameForEffectiveConnectionType(
+                    effective_connection_type));
+    }
+
     EXPECT_TRUE(GetEffectiveConnectionTypeForName(
         connection_type_name, &converted_effective_connection_type));
     EXPECT_EQ(effective_connection_type, converted_effective_connection_type);
   }
+}
+// Tests that the Slow 2G effective connection type is converted correctly to a
+// descriptive string name, and vice-versa.
+TEST(EffectiveConnectionTypeTest, Slow2GTypeConversion) {
+  EffectiveConnectionType type;
+
+  // GetEffectiveConnectionTypeForName should return Slow2G as effective
+  // connection type for both the deprecated and the current string
+  // representation.
+  EXPECT_TRUE(GetEffectiveConnectionTypeForName("Slow2G", &type));
+  EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_SLOW_2G, type);
+
+  EXPECT_TRUE(GetEffectiveConnectionTypeForName("Slow-2G", &type));
+  EXPECT_EQ(EFFECTIVE_CONNECTION_TYPE_SLOW_2G, type);
+
+  EXPECT_EQ("Slow-2G", std::string(GetNameForEffectiveConnectionType(
+                           EFFECTIVE_CONNECTION_TYPE_SLOW_2G)));
+  EXPECT_EQ("Slow2G", std::string(DeprecatedGetNameForEffectiveConnectionType(
+                          EFFECTIVE_CONNECTION_TYPE_SLOW_2G)));
 }
 
 }  // namespace

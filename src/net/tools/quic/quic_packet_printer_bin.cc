@@ -41,7 +41,6 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using std::cerr;
 using std::string;
 
 // If set, specify the QUIC version to use.
@@ -65,89 +64,89 @@ class QuicPacketPrinter : public QuicFramerVisitorInterface {
   explicit QuicPacketPrinter(QuicFramer* framer) : framer_(framer) {}
 
   void OnError(QuicFramer* framer) override {
-    cerr << "OnError: " << QuicErrorCodeToString(framer->error())
-         << " detail: " << framer->detailed_error() << "\n";
+    std::cerr << "OnError: " << QuicErrorCodeToString(framer->error())
+              << " detail: " << framer->detailed_error() << "\n";
   }
   bool OnProtocolVersionMismatch(QuicVersion received_version) override {
     framer_->set_version(received_version);
-    cerr << "OnProtocolVersionMismatch: "
-         << QuicVersionToString(received_version) << "\n";
+    std::cerr << "OnProtocolVersionMismatch: "
+              << QuicVersionToString(received_version) << "\n";
     return true;
   }
-  void OnPacket() override { cerr << "OnPacket\n"; }
+  void OnPacket() override { std::cerr << "OnPacket\n"; }
   void OnPublicResetPacket(const QuicPublicResetPacket& packet) override {
-    cerr << "OnPublicResetPacket\n";
+    std::cerr << "OnPublicResetPacket\n";
   }
   void OnVersionNegotiationPacket(
       const QuicVersionNegotiationPacket& packet) override {
-    cerr << "OnVersionNegotiationPacket\n";
+    std::cerr << "OnVersionNegotiationPacket\n";
   }
   bool OnUnauthenticatedPublicHeader(
       const QuicPacketPublicHeader& header) override {
-    cerr << "OnUnauthenticatedPublicHeader\n";
+    std::cerr << "OnUnauthenticatedPublicHeader\n";
     return true;
   }
   bool OnUnauthenticatedHeader(const QuicPacketHeader& header) override {
-    cerr << "OnUnauthenticatedHeader: " << header;
+    std::cerr << "OnUnauthenticatedHeader: " << header;
     return true;
   }
   void OnDecryptedPacket(EncryptionLevel level) override {
     // This only currently supports "decrypting" null encrypted packets.
     DCHECK_EQ(ENCRYPTION_NONE, level);
-    cerr << "OnDecryptedPacket\n";
+    std::cerr << "OnDecryptedPacket\n";
   }
   bool OnPacketHeader(const QuicPacketHeader& header) override {
-    cerr << "OnPacketHeader\n";
+    std::cerr << "OnPacketHeader\n";
     return true;
   }
   bool OnStreamFrame(const QuicStreamFrame& frame) override {
-    cerr << "OnStreamFrame: " << frame;
-    cerr << "         data: { "
-         << QuicTextUtils::HexEncode(frame.data_buffer, frame.data_length)
-         << " }\n";
+    std::cerr << "OnStreamFrame: " << frame;
+    std::cerr << "         data: { "
+              << QuicTextUtils::HexEncode(frame.data_buffer, frame.data_length)
+              << " }\n";
     return true;
   }
   bool OnAckFrame(const QuicAckFrame& frame) override {
-    cerr << "OnAckFrame: " << frame;
+    std::cerr << "OnAckFrame: " << frame;
     return true;
   }
   bool OnStopWaitingFrame(const QuicStopWaitingFrame& frame) override {
-    cerr << "OnStopWaitingFrame: " << frame;
+    std::cerr << "OnStopWaitingFrame: " << frame;
     return true;
   }
   bool OnPaddingFrame(const QuicPaddingFrame& frame) override {
-    cerr << "OnPaddingFrame: " << frame;
+    std::cerr << "OnPaddingFrame: " << frame;
     return true;
   }
   bool OnPingFrame(const QuicPingFrame& frame) override {
-    cerr << "OnPingFrame\n";
+    std::cerr << "OnPingFrame\n";
     return true;
   }
   bool OnRstStreamFrame(const QuicRstStreamFrame& frame) override {
-    cerr << "OnRstStreamFrame: " << frame;
+    std::cerr << "OnRstStreamFrame: " << frame;
     return true;
   }
   bool OnConnectionCloseFrame(const QuicConnectionCloseFrame& frame) override {
-    cerr << "OnConnectionCloseFrame: " << frame;
+    std::cerr << "OnConnectionCloseFrame: " << frame;
     return true;
   }
   bool OnGoAwayFrame(const QuicGoAwayFrame& frame) override {
-    cerr << "OnGoAwayFrame: " << frame;
+    std::cerr << "OnGoAwayFrame: " << frame;
     return true;
   }
   bool OnWindowUpdateFrame(const QuicWindowUpdateFrame& frame) override {
-    cerr << "OnWindowUpdateFrame: " << frame;
+    std::cerr << "OnWindowUpdateFrame: " << frame;
     return true;
   }
   bool OnBlockedFrame(const QuicBlockedFrame& frame) override {
-    cerr << "OnBlockedFrame: " << frame;
+    std::cerr << "OnBlockedFrame: " << frame;
     return true;
   }
   bool OnPathCloseFrame(const QuicPathCloseFrame& frame) override {
-    cerr << "OnPathCloseFrame:" << frame;
+    std::cerr << "OnPathCloseFrame:" << frame;
     return true;
   }
-  void OnPacketComplete() override { cerr << "OnPacketComplete\n"; }
+  void OnPacketComplete() override { std::cerr << "OnPacketComplete\n"; }
 
  private:
   QuicFramer* framer_;  // Unowned.
@@ -161,8 +160,8 @@ int main(int argc, char* argv[]) {
   const base::CommandLine::StringVector& args = line->GetArgs();
 
   if (args.size() != 3) {
-    cerr << "Missing argument " << argc << ". (Usage: " << argv[0]
-         << " client|server <hex>\n";
+    std::cerr << "Missing argument " << argc << ". (Usage: " << argv[0]
+              << " client|server <hex>\n";
     return 1;
   }
 
@@ -177,8 +176,8 @@ int main(int argc, char* argv[]) {
   } else if (perspective_string == "server") {
     perspective = net::Perspective::IS_SERVER;
   } else {
-    cerr << "Invalid perspective. " << perspective_string
-         << " Usage: " << args[0] << " client|server <hex>\n";
+    std::cerr << "Invalid perspective. " << perspective_string
+              << " Usage: " << args[0] << " client|server <hex>\n";
     return 1;
   }
   string hex = net::QuicTextUtils::HexDecode(argv[2]);

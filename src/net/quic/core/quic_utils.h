@@ -53,12 +53,6 @@ class QUIC_EXPORT_PRIVATE QuicUtils {
   // Returns PeerAddressChangeType as a std::string.
   static std::string PeerAddressChangeTypeToString(PeerAddressChangeType type);
 
-  // Returns a packed representation of |path_id| and |packet_number| in which
-  // the highest byte is set to |path_id| and the lower 7 bytes are the lower
-  // 7 bytes of |packet_number|.
-  static uint64_t PackPathIdAndPacketNumber(QuicPathId path_id,
-                                            QuicPacketNumber packet_number);
-
   // Determines and returns change type of address change from |old_address| to
   // |new_address|.
   static PeerAddressChangeType DetermineAddressChangeType(

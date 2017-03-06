@@ -9,14 +9,14 @@
    and assign size contributions to different classes of file.
 """
 
+import argparse
 import collections
+from contextlib import contextmanager
 import json
 import logging
 import operator
-import optparse
 import os
 import re
-import shutil
 import struct
 import sys
 import tempfile
@@ -33,6 +33,8 @@ from pylib.constants import host_paths
 
 _AAPT_PATH = lazy.WeakConstant(lambda: build_tools.GetPath('aapt'))
 _GRIT_PATH = os.path.join(host_paths.DIR_SOURCE_ROOT, 'tools', 'grit')
+_BUILD_UTILS_PATH = os.path.join(
+    host_paths.DIR_SOURCE_ROOT, 'build', 'android', 'gyp')
 
 # Prepend the grit module from the source tree so it takes precedence over other
 # grit versions that might present in the search path.
@@ -41,6 +43,9 @@ with host_paths.SysPath(_GRIT_PATH, 1):
 
 with host_paths.SysPath(host_paths.BUILD_COMMON_PATH):
   import perf_tests_results_helper # pylint: disable=import-error
+
+with host_paths.SysPath(_BUILD_UTILS_PATH, 1):
+  from util import build_utils # pylint: disable=import-error
 
 
 # Python had a bug in zipinfo parsing that triggers on ChromeModern.apk
@@ -114,31 +119,30 @@ _READELF_SIZES_METRICS = {
 }
 
 
-def _ExtractMainLibSectionSizesFromApk(apk_path, main_lib_path):
-  tmpdir = tempfile.mkdtemp(suffix='_apk_extract')
-  grouped_section_sizes = collections.defaultdict(int)
-  try:
-    with zipfile.ZipFile(apk_path, 'r') as z:
-      extracted_lib_path = z.extract(main_lib_path, tmpdir)
-      section_sizes = _CreateSectionNameSizeMap(extracted_lib_path)
-
-      for group_name, section_names in _READELF_SIZES_METRICS.iteritems():
-        for section_name in section_names:
-          if section_name in section_sizes:
-            grouped_section_sizes[group_name] += section_sizes.pop(section_name)
-
-      # Group any unknown section headers into the "other" group.
-      for section_header, section_size in section_sizes.iteritems():
-        print "Unknown elf section header:", section_header
-        grouped_section_sizes['other'] += section_size
-
-      return grouped_section_sizes
-  finally:
-    shutil.rmtree(tmpdir)
+def _RunReadelf(so_path, options, tools_prefix=''):
+  return cmd_helper.GetCmdOutput(
+      [tools_prefix + 'readelf'] + options + [so_path])
 
 
-def _CreateSectionNameSizeMap(so_path):
-  stdout = cmd_helper.GetCmdOutput(['readelf', '-S', '--wide', so_path])
+def _ExtractMainLibSectionSizesFromApk(apk_path, main_lib_path, tools_prefix):
+  with Unzip(apk_path, filename=main_lib_path) as extracted_lib_path:
+    grouped_section_sizes = collections.defaultdict(int)
+    section_sizes = _CreateSectionNameSizeMap(extracted_lib_path, tools_prefix)
+    for group_name, section_names in _READELF_SIZES_METRICS.iteritems():
+      for section_name in section_names:
+        if section_name in section_sizes:
+          grouped_section_sizes[group_name] += section_sizes.pop(section_name)
+
+    # Group any unknown section headers into the "other" group.
+    for section_header, section_size in section_sizes.iteritems():
+      print "Unknown elf section header:", section_header
+      grouped_section_sizes['other'] += section_size
+
+    return grouped_section_sizes
+
+
+def _CreateSectionNameSizeMap(so_path, tools_prefix):
+  stdout = _RunReadelf(so_path, ['-S', '--wide'], tools_prefix)
   section_sizes = {}
   # Matches  [ 2] .hash HASH 00000000006681f0 0001f0 003154 04   A  3   0  8
   for match in re.finditer(r'\[[\s\d]+\] (\..*)$', stdout, re.MULTILINE):
@@ -148,7 +152,14 @@ def _CreateSectionNameSizeMap(so_path):
   return section_sizes
 
 
-def CountStaticInitializers(so_path):
+def _ParseLibBuildId(so_path, tools_prefix):
+  """Returns the Build ID of the given native library."""
+  stdout = _RunReadelf(so_path, ['n'], tools_prefix)
+  match = re.search(r'Build ID: (\w+)', stdout)
+  return match.group(1) if match else None
+
+
+def CountStaticInitializers(so_path, tools_prefix):
   # Static initializers expected in official builds. Note that this list is
   # built using 'nm' on libchrome.so which results from a GCC official build
   # (i.e. Clang is not supported currently).
@@ -163,7 +174,7 @@ def CountStaticInitializers(so_path):
 
   # Find the number of files with at least one static initializer.
   # First determine if we're 32 or 64 bit
-  stdout = cmd_helper.GetCmdOutput(['readelf', '-h', so_path])
+  stdout = _RunReadelf(so_path, ['-h'], tools_prefix)
   elf_class_line = re.search('Class:.*$', stdout, re.MULTILINE).group(0)
   elf_class = re.split(r'\W+', elf_class_line)[1]
   if elf_class == 'ELF32':
@@ -175,7 +186,7 @@ def CountStaticInitializers(so_path):
   # NOTE: this is very implementation-specific and makes assumptions
   # about how compiler and linker implement global static initializers.
   si_count = 0
-  stdout = cmd_helper.GetCmdOutput(['readelf', '-SW', so_path])
+  stdout = _RunReadelf(so_path, ['-SW'], tools_prefix)
   has_init_array, init_array_size = get_elf_section_size(stdout, 'init_array')
   if has_init_array:
     si_count = init_array_size / word_size
@@ -183,10 +194,11 @@ def CountStaticInitializers(so_path):
   return si_count
 
 
-def GetStaticInitializers(so_path):
+def GetStaticInitializers(so_path, tools_prefix):
   output = cmd_helper.GetCmdOutput([_DUMP_STATIC_INITIALIZERS_PATH, '-d',
-                                    so_path])
-  return output.splitlines()
+                                    so_path, '-t', tools_prefix])
+  summary = re.search(r'Found \d+ static initializers in (\d+) files.', output)
+  return output.splitlines()[:-1], int(summary.group(1))
 
 
 def _NormalizeResourcesArsc(apk_path):
@@ -258,17 +270,6 @@ def ReportPerfResult(chart_data, graph_title, trace_title, value, units,
         graph_title, trace_title, [value], units)
 
 
-def PrintResourceSizes(files, chartjson=None):
-  """Prints the sizes of each given file.
-
-     Args:
-       files: List of files to print sizes for.
-  """
-  for f in files:
-    ReportPerfResult(chartjson, 'ResourceSizes', os.path.basename(f) + ' size',
-                     os.path.getsize(f), 'bytes')
-
-
 class _FileGroup(object):
   """Represents a category that apk files can fall into."""
 
@@ -311,7 +312,7 @@ class _FileGroup(object):
     return self.ComputeExtractedSize() + self.ComputeZippedSize()
 
 
-def PrintApkAnalysis(apk_filename, chartjson=None):
+def PrintApkAnalysis(apk_filename, tools_prefix, chartjson=None):
   """Analyse APK to determine size contributions of different file classes."""
   file_groups = []
 
@@ -415,7 +416,7 @@ def PrintApkAnalysis(apk_filename, chartjson=None):
                      'other lib size', secondary_size, 'bytes')
 
     main_lib_section_sizes = _ExtractMainLibSectionSizesFromApk(
-        apk_filename, main_lib_info.filename)
+        apk_filename, main_lib_info.filename, tools_prefix)
     for metric_name, size in main_lib_section_sizes.iteritems():
       ReportPerfResult(chartjson, apk_basename + '_MainLibInfo',
                        metric_name, size, 'bytes')
@@ -583,7 +584,8 @@ def _AnnotatePakResources():
   return id_name_map, id_header_map
 
 
-def _PrintStaticInitializersCountFromApk(apk_filename, chartjson=None):
+def _PrintStaticInitializersCountFromApk(apk_filename, tools_prefix,
+                                         chartjson=None):
   print 'Finding static initializers (can take a minute)'
   with zipfile.ZipFile(apk_filename) as z:
     infolist = z.infolist()
@@ -595,7 +597,8 @@ def _PrintStaticInitializersCountFromApk(apk_filename, chartjson=None):
       lib_name = os.path.basename(zip_info.filename).replace('crazy.', '')
       unstripped_path = os.path.join(out_dir, 'lib.unstripped', lib_name)
       if os.path.exists(unstripped_path):
-        si_count += _PrintStaticInitializersCount(unstripped_path)
+        si_count += _PrintStaticInitializersCount(
+            apk_filename, zip_info.filename, unstripped_path, tools_prefix)
       else:
         raise Exception('Unstripped .so not found. Looked here: %s',
                         unstripped_path)
@@ -603,33 +606,38 @@ def _PrintStaticInitializersCountFromApk(apk_filename, chartjson=None):
                    'count')
 
 
-def _PrintStaticInitializersCount(so_with_symbols_path):
+def _PrintStaticInitializersCount(apk_path, apk_so_name, so_with_symbols_path,
+                                  tools_prefix):
   """Counts the number of static initializers in the given shared library.
      Additionally, files for which static initializers were found are printed
      on the standard output.
 
      Args:
-       so_with_symbols_path: Path to the unstripped libchrome.so file.
-
+      apk_path: Path to the apk.
+      apk_so_name: Name of the so.
+      so_with_symbols_path: Path to the unstripped libchrome.so file.
+      tools_prefix: Prefix for arch-specific version of binary utility tools.
      Returns:
        The number of static initializers found.
   """
   # GetStaticInitializers uses get-static-initializers.py to get a list of all
   # static initializers. This does not work on all archs (particularly arm).
   # TODO(rnephew): Get rid of warning when crbug.com/585588 is fixed.
-  si_count = CountStaticInitializers(so_with_symbols_path)
-  static_initializers = GetStaticInitializers(so_with_symbols_path)
-  static_initializers_count = len(static_initializers) - 1  # Minus summary.
-  if si_count != static_initializers_count:
+  with Unzip(apk_path, filename=apk_so_name) as unzipped_so:
+    _VerifyLibBuildIdsMatch(tools_prefix, unzipped_so, so_with_symbols_path)
+    readelf_si_count = CountStaticInitializers(unzipped_so, tools_prefix)
+  sis, dump_si_count = GetStaticInitializers(
+      so_with_symbols_path, tools_prefix)
+  if readelf_si_count != dump_si_count:
     print ('There are %d files with static initializers, but '
-           'dump-static-initializers found %d:' %
-           (si_count, static_initializers_count))
+           'dump-static-initializers found %d: files' %
+           (readelf_si_count, dump_si_count))
   else:
     print '%s - Found %d files with static initializers:' % (
-        os.path.basename(so_with_symbols_path), si_count)
-  print '\n'.join(static_initializers)
+        os.path.basename(so_with_symbols_path), dump_si_count)
+  print '\n'.join(sis)
 
-  return si_count
+  return readelf_si_count
 
 def _FormatBytes(byts):
   """Pretty-print a number of bytes."""
@@ -666,75 +674,71 @@ def _PrintDexAnalysis(apk_filename, chartjson=None):
                    'bytes')
 
 
-def main(argv):
-  usage = """Usage: %prog [options] file1 file2 ...
+@contextmanager
+def Unzip(zip_file, filename=None):
+  """Utility for temporary use of a single file in a zip archive."""
+  with build_utils.TempDir() as unzipped_dir:
+    unzipped_files = build_utils.ExtractAll(
+        zip_file, unzipped_dir, True, pattern=filename)
+    if len(unzipped_files) == 0:
+      raise Exception(
+          '%s not found in %s' % (filename, zip_file))
+    yield unzipped_files[0]
 
-Pass any number of files to graph their sizes. Any files with the extension
-'.apk' will be broken down into their components on a separate graph."""
-  option_parser = optparse.OptionParser(usage=usage)
-  option_parser.add_option('--so-path',
-                           help='Obsolete. Pass .so as positional arg instead.')
-  option_parser.add_option('--so-with-symbols-path',
-                           help='Mostly obsolete. Use .so within .apk instead.')
-  option_parser.add_option('--min-pak-resource-size', type='int',
-                           default=20*1024,
-                           help='Minimum byte size of displayed pak resources.')
-  option_parser.add_option('--build_type', dest='build_type', default='Debug',
-                           help='Obsoleted by --chromium-output-directory.')
-  option_parser.add_option('--chromium-output-directory',
-                           help='Location of the build artifacts. '
-                                'Takes precidence over --build_type.')
-  option_parser.add_option('--chartjson', action='store_true',
-                           help='Sets output mode to chartjson.')
-  option_parser.add_option('--output-dir', default='.',
-                           help='Directory to save chartjson to.')
-  option_parser.add_option('--no-output-dir', action='store_true',
-                           help='Skip all measurements that rely on having '
-                                'output-dir')
-  option_parser.add_option('-d', '--device',
-                           help='Dummy option for perf runner.')
-  options, args = option_parser.parse_args(argv)
-  files = args[1:]
-  chartjson = _BASE_CHART.copy() if options.chartjson else None
 
-  constants.SetBuildType(options.build_type)
-  if options.chromium_output_directory:
-    constants.SetOutputDirectory(options.chromium_output_directory)
-  if not options.no_output_dir:
+def _VerifyLibBuildIdsMatch(tools_prefix, *so_files):
+  if len(set(_ParseLibBuildId(f, tools_prefix) for f in so_files)) > 1:
+    raise Exception('Found differing build ids in output directory and apk. '
+                    'Your output directory is likely stale.')
+
+
+def _ReadBuildVars(output_dir):
+  with open(os.path.join(output_dir, 'build_vars.txt')) as f:
+    return dict(l.replace('//', '').rstrip().split('=', 1) for l in f)
+
+
+def main():
+  argparser = argparse.ArgumentParser(description='Print APK size metrics.')
+  argparser.add_argument('--min-pak-resource-size', type=int, default=20*1024,
+                         help='Minimum byte size of displayed pak resources.')
+  argparser.add_argument('--chromium-output-directory',
+                         help='Location of the build artifacts.')
+  argparser.add_argument('--chartjson', action='store_true',
+                         help='Sets output mode to chartjson.')
+  argparser.add_argument('--output-dir', default='.',
+                         help='Directory to save chartjson to.')
+  argparser.add_argument('--no-output-dir', action='store_true',
+                         help='Skip all measurements that rely on having '
+                         'output-dir')
+  argparser.add_argument('-d', '--device',
+                         help='Dummy option for perf runner.')
+  argparser.add_argument('apk', help='APK file path.')
+  args = argparser.parse_args()
+
+  chartjson = _BASE_CHART.copy() if args.chartjson else None
+
+  if args.chromium_output_directory:
+    constants.SetOutputDirectory(args.chromium_output_directory)
+  if not args.no_output_dir:
     constants.CheckOutputDirectory()
     devil_chromium.Initialize()
+    build_vars = _ReadBuildVars(constants.GetOutDirectory())
+    tools_prefix = build_vars['android_tool_prefix']
+  else:
+    tools_prefix = ''
 
-  # For backward compatibilty with buildbot scripts, treat --so-path as just
-  # another file to print the size of. We don't need it for anything special any
-  # more.
-  if options.so_path:
-    files.append(options.so_path)
-
-  if not files:
-    option_parser.error('Must specify a file')
-
-  if options.so_with_symbols_path:
-    si_count = _PrintStaticInitializersCount(options.so_with_symbols_path)
-    ReportPerfResult(chartjson, 'StaticInitializersCount', 'count', si_count,
-                     'count')
-
-  PrintResourceSizes(files, chartjson=chartjson)
-
-  for f in files:
-    if f.endswith('.apk'):
-      PrintApkAnalysis(f, chartjson=chartjson)
-      _PrintDexAnalysis(f, chartjson=chartjson)
-      if not options.no_output_dir:
-        PrintPakAnalysis(f, options.min_pak_resource_size)
-        if not options.so_with_symbols_path:
-          _PrintStaticInitializersCountFromApk(f, chartjson=chartjson)
-
+  PrintApkAnalysis(args.apk, tools_prefix, chartjson=chartjson)
+  _PrintDexAnalysis(args.apk, chartjson=chartjson)
+  if not args.no_output_dir:
+    PrintPakAnalysis(args.apk, args.min_pak_resource_size)
+    _PrintStaticInitializersCountFromApk(
+        args.apk, tools_prefix, chartjson=chartjson)
   if chartjson:
-    results_path = os.path.join(options.output_dir, 'results-chart.json')
+    results_path = os.path.join(args.output_dir, 'results-chart.json')
     logging.critical('Dumping json to %s', results_path)
     with open(results_path, 'w') as json_file:
       json.dump(chartjson, json_file)
 
 
 if __name__ == '__main__':
-  sys.exit(main(sys.argv))
+  sys.exit(main())

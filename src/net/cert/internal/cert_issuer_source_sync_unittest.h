@@ -9,6 +9,7 @@
 #include "net/cert/internal/cert_issuer_source.h"
 #include "net/cert/internal/test_helpers.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -34,7 +35,10 @@ namespace {
   if (!r)
     return r;
   CertErrors errors;
-  *result = ParsedCertificate::Create(der, {}, &errors);
+  *result = ParsedCertificate::Create(
+      bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+          reinterpret_cast<const uint8_t*>(der.data()), der.size(), nullptr)),
+      {}, &errors);
   if (!*result) {
     return ::testing::AssertionFailure()
            << "ParsedCertificate::Create() failed:\n"

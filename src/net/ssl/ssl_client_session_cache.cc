@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/containers/flat_set.h"
 #include "base/memory/memory_coordinator_client_registry.h"
 #include "base/strings/stringprintf.h"
 #include "base/time/clock.h"
@@ -122,29 +123,49 @@ void SSLClientSessionCache::DumpMemoryStats(
     return;
   cache_dump = pmd->CreateAllocatorDump(absolute_name);
   base::AutoLock lock(lock_);
-  size_t total_serialized_cert_size = 0;
-  size_t total_cert_count = 0;
+  size_t cert_size = 0;
+  size_t cert_count = 0;
+  size_t undeduped_cert_size = 0;
+  size_t undeduped_cert_count = 0;
+  for (const auto& pair : cache_) {
+    undeduped_cert_count +=
+        sk_CRYPTO_BUFFER_num(pair.second.session.get()->certs);
+  }
+  // Use a flat_set here to avoid malloc upon insertion.
+  base::flat_set<const CRYPTO_BUFFER*> crypto_buffer_set;
+  crypto_buffer_set.reserve(undeduped_cert_count);
   for (const auto& pair : cache_) {
     const SSL_SESSION* session = pair.second.session.get();
-    size_t cert_count = sk_CRYPTO_BUFFER_num(session->certs);
-    total_cert_count += cert_count;
-    for (size_t i = 0; i < cert_count; ++i) {
+    size_t pair_cert_count = sk_CRYPTO_BUFFER_num(session->certs);
+    for (size_t i = 0; i < pair_cert_count; ++i) {
       const CRYPTO_BUFFER* cert = sk_CRYPTO_BUFFER_value(session->certs, i);
-      total_serialized_cert_size += CRYPTO_BUFFER_len(cert);
+      // TODO(xunjieli): The multipler is added to account for the difference
+      // between the serialized form and real cert allocation. Remove after
+      // crbug.com/671420 is done.
+      size_t individual_cert_size = 4 * CRYPTO_BUFFER_len(cert);
+      undeduped_cert_size += individual_cert_size;
+      auto result = crypto_buffer_set.insert(cert);
+      if (!result.second)
+        continue;
+      cert_size += individual_cert_size;
+      cert_count++;
     }
   }
-  // This measures the lower bound of the serialized certificate. It doesn't
-  // measure the actual memory used, which is 4x this amount (see
-  // crbug.com/671420 for more details).
-  cache_dump->AddScalar("serialized_cert_size",
-                        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                        total_serialized_cert_size);
-  cache_dump->AddScalar("cert_count",
-                        base::trace_event::MemoryAllocatorDump::kUnitsObjects,
-                        total_cert_count);
   cache_dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameSize,
                         base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                        total_serialized_cert_size);
+                        cert_size);
+  cache_dump->AddScalar("cert_size",
+                        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                        cert_size);
+  cache_dump->AddScalar("cert_count",
+                        base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                        cert_count);
+  cache_dump->AddScalar("undeduped_cert_size",
+                        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+                        undeduped_cert_size);
+  cache_dump->AddScalar("undeduped_cert_count",
+                        base::trace_event::MemoryAllocatorDump::kUnitsObjects,
+                        undeduped_cert_count);
 }
 
 SSLClientSessionCache::Entry::Entry() : lookups(0) {}

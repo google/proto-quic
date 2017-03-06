@@ -209,6 +209,10 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
     debug_delegate_ = debug_delegate;
   }
 
+  bool latched_flag_no_stop_waiting_frames() const {
+    return latched_flag_no_stop_waiting_frames_;
+  }
+
  private:
   friend class test::QuicPacketCreatorPeer;
 
@@ -299,8 +303,8 @@ class QUIC_EXPORT_PRIVATE QuicPacketCreator {
   // Packet used to invoke OnSerializedPacket.
   SerializedPacket packet_;
 
-  // Map mapping path_id to last sent packet number on the path.
-  std::unordered_map<QuicPathId, QuicPacketNumber> multipath_packet_number_;
+  // The latched value of FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames
+  bool latched_flag_no_stop_waiting_frames_;
 
   DISALLOW_COPY_AND_ASSIGN(QuicPacketCreator);
 };

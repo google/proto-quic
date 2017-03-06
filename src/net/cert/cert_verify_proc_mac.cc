@@ -35,6 +35,7 @@
 #include "net/cert/test_keychain_search_list_mac.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 #include "net/cert/x509_util_mac.h"
 
 // CSSM functions are deprecated as of OSX 10.7, but have no replacement.
@@ -295,8 +296,8 @@ void GetCandidateEVPolicy(const X509Certificate* cert_input,
     return;
   }
 
-  scoped_refptr<ParsedCertificate> cert(
-      ParsedCertificate::Create(der_cert, {}, nullptr));
+  scoped_refptr<ParsedCertificate> cert(ParsedCertificate::Create(
+      x509_util::CreateCryptoBuffer(der_cert), {}, nullptr));
   if (!cert)
     return;
 
@@ -346,7 +347,8 @@ bool CheckCertChainEV(const X509Certificate* cert,
     if (!X509Certificate::GetDEREncoded(os_cert_chain[i], &der_cert))
       return false;
     scoped_refptr<ParsedCertificate> intermediate_cert(
-        ParsedCertificate::Create(der_cert, {}, nullptr));
+        ParsedCertificate::Create(x509_util::CreateCryptoBuffer(der_cert), {},
+                                  nullptr));
     if (!intermediate_cert)
       return false;
     if (!HasPolicyOrAnyPolicy(intermediate_cert.get(), ev_policy_oid))
@@ -986,13 +988,9 @@ int VerifyWithGivenFlags(X509Certificate* cert,
       break;
   }
 
-  // Perform hostname verification independent of SecTrustEvaluate. In order to
-  // do so, mask off any reported name errors first.
+  // Hostname validation is handled by CertVerifyProc, so mask off any errors
+  // that SecTrustEvaluate may have set, as its results are not used.
   verify_result->cert_status &= ~CERT_STATUS_COMMON_NAME_INVALID;
-  if (!cert->VerifyNameMatch(hostname,
-                             &verify_result->common_name_fallback_used)) {
-    verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
-  }
 
   // TODO(wtc): Suppress CERT_STATUS_NO_REVOCATION_MECHANISM for now to be
   // compatible with Windows, which in turn implements this behavior to be

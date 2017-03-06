@@ -107,6 +107,7 @@
       'CFI Linux': 'cfi_release_static',
       'CFI Linux Full': 'cfi_full_release_static',
       'Chromium Linux Goma Canary': 'release_bot',
+      'Chromium Linux Goma Canary': 'release_bot',
       'Chromium Linux Goma Canary (clobber)': 'release_bot',
       'Chromium Linux Goma Canary LocalOutputCache': 'release_bot',
       'Chromium Linux Precise Goma LinkTest': 'release_bot',
@@ -188,6 +189,7 @@
       'Libfuzzer Upload Linux UBSan': 'release_libfuzzer_ubsan',
       'Libfuzzer Upload Mac ASan': 'release_libfuzzer_mac_asan',
       'Linux ARM': 'release_bot_arm',
+      'Linux Clang Analyzer': 'linux_chromium_analysis',
       'Linux deterministic': 'release_bot',
       'Linux deterministic (dbg)': 'debug_bot',
       'Linux remote_run Builder': 'release_bot',
@@ -250,6 +252,7 @@
       'GPU Win x64 Builder (dbg)': 'gpu_tests_deqp_gles_debug_trybot',
       'Linux ChromiumOS Builder': 'gpu_fyi_tests_chromeos_release_trybot',
       'Linux ChromiumOS Ozone Builder': 'gpu_fyi_tests_chromeos_ozone_release_trybot',
+      'Linux GPU TSAN Release': 'gpu_fyi_tests_release_trybot_tsan',
       'Mac GPU ASAN Release': 'gpu_fyi_tests_release_trybot_asan',
     },
 
@@ -270,7 +273,7 @@
       'Linux Builder Trusty (dbg)': 'debug_bot',
       'Linux Builder Trusty (dbg)(32)': 'debug_bot_x86',
       'Linux Builder Trusty': 'release_bot',
-      'Linux Deterministic': 'release_bot',
+      'Deterministic Linux': 'release_bot',
     },
 
     'chromium.lkgr': {
@@ -358,6 +361,11 @@
       'mac-sdk-multirel': 'release_bot',
       'windows-sdk-multi': 'release_bot_x86',
       'windows-sdk-multirel': 'release_bot_x86',
+    },
+
+    'client.v8.chromium': {
+      'Linux - Future': 'v8_future_release_bot',
+      'Linux - Future (dbg)': 'v8_future_debug_bot',
     },
 
     'client.v8.fyi': {
@@ -1203,7 +1211,7 @@
     ],
 
     'gpu_fyi_tests_chromeos_ozone_release_trybot': [
-      'gpu_fyi_tests', 'release_trybot', 'chromeos', 'ozone',
+      'gpu_fyi_tests', 'release_trybot', 'ozone', 'ozone_linux', 'system_gbm_libdrm',
     ],
 
     'gpu_fyi_tests_chromeos_release_trybot': [
@@ -1220,6 +1228,10 @@
 
     'gpu_fyi_tests_release_trybot_asan': [
       'gpu_fyi_tests', 'release_trybot', 'asan', 'full_symbols', 'disable_nacl',
+    ],
+
+    'gpu_fyi_tests_release_trybot_tsan': [
+      'gpu_fyi_tests', 'release_trybot', 'tsan', 'full_symbols', 'disable_nacl',
     ],
 
     'gpu_fyi_tests_win_clang_debug_bot': [
@@ -1284,6 +1296,10 @@
     # It is an error to actually use one of these configs to generate the
     # build files.
     'ios': [ 'error'],
+
+    'linux_chromium_analysis': [
+      'analysis'
+    ],
 
     'mac_views_browser_release_bot': [
       'mac_views_browser', 'release_bot',
@@ -1501,6 +1517,14 @@
       'ubsan_vptr', 'ubsan_no_recover_hack', 'release_trybot',
     ],
 
+    'v8_future_debug_bot': [
+      'v8_future', 'debug_bot',
+    ],
+
+    'v8_future_release_bot': [
+      'v8_future', 'release_bot',
+    ],
+
     'win_clang_debug_bot': [
       'clang', 'debug_bot', 'minimal_symbols',
     ],
@@ -1514,6 +1538,8 @@
   # mb should use. See //tools/mb/docs/user_guide.md for more information.
   'mixins': {
     'afl': { 'gn_args': 'use_afl=true' },
+
+    'analysis': { 'gn_args': 'use_clang_static_analyzer=true'},
 
     # We build Android with codecs on most bots to ensure maximum test
     # coverage, but use 'android_without_codecs' on bots responsible for
@@ -1765,7 +1791,7 @@
     },
 
     'minimal_symbols': {
-      'gn_args': 'symbol_level=1',
+      'gn_args': 'symbol_level=1 strip_absolute_paths_from_debug_symbols=true',
     },
 
     'mipsel': {
@@ -1858,6 +1884,10 @@
       'gn_args': 'is_component_build=false',
     },
 
+    'system_gbm_libdrm': {
+      'gn_args': 'use_system_libdrm=true use_system_minigbm=true',
+    },
+
     'syzyasan': {
       'gn_args': 'is_syzyasan=true',
     },
@@ -1890,6 +1920,10 @@
 
     'use_lld': {
       'gn_args': 'use_lld=true',
+    },
+
+    'v8_future': {
+      'gn_args': 'v8_enable_future=true',
     },
 
     'v8_heap': {

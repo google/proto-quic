@@ -34,7 +34,7 @@ DecodeStatus PingPayloadDecoder::StartDecodingPayload(FrameDecoderState* state,
     // This supports the claim that this decoder is (mostly) non-buffering.
     static_assert(sizeof(Http2PingFields) == kOpaqueSize,
                   "If not, then can't enter this block!");
-    auto ping = reinterpret_cast<const Http2PingFields*>(db->cursor());
+    auto* ping = reinterpret_cast<const Http2PingFields*>(db->cursor());
     if (frame_header.IsAck()) {
       state->listener()->OnPingAck(frame_header, *ping);
     } else {

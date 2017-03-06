@@ -13,6 +13,7 @@
 #include "net/base/net_export.h"
 #include "net/cert/internal/parse_certificate.h"
 #include "net/der/input.h"
+#include "third_party/boringssl/src/include/openssl/base.h"
 
 namespace net {
 
@@ -40,21 +41,10 @@ class NET_EXPORT ParsedCertificate
   // Creates a ParsedCertificate given a DER-encoded Certificate. Returns
   // nullptr on failure. Failure will occur if the standard certificate fields
   // and supported extensions cannot be parsed.
-  //
-  // The provided certificate data is copied, so |data| needn't remain valid
-  // after this call.
-  //
   // On either success or failure, if |errors| is non-null it may have error
   // information added to it.
   static scoped_refptr<ParsedCertificate> Create(
-      const uint8_t* data,
-      size_t length,
-      const ParseCertificateOptions& options,
-      CertErrors* errors);
-
-  // Overload that takes a StringPiece.
-  static scoped_refptr<ParsedCertificate> Create(
-      const base::StringPiece& data,
+      bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
       const ParseCertificateOptions& options,
       CertErrors* errors);
 
@@ -65,15 +55,7 @@ class NET_EXPORT ParsedCertificate
   // On either success or failure, if |errors| is non-null it may have error
   // information added to it.
   static bool CreateAndAddToVector(
-      const uint8_t* data,
-      size_t length,
-      const ParseCertificateOptions& options,
-      std::vector<scoped_refptr<net::ParsedCertificate>>* chain,
-      CertErrors* errors);
-
-  // Overload that takes a StringPiece.
-  static bool CreateAndAddToVector(
-      const base::StringPiece& data,
+      bssl::UniquePtr<CRYPTO_BUFFER> cert_data,
       const ParseCertificateOptions& options,
       std::vector<scoped_refptr<net::ParsedCertificate>>* chain,
       CertErrors* errors);
@@ -208,50 +190,23 @@ class NET_EXPORT ParsedCertificate
   }
 
  private:
-  // The certificate data for may either be owned internally (INTERNAL_COPY) or
-  // owned externally (EXTERNAL_REFERENCE). When it is owned internally the data
-  // is held by |cert_data_|
-  enum class DataSource {
-    INTERNAL_COPY,
-    EXTERNAL_REFERENCE,
-  };
-
   friend class base::RefCountedThreadSafe<ParsedCertificate>;
   ParsedCertificate();
   ~ParsedCertificate();
 
+  // Creates a ParsedCertificate.  If |backing_data| is non-null, the
+  // certificate's DER-encoded data will be referenced from here. Otherwise the
+  // certificate's data will be |static_data|, and the pointer MUST remain
+  // valid and its data unmodified for the entirety of the program.
   static scoped_refptr<ParsedCertificate> CreateInternal(
-      const uint8_t* data,
-      size_t length,
-      DataSource source,
+      bssl::UniquePtr<CRYPTO_BUFFER> backing_data,
+      der::Input static_data,
       const ParseCertificateOptions& options,
       CertErrors* errors);
 
-  // These private overloads should not be used, and have no definition.
-  //
-  // They are here to prevent incorrectly passing a const char*
-  // in place of a base::StringPiece (thanks to StringPiece implicit
-  // ctor on const char*).
-  //
-  // Accidentally inflating a const char* (without length) to a
-  // StringPiece would be a bug.
-  static scoped_refptr<ParsedCertificate> Create(
-      const char* invalid_data,
-      const ParseCertificateOptions& options,
-      CertErrors* errors);
-  static bool CreateAndAddToVector(
-      const char* data,
-      const ParseCertificateOptions& options,
-      std::vector<scoped_refptr<net::ParsedCertificate>>* chain,
-      CertErrors* errors);
-
-  // The backing store for the certificate data. This is only applicable when
-  // the ParsedCertificate was initialized using DataSource::INTERNAL_COPY.
-  std::vector<uint8_t> cert_data_;
-
-  // Note that the backing data for |cert_| (and its  may come either from
-  // |cert_data_| or some external buffer (depending on how the
-  // ParsedCertificate was created).
+  // The backing store for the certificate data. May be null if created by
+  // CreateWithoutCopyingUnsafe.
+  bssl::UniquePtr<CRYPTO_BUFFER> cert_data_;
 
   // Points to the raw certificate DER.
   der::Input cert_;

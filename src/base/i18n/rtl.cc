@@ -12,12 +12,14 @@
 #include "base/command_line.h"
 #include "base/files/file_path.h"
 #include "base/i18n/base_i18n_switches.h"
+#include "base/lazy_instance.h"
 #include "base/logging.h"
 #include "base/macros.h"
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/synchronization/lock.h"
 #include "build/build_config.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/uchar.h"
@@ -101,6 +103,8 @@ namespace base {
 namespace i18n {
 
 // Represents the locale-specific ICU text direction.
+static base::LazyInstance<base::Lock>::Leaky g_icu_text_direction_lock =
+    LAZY_INSTANCE_INITIALIZER;
 static TextDirection g_icu_text_direction = UNKNOWN_DIRECTION;
 
 // Convert the ICU default locale to a string.
@@ -150,7 +154,10 @@ void SetICUDefaultLocale(const std::string& locale_string) {
   // presence of actual locale data). However,
   // it does not hurt to have it as a sanity check.
   DCHECK(U_SUCCESS(error_code));
-  g_icu_text_direction = UNKNOWN_DIRECTION;
+  {
+    base::AutoLock lock(g_icu_text_direction_lock.Get());
+    g_icu_text_direction = UNKNOWN_DIRECTION;
+  }
 }
 
 bool IsRTL() {
@@ -158,6 +165,7 @@ bool IsRTL() {
 }
 
 bool ICUIsRTL() {
+  base::AutoLock lock(g_icu_text_direction_lock.Get());
   if (g_icu_text_direction == UNKNOWN_DIRECTION) {
     const icu::Locale& locale = icu::Locale::getDefault();
     g_icu_text_direction = GetTextDirectionForLocaleInStartUp(locale.getName());

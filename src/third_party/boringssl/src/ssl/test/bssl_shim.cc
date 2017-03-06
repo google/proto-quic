@@ -927,7 +927,7 @@ static bssl::UniquePtr<SSL_CTX> SetupCtx(const TestConfig *config) {
     cipher_list = config->cipher;
     SSL_CTX_set_options(ssl_ctx.get(), SSL_OP_CIPHER_SERVER_PREFERENCE);
   }
-  if (!SSL_CTX_set_cipher_list(ssl_ctx.get(), cipher_list.c_str())) {
+  if (!SSL_CTX_set_strict_cipher_list(ssl_ctx.get(), cipher_list.c_str())) {
     return nullptr;
   }
 
@@ -1477,7 +1477,7 @@ static bool CheckHandshakeProperties(SSL *ssl, bool is_resume) {
   }
 
   if (expected_sha256_client_cert &&
-      SSL_get_session(ssl)->x509_peer != nullptr) {
+      SSL_get_session(ssl)->certs != nullptr) {
     fprintf(stderr, "Have both client cert and SHA-256 hash: is_resume:%d.\n",
             is_resume);
     return false;
@@ -1584,13 +1584,11 @@ static bool DoExchange(bssl::UniquePtr<SSL_SESSION> *out_session,
       !SSL_set_srtp_profiles(ssl.get(), config->srtp_profiles.c_str())) {
     return false;
   }
-  if (config->enable_ocsp_stapling &&
-      !SSL_enable_ocsp_stapling(ssl.get())) {
-    return false;
+  if (config->enable_ocsp_stapling) {
+    SSL_enable_ocsp_stapling(ssl.get());
   }
-  if (config->enable_signed_cert_timestamps &&
-      !SSL_enable_signed_cert_timestamps(ssl.get())) {
-    return false;
+  if (config->enable_signed_cert_timestamps) {
+    SSL_enable_signed_cert_timestamps(ssl.get());
   }
   if (config->min_version != 0 &&
       !SSL_set_min_proto_version(ssl.get(), (uint16_t)config->min_version)) {

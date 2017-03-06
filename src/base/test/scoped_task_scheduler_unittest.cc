@@ -297,5 +297,21 @@ TEST(ScopedTaskSchedulerTest, ReassignCurrentTaskRunner) {
   EXPECT_TRUE(second_task_ran);
 }
 
+// Verify that a task can be posted from a task running in ScopedTaskScheduler.
+TEST(ScopedTaskSchedulerTest, ReentrantTaskRunner) {
+  bool task_ran = false;
+  ScopedTaskScheduler scoped_task_scheduler;
+  PostTask(FROM_HERE, Bind(
+                          [](bool* task_ran) {
+                            PostTask(
+                                FROM_HERE,
+                                Bind([](bool* task_ran) { *task_ran = true; },
+                                     Unretained(task_ran)));
+                          },
+                          Unretained(&task_ran)));
+  RunLoop().RunUntilIdle();
+  EXPECT_TRUE(task_ran);
+}
+
 }  // namespace test
 }  // namespace base

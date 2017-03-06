@@ -26,6 +26,6 @@ class MultipageSkpicturePrinter(legacy_page_test.LegacyPageTest):
         os.path.join(self._mskp_outdir, page.file_safe_name + '.mskp'))
     # Replace win32 path separator char '\' with '\\'.
     outpath = outpath.replace('\\', '\\\\')
-    tab.EvaluateJavaScript2(
+    tab.EvaluateJavaScript(
         'chrome.gpuBenchmarking.printPagesToSkPictures({{ outpath }});',
         outpath=outpath)

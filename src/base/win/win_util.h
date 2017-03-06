@@ -157,6 +157,14 @@ BASE_EXPORT bool IsKeyboardPresentOnSlate(std::string* reason);
 // Returns true if the machine is enrolled to a domain.
 BASE_EXPORT bool IsEnrolledToDomain();
 
+// Returns true if the machine is being managed by an MDM system.
+BASE_EXPORT bool IsDeviceRegisteredWithManagement();
+
+// Returns true if the current machine is considered enterprise managed in some
+// fashion.  A machine is considered managed if it is either domain enrolled
+// or registered with an MDM.
+BASE_EXPORT bool IsEnterpriseManaged();
+
 // Used by tests to mock any wanted state. Call with |state| set to true to
 // simulate being in a domain and false otherwise.
 BASE_EXPORT void SetDomainStateForTesting(bool state);

@@ -37,7 +37,7 @@ class Gmail(SimplePage):
 
   def RunNavigateSteps(self, action_runner):
     super(Gmail, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
 
@@ -51,7 +51,7 @@ class GoogleCalendar(SimplePage):
 
   def RunNavigateSteps(self, action_runner):
     super(GoogleCalendar, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         (function() { var elem = document.createElement("meta");
           elem.name="viewport";
           elem.content="initial-scale=1";

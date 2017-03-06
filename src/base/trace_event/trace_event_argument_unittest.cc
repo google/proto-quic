@@ -97,9 +97,9 @@ TEST(TraceEventArgumentTest, LongStrings) {
 }
 
 TEST(TraceEventArgumentTest, PassBaseValue) {
-  FundamentalValue int_value(42);
-  FundamentalValue bool_value(true);
-  FundamentalValue double_value(42.0f);
+  Value int_value(42);
+  Value bool_value(true);
+  Value double_value(42.0f);
 
   auto dict_value = WrapUnique(new DictionaryValue);
   dict_value->SetBoolean("bool", true);

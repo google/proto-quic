@@ -121,7 +121,7 @@ typedef unsigned long long MyULongLong;
 /* TREE
  *Typedef(MyString)
  *  Type()
- *    PrimitiveType(DOMString)
+ *    StringType(DOMString)
  */
 typedef DOMString MyString;
 
@@ -188,3 +188,19 @@ typedef byte MyByte;
  */
 typedef octet MyOctet;
 
+/* TREE
+ *Typedef(MyRecord)
+ *  Type()
+ *    Record()
+ *      StringType(ByteString)
+ *      Type()
+ *        Typeref(int)
+ */
+typedef record<ByteString, int> MyRecord;
+
+/* TREE
+ *Typedef(MyInvalidRecord)
+ *  Type()
+ *    Error(Unexpected keyword "double" after "<".)
+ */
+typedef record<double, ByteString> MyInvalidRecord;

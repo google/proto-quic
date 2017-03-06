@@ -314,8 +314,7 @@ std::unique_ptr<TracedValue> ExportHeapDump(
   internal::HeapDumpWriter writer(
       session_state.stack_frame_deduplicator(),
       session_state.type_name_deduplicator(),
-      session_state.memory_dump_config().heap_profiler_options
-          .breakdown_threshold_bytes);
+      session_state.heap_profiler_breakdown_threshold_bytes());
   return Serialize(writer.Summarize(metrics_by_context));
 }
 

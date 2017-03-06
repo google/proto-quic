@@ -47,7 +47,7 @@ class InfiniteScrollPage(page_module.Page):
 
   def _WaitAction(self, action_runner):
     with action_runner.CreateInteraction('Load'):
-      action_runner.WaitForJavaScriptCondition2(
+      action_runner.WaitForJavaScriptCondition(
         'document.body != null && '
         'document.body.scrollHeight > window.innerHeight && '
         '!document.body.addEventListener("touchstart", function() {})')

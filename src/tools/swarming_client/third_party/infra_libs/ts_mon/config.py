@@ -175,6 +175,7 @@ def add_argparse_options(parser):
       default=False, action='store_true',
       help='use the new proto schema (default: false)')
 
+
 def process_argparse_options(args):
   """Process command line arguments to initialize the global monitor.
 
@@ -191,12 +192,15 @@ def process_argparse_options(args):
   endpoint = config.get('endpoint', '')
   credentials = config.get('credentials', '')
   autogen_hostname = config.get('autogen_hostname', False)
+  use_new_proto = config.get('use_new_proto', False)
 
   # Command-line args override the values in the config file.
   if args.ts_mon_endpoint is not None:
     endpoint = args.ts_mon_endpoint
   if args.ts_mon_credentials is not None:
     credentials = args.ts_mon_credentials
+  if args.ts_mon_use_new_proto:
+    use_new_proto = args.ts_mon_use_new_proto
 
   if args.ts_mon_target_type == 'device':
     hostname = args.ts_mon_device_hostname
@@ -246,7 +250,7 @@ def process_argparse_options(args):
                     'available')
   elif endpoint.startswith('https://'):
     interface.state.global_monitor = monitors.HttpsMonitor(
-        endpoint, credentials)
+        endpoint, credentials, ca_certs=args.ts_mon_ca_certs)
   elif endpoint.lower() == 'none':
     logging.info('ts_mon monitoring has been explicitly disabled')
   else:
@@ -254,7 +258,7 @@ def process_argparse_options(args):
                   ' is invalid or not supported: %s', endpoint)
 
   interface.state.flush_mode = args.ts_mon_flush
-  interface.state.use_new_proto = args.ts_mon_use_new_proto
+  interface.state.use_new_proto = use_new_proto
 
   if args.ts_mon_flush == 'auto':
     interface.state.flush_thread = interface._FlushThread(

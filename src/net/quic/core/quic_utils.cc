@@ -176,21 +176,6 @@ string QuicUtils::PeerAddressChangeTypeToString(PeerAddressChangeType type) {
 }
 
 // static
-uint64_t QuicUtils::PackPathIdAndPacketNumber(QuicPathId path_id,
-                                              QuicPacketNumber packet_number) {
-  // Setting the nonce below relies on QuicPathId and QuicPacketNumber being
-  // specific sizes.
-  static_assert(sizeof(path_id) == 1, "Size of QuicPathId changed.");
-  static_assert(sizeof(packet_number) == 8,
-                "Size of QuicPacketNumber changed.");
-  // Use path_id and lower 7 bytes of packet_number as lower 8 bytes of nonce.
-  uint64_t path_id_packet_number =
-      (static_cast<uint64_t>(path_id) << 56) | packet_number;
-  DCHECK(path_id != kDefaultPathId || path_id_packet_number == packet_number);
-  return path_id_packet_number;
-}
-
-// static
 PeerAddressChangeType QuicUtils::DetermineAddressChangeType(
     const QuicSocketAddress& old_address,
     const QuicSocketAddress& new_address) {

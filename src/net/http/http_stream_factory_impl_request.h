@@ -36,8 +36,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
     // Called to resume the HttpStream creation process when necessary
     // Proxy authentication credentials are collected.
-    virtual int RestartTunnelWithProxyAuth(
-        const AuthCredentials& credentials) = 0;
+    virtual int RestartTunnelWithProxyAuth() = 0;
 
     // Called when the priority of transaction changes.
     virtual void SetPriority(RequestPriority priority) = 0;
@@ -114,7 +113,7 @@ class HttpStreamFactoryImpl::Request : public HttpStreamRequest {
 
   // HttpStreamRequest methods.
 
-  int RestartTunnelWithProxyAuth(const AuthCredentials& credentials) override;
+  int RestartTunnelWithProxyAuth() override;
   void SetPriority(RequestPriority priority) override;
   LoadState GetLoadState() const override;
   bool was_alpn_negotiated() const override;

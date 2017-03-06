@@ -259,7 +259,6 @@ TEST_F(HpackHeaderTableTest, EntryIndexing) {
 }
 
 TEST_F(HpackHeaderTableTest, SetSizes) {
-  FLAGS_chromium_reloadable_flag_increase_hpack_table_size = true;
   string key = "key", value = "value";
   const HpackEntry* entry1 = table_.TryAddEntry(key, value);
   const HpackEntry* entry2 = table_.TryAddEntry(key, value);
@@ -281,42 +280,6 @@ TEST_F(HpackHeaderTableTest, SetSizes) {
   // larger than table_.settings_size_bound().
   table_.SetSettingsHeaderTableSize(kDefaultHeaderTableSizeSetting * 3 + 1);
   EXPECT_EQ(kDefaultHeaderTableSizeSetting * 3 + 1, table_.max_size());
-
-  // SETTINGS_HEADER_TABLE_SIZE upper-bounds |table_.max_size()|,
-  // and will force evictions.
-  max_size = entry3->Size() - 1;
-  table_.SetSettingsHeaderTableSize(max_size);
-  EXPECT_EQ(max_size, table_.max_size());
-  EXPECT_EQ(max_size, table_.settings_size_bound());
-  EXPECT_EQ(0u, peer_.dynamic_entries().size());
-}
-
-TEST_F(HpackHeaderTableTest, SetSizesOld) {
-  FLAGS_chromium_reloadable_flag_increase_hpack_table_size = false;
-
-  string key = "key", value = "value";
-  const HpackEntry* entry1 = table_.TryAddEntry(key, value);
-  const HpackEntry* entry2 = table_.TryAddEntry(key, value);
-  const HpackEntry* entry3 = table_.TryAddEntry(key, value);
-
-  // Set exactly large enough. No Evictions.
-  size_t max_size = entry1->Size() + entry2->Size() + entry3->Size();
-  table_.SetMaxSize(max_size);
-  EXPECT_EQ(3u, peer_.dynamic_entries().size());
-
-  // Set just too small. One eviction.
-  max_size = entry1->Size() + entry2->Size() + entry3->Size() - 1;
-  table_.SetMaxSize(max_size);
-  EXPECT_EQ(2u, peer_.dynamic_entries().size());
-
-  // Changing SETTINGS_HEADER_TABLE_SIZE doesn't affect table_.max_size(),
-  // iff SETTINGS_HEADER_TABLE_SIZE >= |max_size|.
-  EXPECT_EQ(kDefaultHeaderTableSizeSetting, table_.settings_size_bound());
-  table_.SetSettingsHeaderTableSize(kDefaultHeaderTableSizeSetting * 2);
-  EXPECT_EQ(max_size, table_.max_size());
-  table_.SetSettingsHeaderTableSize(max_size + 1);
-  EXPECT_EQ(max_size, table_.max_size());
-  EXPECT_EQ(2u, peer_.dynamic_entries().size());
 
   // SETTINGS_HEADER_TABLE_SIZE upper-bounds |table_.max_size()|,
   // and will force evictions.

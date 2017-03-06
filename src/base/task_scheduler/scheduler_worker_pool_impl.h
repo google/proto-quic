@@ -145,7 +145,7 @@ class BASE_EXPORT SchedulerWorkerPoolImpl : public SchedulerWorkerPool {
 
   // All worker owned by this worker pool. Only modified during initialization
   // of the worker pool.
-  std::vector<std::unique_ptr<SchedulerWorker>> workers_;
+  std::vector<scoped_refptr<SchedulerWorker>> workers_;
 
   // Synchronizes access to |next_worker_index_|.
   SchedulerLock next_worker_index_lock_;

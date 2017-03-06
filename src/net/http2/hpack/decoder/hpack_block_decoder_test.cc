@@ -90,8 +90,7 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_1) {
         HpackEntryType::kIndexedLiteralHeader, false, "custom-key", false,
         "custom-header"));
   };
-  EXPECT_TRUE(
-      DecodeHpackExampleAndValidateSeveralWays(R"(
+  const char hpack_example[] = R"(
       40                                      | == Literal indexed ==
       0a                                      |   Literal name (len = 10)
       6375 7374 6f6d 2d6b 6579                | custom-key
@@ -99,8 +98,9 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_1) {
       6375 7374 6f6d 2d68 6561 6465 72        | custom-header
                                               | -> custom-key:
                                               |   custom-header
-      )",
-                                               ValidateDoneAndEmpty(do_check)));
+      )";
+  EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
+      hpack_example, ValidateDoneAndEmpty(do_check)));
   EXPECT_TRUE(do_check());
 }
 
@@ -110,16 +110,16 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_2) {
     VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleLiteralValueHeader(
         HpackEntryType::kUnindexedLiteralHeader, 4, false, "/sample/path"));
   };
-  EXPECT_TRUE(
-      DecodeHpackExampleAndValidateSeveralWays(R"(
+  const char hpack_example[] = R"(
       04                                      | == Literal not indexed ==
                                               |   Indexed name (idx = 4)
                                               |     :path
       0c                                      |   Literal value (len = 12)
       2f73 616d 706c 652f 7061 7468           | /sample/path
                                               | -> :path: /sample/path
-      )",
-                                               ValidateDoneAndEmpty(do_check)));
+      )";
+  EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
+      hpack_example, ValidateDoneAndEmpty(do_check)));
   EXPECT_TRUE(do_check());
 }
 
@@ -130,16 +130,16 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_3) {
         HpackEntryType::kNeverIndexedLiteralHeader, false, "password", false,
         "secret"));
   };
-  EXPECT_TRUE(
-      DecodeHpackExampleAndValidateSeveralWays(R"(
+  const char hpack_example[] = R"(
       10                                      | == Literal never indexed ==
       08                                      |   Literal name (len = 8)
       7061 7373 776f 7264                     | password
       06                                      |   Literal value (len = 6)
       7365 6372 6574                          | secret
                                               | -> password: secret
-      )",
-                                               ValidateDoneAndEmpty(do_check)));
+      )";
+  EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
+      hpack_example, ValidateDoneAndEmpty(do_check)));
   EXPECT_TRUE(do_check());
 }
 
@@ -148,13 +148,13 @@ TEST_F(HpackBlockDecoderTest, SpecExample_C_2_4) {
   NoArgValidator do_check = [this]() {
     VERIFY_AND_RETURN_SUCCESS(collector_.ValidateSoleIndexedHeader(2));
   };
-  EXPECT_TRUE(
-      DecodeHpackExampleAndValidateSeveralWays(R"(
+  const char hpack_example[] = R"(
       82                                      | == Indexed - Add ==
                                               |   idx = 2
                                               | -> :method: GET
-      )",
-                                               ValidateDoneAndEmpty(do_check)));
+      )";
+  EXPECT_TRUE(DecodeHpackExampleAndValidateSeveralWays(
+      hpack_example, ValidateDoneAndEmpty(do_check)));
   EXPECT_TRUE(do_check());
 }
 // http://httpwg.org/specs/rfc7541.html#rfc.section.C.3.1

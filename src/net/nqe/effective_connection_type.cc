@@ -10,10 +10,11 @@ namespace {
 
 const char kEffectiveConnectionTypeUnknown[] = "Unknown";
 const char kEffectiveConnectionTypeOffline[] = "Offline";
-const char kEffectiveConnectionTypeSlow2G[] = "Slow2G";
+const char kEffectiveConnectionTypeSlow2G[] = "Slow-2G";
 const char kEffectiveConnectionType2G[] = "2G";
 const char kEffectiveConnectionType3G[] = "3G";
 const char kEffectiveConnectionType4G[] = "4G";
+const char kDeprectedEffectiveConnectionTypeSlow2G[] = "Slow2G";
 
 }  // namespace
 
@@ -33,10 +34,11 @@ const char* GetNameForEffectiveConnectionType(EffectiveConnectionType type) {
       return kEffectiveConnectionType3G;
     case EFFECTIVE_CONNECTION_TYPE_4G:
       return kEffectiveConnectionType4G;
-    default:
+    case EFFECTIVE_CONNECTION_TYPE_LAST:
       NOTREACHED();
-      break;
+      return "";
   }
+  NOTREACHED();
   return "";
 }
 
@@ -55,6 +57,12 @@ bool GetEffectiveConnectionTypeForName(
     *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
     return true;
   }
+  // Return EFFECTIVE_CONNECTION_TYPE_SLOW_2G if the deprecated string
+  // representation is in use.
+  if (connection_type_name == kDeprectedEffectiveConnectionTypeSlow2G) {
+    *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_SLOW_2G;
+    return true;
+  }
   if (connection_type_name == kEffectiveConnectionType2G) {
     *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_2G;
     return true;
@@ -69,6 +77,16 @@ bool GetEffectiveConnectionTypeForName(
   }
   *effective_connection_type = EFFECTIVE_CONNECTION_TYPE_UNKNOWN;
   return false;
+}
+
+const char* DeprecatedGetNameForEffectiveConnectionType(
+    EffectiveConnectionType type) {
+  switch (type) {
+    case EFFECTIVE_CONNECTION_TYPE_SLOW_2G:
+      return kDeprectedEffectiveConnectionTypeSlow2G;
+    default:
+      return GetNameForEffectiveConnectionType(type);
+  }
 }
 
 }  // namespace net

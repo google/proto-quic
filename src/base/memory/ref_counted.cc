@@ -10,15 +10,10 @@ namespace base {
 namespace subtle {
 
 bool RefCountedThreadSafeBase::HasOneRef() const {
-  return AtomicRefCountIsOne(
-      &const_cast<RefCountedThreadSafeBase*>(this)->ref_count_);
+  return AtomicRefCountIsOne(&ref_count_);
 }
 
-RefCountedThreadSafeBase::RefCountedThreadSafeBase() : ref_count_(0) {
-#if DCHECK_IS_ON()
-  in_dtor_ = false;
-#endif
-}
+RefCountedThreadSafeBase::RefCountedThreadSafeBase() = default;
 
 RefCountedThreadSafeBase::~RefCountedThreadSafeBase() {
 #if DCHECK_IS_ON()

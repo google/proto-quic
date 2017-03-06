@@ -257,8 +257,9 @@ bool SharedMemory::Create(const SharedMemoryCreateOptions& options) {
                          rand_values[0], rand_values[1],
                          rand_values[2], rand_values[3]);
   }
-  mapped_file_.Set(CreateFileMappingWithReducedPermissions(
-      &sa, rounded_size, name_.empty() ? nullptr : name_.c_str()));
+  DCHECK(!name_.empty());
+  mapped_file_.Set(CreateFileMappingWithReducedPermissions(&sa, rounded_size,
+                                                           name_.c_str()));
   if (!mapped_file_.IsValid()) {
     // The error is logged within CreateFileMappingWithReducedPermissions().
     return false;

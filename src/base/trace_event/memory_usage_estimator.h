@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "base/base_export.h"
+#include "base/containers/linked_list.h"
 #include "base/strings/string16.h"
 #include "base/template_util.h"
 
@@ -110,6 +111,9 @@ size_t EstimateMemoryUsage(const std::vector<T, A>& vector);
 
 template <class T, class A>
 size_t EstimateMemoryUsage(const std::list<T, A>& list);
+
+template <class T>
+size_t EstimateMemoryUsage(const base::LinkedList<T>& list);
 
 template <class T, class C, class A>
 size_t EstimateMemoryUsage(const std::set<T, C, A>& set);
@@ -350,6 +354,18 @@ size_t EstimateMemoryUsage(const std::list<T, A>& list) {
   };
   return sizeof(Node) * list.size() +
          EstimateIterableMemoryUsage(list);
+}
+
+template <class T>
+size_t EstimateMemoryUsage(const base::LinkedList<T>& list) {
+  size_t memory_usage = 0u;
+  for (base::LinkNode<T>* node = list.head(); node != list.end();
+       node = node->next()) {
+    // Since we increment by calling node = node->next() we know that node
+    // isn't nullptr.
+    memory_usage += EstimateMemoryUsage(*node->value()) + sizeof(T);
+  }
+  return memory_usage;
 }
 
 // Tree containers

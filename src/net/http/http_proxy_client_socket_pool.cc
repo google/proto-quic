@@ -245,6 +245,12 @@ void HttpProxyClientSocketPool::CancelRequest(
   base_.CancelRequest(group_name, handle);
 }
 
+void HttpProxyClientSocketPool::SetPriority(const std::string& group_name,
+                                            ClientSocketHandle* handle,
+                                            RequestPriority priority) {
+  base_.SetPriority(group_name, handle, priority);
+}
+
 void HttpProxyClientSocketPool::ReleaseSocket(
     const std::string& group_name,
     std::unique_ptr<StreamSocket> socket,
@@ -258,6 +264,11 @@ void HttpProxyClientSocketPool::FlushWithError(int error) {
 
 void HttpProxyClientSocketPool::CloseIdleSockets() {
   base_.CloseIdleSockets();
+}
+
+void HttpProxyClientSocketPool::CloseIdleSocketsInGroup(
+    const std::string& group_name) {
+  base_.CloseIdleSocketsInGroup(group_name);
 }
 
 int HttpProxyClientSocketPool::IdleSocketCount() const {

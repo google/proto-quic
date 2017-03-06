@@ -224,6 +224,7 @@ def ExtractAll(zip_path, path=None, no_clobber=True, pattern=None,
   if not zipfile.is_zipfile(zip_path):
     raise Exception('Invalid zip file: %s' % zip_path)
 
+  extracted = []
   with zipfile.ZipFile(zip_path) as z:
     for name in z.namelist():
       if name.endswith('/'):
@@ -244,8 +245,12 @@ def ExtractAll(zip_path, path=None, no_clobber=True, pattern=None,
         dest = os.path.join(path, name)
         MakeDirectory(os.path.dirname(dest))
         os.symlink(z.read(name), dest)
+        extracted.append(dest)
       else:
         z.extract(name, path)
+        extracted.append(os.path.join(path, name))
+
+  return extracted
 
 
 def AddToZipHermetic(zip_file, zip_path, src_path=None, data=None,

@@ -268,16 +268,32 @@ int EditArgsFile(const std::string& build_dir) {
     // Ensure the file exists. Need to normalize path separators since on
     // Windows they can come out as forward slashes here, and that confuses some
     // of the commands.
+    BuildSettings build_settings = setup.build_settings();
     base::FilePath arg_file =
-        setup.build_settings().GetFullPath(setup.GetBuildArgFile())
-        .NormalizePathSeparators();
+        build_settings.GetFullPath(setup.GetBuildArgFile())
+            .NormalizePathSeparators();
     if (!base::PathExists(arg_file)) {
       std::string argfile_default_contents =
-          "# Build arguments go here. Examples:\n"
-          "#   is_component_build = true\n"
-          "#   is_debug = false\n"
+          "# Build arguments go here.\n"
           "# See \"gn args <out_dir> --list\" for available build "
           "arguments.\n";
+
+      SourceFile template_path = build_settings.arg_file_template_path();
+      if (!template_path.is_null()) {
+        base::FilePath full_path =
+            build_settings.GetFullPath(template_path).NormalizePathSeparators();
+        if (!base::PathExists(full_path)) {
+          Err err =
+              Err(Location(), std::string("Can't load arg_file_template:\n  ") +
+                                  template_path.value());
+          err.PrintToStdout();
+          return 1;
+        }
+
+        // Ignore the return code; if the read fails (unlikely), we'll just
+        // use the default contents.
+        base::ReadFileToString(full_path, &argfile_default_contents);
+      }
 #if defined(OS_WIN)
       // Use Windows lineendings for this file since it will often open in
       // Notepad which can't handle Unix ones.

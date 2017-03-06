@@ -111,7 +111,6 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming) {
 
 TEST_F(QuicSpdyClientStreamTest, TestFraming100Continue) {
   headers_[":status"] = "100";
-  FLAGS_quic_restart_flag_quic_supports_100_continue = true;
   auto headers = AsHeaderList(headers_);
   stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
                               headers);
@@ -121,20 +120,6 @@ TEST_F(QuicSpdyClientStreamTest, TestFraming100Continue) {
   EXPECT_EQ(0u, stream_->response_headers().size());
   EXPECT_EQ(100, stream_->response_code());
   EXPECT_EQ("", stream_->data());
-}
-
-TEST_F(QuicSpdyClientStreamTest, TestFraming100ContinueNoFlag) {
-  headers_[":status"] = "100";
-  FLAGS_quic_restart_flag_quic_supports_100_continue = false;
-  auto headers = AsHeaderList(headers_);
-  stream_->OnStreamHeaderList(false, headers.uncompressed_header_bytes(),
-                              headers);
-  stream_->OnStreamFrame(
-      QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
-  EXPECT_EQ(0u, stream_->preliminary_headers().size());
-  EXPECT_EQ("100", stream_->response_headers().find(":status")->second);
-  EXPECT_EQ(100, stream_->response_code());
-  EXPECT_EQ(body_, stream_->data());
 }
 
 TEST_F(QuicSpdyClientStreamTest, TestFramingOnePacket) {
@@ -168,6 +153,9 @@ TEST_F(QuicSpdyClientStreamTest, DISABLED_TestFramingExtraData) {
 }
 
 TEST_F(QuicSpdyClientStreamTest, TestNoBidirectionalStreaming) {
+  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    return;
+  }
   QuicStreamFrame frame(kClientDataStreamId1, false, 3, StringPiece("asd"));
 
   EXPECT_FALSE(stream_->write_side_closed());
@@ -196,9 +184,14 @@ TEST_F(QuicSpdyClientStreamTest, ReceivingTrailers) {
 
   // Now send the body, which should close the stream as the FIN has been
   // received, as well as all data.
-  EXPECT_CALL(session_, CloseStream(stream_->id()));
+  if (!FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    EXPECT_CALL(session_, CloseStream(stream_->id()));
+  }
   stream_->OnStreamFrame(
       QuicStreamFrame(stream_->id(), /*fin=*/false, /*offset=*/0, body_));
+  if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
+    EXPECT_TRUE(stream_->reading_stopped());
+  }
 }
 
 }  // namespace

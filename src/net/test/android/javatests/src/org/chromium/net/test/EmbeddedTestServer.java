@@ -19,18 +19,12 @@ import java.io.File;
 /** A simple file server for java tests.
  *
  * An example use:
- *   EmbeddedTestServer s = new EmbeddedTestServer();
- *   s.initializeNative();
- *   s.serveFilesFromDirectory("/path/to/my/directory");
- *   if (!s.start()) {
- *       throw new SomeKindOfException("Unable to initialize EmbeddedTestServer.");
- *   }
+ *   EmbeddedTestServer s = EmbeddedTestServer.createAndStartServer(context);
  *
  *   // serve requests...
  *   s.getURL("/foo/bar.txt");
  *
- *   s.shutdownAndWait();
- *   s.destroy();
+ *   s.stopAndDestroyServer();
  *
  * Note that this runs net::test_server::EmbeddedTestServer in a service in a separate APK.
  */

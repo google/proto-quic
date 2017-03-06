@@ -8,8 +8,10 @@
 #include <sstream>
 
 #include "net/quic/core/congestion_control/rtt_stats.h"
+#include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 
 namespace net {
@@ -90,6 +92,7 @@ BbrSender::BbrSender(const RttStats* rtt_stats,
           static_cast<float>(base::GetFlag(FLAGS_quic_bbr_cwnd_gain))),
       rtt_variance_weight_(static_cast<float>(
           base::GetFlag(FLAGS_quic_bbr_rtt_variation_weight))),
+      num_startup_rtts_(kRoundTripsWithoutGrowthBeforeExitingStartup),
       cycle_current_offset_(0),
       last_cycle_start_(QuicTime::Zero()),
       is_at_full_bandwidth_(false),
@@ -165,6 +168,19 @@ QuicByteCount BbrSender::GetSlowStartThreshold() const {
 
 bool BbrSender::InRecovery() const {
   return recovery_state_ != NOT_IN_RECOVERY;
+}
+
+void BbrSender::SetFromConfig(const QuicConfig& config,
+                              Perspective perspective) {
+  if (FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup) {
+    QUIC_FLAG_COUNT(gfe2_reloadable_flag_quic_allow_2_rtt_bbr_startup);
+    if (config.HasClientRequestedIndependentOption(k1RTT, perspective)) {
+      num_startup_rtts_ = 1;
+    }
+    if (config.HasClientRequestedIndependentOption(k2RTT, perspective)) {
+      num_startup_rtts_ = 2;
+    }
+  }
 }
 
 void BbrSender::OnCongestionEvent(bool /*rtt_updated*/,
@@ -358,8 +374,7 @@ void BbrSender::CheckIfFullBandwidthReached() {
   }
 
   rounds_without_bandwidth_gain_++;
-  if (rounds_without_bandwidth_gain_ >=
-      kRoundTripsWithoutGrowthBeforeExitingStartup) {
+  if (rounds_without_bandwidth_gain_ >= num_startup_rtts_) {
     is_at_full_bandwidth_ = true;
   }
 }

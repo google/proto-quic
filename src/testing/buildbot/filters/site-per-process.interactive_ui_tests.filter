@@ -1,1 +1,6 @@
 # List below tests to be excluded from running.
+
+# crbug.com/695221: LocalNTPTests fail with --site-per-process
+-LocalNTPTest.LoadsIframe
+-LocalNTPTest.SimpleJavascriptTests
+-LocalNTPTest.FakeboxRedirectsToOmnibox

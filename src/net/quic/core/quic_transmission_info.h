@@ -55,6 +55,8 @@ struct QUIC_EXPORT_PRIVATE QuicTransmissionInfo {
   QuicPacketNumber retransmission;
   // Non-empty if there is a listener for this packet.
   std::list<AckListenerWrapper> ack_listeners;
+  // The largest_acked in the ack frame, if the packet contains an ack.
+  QuicPacketNumber largest_acked;
 };
 
 }  // namespace net

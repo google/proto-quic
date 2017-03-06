@@ -43,8 +43,8 @@ TEST(QuicTextUtilsText, ToLower) {
 TEST(QuicTextUtilsText, RemoveLeadingAndTrailingWhitespace) {
   string input;
 
-  for (auto input : {"text", " text", "  text", "text ", "text  ", " text ",
-                     "  text  ", "\r\n\ttext", "text\n\r\t"}) {
+  for (auto* input : {"text", " text", "  text", "text ", "text  ", " text ",
+                      "  text  ", "\r\n\ttext", "text\n\r\t"}) {
     StringPiece piece(input);
     QuicTextUtils::RemoveLeadingAndTrailingWhitespace(&piece);
     EXPECT_EQ("text", piece);

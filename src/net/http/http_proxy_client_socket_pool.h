@@ -161,6 +161,10 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
                       int num_sockets,
                       const NetLogWithSource& net_log) override;
 
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) override;
+
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
 
@@ -171,6 +175,8 @@ class NET_EXPORT_PRIVATE HttpProxyClientSocketPool
   void FlushWithError(int error) override;
 
   void CloseIdleSockets() override;
+
+  void CloseIdleSocketsInGroup(const std::string& group_name) override;
 
   int IdleSocketCount() const override;
 

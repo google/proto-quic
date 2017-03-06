@@ -76,7 +76,7 @@ class StupidWatcher : public MessagePumpIOSForIO::Watcher {
 // Test to make sure that we catch calling WatchFileDescriptor off of the wrong
 // thread.
 TEST_F(MessagePumpIOSForIOTest, TestWatchingFromBadThread) {
-  MessagePumpIOSForIO::FileDescriptorWatcher watcher;
+  MessagePumpIOSForIO::FileDescriptorWatcher watcher(FROM_HERE);
   StupidWatcher delegate;
 
   ASSERT_DCHECK_DEATH(
@@ -120,7 +120,7 @@ class DeleteWatcher : public BaseWatcher {
 TEST_F(MessagePumpIOSForIOTest, DeleteWatcher) {
   std::unique_ptr<MessagePumpIOSForIO> pump(new MessagePumpIOSForIO);
   MessagePumpIOSForIO::FileDescriptorWatcher* watcher =
-      new MessagePumpIOSForIO::FileDescriptorWatcher;
+      new MessagePumpIOSForIO::FileDescriptorWatcher(FROM_HERE);
   DeleteWatcher delegate(watcher);
   pump->WatchFileDescriptor(pipefds_[1],
       false, MessagePumpIOSForIO::WATCH_READ_WRITE, watcher, &delegate);
@@ -155,7 +155,7 @@ class StopWatcher : public BaseWatcher {
 
 TEST_F(MessagePumpIOSForIOTest, StopWatcher) {
   std::unique_ptr<MessagePumpIOSForIO> pump(new MessagePumpIOSForIO);
-  MessagePumpIOSForIO::FileDescriptorWatcher watcher;
+  MessagePumpIOSForIO::FileDescriptorWatcher watcher(FROM_HERE);
   StopWatcher delegate(&watcher, pump.get());
   pump->WatchFileDescriptor(pipefds_[1],
       false, MessagePumpIOSForIO::WATCH_READ_WRITE, &watcher, &delegate);
@@ -166,7 +166,7 @@ TEST_F(MessagePumpIOSForIOTest, StopWatcher) {
 
 TEST_F(MessagePumpIOSForIOTest, StopWatcherAndWatchSomethingElse) {
   std::unique_ptr<MessagePumpIOSForIO> pump(new MessagePumpIOSForIO);
-  MessagePumpIOSForIO::FileDescriptorWatcher watcher;
+  MessagePumpIOSForIO::FileDescriptorWatcher watcher(FROM_HERE);
   StopWatcher delegate(&watcher, pump.get(), alternate_pipefds_[1]);
   pump->WatchFileDescriptor(pipefds_[1],
       false, MessagePumpIOSForIO::WATCH_READ_WRITE, &watcher, &delegate);

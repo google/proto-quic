@@ -307,8 +307,7 @@ bool QuicDispatcher::OnUnauthenticatedPublicHeader(
   QuicVersion version = GetSupportedVersions().front();
   if (header.version_flag) {
     QuicVersion packet_version = header.versions.front();
-    if (FLAGS_quic_reloadable_flag_quic_fix_version_manager &&
-        framer_.supported_versions() != GetSupportedVersions()) {
+    if (framer_.supported_versions() != GetSupportedVersions()) {
       // Reset framer's version if version flags change in flight.
       framer_.SetSupportedVersions(GetSupportedVersions());
     }

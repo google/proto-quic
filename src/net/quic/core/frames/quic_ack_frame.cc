@@ -5,6 +5,7 @@
 #include "net/quic/core/frames/quic_ack_frame.h"
 
 #include "net/quic/core/quic_constants.h"
+#include "net/quic/platform/api/quic_bug_tracker.h"
 
 namespace net {
 
@@ -16,9 +17,7 @@ bool IsAwaitingPacket(const QuicAckFrame& ack_frame,
 }
 
 QuicAckFrame::QuicAckFrame()
-    : largest_observed(0),
-      ack_delay_time(QuicTime::Delta::Infinite()),
-      path_id(kDefaultPathId) {}
+    : largest_observed(0), ack_delay_time(QuicTime::Delta::Infinite()) {}
 
 QuicAckFrame::QuicAckFrame(const QuicAckFrame& other) = default;
 
@@ -71,6 +70,14 @@ bool PacketNumberQueue::RemoveUpTo(QuicPacketNumber higher) {
   const QuicPacketNumber old_min = Min();
   packet_number_intervals_.Difference(0, higher);
   return Empty() || old_min != Min();
+}
+
+void PacketNumberQueue::RemoveSmallestInterval() {
+  QUIC_BUG_IF(packet_number_intervals_.Size() < 2)
+      << (Empty() ? "No intervals to remove."
+                  : "Can't remove the last interval.");
+
+  packet_number_intervals_.Difference(*packet_number_intervals_.begin());
 }
 
 void PacketNumberQueue::Complement() {

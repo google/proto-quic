@@ -7,11 +7,15 @@
 #include <cstdint>
 
 #include "net/quic/core/quic_flags.h"
+#include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
+using std::string;
+
 namespace net {
 namespace test {
+namespace {
 
 const float kBeta = 0.7f;          // Default Cubic backoff factor.
 const float kBetaLastMax = 0.85f;  // Default Cubic backoff factor.
@@ -22,17 +26,58 @@ const float kNConnectionBetaLastMax =
 const float kNConnectionAlpha = 3 * kNumConnections * kNumConnections *
                                 (1 - kNConnectionBeta) / (1 + kNConnectionBeta);
 
+struct TestParams {
+  TestParams(bool fix_convex_mode, bool fix_beta_last_max)
+      : fix_convex_mode(fix_convex_mode),
+        fix_beta_last_max(fix_beta_last_max) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
+    os << "{ fix_convex_mode: " << p.fix_convex_mode
+       << "  fix_beta_last_max: " << p.fix_beta_last_max;
+    os << " }";
+    return os;
+  }
+
+  bool fix_convex_mode;
+  bool fix_beta_last_max;
+};
+
+string TestParamToString(const testing::TestParamInfo<TestParams>& params) {
+  return QuicStrCat("convex_mode_", params.param.fix_convex_mode, "_",
+                    "beta_last_max_", params.param.fix_beta_last_max);
+}
+
+std::vector<TestParams> GetTestParams() {
+  std::vector<TestParams> params;
+  for (bool fix_convex_mode : {true, false}) {
+    for (bool fix_beta_last_max : {true, false}) {
+      if (!FLAGS_quic_reloadable_flag_quic_fix_cubic_convex_mode &&
+          fix_convex_mode) {
+        continue;
+      }
+      if (!FLAGS_quic_reloadable_flag_quic_fix_beta_last_max &&
+          fix_beta_last_max) {
+        continue;
+      }
+      TestParams param(fix_convex_mode, fix_beta_last_max);
+      params.push_back(param);
+    }
+  }
+  return params;
+}
+
+}  // namespace
+
 // TODO(jokulik): Once we've rolled out the cubic convex fix, we will
 // no longer need a parameterized test.
-class CubicTest : public ::testing::TestWithParam<bool> {
+class CubicTest : public ::testing::TestWithParam<TestParams> {
  protected:
   CubicTest()
       : one_ms_(QuicTime::Delta::FromMilliseconds(1)),
         hundred_ms_(QuicTime::Delta::FromMilliseconds(100)),
         cubic_(&clock_) {
-    fix_convex_mode_ = GetParam();
-    cubic_.SetFixConvexMode(fix_convex_mode_);
-    cubic_.SetFixBetaLastMax(FLAGS_quic_reloadable_flag_quic_fix_beta_last_max);
+    cubic_.SetFixConvexMode(GetParam().fix_convex_mode);
+    cubic_.SetFixBetaLastMax(GetParam().fix_beta_last_max);
   }
 
   QuicByteCount LastMaxCongestionWindow() {
@@ -43,10 +88,12 @@ class CubicTest : public ::testing::TestWithParam<bool> {
   const QuicTime::Delta hundred_ms_;
   MockClock clock_;
   Cubic cubic_;
-  bool fix_convex_mode_;
 };
 
-INSTANTIATE_TEST_CASE_P(CubicTests, CubicTest, testing::Bool());
+INSTANTIATE_TEST_CASE_P(CubicTests,
+                        CubicTest,
+                        ::testing::ValuesIn(GetTestParams()),
+                        TestParamToString);
 
 TEST_P(CubicTest, AboveOrigin) {
   // Convex growth.
@@ -56,7 +103,7 @@ TEST_P(CubicTest, AboveOrigin) {
   // Without the signed-integer, cubic-convex fix, we mistakenly
   // increment cwnd after only one_ms_ and a single ack.
   QuicPacketCount expected_cwnd =
-      fix_convex_mode_ ? current_cwnd : current_cwnd + 1;
+      GetParam().fix_convex_mode ? current_cwnd : current_cwnd + 1;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   const QuicTime initial_time = clock_.ApproximateNow();
@@ -81,7 +128,7 @@ TEST_P(CubicTest, AboveOrigin) {
     clock_.AdvanceTime(hundred_ms_);
     current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min,
                                                    clock_.ApproximateNow());
-    if (fix_convex_mode_) {
+    if (GetParam().fix_convex_mode) {
       // When we fix convex mode and the uint64 arithmetic, we
       // increase the expected_cwnd only after after the first 100ms,
       // rather than after the initial 1ms.
@@ -122,7 +169,7 @@ TEST_P(CubicTest, LossEvents) {
   // Without the signed-integer, cubic-convex fix, we mistakenly
   // increment cwnd after only one_ms_ and a single ack.
   QuicPacketCount expected_cwnd =
-      fix_convex_mode_ ? current_cwnd : current_cwnd + 1;
+      GetParam().fix_convex_mode ? current_cwnd : current_cwnd + 1;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd, cubic_.CongestionWindowAfterAck(
@@ -149,12 +196,12 @@ TEST_P(CubicTest, LossEvents) {
   current_cwnd = expected_cwnd;
   EXPECT_GT(pre_loss_cwnd, LastMaxCongestionWindow());
   QuicByteCount expected_last_max =
-      FLAGS_quic_reloadable_flag_quic_fix_beta_last_max
+      GetParam().fix_beta_last_max
           ? static_cast<QuicPacketCount>(pre_loss_cwnd *
                                          kNConnectionBetaLastMax)
           : static_cast<QuicPacketCount>(pre_loss_cwnd * kBetaLastMax);
   EXPECT_EQ(expected_last_max, LastMaxCongestionWindow());
-  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
+  if (GetParam().fix_beta_last_max) {
     EXPECT_LT(expected_cwnd, LastMaxCongestionWindow());
   } else {
     // If we don't scale kLastBetaMax, the current window is exactly
@@ -165,7 +212,7 @@ TEST_P(CubicTest, LossEvents) {
   // Simulate an increase, and check that we are below the origin.
   current_cwnd = cubic_.CongestionWindowAfterAck(current_cwnd, rtt_min,
                                                  clock_.ApproximateNow());
-  if (FLAGS_quic_reloadable_flag_quic_fix_beta_last_max) {
+  if (GetParam().fix_beta_last_max) {
     EXPECT_GT(LastMaxCongestionWindow(), current_cwnd);
   } else {
     // Without the bug fix, we will be at or above the origin.
@@ -189,7 +236,7 @@ TEST_P(CubicTest, BelowOrigin) {
   // Without the signed-integer, cubic-convex fix, we mistakenly
   // increment cwnd after only one_ms_ and a single ack.
   QuicPacketCount expected_cwnd =
-      fix_convex_mode_ ? current_cwnd : current_cwnd + 1;
+      GetParam().fix_convex_mode ? current_cwnd : current_cwnd + 1;
   // Initialize the state.
   clock_.AdvanceTime(one_ms_);
   EXPECT_EQ(expected_cwnd, cubic_.CongestionWindowAfterAck(

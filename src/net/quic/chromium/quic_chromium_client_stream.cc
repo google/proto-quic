@@ -185,13 +185,14 @@ void QuicChromiumClientStream::SetDelegate(
     QuicChromiumClientStream::Delegate* delegate) {
   DCHECK(!(delegate_ && delegate));
   delegate_ = delegate;
+  if (delegate == nullptr) {
+    DCHECK(delegate_tasks_.empty());
+    return;
+  }
   while (!delegate_tasks_.empty()) {
     base::Closure closure = delegate_tasks_.front();
     delegate_tasks_.pop_front();
     closure.Run();
-  }
-  if (delegate == nullptr && sequencer()->IsClosed()) {
-    OnFinRead();
   }
 }
 

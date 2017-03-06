@@ -1086,23 +1086,14 @@ class MetaBuildWrapper(object):
                                 output_path=None)
 
     if android and test_type != "script":
-      logdog_command = [
-          '--logdog-bin-cmd', './../../bin/logdog_butler',
-          '--project', 'chromium',
-          '--service-account-json',
-          '/creds/service_accounts/service-account-luci-logdog-publisher.json',
-          '--prefix', 'android/swarming/logcats/${SWARMING_TASK_ID}',
-          '--source', '${ISOLATED_OUTDIR}/logcats',
-          '--name', 'unified_logcats',
-      ]
-      test_cmdline = [
+      # TODO(crbug.com/693203): Reenable logcat logdog uploading when outage
+      # has been resolved.
+      cmdline = [
           self.PathJoin('bin', 'run_%s' % target),
           '--logcat-output-file', '${ISOLATED_OUTDIR}/logcats',
           '--target-devices-file', '${SWARMING_BOT_FILE}',
           '-v'
       ]
-      cmdline = (['./../../build/android/test_wrapper/logdog_wrapper.py']
-                 + logdog_command + test_cmdline)
     elif use_xvfb and test_type == 'windowed_test_launcher':
       extra_files = [
           '../../testing/test_env.py',

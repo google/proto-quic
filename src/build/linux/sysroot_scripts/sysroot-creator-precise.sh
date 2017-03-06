@@ -72,6 +72,8 @@ DEBIAN_PACKAGES="\
   libfontconfig1-dev
   libfreetype6
   libfreetype6-dev
+  libgbm1
+  libgbm-dev
   libgcc1
   libgconf-2-4
   libgconf2-4

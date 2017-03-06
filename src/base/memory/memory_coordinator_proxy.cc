@@ -6,36 +6,40 @@
 
 namespace base {
 
+namespace {
+
+MemoryCoordinator* g_memory_coordinator = nullptr;
+
+}  // namespace
+
 MemoryCoordinatorProxy::MemoryCoordinatorProxy() {
 }
 
 MemoryCoordinatorProxy::~MemoryCoordinatorProxy() {
 }
 
+// static
 MemoryCoordinatorProxy* MemoryCoordinatorProxy::GetInstance() {
   return Singleton<base::MemoryCoordinatorProxy>::get();
 }
 
+// static
+void MemoryCoordinatorProxy::SetMemoryCoordinator(
+    MemoryCoordinator* coordinator) {
+  DCHECK(!g_memory_coordinator);
+  g_memory_coordinator = coordinator;
+}
+
 MemoryState MemoryCoordinatorProxy::GetCurrentMemoryState() const {
-  if (!getter_callback_)
+  if (!g_memory_coordinator)
     return MemoryState::NORMAL;
-  return getter_callback_.Run();
+  return g_memory_coordinator->GetCurrentMemoryState();
 }
 
 void MemoryCoordinatorProxy::SetCurrentMemoryStateForTesting(
     MemoryState memory_state) {
-  DCHECK(setter_callback_);
-  setter_callback_.Run(memory_state);
-}
-
-void MemoryCoordinatorProxy::SetGetCurrentMemoryStateCallback(
-    GetCurrentMemoryStateCallback callback) {
-  getter_callback_ = callback;
-}
-
-void MemoryCoordinatorProxy::SetSetCurrentMemoryStateForTestingCallback(
-    SetCurrentMemoryStateCallback callback) {
-  setter_callback_ = callback;
+  DCHECK(g_memory_coordinator);
+  g_memory_coordinator->SetCurrentMemoryStateForTesting(memory_state);
 }
 
 }  // namespace base

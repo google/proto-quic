@@ -304,6 +304,8 @@ unit tests.
 ===== From net/data/ssl/scripts/generate-multi-root-BFE-keychain.sh
 - multi-root-BFE.keychain: An OSX Keychain containing the generated
   certificates "multi-root-B-by-F.pem" and "multi-root-F-by-E.pem".
+- multi-root.keychain: An OSX Keychain containing the generated
+  certificates multi-root-*-by-*.pem
 
 ===== From net/data/ssl/scripts/generate-duplicate-cn-certs.sh
 - duplicate_cn_1.p12

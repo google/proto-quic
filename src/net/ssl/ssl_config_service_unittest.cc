@@ -65,7 +65,11 @@ TEST(SSLConfigServiceTest, NoChangesWontNotifyObservers) {
 TEST(SSLConfigServiceTest, ConfigUpdatesNotifyObservers) {
   SSLConfig initial_config;
   initial_config.rev_checking_enabled = true;
+  initial_config.rev_checking_required_local_anchors = false;
+  initial_config.sha1_local_anchors_enabled = true;
+  initial_config.common_name_fallback_local_anchors_enabled = true;
   initial_config.false_start_enabled = false;
+  initial_config.require_ecdhe = false;
   initial_config.version_min = SSL_PROTOCOL_VERSION_TLS1;
   initial_config.version_max = SSL_PROTOCOL_VERSION_TLS1_2;
 
@@ -79,7 +83,23 @@ TEST(SSLConfigServiceTest, ConfigUpdatesNotifyObservers) {
   EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
   mock_service->SetSSLConfig(initial_config);
 
+  initial_config.rev_checking_required_local_anchors = true;
+  EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
+  mock_service->SetSSLConfig(initial_config);
+
+  initial_config.sha1_local_anchors_enabled = false;
+  EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
+  mock_service->SetSSLConfig(initial_config);
+
+  initial_config.common_name_fallback_local_anchors_enabled = false;
+  EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
+  mock_service->SetSSLConfig(initial_config);
+
   initial_config.false_start_enabled = true;
+  EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
+  mock_service->SetSSLConfig(initial_config);
+
+  initial_config.require_ecdhe = true;
   EXPECT_CALL(observer, OnSSLConfigChanged()).Times(1);
   mock_service->SetSSLConfig(initial_config);
 

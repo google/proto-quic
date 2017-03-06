@@ -25,8 +25,8 @@ TEST(JsonSchemaCompilerObjectsTest, ObjectParamParamsCreate) {
     std::unique_ptr<base::DictionaryValue> info_value(
         new base::DictionaryValue());
     info_value->Set("strings", strings.release());
-    info_value->Set("integer", new base::FundamentalValue(5));
-    info_value->Set("boolean", new base::FundamentalValue(true));
+    info_value->Set("integer", new base::Value(5));
+    info_value->Set("boolean", new base::Value(true));
 
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     params_value->Append(std::move(info_value));
@@ -46,7 +46,7 @@ TEST(JsonSchemaCompilerObjectsTest, ObjectParamParamsCreate) {
     std::unique_ptr<base::DictionaryValue> info_value(
         new base::DictionaryValue());
     info_value->Set("strings", strings.release());
-    info_value->Set("integer", new base::FundamentalValue(5));
+    info_value->Set("integer", new base::Value(5));
 
     std::unique_ptr<base::ListValue> params_value(new base::ListValue());
     params_value->Append(std::move(info_value));

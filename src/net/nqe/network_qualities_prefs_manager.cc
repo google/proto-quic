@@ -19,7 +19,14 @@ namespace net {
 namespace {
 
 // Maximum size of the prefs that hold the qualities of different networks.
-static const size_t kMaxCacheSize = 3u;
+// A single entry in the cache consists of three tuples:
+// (i)   SSID or MCCMNC of the network. SSID is at most 32 characters in length
+//       (but is typically shorter than that). MCCMNC is at most 6 characters
+//       long.
+// (ii)  Connection type of the network as reported by network
+//       change notifier (an enum).
+// (iii) Effective connection type of the network (an enum).
+static const size_t kMaxCacheSize = 10u;
 
 // Parses |value| into a map of NetworkIDs and CachedNetworkQualities,
 // and returns the map.

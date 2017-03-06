@@ -39,19 +39,19 @@ extern "C" {
 namespace {
 
 void* GlibcMallocHook(size_t size, const void* caller) {
-  return ShimMalloc(size);
+  return ShimMalloc(size, nullptr);
 }
 
 void* GlibcReallocHook(void* ptr, size_t size, const void* caller) {
-  return ShimRealloc(ptr, size);
+  return ShimRealloc(ptr, size, nullptr);
 }
 
 void GlibcFreeHook(void* ptr, const void* caller) {
-  return ShimFree(ptr);
+  return ShimFree(ptr, nullptr);
 }
 
 void* GlibcMemalignHook(size_t align, size_t size, const void* caller) {
-  return ShimMemalign(align, size);
+  return ShimMemalign(align, size, nullptr);
 }
 
 }  // namespace
@@ -76,30 +76,41 @@ SHIM_ALWAYS_EXPORT void* (*MALLOC_HOOK_MAYBE_VOLATILE __memalign_hook)(
 
 // 2) Redefine libc symbols themselves.
 
-SHIM_ALWAYS_EXPORT void* __libc_malloc(size_t size)
-    SHIM_ALIAS_SYMBOL(ShimMalloc);
+SHIM_ALWAYS_EXPORT void* __libc_malloc(size_t size) {
+  return ShimMalloc(size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void __libc_free(void* ptr) SHIM_ALIAS_SYMBOL(ShimFree);
+SHIM_ALWAYS_EXPORT void __libc_free(void* ptr) {
+  ShimFree(ptr, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __libc_realloc(void* ptr, size_t size)
-    SHIM_ALIAS_SYMBOL(ShimRealloc);
+SHIM_ALWAYS_EXPORT void* __libc_realloc(void* ptr, size_t size) {
+  return ShimRealloc(ptr, size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __libc_calloc(size_t n, size_t size)
-    SHIM_ALIAS_SYMBOL(ShimCalloc);
+SHIM_ALWAYS_EXPORT void* __libc_calloc(size_t n, size_t size) {
+  return ShimCalloc(n, size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void __libc_cfree(void* ptr) SHIM_ALIAS_SYMBOL(ShimFree);
+SHIM_ALWAYS_EXPORT void __libc_cfree(void* ptr) {
+  return ShimFree(ptr, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __libc_memalign(size_t align, size_t s)
-    SHIM_ALIAS_SYMBOL(ShimMemalign);
+SHIM_ALWAYS_EXPORT void* __libc_memalign(size_t align, size_t s) {
+  return ShimMemalign(align, s, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __libc_valloc(size_t size)
-    SHIM_ALIAS_SYMBOL(ShimValloc);
+SHIM_ALWAYS_EXPORT void* __libc_valloc(size_t size) {
+  return ShimValloc(size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __libc_pvalloc(size_t size)
-    SHIM_ALIAS_SYMBOL(ShimPvalloc);
+SHIM_ALWAYS_EXPORT void* __libc_pvalloc(size_t size) {
+  return ShimPvalloc(size);
+}
 
-SHIM_ALWAYS_EXPORT int __posix_memalign(void** r, size_t a, size_t s)
-    SHIM_ALIAS_SYMBOL(ShimPosixMemalign);
+SHIM_ALWAYS_EXPORT int __posix_memalign(void** r, size_t a, size_t s) {
+  return ShimPosixMemalign(r, a, s);
+}
 
 }  // extern "C"
 

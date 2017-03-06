@@ -24,7 +24,7 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
     self._power_metric = power.PowerMetric(platform)
 
   def WillNavigateToPage(self, page, tab):
-    tab.ExecuteJavaScript2("""
+    tab.ExecuteJavaScript("""
         if (window.chrome &&
             chrome.gpuBenchmarking &&
             chrome.gpuBenchmarking.clearImageCache) {
@@ -49,7 +49,7 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
 
   def StopBrowserAfterPage(self, browser, page):
     del page  # unused
-    return not browser.tabs[0].ExecuteJavaScript2("""
+    return not browser.tabs[0].ExecuteJavaScript("""
         window.chrome &&
             chrome.gpuBenchmarking &&
             chrome.gpuBenchmarking.clearImageCache;
@@ -62,7 +62,7 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
     self._power_metric.AddResults(tab, results)
 
     def _IsDone():
-      return tab.EvaluateJavaScript2('isDone')
+      return tab.EvaluateJavaScript('isDone')
 
     decode_image_events = timeline_model.GetAllEventsOfName(
         'ImageFrameGenerator::decode')
@@ -77,7 +77,7 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
             'image_decoding_measurement_limit_results_to_min_iterations') and
         page.image_decoding_measurement_limit_results_to_min_iterations):
       assert _IsDone()
-      min_iterations = tab.EvaluateJavaScript2('minIterations')
+      min_iterations = tab.EvaluateJavaScript('minIterations')
       decode_image_events = decode_image_events[-min_iterations:]
 
     durations = [d.duration for d in decode_image_events]
@@ -91,7 +91,7 @@ class ImageDecoding(legacy_page_test.LegacyPageTest):
                     'located at chrome/test/data/image_decoding.'))
     results.AddValue(scalar.ScalarValue(
         results.current_page, 'ImageLoading_avg', 'ms',
-        tab.EvaluateJavaScript2('averageLoadingTimeMs()')))
+        tab.EvaluateJavaScript('averageLoadingTimeMs()')))
 
   def DidRunPage(self, platform):
     self._power_metric.Close()

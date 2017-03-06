@@ -7,7 +7,6 @@
 
 import argparse
 import os
-import posixpath
 import sys
 
 import devil_chromium
@@ -30,19 +29,11 @@ Otherwise: Writes command-line file.
                       default=[], help='Target device serial (repeatable).')
   parser.add_argument('--name', required=True,
                       help='Name of file where to store flags on the device.')
-  parser.add_argument('--device-path', help='(deprecated) No longer needed to'
-                      ' supply a device path.')
   parser.add_argument('-e', '--executable', dest='executable', default='chrome',
                       help='(deprecated) No longer used.')
   parser.add_argument('--adb-path', type=os.path.abspath,
                       help='Path to the adb binary.')
   args, remote_args = parser.parse_known_args()
-
-  if args.device_path:
-    args.name = posixpath.basename(args.device_path)
-    print ('warning: --device-path option is deprecated,'
-           ' --name %s is now enough.'
-           % cmd_helper.SingleQuote(args.name))
 
   devil_chromium.Initialize(adb_path=args.adb_path)
 

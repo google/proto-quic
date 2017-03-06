@@ -117,6 +117,7 @@ class NET_EXPORT_PRIVATE SimpleBackendImpl : public Backend,
   std::unique_ptr<Iterator> CreateIterator() override;
   void GetStats(base::StringPairs* stats) override;
   void OnExternalCacheHit(const std::string& key) override;
+  size_t EstimateMemoryUsage() const override;
 
  private:
   class SimpleIterator;

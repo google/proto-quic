@@ -298,8 +298,13 @@ public class LibraryLoader {
                             Log.i(TAG, "Loading " + library);
                         }
 
-                        // Load the library using this Linker. May throw UnsatisfiedLinkError.
-                        loadLibrary(linker, zipFilePath, libFilePath);
+                        try {
+                            // Load the library using this Linker. May throw UnsatisfiedLinkError.
+                            loadLibrary(linker, zipFilePath, libFilePath);
+                        } catch (UnsatisfiedLinkError e) {
+                            Log.e(TAG, "Unable to load library: " + library);
+                            throw(e);
+                        }
                     }
 
                     linker.finishLibraryLoad();
@@ -309,7 +314,12 @@ public class LibraryLoader {
                     }
                     // Load libraries using the system linker.
                     for (String library : NativeLibraries.LIBRARIES) {
-                        System.loadLibrary(library);
+                        try {
+                            System.loadLibrary(library);
+                        } catch (UnsatisfiedLinkError e) {
+                            Log.e(TAG, "Unable to load library: " + library);
+                            throw(e);
+                        }
                     }
                 }
 

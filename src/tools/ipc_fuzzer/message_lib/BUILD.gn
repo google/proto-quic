@@ -22,8 +22,8 @@ static_library("ipc_message_lib") {
     "//skia",
     "//third_party/WebKit/public:blink",
     "//third_party/WebKit/public:blink_headers",
-    "//third_party/libjingle",
     "//third_party/mt19937ar",
+    "//third_party/webrtc_overrides",
     "//ui/accessibility:ax_gen",
   ]
   sources = [

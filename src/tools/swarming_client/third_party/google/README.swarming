@@ -1,7 +1,7 @@
 Name: Protocol Buffers
 Short Name: protobuf
-Version: 3.0.0
-Revision: e8ae137c96444ea313485ed1118c5e43b2099cf1
+Version: 3.1.0
+Revision: a428e42072765993ff674fda72863c9f1aa2d268
 Home-page: https://github.com/google/protobuf
 License: New BSD License
 
@@ -32,7 +32,7 @@ Local Modifications:
     @@ -31,9 +31,3 @@
      # Copyright 2007 Google Inc. All Rights Reserved.
 
-     __version__ = '3.0.0'
+     __version__ = '3.1.0'
     -
     -if __name__ != '__main__':
     -  try:

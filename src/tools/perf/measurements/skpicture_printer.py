@@ -28,7 +28,7 @@ class SkpicturePrinter(legacy_page_test.LegacyPageTest):
         os.path.join(self._skp_outdir, page.file_safe_name))
     # Replace win32 path separator char '\' with '\\'.
     outpath = outpath.replace('\\', '\\\\')
-    tab.EvaluateJavaScript2(
+    tab.EvaluateJavaScript(
         'chrome.gpuBenchmarking.printToSkPicture({{ outpath }});',
         outpath=outpath)
     pictures = glob.glob(os.path.join(outpath, '*.skp'))

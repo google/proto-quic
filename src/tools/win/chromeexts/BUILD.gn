@@ -4,7 +4,15 @@
 
 shared_library("chromeexts") {
   sources = [
+    "chrome_exts_command.cc",
+    "chrome_exts_command.h",
     "chromeexts.cc",
     "chromeexts.def",
+    "commands/hwnd_command.cc",
+    "commands/hwnd_command.h",
+  ]
+
+  deps = [
+    "//base",
   ]
 }

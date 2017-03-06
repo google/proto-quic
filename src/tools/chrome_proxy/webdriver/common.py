@@ -327,9 +327,18 @@ class TestDriver:
     """
     return self.ExecuteJavascript("return " + script, timeout)
 
-  def GetHistogram(self, histogram):
+  def GetHistogram(self, histogram, timeout=30):
+    """Gets a Chrome histogram as a dictionary object.
+
+    Args:
+      histogram: the name of the histogram to fetch
+      timeout: timeout for the underlying Javascript query.
+
+    Returns:
+      A dictionary object containing information about the histogram.
+    """
     js_query = 'statsCollectionController.getBrowserHistogram("%s")' % histogram
-    string_response = self.ExecuteJavascriptStatement(js_query)
+    string_response = self.ExecuteJavascriptStatement(js_query, timeout)
     self._logger.debug('Got %s histogram=%s', histogram, string_response)
     return json.loads(string_response)
 
@@ -381,6 +390,27 @@ class TestDriver:
       len(all_messages), method_filter)
     self._has_logs = False
     return all_messages
+
+  def SleepUntilHistogramHasEntry(self, histogram_name, sleep_intervals=10):
+    """Polls if a histogram exists in 1-6 second intervals for 10 intervals.
+    Allows script to run with a timeout of 5 seconds, so the default behavior
+    allows up to 60 seconds until timeout.
+
+    Args:
+      histogram_name: The name of the histogram to wait for
+      sleep_intervals: The number of polling intervals, each polling cycle takes
+      no more than 6 seconds.
+    Returns:
+      Whether the histogram exists
+    """
+    histogram = {}
+    while(not histogram and sleep_intervals > 0):
+      histogram = self.GetHistogram(histogram_name, 5)
+      if (not histogram):
+        time.sleep(1)
+        sleep_intervals -= 1
+
+    return bool(histogram)
 
   def GetHTTPResponses(self, include_favicon=False, skip_domainless_pages=True):
     """Parses the Performance Logs and returns a list of HTTPResponse objects.
@@ -548,6 +578,65 @@ class IntegrationTest(unittest.TestCase):
       self.assertNotIn(expected_via_header,
         http_response.response_headers['via'])
 
+  def checkLoFiResponse(self, http_response, expected_lo_fi):
+    """Asserts that if expected the response headers contain the Lo-Fi directive
+    then the request headers do too. Also checks that the content size is less
+    than 100 if |expected_lo_fi|. Otherwise, checks that the response and
+    request headers don't contain the Lo-Fi directive and the content size is
+    greater than 100.
+
+    Args:
+      http_response: The HTTPResponse object to check.
+      expected_lo_fi: Whether the response should be Lo-Fi.
+
+    Returns:
+      Whether the response was Lo-Fi.
+    """
+
+    if (expected_lo_fi) :
+      self.assertHasChromeProxyViaHeader(http_response)
+      content_length = http_response.response_headers['content-length']
+      cpat_request = http_response.request_headers[
+                       'chrome-proxy-accept-transform']
+      cpct_response = http_response.response_headers[
+                        'chrome-proxy-content-transform']
+      if ('empty-image' in cpct_response):
+        self.assertIn('empty-image', cpat_request)
+        self.assertTrue(int(content_length) < 100)
+        return True;
+      return False;
+    else:
+      self.assertNotIn('chrome-proxy-accept-transform',
+        http_response.request_headers)
+      self.assertNotIn('chrome-proxy-content-transform',
+        http_response.response_headers)
+      content_length = http_response.response_headers['content-length']
+      self.assertTrue(int(content_length) > 100)
+      return False;
+
+  def checkLitePageResponse(self, http_response):
+    """Asserts that if the response headers contain the Lite Page directive then
+    the request headers do too.
+
+    Args:
+      http_response: The HTTPResponse object to check.
+
+    Returns:
+      Whether the response was a Lite Page.
+    """
+
+    self.assertHasChromeProxyViaHeader(http_response)
+    if ('chrome-proxy-content-transform' not in http_response.response_headers):
+      return False;
+    cpct_response = http_response.response_headers[
+                      'chrome-proxy-content-transform']
+    cpat_request = http_response.request_headers[
+                      'chrome-proxy-accept-transform']
+    if ('lite-page' in cpct_response):
+      self.assertIn('lite-page', cpat_request)
+      return True;
+    return False;
+
   @staticmethod
   def RunAllTests(run_all_tests=False):
     """A simple helper method to run all tests using unittest.main().
@@ -581,3 +670,71 @@ class IntegrationTest(unittest.TestCase):
     testRunner = unittest.runner.TextTestRunner(verbosity=2,
       failfast=flags.failfast, buffer=(not flags.disable_buffer))
     testRunner.run(tests)
+
+# Platform-specific decorators.
+# These decorators can be used to only run a test function for certain platforms
+# by annotating the function with them.
+
+def AndroidOnly(func):
+  def wrapper(*args, **kwargs):
+    if ParseFlags().android:
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test runs on Android only.')
+  return wrapper
+
+def NotAndroid(func):
+  def wrapper(*args, **kwargs):
+    if not ParseFlags().android:
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test does not run on Android.')
+  return wrapper
+
+def WindowsOnly(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform == 'win32':
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test runs on Windows only.')
+  return wrapper
+
+def NotWindows(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform != 'win32':
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test does not run on Windows.')
+  return wrapper
+
+def LinuxOnly(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform.startswith('linux'):
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test runs on Linux only.')
+  return wrapper
+
+def NotLinux(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform.startswith('linux'):
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test does not run on Linux.')
+  return wrapper
+
+def MacOnly(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform == 'darwin':
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test runs on Mac OS only.')
+  return wrapper
+
+def NotMac(func):
+  def wrapper(*args, **kwargs):
+    if sys.platform == 'darwin':
+      func(*args, **kwargs)
+    else:
+      args[0].skipTest('This test does not run on Mac OS.')
+  return wrapper

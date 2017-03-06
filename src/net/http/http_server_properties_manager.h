@@ -162,6 +162,9 @@ class NET_EXPORT HttpServerPropertiesManager : public HttpServerProperties {
       size_t max_server_configs_stored_in_properties) override;
   bool IsInitialized() const override;
 
+  static base::TimeDelta GetUpdateCacheDelayForTesting();
+  static base::TimeDelta GetUpdatePrefsDelayForTesting();
+
  protected:
   // The location where ScheduleUpdatePrefsOnNetworkThread was called.
   enum Location {

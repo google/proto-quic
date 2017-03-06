@@ -74,7 +74,7 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL_HANDSHAKE *hs) {
       {TLSEXT_TYPE_cookie, &have_cookie, &cookie},
   };
 
-  uint8_t alert;
+  uint8_t alert = SSL_AD_DECODE_ERROR;
   if (!ssl_parse_extensions(&extensions, &alert, ext_types,
                             OPENSSL_ARRAY_SIZE(ext_types),
                             0 /* reject unknown */)) {
@@ -135,7 +135,7 @@ static enum ssl_hs_wait_t do_process_hello_retry_request(SSL_HANDSHAKE *hs) {
     hs->retry_group = group_id;
   }
 
-  if (!ssl_hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -207,7 +207,7 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
       {TLSEXT_TYPE_short_header, &have_short_header, &short_header},
   };
 
-  uint8_t alert;
+  uint8_t alert = SSL_AD_DECODE_ERROR;
   if (!ssl_parse_extensions(&extensions, &alert, ext_types,
                             OPENSSL_ARRAY_SIZE(ext_types),
                             0 /* reject unknown */)) {
@@ -251,39 +251,47 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
 
     ssl->s3->session_reused = 1;
     /* Only authentication information carries over in TLS 1.3. */
-    ssl->s3->new_session =
-        SSL_SESSION_dup(ssl->session, SSL_SESSION_DUP_AUTH_ONLY);
-    if (ssl->s3->new_session == NULL) {
+    hs->new_session = SSL_SESSION_dup(ssl->session, SSL_SESSION_DUP_AUTH_ONLY);
+    if (hs->new_session == NULL) {
       ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
       return ssl_hs_error;
     }
     ssl_set_session(ssl, NULL);
 
     /* Resumption incorporates fresh key material, so refresh the timeout. */
-    ssl_session_renew_timeout(ssl, ssl->s3->new_session,
+    ssl_session_renew_timeout(ssl, hs->new_session,
                               ssl->initial_ctx->session_psk_dhe_timeout);
   } else if (!ssl_get_new_session(hs, 0)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
     return ssl_hs_error;
   }
 
-  ssl->s3->new_session->cipher = cipher;
-  ssl->s3->tmp.new_cipher = cipher;
+  hs->new_session->cipher = cipher;
+  hs->new_cipher = cipher;
+
+  /* Store the initial negotiated ALPN in the session. */
+  if (ssl->s3->alpn_selected != NULL) {
+    hs->new_session->early_alpn =
+        BUF_memdup(ssl->s3->alpn_selected, ssl->s3->alpn_selected_len);
+    if (hs->new_session->early_alpn == NULL) {
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_INTERNAL_ERROR);
+      return ssl_hs_error;
+    }
+    hs->new_session->early_alpn_len = ssl->s3->alpn_selected_len;
+  }
 
   /* The PRF hash is now known. Set up the key schedule. */
-  size_t hash_len =
-      EVP_MD_size(ssl_get_handshake_digest(ssl_get_algorithm_prf(ssl)));
   if (!tls13_init_key_schedule(hs)) {
     return ssl_hs_error;
   }
 
   /* Incorporate the PSK into the running secret. */
   if (ssl->s3->session_reused) {
-    if (!tls13_advance_key_schedule(hs, ssl->s3->new_session->master_key,
-                                    ssl->s3->new_session->master_key_length)) {
+    if (!tls13_advance_key_schedule(hs, hs->new_session->master_key,
+                                    hs->new_session->master_key_length)) {
       return ssl_hs_error;
     }
-  } else if (!tls13_advance_key_schedule(hs, kZeroes, hash_len)) {
+  } else if (!tls13_advance_key_schedule(hs, kZeroes, hs->hash_len)) {
     return ssl_hs_error;
   }
 
@@ -297,6 +305,7 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
   /* Resolve ECDHE and incorporate it into the secret. */
   uint8_t *dhe_secret;
   size_t dhe_secret_len;
+  alert = SSL_AD_DECODE_ERROR;
   if (!ssl_ext_key_share_parse_serverhello(hs, &dhe_secret, &dhe_secret_len,
                                            &alert, &key_share)) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -326,7 +335,7 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
     ssl->s3->short_header = 1;
   }
 
-  if (!ssl_hash_current_message(ssl) ||
+  if (!ssl_hash_current_message(hs) ||
       !tls13_derive_handshake_secrets(hs) ||
       !tls13_set_traffic_key(ssl, evp_aead_open, hs->server_handshake_secret,
                              hs->hash_len) ||
@@ -357,7 +366,7 @@ static enum ssl_hs_wait_t do_process_encrypted_extensions(SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
-  if (!ssl_hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -392,7 +401,7 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
     return ssl_hs_error;
   }
 
-  uint8_t alert;
+  uint8_t alert = SSL_AD_DECODE_ERROR;
   STACK_OF(X509_NAME) *ca_sk = ssl_parse_client_CA_list(ssl, &alert, &cbs);
   if (ca_sk == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
@@ -413,7 +422,7 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
   sk_X509_NAME_pop_free(hs->ca_names, X509_NAME_free);
   hs->ca_names = ca_sk;
 
-  if (!ssl_hash_current_message(ssl)) {
+  if (!ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -425,7 +434,7 @@ static enum ssl_hs_wait_t do_process_server_certificate(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   if (!ssl_check_message_type(ssl, SSL3_MT_CERTIFICATE) ||
       !tls13_process_certificate(hs, 0 /* certificate required */) ||
-      !ssl_hash_current_message(ssl)) {
+      !ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -438,7 +447,7 @@ static enum ssl_hs_wait_t do_process_server_certificate_verify(
   SSL *const ssl = hs->ssl;
   if (!ssl_check_message_type(ssl, SSL3_MT_CERTIFICATE_VERIFY) ||
       !tls13_process_certificate_verify(hs) ||
-      !ssl_hash_current_message(ssl)) {
+      !ssl_hash_current_message(hs)) {
     return ssl_hs_error;
   }
 
@@ -450,7 +459,7 @@ static enum ssl_hs_wait_t do_process_server_finished(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
   if (!ssl_check_message_type(ssl, SSL3_MT_FINISHED) ||
       !tls13_process_finished(hs) ||
-      !ssl_hash_current_message(ssl) ||
+      !ssl_hash_current_message(hs) ||
       /* Update the secret to the master secret and derive traffic keys. */
       !tls13_advance_key_schedule(hs, kZeroes, hs->hash_len) ||
       !tls13_derive_application_secrets(hs)) {
@@ -535,7 +544,7 @@ static enum ssl_hs_wait_t do_complete_second_flight(SSL_HANDSHAKE *hs) {
 
     CBB cbb, body;
     if (!ssl->method->init_message(ssl, &cbb, &body, SSL3_MT_CHANNEL_ID) ||
-        !tls1_write_channel_id(ssl, &body) ||
+        !tls1_write_channel_id(hs, &body) ||
         !ssl_add_message_cbb(ssl, &cbb)) {
       CBB_cleanup(&cbb);
       return ssl_hs_error;
@@ -616,9 +625,8 @@ enum ssl_hs_wait_t tls13_client_handshake(SSL_HANDSHAKE *hs) {
 
 int tls13_process_new_session_ticket(SSL *ssl) {
   int ret = 0;
-  SSL_SESSION *session =
-      SSL_SESSION_dup(ssl->s3->established_session,
-                      SSL_SESSION_INCLUDE_NONAUTH);
+  SSL_SESSION *session = SSL_SESSION_dup(ssl->s3->established_session,
+                                         SSL_SESSION_INCLUDE_NONAUTH);
   if (session == NULL) {
     return 0;
   }
@@ -662,7 +670,7 @@ int tls13_process_new_session_ticket(SSL *ssl) {
        &early_data_info},
   };
 
-  uint8_t alert;
+  uint8_t alert = SSL_AD_DECODE_ERROR;
   if (!ssl_parse_extensions(&extensions, &alert, ext_types,
                             OPENSSL_ARRAY_SIZE(ext_types),
                             1 /* ignore unknown */)) {

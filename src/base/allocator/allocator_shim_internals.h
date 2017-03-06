@@ -20,8 +20,6 @@
 // Shim layer symbols need to be ALWAYS exported, regardless of component build.
 #define SHIM_ALWAYS_EXPORT __attribute__((visibility("default")))
 
-#define SHIM_ALIAS_SYMBOL(fn) __attribute__((alias(#fn)))
-
 #endif  // __GNUC__
 
 #endif  // BASE_ALLOCATOR_ALLOCATOR_SHIM_INTERNALS_H_

@@ -59,36 +59,43 @@ class AllocatorShimTest : public testing::Test {
     return reinterpret_cast<uintptr_t>(ptr) % kMaxSizeTracked;
   }
 
-  static void* MockAlloc(const AllocatorDispatch* self, size_t size) {
+  static void* MockAlloc(const AllocatorDispatch* self,
+                         size_t size,
+                         void* context) {
     if (instance_ && size < kMaxSizeTracked)
       ++(instance_->allocs_intercepted_by_size[size]);
-    return self->next->alloc_function(self->next, size);
+    return self->next->alloc_function(self->next, size, context);
   }
 
   static void* MockAllocZeroInit(const AllocatorDispatch* self,
                                  size_t n,
-                                 size_t size) {
+                                 size_t size,
+                                 void* context) {
     const size_t real_size = n * size;
     if (instance_ && real_size < kMaxSizeTracked)
       ++(instance_->zero_allocs_intercepted_by_size[real_size]);
-    return self->next->alloc_zero_initialized_function(self->next, n, size);
+    return self->next->alloc_zero_initialized_function(self->next, n, size,
+                                                       context);
   }
 
   static void* MockAllocAligned(const AllocatorDispatch* self,
                                 size_t alignment,
-                                size_t size) {
+                                size_t size,
+                                void* context) {
     if (instance_) {
       if (size < kMaxSizeTracked)
         ++(instance_->aligned_allocs_intercepted_by_size[size]);
       if (alignment < kMaxSizeTracked)
         ++(instance_->aligned_allocs_intercepted_by_alignment[alignment]);
     }
-    return self->next->alloc_aligned_function(self->next, alignment, size);
+    return self->next->alloc_aligned_function(self->next, alignment, size,
+                                              context);
   }
 
   static void* MockRealloc(const AllocatorDispatch* self,
                            void* address,
-                           size_t size) {
+                           size_t size,
+                           void* context) {
     if (instance_) {
       // Size 0xFEED a special sentinel for the NewHandlerConcurrency test.
       // Hitting it for the first time will cause a failure, causing the
@@ -106,52 +113,59 @@ class AllocatorShimTest : public testing::Test {
         ++(instance_->reallocs_intercepted_by_size[size]);
       ++instance_->reallocs_intercepted_by_addr[Hash(address)];
     }
-    return self->next->realloc_function(self->next, address, size);
+    return self->next->realloc_function(self->next, address, size, context);
   }
 
-  static void MockFree(const AllocatorDispatch* self, void* address) {
+  static void MockFree(const AllocatorDispatch* self,
+                       void* address,
+                       void* context) {
     if (instance_) {
       ++instance_->frees_intercepted_by_addr[Hash(address)];
     }
-    self->next->free_function(self->next, address);
+    self->next->free_function(self->next, address, context);
   }
 
   static size_t MockGetSizeEstimate(const AllocatorDispatch* self,
-                                    void* address) {
-    return self->next->get_size_estimate_function(self->next, address);
+                                    void* address,
+                                    void* context) {
+    return self->next->get_size_estimate_function(self->next, address, context);
   }
 
   static unsigned MockBatchMalloc(const AllocatorDispatch* self,
                                   size_t size,
                                   void** results,
-                                  unsigned num_requested) {
+                                  unsigned num_requested,
+                                  void* context) {
     if (instance_) {
       instance_->batch_mallocs_intercepted_by_size[size] =
           instance_->batch_mallocs_intercepted_by_size[size] + num_requested;
     }
     return self->next->batch_malloc_function(self->next, size, results,
-                                             num_requested);
+                                             num_requested, context);
   }
 
   static void MockBatchFree(const AllocatorDispatch* self,
                             void** to_be_freed,
-                            unsigned num_to_be_freed) {
+                            unsigned num_to_be_freed,
+                            void* context) {
     if (instance_) {
       for (unsigned i = 0; i < num_to_be_freed; ++i) {
         ++instance_->batch_frees_intercepted_by_addr[Hash(to_be_freed[i])];
       }
     }
-    self->next->batch_free_function(self->next, to_be_freed, num_to_be_freed);
+    self->next->batch_free_function(self->next, to_be_freed, num_to_be_freed,
+                                    context);
   }
 
   static void MockFreeDefiniteSize(const AllocatorDispatch* self,
                                    void* ptr,
-                                   size_t size) {
+                                   size_t size,
+                                   void* context) {
     if (instance_) {
       ++instance_->frees_intercepted_by_addr[Hash(ptr)];
       ++instance_->free_definite_sizes_intercepted_by_size[size];
     }
-    self->next->free_definite_size_function(self->next, ptr, size);
+    self->next->free_definite_size_function(self->next, ptr, size, context);
   }
 
   static void NewHandler() {

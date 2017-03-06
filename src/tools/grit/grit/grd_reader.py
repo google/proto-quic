@@ -13,6 +13,7 @@ import xml.sax.handler
 
 from grit import exception
 from grit import util
+from grit.format import rc_header
 from grit.node import base
 from grit.node import mapping
 from grit.node import misc
@@ -139,7 +140,8 @@ class GrdPartContentHandler(xml.sax.handler.ContentHandler):
 
 
 def Parse(filename_or_stream, dir=None, stop_after=None, first_ids_file=None,
-          debug=False, defines=None, tags_to_ignore=None, target_platform=None):
+          debug=False, defines=None, tags_to_ignore=None, target_platform=None,
+          predetermined_ids_file=None):
   '''Parses a GRD file into a tree of nodes (from grit.node).
 
   If filename_or_stream is a stream, 'dir' should point to the directory
@@ -168,6 +170,9 @@ def Parse(filename_or_stream, dir=None, stop_after=None, first_ids_file=None,
     defines: dictionary of defines, like {'chromeos': '1'}
     target_platform: None or the value that would be returned by sys.platform
         on your target platform.
+    predetermined_ids_file: File path to a file containing a pre-determined
+        mapping from resource names to resource ids which will be used to assign
+        resource ids to those resources.
 
   Return:
     Subclass of grit.node.base.Node
@@ -179,6 +184,7 @@ def Parse(filename_or_stream, dir=None, stop_after=None, first_ids_file=None,
   if dir is None and isinstance(filename_or_stream, types.StringType):
     dir = util.dirname(filename_or_stream)
 
+  rc_header.SetPredeterminedIdsFile(predetermined_ids_file)
   handler = GrdContentHandler(stop_after=stop_after, debug=debug, dir=dir,
                               defines=defines, tags_to_ignore=tags_to_ignore,
                               target_platform=target_platform)

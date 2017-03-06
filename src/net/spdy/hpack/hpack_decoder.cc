@@ -21,7 +21,10 @@ HpackDecoder::HpackDecoder()
     : handler_(nullptr),
       total_header_bytes_(0),
       total_parsed_bytes_(0),
-      header_block_started_(false) {}
+      header_block_started_(false),
+      size_updates_seen_(0),
+      size_updates_allowed_(true),
+      incremental_decode_(false) {}
 
 HpackDecoder::~HpackDecoder() {}
 

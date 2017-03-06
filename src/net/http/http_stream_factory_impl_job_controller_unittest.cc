@@ -115,12 +115,6 @@ class HttpStreamFactoryImplJobPeer {
 
 class JobControllerPeer {
  public:
-  static void VerifyWaitingTimeForMainJob(
-      HttpStreamFactoryImpl::JobController* job_controller,
-      const base::TimeDelta& delay) {
-    EXPECT_EQ(delay, job_controller->main_job_wait_time_);
-  }
-
   static bool main_job_is_blocked(
       HttpStreamFactoryImpl::JobController* job_controller) {
     return job_controller->main_job_is_blocked_;
@@ -940,7 +934,7 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCP) {
   job_controller_->OnStreamFailed(job_factory_.alternative_job(),
                                   ERR_NETWORK_CHANGED, SSLConfig());
   EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
-  test_task_runner->RunUntilIdle();
+  test_task_runner->FastForwardUntilNoTasksRemain();
 }
 
 // Test that main job is blocked for kMaxDelayTimeForMainJob(3s) if
@@ -1117,6 +1111,10 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, HttpURLWithNoProxy) {
 // Verifies that the main job is resumed properly after a delay when the
 // alternative proxy server job hangs.
 TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
+  // Overrides the main thread's message loop with a mock tick clock so that we
+  // could verify the main job is resumed with appropriate delay.
+  base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
+
   // Using hanging resolver will cause the alternative job to hang indefinitely.
   HangingResolver* resolver = new HangingResolver();
   session_deps_.host_resolver.reset(resolver);
@@ -1146,38 +1144,32 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, DelayedTCPAlternativeProxy) {
   EXPECT_TRUE(job_controller_->alternative_job());
   EXPECT_TRUE(JobControllerPeer::main_job_is_blocked(job_controller_));
 
-  // The alternative proxy server job stalls when connecting to the alternative
-  // proxy server, and controller should resume the main job after delay.
-  // Verify the waiting time for delayed main job.
-  EXPECT_CALL(*job_factory_.main_job(), Resume())
-      .WillOnce(Invoke(testing::CreateFunctor(
-          &JobControllerPeer::VerifyWaitingTimeForMainJob, job_controller_,
-          base::TimeDelta::FromMicroseconds(15))));
+  // Alternative proxy server job will start in the next message loop.
+  EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
 
-  // This message loop should cause the alternative proxy server job to start,
-  // and schedule resumption of the main job.
-  base::RunLoop().RunUntilIdle();
+  EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(0);
+  // Run tasks with no remaining delay, this will start the alternative proxy
+  // server job. The alternative proxy server job stalls when connecting to the
+  // alternative proxy server, and should schedule a task to resume the main job
+  // after delay. That task will be queued.
+  test_task_runner->RunUntilIdle();
+  EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
+
+  // Move forward the delay and verify the main job is resumed.
+  EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(1);
+  test_task_runner->FastForwardBy(base::TimeDelta::FromMicroseconds(15));
   EXPECT_FALSE(JobControllerPeer::main_job_is_blocked(job_controller_));
 
-  // Wait for the Resume to post.
-  base::PlatformThread::Sleep(base::TimeDelta::FromSeconds(1));
-
-  // This message loop should cause the main job to resume.
-  base::RunLoop().RunUntilIdle();
-  EXPECT_FALSE(JobControllerPeer::main_job_is_blocked(job_controller_));
-
-  JobControllerPeer::VerifyWaitingTimeForMainJob(
-      job_controller_, base::TimeDelta::FromMicroseconds(0));
-
-  // Since the main job did not complete successfully, the alternative proxy
-  // server should not be marked as bad.
+  test_task_runner->RunUntilIdle();
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_valid());
   EXPECT_EQ(1, test_proxy_delegate()->get_alternative_proxy_invocations());
+  EXPECT_FALSE(test_task_runner->HasPendingTask());
 }
 
 // Verifies that the alternative proxy server job fails immediately, and the
 // main job is not blocked.
 TEST_F(HttpStreamFactoryImplJobControllerTest, FailAlternativeProxy) {
+  base::ScopedMockTimeMessageLoopTaskRunner test_task_runner;
   // Using failing resolver will cause the alternative job to fail.
   FailingHostResolver* resolver = new FailingHostResolver();
   session_deps_.host_resolver.reset(resolver);
@@ -1204,23 +1196,25 @@ TEST_F(HttpStreamFactoryImplJobControllerTest, FailAlternativeProxy) {
   EXPECT_TRUE(job_controller_->main_job()->is_waiting());
   EXPECT_TRUE(job_controller_->alternative_job());
 
+  EXPECT_EQ(1u, test_task_runner->GetPendingTaskCount());
+
   EXPECT_CALL(request_delegate_, OnStreamReady(_, _, _)).Times(0);
 
   // Since the alternative proxy server job is started in the next message loop,
   // the main job would remain blocked until the alternative proxy starts, and
   // fails.
-  EXPECT_CALL(*job_factory_.main_job(), Resume())
-      .WillOnce(Invoke(testing::CreateFunctor(
-          &JobControllerPeer::VerifyWaitingTimeForMainJob, job_controller_,
-          base::TimeDelta::FromMicroseconds(0))));
+  EXPECT_CALL(*job_factory_.main_job(), Resume()).Times(1);
 
-  base::RunLoop().RunUntilIdle();
+  // Run tasks with no remaining delay.
+  test_task_runner->RunUntilIdle();
+
   EXPECT_FALSE(job_controller_->alternative_job());
   EXPECT_TRUE(job_controller_->main_job()->is_waiting());
   // Since the main job did not complete successfully, the alternative proxy
   // server should not be marked as bad.
   EXPECT_TRUE(test_proxy_delegate()->alternative_proxy_server().is_valid());
   EXPECT_EQ(1, test_proxy_delegate()->get_alternative_proxy_invocations());
+  EXPECT_FALSE(test_task_runner->HasPendingTask());
 }
 
 TEST_F(HttpStreamFactoryImplJobControllerTest,

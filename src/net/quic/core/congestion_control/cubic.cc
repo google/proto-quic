@@ -124,22 +124,18 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
     QuicTime event_time) {
   acked_packets_count_ += 1;  // Packets acked.
   epoch_packets_count_ += 1;
-  QuicTime current_time = FLAGS_quic_reloadable_flag_quic_use_event_time
-                              ? event_time
-                              : clock_->ApproximateNow();
-
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
   if (last_congestion_window_ == current_congestion_window &&
-      (current_time - last_update_time_ <= MaxCubicTimeInterval())) {
+      (event_time - last_update_time_ <= MaxCubicTimeInterval())) {
     return std::max(last_target_congestion_window_,
                     estimated_tcp_congestion_window_);
   }
   last_congestion_window_ = current_congestion_window;
-  last_update_time_ = current_time;
+  last_update_time_ = event_time;
 
   if (!epoch_.IsInitialized()) {
     // First ACK after a loss event.
-    epoch_ = current_time;     // Start of epoch.
+    epoch_ = event_time;       // Start of epoch.
     acked_packets_count_ = 1;  // Reset count.
     epoch_packets_count_ = 1;
     // Reset estimated_tcp_congestion_window_ to be in sync with cubic.
@@ -159,7 +155,7 @@ QuicPacketCount Cubic::CongestionWindowAfterAck(
   // the round trip time in account. This is done to allow us to use shift as a
   // divide operator.
   const int64_t elapsed_time =
-      ((current_time + delay_min - epoch_).ToMicroseconds() << 10) /
+      ((event_time + delay_min - epoch_).ToMicroseconds() << 10) /
       kNumMicrosPerSecond;
   DCHECK_GE(elapsed_time, 0);
 

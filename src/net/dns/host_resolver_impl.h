@@ -158,6 +158,9 @@ class NET_EXPORT HostResolverImpl
       const PersistCallback& persist_callback,
       std::unique_ptr<const base::Value> old_data) override;
 
+  void SetDefaultAddressFamily(AddressFamily address_family) override;
+  AddressFamily GetDefaultAddressFamily() const override;
+
   void set_proc_params_for_test(const ProcTaskParams& proc_params) {
     proc_params_ = proc_params;
   }
@@ -345,6 +348,10 @@ class NET_EXPORT HostResolverImpl
 
   // Number of consecutive failures of DnsTask, counted when fallback succeeds.
   unsigned num_dns_failures_;
+
+  // Address family to use when the request doesn't specify one. See
+  // http://crbug.com/696569 for why the option is needed.
+  AddressFamily default_address_family_;
 
   // True if DnsConfigService detected that system configuration depends on
   // local IPv6 connectivity. Disables probing.

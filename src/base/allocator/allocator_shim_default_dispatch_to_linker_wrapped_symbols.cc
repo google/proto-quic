@@ -32,23 +32,32 @@ namespace {
 
 using base::allocator::AllocatorDispatch;
 
-void* RealMalloc(const AllocatorDispatch*, size_t size) {
+void* RealMalloc(const AllocatorDispatch*, size_t size, void* context) {
   return __real_malloc(size);
 }
 
-void* RealCalloc(const AllocatorDispatch*, size_t n, size_t size) {
+void* RealCalloc(const AllocatorDispatch*,
+                 size_t n,
+                 size_t size,
+                 void* context) {
   return __real_calloc(n, size);
 }
 
-void* RealRealloc(const AllocatorDispatch*, void* address, size_t size) {
+void* RealRealloc(const AllocatorDispatch*,
+                  void* address,
+                  size_t size,
+                  void* context) {
   return __real_realloc(address, size);
 }
 
-void* RealMemalign(const AllocatorDispatch*, size_t alignment, size_t size) {
+void* RealMemalign(const AllocatorDispatch*,
+                   size_t alignment,
+                   size_t size,
+                   void* context) {
   return __real_memalign(alignment, size);
 }
 
-void RealFree(const AllocatorDispatch*, void* address) {
+void RealFree(const AllocatorDispatch*, void* address, void* context) {
   __real_free(address);
 }
 
@@ -56,7 +65,9 @@ void RealFree(const AllocatorDispatch*, void* address) {
 size_t DummyMallocUsableSize(const void*) { return 0; }
 #endif
 
-size_t RealSizeEstimate(const AllocatorDispatch*, void* address) {
+size_t RealSizeEstimate(const AllocatorDispatch*,
+                        void* address,
+                        void* context) {
 #if defined(OS_ANDROID)
 #if __ANDROID_API__ < 17
   // malloc_usable_size() is available only starting from API 17.

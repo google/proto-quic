@@ -52,6 +52,14 @@ class BuildSettings {
   const SourceFile& build_config_file() const { return build_config_file_; }
   void set_build_config_file(const SourceFile& f) { build_config_file_ = f; }
 
+  // Path to a file containing the default text to use when running `gn args`.
+  const SourceFile& arg_file_template_path() const {
+    return arg_file_template_path_;
+  }
+  void set_arg_file_template_path(const SourceFile& f) {
+    arg_file_template_path_ = f;
+  }
+
   // The build directory is the root of all output files. The default toolchain
   // files go into here, and non-default toolchains will have separate
   // toolchain-specific root directories inside this.
@@ -102,6 +110,7 @@ class BuildSettings {
   base::FilePath python_path_;
 
   SourceFile build_config_file_;
+  SourceFile arg_file_template_path_;
   SourceDir build_dir_;
   Args build_args_;
 

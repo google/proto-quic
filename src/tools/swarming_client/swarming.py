@@ -5,7 +5,7 @@
 
 """Client tool to trigger tasks or retrieve results from a Swarming server."""
 
-__version__ = '0.8.8'
+__version__ = '0.8.10'
 
 import collections
 import datetime
@@ -15,6 +15,7 @@ import optparse
 import os
 import subprocess
 import sys
+import textwrap
 import threading
 import time
 import urllib
@@ -165,6 +166,7 @@ FilesRef = collections.namedtuple(
 TaskProperties = collections.namedtuple(
     'TaskProperties',
     [
+      'caches',
       'cipd_input',
       'command',
       'dimensions',
@@ -887,7 +889,7 @@ def abort_task(_swarming, _manifest):
 
 
 def add_filter_options(parser):
-  parser.filter_group = optparse.OptionGroup(parser, 'Filtering slaves')
+  parser.filter_group = optparse.OptionGroup(parser, 'Bot selection')
   parser.filter_group.add_option(
       '-d', '--dimension', default=[], action='append', nargs=2,
       dest='dimensions', metavar='FOO bar',
@@ -908,70 +910,76 @@ def add_trigger_options(parser):
   isolateserver.add_isolate_server_options(parser)
   add_filter_options(parser)
 
-  parser.task_group = optparse.OptionGroup(parser, 'Task properties')
-  parser.task_group.add_option(
+  group = optparse.OptionGroup(parser, 'Task properties')
+  group.add_option(
       '-s', '--isolated',
       help='Hash of the .isolated to grab from the isolate server')
-  parser.task_group.add_option(
+  group.add_option(
       '-e', '--env', default=[], action='append', nargs=2, metavar='FOO bar',
       help='Environment variables to set')
-  parser.task_group.add_option(
-      '--priority', type='int', default=100,
-      help='The lower value, the more important the task is')
-  parser.task_group.add_option(
-      '-T', '--task-name',
-      help='Display name of the task. Defaults to '
-           '<base_name>/<dimensions>/<isolated hash>/<timestamp> if an '
-           'isolated file is provided, if a hash is provided, it defaults to '
-           '<user>/<dimensions>/<isolated hash>/<timestamp>')
-  parser.task_group.add_option(
-      '--tags', action='append', default=[],
-      help='Tags to assign to the task.')
-  parser.task_group.add_option(
-      '--user', default='',
-      help='User associated with the task. Defaults to authenticated user on '
-           'the server.')
-  parser.task_group.add_option(
+  group.add_option(
       '--idempotent', action='store_true', default=False,
       help='When set, the server will actively try to find a previous task '
            'with the same parameter and return this result instead if possible')
-  parser.task_group.add_option(
+  group.add_option(
       '--secret-bytes-path',
       help='The optional path to a file containing the secret_bytes to use with'
            'this task.')
-  parser.task_group.add_option(
-      '--expiration', type='int', default=6*60*60,
-      help='Seconds to allow the task to be pending for a bot to run before '
-           'this task request expires.')
-  parser.task_group.add_option(
-      '--deadline', type='int', dest='expiration',
-      help=optparse.SUPPRESS_HELP)
-  parser.task_group.add_option(
+  group.add_option(
       '--hard-timeout', type='int', default=60*60,
       help='Seconds to allow the task to complete.')
-  parser.task_group.add_option(
+  group.add_option(
       '--io-timeout', type='int', default=20*60,
       help='Seconds to allow the task to be silent.')
-  parser.task_group.add_option(
+  group.add_option(
       '--raw-cmd', action='store_true', default=False,
       help='When set, the command after -- is used as-is without run_isolated. '
            'In this case, no .isolated file is expected.')
-  parser.task_group.add_option(
+  group.add_option(
       '--cipd-package', action='append', default=[],
       help='CIPD packages to install on the Swarming bot.  Uses the format: '
            'path:package_name:version')
-  parser.task_group.add_option(
+  group.add_option(
+      '--named-cache', action='append', nargs=2, default=[],
+      help='"<name> <relpath>" items to keep a persistent bot managed cache')
+  group.add_option(
       '--service-account',
       help='Name of a service account to run the task as. Only literal "bot" '
            'string can be specified currently (to run the task under bot\'s '
            'account). Don\'t use task service accounts if not given '
            '(default).')
-  parser.task_group.add_option(
+  group.add_option(
       '-o', '--output', action='append', default=[],
       help='A list of files to return in addition to those written to'
            '$(ISOLATED_OUTDIR). An error will occur if a file specified by'
            'this option is also written directly to $(ISOLATED_OUTDIR).')
-  parser.add_option_group(parser.task_group)
+  parser.add_option_group(group)
+
+  group = optparse.OptionGroup(parser, 'Task request')
+  group.add_option(
+      '--priority', type='int', default=100,
+      help='The lower value, the more important the task is')
+  group.add_option(
+      '-T', '--task-name',
+      help='Display name of the task. Defaults to '
+           '<base_name>/<dimensions>/<isolated hash>/<timestamp> if an '
+           'isolated file is provided, if a hash is provided, it defaults to '
+           '<user>/<dimensions>/<isolated hash>/<timestamp>')
+  group.add_option(
+      '--tags', action='append', default=[],
+      help='Tags to assign to the task.')
+  group.add_option(
+      '--user', default='',
+      help='User associated with the task. Defaults to authenticated user on '
+           'the server.')
+  group.add_option(
+      '--expiration', type='int', default=6*60*60,
+      help='Seconds to allow the task to be pending for a bot to run before '
+           'this task request expires.')
+  group.add_option(
+      '--deadline', type='int', dest='expiration',
+      help=optparse.SUPPRESS_HELP)
+  parser.add_option_group(group)
 
 
 def process_trigger_options(parser, options, args):
@@ -1029,10 +1037,15 @@ def process_trigger_options(parser, options, args):
     with open(options.secret_bytes_path, 'r') as f:
       secret_bytes = f.read().encode('base64')
 
+  caches = [
+    {u'name': unicode(i[0]), u'path': unicode(i[1])}
+    for i in options.named_cache
+  ]
   # If inputs_ref.isolated is used, command is actually extra_args.
   # Otherwise it's an actual command to run.
   isolated_input = inputs_ref and inputs_ref.isolated
   properties = TaskProperties(
+      caches=caches,
       cipd_input=cipd_input,
       command=None if isolated_input else command,
       dimensions=options.dimensions,
@@ -1396,18 +1409,35 @@ def CMDquery_list(parser, args):
     help_url = (
       'https://apis-explorer.appspot.com/apis-explorer/?base=%s/_ah/api#p/' %
       options.swarming)
-    for api_id, api in sorted(apis.iteritems()):
+    for i, (api_id, api) in enumerate(sorted(apis.iteritems())):
+      if i:
+        print('')
       print api_id
-      print '  ' + api['description']
-      for resource_name, resource in sorted(api['resources'].iteritems()):
-        print ''
-        for method_name, method in sorted(resource['methods'].iteritems()):
+      print '  ' + api['description'].strip()
+      if 'resources' in api:
+        # Old.
+        for j, (resource_name, resource) in enumerate(
+            sorted(api['resources'].iteritems())):
+          if j:
+            print('')
+          for method_name, method in sorted(resource['methods'].iteritems()):
+            # Only list the GET ones.
+            if method['httpMethod'] != 'GET':
+              continue
+            print '- %s.%s: %s' % (
+                resource_name, method_name, method['path'])
+            print('\n'.join(
+                '  ' + l for l in textwrap.wrap(method['description'], 78)))
+            print '  %s%s%s' % (help_url, api['servicePath'], method['id'])
+      else:
+        # New.
+        for method_name, method in sorted(api['methods'].iteritems()):
           # Only list the GET ones.
           if method['httpMethod'] != 'GET':
             continue
-          print '- %s.%s: %s' % (
-              resource_name, method_name, method['path'])
-          print '  ' + method['description']
+          print '- %s: %s' % (method['id'], method['path'])
+          print('\n'.join(
+              '  ' + l for l in textwrap.wrap(method['description'], 78)))
           print '  %s%s%s' % (help_url, api['servicePath'], method['id'])
   return 0
 

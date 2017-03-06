@@ -532,6 +532,12 @@ class TestClientSocketPool : public ClientSocketPool {
     base_.RequestSockets(group_name, *casted_params, num_sockets, net_log);
   }
 
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) override {
+    base_.SetPriority(group_name, handle, priority);
+  }
+
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override {
     base_.CancelRequest(group_name, handle);
@@ -548,6 +554,10 @@ class TestClientSocketPool : public ClientSocketPool {
   bool IsStalled() const override { return base_.IsStalled(); }
 
   void CloseIdleSockets() override { base_.CloseIdleSockets(); }
+
+  void CloseIdleSocketsInGroup(const std::string& group_name) override {
+    base_.CloseIdleSocketsInGroup(group_name);
+  }
 
   int IdleSocketCount() const override { return base_.idle_socket_count(); }
 
@@ -734,6 +744,8 @@ class ClientSocketPoolBaseTest : public testing::Test {
   std::vector<std::unique_ptr<TestSocketRequest>>* requests() {
     return test_base_.requests();
   }
+  // Only counts the requests that get sockets asynchronously;
+  // synchronous completions are not registered by this count.
   size_t completion_count() const { return test_base_.completion_count(); }
 
   TestNetLog net_log_;
@@ -986,6 +998,107 @@ TEST_F(ClientSocketPoolBaseTest, TotalLimitRespectsPriority) {
 
   // Make sure we test order of all requests made.
   EXPECT_EQ(ClientSocketPoolTest::kIndexOutOfBounds, GetOrderOfRequest(9));
+}
+
+// Test reprioritizing a request before completion doesn't interfere with
+// its completion.
+TEST_F(ClientSocketPoolBaseTest, ReprioritizeOne) {
+  CreatePool(kDefaultMaxSockets, 1);
+
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(OK));
+  EXPECT_THAT(StartRequest("a", MEDIUM), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(request(0)->handle()->socket());
+  EXPECT_FALSE(request(1)->handle()->socket());
+
+  request(1)->handle()->SetPriority(MEDIUM);
+
+  ReleaseOneConnection(ClientSocketPoolTest::NO_KEEP_ALIVE);
+
+  EXPECT_TRUE(request(1)->handle()->socket());
+}
+
+// Reprioritize a request up past another one and make sure that changes the
+// completion order.
+TEST_F(ClientSocketPoolBaseTest, ReprioritizeUpReorder) {
+  CreatePool(kDefaultMaxSockets, 1);
+
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(OK));
+  EXPECT_THAT(StartRequest("a", MEDIUM), IsError(ERR_IO_PENDING));
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(request(0)->handle()->socket());
+  EXPECT_FALSE(request(1)->handle()->socket());
+  EXPECT_FALSE(request(2)->handle()->socket());
+
+  request(2)->handle()->SetPriority(HIGHEST);
+
+  ReleaseAllConnections(ClientSocketPoolTest::NO_KEEP_ALIVE);
+
+  EXPECT_EQ(1, GetOrderOfRequest(1));
+  EXPECT_EQ(3, GetOrderOfRequest(2));
+  EXPECT_EQ(2, GetOrderOfRequest(3));
+}
+
+// Reprioritize a request without changing relative priorities and check
+// that the order doesn't change.
+TEST_F(ClientSocketPoolBaseTest, ReprioritizeUpNoReorder) {
+  CreatePool(kDefaultMaxSockets, 1);
+
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(OK));
+  EXPECT_THAT(StartRequest("a", MEDIUM), IsError(ERR_IO_PENDING));
+  EXPECT_THAT(StartRequest("a", LOW), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(request(0)->handle()->socket());
+  EXPECT_FALSE(request(1)->handle()->socket());
+  EXPECT_FALSE(request(2)->handle()->socket());
+
+  request(2)->handle()->SetPriority(MEDIUM);
+
+  ReleaseAllConnections(ClientSocketPoolTest::NO_KEEP_ALIVE);
+
+  EXPECT_EQ(1, GetOrderOfRequest(1));
+  EXPECT_EQ(2, GetOrderOfRequest(2));
+  EXPECT_EQ(3, GetOrderOfRequest(3));
+}
+
+// Reprioritize a request past down another one and make sure that changes the
+// completion order.
+TEST_F(ClientSocketPoolBaseTest, ReprioritizeDownReorder) {
+  CreatePool(kDefaultMaxSockets, 1);
+
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(OK));
+  EXPECT_THAT(StartRequest("a", HIGHEST), IsError(ERR_IO_PENDING));
+  EXPECT_THAT(StartRequest("a", MEDIUM), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(request(0)->handle()->socket());
+  EXPECT_FALSE(request(1)->handle()->socket());
+  EXPECT_FALSE(request(2)->handle()->socket());
+
+  request(1)->handle()->SetPriority(LOW);
+
+  ReleaseAllConnections(ClientSocketPoolTest::NO_KEEP_ALIVE);
+
+  EXPECT_EQ(1, GetOrderOfRequest(1));
+  EXPECT_EQ(3, GetOrderOfRequest(2));
+  EXPECT_EQ(2, GetOrderOfRequest(3));
+}
+
+// Reprioritize a request to the same level as another and confirm it is
+// put after the old request.
+TEST_F(ClientSocketPoolBaseTest, ReprioritizeResetFIFO) {
+  CreatePool(kDefaultMaxSockets, 1);
+
+  EXPECT_THAT(StartRequest("a", LOWEST), IsError(OK));
+  EXPECT_THAT(StartRequest("a", HIGHEST), IsError(ERR_IO_PENDING));
+  EXPECT_THAT(StartRequest("a", MEDIUM), IsError(ERR_IO_PENDING));
+  EXPECT_TRUE(request(0)->handle()->socket());
+  EXPECT_FALSE(request(1)->handle()->socket());
+  EXPECT_FALSE(request(2)->handle()->socket());
+
+  request(1)->handle()->SetPriority(MEDIUM);
+
+  ReleaseAllConnections(ClientSocketPoolTest::NO_KEEP_ALIVE);
+
+  EXPECT_EQ(1, GetOrderOfRequest(1));
+  EXPECT_EQ(3, GetOrderOfRequest(2));
+  EXPECT_EQ(2, GetOrderOfRequest(3));
 }
 
 TEST_F(ClientSocketPoolBaseTest, TotalLimitRespectsGroupLimit) {
@@ -1618,6 +1731,36 @@ TEST_F(ClientSocketPoolBaseTest, CloseIdleSocketsForced) {
   EXPECT_THAT(histograms.GetAllSamples(kIdleSocketFateHistogram),
               testing::ElementsAre(
                   base::Bucket(/*IDLE_SOCKET_FATE_CLEAN_UP_FORCED=*/4, 1)));
+}
+
+TEST_F(ClientSocketPoolBaseTest, CloseIdleSocketsInGroupForced) {
+  base::HistogramTester histograms;
+  CreatePool(kDefaultMaxSockets, kDefaultMaxSocketsPerGroup);
+  TestCompletionCallback callback;
+  BoundTestNetLog log;
+  ClientSocketHandle handle1;
+  int rv = handle1.Init("a", params_, LOWEST,
+                        ClientSocketPool::RespectLimits::ENABLED,
+                        callback.callback(), pool_.get(), log.bound());
+  EXPECT_THAT(rv, IsOk());
+  ClientSocketHandle handle2;
+  rv = handle2.Init("a", params_, LOWEST,
+                    ClientSocketPool::RespectLimits::ENABLED,
+                    callback.callback(), pool_.get(), log.bound());
+  ClientSocketHandle handle3;
+  rv = handle3.Init("b", params_, LOWEST,
+                    ClientSocketPool::RespectLimits::ENABLED,
+                    callback.callback(), pool_.get(), log.bound());
+  EXPECT_THAT(rv, IsOk());
+  handle1.Reset();
+  handle2.Reset();
+  handle3.Reset();
+  EXPECT_EQ(3, pool_->IdleSocketCount());
+  pool_->CloseIdleSocketsInGroup("a");
+  EXPECT_EQ(1, pool_->IdleSocketCount());
+  EXPECT_THAT(histograms.GetAllSamples(kIdleSocketFateHistogram),
+              testing::ElementsAre(
+                  base::Bucket(/*IDLE_SOCKET_FATE_CLEAN_UP_FORCED=*/4, 2)));
 }
 
 TEST_F(ClientSocketPoolBaseTest, CleanUpUnusableIdleSockets) {

@@ -43,7 +43,7 @@ static std::unique_ptr<base::DictionaryValue> CreateBasicArrayTypeDictionary() {
 
 std::unique_ptr<base::DictionaryValue> CreateItemValue(int val) {
   std::unique_ptr<base::DictionaryValue> value(new base::DictionaryValue());
-  value->Set("val", new base::FundamentalValue(val));
+  value->Set("val", new base::Value(val));
   return value;
 }
 

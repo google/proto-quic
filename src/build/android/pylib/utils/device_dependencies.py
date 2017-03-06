@@ -14,6 +14,7 @@ _BLACKLIST = [
   re.compile(r'.*\.so'),  # Libraries packed into .apk.
   re.compile(r'.*Mojo.*manifest\.json'),  # Some source_set()s pull these in.
   re.compile(r'.*\.py'),  # Some test_support targets include python deps.
+  re.compile(r'.*\.stamp'),  # Stamp files should never be included.
 
   # Some test_support targets include python deps.
   re.compile(r'.*\.mojom\.js'),

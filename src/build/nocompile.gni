@@ -59,7 +59,8 @@ import("//testing/test.gni")
 
 declare_args() {
   # TODO(crbug.com/105388): make sure no-compile test is not flaky.
-  enable_nocompile_tests = is_linux && is_clang && host_cpu == target_cpu
+  enable_nocompile_tests =
+      (is_linux || is_mac || is_ios) && is_clang && host_cpu == target_cpu
 }
 
 if (enable_nocompile_tests) {

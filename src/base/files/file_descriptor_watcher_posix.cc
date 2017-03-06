@@ -92,7 +92,10 @@ FileDescriptorWatcher::Controller::Watcher::Watcher(
     WeakPtr<Controller> controller,
     MessageLoopForIO::Mode mode,
     int fd)
-    : controller_(controller), mode_(mode), fd_(fd) {
+    : file_descriptor_watcher_(FROM_HERE),
+      controller_(controller),
+      mode_(mode),
+      fd_(fd) {
   DCHECK(callback_task_runner_);
   thread_checker_.DetachFromThread();
 }

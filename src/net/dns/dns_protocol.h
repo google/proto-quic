@@ -135,12 +135,12 @@ static const uint8_t kRcodeNXDOMAIN = 3;
 static const uint8_t kRcodeNOTIMP = 4;
 static const uint8_t kRcodeREFUSED = 5;
 
-// DNS flags.
+// DNS header flags.
+//
+// https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-12
 static const uint16_t kFlagResponse = 0x8000;
-static const uint16_t kFlagRA = 0x80;
-static const uint16_t kFlagRD = 0x100;
-static const uint16_t kFlagTC = 0x200;
-static const uint16_t kFlagAA = 0x400;
+static const uint16_t kFlagRD = 0x100;  // Recursion Desired - query flag.
+static const uint16_t kFlagTC = 0x200;  // Truncated - server flag.
 
 }  // namespace dns_protocol
 

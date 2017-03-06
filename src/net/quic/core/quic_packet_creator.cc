@@ -39,13 +39,9 @@ QuicPacketCreator::QuicPacketCreator(QuicConnectionId connection_id,
       connection_id_length_(PACKET_8BYTE_CONNECTION_ID),
       packet_size_(0),
       connection_id_(connection_id),
-      packet_(kDefaultPathId,
-              0,
-              PACKET_1BYTE_PACKET_NUMBER,
-              nullptr,
-              0,
-              false,
-              false) {
+      packet_(0, PACKET_1BYTE_PACKET_NUMBER, nullptr, 0, false, false),
+      latched_flag_no_stop_waiting_frames_(
+          FLAGS_quic_reloadable_flag_quic_no_stop_waiting_frames) {
   SetMaxPacketLength(kDefaultMaxPacketSize);
 }
 
@@ -341,6 +337,7 @@ void QuicPacketCreator::ClearPacket() {
   packet_.encrypted_length = 0;
   DCHECK(packet_.retransmittable_frames.empty());
   packet_.listeners.clear();
+  packet_.largest_acked = 0;
 }
 
 void QuicPacketCreator::CreateAndSerializeStreamFrame(
@@ -395,7 +392,7 @@ void QuicPacketCreator::CreateAndSerializeStreamFrame(
   }
 
   size_t encrypted_length = framer_->EncryptInPlace(
-      packet_.encryption_level, packet_.path_id, packet_.packet_number,
+      packet_.encryption_level, packet_.packet_number,
       GetStartOfEncryptedData(framer_->version(), header), writer.length(),
       arraysize(encrypted_buffer), encrypted_buffer);
   if (encrypted_length == 0) {
@@ -499,7 +496,7 @@ void QuicPacketCreator::SerializePacket(char* encrypted_buffer,
     DCHECK_EQ(packet_size_, length);
   }
   const size_t encrypted_length = framer_->EncryptInPlace(
-      packet_.encryption_level, packet_.path_id, packet_.packet_number,
+      packet_.encryption_level, packet_.packet_number,
       GetStartOfEncryptedData(framer_->version(), header), length,
       encrypted_buffer_len, encrypted_buffer);
   if (encrypted_length == 0) {
@@ -527,8 +524,8 @@ QuicPacketCreator::SerializeVersionNegotiationPacket(
 
 // TODO(jri): Make this a public method of framer?
 SerializedPacket QuicPacketCreator::NoPacket() {
-  return SerializedPacket(kInvalidPathId, 0, PACKET_1BYTE_PACKET_NUMBER,
-                          nullptr, 0, false, false);
+  return SerializedPacket(0, PACKET_1BYTE_PACKET_NUMBER, nullptr, 0, false,
+                          false);
 }
 
 void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
@@ -543,7 +540,6 @@ void QuicPacketCreator::FillPacketHeader(QuicPacketHeader* header) {
   } else {
     header->public_header.nonce = nullptr;
   }
-  header->path_id = packet_.path_id;
   header->packet_number = ++packet_.packet_number;
   header->public_header.packet_number_length = packet_.packet_number_length;
 }
@@ -600,6 +596,9 @@ bool QuicPacketCreator::AddFrame(const QuicFrame& frame,
 
   if (frame.type == ACK_FRAME) {
     packet_.has_ack = true;
+    if (latched_flag_no_stop_waiting_frames_) {
+      packet_.largest_acked = frame.ack_frame->largest_observed;
+    }
   }
   if (frame.type == STOP_WAITING_FRAME) {
     packet_.has_stop_waiting = true;

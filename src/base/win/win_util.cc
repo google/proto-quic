@@ -10,6 +10,7 @@
 #include <shobjidl.h>  // Must be before propkey.
 #include <initguid.h>
 #include <inspectable.h>
+#include <mdmregistration.h>
 #include <propkey.h>
 #include <propvarutil.h>
 #include <psapi.h>
@@ -32,8 +33,10 @@
 
 #include "base/base_switches.h"
 #include "base/command_line.h"
+#include "base/files/file_path.h"
 #include "base/logging.h"
 #include "base/macros.h"
+#include "base/scoped_native_library.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
@@ -494,6 +497,40 @@ bool IsEnrolledToDomain() {
   }
 
   return g_domain_state == ENROLLED;
+}
+
+bool IsDeviceRegisteredWithManagement() {
+  static bool is_device_registered_with_management = []() {
+    ScopedNativeLibrary library(
+        FilePath(FILE_PATH_LITERAL("MDMRegistration.dll")));
+    if (!library.is_valid())
+      return false;
+
+    using IsDeviceRegisteredWithManagementFunction =
+        decltype(&::IsDeviceRegisteredWithManagement);
+    IsDeviceRegisteredWithManagementFunction
+        is_device_registered_with_management_function =
+            reinterpret_cast<IsDeviceRegisteredWithManagementFunction>(
+                library.GetFunctionPointer("IsDeviceRegisteredWithManagement"));
+    if (!is_device_registered_with_management_function)
+      return false;
+
+    BOOL is_managed = false;
+    HRESULT hr =
+        is_device_registered_with_management_function(&is_managed, 0, nullptr);
+    return SUCCEEDED(hr) && is_managed;
+  }();
+  return is_device_registered_with_management;
+}
+
+bool IsEnterpriseManaged() {
+  // TODO(rogerta): this function should really be:
+  //
+  //    return IsEnrolledToDomain() || IsDeviceRegisteredWithManagement();
+  //
+  // However, for now it is decided to collect some UMA metrics about
+  // IsDeviceRegisteredWithMdm() before changing chrome's behavior.
+  return IsEnrolledToDomain();
 }
 
 void SetDomainStateForTesting(bool state) {

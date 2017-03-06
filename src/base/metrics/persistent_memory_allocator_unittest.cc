@@ -100,9 +100,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   EXPECT_TRUE(allocator_->used_histogram_);
   EXPECT_EQ("UMA.PersistentAllocator." + base_name + ".UsedPct",
             allocator_->used_histogram_->histogram_name());
-  EXPECT_TRUE(allocator_->allocs_histogram_);
-  EXPECT_EQ("UMA.PersistentAllocator." + base_name + ".Allocs",
-            allocator_->allocs_histogram_->histogram_name());
 
   // Get base memory info for later comparison.
   PersistentMemoryAllocator::MemoryInfo meminfo0;
@@ -206,21 +203,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
   EXPECT_TRUE(used_samples);
   EXPECT_EQ(1, used_samples->TotalCount());
 
-  // Check the internal histogram record of allocation requests.
-  std::unique_ptr<HistogramSamples> allocs_samples(
-      allocator_->allocs_histogram_->SnapshotSamples());
-  EXPECT_TRUE(allocs_samples);
-  EXPECT_EQ(2, allocs_samples->TotalCount());
-  EXPECT_EQ(0, allocs_samples->GetCount(0));
-  EXPECT_EQ(1, allocs_samples->GetCount(sizeof(TestObject1)));
-  EXPECT_EQ(1, allocs_samples->GetCount(sizeof(TestObject2)));
-#if !DCHECK_IS_ON()  // DCHECK builds will die at a NOTREACHED().
-  EXPECT_EQ(0U, allocator_->Allocate(TEST_MEMORY_SIZE + 1, 0));
-  allocs_samples = allocator_->allocs_histogram_->SnapshotSamples();
-  EXPECT_EQ(3, allocs_samples->TotalCount());
-  EXPECT_EQ(1, allocs_samples->GetCount(0));
-#endif
-
   // Check that an object's type can be changed.
   EXPECT_EQ(2U, allocator_->GetType(block2));
   allocator_->ChangeType(block2, 3, 2, false);
@@ -234,8 +216,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
                                     TEST_MEMORY_PAGE, 0, "", false));
   EXPECT_EQ(TEST_ID, allocator2->Id());
   EXPECT_FALSE(allocator2->used_histogram_);
-  EXPECT_FALSE(allocator2->allocs_histogram_);
-  EXPECT_NE(allocator2->allocs_histogram_, allocator_->allocs_histogram_);
 
   // Ensure that iteration and access through second allocator works.
   PersistentMemoryAllocator::Iterator iter2(allocator2.get());
@@ -251,7 +231,6 @@ TEST_F(PersistentMemoryAllocatorTest, AllocateAndIterate) {
                                     TEST_MEMORY_PAGE, 0, "", true));
   EXPECT_EQ(TEST_ID, allocator3->Id());
   EXPECT_FALSE(allocator3->used_histogram_);
-  EXPECT_FALSE(allocator3->allocs_histogram_);
 
   // Ensure that iteration and access through third allocator works.
   PersistentMemoryAllocator::Iterator iter3(allocator3.get());

@@ -1201,6 +1201,9 @@
         "test": "chrome_junit_tests"
       },
       {
+        "test": "components_gcm_driver_junit_tests"
+      },
+      {
         "test": "components_invalidation_impl_junit_tests"
       },
       {
@@ -2443,6 +2446,9 @@
       },
       {
         "test": "chrome_junit_tests"
+      },
+      {
+        "test": "components_gcm_driver_junit_tests"
       },
       {
         "test": "components_invalidation_impl_junit_tests"

@@ -256,7 +256,8 @@ config("common_linker_setup") {
   # https://msdn.microsoft.com/en-us/library/windows/desktop/mt637065.aspx
   # /DYNAMICBASE (ASLR) is turned off in debug builds, therefore CFG can’t be
   # turned on either.
-  if (!is_debug) {
+  # TODO(thakis): Turn this on with lld once supported, https://crbug.com/693709
+  if (!is_debug && !use_lld) {
     # Turn on CFG in msvc linker, regardless of compiler used.
     ldflags += [ "/guard:cf" ]
   }

@@ -30,7 +30,7 @@ class BlinkStyle(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     with tab.action_runner.CreateInteraction('wait-for-quiescence'):
-      tab.ExecuteJavaScript2('console.time("");')
+      tab.ExecuteJavaScript('console.time("");')
       try:
         util.WaitFor(tab.HasReachedQuiescence, 15)
       except py_utils.TimeoutException:
@@ -39,7 +39,7 @@ class BlinkStyle(legacy_page_test.LegacyPageTest):
         # state on every run.
         pass
 
-    tab.ExecuteJavaScript2('''
+    tab.ExecuteJavaScript('''
         for (var i = 0; i < 11; i++) {
           var cold = i % 2 == 0;
           var name = "update_style";

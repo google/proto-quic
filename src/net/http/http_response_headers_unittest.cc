@@ -1819,7 +1819,7 @@ TEST_P(RemoveHeadersTest, RemoveHeaders) {
       new HttpResponseHeaders(orig_headers));
 
   std::unordered_set<std::string> to_remove;
-  for (const auto& header : test.to_remove) {
+  for (auto* header : test.to_remove) {
     if (header)
       to_remove.insert(header);
   }

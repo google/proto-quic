@@ -182,6 +182,19 @@ bool TestNetworkQualityEstimator::GetRecentDownlinkThroughputKbps(
                                                                   kbps);
 }
 
+base::TimeDelta TestNetworkQualityEstimator::GetRTTEstimateInternal(
+    const std::vector<NetworkQualityObservationSource>&
+        disallowed_observation_sources,
+    base::TimeTicks start_time,
+    const base::Optional<NetworkQualityEstimator::Statistic>& statistic,
+    int percentile) const {
+  if (rtt_estimate_internal_)
+    return rtt_estimate_internal_.value();
+
+  return NetworkQualityEstimator::GetRTTEstimateInternal(
+      disallowed_observation_sources, start_time, statistic, percentile);
+}
+
 void TestNetworkQualityEstimator::SetAccuracyRecordingIntervals(
     const std::vector<base::TimeDelta>& accuracy_recording_intervals) {
   accuracy_recording_intervals_set_ = true;

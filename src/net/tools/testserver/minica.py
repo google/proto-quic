@@ -216,11 +216,12 @@ OCSP_TYPE_BASIC = asn1.OID([1, 3, 6, 1, 5, 5, 7, 48, 1, 1])
 ORGANIZATION = asn1.OID([2, 5, 4, 10])
 PUBLIC_KEY_RSA = asn1.OID([1, 2, 840, 113549, 1, 1, 1])
 SHA256_WITH_RSA_ENCRYPTION = asn1.OID([1, 2, 840, 113549, 1, 1, 11])
-
+SUBJECT_ALTERNATIVE_NAME = asn1.OID([2, 5, 29, 17])
 
 def MakeCertificate(
     issuer_cn, subject_cn, serial, pubkey, privkey, ocsp_url = None,
-    ca_issuers_url = None, is_ca=False, path_len=None):
+    ca_issuers_url = None, is_ca=False, path_len=None, ip_sans=None,
+    dns_sans=None):
   '''MakeCertificate returns a DER encoded certificate, signed by privkey.'''
   extensions = asn1.SEQUENCE([])
 
@@ -240,6 +241,24 @@ def MakeCertificate(
             True, # IsCA
         ] + ([path_len] if path_len is not None else []) # Path len
         ))),
+      ]))
+
+  if ip_sans is not None or dns_sans is not None:
+    sans = []
+    if dns_sans is not None:
+      for dns_name in dns_sans:
+        sans.append(
+          asn1.Raw(asn1.TagAndLength(0x82, len(dns_name)) + dns_name))
+    if ip_sans is not None:
+      for ip_addr in ip_sans:
+        sans.append(
+          asn1.Raw(asn1.TagAndLength(0x87, len(ip_addr)) + ip_addr))
+    extensions.children.append(
+      asn1.SEQUENCE([
+        SUBJECT_ALTERNATIVE_NAME,
+        # There is implicitly a critical=False here. Since false is the
+        # default, encoding the value would be invalid DER.
+        asn1.OCTETSTRING(asn1.ToDER(asn1.SEQUENCE(sans)))
       ]))
 
   if ocsp_url is not None or ca_issuers_url is not None:
@@ -426,6 +445,8 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
                            ocsp_states = None,
                            ocsp_dates = None,
                            ocsp_produced = OCSP_PRODUCED_VALID,
+                           ip_sans = ["\x7F\x00\x00\x01"],
+                           dns_sans = None,
                            serial = 0):
   '''GenerateCertKeyAndOCSP returns a (cert_and_key_pem, ocsp_der) where:
        * cert_and_key_pem contains a certificate and private key in PEM format
@@ -441,7 +462,8 @@ def GenerateCertKeyAndOCSP(subject = "127.0.0.1",
   if serial == 0:
     serial = RandomNumber(16)
   cert_der = MakeCertificate(ROOT_CN, bytes(subject), serial, LEAF_KEY,
-                             ROOT_KEY, bytes(ocsp_url))
+                             ROOT_KEY, bytes(ocsp_url), ip_sans=ip_sans,
+                             dns_sans=dns_sans)
   cert_pem = DERToPEM(cert_der)
 
   ocsp_der = None

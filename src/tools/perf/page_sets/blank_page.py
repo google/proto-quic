@@ -13,7 +13,7 @@ class BlankPage(page_module.Page):
   def RunPageInteractions(self, action_runner):
     # Request a RAF and wait for it to be processed to ensure that the metric
     # Startup.FirstWebContents.NonEmptyPaint2 is recorded.
-    action_runner.ExecuteJavaScript2(
+    action_runner.ExecuteJavaScript(
         """
         this.hasRunRAF = 0;
         requestAnimationFrame(function() {
@@ -21,7 +21,7 @@ class BlankPage(page_module.Page):
         });
         """
     )
-    action_runner.WaitForJavaScriptCondition2("this.hasRunRAF == 1")
+    action_runner.WaitForJavaScriptCondition("this.hasRunRAF == 1")
 
 class BlankPageSet(story.StorySet):
   """A single blank page."""
@@ -39,7 +39,7 @@ class BlankPageTBM(page_module.Page):
         shared_page_state_class=BrowserStartupSharedState)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript2(
+    action_runner.ExecuteJavaScript(
         """
         this.hasRunRAF = 0;
         requestAnimationFrame(function() {
@@ -47,7 +47,7 @@ class BlankPageTBM(page_module.Page):
         });
         """
     )
-    action_runner.WaitForJavaScriptCondition2("this.hasRunRAF == 1")
+    action_runner.WaitForJavaScriptCondition("this.hasRunRAF == 1")
 
 
 class BlankPageSetTBM(story.StorySet):

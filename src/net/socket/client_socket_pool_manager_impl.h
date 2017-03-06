@@ -79,7 +79,7 @@ class ClientSocketPoolManagerImpl : public base::NonThreadSafe,
   std::unique_ptr<base::Value> SocketPoolInfoToValue() const override;
 
   // CertDatabase::Observer methods:
-  void OnCertDBChanged(const X509Certificate* cert) override;
+  void OnCertDBChanged() override;
 
   void DumpMemoryStats(
       base::trace_event::ProcessMemoryDump* pmd,

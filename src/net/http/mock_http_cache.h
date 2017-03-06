@@ -134,6 +134,7 @@ class MockDiskCache : public disk_cache::Backend {
   std::unique_ptr<Iterator> CreateIterator() override;
   void GetStats(base::StringPairs* stats) override;
   void OnExternalCacheHit(const std::string& key) override;
+  size_t EstimateMemoryUsage() const override;
 
   // Returns number of times a cache entry was successfully opened.
   int open_count() const { return open_count_; }

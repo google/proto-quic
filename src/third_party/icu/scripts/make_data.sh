@@ -42,7 +42,7 @@ function rewrite_data_makefile {
 function build_data {
   make clean
   make
-  sed -i 's/css3transform.res/root.res/' out/tmp/icudata.lst
+  sed -i 's/root_subset.res/root.res/' out/tmp/icudata.lst
   make
 }
 

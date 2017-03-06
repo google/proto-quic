@@ -227,7 +227,7 @@ class QuicDispatcherTest : public ::testing::Test {
                      QuicPacketNumberLength packet_number_length) {
     ProcessPacket(client_address, connection_id, has_version_flag,
                   has_multipath_flag, data, connection_id_length,
-                  packet_number_length, kDefaultPathId, 1);
+                  packet_number_length, 1);
   }
 
   // Process a packet using the first supported version.
@@ -238,7 +238,6 @@ class QuicDispatcherTest : public ::testing::Test {
                      const string& data,
                      QuicConnectionIdLength connection_id_length,
                      QuicPacketNumberLength packet_number_length,
-                     QuicPathId path_id,
                      QuicPacketNumber packet_number) {
     ProcessPacket(client_address, connection_id, has_version_flag,
                   CurrentSupportedVersions().front(), data,
@@ -256,7 +255,7 @@ class QuicDispatcherTest : public ::testing::Test {
                      QuicPacketNumber packet_number) {
     QuicVersionVector versions(SupportedVersions(version));
     std::unique_ptr<QuicEncryptedPacket> packet(ConstructEncryptedPacket(
-        connection_id, has_version_flag, false, false, 0, packet_number, data,
+        connection_id, has_version_flag, false, false, packet_number, data,
         connection_id_length, packet_number_length, &versions));
     std::unique_ptr<QuicReceivedPacket> received_packet(
         ConstructReceivedPacket(*packet, helper_.GetClock()->Now()));
@@ -505,7 +504,6 @@ TEST_F(QuicDispatcherTest, OKSeqNoPacketProcessed) {
   // connection.
   ProcessPacket(client_address, connection_id, true, false, SerializeCHLO(),
                 PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
-                kDefaultPathId,
                 QuicDispatcher::kMaxReasonableInitialPacketNumber);
   EXPECT_EQ(client_address, dispatcher_->current_client_address());
   EXPECT_EQ(server_address_, dispatcher_->current_server_address());
@@ -528,14 +526,12 @@ TEST_F(QuicDispatcherTest, TooBigSeqNoPacketToTimeWaitListManager) {
   // connection.
   ProcessPacket(client_address, connection_id, true, false, SerializeCHLO(),
                 PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
-                kDefaultPathId,
                 QuicDispatcher::kMaxReasonableInitialPacketNumber + 1);
 }
 
 TEST_F(QuicDispatcherTest, SupportedVersionsChangeInFlight) {
   static_assert(arraysize(kSupportedQuicVersions) == 5u,
                 "Supported versions out of sync");
-  FLAGS_quic_reloadable_flag_quic_fix_version_manager = true;
   FLAGS_quic_reloadable_flag_quic_disable_version_34 = false;
   FLAGS_quic_reloadable_flag_quic_enable_version_36_v3 = true;
   FLAGS_quic_reloadable_flag_quic_enable_version_37 = true;
@@ -1202,8 +1198,7 @@ TEST_P(BufferedPacketStoreTest, ProcessNonChloPacketsUptoLimitAndProcessChlo) {
   for (size_t i = 1; i <= kDefaultMaxUndecryptablePackets + 1; ++i) {
     ProcessPacket(client_address, conn_id, true, false,
                   QuicStrCat("data packet ", i + 1), PACKET_8BYTE_CONNECTION_ID,
-                  PACKET_6BYTE_PACKET_NUMBER, kDefaultPathId,
-                  /*packet_number=*/i + 1);
+                  PACKET_6BYTE_PACKET_NUMBER, /*packet_number=*/i + 1);
   }
   EXPECT_EQ(0u, dispatcher_->session_map().size())
       << "No session should be created before CHLO arrives.";
@@ -1257,7 +1252,6 @@ TEST_P(BufferedPacketStoreTest,
     ProcessPacket(client_address, conn_id, true, false,
                   QuicStrCat("data packet on connection ", i),
                   PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
-                  kDefaultPathId,
                   /*packet_number=*/2);
   }
 
@@ -1332,8 +1326,7 @@ TEST_P(BufferedPacketStoreTest, ReceiveRetransmittedCHLO) {
   QuicConnectionId conn_id = 1;
   ProcessPacket(client_address, conn_id, true, false,
                 QuicStrCat("data packet ", 2), PACKET_8BYTE_CONNECTION_ID,
-                PACKET_6BYTE_PACKET_NUMBER, kDefaultPathId,
-                /*packet_number=*/2);
+                PACKET_6BYTE_PACKET_NUMBER, /*packet_number=*/2);
 
   // When CHLO arrives, a new session should be created, and all packets
   // buffered should be delivered to the session.
@@ -1367,8 +1360,7 @@ TEST_P(BufferedPacketStoreTest, ReceiveCHLOAfterExpiration) {
   QuicConnectionId conn_id = 1;
   ProcessPacket(client_address, conn_id, true, false,
                 QuicStrCat("data packet ", 2), PACKET_8BYTE_CONNECTION_ID,
-                PACKET_6BYTE_PACKET_NUMBER, kDefaultPathId,
-                /*packet_number=*/2);
+                PACKET_6BYTE_PACKET_NUMBER, /*packet_number=*/2);
 
   mock_helper_.AdvanceTime(
       QuicTime::Delta::FromSeconds(kInitialIdleTimeoutSecs));
@@ -1562,7 +1554,6 @@ TEST_P(BufferedPacketStoreTest, ReceiveCHLOForBufferedConnection) {
   QuicConnectionId conn_id = 1;
   ProcessPacket(client_addr_, conn_id, true, false, "data packet",
                 PACKET_8BYTE_CONNECTION_ID, PACKET_6BYTE_PACKET_NUMBER,
-                kDefaultPathId,
                 /*packet_number=*/1);
   // Fill packet buffer to full with CHLOs on other connections. Need to feed
   // extra CHLOs because the first |kMaxNumSessionsToCreate| are going to create

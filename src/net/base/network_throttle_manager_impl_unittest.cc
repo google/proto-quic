@@ -5,11 +5,11 @@
 #include "net/base/network_throttle_manager_impl.h"
 
 #include <memory>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/callback.h"
 #include "base/callback_helpers.h"
-#include "base/memory/scoped_vector.h"
 #include "base/run_loop.h"
 #include "base/test/simple_test_tick_clock.h"
 #include "base/test/test_message_loop.h"
@@ -223,8 +223,9 @@ TEST_F(NetworkThrottleManagerTest, ThrottledSetPriority) {
   EXPECT_TRUE(throttle4->IsBlocked());
 }
 
-void ResetThrottles(bool* function_called,
-                    ScopedVector<NetworkThrottleManager::Throttle> throttles) {
+void ResetThrottles(
+    bool* function_called,
+    std::vector<std::unique_ptr<NetworkThrottleManager::Throttle>> throttles) {
   *function_called = true;
   // All pointers in the vector should be deleted on exit.
 }
@@ -232,18 +233,15 @@ void ResetThrottles(bool* function_called,
 // Check that tearing down all elements in the NTM on a SetPriority
 // upcall doesn't create any problems.
 TEST_F(NetworkThrottleManagerTest, ThrottleTeardown) {
-  ScopedVector<NetworkThrottleManager::Throttle> throttles;
-  std::unique_ptr<NetworkThrottleManager::Throttle> throttle_temporary;
+  std::vector<std::unique_ptr<NetworkThrottleManager::Throttle>> throttles;
 
-  throttles.push_back(std::unique_ptr<NetworkThrottleManager::Throttle>(
-      CreateThrottle(THROTTLED, UNBLOCKED)));
-  throttles.push_back(std::unique_ptr<NetworkThrottleManager::Throttle>(
-      CreateThrottle(THROTTLED, UNBLOCKED)));
+  throttles.push_back(CreateThrottle(THROTTLED, UNBLOCKED));
+  throttles.push_back(CreateThrottle(THROTTLED, UNBLOCKED));
 
   // Note that if there is more than one throttle blocked, then the
   // number of throttle state changes is dependent on destruction order.
   // So only one blocked throttle is created.
-  throttle_temporary = CreateThrottle(THROTTLED, BLOCKED);
+  auto throttle_temporary = CreateThrottle(THROTTLED, BLOCKED);
   NetworkThrottleManager::Throttle* throttle3 = throttle_temporary.get();
   throttles.push_back(std::move(throttle_temporary));
 

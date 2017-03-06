@@ -33,14 +33,14 @@ class _DromaeoMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'window.document.getElementById("pause") &&' +
         'window.document.getElementById("pause").value == "Run"',
         timeout=120)
 
     # Start spying on POST request that will report benchmark results, and
     # intercept result data.
-    tab.ExecuteJavaScript2("""
+    tab.ExecuteJavaScript("""
         (function() {
           var real_jquery_ajax_ = window.jQuery;
           window.results_ = "";
@@ -55,14 +55,14 @@ class _DromaeoMeasurement(legacy_page_test.LegacyPageTest):
           };
         })();""")
     # Starts benchmark.
-    tab.ExecuteJavaScript2('window.document.getElementById("pause").click();')
+    tab.ExecuteJavaScript('window.document.getElementById("pause").click();')
 
-    tab.WaitForJavaScriptCondition2('!!window.results_', timeout=600)
+    tab.WaitForJavaScriptCondition('!!window.results_', timeout=600)
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    score = json.loads(tab.EvaluateJavaScript2('window.results_ || "[]"'))
+    score = json.loads(tab.EvaluateJavaScript('window.results_ || "[]"'))
 
     def Escape(k):
       chars = [' ', '.', '-', '/', '(', ')', '*']

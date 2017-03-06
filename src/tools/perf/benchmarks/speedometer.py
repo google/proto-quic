@@ -56,7 +56,7 @@ class SpeedometerMeasurement(legacy_page_test.LegacyPageTest):
     if tab.browser.platform.GetOSName() == 'android':
       iterationCount = 3
 
-    tab.ExecuteJavaScript2("""
+    tab.ExecuteJavaScript("""
         // Store all the results in the benchmarkClient
         benchmarkClient._measuredValues = []
         benchmarkClient.didRunSuites = function(measuredValues) {
@@ -67,19 +67,19 @@ class SpeedometerMeasurement(legacy_page_test.LegacyPageTest):
         startTest();
         """,
         count=iterationCount)
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'benchmarkClient._finishedTestCount == benchmarkClient.testsCount',
         timeout=600)
     results.AddValue(list_of_scalar_values.ListOfScalarValues(
         page, 'Total', 'ms',
-        tab.EvaluateJavaScript2('benchmarkClient._timeValues'),
+        tab.EvaluateJavaScript('benchmarkClient._timeValues'),
         important=True))
 
     # Extract the timings for each suite
     for suite_name in self.enabled_suites:
       results.AddValue(list_of_scalar_values.ListOfScalarValues(
           page, suite_name, 'ms',
-          tab.EvaluateJavaScript2("""
+          tab.EvaluateJavaScript("""
               var suite_times = [];
               for(var i = 0; i < benchmarkClient.iterationCount; i++) {
                 suite_times.push(

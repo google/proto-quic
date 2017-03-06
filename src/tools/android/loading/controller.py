@@ -27,6 +27,7 @@ import traceback
 import psutil
 
 import chrome_cache
+import chrome_setup
 import common_util
 import device_setup
 import devtools_monitor
@@ -146,23 +147,7 @@ class ChromeControllerBase(object):
   DEVTOOLS_CONNECTION_ATTEMPT_INTERVAL_SECONDS = 1
 
   def __init__(self):
-    self._chrome_args = [
-        # Disable backgound network requests that may pollute WPR archive,
-        # pollute HTTP cache generation, and introduce noise in loading
-        # performance.
-        '--disable-background-networking',
-        '--disable-default-apps',
-        '--no-proxy-server',
-        # TODO(gabadie): Remove once crbug.com/354743 done.
-        '--safebrowsing-disable-auto-update',
-
-        # Disables actions that chrome performs only on first run or each
-        # launches, which can interfere with page load performance, or even
-        # block its execution by waiting for user input.
-        '--disable-fre',
-        '--no-default-browser-check',
-        '--no-first-run',
-
+    self._chrome_args = chrome_setup.CHROME_ARGS + [
         # Tests & dev-tools related stuff.
         '--enable-test-events',
         '--remote-debugging-port=%d' % OPTIONS.devtools_port,
@@ -339,13 +324,9 @@ class RemoteChromeController(ChromeControllerBase):
       assert self._wpr_attributes.chrome_env_override == {}, \
           'Remote controller doesn\'t support chrome environment variables.'
     package_info = OPTIONS.ChromePackage()
-    command_line_path = '/data/local/tmp/chrome-command-line'
     self._device.ForceStop(package_info.package)
-    chrome_args = self._GetChromeArguments()
-    logging.info('Launching %s with flags: %s' % (package_info.package,
-        subprocess.list2cmdline(chrome_args)))
     with device_setup.FlagReplacer(
-        self._device, command_line_path, self._GetChromeArguments()):
+        self._device, package_info.cmdline_file, self._GetChromeArguments()):
       self._DismissCrashDialogIfNeeded()
       start_intent = intent.Intent(
           package=package_info.package, activity=package_info.activity,
@@ -406,14 +387,9 @@ class RemoteChromeController(ChromeControllerBase):
   def ResetBrowserState(self):
     """Override resetting Chrome local state."""
     logging.info('Resetting Chrome local state')
-    package = OPTIONS.ChromePackage().package
-    # Remove the Chrome Profile and the various disk caches. Other parts
-    # theoretically should not affect loading performance. Also remove the tab
-    # state to prevent it from growing infinitely. [:D]
-    for directory in ['app_chrome/Default', 'cache', 'app_chrome/ShaderCache',
-                      'app_tabs']:
-      cmd = ['rm', '-rf', '/data/data/{}/{}'.format(package, directory)]
-      self._device.adb.Shell(subprocess.list2cmdline(cmd))
+    chrome_setup.ResetChromeLocalState(self._device,
+                                       OPTIONS.ChromePackage().package)
+
 
   def RebootDevice(self):
     """Reboot the remote device."""

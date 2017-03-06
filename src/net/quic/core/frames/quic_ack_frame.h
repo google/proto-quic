@@ -50,6 +50,9 @@ class QUIC_EXPORT_PRIVATE PacketNumberQueue {
   // the queue. Returns true if packets were removed.
   bool RemoveUpTo(QuicPacketNumber higher);
 
+  // Removes the smallest interval in the queue.
+  void RemoveSmallestInterval();
+
   // Mutates packet number set so that it contains only those packet numbers
   // from minimum to maximum packet number not currently in the set. Do nothing
   // if packet number set is empty.
@@ -115,9 +118,6 @@ struct QUIC_EXPORT_PRIVATE QuicAckFrame {
 
   // Set of packets.
   PacketNumberQueue packets;
-
-  // Path which this ack belongs to.
-  QuicPathId path_id;
 };
 
 // True if the packet number is greater than largest_observed or is listed

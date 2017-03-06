@@ -38,8 +38,7 @@ void QuicHeadersStream::OnDataAvailable() {
 }
 
 void QuicHeadersStream::MaybeReleaseSequencerBuffer() {
-  if (FLAGS_quic_reloadable_flag_quic_headers_stream_release_sequencer_buffer &&
-      spdy_session_->ShouldReleaseHeadersStreamSequencerBuffer()) {
+  if (spdy_session_->ShouldReleaseHeadersStreamSequencerBuffer()) {
     sequencer()->ReleaseBufferIfEmpty();
   }
 }

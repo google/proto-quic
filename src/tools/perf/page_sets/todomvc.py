@@ -36,7 +36,7 @@ class TodoMVCPage(page_module.Page):
         'console.time({{ label }});', label=INTERACTION_NAME)
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript2(
+    action_runner.ExecuteJavaScript(
         """
         this.becameIdle = false;
         this.idleCallback = function(deadline) {
@@ -48,8 +48,8 @@ class TodoMVCPage(page_module.Page):
         requestIdleCallback(this.idleCallback);
         """
     )
-    action_runner.WaitForJavaScriptCondition2('this.becameIdle === true')
-    action_runner.ExecuteJavaScript2(
+    action_runner.WaitForJavaScriptCondition('this.becameIdle === true')
+    action_runner.ExecuteJavaScript(
         'console.timeEnd({{ label }});', label=INTERACTION_NAME)
 
 

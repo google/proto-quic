@@ -122,6 +122,7 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 
 @interface NSLayoutConstraint (YosemiteSDK)
 @property(getter=isActive) BOOL active;
++ (void)activateConstraints:(NSArray*)constraints;
 @end
 
 @interface NSVisualEffectView (YosemiteSDK)
@@ -141,6 +142,10 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 
 @class CIQRCodeFeature;
 
+@interface NSView (YosemiteSDK)
+- (BOOL)isAccessibilitySelectorAllowed:(SEL)selector;
+@end
+
 #endif  // MAC_OS_X_VERSION_10_10
 
 // Once Chrome no longer supports OSX 10.10.2, everything within this
@@ -148,11 +153,11 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 #if !defined(MAC_OS_X_VERSION_10_10_3) || \
     MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10_3
 
-@interface NSEvent (YosemiteSDK)
+@interface NSEvent (Yosemite_3_SDK)
 @property(readonly) NSInteger stage;
 @end
 
-@interface NSView (YosemiteSDK)
+@interface NSView (Yosemite_3_SDK)
 - (void)setPressureConfiguration:(NSPressureConfiguration*)aConfiguration;
 @end
 
@@ -163,13 +168,19 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 #if !defined(MAC_OS_X_VERSION_10_11) || \
     MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_11
 
+@class NSLayoutDimension;
 @class NSLayoutXAxisAnchor;
 @class NSLayoutYAxisAnchor;
+
+@interface NSObject (ElCapitanSDK)
+- (NSLayoutConstraint*)constraintEqualToConstant:(CGFloat)c;
+@end
 
 @interface NSView (ElCapitanSDK)
 @property(readonly, strong) NSLayoutXAxisAnchor* leftAnchor;
 @property(readonly, strong) NSLayoutXAxisAnchor* rightAnchor;
 @property(readonly, strong) NSLayoutYAxisAnchor* bottomAnchor;
+@property(readonly, strong) NSLayoutDimension* widthAnchor;
 @end
 
 @interface NSWindow (ElCapitanSDK)
@@ -196,9 +207,24 @@ BASE_EXPORT extern NSString* const NSAppearanceNameVibrantLight;
 
 @interface NSButton (SierraPointOneSDK)
 @property(copy) NSColor* bezelColor;
+@property BOOL imageHugsTitle;
 + (instancetype)buttonWithTitle:(NSString*)title
                          target:(id)target
                          action:(SEL)action;
++ (instancetype)buttonWithImage:(NSImage*)image
+                         target:(id)target
+                         action:(SEL)action;
++ (instancetype)buttonWithTitle:(NSString*)title
+                          image:(NSImage*)image
+                         target:(id)target
+                         action:(SEL)action;
+@end
+
+@interface NSSegmentedControl (SierraPointOneSDK)
++ (instancetype)segmentedControlWithImages:(NSArray*)images
+                              trackingMode:(NSSegmentSwitchTracking)trackingMode
+                                    target:(id)target
+                                    action:(SEL)action;
 @end
 
 #endif  // MAC_OS_X_VERSION_10_12_1

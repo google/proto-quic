@@ -277,21 +277,21 @@ bool Client(const std::vector<std::string> &args) {
   }
 
   if (args_map.count("-cipher") != 0 &&
-      !SSL_CTX_set_cipher_list(ctx.get(), args_map["-cipher"].c_str())) {
+      !SSL_CTX_set_strict_cipher_list(ctx.get(), args_map["-cipher"].c_str())) {
     fprintf(stderr, "Failed setting cipher list\n");
     return false;
   }
 
-  if (args_map.count("-max-version") != 0) {
-    uint16_t version;
-    if (!VersionFromString(&version, args_map["-max-version"])) {
-      fprintf(stderr, "Unknown protocol version: '%s'\n",
-              args_map["-max-version"].c_str());
-      return false;
-    }
-    if (!SSL_CTX_set_max_proto_version(ctx.get(), version)) {
-      return false;
-    }
+  uint16_t max_version = TLS1_3_VERSION;
+  if (args_map.count("-max-version") != 0 &&
+      !VersionFromString(&max_version, args_map["-max-version"])) {
+    fprintf(stderr, "Unknown protocol version: '%s'\n",
+            args_map["-max-version"].c_str());
+    return false;
+  }
+
+  if (!SSL_CTX_set_max_proto_version(ctx.get(), max_version)) {
+    return false;
   }
 
   if (args_map.count("-min-version") != 0) {

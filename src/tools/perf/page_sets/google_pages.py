@@ -38,7 +38,7 @@ class GmailPage(GooglePages):
     google_login.LoginGoogleAccount(action_runner, 'google',
                                     self.credentials_path)
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
 
@@ -56,7 +56,7 @@ class GoogleDocPage(GooglePages):
                                     self.credentials_path)
     super(GoogleDocPage, self).RunNavigateSteps(action_runner)
     action_runner.Wait(2)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.getElementsByClassName("kix-appview-editor").length')
 
 
@@ -78,5 +78,5 @@ class AdwordCampaignDesktopPage(page_module.Page):
 
   def RunPageInteractions(self, action_runner):
     action_runner.WaitForElement(text='Welcome to AdWords!')
-    action_runner.ExecuteJavaScript2(
+    action_runner.ExecuteJavaScript(
         'console.timeEnd({{ label }});', label=INTERACTION_NAME)

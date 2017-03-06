@@ -1,5 +1,6 @@
 CA_DIR=out
 CA_NAME=policy-root
+SAN=policy_test.example
 
 [ca]
 default_ca = CA_root
@@ -26,6 +27,7 @@ copy_extensions  = copy
 basicConstraints       = critical, CA:false
 extendedKeyUsage       = serverAuth, clientAuth
 certificatePolicies    = 1.2.3.4
+subjectAltName         = DNS:${ENV::SAN}
 
 [ca_cert]
 basicConstraints       = critical, CA:true

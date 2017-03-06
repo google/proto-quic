@@ -170,7 +170,7 @@ void MockProxyResolverV8Tracing::GetProxyForURL(
     std::unique_ptr<ProxyResolver::Request>* request,
     std::unique_ptr<Bindings> bindings) {
   pending_jobs_.push_back(base::WrapUnique(new Job()));
-  auto pending_job = pending_jobs_.back().get();
+  auto* pending_job = pending_jobs_.back().get();
   pending_job->url = url;
   pending_job->results = results;
   pending_job->SetCallback(callback);

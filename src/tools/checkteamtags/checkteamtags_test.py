@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import os
 import sys
 import unittest
@@ -16,13 +17,41 @@ import mock
 
 def mock_file(lines):
   inner_mock = mock.MagicMock()
-  inner_attrs = {'readlines.return_value': lines}
+  inner_attrs = {'readlines.return_value': lines,
+                 '__iter__.return_value': lines}
   inner_mock.configure_mock(**inner_attrs)
 
   return_val = mock.MagicMock()
   attrs = {'__enter__.return_value': inner_mock}
   return_val.configure_mock(**attrs)
   return return_val
+
+
+DEFAULT_MAPPING = {
+    'dir-to-component': {},
+    'component-to-team': {},
+}
+
+def mock_url_open(data=None):
+  """Simulate the result of fetching the cloud location of the mapping.
+
+  i.e. https://storage.googleapis.com/chromium-owners/component_map.json
+  """
+  if data is None:
+    data = DEFAULT_MAPPING
+
+  class _MockJsonResponse(object):
+    def __init__(self, data):
+      self.data = data
+
+    def read(self):
+      return json.dumps(self.data)
+
+  def inner(url):
+    if url.endswith('.json'):
+      return _MockJsonResponse(data)
+  return inner
+
 
 NO_TAGS = """
 mock@chromium.org
@@ -75,45 +104,109 @@ mock@chromium.org
 
 open_name = 'checkteamtags.open'
 
-@mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
 @mock.patch('sys.stdout', mock.MagicMock())
+@mock.patch('os.path.exists', mock.MagicMock())
 class CheckTeamTagsTest(unittest.TestCase):
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testNoTags(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(NO_TAGS)
       self.assertEqual(0, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMultipleComponentTags(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MULTIPLE_COMPONENT_TAGS)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMultipleComponentsInTag(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MULTIPLE_COMPONENTS_IN_TAG)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMissingComponent(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MISSING_COMPONENT)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMultipleTeamTags(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MULTIPLE_TEAM_TAGS)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMultipleTeamsInTag(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MULTIPLE_TEAMS_IN_TAG)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testMissingTeam(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(MISSING_TEAM)
       self.assertEqual(1, checkteamtags.main())
 
+  @mock.patch('urllib2.urlopen', mock_url_open())
+  @mock.patch('sys.argv', ['checkteamtags', '--bare' ,'OWNERS'])
   def testBasic(self):
     with mock.patch(open_name, create=True) as mock_open:
       mock_open.return_value = mock_file(BASIC)
       self.assertEqual(0, checkteamtags.main())
+
+  @mock.patch('urllib2.urlopen', mock_url_open({
+      'dir-to-component': {
+          'some/dir':      'V8>mock_component',
+      },
+      'component-to-team': {
+          'V8>mock_component': 'some-other-team@chromium.org',
+      },
+  }))
+  @mock.patch('sys.argv', ['checkteamtags', '--bare', 'fakepath/OWNERS'])
+  def testMappingFail(self):
+    with mock.patch(open_name, create=True) as mock_open:
+      mock_open.return_value = mock_file(BASIC)
+      with mock.patch('owners_file_tags.open', create=True) as mock_open_2:
+        mock_open_2.return_value = mock_file(BASIC)
+        self.assertEqual(1, checkteamtags.main())
+
+  @mock.patch('urllib2.urlopen', mock_url_open({
+      'dir-to-component': {
+          'some/dir':      'V8>mock_component',
+      },
+      'component-to-team': {
+          'V8>mock_component': 'some-other-team@chromium.org',
+      },
+  }))
+  @mock.patch('sys.argv', ['checkteamtags', '--bare', 'some/dir/OWNERS'])
+  def testMappingPassRename(self):
+    with mock.patch(open_name, create=True) as mock_open:
+      mock_open.return_value = mock_file(BASIC)
+      with mock.patch('owners_file_tags.open', create=True) as mock_open_2:
+        mock_open_2.return_value = mock_file(BASIC)
+        self.assertEqual(0, checkteamtags.main())
+
+  @mock.patch('urllib2.urlopen', mock_url_open({
+      'dir-to-component': {
+          'some/dir/':      'V8>mock_component',
+      },
+      'component-to-team': {
+          'V8>mock_component': 'some-team@chromium.org',
+      },
+  }))
+  @mock.patch('sys.argv', ['checkteamtags', '--bare', 'other/dir/OWNERS'])
+  def testMappingPassNew(self):
+    with mock.patch(open_name, create=True) as mock_open:
+      mock_open.return_value = mock_file(BASIC)
+      with mock.patch('owners_file_tags.open', create=True) as mock_open_2:
+        mock_open_2.return_value = mock_file(BASIC)
+        self.assertEqual(0, checkteamtags.main())

@@ -17,28 +17,38 @@
 
 extern "C" {
 
-SHIM_ALWAYS_EXPORT void* __wrap_calloc(size_t, size_t)
-    SHIM_ALIAS_SYMBOL(ShimCalloc);
+SHIM_ALWAYS_EXPORT void* __wrap_calloc(size_t n, size_t size) {
+  return ShimCalloc(n, size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void __wrap_free(void*)
-    SHIM_ALIAS_SYMBOL(ShimFree);
+SHIM_ALWAYS_EXPORT void __wrap_free(void* ptr) {
+  ShimFree(ptr, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __wrap_malloc(size_t)
-    SHIM_ALIAS_SYMBOL(ShimMalloc);
+SHIM_ALWAYS_EXPORT void* __wrap_malloc(size_t size) {
+  return ShimMalloc(size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __wrap_memalign(size_t, size_t)
-    SHIM_ALIAS_SYMBOL(ShimMemalign);
+SHIM_ALWAYS_EXPORT void* __wrap_memalign(size_t align, size_t size) {
+  return ShimMemalign(align, size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT int __wrap_posix_memalign(void**, size_t, size_t)
-    SHIM_ALIAS_SYMBOL(ShimPosixMemalign);
+SHIM_ALWAYS_EXPORT int __wrap_posix_memalign(void** res,
+                                             size_t align,
+                                             size_t size) {
+  return ShimPosixMemalign(res, align, size);
+}
 
-SHIM_ALWAYS_EXPORT void* __wrap_pvalloc(size_t)
-    SHIM_ALIAS_SYMBOL(ShimPvalloc);
+SHIM_ALWAYS_EXPORT void* __wrap_pvalloc(size_t size) {
+  return ShimPvalloc(size);
+}
 
-SHIM_ALWAYS_EXPORT void* __wrap_realloc(void*, size_t)
-    SHIM_ALIAS_SYMBOL(ShimRealloc);
+SHIM_ALWAYS_EXPORT void* __wrap_realloc(void* address, size_t size) {
+  return ShimRealloc(address, size, nullptr);
+}
 
-SHIM_ALWAYS_EXPORT void* __wrap_valloc(size_t)
-    SHIM_ALIAS_SYMBOL(ShimValloc);
+SHIM_ALWAYS_EXPORT void* __wrap_valloc(size_t size) {
+  return ShimValloc(size, nullptr);
+}
 
 }  // extern "C"

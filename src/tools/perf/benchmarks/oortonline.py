@@ -23,8 +23,8 @@ class _OortOnlineMeasurement(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     del page  # unused
-    tab.WaitForJavaScriptCondition2('window.benchmarkFinished', timeout=1000)
-    scores = tab.EvaluateJavaScript2('window.benchmarkScore')
+    tab.WaitForJavaScriptCondition('window.benchmarkFinished', timeout=1000)
+    scores = tab.EvaluateJavaScript('window.benchmarkScore')
     for score in scores:
       valid = score['valid']
       if valid:

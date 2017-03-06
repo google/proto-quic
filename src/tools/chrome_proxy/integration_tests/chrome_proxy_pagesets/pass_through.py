@@ -17,7 +17,7 @@ class PassThroughPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(PassThroughPage, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         (function() {
           var request = new XMLHttpRequest();
           request.open("GET", {{ url }});
