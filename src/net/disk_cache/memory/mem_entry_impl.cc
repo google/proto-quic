@@ -253,6 +253,14 @@ int MemEntryImpl::ReadyForSparseIO(const CompletionCallback& callback) {
   return net::OK;
 }
 
+size_t MemEntryImpl::EstimateMemoryUsage() const {
+  // Subtlety: the entries in children_ are not double counted, as the entry
+  // pointers won't be followed by EstimateMemoryUsage.
+  return base::trace_event::EstimateMemoryUsage(data_) +
+         base::trace_event::EstimateMemoryUsage(key_) +
+         base::trace_event::EstimateMemoryUsage(children_);
+}
+
 // ------------------------------------------------------------------------
 
 MemEntryImpl::MemEntryImpl(MemBackendImpl* backend,

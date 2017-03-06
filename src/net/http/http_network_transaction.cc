@@ -212,7 +212,7 @@ int HttpNetworkTransaction::RestartWithAuth(
     DCHECK(stream_request_ != NULL);
     auth_controllers_[target] = NULL;
     ResetStateForRestart();
-    rv = stream_request_->RestartTunnelWithProxyAuth(credentials);
+    rv = stream_request_->RestartTunnelWithProxyAuth();
   } else {
     // In this case, we've gathered credentials for the server or the proxy
     // but it is not during the tunneling phase.
@@ -421,11 +421,16 @@ void HttpNetworkTransaction::PopulateNetErrorDetails(
 void HttpNetworkTransaction::SetPriority(RequestPriority priority) {
   priority_ = priority;
 
-  // TODO: Note that if throttling is ever implemented below this
-  // level, either of the two below calls may result in request
-  // completion, callbacks, and the potential deletion of this object
-  // (like the call below to throttle_->SetPriority()).  In that case,
-  // this code will need to be modified.
+  // TODO(rdsmith): Note that if any code indirectly executed by
+  // |stream_request_->SetPriority()| or |stream_->SetPriority()|
+  // ever implements a throttling mechanism where changing a request's
+  // priority may cause a this or another request to synchronously succeed
+  // or fail, that callback could synchronously delete |*this|, causing
+  // a crash on return to this code.
+  //
+  // |throttle_->SetPriority()| has exactly the above attributes, which
+  // is why it's the last call in this function.
+
   if (stream_request_)
     stream_request_->SetPriority(priority);
   if (stream_)

@@ -228,7 +228,7 @@
       <Item Name="Type">type_</Item>
     </Expand>
   </Type>
-  <Type Name="base::FundamentalValue">
+  <Type Name="base::Value">
     <DisplayString>Fundamental</DisplayString>
     <Expand>
       <ExpandedItem>(base::Value*)this,nd</ExpandedItem>

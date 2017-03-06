@@ -1650,6 +1650,12 @@ int MockTransportClientSocketPool::RequestSocket(
   return job->Connect();
 }
 
+void MockTransportClientSocketPool::SetPriority(const std::string& group_name,
+                                                ClientSocketHandle* handle,
+                                                RequestPriority priority) {
+  // TODO: Implement.
+}
+
 void MockTransportClientSocketPool::CancelRequest(const std::string& group_name,
                                                   ClientSocketHandle* handle) {
   for (std::unique_ptr<MockConnectJob>& it : job_list_) {
@@ -1692,6 +1698,12 @@ int MockSOCKSClientSocketPool::RequestSocket(const std::string& group_name,
   return transport_pool_->RequestSocket(group_name, socket_params, priority,
                                         respect_limits, handle, callback,
                                         net_log);
+}
+
+void MockSOCKSClientSocketPool::SetPriority(const std::string& group_name,
+                                            ClientSocketHandle* handle,
+                                            RequestPriority priority) {
+  transport_pool_->SetPriority(group_name, handle, priority);
 }
 
 void MockSOCKSClientSocketPool::CancelRequest(

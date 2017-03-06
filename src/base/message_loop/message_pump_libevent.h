@@ -6,6 +6,7 @@
 #define BASE_MESSAGE_LOOP_MESSAGE_PUMP_LIBEVENT_H_
 
 #include "base/compiler_specific.h"
+#include "base/location.h"
 #include "base/macros.h"
 #include "base/message_loop/message_pump.h"
 #include "base/threading/thread_checker.h"
@@ -37,7 +38,7 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
   // Object returned by WatchFileDescriptor to manage further watching.
   class FileDescriptorWatcher {
    public:
-    FileDescriptorWatcher();
+    explicit FileDescriptorWatcher(const tracked_objects::Location& from_here);
     ~FileDescriptorWatcher();  // Implicitly calls StopWatchingFileDescriptor.
 
     // NOTE: These methods aren't called StartWatching()/StopWatching() to
@@ -46,6 +47,10 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
     // Stop watching the FD, always safe to call.  No-op if there's nothing
     // to do.
     bool StopWatchingFileDescriptor();
+
+    const tracked_objects::Location& created_from_location() {
+      return created_from_location_;
+    }
 
    private:
     friend class MessagePumpLibevent;
@@ -72,6 +77,8 @@ class BASE_EXPORT MessagePumpLibevent : public MessagePump {
     // If this pointer is non-NULL, the pointee is set to true in the
     // destructor.
     bool* was_destroyed_;
+
+    const tracked_objects::Location created_from_location_;
 
     DISALLOW_COPY_AND_ASSIGN(FileDescriptorWatcher);
   };

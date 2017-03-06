@@ -47,8 +47,11 @@ class linked_hash_map {
   typedef typename ListType::value_type value_type;
   typedef typename ListType::size_type size_type;
 
-  linked_hash_map() : map_(), list_() {
-  }
+  linked_hash_map() = default;
+  explicit linked_hash_map(size_type bucket_count) : map_(bucket_count) {}
+
+  linked_hash_map(linked_hash_map&& other) = default;
+  linked_hash_map& operator=(linked_hash_map&& other) = default;
 
   // Returns an iterator to the first (insertion-ordered) element.  Like a map,
   // this can be dereferenced to a pair<Key, Value>.

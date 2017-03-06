@@ -4,6 +4,7 @@
 
 #include "net/base/sdch_manager.h"
 
+#include <inttypes.h>
 #include <limits.h>
 
 #include <memory>
@@ -640,7 +641,18 @@ TEST_F(SdchManagerTest, AddRemoveNotifications) {
   sdch_manager()->RemoveObserver(&observer);
 }
 
-TEST_F(SdchManagerTest, DumpMemoryStats) {
+class SdchManagerMemoryDumpTest
+    : public SdchManagerTest,
+      public testing::WithParamInterface<
+          base::trace_event::MemoryDumpLevelOfDetail> {};
+
+INSTANTIATE_TEST_CASE_P(
+    /* no prefix */,
+    SdchManagerMemoryDumpTest,
+    ::testing::Values(base::trace_event::MemoryDumpLevelOfDetail::DETAILED,
+                      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND));
+
+TEST_P(SdchManagerMemoryDumpTest, DumpMemoryStats) {
   MockSdchObserver observer;
   sdch_manager()->AddObserver(&observer);
 
@@ -655,20 +667,20 @@ TEST_F(SdchManagerTest, DumpMemoryStats) {
   EXPECT_EQ(target_gurl, observer.last_dictionary_url());
   EXPECT_EQ(server_hash, observer.last_server_hash());
 
-  base::trace_event::MemoryDumpArgs dump_args = {
-      base::trace_event::MemoryDumpLevelOfDetail::DETAILED};
+  base::trace_event::MemoryDumpArgs dump_args = {GetParam()};
   std::unique_ptr<base::trace_event::ProcessMemoryDump> pmd(
       new base::trace_event::ProcessMemoryDump(nullptr, dump_args));
 
   base::trace_event::MemoryAllocatorDump* parent =
-      pmd->CreateAllocatorDump("parent");
+      pmd->CreateAllocatorDump("net/url_request_context_0x123");
   sdch_manager()->DumpMemoryStats(pmd.get(), parent->absolute_name());
 
   const base::trace_event::MemoryAllocatorDump* sub_dump =
-      pmd->GetAllocatorDump("parent/sdch_manager");
+      pmd->GetAllocatorDump("net/url_request_context_0x123/sdch_manager");
   ASSERT_NE(nullptr, sub_dump);
   const base::trace_event::MemoryAllocatorDump* dump = pmd->GetAllocatorDump(
-      base::StringPrintf("net/sdch_manager_%p", sdch_manager()));
+      base::StringPrintf("net/sdch_manager_0x%" PRIxPTR,
+                         reinterpret_cast<uintptr_t>(sdch_manager())));
   std::unique_ptr<base::Value> raw_attrs =
       dump->attributes_for_testing()->ToBaseValue();
   base::DictionaryValue* attrs;

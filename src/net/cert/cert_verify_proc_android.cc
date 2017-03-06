@@ -23,6 +23,7 @@
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/x509_certificate.h"
+#include "net/cert/x509_util.h"
 #include "third_party/boringssl/src/include/openssl/x509v3.h"
 #include "url/gurl.h"
 
@@ -112,7 +113,9 @@ bool PerformAIAFetchAndAddResultToVector(scoped_refptr<CertNetFetcher> fetcher,
     return false;
   CertErrors errors;
   return ParsedCertificate::CreateAndAddToVector(
-      aia_fetch_bytes.data(), aia_fetch_bytes.size(), {}, cert_list, &errors);
+      x509_util::CreateCryptoBuffer(aia_fetch_bytes.data(),
+                                    aia_fetch_bytes.size()),
+      {}, cert_list, &errors);
 }
 
 // Uses android::VerifyX509CertChain() to verify the certificates in |certs| for
@@ -175,7 +178,8 @@ android::CertVerifyStatusAndroid TryVerifyWithAIAFetching(
   CertErrors errors;
   ParsedCertificateList certs;
   for (const auto& cert : cert_bytes) {
-    if (!ParsedCertificate::CreateAndAddToVector(cert, {}, &certs, &errors)) {
+    if (!ParsedCertificate::CreateAndAddToVector(
+            x509_util::CreateCryptoBuffer(cert), {}, &certs, &errors)) {
       return android::CERT_VERIFY_STATUS_ANDROID_NO_TRUSTED_ROOT;
     }
   }
@@ -386,11 +390,6 @@ int CertVerifyProcAndroid::VerifyInternal(
     CRLSet* crl_set,
     const CertificateList& additional_trust_anchors,
     CertVerifyResult* verify_result) {
-  if (!cert->VerifyNameMatch(hostname,
-                             &verify_result->common_name_fallback_used)) {
-    verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
-  }
-
   std::vector<std::string> cert_bytes;
   if (!GetChainDEREncodedBytes(cert, &cert_bytes))
     return ERR_CERT_INVALID;
@@ -399,6 +398,7 @@ int CertVerifyProcAndroid::VerifyInternal(
     NOTREACHED();
     return ERR_FAILED;
   }
+
   if (IsCertStatusError(verify_result->cert_status))
     return MapCertStatusToNetError(verify_result->cert_status);
 

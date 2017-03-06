@@ -178,7 +178,7 @@ class WprManager(object):
     self._flag_changer = flag_changer.FlagChanger(
         self._device, self._cmdline_file)
     self._flag_changer.AddFlags([
-        '--host-resolver-rules="MAP * 127.0.0.1,EXCLUDE localhost"',
+        '--host-resolver-rules=MAP * 127.0.0.1,EXCLUDE localhost',
         '--testing-fixed-http-port=%s' % device_http,
         '--testing-fixed-https-port=%s' % device_https])
 
@@ -416,4 +416,3 @@ def main():
 
 if __name__ == '__main__':
   sys.exit(main())
-

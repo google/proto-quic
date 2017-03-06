@@ -21,6 +21,7 @@
 #include "net/cert/internal/signature_policy.h"
 #include "net/cert/internal/trust_store_collection.h"
 #include "net/cert/internal/trust_store_in_memory.h"
+#include "net/cert/x509_util.h"
 #include "net/cert_net/cert_net_fetcher_impl.h"
 #include "net/tools/cert_verify_tool/cert_verify_tool_util.h"
 #include "net/url_request/url_request_context.h"
@@ -36,6 +37,11 @@
 #if defined(OS_LINUX)
 #include "net/proxy/proxy_config.h"
 #include "net/proxy/proxy_config_service_fixed.h"
+#endif
+
+#if defined(OS_MACOSX) && !defined(OS_IOS)
+#include <Security/Security.h>
+#include "net/cert/internal/trust_store_mac.h"
 #endif
 
 namespace {
@@ -158,8 +164,8 @@ void PrintResultPath(const net::CertPathBuilder::ResultPath* result_path,
 
 scoped_refptr<net::ParsedCertificate> ParseCertificate(const CertInput& input) {
   net::CertErrors errors;
-  scoped_refptr<net::ParsedCertificate> cert =
-      net::ParsedCertificate::Create(input.der_cert, {}, &errors);
+  scoped_refptr<net::ParsedCertificate> cert = net::ParsedCertificate::Create(
+      net::x509_util::CreateCryptoBuffer(input.der_cert), {}, &errors);
   if (!cert) {
     PrintCertError("ERROR: ParsedCertificate failed:", input);
     std::cout << errors.ToDebugString() << "\n";
@@ -228,6 +234,9 @@ bool VerifyUsingPathBuilder(
 #if defined(USE_NSS_CERTS)
   net::TrustStoreNSS trust_store_nss(trustSSL);
   trust_store.AddTrustStore(&trust_store_nss);
+#elif defined(OS_MACOSX) && !defined(OS_IOS)
+  net::TrustStoreMac trust_store_mac(kSecPolicyAppleSSL);
+  trust_store.AddTrustStore(&trust_store_mac);
 #else
   if (root_der_certs.empty()) {
     std::cerr << "NOTE: CertPathBuilder does not currently use OS trust "

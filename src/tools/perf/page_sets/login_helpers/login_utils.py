@@ -45,7 +45,7 @@ def InputWithSelector(action_runner, input_text, input_selector):
       possible exceptions.
   """
   action_runner.WaitForElement(selector=input_selector)
-  action_runner.ExecuteJavaScript2(
+  action_runner.ExecuteJavaScript(
       'document.querySelector({{ selector }}).value = {{ value }};',
       selector=input_selector, value=input_text)
 

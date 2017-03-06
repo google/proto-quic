@@ -4,9 +4,6 @@
 
 """Fetches CIPD client and installs packages."""
 
-__version__ = '0.4'
-
-import collections
 import contextlib
 import hashlib
 import json
@@ -39,19 +36,25 @@ class Error(Exception):
 def add_cipd_options(parser):
   group = optparse.OptionGroup(parser, 'CIPD')
   group.add_option(
+      '--cipd-enabled',
+      help='Enable CIPD client bootstrap. Implied by --cipd-package.',
+      action='store_true',
+      default=False)
+  group.add_option(
       '--cipd-server',
-      help='URL of the CIPD server. Only relevant with --cipd-package.')
+      help='URL of the CIPD server. '
+           'Only relevant with --cipd-enabled or --cipd-package.')
   group.add_option(
       '--cipd-client-package',
       help='Package name of CIPD client with optional parameters described in '
            '--cipd-package help. '
-           'Only relevant with --cipd-package. '
+           'Only relevant with --cipd-enabled or --cipd-package. '
            'Default: "%default"',
       default='infra/tools/cipd/${platform}')
   group.add_option(
       '--cipd-client-version',
       help='Version of CIPD client. '
-           'Only relevant with --cipd-package. '
+           'Only relevant with --cipd-enabled or --cipd-package. '
            'Default: "%default"',
       default='latest')
   group.add_option(
@@ -70,7 +73,7 @@ def add_cipd_options(parser):
   group.add_option(
       '--cipd-cache',
       help='CIPD cache directory, separate from isolate cache. '
-           'Only relevant with --cipd-package. '
+           'Only relevant with --cipd-enabled or --cipd-package. '
            'Default: "%default".',
       default='')
   parser.add_option_group(group)
@@ -78,7 +81,10 @@ def add_cipd_options(parser):
 
 def validate_cipd_options(parser, options):
   """Calls parser.error on first found error among cipd options."""
-  if not options.cipd_packages:
+  if options.cipd_packages:
+    options.cipd_enabled = True
+
+  if not options.cipd_enabled:
     return
 
   for pkg in options.cipd_packages:
@@ -92,14 +98,14 @@ def validate_cipd_options(parser, options):
       parser.error('invalid package "%s": version is not specified' % pkg)
 
   if not options.cipd_server:
-    parser.error('--cipd-package requires non-empty --cipd-server')
+    parser.error('cipd is enabled, --cipd-server is required')
 
   if not options.cipd_client_package:
     parser.error(
-        '--cipd-package requires non-empty --cipd-client-package')
+        'cipd is enabled, --cipd-client-package is required')
   if not options.cipd_client_version:
     parser.error(
-        '--cipd-package requires non-empty --cipd-client-version')
+        'cipd is enabled, --cipd-client-version is required')
 
 
 class CipdClient(object):
@@ -196,7 +202,23 @@ class CipdClient(object):
             exit_code, '\n'.join(output)))
       with open(json_file_path) as jfile:
         result_json = json.load(jfile)
-      return [(x['package'], x['instance_id']) for x in result_json['result']]
+      # TEMPORARY(iannucci): this code handles cipd <1.4 and cipd >=1.5
+      # formatted ensure result formats. Cipd 1.5 added support for subdirs, and
+      # as part of the transition, the result of the ensure command needed to
+      # change. To ease the transition, we always return data as-if we're using
+      # the new format. Once cipd 1.5+ is deployed everywhere, this type switch
+      # can be removed.
+      if isinstance(result_json['result'], dict):
+        # cipd 1.5
+        return {
+          subdir: [(x['package'], x['instance_id']) for x in pins]
+          for subdir, pins in result_json['result'].iteritems()
+        }
+      else:
+        # cipd 1.4
+        return {
+          "": [(x['package'], x['instance_id']) for x in result_json['result']],
+        }
     finally:
       fs.remove(list_file_path)
       fs.remove(json_file_path)
@@ -347,17 +369,19 @@ def _fetch_cipd_client(disk_cache, instance_id, fetch_url, timeoutfn):
 
 
 @contextlib.contextmanager
-def get_client(
-      service_url, package_name, version, cache_dir, timeout=None):
+def get_client(service_url, package_name, version, cache_dir, timeout=None):
   """Returns a context manager that yields a CipdClient. A blocking call.
 
+  Upon exit from the context manager, the client binary may be deleted
+  (if the internal cache is full).
+
   Args:
-      service_url (str): URL of the CIPD backend.
-      package_name (str): package name template of the CIPD client.
-      version (str): version of CIPD client package.
-      cache_dir: directory to store instance cache, version cache
-        and a hardlink to the client binary.
-      timeout (int): if not None, timeout in seconds for this function.
+    service_url (str): URL of the CIPD backend.
+    package_name (str): package name template of the CIPD client.
+    version (str): version of CIPD client package.
+    cache_dir: directory to store instance cache, version cache
+      and a hardlink to the client binary.
+    timeout (int): if not None, timeout in seconds for this function.
 
   Yields:
     CipdClient.
@@ -413,15 +437,21 @@ def get_client(
     # A single host can run multiple swarming bots, but ATM they do not share
     # same root bot directory. Thus, it is safe to use the same name for the
     # binary.
-    binary_path = unicode(os.path.join(cache_dir, 'cipd' + EXECUTABLE_SUFFIX))
+    cipd_bin_dir = unicode(os.path.join(cache_dir, 'bin'))
+    binary_path = os.path.join(cipd_bin_dir, 'cipd' + EXECUTABLE_SUFFIX)
     if fs.isfile(binary_path):
       file_path.remove(binary_path)
+    else:
+      file_path.ensure_tree(cipd_bin_dir)
 
     with instance_cache.getfileobj(instance_id) as f:
       isolateserver.putfile(f, binary_path, 0511)  # -r-x--x--x
 
-    yield CipdClient(binary_path, package_name=package_name,
-                     instance_id=instance_id, service_url=service_url)
+    yield CipdClient(
+        binary_path,
+        package_name=package_name,
+        instance_id=instance_id,
+        service_url=service_url)
 
 
 def parse_package_args(packages):

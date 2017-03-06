@@ -43,13 +43,13 @@ def LoginGoogleAccount(action_runner,
        'https%3A%2F%2Faccounts.google.com%2FManageAccount')
 
   # Wait until either the email or password input is visible.
-  action_runner.WaitForJavaScriptCondition2('{{ @a }} || {{ @b }}',
+  action_runner.WaitForJavaScriptCondition('{{ @a }} || {{ @b }}',
       a=_EMAIL_INPUT_VISIBLE_CONDITION, b=_PASSWORD_INPUT_VISIBLE_CONDITION)
 
   # If the email input is visible, this is the first Google login within the
   # browser session, so we must enter both email and password. Otherwise, only
   # password is required.
-  if action_runner.EvaluateJavaScript2(_EMAIL_INPUT_VISIBLE_CONDITION):
+  if action_runner.EvaluateJavaScript(_EMAIL_INPUT_VISIBLE_CONDITION):
     login_utils.InputForm(action_runner, account_name, input_id='Email',
                           form_id='gaia_firstform')
     action_runner.ClickElement(selector='#gaia_firstform #next')

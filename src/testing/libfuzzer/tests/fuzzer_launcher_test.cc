@@ -23,7 +23,8 @@ TEST(FuzzerConfigTest, DictOnly) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd({{launcher_path, "test_dict_only.options"}});
+  base::CommandLine cmd(
+      std::vector<std::string>({launcher_path, "test_dict_only.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(
@@ -43,7 +44,8 @@ TEST(FuzzerConfigTest, ConfigOnly) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd({{launcher_path, "test_config_only.options"}});
+  base::CommandLine cmd(
+      std::vector<std::string>({launcher_path, "test_config_only.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(
@@ -64,7 +66,8 @@ TEST(FuzzerConfigTest, ConfigAndDict) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd({{launcher_path, "test_config_and_dict.options"}});
+  base::CommandLine cmd(std::vector<std::string>(
+      {launcher_path, "test_config_and_dict.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(
@@ -87,8 +90,8 @@ TEST(FuzzerConfigTest, ConfigAndSeedCorpus) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd(
-      {{launcher_path, "test_config_and_seed_corpus.options"}});
+  base::CommandLine cmd(std::vector<std::string>(
+      {launcher_path, "test_config_and_seed_corpus.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(
@@ -103,8 +106,8 @@ TEST(FuzzerConfigTest, ConfigAndSeedCorpus) {
   launcher_path =
     exe_path.DirName().Append("check_seed_corpus_archive.py").value();
 
-  cmd = base::CommandLine(
-      {{launcher_path, "test_config_and_seed_corpus_seed_corpus.zip"}});
+  cmd = base::CommandLine(std::vector<std::string>(
+      {launcher_path, "test_config_and_seed_corpus_seed_corpus.zip"}));
   success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> seed_corpus_info = base::SplitString(
@@ -123,8 +126,8 @@ TEST(FuzzerConfigTest, ConfigAndSeedCorpuses) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd(
-      {{launcher_path, "test_config_and_seed_corpuses.options"}});
+  base::CommandLine cmd(std::vector<std::string>(
+      {launcher_path, "test_config_and_seed_corpuses.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(
@@ -139,8 +142,8 @@ TEST(FuzzerConfigTest, ConfigAndSeedCorpuses) {
   launcher_path =
     exe_path.DirName().Append("check_seed_corpus_archive.py").value();
 
-  cmd = base::CommandLine(
-      {{launcher_path, "test_config_and_seed_corpuses_seed_corpus.zip"}});
+  cmd = base::CommandLine(std::vector<std::string>(
+      {launcher_path, "test_config_and_seed_corpuses_seed_corpus.zip"}));
   success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> seed_corpus_info = base::SplitString(
@@ -159,7 +162,8 @@ TEST(FuzzerConfigTest, DictSubdir) {
     exe_path.DirName().Append("check_fuzzer_config.py").value();
 
   std::string output;
-  base::CommandLine cmd({{launcher_path, "test_dict_from_subdir.options"}});
+  base::CommandLine cmd(std::vector<std::string>(
+      {launcher_path, "test_dict_from_subdir.options"}));
   bool success = base::GetAppOutputAndError(cmd, &output);
   EXPECT_TRUE(success);
   std::vector<std::string> fuzzer_args = base::SplitString(

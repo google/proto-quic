@@ -32,7 +32,7 @@ require "x86asm.pl";
 
 $output = pop;
 open STDOUT,">$output";
- 
+
 &asm_init($ARGV[0],$0);
 
 $sse2=0;
@@ -66,33 +66,57 @@ $frame=32;				# size of above frame rounded up to 16n
 
 	&lea	("esi",&wparam(0));	# put aside pointer to argument block
 	&lea	("edx",&wparam(1));	# load ap
-	&mov	("ebp","esp");		# saved stack pointer!
 	&add	("edi",2);		# extra two words on top of tp
 	&neg	("edi");
-	&lea	("esp",&DWP(-$frame,"esp","edi",4));	# alloca($frame+4*(num+2))
+	&lea	("ebp",&DWP(-$frame,"esp","edi",4));	# future alloca($frame+4*(num+2))
 	&neg	("edi");
 
 	# minimize cache contention by arraning 2K window between stack
 	# pointer and ap argument [np is also position sensitive vector,
 	# but it's assumed to be near ap, as it's allocated at ~same
 	# time].
-	&mov	("eax","esp");
+	&mov	("eax","ebp");
 	&sub	("eax","edx");
 	&and	("eax",2047);
-	&sub	("esp","eax");		# this aligns sp and ap modulo 2048
+	&sub	("ebp","eax");		# this aligns sp and ap modulo 2048
 
-	&xor	("edx","esp");
+	&xor	("edx","ebp");
 	&and	("edx",2048);
 	&xor	("edx",2048);
-	&sub	("esp","edx");		# this splits them apart modulo 4096
+	&sub	("ebp","edx");		# this splits them apart modulo 4096
 
-	&and	("esp",-64);		# align to cache line
+	&and	("ebp",-64);		# align to cache line
+
+	# An OS-agnostic version of __chkstk.
+	#
+	# Some OSes (Windows) insist on stack being "wired" to
+	# physical memory in strictly sequential manner, i.e. if stack
+	# allocation spans two pages, then reference to farmost one can
+	# be punishable by SEGV. But page walking can do good even on
+	# other OSes, because it guarantees that villain thread hits
+	# the guard page before it can make damage to innocent one...
+	&mov	("eax","esp");
+	&sub	("eax","ebp");
+	&and	("eax",-4096);
+	&mov	("edx","esp");		# saved stack pointer!
+	&lea	("esp",&DWP(0,"ebp","eax"));
+	&mov	("eax",&DWP(0,"esp"));
+	&cmp	("esp","ebp");
+	&ja	(&label("page_walk"));
+	&jmp	(&label("page_walk_done"));
+
+&set_label("page_walk",16);
+	&lea	("esp",&DWP(-4096,"esp"));
+	&mov	("eax",&DWP(0,"esp"));
+	&cmp	("esp","ebp");
+	&ja	(&label("page_walk"));
+&set_label("page_walk_done");
 
 	################################# load argument block...
 	&mov	("eax",&DWP(0*4,"esi"));# BN_ULONG *rp
 	&mov	("ebx",&DWP(1*4,"esi"));# const BN_ULONG *ap
 	&mov	("ecx",&DWP(2*4,"esi"));# const BN_ULONG *bp
-	&mov	("edx",&DWP(3*4,"esi"));# const BN_ULONG *np
+	&mov	("ebp",&DWP(3*4,"esi"));# const BN_ULONG *np
 	&mov	("esi",&DWP(4*4,"esi"));# const BN_ULONG *n0
 	#&mov	("edi",&DWP(5*4,"esi"));# int num
 
@@ -100,11 +124,11 @@ $frame=32;				# size of above frame rounded up to 16n
 	&mov	($_rp,"eax");		# ... save a copy of argument block
 	&mov	($_ap,"ebx");
 	&mov	($_bp,"ecx");
-	&mov	($_np,"edx");
+	&mov	($_np,"ebp");
 	&mov	($_n0,"esi");
 	&lea	($num,&DWP(-3,"edi"));	# num=num-1 to assist modulo-scheduling
 	#&mov	($_num,$num);		# redundant as $num is not reused
-	&mov	($_sp,"ebp");		# saved stack pointer!
+	&mov	($_sp,"edx");		# saved stack pointer!
 
 if($sse2) {
 $acc0="mm0";	# mmx register bank layout
@@ -270,7 +294,7 @@ if (0) {
 	&xor	("eax","eax");	# signal "not fast enough [yet]"
 	&jmp	(&label("just_leave"));
 	# While the below code provides competitive performance for
-	# all key lengthes on modern Intel cores, it's still more
+	# all key lengths on modern Intel cores, it's still more
 	# than 10% slower for 4096-bit key elsewhere:-( "Competitive"
 	# means compared to the original integer-only assembler.
 	# 512-bit RSA sign is better by ~40%, but that's about all
@@ -573,15 +597,16 @@ $sbit=$num;
 	&jge	(&label("sub"));
 
 	&sbb	("eax",0);			# handle upmost overflow bit
+	&and	($tp,"eax");
+	&not	("eax");
+	&mov	($np,$rp);
+	&and	($np,"eax");
+	&or	($tp,$np);			# tp=carry?tp:rp
 
 &set_label("copy",16);				# copy or in-place refresh
-	&mov	("edx",&DWP(0,$tp,$num,4));
-	&mov	($np,&DWP(0,$rp,$num,4));
-	&xor	("edx",$np);			# conditional select
-	&and	("edx","eax");
-	&xor	("edx",$np);
-	&mov	(&DWP(0,$tp,$num,4),$j)		# zap temporary vector
-	&mov	(&DWP(0,$rp,$num,4),"edx");	# rp[i]=tp[i]
+	&mov	("eax",&DWP(0,$tp,$num,4));
+	&mov	(&DWP(0,$rp,$num,4),"eax");	# rp[i]=tp[i]
+	&mov	(&DWP($frame,"esp",$num,4),$j);	# zap temporary vector
 	&dec	($num);
 	&jge	(&label("copy"));
 

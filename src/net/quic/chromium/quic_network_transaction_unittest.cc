@@ -991,9 +991,8 @@ TEST_P(QuicNetworkTransactionTest, QuicProxyWithCert) {
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
   ASSERT_TRUE(cert.get());
   // This certificate is valid for the proxy, but not for the origin.
-  bool common_name_fallback_used;
-  EXPECT_TRUE(cert->VerifyNameMatch(proxy_host, &common_name_fallback_used));
-  EXPECT_FALSE(cert->VerifyNameMatch(origin_host, &common_name_fallback_used));
+  EXPECT_TRUE(cert->VerifyNameMatch(proxy_host, false));
+  EXPECT_FALSE(cert->VerifyNameMatch(origin_host, false));
   ProofVerifyDetailsChromium verify_details;
   verify_details.cert_verify_result.verified_cert = cert;
   crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
@@ -1018,10 +1017,9 @@ TEST_P(QuicNetworkTransactionTest, AlternativeServicesDifferentHost) {
   ASSERT_TRUE(cert.get());
   // TODO(rch): the connection should be "to" the origin, so if the cert is
   // valid for the origin but not the alternative, that should work too.
-  bool common_name_fallback_used;
-  EXPECT_TRUE(cert->VerifyNameMatch(origin.host(), &common_name_fallback_used));
+  EXPECT_TRUE(cert->VerifyNameMatch(origin.host(), false));
   EXPECT_TRUE(
-      cert->VerifyNameMatch(alternative.host(), &common_name_fallback_used));
+      cert->VerifyNameMatch(alternative.host(), false));
   ProofVerifyDetailsChromium verify_details;
   verify_details.cert_verify_result.verified_cert = cert;
   crypto_client_stream_factory_.AddProofVerifyDetails(&verify_details);
@@ -3326,9 +3324,8 @@ TEST_P(QuicNetworkTransactionWithDestinationTest, InvalidCertificate) {
 
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
-  bool unused;
-  ASSERT_FALSE(cert->VerifyNameMatch(origin1_, &unused));
-  ASSERT_TRUE(cert->VerifyNameMatch(origin2_, &unused));
+  ASSERT_FALSE(cert->VerifyNameMatch(origin1_, false));
+  ASSERT_TRUE(cert->VerifyNameMatch(origin2_, false));
 
   ProofVerifyDetailsChromium verify_details;
   verify_details.cert_verify_result.verified_cert = cert;
@@ -3366,10 +3363,9 @@ TEST_P(QuicNetworkTransactionWithDestinationTest, PoolIfCertificateValid) {
 
   scoped_refptr<X509Certificate> cert(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
-  bool unused;
-  ASSERT_TRUE(cert->VerifyNameMatch(origin1_, &unused));
-  ASSERT_TRUE(cert->VerifyNameMatch(origin2_, &unused));
-  ASSERT_FALSE(cert->VerifyNameMatch(kDifferentHostname, &unused));
+  ASSERT_TRUE(cert->VerifyNameMatch(origin1_, false));
+  ASSERT_TRUE(cert->VerifyNameMatch(origin2_, false));
+  ASSERT_FALSE(cert->VerifyNameMatch(kDifferentHostname, false));
 
   ProofVerifyDetailsChromium verify_details;
   verify_details.cert_verify_result.verified_cert = cert;
@@ -3436,15 +3432,14 @@ TEST_P(QuicNetworkTransactionWithDestinationTest,
 
   scoped_refptr<X509Certificate> cert1(
       ImportCertFromFile(GetTestCertsDirectory(), "wildcard.pem"));
-  bool unused;
-  ASSERT_TRUE(cert1->VerifyNameMatch(origin1_, &unused));
-  ASSERT_FALSE(cert1->VerifyNameMatch(origin2_, &unused));
-  ASSERT_FALSE(cert1->VerifyNameMatch(kDifferentHostname, &unused));
+  ASSERT_TRUE(cert1->VerifyNameMatch(origin1_, false));
+  ASSERT_FALSE(cert1->VerifyNameMatch(origin2_, false));
+  ASSERT_FALSE(cert1->VerifyNameMatch(kDifferentHostname, false));
 
   scoped_refptr<X509Certificate> cert2(
       ImportCertFromFile(GetTestCertsDirectory(), "spdy_pooling.pem"));
-  ASSERT_TRUE(cert2->VerifyNameMatch(origin2_, &unused));
-  ASSERT_FALSE(cert2->VerifyNameMatch(kDifferentHostname, &unused));
+  ASSERT_TRUE(cert2->VerifyNameMatch(origin2_, false));
+  ASSERT_FALSE(cert2->VerifyNameMatch(kDifferentHostname, false));
 
   ProofVerifyDetailsChromium verify_details1;
   verify_details1.cert_verify_result.verified_cert = cert1;

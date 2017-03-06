@@ -41,14 +41,6 @@ struct NET_EXPORT CertPrincipal {
   bool ParseDistinguishedName(const void* ber_name_data, size_t length);
 #endif
 
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-  // Compare this CertPrincipal with |against|, returning true if they're
-  // equal enough to be a possible match. This should NOT be used for any
-  // security relevant decisions.
-  // TODO(rsleevi): Remove once Mac client auth uses NSS for name comparison.
-  bool Matches(const CertPrincipal& against) const;
-#endif
-
   // Returns a name that can be used to represent the issuer.  It tries in this
   // order: CN, O and OU and returns the first non-empty one found.
   std::string GetDisplayName() const;

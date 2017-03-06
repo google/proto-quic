@@ -5,16 +5,7 @@
 # Functions in this file relies on depot_tools been checked-out as a sibling
 # of infra.git.
 
-import logging
-import os
 import re
-import subprocess
-
-
-BASE_DIR = os.path.dirname(
-  os.path.dirname(
-    os.path.dirname(
-      os.path.dirname(os.path.realpath(__file__)))))
 
 
 def parse_revinfo(revinfo):
@@ -46,27 +37,3 @@ def parse_revinfo(revinfo):
     url = url.strip()
     revinfo_d[path] = {'source_url': url, 'revision': revision}
   return revinfo_d
-
-
-def get_revinfo(cwd=None):  # pragma: no cover
-  """Call gclient to get the list of all revisions actually checked out on disk.
-
-  gclient is expected to be under depot_tools/ sibling to infra/.
-  If gclient can't be found or fail to run returns {}.
-
-  Args:
-    cwd (str): working directory where to run gclient. If None, use the
-      current working directory.
-  Returns:
-    revinfo (dict): keys are local paths, values are dicts with keys:
-      'source_url' or 'revision'.
-  """
-
-  cmd = [os.path.join(BASE_DIR, 'depot_tools', 'gclient'), 'revinfo', '-a']
-  logging.debug('Running: %s', ' '.join(cmd))
-  revinfo = ''
-  try:
-    revinfo = subprocess.check_output(cmd, cwd=cwd)
-  except (subprocess.CalledProcessError, OSError):
-    logging.exception('Command failed to run: %s', ' '.join(cmd))
-  return parse_revinfo(revinfo)

@@ -493,7 +493,7 @@ bool X509Certificate::VerifyHostname(
     const std::string& cert_common_name,
     const std::vector<std::string>& cert_san_dns_names,
     const std::vector<std::string>& cert_san_ip_addrs,
-    bool* common_name_fallback_used) {
+    bool allow_common_name_fallback) {
   DCHECK(!hostname.empty());
   // Perform name verification following http://tools.ietf.org/html/rfc6125.
   // The terminology used in this method is as per that RFC:-
@@ -514,14 +514,17 @@ bool X509Certificate::VerifyHostname(
   if (reference_name.empty())
     return false;
 
-  // Allow fallback to Common name matching?
-  const bool common_name_fallback = cert_san_dns_names.empty() &&
-                                    cert_san_ip_addrs.empty();
-  *common_name_fallback_used = common_name_fallback;
+  if (!allow_common_name_fallback && cert_san_dns_names.empty() &&
+      cert_san_ip_addrs.empty()) {
+    // Common Name matching is not allowed, so fail fast.
+    return false;
+  }
 
   // Fully handle all cases where |hostname| contains an IP address.
   if (host_info.IsIPAddress()) {
-    if (common_name_fallback && host_info.family == url::CanonHostInfo::IPV4) {
+    if (allow_common_name_fallback && cert_san_dns_names.empty() &&
+        cert_san_ip_addrs.empty() &&
+        host_info.family == url::CanonHostInfo::IPV4) {
       // Fallback to Common name matching. As this is deprecated and only
       // supported for compatibility refuse it for IPv6 addresses.
       return reference_name == cert_common_name;
@@ -580,7 +583,8 @@ bool X509Certificate::VerifyHostname(
   // fallback to use the common name instead.
   std::vector<std::string> common_name_as_vector;
   const std::vector<std::string>* presented_names = &cert_san_dns_names;
-  if (common_name_fallback) {
+  if (allow_common_name_fallback && cert_san_dns_names.empty() &&
+      cert_san_ip_addrs.empty()) {
     // Note: there's a small possibility cert_common_name is an international
     // domain name in non-standard encoding (e.g. UTF8String or BMPString
     // instead of A-label). As common name fallback is deprecated we're not
@@ -628,11 +632,11 @@ bool X509Certificate::VerifyHostname(
 }
 
 bool X509Certificate::VerifyNameMatch(const std::string& hostname,
-                                      bool* common_name_fallback_used) const {
+                                      bool allow_common_name_fallback) const {
   std::vector<std::string> dns_names, ip_addrs;
   GetSubjectAltName(&dns_names, &ip_addrs);
   return VerifyHostname(hostname, subject_.common_name, dns_names, ip_addrs,
-                        common_name_fallback_used);
+                        allow_common_name_fallback);
 }
 
 // static

@@ -4,8 +4,9 @@
 
 #include "base/files/file_util.h"
 
-#include <copyfile.h>
 #import <Foundation/Foundation.h>
+#include <copyfile.h>
+#include <stdlib.h>
 
 #include "base/files/file_path.h"
 #include "base/mac/foundation_util.h"
@@ -23,6 +24,15 @@ bool CopyFile(const FilePath& from_path, const FilePath& to_path) {
 }
 
 bool GetTempDir(base::FilePath* path) {
+  // In order to facilitate hermetic runs on macOS, first check $TMPDIR.
+  // NOTE: $TMPDIR is ALMOST ALWAYS set on macOS (unless the user un-set it).
+  const char* env_tmpdir = getenv("TMPDIR");
+  if (env_tmpdir) {
+    *path = base::FilePath(env_tmpdir);
+    return true;
+  }
+
+  // If we didn't find it, fall back to the native function.
   NSString* tmp = NSTemporaryDirectory();
   if (tmp == nil)
     return false;

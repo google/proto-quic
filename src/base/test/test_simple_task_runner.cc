@@ -5,6 +5,8 @@
 #include "base/test/test_simple_task_runner.h"
 
 #include "base/logging.h"
+#include "base/memory/ptr_util.h"
+#include "base/threading/thread_task_runner_handle.h"
 
 namespace base {
 
@@ -34,6 +36,9 @@ bool TestSimpleTaskRunner::PostNonNestableDelayedTask(
   return true;
 }
 
+// TODO(gab): Use SequenceToken here to differentiate between tasks running in
+// the scope of this TestSimpleTaskRunner and other task runners sharing this
+// thread. http://crbug.com/631186
 bool TestSimpleTaskRunner::RunsTasksOnCurrentThread() const {
   return thread_ref_ == PlatformThread::CurrentRef();
 }
@@ -76,6 +81,14 @@ void TestSimpleTaskRunner::RunPendingTasks() {
   {
     AutoLock auto_lock(lock_);
     tasks_to_run.swap(pending_tasks_);
+  }
+
+  // Multiple test task runners can share the same thread for determinism in
+  // unit tests. Make sure this TestSimpleTaskRunner's tasks run in its scope.
+  ScopedClosureRunner undo_override;
+  if (!ThreadTaskRunnerHandle::IsSet() ||
+      ThreadTaskRunnerHandle::Get() != this) {
+    undo_override = ThreadTaskRunnerHandle::OverrideForTesting(this);
   }
 
   for (auto& task : tasks_to_run)

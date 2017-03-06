@@ -547,7 +547,7 @@ void TestLibraryUnload(bool wait_until_unloaded) {
     // the same stack as |wait_until_unloaded|, if not we should have the full
     // stack. The important thing is that we should not crash.
 
-    if ((sample.frames.end() - 1) - end_frame == 2) {
+    if (sample.frames.end() - end_frame == 2) {
       // This is the same case as |wait_until_unloaded|.
       return;
     }

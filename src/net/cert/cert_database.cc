@@ -25,9 +25,8 @@ void CertDatabase::RemoveObserver(Observer* observer) {
   observer_list_->RemoveObserver(observer);
 }
 
-void CertDatabase::NotifyObserversCertDBChanged(const X509Certificate* cert) {
-  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged,
-                         base::RetainedRef(cert));
+void CertDatabase::NotifyObserversCertDBChanged() {
+  observer_list_->Notify(FROM_HERE, &Observer::OnCertDBChanged);
 }
 
 }  // namespace net

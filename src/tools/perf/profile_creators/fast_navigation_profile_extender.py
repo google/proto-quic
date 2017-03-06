@@ -120,7 +120,7 @@ class FastNavigationProfileExtender(profile_extender.ProfileExtender):
     """Retrives the URL of the tab."""
     # TODO(erikchen): Use tab.url instead, which talks to the browser process
     # instead of the renderer process. http://crbug.com/486119
-    return tab.EvaluateJavaScript2('document.URL', timeout=timeout)
+    return tab.EvaluateJavaScript('document.URL', timeout=timeout)
 
   def _WaitForUrlToChange(self, tab, initial_url, end_time):
     """Waits for the tab to navigate away from its initial url.

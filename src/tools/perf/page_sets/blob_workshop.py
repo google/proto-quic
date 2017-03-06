@@ -20,17 +20,17 @@ class BlobCreateThenRead(page_module.Page):
     self._blob_sizes = blob_sizes
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript2('disableUI = true;')
+    action_runner.ExecuteJavaScript('disableUI = true;')
 
     for size_bytes in self._blob_sizes:
       with action_runner.CreateInteraction('Action_CreateAndReadBlob',
                                            repeatable=True):
-        action_runner.ExecuteJavaScript2(
+        action_runner.ExecuteJavaScript(
             'createAndRead({{ size }});', size=size_bytes)
-        action_runner.WaitForJavaScriptCondition2(
+        action_runner.WaitForJavaScriptCondition(
             'doneReading === true || errors', timeout=60)
 
-    errors = action_runner.EvaluateJavaScript2('errors')
+    errors = action_runner.EvaluateJavaScript('errors')
     if errors:
       raise legacy_page_test.Failure('Errors on page: ' + ', '.join(errors))
 
@@ -44,27 +44,27 @@ class BlobMassCreate(page_module.Page):
     self._blob_sizes = blob_sizes
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript2('disableUI = true;')
+    action_runner.ExecuteJavaScript('disableUI = true;')
 
     # Add blobs
     for size_bytes in self._blob_sizes:
       with action_runner.CreateInteraction('Action_CreateBlob',
                                            repeatable=True):
-        action_runner.ExecuteJavaScript2(
+        action_runner.ExecuteJavaScript(
             'createBlob({{ size }});', size=size_bytes)
 
     # Read blobs
     for _ in range(0, NUM_BLOB_MASS_CREATE_READS):
       with action_runner.CreateInteraction('Action_ReadBlobs',
                                            repeatable=True):
-        action_runner.ExecuteJavaScript2('readBlobsSerially();')
-        action_runner.WaitForJavaScriptCondition2(
+        action_runner.ExecuteJavaScript('readBlobsSerially();')
+        action_runner.WaitForJavaScriptCondition(
             'doneReading === true || errors', timeout=60)
     # Clean up blobs. Make sure this flag is turned on:
     # --enable-experimental-web-platform-features
-    action_runner.ExecuteJavaScript2('garbageCollect();')
+    action_runner.ExecuteJavaScript('garbageCollect();')
 
-    errors = action_runner.EvaluateJavaScript2('errors')
+    errors = action_runner.EvaluateJavaScript('errors')
     if errors:
       raise legacy_page_test.Failure('Errors on page: ' + ', '.join(errors))
 

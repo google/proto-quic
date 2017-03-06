@@ -129,6 +129,8 @@ main/l/linux/linux-libc-dev_3.2.78-1_i386.deb
 main/m/mesa/libegl1-mesa_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libegl1-mesa-dev_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libegl1-mesa-drivers_8.0.5-4+deb7u2_i386.deb
+main/m/mesa/libgbm1_8.0.5-4+deb7u2_i386.deb
+main/m/mesa/libgbm-dev_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libgl1-mesa-dev_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libgl1-mesa-glx_8.0.5-4+deb7u2_i386.deb
 main/m/mesa/libglapi-mesa_8.0.5-4+deb7u2_i386.deb

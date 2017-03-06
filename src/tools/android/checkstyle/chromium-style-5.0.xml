@@ -166,7 +166,7 @@
     </module>
     <module name="ImportOrder">
       <property name="severity" value="error"/>
-      <message key="import.ordering" value="Wrong order for {0} import. Use :JavaImportOrganize (ECLIM) or Ctrl+Shift+O (Eclipse) to sort imports. An importorder file for configuring Eclipse can be found at //tools/android/eclipse/android.importorder."/>
+      <message key="import.ordering" value="Wrong order for {0} import. Use :JavaImportOrganize (ECLIM), Ctrl+Shift+O (Eclipse), or Ctrl+Alt+O (Android Studio) to sort imports. An importorder file for configuring Eclipse can be found at //tools/android/eclipse/android.importorder. A style configuration file for Android Studio can be found at //tools/android/android_studio/ChromiumStyle.xml."/>
       <property name="groups" value="android, com, dalvik, junit, org, com.google.android.apps.chrome, org.chromium, java, javax"/>
       <property name="ordered" value="true"/>
       <property name="option" value="top"/>

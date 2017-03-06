@@ -16,6 +16,7 @@
 #include "base/gtest_prod_util.h"
 #include "base/macros.h"
 #include "base/time/time.h"
+#include "base/trace_event/memory_usage_estimator.h"
 #include "net/base/net_export.h"
 #include "net/disk_cache/disk_cache.h"
 #include "net/log/net_log_with_source.h"
@@ -130,6 +131,7 @@ class NET_EXPORT_PRIVATE MemEntryImpl final
   bool CouldBeSparse() const override;
   void CancelSparseIO() override {}
   int ReadyForSparseIO(const CompletionCallback& callback) override;
+  size_t EstimateMemoryUsage() const;
 
  private:
   MemEntryImpl(MemBackendImpl* backend,

@@ -581,6 +581,12 @@ void SSLClientSocketPool::RequestSockets(const std::string& group_name,
   base_.RequestSockets(group_name, *casted_params, num_sockets, net_log);
 }
 
+void SSLClientSocketPool::SetPriority(const std::string& group_name,
+                                      ClientSocketHandle* handle,
+                                      RequestPriority priority) {
+  base_.SetPriority(group_name, handle, priority);
+}
+
 void SSLClientSocketPool::CancelRequest(const std::string& group_name,
                                         ClientSocketHandle* handle) {
   base_.CancelRequest(group_name, handle);
@@ -598,6 +604,11 @@ void SSLClientSocketPool::FlushWithError(int error) {
 
 void SSLClientSocketPool::CloseIdleSockets() {
   base_.CloseIdleSockets();
+}
+
+void SSLClientSocketPool::CloseIdleSocketsInGroup(
+    const std::string& group_name) {
+  base_.CloseIdleSocketsInGroup(group_name);
 }
 
 int SSLClientSocketPool::IdleSocketCount() const {

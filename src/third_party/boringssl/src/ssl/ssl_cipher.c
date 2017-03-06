@@ -787,10 +787,11 @@ int ssl_cipher_get_evp_aead(const EVP_AEAD **out_aead,
   return 1;
 }
 
-const EVP_MD *ssl_get_handshake_digest(uint32_t algorithm_prf) {
+const EVP_MD *ssl_get_handshake_digest(uint32_t algorithm_prf,
+                                       uint16_t version) {
   switch (algorithm_prf) {
     case SSL_HANDSHAKE_MAC_DEFAULT:
-      return EVP_sha1();
+      return version >= TLS1_2_VERSION ? EVP_sha256() : EVP_md5_sha1();
     case SSL_HANDSHAKE_MAC_SHA256:
       return EVP_sha256();
     case SSL_HANDSHAKE_MAC_SHA384:
@@ -1069,7 +1070,7 @@ static int ssl_cipher_strength_sort(CIPHER_ORDER **head_p,
 static int ssl_cipher_process_rulestr(const SSL_PROTOCOL_METHOD *ssl_method,
                                       const char *rule_str,
                                       CIPHER_ORDER **head_p,
-                                      CIPHER_ORDER **tail_p) {
+                                      CIPHER_ORDER **tail_p, int strict) {
   uint32_t alg_mkey, alg_auth, alg_enc, alg_mac;
   uint16_t min_version;
   const char *l, *buf;
@@ -1205,6 +1206,10 @@ static int ssl_cipher_process_rulestr(const SSL_PROTOCOL_METHOD *ssl_method,
         }
         if (j == kCipherAliasesLen) {
           skip_rule = 1;
+          if (strict) {
+            OPENSSL_PUT_ERROR(SSL, SSL_R_INVALID_COMMAND);
+            return 0;
+          }
         }
       }
 
@@ -1252,7 +1257,7 @@ static int ssl_cipher_process_rulestr(const SSL_PROTOCOL_METHOD *ssl_method,
 STACK_OF(SSL_CIPHER) *
 ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
                        struct ssl_cipher_preference_list_st **out_cipher_list,
-                       const char *rule_str) {
+                       const char *rule_str, int strict) {
   STACK_OF(SSL_CIPHER) *cipherstack = NULL;
   CIPHER_ORDER *co_list = NULL, *head = NULL, *tail = NULL, *curr;
   uint8_t *in_group_flags = NULL;
@@ -1333,7 +1338,7 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   const char *rule_p = rule_str;
   if (strncmp(rule_str, "DEFAULT", 7) == 0) {
     if (!ssl_cipher_process_rulestr(ssl_method, SSL_DEFAULT_CIPHER_LIST, &head,
-                                    &tail)) {
+                                    &tail, strict)) {
       goto err;
     }
     rule_p += 7;
@@ -1343,7 +1348,7 @@ ssl_create_cipher_list(const SSL_PROTOCOL_METHOD *ssl_method,
   }
 
   if (*rule_p != '\0' &&
-      !ssl_cipher_process_rulestr(ssl_method, rule_p, &head, &tail)) {
+      !ssl_cipher_process_rulestr(ssl_method, rule_p, &head, &tail, strict)) {
     goto err;
   }
 
@@ -1414,10 +1419,6 @@ uint16_t ssl_cipher_get_value(const SSL_CIPHER *cipher) {
 
 int SSL_CIPHER_is_AES(const SSL_CIPHER *cipher) {
   return (cipher->algorithm_enc & SSL_AES) != 0;
-}
-
-int SSL_CIPHER_has_MD5_HMAC(const SSL_CIPHER *cipher) {
-  return 0;
 }
 
 int SSL_CIPHER_has_SHA1_HMAC(const SSL_CIPHER *cipher) {

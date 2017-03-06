@@ -184,10 +184,9 @@ void HttpStreamFactoryImpl::JobController::OnRequestComplete() {
   MaybeNotifyFactoryOfCompletion();
 }
 
-int HttpStreamFactoryImpl::JobController::RestartTunnelWithProxyAuth(
-    const AuthCredentials& credentials) {
+int HttpStreamFactoryImpl::JobController::RestartTunnelWithProxyAuth() {
   DCHECK(bound_job_);
-  return bound_job_->RestartTunnelWithProxyAuth(credentials);
+  return bound_job_->RestartTunnelWithProxyAuth();
 }
 
 void HttpStreamFactoryImpl::JobController::SetPriority(

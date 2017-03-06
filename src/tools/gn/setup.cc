@@ -58,8 +58,12 @@ extern const char kDotfile_Help[] =
 
 Variables
 
+  arg_file_template [optional]
+      Path to a file containing the text that should be used as the default
+      args.gn content when you run `gn args`.
+
   buildconfig [required]
-      Label of the build config file. This file will be used to set up the
+      Path to the build config file. This file will be used to set up the
       build file execution environment for each toolchain.
 
   check_targets [optional]
@@ -788,6 +792,17 @@ bool Setup::FillOtherConfig(const base::CommandLine& cmdline) {
     }
 
     default_args_ = default_args_value->scope_value();
+  }
+
+  const Value* arg_file_template_value =
+      dotfile_scope_.GetValue("arg_file_template", true);
+  if (arg_file_template_value) {
+    if (!arg_file_template_value->VerifyTypeIs(Value::STRING, &err)) {
+      err.PrintToStdout();
+      return false;
+    }
+    SourceFile path(arg_file_template_value->string_value());
+    build_settings_.set_arg_file_template_path(path);
   }
 
   return true;

@@ -228,11 +228,9 @@ class ZipPackage(object):
 def get_module_zip_archive(module):
   """Given a module, returns path to a zip package that contains it or None."""
   loader = pkgutil.get_loader(module)
-  if not isinstance(loader, zipimport.zipimporter):
-    return None
-  # 'archive' property is documented only for python 2.7, but it appears to be
-  # there at least since python 2.5.2.
-  return loader.archive
+  # Handle zipimporter and its variations.
+  if loader and hasattr(loader, 'archive'):
+    return loader.archive
 
 
 def is_zipped_module(module):

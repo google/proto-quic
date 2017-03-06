@@ -2,3 +2,5 @@ cpu@chromium.org
 grt@chromium.org
 jschuh@chromium.org
 scottmg@chromium.org
+
+# COMPONENT: Internals>PlatformIntegration

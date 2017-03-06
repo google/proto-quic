@@ -46,33 +46,44 @@ namespace allocator {
 // wihout introducing unnecessary perf hits.
 
 struct AllocatorDispatch {
-  using AllocFn = void*(const AllocatorDispatch* self, size_t size);
+  using AllocFn = void*(const AllocatorDispatch* self,
+                        size_t size,
+                        void* context);
   using AllocZeroInitializedFn = void*(const AllocatorDispatch* self,
                                        size_t n,
-                                       size_t size);
+                                       size_t size,
+                                       void* context);
   using AllocAlignedFn = void*(const AllocatorDispatch* self,
                                size_t alignment,
-                               size_t size);
+                               size_t size,
+                               void* context);
   using ReallocFn = void*(const AllocatorDispatch* self,
                           void* address,
-                          size_t size);
-  using FreeFn = void(const AllocatorDispatch* self, void* address);
+                          size_t size,
+                          void* context);
+  using FreeFn = void(const AllocatorDispatch* self,
+                      void* address,
+                      void* context);
   // Returns the best available estimate for the actual amount of memory
   // consumed by the allocation |address|. If possible, this should include
   // heap overhead or at least a decent estimate of the full cost of the
   // allocation. If no good estimate is possible, returns zero.
   using GetSizeEstimateFn = size_t(const AllocatorDispatch* self,
-                                   void* address);
+                                   void* address,
+                                   void* context);
   using BatchMallocFn = unsigned(const AllocatorDispatch* self,
                                  size_t size,
                                  void** results,
-                                 unsigned num_requested);
+                                 unsigned num_requested,
+                                 void* context);
   using BatchFreeFn = void(const AllocatorDispatch* self,
                            void** to_be_freed,
-                           unsigned num_to_be_freed);
+                           unsigned num_to_be_freed,
+                           void* context);
   using FreeDefiniteSizeFn = void(const AllocatorDispatch* self,
                                   void* ptr,
-                                  size_t size);
+                                  size_t size,
+                                  void* context);
 
   AllocFn* const alloc_function;
   AllocZeroInitializedFn* const alloc_zero_initialized_function;

@@ -46,7 +46,7 @@ typedef std::unordered_map<HANDLE, Info, HandleHash> HandleMap;
 // module.
 typedef base::internal::LockImpl NativeLock;
 NativeLock* GetLock() {
-  static auto native_lock = new NativeLock();
+  static auto* native_lock = new NativeLock();
   return native_lock;
 }
 

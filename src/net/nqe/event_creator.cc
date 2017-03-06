@@ -4,6 +4,7 @@
 
 #include "net/nqe/event_creator.h"
 
+#include <stdlib.h>
 #include <memory>
 #include <utility>
 
@@ -21,7 +22,7 @@ namespace internal {
 
 namespace {
 
-std::unique_ptr<base::Value> EffectiveConnectionTypeChangedNetLogCallback(
+std::unique_ptr<base::Value> NetworkQualityChangedNetLogCallback(
     base::TimeDelta http_rtt,
     base::TimeDelta transport_rtt,
     int32_t downstream_throughput_kbps,
@@ -36,6 +37,37 @@ std::unique_ptr<base::Value> EffectiveConnectionTypeChangedNetLogCallback(
   return std::move(dict);
 }
 
+bool MetricChangedMeaningfully(int32_t past_value, int32_t current_value) {
+  if ((past_value == INVALID_RTT_THROUGHPUT) !=
+      (current_value == INVALID_RTT_THROUGHPUT)) {
+    return true;
+  }
+
+  if (past_value == INVALID_RTT_THROUGHPUT &&
+      current_value == INVALID_RTT_THROUGHPUT) {
+    return false;
+  }
+
+  // Create a new entry only if (i) the difference between the two values exceed
+  // the threshold; and, (ii) the ratio of the values also exceeds the
+  // threshold.
+  static const int kMinDifferenceInMetrics = 100;
+  static const float kMinRatio = 1.2f;
+
+  if (std::abs(past_value - current_value) < kMinDifferenceInMetrics) {
+    // The absolute change in the value is not sufficient enough.
+    return false;
+  }
+
+  if (past_value < (kMinRatio * current_value) &&
+      current_value < (kMinRatio * past_value)) {
+    // The relative change in the value is not sufficient enough.
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace
 
 EventCreator::EventCreator(NetLogWithSource net_log)
@@ -46,7 +78,7 @@ EventCreator::~EventCreator() {
   DCHECK(thread_checker_.CalledOnValidThread());
 }
 
-void EventCreator::MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
+void EventCreator::MaybeAddNetworkQualityChangedEventToNetLog(
     EffectiveConnectionType effective_connection_type,
     const NetworkQuality& network_quality) {
   DCHECK(thread_checker_.CalledOnValidThread());
@@ -54,15 +86,16 @@ void EventCreator::MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
   // Check if any of the network quality metrics changed meaningfully.
   bool effective_connection_type_changed =
       past_effective_connection_type_ != effective_connection_type;
-  bool http_rtt_changed = (past_network_quality_.http_rtt() == InvalidRTT()) !=
-                          (network_quality.http_rtt() == InvalidRTT());
-  bool transport_rtt_changed =
-      (past_network_quality_.transport_rtt() == InvalidRTT()) !=
-      (network_quality.transport_rtt() == InvalidRTT());
-  bool kbps_changed =
-      (past_network_quality_.downstream_throughput_kbps() ==
-       INVALID_RTT_THROUGHPUT) !=
-      (network_quality.downstream_throughput_kbps() == INVALID_RTT_THROUGHPUT);
+  bool http_rtt_changed = MetricChangedMeaningfully(
+      past_network_quality_.http_rtt().InMilliseconds(),
+      network_quality.http_rtt().InMilliseconds());
+
+  bool transport_rtt_changed = MetricChangedMeaningfully(
+      past_network_quality_.transport_rtt().InMilliseconds(),
+      network_quality.transport_rtt().InMilliseconds());
+  bool kbps_changed = MetricChangedMeaningfully(
+      past_network_quality_.downstream_throughput_kbps(),
+      network_quality.downstream_throughput_kbps());
 
   if (!effective_connection_type_changed && !http_rtt_changed &&
       !transport_rtt_changed && !kbps_changed) {
@@ -75,7 +108,7 @@ void EventCreator::MaybeAddEffectiveConnectionTypeChangedEventToNetLog(
 
   net_log_.AddEvent(
       NetLogEventType::NETWORK_QUALITY_CHANGED,
-      base::Bind(&EffectiveConnectionTypeChangedNetLogCallback,
+      base::Bind(&NetworkQualityChangedNetLogCallback,
                  network_quality.http_rtt(), network_quality.transport_rtt(),
                  network_quality.downstream_throughput_kbps(),
                  effective_connection_type));

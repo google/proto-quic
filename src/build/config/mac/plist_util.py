@@ -141,7 +141,7 @@ def MergePList(plist1, plist2):
 
   Creates a new dictionary representing a Property List (.plist) files by
   merging the two dictionary |plist1| and |plist2| recursively (only for
-  dictionary values).
+  dictionary values). List value will be concatenated.
 
   Args:
     plist1: a dictionary representing a Property List (.plist) file
@@ -150,7 +150,8 @@ def MergePList(plist1, plist2):
   Returns:
     A new dictionary representing a Property List (.plist) file by merging
     |plist1| with |plist2|. If any value is a dictionary, they are merged
-    recursively, otherwise |plist2| value is used.
+    recursively, otherwise |plist2| value is used. If values are list, they
+    are concatenated.
   """
   if not isinstance(plist1, dict) or not isinstance(plist2, dict):
     if plist2 is not None:
@@ -165,6 +166,8 @@ def MergePList(plist1, plist2):
       value = plist1[key]
     if isinstance(value, dict):
       value = MergePList(plist1.get(key, None), plist2.get(key, None))
+    if isinstance(value, list):
+      value = plist1.get(key, []) + plist2.get(key, [])
     result[key] = value
   return result
 

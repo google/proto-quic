@@ -15,6 +15,7 @@
 #include "base/strings/string_piece.h"
 #include "base/time/time.h"
 #include "net/base/net_export.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace crypto {
 class RSAPrivateKey;
@@ -106,6 +107,23 @@ class NET_EXPORT_PRIVATE ClientCertSorter {
  private:
   base::Time now_;
 };
+
+// Returns a CRYPTO_BUFFER_POOL for deduplicating certificates.
+NET_EXPORT CRYPTO_BUFFER_POOL* GetBufferPool();
+
+// Creates a CRYPTO_BUFFER in the same pool returned by GetBufferPool.
+NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
+    const uint8_t* data,
+    size_t length);
+
+// Creates a CRYPTO_BUFFER in the same pool returned by GetBufferPool.
+NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
+    const base::StringPiece& data);
+
+// Overload with no definition, to disallow creating a CRYPTO_BUFFER from a
+// char* due to StringPiece implicit ctor.
+NET_EXPORT bssl::UniquePtr<CRYPTO_BUFFER> CreateCryptoBuffer(
+    const char* invalid_data);
 
 } // namespace x509_util
 

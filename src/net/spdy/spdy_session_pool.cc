@@ -368,7 +368,7 @@ void SpdySessionPool::OnSSLConfigChanged() {
   CloseCurrentSessions(ERR_NETWORK_CHANGED);
 }
 
-void SpdySessionPool::OnCertDBChanged(const X509Certificate* cert) {
+void SpdySessionPool::OnCertDBChanged() {
   CloseCurrentSessions(ERR_CERT_DATABASE_CHANGED);
 }
 
@@ -380,15 +380,15 @@ void SpdySessionPool::DumpMemoryStats(
   size_t total_size = 0;
   size_t buffer_size = 0;
   size_t cert_count = 0;
-  size_t serialized_cert_size = 0;
+  size_t cert_size = 0;
   size_t num_active_sessions = 0;
-  for (const auto& session : sessions_) {
+  for (auto* session : sessions_) {
     StreamSocket::SocketMemoryStats stats;
     bool is_session_active = false;
     total_size += session->DumpMemoryStats(&stats, &is_session_active);
     buffer_size += stats.buffer_size;
     cert_count += stats.cert_count;
-    serialized_cert_size += stats.serialized_cert_size;
+    cert_size += stats.cert_size;
     if (is_session_active)
       num_active_sessions++;
   }
@@ -412,9 +412,9 @@ void SpdySessionPool::DumpMemoryStats(
   dump->AddScalar("cert_count",
                   base::trace_event::MemoryAllocatorDump::kUnitsObjects,
                   cert_count);
-  dump->AddScalar("serialized_cert_size",
+  dump->AddScalar("cert_size",
                   base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-                  serialized_cert_size);
+                  cert_size);
 }
 
 bool SpdySessionPool::IsSessionAvailable(

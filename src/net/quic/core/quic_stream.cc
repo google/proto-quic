@@ -275,8 +275,8 @@ QuicConsumedData QuicStream::WritevData(
     bool fin,
     QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
   if (write_side_closed_) {
-    QUIC_DLOG(ERROR) << ENDPOINT
-                     << "Attempt to write when the write side is closed";
+    QUIC_DLOG(ERROR) << ENDPOINT << "Stream " << id()
+                     << "attempting to write when the write side is closed";
     return QuicConsumedData(0, false);
   }
 
@@ -373,7 +373,7 @@ void QuicStream::CloseReadSide() {
   sequencer_.ReleaseBuffer();
 
   if (write_side_closed_) {
-    QUIC_DLOG(INFO) << ENDPOINT << "Closing stream: " << id();
+    QUIC_DLOG(INFO) << ENDPOINT << "Closing stream " << id();
     session_->CloseStream(id());
   }
 }
@@ -386,7 +386,7 @@ void QuicStream::CloseWriteSide() {
 
   write_side_closed_ = true;
   if (read_side_closed_) {
-    QUIC_DLOG(INFO) << ENDPOINT << "Closing stream: " << id();
+    QUIC_DLOG(INFO) << ENDPOINT << "Closing stream " << id();
     session_->CloseStream(id());
   }
 }

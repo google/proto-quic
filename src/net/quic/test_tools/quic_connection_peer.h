@@ -113,8 +113,9 @@ class QuicConnectionPeer {
   static void SetAckDecimationDelay(QuicConnection* connection,
                                     float ack_decimation_delay);
   static bool HasRetransmittableFrames(QuicConnection* connection,
-                                       QuicPathId path_id,
                                        QuicPacketNumber packet_number);
+  static void SetNoStopWaitingFrames(QuicConnection* connection,
+                                     bool no_stop_waiting_frames);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(QuicConnectionPeer);

@@ -124,6 +124,16 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
                               int num_sockets,
                               const NetLogWithSource& net_log) = 0;
 
+  // Called to change the priority of a RequestSocket call that returned
+  // ERR_IO_PENDING and has not yet asynchronously completed.  The same handle
+  // parameter must be passed to this method as was passed to the
+  // RequestSocket call being modified.
+  // This function is a no-op if |priority| is the same as the current
+  // request priority.
+  virtual void SetPriority(const std::string& group_name,
+                           ClientSocketHandle* handle,
+                           RequestPriority priority) = 0;
+
   // Called to cancel a RequestSocket call that returned ERR_IO_PENDING.  The
   // same handle parameter must be passed to this method as was passed to the
   // RequestSocket call being cancelled.  The associated CompletionCallback is
@@ -152,6 +162,9 @@ class NET_EXPORT ClientSocketPool : public LowerLayeredPool {
 
   // Called to close any idle connections held by the connection manager.
   virtual void CloseIdleSockets() = 0;
+
+  // Called to close any idle connections held by the connection manager.
+  virtual void CloseIdleSocketsInGroup(const std::string& group_name) = 0;
 
   // The total number of idle sockets in the pool.
   virtual int IdleSocketCount() const = 0;

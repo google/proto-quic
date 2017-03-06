@@ -147,15 +147,19 @@ class CppBundleGenerator(object):
         raise ValueError("Unsupported platform ifdef: %s" % platform.name)
     return ' || '.join(ifdefs)
 
-  def _GenerateRegisterFunctions(self, namespace_name, function):
+  def _GenerateRegistrationEntry(self, namespace_name, function):
     c = code.Code()
     function_ifdefs = self._GetPlatformIfdefs(function)
     if function_ifdefs is not None:
       c.Append("#if %s" % function_ifdefs, indent_level=0)
 
-    function_name = JsFunctionNameToClassName(namespace_name, function.name)
-    c.Append("registry->RegisterFunction<%sFunction>();" % (
-        function_name))
+    function_name = '%sFunction' % JsFunctionNameToClassName(
+        namespace_name, function.name)
+    c.Sblock('{')
+    c.Append('&NewExtensionFunction<%s>,' % function_name)
+    c.Append('%s::function_name(),' % function_name)
+    c.Append('%s::histogram_value(),' % function_name)
+    c.Eblock('},')
 
     if function_ifdefs is not None:
       c.Append("#endif  // %s" % function_ifdefs, indent_level=0)
@@ -166,6 +170,7 @@ class CppBundleGenerator(object):
     c.Append('// static')
     c.Sblock('void %s::RegisterAll(ExtensionFunctionRegistry* registry) {' %
              self._GenerateBundleClass('GeneratedFunctionRegistry'))
+    c.Sblock('constexpr ExtensionFunctionRegistry::FactoryEntry kEntries[] = {')
     for namespace in self._model.namespaces.values():
       namespace_ifdefs = self._GetPlatformIfdefs(namespace)
       if namespace_ifdefs is not None:
@@ -174,7 +179,7 @@ class CppBundleGenerator(object):
       for function in namespace.functions.values():
         if function.nocompile:
           continue
-        c.Concat(self._GenerateRegisterFunctions(namespace.name, function))
+        c.Concat(self._GenerateRegistrationEntry(namespace.name, function))
 
       for type_ in namespace.types.values():
         for function in type_.functions.values():
@@ -182,11 +187,15 @@ class CppBundleGenerator(object):
             continue
           namespace_types_name = JsFunctionNameToClassName(
                 namespace.name, type_.name)
-          c.Concat(self._GenerateRegisterFunctions(namespace_types_name,
+          c.Concat(self._GenerateRegistrationEntry(namespace_types_name,
                                                    function))
 
       if namespace_ifdefs is not None:
         c.Append("#endif  // %s" % namespace_ifdefs, indent_level=0)
+    c.Eblock("};")
+    c.Sblock("for (const auto& entry : kEntries) {")
+    c.Append("  registry->Register(entry);")
+    c.Eblock("}")
     c.Eblock("}")
     return c
 

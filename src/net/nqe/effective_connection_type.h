@@ -64,6 +64,11 @@ NET_EXPORT bool GetEffectiveConnectionTypeForName(
     base::StringPiece connection_type_name,
     EffectiveConnectionType* effective_connection_type);
 
+// Returns the string equivalent of |type|. Deprecated, and replaced by
+// GetNameForEffectiveConnectionType.
+NET_EXPORT_PRIVATE const char* DeprecatedGetNameForEffectiveConnectionType(
+    EffectiveConnectionType type);
+
 }  // namespace net
 
 #endif  // NET_NQE_EFFECTIVE_CONNECTION_TYPE_H_

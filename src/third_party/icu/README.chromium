@@ -39,7 +39,7 @@ Pre-built data files are generated and checked in with the following steps
 
 
   c. Run make
-     'make' will fail  when pkgdata looks for css3transform.res. This
+     'make' will fail  when pkgdata looks for root_subset.res. This
      is expected. See http://bugs.icu-project.org/trac/ticket/10570
 
   d. Run
@@ -175,8 +175,9 @@ them when updating ICU.
   - word_ja.txt (used only on Android)
     Added for Japanese-specific word-breaking without the C+J dictionary.
 
-4. source/data/trnslit/css3transform.txt
-  - Handle Greek case conversion with a transliterator
+4. source/data/trnslit/root_subset.txt
+   Subset of transliteration data to keep for:
+   - Handling Chinese Simplified/Traditional text detection
 
 5. Add {an,ast,ckb,ku,tg,wa}.txt to source/data/{locale,lang}
    with the minimal locale data necessary for spellchecker and

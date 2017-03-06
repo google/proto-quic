@@ -57,14 +57,14 @@ class StartupMetric(Metric):
 
     def RecordOneTab(t):
       def EvaluateInt(exp):
-        val = t.EvaluateJavaScript2(exp)
+        val = t.EvaluateJavaScript(exp)
         if not val:
           logging.warn('%s undefined', exp)
           return 0
         return int(val)
 
       try:
-        t.WaitForJavaScriptCondition2(
+        t.WaitForJavaScriptCondition(
             'window.performance.timing["loadEventEnd"] > 0',
             timeout=self.DEFAULT_LOADING_TIMEOUT)
 
@@ -105,7 +105,7 @@ class StartupMetric(Metric):
 
   def AddResults(self, tab, results):
     for display_name, histogram_name in self.HISTOGRAMS_TO_RECORD.iteritems():
-      result = tab.EvaluateJavaScript2(
+      result = tab.EvaluateJavaScript(
           'statsCollectionController.getBrowserHistogram({{ name }})',
           name=histogram_name)
       result = json.loads(result)

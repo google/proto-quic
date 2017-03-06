@@ -6,10 +6,10 @@ from telemetry.page import legacy_page_test
 
 
 def Repaint(action_runner, mode='viewport', width=None, height=None):
-  action_runner.WaitForJavaScriptCondition2(
+  action_runner.WaitForJavaScriptCondition(
     'document.readyState == "complete"', timeout=90)
   # Rasterize only what's visible.
-  action_runner.ExecuteJavaScript2(
+  action_runner.ExecuteJavaScript(
       'chrome.gpuBenchmarking.setRasterizeOnlyVisibleContent();')
 
   args = {}
@@ -20,7 +20,7 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
     args['height'] = height
 
   # Enqueue benchmark
-  action_runner.ExecuteJavaScript2("""
+  action_runner.ExecuteJavaScript("""
       window.benchmark_results = {};
       window.benchmark_results.id =
           chrome.gpuBenchmarking.runMicroBenchmark(
@@ -31,7 +31,7 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
       """,
       args=args)
 
-  micro_benchmark_id = action_runner.EvaluateJavaScript2(
+  micro_benchmark_id = action_runner.EvaluateJavaScript(
       'window.benchmark_results.id')
   if not micro_benchmark_id:
     raise legacy_page_test.MeasurementFailure(
@@ -40,7 +40,7 @@ def Repaint(action_runner, mode='viewport', width=None, height=None):
   with action_runner.CreateInteraction('Repaint'):
     action_runner.RepaintContinuously(seconds=5)
 
-  action_runner.ExecuteJavaScript2("""
+  action_runner.ExecuteJavaScript("""
       window.benchmark_results.message_handled =
           chrome.gpuBenchmarking.sendMessageToMicroBenchmark(
                 {{ micro_benchmark_id }}, {

@@ -2011,6 +2011,7 @@ HostResolverImpl::HostResolverImpl(
       net_log_(net_log),
       received_dns_config_(false),
       num_dns_failures_(0),
+      default_address_family_(ADDRESS_FAMILY_UNSPECIFIED),
       use_local_ipv6_(false),
       last_ipv6_probe_result_(true),
       resolved_known_ipv6_hostname_(false),
@@ -2184,6 +2185,15 @@ int HostResolverImpl::ResolveStaleFromCache(
   return rv;
 }
 
+void HostResolverImpl::SetDefaultAddressFamily(AddressFamily address_family) {
+  DCHECK(CalledOnValidThread());
+  default_address_family_ = address_family;
+}
+
+AddressFamily HostResolverImpl::GetDefaultAddressFamily() const {
+  return default_address_family_;
+}
+
 bool HostResolverImpl::ResolveAsIP(const Key& key,
                                    const RequestInfo& info,
                                    const IPAddress* ip_address,
@@ -2196,6 +2206,11 @@ bool HostResolverImpl::ResolveAsIP(const Key& key,
 
   *net_error = OK;
   AddressFamily family = GetAddressFamily(*ip_address);
+  if (family == ADDRESS_FAMILY_IPV6 &&
+      default_address_family_ == ADDRESS_FAMILY_IPV4) {
+    // Don't return IPv6 addresses if default address family is set to IPv4.
+    *net_error = ERR_NAME_NOT_RESOLVED;
+  }
   if (key.address_family != ADDRESS_FAMILY_UNSPECIFIED &&
       key.address_family != family) {
     // Don't return IPv6 addresses for IPv4 queries, and vice versa.
@@ -2338,20 +2353,19 @@ HostResolverImpl::Key HostResolverImpl::GetEffectiveKeyForRequest(
       info.host_resolver_flags() | additional_resolver_flags_;
   AddressFamily effective_address_family = info.address_family();
 
-  if (info.address_family() == ADDRESS_FAMILY_UNSPECIFIED) {
-    if (!use_local_ipv6_ &&
-        // When resolving IPv4 literals, there's no need to probe for IPv6.
-        // When resolving IPv6 literals, there's no benefit to artificially
-        // limiting our resolution based on a probe.  Prior logic ensures
-        // that this query is UNSPECIFIED (see info.address_family()
-        // check above) so the code requesting the resolution should be amenable
-        // to receiving a IPv6 resolution.
-        ip_address == nullptr) {
-      if (!IsIPv6Reachable(net_log)) {
-        effective_address_family = ADDRESS_FAMILY_IPV4;
-        effective_flags |= HOST_RESOLVER_DEFAULT_FAMILY_SET_DUE_TO_NO_IPV6;
-      }
-    }
+  if (info.address_family() == ADDRESS_FAMILY_UNSPECIFIED)
+    effective_address_family = default_address_family_;
+
+  if (effective_address_family == ADDRESS_FAMILY_UNSPECIFIED &&
+      // When resolving IPv4 literals, there's no need to probe for IPv6.
+      // When resolving IPv6 literals, there's no benefit to artificially
+      // limiting our resolution based on a probe.  Prior logic ensures
+      // that this query is UNSPECIFIED (see effective_address_family
+      // check above) so the code requesting the resolution should be amenable
+      // to receiving a IPv6 resolution.
+      !use_local_ipv6_ && ip_address == nullptr && !IsIPv6Reachable(net_log)) {
+    effective_address_family = ADDRESS_FAMILY_IPV4;
+    effective_flags |= HOST_RESOLVER_DEFAULT_FAMILY_SET_DUE_TO_NO_IPV6;
   }
 
   return Key(info.hostname(), effective_address_family, effective_flags);

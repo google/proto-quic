@@ -540,12 +540,12 @@ void URLFetcherCore::StartURLRequest() {
     return;
   }
 
+  DCHECK(request_context_getter_);
   if (!request_context_getter_->GetURLRequestContext()) {
     CancelRequestAndInformDelegate(ERR_CONTEXT_SHUT_DOWN);
     return;
   }
 
-  DCHECK(request_context_getter_.get());
   DCHECK(!request_.get());
 
   g_registry.Get().AddURLFetcherCore(this);

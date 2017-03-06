@@ -42,8 +42,7 @@ bool QuicStreamSequencerBufferPeer::CheckEmptyInvariants() {
 }
 
 bool QuicStreamSequencerBufferPeer::IsBlockArrayEmpty() {
-  if (FLAGS_quic_reloadable_flag_quic_reduce_sequencer_buffer_memory_life_time &&  // NOLINT
-      buffer_->blocks_ == nullptr) {
+  if (buffer_->blocks_ == nullptr) {
     return true;
   }
 

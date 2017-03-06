@@ -13,7 +13,6 @@ import optparse
 import os
 import random
 import re
-import subprocess
 import sys
 import time
 
@@ -30,43 +29,15 @@ sys.path.append(os.path.join(_SRC_PATH, 'build', 'android'))
 import devil_chromium
 
 sys.path.append(os.path.join(_SRC_PATH, 'tools', 'android', 'loading'))
+import chrome_setup
 import device_setup
 
 
 # Local build of Chrome (not Chromium).
 _CHROME_PACKAGE = 'com.google.android.apps.chrome'
-_COMMAND_LINE_PATH = '/data/local/tmp/chrome-command-line'
+_COMMAND_LINE_FILE = 'chrome-command-line'
 _TEST_APP_PACKAGE_NAME = 'org.chromium.customtabsclient.test'
 _INVALID_VALUE = -1
-
-
-# Command line arguments for Chrome.
-CHROME_ARGS = [
-    # Disable backgound network requests that may pollute WPR archive, pollute
-    # HTTP cache generation, and introduce noise in loading performance.
-    '--disable-background-networking',
-    '--disable-default-apps',
-    '--no-proxy-server',
-    # TODO(droger): Remove once crbug.com/354743 is fixed.
-    '--safebrowsing-disable-auto-update',
-
-    # Disables actions that chrome performs only on first run or each launches,
-    # which can interfere with page load performance, or even block its
-    # execution by waiting for user input.
-    '--disable-fre',
-    '--no-default-browser-check',
-    '--no-first-run',
-]
-
-
-def ResetChromeLocalState(device):
-  """Remove the Chrome Profile and the various disk caches."""
-  profile_dirs = ['app_chrome/Default', 'cache', 'app_chrome/ShaderCache',
-                  'app_tabs']
-  cmd = ['rm', '-rf']
-  cmd.extend(
-      '/data/data/{}/{}'.format(_CHROME_PACKAGE, d) for d in profile_dirs)
-  device.adb.Shell(subprocess.list2cmdline(cmd))
 
 
 def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
@@ -99,7 +70,7 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
   logcat_timeout = int(timeout_s + delay_to_may_launch_url / 1000.
                        + delay_to_launch_url / 1000.) + 3;
 
-  with device_setup.FlagReplacer(device, _COMMAND_LINE_PATH, chrome_args):
+  with device_setup.FlagReplacer(device, _COMMAND_LINE_FILE, chrome_args):
     launch_intent = intent.Intent(
         action='android.intent.action.MAIN',
         package=_TEST_APP_PACKAGE_NAME,
@@ -116,7 +87,7 @@ def RunOnce(device, url, warmup, speculation_mode, delay_to_may_launch_url,
     device.ForceStop(_TEST_APP_PACKAGE_NAME)
 
     if reset_chrome_state:
-      ResetChromeLocalState(device)
+      chrome_setup.ResetChromeLocalState(device, _CHROME_PACKAGE)
 
     if cold:
       cache_control.CacheControl(device).DropRamCaches()
@@ -180,19 +151,19 @@ def LoopOnDevice(device, configs, output_filename, wpr_archive_path=None,
     try:
       while should_stop is None or not should_stop.is_set():
         config = configs[random.randint(0, len(configs) - 1)]
-        chrome_args = CHROME_ARGS + wpr_attributes.chrome_args
+        chrome_args = chrome_setup.CHROME_ARGS + wpr_attributes.chrome_args
         if config['speculation_mode'] == 'no_state_prefetch':
           # NoStatePrefetch is enabled through an experiment.
           chrome_args.extend([
               '--force-fieldtrials=trial/group',
               '--force-fieldtrial-params=trial.group:mode/no_state_prefetch',
-              '--enable-features="NoStatePrefetch<trial"'])
+              '--enable-features=NoStatePrefetch<trial'])
         elif config['speculation_mode'] == 'speculative_prefetch':
           # Speculative Prefetch is enabled through an experiment.
           chrome_args.extend([
               '--force-fieldtrials=trial/group',
               '--force-fieldtrial-params=trial.group:mode/external-prefetching',
-              '--enable-features="SpeculativeResourcePrefetching<trial"'])
+              '--enable-features=SpeculativeResourcePrefetching<trial'])
 
         result = RunOnce(device, config['url'], config['warmup'],
                          config['speculation_mode'],

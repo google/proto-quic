@@ -40,7 +40,7 @@ class PolymerPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(PolymerPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.__polymer_ready')
 
 
@@ -70,7 +70,7 @@ class PolymerCalculatorPage(PolymerPage):
 
   def SlidePanel(self, action_runner):
     # only bother with this interaction if the drawer is hidden
-    opened = action_runner.EvaluateJavaScript2('''
+    opened = action_runner.EvaluateJavaScript('''
         (function() {
           var outer = document.querySelector("body /deep/ #outerPanels");
           return outer.opened || outer.wideMode;
@@ -88,7 +88,7 @@ class PolymerCalculatorPage(PolymerPage):
                 ).shadowRoot.querySelector(
                   '.handle-bar'
                 )''')
-        action_runner.WaitForJavaScriptCondition2('''
+        action_runner.WaitForJavaScriptCondition('''
             var outer = document.querySelector("body /deep/ #outerPanels");
             outer.opened || outer.wideMode;''')
 
@@ -102,7 +102,7 @@ class PolymerShadowPage(PolymerPage):
 
   def PerformPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('ScrollAndShadowAnimation'):
-      action_runner.ExecuteJavaScript2(
+      action_runner.ExecuteJavaScript(
           "document.getElementById('fab').scrollIntoView()")
       action_runner.Wait(5)
       self.AnimateShadow(action_runner, 'card')
@@ -112,7 +112,7 @@ class PolymerShadowPage(PolymerPage):
 
   def AnimateShadow(self, action_runner, eid):
     for i in range(1, 6):
-      action_runner.ExecuteJavaScript2(
+      action_runner.ExecuteJavaScript(
           'document.getElementById({{ eid }}).z = {{ i }}', eid=eid, i=i)
       action_runner.Wait(1)
 
@@ -138,14 +138,14 @@ class PolymerSampler(PolymerPage):
 
   def RunNavigateSteps(self, action_runner):
     super(PolymerSampler, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript2("""
+    action_runner.ExecuteJavaScript("""
         window.Polymer.whenPolymerReady(function() {
           {{ @iframe }}.contentWindow.Polymer.whenPolymerReady(function() {
             window.__polymer_ready = true;
           })
         });
         """, iframe=self.iframe_js)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.__polymer_ready')
 
   def PerformPageInteractions(self, action_runner):
@@ -196,13 +196,13 @@ class PolymerSampler(PolymerPage):
         selector='body %s:not([disabled]):not([active])' % widget_type)
 
     roles_count_query = element_list_query + '.length'
-    for i in range(action_runner.EvaluateJavaScript2(roles_count_query)):
+    for i in range(action_runner.EvaluateJavaScript(roles_count_query)):
       element_query = js_template.Render(
         '{{ @query }}[{{ i }}]', query=element_list_query, i=i)
-      if action_runner.EvaluateJavaScript2(
+      if action_runner.EvaluateJavaScript(
           element_query + '.offsetParent != null'):
         # Only try to tap on visible elements (offsetParent != null)
-        action_runner.ExecuteJavaScript2(element_query + '.scrollIntoView()')
+        action_runner.ExecuteJavaScript(element_query + '.scrollIntoView()')
         action_runner.Wait(1) # wait for page to settle after scrolling
         action_function(action_runner, element_query)
 

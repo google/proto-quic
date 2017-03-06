@@ -196,6 +196,7 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     ClientSocketHandle* handle() const { return handle_; }
     const CompletionCallback& callback() const { return callback_; }
     RequestPriority priority() const { return priority_; }
+    void set_priority(RequestPriority priority) { priority_ = priority; }
     ClientSocketPool::RespectLimits respect_limits() const {
       return respect_limits_;
     }
@@ -214,8 +215,7 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
     ClientSocketHandle* const handle_;
     const CompletionCallback callback_;
-    // TODO(akalin): Support reprioritization.
-    const RequestPriority priority_;
+    RequestPriority priority_;
     const ClientSocketPool::RespectLimits respect_limits_;
     const Flags flags_;
     const NetLogWithSource net_log_;
@@ -266,12 +266,17 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
   // See ClientSocketPool::RequestSocket for documentation on this function.
   int RequestSocket(const std::string& group_name,
-                    std::unique_ptr<const Request> request);
+                    std::unique_ptr<Request> request);
 
-  // See ClientSocketPool::RequestSocket for documentation on this function.
+  // See ClientSocketPool::RequestSockets for documentation on this function.
   void RequestSockets(const std::string& group_name,
                       const Request& request,
                       int num_sockets);
+
+  // See ClientSocketPool::SetPriority for documentation on this function.
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority);
 
   // See ClientSocketPool::CancelRequest for documentation on this function.
   void CancelRequest(const std::string& group_name,
@@ -287,6 +292,9 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
   // See ClientSocketPool::CloseIdleSockets for documentation on this function.
   void CloseIdleSockets();
+
+  // See ClientSocketPool::CloseIdleSocketsInGroup for documentation.
+  void CloseIdleSocketsInGroup(const std::string& group_name);
 
   // See ClientSocketPool::IdleSocketCount() for documentation on this function.
   int idle_socket_count() const {
@@ -380,8 +388,8 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     base::TimeTicks start_time;
   };
 
-  typedef PriorityQueue<const Request*> RequestQueue;
-  typedef std::map<const ClientSocketHandle*, const Request*> RequestMap;
+  typedef PriorityQueue<Request*> RequestQueue;
+  typedef std::map<const ClientSocketHandle*, Request*> RequestMap;
 
   // A Group is allocated per group_name when there are idle sockets or pending
   // requests.  Otherwise, the Group object is removed from the map.
@@ -459,16 +467,21 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
     // Inserts the request into the queue based on priority
     // order. Older requests are prioritized over requests of equal
     // priority.
-    void InsertPendingRequest(std::unique_ptr<const Request> request);
+    void InsertPendingRequest(std::unique_ptr<Request> request);
 
     // Gets and removes the next pending request. Returns NULL if
     // there are no pending requests.
-    std::unique_ptr<const Request> PopNextPendingRequest();
+    std::unique_ptr<Request> PopNextPendingRequest();
 
     // Finds the pending request for |handle| and removes it. Returns
     // the removed pending request, or NULL if there was none.
-    std::unique_ptr<const Request> FindAndRemovePendingRequest(
+    std::unique_ptr<Request> FindAndRemovePendingRequest(
         ClientSocketHandle* handle);
+
+    // Change the priority of the request named by |*handle|.  |*handle|
+    // must refer to a request currently present in the group.  If |priority|
+    // is the same as the current priority of the request, this is a no-op.
+    void SetPriority(ClientSocketHandle* handle, RequestPriority priority);
 
     void IncrementActiveSocketCount() { active_socket_count_++; }
     void DecrementActiveSocketCount() { active_socket_count_--; }
@@ -482,7 +495,7 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
    private:
     // Returns the iterator's pending request after removing it from
     // the queue.
-    std::unique_ptr<const Request> RemovePendingRequest(
+    std::unique_ptr<Request> RemovePendingRequest(
         const RequestQueue::Pointer& pointer);
 
     // Called when the backup socket timer fires.
@@ -526,6 +539,13 @@ class NET_EXPORT_PRIVATE ClientSocketPoolBaseHelper
 
   typedef std::map<const ClientSocketHandle*, CallbackResultPair>
       PendingCallbackMap;
+
+  // Closes all idle sockets in |group| if |force| is true.  Else, only closes
+  // idle sockets in |group| that timed out with respect to |now| or can't be
+  // reused.
+  void CleanupIdleSocketsInGroup(bool force,
+                                 Group* group,
+                                 const base::TimeTicks& now);
 
   Group* GetOrCreateGroup(const std::string& group_name);
   void RemoveGroup(const std::string& group_name);
@@ -753,7 +773,7 @@ class ClientSocketPoolBase {
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
                     const NetLogWithSource& net_log) {
-    std::unique_ptr<const Request> request(new Request(
+    std::unique_ptr<Request> request(new Request(
         handle, callback, priority, respect_limits,
         internal::ClientSocketPoolBaseHelper::NORMAL, params, net_log));
     return helper_.RequestSocket(group_name, std::move(request));
@@ -773,6 +793,12 @@ class ClientSocketPoolBase {
     helper_.RequestSockets(group_name, request, num_sockets);
   }
 
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) {
+    return helper_.SetPriority(group_name, handle, priority);
+  }
+
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) {
     return helper_.CancelRequest(group_name, handle);
@@ -789,6 +815,10 @@ class ClientSocketPoolBase {
   bool IsStalled() const { return helper_.IsStalled(); }
 
   void CloseIdleSockets() { return helper_.CloseIdleSockets(); }
+
+  void CloseIdleSocketsInGroup(const std::string& group_name) {
+    return helper_.CloseIdleSocketsInGroup(group_name);
+  }
 
   int idle_socket_count() const { return helper_.idle_socket_count(); }
 

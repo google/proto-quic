@@ -166,10 +166,6 @@ class QUIC_EXPORT_PRIVATE QuicStreamSequencerBuffer {
   // Count how many bytes are in buffer at this moment.
   size_t BytesBuffered() const;
 
-  bool reduce_sequencer_buffer_memory_life_time() const {
-    return reduce_sequencer_buffer_memory_life_time_;
-  }
-
  private:
   friend class test::QuicStreamSequencerBufferPeer;
 
@@ -236,10 +232,6 @@ class QUIC_EXPORT_PRIVATE QuicStreamSequencerBuffer {
 
   // Contains Gaps which represents currently missing data.
   std::list<Gap> gaps_;
-
-  // If true, allocate buffer memory upon the first frame arrival and release
-  // the memory when stream is read closed.
-  bool reduce_sequencer_buffer_memory_life_time_;
 
   // An ordered, variable-length list of blocks, with the length limited
   // such that the number of blocks never exceeds blocks_count_.

@@ -38,6 +38,8 @@ class QuicPacketWriterWrapper : public QuicPacketWriter {
   // Takes ownership of |writer|.
   void set_writer(QuicPacketWriter* writer);
 
+  virtual void set_peer_address(const QuicSocketAddress& peer_address) {}
+
  private:
   std::unique_ptr<QuicPacketWriter> writer_;
 

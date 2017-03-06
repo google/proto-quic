@@ -11,23 +11,111 @@ import logging
 import optparse
 import os
 import sys
+import urllib2
+
+from collections import defaultdict
+
+from owners_file_tags import parse
 
 
-def check_owners(root, owners_path):
-  """Component and Team check in OWNERS files. crbug.com/667954"""
+DEFAULT_MAPPING_URL = \
+    'https://storage.googleapis.com/chromium-owners/component_map.json'
+
+
+def rel_and_full_paths(root, owners_path):
   if root:
     full_path = os.path.join(root, owners_path)
     rel_path = owners_path
   else:
     full_path = os.path.abspath(owners_path)
     rel_path = os.path.relpath(owners_path)
+  return rel_path, full_path
 
+
+def validate_mappings(options, args):
+  """Ensure team/component mapping remains consistent after patch.
+
+  The main purpose of this check is to prevent new and edited OWNERS files
+  introduce multiple teams for the same component.
+
+  Args:
+    options: Command line options from optparse
+    args: List of paths to affected OWNERS files
+  """
+  mappings_file = json.load(urllib2.urlopen(options.current_mapping_url))
+
+  # Convert dir -> component, component -> team to dir -> (team, component)
+  current_mappings = {}
+  for dir_name in mappings_file['dir-to-component'].keys():
+    component = mappings_file['dir-to-component'].get(dir_name)
+    if component:
+      team = mappings_file['component-to-team'].get(component)
+    else:
+      team = None
+    current_mappings[dir_name] = (team, component)
+
+  # Extract dir -> (team, component) for affected files
+  affected = {}
+  deleted = []
+  for f in args:
+    rel, full = rel_and_full_paths(options.root, f)
+    if os.path.exists(full):
+      affected[os.path.dirname(rel)] = parse(full)
+    else:
+      deleted.append(os.path.dirname(rel))
+  for d in deleted:
+    current_mappings.pop(d, None)
+  current_mappings.update(affected)
+
+  #Ensure internal consistency of modified mappings.
+  new_dir_to_component = {}
+  new_component_to_team = {}
+  team_to_dir = defaultdict(list)
+  errors = {}
+  for dir_name, tags in current_mappings.iteritems():
+    team, component = tags
+    if component:
+      new_dir_to_component[dir_name] = component
+    if team:
+      team_to_dir[team].append(dir_name)
+    if component and team:
+      if new_component_to_team.setdefault(component, team) != team:
+        if component not in errors:
+          errors[component] = set([new_component_to_team[component], team])
+        else:
+          errors[component].add(team)
+
+  result = []
+  for component, teams in errors.iteritems():
+    error_message = 'The component "%s" has more than one team: ' % component
+    team_details = []
+    for team in teams:
+      team_details.append('%(team)s is used in %(paths)s' % {
+          'team': team,
+          'paths': ', '.join(team_to_dir[team]),
+      })
+    error_message += '; '.join(team_details)
+    result.append({
+        'error': error_message,
+        'full_path':
+            ' '.join(['%s/OWNERS' % d
+                      for d, c in new_dir_to_component.iteritems()
+                      if c == component and d in affected.keys()])
+    })
+  return result
+
+
+def check_owners(rel_path, full_path):
+  """Component and Team check in OWNERS files. crbug.com/667954"""
   def result_dict(error):
     return {
       'error': error,
       'full_path': full_path,
       'rel_path': rel_path,
     }
+
+  if not os.path.exists(full_path):
+    return
 
   with open(full_path) as f:
     owners_file_lines = f.readlines()
@@ -89,13 +177,20 @@ Examples:
       action='store_true',
       default=False,
       help='Prints the bare filename triggering the checks')
+  parser.add_option(
+      '--current_mapping_url', default=DEFAULT_MAPPING_URL,
+      help='URL for existing dir/component and component/team mapping')
   parser.add_option('--json', help='Path to JSON output file')
   options, args = parser.parse_args()
 
   levels = [logging.ERROR, logging.INFO, logging.DEBUG]
   logging.basicConfig(level=levels[min(len(levels) - 1, options.verbose)])
 
-  errors = filter(None, [check_owners(options.root, f) for f in args])
+  errors = filter(None, [check_owners(*rel_and_full_paths(options.root, f))
+                         for f in args])
+
+  if not errors:
+    errors += validate_mappings(options, args) or []
 
   if options.json:
     with open(options.json, 'w') as f:

@@ -122,9 +122,8 @@ void HttpStreamFactoryImpl::Request::OnHttpsProxyTunnelResponse(
       response_info, used_ssl_config, used_proxy_info, stream);
 }
 
-int HttpStreamFactoryImpl::Request::RestartTunnelWithProxyAuth(
-    const AuthCredentials& credentials) {
-  return helper_->RestartTunnelWithProxyAuth(credentials);
+int HttpStreamFactoryImpl::Request::RestartTunnelWithProxyAuth() {
+  return helper_->RestartTunnelWithProxyAuth();
 }
 
 void HttpStreamFactoryImpl::Request::SetPriority(RequestPriority priority) {

@@ -798,11 +798,6 @@ int CertVerifyProcNSS::VerifyInternalImpl(
                                            nullptr);
   }
 
-  if (!cert->VerifyNameMatch(hostname,
-                             &verify_result->common_name_fallback_used)) {
-    verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
-  }
-
   // Setup a callback to call into CheckChainRevocationWithCRLSet with the
   // current CRLSet. If the CRLSet revokes a given chain, |was_revoked|
   // will be set to true.

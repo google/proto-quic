@@ -368,7 +368,7 @@ size_t HuffmanBitBuffer::AppendBytes(StringPiece input) {
 
   // Top up |accumulator_| until there isn't room for a whole byte.
   size_t bytes_used = 0;
-  auto ptr = reinterpret_cast<const uint8_t*>(input.data());
+  auto* ptr = reinterpret_cast<const uint8_t*>(input.data());
   do {
     auto b = static_cast<HuffmanAccumulator>(*ptr++);
     free_cnt -= 8;

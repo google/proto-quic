@@ -20,7 +20,7 @@ class _MSEMeasurement(legacy_page_test.LegacyPageTest):
 
   def ValidateAndMeasurePage(self, page, tab, results):
     del page  # unused
-    media_metric = tab.EvaluateJavaScript2('window.__testMetrics')
+    media_metric = tab.EvaluateJavaScript('window.__testMetrics')
     trace = media_metric['id'] if 'id' in media_metric else None
     metrics = media_metric['metrics'] if 'metrics' in media_metric else []
     for m in metrics:
@@ -38,9 +38,8 @@ class _MSEMeasurement(legacy_page_test.LegacyPageTest):
 
 
 # android: See media.android.tough_video_cases below
-# win8: crbug.com/531618
 # crbug.com/565180: Only include cases that report time_to_play
-@benchmark.Disabled('android', 'win8')
+@benchmark.Disabled('android')
 class Media(perf_benchmark.PerfBenchmark):
   """Obtains media metrics for key user scenarios."""
   test = media.Media
@@ -52,7 +51,7 @@ class Media(perf_benchmark.PerfBenchmark):
 
 
 # crbug.com/565180: Only include cases that don't report time_to_play
-@benchmark.Disabled('android', 'win8')
+@benchmark.Disabled('android')
 class MediaExtra(perf_benchmark.PerfBenchmark):
   """Obtains extra media metrics for key user scenarios."""
   test = media.Media

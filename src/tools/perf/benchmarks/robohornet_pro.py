@@ -33,15 +33,15 @@ class _RobohornetProMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.ExecuteJavaScript2('ToggleRoboHornet()')
-    tab.WaitForJavaScriptCondition2(
+    tab.ExecuteJavaScript('ToggleRoboHornet()')
+    tab.WaitForJavaScriptCondition(
         'document.getElementById("results").innerHTML.indexOf("Total") != -1',
         timeout=600)
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    result = int(tab.EvaluateJavaScript2('stopTime - startTime'))
+    result = int(tab.EvaluateJavaScript('stopTime - startTime'))
     results.AddValue(
         scalar.ScalarValue(results.current_page, 'Total', 'ms', result))
 

@@ -55,6 +55,12 @@ typedef unsigned int NSSearchPathDomainMask;
 typedef struct OpaqueSecTrustRef* SecACLRef;
 typedef struct OpaqueSecTrustedApplicationRef* SecTrustedApplicationRef;
 
+#if defined(OS_IOS)
+typedef struct CF_BRIDGED_TYPE(id) __SecPolicy* SecPolicyRef;
+#else
+typedef struct OpaqueSecPolicyRef* SecPolicyRef;
+#endif
+
 namespace base {
 
 class FilePath;
@@ -140,6 +146,8 @@ TYPE_NAME_FOR_CF_TYPE_DECL(CGColor);
 
 TYPE_NAME_FOR_CF_TYPE_DECL(CTFont);
 TYPE_NAME_FOR_CF_TYPE_DECL(CTRun);
+
+TYPE_NAME_FOR_CF_TYPE_DECL(SecPolicy);
 
 #undef TYPE_NAME_FOR_CF_TYPE_DECL
 
@@ -301,6 +309,7 @@ CF_CAST_DECL(CTFontDescriptor);
 CF_CAST_DECL(CTRun);
 
 CF_CAST_DECL(SecACL);
+CF_CAST_DECL(SecPolicy);
 CF_CAST_DECL(SecTrustedApplication);
 
 #undef CF_CAST_DECL

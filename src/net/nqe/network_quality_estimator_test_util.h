@@ -168,6 +168,20 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   bool GetRecentDownlinkThroughputKbps(const base::TimeTicks& start_time,
                                        int32_t* kbps) const override;
 
+  // Returns the recent HTTP RTT value that was set using
+  // |set_rtt_estimate_internal|. If it has not been set, then the base
+  // implementation is called.
+  base::TimeDelta GetRTTEstimateInternal(
+      const std::vector<NetworkQualityObservationSource>&
+          disallowed_observation_sources,
+      base::TimeTicks start_time,
+      const base::Optional<NetworkQualityEstimator::Statistic>& statistic,
+      int percentile) const override;
+
+  void set_rtt_estimate_internal(base::TimeDelta value) {
+    rtt_estimate_internal_ = value;
+  }
+
   void SetAccuracyRecordingIntervals(
       const std::vector<base::TimeDelta>& accuracy_recording_intervals);
 
@@ -233,6 +247,9 @@ class TestNetworkQualityEstimator : public NetworkQualityEstimator {
   // returned.
   base::Optional<int32_t> start_time_null_downlink_throughput_kbps_;
   base::Optional<int32_t> recent_downlink_throughput_kbps_;
+
+  // If set, GetRTTEstimateInternal() would return the set value.
+  base::Optional<base::TimeDelta> rtt_estimate_internal_;
 
   double rand_double_;
 

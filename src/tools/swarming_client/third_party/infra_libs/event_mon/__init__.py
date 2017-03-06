@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 # pylint: disable=line-too-long
-from infra_libs.event_mon.checkouts import get_revinfo, parse_revinfo
+from infra_libs.event_mon.checkouts import parse_revinfo
 
 from infra_libs.event_mon.config import add_argparse_options
 from infra_libs.event_mon.config import close

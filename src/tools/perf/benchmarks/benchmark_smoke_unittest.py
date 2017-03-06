@@ -52,7 +52,6 @@ def SmokeTestGenerator(benchmark, num_pages=1):
   def BenchmarkSmokeTest(self):
     # Only measure a single page so that this test cycles reasonably quickly.
     benchmark.options['pageset_repeat'] = 1
-    benchmark.options['page_repeat'] = 1
 
     class SinglePageBenchmark(benchmark):  # pylint: disable=no-init
 

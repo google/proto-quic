@@ -13,45 +13,6 @@ namespace net {
 
 namespace {
 
-#if defined(OS_MACOSX) && !defined(OS_IOS)
-TEST(X509TypesTest, Matching) {
-  CertPrincipal spamco;
-  spamco.common_name = "SpamCo Dept. Of Certificization";
-  spamco.country_name = "EB";
-  spamco.organization_names.push_back("SpamCo Holding Company, LLC");
-  spamco.organization_names.push_back("SpamCo Evil Masterminds");
-  spamco.organization_unit_names.push_back("Class Z Obfuscation Authority");
-  ASSERT_TRUE(spamco.Matches(spamco));
-
-  CertPrincipal bogus;
-  EXPECT_FALSE(bogus.Matches(spamco));
-  EXPECT_FALSE(spamco.Matches(bogus));
-
-  bogus = spamco;
-  EXPECT_TRUE(bogus.Matches(spamco));
-  EXPECT_TRUE(spamco.Matches(bogus));
-
-  bogus.organization_names.erase(bogus.organization_names.begin(),
-                                 bogus.organization_names.end());
-  EXPECT_FALSE(bogus.Matches(spamco));
-  EXPECT_FALSE(spamco.Matches(bogus));
-
-  bogus.organization_names.push_back("SpamCo Holding Company, LLC");
-  bogus.organization_names.push_back("SpamCo Evil Masterminds");
-  EXPECT_TRUE(bogus.Matches(spamco));
-  EXPECT_TRUE(spamco.Matches(bogus));
-
-  bogus.locality_name = "Elbosdorf";
-  EXPECT_FALSE(bogus.Matches(spamco));
-  EXPECT_FALSE(spamco.Matches(bogus));
-
-  bogus.locality_name = "";
-  bogus.organization_unit_names.push_back("Q Division");
-  EXPECT_FALSE(bogus.Matches(spamco));
-  EXPECT_FALSE(spamco.Matches(bogus));
-}
-#endif
-
 #if (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(OS_WIN)
 TEST(X509TypesTest, ParseDNVerisign) {
   CertPrincipal verisign;

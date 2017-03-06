@@ -90,7 +90,14 @@ class WindowedFilter {
     if (Compare()(new_sample, estimates_[1].sample)) {
       estimates_[1] = Sample(new_sample, new_time);
       estimates_[2] = estimates_[1];
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+#endif
     } else if (Compare()(new_sample, estimates_[2].sample)) {
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
       estimates_[2] = Sample(new_sample, new_time);
     }
 

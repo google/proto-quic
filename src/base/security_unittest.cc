@@ -87,16 +87,15 @@ void OverflowTestsSoftExpectTrue(bool overflow_detected) {
   }
 }
 
-#if defined(OS_IOS) || defined(OS_LINUX) || defined(ADDRESS_SANITIZER)
+#if defined(OS_IOS) || defined(ADDRESS_SANITIZER) || \
+    defined(THREAD_SANITIZER) || defined(MEMORY_SANITIZER)
 #define MAYBE_NewOverflow DISABLED_NewOverflow
 #else
 #define MAYBE_NewOverflow NewOverflow
 #endif
 // Test array[TooBig][X] and array[X][TooBig] allocations for int overflows.
 // IOS doesn't honor nothrow, so disable the test there.
-// Disabled on Linux because failing Linux Valgrind bot, and Valgrind exclusions
-// are not currently read. See http://crbug.com/582398
-// Disabled under ASan because asan aborts when new returns nullptr,
+// Disabled under XSan because asan aborts when new returns nullptr,
 // https://bugs.chromium.org/p/chromium/issues/detail?id=690271#c15
 TEST(SecurityTest, MAYBE_NewOverflow) {
   const size_t kArraySize = 4096;

@@ -67,6 +67,9 @@ fi
 
 sudo apt-get -y install ant
 
+# Required for apk-patch-size-estimator
+sudo apt-get -y install bsdiff
+
 # Install openjdk and openjre stuff
 sudo apt-get -y install $java_pkgs
 

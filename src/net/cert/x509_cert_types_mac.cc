@@ -170,31 +170,6 @@ void SetSingle(const std::vector<std::string>& values,
     *single_value = values[0];
 }
 
-bool match(const std::string& str, const std::string& against) {
-  // TODO(snej): Use the full matching rules specified in RFC 5280 sec. 7.1
-  // including trimming and case-folding: <http://www.ietf.org/rfc/rfc5280.txt>.
-  return against == str;
-}
-
-bool match(const std::vector<std::string>& rdn1,
-           const std::vector<std::string>& rdn2) {
-  // "Two relative distinguished names RDN1 and RDN2 match if they have the
-  // same number of naming attributes and for each naming attribute in RDN1
-  // there is a matching naming attribute in RDN2." --RFC 5280 sec. 7.1.
-  if (rdn1.size() != rdn2.size())
-    return false;
-  for (unsigned i1 = 0; i1 < rdn1.size(); ++i1) {
-    unsigned i2;
-    for (i2 = 0; i2 < rdn2.size(); ++i2) {
-      if (match(rdn1[i1], rdn2[i2]))
-          break;
-    }
-    if (i2 == rdn2.size())
-      return false;
-  }
-  return true;
-}
-
 }  // namespace
 
 bool CertPrincipal::ParseDistinguishedName(const void* ber_name_data,
@@ -281,17 +256,6 @@ bool CertPrincipal::ParseDistinguishedName(const void* ber_name_data,
   // Releasing |coder| frees all the memory pointed to via |name|.
   SecAsn1CoderRelease(coder);
   return true;
-}
-
-bool CertPrincipal::Matches(const CertPrincipal& against) const {
-  return match(common_name, against.common_name) &&
-      match(locality_name, against.locality_name) &&
-      match(state_or_province_name, against.state_or_province_name) &&
-      match(country_name, against.country_name) &&
-      match(street_addresses, against.street_addresses) &&
-      match(organization_names, against.organization_names) &&
-      match(organization_unit_names, against.organization_unit_names) &&
-      match(domain_components, against.domain_components);
 }
 
 #pragma clang diagnostic pop  // "-Wdeprecated-declarations"

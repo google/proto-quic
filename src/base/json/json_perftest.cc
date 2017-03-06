@@ -23,9 +23,9 @@ std::unique_ptr<DictionaryValue> GenerateDict() {
   root->SetString("String", "Foo");
 
   auto list = MakeUnique<ListValue>();
-  list->Set(0, MakeUnique<FundamentalValue>(2.718));
-  list->Set(1, MakeUnique<FundamentalValue>(false));
-  list->Set(2, MakeUnique<FundamentalValue>(123));
+  list->Set(0, MakeUnique<Value>(2.718));
+  list->Set(1, MakeUnique<Value>(false));
+  list->Set(2, MakeUnique<Value>(123));
   list->Set(3, MakeUnique<StringValue>("Bar"));
   root->Set("List", std::move(list));
 

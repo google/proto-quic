@@ -34,10 +34,6 @@ class FakeTab(object):
       return self.histograms[self.current_histogram_index - 1]
     return '{}'
 
-  # TODO(catapult:3028): Remove after migration to new JS API completed.
-  def EvaluateJavaScript2(self, script, **kwargs):
-    return self.EvaluateJavaScript(script, **kwargs)
-
   def CollectGarbage(self):
     pass
 

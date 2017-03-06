@@ -34,7 +34,7 @@ class NET_EXPORT_PRIVATE StreamSocket : public Socket {
     // Number of certs used by this socket.
     size_t cert_count;
     // Total size of certs used by this socket in bytes.
-    size_t serialized_cert_size;
+    size_t cert_size;
 
    private:
     DISALLOW_COPY_AND_ASSIGN(SocketMemoryStats);

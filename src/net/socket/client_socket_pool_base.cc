@@ -305,7 +305,7 @@ void ClientSocketPoolBaseHelper::RemoveHigherLayeredPool(
 
 int ClientSocketPoolBaseHelper::RequestSocket(
     const std::string& group_name,
-    std::unique_ptr<const Request> request) {
+    std::unique_ptr<Request> request) {
   CHECK(!request->callback().is_null());
   CHECK(request->handle());
 
@@ -562,6 +562,20 @@ void ClientSocketPoolBaseHelper::LogBoundConnectJobToRequest(
                              connect_job_source.ToEventParametersCallback());
 }
 
+void ClientSocketPoolBaseHelper::SetPriority(const std::string& group_name,
+                                             ClientSocketHandle* handle,
+                                             RequestPriority priority) {
+  GroupMap::iterator group_it = group_map_.find(group_name);
+  if (group_it == group_map_.end()) {
+    DCHECK(base::ContainsKey(pending_callback_map_, handle));
+    // The Request has already completed and been destroyed; nothing to
+    // reprioritize.
+    return;
+  }
+
+  group_it->second->SetPriority(handle, priority);
+}
+
 void ClientSocketPoolBaseHelper::CancelRequest(
     const std::string& group_name, ClientSocketHandle* handle) {
   PendingCallbackMap::iterator callback_it = pending_callback_map_.find(handle);
@@ -582,8 +596,7 @@ void ClientSocketPoolBaseHelper::CancelRequest(
   Group* group = GetOrCreateGroup(group_name);
 
   // Search pending_requests for matching handle.
-  std::unique_ptr<const Request> request =
-      group->FindAndRemovePendingRequest(handle);
+  std::unique_ptr<Request> request = group->FindAndRemovePendingRequest(handle);
   if (request) {
     request->net_log().AddEvent(NetLogEventType::CANCELLED);
     request->net_log().EndEvent(NetLogEventType::SOCKET_POOL);
@@ -605,6 +618,18 @@ bool ClientSocketPoolBaseHelper::HasGroup(const std::string& group_name) const {
 void ClientSocketPoolBaseHelper::CloseIdleSockets() {
   CleanupIdleSockets(true);
   DCHECK_EQ(0, idle_socket_count_);
+}
+
+void ClientSocketPoolBaseHelper::CloseIdleSocketsInGroup(
+    const std::string& group_name) {
+  if (idle_socket_count_ == 0)
+    return;
+  GroupMap::iterator it = group_map_.find(group_name);
+  if (it == group_map_.end())
+    return;
+  CleanupIdleSocketsInGroup(true, it->second, base::TimeTicks::Now());
+  if (it->second->IsEmpty())
+    RemoveGroup(it);
 }
 
 int ClientSocketPoolBaseHelper::IdleSocketCountInGroup(
@@ -708,7 +733,7 @@ void ClientSocketPoolBaseHelper::DumpMemoryStats(
   size_t total_size = 0;
   size_t buffer_size = 0;
   size_t cert_count = 0;
-  size_t serialized_cert_size = 0;
+  size_t cert_size = 0;
   for (const auto& kv : group_map_) {
     for (const auto& socket : kv.second->idle_sockets()) {
       StreamSocket::SocketMemoryStats stats;
@@ -716,7 +741,7 @@ void ClientSocketPoolBaseHelper::DumpMemoryStats(
       total_size += stats.total_size;
       buffer_size += stats.buffer_size;
       cert_count += stats.cert_count;
-      serialized_cert_size += stats.serialized_cert_size;
+      cert_size += stats.cert_size;
       ++socket_count;
     }
   }
@@ -738,9 +763,8 @@ void ClientSocketPoolBaseHelper::DumpMemoryStats(
         "cert_count", base::trace_event::MemoryAllocatorDump::kUnitsObjects,
         cert_count);
     socket_pool_dump->AddScalar(
-        "serialized_cert_size",
-        base::trace_event::MemoryAllocatorDump::kUnitsBytes,
-        serialized_cert_size);
+        "cert_size", base::trace_event::MemoryAllocatorDump::kUnitsBytes,
+        cert_size);
   }
 }
 
@@ -761,39 +785,43 @@ void ClientSocketPoolBaseHelper::CleanupIdleSockets(bool force) {
   GroupMap::iterator i = group_map_.begin();
   while (i != group_map_.end()) {
     Group* group = i->second;
-
-    auto idle_socket_it = group->mutable_idle_sockets()->begin();
-    while (idle_socket_it != group->idle_sockets().end()) {
-      base::TimeDelta timeout = idle_socket_it->socket->WasEverUsed()
-                                    ? used_idle_socket_timeout_
-                                    : unused_idle_socket_timeout_;
-      bool timed_out = (now - idle_socket_it->start_time) >= timeout;
-      bool should_clean_up = force || timed_out || !idle_socket_it->IsUsable();
-      if (should_clean_up) {
-        if (force) {
-          RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_FORCED);
-        } else if (timed_out) {
-          RecordIdleSocketFate(
-              idle_socket_it->socket->WasEverUsed()
-                  ? IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_REUSED
-                  : IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_UNUSED);
-        } else {
-          DCHECK(!idle_socket_it->IsUsable());
-          RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_UNUSABLE);
-        }
-        delete idle_socket_it->socket;
-        idle_socket_it = group->mutable_idle_sockets()->erase(idle_socket_it);
-        DecrementIdleCount();
-      } else {
-        ++idle_socket_it;
-      }
-    }
-
+    CleanupIdleSocketsInGroup(force, group, now);
     // Delete group if no longer needed.
     if (group->IsEmpty()) {
       RemoveGroup(i++);
     } else {
       ++i;
+    }
+  }
+}
+
+void ClientSocketPoolBaseHelper::CleanupIdleSocketsInGroup(
+    bool force,
+    Group* group,
+    const base::TimeTicks& now) {
+  auto idle_socket_it = group->mutable_idle_sockets()->begin();
+  while (idle_socket_it != group->idle_sockets().end()) {
+    base::TimeDelta timeout = idle_socket_it->socket->WasEverUsed()
+                                  ? used_idle_socket_timeout_
+                                  : unused_idle_socket_timeout_;
+    bool timed_out = (now - idle_socket_it->start_time) >= timeout;
+    bool should_clean_up = force || timed_out || !idle_socket_it->IsUsable();
+    if (should_clean_up) {
+      if (force) {
+        RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_FORCED);
+      } else if (timed_out) {
+        RecordIdleSocketFate(idle_socket_it->socket->WasEverUsed()
+                                 ? IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_REUSED
+                                 : IDLE_SOCKET_FATE_CLEAN_UP_TIMED_OUT_UNUSED);
+      } else {
+        DCHECK(!idle_socket_it->IsUsable());
+        RecordIdleSocketFate(IDLE_SOCKET_FATE_CLEAN_UP_UNUSABLE);
+      }
+      delete idle_socket_it->socket;
+      idle_socket_it = group->mutable_idle_sockets()->erase(idle_socket_it);
+      DecrementIdleCount();
+    } else {
+      ++idle_socket_it;
     }
   }
 }
@@ -967,7 +995,7 @@ void ClientSocketPoolBaseHelper::OnConnectJobComplete(
   if (result == OK) {
     DCHECK(socket.get());
     RemoveConnectJob(job, group);
-    std::unique_ptr<const Request> request = group->PopNextPendingRequest();
+    std::unique_ptr<Request> request = group->PopNextPendingRequest();
     if (request) {
       LogBoundConnectJobToRequest(job_log.source(), *request);
       HandOutSocket(std::move(socket), ClientSocketHandle::UNUSED,
@@ -984,7 +1012,7 @@ void ClientSocketPoolBaseHelper::OnConnectJobComplete(
     // If we got a socket, it must contain error information so pass that
     // up so that the caller can retrieve it.
     bool handed_out_socket = false;
-    std::unique_ptr<const Request> request = group->PopNextPendingRequest();
+    std::unique_ptr<Request> request = group->PopNextPendingRequest();
     if (request) {
       LogBoundConnectJobToRequest(job_log.source(), *request);
       job->GetAdditionalErrorState(request->handle());
@@ -1053,7 +1081,7 @@ void ClientSocketPoolBaseHelper::ProcessPendingRequest(
 
   int rv = RequestSocketInternal(group_name, *next_request);
   if (rv != ERR_IO_PENDING) {
-    std::unique_ptr<const Request> request = group->PopNextPendingRequest();
+    std::unique_ptr<Request> request = group->PopNextPendingRequest();
     DCHECK(request);
     if (group->IsEmpty())
       RemoveGroup(group_name);
@@ -1140,7 +1168,7 @@ void ClientSocketPoolBaseHelper::CancelAllRequestsWithError(int error) {
     Group* group = i->second;
 
     while (true) {
-      std::unique_ptr<const Request> request = group->PopNextPendingRequest();
+      std::unique_ptr<Request> request = group->PopNextPendingRequest();
       if (!request)
         break;
       InvokeUserCallbackLater(request->handle(), request->callback(), error);
@@ -1383,7 +1411,7 @@ bool ClientSocketPoolBaseHelper::Group::HasConnectJobForHandle(
 }
 
 void ClientSocketPoolBaseHelper::Group::InsertPendingRequest(
-    std::unique_ptr<const Request> request) {
+    std::unique_ptr<Request> request) {
   // This value must be cached before we release |request|.
   RequestPriority priority = request->priority();
   if (request->respect_limits() == ClientSocketPool::RespectLimits::DISABLED) {
@@ -1397,33 +1425,61 @@ void ClientSocketPoolBaseHelper::Group::InsertPendingRequest(
   }
 }
 
-std::unique_ptr<const ClientSocketPoolBaseHelper::Request>
+std::unique_ptr<ClientSocketPoolBaseHelper::Request>
 ClientSocketPoolBaseHelper::Group::PopNextPendingRequest() {
   if (pending_requests_.empty())
-    return std::unique_ptr<const ClientSocketPoolBaseHelper::Request>();
+    return std::unique_ptr<ClientSocketPoolBaseHelper::Request>();
   return RemovePendingRequest(pending_requests_.FirstMax());
 }
 
-std::unique_ptr<const ClientSocketPoolBaseHelper::Request>
+std::unique_ptr<ClientSocketPoolBaseHelper::Request>
 ClientSocketPoolBaseHelper::Group::FindAndRemovePendingRequest(
     ClientSocketHandle* handle) {
   for (RequestQueue::Pointer pointer = pending_requests_.FirstMax();
        !pointer.is_null();
        pointer = pending_requests_.GetNextTowardsLastMin(pointer)) {
     if (pointer.value()->handle() == handle) {
-      std::unique_ptr<const Request> request = RemovePendingRequest(pointer);
+      DCHECK_EQ(static_cast<RequestPriority>(pointer.priority()),
+                pointer.value()->priority());
+      std::unique_ptr<Request> request = RemovePendingRequest(pointer);
       return request;
     }
   }
-  return std::unique_ptr<const ClientSocketPoolBaseHelper::Request>();
+  return std::unique_ptr<ClientSocketPoolBaseHelper::Request>();
 }
 
-std::unique_ptr<const ClientSocketPoolBaseHelper::Request>
+void ClientSocketPoolBaseHelper::Group::SetPriority(ClientSocketHandle* handle,
+                                                    RequestPriority priority) {
+  for (RequestQueue::Pointer pointer = pending_requests_.FirstMax();
+       !pointer.is_null();
+       pointer = pending_requests_.GetNextTowardsLastMin(pointer)) {
+    if (pointer.value()->handle() == handle) {
+      if (pointer.value()->priority() == priority)
+        return;
+
+      std::unique_ptr<Request> request = RemovePendingRequest(pointer);
+
+      // Requests that ignore limits much be created and remain at the highest
+      // priority, and should not be reprioritized.
+      DCHECK_EQ(request->respect_limits(),
+                ClientSocketPool::RespectLimits::ENABLED);
+
+      request->set_priority(priority);
+      InsertPendingRequest(std::move(request));
+      return;
+    }
+  }
+
+  // This function must be called with a valid ClientSocketHandle.
+  NOTREACHED();
+}
+
+std::unique_ptr<ClientSocketPoolBaseHelper::Request>
 ClientSocketPoolBaseHelper::Group::RemovePendingRequest(
     const RequestQueue::Pointer& pointer) {
   // TODO(eroman): Temporary for debugging http://crbug.com/467797.
   CHECK(!pointer.is_null());
-  std::unique_ptr<const Request> request(pointer.value());
+  std::unique_ptr<Request> request(pointer.value());
   pending_requests_.Erase(pointer);
   // If there are no more requests, kill the backup timer.
   if (pending_requests_.empty())

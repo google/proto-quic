@@ -249,6 +249,17 @@ _js_minifier = "//third_party/closure_compiler/js_minify.py"
 grit_resource_id_file = "//tools/gritsettings/resource_ids"
 grit_info_script = "//tools/grit/grit_info.py"
 
+# TODO(asvitkine): Add predetermined ids files for other platforms.
+grit_predetermined_resource_ids_file = ""
+if (is_mac) {
+  grit_predetermined_resource_ids_file =
+      "//tools/gritsettings/startup_resources_mac.txt"
+}
+if (is_win) {
+  grit_predetermined_resource_ids_file =
+      "//tools/gritsettings/startup_resources_win.txt"
+}
+
 template("grit") {
   assert(defined(invoker.source),
          "\"source\" must be defined for the grit template $target_name")
@@ -299,6 +310,12 @@ template("grit") {
     grit_flags += [
       "-f",
       rebase_path(resource_ids, root_build_dir),
+    ]
+  }
+  if (grit_predetermined_resource_ids_file != "") {
+    grit_flags += [
+      "-p",
+      rebase_path(grit_predetermined_resource_ids_file, root_build_dir),
     ]
   }
 

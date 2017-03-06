@@ -4,6 +4,8 @@
 
 #include "net/url_request/url_request_context.h"
 
+#include <inttypes.h>
+
 #include "base/compiler_specific.h"
 #include "base/debug/alias.h"
 #include "base/memory/ptr_util.h"
@@ -12,10 +14,12 @@
 #include "base/threading/thread_task_runner_handle.h"
 #include "base/trace_event/memory_allocator_dump.h"
 #include "base/trace_event/memory_dump_manager.h"
+#include "base/trace_event/memory_dump_request_args.h"
 #include "base/trace_event/process_memory_dump.h"
 #include "net/base/sdch_manager.h"
 #include "net/cookies/cookie_store.h"
 #include "net/dns/host_resolver.h"
+#include "net/http/http_cache.h"
 #include "net/http/http_transaction_factory.h"
 #include "net/socket/ssl_client_socket_impl.h"
 #include "net/url_request/http_user_agent_settings.h"
@@ -137,20 +141,32 @@ bool URLRequestContext::OnMemoryDump(
     base::trace_event::ProcessMemoryDump* pmd) {
   if (name_.empty())
     name_ = "unknown";
-  base::trace_event::MemoryAllocatorDump* dump = pmd->CreateAllocatorDump(
-      base::StringPrintf("net/url_request_context/%s_%p", name_.c_str(), this));
+
+  SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(pmd);
+
+  std::string dump_name = base::StringPrintf(
+      "net/url_request_context_0x%" PRIxPTR, reinterpret_cast<uintptr_t>(this));
+  base::trace_event::MemoryAllocatorDump* dump =
+      pmd->CreateAllocatorDump(dump_name);
   dump->AddScalar(base::trace_event::MemoryAllocatorDump::kNameObjectCount,
                   base::trace_event::MemoryAllocatorDump::kUnitsObjects,
                   url_requests_->size());
+  if (args.level_of_detail !=
+      base::trace_event::MemoryDumpLevelOfDetail::BACKGROUND) {
+    dump->AddString("origin",
+                    base::trace_event::MemoryAllocatorDump::kTypeString, name_);
+  }
   HttpTransactionFactory* transaction_factory = http_transaction_factory();
   if (transaction_factory) {
     HttpNetworkSession* network_session = transaction_factory->GetSession();
     if (network_session)
       network_session->DumpMemoryStats(pmd, dump->absolute_name());
+    HttpCache* http_cache = transaction_factory->GetCache();
+    if (http_cache)
+      http_cache->DumpMemoryStats(pmd, dump->absolute_name());
   }
-  SSLClientSocketImpl::DumpSSLClientSessionMemoryStats(pmd);
   if (sdch_manager_)
-    sdch_manager_->DumpMemoryStats(pmd, dump->absolute_name());
+    sdch_manager_->DumpMemoryStats(pmd, dump_name);
   return true;
 }
 

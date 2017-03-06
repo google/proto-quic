@@ -364,7 +364,7 @@ class Page19(KeySilkCasesPage):
       action_runner.TapElement('#menu-button')
 
     with action_runner.CreateInteraction('Wait'):
-      action_runner.WaitForJavaScriptCondition2('''
+      action_runner.WaitForJavaScriptCondition('''
           document.getElementById("nav-drawer").active &&
           document.getElementById("nav-drawer").children[0]
               .getBoundingClientRect().left == 0''')
@@ -383,7 +383,7 @@ class Page19(KeySilkCasesPage):
           left_start_ratio=0.8, top_start_ratio=0.2,
           direction='left', distance=200,
           element_function='document.getElementById("nav-drawer").children[0]')
-      action_runner.WaitForJavaScriptCondition2(
+      action_runner.WaitForJavaScriptCondition(
           '!document.getElementById("nav-drawer").active')
 
 
@@ -418,7 +418,7 @@ class GwsExpansionPage(KeySilkCasesPage):
 
   def ScrollKnowledgeCardToTop(self, action_runner, card_id):
     # scroll until the knowledge card is at the top
-    action_runner.ExecuteJavaScript2(
+    action_runner.ExecuteJavaScript(
         "document.getElementById({{ card_id }}).scrollIntoView()",
         card_id=card_id)
 
@@ -465,7 +465,7 @@ class Page22(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(Page22, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.getElementsByClassName("fHa").length > 0')
     action_runner.Wait(2)
 
@@ -511,7 +511,7 @@ class Page24(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(Page24, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.getElementById(":h") != null')
     action_runner.Wait(1)
 
@@ -532,7 +532,7 @@ class Page25(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(Page25, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.getElementById(":h") != null')
     action_runner.Wait(1)
 
@@ -556,14 +556,14 @@ class Page26(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(Page26, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.getElementsByClassName("tweet").length > 0')
     action_runner.Wait(1)
 
   def PerformPageInteractions(self, action_runner):
     # Add a touch-action: none because this page prevent defaults all
     # touch moves.
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         var style = document.createElement("style");
         document.head.appendChild(style);
         style.sheet.insertRule("body { touch-action: none }", 0);
@@ -583,7 +583,7 @@ class SVGIconRaster(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(SVGIconRaster, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'loaded = true')
     action_runner.Wait(1)
 
@@ -607,12 +607,12 @@ class UpdateHistoryState(KeySilkCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(UpdateHistoryState, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         window.requestAnimationFrame(function() {
             window.__history_state_loaded = true;
           });
         ''')
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.__history_state_loaded == true;')
 
   def PerformPageInteractions(self, action_runner):
@@ -648,20 +648,20 @@ class PolymerTopeka(KeySilkCasesPage):
     first_name = profile + 'paper-input#first /deep/ input'
     action_runner.WaitForElement(selector=first_name)
     # Input First Name:
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         var fn = document.querySelector({{ first_name }});
         fn.value = 'Chrome';
         fn.fire('input');''',
         first_name=first_name)
     # Input Last Initial:
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         var li = document.querySelector({{ selector }});
         li.value = 'E';
         li.fire('input');''',
         selector='%s paper-input#last /deep/ input' % profile)
     with action_runner.CreateInteraction('animation_interaction'):
       # Click the check-mark to login:
-      action_runner.ExecuteJavaScript2('''
+      action_runner.ExecuteJavaScript('''
           window.topeka_page_transitions = 0;
           [].forEach.call(document.querySelectorAll(
               'html /deep/ core-animated-pages'), function(p){
@@ -673,32 +673,32 @@ class PolymerTopeka(KeySilkCasesPage):
           document.querySelector({{ selector }}).fire('tap')''',
           selector='%s paper-fab' % profile)
       # Wait for category list to animate in:
-      action_runner.WaitForJavaScriptCondition2('''
+      action_runner.WaitForJavaScriptCondition('''
           window.topeka_page_transitions === 1''')
       # Click a category to start a quiz:
-      action_runner.ExecuteJavaScript2('''
+      action_runner.ExecuteJavaScript('''
           document.querySelector('\
               html /deep/ core-selector.category-list').fire(
               'tap',1,document.querySelector('html /deep/ \
                       div.category-item.red-theme'));''')
       # Wait for the category splash to animate in:
-      action_runner.WaitForJavaScriptCondition2('''
+      action_runner.WaitForJavaScriptCondition('''
           window.topeka_page_transitions === 2''')
       # Click to start the quiz:
-      action_runner.ExecuteJavaScript2('''
+      action_runner.ExecuteJavaScript('''
           document.querySelector('html /deep/ topeka-category-front-page /deep/\
               paper-fab').fire('tap');''')
-      action_runner.WaitForJavaScriptCondition2('''
+      action_runner.WaitForJavaScriptCondition('''
           window.topeka_page_transitions === 4''')
       # Input a mostly correct answer:
-      action_runner.ExecuteJavaScript2('''
+      action_runner.ExecuteJavaScript('''
           document.querySelector('html /deep/ topeka-quiz-fill-blank /deep/\
               input').value = 'arkinsaw';
           document.querySelector('html /deep/ topeka-quiz-fill-blank /deep/\
               input').fire('input');
           document.querySelector('html /deep/ topeka-quizzes /deep/ \
               paper-fab').fire('tap');''')
-      action_runner.WaitForJavaScriptCondition2('''
+      action_runner.WaitForJavaScriptCondition('''
           window.topeka_page_transitions === 6''')
 
 class Masonry(KeySilkCasesPage):
@@ -712,8 +712,8 @@ class Masonry(KeySilkCasesPage):
 
   def PerformPageInteractions(self, action_runner):
     with action_runner.CreateInteraction('animation_interaction'):
-      action_runner.ExecuteJavaScript2('window.brick()')
-      action_runner.WaitForJavaScriptCondition2('window.done')
+      action_runner.ExecuteJavaScript('window.brick()')
+      action_runner.WaitForJavaScriptCondition('window.done')
 
 
 class KeySilkCasesPageSet(story.StorySet):

@@ -26,12 +26,12 @@ namespace {
 // Time to wait before starting an update the http_server_properties_impl_ cache
 // from preferences. Scheduling another update during this period will be a
 // no-op.
-const int64_t kUpdateCacheDelayMs = 1000;
+constexpr base::TimeDelta kUpdateCacheDelay = base::TimeDelta::FromSeconds(1);
 
 // Time to wait before starting an update the preferences from the
 // http_server_properties_impl_ cache. Scheduling another update during this
 // period will be a no-op.
-const int64_t kUpdatePrefsDelayMs = 60000;
+constexpr base::TimeDelta kUpdatePrefsDelay = base::TimeDelta::FromSeconds(60);
 
 // "version" 0 indicates, http_server_properties doesn't have "version"
 // property.
@@ -76,11 +76,12 @@ HttpServerPropertiesManager::HttpServerPropertiesManager(
     PrefDelegate* pref_delegate,
     scoped_refptr<base::SingleThreadTaskRunner> pref_task_runner,
     scoped_refptr<base::SingleThreadTaskRunner> network_task_runner)
-    : pref_task_runner_(pref_task_runner),
+    : pref_task_runner_(std::move(pref_task_runner)),
       pref_delegate_(pref_delegate),
       setting_prefs_(false),
       is_initialized_(false),
-      network_task_runner_(network_task_runner) {
+      network_task_runner_(std::move(network_task_runner)) {
+  DCHECK(pref_task_runner_->RunsTasksOnCurrentThread());
   DCHECK(pref_delegate_);
   pref_weak_ptr_factory_.reset(
       new base::WeakPtrFactory<HttpServerPropertiesManager>(this));
@@ -366,6 +367,16 @@ bool HttpServerPropertiesManager::IsInitialized() const {
   return is_initialized_;
 }
 
+// static
+base::TimeDelta HttpServerPropertiesManager::GetUpdateCacheDelayForTesting() {
+  return kUpdateCacheDelay;
+}
+
+// static
+base::TimeDelta HttpServerPropertiesManager::GetUpdatePrefsDelayForTesting() {
+  return kUpdatePrefsDelay;
+}
+
 //
 // Update the HttpServerPropertiesImpl's cache with data from preferences.
 //
@@ -376,7 +387,7 @@ void HttpServerPropertiesManager::ScheduleUpdateCacheOnPrefThread() {
     return;
 
   pref_cache_update_timer_->Start(
-      FROM_HERE, base::TimeDelta::FromMilliseconds(kUpdateCacheDelayMs), this,
+      FROM_HERE, kUpdateCacheDelay, this,
       &HttpServerPropertiesManager::UpdateCacheFromPrefsOnPrefThread);
 }
 
@@ -775,6 +786,9 @@ void HttpServerPropertiesManager::UpdateCacheFromPrefsOnNetworkThread(
 
   http_server_properties_impl_->SetServerNetworkStats(server_network_stats_map);
 
+  UMA_HISTOGRAM_COUNTS_1000("Net.CountOfQuicServerInfos",
+                            quic_server_info_map->size());
+
   http_server_properties_impl_->SetQuicServerInfoMap(quic_server_info_map);
 
   // Update the prefs with what we have read (delete all corrupted prefs).
@@ -793,7 +807,7 @@ void HttpServerPropertiesManager::ScheduleUpdatePrefsOnNetworkThread(
     return;
 
   network_prefs_update_timer_->Start(
-      FROM_HERE, base::TimeDelta::FromMilliseconds(kUpdatePrefsDelayMs), this,
+      FROM_HERE, kUpdatePrefsDelay, this,
       &HttpServerPropertiesManager::UpdatePrefsFromCacheOnNetworkThread);
 
   // TODO(rtenneti): Delete the following histogram after collecting some data.

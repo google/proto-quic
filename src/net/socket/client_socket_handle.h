@@ -85,6 +85,12 @@ class NET_EXPORT ClientSocketHandle {
            PoolType* pool,
            const NetLogWithSource& net_log);
 
+  // Changes the priority of the ClientSocketHandle to the passed value.
+  // This function is a no-op if |priority| is the same as the current
+  // priority, of if Init() has not been called since the last time
+  // the ClientSocketHandle was reset.
+  void SetPriority(RequestPriority priority);
+
   // An initialized handle can be reset, which causes it to return to the
   // un-initialized state.  This releases the underlying socket, which in the
   // case of a socket that still has an established connection, indicates that
@@ -110,6 +116,9 @@ class NET_EXPORT ClientSocketHandle {
   // Removes a higher layered pool from the socket pool that |socket_| belongs
   // to.  |higher_pool| must have been added by the above function.
   void RemoveHigherLayeredPool(HigherLayeredPool* higher_pool);
+
+  // Closes idle sockets that are in the same group with |this|.
+  void CloseIdleSocketsInGroup();
 
   // Returns true when Init() has completed successfully.
   bool is_initialized() const { return is_initialized_; }

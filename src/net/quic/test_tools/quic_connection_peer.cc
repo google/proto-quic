@@ -252,10 +252,15 @@ void QuicConnectionPeer::SetAckDecimationDelay(QuicConnection* connection,
 // static
 bool QuicConnectionPeer::HasRetransmittableFrames(
     QuicConnection* connection,
-    QuicPathId path_id,
     QuicPacketNumber packet_number) {
   return QuicSentPacketManagerPeer::HasRetransmittableFrames(
       GetSentPacketManager(connection), packet_number);
+}
+
+// static
+void QuicConnectionPeer::SetNoStopWaitingFrames(QuicConnection* connection,
+                                                bool no_stop_waiting_frames) {
+  connection->no_stop_waiting_frames_ = no_stop_waiting_frames;
 }
 
 }  // namespace test

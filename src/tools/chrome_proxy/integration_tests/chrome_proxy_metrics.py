@@ -82,27 +82,27 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     # TODO(bustamante): This is a hack to workaround crbug.com/467174,
     #   once fixed just pull down window.performance.timing object and
     #   reference that everywhere.
-    load_event_start = tab.EvaluateJavaScript2(
+    load_event_start = tab.EvaluateJavaScript(
         'window.performance.timing.loadEventStart')
-    navigation_start = tab.EvaluateJavaScript2(
+    navigation_start = tab.EvaluateJavaScript(
         'window.performance.timing.navigationStart')
-    dom_content_loaded_event_start = tab.EvaluateJavaScript2(
+    dom_content_loaded_event_start = tab.EvaluateJavaScript(
         'window.performance.timing.domContentLoadedEventStart')
-    fetch_start = tab.EvaluateJavaScript2(
+    fetch_start = tab.EvaluateJavaScript(
         'window.performance.timing.fetchStart')
-    request_start = tab.EvaluateJavaScript2(
+    request_start = tab.EvaluateJavaScript(
         'window.performance.timing.requestStart')
-    domain_lookup_end = tab.EvaluateJavaScript2(
+    domain_lookup_end = tab.EvaluateJavaScript(
         'window.performance.timing.domainLookupEnd')
-    domain_lookup_start = tab.EvaluateJavaScript2(
+    domain_lookup_start = tab.EvaluateJavaScript(
         'window.performance.timing.domainLookupStart')
-    connect_end = tab.EvaluateJavaScript2(
+    connect_end = tab.EvaluateJavaScript(
         'window.performance.timing.connectEnd')
-    connect_start = tab.EvaluateJavaScript2(
+    connect_start = tab.EvaluateJavaScript(
         'window.performance.timing.connectStart')
-    response_end = tab.EvaluateJavaScript2(
+    response_end = tab.EvaluateJavaScript(
         'window.performance.timing.responseEnd')
-    response_start = tab.EvaluateJavaScript2(
+    response_start = tab.EvaluateJavaScript(
         'window.performance.timing.responseStart')
 
     # NavigationStart relative markers in milliseconds.
@@ -431,12 +431,12 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
   def AddResultsForHTML5Test(self, tab, results):
     # Wait for the number of "points" of HTML5 compatibility to appear to verify
     # the HTML5 elements have loaded successfully.
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'document.getElementsByClassName("pointsPanel")', timeout=15)
 
   def AddResultsForYouTube(self, tab, results):
     # Wait for the video to begin playing.
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'window.playerState == YT.PlayerState.PLAYING', timeout=30)
 
   def AddResultsForBypass(self, tab, results, url_pattern=""):
@@ -671,7 +671,7 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     before_metrics = ChromeProxyMetric()
     before_metrics.Start(results.current_page, tab)
     tab.Navigate('http://chromeproxy-test.appspot.com/default')
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=10)
     before_metrics.Stop(results.current_page, tab)
 
@@ -697,7 +697,7 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     after_metrics = ChromeProxyMetric()
     after_metrics.Start(results.current_page, tab)
     tab.Navigate('http://chromeproxy-test.appspot.com/default')
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=10)
     after_metrics.Stop(results.current_page, tab)
 
@@ -748,7 +748,7 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     before_metrics = ChromeProxyMetric()
     before_metrics.Start(results.current_page, tab)
     tab.Navigate('http://chromeproxy-test.appspot.com/default')
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=10)
     before_metrics.Stop(results.current_page, tab)
 
@@ -776,7 +776,7 @@ class ChromeProxyMetric(network_metrics.NetworkMetric):
     after_metrics = ChromeProxyMetric()
     after_metrics.Start(results.current_page, tab)
     tab.Navigate('http://chromeproxy-test.appspot.com/default')
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'performance.timing.loadEventStart', timeout=10)
     after_metrics.Stop(results.current_page, tab)
 
@@ -980,26 +980,26 @@ class ChromeProxyVideoMetric(network_metrics.NetworkMetric):
     super(ChromeProxyVideoMetric, self).__init__()
     with open(os.path.join(os.path.dirname(__file__), 'videowrapper.js')) as f:
       js = f.read()
-      tab.ExecuteJavaScript2(js)
+      tab.ExecuteJavaScript(js)
 
   def Start(self, page, tab):
-    tab.ExecuteJavaScript2('window.__chromeProxyCreateVideoWrappers()')
+    tab.ExecuteJavaScript('window.__chromeProxyCreateVideoWrappers()')
     self.videoMetrics = None
     super(ChromeProxyVideoMetric, self).Start(page, tab)
 
   def Stop(self, page, tab):
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'window.__chromeProxyVideoLoaded', timeout=30)
-    m = tab.EvaluateJavaScript2('window.__chromeProxyVideoMetrics')
+    m = tab.EvaluateJavaScript('window.__chromeProxyVideoMetrics')
 
     # Now wait for the video to stop playing.
     # Give it 2x the total duration to account for buffering.
     waitTime = 2 * m['video_duration']
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'window.__chromeProxyVideoEnded', timeout=waitTime)
 
     # Load the final metrics.
-    m = tab.EvaluateJavaScript2('window.__chromeProxyVideoMetrics')
+    m = tab.EvaluateJavaScript('window.__chromeProxyVideoMetrics')
     self.videoMetrics = m
     # Cast this to an integer as it is often approximate (for an unknown reason)
     m['video_duration'] = int(m['video_duration'])
@@ -1073,12 +1073,12 @@ class ChromeProxyInstrumentedVideoMetric(Metric):
     super(ChromeProxyInstrumentedVideoMetric, self).__init__()
 
   def Stop(self, page, tab):
-    waitTime = tab.EvaluateJavaScript2('test.waitTime')
-    tab.WaitForJavaScriptCondition2('test.metrics.complete', timeout=waitTime)
+    waitTime = tab.EvaluateJavaScript('test.waitTime')
+    tab.WaitForJavaScriptCondition('test.metrics.complete', timeout=waitTime)
     super(ChromeProxyInstrumentedVideoMetric, self).Stop(page, tab)
 
   def AddResults(self, tab, results):
-    metrics = tab.EvaluateJavaScript2('test.metrics')
+    metrics = tab.EvaluateJavaScript('test.metrics')
     for (k, v) in metrics.iteritems():
       results.AddValue(scalar.ScalarValue(results.current_page, k, '', v))
     try:

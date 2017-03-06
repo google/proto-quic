@@ -12,6 +12,7 @@
 #include "net/cert/pem_tokenizer.h"
 #include "net/der/parser.h"
 #include "testing/gtest/include/gtest/gtest.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 namespace net {
 
@@ -142,15 +143,21 @@ void ReadVerifyCertChainTestFromFile(const std::string& file_path_ascii,
 
     if (block_type == kCertificateHeader) {
       CertErrors errors;
-      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(block_data, {},
-                                                               chain, &errors))
+      ASSERT_TRUE(net::ParsedCertificate::CreateAndAddToVector(
+          bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+              reinterpret_cast<const uint8_t*>(block_data.data()),
+              block_data.size(), nullptr)),
+          {}, chain, &errors))
           << errors.ToDebugString();
     } else if (block_type == kTrustAnchorUnconstrained ||
                block_type == kTrustAnchorConstrained) {
       ASSERT_FALSE(*trust_anchor) << "Duplicate trust anchor";
       CertErrors errors;
-      scoped_refptr<ParsedCertificate> root =
-          net::ParsedCertificate::Create(block_data, {}, &errors);
+      scoped_refptr<ParsedCertificate> root = net::ParsedCertificate::Create(
+          bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+              reinterpret_cast<const uint8_t*>(block_data.data()),
+              block_data.size(), nullptr)),
+          {}, &errors);
       ASSERT_TRUE(root) << errors.ToDebugString();
       *trust_anchor =
           block_type == kTrustAnchorUnconstrained

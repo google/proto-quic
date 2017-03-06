@@ -15,8 +15,6 @@ NET_EXPORT_PRIVATE extern bool
     FLAGS_chromium_http2_flag_spdy_use_hpack_decoder2;
 NET_EXPORT_PRIVATE extern bool
     FLAGS_chromium_http2_flag_spdy_use_hpack_decoder3;
-NET_EXPORT_PRIVATE extern bool
-    FLAGS_chromium_reloadable_flag_increase_hpack_table_size;
 NET_EXPORT_PRIVATE extern bool FLAGS_use_http2_frame_decoder_adapter;
 NET_EXPORT_PRIVATE extern bool FLAGS_use_nested_spdy_framer_decoder;
 NET_EXPORT_PRIVATE extern bool

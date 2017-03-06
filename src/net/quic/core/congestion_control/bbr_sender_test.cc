@@ -461,5 +461,71 @@ TEST_F(BbrSenderTest, NoBandwidthDropOnStartup) {
   EXPECT_GE(sender_->PacingRate(0), initial_rate);
 }
 
+// Test exiting STARTUP earlier due to the 1RTT connection option.
+TEST_F(BbrSenderTest, SimpleTransfer1RTTStartup) {
+  FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup = true;
+  CreateDefaultSetup();
+
+  QuicConfig config;
+  QuicTagVector options;
+  options.push_back(k1RTT);
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  EXPECT_EQ(1u, sender_->num_startup_rtts());
+
+  // Run until the full bandwidth is reached and check how many rounds it was.
+  bbr_sender_.AddBytesToTransfer(12 * 1024 * 1024);
+  QuicRoundTripCount max_bw_round = 0;
+  QuicBandwidth max_bw(QuicBandwidth::Zero());
+  bool simulator_result = simulator_.RunUntilOrTimeout(
+      [this, &max_bw, &max_bw_round]() {
+        if (max_bw < sender_->ExportDebugState().max_bandwidth) {
+          max_bw = sender_->ExportDebugState().max_bandwidth;
+          max_bw_round = sender_->ExportDebugState().round_trip_count;
+        }
+        return sender_->ExportDebugState().is_at_full_bandwidth;
+      },
+      QuicTime::Delta::FromSeconds(5));
+  ASSERT_TRUE(simulator_result);
+  EXPECT_EQ(BbrSender::DRAIN, sender_->ExportDebugState().mode);
+  EXPECT_EQ(1u, sender_->ExportDebugState().round_trip_count - max_bw_round);
+  EXPECT_EQ(1u, sender_->ExportDebugState().rounds_without_bandwidth_gain);
+  EXPECT_EQ(0u, bbr_sender_.connection()->GetStats().packets_lost);
+  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
+}
+
+// Test exiting STARTUP earlier due to the 2RTT connection option.
+TEST_F(BbrSenderTest, SimpleTransfer2RTTStartup) {
+  FLAGS_quic_reloadable_flag_quic_allow_2_rtt_bbr_startup = true;
+  CreateDefaultSetup();
+
+  QuicConfig config;
+  QuicTagVector options;
+  options.push_back(k2RTT);
+  QuicConfigPeer::SetReceivedConnectionOptions(&config, options);
+  sender_->SetFromConfig(config, Perspective::IS_SERVER);
+  EXPECT_EQ(2u, sender_->num_startup_rtts());
+
+  // Run until the full bandwidth is reached and check how many rounds it was.
+  bbr_sender_.AddBytesToTransfer(12 * 1024 * 1024);
+  QuicRoundTripCount max_bw_round = 0;
+  QuicBandwidth max_bw(QuicBandwidth::Zero());
+  bool simulator_result = simulator_.RunUntilOrTimeout(
+      [this, &max_bw, &max_bw_round]() {
+        if (max_bw < sender_->ExportDebugState().max_bandwidth) {
+          max_bw = sender_->ExportDebugState().max_bandwidth;
+          max_bw_round = sender_->ExportDebugState().round_trip_count;
+        }
+        return sender_->ExportDebugState().is_at_full_bandwidth;
+      },
+      QuicTime::Delta::FromSeconds(5));
+  ASSERT_TRUE(simulator_result);
+  EXPECT_EQ(BbrSender::DRAIN, sender_->ExportDebugState().mode);
+  EXPECT_EQ(2u, sender_->ExportDebugState().round_trip_count - max_bw_round);
+  EXPECT_EQ(2u, sender_->ExportDebugState().rounds_without_bandwidth_gain);
+  EXPECT_EQ(0u, bbr_sender_.connection()->GetStats().packets_lost);
+  EXPECT_FALSE(sender_->ExportDebugState().last_sample_is_app_limited);
+}
+
 }  // namespace test
 }  // namespace net

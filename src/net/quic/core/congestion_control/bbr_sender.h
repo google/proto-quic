@@ -102,7 +102,8 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   bool InRecovery() const override;
 
   void SetFromConfig(const QuicConfig& config,
-                     Perspective perspective) override {}
+                     Perspective perspective) override;
+
   void ResumeConnectionState(
       const CachedNetworkParameters& cached_network_params,
       bool max_bandwidth_resumption) override {}
@@ -129,6 +130,9 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   std::string GetDebugState() const override;
   void OnApplicationLimited(QuicByteCount bytes_in_flight) override;
   // End implementation of SendAlgorithmInterface.
+
+  // Gets the number of RTTs BBR remains in STARTUP phase.
+  QuicRoundTripCount num_startup_rtts() const { return num_startup_rtts_; }
 
   DebugState ExportDebugState() const;
 
@@ -242,6 +246,8 @@ class QUIC_EXPORT_PRIVATE BbrSender : public SendAlgorithmInterface {
   // The coefficient by which mean RTT variance is added to the congestion
   // window.  Latched from quic_bbr_rtt_variation_weight flag.
   const float rtt_variance_weight_;
+  // The number of RTTs to stay in STARTUP mode.  Defaults to 3.
+  QuicRoundTripCount num_startup_rtts_;
 
   // Number of round-trips in PROBE_BW mode, used for determining the current
   // pacing gain cycle.

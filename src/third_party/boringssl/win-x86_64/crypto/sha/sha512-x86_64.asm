@@ -30,13 +30,13 @@ $L$SEH_begin_sha512_block_data_order:
 	or	r10d,r9d
 	cmp	r10d,1342177792
 	je	NEAR $L$avx_shortcut
+	mov	rax,rsp
 	push	rbx
 	push	rbp
 	push	r12
 	push	r13
 	push	r14
 	push	r15
-	mov	r11,rsp
 	shl	rdx,4
 	sub	rsp,16*8+4*8
 	lea	rdx,[rdx*8+rsi]
@@ -44,7 +44,7 @@ $L$SEH_begin_sha512_block_data_order:
 	mov	QWORD[((128+0))+rsp],rdi
 	mov	QWORD[((128+8))+rsp],rsi
 	mov	QWORD[((128+16))+rsp],rdx
-	mov	QWORD[((128+24))+rsp],r11
+	mov	QWORD[((128+24))+rsp],rax
 $L$prologue:
 
 	mov	rax,QWORD[rdi]
@@ -1709,13 +1709,13 @@ $L$rounds_16_xx:
 	jb	NEAR $L$loop
 
 	mov	rsi,QWORD[((128+24))+rsp]
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -1825,13 +1825,13 @@ $L$SEH_begin_sha512_block_data_order_xop:
 
 
 $L$xop_shortcut:
+	mov	rax,rsp
 	push	rbx
 	push	rbp
 	push	r12
 	push	r13
 	push	r14
 	push	r15
-	mov	r11,rsp
 	shl	rdx,4
 	sub	rsp,256
 	lea	rdx,[rdx*8+rsi]
@@ -1839,7 +1839,7 @@ $L$xop_shortcut:
 	mov	QWORD[((128+0))+rsp],rdi
 	mov	QWORD[((128+8))+rsp],rsi
 	mov	QWORD[((128+16))+rsp],rdx
-	mov	QWORD[((128+24))+rsp],r11
+	mov	QWORD[((128+24))+rsp],rax
 	movaps	XMMWORD[(128+32)+rsp],xmm6
 	movaps	XMMWORD[(128+48)+rsp],xmm7
 	movaps	XMMWORD[(128+64)+rsp],xmm8
@@ -2906,13 +2906,13 @@ DB	143,72,120,195,203,42
 	movaps	xmm9,XMMWORD[((128+80))+rsp]
 	movaps	xmm10,XMMWORD[((128+96))+rsp]
 	movaps	xmm11,XMMWORD[((128+112))+rsp]
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$epilogue_xop:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -2931,13 +2931,13 @@ $L$SEH_begin_sha512_block_data_order_avx:
 
 
 $L$avx_shortcut:
+	mov	rax,rsp
 	push	rbx
 	push	rbp
 	push	r12
 	push	r13
 	push	r14
 	push	r15
-	mov	r11,rsp
 	shl	rdx,4
 	sub	rsp,256
 	lea	rdx,[rdx*8+rsi]
@@ -2945,7 +2945,7 @@ $L$avx_shortcut:
 	mov	QWORD[((128+0))+rsp],rdi
 	mov	QWORD[((128+8))+rsp],rsi
 	mov	QWORD[((128+16))+rsp],rdx
-	mov	QWORD[((128+24))+rsp],r11
+	mov	QWORD[((128+24))+rsp],rax
 	movaps	XMMWORD[(128+32)+rsp],xmm6
 	movaps	XMMWORD[(128+48)+rsp],xmm7
 	movaps	XMMWORD[(128+64)+rsp],xmm8
@@ -4076,13 +4076,13 @@ $L$avx_00_47:
 	movaps	xmm9,XMMWORD[((128+80))+rsp]
 	movaps	xmm10,XMMWORD[((128+96))+rsp]
 	movaps	xmm11,XMMWORD[((128+112))+rsp]
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$epilogue_avx:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -4122,7 +4122,6 @@ se_handler:
 	jae	NEAR $L$in_prologue
 	mov	rsi,rax
 	mov	rax,QWORD[((128+24))+rax]
-	lea	rax,[48+rax]
 
 	mov	rbx,QWORD[((-8))+rax]
 	mov	rbp,QWORD[((-16))+rax]

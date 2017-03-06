@@ -488,7 +488,6 @@ class TestConnection : public QuicConnection {
   }
 
   void SendPacket(EncryptionLevel level,
-                  QuicPathId path_id,
                   QuicPacketNumber packet_number,
                   QuicPacket* packet,
                   HasRetransmittableData retransmittable,
@@ -500,8 +499,8 @@ class TestConnection : public QuicConnection {
             ENCRYPTION_NONE, packet_number, *packet, buffer, kMaxPacketSize);
     delete packet;
     SerializedPacket serialized_packet(
-        kDefaultPathId, packet_number, PACKET_6BYTE_PACKET_NUMBER, buffer,
-        encrypted_length, has_ack, has_pending_frames);
+        packet_number, PACKET_6BYTE_PACKET_NUMBER, buffer, encrypted_length,
+        has_ack, has_pending_frames);
     if (retransmittable == HAS_RETRANSMITTABLE_DATA) {
       serialized_packet.retransmittable_frames.push_back(
           QuicFrame(new QuicStreamFrame()));
@@ -642,19 +641,24 @@ enum class AckResponse { kDefer, kImmediate };
 
 // Run tests with combinations of {QuicVersion, AckResponse}.
 struct TestParams {
-  TestParams(QuicVersion version, AckResponse ack_response)
-      : version(version), ack_response(ack_response) {}
+  TestParams(QuicVersion version,
+             AckResponse ack_response,
+             bool no_stop_waiting)
+      : version(version),
+        ack_response(ack_response),
+        no_stop_waiting(no_stop_waiting) {}
 
   friend std::ostream& operator<<(std::ostream& os, const TestParams& p) {
     os << "{ client_version: " << QuicVersionToString(p.version)
        << " ack_response: "
        << (p.ack_response == AckResponse::kDefer ? "defer" : "immediate")
-       << " }";
+       << " no_stop_waiting: " << p.no_stop_waiting << " }";
     return os;
   }
 
   QuicVersion version;
   AckResponse ack_response;
+  bool no_stop_waiting;
 };
 
 // Constructs various test permutations.
@@ -664,7 +668,10 @@ std::vector<TestParams> GetTestParams() {
   for (size_t i = 0; i < all_supported_versions.size(); ++i) {
     for (AckResponse ack_response :
          {AckResponse::kDefer, AckResponse::kImmediate}) {
-      params.push_back(TestParams(all_supported_versions[i], ack_response));
+      for (bool stop_waiting : {true, false}) {
+        params.push_back(
+            TestParams(all_supported_versions[i], ack_response, stop_waiting));
+      }
     }
   }
   return params;
@@ -705,6 +712,8 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         connection_id_length_(PACKET_8BYTE_CONNECTION_ID) {
     connection_.set_defer_send_in_response_to_packets(GetParam().ack_response ==
                                                       AckResponse::kDefer);
+    QuicConnectionPeer::SetNoStopWaitingFrames(&connection_,
+                                               GetParam().no_stop_waiting);
     connection_.set_visitor(&visitor_);
     connection_.SetSendAlgorithm(send_algorithm_);
     connection_.SetLossAlgorithm(loss_algorithm_.get());
@@ -762,9 +771,9 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
 
   void use_tagging_decrypter() { writer_->use_tagging_decrypter(); }
 
-  void ProcessPacket(QuicPathId path_id, QuicPacketNumber number) {
+  void ProcessPacket(QuicPacketNumber number) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacket(path_id, number);
+    ProcessDataPacket(number);
     if (connection_.GetSendAlarm()->IsSet()) {
       connection_.GetSendAlarm()->Fire();
     }
@@ -810,7 +819,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     DCHECK_GT(length, 0u);
 
     const size_t encrypted_length = peer_framer_.EncryptInPlace(
-        ENCRYPTION_NONE, kDefaultPathId, header.packet_number,
+        ENCRYPTION_NONE, header.packet_number,
         GetStartOfEncryptedData(peer_framer_.version(), header), length,
         kMaxPacketSize, encrypted_buffer);
     DCHECK_GT(encrypted_length, 0u);
@@ -820,16 +829,14 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         QuicReceivedPacket(encrypted_buffer, encrypted_length, clock_.Now()));
   }
 
-  size_t ProcessFramePacketAtLevel(QuicPathId path_id,
-                                   QuicPacketNumber number,
+  size_t ProcessFramePacketAtLevel(QuicPacketNumber number,
                                    QuicFrame frame,
                                    EncryptionLevel level) {
     QuicPacketHeader header;
     header.public_header.connection_id = connection_id_;
     header.public_header.packet_number_length = packet_number_length_;
     header.public_header.connection_id_length = connection_id_length_;
-    header.public_header.multipath_flag = path_id != kDefaultPathId;
-    header.path_id = path_id;
+    header.public_header.multipath_flag = false;
     header.packet_number = number;
     QuicFrames frames;
     frames.push_back(frame);
@@ -844,16 +851,15 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     return encrypted_length;
   }
 
-  size_t ProcessDataPacket(QuicPathId path_id, QuicPacketNumber number) {
-    return ProcessDataPacketAtLevel(path_id, number, false, ENCRYPTION_NONE);
+  size_t ProcessDataPacket(QuicPacketNumber number) {
+    return ProcessDataPacketAtLevel(number, false, ENCRYPTION_NONE);
   }
 
-  size_t ProcessDataPacketAtLevel(QuicPathId path_id,
-                                  QuicPacketNumber number,
+  size_t ProcessDataPacketAtLevel(QuicPacketNumber number,
                                   bool has_stop_waiting,
                                   EncryptionLevel level) {
     std::unique_ptr<QuicPacket> packet(
-        ConstructDataPacket(path_id, number, has_stop_waiting));
+        ConstructDataPacket(number, has_stop_waiting));
     char buffer[kMaxPacketSize];
     size_t encrypted_length = peer_framer_.EncryptPayload(
         level, number, *packet, buffer, kMaxPacketSize);
@@ -866,7 +872,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     return encrypted_length;
   }
 
-  void ProcessClosePacket(QuicPathId path_id, QuicPacketNumber number) {
+  void ProcessClosePacket(QuicPacketNumber number) {
     std::unique_ptr<QuicPacket> packet(ConstructClosePacket(number));
     char buffer[kMaxPacketSize];
     size_t encrypted_length = peer_framer_.EncryptPayload(
@@ -913,11 +919,10 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     ProcessFramePacket(QuicFrame(frame));
   }
 
-  size_t ProcessStopWaitingPacketAtLevel(QuicPathId path_id,
-                                         QuicPacketNumber number,
+  size_t ProcessStopWaitingPacketAtLevel(QuicPacketNumber number,
                                          QuicStopWaitingFrame* frame,
                                          EncryptionLevel level) {
-    return ProcessFramePacketAtLevel(path_id, number, QuicFrame(frame),
+    return ProcessFramePacketAtLevel(number, QuicFrame(frame),
                                      ENCRYPTION_INITIAL);
   }
 
@@ -939,15 +944,13 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
     return packet;
   }
 
-  QuicPacket* ConstructDataPacket(QuicPathId path_id,
-                                  QuicPacketNumber number,
+  QuicPacket* ConstructDataPacket(QuicPacketNumber number,
                                   bool has_stop_waiting) {
     QuicPacketHeader header;
     header.public_header.connection_id = connection_id_;
     header.public_header.packet_number_length = packet_number_length_;
     header.public_header.connection_id_length = connection_id_length_;
-    header.public_header.multipath_flag = path_id != kDefaultPathId;
-    header.path_id = path_id;
+    header.public_header.multipath_flag = false;
     header.packet_number = number;
 
     QuicFrames frames;
@@ -1012,7 +1015,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
                                              ConnectionCloseSource::FROM_SELF));
     // Call ProcessDataPacket rather than ProcessPacket, as we should not get a
     // packet call to the visitor.
-    ProcessDataPacket(kDefaultPathId, 6000);
+    ProcessDataPacket(6000);
     EXPECT_FALSE(QuicConnectionPeer::GetConnectionClosePacket(&connection_) ==
                  nullptr);
   }
@@ -1203,7 +1206,6 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSize) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.version_flag = true;
-  header.path_id = kDefaultPathId;
   header.packet_number = 1;
 
   QuicFrames frames;
@@ -1237,7 +1239,6 @@ TEST_P(QuicConnectionTest, IncreaseServerMaxPacketSizeWhileWriterLimited) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.version_flag = true;
-  header.path_id = kDefaultPathId;
   header.packet_number = 1;
 
   QuicFrames frames;
@@ -1286,15 +1287,15 @@ TEST_P(QuicConnectionTest, LimitMaxPacketSizeByWriterForNewConnection) {
 TEST_P(QuicConnectionTest, PacketsInOrder) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   EXPECT_EQ(1u, outgoing_ack()->largest_observed);
   EXPECT_EQ(1u, outgoing_ack()->packets.NumIntervals());
 
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(2);
   EXPECT_EQ(2u, outgoing_ack()->largest_observed);
   EXPECT_EQ(1u, outgoing_ack()->packets.NumIntervals());
 
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_EQ(1u, outgoing_ack()->packets.NumIntervals());
 }
@@ -1302,17 +1303,17 @@ TEST_P(QuicConnectionTest, PacketsInOrder) {
 TEST_P(QuicConnectionTest, PacketsOutOfOrder) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(2));
   EXPECT_TRUE(IsMissing(1));
 
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(2);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_FALSE(IsMissing(2));
   EXPECT_TRUE(IsMissing(1));
 
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_FALSE(IsMissing(2));
   EXPECT_FALSE(IsMissing(1));
@@ -1321,14 +1322,14 @@ TEST_P(QuicConnectionTest, PacketsOutOfOrder) {
 TEST_P(QuicConnectionTest, DuplicatePacket) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(2));
   EXPECT_TRUE(IsMissing(1));
 
   // Send packet 3 again, but do not set the expectation that
   // the visitor OnStreamFrame() will be called.
-  ProcessDataPacket(kDefaultPathId, 3);
+  ProcessDataPacket(3);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(2));
   EXPECT_TRUE(IsMissing(1));
@@ -1337,16 +1338,16 @@ TEST_P(QuicConnectionTest, DuplicatePacket) {
 TEST_P(QuicConnectionTest, PacketsOutOfOrderWithAdditionsAndLeastAwaiting) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(2));
   EXPECT_TRUE(IsMissing(1));
 
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(2);
   EXPECT_EQ(3u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(1));
 
-  ProcessPacket(kDefaultPathId, 5);
+  ProcessPacket(5);
   EXPECT_EQ(5u, outgoing_ack()->largest_observed);
   EXPECT_TRUE(IsMissing(1));
   EXPECT_TRUE(IsMissing(4));
@@ -1369,7 +1370,7 @@ TEST_P(QuicConnectionTest, RejectPacketTooFarOut) {
                                            ConnectionCloseSource::FROM_SELF));
   // Call ProcessDataPacket rather than ProcessPacket, as we should not get a
   // packet call to the visitor.
-  ProcessDataPacket(kDefaultPathId, 6000);
+  ProcessDataPacket(6000);
   EXPECT_FALSE(QuicConnectionPeer::GetConnectionClosePacket(&connection_) ==
                nullptr);
 }
@@ -1380,7 +1381,7 @@ TEST_P(QuicConnectionTest, RejectUnencryptedStreamData) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_UNENCRYPTED_STREAM_DATA, _,
                                            ConnectionCloseSource::FROM_SELF));
-  EXPECT_QUIC_BUG(ProcessDataPacket(kDefaultPathId, 1), "");
+  EXPECT_QUIC_BUG(ProcessDataPacket(1), "");
   EXPECT_FALSE(QuicConnectionPeer::GetConnectionClosePacket(&connection_) ==
                nullptr);
   const std::vector<QuicConnectionCloseFrame>& connection_close_frames =
@@ -1393,19 +1394,19 @@ TEST_P(QuicConnectionTest, RejectUnencryptedStreamData) {
 TEST_P(QuicConnectionTest, OutOfOrderReceiptCausesAckSend) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
 
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   // Should ack immediately since we have missing packets.
   EXPECT_EQ(1u, writer_->packets_write_attempts());
 
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(2);
   // Should ack immediately since we have missing packets.
   EXPECT_EQ(2u, writer_->packets_write_attempts());
 
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   // Should ack immediately, since this fills the last hole.
   EXPECT_EQ(3u, writer_->packets_write_attempts());
 
-  ProcessPacket(kDefaultPathId, 4);
+  ProcessPacket(4);
   // Should not cause an ack.
   EXPECT_EQ(3u, writer_->packets_write_attempts());
 }
@@ -1475,7 +1476,11 @@ TEST_P(QuicConnectionTest, AckReceiptCausesAckSend) {
               OnPacketSent(_, _, _, _, HAS_RETRANSMITTABLE_DATA));
   connection_.SendStreamDataWithString(3, "foo", 3, !kFin, nullptr);
   // Ack bundled.
-  EXPECT_EQ(3u, writer_->frame_count());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+  }
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_FALSE(writer_->ack_frames().empty());
 
@@ -1521,16 +1526,20 @@ TEST_P(QuicConnectionTest, LeastUnackedLower) {
   QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 1);
   // The scheduler will not process out of order acks, but all packet processing
   // causes the connection to try to write.
-  EXPECT_CALL(visitor_, OnCanWrite());
+  if (!GetParam().no_stop_waiting) {
+    EXPECT_CALL(visitor_, OnCanWrite());
+  }
   QuicStopWaitingFrame frame2 = InitStopWaitingFrame(1);
   ProcessStopWaitingPacket(&frame2);
 
   // Now claim it's one, but set the ordering so it was sent "after" the first
   // one.  This should cause a connection error.
-  EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
   QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 7);
-  EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_INVALID_STOP_WAITING_DATA, _,
-                                           ConnectionCloseSource::FROM_SELF));
+  if (!GetParam().no_stop_waiting) {
+    EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
+    EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_INVALID_STOP_WAITING_DATA, _,
+                                             ConnectionCloseSource::FROM_SELF));
+  }
   QuicStopWaitingFrame frame3 = InitStopWaitingFrame(1);
   ProcessStopWaitingPacket(&frame3);
 }
@@ -1556,7 +1565,7 @@ TEST_P(QuicConnectionTest, TooManyReceivedPackets) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Miss 99 of every 100 packets for 5500 packets.
   for (QuicPacketNumber i = 1; i < kMaxTrackedPackets + 500; i += 100) {
-    ProcessPacket(kDefaultPathId, i);
+    ProcessPacket(i);
     if (!connection_.connected()) {
       break;
     }
@@ -1596,7 +1605,7 @@ TEST_P(QuicConnectionTest, AckUnsentData) {
 
 TEST_P(QuicConnectionTest, AckAll) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
 
   QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 1);
   QuicAckFrame frame1 = InitAckFrame(0);
@@ -1610,15 +1619,30 @@ TEST_P(QuicConnectionTest, BasicSending) {
   EXPECT_EQ(1u, last_packet);
   SendAckPacketToPeer();  // Packet 2
 
-  EXPECT_EQ(1u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(1u, least_unacked());
+  }
 
   SendAckPacketToPeer();  // Packet 3
-  EXPECT_EQ(1u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(1u, least_unacked());
+  }
 
   SendStreamDataToPeer(1, "bar", 3, !kFin, &last_packet);  // Packet 4
   EXPECT_EQ(4u, last_packet);
   SendAckPacketToPeer();  // Packet 5
-  EXPECT_EQ(1u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(1u, least_unacked());
+  }
 
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
 
@@ -1629,7 +1653,12 @@ TEST_P(QuicConnectionTest, BasicSending) {
 
   // As soon as we've acked one, we skip ack packets 2 and 3 and note lack of
   // ack for 4.
-  EXPECT_EQ(4u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(4u, least_unacked());
+  }
 
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
 
@@ -1641,17 +1670,32 @@ TEST_P(QuicConnectionTest, BasicSending) {
   EXPECT_EQ(6u, writer_->header().packet_number);
 
   // So the last ack has not changed.
-  EXPECT_EQ(4u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(4u, least_unacked());
+  }
 
   // If we force an ack, we shouldn't change our retransmit state.
   SendAckPacketToPeer();  // Packet 7
-  EXPECT_EQ(7u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(7u, least_unacked());
+  }
 
   // But if we send more data it should.
   SendStreamDataToPeer(1, "eep", 6, !kFin, &last_packet);  // Packet 8
   EXPECT_EQ(8u, last_packet);
   SendAckPacketToPeer();  // Packet 9
-  EXPECT_EQ(7u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(7u, least_unacked());
+  }
 }
 
 // QuicConnection should record the the packet sent-time prior to sending the
@@ -1701,8 +1745,13 @@ TEST_P(QuicConnectionTest, FramePacking) {
 
   // Parse the last packet and ensure it's an ack and two stream frames from
   // two different streams.
-  EXPECT_EQ(4u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(4u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   ASSERT_EQ(2u, writer_->stream_frames().size());
   EXPECT_EQ(kClientDataStreamId1, writer_->stream_frames()[0]->stream_id);
@@ -1751,7 +1800,7 @@ TEST_P(QuicConnectionTest, FramePackingAckResponse) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Process a data packet to queue up a pending ack.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacket(kDefaultPathId, 1);
+  ProcessDataPacket(1);
 
   EXPECT_CALL(visitor_, OnCanWrite())
       .WillOnce(DoAll(IgnoreResult(InvokeWithoutArgs(
@@ -1770,8 +1819,13 @@ TEST_P(QuicConnectionTest, FramePackingAckResponse) {
 
   // Parse the last packet and ensure it's an ack and two stream frames from
   // two different streams.
-  EXPECT_EQ(4u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(4u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   ASSERT_EQ(2u, writer_->stream_frames().size());
   EXPECT_EQ(kClientDataStreamId1, writer_->stream_frames()[0]->stream_id);
@@ -2180,8 +2234,7 @@ TEST_P(QuicConnectionTest, RetransmitAckedPacket) {
 
   EXPECT_EQ(0u, connection_.NumQueuedPackets());
   // We do not store retransmittable frames of this retransmission.
-  EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_,
-                                                            kDefaultPathId, 4));
+  EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_, 4));
 }
 
 TEST_P(QuicConnectionTest, RetransmitNackedLargestObserved) {
@@ -2284,8 +2337,7 @@ TEST_P(QuicConnectionTest, RetransmitWriteBlockedAckedOriginalThenSent) {
   connection_.OnCanWrite();
   // There is now a pending packet, but with no retransmittable frames.
   EXPECT_FALSE(connection_.GetRetransmissionAlarm()->IsSet());
-  EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_,
-                                                            ack.path_id, 2));
+  EXPECT_FALSE(QuicConnectionPeer::HasRetransmittableFrames(&connection_, 2));
 }
 
 TEST_P(QuicConnectionTest, AlarmsWhenWriteBlocked) {
@@ -2389,8 +2441,13 @@ TEST_P(QuicConnectionTest, DontLatchUnackedPacket) {
   SendAckPacketToPeer();  // Packet 3
   // Least_unacked remains at 3 until another ack is received.
   EXPECT_EQ(3u, stop_waiting()->least_unacked);
-  // Check that the outgoing ack had its packet number as least_unacked.
-  EXPECT_EQ(3u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    // Check that the outgoing ack had its packet number as least_unacked.
+    EXPECT_EQ(3u, least_unacked());
+  }
 
   // Ack the ack, which updates the rtt and raises the least unacked.
   EXPECT_CALL(*send_algorithm_, OnCongestionEvent(true, _, _, _, _));
@@ -2404,7 +2461,12 @@ TEST_P(QuicConnectionTest, DontLatchUnackedPacket) {
   ON_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _))
       .WillByDefault(Return(false));
   SendAckPacketToPeer();  // Packet 5
-  EXPECT_EQ(4u, least_unacked());
+  if (GetParam().no_stop_waiting) {
+    // Expect no stop waiting frame is sent.
+    EXPECT_EQ(0u, least_unacked());
+  } else {
+    EXPECT_EQ(4u, least_unacked());
+  }
 
   // Send two data packets at the end, and ensure if the last one is acked,
   // the least unacked is raised above the ack packets.
@@ -2574,8 +2636,7 @@ TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
 
   // Process an encrypted packet which can not yet be decrypted which should
   // result in the packet being buffered.
-  ProcessDataPacketAtLevel(kDefaultPathId, 1, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(1, !kHasStopWaiting, ENCRYPTION_INITIAL);
 
   // Transition to the new encryption state and process another encrypted packet
   // which should result in the original packet being processed.
@@ -2583,14 +2644,12 @@ TEST_P(QuicConnectionTest, BufferNonDecryptablePackets) {
   connection_.SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
   connection_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(2);
-  ProcessDataPacketAtLevel(kDefaultPathId, 2, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(2, !kHasStopWaiting, ENCRYPTION_INITIAL);
 
   // Finally, process a third packet and note that we do not reprocess the
   // buffered packet.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, 3, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(3, !kHasStopWaiting, ENCRYPTION_INITIAL);
 }
 
 TEST_P(QuicConnectionTest, Buffer100NonDecryptablePackets) {
@@ -2608,8 +2667,7 @@ TEST_P(QuicConnectionTest, Buffer100NonDecryptablePackets) {
   // Process an encrypted packet which can not yet be decrypted which should
   // result in the packet being buffered.
   for (QuicPacketNumber i = 1; i <= 100; ++i) {
-    ProcessDataPacketAtLevel(kDefaultPathId, i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
 
   // Transition to the new encryption state and process another encrypted packet
@@ -2618,14 +2676,12 @@ TEST_P(QuicConnectionTest, Buffer100NonDecryptablePackets) {
   connection_.SetDefaultEncryptionLevel(ENCRYPTION_INITIAL);
   connection_.SetEncrypter(ENCRYPTION_INITIAL, new TaggingEncrypter(tag));
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(101);
-  ProcessDataPacketAtLevel(kDefaultPathId, 101, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(101, !kHasStopWaiting, ENCRYPTION_INITIAL);
 
   // Finally, process a third packet and note that we do not reprocess the
   // buffered packet.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, 102, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(102, !kHasStopWaiting, ENCRYPTION_INITIAL);
 }
 
 TEST_P(QuicConnectionTest, TestRetransmitOrder) {
@@ -3252,7 +3308,7 @@ TEST_P(QuicConnectionTest, TimeoutAfterRetransmission) {
   const QuicTime receive_time = send_time + five_ms;
   clock_.AdvanceTime(receive_time - clock_.Now());
   ASSERT_EQ(receive_time, clock_.Now());
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
 
   // Now move forward to the retransmission time and retransmit the
   // packet, which should move the timeout forward again (but will not
@@ -3497,10 +3553,10 @@ TEST_P(QuicConnectionTest, TimeoutAfter5ClientRTOs) {
 
 TEST_P(QuicConnectionTest, SendScheduler) {
   // Test that if we send a packet without delay, it is not queued.
-  QuicPacket* packet = ConstructDataPacket(kDefaultPathId, 1, !kHasStopWaiting);
+  QuicPacket* packet = ConstructDataPacket(1, !kHasStopWaiting);
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _));
-  connection_.SendPacket(ENCRYPTION_NONE, kDefaultPathId, 1, packet,
-                         HAS_RETRANSMITTABLE_DATA, false, false);
+  connection_.SendPacket(ENCRYPTION_NONE, 1, packet, HAS_RETRANSMITTABLE_DATA,
+                         false, false);
   EXPECT_EQ(0u, connection_.NumQueuedPackets());
 }
 
@@ -3508,18 +3564,18 @@ TEST_P(QuicConnectionTest, FailToSendFirstPacket) {
   // Test that the connection does not crash when it fails to send the first
   // packet at which point self_address_ might be uninitialized.
   EXPECT_CALL(visitor_, OnConnectionClosed(_, _, _)).Times(1);
-  QuicPacket* packet = ConstructDataPacket(kDefaultPathId, 1, !kHasStopWaiting);
+  QuicPacket* packet = ConstructDataPacket(1, !kHasStopWaiting);
   writer_->SetShouldWriteFail();
-  connection_.SendPacket(ENCRYPTION_NONE, kDefaultPathId, 1, packet,
-                         HAS_RETRANSMITTABLE_DATA, false, false);
+  connection_.SendPacket(ENCRYPTION_NONE, 1, packet, HAS_RETRANSMITTABLE_DATA,
+                         false, false);
 }
 
 TEST_P(QuicConnectionTest, SendSchedulerEAGAIN) {
-  QuicPacket* packet = ConstructDataPacket(kDefaultPathId, 1, !kHasStopWaiting);
+  QuicPacket* packet = ConstructDataPacket(1, !kHasStopWaiting);
   BlockOnNextWrite();
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 1, _, _)).Times(0);
-  connection_.SendPacket(ENCRYPTION_NONE, kDefaultPathId, 1, packet,
-                         HAS_RETRANSMITTABLE_DATA, false, false);
+  connection_.SendPacket(ENCRYPTION_NONE, 1, packet, HAS_RETRANSMITTABLE_DATA,
+                         false, false);
   EXPECT_EQ(1u, connection_.NumQueuedPackets());
 }
 
@@ -3604,8 +3660,7 @@ TEST_P(QuicConnectionTest, SendDelayedAck) {
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, 1, !kHasStopWaiting,
-                           ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(1, !kHasStopWaiting, ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3613,8 +3668,13 @@ TEST_P(QuicConnectionTest, SendDelayedAck) {
   // Simulate delayed ack alarm firing.
   connection_.GetAckAlarm()->Fire();
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3642,15 +3702,14 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimation) {
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3660,12 +3719,17 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimation) {
   for (int i = 0; i < 9; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3694,15 +3758,14 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationEighthRtt) {
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3712,12 +3775,17 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationEighthRtt) {
   for (int i = 0; i < 9; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3746,15 +3814,14 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3762,8 +3829,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
 
   // Process packet 10 first and ensure the alarm is one eighth min_rtt.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 9,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 9, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
@@ -3772,12 +3839,17 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReordering) {
   for (int i = 0; i < 8; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3806,15 +3878,14 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3822,8 +3893,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
 
   // Process packet 10 first and ensure the alarm is one eighth min_rtt.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 19,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 19, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
@@ -3832,12 +3903,17 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   for (int i = 0; i < 8; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 
@@ -3845,11 +3921,16 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithLargeReordering) {
   // because it fills a hole.
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 10,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 10, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3879,15 +3960,14 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3895,8 +3975,8 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
 
   // Process packet 10 first and ensure the alarm is one eighth min_rtt.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 9,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 9, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
@@ -3905,12 +3985,17 @@ TEST_P(QuicConnectionTest, SendDelayedAckDecimationWithReorderingEighthRtt) {
   for (int i = 0; i < 8; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -3941,15 +4026,14 @@ TEST_P(QuicConnectionTest,
   QuicPacketNumber kFirstDecimatedPacket = 101;
   for (unsigned int i = 0; i < kFirstDecimatedPacket - 1; ++i) {
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, 1 + i, !kHasStopWaiting,
-                             ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(1 + i, !kHasStopWaiting, ENCRYPTION_INITIAL);
   }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   // The same as ProcessPacket(1) except that ENCRYPTION_INITIAL is used
   // instead of ENCRYPTION_NONE.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
 
   // Check if delayed ack timer is running for the expected interval.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
@@ -3957,8 +4041,8 @@ TEST_P(QuicConnectionTest,
 
   // Process packet 10 first and ensure the alarm is one eighth min_rtt.
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 19,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 19, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   ack_time = clock_.ApproximateNow() + QuicTime::Delta::FromMilliseconds(5);
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   EXPECT_EQ(ack_time, connection_.GetAckAlarm()->deadline());
@@ -3967,12 +4051,17 @@ TEST_P(QuicConnectionTest,
   for (int i = 0; i < 8; ++i) {
     EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
     EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-    ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 1 + i,
-                             !kHasStopWaiting, ENCRYPTION_INITIAL);
+    ProcessDataPacketAtLevel(kFirstDecimatedPacket + 1 + i, !kHasStopWaiting,
+                             ENCRYPTION_INITIAL);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 
@@ -3980,18 +4069,23 @@ TEST_P(QuicConnectionTest,
   // because it fills a hole.
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(1);
-  ProcessDataPacketAtLevel(kDefaultPathId, kFirstDecimatedPacket + 10,
-                           !kHasStopWaiting, ENCRYPTION_INITIAL);
+  ProcessDataPacketAtLevel(kFirstDecimatedPacket + 10, !kHasStopWaiting,
+                           ENCRYPTION_INITIAL);
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
 TEST_P(QuicConnectionTest, SendDelayedAckOnHandshakeConfirmed) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   // Check that ack is sent and that delayed ack alarm is set.
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
   QuicTime ack_time = clock_.ApproximateNow() + DefaultDelayedAckTime();
@@ -4012,11 +4106,16 @@ TEST_P(QuicConnectionTest, SendDelayedAckOnHandshakeConfirmed) {
 
 TEST_P(QuicConnectionTest, SendDelayedAckOnSecondPacket) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(1);
+  ProcessPacket(2);
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(2u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(1u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
@@ -4024,56 +4123,66 @@ TEST_P(QuicConnectionTest, SendDelayedAckOnSecondPacket) {
 TEST_P(QuicConnectionTest, NoAckOnOldNacks) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Drop one packet, triggering a sequence of acks.
-  ProcessPacket(kDefaultPathId, 2);
-  size_t frames_per_ack = 2;
+  ProcessPacket(2);
+  size_t frames_per_ack = GetParam().no_stop_waiting ? 1 : 2;
   EXPECT_EQ(frames_per_ack, writer_->frame_count());
   EXPECT_FALSE(writer_->ack_frames().empty());
   writer_->Reset();
-  ProcessPacket(kDefaultPathId, 3);
+  ProcessPacket(3);
   EXPECT_EQ(frames_per_ack, writer_->frame_count());
   EXPECT_FALSE(writer_->ack_frames().empty());
   writer_->Reset();
-  ProcessPacket(kDefaultPathId, 4);
+  ProcessPacket(4);
   EXPECT_EQ(frames_per_ack, writer_->frame_count());
   EXPECT_FALSE(writer_->ack_frames().empty());
   writer_->Reset();
-  ProcessPacket(kDefaultPathId, 5);
+  ProcessPacket(5);
   EXPECT_EQ(frames_per_ack, writer_->frame_count());
   EXPECT_FALSE(writer_->ack_frames().empty());
   writer_->Reset();
   // Now only set the timer on the 6th packet, instead of sending another ack.
-  ProcessPacket(kDefaultPathId, 6);
+  ProcessPacket(6);
   EXPECT_EQ(0u, writer_->frame_count());
   EXPECT_TRUE(connection_.GetAckAlarm()->IsSet());
 }
 
 TEST_P(QuicConnectionTest, SendDelayedAckOnOutgoingPacket) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   connection_.SendStreamDataWithString(kClientDataStreamId1, "foo", 0, !kFin,
                                        nullptr);
   // Check that ack is bundled with outgoing data and that delayed ack
   // alarm is reset.
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
 TEST_P(QuicConnectionTest, SendDelayedAckOnOutgoingCryptoPacket) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   connection_.SendStreamDataWithString(kCryptoStreamId, "foo", 0, !kFin,
                                        nullptr);
   // Check that ack is bundled with outgoing crypto data.
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->ack_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(connection_.GetAckAlarm()->IsSet());
 }
 
 TEST_P(QuicConnectionTest, BlockAndBufferOnFirstCHLOPacketOfTwo) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   BlockOnNextWrite();
   writer_->set_is_write_blocked_data_buffered(true);
   connection_.SendStreamDataWithString(kCryptoStreamId, "foo", 0, !kFin,
@@ -4095,10 +4204,15 @@ TEST_P(QuicConnectionTest, BundleAckForSecondCHLO) {
   // Process a packet from the crypto stream, which is frame1_'s default.
   // Receiving the CHLO as packet 2 first will cause the connection to
   // immediately send an ack, due to the packet gap.
-  ProcessPacket(kDefaultPathId, 2);
+  ProcessPacket(2);
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_EQ(2u, writer_->ack_frames().front().largest_observed);
@@ -4112,16 +4226,21 @@ TEST_P(QuicConnectionTest, BundleAckForSecondCHLOTwoPacketReject) {
   // Process two packets from the crypto stream, which is frame1_'s default,
   // simulating a 2 packet reject.
   {
-    ProcessPacket(kDefaultPathId, 1);
+    ProcessPacket(1);
     // Send the new CHLO when the REJ is processed.
     EXPECT_CALL(visitor_, OnStreamFrame(_))
         .WillOnce(IgnoreResult(InvokeWithoutArgs(
             &connection_, &TestConnection::SendCryptoStreamData)));
-    ProcessDataPacket(kDefaultPathId, 2);
+    ProcessDataPacket(2);
   }
   // Check that ack is sent and that delayed ack alarm is reset.
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_EQ(1u, writer_->stream_frames().size());
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_EQ(2u, writer_->ack_frames().front().largest_observed);
@@ -4171,8 +4290,13 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
 
   // Check that ack is bundled with outgoing data and the delayed ack
   // alarm is reset.
-  EXPECT_EQ(3u, writer_->frame_count());
-  EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  if (GetParam().no_stop_waiting) {
+    EXPECT_EQ(2u, writer_->frame_count());
+    EXPECT_TRUE(writer_->stop_waiting_frames().empty());
+  } else {
+    EXPECT_EQ(3u, writer_->frame_count());
+    EXPECT_FALSE(writer_->stop_waiting_frames().empty());
+  }
   EXPECT_FALSE(writer_->ack_frames().empty());
   EXPECT_EQ(3u, writer_->ack_frames().front().largest_observed);
   EXPECT_EQ(1u, writer_->stream_frames().size());
@@ -4181,11 +4305,11 @@ TEST_P(QuicConnectionTest, BundleAckWithDataOnIncomingAck) {
 
 TEST_P(QuicConnectionTest, NoAckSentForClose) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   EXPECT_CALL(visitor_, OnConnectionClosed(QUIC_PEER_GOING_AWAY, _,
                                            ConnectionCloseSource::FROM_PEER));
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, _, _, _)).Times(0);
-  ProcessClosePacket(kDefaultPathId, 2);
+  ProcessClosePacket(2);
 }
 
 TEST_P(QuicConnectionTest, SendWhenDisconnected) {
@@ -4196,10 +4320,10 @@ TEST_P(QuicConnectionTest, SendWhenDisconnected) {
                               ConnectionCloseBehavior::SILENT_CLOSE);
   EXPECT_FALSE(connection_.connected());
   EXPECT_FALSE(connection_.CanWriteStreamData());
-  QuicPacket* packet = ConstructDataPacket(kDefaultPathId, 1, !kHasStopWaiting);
+  QuicPacket* packet = ConstructDataPacket(1, !kHasStopWaiting);
   EXPECT_CALL(*send_algorithm_, OnPacketSent(_, _, 1, _, _)).Times(0);
-  connection_.SendPacket(ENCRYPTION_NONE, kDefaultPathId, 1, packet,
-                         HAS_RETRANSMITTABLE_DATA, false, false);
+  connection_.SendPacket(ENCRYPTION_NONE, 1, packet, HAS_RETRANSMITTABLE_DATA,
+                         false, false);
 }
 
 TEST_P(QuicConnectionTest, PublicReset) {
@@ -4249,15 +4373,6 @@ TEST_P(QuicConnectionTest, Blocked) {
   EXPECT_EQ(0u, connection_.GetStats().blocked_frames_sent);
 }
 
-TEST_P(QuicConnectionTest, PathClose) {
-  EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
-
-  QuicPathCloseFrame path_close = QuicPathCloseFrame(1);
-  ProcessPathClosePacket(&path_close);
-  EXPECT_TRUE(QuicFramerPeer::IsPathClosed(
-      QuicConnectionPeer::GetFramer(&connection_), 1));
-}
-
 TEST_P(QuicConnectionTest, ZeroBytePacket) {
   // Don't close the connection for zero byte packets.
   EXPECT_CALL(visitor_, OnConnectionClosed(_, _, _)).Times(0);
@@ -4282,7 +4397,6 @@ TEST_P(QuicConnectionTest, ServerSendsVersionNegotiationPacket) {
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
   header.public_header.version_flag = true;
-  header.path_id = kDefaultPathId;
   header.packet_number = 12;
 
   QuicFrames frames;
@@ -4397,7 +4511,6 @@ TEST_P(QuicConnectionTest, ClientHandlesVersionNegotiation) {
   // NEGOTIATED_VERSION state and tell the packet creator to StopSendingVersion.
   QuicPacketHeader header;
   header.public_header.connection_id = connection_id_;
-  header.path_id = kDefaultPathId;
   header.packet_number = 12;
   header.public_header.version_flag = false;
   QuicFrames frames;
@@ -4893,13 +5006,6 @@ TEST_P(QuicConnectionTest, EnableMultipathNegotiation) {
   EXPECT_TRUE(QuicConnectionPeer::IsMultipathEnabled(&connection_));
 }
 
-TEST_P(QuicConnectionTest, ClosePath) {
-  QuicPathId kTestPathId = 1;
-  connection_.SendPathClose(kTestPathId);
-  EXPECT_TRUE(QuicFramerPeer::IsPathClosed(
-      QuicConnectionPeer::GetFramer(&connection_), kTestPathId));
-}
-
 TEST_P(QuicConnectionTest, OnPathDegrading) {
   QuicByteCount packet_size;
   const size_t kMinTimeoutsBeforePathDegrading = 2;
@@ -5036,7 +5142,7 @@ TEST_P(QuicConnectionTest, NotBecomeApplicationLimitedDueToWriteBlock) {
 TEST_P(QuicConnectionTest, DonotForceSendingAckOnPacketTooLarge) {
   EXPECT_CALL(visitor_, OnSuccessfulVersionNegotiation(_));
   // Send an ack by simulating delayed ack alarm firing.
-  ProcessPacket(kDefaultPathId, 1);
+  ProcessPacket(1);
   QuicAlarm* ack_alarm = QuicConnectionPeer::GetAckAlarm(&connection_);
   EXPECT_TRUE(ack_alarm->IsSet());
   connection_.GetAckAlarm()->Fire();

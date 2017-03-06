@@ -21,7 +21,12 @@ def CommonChecks(input_api, output_api):
       join('tests'),
       join('third_party'),
     ] + sys.path
-    output.extend(input_api.canned_checks.RunPylint(input_api, output_api))
+    black_list = list(input_api.DEFAULT_BLACK_LIST) + [
+        r'.*_pb2\.py$',
+    ]
+    output.extend(input_api.canned_checks.RunPylint(
+        input_api, output_api,
+    black_list=black_list))
   finally:
     sys.path = sys_path_backup
 

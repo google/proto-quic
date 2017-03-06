@@ -872,7 +872,7 @@ class ClientSocketPoolTest {
   void ReleaseAllConnections(KeepAlive keep_alive);
 
   // Note that this uses 0-based indices, while GetOrderOfRequest takes and
-  // returns 0-based indices.
+  // returns 1-based indices.
   TestSocketRequest* request(int i) { return requests_[i].get(); }
 
   size_t requests_size() const { return requests_.size(); }
@@ -942,7 +942,9 @@ class MockTransportClientSocketPool : public TransportClientSocketPool {
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
                     const NetLogWithSource& net_log) override;
-
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) override;
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
   void ReleaseSocket(const std::string& group_name,
@@ -975,7 +977,9 @@ class MockSOCKSClientSocketPool : public SOCKSClientSocketPool {
                     ClientSocketHandle* handle,
                     const CompletionCallback& callback,
                     const NetLogWithSource& net_log) override;
-
+  void SetPriority(const std::string& group_name,
+                   ClientSocketHandle* handle,
+                   RequestPriority priority) override;
   void CancelRequest(const std::string& group_name,
                      ClientSocketHandle* handle) override;
   void ReleaseSocket(const std::string& group_name,

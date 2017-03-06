@@ -29,7 +29,7 @@ class Typical10MobileReloadPage(Typical10MobilePage):
   def RunPageInteractions(self, action_runner):
     for _ in range(0, 5):
       action_runner.ReloadPage()
-      action_runner.WaitForJavaScriptCondition2(
+      action_runner.WaitForJavaScriptCondition(
           'document.readyState === "complete"')
 
 

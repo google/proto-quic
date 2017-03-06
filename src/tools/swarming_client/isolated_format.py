@@ -18,7 +18,7 @@ from utils import tools
 
 
 # Version stored and expected in .isolated files.
-ISOLATED_FILE_VERSION = '1.5'
+ISOLATED_FILE_VERSION = '1.6'
 
 
 # Chunk size to use when doing disk I/O.
@@ -37,7 +37,7 @@ SUPPORTED_ALGOS = {
 # Used for serialization.
 SUPPORTED_ALGOS_REVERSE = dict((v, k) for k, v in SUPPORTED_ALGOS.iteritems())
 
-SUPPORTED_FILE_TYPES = ['basic', 'ar']
+SUPPORTED_FILE_TYPES = ['basic', 'ar', 'tar']
 
 
 class IsolatedError(ValueError):

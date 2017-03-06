@@ -11,27 +11,35 @@ namespace {
 
 using base::allocator::AllocatorDispatch;
 
-void* TCMalloc(const AllocatorDispatch*, size_t size) {
+void* TCMalloc(const AllocatorDispatch*, size_t size, void* context) {
   return tc_malloc(size);
 }
 
-void* TCCalloc(const AllocatorDispatch*, size_t n, size_t size) {
+void* TCCalloc(const AllocatorDispatch*, size_t n, size_t size, void* context) {
   return tc_calloc(n, size);
 }
 
-void* TCMemalign(const AllocatorDispatch*, size_t alignment, size_t size) {
+void* TCMemalign(const AllocatorDispatch*,
+                 size_t alignment,
+                 size_t size,
+                 void* context) {
   return tc_memalign(alignment, size);
 }
 
-void* TCRealloc(const AllocatorDispatch*, void* address, size_t size) {
+void* TCRealloc(const AllocatorDispatch*,
+                void* address,
+                size_t size,
+                void* context) {
   return tc_realloc(address, size);
 }
 
-void TCFree(const AllocatorDispatch*, void* address) {
+void TCFree(const AllocatorDispatch*, void* address, void* context) {
   tc_free(address);
 }
 
-size_t TCGetSizeEstimate(const AllocatorDispatch*, void* address) {
+size_t TCGetSizeEstimate(const AllocatorDispatch*,
+                         void* address,
+                         void* context) {
   return tc_malloc_size(address);
 }
 

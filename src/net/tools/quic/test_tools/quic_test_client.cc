@@ -194,6 +194,11 @@ void MockableQuicClient::UseConnectionId(QuicConnectionId connection_id) {
   override_connection_id_ = connection_id;
 }
 
+void MockableQuicClient::set_peer_address(const QuicSocketAddress& address) {
+  CHECK(test_writer_ != nullptr);
+  test_writer_->set_peer_address(address);
+}
+
 QuicTestClient::QuicTestClient(QuicSocketAddress server_address,
                                const string& server_hostname,
                                const QuicVersionVector& supported_versions)

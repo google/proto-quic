@@ -1305,15 +1305,14 @@ bsaes_cbc_encrypt:
 	cmpq	%rax,%rbp
 	ja	.Lcbc_dec_bzero
 
-	leaq	(%rbp),%rsp
-	movq	72(%rsp),%r15
-	movq	80(%rsp),%r14
-	movq	88(%rsp),%r13
-	movq	96(%rsp),%r12
-	movq	104(%rsp),%rbx
-	movq	112(%rsp),%rax
-	leaq	120(%rsp),%rsp
-	movq	%rax,%rbp
+	leaq	120(%rbp),%rax
+	movq	-48(%rax),%r15
+	movq	-40(%rax),%r14
+	movq	-32(%rax),%r13
+	movq	-24(%rax),%r12
+	movq	-16(%rax),%rbx
+	movq	-8(%rax),%rbp
+	leaq	(%rax),%rsp
 .Lcbc_dec_epilogue:
 	.byte	0xf3,0xc3
 .size	bsaes_cbc_encrypt,.-bsaes_cbc_encrypt
@@ -1506,15 +1505,14 @@ bsaes_ctr32_encrypt_blocks:
 	cmpq	%rax,%rbp
 	ja	.Lctr_enc_bzero
 
-	leaq	(%rbp),%rsp
-	movq	72(%rsp),%r15
-	movq	80(%rsp),%r14
-	movq	88(%rsp),%r13
-	movq	96(%rsp),%r12
-	movq	104(%rsp),%rbx
-	movq	112(%rsp),%rax
-	leaq	120(%rsp),%rsp
-	movq	%rax,%rbp
+	leaq	120(%rbp),%rax
+	movq	-48(%rax),%r15
+	movq	-40(%rax),%r14
+	movq	-32(%rax),%r13
+	movq	-24(%rax),%r12
+	movq	-16(%rax),%rbx
+	movq	-8(%rax),%rbp
+	leaq	(%rax),%rsp
 .Lctr_enc_epilogue:
 	.byte	0xf3,0xc3
 .size	bsaes_ctr32_encrypt_blocks,.-bsaes_ctr32_encrypt_blocks
@@ -1958,15 +1956,14 @@ bsaes_xts_encrypt:
 	cmpq	%rax,%rbp
 	ja	.Lxts_enc_bzero
 
-	leaq	(%rbp),%rsp
-	movq	72(%rsp),%r15
-	movq	80(%rsp),%r14
-	movq	88(%rsp),%r13
-	movq	96(%rsp),%r12
-	movq	104(%rsp),%rbx
-	movq	112(%rsp),%rax
-	leaq	120(%rsp),%rsp
-	movq	%rax,%rbp
+	leaq	120(%rbp),%rax
+	movq	-48(%rax),%r15
+	movq	-40(%rax),%r14
+	movq	-32(%rax),%r13
+	movq	-24(%rax),%r12
+	movq	-16(%rax),%rbx
+	movq	-8(%rax),%rbp
+	leaq	(%rax),%rsp
 .Lxts_enc_epilogue:
 	.byte	0xf3,0xc3
 .size	bsaes_xts_encrypt,.-bsaes_xts_encrypt
@@ -2437,15 +2434,14 @@ bsaes_xts_decrypt:
 	cmpq	%rax,%rbp
 	ja	.Lxts_dec_bzero
 
-	leaq	(%rbp),%rsp
-	movq	72(%rsp),%r15
-	movq	80(%rsp),%r14
-	movq	88(%rsp),%r13
-	movq	96(%rsp),%r12
-	movq	104(%rsp),%rbx
-	movq	112(%rsp),%rax
-	leaq	120(%rsp),%rsp
-	movq	%rax,%rbp
+	leaq	120(%rbp),%rax
+	movq	-48(%rax),%r15
+	movq	-40(%rax),%r14
+	movq	-32(%rax),%r13
+	movq	-24(%rax),%r12
+	movq	-16(%rax),%rbx
+	movq	-8(%rax),%rbp
+	leaq	(%rax),%rsp
 .Lxts_dec_epilogue:
 	.byte	0xf3,0xc3
 .size	bsaes_xts_decrypt,.-bsaes_xts_decrypt

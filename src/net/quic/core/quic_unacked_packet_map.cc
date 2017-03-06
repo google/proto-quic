@@ -43,6 +43,7 @@ void QuicUnackedPacketMap::AddSentPacket(SerializedPacket* packet,
   QuicTransmissionInfo info(
       packet->encryption_level, packet->packet_number_length, transmission_type,
       sent_time, bytes_sent, has_crypto_handshake, packet->num_padding_bytes);
+  info.largest_acked = packet->largest_acked;
   if (old_packet_number > 0) {
     TransferRetransmissionInfo(old_packet_number, packet_number,
                                transmission_type, &info);

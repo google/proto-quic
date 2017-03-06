@@ -132,6 +132,14 @@ void HostResolver::InitializePersistence(
     const PersistCallback& persist_callback,
     std::unique_ptr<const base::Value> old_data) {}
 
+void HostResolver::SetDefaultAddressFamily(AddressFamily address_family) {
+  NOTREACHED();
+}
+
+AddressFamily HostResolver::GetDefaultAddressFamily() const {
+  return ADDRESS_FAMILY_UNSPECIFIED;
+}
+
 // static
 std::unique_ptr<HostResolver> HostResolver::CreateSystemResolver(
     const Options& options,

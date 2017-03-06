@@ -23,15 +23,22 @@ HpackEntry::HpackEntry(StringPiece name,
       name_ref_(name_),
       value_ref_(value_),
       insertion_index_(insertion_index),
-      type_(is_static ? STATIC : DYNAMIC) {}
+      type_(is_static ? STATIC : DYNAMIC),
+      time_added_(0) {}
 
 HpackEntry::HpackEntry(StringPiece name, StringPiece value)
-    : name_ref_(name), value_ref_(value), insertion_index_(0), type_(LOOKUP) {}
+    : name_ref_(name),
+      value_ref_(value),
+      insertion_index_(0),
+      type_(LOOKUP),
+      time_added_(0) {}
 
-HpackEntry::HpackEntry() : insertion_index_(0), type_(LOOKUP) {}
+HpackEntry::HpackEntry() : insertion_index_(0), type_(LOOKUP), time_added_(0) {}
 
 HpackEntry::HpackEntry(const HpackEntry& other)
-    : insertion_index_(other.insertion_index_), type_(other.type_) {
+    : insertion_index_(other.insertion_index_),
+      type_(other.type_),
+      time_added_(0) {
   if (type_ == LOOKUP) {
     name_ref_ = other.name_ref_;
     value_ref_ = other.value_ref_;

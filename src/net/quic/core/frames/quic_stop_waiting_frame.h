@@ -20,8 +20,6 @@ struct QUIC_EXPORT_PRIVATE QuicStopWaitingFrame {
       std::ostream& os,
       const QuicStopWaitingFrame& s);
 
-  // Path which this stop waiting frame belongs to.
-  QuicPathId path_id;
   // The lowest packet we've sent which is unacked, and we expect an ack for.
   QuicPacketNumber least_unacked;
 };

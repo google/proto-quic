@@ -76,7 +76,7 @@ const char kProjectVersionVs2015[] = "14.0";               // Visual Studio 2015
 const char kVersionStringVs2013[] = "Visual Studio 2013";  // Visual Studio 2013
 const char kVersionStringVs2015[] = "Visual Studio 2015";  // Visual Studio 2015
 const char kWindowsKitsVersion[] = "10";                   // Windows 10 SDK
-const char kWindowsKitsIncludeVersion[] = "10.0.10586.0";  // Windows 10 SDK
+const char kWindowsKitsIncludeVersion[] = "10.0.14393.0";  // Windows 10 SDK
 
 const char kGuidTypeProject[] = "{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}";
 const char kGuidTypeFolder[] = "{2150E333-8FDC-42A3-9474-1A3956D46DE8}";

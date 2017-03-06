@@ -1682,7 +1682,7 @@
   }
 
   If you want to override the (default disabled) Doom Melon:
-    gn --args="enable_doom_melon=true enable_teleporter=false"
+    gn --args="enable_doom_melon=true enable_teleporter=true"
   This also sets the teleporter, but it's already defaulted to on so it will
   have no effect.
 
@@ -5307,11 +5307,27 @@
   config applying to this target specifies this value. In addition, the tool
   corresponding to the source files must also specify precompiled headers (see
   "gn help tool"). The tool will also specify what type of precompiled headers
-  to use.
+  to use, by setting precompiled_header_type to either "gcc" or "msvc".
 
   The precompiled header/source variables can be specified on a target or a
   config, but must be the same for all configs applying to a given target since
   a target can only have one precompiled header.
+
+  If you use both C and C++ sources, the precompiled header and source file
+  will be compiled once per language. You will want to make sure to wrap C++
+  includes in __cplusplus #ifdefs so the file will compile in C mode.
+
+```
+
+### **GCC precompiled headers**
+
+```
+  When using GCC-style precompiled headers, "precompiled_source" contains the
+  path of a .h file that is precompiled and then included by all source files
+  in targets that set "precompiled_source".
+
+  The value of "precompiled_header" is not used with GCC-style precompiled
+  headers.
 
 ```
 
@@ -5320,18 +5336,14 @@
 ```
   When using MSVC-style precompiled headers, the "precompiled_header" value is
   a string corresponding to the header. This is NOT a path to a file that GN
-  recognises, but rather the exact string that appears in quotes after an
-  #include line in source code. The compiler will match this string against
+  recognises, but rather the exact string that appears in quotes after
+  an #include line in source code. The compiler will match this string against
   includes or forced includes (/FI).
 
   MSVC also requires a source file to compile the header with. This must be
   specified by the "precompiled_source" value. In contrast to the header value,
   this IS a GN-style file name, and tells GN which source file to compile to
   make the .pch file used for subsequent compiles.
-
-  If you use both C and C++ sources, the precompiled header and source file
-  will be compiled using both tools. You will want to make sure to wrap C++
-  includes in __cplusplus #ifdefs so the file will compile in C mode.
 
   For example, if the toolchain specifies MSVC headers:
 
@@ -5357,6 +5369,13 @@
     executable("doom_melon") {
       configs += [ ":use_precompiled_headers" ]
       ...
+
+
+```
+## **precompiled_header_type**: [string] "gcc" or "msvc".
+
+```
+  See "gn help precompiled_header".
 
 
 ```
@@ -5796,8 +5815,12 @@
 ### **Variables**
 
 ```
+  arg_file_template [optional]
+      Path to a file containing the text that should be used as the default
+      args.gn content when you run `gn args`.
+
   buildconfig [required]
-      Label of the build config file. This file will be used to set up the
+      Path to the build config file. This file will be used to set up the
       build file execution environment for each toolchain.
 
   check_targets [optional]

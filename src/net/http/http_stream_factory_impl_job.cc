@@ -301,8 +301,7 @@ int HttpStreamFactoryImpl::Job::Preconnect(int num_streams) {
   return StartInternal();
 }
 
-int HttpStreamFactoryImpl::Job::RestartTunnelWithProxyAuth(
-    const AuthCredentials& credentials) {
+int HttpStreamFactoryImpl::Job::RestartTunnelWithProxyAuth() {
   DCHECK(establishing_tunnel_);
   next_state_ = STATE_RESTART_TUNNEL_AUTH;
   stream_.reset();
@@ -344,8 +343,18 @@ void HttpStreamFactoryImpl::Job::Orphan() {
 
 void HttpStreamFactoryImpl::Job::SetPriority(RequestPriority priority) {
   priority_ = priority;
-  // TODO(akalin): Propagate this to |connection_| and maybe the
-  // preconnect state.
+  // Ownership of |connection_| is passed to the newly created stream
+  // or H2 session in DoCreateStream(), and the consumer is not
+  // notified immediately, so this call may occur when |connection_|
+  // is null.
+  //
+  // Note that streams are created without a priority associated with them,
+  // and it is up to the consumer to set their priority via
+  // HttpStream::InitializeStream().  So there is no need for this code
+  // to propagate priority changes to the newly created stream.
+  if (connection_ && connection_->is_initialized())
+    connection_->SetPriority(priority);
+  // TODO(akalin): Maybe Propagate this to the preconnect state.
 }
 
 bool HttpStreamFactoryImpl::Job::was_alpn_negotiated() const {

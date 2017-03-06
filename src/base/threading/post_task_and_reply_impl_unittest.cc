@@ -9,7 +9,7 @@
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/test/test_simple_task_runner.h"
-#include "base/threading/sequenced_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -74,7 +74,7 @@ class MockObject {
 TEST(PostTaskAndReplyImplTest, PostTaskAndReply) {
   scoped_refptr<TestSimpleTaskRunner> post_runner(new TestSimpleTaskRunner);
   scoped_refptr<TestSimpleTaskRunner> reply_runner(new TestSimpleTaskRunner);
-  SequencedTaskRunnerHandle sequenced_task_runner_handle(reply_runner);
+  ThreadTaskRunnerHandle task_runner_handle(reply_runner);
 
   testing::StrictMock<MockObject> mock_object;
   bool delete_flag = false;

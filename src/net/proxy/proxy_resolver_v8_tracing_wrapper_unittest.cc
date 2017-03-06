@@ -16,7 +16,6 @@
 #include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/synchronization/waitable_event.h"
-#include "base/test/scoped_async_task_scheduler.h"
 #include "base/threading/platform_thread.h"
 #include "base/values.h"
 #include "net/base/net_errors.h"
@@ -1070,10 +1069,6 @@ TEST_F(ProxyResolverV8TracingWrapperTest, Terminate) {
 // own thread to run V8 on, however each thread is operating on the same
 // v8::Isolate.
 TEST_F(ProxyResolverV8TracingWrapperTest, MultipleResolvers) {
-  // Required by gin::V8Platform::CallOnBackgroundThread(). Can't be a
-  // ScopedTaskScheduler because v8 synchronously waits for tasks to run.
-  base::test::ScopedAsyncTaskScheduler scoped_async_task_scheduler;
-
   // ------------------------
   // Setup resolver0
   // ------------------------

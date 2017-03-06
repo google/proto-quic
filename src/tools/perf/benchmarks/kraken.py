@@ -86,14 +86,14 @@ class _KrakenMeasurement(legacy_page_test.LegacyPageTest):
     self._power_metric.Start(page, tab)
 
   def ValidateAndMeasurePage(self, page, tab, results):
-    tab.WaitForJavaScriptCondition2(
+    tab.WaitForJavaScriptCondition(
         'document.title.indexOf("Results") != -1', timeout=700)
     tab.WaitForDocumentReadyStateToBeComplete()
 
     self._power_metric.Stop(page, tab)
     self._power_metric.AddResults(tab, results)
 
-    result_dict = json.loads(tab.EvaluateJavaScript2("""
+    result_dict = json.loads(tab.EvaluateJavaScript("""
         var formElement = document.getElementsByTagName("input")[0];
         decodeURIComponent(formElement.value.split("?")[1]);
         """))

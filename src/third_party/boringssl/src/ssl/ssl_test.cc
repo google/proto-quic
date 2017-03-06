@@ -59,6 +59,8 @@ struct CipherTest {
   const char *rule;
   // The list of expected ciphers, in order.
   std::vector<ExpectedCipher> expected;
+  // True if this cipher list should fail in strict mode.
+  bool strict_fail;
 };
 
 struct CurveTest {
@@ -81,6 +83,7 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
     // + reorders selected ciphers to the end, keeping their relative order.
     {
@@ -95,6 +98,7 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
     // ! banishes ciphers from future selections.
     {
@@ -107,6 +111,7 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, 0},
             {TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
     // Multiple masks can be ANDed in a single rule.
     {
@@ -114,6 +119,7 @@ static const CipherTest kCipherTests[] = {
         {
             {TLS1_CK_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
     // - removes selected ciphers, but preserves their order for future
     // selections. Select AES_128_GCM, but order the key exchanges RSA, DHE_RSA,
@@ -126,20 +132,37 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_DHE_RSA_WITH_AES_128_GCM_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
-    // Unknown selectors are no-ops.
+    // Unknown selectors are no-ops, except in strict mode.
     {
         "ECDHE-ECDSA-CHACHA20-POLY1305:"
         "ECDHE-RSA-CHACHA20-POLY1305:"
         "ECDHE-ECDSA-AES128-GCM-SHA256:"
         "ECDHE-RSA-AES128-GCM-SHA256:"
-        "BOGUS1:-BOGUS2:+BOGUS3:!BOGUS4",
+        "BOGUS1",
         {
             {TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 0},
             {TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        true,
+    },
+    // Unknown selectors are no-ops, except in strict mode.
+    {
+        "ECDHE-ECDSA-CHACHA20-POLY1305:"
+        "ECDHE-RSA-CHACHA20-POLY1305:"
+        "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:"
+        "-BOGUS2:+BOGUS3:!BOGUS4",
+        {
+            {TLS1_CK_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, 0},
+            {TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 0},
+            {TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0},
+            {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
+        },
+        true,
     },
     // Square brackets specify equi-preference groups.
     {
@@ -152,13 +175,14 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        false,
     },
     // @STRENGTH performs a stable strength-sort of the selected ciphers and
     // only the selected ciphers.
     {
         // To simplify things, banish all but {ECDHE_RSA,RSA} x
         // {CHACHA20,AES_256_CBC,AES_128_CBC} x SHA1.
-        "!kEDH:!AESGCM:!3DES:!SHA256:!MD5:!SHA384:"
+        "!kEDH:!AESGCM:!3DES:!SHA256:!SHA384:"
         // Order some ciphers backwards by strength.
         "ALL:-CHACHA20:-AES256:-AES128:-ALL:"
         // Select ECDHE ones and sort them by strength. Ties should resolve
@@ -174,6 +198,7 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_RSA_WITH_AES_128_SHA, 0},
             {TLS1_CK_RSA_WITH_AES_256_SHA, 0},
         },
+        false,
     },
     // Exact ciphers may not be used in multi-part rules; they are treated
     // as unknown aliases.
@@ -186,6 +211,7 @@ static const CipherTest kCipherTests[] = {
             {TLS1_CK_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, 0},
             {TLS1_CK_ECDHE_RSA_WITH_AES_128_GCM_SHA256, 0},
         },
+        true,
     },
     // SSLv3 matches everything that existed before TLS 1.2.
     {
@@ -193,6 +219,7 @@ static const CipherTest kCipherTests[] = {
         {
             {TLS1_CK_RSA_WITH_AES_128_SHA256, 0},
         },
+        false,
     },
     // TLSv1.2 matches everything added in TLS 1.2.
     {
@@ -200,14 +227,17 @@ static const CipherTest kCipherTests[] = {
         {
             {TLS1_CK_RSA_WITH_AES_128_SHA, 0},
         },
+        false,
     },
-    // The two directives have no intersection.
+    // The two directives have no intersection.  But each component is valid, so
+    // even in strict mode it is accepted.
     {
         "AES128-SHA:AES128-SHA256:!TLSv1.2+SSLv3",
         {
             {TLS1_CK_RSA_WITH_AES_128_SHA, 0},
             {TLS1_CK_RSA_WITH_AES_128_SHA256, 0},
         },
+        false,
     },
 };
 
@@ -239,8 +269,6 @@ static const char *kBadRules[] = {
 static const char *kMustNotIncludeNull[] = {
   "ALL",
   "DEFAULT",
-  "ALL:!eNULL",
-  "ALL:!NULL",
   "HIGH",
   "FIPS",
   "SHA",
@@ -309,6 +337,12 @@ static bool TestCipherRule(const CipherTest &t) {
     return false;
   }
 
+  if (!SSL_CTX_set_strict_cipher_list(ctx.get(), t.rule) != t.strict_fail) {
+    fprintf(stderr, "Unexpected strict failure result testing cipher rule '%s':"
+            " expected %d\n", t.rule, t.strict_fail);
+    return false;
+  }
+
   // Compare the two lists.
   if (sk_SSL_CIPHER_num(ctx->cipher_list->ciphers) != t.expected.size()) {
     fprintf(stderr, "Error: cipher rule '%s' evaluated to:\n", t.rule);
@@ -335,7 +369,7 @@ static bool TestRuleDoesNotIncludeNull(const char *rule) {
   if (!ctx) {
     return false;
   }
-  if (!SSL_CTX_set_cipher_list(ctx.get(), rule)) {
+  if (!SSL_CTX_set_strict_cipher_list(ctx.get(), rule)) {
     fprintf(stderr, "Error: cipher rule '%s' failed\n", rule);
     return false;
   }
@@ -634,7 +668,12 @@ static bool TestSSL_SESSIONEncoding(const char *input_b64) {
   }
 
   // Verify the SSL_SESSION decodes.
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_from_bytes(input.data(), input.size()));
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
+  bssl::UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(input.data(), input.size(), ssl_ctx.get()));
   if (!session) {
     fprintf(stderr, "SSL_SESSION_from_bytes failed\n");
     return false;
@@ -703,7 +742,12 @@ static bool TestBadSSL_SESSIONEncoding(const char *input_b64) {
   }
 
   // Verify that the SSL_SESSION fails to decode.
-  bssl::UniquePtr<SSL_SESSION> session(SSL_SESSION_from_bytes(input.data(), input.size()));
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
+  bssl::UniquePtr<SSL_SESSION> session(
+      SSL_SESSION_from_bytes(input.data(), input.size(), ssl_ctx.get()));
   if (session) {
     fprintf(stderr, "SSL_SESSION_from_bytes unexpectedly succeeded\n");
     return false;
@@ -795,8 +839,13 @@ static bssl::UniquePtr<SSL_SESSION> CreateSessionWithTicket(uint16_t version,
   if (!DecodeBase64(&der, kOpenSSLSession)) {
     return nullptr;
   }
+
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return nullptr;
+  }
   bssl::UniquePtr<SSL_SESSION> session(
-      SSL_SESSION_from_bytes(der.data(), der.size()));
+      SSL_SESSION_from_bytes(der.data(), der.size(), ssl_ctx.get()));
   if (!session) {
     return nullptr;
   }
@@ -860,7 +909,7 @@ static size_t GetClientHelloLen(uint16_t max_version, uint16_t session_version,
   // Set a one-element cipher list so the baseline ClientHello is unpadded.
   bssl::UniquePtr<SSL> ssl(SSL_new(ctx.get()));
   if (!ssl || !SSL_set_session(ssl.get(), session.get()) ||
-      !SSL_set_cipher_list(ssl.get(), "ECDHE-RSA-AES128-GCM-SHA256") ||
+      !SSL_set_strict_cipher_list(ssl.get(), "ECDHE-RSA-AES128-GCM-SHA256") ||
       !SSL_set_max_proto_version(ssl.get(), max_version)) {
     return 0;
   }
@@ -989,7 +1038,11 @@ static bool ExpectCache(SSL_CTX *ctx,
 }
 
 static bssl::UniquePtr<SSL_SESSION> CreateTestSession(uint32_t number) {
-  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new());
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return nullptr;
+  }
+  bssl::UniquePtr<SSL_SESSION> ret(SSL_SESSION_new(ssl_ctx.get()));
   if (!ret) {
     return nullptr;
   }
@@ -1484,8 +1537,7 @@ TEST(SSLTest, SessionDuplication) {
   ASSERT_TRUE(SSL_SESSION_to_bytes(session1.get(), &s1_bytes, &s1_len));
   bssl::UniquePtr<uint8_t> free_s1(s1_bytes);
 
-  ASSERT_EQ(s0_len, s1_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(s0_bytes, s1_bytes, s0_len));
+  EXPECT_EQ(Bytes(s0_bytes, s0_len), Bytes(s1_bytes, s1_len));
 }
 
 static void ExpectFDs(const SSL *ssl, int rfd, int wfd) {
@@ -1742,7 +1794,7 @@ static bool ClientHelloMatches(uint16_t version, const uint8_t *expected,
       !SSL_CTX_set_max_proto_version(ctx.get(), version) ||
       // Our default cipher list varies by CPU capabilities, so manually place
       // the ChaCha20 ciphers in front.
-      !SSL_CTX_set_cipher_list(ctx.get(), "CHACHA20:ALL")) {
+      !SSL_CTX_set_strict_cipher_list(ctx.get(), "CHACHA20:ALL")) {
     return false;
   }
 
@@ -2166,8 +2218,12 @@ static bool GetServerTicketTime(long *out, const SSL_SESSION *session) {
   len = static_cast<size_t>(len1 + len2);
 #endif
 
+  bssl::UniquePtr<SSL_CTX> ssl_ctx(SSL_CTX_new(TLS_method()));
+  if (!ssl_ctx) {
+    return false;
+  }
   bssl::UniquePtr<SSL_SESSION> server_session(
-      SSL_SESSION_from_bytes(plaintext.get(), len));
+      SSL_SESSION_from_bytes(plaintext.get(), len, ssl_ctx.get()));
   if (!server_session) {
     return false;
   }
@@ -2393,6 +2449,9 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   // Test that switching the |SSL_CTX| at the SNI callback behaves correctly.
   static const uint16_t kECDSAWithSHA256 = SSL_SIGN_ECDSA_SECP256R1_SHA256;
 
+  static const uint8_t kSCTList[] = {0, 6, 0, 4, 5, 6, 7, 8};
+  static const uint8_t kOCSPResponse[] = {1, 2, 3, 4};
+
   bssl::UniquePtr<SSL_CTX> server_ctx(SSL_CTX_new(method));
   bssl::UniquePtr<SSL_CTX> server_ctx2(SSL_CTX_new(method));
   bssl::UniquePtr<SSL_CTX> client_ctx(SSL_CTX_new(method));
@@ -2401,6 +2460,10 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
       !SSL_CTX_use_PrivateKey(server_ctx.get(), key.get()) ||
       !SSL_CTX_use_certificate(server_ctx2.get(), cert2.get()) ||
       !SSL_CTX_use_PrivateKey(server_ctx2.get(), key2.get()) ||
+      !SSL_CTX_set_signed_cert_timestamp_list(server_ctx2.get(), kSCTList,
+                                              sizeof(kSCTList)) ||
+      !SSL_CTX_set_ocsp_response(server_ctx2.get(), kOCSPResponse,
+                                 sizeof(kOCSPResponse)) ||
       // Historically signing preferences would be lost in some cases with the
       // SNI callback, which triggers the TLS 1.2 SHA-1 default. To ensure
       // this doesn't happen when |version| is TLS 1.2, configure the private
@@ -2419,6 +2482,9 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   SSL_CTX_set_tlsext_servername_callback(server_ctx.get(), SwitchContext);
   SSL_CTX_set_tlsext_servername_arg(server_ctx.get(), server_ctx2.get());
 
+  SSL_CTX_enable_signed_cert_timestamps(client_ctx.get());
+  SSL_CTX_enable_ocsp_stapling(client_ctx.get());
+
   bssl::UniquePtr<SSL> client, server;
   if (!ConnectClientAndServer(&client, &server, client_ctx.get(),
                               server_ctx.get(), nullptr)) {
@@ -2430,6 +2496,22 @@ static bool TestSNICallback(bool is_dtls, const SSL_METHOD *method,
   bssl::UniquePtr<X509> peer(SSL_get_peer_certificate(client.get()));
   if (!peer || X509_cmp(peer.get(), cert2.get()) != 0) {
     fprintf(stderr, "Incorrect certificate received.\n");
+    return false;
+  }
+
+  // The client should have received |server_ctx2|'s SCT list.
+  const uint8_t *data;
+  size_t len;
+  SSL_get0_signed_cert_timestamp_list(client.get(), &data, &len);
+  if (Bytes(kSCTList) != Bytes(data, len)) {
+    fprintf(stderr, "Incorrect SCT list received.\n");
+    return false;
+  }
+
+  // The client should have received |server_ctx2|'s OCSP response.
+  SSL_get0_ocsp_response(client.get(), &data, &len);
+  if (Bytes(kOCSPResponse) != Bytes(data, len)) {
+    fprintf(stderr, "Incorrect OCSP response received.\n");
     return false;
   }
 
@@ -3053,10 +3135,8 @@ TEST(SSLTest, GetCertificate) {
   bssl::UniquePtr<uint8_t> free_der3(der3);
 
   // They must also encode identically.
-  ASSERT_EQ(der2_len, der_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(der, der2, static_cast<size_t>(der_len)));
-  ASSERT_EQ(der3_len, der_len);
-  EXPECT_EQ(0, OPENSSL_memcmp(der, der3, static_cast<size_t>(der_len)));
+  EXPECT_EQ(Bytes(der, der_len), Bytes(der2, der2_len));
+  EXPECT_EQ(Bytes(der, der_len), Bytes(der3, der3_len));
 }
 
 // TODO(davidben): Convert this file to GTest properly.

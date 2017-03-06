@@ -53,7 +53,7 @@ class NET_EXPORT_PRIVATE SSLClientAuthCache : public CertDatabase::Observer {
   void Remove(const HostPortPair& server);
 
   // CertDatabase::Observer methods:
-  void OnCertDBChanged(const X509Certificate* cert) override;
+  void OnCertDBChanged() override;
 
  private:
   typedef HostPortPair AuthCacheKey;

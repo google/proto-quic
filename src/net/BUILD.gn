@@ -397,9 +397,6 @@ component("net") {
       "base/cache_type.h",
       "base/chunked_upload_data_stream.cc",
       "base/chunked_upload_data_stream.h",
-      "base/crypto_module.h",
-      "base/crypto_module_nss.cc",
-      "base/crypto_module_openssl.cc",
       "base/data_url.cc",
       "base/data_url.h",
       "base/elements_upload_data_stream.cc",
@@ -545,6 +542,8 @@ component("net") {
       "cert/ev_root_ca_metadata.h",
       "cert/internal/cert_issuer_source_nss.cc",
       "cert/internal/cert_issuer_source_nss.h",
+      "cert/internal/trust_store_mac.cc",
+      "cert/internal/trust_store_mac.h",
       "cert/internal/trust_store_nss.cc",
       "cert/internal/trust_store_nss.h",
       "cert/jwk_serializer.cc",
@@ -1262,10 +1261,6 @@ component("net") {
       "quic/core/quic_headers_stream.cc",
       "quic/core/quic_headers_stream.h",
       "quic/core/quic_iovector.h",
-      "quic/core/quic_multipath_received_packet_manager.cc",
-      "quic/core/quic_multipath_received_packet_manager.h",
-      "quic/core/quic_multipath_transmissions_map.cc",
-      "quic/core/quic_multipath_transmissions_map.h",
       "quic/core/quic_one_block_arena.h",
       "quic/core/quic_packet_creator.cc",
       "quic/core/quic_packet_creator.h",
@@ -1326,7 +1321,9 @@ component("net") {
       "quic/platform/api/quic_clock.cc",
       "quic/platform/api/quic_clock.h",
       "quic/platform/api/quic_containers.h",
+      "quic/platform/api/quic_endian.h",
       "quic/platform/api/quic_export.h",
+      "quic/platform/api/quic_flag_utils.h",
       "quic/platform/api/quic_hostname_utils.cc",
       "quic/platform/api/quic_hostname_utils.h",
       "quic/platform/api/quic_ip_address.cc",
@@ -1353,7 +1350,9 @@ component("net") {
       "quic/platform/impl/quic_chromium_clock.cc",
       "quic/platform/impl/quic_chromium_clock.h",
       "quic/platform/impl/quic_containers_impl.h",
+      "quic/platform/impl/quic_endian_impl.h",
       "quic/platform/impl/quic_export_impl.h",
+      "quic/platform/impl/quic_flag_utils_impl.h",
       "quic/platform/impl/quic_hostname_utils_impl.cc",
       "quic/platform/impl/quic_hostname_utils_impl.h",
       "quic/platform/impl/quic_ip_address_impl.cc",
@@ -1687,7 +1686,6 @@ component("net") {
 
     if (!use_openssl_certs) {
       sources -= [
-        "base/crypto_module_openssl.cc",
         "cert/cert_database_openssl.cc",
         "cert/cert_verify_proc_openssl.cc",
         "cert/cert_verify_proc_openssl.h",
@@ -1720,7 +1718,6 @@ component("net") {
 
     if (!use_nss_certs) {
       sources -= [
-        "base/crypto_module_nss.cc",
         "cert/cert_database_nss.cc",
         "cert/internal/cert_issuer_source_nss.cc",
         "cert/internal/cert_issuer_source_nss.h",
@@ -2598,6 +2595,10 @@ if (!is_ios && !is_android) {
       "//build/config/sanitizers:deps",
       "//build/win:default_exe_manifest",
     ]
+
+    if (is_mac) {
+      libs = [ "Security.framework" ]
+    }
   }
 
   executable("crash_cache") {
@@ -2685,38 +2686,6 @@ if (!is_ios && !is_android) {
     testonly = true
     sources = [
       "spdy/fuzzing/hpack_example_generator.cc",
-    ]
-
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    configs += [ "//build/config/compiler:no_size_t_to_int_warning" ]
-    deps = [
-      ":net",
-      "//base",
-      "//build/config/sanitizers:deps",
-      "//build/win:default_exe_manifest",
-    ]
-  }
-
-  executable("hpack_fuzz_mutator") {
-    testonly = true
-    sources = [
-      "spdy/fuzzing/hpack_fuzz_mutator.cc",
-    ]
-
-    # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
-    configs += [ "//build/config/compiler:no_size_t_to_int_warning" ]
-    deps = [
-      ":net",
-      "//base",
-      "//build/config/sanitizers:deps",
-      "//build/win:default_exe_manifest",
-    ]
-  }
-
-  executable("hpack_fuzz_wrapper") {
-    testonly = true
-    sources = [
-      "spdy/fuzzing/hpack_fuzz_wrapper.cc",
     ]
 
     # TODO(jschuh): crbug.com/167187 fix size_t to int truncations.
@@ -4149,6 +4118,7 @@ test("net_unittests") {
     "cert/internal/test_helpers.cc",
     "cert/internal/test_helpers.h",
     "cert/internal/trust_store_collection_unittest.cc",
+    "cert/internal/trust_store_mac_unittest.cc",
     "cert/internal/trust_store_nss_unittest.cc",
     "cert/internal/verify_certificate_chain_pkits_unittest.cc",
     "cert/internal/verify_certificate_chain_typed_unittest.h",
@@ -4370,6 +4340,7 @@ test("net_unittests") {
     "log/trace_net_log_observer_unittest.cc",
     "log/write_to_file_net_log_observer_unittest.cc",
     "nqe/effective_connection_type_unittest.cc",
+    "nqe/event_creator_unittest.cc",
     "nqe/network_qualities_prefs_manager_unittest.cc",
     "nqe/network_quality_estimator_unittest.cc",
     "nqe/network_quality_store_unittest.cc",
@@ -4507,6 +4478,7 @@ test("net_unittests") {
     "quic/core/quic_versions_test.cc",
     "quic/core/quic_write_blocked_list_test.cc",
     "quic/core/spdy_utils_test.cc",
+    "quic/platform/api/quic_endian_test.cc",
     "quic/platform/api/quic_estimate_memory_usage.h",
     "quic/platform/api/quic_hostname_utils_test.cc",
     "quic/platform/api/quic_lru_cache_test.cc",
@@ -4558,8 +4530,6 @@ test("net_unittests") {
     "quic/test_tools/quic_packet_creator_peer.h",
     "quic/test_tools/quic_packet_generator_peer.cc",
     "quic/test_tools/quic_packet_generator_peer.h",
-    "quic/test_tools/quic_received_packet_manager_peer.cc",
-    "quic/test_tools/quic_received_packet_manager_peer.h",
     "quic/test_tools/quic_sent_packet_manager_peer.cc",
     "quic/test_tools/quic_sent_packet_manager_peer.h",
     "quic/test_tools/quic_session_peer.cc",

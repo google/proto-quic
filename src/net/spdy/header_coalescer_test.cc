@@ -7,6 +7,7 @@
 #include <string>
 
 #include "base/strings/string_piece.h"
+#include "base/strings/stringprintf.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -76,5 +77,65 @@ TEST_F(HeaderCoalescerTest, CRLFInHeaderValue) {
   EXPECT_TRUE(header_coalescer_.error_seen());
 }
 
+TEST_F(HeaderCoalescerTest, HeaderNameNotValid) {
+  base::StringPiece header_name("\x01\x7F\x80\xff");
+  header_coalescer_.OnHeader(header_name, "foo");
+  EXPECT_TRUE(header_coalescer_.error_seen());
+}
+
+// RFC 7230 Section 3.2. Valid header name is defined as:
+// field-name     = token
+// token          = 1*tchar
+// tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
+//                  "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
+TEST_F(HeaderCoalescerTest, HeaderNameValid) {
+  base::StringPiece header_name(
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&'*+-."
+      "^_`|~");
+  header_coalescer_.OnHeader(header_name, "foo");
+  EXPECT_FALSE(header_coalescer_.error_seen());
+  SpdyHeaderBlock header_block = header_coalescer_.release_headers();
+  EXPECT_THAT(header_block, ElementsAre(Pair(header_name, "foo")));
+}
+
+// RFC 7230 Section 3.2. Valid header value is defined as:
+// field-value    = *( field-content / obs-fold )
+// field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+// field-vchar    = VCHAR / obs-text
+//
+// obs-fold       = CRLF 1*( SP / HTAB )
+//                ; obsolete line folding
+//                ; see Section 3.2.4
+TEST_F(HeaderCoalescerTest, HeaderValueValid) {
+  // Add two headers, one with an HTAB and one with a SP.
+  std::vector<char> header_values[2];
+  char prefixes[] = {'\t', ' '};
+  for (int i = 0; i < 2; ++i) {
+    header_values[i] = std::vector<char>();
+    header_values[i].push_back(prefixes[i]);
+    // obs-text. From 0x80 to 0xff.
+    for (int j = 0x80; j <= 0xff; ++j) {
+      header_values[i].push_back(j);
+    }
+    // vchar
+    for (int j = 0x21; j <= 0x7E; ++j) {
+      header_values[i].push_back(j);
+    }
+    header_coalescer_.OnHeader(
+        base::StringPrintf("%s_%d", "foo", i),
+        base::StringPiece(header_values[i].data(), header_values[i].size()));
+    EXPECT_FALSE(header_coalescer_.error_seen());
+  }
+  SpdyHeaderBlock header_block = header_coalescer_.release_headers();
+  EXPECT_THAT(header_block,
+              ElementsAre(Pair("foo_0",
+                               base::StringPiece(header_values[0].data(),
+                                                 header_values[0].size())),
+                          Pair("foo_1",
+                               base::StringPiece(header_values[1].data(),
+                                                 header_values[1].size()))));
+}
+
 }  // namespace test
+
 }  // namespace net

@@ -332,6 +332,7 @@ _x86_64_AES_encrypt_compact:
 .type	asm_AES_encrypt,@function
 .hidden	asm_AES_encrypt
 asm_AES_encrypt:
+	movq	%rsp,%rax
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -340,7 +341,6 @@ asm_AES_encrypt:
 	pushq	%r15
 
 
-	movq	%rsp,%r10
 	leaq	-63(%rdx),%rcx
 	andq	$-64,%rsp
 	subq	%rsp,%rcx
@@ -350,7 +350,7 @@ asm_AES_encrypt:
 	subq	$32,%rsp
 
 	movq	%rsi,16(%rsp)
-	movq	%r10,24(%rsp)
+	movq	%rax,24(%rsp)
 .Lenc_prologue:
 
 	movq	%rdx,%r15
@@ -382,13 +382,13 @@ asm_AES_encrypt:
 	movl	%ecx,8(%r9)
 	movl	%edx,12(%r9)
 
-	movq	(%rsi),%r15
-	movq	8(%rsi),%r14
-	movq	16(%rsi),%r13
-	movq	24(%rsi),%r12
-	movq	32(%rsi),%rbp
-	movq	40(%rsi),%rbx
-	leaq	48(%rsi),%rsp
+	movq	-48(%rsi),%r15
+	movq	-40(%rsi),%r14
+	movq	-32(%rsi),%r13
+	movq	-24(%rsi),%r12
+	movq	-16(%rsi),%rbp
+	movq	-8(%rsi),%rbx
+	leaq	(%rsi),%rsp
 .Lenc_epilogue:
 	.byte	0xf3,0xc3
 .size	asm_AES_encrypt,.-asm_AES_encrypt
@@ -778,6 +778,7 @@ _x86_64_AES_decrypt_compact:
 .type	asm_AES_decrypt,@function
 .hidden	asm_AES_decrypt
 asm_AES_decrypt:
+	movq	%rsp,%rax
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -786,7 +787,6 @@ asm_AES_decrypt:
 	pushq	%r15
 
 
-	movq	%rsp,%r10
 	leaq	-63(%rdx),%rcx
 	andq	$-64,%rsp
 	subq	%rsp,%rcx
@@ -796,7 +796,7 @@ asm_AES_decrypt:
 	subq	$32,%rsp
 
 	movq	%rsi,16(%rsp)
-	movq	%r10,24(%rsp)
+	movq	%rax,24(%rsp)
 .Ldec_prologue:
 
 	movq	%rdx,%r15
@@ -830,13 +830,13 @@ asm_AES_decrypt:
 	movl	%ecx,8(%r9)
 	movl	%edx,12(%r9)
 
-	movq	(%rsi),%r15
-	movq	8(%rsi),%r14
-	movq	16(%rsi),%r13
-	movq	24(%rsi),%r12
-	movq	32(%rsi),%rbp
-	movq	40(%rsi),%rbx
-	leaq	48(%rsi),%rsp
+	movq	-48(%rsi),%r15
+	movq	-40(%rsi),%r14
+	movq	-32(%rsi),%r13
+	movq	-24(%rsi),%r12
+	movq	-16(%rsi),%rbp
+	movq	-8(%rsi),%rbx
+	leaq	(%rsi),%rsp
 .Ldec_epilogue:
 	.byte	0xf3,0xc3
 .size	asm_AES_decrypt,.-asm_AES_decrypt
@@ -1313,10 +1313,9 @@ asm_AES_cbc_encrypt:
 	movl	%r9d,%r9d
 
 	leaq	.LAES_Te(%rip),%r14
+	leaq	.LAES_Td(%rip),%r10
 	cmpq	$0,%r9
-	jne	.Lcbc_picked_te
-	leaq	.LAES_Td(%rip),%r14
-.Lcbc_picked_te:
+	cmoveq	%r10,%r14
 
 	movl	OPENSSL_ia32cap_P(%rip),%r10d
 	cmpq	$512,%rdx

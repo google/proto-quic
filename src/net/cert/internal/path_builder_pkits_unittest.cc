@@ -12,6 +12,7 @@
 #include "net/cert/internal/trust_store_in_memory.h"
 #include "net/cert/internal/verify_certificate_chain.h"
 #include "net/der/input.h"
+#include "third_party/boringssl/src/include/openssl/pool.h"
 
 // Disable tests that require DSA signatures (DSA signatures are intentionally
 // unsupported). Custom versions of the DSA tests are defined below which expect
@@ -59,7 +60,11 @@ class PathBuilderPkitsTestDelegate {
     ParsedCertificateList certs;
     for (const std::string& der : cert_ders) {
       CertErrors errors;
-      if (!ParsedCertificate::CreateAndAddToVector(der, {}, &certs, &errors)) {
+      if (!ParsedCertificate::CreateAndAddToVector(
+              bssl::UniquePtr<CRYPTO_BUFFER>(CRYPTO_BUFFER_new(
+                  reinterpret_cast<const uint8_t*>(der.data()), der.size(),
+                  nullptr)),
+              {}, &certs, &errors)) {
         ADD_FAILURE() << "ParseCertificate::CreateAndAddToVector() failed:\n"
                       << errors.ToDebugString();
         return false;

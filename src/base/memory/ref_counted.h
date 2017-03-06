@@ -97,9 +97,9 @@ class BASE_EXPORT RefCountedThreadSafeBase {
   bool Release() const;
 
  private:
-  mutable AtomicRefCount ref_count_;
+  mutable AtomicRefCount ref_count_ = 0;
 #if DCHECK_IS_ON()
-  mutable bool in_dtor_;
+  mutable bool in_dtor_ = false;
 #endif
 
   DISALLOW_COPY_AND_ASSIGN(RefCountedThreadSafeBase);

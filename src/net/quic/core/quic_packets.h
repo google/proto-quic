@@ -86,7 +86,6 @@ struct QUIC_EXPORT_PRIVATE QuicPacketHeader {
 
   QuicPacketPublicHeader public_header;
   QuicPacketNumber packet_number;
-  QuicPathId path_id;
 };
 
 struct QUIC_EXPORT_PRIVATE QuicPublicResetPacket {
@@ -212,8 +211,7 @@ class QUIC_EXPORT_PRIVATE QuicReceivedPacket : public QuicEncryptedPacket {
 };
 
 struct QUIC_EXPORT_PRIVATE SerializedPacket {
-  SerializedPacket(QuicPathId path_id,
-                   QuicPacketNumber packet_number,
+  SerializedPacket(QuicPacketNumber packet_number,
                    QuicPacketNumberLength packet_number_length,
                    const char* encrypted_buffer,
                    QuicPacketLength encrypted_length,
@@ -231,7 +229,6 @@ struct QUIC_EXPORT_PRIVATE SerializedPacket {
   //  0: no padding
   //  otherwise: only pad up to num_padding_bytes bytes
   int16_t num_padding_bytes;
-  QuicPathId path_id;
   QuicPacketNumber packet_number;
   QuicPacketNumberLength packet_number_length;
   EncryptionLevel encryption_level;
@@ -239,6 +236,9 @@ struct QUIC_EXPORT_PRIVATE SerializedPacket {
   bool has_stop_waiting;
   TransmissionType transmission_type;
   QuicPacketNumber original_packet_number;
+  // The largest acked of the AckFrame in this packet if has_ack is true,
+  // 0 otherwise.
+  QuicPacketNumber largest_acked;
 
   // Optional notifiers which will be informed when this packet has been ACKed.
   std::list<AckListenerWrapper> listeners;

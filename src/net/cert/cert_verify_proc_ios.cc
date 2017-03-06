@@ -266,12 +266,9 @@ int CertVerifyProcIOS::VerifyInternal(
 
   GetCertChainInfo(final_chain, verify_result);
 
-  // Perform hostname verification independent of SecTrustEvaluate.
-  if (!verify_result->verified_cert->VerifyNameMatch(
-          hostname, &verify_result->common_name_fallback_used)) {
-    verify_result->cert_status |= CERT_STATUS_COMMON_NAME_INVALID;
-  }
-
+  // iOS lacks the ability to distinguish built-in versus non-built-in roots,
+  // so opt to 'fail open' of any restrictive policies that apply to built-in
+  // roots.
   verify_result->is_issued_by_known_root = false;
 
   if (IsCertStatusError(verify_result->cert_status))

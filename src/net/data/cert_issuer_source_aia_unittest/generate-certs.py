@@ -85,30 +85,39 @@ section.set_property('caIssuers;URI.1', 'http://url-for-aia2/I2.foo')
 # target certs
 
 target = common.create_end_entity_certificate('target', i_base)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_one_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_no_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_no_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_two_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_two_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_three_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_three_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_six_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_six_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_file_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_file_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_invalid_url_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(), 'target_invalid_url_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_file_and_http_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(),
                             'target_file_and_http_aia.pem')
 
 target = common.create_end_entity_certificate('target', i_invalid_and_http_aia)
+target.get_extensions().set_property('subjectAltName', 'DNS:target')
 common.write_string_to_file(target.get_cert_pem(),
                             'target_invalid_and_http_aia.pem')

@@ -6,6 +6,7 @@
 #define BASE_THREADING_THREAD_TASK_RUNNER_HANDLE_H_
 
 #include "base/base_export.h"
+#include "base/callback_helpers.h"
 #include "base/macros.h"
 #include "base/memory/ref_counted.h"
 #include "base/single_thread_task_runner.h"
@@ -25,6 +26,17 @@ class BASE_EXPORT ThreadTaskRunnerHandle {
   // Returns true if the SingleThreadTaskRunner is already created for
   // the current thread.
   static bool IsSet();
+
+  // Overrides ThreadTaskRunnerHandle::Get()'s |task_runner_| to point at
+  // |overriding_task_runner| until the returned ScopedClosureRunner goes out of
+  // scope (instantiates a ThreadTaskRunnerHandle for that scope if |!IsSet()|).
+  // Nested overrides are allowed but callers must ensure the
+  // ScopedClosureRunners expire in LIFO (stack) order. Note: nesting
+  // ThreadTaskRunnerHandles isn't generally desired but it's useful in unit
+  // tests where multiple task runners can share the main thread for simplicity
+  // and determinism.
+  static ScopedClosureRunner OverrideForTesting(
+      scoped_refptr<SingleThreadTaskRunner> overriding_task_runner);
 
   // Binds |task_runner| to the current thread. |task_runner| must belong
   // to the current thread for this to succeed.

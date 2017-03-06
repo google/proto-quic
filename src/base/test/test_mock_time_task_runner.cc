@@ -8,6 +8,7 @@
 #include "base/macros.h"
 #include "base/memory/ptr_util.h"
 #include "base/memory/ref_counted.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/clock.h"
 #include "base/time/tick_clock.h"
 
@@ -120,6 +121,16 @@ TestMockTimeTaskRunner::TestOrderedPendingTask::operator=(
 
 // TestMockTimeTaskRunner -----------------------------------------------------
 
+// TODO(gab): This should also set the SequenceToken for the current thread.
+// Ref. TestMockTimeTaskRunner::RunsTasksOnCurrentThread().
+TestMockTimeTaskRunner::ScopedContext::ScopedContext(
+    scoped_refptr<TestMockTimeTaskRunner> scope)
+    : on_destroy_(ThreadTaskRunnerHandle::OverrideForTesting(scope)) {
+  scope->RunUntilIdle();
+}
+
+TestMockTimeTaskRunner::ScopedContext::~ScopedContext() = default;
+
 bool TestMockTimeTaskRunner::TemporalOrder::operator()(
     const TestOrderedPendingTask& first_task,
     const TestOrderedPendingTask& second_task) const {
@@ -186,6 +197,7 @@ std::unique_ptr<TickClock> TestMockTimeTaskRunner::GetMockTickClock() const {
 }
 
 std::deque<TestPendingTask> TestMockTimeTaskRunner::TakePendingTasks() {
+  AutoLock scoped_lock(tasks_lock_);
   std::deque<TestPendingTask> tasks;
   while (!tasks_.empty()) {
     // It's safe to remove const and consume |task| here, since |task| is not
@@ -213,6 +225,9 @@ TimeDelta TestMockTimeTaskRunner::NextPendingTaskDelay() const {
                         : tasks_.top().GetTimeToRun() - now_ticks_;
 }
 
+// TODO(gab): Combine |thread_checker_| with a SequenceToken to differentiate
+// between tasks running in the scope of this TestMockTimeTaskRunner and other
+// task runners sharing this thread. http://crbug.com/631186
 bool TestMockTimeTaskRunner::RunsTasksOnCurrentThread() const {
   return thread_checker_.CalledOnValidThread();
 }
@@ -252,7 +267,17 @@ void TestMockTimeTaskRunner::OnAfterTaskRun() {
 }
 
 void TestMockTimeTaskRunner::ProcessAllTasksNoLaterThan(TimeDelta max_delta) {
+  DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_GE(max_delta, TimeDelta());
+
+  // Multiple test task runners can share the same thread for determinism in
+  // unit tests. Make sure this TestMockTimeTaskRunner's tasks run in its scope.
+  ScopedClosureRunner undo_override;
+  if (!ThreadTaskRunnerHandle::IsSet() ||
+      ThreadTaskRunnerHandle::Get() != this) {
+    undo_override = ThreadTaskRunnerHandle::OverrideForTesting(this);
+  }
+
   const TimeTicks original_now_ticks = now_ticks_;
   while (!IsElapsingStopped()) {
     OnBeforeSelectingTask();
@@ -269,6 +294,7 @@ void TestMockTimeTaskRunner::ProcessAllTasksNoLaterThan(TimeDelta max_delta) {
 }
 
 void TestMockTimeTaskRunner::ForwardClocksUntilTickTime(TimeTicks later_ticks) {
+  DCHECK(thread_checker_.CalledOnValidThread());
   if (later_ticks <= now_ticks_)
     return;
 

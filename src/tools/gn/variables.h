@@ -239,6 +239,10 @@ extern const char kPrecompiledHeader[];
 extern const char kPrecompiledHeader_HelpShort[];
 extern const char kPrecompiledHeader_Help[];
 
+extern const char kPrecompiledHeaderType[];
+extern const char kPrecompiledHeaderType_HelpShort[];
+extern const char kPrecompiledHeaderType_Help[];
+
 extern const char kPrecompiledSource[];
 extern const char kPrecompiledSource_HelpShort[];
 extern const char kPrecompiledSource_Help[];

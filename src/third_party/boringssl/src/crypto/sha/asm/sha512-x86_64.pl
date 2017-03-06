@@ -34,7 +34,7 @@
 # level parallelism, on a given CPU implementation in this case.
 #
 # Special note on Intel EM64T. While Opteron CPU exhibits perfect
-# perfromance ratio of 1.5 between 64- and 32-bit flavors [see above],
+# performance ratio of 1.5 between 64- and 32-bit flavors [see above],
 # [currently available] EM64T CPUs apparently are far from it. On the
 # contrary, 64-bit version, sha512_block, is ~30% *slower* than 32-bit
 # sha256_block:-( This is presumably because 64-bit shifts/rotates
@@ -86,12 +86,14 @@
 # Sandy Bridge	17.4	14.2(+23%)  11.6(+50%(**))  11.2    8.10(+38%(**))
 # Ivy Bridge	12.6	10.5(+20%)  10.3(+22%)	    8.17    7.22(+13%)
 # Haswell	12.2	9.28(+31%)  7.80(+56%)	    7.66    5.40(+42%)
+# Skylake	11.4	9.03(+26%)  7.70(+48%)      7.25    5.20(+40%)
 # Bulldozer	21.1	13.6(+54%)  13.6(+54%(***)) 13.5    8.58(+57%)
 # VIA Nano	23.0	16.5(+39%)  -		    14.7    -
 # Atom		23.0	18.9(+22%)  -		    14.7    -
 # Silvermont	27.4	20.6(+33%)  -               17.5    -
+# Goldmont	18.9	14.3(+32%)  4.16(+350%)     12.0    -
 #
-# (*)	whichever best applicable;
+# (*)	whichever best applicable, including SHAEXT;
 # (**)	switch from ror to shrd stands for fair share of improvement;
 # (***)	execution time is fully determined by remaining integer-only
 #	part, body_00_15; reducing the amount of SIMD instructions
@@ -284,13 +286,13 @@ $code.=<<___ if ($SZ==4);
 	jnz	.Lssse3_shortcut
 ___
 $code.=<<___;
+	mov	%rsp,%rax		# copy %rsp
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
-	mov	%rsp,%r11		# copy %rsp
 	shl	\$4,%rdx		# num*16
 	sub	\$$framesz,%rsp
 	lea	($inp,%rdx,$SZ),%rdx	# inp+num*16*$SZ
@@ -298,7 +300,7 @@ $code.=<<___;
 	mov	$ctx,$_ctx		# save ctx, 1st arg
 	mov	$inp,$_inp		# save inp, 2nd arh
 	mov	%rdx,$_end		# save end pointer, "3rd" arg
-	mov	%r11,$_rsp		# save copy of %rsp
+	mov	%rax,$_rsp		# save copy of %rsp
 .Lprologue:
 
 	mov	$SZ*0($ctx),$A
@@ -365,13 +367,13 @@ $code.=<<___;
 	jb	.Lloop
 
 	mov	$_rsp,%rsi
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lepilogue:
 	ret
 .size	$func,.-$func
@@ -744,13 +746,13 @@ $code.=<<___;
 .align	64
 ${func}_ssse3:
 .Lssse3_shortcut:
+	mov	%rsp,%rax		# copy %rsp
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
-	mov	%rsp,%r11		# copy %rsp
 	shl	\$4,%rdx		# num*16
 	sub	\$`$framesz+$win64*16*4`,%rsp
 	lea	($inp,%rdx,$SZ),%rdx	# inp+num*16*$SZ
@@ -758,7 +760,7 @@ ${func}_ssse3:
 	mov	$ctx,$_ctx		# save ctx, 1st arg
 	mov	$inp,$_inp		# save inp, 2nd arh
 	mov	%rdx,$_end		# save end pointer, "3rd" arg
-	mov	%r11,$_rsp		# save copy of %rsp
+	mov	%rax,$_rsp		# save copy of %rsp
 ___
 $code.=<<___ if ($win64);
 	movaps	%xmm6,16*$SZ+32(%rsp)
@@ -1065,13 +1067,13 @@ $code.=<<___ if ($win64);
 	movaps	16*$SZ+80(%rsp),%xmm9
 ___
 $code.=<<___;
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lepilogue_ssse3:
 	ret
 .size	${func}_ssse3,.-${func}_ssse3
@@ -1088,13 +1090,13 @@ $code.=<<___;
 .align	64
 ${func}_xop:
 .Lxop_shortcut:
+	mov	%rsp,%rax		# copy %rsp
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
-	mov	%rsp,%r11		# copy %rsp
 	shl	\$4,%rdx		# num*16
 	sub	\$`$framesz+$win64*16*($SZ==4?4:6)`,%rsp
 	lea	($inp,%rdx,$SZ),%rdx	# inp+num*16*$SZ
@@ -1102,7 +1104,7 @@ ${func}_xop:
 	mov	$ctx,$_ctx		# save ctx, 1st arg
 	mov	$inp,$_inp		# save inp, 2nd arh
 	mov	%rdx,$_end		# save end pointer, "3rd" arg
-	mov	%r11,$_rsp		# save copy of %rsp
+	mov	%rax,$_rsp		# save copy of %rsp
 ___
 $code.=<<___ if ($win64);
 	movaps	%xmm6,16*$SZ+32(%rsp)
@@ -1442,13 +1444,13 @@ $code.=<<___ if ($win64 && $SZ>4);
 	movaps	16*$SZ+112(%rsp),%xmm11
 ___
 $code.=<<___;
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lepilogue_xop:
 	ret
 .size	${func}_xop,.-${func}_xop
@@ -1464,13 +1466,13 @@ $code.=<<___;
 .align	64
 ${func}_avx:
 .Lavx_shortcut:
+	mov	%rsp,%rax		# copy %rsp
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
-	mov	%rsp,%r11		# copy %rsp
 	shl	\$4,%rdx		# num*16
 	sub	\$`$framesz+$win64*16*($SZ==4?4:6)`,%rsp
 	lea	($inp,%rdx,$SZ),%rdx	# inp+num*16*$SZ
@@ -1478,7 +1480,7 @@ ${func}_avx:
 	mov	$ctx,$_ctx		# save ctx, 1st arg
 	mov	$inp,$_inp		# save inp, 2nd arh
 	mov	%rdx,$_end		# save end pointer, "3rd" arg
-	mov	%r11,$_rsp		# save copy of %rsp
+	mov	%rax,$_rsp		# save copy of %rsp
 ___
 $code.=<<___ if ($win64);
 	movaps	%xmm6,16*$SZ+32(%rsp)
@@ -1750,13 +1752,13 @@ $code.=<<___ if ($win64 && $SZ>4);
 	movaps	16*$SZ+112(%rsp),%xmm11
 ___
 $code.=<<___;
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lepilogue_avx:
 	ret
 .size	${func}_avx,.-${func}_avx
@@ -1766,7 +1768,7 @@ if ($avx>1) {{
 ######################################################################
 # AVX2+BMI code path
 #
-my $a5=$SZ==4?"%esi":"%rsi";	# zap $inp 
+my $a5=$SZ==4?"%esi":"%rsi";	# zap $inp
 my $PUSH8=8*2*$SZ;
 use integer;
 
@@ -1815,13 +1817,13 @@ $code.=<<___;
 .align	64
 ${func}_avx2:
 .Lavx2_shortcut:
+	mov	%rsp,%rax		# copy %rsp
 	push	%rbx
 	push	%rbp
 	push	%r12
 	push	%r13
 	push	%r14
 	push	%r15
-	mov	%rsp,%r11		# copy %rsp
 	sub	\$`2*$SZ*$rounds+4*8+$win64*16*($SZ==4?4:6)`,%rsp
 	shl	\$4,%rdx		# num*16
 	and	\$-256*$SZ,%rsp		# align stack frame
@@ -1830,7 +1832,7 @@ ${func}_avx2:
 	mov	$ctx,$_ctx		# save ctx, 1st arg
 	mov	$inp,$_inp		# save inp, 2nd arh
 	mov	%rdx,$_end		# save end pointer, "3rd" arg
-	mov	%r11,$_rsp		# save copy of %rsp
+	mov	%rax,$_rsp		# save copy of %rsp
 ___
 $code.=<<___ if ($win64);
 	movaps	%xmm6,16*$SZ+32(%rsp)
@@ -2124,13 +2126,13 @@ $code.=<<___ if ($win64 && $SZ>4);
 	movaps	16*$SZ+112(%rsp),%xmm11
 ___
 $code.=<<___;
-	mov	(%rsi),%r15
-	mov	8(%rsi),%r14
-	mov	16(%rsi),%r13
-	mov	24(%rsi),%r12
-	mov	32(%rsi),%rbp
-	mov	40(%rsi),%rbx
-	lea	48(%rsi),%rsp
+	mov	-48(%rsi),%r15
+	mov	-40(%rsi),%r14
+	mov	-32(%rsi),%r13
+	mov	-24(%rsi),%r12
+	mov	-16(%rsi),%rbp
+	mov	-8(%rsi),%rbx
+	lea	(%rsi),%rsp
 .Lepilogue_avx2:
 	ret
 .size	${func}_avx2,.-${func}_avx2
@@ -2192,7 +2194,6 @@ ___
 $code.=<<___;
 	mov	%rax,%rsi		# put aside Rsp
 	mov	16*$SZ+3*8(%rax),%rax	# pull $_rsp
-	lea	48(%rax),%rax
 
 	mov	-8(%rax),%rbx
 	mov	-16(%rax),%rbp

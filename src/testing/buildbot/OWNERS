@@ -10,6 +10,7 @@ maruel@chromium.org
 phajdan.jr@chromium.org
 sky@chromium.org
 stip@chromium.org
+tansell@chromium.org
 thakis@chromium.org
 
 per-file chromium.android*.json=bpastene@chromium.org
@@ -21,9 +22,13 @@ per-file chromium.fyi.json=nick@chromium.org
 
 per-file *chromium.perf*.json=dtu@chromium.org
 per-file *chromium.perf*.json=eyaich@chromium.org
+per-file *chromium.perf*.json=martiniss@chromium.org
+per-file *chromium.perf*.json=nednguyen@google.com
 per-file chromium.perf.json=eakuefner@chromium.org
 per-file chromium.perf.json=fmeawad@chromium.org
 per-file chromium.perf.json=simonhatch@chromium.org
 per-file chromium.perf.json=sullivan@chromium.org
 per-file chromium.webrtc.json=kjellander@chromium.org
 per-file chromium.webrtc.fyi.json=kjellander@chromium.org
+
+# COMPONENT: Infra>Client

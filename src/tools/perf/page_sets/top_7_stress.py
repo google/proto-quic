@@ -7,11 +7,11 @@ from telemetry import story
 
 
 def _GetCurrentLocation(action_runner):
-  return action_runner.EvaluateJavaScript2('document.location.href')
+  return action_runner.EvaluateJavaScript('document.location.href')
 
 
 def _WaitForLocationChange(action_runner, old_href):
-  action_runner.WaitForJavaScriptCondition2(
+  action_runner.WaitForJavaScriptCondition(
       'document.location.href != {{ old_href }}', old_href=old_href)
 
 
@@ -99,7 +99,7 @@ class GmailPage(Top7StressPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GmailPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
 
@@ -129,7 +129,7 @@ class GoogleCalendarPage(Top7StressPage):
     super(GoogleCalendarPage, self).RunNavigateSteps(action_runner)
     action_runner.Wait(2)
     action_runner.WaitForElement('div[class~="navForward"]')
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         (function() {
           var elem = document.createElement('meta');
           elem.name='viewport';
@@ -295,14 +295,14 @@ class FacebookPage(Top7StressPage):
     # Scroll and wait for the next page to be loaded.
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.documentElement.scrollHeight - window.innerHeight - '
         'window.pageYOffset > 0')
 
     # Scroll and wait again.
     with action_runner.CreateGestureInteraction('ScrollAction'):
       action_runner.ScrollPage()
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.documentElement.scrollHeight - window.innerHeight - '
         'window.pageYOffset > 0')
 

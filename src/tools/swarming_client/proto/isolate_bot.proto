@@ -1,0 +1,116 @@
+// Copyright 2016 The LUCI Authors. All rights reserved.
+// Use of this source code is governed under the Apache License, Version 2.0
+// that can be found in the LICENSE file.
+
+// This describes the interface a Swarming bot can use to contact an Isolate
+// server over a gRPC proxy. It essentially duplicates the portions of the
+// "native" Isolate REST API that's used by the bot.
+//
+// This proto is *not yet stable* and *will* change over time in non-backward-
+// compatible ways.
+
+syntax = "proto3";
+
+package luci.swarming.bot;
+
+// FileService exposes the main operations of an Isolate server
+// to upload and download blobs.
+service FileService {
+  // Unlike in the native Isolate API, it is not *necessary* to
+  // call Contains prior to pushing a blob, as Contains does not
+  // return "upload tickets." The BlobStatus returned by Contains
+  // will have succeeded = True if all digests were found, and
+  // false for any other reason (missing blobs, network error,
+  // etc.)
+  rpc Contains(ContainsRequest) returns (ContainsReply);
+
+  // PushBlobs can push one or more blobs at a time (serially),
+  // with each blob transmitted as one or more chunks. At the
+  // beginning of a new blob, the chunk offset should be zero
+  // and the digest must be provided. The function returns true
+  // only if all blobs are successfully received, and returns
+  // as soon as an error occurs.
+  rpc PushBlobs(stream PushBlobsRequest) returns (PushBlobsReply);
+
+  // FetchBlobs takes a list of digests and returns them all as
+  // a stream of BlobChunks.
+  rpc FetchBlobs(FetchBlobsRequest) returns (stream FetchBlobsReply);
+}
+
+message ContainsRequest {
+  repeated ContentDigest digest = 1;
+}
+
+message ContainsReply {
+  BlobStatus status = 1;
+}
+
+message PushBlobsRequest {
+  BlobChunk data = 1;
+}
+
+message PushBlobsReply {
+  BlobStatus status = 1;
+}
+
+message FetchBlobsRequest {
+  repeated ContentDigest digest = 1;
+}
+
+message FetchBlobsReply {
+  BlobStatus status = 1;
+  BlobChunk data = 2;
+}
+
+message BlobChunk {
+  // The digest is optional for all chunks except
+  // the first that represents a blob.
+  ContentDigest digest = 1;
+  int64 offset = 2;
+  bytes data = 3;
+}
+
+message ContentDigest {
+  // At present, "digest" is a 20-byte SHA1 hash.
+  bytes digest = 1;
+
+  // size_bytes is the size of the blob during uploads.
+  // During requests to FetchBlobs, the size is ignored.
+  int64 size_bytes = 2;
+
+  // Currently "0" to represents the SHA1 hash; may
+  // be incremented to allow other hash functions.
+  int32 version = 3;
+}
+
+message BlobStatus {
+  // True if the entire function succeeded.
+  bool succeeded = 1;
+
+  // "error" will be set to one of the following if succeeded is false.
+  enum ErrorCode {
+    // Typically an internal proxy error; error_detail may have more
+    // information.
+    UNKNOWN = 0;
+
+    // The client behaved incorrectly. error_detail should have more
+    // information.
+    INVALID_ARGUMENT = 1;
+
+    // Isolate is missing the nodes specified by missing_digest.
+    MISSING_DIGEST = 2;
+
+     // Upload only error, when requested digest does not match the
+     // server side computed one.
+    DIGEST_MISMATCH = 3;
+  }
+  ErrorCode error = 2;
+
+  // Human-readable error text
+  string error_detail = 3;
+
+  // If error is MISSIN_DIGEST, this will be populated with the
+  // digests that are missing.
+  repeated ContentDigest missing_digest = 4;
+}
+

@@ -21,6 +21,10 @@
 #include "base/allocator/winheap_stubs_win.h"
 #endif
 
+#if defined(OS_MACOSX)
+#include <malloc/malloc.h>
+#endif
+
 // No calls to malloc / new in this file. They would would cause re-entrancy of
 // the shim, which is hard to deal with. Keep this code as simple as possible
 // and don't use any external C++ object here, not even //base ones. Even if
@@ -96,7 +100,7 @@ void SetCallNewHandlerOnMallocFailure(bool value) {
 
 void* UncheckedAlloc(size_t size) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
-  return chain_head->alloc_function(chain_head, size);
+  return chain_head->alloc_function(chain_head, size, nullptr);
 }
 
 void InsertAllocatorDispatch(AllocatorDispatch* dispatch) {
@@ -138,8 +142,10 @@ void RemoveAllocatorDispatchForTesting(AllocatorDispatch* dispatch) {
 }  // namespace base
 
 // The Shim* functions below are the entry-points into the shim-layer and
-// are supposed to be invoked / aliased by the allocator_shim_override_*
+// are supposed to be invoked by the allocator_shim_override_*
 // headers to route the malloc / new symbols through the shim layer.
+// They are defined as ALWAYS_INLINE in order to remove a level of indirection
+// between the system-defined entry points and the shim implementations.
 extern "C" {
 
 // The general pattern for allocations is:
@@ -154,114 +160,132 @@ extern "C" {
 //       just suicide priting a message).
 //     - Assume it did succeed if it returns, in which case reattempt the alloc.
 
-void* ShimCppNew(size_t size) {
+ALWAYS_INLINE void* ShimCppNew(size_t size) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   void* ptr;
   do {
-    ptr = chain_head->alloc_function(chain_head, size);
+    void* context = nullptr;
+#if defined(OS_MACOSX)
+    context = malloc_default_zone();
+#endif
+    ptr = chain_head->alloc_function(chain_head, size, context);
   } while (!ptr && CallNewHandler(size));
   return ptr;
 }
 
-void ShimCppDelete(void* address) {
+ALWAYS_INLINE void ShimCppDelete(void* address) {
+  void* context = nullptr;
+#if defined(OS_MACOSX)
+  context = malloc_default_zone();
+#endif
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
-  return chain_head->free_function(chain_head, address);
+  return chain_head->free_function(chain_head, address, context);
 }
 
-void* ShimMalloc(size_t size) {
+ALWAYS_INLINE void* ShimMalloc(size_t size, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   void* ptr;
   do {
-    ptr = chain_head->alloc_function(chain_head, size);
+    ptr = chain_head->alloc_function(chain_head, size, context);
   } while (!ptr && g_call_new_handler_on_malloc_failure &&
            CallNewHandler(size));
   return ptr;
 }
 
-void* ShimCalloc(size_t n, size_t size) {
+ALWAYS_INLINE void* ShimCalloc(size_t n, size_t size, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   void* ptr;
   do {
-    ptr = chain_head->alloc_zero_initialized_function(chain_head, n, size);
+    ptr = chain_head->alloc_zero_initialized_function(chain_head, n, size,
+                                                      context);
   } while (!ptr && g_call_new_handler_on_malloc_failure &&
            CallNewHandler(size));
   return ptr;
 }
 
-void* ShimRealloc(void* address, size_t size) {
+ALWAYS_INLINE void* ShimRealloc(void* address, size_t size, void* context) {
   // realloc(size == 0) means free() and might return a nullptr. We should
   // not call the std::new_handler in that case, though.
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   void* ptr;
   do {
-    ptr = chain_head->realloc_function(chain_head, address, size);
+    ptr = chain_head->realloc_function(chain_head, address, size, context);
   } while (!ptr && size && g_call_new_handler_on_malloc_failure &&
            CallNewHandler(size));
   return ptr;
 }
 
-void* ShimMemalign(size_t alignment, size_t size) {
+ALWAYS_INLINE void* ShimMemalign(size_t alignment, size_t size, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   void* ptr;
   do {
-    ptr = chain_head->alloc_aligned_function(chain_head, alignment, size);
+    ptr = chain_head->alloc_aligned_function(chain_head, alignment, size,
+                                             context);
   } while (!ptr && g_call_new_handler_on_malloc_failure &&
            CallNewHandler(size));
   return ptr;
 }
 
-int ShimPosixMemalign(void** res, size_t alignment, size_t size) {
+ALWAYS_INLINE int ShimPosixMemalign(void** res, size_t alignment, size_t size) {
   // posix_memalign is supposed to check the arguments. See tc_posix_memalign()
   // in tc_malloc.cc.
   if (((alignment % sizeof(void*)) != 0) ||
       ((alignment & (alignment - 1)) != 0) || (alignment == 0)) {
     return EINVAL;
   }
-  void* ptr = ShimMemalign(alignment, size);
+  void* ptr = ShimMemalign(alignment, size, nullptr);
   *res = ptr;
   return ptr ? 0 : ENOMEM;
 }
 
-void* ShimValloc(size_t size) {
-  return ShimMemalign(GetCachedPageSize(), size);
+ALWAYS_INLINE void* ShimValloc(size_t size, void* context) {
+  return ShimMemalign(GetCachedPageSize(), size, context);
 }
 
-void* ShimPvalloc(size_t size) {
+ALWAYS_INLINE void* ShimPvalloc(size_t size) {
   // pvalloc(0) should allocate one page, according to its man page.
   if (size == 0) {
     size = GetCachedPageSize();
   } else {
     size = (size + GetCachedPageSize() - 1) & ~(GetCachedPageSize() - 1);
   }
-  return ShimMemalign(GetCachedPageSize(), size);
+  // The third argument is nullptr because pvalloc is glibc only and does not
+  // exist on OSX/BSD systems.
+  return ShimMemalign(GetCachedPageSize(), size, nullptr);
 }
 
-void ShimFree(void* address) {
+ALWAYS_INLINE void ShimFree(void* address, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
-  return chain_head->free_function(chain_head, address);
+  return chain_head->free_function(chain_head, address, context);
 }
 
-size_t ShimGetSizeEstimate(const void* address) {
+ALWAYS_INLINE size_t ShimGetSizeEstimate(const void* address, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
-  return chain_head->get_size_estimate_function(chain_head,
-                                                const_cast<void*>(address));
+  return chain_head->get_size_estimate_function(
+      chain_head, const_cast<void*>(address), context);
 }
 
-unsigned ShimBatchMalloc(size_t size, void** results, unsigned num_requested) {
+ALWAYS_INLINE unsigned ShimBatchMalloc(size_t size,
+                                       void** results,
+                                       unsigned num_requested,
+                                       void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   return chain_head->batch_malloc_function(chain_head, size, results,
-                                           num_requested);
+                                           num_requested, context);
 }
 
-void ShimBatchFree(void** to_be_freed, unsigned num_to_be_freed) {
+ALWAYS_INLINE void ShimBatchFree(void** to_be_freed,
+                                 unsigned num_to_be_freed,
+                                 void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
   return chain_head->batch_free_function(chain_head, to_be_freed,
-                                         num_to_be_freed);
+                                         num_to_be_freed, context);
 }
 
-void ShimFreeDefiniteSize(void* ptr, size_t size) {
+ALWAYS_INLINE void ShimFreeDefiniteSize(void* ptr, size_t size, void* context) {
   const allocator::AllocatorDispatch* const chain_head = GetChainHead();
-  return chain_head->free_definite_size_function(chain_head, ptr, size);
+  return chain_head->free_definite_size_function(chain_head, ptr, size,
+                                                 context);
 }
 
 }  // extern "C"

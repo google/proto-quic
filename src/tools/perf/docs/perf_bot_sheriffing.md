@@ -13,6 +13,17 @@ waterfall up and running, and triaging performance test failures and flakes.
 
 ## Understanding the Waterfall State
 
+**[Sheriff-O-Matic](https://sheriff-o-matic.appspot.com/chromium.perf)** is (as of
+2/27/2017) the recommended way to perfbot sheriff. It can be used to track the
+different issues and associate them with specific bugs, and annotate failures
+with useful information. It also attempts to group together similar failures
+across different builders, so it can help to see a higher level perspective on
+what is happening on the perf waterfall.
+
+It is an actively staffed project, which should be getting better over time. If
+you find any bugs with the app, you can file a bug by clicking on the feedback
+link in the bottom right of the app, or by clicking this [link](https://bugs.chromium.org/p/chromium/issues/entry?template=Build%20Infrastructure&components=Infra%3ESheriffing%3ESheriffOMatic&labels=Pri-2,Infra-DX&cc=seanmccullough@chromium.org,martiniss@chromium.org,zhangtiff@chromium.org&comment=Problem+with+Sheriff-o-Matic).
+
 Everyone can view the chromium.perf waterfall at
 https://build.chromium.org/p/chromium.perf/, but for Googlers it is recommended
 that you use the url https://uberchromegw.corp.google.com/i/chromium.perf/ instead.
@@ -38,18 +49,10 @@ Note that there are three different views:
         "Android Nexus5 Perf (2)"
     *   **start_time** is seconds since the epoch.
 
-
 There is also [milo](https://luci-milo.appspot.com), which has the same data as
 buildbot, but mirrored in a different datastore. It is generally faster than
 buildbot, and links to it will not break, as the data is kept around for much
 longer.
-
-In addition to watching the waterfall directly,
-[Sheriff-O-Matic](https://sheriff-o-matic.appspot.com/chromium.perf) may
-optionally be used to easily track the different issues and associate
-them with specific bugs. It also attempts to group together similar failures
-across different builders, so it can help to see a higher level perspective on
-what is happening on the perf waterfall.
 
 You can see a list of all previously filed bugs using the
 **[Performance-Sheriff-BotHealth](https://bugs.chromium.org/p/chromium/issues/list?can=2&q=label%3APerformance-Sheriff-BotHealth)**

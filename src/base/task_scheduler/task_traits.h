@@ -79,9 +79,10 @@ enum class TaskShutdownBehavior {
 class BASE_EXPORT TaskTraits {
  public:
   // Constructs a default TaskTraits for tasks that
-  //     (1) do not make blocking calls
-  //     (2) can inherit their priority from the calling context, and
-  //     (3) may block shutdown or be skipped on shutdown.
+  //     (1) don't block (ref. MayBlock() and WithBaseSyncPrimitives()),
+  //     (2) prefer inheriting the current priority to specifying their own, and
+  //     (3) can either block shutdown or be skipped on shutdown
+  //         (TaskScheduler implementation is free to choose a fitting default).
   // Tasks that require stricter guarantees and/or know the specific
   // TaskPriority appropriate for them should highlight those by requesting
   // explicit traits below.
@@ -126,7 +127,7 @@ class BASE_EXPORT TaskTraits {
   // removing usage of methods listed above in the labeled tasks would still
   // result in tasks that may block (per MayBlock()'s definition).
   //
-  // In doubt, consult with base/task_scheduler/OWNERS.
+  // In doubt, consult with //base/task_scheduler/OWNERS.
   TaskTraits& WithBaseSyncPrimitives();
 
   // Applies |priority| to tasks with these traits.

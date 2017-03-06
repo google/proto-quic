@@ -344,6 +344,7 @@ $L$SEH_begin_asm_AES_encrypt:
 	mov	rdx,r8
 
 
+	mov	rax,rsp
 	push	rbx
 	push	rbp
 	push	r12
@@ -352,7 +353,6 @@ $L$SEH_begin_asm_AES_encrypt:
 	push	r15
 
 
-	mov	r10,rsp
 	lea	rcx,[((-63))+rdx]
 	and	rsp,-64
 	sub	rcx,rsp
@@ -362,7 +362,7 @@ $L$SEH_begin_asm_AES_encrypt:
 	sub	rsp,32
 
 	mov	QWORD[16+rsp],rsi
-	mov	QWORD[24+rsp],r10
+	mov	QWORD[24+rsp],rax
 $L$enc_prologue:
 
 	mov	r15,rdx
@@ -394,13 +394,13 @@ $L$enc_prologue:
 	mov	DWORD[8+r9],ecx
 	mov	DWORD[12+r9],edx
 
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$enc_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -800,6 +800,7 @@ $L$SEH_begin_asm_AES_decrypt:
 	mov	rdx,r8
 
 
+	mov	rax,rsp
 	push	rbx
 	push	rbp
 	push	r12
@@ -808,7 +809,6 @@ $L$SEH_begin_asm_AES_decrypt:
 	push	r15
 
 
-	mov	r10,rsp
 	lea	rcx,[((-63))+rdx]
 	and	rsp,-64
 	sub	rcx,rsp
@@ -818,7 +818,7 @@ $L$SEH_begin_asm_AES_decrypt:
 	sub	rsp,32
 
 	mov	QWORD[16+rsp],rsi
-	mov	QWORD[24+rsp],r10
+	mov	QWORD[24+rsp],rax
 $L$dec_prologue:
 
 	mov	r15,rdx
@@ -852,13 +852,13 @@ $L$dec_prologue:
 	mov	DWORD[8+r9],ecx
 	mov	DWORD[12+r9],edx
 
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$dec_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -1367,10 +1367,9 @@ $L$cbc_prologue:
 	mov	r9d,r9d
 
 	lea	r14,[$L$AES_Te]
+	lea	r10,[$L$AES_Td]
 	cmp	r9,0
-	jne	NEAR $L$cbc_picked_te
-	lea	r14,[$L$AES_Td]
-$L$cbc_picked_te:
+	cmove	r14,r10
 
 	mov	r10d,DWORD[OPENSSL_ia32cap_P]
 	cmp	rdx,512
@@ -2626,7 +2625,6 @@ block_se_handler:
 	jae	NEAR $L$in_block_prologue
 
 	mov	rax,QWORD[24+rax]
-	lea	rax,[48+rax]
 
 	mov	rbx,QWORD[((-8))+rax]
 	mov	rbp,QWORD[((-16))+rax]

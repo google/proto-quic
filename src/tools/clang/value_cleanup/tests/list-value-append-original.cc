@@ -25,10 +25,10 @@ struct Thing {
 
 void F() {
   base::ListValue list;
-  list.Append(new base::FundamentalValue(1 == 0));
-  list.Append(new base::FundamentalValue(true));
-  list.Append(new base::FundamentalValue(static_cast<unsigned char>(1.0)));
-  list.Append(new base::FundamentalValue(double{3}));
+  list.Append(new base::Value(1 == 0));
+  list.Append(new base::Value(true));
+  list.Append(new base::Value(static_cast<unsigned char>(1.0)));
+  list.Append(new base::Value(double{3}));
   list.Append(new base::StringValue("abc"));
 
   list.Append(ReturnsUniquePtr().release());

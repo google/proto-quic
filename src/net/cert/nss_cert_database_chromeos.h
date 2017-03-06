@@ -28,7 +28,8 @@ class NET_EXPORT NSSCertDatabaseChromeOS : public NSSCertDatabase {
   // NSSCertDatabase implementation.
   void ListCertsSync(CertificateList* certs) override;
   void ListCerts(const NSSCertDatabase::ListCertsCallback& callback) override;
-  void ListModules(CryptoModuleList* modules, bool need_rw) const override;
+  void ListModules(std::vector<crypto::ScopedPK11Slot>* modules,
+                   bool need_rw) const override;
   crypto::ScopedPK11Slot GetSystemSlot() const override;
 
   // TODO(mattm): handle trust setting, deletion, etc correctly when certs exist

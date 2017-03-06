@@ -236,6 +236,12 @@ void SOCKSClientSocketPool::RequestSockets(const std::string& group_name,
   base_.RequestSockets(group_name, *casted_params, num_sockets, net_log);
 }
 
+void SOCKSClientSocketPool::SetPriority(const std::string& group_name,
+                                        ClientSocketHandle* handle,
+                                        RequestPriority priority) {
+  base_.SetPriority(group_name, handle, priority);
+}
+
 void SOCKSClientSocketPool::CancelRequest(const std::string& group_name,
                                           ClientSocketHandle* handle) {
   base_.CancelRequest(group_name, handle);
@@ -253,6 +259,11 @@ void SOCKSClientSocketPool::FlushWithError(int error) {
 
 void SOCKSClientSocketPool::CloseIdleSockets() {
   base_.CloseIdleSockets();
+}
+
+void SOCKSClientSocketPool::CloseIdleSocketsInGroup(
+    const std::string& group_name) {
+  base_.CloseIdleSocketsInGroup(group_name);
 }
 
 int SOCKSClientSocketPool::IdleSocketCount() const {

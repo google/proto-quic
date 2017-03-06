@@ -136,7 +136,7 @@ class TestNetworkStreamThrottler : public NetworkThrottleManager {
 
   void UnthrottleAllRequests() {
     std::set<TestThrottle*> outstanding_throttles_copy(outstanding_throttles_);
-    for (auto& throttle : outstanding_throttles_copy) {
+    for (auto* throttle : outstanding_throttles_copy) {
       if (throttle->IsBlocked())
         throttle->Unthrottle();
     }
@@ -684,6 +684,7 @@ class CaptureGroupNameSocketPool : public ParentPool {
                      std::unique_ptr<StreamSocket> socket,
                      int id) override {}
   void CloseIdleSockets() override {}
+  void CloseIdleSocketsInGroup(const std::string& group_name) override {}
   int IdleSocketCount() const override { return 0; }
   int IdleSocketCountInGroup(const std::string& group_name) const override {
     return 0;
@@ -14904,7 +14905,7 @@ class FakeStreamRequest : public HttpStreamRequest,
     return weak_stream;
   }
 
-  int RestartTunnelWithProxyAuth(const AuthCredentials& credentials) override {
+  int RestartTunnelWithProxyAuth() override {
     ADD_FAILURE();
     return ERR_UNEXPECTED;
   }

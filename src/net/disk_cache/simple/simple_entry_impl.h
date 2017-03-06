@@ -122,6 +122,9 @@ class NET_EXPORT_PRIVATE SimpleEntryImpl : public Entry,
   void CancelSparseIO() override;
   int ReadyForSparseIO(const CompletionCallback& callback) override;
 
+  // Returns the estimate of dynamically allocated memory in bytes.
+  size_t EstimateMemoryUsage() const;
+
  private:
   class ScopedOperationRunner;
   friend class ScopedOperationRunner;

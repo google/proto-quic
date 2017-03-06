@@ -262,14 +262,6 @@ void StackSamplingProfiler::SamplingThread::Stop() {
 
 subtle::Atomic32 StackSamplingProfiler::process_milestones_ = 0;
 
-StackSamplingProfiler::SamplingParams::SamplingParams()
-    : initial_delay(TimeDelta::FromMilliseconds(0)),
-      bursts(1),
-      burst_interval(TimeDelta::FromMilliseconds(10000)),
-      samples_per_burst(300),
-      sampling_interval(TimeDelta::FromMilliseconds(100)) {
-}
-
 StackSamplingProfiler::StackSamplingProfiler(
     PlatformThreadId thread_id,
     const SamplingParams& params,

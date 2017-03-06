@@ -181,7 +181,7 @@ class ThreadPostingTasks : public SimpleThread {
 
 using WaitBeforePostTask = ThreadPostingTasks::WaitBeforePostTask;
 
-void ShouldNotRunCallback() {
+void ShouldNotRun() {
   ADD_FAILURE() << "Ran a task that shouldn't run.";
 }
 
@@ -316,7 +316,7 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostTaskAfterShutdown) {
   auto task_runner =
       CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam());
   task_tracker_.Shutdown();
-  EXPECT_FALSE(task_runner->PostTask(FROM_HERE, Bind(&ShouldNotRunCallback)));
+  EXPECT_FALSE(task_runner->PostTask(FROM_HERE, Bind(&ShouldNotRun)));
 }
 
 // Verify that a Task runs shortly after its delay expires.
@@ -348,10 +348,10 @@ TEST_P(TaskSchedulerWorkerPoolImplTest, PostDelayedTask) {
 // returns true when appropriate so this method complements it to get full
 // coverage of that method.
 TEST_P(TaskSchedulerWorkerPoolImplTest, SequencedRunsTasksOnCurrentThread) {
-  scoped_refptr<TaskRunner> task_runner(
-      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam()));
-  scoped_refptr<SequencedTaskRunner> sequenced_task_runner(
-      worker_pool_->CreateSequencedTaskRunnerWithTraits(TaskTraits()));
+  auto task_runner =
+      CreateTaskRunnerWithExecutionMode(worker_pool_.get(), GetParam());
+  auto sequenced_task_runner =
+      worker_pool_->CreateSequencedTaskRunnerWithTraits(TaskTraits());
 
   WaitableEvent task_ran(WaitableEvent::ResetPolicy::MANUAL,
                          WaitableEvent::InitialState::NOT_SIGNALED);
@@ -719,6 +719,105 @@ TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBetweenWaitsWithDetach) {
   worker_pool_->DisallowWorkerDetachmentForTesting();
 }
 
+// TODO(crbug.com/698046): disabled due to flakyness.
+TEST_F(TaskSchedulerWorkerPoolHistogramTest, DISABLED_NumTasksBeforeDetach) {
+  InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
+
+  auto histogrammed_thread_task_runner =
+      worker_pool_->CreateSequencedTaskRunnerWithTraits(
+          TaskTraits().WithBaseSyncPrimitives());
+
+  // Post 3 tasks and hold the thread for idle thread stack ordering.
+  // This test assumes |histogrammed_thread_task_runner| gets assigned the same
+  // thread for each of its tasks.
+  PlatformThreadRef thread_ref;
+  histogrammed_thread_task_runner->PostTask(
+      FROM_HERE, Bind(
+                     [](PlatformThreadRef* thread_ref) {
+                       ASSERT_TRUE(thread_ref);
+                       *thread_ref = PlatformThread::CurrentRef();
+                     },
+                     Unretained(&thread_ref)));
+  histogrammed_thread_task_runner->PostTask(
+      FROM_HERE, Bind(
+                     [](PlatformThreadRef thread_ref) {
+                       EXPECT_EQ(thread_ref, PlatformThreadRef());
+                     },
+                     thread_ref));
+  WaitableEvent detach_thread_running(
+      WaitableEvent::ResetPolicy::MANUAL,
+      WaitableEvent::InitialState::NOT_SIGNALED);
+  WaitableEvent detach_thread_continue(
+      WaitableEvent::ResetPolicy::MANUAL,
+      WaitableEvent::InitialState::NOT_SIGNALED);
+  histogrammed_thread_task_runner->PostTask(
+      FROM_HERE,
+      Bind(
+          [](PlatformThreadRef thread_ref, WaitableEvent* detach_thread_running,
+             WaitableEvent* detach_thread_continue) {
+            EXPECT_EQ(thread_ref, PlatformThreadRef());
+            detach_thread_running->Signal();
+            detach_thread_continue->Wait();
+          },
+          thread_ref, Unretained(&detach_thread_running),
+          Unretained(&detach_thread_continue)));
+
+  detach_thread_running.Wait();
+
+  // To allow the SchedulerWorker associated with
+  // |histogrammed_thread_task_runner| to detach, make sure it isn't on top of
+  // the idle stack by waking up another SchedulerWorker via
+  // |task_runner_for_top_idle|. |histogrammed_thread_task_runner| should
+  // release and go idle first and then |task_runner_for_top_idle| should
+  // release and go idle. This allows the SchedulerWorker associated with
+  // |histogrammed_thread_task_runner| to detach.
+  WaitableEvent top_idle_thread_running(
+      WaitableEvent::ResetPolicy::MANUAL,
+      WaitableEvent::InitialState::NOT_SIGNALED);
+  WaitableEvent top_idle_thread_continue(
+      WaitableEvent::ResetPolicy::MANUAL,
+      WaitableEvent::InitialState::NOT_SIGNALED);
+  auto task_runner_for_top_idle =
+      worker_pool_->CreateSequencedTaskRunnerWithTraits(
+          TaskTraits().WithBaseSyncPrimitives());
+  task_runner_for_top_idle->PostTask(
+      FROM_HERE, Bind(
+                     [](PlatformThreadRef thread_ref,
+                        WaitableEvent* top_idle_thread_running,
+                        WaitableEvent* top_idle_thread_continue) {
+                       EXPECT_NE(thread_ref, PlatformThread::CurrentRef())
+                           << "Worker reused. Thread will not detach and the "
+                              "histogram value will be wrong.";
+                       top_idle_thread_running->Signal();
+                       top_idle_thread_continue->Wait();
+                     },
+                     thread_ref, Unretained(&top_idle_thread_running),
+                     Unretained(&top_idle_thread_continue)));
+  top_idle_thread_running.Wait();
+  detach_thread_continue.Signal();
+  // Wait for the thread processing the |histogrammed_thread_task_runner| work
+  // to go to the idle stack.
+  PlatformThread::Sleep(TestTimeouts::tiny_timeout());
+  top_idle_thread_continue.Signal();
+  // Allow the thread processing the |histogrammed_thread_task_runner| work to
+  // detach.
+  PlatformThread::Sleep(kReclaimTimeForDetachTests +
+                        kReclaimTimeForDetachTests);
+  worker_pool_->WaitForAllWorkersIdleForTesting();
+  worker_pool_->DisallowWorkerDetachmentForTesting();
+
+  // Verify that counts were recorded to the histogram as expected.
+  const auto* histogram = worker_pool_->num_tasks_before_detach_histogram();
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(0));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(1));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(2));
+  EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(3));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(4));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(5));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(6));
+  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
+}
+
 namespace {
 
 void NotReachedReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence) {
@@ -726,52 +825,7 @@ void NotReachedReEnqueueSequenceCallback(scoped_refptr<Sequence> sequence) {
       << "Unexpected invocation of NotReachedReEnqueueSequenceCallback.";
 }
 
-void CaptureThreadId(PlatformThreadId* thread_id) {
-  ASSERT_TRUE(thread_id);
-  *thread_id = PlatformThread::CurrentId();
-}
-
-void VerifyThreadIdIsNot(PlatformThreadId thread_id) {
-  EXPECT_NE(thread_id, PlatformThread::CurrentId());
-}
-
 }  // namespace
-
-TEST_F(TaskSchedulerWorkerPoolHistogramTest, NumTasksBeforeDetach) {
-  InitializeWorkerPool(kReclaimTimeForDetachTests, kNumWorkersInWorkerPool);
-
-  // This test assumes that the TaskRunners aren't assigned to the same worker.
-  auto task_runner =
-      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
-  auto other_task_runner =
-      worker_pool_->CreateSingleThreadTaskRunnerWithTraits(TaskTraits());
-
-  // Post 3 tasks and wait until they run.
-  PlatformThreadId thread_id;
-  task_runner->PostTask(FROM_HERE,
-                        Bind(&CaptureThreadId, Unretained(&thread_id)));
-  task_runner->PostTask(FROM_HERE, Bind(&DoNothing));
-  task_runner->PostTask(FROM_HERE, Bind(&DoNothing));
-  worker_pool_->WaitForAllWorkersIdleForTesting();
-
-  // To allow the SchedulerWorker associated with |task_runner| to detach:
-  // - Make sure it isn't on top of the idle stack by waking up another
-  //   SchedulerWorker and waiting until it goes back to sleep.
-  // - Release |task_runner|.
-  other_task_runner->PostTask(FROM_HERE, Bind(&VerifyThreadIdIsNot, thread_id));
-  worker_pool_->WaitForAllWorkersIdleForTesting();
-  task_runner = nullptr;
-
-  // Allow the SchedulerWorker that was associated with |task_runner| to detach.
-  PlatformThread::Sleep(kReclaimTimeForDetachTests + kExtraTimeToWaitForDetach);
-  worker_pool_->DisallowWorkerDetachmentForTesting();
-
-  // Verify that counts were recorded to the histogram as expected.
-  const auto* histogram = worker_pool_->num_tasks_before_detach_histogram();
-  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(0));
-  EXPECT_EQ(1, histogram->SnapshotSamples()->GetCount(3));
-  EXPECT_EQ(0, histogram->SnapshotSamples()->GetCount(10));
-}
 
 TEST(TaskSchedulerWorkerPoolStandbyPolicyTest, InitLazy) {
   TaskTracker task_tracker;

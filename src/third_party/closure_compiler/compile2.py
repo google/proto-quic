@@ -188,7 +188,7 @@ class Checker(object):
       tmp_file.write(contents)
     return tmp_file.name
 
-  def check(self, sources, out_file=None, closure_args=None,
+  def check(self, sources, out_file, closure_args=None,
             custom_sources=True):
     """Closure compile |sources| while checking for errors.
 
@@ -250,10 +250,15 @@ class Checker(object):
            ["--js=%s" % s for s in js_args] + \
            ["--%s" % arg for arg in closure_args]
 
-    if out_file:
-      out_dir = os.path.dirname(out_file)
-      if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
+    assert out_file
+
+    out_dir = os.path.dirname(out_file)
+    if not os.path.exists(out_dir):
+      os.makedirs(out_dir)
+
+    checks_only = 'checks_only' in closure_args
+
+    if not checks_only:
       args += ["--js_output_file=%s" % out_file]
       args += ["--create_source_map=%s" % (self._MAP_FILE_FORMAT % out_file)]
 
@@ -273,11 +278,17 @@ class Checker(object):
       self._nuke_temp_files()
       sys.exit(1)
 
-    if summary.group('error_count') != "0" and out_file:
+    if summary.group('error_count') != "0":
       if os.path.exists(out_file):
         os.remove(out_file)
       if os.path.exists(self._MAP_FILE_FORMAT % out_file):
         os.remove(self._MAP_FILE_FORMAT % out_file)
+    elif checks_only:
+      # Compile succeeded but --checks_only disables --js_output_file from
+      # actually writing a file. Write a file ourselves so incremental builds
+      # still work.
+      with open(out_file, 'w') as f:
+        f.write('')
 
     if not custom_sources:
       filtered_errors = self._filter_errors(errors)
@@ -301,7 +312,7 @@ if __name__ == "__main__":
                       help="Path to a source file to typecheck")
   parser.add_argument("--custom_sources", action="store_true",
                       help="Whether this rules has custom sources.")
-  parser.add_argument("-o", "--out_file",
+  parser.add_argument("-o", "--out_file", required=True,
                       help="A file where the compiled output is written to")
   parser.add_argument("-c", "--closure_args", nargs=argparse.ZERO_OR_MORE,
                       help="Arguments passed directly to the Closure compiler")

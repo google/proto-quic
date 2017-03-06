@@ -392,6 +392,19 @@ void WebSocketTransportClientSocketPool::RequestSockets(
   NOTIMPLEMENTED();
 }
 
+void WebSocketTransportClientSocketPool::SetPriority(
+    const std::string& group_name,
+    ClientSocketHandle* handle,
+    RequestPriority priority) {
+  // Since sockets requested by RequestSocket are bound early and
+  // stalled_request_{queue,map} don't take priorities into account, there's
+  // nothing to do within the pool to change priority or the request.
+  // TODO(rdsmith, ricea): Make stalled_request_{queue,map} take priorities
+  // into account.
+  // TODO(rdsmith): Investigate plumbing the reprioritization request to the
+  // connect job.
+}
+
 void WebSocketTransportClientSocketPool::CancelRequest(
     const std::string& group_name,
     ClientSocketHandle* handle) {
@@ -447,6 +460,11 @@ void WebSocketTransportClientSocketPool::FlushWithError(int error) {
 }
 
 void WebSocketTransportClientSocketPool::CloseIdleSockets() {
+  // We have no idle sockets.
+}
+
+void WebSocketTransportClientSocketPool::CloseIdleSocketsInGroup(
+    const std::string& group_name) {
   // We have no idle sockets.
 }
 

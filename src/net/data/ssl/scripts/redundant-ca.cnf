@@ -25,6 +25,7 @@ basicConstraints       = critical, CA:false
 subjectKeyIdentifier   = hash
 authorityKeyIdentifier = keyid:always
 extendedKeyUsage       = serverAuth,clientAuth
+subjectAltName         = IP:127.0.0.1
 
 [ca_cert]
 # Extensions to add when signing a request for an intermediate/CA cert

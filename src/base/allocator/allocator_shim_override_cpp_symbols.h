@@ -7,36 +7,45 @@
 #endif
 #define BASE_ALLOCATOR_ALLOCATOR_SHIM_OVERRIDE_CPP_SYMBOLS_H_
 
-// Alias the default new/delete C++ symbols to the shim entry points.
-// This file is strongly inspired by tcmalloc's libc_override_redefine.h.
+// Preempt the default new/delete C++ symbols so they call the shim entry
+// points. This file is strongly inspired by tcmalloc's
+// libc_override_redefine.h.
 
 #include <new>
 
 #include "base/allocator/allocator_shim_internals.h"
 
-SHIM_ALWAYS_EXPORT void* operator new(size_t size)
-    SHIM_ALIAS_SYMBOL(ShimCppNew);
+SHIM_ALWAYS_EXPORT void* operator new(size_t size) {
+  return ShimCppNew(size);
+}
 
-SHIM_ALWAYS_EXPORT void operator delete(void* p) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppDelete);
+SHIM_ALWAYS_EXPORT void operator delete(void* p) __THROW {
+  ShimCppDelete(p);
+}
 
-SHIM_ALWAYS_EXPORT void* operator new[](size_t size)
-    SHIM_ALIAS_SYMBOL(ShimCppNew);
+SHIM_ALWAYS_EXPORT void* operator new[](size_t size) {
+  return ShimCppNew(size);
+}
 
-SHIM_ALWAYS_EXPORT void operator delete[](void* p) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppDelete);
+SHIM_ALWAYS_EXPORT void operator delete[](void* p) __THROW {
+  ShimCppDelete(p);
+}
 
 SHIM_ALWAYS_EXPORT void* operator new(size_t size,
-                                      const std::nothrow_t&) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppNew);
+                                      const std::nothrow_t&) __THROW {
+  return ShimCppNew(size);
+}
 
 SHIM_ALWAYS_EXPORT void* operator new[](size_t size,
-                                        const std::nothrow_t&) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppNew);
+                                        const std::nothrow_t&) __THROW {
+  return ShimCppNew(size);
+}
 
-SHIM_ALWAYS_EXPORT void operator delete(void* p, const std::nothrow_t&) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppDelete);
+SHIM_ALWAYS_EXPORT void operator delete(void* p, const std::nothrow_t&) __THROW {
+  ShimCppDelete(p);
+}
 
 SHIM_ALWAYS_EXPORT void operator delete[](void* p,
-                                          const std::nothrow_t&) __THROW
-    SHIM_ALIAS_SYMBOL(ShimCppDelete);
+                                          const std::nothrow_t&) __THROW {
+  ShimCppDelete(p);
+}

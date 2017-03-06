@@ -58,7 +58,7 @@ class FormatResourceMapUnittest(unittest.TestCase):
 #ifndef GRIT_RESOURCE_MAP_STRUCT_
 #define GRIT_RESOURCE_MAP_STRUCT_
 struct GritResourceMap {
-  const char* const name;
+  const char* name;
   int value;
 };
 #endif // GRIT_RESOURCE_MAP_STRUCT_
@@ -150,7 +150,7 @@ const size_t kTheRcHeaderSize = arraysize(kTheRcHeader);''', output)
 #ifndef GRIT_RESOURCE_MAP_STRUCT_
 #define GRIT_RESOURCE_MAP_STRUCT_
 struct GritResourceMap {
-  const char* const name;
+  const char* name;
   int value;
 };
 #endif // GRIT_RESOURCE_MAP_STRUCT_
@@ -235,7 +235,7 @@ const size_t kTheRcHeaderSize = arraysize(kTheRcHeader);''', output)
 #ifndef GRIT_RESOURCE_MAP_STRUCT_
 #define GRIT_RESOURCE_MAP_STRUCT_
 struct GritResourceMap {
-  const char* const name;
+  const char* name;
   int value;
 };
 #endif // GRIT_RESOURCE_MAP_STRUCT_
@@ -313,7 +313,7 @@ const size_t kTheRcHeaderSize = arraysize(kTheRcHeader);''', output)
 #ifndef GRIT_RESOURCE_MAP_STRUCT_
 #define GRIT_RESOURCE_MAP_STRUCT_
 struct GritResourceMap {
-  const char* const name;
+  const char* name;
   int value;
 };
 #endif // GRIT_RESOURCE_MAP_STRUCT_

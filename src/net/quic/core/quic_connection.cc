@@ -29,6 +29,7 @@
 #include "net/quic/core/quic_pending_retransmission.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
+#include "net/quic/platform/api/quic_flag_utils.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
@@ -260,7 +261,8 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
       goaway_sent_(false),
       goaway_received_(false),
       multipath_enabled_(false),
-      write_error_occured_(false) {
+      write_error_occured_(false),
+      no_stop_waiting_frames_(false) {
   QUIC_DLOG(INFO) << ENDPOINT
                   << "Created connection with connection_id: " << connection_id;
   framer_.set_visitor(this);
@@ -273,6 +275,10 @@ QuicConnection::QuicConnection(QuicConnectionId connection_id,
   SetMaxPacketLength(perspective_ == Perspective::IS_SERVER
                          ? kDefaultServerMaxPacketSize
                          : kDefaultMaxPacketSize);
+  if (packet_generator_.latched_flag_no_stop_waiting_frames()) {
+    QUIC_FLAG_COUNT_N(gfe2_reloadable_flag_quic_no_stop_waiting_frame, 1, 2);
+    received_packet_manager_.set_max_ack_ranges(255);
+  }
 }
 
 QuicConnection::~QuicConnection() {
@@ -344,6 +350,11 @@ void QuicConnection::SetFromConfig(const QuicConfig& config) {
   }
   if (config.HasClientSentConnectionOption(k5RTO, perspective_)) {
     close_connection_after_five_rtos_ = true;
+  }
+  if (packet_generator_.latched_flag_no_stop_waiting_frames() &&
+      config.HasClientSentConnectionOption(kNSTP, perspective_)) {
+    QUIC_FLAG_COUNT_N(gfe2_reloadable_flag_quic_no_stop_waiting_frame, 2, 2);
+    no_stop_waiting_frames_ = true;
   }
 }
 
@@ -691,7 +702,17 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   if (send_alarm_->IsSet()) {
     send_alarm_->Cancel();
   }
-  ProcessAckFrame(incoming_ack);
+  largest_seen_packet_with_ack_ = last_header_.packet_number;
+  sent_packet_manager_.OnIncomingAck(incoming_ack,
+                                     time_of_last_received_packet_);
+  if (no_stop_waiting_frames_) {
+    received_packet_manager_.DontWaitForPacketsBefore(
+        sent_packet_manager_.largest_packet_peer_knows_is_acked());
+  }
+  // Always reset the retransmission alarm when an ack comes in, since we now
+  // have a better estimate of the current rtt than when it was set.
+  SetRetransmissionAlarm();
+
   // If the incoming ack's packets set expresses missing packets: peer is still
   // waiting for a packet lower than a packet that we are no longer planning to
   // send.
@@ -708,24 +729,11 @@ bool QuicConnection::OnAckFrame(const QuicAckFrame& incoming_ack) {
   return connected_;
 }
 
-void QuicConnection::ProcessAckFrame(const QuicAckFrame& incoming_ack) {
-  largest_seen_packet_with_ack_ = last_header_.packet_number;
-  sent_packet_manager_.OnIncomingAck(incoming_ack,
-                                     time_of_last_received_packet_);
-  // Always reset the retransmission alarm when an ack comes in, since we now
-  // have a better estimate of the current rtt than when it was set.
-  SetRetransmissionAlarm();
-}
-
-void QuicConnection::ProcessStopWaitingFrame(
-    const QuicStopWaitingFrame& stop_waiting) {
-  largest_seen_packet_with_stop_waiting_ = last_header_.packet_number;
-  received_packet_manager_.UpdatePacketInformationSentByPeer(stop_waiting);
-}
-
 bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
   DCHECK(connected_);
-
+  if (no_stop_waiting_frames_) {
+    return true;
+  }
   if (last_header_.packet_number <= largest_seen_packet_with_stop_waiting_) {
     QUIC_DLOG(INFO) << ENDPOINT
                     << "Received an old stop waiting frame: ignoring";
@@ -743,7 +751,8 @@ bool QuicConnection::OnStopWaitingFrame(const QuicStopWaitingFrame& frame) {
     debug_visitor_->OnStopWaitingFrame(frame);
   }
 
-  ProcessStopWaitingFrame(frame);
+  largest_seen_packet_with_stop_waiting_ = last_header_.packet_number;
+  received_packet_manager_.DontWaitForPacketsBefore(frame.least_unacked);
   return connected_;
 }
 
@@ -908,7 +917,6 @@ bool QuicConnection::OnPathCloseFrame(const QuicPathCloseFrame& frame) {
   }
   QUIC_DLOG(INFO) << ENDPOINT
                   << "PATH_CLOSE_FRAME received for path: " << frame.path_id;
-  OnPathClosed(frame.path_id);
   return connected_;
 }
 
@@ -1140,13 +1148,6 @@ void QuicConnection::SendBlocked(QuicStreamId id) {
   stats_.blocked_frames_sent++;
 }
 
-void QuicConnection::SendPathClose(QuicPathId path_id) {
-  // Opportunistically bundle an ack with this outgoing packet.
-  ScopedPacketBundler ack_bundler(this, SEND_ACK_IF_PENDING);
-  packet_generator_.AddControlFrame(QuicFrame(new QuicPathCloseFrame(path_id)));
-  OnPathClosed(path_id);
-}
-
 const QuicConnectionStats& QuicConnection::GetStats() {
   const RttStats* rtt_stats = sent_packet_manager_.GetRttStats();
 
@@ -1196,9 +1197,8 @@ void QuicConnection::ProcessUdpPacket(const QuicSocketAddress& self_address,
   ++stats_.packets_received;
 
   // Ensure the time coming from the packet reader is within a minute of now.
-  if (FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas &&
-      std::abs((packet.receipt_time() - clock_->ApproximateNow()).ToSeconds()) >
-          60) {
+  if (std::abs((packet.receipt_time() - clock_->ApproximateNow()).ToSeconds()) >
+      60) {
     QUIC_BUG << "Packet receipt time:"
              << packet.receipt_time().ToDebuggingValue()
              << " too far from current time:"
@@ -1291,10 +1291,16 @@ bool QuicConnection::ProcessValidatedPacket(const QuicPacketHeader& header) {
     if (self_address_.port() != last_packet_destination_address_.port() ||
         self_address_.host().Normalized() !=
             last_packet_destination_address_.host().Normalized()) {
-      CloseConnection(QUIC_ERROR_MIGRATING_ADDRESS,
-                      "Self address migration is not supported at the server.",
-                      ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
-      return false;
+      if (FLAGS_quic_reloadable_flag_quic_allow_one_address_change &&
+          AllowSelfAddressChange()) {
+        OnSelfAddressChange();
+      } else {
+        CloseConnection(
+            QUIC_ERROR_MIGRATING_ADDRESS,
+            "Self address migration is not supported at the server.",
+            ConnectionCloseBehavior::SEND_CONNECTION_CLOSE_PACKET);
+        return false;
+      }
     }
     self_address_ = last_packet_destination_address_;
   }
@@ -1628,6 +1634,10 @@ bool QuicConnection::ShouldDiscardPacket(const SerializedPacket& packet) {
   return false;
 }
 
+bool QuicConnection::AllowSelfAddressChange() const {
+  return false;
+}
+
 void QuicConnection::OnWriteError(int error_code) {
   if (write_error_occured_) {
     // A write error already occurred. The connection is being closed.
@@ -1652,7 +1662,6 @@ void QuicConnection::OnWriteError(int error_code) {
 }
 
 void QuicConnection::OnSerializedPacket(SerializedPacket* serialized_packet) {
-  DCHECK_NE(kInvalidPathId, serialized_packet->path_id);
   if (serialized_packet->encrypted_buffer == nullptr) {
     // We failed to serialize the packet, so close the connection.
     // TearDownLocalConnectionState does not send close packet, so no infinite
@@ -1753,7 +1762,7 @@ void QuicConnection::SendAck() {
   last_ack_had_missing_packets_ = received_packet_manager_.HasMissingPackets();
   num_packets_received_since_last_ack_sent_ = 0;
 
-  packet_generator_.SetShouldSendAck(true);
+  packet_generator_.SetShouldSendAck(!no_stop_waiting_frames_);
 }
 
 void QuicConnection::OnRetransmissionTimeout() {
@@ -2335,11 +2344,6 @@ void QuicConnection::StartPeerMigration(
   // OnConnectionMigration methods to OnPeerMigration.
   visitor_->OnConnectionMigration(peer_migration_type);
   sent_packet_manager_.OnConnectionMigration(peer_migration_type);
-}
-
-void QuicConnection::OnPathClosed(QuicPathId path_id) {
-  // Stop receiving packets on this path.
-  framer_.OnPathClosed(path_id);
 }
 
 bool QuicConnection::ack_frame_updated() const {

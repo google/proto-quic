@@ -48,6 +48,13 @@ _DISABLED_TESTS = frozenset({
 
   # crbug.com/
   'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.browse:news:nytimes',  # pylint: disable=line-too-long
+
+  # crbug.com/696824
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.load:news:qq',  # pylint: disable=line-too-long
+
+  # crbug.com/698006
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.load:tools:drive',  # pylint: disable=line-too-long
+  'benchmarks.system_health_smoke_test.SystemHealthBenchmarkSmokeTest.system_health.memory_desktop.load:tools:gmail',  # pylint: disable=line-too-long
 })
 
 
@@ -119,7 +126,7 @@ def GenerateBenchmarkOptions(benchmark_class):
   benchmark_module.ProcessCommandLineArgs(None, options)
   # Only measure a single story so that this test cycles reasonably quickly.
   options.pageset_repeat = 1
-  options.page_repeat = 1
+
   # Enable browser logging in the smoke test only. Hopefully, this will detect
   # all crashes and hence remove the need to enable logging in actual perf
   # benchmarks.

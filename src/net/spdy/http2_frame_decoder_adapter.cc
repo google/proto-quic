@@ -470,6 +470,10 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
     }
   }
 
+  // Per RFC7838, an ALTSVC frame on stream 0 with origin_length == 0, or one on
+  // a stream other than stream 0 with origin_length != 0 MUST be ignored.  All
+  // frames are decoded by Http2DecoderAdapter, and it is left to the consumer
+  // (listener) to implement this behavior.
   void OnAltSvcStart(const Http2FrameHeader& header,
                      size_t origin_length,
                      size_t value_length) override {
@@ -477,11 +481,6 @@ class Http2DecoderAdapter : public SpdyFramerDecoderAdapter,
              << "; origin_length: " << origin_length
              << "; value_length: " << value_length;
     if (!IsOkToStartFrame(header)) {
-      return;
-    }
-    // Per RFC7838, origin_length must be zero IFF the stream id is non-zero.
-    if ((origin_length == 0 && !HasRequiredStreamId(header)) ||
-        (origin_length != 0 && !HasRequiredStreamIdZero(header))) {
       return;
     }
     frame_header_ = header;

@@ -127,13 +127,7 @@ void HpackHeaderTable::SetMaxSize(size_t max_size) {
 
 void HpackHeaderTable::SetSettingsHeaderTableSize(size_t settings_size) {
   settings_size_bound_ = settings_size;
-  if (!FLAGS_chromium_reloadable_flag_increase_hpack_table_size) {
-    if (settings_size_bound_ < max_size_) {
-      SetMaxSize(settings_size_bound_);
-    }
-  } else {
-    SetMaxSize(settings_size_bound_);
-  }
+  SetMaxSize(settings_size_bound_);
 }
 
 void HpackHeaderTable::EvictionSet(StringPiece name,

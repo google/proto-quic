@@ -9,30 +9,64 @@
 .type	bn_mul_mont_gather5,@function
 .align	64
 bn_mul_mont_gather5:
+.cfi_startproc	
+	movl	%r9d,%r9d
+	movq	%rsp,%rax
+.cfi_def_cfa_register	%rax
 	testl	$7,%r9d
 	jnz	.Lmul_enter
 	jmp	.Lmul4x_enter
 
 .align	16
 .Lmul_enter:
-	movl	%r9d,%r9d
-	movq	%rsp,%rax
 	movd	8(%rsp),%xmm5
-	leaq	.Linc(%rip),%r10
 	pushq	%rbx
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_offset	%r15,-56
 
-	leaq	2(%r9),%r11
-	negq	%r11
-	leaq	-264(%rsp,%r11,8),%rsp
-	andq	$-1024,%rsp
+	negq	%r9
+	movq	%rsp,%r11
+	leaq	-280(%rsp,%r9,8),%r10
+	negq	%r9
+	andq	$-1024,%r10
 
+
+
+
+
+
+
+
+
+	subq	%r10,%r11
+	andq	$-4096,%r11
+	leaq	(%r10,%r11,1),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	.Lmul_page_walk
+	jmp	.Lmul_page_walk_done
+
+.Lmul_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r11
+	cmpq	%r10,%rsp
+	ja	.Lmul_page_walk
+.Lmul_page_walk_done:
+
+	leaq	.Linc(%rip),%r10
 	movq	%rax,8(%rsp,%r9,8)
+.cfi_escape	0x0f,0x0a,0x77,0x08,0x79,0x00,0x38,0x1e,0x22,0x06,0x23,0x08
 .Lmul_body:
+
 	leaq	128(%rdx),%r12
 	movdqa	0(%r10),%xmm0
 	movdqa	16(%r10),%xmm1
@@ -371,45 +405,64 @@ bn_mul_mont_gather5:
 
 	sbbq	$0,%rax
 	xorq	%r14,%r14
+	andq	%rax,%rsi
+	notq	%rax
+	movq	%rdi,%rcx
+	andq	%rax,%rcx
 	movq	%r9,%r15
+	orq	%rcx,%rsi
 .align	16
 .Lcopy:
-	movq	(%rsp,%r14,8),%rsi
-	movq	(%rdi,%r14,8),%rcx
-	xorq	%rcx,%rsi
-	andq	%rax,%rsi
-	xorq	%rcx,%rsi
+	movq	(%rsi,%r14,8),%rax
 	movq	%r14,(%rsp,%r14,8)
-	movq	%rsi,(%rdi,%r14,8)
+	movq	%rax,(%rdi,%r14,8)
 	leaq	1(%r14),%r14
 	subq	$1,%r15
 	jnz	.Lcopy
 
 	movq	8(%rsp,%r9,8),%rsi
+.cfi_def_cfa	%rsi,8
 	movq	$1,%rax
 
 	movq	-48(%rsi),%r15
+.cfi_restore	%r15
 	movq	-40(%rsi),%r14
+.cfi_restore	%r14
 	movq	-32(%rsi),%r13
+.cfi_restore	%r13
 	movq	-24(%rsi),%r12
+.cfi_restore	%r12
 	movq	-16(%rsi),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rsi),%rbx
+.cfi_restore	%rbx
 	leaq	(%rsi),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	bn_mul_mont_gather5,.-bn_mul_mont_gather5
 .type	bn_mul4x_mont_gather5,@function
 .align	32
 bn_mul4x_mont_gather5:
-.Lmul4x_enter:
+.cfi_startproc	
 .byte	0x67
 	movq	%rsp,%rax
+.cfi_def_cfa_register	%rax
+.Lmul4x_enter:
 	pushq	%rbx
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_offset	%r15,-56
+.Lmul4x_prologue:
 
 .byte	0x67
 	shll	$3,%r9d
@@ -426,43 +479,70 @@ bn_mul4x_mont_gather5:
 
 
 	leaq	-320(%rsp,%r9,2),%r11
+	movq	%rsp,%rbp
 	subq	%rdi,%r11
 	andq	$4095,%r11
 	cmpq	%r11,%r10
 	jb	.Lmul4xsp_alt
-	subq	%r11,%rsp
-	leaq	-320(%rsp,%r9,2),%rsp
+	subq	%r11,%rbp
+	leaq	-320(%rbp,%r9,2),%rbp
 	jmp	.Lmul4xsp_done
 
 .align	32
 .Lmul4xsp_alt:
 	leaq	4096-320(,%r9,2),%r10
-	leaq	-320(%rsp,%r9,2),%rsp
+	leaq	-320(%rbp,%r9,2),%rbp
 	subq	%r10,%r11
 	movq	$0,%r10
 	cmovcq	%r10,%r11
-	subq	%r11,%rsp
+	subq	%r11,%rbp
 .Lmul4xsp_done:
-	andq	$-64,%rsp
+	andq	$-64,%rbp
+	movq	%rsp,%r11
+	subq	%rbp,%r11
+	andq	$-4096,%r11
+	leaq	(%r11,%rbp,1),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lmul4x_page_walk
+	jmp	.Lmul4x_page_walk_done
+
+.Lmul4x_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lmul4x_page_walk
+.Lmul4x_page_walk_done:
+
 	negq	%r9
 
 	movq	%rax,40(%rsp)
+.cfi_escape	0x0f,0x05,0x77,0x28,0x06,0x23,0x08
 .Lmul4x_body:
 
 	call	mul4x_internal
 
 	movq	40(%rsp),%rsi
+.cfi_def_cfa	%rsi,8
 	movq	$1,%rax
 
 	movq	-48(%rsi),%r15
+.cfi_restore	%r15
 	movq	-40(%rsi),%r14
+.cfi_restore	%r14
 	movq	-32(%rsi),%r13
+.cfi_restore	%r13
 	movq	-24(%rsi),%r12
+.cfi_restore	%r12
 	movq	-16(%rsi),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rsi),%rbx
+.cfi_restore	%rbx
 	leaq	(%rsi),%rsp
+.cfi_def_cfa_register	%rsp
 .Lmul4x_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	bn_mul4x_mont_gather5,.-bn_mul4x_mont_gather5
 
 .type	mul4x_internal,@function
@@ -995,13 +1075,22 @@ mul4x_internal:
 .type	bn_power5,@function
 .align	32
 bn_power5:
+.cfi_startproc	
 	movq	%rsp,%rax
+.cfi_def_cfa_register	%rax
 	pushq	%rbx
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_offset	%r15,-56
+.Lpower5_prologue:
 
 	shll	$3,%r9d
 	leal	(%r9,%r9,2),%r10d
@@ -1016,24 +1105,41 @@ bn_power5:
 
 
 	leaq	-320(%rsp,%r9,2),%r11
+	movq	%rsp,%rbp
 	subq	%rdi,%r11
 	andq	$4095,%r11
 	cmpq	%r11,%r10
 	jb	.Lpwr_sp_alt
-	subq	%r11,%rsp
-	leaq	-320(%rsp,%r9,2),%rsp
+	subq	%r11,%rbp
+	leaq	-320(%rbp,%r9,2),%rbp
 	jmp	.Lpwr_sp_done
 
 .align	32
 .Lpwr_sp_alt:
 	leaq	4096-320(,%r9,2),%r10
-	leaq	-320(%rsp,%r9,2),%rsp
+	leaq	-320(%rbp,%r9,2),%rbp
 	subq	%r10,%r11
 	movq	$0,%r10
 	cmovcq	%r10,%r11
-	subq	%r11,%rsp
+	subq	%r11,%rbp
 .Lpwr_sp_done:
-	andq	$-64,%rsp
+	andq	$-64,%rbp
+	movq	%rsp,%r11
+	subq	%rbp,%r11
+	andq	$-4096,%r11
+	leaq	(%r11,%rbp,1),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lpwr_page_walk
+	jmp	.Lpwr_page_walk_done
+
+.Lpwr_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lpwr_page_walk
+.Lpwr_page_walk_done:
+
 	movq	%r9,%r10
 	negq	%r9
 
@@ -1048,6 +1154,7 @@ bn_power5:
 
 	movq	%r8,32(%rsp)
 	movq	%rax,40(%rsp)
+.cfi_escape	0x0f,0x05,0x77,0x28,0x06,0x23,0x08
 .Lpower5_body:
 .byte	102,72,15,110,207
 .byte	102,72,15,110,209
@@ -1074,16 +1181,25 @@ bn_power5:
 	call	mul4x_internal
 
 	movq	40(%rsp),%rsi
+.cfi_def_cfa	%rsi,8
 	movq	$1,%rax
 	movq	-48(%rsi),%r15
+.cfi_restore	%r15
 	movq	-40(%rsi),%r14
+.cfi_restore	%r14
 	movq	-32(%rsi),%r13
+.cfi_restore	%r13
 	movq	-24(%rsi),%r12
+.cfi_restore	%r12
 	movq	-16(%rsi),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rsi),%rbx
+.cfi_restore	%rbx
 	leaq	(%rsi),%rsp
+.cfi_def_cfa_register	%rsp
 .Lpower5_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	bn_power5,.-bn_power5
 
 .globl	bn_sqr8x_internal
@@ -1936,14 +2052,23 @@ bn_from_montgomery:
 .type	bn_from_mont8x,@function
 .align	32
 bn_from_mont8x:
+.cfi_startproc	
 .byte	0x67
 	movq	%rsp,%rax
+.cfi_def_cfa_register	%rax
 	pushq	%rbx
+.cfi_offset	%rbx,-16
 	pushq	%rbp
+.cfi_offset	%rbp,-24
 	pushq	%r12
+.cfi_offset	%r12,-32
 	pushq	%r13
+.cfi_offset	%r13,-40
 	pushq	%r14
+.cfi_offset	%r14,-48
 	pushq	%r15
+.cfi_offset	%r15,-56
+.Lfrom_prologue:
 
 	shll	$3,%r9d
 	leaq	(%r9,%r9,2),%r10
@@ -1958,24 +2083,41 @@ bn_from_mont8x:
 
 
 	leaq	-320(%rsp,%r9,2),%r11
+	movq	%rsp,%rbp
 	subq	%rdi,%r11
 	andq	$4095,%r11
 	cmpq	%r11,%r10
 	jb	.Lfrom_sp_alt
-	subq	%r11,%rsp
-	leaq	-320(%rsp,%r9,2),%rsp
+	subq	%r11,%rbp
+	leaq	-320(%rbp,%r9,2),%rbp
 	jmp	.Lfrom_sp_done
 
 .align	32
 .Lfrom_sp_alt:
 	leaq	4096-320(,%r9,2),%r10
-	leaq	-320(%rsp,%r9,2),%rsp
+	leaq	-320(%rbp,%r9,2),%rbp
 	subq	%r10,%r11
 	movq	$0,%r10
 	cmovcq	%r10,%r11
-	subq	%r11,%rsp
+	subq	%r11,%rbp
 .Lfrom_sp_done:
-	andq	$-64,%rsp
+	andq	$-64,%rbp
+	movq	%rsp,%r11
+	subq	%rbp,%r11
+	andq	$-4096,%r11
+	leaq	(%r11,%rbp,1),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lfrom_page_walk
+	jmp	.Lfrom_page_walk_done
+
+.Lfrom_page_walk:
+	leaq	-4096(%rsp),%rsp
+	movq	(%rsp),%r10
+	cmpq	%rbp,%rsp
+	ja	.Lfrom_page_walk
+.Lfrom_page_walk_done:
+
 	movq	%r9,%r10
 	negq	%r9
 
@@ -1990,6 +2132,7 @@ bn_from_mont8x:
 
 	movq	%r8,32(%rsp)
 	movq	%rax,40(%rsp)
+.cfi_escape	0x0f,0x05,0x77,0x28,0x06,0x23,0x08
 .Lfrom_body:
 	movq	%r9,%r11
 	leaq	48(%rsp),%rax
@@ -2025,11 +2168,12 @@ bn_from_mont8x:
 
 	pxor	%xmm0,%xmm0
 	leaq	48(%rsp),%rax
-	movq	40(%rsp),%rsi
 	jmp	.Lfrom_mont_zero
 
 .align	32
 .Lfrom_mont_zero:
+	movq	40(%rsp),%rsi
+.cfi_def_cfa	%rsi,8
 	movdqa	%xmm0,0(%rax)
 	movdqa	%xmm0,16(%rax)
 	movdqa	%xmm0,32(%rax)
@@ -2040,14 +2184,22 @@ bn_from_mont8x:
 
 	movq	$1,%rax
 	movq	-48(%rsi),%r15
+.cfi_restore	%r15
 	movq	-40(%rsi),%r14
+.cfi_restore	%r14
 	movq	-32(%rsi),%r13
+.cfi_restore	%r13
 	movq	-24(%rsi),%r12
+.cfi_restore	%r12
 	movq	-16(%rsi),%rbp
+.cfi_restore	%rbp
 	movq	-8(%rsi),%rbx
+.cfi_restore	%rbx
 	leaq	(%rsi),%rsp
+.cfi_def_cfa_register	%rsp
 .Lfrom_epilogue:
 	.byte	0xf3,0xc3
+.cfi_endproc	
 .size	bn_from_mont8x,.-bn_from_mont8x
 .globl	bn_scatter5
 .hidden bn_scatter5

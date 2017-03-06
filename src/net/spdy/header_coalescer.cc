@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "base/strings/string_util.h"
+#include "net/http/http_util.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 
 namespace net {
@@ -24,20 +25,27 @@ void HeaderCoalescer::OnHeader(base::StringPiece key, base::StringPiece value) {
     return;
   }
 
-  // 32 byte overhead according to RFC 7540 Section 6.5.2.
-  header_list_size_ += key.size() + value.size() + 32;
-  if (header_list_size_ > kMaxHeaderListSize) {
-    error_seen_ = true;
-    return;
-  }
-
+  base::StringPiece key_name = key;
   if (key[0] == ':') {
     if (regular_header_seen_) {
       error_seen_ = true;
       return;
     }
-  } else {
+    key_name.remove_prefix(1);
+  } else if (!regular_header_seen_) {
     regular_header_seen_ = true;
+  }
+
+  if (!HttpUtil::IsValidHeaderName(key_name)) {
+    error_seen_ = true;
+    return;
+  }
+
+  // 32 byte overhead according to RFC 7540 Section 6.5.2.
+  header_list_size_ += key.size() + value.size() + 32;
+  if (header_list_size_ > kMaxHeaderListSize) {
+    error_seen_ = true;
+    return;
   }
 
   // End of line delimiter is forbidden according to RFC 7230 Section 3.2.

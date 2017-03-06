@@ -21,6 +21,10 @@ $L$SEH_begin_gcm_gmult_4bit:
 	push	rbx
 	push	rbp
 	push	r12
+	push	r13
+	push	r14
+	push	r15
+	sub	rsp,280
 $L$gmult_prologue:
 
 	movzx	r8,BYTE[15+rdi]
@@ -97,8 +101,9 @@ $L$break1:
 	mov	QWORD[8+rdi],r8
 	mov	QWORD[rdi],r9
 
-	mov	rbx,QWORD[16+rsp]
-	lea	rsp,[24+rsp]
+	lea	rsi,[((280+48))+rsp]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$gmult_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -669,14 +674,14 @@ $L$outer_loop:
 	mov	QWORD[8+rdi],r8
 	mov	QWORD[rdi],r9
 
-	lea	rsi,[280+rsp]
-	mov	r15,QWORD[rsi]
-	mov	r14,QWORD[8+rsi]
-	mov	r13,QWORD[16+rsi]
-	mov	r12,QWORD[24+rsi]
-	mov	rbp,QWORD[32+rsi]
-	mov	rbx,QWORD[40+rsi]
-	lea	rsp,[48+rsi]
+	lea	rsi,[((280+48))+rsp]
+	mov	r15,QWORD[((-48))+rsi]
+	mov	r14,QWORD[((-40))+rsi]
+	mov	r13,QWORD[((-32))+rsi]
+	mov	r12,QWORD[((-24))+rsi]
+	mov	rbp,QWORD[((-16))+rsi]
+	mov	rbx,QWORD[((-8))+rsi]
+	lea	rsp,[rsi]
 $L$ghash_epilogue:
 	mov	rdi,QWORD[8+rsp]	;WIN64 epilogue
 	mov	rsi,QWORD[16+rsp]
@@ -1916,14 +1921,20 @@ se_handler:
 	cmp	rbx,r10
 	jae	NEAR $L$in_prologue
 
-	lea	rax,[24+rax]
+	lea	rax,[((48+280))+rax]
 
 	mov	rbx,QWORD[((-8))+rax]
 	mov	rbp,QWORD[((-16))+rax]
 	mov	r12,QWORD[((-24))+rax]
+	mov	r13,QWORD[((-32))+rax]
+	mov	r14,QWORD[((-40))+rax]
+	mov	r15,QWORD[((-48))+rax]
 	mov	QWORD[144+r8],rbx
 	mov	QWORD[160+r8],rbp
 	mov	QWORD[216+r8],r12
+	mov	QWORD[224+r8],r13
+	mov	QWORD[232+r8],r14
+	mov	QWORD[240+r8],r15
 
 $L$in_prologue:
 	mov	rdi,QWORD[8+rax]

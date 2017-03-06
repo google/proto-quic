@@ -11,6 +11,6 @@
     "play-services-nearby",
     "play-services-vision"
   ],
-  "version_number": "10.0.1",
+  "version_number": "10.2.0",
   "version_xml_path": "res/values/version.xml"
 }

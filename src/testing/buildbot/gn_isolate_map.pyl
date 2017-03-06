@@ -276,6 +276,10 @@
     "label": "//chrome/android:chrome_public_test_apk",
     "type": "console_test_launcher",
   },
+  "chrome_public_test_vr_apk": {
+    "label": "//chrome/android:chrome_public_test_vr_apk",
+    "type": "console_test_launcher",
+  },
   "chrome_sync_shell_test_apk": {
     "label": "//chrome/android:chrome_sync_shell_test_apk",
     "type": "console_test_launcher",
@@ -315,6 +319,10 @@
   "components_browsertests": {
     "label": "//components:components_browsertests",
     "type": "windowed_test_launcher",
+  },
+  "components_gcm_driver_junit_tests": {
+    "label": "//components/gcm_driver/android:components_gcm_driver_junit_tests",
+    "type": "junit_test",
   },
   "components_invalidation_impl_junit_tests": {
     "label": "//components/invalidation/impl:components_invalidation_impl_junit_tests",
@@ -519,8 +527,33 @@
     "label": "//chrome/test:interactive_ui_tests",
     "type": "windowed_test_launcher",
   },
+  "ios_chrome_integration_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_integration_egtests",
+    "type": "raw",
+    "args": [],
+  },
+  "ios_chrome_settings_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_settings_egtests",
+    "type": "raw",
+    "args": [],
+  },
+  "ios_chrome_smoke_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_smoke_egtests",
+    "type": "raw",
+    "args": [],
+  },
+  "ios_chrome_ui_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_ui_egtests",
+    "type": "raw",
+    "args": [],
+  },
   "ios_chrome_unittests": {
     "label": "//ios/chrome/test:ios_chrome_unittests",
+    "type": "raw",
+    "args": [],
+  },
+  "ios_chrome_web_egtests": {
+    "label": "//ios/chrome/test/earl_grey:ios_chrome_web_egtests",
     "type": "raw",
     "args": [],
   },
@@ -529,8 +562,18 @@
     "type": "raw",
     "args": [],
   },
+  "ios_showcase_egtests": {
+    "label": "//ios/showcase:ios_showcase_egtests",
+    "type": "raw",
+    "args": [],
+  },
   "ios_web_inttests": {
     "label": "//ios/web:ios_web_inttests",
+    "type": "raw",
+    "args": [],
+  },
+  "ios_web_shell_egtests": {
+    "label": "//ios/web/shell/test:ios_web_shell_egtests",
     "type": "raw",
     "args": [],
   },

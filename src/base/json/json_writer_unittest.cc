@@ -27,23 +27,23 @@ TEST(JSONWriterTest, BasicTypes) {
   EXPECT_EQ("[]", output_js);
 
   // Test integer values.
-  EXPECT_TRUE(JSONWriter::Write(FundamentalValue(42), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(42), &output_js));
   EXPECT_EQ("42", output_js);
 
   // Test boolean values.
-  EXPECT_TRUE(JSONWriter::Write(FundamentalValue(true), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(true), &output_js));
   EXPECT_EQ("true", output_js);
 
   // Test Real values should always have a decimal or an 'e'.
-  EXPECT_TRUE(JSONWriter::Write(FundamentalValue(1.0), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(1.0), &output_js));
   EXPECT_EQ("1.0", output_js);
 
   // Test Real values in the the range (-1, 1) must have leading zeros
-  EXPECT_TRUE(JSONWriter::Write(FundamentalValue(0.2), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(0.2), &output_js));
   EXPECT_EQ("0.2", output_js);
 
   // Test Real values in the the range (-1, 1) must have leading zeros
-  EXPECT_TRUE(JSONWriter::Write(FundamentalValue(-0.8), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value(-0.8), &output_js));
   EXPECT_EQ("-0.8", output_js);
 
   // Test String values.
@@ -119,9 +119,9 @@ TEST(JSONWriterTest, BinaryValues) {
 
   ListValue binary_list;
   binary_list.Append(BinaryValue::CreateWithCopiedBuffer("asdf", 4));
-  binary_list.Append(MakeUnique<FundamentalValue>(5));
+  binary_list.Append(MakeUnique<Value>(5));
   binary_list.Append(BinaryValue::CreateWithCopiedBuffer("asdf", 4));
-  binary_list.Append(MakeUnique<FundamentalValue>(2));
+  binary_list.Append(MakeUnique<Value>(2));
   binary_list.Append(BinaryValue::CreateWithCopiedBuffer("asdf", 4));
   EXPECT_FALSE(JSONWriter::Write(binary_list, &output_js));
   EXPECT_TRUE(JSONWriter::WriteWithOptions(
@@ -144,7 +144,7 @@ TEST(JSONWriterTest, DoublesAsInts) {
   std::string output_js;
 
   // Test allowing a double with no fractional part to be written as an integer.
-  FundamentalValue double_value(1e10);
+  Value double_value(1e10);
   EXPECT_TRUE(JSONWriter::WriteWithOptions(
       double_value, JSONWriter::OPTIONS_OMIT_DOUBLE_TYPE_PRESERVATION,
       &output_js));

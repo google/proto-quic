@@ -10,6 +10,7 @@
 #include "net/cert/internal/cert_errors.h"
 #include "net/cert/internal/parsed_certificate.h"
 #include "net/cert/internal/test_helpers.h"
+#include "net/cert/x509_util.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "url/gurl.h"
@@ -44,7 +45,8 @@ using ::testing::_;
   if (!r)
     return r;
   CertErrors errors;
-  *result = ParsedCertificate::Create(der, {}, &errors);
+  *result = ParsedCertificate::Create(x509_util::CreateCryptoBuffer(der), {},
+                                      &errors);
   if (!*result) {
     return ::testing::AssertionFailure()
            << "ParsedCertificate::Create() failed:\n"

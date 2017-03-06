@@ -48,19 +48,19 @@ int _query_new_mode() {
 
 // These symbols override the CRT's implementation of the same functions.
 __declspec(restrict) void* malloc(size_t size) {
-  return ShimMalloc(size);
+  return ShimMalloc(size, nullptr);
 }
 
 void free(void* ptr) {
-  ShimFree(ptr);
+  ShimFree(ptr, nullptr);
 }
 
 __declspec(restrict) void* realloc(void* ptr, size_t size) {
-  return ShimRealloc(ptr, size);
+  return ShimRealloc(ptr, size, nullptr);
 }
 
 __declspec(restrict) void* calloc(size_t n, size_t size) {
-  return ShimCalloc(n, size);
+  return ShimCalloc(n, size, nullptr);
 }
 
 // The symbols

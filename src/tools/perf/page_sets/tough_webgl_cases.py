@@ -27,7 +27,7 @@ class ToughWebglCasesPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(ToughWebglCasesPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.readyState == "complete"')
     action_runner.Wait(2)
 

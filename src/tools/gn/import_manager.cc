@@ -111,7 +111,7 @@ bool ImportManager::DoImport(const SourceFile& file,
           base::TimeDelta::FromMilliseconds(20);
       if (TracingEnabled() &&
           import_block_end - import_block_begin > kImportBlockTraceThreshold) {
-        auto import_block_trace =
+        auto* import_block_trace =
             new TraceItem(TraceItem::TRACE_IMPORT_BLOCK, file.value(),
                           base::PlatformThread::CurrentId());
         import_block_trace->set_begin(import_block_begin);

@@ -14,8 +14,8 @@ class ImageDecodingMeasurementPage(page_module.Page):
 
   def RunNavigateSteps(self, action_runner):
     super(ImageDecodingMeasurementPage, self).RunNavigateSteps(action_runner)
-    action_runner.ExecuteJavaScript2('runBenchmark();')
-    action_runner.WaitForJavaScriptCondition2('isDone')
+    action_runner.ExecuteJavaScript('runBenchmark();')
+    action_runner.WaitForJavaScriptCondition('isDone')
 
 
 class ImageDecodingMeasurementPageSet(story.StorySet):

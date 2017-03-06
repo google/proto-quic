@@ -35,6 +35,10 @@ config("find_bad_constructs") {
       "-add-plugin",
       "-Xclang",
       "find-bad-constructs",
+      "-Xclang",
+      "-plugin-arg-find-bad-constructs",
+      "-Xclang",
+      "check-auto-raw-pointer",
     ]
 
     if ((is_linux || is_android) && !is_chromecast) {

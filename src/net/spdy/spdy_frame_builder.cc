@@ -156,7 +156,7 @@ bool SpdyFrameBuilder::WriteBytes(const void* data, uint32_t data_len) {
         // Unable to make progress.
         return false;
       }
-      uint32_t to_copy = std::min((size_t)data_len, size);
+      uint32_t to_copy = std::min<uint32_t>(data_len, size);
       const char* src = data_ptr + total_written;
       memcpy(dest, src, to_copy);
       Seek(to_copy);

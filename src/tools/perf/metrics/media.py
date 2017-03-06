@@ -23,7 +23,7 @@ class MediaMetric(Metric):
     super(MediaMetric, self).__init__()
     with open(os.path.join(os.path.dirname(__file__), 'media.js')) as f:
       js = f.read()
-      tab.ExecuteJavaScript2(js)
+      tab.ExecuteJavaScript(js)
     self._results = None
     self._skip_basic_metrics = False
 
@@ -31,10 +31,10 @@ class MediaMetric(Metric):
     """Create the media metrics for all media elements in the document."""
     if hasattr(page, 'skip_basic_metrics'):
       self._skip_basic_metrics = page.skip_basic_metrics
-    tab.ExecuteJavaScript2('window.__createMediaMetricsForDocument()')
+    tab.ExecuteJavaScript('window.__createMediaMetricsForDocument()')
 
   def Stop(self, page, tab):
-    self._results = tab.EvaluateJavaScript2('window.__getAllMetrics()')
+    self._results = tab.EvaluateJavaScript('window.__getAllMetrics()')
 
   # Optional |exclude_metrics| args are not in base class Metric.
   # pylint: disable=arguments-differ

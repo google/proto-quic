@@ -141,23 +141,19 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
     QuicTime::Delta delay_min,
     QuicTime event_time) {
   acked_bytes_count_ += acked_bytes;
-  QuicTime current_time = FLAGS_quic_reloadable_flag_quic_use_event_time
-                              ? event_time
-                              : clock_->ApproximateNow();
-
   // Cubic is "independent" of RTT, the update is limited by the time elapsed.
   if (last_congestion_window_ == current_congestion_window &&
-      (current_time - last_update_time_ <= MaxCubicTimeInterval())) {
+      (event_time - last_update_time_ <= MaxCubicTimeInterval())) {
     return std::max(last_target_congestion_window_,
                     estimated_tcp_congestion_window_);
   }
   last_congestion_window_ = current_congestion_window;
-  last_update_time_ = current_time;
+  last_update_time_ = event_time;
 
   if (!epoch_.IsInitialized()) {
     // First ACK after a loss event.
     QUIC_DVLOG(1) << "Start of epoch";
-    epoch_ = current_time;             // Start of epoch.
+    epoch_ = event_time;               // Start of epoch.
     acked_bytes_count_ = acked_bytes;  // Reset count.
     // Reset estimated_tcp_congestion_window_ to be in sync with cubic.
     estimated_tcp_congestion_window_ = current_congestion_window;
@@ -175,7 +171,7 @@ QuicByteCount CubicBytes::CongestionWindowAfterAck(
   // the round trip time in account. This is done to allow us to use shift as a
   // divide operator.
   int64_t elapsed_time =
-      ((current_time + delay_min - epoch_).ToMicroseconds() << 10) /
+      ((event_time + delay_min - epoch_).ToMicroseconds() << 10) /
       kNumMicrosPerSecond;
 
   int64_t offset = time_to_origin_point_ - elapsed_time;

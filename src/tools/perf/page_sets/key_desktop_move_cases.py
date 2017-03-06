@@ -36,19 +36,19 @@ class GmailMouseScrollPage(KeyDesktopMoveCasesPage):
 
   def RunNavigateSteps(self, action_runner):
     super(GmailMouseScrollPage, self).RunNavigateSteps(action_runner)
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.gmonkey !== undefined &&'
         'document.getElementById("gb") !== null')
     # This check is needed for gmonkey to load completely.
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'document.readyState == "complete"')
 
   def RunPageInteractions(self, action_runner):
-    action_runner.ExecuteJavaScript2('''
+    action_runner.ExecuteJavaScript('''
         gmonkey.load('2.0', function(api) {
           window.__scrollableElementForTelemetry = api.getScrollableElement();
         });''')
-    action_runner.WaitForJavaScriptCondition2(
+    action_runner.WaitForJavaScriptCondition(
         'window.__scrollableElementForTelemetry != null')
     scrollbar_x, start_y, end_y = self._CalculateScrollBarRatios(action_runner)
 
@@ -59,13 +59,13 @@ class GmailMouseScrollPage(KeyDesktopMoveCasesPage):
           element_function='window.__scrollableElementForTelemetry')
 
   def _CalculateScrollBarRatios(self, action_runner):
-    viewport_height = float(action_runner.EvaluateJavaScript2(
+    viewport_height = float(action_runner.EvaluateJavaScript(
         'window.__scrollableElementForTelemetry.clientHeight'))
-    content_height = float(action_runner.EvaluateJavaScript2(
+    content_height = float(action_runner.EvaluateJavaScript(
         'window.__scrollableElementForTelemetry.scrollHeight'))
-    viewport_width = float(action_runner.EvaluateJavaScript2(
+    viewport_width = float(action_runner.EvaluateJavaScript(
         'window.__scrollableElementForTelemetry.offsetWidth'))
-    scrollbar_width = float(action_runner.EvaluateJavaScript2('''
+    scrollbar_width = float(action_runner.EvaluateJavaScript('''
         window.__scrollableElementForTelemetry.offsetWidth -
         window.__scrollableElementForTelemetry.scrollWidth'''))
 

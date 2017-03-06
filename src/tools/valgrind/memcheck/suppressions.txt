@@ -1046,19 +1046,19 @@
 {
    bug_84770_a
    Memcheck:Unaddressable
-   fun:_ZN5blink21FrameLoaderClientImpl12allowPluginsEb
+   fun:_ZN5blink21LocalFrameClientImpl12allowPluginsEb
    fun:_ZN5blink14SubframeLoader12allowPluginsENS_28ReasonForCallingAllowPluginsE
 }
 {
    bug_84770_b
    Memcheck:Unaddressable
-   fun:_ZN5blink21FrameLoaderClientImpl15allowJavaScriptEb
+   fun:_ZN5blink21LocalFrameClientImpl15allowJavaScriptEb
    fun:_ZN5blink16ScriptController17canExecuteScriptsENS_33ReasonForCallingCanExecuteScriptsE
 }
 {
    bug_84770_c
    Memcheck:Unaddressable
-   fun:_ZN5blink21FrameLoaderClientImpl20allowScriptExtensionERKN3WTF6StringEi
+   fun:_ZN5blink21LocalFrameClientImpl20allowScriptExtensionERKN3WTF6StringEi
    fun:_ZN5blink16V8DOMWindowShell16createNewContextEN2v86HandleINS1_6ObjectEEEi
 }
 {
@@ -2262,7 +2262,7 @@
    fun:_ZN7content14RenderViewImpl20didClearWindowObjectEPN5blink13WebLocalFrameE
    fun:_ZN7content15RenderFrameImpl20didClearWindowObjectEPN5blink13WebLocalFrameE
    fun:_ZThn16_N7content15RenderFrameImpl20didClearWindowObjectEPN5blink13WebLocalFrameE
-   fun:_ZN5blink21FrameLoaderClientImpl39dispatchDidClearWindowObjectInMainWorldEv
+   fun:_ZN5blink21LocalFrameClientImpl39dispatchDidClearWindowObjectInMainWorldEv
    fun:_ZN5blink11FrameLoader39dispatchDidClearWindowObjectInMainWorldEv
    fun:_ZN5blink16ScriptController11windowShellERNS_15DOMWrapperWorldE
    fun:_ZN5blink11toV8ContextEPNS_10LocalFrameERNS_15DOMWrapperWorldE

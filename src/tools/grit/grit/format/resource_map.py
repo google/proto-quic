@@ -56,7 +56,7 @@ def _FormatHeader(root, lang='en', output_dir='.'):
 #ifndef GRIT_RESOURCE_MAP_STRUCT_
 #define GRIT_RESOURCE_MAP_STRUCT_
 struct GritResourceMap {
-  const char* const name;
+  const char* name;
   int value;
 };
 #endif // GRIT_RESOURCE_MAP_STRUCT_
@@ -66,15 +66,17 @@ extern const size_t %(map_name)sSize;
 ''' % { 'map_name': GetMapName(root) }
 
 
-def _FormatSourceHeader(root):
+def _FormatSourceHeader(root, output_dir):
   '''Create the header of the C++ source file for the resource mapping.'''
   rc_header_file = None
   map_header_file = None
   for output in root.GetOutputFiles():
     if 'rc_header' == output.GetType():
-      rc_header_file = output.GetFilename()
+      rc_header_file = util.MakeRelativePath(output_dir,
+                                             output.GetOutputFilename())
     elif 'resource_map_header' == output.GetType():
-      map_header_file = output.GetFilename()
+      map_header_file = util.MakeRelativePath(output_dir,
+                                              output.GetOutputFilename())
   if not rc_header_file or not map_header_file:
     raise Exception('resource_map_source output type requires '
         'resource_map_header and rc_header outputs')
@@ -108,7 +110,7 @@ const size_t %(map_name)sSize = arraysize(%(map_name)s);
 def _FormatSource(get_key, root, lang, output_dir):
   from grit.format import rc_header
   from grit.node import include, structure, message
-  yield _FormatSourceHeader(root)
+  yield _FormatSourceHeader(root, output_dir)
   tids = rc_header.GetIds(root)
   seen = set()
   active_descendants = [item for item in root.ActiveDescendants()]

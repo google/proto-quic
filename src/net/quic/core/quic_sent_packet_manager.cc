@@ -83,7 +83,8 @@ QuicSentPacketManager::QuicSentPacketManager(
       conservative_handshake_retransmits_(false),
       largest_newly_acked_(0),
       largest_mtu_acked_(0),
-      handshake_confirmed_(false) {
+      handshake_confirmed_(false),
+      largest_packet_peer_knows_is_acked_(0) {
   SetSendAlgorithm(congestion_control_type);
 }
 
@@ -104,40 +105,18 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
                           config.GetInitialRoundTripTimeUsToSend())));
   }
   // Configure congestion control.
-  const bool enable_client_connection_options =
-      FLAGS_quic_reloadable_flag_quic_client_connection_options;
-  if (enable_client_connection_options) {
-    if (FLAGS_quic_reloadable_flag_quic_allow_new_bbr &&
-        config.HasClientRequestedIndependentOption(kTBBR, perspective_)) {
-      SetSendAlgorithm(kBBR);
+  if (FLAGS_quic_reloadable_flag_quic_allow_new_bbr &&
+      config.HasClientRequestedIndependentOption(kTBBR, perspective_)) {
+    SetSendAlgorithm(kBBR);
+  }
+  if (config.HasClientRequestedIndependentOption(kRENO, perspective_)) {
+    if (config.HasClientRequestedIndependentOption(kBYTE, perspective_)) {
+      SetSendAlgorithm(kRenoBytes);
+    } else {
+      SetSendAlgorithm(kReno);
     }
-    if (config.HasClientRequestedIndependentOption(kRENO, perspective_)) {
-      if (config.HasClientRequestedIndependentOption(kBYTE, perspective_)) {
-        SetSendAlgorithm(kRenoBytes);
-      } else {
-        SetSendAlgorithm(kReno);
-      }
-    } else if (config.HasClientRequestedIndependentOption(kBYTE,
-                                                          perspective_)) {
-      SetSendAlgorithm(kCubic);
-    }
-  } else {
-    if (FLAGS_quic_reloadable_flag_quic_allow_new_bbr &&
-        config.HasReceivedConnectionOptions() &&
-        ContainsQuicTag(config.ReceivedConnectionOptions(), kTBBR)) {
-      SetSendAlgorithm(kBBR);
-    }
-    if (config.HasReceivedConnectionOptions() &&
-        ContainsQuicTag(config.ReceivedConnectionOptions(), kRENO)) {
-      if (ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-        SetSendAlgorithm(kRenoBytes);
-      } else {
-        SetSendAlgorithm(kReno);
-      }
-    } else if (config.HasReceivedConnectionOptions() &&
-               ContainsQuicTag(config.ReceivedConnectionOptions(), kBYTE)) {
-      SetSendAlgorithm(kCubic);
-    }
+  } else if (config.HasClientRequestedIndependentOption(kBYTE, perspective_)) {
+    SetSendAlgorithm(kCubic);
   }
   using_pacing_ = !FLAGS_quic_disable_pacing_for_perf_tests;
 
@@ -157,37 +136,19 @@ void QuicSentPacketManager::SetFromConfig(const QuicConfig& config) {
     use_new_rto_ = true;
   }
   // Configure loss detection.
-  if (enable_client_connection_options) {
-    if (config.HasClientRequestedIndependentOption(kTIME, perspective_)) {
-      general_loss_algorithm_.SetLossDetectionType(kTime);
-    }
-    if (config.HasClientRequestedIndependentOption(kATIM, perspective_)) {
-      general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
-    }
-    if (FLAGS_quic_reloadable_flag_quic_enable_lazy_fack &&
-        config.HasClientRequestedIndependentOption(kLFAK, perspective_)) {
-      general_loss_algorithm_.SetLossDetectionType(kLazyFack);
-    }
-  } else {
-    if (config.HasReceivedConnectionOptions() &&
-        ContainsQuicTag(config.ReceivedConnectionOptions(), kTIME)) {
-      general_loss_algorithm_.SetLossDetectionType(kTime);
-    }
-    if (config.HasReceivedConnectionOptions() &&
-        ContainsQuicTag(config.ReceivedConnectionOptions(), kATIM)) {
-      general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
-    }
-    if (FLAGS_quic_reloadable_flag_quic_enable_lazy_fack &&
-        config.HasReceivedConnectionOptions() &&
-        ContainsQuicTag(config.ReceivedConnectionOptions(), kLFAK)) {
-      general_loss_algorithm_.SetLossDetectionType(kLazyFack);
-    }
+  if (config.HasClientRequestedIndependentOption(kTIME, perspective_)) {
+    general_loss_algorithm_.SetLossDetectionType(kTime);
+  }
+  if (config.HasClientRequestedIndependentOption(kATIM, perspective_)) {
+    general_loss_algorithm_.SetLossDetectionType(kAdaptiveTime);
+  }
+  if (config.HasClientRequestedIndependentOption(kLFAK, perspective_)) {
+    general_loss_algorithm_.SetLossDetectionType(kLazyFack);
   }
   if (config.HasClientSentConnectionOption(kUNDO, perspective_)) {
     undo_pending_retransmits_ = true;
   }
-  if (FLAGS_quic_reloadable_flag_quic_conservative_handshake_retransmits &&
-      config.HasClientSentConnectionOption(kCONH, perspective_)) {
+  if (config.HasClientSentConnectionOption(kCONH, perspective_)) {
     conservative_handshake_retransmits_ = true;
   }
   send_algorithm_->SetFromConfig(config, perspective_);
@@ -339,6 +300,10 @@ void QuicSentPacketManager::HandleAckForSentPackets(
     }
     // Packet was acked, so remove it from our unacked packet list.
     QUIC_DVLOG(1) << ENDPOINT << "Got an ack for packet " << packet_number;
+    if (it->largest_acked > 0) {
+      largest_packet_peer_knows_is_acked_ =
+          std::max(largest_packet_peer_knows_is_acked_, it->largest_acked);
+    }
     // If data is associated with the most recent transmission of this
     // packet, then inform the caller.
     if (it->in_flight) {
@@ -741,18 +706,6 @@ bool QuicSentPacketManager::MaybeUpdateRTT(const QuicAckFrame& ack_frame,
   }
 
   QuicTime::Delta send_delta = ack_receive_time - transmission_info.sent_time;
-  const int kMaxSendDeltaSeconds = 30;
-  if (!FLAGS_quic_reloadable_flag_quic_allow_large_send_deltas &&
-      send_delta.ToSeconds() > kMaxSendDeltaSeconds) {
-    // send_delta can be very high if local clock is changed mid-connection.
-    QUIC_LOG_FIRST_N(WARNING, 10)
-        << "Excessive send delta: " << send_delta.ToSeconds()
-        << ", setting to: " << kMaxSendDeltaSeconds
-        << " largest_observed:" << ack_frame.largest_observed
-        << " ack_receive_time:" << ack_receive_time.ToDebuggingValue()
-        << " sent_time:" << transmission_info.sent_time.ToDebuggingValue();
-    return false;
-  }
   rtt_stats_.UpdateRtt(send_delta, ack_frame.ack_delay_time, ack_receive_time);
 
   return true;

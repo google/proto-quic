@@ -198,6 +198,42 @@ class CheckDepsTest(unittest.TestCase):
         dirs_traversed.append(dir_names.pop())
     self.failUnlessEqual(dirs_traversed, sorted(dirs_traversed))
 
+  def testCheckPartialImportsAreAllowed(self):
+    problems = self.deps_checker.CheckAddedProtoImports(
+      [['checkdeps/testdata/test.proto',
+        ['import "no_rule_for_this/nogood.proto"']
+      ]])
+    self.failIf(problems)
+
+  def testCheckAddedFullPathImportsAllowed(self):
+    # NOTE: Base directory is buildtools.
+    problems = self.deps_checker.CheckAddedProtoImports(
+      [['checkdeps/testdata/test.proto',
+        ['import "checkdeps/testdata/allowed/good.proto"',
+         'import "checkdeps/testdata/disallowed/sub_folder/good.proto"']
+      ]])
+    self.failIf(problems)
+
+  def testCheckAddedFullPathImportsDisallowed(self):
+    problems = self.deps_checker.CheckAddedProtoImports(
+      [['checkdeps/testdata/test.proto',
+        ['import "checkdeps/testdata/disallowed/bad.proto"']
+      ]])
+    self.failUnless(problems)
+
+  def testCheckAddedFullPathImportsManyGarbageLines(self):
+    garbage_lines = ["My name is Sam%d\n" % num for num in range(50)]
+    problems = self.deps_checker.CheckAddedProtoImports(
+      [['checkdeps/testdata/test.proto',
+        garbage_lines]])
+    self.failIf(problems)
+
+  def testCheckAddedIncludesNoRuleFullPath(self):
+    problems = self.deps_checker.CheckAddedProtoImports(
+      [['checkdeps/testdata/test.proto',
+        ['import "../tools/some.proto"']
+      ]])
+    self.failUnless(problems)
 
 if __name__ == '__main__':
   unittest.main()

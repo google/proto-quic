@@ -10,6 +10,10 @@ _gcm_gmult_4bit:
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+	subq	$280,%rsp
 L$gmult_prologue:
 
 	movzbq	15(%rdi),%r8
@@ -86,8 +90,9 @@ L$break1:
 	movq	%r8,8(%rdi)
 	movq	%r9,(%rdi)
 
-	movq	16(%rsp),%rbx
-	leaq	24(%rsp),%rsp
+	leaq	280+48(%rsp),%rsi
+	movq	-8(%rsi),%rbx
+	leaq	(%rsi),%rsp
 L$gmult_epilogue:
 	.byte	0xf3,0xc3
 
@@ -647,14 +652,14 @@ L$outer_loop:
 	movq	%r8,8(%rdi)
 	movq	%r9,(%rdi)
 
-	leaq	280(%rsp),%rsi
-	movq	0(%rsi),%r15
-	movq	8(%rsi),%r14
-	movq	16(%rsi),%r13
-	movq	24(%rsi),%r12
-	movq	32(%rsi),%rbp
-	movq	40(%rsi),%rbx
-	leaq	48(%rsi),%rsp
+	leaq	280+48(%rsp),%rsi
+	movq	-48(%rsi),%r15
+	movq	-40(%rsi),%r14
+	movq	-32(%rsi),%r13
+	movq	-24(%rsi),%r12
+	movq	-16(%rsi),%rbp
+	movq	-8(%rsi),%rbx
+	leaq	0(%rsi),%rsp
 L$ghash_epilogue:
 	.byte	0xf3,0xc3
 

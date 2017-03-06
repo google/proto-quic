@@ -82,6 +82,7 @@ try openssl req \
   -config policy.cnf
 
 COMMON_NAME="Policy Test Intermediate CA" \
+  SAN="policy_test.example" \
   CA_DIR=out \
   CA_NAME=policy-intermediate \
   try openssl ca \

@@ -109,6 +109,7 @@ if (current_toolchain != default_toolchain) {
   is_ubsan_vptr = false
   msan_track_origins = 0
   sanitizer_coverage_flags = ""
+  use_afl = false
   use_cfi_diag = false
   use_custom_libcxx = false
   use_drfuzz = false
@@ -139,7 +140,7 @@ declare_args() {
   asan_globals = !is_mac
 }
 
-if (use_afl && sanitizer_coverage_flags == "") {
+if ((use_afl || use_libfuzzer) && sanitizer_coverage_flags == "") {
   sanitizer_coverage_flags = "trace-pc-guard"
 } else if (use_sanitizer_coverage && sanitizer_coverage_flags == "") {
   sanitizer_coverage_flags = "edge,indirect-calls,8bit-counters"

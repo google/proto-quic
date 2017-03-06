@@ -16,12 +16,14 @@ def convert(pb):
       obj[field.name] = _get_json_func(field.type)(value)
   return obj
 
+
 def _get_json_func(field_type):
   if field_type in _FD_TO_JSON:
     return _FD_TO_JSON[field_type]
   else: # pragma: no cover
     logging.warning("pb_to_popo doesn't support converting %s", field_type)
     return unicode
+
 
 _FD_TO_JSON  = {
   fd.TYPE_BOOL: bool,
