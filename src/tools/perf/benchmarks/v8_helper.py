@@ -5,10 +5,6 @@
 _JS_FLAGS_SWITCH = '--js-flags='
 
 
-def EnableIgnition(options):
-  AppendJSFlags(options, '--ignition-staging')
-
-
 def EnableTurbo(options):
   AppendJSFlags(options, '--ignition-staging')
   AppendJSFlags(options, '--turbo')

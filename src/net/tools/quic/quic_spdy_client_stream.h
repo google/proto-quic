@@ -10,9 +10,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_spdy_stream.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/spdy/spdy_framer.h"
 
 namespace net {
@@ -50,7 +50,7 @@ class QuicSpdyClientStream : public QuicSpdyStream {
 
   // Serializes the headers and body, sends it to the server, and
   // returns the number of bytes sent.
-  size_t SendRequest(SpdyHeaderBlock headers, base::StringPiece body, bool fin);
+  size_t SendRequest(SpdyHeaderBlock headers, QuicStringPiece body, bool fin);
 
   // Returns the response data.
   const std::string& data() { return data_; }

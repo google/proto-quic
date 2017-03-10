@@ -10,6 +10,7 @@
 #include "net/quic/core/quic_connection_stats.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -70,7 +71,7 @@ class QuicConnectionPeer {
   static void SwapCrypters(QuicConnection* connection, QuicFramer* framer);
 
   static void SetCurrentPacket(QuicConnection* connection,
-                               base::StringPiece current_packet);
+                               QuicStringPiece current_packet);
 
   static QuicConnectionHelperInterface* GetHelper(QuicConnection* connection);
 

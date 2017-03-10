@@ -32,7 +32,7 @@ def parse(filename):
   return team, component
 
 
-def aggregate_components_from_owners(root):
+def aggregate_components_from_owners(root, include_subdirs=False):
   """Traverses the given dir and parse OWNERS files for team and component tags.
 
   Args:
@@ -65,6 +65,7 @@ def aggregate_components_from_owners(root):
   for dirname, _, files in os.walk(root):
     # Proofing against windows casing oddities.
     owners_file_names = [f for f in files if f.upper() == 'OWNERS']
+    rel_dirname = os.path.relpath(dirname, root)
     if owners_file_names:
       file_depth = dirname[len(root) + len(os.path.sep):].count(os.path.sep)
       num_total += 1
@@ -75,13 +76,19 @@ def aggregate_components_from_owners(root):
       if component:
         num_with_component += 1
         num_with_component_by_depth[file_depth] += 1
-        dir_to_component[os.path.relpath(dirname, root)] = component
+        dir_to_component[rel_dirname] = component
         if team:
           num_with_team_component += 1
           num_with_team_component_by_depth[file_depth] += 1
           component_to_team[component].add(team)
       else:
         warnings.append('%s has no COMPONENT tag' % owners_rel_path)
+
+    if include_subdirs and rel_dirname not in dir_to_component:
+      rel_parent_dirname = os.path.relpath(os.path.dirname(dirname), root)
+      if rel_parent_dirname in dir_to_component:
+        dir_to_component[rel_dirname] = dir_to_component[rel_parent_dirname]
+
   mappings = {'component-to-team': component_to_team,
               'dir-to-component': dir_to_component}
   errors = validate_one_team_per_component(mappings)

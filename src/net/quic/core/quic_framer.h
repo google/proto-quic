@@ -11,9 +11,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -231,7 +231,7 @@ class QUIC_EXPORT_PRIVATE QuicFramer {
 
   // Returns the associated data from the encrypted packet |encrypted| as a
   // stringpiece.
-  static base::StringPiece GetAssociatedDataFromEncryptedPacket(
+  static QuicStringPiece GetAssociatedDataFromEncryptedPacket(
       QuicVersion version,
       const QuicEncryptedPacket& encrypted,
       QuicConnectionIdLength connection_id_length,

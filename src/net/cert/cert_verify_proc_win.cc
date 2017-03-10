@@ -662,7 +662,7 @@ class RevocationInjector {
   void SetCRLSet(CRLSet* crl_set) { thread_local_crlset.Set(crl_set); }
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<RevocationInjector>;
+  friend struct base::LazyInstanceTraitsBase<RevocationInjector>;
 
   RevocationInjector() {
     const CRYPT_OID_FUNC_ENTRY kInterceptFunction[] = {

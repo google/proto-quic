@@ -38,7 +38,6 @@
 #include "testing/gmock_mutant.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::CreateFunctor;
 using testing::DoAll;

@@ -13,7 +13,6 @@
 ../../third_party/catapult/common/py_utils/py_utils/cloud_storage_global_lock.py
 ../../third_party/catapult/common/py_utils/py_utils/contextlib_ext.py
 ../../third_party/catapult/common/py_utils/py_utils/lock.py
-../../third_party/catapult/common/py_utils/py_utils/tempfile_ext.py
 ../../third_party/catapult/dependency_manager/dependency_manager/__init__.py
 ../../third_party/catapult/dependency_manager/dependency_manager/archive_info.py
 ../../third_party/catapult/dependency_manager/dependency_manager/base_config.py
@@ -121,7 +120,6 @@
 ../../tools/swarming_client/libs/logdog/stream.py
 ../../tools/swarming_client/libs/logdog/streamname.py
 ../../tools/swarming_client/libs/logdog/varint.py
-../find_depot_tools.py
 ../util/lib/common/unittest_util.py
 devil_chromium.py
 pylib/__init__.py
@@ -179,7 +177,6 @@ pylib/utils/__init__.py
 pylib/utils/decorators.py
 pylib/utils/device_dependencies.py
 pylib/utils/dexdump.py
-pylib/utils/google_storage_helper.py
 pylib/utils/logdog_helper.py
 pylib/utils/proguard.py
 pylib/utils/repo_utils.py

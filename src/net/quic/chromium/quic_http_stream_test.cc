@@ -42,6 +42,7 @@
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/quic_write_blocked_list.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
@@ -368,7 +369,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data,
+      QuicStringPiece data,
       QuicTestPacketMaker* maker) {
     return maker->MakeDataPacket(packet_number, stream_id,
                                  should_include_version, fin, offset, data);
@@ -379,7 +380,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return InnerConstructDataPacket(packet_number, stream_id_,
                                     should_include_version, fin, offset, data,
                                     &client_maker_);
@@ -390,7 +391,7 @@ class QuicHttpStreamTest : public ::testing::TestWithParam<QuicVersion> {
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return InnerConstructDataPacket(packet_number, stream_id_,
                                     should_include_version, fin, offset, data,
                                     &server_maker_);

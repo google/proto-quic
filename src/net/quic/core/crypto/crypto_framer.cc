@@ -9,8 +9,7 @@
 #include "net/quic/core/quic_data_writer.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_str_cat.h"
-
-using base::StringPiece;
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -51,7 +50,7 @@ CryptoFramer::~CryptoFramer() {}
 
 // static
 std::unique_ptr<CryptoHandshakeMessage> CryptoFramer::ParseMessage(
-    StringPiece in) {
+    QuicStringPiece in) {
   OneShotVisitor visitor;
   CryptoFramer framer;
 
@@ -64,7 +63,7 @@ std::unique_ptr<CryptoHandshakeMessage> CryptoFramer::ParseMessage(
   return visitor.release();
 }
 
-bool CryptoFramer::ProcessInput(StringPiece input) {
+bool CryptoFramer::ProcessInput(QuicStringPiece input) {
   DCHECK_EQ(QUIC_NO_ERROR, error_);
   if (error_ != QUIC_NO_ERROR) {
     return false;
@@ -191,7 +190,7 @@ void CryptoFramer::Clear() {
   state_ = STATE_READING_TAG;
 }
 
-QuicErrorCode CryptoFramer::Process(StringPiece input) {
+QuicErrorCode CryptoFramer::Process(QuicStringPiece input) {
   // Add this data to the buffer.
   buffer_.append(input.data(), input.length());
   QuicDataReader reader(buffer_.data(), buffer_.length());
@@ -259,7 +258,7 @@ QuicErrorCode CryptoFramer::Process(StringPiece input) {
         break;
       }
       for (const std::pair<QuicTag, size_t>& item : tags_and_lengths_) {
-        StringPiece value;
+        QuicStringPiece value;
         reader.ReadStringPiece(&value, item.second);
         message_.SetStringPiece(item.first, value);
       }

@@ -14,13 +14,13 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_stack_trace.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/tools/quic/chlo_extractor.h"
 #include "net/tools/quic/quic_per_connection_packet_writer.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 #include "net/tools/quic/quic_time_wait_list_manager.h"
 #include "net/tools/quic/stateless_rejector.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -113,7 +113,7 @@ class StatelessConnectionTerminator {
   // Generates a series of termination packets containing the crypto handshake
   // message |reject|.  Adds the connection to time wait list with the
   // generated packets.
-  void RejectConnection(StringPiece reject) {
+  void RejectConnection(QuicStringPiece reject) {
     struct iovec iovec;
     iovec.iov_base = const_cast<char*>(reject.data());
     iovec.iov_len = reject.length();

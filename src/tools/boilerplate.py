@@ -60,12 +60,28 @@ def _RemoveTestSuffix(filename):
       return base[:-l]
   return base
 
+
+def _IsIOSFile(filename):
+  if os.path.splitext(os.path.basename(filename))[0].endswith('_ios'):
+    return True
+  if 'ios' in filename.split(os.path.sep):
+    return True
+  return False
+
+
 def _CppImplementation(filename):
   return '\n#include "' + _RemoveTestSuffix(filename) + '.h"\n'
 
 
 def _ObjCppImplementation(filename):
-  return '\n#import "' + _RemoveTestSuffix(filename) + '.h"\n'
+  implementation = '\n#import "' + _RemoveTestSuffix(filename) + '.h"\n'
+  if not _IsIOSFile(filename):
+    return implementation
+  implementation += '\n'
+  implementation += '#if !defined(__has_feature) || !__has_feature(objc_arc)\n'
+  implementation += '#error "This file requires ARC support."\n'
+  implementation += '#endif\n'
+  return implementation
 
 
 def _CreateFile(filename):

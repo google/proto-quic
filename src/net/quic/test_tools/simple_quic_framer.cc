@@ -10,8 +10,8 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -56,7 +56,8 @@ class SimpleFramerVisitor : public QuicFramerVisitorInterface {
     stream_data_.push_back(QuicWrapUnique(string_data));
     // TODO(ianswett): A pointer isn't necessary with emplace_back.
     stream_frames_.push_back(QuicMakeUnique<QuicStreamFrame>(
-        frame.stream_id, frame.fin, frame.offset, StringPiece(*string_data)));
+        frame.stream_id, frame.fin, frame.offset,
+        QuicStringPiece(*string_data)));
     return true;
   }
 

@@ -6,6 +6,7 @@
 
 import argparse
 import contextlib
+import multiprocessing
 import os
 import shutil
 import subprocess
@@ -53,13 +54,12 @@ def build_libraries(build_type, ubuntu_release, jobs, use_goma):
   gn_args = [
       'is_debug = false',
       'use_goma = %s' % str(use_goma).lower(),
-      'instrumented_libraries_jobs  = %d' % jobs,
       'use_locally_built_instrumented_libraries = true',
   ] + BUILD_TYPES[build_type]
   with open(os.path.join(build_dir, 'args.gn'), 'w') as f:
-    f.write('\n'.join(gn_args))
+    f.write('\n'.join(gn_args) + '\n')
   subprocess.check_call(['gn', 'gen', build_dir, '--check'])
-  subprocess.check_call(['ninja', '-j2', '-C', build_dir,
+  subprocess.check_call(['ninja', '-j%d' % jobs, '-C', build_dir,
                          'third_party/instrumented_libraries:locally_built'])
   with tarfile.open('%s.tgz' % archive_name, mode='w:gz') as f:
     prefix = build_type.split('-', 1)[0]
@@ -69,7 +69,6 @@ def build_libraries(build_type, ubuntu_release, jobs, use_goma):
     f.add('%s/instrumented_libraries/sources' % build_dir,
           arcname='sources',
           filter=_tar_filter)
-  return archive_name
 
 
 def main():
@@ -81,7 +80,11 @@ def main():
       '-j',
       type=int,
       default=8,
-      help='the default number of jobs to use when running make')
+      help='the default number of jobs to use when running ninja')
+  parser.add_argument('--parallel',
+                      action='store_true',
+                      default=False,
+                      help='whether to run all instrumented builds in parallel')
   parser.add_argument('--use_goma',
                       action='store_true',
                       default=False,
@@ -99,14 +102,25 @@ def main():
   if ubuntu_release not in SUPPORTED_RELEASES:
     raise UnsupportedReleaseError('%s is not a supported release' %
                                   _get_release())
-  archive_names = [
+  build_types = sorted(set(args.build_type))
+  if args.parallel:
+    procs = []
+    for build_type in build_types:
+      proc = multiprocessing.Process(target=build_libraries,
+                                     args=(build_type, ubuntu_release,
+                                           args.jobs, args.use_goma))
+      proc.start()
+      procs.append(proc)
+    for proc in procs:
+      proc.join()
+  else:
+    for build_type in build_types:
       build_libraries(build_type, ubuntu_release, args.jobs, args.use_goma)
-      for build_type in sorted(set(args.build_type))
-  ]
   print 'To upload, run:'
-  for archive_name in archive_names:
+  for build_type in build_types:
     print('upload_to_google_storage.py -b '
-          'chromium-instrumented-libraries %s.tgz') % archive_name
+          'chromium-instrumented-libraries %s-%s.tgz' %
+          (build_type, ubuntu_release))
   print 'You should then commit the resulting .sha1 files.'
 
 

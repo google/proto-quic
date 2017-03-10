@@ -16,6 +16,7 @@
 #include "net/quic/core/quic_simple_buffer_allocator.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_packet_creator_peer.h"
 #include "net/quic/test_tools/quic_packet_generator_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -23,7 +24,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::InSequence;
 using testing::Return;
@@ -202,7 +202,7 @@ class QuicPacketGeneratorTest : public ::testing::Test {
     return QuicIOVector(&iov_, 1, len);
   }
 
-  QuicIOVector MakeIOVectorFromStringPiece(StringPiece s) {
+  QuicIOVector MakeIOVectorFromStringPiece(QuicStringPiece s) {
     return MakeIOVector(s, &iov_);
   }
 
@@ -853,7 +853,7 @@ TEST_F(QuicPacketGeneratorTest, ConnectionCloseFrameLargerThanPacketSize) {
   QuicConnectionCloseFrame* frame = new QuicConnectionCloseFrame();
   frame->error_code = QUIC_PACKET_WRITE_ERROR;
   char buf[2000];
-  StringPiece error_details(buf, 2000);
+  QuicStringPiece error_details(buf, 2000);
   frame->error_details = error_details.as_string();
   EXPECT_CALL(delegate_,
               OnUnrecoverableError(QUIC_FAILED_TO_SERIALIZE_PACKET,

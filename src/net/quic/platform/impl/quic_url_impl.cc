@@ -6,14 +6,13 @@
 
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 
-QuicUrlImpl::QuicUrlImpl(StringPiece url) : url_(url) {}
+QuicUrlImpl::QuicUrlImpl(QuicStringPiece url) : url_(url) {}
 
-QuicUrlImpl::QuicUrlImpl(StringPiece url, StringPiece default_scheme)
+QuicUrlImpl::QuicUrlImpl(QuicStringPiece url, QuicStringPiece default_scheme)
     : url_(url) {
   if (url_.has_scheme()) {
     return;

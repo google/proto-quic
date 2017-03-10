@@ -145,7 +145,7 @@ class FlipboardDesktopStory(_NewsBrowsingStory):
 
 
 # crbug.com/657665 for win and mac
-@decorators.Disabled('win', 'yosemite', 'elcapitan')
+@decorators.Disabled('win', 'mac')
 class HackerNewsStory(_NewsBrowsingStory):
   NAME = 'browse:news:hackernews'
   URL = 'https://news.ycombinator.com'

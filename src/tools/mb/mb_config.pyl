@@ -241,6 +241,7 @@
       'Android Release (Nexus 6P)': 'android_release_trybot_arm64',
       'Android Release (Nexus 9)': 'android_release_trybot_arm64',
       'Android Release (Pixel C)': 'android_release_trybot_arm64',
+      'Android Release (NVIDIA Shield)': 'android_release_trybot',
       'GPU Linux Builder (dbg)': 'gpu_fyi_tests_debug_trybot',
       'GPU Linux Builder': 'gpu_fyi_tests_release_trybot',
       'GPU Mac Builder': 'gpu_fyi_tests_release_trybot',
@@ -268,11 +269,6 @@
       'Linux Builder (dbg)': 'debug_bot',
       'Linux Builder (dbg)(32)': 'debug_bot_x86',
       'Linux Builder': 'release_bot',
-      # Trusty bots.
-      'Cast Linux Trusty': 'cast_release_bot',
-      'Linux Builder Trusty (dbg)': 'debug_bot',
-      'Linux Builder Trusty (dbg)(32)': 'debug_bot_x86',
-      'Linux Builder Trusty': 'release_bot',
       'Deterministic Linux': 'release_bot',
     },
 
@@ -370,6 +366,7 @@
 
     'client.v8.fyi': {
       'Android Builder': 'official_goma_minimal_symbols_android',
+      'Android Release (Nexus 5X)': 'gpu_tests_deqp_android_release_trybot_arm64',
       'Chromium ASAN - debug': 'asan_lsan_edge_debug_bot',
       'Chromium ASAN (symbolized)': 'asan_lsan_release_bot',
       'Chromium Win SyzyASAN': 'syzyasan_no_pch_release_x86',
@@ -398,6 +395,7 @@
       'WebKit Mac Builder (dbg)': 'debug_bot',
       'WebKit Mac Builder': 'release_bot',
       'WebKit Mac10.11 (retina)': 'release_bot',
+      'WebKit Mac10.12': 'release_bot',
       'WebKit Mac10.9': 'release_bot',
       'WebKit Win Builder (dbg)': 'debug_bot_x86',
       'WebKit Win Builder': 'release_bot_x86',
@@ -437,6 +435,7 @@
     },
 
     'official.desktop': {
+      'linux64': 'official',
       'mac64': 'official',
       'precise64': 'official',
 
@@ -487,6 +486,7 @@
       'mac10.10_blink_rel': 'release_bot_minimal_symbols',
       'mac10.11_blink_rel': 'release_bot_minimal_symbols',
       'mac10.11_retina_blink_rel': 'release_bot_minimal_symbols',
+      'mac10.12_blink_rel': 'release_bot_minimal_symbols',
       'win7_blink_compile_dbg': 'debug_trybot_x86',
       'win7_blink_compile_rel': 'release_bot_x86',
       'win7_blink_dbg': 'debug_trybot_x86',
@@ -585,27 +585,6 @@
       'linux_optional_gpu_tests_rel': 'gpu_fyi_tests_release_trybot',
       'linux_site_isolation': 'release_trybot',
       'linux_upload_clang': 'release_bot',
-
-      # Trusty trybot
-      'cast_shell_linux_trusty': 'cast_release_trybot',
-      'linux_arm_trusty': 'release_trybot_arm',
-      'linux_chromium_asan_rel_ng_trusty': 'asan_lsan_release_trybot',
-      'linux_chromium_browser_side_navigation_rel_trusty': 'release_trybot',
-      'linux_chromium_chromeos_asan_rel_ng_trusty': 'asan_lsan_chromeos_release_trybot',
-      'linux_chromium_chromeos_compile_dbg_ng_trusty': 'chromeos_with_codecs_debug_trybot',
-      'linux_chromium_chromeos_compile_rel_ng_trusty': 'chromeos_with_codecs_release_trybot',
-      'linux_chromium_chromeos_dbg_ng_trusty': 'chromeos_with_codecs_debug_trybot',
-      'linux_chromium_chromeos_rel_ng_trusty': 'chromeos_with_codecs_release_trybot',
-      'linux_chromium_clobber_rel_ng_trusty': 'release_trybot',
-      'linux_chromium_compile_dbg_32_ng_trusty': 'debug_trybot_x86',
-      'linux_chromium_compile_dbg_ng_trusty': 'debug_trybot',
-      'linux_chromium_compile_rel_ng_trusty': 'release_trybot',
-      'linux_chromium_dbg_32_ng_trusty': 'debug_trybot_x86',
-      'linux_chromium_dbg_ng_trusty': 'debug_trybot',
-      'linux_chromium_rel_ng_trusty': 'gpu_tests_release_trybot',
-      'linux_chromium_tsan_rel_ng_trusty': 'tsan_disable_nacl_release_trybot',
-      'linux_optional_gpu_tests_rel_trusty': 'gpu_fyi_tests_release_trybot',
-      'linux_site_isolation_trusty': 'release_trybot',
     },
 
     'tryserver.chromium.mac': {
@@ -1923,7 +1902,10 @@
     },
 
     'v8_future': {
-      'gn_args': 'v8_enable_future=true',
+      # TODO(machenbach): Switch back to v8_enable_future=true when
+      # turbofan+ignition are stable.
+      # http://crbug.com/682617
+      'gn_args': 'v8_disable_turbo=true',
     },
 
     'v8_heap': {

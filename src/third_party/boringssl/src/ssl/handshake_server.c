@@ -877,7 +877,7 @@ static int ssl3_select_certificate(SSL_HANDSHAKE *hs) {
     }
   }
 
-  if (!ssl_auto_chain_if_needed(ssl)) {
+  if (!ssl->ctx->x509_method->ssl_auto_chain_if_needed(ssl)) {
     return -1;
   }
 
@@ -1058,7 +1058,7 @@ static int ssl3_send_server_hello(SSL_HANDSHAKE *hs) {
     ssl->s3->tlsext_channel_id_valid = 0;
   }
 
-  struct timeval now;
+  struct OPENSSL_timeval now;
   ssl_get_current_time(ssl, &now);
   ssl->s3->server_random[0] = now.tv_sec >> 24;
   ssl->s3->server_random[1] = now.tv_sec >> 16;
@@ -1481,10 +1481,10 @@ static int ssl3_get_client_certificate(SSL_HANDSHAKE *hs) {
     hs->new_session->peer_sha256_valid = 1;
   }
 
-  if (!ssl_verify_cert_chain(ssl, &hs->new_session->verify_result,
-                             hs->new_session->x509_chain)) {
+  if (!ssl->ctx->x509_method->session_verify_cert_chain(hs->new_session, ssl)) {
     return -1;
   }
+
   return 1;
 }
 

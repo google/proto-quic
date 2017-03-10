@@ -68,6 +68,9 @@ class NET_EXPORT TCPClientSocket : public StreamSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;
@@ -89,6 +92,13 @@ class NET_EXPORT TCPClientSocket : public StreamSocket {
     CONNECT_STATE_CONNECT_COMPLETE,
     CONNECT_STATE_NONE,
   };
+
+  // A helper method shared by Read() and ReadIfReady(). If |read_if_ready| is
+  // set to true, ReadIfReady() will be used instead of Read().
+  int ReadCommon(IOBuffer* buf,
+                 int buf_len,
+                 const CompletionCallback& callback,
+                 bool read_if_ready);
 
   // State machine used by Connect().
   int DoConnectLoop(int result);

@@ -4,18 +4,23 @@
      in the LICENSE file. -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.chromium.customtabsclient.test"
+    package="org.chromium.customtabs.test"
     android:versionCode="1"
     android:versionName="1.0">
-    <uses-sdk android:minSdkVersion="16" android:targetSdkVersion="22" />
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22" />
 
-    <application>
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application android:label="CustomTabsBenchmark">
       <activity android:name="org.chromium.customtabs.test.MainActivity"
-                android:label="MainActivity">
+                android:label="CustomTabsBenchmark">
         <intent-filter>
           <action android:name="android.intent.action.MAIN" />
           <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <activity android:name="org.chromium.customtabs.test.WebViewActivity"
+                android:label="WebViewActivity"
+                android:exported="false"/>
     </application>
 </manifest>

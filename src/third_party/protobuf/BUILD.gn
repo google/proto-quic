@@ -177,7 +177,12 @@ component("protobuf_lite") {
 # into that category. Do not use in Chrome code.
 static_library("protobuf_full") {
   # Prevent people from depending on this outside our file.
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+
+    # requires descriptors & reflection; testonly.
+    "//third_party/libprotobuf-mutator:*",
+  ]
 
   sources = protobuf_lite_sources
   sources += [

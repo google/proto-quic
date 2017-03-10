@@ -7,6 +7,9 @@
 # //build/config/linux/gtk and it will switch for you.
 
 declare_args() {
-  # Whether to compile agains GTKv3 instead of GTKv2.
-  use_gtk3 = false
+  # Whether to compile against GTKv3 instead of GTKv2.
+  # TODO(thomasanderson): Currently, the 32-bit clusterfuzz schroot does not
+  # have libgtk-3-0 installed.  set use_gtk3 = true on all architectures when
+  # the package is added (crbug.com/699669).
+  use_gtk3 = target_cpu == "x64"
 }

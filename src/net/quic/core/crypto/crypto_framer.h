@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
@@ -41,11 +40,11 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
 
   virtual ~CryptoFramer();
 
-  // ParseMessage parses exactly one message from the given StringPiece. If
+  // ParseMessage parses exactly one message from the given QuicStringPiece. If
   // there is an error, the message is truncated, or the message has trailing
   // garbage then nullptr will be returned.
   static std::unique_ptr<CryptoHandshakeMessage> ParseMessage(
-      base::StringPiece in);
+      QuicStringPiece in);
 
   // Set callbacks to be called from the framer.  A visitor must be set, or
   // else the framer will crash.  It is acceptable for the visitor to do
@@ -60,7 +59,7 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
 
   // Processes input data, which must be delivered in order. Returns
   // false if there was an error, and true otherwise.
-  bool ProcessInput(base::StringPiece input);
+  bool ProcessInput(QuicStringPiece input);
 
   // Returns the number of bytes of buffered input data remaining to be
   // parsed.
@@ -77,7 +76,7 @@ class QUIC_EXPORT_PRIVATE CryptoFramer {
 
   // Process does does the work of |ProcessInput|, but returns an error code,
   // doesn't set error_ and doesn't call |visitor_->OnError()|.
-  QuicErrorCode Process(base::StringPiece input);
+  QuicErrorCode Process(QuicStringPiece input);
 
   static bool WritePadTag(QuicDataWriter* writer,
                           size_t pad_length,

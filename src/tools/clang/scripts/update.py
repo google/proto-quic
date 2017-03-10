@@ -27,7 +27,7 @@ import zipfile
 # Do NOT CHANGE this if you don't know what you're doing -- see
 # https://chromium.googlesource.com/chromium/src/+/master/docs/updating_clang.md
 # Reverting problematic clang rolls is safe, though.
-CLANG_REVISION = '296320'
+CLANG_REVISION = '296321'
 
 use_head_revision = 'LLVM_FORCE_HEAD_REVISION' in os.environ
 if use_head_revision:
@@ -397,9 +397,8 @@ def VeryifyVersionOfBuiltClangMatchesVERSION():
 def UpdateClang(args):
   print 'Updating Clang to %s...' % PACKAGE_VERSION
 
-  need_gold_plugin = 'LLVM_DOWNLOAD_GOLD_PLUGIN' in os.environ or (
-      sys.platform.startswith('linux') and
-      'buildtype=Official' in os.environ.get('GYP_DEFINES', ''))
+  # Required for LTO, which is used when is_official_build = true.
+  need_gold_plugin = sys.platform.startswith('linux')
 
   if ReadStampFile() == PACKAGE_VERSION and not args.force_local_build:
     print 'Clang is already up to date.'
@@ -618,6 +617,13 @@ def UpdateClang(args):
   if use_head_revision:
     cflags += ['-DLLVM_FORCE_HEAD_REVISION']
     cxxflags += ['-DLLVM_FORCE_HEAD_REVISION']
+
+  # Build PDBs for archival on Windows.  Don't use RelWithDebInfo since it
+  # has different optimization defaults than Release.
+  if sys.platform == 'win32' and args.bootstrap:
+    cflags += ['/Zi']
+    cxxflags += ['/Zi']
+    ldflags += ['/DEBUG', '/OPT:REF', '/OPT:ICF']
 
   CreateChromeToolsShim()
 

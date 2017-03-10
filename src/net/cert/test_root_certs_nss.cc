@@ -12,10 +12,6 @@
 #include "crypto/nss_util.h"
 #include "net/cert/x509_certificate.h"
 
-#if defined(OS_IOS)
-#include "net/cert/x509_util_ios.h"
-#endif
-
 namespace net {
 
 
@@ -30,12 +26,7 @@ TestRootCerts::TrustEntry::~TrustEntry() {
 }
 
 bool TestRootCerts::Add(X509Certificate* certificate) {
-#if defined(OS_IOS)
-  x509_util_ios::NSSCertificate nss_certificate(certificate->os_cert_handle());
-  CERTCertificate* cert_handle = nss_certificate.cert_handle();
-#else
   CERTCertificate* cert_handle = certificate->os_cert_handle();
-#endif
   // Preserve the original trust bits so that they can be restored when
   // the certificate is removed.
   CERTCertTrust original_trust;
@@ -92,7 +83,6 @@ bool TestRootCerts::IsEmpty() const {
   return trust_cache_.empty();
 }
 
-#if defined(USE_NSS_CERTS)
 bool TestRootCerts::Contains(CERTCertificate* cert) const {
   for (const auto& item : trust_cache_)
     if (X509Certificate::IsSameOSCert(cert, item->certificate()))
@@ -100,7 +90,6 @@ bool TestRootCerts::Contains(CERTCertificate* cert) const {
 
   return false;
 }
-#endif
 
 TestRootCerts::~TestRootCerts() {
   Clear();

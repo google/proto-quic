@@ -100,7 +100,6 @@ const (
 	extensionNextProtoNeg               uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo          uint16 = 0xff01
 	extensionChannelID                  uint16 = 30032 // not IANA assigned
-	extensionShortHeader                uint16 = 27463 // not IANA assigned
 )
 
 // TLS signaling cipher suite values
@@ -223,7 +222,6 @@ type ConnectionState struct {
 	SCTList                    []byte                // signed certificate timestamp list
 	PeerSignatureAlgorithm     signatureAlgorithm    // algorithm used by the peer in the handshake
 	CurveID                    CurveID               // the curve used in ECDHE
-	ShortHeader                bool                  // whether the short header extension was negotiated
 }
 
 // ClientAuthType declares the policy the server will follow for
@@ -982,6 +980,10 @@ type ProtocolBugs struct {
 	// server receives from the client.
 	ExpectTicketAge time.Duration
 
+	// SendTicketAge, if non-zero, is the ticket age to be sent by the
+	// client.
+	SendTicketAge time.Duration
+
 	// FailIfSessionOffered, if true, causes the server to fail any
 	// connections where the client offers a non-empty session ID or session
 	// ticket.
@@ -1274,18 +1276,6 @@ type ProtocolBugs struct {
 	// request signed certificate timestamps.
 	NoSignedCertificateTimestamps bool
 
-	// EnableShortHeader, if true, causes the TLS 1.3 short header extension
-	// to be enabled.
-	EnableShortHeader bool
-
-	// AlwaysNegotiateShortHeader, if true, causes the server to always
-	// negotiate the short header extension in ServerHello.
-	AlwaysNegotiateShortHeader bool
-
-	// ClearShortHeaderBit, if true, causes the server to send short headers
-	// without the high bit set.
-	ClearShortHeaderBit bool
-
 	// SendSupportedPointFormats, if not nil, is the list of supported point
 	// formats to send in ClientHello or ServerHello. If set to a non-nil
 	// empty slice, no extension will be sent.
@@ -1302,6 +1292,14 @@ type ProtocolBugs struct {
 	// SendServerNameAck, if true, causes the server to acknowledge the SNI
 	// extension.
 	SendServerNameAck bool
+
+	// ExpectCertificateReqNames, if not nil, contains the list of X.509
+	// names that must be sent in a CertificateRequest from the server.
+	ExpectCertificateReqNames [][]byte
+
+	// RenegotiationCertificate, if not nil, is the certificate to use on
+	// renegotiation handshakes.
+	RenegotiationCertificate *Certificate
 }
 
 func (c *Config) serverInit() {

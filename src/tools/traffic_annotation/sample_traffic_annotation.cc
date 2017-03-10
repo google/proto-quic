@@ -8,7 +8,7 @@
 // For more description on each field, please refer to:
 // tools/traffic_annotation/traffic_annotation.proto
 // and
-// out/Debug/gen/components/policy/proto/cloud_policy.proto
+// out/Debug/gen/components/policy/proto/chrome_settings.proto
 // For more information on policies, please refer to:
 // http://dev.chromium.org/administrators/policy-list-3
 
@@ -38,10 +38,10 @@ void network_traffic_annotation_sample() {
             "You can enable or disable this feature via 'Use a web service to "
             "help resolve spelling errors.' in Chrome's settings under "
             "Advanced. The feature is disabled by default."
-          policy {
+          chrome_policy {
             SpellCheckServiceEnabled {
                 policy_options {mode: MANDATORY}
-                value: false
+                SpellCheckServiceEnabled: false
             }
           }
         })");
@@ -61,10 +61,10 @@ void network_traffic_annotation_template() {
           cookies_allowed: false/true
           cookies_store: "..."
           setting: "..."
-          policy {
+          chrome_policy {
             [POLICY_NAME] {
                 policy_options {mode: MANDATORY/RECOMMENDED/UNSET}
-                value: ...
+                [POLICY_NAME]: ...
             }
           }
           policy_exception_justification = "..."

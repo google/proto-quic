@@ -7,14 +7,13 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 namespace test {
 
 TEST(CryptoSecretBoxerTest, BoxAndUnbox) {
-  StringPiece message("hello world");
+  QuicStringPiece message("hello world");
 
   CryptoSecretBoxer boxer;
   boxer.SetKeys({string(CryptoSecretBoxer::GetKeySize(), 0x11)});
@@ -22,7 +21,7 @@ TEST(CryptoSecretBoxerTest, BoxAndUnbox) {
   const string box = boxer.Box(QuicRandom::GetInstance(), message);
 
   string storage;
-  StringPiece result;
+  QuicStringPiece result;
   EXPECT_TRUE(boxer.Unbox(box, &storage, &result));
   EXPECT_EQ(result, message);
 
@@ -37,10 +36,10 @@ TEST(CryptoSecretBoxerTest, BoxAndUnbox) {
 // Helper function to test whether one boxer can decode the output of another.
 static bool CanDecode(const CryptoSecretBoxer& decoder,
                       const CryptoSecretBoxer& encoder) {
-  StringPiece message("hello world");
+  QuicStringPiece message("hello world");
   const string boxed = encoder.Box(QuicRandom::GetInstance(), message);
   string storage;
-  StringPiece result;
+  QuicStringPiece result;
   bool ok = decoder.Unbox(boxed, &storage, &result);
   if (ok) {
     EXPECT_EQ(result, message);

@@ -14,6 +14,7 @@
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -57,8 +58,8 @@ class QUIC_EXPORT_PRIVATE QuicCryptoStream
   // dependent on |label|, |context|, and the stream's negotiated subkey secret.
   // Returns false if the handshake has not been confirmed or the parameters are
   // invalid (e.g. |label| contains null bytes); returns true on success.
-  bool ExportKeyingMaterial(base::StringPiece label,
-                            base::StringPiece context,
+  bool ExportKeyingMaterial(QuicStringPiece label,
+                            QuicStringPiece context,
                             size_t result_len,
                             std::string* result) const;
 

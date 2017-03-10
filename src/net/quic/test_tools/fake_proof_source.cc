@@ -48,7 +48,7 @@ void FakeProofSource::GetProof(
     const string& hostname,
     const string& server_config,
     QuicVersion quic_version,
-    StringPiece chlo_hash,
+    QuicStringPiece chlo_hash,
     const QuicTagVector& connection_options,
     std::unique_ptr<ProofSource::Callback> callback) {
   if (!active_) {

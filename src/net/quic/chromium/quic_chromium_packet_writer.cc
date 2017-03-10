@@ -61,7 +61,7 @@ WriteResult QuicChromiumPacketWriter::WritePacketToSocket(
     } else {
       status = WRITE_STATUS_BLOCKED;
       write_blocked_ = true;
-      packet_ = packet;
+      packet_ = std::move(packet);
     }
   }
 

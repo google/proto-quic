@@ -17,6 +17,21 @@ namespace net {
 
 namespace {
 
+// md2WithRSAEncryption
+// In dotted notation: 1.2.840.113549.1.1.2
+const uint8_t kOidMd2WithRsaEncryption[] = {0x2a, 0x86, 0x48, 0x86, 0xf7,
+                                            0x0d, 0x01, 0x01, 0x02};
+
+// md4WithRSAEncryption
+// In dotted notation: 1.2.840.113549.1.1.3
+const uint8_t kOidMd4WithRsaEncryption[] = {0x2a, 0x86, 0x48, 0x86, 0xf7,
+                                            0x0d, 0x01, 0x01, 0x03};
+
+// md5WithRSAEncryption
+// In dotted notation: 1.2.840.113549.1.1.4
+const uint8_t kOidMd5WithRsaEncryption[] = {0x2a, 0x86, 0x48, 0x86, 0xf7,
+                                            0x0d, 0x01, 0x01, 0x04};
+
 // From RFC 5912:
 //
 //     sha1WithRSAEncryption OBJECT IDENTIFIER ::= {
@@ -498,7 +513,7 @@ std::unique_ptr<SignatureAlgorithm> ParseRsaPss(const der::Input& params) {
 
 }  // namespace
 
-WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input input,
+WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input& input,
                                            DigestAlgorithm* out) {
   der::Input oid;
   der::Input params;
@@ -516,6 +531,7 @@ WARN_UNUSED_RESULT bool ParseHashAlgorithm(const der::Input input,
   } else if (oid == der::Input(kOidSha512)) {
     hash = DigestAlgorithm::Sha512;
   } else {
+    // TODO(eroman): Support MD2, MD4, MD5 for completeness?
     // Unsupported digest algorithm.
     return false;
   }
@@ -580,6 +596,15 @@ std::unique_ptr<SignatureAlgorithm> SignatureAlgorithm::Create(
   if (oid == der::Input(kOidSha1WithRsaSignature))
     return ParseRsaPkcs1(DigestAlgorithm::Sha1, params);
 
+  if (oid == der::Input(kOidMd2WithRsaEncryption))
+    return ParseRsaPkcs1(DigestAlgorithm::Md2, params);
+
+  if (oid == der::Input(kOidMd4WithRsaEncryption))
+    return ParseRsaPkcs1(DigestAlgorithm::Md4, params);
+
+  if (oid == der::Input(kOidMd5WithRsaEncryption))
+    return ParseRsaPkcs1(DigestAlgorithm::Md5, params);
+
   // TODO(crbug.com/634443): Add an error indicating what the OID
   // was.
 
@@ -611,6 +636,39 @@ const RsaPssParameters* SignatureAlgorithm::ParamsForRsaPss() const {
   if (algorithm_ == SignatureAlgorithmId::RsaPss)
     return static_cast<RsaPssParameters*>(params_.get());
   return nullptr;
+}
+
+bool SignatureAlgorithm::IsEquivalent(const der::Input& alg1_tlv,
+                                      const der::Input& alg2_tlv) {
+  if (alg1_tlv == alg2_tlv)
+    return true;
+
+  std::unique_ptr<SignatureAlgorithm> alg1 = Create(alg1_tlv, nullptr);
+  std::unique_ptr<SignatureAlgorithm> alg2 = Create(alg2_tlv, nullptr);
+
+  // Do checks that apply to all algorithms.
+  if (!alg1 || !alg2 || (alg1->algorithm() != alg2->algorithm()) ||
+      (alg1->digest() != alg2->digest())) {
+    return false;
+  }
+
+  // Check algorithm-specific parameters for equality.
+  switch (alg1->algorithm()) {
+    case SignatureAlgorithmId::RsaPkcs1:
+    case SignatureAlgorithmId::Ecdsa:
+      DCHECK(!alg1->has_params());
+      DCHECK(!alg2->has_params());
+      return true;
+    case SignatureAlgorithmId::RsaPss: {
+      const RsaPssParameters* params1 = alg1->ParamsForRsaPss();
+      const RsaPssParameters* params2 = alg2->ParamsForRsaPss();
+      return params1 && params2 &&
+             (params1->salt_length() == params2->salt_length()) &&
+             (params1->mgf1_hash() == params2->mgf1_hash());
+    }
+  }
+
+  return false;
 }
 
 SignatureAlgorithm::SignatureAlgorithm(

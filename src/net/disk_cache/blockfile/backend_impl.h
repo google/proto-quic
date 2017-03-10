@@ -72,22 +72,23 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
   void CleanupCache();
 
   // Synchronous implementation of the asynchronous interface.
-  int SyncOpenEntry(const std::string& key, Entry** entry);
-  int SyncCreateEntry(const std::string& key, Entry** entry);
+  int SyncOpenEntry(const std::string& key, scoped_refptr<EntryImpl>* entry);
+  int SyncCreateEntry(const std::string& key, scoped_refptr<EntryImpl>* entry);
   int SyncDoomEntry(const std::string& key);
   int SyncDoomAllEntries();
   int SyncDoomEntriesBetween(base::Time initial_time,
                              base::Time end_time);
   int SyncCalculateSizeOfAllEntries();
   int SyncDoomEntriesSince(base::Time initial_time);
-  int SyncOpenNextEntry(Rankings::Iterator* iterator, Entry** next_entry);
+  int SyncOpenNextEntry(Rankings::Iterator* iterator,
+                        scoped_refptr<EntryImpl>* next_entry);
   void SyncEndEnumeration(std::unique_ptr<Rankings::Iterator> iterator);
   void SyncOnExternalCacheHit(const std::string& key);
 
   // Open or create an entry for the given |key| or |iter|.
-  EntryImpl* OpenEntryImpl(const std::string& key);
-  EntryImpl* CreateEntryImpl(const std::string& key);
-  EntryImpl* OpenNextEntryImpl(Rankings::Iterator* iter);
+  scoped_refptr<EntryImpl> OpenEntryImpl(const std::string& key);
+  scoped_refptr<EntryImpl> CreateEntryImpl(const std::string& key);
+  scoped_refptr<EntryImpl> OpenNextEntryImpl(Rankings::Iterator* iter);
 
   // Sets the maximum size for the total amount of data stored by this instance.
   bool SetMaxSize(int max_bytes);
@@ -313,7 +314,7 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
 
   // Creates a new entry object. Returns zero on success, or a disk_cache error
   // on failure.
-  int NewEntry(Addr address, EntryImpl** entry);
+  int NewEntry(Addr address, scoped_refptr<EntryImpl>* entry);
 
   // Returns a given entry from the cache. The entry to match is determined by
   // key and hash, and the returned entry may be the matched one or it's parent
@@ -322,24 +323,26 @@ class NET_EXPORT_PRIVATE BackendImpl : public Backend {
   // if it doesn't match the entry on the index, we know that it was replaced
   // with a new entry; in this case |*match_error| will be set to true and the
   // return value will be NULL.
-  EntryImpl* MatchEntry(const std::string& key,
-                        uint32_t hash,
-                        bool find_parent,
-                        Addr entry_addr,
-                        bool* match_error);
+  scoped_refptr<EntryImpl> MatchEntry(const std::string& key,
+                                      uint32_t hash,
+                                      bool find_parent,
+                                      Addr entry_addr,
+                                      bool* match_error);
 
   // Opens the next or previous entry on a single list. If successful,
   // |from_entry| will be updated to point to the new entry, otherwise it will
   // be set to NULL; in other words, it is used as an explicit iterator.
   bool OpenFollowingEntryFromList(Rankings::List list,
                                   CacheRankingsBlock** from_entry,
-                                  EntryImpl** next_entry);
+                                  scoped_refptr<EntryImpl>* next_entry);
 
   // Returns the entry that is pointed by |next|, from the given |list|.
-  EntryImpl* GetEnumeratedEntry(CacheRankingsBlock* next, Rankings::List list);
+  scoped_refptr<EntryImpl> GetEnumeratedEntry(CacheRankingsBlock* next,
+                                              Rankings::List list);
 
   // Re-opens an entry that was previously deleted.
-  EntryImpl* ResurrectEntry(EntryImpl* deleted_entry);
+  scoped_refptr<EntryImpl> ResurrectEntry(
+      scoped_refptr<EntryImpl> deleted_entry);
 
   void DestroyInvalidEntry(EntryImpl* entry);
 

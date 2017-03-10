@@ -39,6 +39,7 @@
 #include "net/quic/core/quic_crypto_stream.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_server_id.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/ssl/ssl_config_service.h"
 
 namespace base {
@@ -119,7 +120,7 @@ class NET_EXPORT_PRIVATE QuicStreamRequest {
               PrivacyMode privacy_mode,
               int cert_verify_flags,
               const GURL& url,
-              base::StringPiece method,
+              QuicStringPiece method,
               const NetLogWithSource& net_log,
               const CompletionCallback& callback);
 
@@ -246,7 +247,7 @@ class NET_EXPORT_PRIVATE QuicStreamFactory
              const HostPortPair& destination,
              int cert_verify_flags,
              const GURL& url,
-             base::StringPiece method,
+             QuicStringPiece method,
              const NetLogWithSource& net_log,
              QuicStreamRequest* request);
 

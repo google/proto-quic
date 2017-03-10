@@ -4,10 +4,9 @@
 
 #include "net/quic/platform/api/quic_str_cat.h"
 
-#include "base/strings/string_piece.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -45,7 +44,7 @@ TEST(QuicStrCatTest, Basics) {
 
   string strs[] = {"Hello", "Cruel", "World"};
 
-  StringPiece pieces[] = {"Hello", "Cruel", "World"};
+  QuicStringPiece pieces[] = {"Hello", "Cruel", "World"};
 
   const char* c_strs[] = {"Hello", "Cruel", "World"};
 

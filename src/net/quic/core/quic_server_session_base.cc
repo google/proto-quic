@@ -10,6 +10,7 @@
 #include "net/quic/core/quic_stream.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 using std::string;
 

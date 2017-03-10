@@ -8,10 +8,10 @@
 #include <memory>
 #include <ostream>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_buffer_allocator.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -44,7 +44,7 @@ struct QUIC_EXPORT_PRIVATE QuicStreamFrame {
   QuicStreamFrame(QuicStreamId stream_id,
                   bool fin,
                   QuicStreamOffset offset,
-                  base::StringPiece data);
+                  QuicStringPiece data);
   QuicStreamFrame(QuicStreamId stream_id,
                   bool fin,
                   QuicStreamOffset offset,

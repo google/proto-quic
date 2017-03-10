@@ -9,9 +9,9 @@
 #include <cstdint>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/int128.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -64,29 +64,29 @@ class QUIC_EXPORT_PRIVATE QuicDataReader {
   //
   // Forwards the internal iterator on success.
   // Returns true on success, false otherwise.
-  bool ReadStringPiece16(base::StringPiece* result);
+  bool ReadStringPiece16(QuicStringPiece* result);
 
   // Reads a given number of bytes into the given buffer. The buffer
   // must be of adequate size.
   // Forwards the internal iterator on success.
   // Returns true on success, false otherwise.
-  bool ReadStringPiece(base::StringPiece* result, size_t len);
+  bool ReadStringPiece(QuicStringPiece* result, size_t len);
 
-  // Returns the remaining payload as a StringPiece.
+  // Returns the remaining payload as a QuicStringPiece.
   //
   // NOTE: Does not copy but rather references strings in the underlying buffer.
   // This should be kept in mind when handling memory management!
   //
   // Forwards the internal iterator.
-  base::StringPiece ReadRemainingPayload();
+  QuicStringPiece ReadRemainingPayload();
 
-  // Returns the remaining payload as a StringPiece.
+  // Returns the remaining payload as a QuicStringPiece.
   //
   // NOTE: Does not copy but rather references strings in the underlying buffer.
   // This should be kept in mind when handling memory management!
   //
   // DOES NOT forward the internal iterator.
-  base::StringPiece PeekRemainingPayload();
+  QuicStringPiece PeekRemainingPayload();
 
   // Reads a given number of bytes into the given buffer. The buffer
   // must be of adequate size.

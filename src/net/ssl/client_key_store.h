@@ -58,7 +58,7 @@ class NET_EXPORT ClientKeyStore {
       const X509Certificate& certificate);
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<ClientKeyStore>;
+  friend struct base::LazyInstanceTraitsBase<ClientKeyStore>;
 
   ClientKeyStore();
   ~ClientKeyStore();

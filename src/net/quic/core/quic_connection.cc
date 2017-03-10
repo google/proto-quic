@@ -35,7 +35,6 @@
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -1521,8 +1520,8 @@ bool QuicConnection::WritePacket(SerializedPacket* packet) {
                 << QuicUtils::EncryptionLevelToString(packet->encryption_level)
                 << ", encrypted length:" << encrypted_length;
   QUIC_DVLOG(2) << ENDPOINT << "packet(" << packet_number << "): " << std::endl
-                << QuicTextUtils::HexDump(
-                       StringPiece(packet->encrypted_buffer, encrypted_length));
+                << QuicTextUtils::HexDump(QuicStringPiece(
+                       packet->encrypted_buffer, encrypted_length));
 
   // Measure the RTT from before the write begins to avoid underestimating the
   // min_rtt_, especially in cases where the thread blocks or gets swapped out
@@ -2350,11 +2349,11 @@ bool QuicConnection::ack_frame_updated() const {
   return received_packet_manager_.ack_frame_updated();
 }
 
-StringPiece QuicConnection::GetCurrentPacket() {
+QuicStringPiece QuicConnection::GetCurrentPacket() {
   if (current_packet_data_ == nullptr) {
-    return StringPiece();
+    return QuicStringPiece();
   }
-  return StringPiece(current_packet_data_, last_size_);
+  return QuicStringPiece(current_packet_data_, last_size_);
 }
 
 bool QuicConnection::MaybeConsiderAsMemoryCorruption(

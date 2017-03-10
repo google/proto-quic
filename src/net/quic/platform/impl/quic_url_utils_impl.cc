@@ -6,18 +6,17 @@
 
 #include "url/gurl.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 
 // static
-string QuicUrlUtilsImpl::HostName(StringPiece url) {
+string QuicUrlUtilsImpl::HostName(QuicStringPiece url) {
   return GURL(url).host();
 }
 
 // static
-bool QuicUrlUtilsImpl::IsValidUrl(StringPiece url) {
+bool QuicUrlUtilsImpl::IsValidUrl(QuicStringPiece url) {
   return GURL(url).is_valid();
 }
 

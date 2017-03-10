@@ -123,17 +123,17 @@ class BaseDescBuilder {
 
   ValuePtr RenderValue(const std::string& s, bool optional = false) {
     return (s.empty() && optional) ? base::Value::CreateNullValue()
-                                   : ValuePtr(new base::StringValue(s));
+                                   : ValuePtr(new base::Value(s));
   }
 
   ValuePtr RenderValue(const SourceDir& d) {
     return d.is_null() ? base::Value::CreateNullValue()
-                       : ValuePtr(new base::StringValue(FormatSourceDir(d)));
+                       : ValuePtr(new base::Value(FormatSourceDir(d)));
   }
 
   ValuePtr RenderValue(const SourceFile& f) {
     return f.is_null() ? base::Value::CreateNullValue()
-                       : ValuePtr(new base::StringValue(f.value()));
+                       : ValuePtr(new base::Value(f.value()));
   }
 
   ValuePtr RenderValue(const LibFile& lib) {
@@ -679,7 +679,7 @@ class TargetDescBuilder : public BaseDescBuilder {
         // Indent string values in blame mode
         if (blame_ && rendered->GetAsString(&str)) {
           str = "  " + str;
-          rendered = base::MakeUnique<base::StringValue>(str);
+          rendered = base::MakeUnique<base::Value>(str);
         }
         res->Append(std::move(rendered));
       }

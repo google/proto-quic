@@ -4,7 +4,6 @@
 
 #include "net/quic/test_tools/delayed_verify_strike_register_client.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -26,7 +25,7 @@ DelayedVerifyStrikeRegisterClient::DelayedVerifyStrikeRegisterClient(
 DelayedVerifyStrikeRegisterClient::~DelayedVerifyStrikeRegisterClient() {}
 
 void DelayedVerifyStrikeRegisterClient::VerifyNonceIsValidAndUnique(
-    StringPiece nonce,
+    QuicStringPiece nonce,
     QuicWallTime now,
     ResultCallback* cb) {
   if (delay_verifications_) {

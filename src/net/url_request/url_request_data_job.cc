@@ -23,10 +23,9 @@ int URLRequestDataJob::BuildResponse(const GURL& url,
 
   // |mime_type| set by DataURL::Parse() is guaranteed to be in
   //     token "/" token
-  // form. |charset| is also guaranteed to be a token.
+  // form. |charset| can be an empty string.
 
   DCHECK(!mime_type->empty());
-  DCHECK(!charset->empty());
 
   if (headers) {
     headers->ReplaceStatusLine("HTTP/1.1 200 OK");
@@ -34,8 +33,9 @@ int URLRequestDataJob::BuildResponse(const GURL& url,
     // the "token" ABNF in the HTTP spec. When DataURL::Parse() call is
     // successful, it's guaranteed that the string in |charset| follows the
     // "token" ABNF.
-    std::string content_type_header =
-        "Content-Type: " + *mime_type + ";charset=" + *charset;
+    std::string content_type_header = "Content-Type: " + *mime_type;
+    if (!charset->empty())
+      content_type_header.append(";charset=" + *charset);
     headers->AddHeader(content_type_header);
     headers->AddHeader("Access-Control-Allow-Origin: *");
   }

@@ -408,20 +408,20 @@ void ListValueRewriter::RegisterMatchers(MatchFinder* match_finder) {
                                           realFloatingPointType())))))))))))),
       &append_double_callback_);
 
-  // base::ListValue::Append(new base::StringValue(...))
+  // base::ListValue::Append(new base::Value(...))
   //     => base::ListValue::AppendString()
   match_finder->addMatcher(
       id("callExpr",
          cxxMemberCallExpr(
              is_list_append,
              hasArgument(
-                 0, ignoringParenImpCasts(id(
-                        "newExpr",
-                        cxxNewExpr(has(cxxConstructExpr(
-                            hasDeclaration(cxxMethodDecl(
-                                hasName("::base::StringValue::StringValue"))),
-                            argumentCountIs(1),
-                            hasArgument(0, id("argExpr", expr())))))))))),
+                 0, ignoringParenImpCasts(
+                        id("newExpr",
+                           cxxNewExpr(has(cxxConstructExpr(
+                               hasDeclaration(cxxMethodDecl(
+                                   hasName("::base::Value::StringValue"))),
+                               argumentCountIs(1),
+                               hasArgument(0, id("argExpr", expr())))))))))),
       &append_string_callback_);
 
   auto is_unique_ptr_release =

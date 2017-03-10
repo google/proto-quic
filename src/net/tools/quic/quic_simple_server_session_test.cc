@@ -15,6 +15,7 @@
 #include "net/quic/core/quic_crypto_server_stream.h"
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_config_peer.h"
@@ -228,7 +229,7 @@ INSTANTIATE_TEST_CASE_P(Tests,
 TEST_P(QuicSimpleServerSessionTest, CloseStreamDueToReset) {
   // Open a stream, then reset it.
   // Send two bytes of payload to open it.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   session_->OnStreamFrame(data1);
   EXPECT_EQ(1u, session_->GetNumOpenIncomingStreams());
 
@@ -258,7 +259,7 @@ TEST_P(QuicSimpleServerSessionTest, NeverOpenStreamDueToReset) {
   EXPECT_EQ(0u, session_->GetNumOpenIncomingStreams());
 
   // Send two bytes of payload.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   visitor_->OnStreamFrame(data1);
 
   // The stream should never be opened, now that the reset is received.
@@ -269,9 +270,9 @@ TEST_P(QuicSimpleServerSessionTest, NeverOpenStreamDueToReset) {
 TEST_P(QuicSimpleServerSessionTest, AcceptClosedStream) {
   // Send (empty) compressed headers followed by two bytes of data.
   QuicStreamFrame frame1(kClientDataStreamId1, false, 0,
-                         StringPiece("\1\0\0\0\0\0\0\0HT"));
+                         QuicStringPiece("\1\0\0\0\0\0\0\0HT"));
   QuicStreamFrame frame2(kClientDataStreamId2, false, 0,
-                         StringPiece("\2\0\0\0\0\0\0\0HT"));
+                         QuicStringPiece("\2\0\0\0\0\0\0\0HT"));
   visitor_->OnStreamFrame(frame1);
   visitor_->OnStreamFrame(frame2);
   EXPECT_EQ(2u, session_->GetNumOpenIncomingStreams());
@@ -285,8 +286,8 @@ TEST_P(QuicSimpleServerSessionTest, AcceptClosedStream) {
   // If we were tracking, we'd probably want to reject this because it's data
   // past the reset point of stream 3.  As it's a closed stream we just drop the
   // data on the floor, but accept the packet because it has data for stream 5.
-  QuicStreamFrame frame3(kClientDataStreamId1, false, 2, StringPiece("TP"));
-  QuicStreamFrame frame4(kClientDataStreamId2, false, 2, StringPiece("TP"));
+  QuicStreamFrame frame3(kClientDataStreamId1, false, 2, QuicStringPiece("TP"));
+  QuicStreamFrame frame4(kClientDataStreamId2, false, 2, QuicStringPiece("TP"));
   visitor_->OnStreamFrame(frame3);
   visitor_->OnStreamFrame(frame4);
   // The stream should never be opened, now that the reset is received.
@@ -350,7 +351,7 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamUptoLimit) {
 
   // Receive some data to initiate a incoming stream which should not effect
   // creating outgoing streams.
-  QuicStreamFrame data1(kClientDataStreamId1, false, 0, StringPiece("HT"));
+  QuicStreamFrame data1(kClientDataStreamId1, false, 0, QuicStringPiece("HT"));
   session_->OnStreamFrame(data1);
   EXPECT_EQ(1u, session_->GetNumOpenIncomingStreams());
   EXPECT_EQ(0u, session_->GetNumOpenOutgoingStreams());
@@ -377,13 +378,13 @@ TEST_P(QuicSimpleServerSessionTest, CreateOutgoingDynamicStreamUptoLimit) {
   EXPECT_EQ(kMaxStreamsForTest, session_->GetNumOpenOutgoingStreams());
 
   // Create peer initiated stream should have no problem.
-  QuicStreamFrame data2(kClientDataStreamId2, false, 0, StringPiece("HT"));
+  QuicStreamFrame data2(kClientDataStreamId2, false, 0, QuicStringPiece("HT"));
   session_->OnStreamFrame(data2);
   EXPECT_EQ(2u, session_->GetNumOpenIncomingStreams());
 }
 
 TEST_P(QuicSimpleServerSessionTest, OnStreamFrameWithEvenStreamId) {
-  QuicStreamFrame frame(2, false, 0, StringPiece());
+  QuicStreamFrame frame(2, false, 0, QuicStringPiece());
   EXPECT_CALL(*connection_,
               CloseConnection(QUIC_INVALID_STREAM_ID,
                               "Client sent data on server push stream", _));

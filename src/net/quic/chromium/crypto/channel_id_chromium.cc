@@ -23,7 +23,7 @@ ChannelIDKeyChromium::ChannelIDKeyChromium(
 
 ChannelIDKeyChromium::~ChannelIDKeyChromium() {}
 
-bool ChannelIDKeyChromium::Sign(base::StringPiece signed_data,
+bool ChannelIDKeyChromium::Sign(QuicStringPiece signed_data,
                                 std::string* out_signature) const {
   std::unique_ptr<crypto::ECSignatureCreator> sig_creator(
       crypto::ECSignatureCreator::Create(ec_private_key_.get()));

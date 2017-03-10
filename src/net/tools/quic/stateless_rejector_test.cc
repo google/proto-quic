@@ -13,6 +13,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
@@ -117,7 +118,7 @@ class StatelessRejectorTest : public ::testing::TestWithParam<TestParams> {
     string nonce;
     CryptoUtils::GenerateNonce(
         clock_.WallNow(), QuicRandom::GetInstance(),
-        StringPiece(
+        QuicStringPiece(
             reinterpret_cast<char*>(config_peer_.GetPrimaryConfig()->orbit),
             kOrbitSize),
         &nonce);

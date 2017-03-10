@@ -135,18 +135,6 @@ WARN_UNUSED_RESULT bool VerifyTimeValidity(const ParsedCertificate& cert,
   return true;
 }
 
-// Returns true if |signature_algorithm_tlv| is a valid algorithm encoding for
-// RSA with SHA1.
-WARN_UNUSED_RESULT bool IsRsaWithSha1SignatureAlgorithm(
-    const der::Input& signature_algorithm_tlv) {
-  std::unique_ptr<SignatureAlgorithm> algorithm =
-      SignatureAlgorithm::Create(signature_algorithm_tlv, nullptr);
-
-  return algorithm &&
-         algorithm->algorithm() == SignatureAlgorithmId::RsaPkcs1 &&
-         algorithm->digest() == DigestAlgorithm::Sha1;
-}
-
 // Returns true if |cert| has internally consistent signature algorithms.
 //
 // X.509 certificates contain two different signature algorithms:
@@ -177,9 +165,10 @@ WARN_UNUSED_RESULT bool VerifySignatureAlgorithmsMatch(
   if (alg1_tlv == alg2_tlv)
     return true;
 
-  // But make a compatibility concession for RSA with SHA1.
-  if (IsRsaWithSha1SignatureAlgorithm(alg1_tlv) &&
-      IsRsaWithSha1SignatureAlgorithm(alg2_tlv)) {
+  // But make a compatibility concession if alternate encodings are used
+  // TODO(eroman): Turn this warning into an error.
+  // TODO(eroman): Add a unit-test that exercises this case.
+  if (SignatureAlgorithm::IsEquivalent(alg1_tlv, alg2_tlv)) {
     errors->AddWarning(
         kSignatureAlgorithmsDifferentEncoding,
         CreateCertErrorParams2Der("Certificate.algorithm", alg1_tlv,

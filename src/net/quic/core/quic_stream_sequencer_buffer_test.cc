@@ -136,8 +136,8 @@ TEST_F(QuicStreamSequencerBufferTest, OnStreamDataWithinBlock) {
 
 TEST_F(QuicStreamSequencerBufferTest, OnStreamDataInvalidSource) {
   // Pass in an invalid source, expects to return error.
-  StringPiece source;
-  source = StringPiece(nullptr, 1024);
+  QuicStringPiece source;
+  source = QuicStringPiece(nullptr, 1024);
   size_t written;
   clock_.AdvanceTime(QuicTime::Delta::FromSeconds(1));
   QuicTime t = clock_.ApproximateNow();
@@ -865,7 +865,7 @@ class QuicStreamSequencerBufferRandomIOTest
     for (size_t i = 0; i < num_to_write; ++i) {
       write_buf[i] = (offset + i) % 256;
     }
-    base::StringPiece string_piece_w(write_buf.get(), num_to_write);
+    QuicStringPiece string_piece_w(write_buf.get(), num_to_write);
     size_t written;
     auto result =
         buffer_->OnStreamData(offset, string_piece_w, clock_.ApproximateNow(),

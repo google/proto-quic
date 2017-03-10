@@ -1019,6 +1019,7 @@ class NET_EXPORT SpdySession : public BufferedSpdyFramerVisitorInterface,
   std::unique_ptr<ClientSocketHandle> connection_;
 
   // The read buffer used to read data from the socket.
+  // Non-null if there is a Read() pending.
   scoped_refptr<IOBuffer> read_buffer_;
 
   SpdyStreamId stream_hi_water_mark_;  // The next stream id to use.

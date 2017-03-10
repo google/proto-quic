@@ -4,13 +4,12 @@
 
 #include "net/quic/platform/api/quic_hostname_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 
 // static
-bool QuicHostnameUtils::IsValidSNI(StringPiece sni) {
+bool QuicHostnameUtils::IsValidSNI(QuicStringPiece sni) {
   return QuicHostnameUtilsImpl::IsValidSNI(sni);
 }
 

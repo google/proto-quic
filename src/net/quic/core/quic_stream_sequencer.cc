@@ -17,8 +17,8 @@
 #include "net/quic/platform/api/quic_clock.h"
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -50,7 +50,7 @@ void QuicStreamSequencer::OnStreamFrame(const QuicStreamFrame& frame) {
   size_t bytes_written;
   string error_details;
   QuicErrorCode result = buffered_frames_.OnStreamData(
-      byte_offset, StringPiece(frame.data_buffer, frame.data_length),
+      byte_offset, QuicStringPiece(frame.data_buffer, frame.data_length),
       clock_->ApproximateNow(), &bytes_written, &error_details);
   if (result != QUIC_NO_ERROR) {
     string details = QuicStrCat(

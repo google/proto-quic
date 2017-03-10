@@ -608,15 +608,21 @@ TEST_F(TraceEventAnalyzerTest, AsyncBeginEndAssocationsWithSteps) {
 
   EXPECT_STRCASEEQ("0xb", found[0]->id.c_str());
   EXPECT_EQ(TRACE_EVENT_PHASE_ASYNC_STEP_PAST, found[0]->other_event->phase);
+  EXPECT_EQ(found[0], found[0]->other_event->prev_event);
   EXPECT_TRUE(found[0]->other_event->other_event);
   EXPECT_EQ(TRACE_EVENT_PHASE_ASYNC_END,
             found[0]->other_event->other_event->phase);
+  EXPECT_EQ(found[0]->other_event,
+            found[0]->other_event->other_event->prev_event);
 
   EXPECT_STRCASEEQ("0xc", found[1]->id.c_str());
   EXPECT_EQ(TRACE_EVENT_PHASE_ASYNC_STEP_INTO, found[1]->other_event->phase);
+  EXPECT_EQ(found[1], found[1]->other_event->prev_event);
   EXPECT_TRUE(found[1]->other_event->other_event);
   EXPECT_EQ(TRACE_EVENT_PHASE_ASYNC_STEP_INTO,
             found[1]->other_event->other_event->phase);
+  EXPECT_EQ(found[1]->other_event,
+            found[1]->other_event->other_event->prev_event);
   double arg_actual = 0;
   EXPECT_TRUE(found[1]->other_event->other_event->GetArgAsNumber(
                   "a", &arg_actual));

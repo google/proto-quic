@@ -91,34 +91,38 @@ TEST_F(ActivityTrackerTest, UserDataTest) {
   char buffer[256];
   memset(buffer, 0, sizeof(buffer));
   ActivityUserData data(buffer, sizeof(buffer));
-  ASSERT_EQ(sizeof(buffer) - 8, data.available_);
+  const size_t space = sizeof(buffer) - 8;
+  ASSERT_EQ(space, data.available_);
 
   data.SetInt("foo", 1);
-  ASSERT_EQ(sizeof(buffer) - 8 - 24, data.available_);
+  ASSERT_EQ(space - 24, data.available_);
 
   data.SetUint("b", 1U);  // Small names fit beside header in a word.
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16, data.available_);
+  ASSERT_EQ(space - 24 - 16, data.available_);
 
   data.Set("c", buffer, 10);
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24, data.available_);
 
   data.SetString("dear john", "it's been fun");
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32, data.available_);
 
   data.Set("c", buffer, 20);
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32, data.available_);
 
   data.SetString("dear john", "but we're done together");
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32, data.available_);
 
   data.SetString("dear john", "bye");
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32, data.available_);
 
   data.SetChar("d", 'x');
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32 - 8, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32 - 8, data.available_);
 
   data.SetBool("ee", true);
-  ASSERT_EQ(sizeof(buffer) - 8 - 24 - 16 - 24 - 32 - 8 - 16, data.available_);
+  ASSERT_EQ(space - 24 - 16 - 24 - 32 - 8 - 16, data.available_);
+
+  data.SetString("f", "");
+  ASSERT_EQ(space - 24 - 16 - 24 - 32 - 8 - 16 - 8, data.available_);
 }
 
 TEST_F(ActivityTrackerTest, PushPopTest) {

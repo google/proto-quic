@@ -5,8 +5,6 @@
 #include "net/quic/core/crypto/null_decrypter.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
-using base::StringPiece;
-
 namespace net {
 namespace test {
 
@@ -25,10 +23,10 @@ TEST_F(NullDecrypterTest, DecryptClient) {
   char buffer[256];
   size_t length = 0;
   ASSERT_TRUE(decrypter.DecryptPacket(QUIC_VERSION_37, 0, "hello world!",
-                                      StringPiece(data, len), buffer, &length,
-                                      256));
+                                      QuicStringPiece(data, len), buffer,
+                                      &length, 256));
   EXPECT_LT(0u, length);
-  EXPECT_EQ("goodbye!", StringPiece(buffer, length));
+  EXPECT_EQ("goodbye!", QuicStringPiece(buffer, length));
 }
 
 TEST_F(NullDecrypterTest, DecryptServer) {
@@ -44,10 +42,10 @@ TEST_F(NullDecrypterTest, DecryptServer) {
   char buffer[256];
   size_t length = 0;
   ASSERT_TRUE(decrypter.DecryptPacket(QUIC_VERSION_37, 0, "hello world!",
-                                      StringPiece(data, len), buffer, &length,
-                                      256));
+                                      QuicStringPiece(data, len), buffer,
+                                      &length, 256));
   EXPECT_LT(0u, length);
-  EXPECT_EQ("goodbye!", StringPiece(buffer, length));
+  EXPECT_EQ("goodbye!", QuicStringPiece(buffer, length));
 }
 
 TEST_F(NullDecrypterTest, DecryptClientPre37) {
@@ -63,10 +61,10 @@ TEST_F(NullDecrypterTest, DecryptClientPre37) {
   char buffer[256];
   size_t length = 0;
   ASSERT_TRUE(decrypter.DecryptPacket(QUIC_VERSION_36, 0, "hello world!",
-                                      StringPiece(data, len), buffer, &length,
-                                      256));
+                                      QuicStringPiece(data, len), buffer,
+                                      &length, 256));
   EXPECT_LT(0u, length);
-  EXPECT_EQ("goodbye!", StringPiece(buffer, length));
+  EXPECT_EQ("goodbye!", QuicStringPiece(buffer, length));
 }
 
 TEST_F(NullDecrypterTest, DecryptServerPre37) {
@@ -82,10 +80,10 @@ TEST_F(NullDecrypterTest, DecryptServerPre37) {
   char buffer[256];
   size_t length = 0;
   ASSERT_TRUE(decrypter.DecryptPacket(QUIC_VERSION_36, 0, "hello world!",
-                                      StringPiece(data, len), buffer, &length,
-                                      256));
+                                      QuicStringPiece(data, len), buffer,
+                                      &length, 256));
   EXPECT_LT(0u, length);
-  EXPECT_EQ("goodbye!", StringPiece(buffer, length));
+  EXPECT_EQ("goodbye!", QuicStringPiece(buffer, length));
 }
 
 TEST_F(NullDecrypterTest, BadHash) {
@@ -101,8 +99,8 @@ TEST_F(NullDecrypterTest, BadHash) {
   char buffer[256];
   size_t length = 0;
   ASSERT_FALSE(decrypter.DecryptPacket(QUIC_VERSION_35, 0, "hello world!",
-                                       StringPiece(data, len), buffer, &length,
-                                       256));
+                                       QuicStringPiece(data, len), buffer,
+                                       &length, 256));
 }
 
 TEST_F(NullDecrypterTest, ShortInput) {
@@ -116,8 +114,8 @@ TEST_F(NullDecrypterTest, ShortInput) {
   char buffer[256];
   size_t length = 0;
   ASSERT_FALSE(decrypter.DecryptPacket(QUIC_VERSION_35, 0, "hello world!",
-                                       StringPiece(data, len), buffer, &length,
-                                       256));
+                                       QuicStringPiece(data, len), buffer,
+                                       &length, 256));
 }
 
 }  // namespace test

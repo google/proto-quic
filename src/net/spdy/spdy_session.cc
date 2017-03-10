@@ -46,6 +46,7 @@
 #include "net/log/net_log_source_type.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_server.h"
+#include "net/socket/socket.h"
 #include "net/socket/ssl_client_socket.h"
 #include "net/spdy/platform/api/spdy_estimate_memory_usage.h"
 #include "net/spdy/spdy_buffer_producer.h"
@@ -739,7 +740,6 @@ SpdySession::SpdySession(const SpdySessionKey& spdy_session_key,
       pool_(NULL),
       http_server_properties_(http_server_properties),
       transport_security_state_(transport_security_state),
-      read_buffer_(new IOBuffer(kReadBufferSize)),
       stream_hi_water_mark_(kFirstStreamId),
       last_accepted_push_stream_id_(0),
       unclaimed_pushed_streams_(this),
@@ -1377,8 +1377,9 @@ size_t SpdySession::DumpMemoryStats(StreamSocket::SocketMemoryStats* stats,
   connection_->DumpMemoryStats(stats);
 
   // |connection_| is estimated in stats->total_size. |read_buffer_| is
-  // estimated in kReadBufferSize. TODO(xunjieli): Make them use EMU().
-  return stats->total_size + kReadBufferSize +
+  // estimated in |read_buffer_size|. TODO(xunjieli): Make them use EMU().
+  size_t read_buffer_size = read_buffer_ ? kReadBufferSize : 0;
+  return stats->total_size + read_buffer_size +
          SpdyEstimateMemoryUsage(spdy_session_key_) +
          SpdyEstimateMemoryUsage(pooled_aliases_) +
          SpdyEstimateMemoryUsage(active_streams_) +
@@ -1868,18 +1869,37 @@ int SpdySession::DoReadLoop(ReadState expected_read_state, int result) {
 }
 
 int SpdySession::DoRead() {
+  DCHECK(!read_buffer_);
   CHECK(in_io_loop_);
 
   CHECK(connection_);
   CHECK(connection_->socket());
   read_state_ = READ_STATE_DO_READ_COMPLETE;
-  return connection_->socket()->Read(
-      read_buffer_.get(), kReadBufferSize,
-      base::Bind(&SpdySession::PumpReadLoop, weak_factory_.GetWeakPtr(),
-                 READ_STATE_DO_READ_COMPLETE));
+  int rv = ERR_READ_IF_READY_NOT_IMPLEMENTED;
+  read_buffer_ = new IOBuffer(kReadBufferSize);
+  if (base::FeatureList::IsEnabled(Socket::kReadIfReadyExperiment)) {
+    rv = connection_->socket()->ReadIfReady(
+        read_buffer_.get(), kReadBufferSize,
+        base::Bind(&SpdySession::PumpReadLoop, weak_factory_.GetWeakPtr(),
+                   READ_STATE_DO_READ));
+    if (rv == ERR_IO_PENDING) {
+      read_buffer_ = nullptr;
+      read_state_ = READ_STATE_DO_READ;
+      return rv;
+    }
+  }
+  if (rv == ERR_READ_IF_READY_NOT_IMPLEMENTED) {
+    // Fallback to regular Read().
+    return connection_->socket()->Read(
+        read_buffer_.get(), kReadBufferSize,
+        base::Bind(&SpdySession::PumpReadLoop, weak_factory_.GetWeakPtr(),
+                   READ_STATE_DO_READ_COMPLETE));
+  }
+  return rv;
 }
 
 int SpdySession::DoReadComplete(int result) {
+  DCHECK(read_buffer_);
   CHECK(in_io_loop_);
 
   // Parse a frame.  For now this code requires that the frame fit into our
@@ -1917,6 +1937,7 @@ int SpdySession::DoReadComplete(int result) {
               SpdyFramer::SPDY_NO_ERROR);
   }
 
+  read_buffer_ = nullptr;
   read_state_ = READ_STATE_DO_READ;
   return OK;
 }

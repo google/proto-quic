@@ -8,13 +8,12 @@
 #include "url/gurl.h"
 #include "url/url_canon.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
 
 // static
-bool QuicHostnameUtilsImpl::IsValidSNI(StringPiece sni) {
+bool QuicHostnameUtilsImpl::IsValidSNI(QuicStringPiece sni) {
   // TODO(rtenneti): Support RFC2396 hostname.
   // NOTE: Microsoft does NOT enforce this spec, so if we throw away hostnames
   // based on the above spec, we may be losing some hostnames that windows

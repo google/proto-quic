@@ -156,7 +156,7 @@ TEST_F(QuicSpdyClientStreamTest, TestNoBidirectionalStreaming) {
   if (FLAGS_quic_reloadable_flag_quic_always_enable_bidi_streaming) {
     return;
   }
-  QuicStreamFrame frame(kClientDataStreamId1, false, 3, StringPiece("asd"));
+  QuicStreamFrame frame(kClientDataStreamId1, false, 3, QuicStringPiece("asd"));
 
   EXPECT_FALSE(stream_->write_side_closed());
   stream_->OnStreamFrame(frame);

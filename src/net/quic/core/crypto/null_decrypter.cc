@@ -11,7 +11,6 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -19,15 +18,15 @@ namespace net {
 NullDecrypter::NullDecrypter(Perspective perspective)
     : perspective_(perspective) {}
 
-bool NullDecrypter::SetKey(StringPiece key) {
+bool NullDecrypter::SetKey(QuicStringPiece key) {
   return key.empty();
 }
 
-bool NullDecrypter::SetNoncePrefix(StringPiece nonce_prefix) {
+bool NullDecrypter::SetNoncePrefix(QuicStringPiece nonce_prefix) {
   return nonce_prefix.empty();
 }
 
-bool NullDecrypter::SetPreliminaryKey(StringPiece key) {
+bool NullDecrypter::SetPreliminaryKey(QuicStringPiece key) {
   QUIC_BUG << "Should not be called";
   return false;
 }
@@ -39,8 +38,8 @@ bool NullDecrypter::SetDiversificationNonce(const DiversificationNonce& nonce) {
 
 bool NullDecrypter::DecryptPacket(QuicVersion version,
                                   QuicPacketNumber /*packet_number*/,
-                                  StringPiece associated_data,
-                                  StringPiece ciphertext,
+                                  QuicStringPiece associated_data,
+                                  QuicStringPiece ciphertext,
                                   char* output,
                                   size_t* output_length,
                                   size_t max_output_length) {
@@ -51,7 +50,7 @@ bool NullDecrypter::DecryptPacket(QuicVersion version,
     return false;
   }
 
-  StringPiece plaintext = reader.ReadRemainingPayload();
+  QuicStringPiece plaintext = reader.ReadRemainingPayload();
   if (plaintext.length() > max_output_length) {
     QUIC_BUG << "Output buffer must be larger than the plaintext.";
     return false;
@@ -65,12 +64,12 @@ bool NullDecrypter::DecryptPacket(QuicVersion version,
   return true;
 }
 
-StringPiece NullDecrypter::GetKey() const {
-  return StringPiece();
+QuicStringPiece NullDecrypter::GetKey() const {
+  return QuicStringPiece();
 }
 
-StringPiece NullDecrypter::GetNoncePrefix() const {
-  return StringPiece();
+QuicStringPiece NullDecrypter::GetNoncePrefix() const {
+  return QuicStringPiece();
 }
 
 const char* NullDecrypter::cipher_name() const {
@@ -92,8 +91,8 @@ bool NullDecrypter::ReadHash(QuicDataReader* reader, uint128* hash) {
 }
 
 uint128 NullDecrypter::ComputeHash(QuicVersion version,
-                                   const StringPiece data1,
-                                   const StringPiece data2) const {
+                                   const QuicStringPiece data1,
+                                   const QuicStringPiece data2) const {
   uint128 correct_hash;
   if (version > QUIC_VERSION_36) {
     if (perspective_ == Perspective::IS_CLIENT) {

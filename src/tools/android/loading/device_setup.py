@@ -18,7 +18,6 @@ _SRC_DIR = os.path.abspath(os.path.join(
 _CATAPULT_DIR = os.path.join(_SRC_DIR, 'third_party', 'catapult')
 sys.path.append(os.path.join(_CATAPULT_DIR, 'devil'))
 from devil.android import device_utils
-from devil.android import flag_changer
 from devil.android import forwarder
 from devil.android.sdk import adb_wrapper
 from devil.android.sdk import intent
@@ -118,29 +117,6 @@ def DeviceSubmitShellCommandQueue(device, command_queue):
     command_file.flush()
     device.adb.Push(command_file.name, REMOTE_COMMAND_FILE_PATH)
     device.adb.Shell('sh {p} && rm {p}'.format(p=REMOTE_COMMAND_FILE_PATH))
-
-
-@contextlib.contextmanager
-def FlagReplacer(device, command_line_path, new_flags):
-  """Replaces chrome flags in a context, restores them afterwards.
-
-  Args:
-    device: Device to target, from DeviceUtils. Can be None, in which case this
-      context manager is a no-op.
-    command_line_path: Full path to the command-line file.
-    new_flags: Flags to replace.
-  """
-  # If we're logging requests from a local desktop chrome instance there is no
-  # device.
-  if not device:
-    yield
-    return
-  changer = flag_changer.FlagChanger(device, command_line_path)
-  changer.ReplaceFlags(new_flags)
-  try:
-    yield
-  finally:
-    changer.Restore()
 
 
 @contextlib.contextmanager

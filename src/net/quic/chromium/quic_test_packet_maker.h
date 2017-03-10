@@ -16,6 +16,7 @@
 #include "base/macros.h"
 #include "net/base/request_priority.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/mock_clock.h"
 #include "net/quic/test_tools/mock_random.h"
 #include "net/spdy/spdy_framer.h"
@@ -89,14 +90,14 @@ class QuicTestPacketMaker {
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data);
+      QuicStringPiece data);
   std::unique_ptr<QuicReceivedPacket> MakeForceHolDataPacket(
       QuicPacketNumber packet_number,
       QuicStreamId stream_id,
       bool should_include_version,
       bool fin,
       QuicStreamOffset* offset,
-      base::StringPiece data);
+      QuicStringPiece data);
   std::unique_ptr<QuicReceivedPacket> MakeMultipleDataFramesPacket(
       QuicPacketNumber packet_number,
       QuicStreamId stream_id,
@@ -112,7 +113,7 @@ class QuicTestPacketMaker {
       QuicPacketNumber least_unacked,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data);
+      QuicStringPiece data);
 
   std::unique_ptr<QuicReceivedPacket>
   MakeRequestHeadersAndMultipleDataFramesPacket(

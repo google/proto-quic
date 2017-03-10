@@ -14,7 +14,6 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/quic_random.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -54,7 +53,8 @@ void CryptoSecretBoxer::SetKeys(const std::vector<string>& keys) {
   keys_.swap(copy);
 }
 
-string CryptoSecretBoxer::Box(QuicRandom* rand, StringPiece plaintext) const {
+string CryptoSecretBoxer::Box(QuicRandom* rand,
+                              QuicStringPiece plaintext) const {
   std::unique_ptr<Aes128Gcm12Encrypter> encrypter(new Aes128Gcm12Encrypter());
   {
     QuicReaderMutexLock l(&lock_);
@@ -76,7 +76,7 @@ string CryptoSecretBoxer::Box(QuicRandom* rand, StringPiece plaintext) const {
   memcpy(data + kBoxNonceSize, plaintext.data(), plaintext.size());
 
   if (!encrypter->Encrypt(
-          StringPiece(data, kBoxNonceSize), StringPiece(), plaintext,
+          QuicStringPiece(data, kBoxNonceSize), QuicStringPiece(), plaintext,
           reinterpret_cast<unsigned char*>(data + kBoxNonceSize))) {
     DLOG(DFATAL) << "CryptoSecretBoxer's Encrypt failed.";
     return string();
@@ -85,17 +85,18 @@ string CryptoSecretBoxer::Box(QuicRandom* rand, StringPiece plaintext) const {
   return ret;
 }
 
-bool CryptoSecretBoxer::Unbox(StringPiece ciphertext,
+bool CryptoSecretBoxer::Unbox(QuicStringPiece ciphertext,
                               string* out_storage,
-                              StringPiece* out) const {
+                              QuicStringPiece* out) const {
   if (ciphertext.size() < kBoxNonceSize) {
     return false;
   }
 
-  StringPiece nonce(ciphertext.data(), kBoxNonceSize);
+  QuicStringPiece nonce(ciphertext.data(), kBoxNonceSize);
   ciphertext.remove_prefix(kBoxNonceSize);
   QuicPacketNumber packet_number;
-  StringPiece nonce_prefix(nonce.data(), nonce.size() - sizeof(packet_number));
+  QuicStringPiece nonce_prefix(nonce.data(),
+                               nonce.size() - sizeof(packet_number));
   memcpy(&packet_number, nonce.data() + nonce_prefix.size(),
          sizeof(packet_number));
 
@@ -109,7 +110,7 @@ bool CryptoSecretBoxer::Unbox(StringPiece ciphertext,
       if (decrypter->SetKey(key)) {
         decrypter->SetNoncePrefix(nonce_prefix);
         if (decrypter->DecryptPacket(QUIC_VERSION_36, packet_number,
-                                     /*associated data=*/StringPiece(),
+                                     /*associated data=*/QuicStringPiece(),
                                      ciphertext, plaintext, &plaintext_length,
                                      kMaxPacketSize)) {
           ok = true;

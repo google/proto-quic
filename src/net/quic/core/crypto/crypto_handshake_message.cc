@@ -15,7 +15,6 @@
 #include "net/quic/platform/api/quic_str_cat.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -68,7 +67,8 @@ void CryptoHandshakeMessage::MarkDirty() {
   serialized_.reset();
 }
 
-void CryptoHandshakeMessage::SetStringPiece(QuicTag tag, StringPiece value) {
+void CryptoHandshakeMessage::SetStringPiece(QuicTag tag,
+                                            QuicStringPiece value) {
   tag_value_map_[tag] = value.as_string();
 }
 
@@ -100,7 +100,7 @@ QuicErrorCode CryptoHandshakeMessage::GetTaglist(QuicTag tag,
 }
 
 bool CryptoHandshakeMessage::GetStringPiece(QuicTag tag,
-                                            StringPiece* out) const {
+                                            QuicStringPiece* out) const {
   QuicTagValueMap::const_iterator it = tag_value_map_.find(tag);
   if (it == tag_value_map_.end()) {
     return false;
@@ -113,10 +113,11 @@ bool CryptoHandshakeMessage::HasStringPiece(QuicTag tag) const {
   return QuicContainsKey(tag_value_map_, tag);
 }
 
-QuicErrorCode CryptoHandshakeMessage::GetNthValue24(QuicTag tag,
-                                                    unsigned index,
-                                                    StringPiece* out) const {
-  StringPiece value;
+QuicErrorCode CryptoHandshakeMessage::GetNthValue24(
+    QuicTag tag,
+    unsigned index,
+    QuicStringPiece* out) const {
+  QuicStringPiece value;
   if (!GetStringPiece(tag, &value)) {
     return QUIC_CRYPTO_MESSAGE_PARAMETER_NOT_FOUND;
   }
@@ -141,7 +142,7 @@ QuicErrorCode CryptoHandshakeMessage::GetNthValue24(QuicTag tag,
     }
 
     if (i == index) {
-      *out = StringPiece(value.data(), size);
+      *out = QuicStringPiece(value.data(), size);
       return QUIC_NO_ERROR;
     }
 

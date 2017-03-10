@@ -102,7 +102,7 @@ class X509CertificateCache {
   // Obtain an instance of X509CertificateCache via a LazyInstance.
   X509CertificateCache() {}
   ~X509CertificateCache() {}
-  friend struct base::DefaultLazyInstanceTraits<X509CertificateCache>;
+  friend struct base::LazyInstanceTraitsBase<X509CertificateCache>;
 
   // You must acquire this lock before using any private data of this object
   // You must not block while holding this lock.

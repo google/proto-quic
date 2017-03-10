@@ -15,7 +15,6 @@
 #include "net/quic/platform/api/quic_map_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {

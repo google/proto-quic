@@ -316,7 +316,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_WIFI, std::string());
   histogram_tester.ExpectUniqueSample("NQE.CachedNetworkQualityAvailable",
-                                      false, 3);
+                                      false, 2);
   histogram_tester.ExpectTotalCount("NQE.PeakKbps.Unknown", 1);
   histogram_tester.ExpectTotalCount("NQE.FastestRTT.Unknown", 1);
 
@@ -347,7 +347,7 @@ TEST(NetworkQualityEstimatorTest, TestKbpsRTTUpdates) {
   estimator.SimulateNetworkChange(
       NetworkChangeNotifier::ConnectionType::CONNECTION_UNKNOWN, "test");
   histogram_tester.ExpectBucketCount("NQE.CachedNetworkQualityAvailable", false,
-                                     3);
+                                     2);
   histogram_tester.ExpectBucketCount("NQE.CachedNetworkQualityAvailable", true,
                                      1);
 }

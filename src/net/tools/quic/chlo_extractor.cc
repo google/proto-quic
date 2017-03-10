@@ -10,9 +10,8 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_framer.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
-
-using base::StringPiece;
 
 namespace net {
 
@@ -91,7 +90,7 @@ bool ChloFramerVisitor::OnPacketHeader(const QuicPacketHeader& header) {
   return true;
 }
 bool ChloFramerVisitor::OnStreamFrame(const QuicStreamFrame& frame) {
-  StringPiece data(frame.data_buffer, frame.data_length);
+  QuicStringPiece data(frame.data_buffer, frame.data_length);
   if (frame.stream_id == kCryptoStreamId && frame.offset == 0 &&
       QuicTextUtils::StartsWith(data, "CHLO")) {
     CryptoFramer crypto_framer;

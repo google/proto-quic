@@ -7,8 +7,6 @@
 #include <algorithm>
 #include <limits>
 
-using base::StringPiece;
-
 namespace net {
 
 QuicDataWriter::QuicDataWriter(size_t size, char* buffer)
@@ -81,7 +79,7 @@ bool QuicDataWriter::WriteUFloat16(uint64_t value) {
   return WriteBytes(&result, sizeof(result));
 }
 
-bool QuicDataWriter::WriteStringPiece16(StringPiece val) {
+bool QuicDataWriter::WriteStringPiece16(QuicStringPiece val) {
   if (val.size() > std::numeric_limits<uint16_t>::max()) {
     return false;
   }

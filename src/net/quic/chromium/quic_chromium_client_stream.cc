@@ -145,7 +145,7 @@ SpdyPriority QuicChromiumClientStream::priority() const {
 }
 
 int QuicChromiumClientStream::WriteStreamData(
-    base::StringPiece data,
+    QuicStringPiece data,
     bool fin,
     const CompletionCallback& callback) {
   // We should not have data buffered.
@@ -170,7 +170,7 @@ int QuicChromiumClientStream::WritevStreamData(
   // Writes the data, or buffers it.
   for (size_t i = 0; i < buffers.size(); ++i) {
     bool is_fin = fin && (i == buffers.size() - 1);
-    base::StringPiece string_data(buffers[i]->data(), lengths[i]);
+    QuicStringPiece string_data(buffers[i]->data(), lengths[i]);
     WriteOrBufferData(string_data, is_fin, nullptr);
   }
   if (!HasBufferedData()) {

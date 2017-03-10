@@ -81,7 +81,7 @@ bool QuicStreamSequencerBuffer::RetireBlock(size_t idx) {
 
 QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
     QuicStreamOffset starting_offset,
-    base::StringPiece data,
+    QuicStringPiece data,
     QuicTime timestamp,
     size_t* const bytes_buffered,
     std::string* error_details) {
@@ -104,7 +104,7 @@ QuicErrorCode QuicStreamSequencerBuffer::OnStreamData(
   DCHECK(current_gap != gaps_.end());
 
   // "duplication": might duplicate with data alread filled,but also might
-  // overlap across different base::StringPiece objects already written.
+  // overlap across different QuicStringPiece objects already written.
   // In both cases, don't write the data,
   // and allow the caller of this method to handle the result.
   if (offset < current_gap->begin_offset &&

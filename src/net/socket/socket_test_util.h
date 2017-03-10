@@ -518,6 +518,10 @@ class MockClientSocketFactory : public ClientSocketFactory {
     return mock_data_;
   }
 
+  void set_enable_read_if_ready(bool enable_read_if_ready) {
+    enable_read_if_ready_ = enable_read_if_ready;
+  }
+
   // ClientSocketFactory
   std::unique_ptr<DatagramClientSocket> CreateDatagramClientSocket(
       DatagramSocket::BindType bind_type,
@@ -544,6 +548,10 @@ class MockClientSocketFactory : public ClientSocketFactory {
   SocketDataProviderArray<SocketDataProvider> mock_data_;
   SocketDataProviderArray<SSLSocketDataProvider> mock_ssl_data_;
   std::vector<uint16_t> udp_client_socket_ports_;
+
+  // If true, ReadIfReady() is enabled; otherwise ReadIfReady() returns
+  // ERR_READ_IF_READY_NOT_IMPLEMENTED.
+  bool enable_read_if_ready_;
 
   DISALLOW_COPY_AND_ASSIGN(MockClientSocketFactory);
 };
@@ -627,6 +635,9 @@ class MockTCPClientSocket : public MockClientSocket, public AsyncSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;
@@ -650,9 +661,15 @@ class MockTCPClientSocket : public MockClientSocket, public AsyncSocket {
   void OnConnectComplete(const MockConnect& data) override;
   void OnDataProviderDestroyed() override;
 
- private:
-  int CompleteRead();
+  void set_enable_read_if_ready(bool enable_read_if_ready) {
+    enable_read_if_ready_ = enable_read_if_ready;
+  }
 
+ private:
+  void RetryRead(int rv);
+  int ReadIfReadyImpl(IOBuffer* buf,
+                      int buf_len,
+                      const CompletionCallback& callback);
   AddressList addresses_;
 
   SocketDataProvider* data_;
@@ -668,10 +685,18 @@ class MockTCPClientSocket : public MockClientSocket, public AsyncSocket {
   // While an asynchronous read is pending, we save our user-buffer state.
   scoped_refptr<IOBuffer> pending_read_buf_;
   int pending_read_buf_len_;
-  CompletionCallback pending_connect_callback_;
   CompletionCallback pending_read_callback_;
+
+  // Non-null when a ReadIfReady() is pending.
+  CompletionCallback pending_read_if_ready_callback_;
+
+  CompletionCallback pending_connect_callback_;
   CompletionCallback pending_write_callback_;
   bool was_used_to_convey_data_;
+
+  // If true, ReadIfReady() is enabled; otherwise ReadIfReady() returns
+  // ERR_READ_IF_READY_NOT_IMPLEMENTED.
+  bool enable_read_if_ready_;
 
   ConnectionAttempts connection_attempts_;
 
@@ -690,6 +715,9 @@ class MockSSLClientSocket : public MockClientSocket, public AsyncSocket {
   int Read(IOBuffer* buf,
            int buf_len,
            const CompletionCallback& callback) override;
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback) override;
   int Write(IOBuffer* buf,
             int buf_len,
             const CompletionCallback& callback) override;

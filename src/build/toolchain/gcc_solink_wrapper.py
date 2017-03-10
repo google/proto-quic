@@ -78,6 +78,10 @@ def main():
                       required=True,
                       help='Output table-of-contents file',
                       metavar='FILE')
+  parser.add_argument('--map-file',
+                      help=('Use --Wl,-Map to generate a map file. Will be '
+                            'gzipped if extension ends with .gz'),
+                      metavar='FILE')
   parser.add_argument('--output',
                       required=True,
                       help='Final output shared object file',
@@ -99,8 +103,10 @@ def main():
         whitelist_candidates, args.resource_whitelist)
 
   # First, run the actual link.
-  result = subprocess.call(
-      wrapper_utils.CommandToRun(args.command), env=fast_env)
+  command = wrapper_utils.CommandToRun(args.command)
+  result = wrapper_utils.RunLinkWithOptionalMapFile(command, env=fast_env,
+                                                    map_file=args.map_file)
+
   if result != 0:
     return result
 

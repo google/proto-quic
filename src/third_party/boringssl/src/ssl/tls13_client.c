@@ -23,7 +23,6 @@
 #include <openssl/err.h>
 #include <openssl/mem.h>
 #include <openssl/stack.h>
-#include <openssl/x509.h>
 
 #include "../crypto/internal.h"
 #include "internal.h"
@@ -199,12 +198,11 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
   }
 
   /* Parse out the extensions. */
-  int have_key_share = 0, have_pre_shared_key = 0, have_short_header = 0;
-  CBS key_share, pre_shared_key, short_header;
+  int have_key_share = 0, have_pre_shared_key = 0;
+  CBS key_share, pre_shared_key;
   const SSL_EXTENSION_TYPE ext_types[] = {
       {TLSEXT_TYPE_key_share, &have_key_share, &key_share},
       {TLSEXT_TYPE_pre_shared_key, &have_pre_shared_key, &pre_shared_key},
-      {TLSEXT_TYPE_short_header, &have_short_header, &short_header},
   };
 
   uint8_t alert = SSL_AD_DECODE_ERROR;
@@ -318,23 +316,6 @@ static enum ssl_hs_wait_t do_process_server_hello(SSL_HANDSHAKE *hs) {
   }
   OPENSSL_free(dhe_secret);
 
-  /* Negotiate short record headers. */
-  if (have_short_header) {
-    if (CBS_len(&short_header) != 0) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-      return ssl_hs_error;
-    }
-
-    if (!ssl->ctx->short_header_enabled) {
-      OPENSSL_PUT_ERROR(SSL, SSL_R_UNEXPECTED_EXTENSION);
-      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_UNSUPPORTED_EXTENSION);
-      return ssl_hs_error;
-    }
-
-    ssl->s3->short_header = 1;
-  }
-
   if (!ssl_hash_current_message(hs) ||
       !tls13_derive_handshake_secrets(hs) ||
       !tls13_set_traffic_key(ssl, evp_aead_open, hs->server_handshake_secret,
@@ -402,8 +383,9 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
   }
 
   uint8_t alert = SSL_AD_DECODE_ERROR;
-  STACK_OF(X509_NAME) *ca_sk = ssl_parse_client_CA_list(ssl, &alert, &cbs);
-  if (ca_sk == NULL) {
+  STACK_OF(CRYPTO_BUFFER) *ca_names =
+      ssl_parse_client_CA_list(ssl, &alert, &cbs);
+  if (ca_names == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     return ssl_hs_error;
   }
@@ -413,14 +395,15 @@ static enum ssl_hs_wait_t do_process_certificate_request(SSL_HANDSHAKE *hs) {
   if (!CBS_get_u16_length_prefixed(&cbs, &extensions) ||
       CBS_len(&cbs) != 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    sk_X509_NAME_pop_free(ca_sk, X509_NAME_free);
+    sk_CRYPTO_BUFFER_pop_free(ca_names, CRYPTO_BUFFER_free);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     return ssl_hs_error;
   }
 
   hs->cert_request = 1;
-  sk_X509_NAME_pop_free(hs->ca_names, X509_NAME_free);
-  hs->ca_names = ca_sk;
+  sk_CRYPTO_BUFFER_pop_free(hs->ca_names, CRYPTO_BUFFER_free);
+  hs->ca_names = ca_names;
+  ssl->ctx->x509_method->hs_flush_cached_ca_names(hs);
 
   if (!ssl_hash_current_message(hs)) {
     return ssl_hs_error;
@@ -493,7 +476,7 @@ static enum ssl_hs_wait_t do_send_client_certificate(SSL_HANDSHAKE *hs) {
     }
   }
 
-  if (!ssl_auto_chain_if_needed(ssl) ||
+  if (!ssl->ctx->x509_method->ssl_auto_chain_if_needed(ssl) ||
       !tls13_add_certificate(hs)) {
     return ssl_hs_error;
   }
@@ -648,18 +631,9 @@ int tls13_process_new_session_ticket(SSL *ssl) {
   }
 
   /* Cap the renewable lifetime by the server advertised value. This avoids
-   * wasting bandwidth on 0-RTT when we know the server will reject it.
-   *
-   * TODO(davidben): This dance where we're not sure if long or uint32_t is
-   * bigger is silly. session->timeout should not be a long to begin with.
-   * https://crbug.com/boringssl/155. */
-#if LONG_MAX < 0xffffffff
-  if (server_timeout > LONG_MAX) {
-    server_timeout = LONG_MAX;
-  }
-#endif
-  if (session->timeout > (long)server_timeout) {
-    session->timeout = (long)server_timeout;
+   * wasting bandwidth on 0-RTT when we know the server will reject it. */
+  if (session->timeout > server_timeout) {
+    session->timeout = server_timeout;
   }
 
   /* Parse out the extensions. */

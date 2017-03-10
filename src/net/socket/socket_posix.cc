@@ -253,11 +253,26 @@ bool SocketPosix::IsConnectedAndIdle() const {
 int SocketPosix::Read(IOBuffer* buf,
                       int buf_len,
                       const CompletionCallback& callback) {
+  // Use base::Unretained() is safe here because OnFileCanReadWithoutBlocking()
+  // won't be called if |this| is gone.
+  int rv =
+      ReadIfReady(buf, buf_len,
+                  base::Bind(&SocketPosix::RetryRead, base::Unretained(this)));
+  if (rv == ERR_IO_PENDING) {
+    read_buf_ = buf;
+    read_buf_len_ = buf_len;
+    read_callback_ = callback;
+  }
+  return rv;
+}
+
+int SocketPosix::ReadIfReady(IOBuffer* buf,
+                             int buf_len,
+                             const CompletionCallback& callback) {
   DCHECK(thread_checker_.CalledOnValidThread());
   DCHECK_NE(kInvalidSocket, socket_fd_);
   DCHECK(!waiting_connect_);
-  CHECK(read_callback_.is_null());
-  // Synchronous operation not supported
+  CHECK(read_if_ready_callback_.is_null());
   DCHECK(!callback.is_null());
   DCHECK_LT(0, buf_len);
 
@@ -272,9 +287,7 @@ int SocketPosix::Read(IOBuffer* buf,
     return MapSystemError(errno);
   }
 
-  read_buf_ = buf;
-  read_buf_len_ = buf_len;
-  read_callback_ = callback;
+  read_if_ready_callback_ = callback;
   return ERR_IO_PENDING;
 }
 
@@ -375,10 +388,10 @@ void SocketPosix::DetachFromThread() {
 void SocketPosix::OnFileCanReadWithoutBlocking(int fd) {
   TRACE_EVENT0(kNetTracingCategory,
                "SocketPosix::OnFileCanReadWithoutBlocking");
-  DCHECK(!accept_callback_.is_null() || !read_callback_.is_null());
   if (!accept_callback_.is_null()) {
     AcceptCompleted();
-  } else {  // !read_callback_.is_null()
+  } else {
+    DCHECK(!read_if_ready_callback_.is_null());
     ReadCompleted();
   }
 }
@@ -453,16 +466,29 @@ int SocketPosix::DoRead(IOBuffer* buf, int buf_len) {
   return rv >= 0 ? rv : MapSystemError(errno);
 }
 
+void SocketPosix::RetryRead(int rv) {
+  DCHECK(read_callback_);
+  DCHECK(read_buf_);
+  DCHECK_LT(0, read_buf_len_);
+
+  if (rv == OK) {
+    rv = ReadIfReady(
+        read_buf_.get(), read_buf_len_,
+        base::Bind(&SocketPosix::RetryRead, base::Unretained(this)));
+    if (rv == ERR_IO_PENDING)
+      return;
+  }
+  read_buf_ = nullptr;
+  read_buf_len_ = 0;
+  base::ResetAndReturn(&read_callback_).Run(rv);
+}
+
 void SocketPosix::ReadCompleted() {
-  int rv = DoRead(read_buf_.get(), read_buf_len_);
-  if (rv == ERR_IO_PENDING)
-    return;
+  DCHECK(read_if_ready_callback_);
 
   bool ok = read_socket_watcher_.StopWatchingFileDescriptor();
   DCHECK(ok);
-  read_buf_ = NULL;
-  read_buf_len_ = 0;
-  base::ResetAndReturn(&read_callback_).Run(rv);
+  base::ResetAndReturn(&read_if_ready_callback_).Run(OK);
 }
 
 int SocketPosix::DoWrite(IOBuffer* buf, int buf_len) {
@@ -508,6 +534,8 @@ void SocketPosix::StopWatchingAndCleanUp() {
     read_buf_len_ = 0;
     read_callback_.Reset();
   }
+
+  read_if_ready_callback_.Reset();
 
   if (!write_callback_.is_null()) {
     write_buf_ = NULL;

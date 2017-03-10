@@ -5647,14 +5647,44 @@ Encoding CompactEncDet::DetectEncoding(
   }
 
 #if defined(HTML5_MODE)
-  // ISO_2022_JP (JAPANESE_JIS) is the only 7-bit encoding
-  // supported in HTML5 mode. Mark all the other encodings to
-  // ASCII_7BIT.
+  // Map all the Shift-JIS variants to Shift-JIS when used in Japanese locale.
+  if (language_hint == JAPANESE && IsShiftJisOrVariant(enc)) {
+    enc = JAPANESE_SHIFT_JIS;
+  }
+
+  // 7-bit encodings (except ISO-2022-JP), and some obscure encodings not
+  // supported in WHATWG encoding standard are marked as ASCII to keep the raw
+  // bytes intact.
   switch (enc) {
     case ISO_2022_KR:
     case ISO_2022_CN:
     case HZ_GB_2312:
     case UTF7:
+
+    case CHINESE_EUC_DEC:
+    case CHINESE_CNS:
+    case CHINESE_BIG5_CP950:
+    case JAPANESE_CP932:
+    case MSFT_CP874:
+    case TSCII:
+    case TAMIL_MONO:
+    case TAMIL_BI:
+    case JAGRAN:
+    case BHASKAR:
+    case HTCHANAKYA:
+    case BINARYENC:
+    case UTF8UTF8:
+    case TAM_ELANGO:
+    case TAM_LTTMBARANI:
+    case TAM_SHREE:
+    case TAM_TBOOMIS:
+    case TAM_TMNEWS:
+    case TAM_WEBTAMIL:
+    case KDDI_SHIFT_JIS:
+    case DOCOMO_SHIFT_JIS:
+    case SOFTBANK_SHIFT_JIS:
+    case KDDI_ISO_2022_JP:
+    case SOFTBANK_ISO_2022_JP:
       enc = ASCII_7BIT;
       break;
     default:

@@ -92,7 +92,7 @@ class DnsReloader : public NetworkChangeNotifier::DNSObserver {
 
   base::Lock lock_;  // Protects resolver_generation_.
   int resolver_generation_;
-  friend struct base::DefaultLazyInstanceTraits<DnsReloader>;
+  friend struct base::LazyInstanceTraitsBase<DnsReloader>;
 
   // We use thread local storage to identify which ReloadState to interact with.
   static base::ThreadLocalStorage::StaticSlot tls_index_;

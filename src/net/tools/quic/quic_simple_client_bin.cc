@@ -57,6 +57,7 @@
 #include "net/quic/core/quic_server_id.h"
 #include "net/quic/platform/api/quic_socket_address.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -64,13 +65,13 @@
 #include "net/tools/quic/synchronous_host_resolver.h"
 #include "url/gurl.h"
 
-using base::StringPiece;
 using net::CertVerifier;
 using net::CTPolicyEnforcer;
 using net::CTVerifier;
 using net::MultiLogCTVerifier;
 using net::ProofVerifier;
 using net::ProofVerifierChromium;
+using net::QuicStringPiece;
 using net::QuicTextUtils;
 using net::SpdyHeaderBlock;
 using net::TransportSecurityState;
@@ -111,7 +112,7 @@ class FakeProofVerifier : public ProofVerifier {
       const uint16_t port,
       const string& server_config,
       net::QuicVersion quic_version,
-      StringPiece chlo_hash,
+      QuicStringPiece chlo_hash,
       const std::vector<string>& certs,
       const string& cert_sct,
       const string& signature,
@@ -308,12 +309,12 @@ int main(int argc, char* argv[]) {
   header_block[":path"] = url.path();
 
   // Append any additional headers supplied on the command line.
-  for (StringPiece sp : QuicTextUtils::Split(FLAGS_headers, ';')) {
+  for (QuicStringPiece sp : QuicTextUtils::Split(FLAGS_headers, ';')) {
     QuicTextUtils::RemoveLeadingAndTrailingWhitespace(&sp);
     if (sp.empty()) {
       continue;
     }
-    std::vector<StringPiece> kv = QuicTextUtils::Split(sp, ':');
+    std::vector<QuicStringPiece> kv = QuicTextUtils::Split(sp, ':');
     QuicTextUtils::RemoveLeadingAndTrailingWhitespace(&kv[0]);
     QuicTextUtils::RemoveLeadingAndTrailingWhitespace(&kv[1]);
     header_block[kv[0]] = kv[1];

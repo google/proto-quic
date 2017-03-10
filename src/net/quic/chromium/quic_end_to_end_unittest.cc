@@ -31,6 +31,7 @@
 #include "net/http/transport_security_state.h"
 #include "net/log/net_log_with_source.h"
 #include "net/proxy/proxy_service.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "net/ssl/default_channel_id_store.h"
@@ -43,8 +44,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 #include "testing/platform_test.h"
-
-using base::StringPiece;
 
 namespace net {
 
@@ -189,10 +188,10 @@ class QuicEndToEndTest : public ::testing::TestWithParam<TestParams> {
 
   // Adds an entry to the cache used by the QUIC server to serve
   // responses.
-  void AddToCache(StringPiece path,
+  void AddToCache(QuicStringPiece path,
                   int response_code,
-                  StringPiece response_detail,
-                  StringPiece body) {
+                  QuicStringPiece response_detail,
+                  QuicStringPiece body) {
     response_cache_.AddSimpleResponse("test.example.com", path, response_code,
                                       body);
   }

@@ -28,7 +28,6 @@ namespace net {
 
 namespace x509_util {
 
-#if defined(USE_NSS_CERTS)
 // Parses the Principal attribute from |name| and outputs the result in
 // |principal|.
 void ParsePrincipal(CERTName* name,
@@ -127,7 +126,6 @@ bool IsCertificateIssuedBy(const std::vector<CERTCertificate*>& cert_chain,
 std::string GetUniqueNicknameForSlot(const std::string& nickname,
                                      const SECItem* subject,
                                      PK11SlotInfo* slot);
-#endif  // defined(USE_NSS_CERTS)
 
 } // namespace x509_util
 

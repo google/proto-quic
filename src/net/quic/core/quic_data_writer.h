@@ -10,10 +10,10 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/int128.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -47,7 +47,7 @@ class QUIC_EXPORT_PRIVATE QuicDataWriter {
   // clamped to the maximum representable (kUFloat16MaxValue). Values that can
   // not be represented directly are rounded down.
   bool WriteUFloat16(uint64_t value);
-  bool WriteStringPiece16(base::StringPiece val);
+  bool WriteStringPiece16(QuicStringPiece val);
   bool WriteBytes(const void* data, size_t data_len);
   bool WriteRepeatedByte(uint8_t byte, size_t count);
   // Fills the remaining buffer with null characters.

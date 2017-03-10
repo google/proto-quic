@@ -24,11 +24,11 @@
 // requires that Type be a complete type so we can determine the size.
 //
 // Example usage:
-//   static LazyInstance<MyClass> my_instance = LAZY_INSTANCE_INITIALIZER;
+//   static LazyInstance<MyClass>::Leaky inst = LAZY_INSTANCE_INITIALIZER;
 //   void SomeMethod() {
-//     my_instance.Get().SomeMethod();  // MyClass::SomeMethod()
+//     inst.Get().SomeMethod();  // MyClass::SomeMethod()
 //
-//     MyClass* ptr = my_instance.Pointer();
+//     MyClass* ptr = inst.Pointer();
 //     ptr->DoDoDo();  // MyClass::DoDoDo
 //   }
 
@@ -53,22 +53,15 @@
 namespace base {
 
 template <typename Type>
-struct DefaultLazyInstanceTraits {
-  static const bool kRegisterOnExit = true;
-#if DCHECK_IS_ON()
-  static const bool kAllowedToAccessOnNonjoinableThread = false;
-#endif
-
+struct LazyInstanceTraitsBase {
   static Type* New(void* instance) {
-    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (ALIGNOF(Type) - 1), 0u)
-        << ": Bad boy, the buffer passed to placement new is not aligned!\n"
-        "This may break some stuff like SSE-based optimizations assuming the "
-        "<Type> objects are word aligned.";
+    DCHECK_EQ(reinterpret_cast<uintptr_t>(instance) & (ALIGNOF(Type) - 1), 0u);
     // Use placement new to initialize our instance in our preallocated space.
     // The parenthesis is very important here to force POD type initialization.
     return new (instance) Type();
   }
-  static void Delete(Type* instance) {
+
+  static void CallDestructor(Type* instance) {
     // Explicitly call the destructor.
     instance->~Type();
   }
@@ -77,6 +70,25 @@ struct DefaultLazyInstanceTraits {
 // We pull out some of the functionality into non-templated functions, so we
 // can implement the more complicated pieces out of line in the .cc file.
 namespace internal {
+
+// This traits class causes destruction the contained Type at process exit via
+// AtExitManager. This is probably generally not what you want. Instead, prefer
+// Leaky below.
+template <typename Type>
+struct DestructorAtExitLazyInstanceTraits {
+  static const bool kRegisterOnExit = true;
+#if DCHECK_IS_ON()
+  static const bool kAllowedToAccessOnNonjoinableThread = false;
+#endif
+
+  static Type* New(void* instance) {
+    return LazyInstanceTraitsBase<Type>::New(instance);
+  }
+
+  static void Delete(Type* instance) {
+    LazyInstanceTraitsBase<Type>::CallDestructor(instance);
+  }
+};
 
 // Use LazyInstance<T>::Leaky for a less-verbose call-site typedef; e.g.:
 // base::LazyInstance<T>::Leaky my_leaky_lazy_instance;
@@ -95,11 +107,14 @@ struct LeakyLazyInstanceTraits {
 
   static Type* New(void* instance) {
     ANNOTATE_SCOPED_MEMORY_LEAK;
-    return DefaultLazyInstanceTraits<Type>::New(instance);
+    return LazyInstanceTraitsBase<Type>::New(instance);
   }
   static void Delete(Type* instance) {
   }
 };
+
+template <typename Type>
+struct ErrorMustSelectLazyOrDestructorAtExitForLazyInstance {};
 
 // Our AtomicWord doubles as a spinlock, where a value of
 // kLazyInstanceStateCreating means the spinlock is being held for creation.
@@ -119,7 +134,10 @@ BASE_EXPORT void CompleteLazyInstance(subtle::AtomicWord* state,
 
 }  // namespace internal
 
-template <typename Type, typename Traits = DefaultLazyInstanceTraits<Type> >
+template <
+    typename Type,
+    typename Traits =
+        internal::ErrorMustSelectLazyOrDestructorAtExitForLazyInstance<Type>>
 class LazyInstance {
  public:
   // Do not define a destructor, as doing so makes LazyInstance a
@@ -131,7 +149,9 @@ class LazyInstance {
 
   // Convenience typedef to avoid having to repeat Type for leaky lazy
   // instances.
-  typedef LazyInstance<Type, internal::LeakyLazyInstanceTraits<Type> > Leaky;
+  typedef LazyInstance<Type, internal::LeakyLazyInstanceTraits<Type>> Leaky;
+  typedef LazyInstance<Type, internal::DestructorAtExitLazyInstanceTraits<Type>>
+      DestructorAtExit;
 
   Type& Get() {
     return *Pointer();

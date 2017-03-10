@@ -25,7 +25,7 @@ base::android::JniRegistrationType g_jni_registration_type =
     base::android::ALL_JNI_REGISTRATION;
 
 JavaVM* g_jvm = NULL;
-base::LazyInstance<base::android::ScopedJavaGlobalRef<jobject> >::Leaky
+base::LazyInstance<base::android::ScopedJavaGlobalRef<jobject>>::Leaky
     g_class_loader = LAZY_INSTANCE_INITIALIZER;
 jmethodID g_class_loader_load_class_method_id = 0;
 

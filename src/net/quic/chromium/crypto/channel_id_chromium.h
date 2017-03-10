@@ -12,6 +12,7 @@
 #include "base/macros.h"
 #include "net/base/net_export.h"
 #include "net/quic/core/crypto/channel_id.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace crypto {
 class ECPrivateKey;
@@ -28,7 +29,7 @@ class NET_EXPORT_PRIVATE ChannelIDKeyChromium : public ChannelIDKey {
   ~ChannelIDKeyChromium() override;
 
   // ChannelIDKey interface
-  bool Sign(base::StringPiece signed_data,
+  bool Sign(QuicStringPiece signed_data,
             std::string* out_signature) const override;
   std::string SerializeKey() const override;
 

@@ -175,7 +175,7 @@ Value::Value(std::vector<char>&& in_blob) : type_(Type::BINARY) {
 Value& Value::operator=(const Value& that) {
   if (this != &that) {
     if (type_ == that.type_) {
-      InternalCopyAssignFrom(that);
+      InternalCopyAssignFromSameType(that);
     } else {
       InternalCleanup();
       InternalCopyConstructFrom(that);
@@ -188,7 +188,7 @@ Value& Value::operator=(const Value& that) {
 Value& Value::operator=(Value&& that) {
   if (this != &that) {
     if (type_ == that.type_) {
-      InternalMoveAssignFrom(std::move(that));
+      InternalMoveAssignFromSameType(std::move(that));
     } else {
       InternalCleanup();
       InternalMoveConstructFrom(std::move(that));
@@ -290,9 +290,9 @@ bool Value::GetAsString(string16* out_value) const {
   return is_string();
 }
 
-bool Value::GetAsString(const StringValue** out_value) const {
+bool Value::GetAsString(const Value** out_value) const {
   if (out_value && is_string()) {
-    *out_value = static_cast<const StringValue*>(this);
+    *out_value = static_cast<const Value*>(this);
     return true;
   }
   return is_string();
@@ -359,14 +359,12 @@ Value* Value::DeepCopy() const {
       return new Value(int_value_);
     case Type::DOUBLE:
       return new Value(double_value_);
-    // For now, make StringValues for backward-compatibility. Convert to
-    // Value when that code is deleted.
     case Type::STRING:
-      return new StringValue(*string_value_);
+      return new Value(*string_value_);
     // For now, make BinaryValues for backward-compatibility. Convert to
     // Value when that code is deleted.
     case Type::BINARY:
-      return new BinaryValue(*binary_value_);
+      return new Value(*binary_value_);
 
     // TODO(crbug.com/646113): Clean this up when DictionaryValue and ListValue
     // are completely inlined.
@@ -534,8 +532,8 @@ void Value::InternalMoveConstructFrom(Value&& that) {
   }
 }
 
-void Value::InternalCopyAssignFrom(const Value& that) {
-  type_ = that.type_;
+void Value::InternalCopyAssignFromSameType(const Value& that) {
+  CHECK_EQ(type_, that.type_);
 
   switch (type_) {
     case Type::NONE:
@@ -564,8 +562,8 @@ void Value::InternalCopyAssignFrom(const Value& that) {
   }
 }
 
-void Value::InternalMoveAssignFrom(Value&& that) {
-  type_ = that.type_;
+void Value::InternalMoveAssignFromSameType(Value&& that) {
+  CHECK_EQ(type_, that.type_);
 
   switch (type_) {
     case Type::NONE:
@@ -683,11 +681,11 @@ void DictionaryValue::SetDouble(StringPiece path, double in_value) {
 }
 
 void DictionaryValue::SetString(StringPiece path, StringPiece in_value) {
-  Set(path, new StringValue(in_value));
+  Set(path, new Value(in_value));
 }
 
 void DictionaryValue::SetString(StringPiece path, const string16& in_value) {
-  Set(path, new StringValue(in_value));
+  Set(path, new Value(in_value));
 }
 
 void DictionaryValue::SetWithoutPathExpansion(StringPiece key,
@@ -717,12 +715,12 @@ void DictionaryValue::SetDoubleWithoutPathExpansion(StringPiece path,
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
                                                     StringPiece in_value) {
-  SetWithoutPathExpansion(path, base::MakeUnique<base::StringValue>(in_value));
+  SetWithoutPathExpansion(path, base::MakeUnique<base::Value>(in_value));
 }
 
 void DictionaryValue::SetStringWithoutPathExpansion(StringPiece path,
                                                     const string16& in_value) {
-  SetWithoutPathExpansion(path, base::MakeUnique<base::StringValue>(in_value));
+  SetWithoutPathExpansion(path, base::MakeUnique<base::Value>(in_value));
 }
 
 bool DictionaryValue::Get(StringPiece path,
@@ -1038,6 +1036,7 @@ std::unique_ptr<DictionaryValue> DictionaryValue::DeepCopyWithoutEmptyChildren()
 }
 
 void DictionaryValue::MergeDictionary(const DictionaryValue* dictionary) {
+  CHECK(dictionary->is_dict());
   for (DictionaryValue::Iterator it(*dictionary); !it.IsAtEnd(); it.Advance()) {
     const Value* merge_value = &it.value();
     // Check whether we have to merge dictionaries.
@@ -1056,6 +1055,7 @@ void DictionaryValue::MergeDictionary(const DictionaryValue* dictionary) {
 }
 
 void DictionaryValue::Swap(DictionaryValue* other) {
+  CHECK(other->is_dict());
   dict_ptr_->swap(*(other->dict_ptr_));
 }
 
@@ -1281,11 +1281,11 @@ void ListValue::AppendDouble(double in_value) {
 }
 
 void ListValue::AppendString(StringPiece in_value) {
-  Append(MakeUnique<StringValue>(in_value));
+  Append(MakeUnique<Value>(in_value));
 }
 
 void ListValue::AppendString(const string16& in_value) {
-  Append(MakeUnique<StringValue>(in_value));
+  Append(MakeUnique<Value>(in_value));
 }
 
 void ListValue::AppendStrings(const std::vector<std::string>& in_values) {
@@ -1330,6 +1330,7 @@ ListValue::const_iterator ListValue::Find(const Value& value) const {
 }
 
 void ListValue::Swap(ListValue* other) {
+  CHECK(other->is_list());
   list_->swap(*(other->list_));
 }
 

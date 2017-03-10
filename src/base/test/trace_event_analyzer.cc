@@ -449,14 +449,24 @@ bool Query::GetAsString(const TraceEvent& event, std::string* str) const {
   }
 }
 
+const TraceEvent* Query::SelectTargetEvent(const TraceEvent* event,
+                                           TraceEventMember member) {
+  if (member >= OTHER_FIRST_MEMBER && member <= OTHER_LAST_MEMBER) {
+    return event->other_event;
+  } else if (member >= PREV_FIRST_MEMBER && member <= PREV_LAST_MEMBER) {
+    return event->prev_event;
+  } else {
+    return event;
+  }
+}
+
 bool Query::GetMemberValueAsDouble(const TraceEvent& event,
                                    double* num) const {
   DCHECK_EQ(QUERY_EVENT_MEMBER, type_);
 
   // This could be a request for a member of |event| or a member of |event|'s
-  // associated event. Store the target event in the_event:
-  const TraceEvent* the_event = (member_ < OTHER_PID) ?
-      &event : event.other_event;
+  // associated previous or next event. Store the target event in the_event:
+  const TraceEvent* the_event = SelectTargetEvent(&event, member_);
 
   // Request for member of associated event, but there is no associated event.
   if (!the_event)
@@ -465,14 +475,17 @@ bool Query::GetMemberValueAsDouble(const TraceEvent& event,
   switch (member_) {
     case EVENT_PID:
     case OTHER_PID:
+    case PREV_PID:
       *num = static_cast<double>(the_event->thread.process_id);
       return true;
     case EVENT_TID:
     case OTHER_TID:
+    case PREV_TID:
       *num = static_cast<double>(the_event->thread.thread_id);
       return true;
     case EVENT_TIME:
     case OTHER_TIME:
+    case PREV_TIME:
       *num = the_event->timestamp;
       return true;
     case EVENT_DURATION:
@@ -487,18 +500,22 @@ bool Query::GetMemberValueAsDouble(const TraceEvent& event,
       return true;
     case EVENT_PHASE:
     case OTHER_PHASE:
+    case PREV_PHASE:
       *num = static_cast<double>(the_event->phase);
       return true;
     case EVENT_HAS_STRING_ARG:
     case OTHER_HAS_STRING_ARG:
+    case PREV_HAS_STRING_ARG:
       *num = (the_event->HasStringArg(string_) ? 1.0 : 0.0);
       return true;
     case EVENT_HAS_NUMBER_ARG:
     case OTHER_HAS_NUMBER_ARG:
+    case PREV_HAS_NUMBER_ARG:
       *num = (the_event->HasNumberArg(string_) ? 1.0 : 0.0);
       return true;
     case EVENT_ARG:
-    case OTHER_ARG: {
+    case OTHER_ARG:
+    case PREV_ARG: {
       // Search for the argument name and return its value if found.
       std::map<std::string, double>::const_iterator num_i =
           the_event->arg_numbers.find(string_);
@@ -511,6 +528,9 @@ bool Query::GetMemberValueAsDouble(const TraceEvent& event,
       // return 1.0 (true) if the other event exists
       *num = event.other_event ? 1.0 : 0.0;
       return true;
+    case EVENT_HAS_PREV:
+      *num = event.prev_event ? 1.0 : 0.0;
+      return true;
     default:
       return false;
   }
@@ -521,9 +541,8 @@ bool Query::GetMemberValueAsString(const TraceEvent& event,
   DCHECK_EQ(QUERY_EVENT_MEMBER, type_);
 
   // This could be a request for a member of |event| or a member of |event|'s
-  // associated event. Store the target event in the_event:
-  const TraceEvent* the_event = (member_ < OTHER_PID) ?
-      &event : event.other_event;
+  // associated previous or next event. Store the target event in the_event:
+  const TraceEvent* the_event = SelectTargetEvent(&event, member_);
 
   // Request for member of associated event, but there is no associated event.
   if (!the_event)
@@ -532,18 +551,22 @@ bool Query::GetMemberValueAsString(const TraceEvent& event,
   switch (member_) {
     case EVENT_CATEGORY:
     case OTHER_CATEGORY:
+    case PREV_CATEGORY:
       *str = the_event->category;
       return true;
     case EVENT_NAME:
     case OTHER_NAME:
+    case PREV_NAME:
       *str = the_event->name;
       return true;
     case EVENT_ID:
     case OTHER_ID:
+    case PREV_ID:
       *str = the_event->id;
       return true;
     case EVENT_ARG:
-    case OTHER_ARG: {
+    case OTHER_ARG:
+    case PREV_ARG: {
       // Search for the argument name and return its value if found.
       std::map<std::string, std::string>::const_iterator str_i =
           the_event->arg_strings.find(string_);
@@ -740,7 +763,7 @@ void TraceAnalyzer::AssociateBeginEndEvents() {
   AssociateEvents(begin, end, match);
 }
 
-void TraceAnalyzer::AssociateAsyncBeginEndEvents() {
+void TraceAnalyzer::AssociateAsyncBeginEndEvents(bool match_pid) {
   using trace_analyzer::Query;
 
   Query begin(
@@ -750,9 +773,12 @@ void TraceAnalyzer::AssociateAsyncBeginEndEvents() {
   Query end(Query::EventPhaseIs(TRACE_EVENT_PHASE_ASYNC_END) ||
             Query::EventPhaseIs(TRACE_EVENT_PHASE_ASYNC_STEP_INTO) ||
             Query::EventPhaseIs(TRACE_EVENT_PHASE_ASYNC_STEP_PAST));
-  Query match(Query::EventName() == Query::OtherName() &&
-              Query::EventCategory() == Query::OtherCategory() &&
+  Query match(Query::EventCategory() == Query::OtherCategory() &&
               Query::EventId() == Query::OtherId());
+
+  if (match_pid) {
+    match = match && Query::EventPid() == Query::OtherPid();
+  }
 
   AssociateEvents(begin, end, match);
 }
@@ -782,6 +808,8 @@ void TraceAnalyzer::AssociateEvents(const Query& first,
         begin_event.other_event = &this_event;
         if (match.Evaluate(begin_event)) {
           // Found a matching begin/end pair.
+          // Set the associated previous event
+          this_event.prev_event = &begin_event;
           // Erase the matching begin event index from the stack.
           begin_stack.erase(begin_stack.begin() + stack_index);
           break;

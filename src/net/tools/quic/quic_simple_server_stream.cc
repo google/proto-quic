@@ -18,7 +18,6 @@
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_simple_server_session.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -223,14 +222,14 @@ void QuicSimpleServerStream::SendErrorResponse() {
 
 void QuicSimpleServerStream::SendHeadersAndBody(
     SpdyHeaderBlock response_headers,
-    StringPiece body) {
+    QuicStringPiece body) {
   SendHeadersAndBodyAndTrailers(std::move(response_headers), body,
                                 SpdyHeaderBlock());
 }
 
 void QuicSimpleServerStream::SendHeadersAndBodyAndTrailers(
     SpdyHeaderBlock response_headers,
-    StringPiece body,
+    QuicStringPiece body,
     SpdyHeaderBlock response_trailers) {
   if (!allow_bidirectional_data() && !reading_stopped()) {
     StopReading();

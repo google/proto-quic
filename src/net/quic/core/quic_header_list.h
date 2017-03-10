@@ -9,9 +9,9 @@
 #include <deque>
 #include <functional>
 
-#include "base/strings/string_piece.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_headers_handler_interface.h"
 
@@ -32,7 +32,7 @@ class QUIC_EXPORT_PRIVATE QuicHeaderList : public SpdyHeadersHandlerInterface {
 
   // From SpdyHeadersHandlerInteface.
   void OnHeaderBlockStart() override;
-  void OnHeader(base::StringPiece name, base::StringPiece value) override;
+  void OnHeader(QuicStringPiece name, QuicStringPiece value) override;
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes) override;
   void OnHeaderBlockEnd(size_t uncompressed_header_bytes,
                         size_t compressed_header_bytes) override;

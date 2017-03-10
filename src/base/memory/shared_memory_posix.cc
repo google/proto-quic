@@ -15,12 +15,14 @@
 #include "base/files/scoped_file.h"
 #include "base/logging.h"
 #include "base/memory/shared_memory_helper.h"
+#include "base/memory/shared_memory_tracker.h"
 #include "base/posix/eintr_wrapper.h"
 #include "base/posix/safe_strerror.h"
 #include "base/process/process_metrics.h"
 #include "base/scoped_generic.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/thread_restrictions.h"
+#include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 
 #if defined(OS_ANDROID)
@@ -283,8 +285,10 @@ bool SharedMemory::MapAt(off_t offset, size_t bytes) {
   bool mmap_succeeded = memory_ != (void*)-1 && memory_ != NULL;
   if (mmap_succeeded) {
     mapped_size_ = bytes;
-    DCHECK_EQ(0U, reinterpret_cast<uintptr_t>(memory_) &
-        (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
+    DCHECK_EQ(0U,
+              reinterpret_cast<uintptr_t>(memory_) &
+                  (SharedMemory::MAP_MINIMUM_ALIGNMENT - 1));
+    SharedMemoryTracker::GetInstance()->IncrementMemoryUsage(*this);
   } else {
     memory_ = NULL;
   }
@@ -297,6 +301,7 @@ bool SharedMemory::Unmap() {
     return false;
 
   munmap(memory_, mapped_size_);
+  SharedMemoryTracker::GetInstance()->DecrementMemoryUsage(*this);
   memory_ = NULL;
   mapped_size_ = 0;
   return true;
@@ -387,6 +392,24 @@ bool SharedMemory::ShareToProcessCommon(ProcessHandle process,
     Close();
   }
 
+  return true;
+}
+
+bool SharedMemory::GetUniqueId(SharedMemory::UniqueId* id) const {
+  // This function is called just after mmap. fstat is a system call that might
+  // cause I/O. It's safe to call fstat here because mmap for shared memory is
+  // called in two cases:
+  // 1) To handle file-mapped memory
+  // 2) To handle annonymous shared memory
+  // In 1), I/O is already permitted. In 2), the backend is on page cache and
+  // fstat doesn't cause I/O access to the disk. See the discussion at
+  // crbug.com/604726#c41.
+  base::ThreadRestrictions::ScopedAllowIO allow_io;
+  struct stat file_stat;
+  if (HANDLE_EINTR(::fstat(static_cast<int>(handle().fd), &file_stat)) != 0)
+    return false;
+  id->first = file_stat.st_dev;
+  id->second = file_stat.st_ino;
   return true;
 }
 

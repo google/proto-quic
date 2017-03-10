@@ -141,7 +141,7 @@ extern "C" {
  * A consumer may use this symbol in the preprocessor to temporarily build
  * against multiple revisions of BoringSSL at the same time. It is not
  * recommended to do so for longer than is necessary. */
-#define BORINGSSL_API_VERSION 2
+#define BORINGSSL_API_VERSION 3
 
 #if defined(BORINGSSL_SHARED_LIBRARY)
 
@@ -303,6 +303,7 @@ typedef struct ssl_cipher_st SSL_CIPHER;
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_custom_extension SSL_CUSTOM_EXTENSION;
 typedef struct ssl_method_st SSL_METHOD;
+typedef struct ssl_private_key_method_st SSL_PRIVATE_KEY_METHOD;
 typedef struct ssl_session_st SSL_SESSION;
 typedef struct ssl_st SSL;
 typedef struct st_ERR_FNS ERR_FNS;

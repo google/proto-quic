@@ -326,7 +326,7 @@ TEST_P(QuicChromiumClientSessionTest, PushStreamTimedOutWithResponse) {
                                        promise_headers));
   session_->OnInitialHeadersComplete(kServerDataStreamId1, SpdyHeaderBlock());
   // Read data on the pushed stream.
-  QuicStreamFrame data(kServerDataStreamId1, false, 0, StringPiece("SP"));
+  QuicStreamFrame data(kServerDataStreamId1, false, 0, QuicStringPiece("SP"));
   session_->OnStreamFrame(data);
 
   QuicClientPromisedInfo* promised =
@@ -488,7 +488,7 @@ TEST_P(QuicChromiumClientSessionTest, CancelPushAfterReceivingResponse) {
                                        promise_headers));
   session_->OnInitialHeadersComplete(kServerDataStreamId1, SpdyHeaderBlock());
   // Read data on the pushed stream.
-  QuicStreamFrame data(kServerDataStreamId1, false, 0, StringPiece("SP"));
+  QuicStreamFrame data(kServerDataStreamId1, false, 0, QuicStringPiece("SP"));
   session_->OnStreamFrame(data);
 
   QuicClientPromisedInfo* promised =
@@ -751,7 +751,7 @@ TEST_P(QuicChromiumClientSessionTest, MigrateToSocket) {
       server_maker_.MakePingPacket(1, /*include_version=*/false));
   std::unique_ptr<QuicEncryptedPacket> ack_and_data_out(
       client_maker_.MakeAckAndDataPacket(3, false, 5, 1, 1, false, 0,
-                                         StringPiece(data)));
+                                         QuicStringPiece(data)));
   MockRead reads[] = {
       MockRead(SYNCHRONOUS, server_ping->data(), server_ping->length(), 0),
       MockRead(SYNCHRONOUS, ERR_IO_PENDING, 1)};

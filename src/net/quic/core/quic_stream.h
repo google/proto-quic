@@ -23,7 +23,6 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/base/iovec.h"
 #include "net/quic/core/quic_flow_controller.h"
 #include "net/quic/core/quic_iovector.h"
@@ -32,6 +31,7 @@
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -182,7 +182,7 @@ class QUIC_EXPORT_PRIVATE QuicStream {
   // If fin is true: if it is immediately passed on to the session,
   // write_side_closed() becomes true, otherwise fin_buffered_ becomes true.
   void WriteOrBufferData(
-      base::StringPiece data,
+      QuicStringPiece data,
       bool fin,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener);
 

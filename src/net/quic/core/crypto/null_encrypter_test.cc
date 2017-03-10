@@ -5,8 +5,6 @@
 #include "net/quic/core/crypto/null_encrypter.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 
-using base::StringPiece;
-
 namespace net {
 namespace test {
 

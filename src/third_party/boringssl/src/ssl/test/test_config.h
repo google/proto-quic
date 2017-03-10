@@ -110,7 +110,8 @@ struct TestConfig {
   int expect_resume_curve_id = 0;
   bool use_old_client_cert_callback = false;
   int initial_timeout_duration_ms = 0;
-  bool use_null_client_ca_list = false;
+  std::string use_client_ca_list;
+  std::string expected_client_ca_list;
   bool send_alert = false;
   bool peek_then_read = false;
   bool enable_grease = false;
@@ -125,7 +126,6 @@ struct TestConfig {
   bool retain_only_sha256_client_cert_resume = false;
   bool expect_sha256_client_cert_initial = false;
   bool expect_sha256_client_cert_resume = false;
-  bool enable_short_header = false;
   bool read_with_unfinished_write = false;
   bool expect_secure_renegotiation = false;
   bool expect_no_secure_renegotiation = false;
@@ -133,6 +133,7 @@ struct TestConfig {
   int read_size = 0;
   bool expect_session_id = false;
   bool expect_no_session_id = false;
+  int expect_ticket_age_skew = 0;
 };
 
 bool ParseConfig(int argc, char **argv, TestConfig *out_config);

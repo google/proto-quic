@@ -1744,7 +1744,7 @@ TEST_F(FileUtilTest, GetTempDirTest) {
 TEST_F(FileUtilTest, OpenFileNoInheritance) {
   FilePath file_path(temp_dir_.GetPath().Append(FPL("a_file")));
 
-  for (const char* mode : {"wb", "r,ccs=UNICODE"}) {
+  for (const char* mode : {"wb", "r,ccs=UTF-8"}) {
     SCOPED_TRACE(mode);
     ASSERT_NO_FATAL_FAILURE(CreateTextFile(file_path, L"Geepers"));
     FILE* file = OpenFile(file_path, mode);

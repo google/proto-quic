@@ -12,6 +12,7 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/crypto/scoped_evp_aead_ctx.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -25,12 +26,12 @@ class QUIC_EXPORT_PRIVATE AeadBaseEncrypter : public QuicEncrypter {
   ~AeadBaseEncrypter() override;
 
   // QuicEncrypter implementation
-  bool SetKey(base::StringPiece key) override;
-  bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
+  bool SetKey(QuicStringPiece key) override;
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override;
   bool EncryptPacket(QuicVersion version,
                      QuicPacketNumber packet_number,
-                     base::StringPiece associated_data,
-                     base::StringPiece plaintext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece plaintext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override;
@@ -38,14 +39,14 @@ class QUIC_EXPORT_PRIVATE AeadBaseEncrypter : public QuicEncrypter {
   size_t GetNoncePrefixSize() const override;
   size_t GetMaxPlaintextSize(size_t ciphertext_size) const override;
   size_t GetCiphertextSize(size_t plaintext_size) const override;
-  base::StringPiece GetKey() const override;
-  base::StringPiece GetNoncePrefix() const override;
+  QuicStringPiece GetKey() const override;
+  QuicStringPiece GetNoncePrefix() const override;
 
   // Necessary so unit tests can explicitly specify a nonce, instead of a
   // nonce prefix and packet number.
-  bool Encrypt(base::StringPiece nonce,
-               base::StringPiece associated_data,
-               base::StringPiece plaintext,
+  bool Encrypt(QuicStringPiece nonce,
+               QuicStringPiece associated_data,
+               QuicStringPiece plaintext,
                unsigned char* output);
 
  protected:

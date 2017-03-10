@@ -164,8 +164,6 @@
 #include <openssl/md5.h>
 #include <openssl/mem.h>
 #include <openssl/rand.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
 
 #include "../crypto/internal.h"
 #include "internal.h"
@@ -1057,6 +1055,33 @@ static int ssl3_get_server_certificate(SSL_HANDSHAKE *hs) {
     return -1;
   }
 
+  /* Disallow the server certificate from changing during a renegotiation. See
+   * https://mitls.org/pages/attacks/3SHAKE. We never resume on renegotiation,
+   * so this check is sufficient. */
+  if (ssl->s3->established_session != NULL) {
+    if (sk_CRYPTO_BUFFER_num(ssl->s3->established_session->certs) !=
+        sk_CRYPTO_BUFFER_num(hs->new_session->certs)) {
+      OPENSSL_PUT_ERROR(SSL, SSL_R_SERVER_CERT_CHANGED);
+      ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
+      return -1;
+    }
+
+    for (size_t i = 0; i < sk_CRYPTO_BUFFER_num(hs->new_session->certs); i++) {
+      const CRYPTO_BUFFER *old_cert =
+          sk_CRYPTO_BUFFER_value(ssl->s3->established_session->certs, i);
+      const CRYPTO_BUFFER *new_cert =
+          sk_CRYPTO_BUFFER_value(hs->new_session->certs, i);
+      if (CRYPTO_BUFFER_len(old_cert) != CRYPTO_BUFFER_len(new_cert) ||
+          OPENSSL_memcmp(CRYPTO_BUFFER_data(old_cert),
+                         CRYPTO_BUFFER_data(new_cert),
+                         CRYPTO_BUFFER_len(old_cert)) != 0) {
+        OPENSSL_PUT_ERROR(SSL, SSL_R_SERVER_CERT_CHANGED);
+        ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_ILLEGAL_PARAMETER);
+        return -1;
+      }
+    }
+  }
+
   return 1;
 }
 
@@ -1108,8 +1133,7 @@ f_err:
 
 static int ssl3_verify_server_cert(SSL_HANDSHAKE *hs) {
   SSL *const ssl = hs->ssl;
-  if (!ssl_verify_cert_chain(ssl, &hs->new_session->verify_result,
-                             hs->new_session->x509_chain)) {
+  if (!ssl->ctx->x509_method->session_verify_cert_chain(hs->new_session, ssl)) {
     return -1;
   }
 
@@ -1403,22 +1427,24 @@ static int ssl3_get_certificate_request(SSL_HANDSHAKE *hs) {
   }
 
   uint8_t alert = SSL_AD_DECODE_ERROR;
-  STACK_OF(X509_NAME) *ca_sk = ssl_parse_client_CA_list(ssl, &alert, &cbs);
-  if (ca_sk == NULL) {
+  STACK_OF(CRYPTO_BUFFER) *ca_names =
+      ssl_parse_client_CA_list(ssl, &alert, &cbs);
+  if (ca_names == NULL) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, alert);
     return -1;
   }
 
   if (CBS_len(&cbs) != 0) {
     ssl3_send_alert(ssl, SSL3_AL_FATAL, SSL_AD_DECODE_ERROR);
-    sk_X509_NAME_pop_free(ca_sk, X509_NAME_free);
+    sk_CRYPTO_BUFFER_pop_free(ca_names, CRYPTO_BUFFER_free);
     OPENSSL_PUT_ERROR(SSL, SSL_R_DECODE_ERROR);
     return -1;
   }
 
   hs->cert_request = 1;
-  sk_X509_NAME_pop_free(hs->ca_names, X509_NAME_free);
-  hs->ca_names = ca_sk;
+  sk_CRYPTO_BUFFER_pop_free(hs->ca_names, CRYPTO_BUFFER_free);
+  hs->ca_names = ca_names;
+  ssl->ctx->x509_method->hs_flush_cached_ca_names(hs);
   return 1;
 }
 
@@ -1474,7 +1500,7 @@ static int ssl3_send_client_certificate(SSL_HANDSHAKE *hs) {
     }
   }
 
-  if (!ssl_auto_chain_if_needed(ssl) ||
+  if (!ssl->ctx->x509_method->ssl_auto_chain_if_needed(ssl) ||
       !ssl3_output_cert_chain(ssl)) {
     return -1;
   }

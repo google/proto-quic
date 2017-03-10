@@ -7,6 +7,7 @@
 
 #include "base/macros.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/impl/quic_hostname_utils_impl.h"
 
 namespace net {
@@ -19,7 +20,7 @@ class QUIC_EXPORT_PRIVATE QuicHostnameUtils {
   //  (1) disallow IP addresses;
   //  (2) check that the hostname contains valid characters only; and
   //  (3) contains at least one dot.
-  static bool IsValidSNI(base::StringPiece sni);
+  static bool IsValidSNI(QuicStringPiece sni);
 
   // Convert hostname to lowercase and remove the trailing '.'.
   // WARNING: mutates |hostname| in place and returns |hostname|.

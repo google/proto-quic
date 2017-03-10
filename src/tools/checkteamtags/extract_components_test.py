@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+from collections import OrderedDict
 import json
 import os
 import sys
@@ -20,8 +21,11 @@ def mock_file_tree(tree):
   os_walk_mocks = []
   file_mocks = {}
   for path in tree:
-    os_walk_mocks.append((path, ('ignored'), ('OWNERS', 'dummy.cc')))
-    file_mocks[os.path.join(path, 'OWNERS')] = tree[path]
+    if tree[path] is not None:
+      os_walk_mocks.append((path, ('ignored'), ('OWNERS', 'dummy.cc')))
+      file_mocks[os.path.join(path, 'OWNERS')] = tree[path]
+    else:
+      os_walk_mocks.append((path, ('ignored'), ('dummy.cc')))
 
   def custom_mock_open(files_data):
     def inner_open(path, mode='r'):
@@ -162,3 +166,35 @@ class ExtractComponentsTest(unittest.TestCase):
     self.assertIn('3 (75.00%) OWNERS files have COMPONENT', output)
     self.assertIn('2 (50.00%) OWNERS files have TEAM and COMPONENT', output)
     self.assertIn('4 OWNERS files at depth 0', output)
+
+  # We use OrderedDict here to guarantee that mocked version of os.walk returns
+  # directories in the specified order (top-down).
+  @mock_file_tree(OrderedDict([
+      ('chromium/src', 'boss@chromium.org\n'),
+      ('chromium/src/dir1', 'dummy@chromium.org\n'
+                           '# TEAM: dummy-team@chromium.org\n'
+                           '# COMPONENT: Dummy>Component'),
+      ('chromium/src/dir2', 'dummy2@chromium.org\n'
+                           '# TEAM: other-dummy-team@chromium.org\n'
+                           '# COMPONENT: Dummy>Component2'),
+      ('chromium/src/dir1/subdir', 'dummy@chromium.org'),
+      ('chromium/src/dir2/subdir', None)]))
+  def testIncludesSubdirectoriesWithNoOwnersFileOrNoComponentTag(self):
+    self.maxDiff = None  # This helps to see assertDictEqual errors in full.
+    saved_output = StringIO()
+    with mock.patch('sys.stdout', saved_output):
+      error_code = extract_components.main(['%prog', '--include-subdirs'])
+    self.assertEqual(0, error_code)
+    result_minus_readme = json.loads(saved_output.getvalue())
+    del result_minus_readme['AAA-README']
+    self.assertDictEqual(result_minus_readme, {
+        u'component-to-team': {
+            u'Dummy>Component2': u'other-dummy-team@chromium.org',
+            u'Dummy>Component': u'dummy-team@chromium.org'
+        },
+        u'dir-to-component': {
+            u'tools/checkteamtags/chromium/src/dir1': u'Dummy>Component',
+            u'tools/checkteamtags/chromium/src/dir1/subdir': u'Dummy>Component',
+            u'tools/checkteamtags/chromium/src/dir2': u'Dummy>Component2',
+            u'tools/checkteamtags/chromium/src/dir2/subdir': u'Dummy>Component2'
+        }})

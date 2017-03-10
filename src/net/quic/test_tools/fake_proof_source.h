@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "net/quic/core/crypto/proof_source.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 namespace test {
@@ -34,7 +35,7 @@ class FakeProofSource : public ProofSource {
                 const std::string& hostname,
                 const std::string& server_config,
                 QuicVersion quic_version,
-                base::StringPiece chlo_hash,
+                QuicStringPiece chlo_hash,
                 const QuicTagVector& connection_options,
                 std::unique_ptr<ProofSource::Callback> callback) override;
 

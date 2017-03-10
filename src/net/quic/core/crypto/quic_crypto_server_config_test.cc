@@ -21,7 +21,6 @@
 #include "net/quic/test_tools/quic_crypto_server_config_peer.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -125,8 +124,8 @@ TEST(QuicCryptoServerConfigTest, CompressDifferentCerts) {
   static const uint64_t set_hash = 42;
   std::unique_ptr<CommonCertSets> common_sets(
       crypto_test_utils::MockCommonCertSets(certs[0], set_hash, 1));
-  StringPiece different_common_certs(reinterpret_cast<const char*>(&set_hash),
-                                     sizeof(set_hash));
+  QuicStringPiece different_common_certs(
+      reinterpret_cast<const char*>(&set_hash), sizeof(set_hash));
   string compressed3 = QuicCryptoServerConfigPeer::CompressChain(
       &compressed_certs_cache, chain, different_common_certs.as_string(),
       cached_certs, common_sets.get());
@@ -173,14 +172,14 @@ class SourceAddressTokenTest : public ::testing::Test {
   }
 
   HandshakeFailureReason ValidateSourceAddressTokens(string config_id,
-                                                     StringPiece srct,
+                                                     QuicStringPiece srct,
                                                      const QuicIpAddress& ip) {
     return ValidateSourceAddressTokens(config_id, srct, ip, nullptr);
   }
 
   HandshakeFailureReason ValidateSourceAddressTokens(
       string config_id,
-      StringPiece srct,
+      QuicStringPiece srct,
       const QuicIpAddress& ip,
       CachedNetworkParameters* cached_network_params) {
     return peer_.ValidateSourceAddressTokens(

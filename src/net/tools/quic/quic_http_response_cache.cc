@@ -18,7 +18,6 @@
 
 using base::FilePath;
 using base::IntToString;
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -67,7 +66,7 @@ void QuicHttpResponseCache::ResourceFile::Read() {
     if (file_contents_[pos - 1] == '\r') {
       len -= 1;
     }
-    StringPiece line(file_contents_.data() + start, len);
+    QuicStringPiece line(file_contents_.data() + start, len);
     start = pos + 1;
     // Headers end with an empty line.
     if (line.empty()) {
@@ -110,26 +109,26 @@ void QuicHttpResponseCache::ResourceFile::Read() {
   // stuff as described in https://w3c.github.io/preload/.
   it = spdy_headers_.find("x-push-url");
   if (it != spdy_headers_.end()) {
-    StringPiece push_urls = it->second;
+    QuicStringPiece push_urls = it->second;
     size_t start = 0;
     while (start < push_urls.length()) {
       size_t pos = push_urls.find('\0', start);
       if (pos == string::npos) {
-        push_urls_.push_back(
-            StringPiece(push_urls.data() + start, push_urls.length() - start));
+        push_urls_.push_back(QuicStringPiece(push_urls.data() + start,
+                                             push_urls.length() - start));
         break;
       }
-      push_urls_.push_back(StringPiece(push_urls.data() + start, pos));
+      push_urls_.push_back(QuicStringPiece(push_urls.data() + start, pos));
       start += pos + 1;
     }
   }
 
-  body_ =
-      StringPiece(file_contents_.data() + start, file_contents_.size() - start);
+  body_ = QuicStringPiece(file_contents_.data() + start,
+                          file_contents_.size() - start);
 }
 
 void QuicHttpResponseCache::ResourceFile::SetHostPathFromBase(
-    StringPiece base) {
+    QuicStringPiece base) {
   size_t path_start = base.find_first_of('/');
   DCHECK_LT(0UL, path_start);
   host_ = base.substr(0, path_start);
@@ -141,7 +140,8 @@ void QuicHttpResponseCache::ResourceFile::SetHostPathFromBase(
   }
 }
 
-StringPiece QuicHttpResponseCache::ResourceFile::RemoveScheme(StringPiece url) {
+QuicStringPiece QuicHttpResponseCache::ResourceFile::RemoveScheme(
+    QuicStringPiece url) {
   if (QuicTextUtils::StartsWith(url, "https://")) {
     url.remove_prefix(8);
   } else if (QuicTextUtils::StartsWith(url, "http://")) {
@@ -151,15 +151,15 @@ StringPiece QuicHttpResponseCache::ResourceFile::RemoveScheme(StringPiece url) {
 }
 
 void QuicHttpResponseCache::ResourceFile::HandleXOriginalUrl() {
-  StringPiece url(x_original_url_);
+  QuicStringPiece url(x_original_url_);
   // Remove the protocol so we can add it below.
   url = RemoveScheme(url);
   SetHostPathFromBase(url);
 }
 
 const QuicHttpResponseCache::Response* QuicHttpResponseCache::GetResponse(
-    StringPiece host,
-    StringPiece path) const {
+    QuicStringPiece host,
+    QuicStringPiece path) const {
   QuicWriterMutexLock lock(&response_mutex_);
 
   auto it = responses_.find(GetKey(host, path));
@@ -176,10 +176,10 @@ const QuicHttpResponseCache::Response* QuicHttpResponseCache::GetResponse(
 
 typedef QuicHttpResponseCache::ServerPushInfo ServerPushInfo;
 
-void QuicHttpResponseCache::AddSimpleResponse(StringPiece host,
-                                              StringPiece path,
+void QuicHttpResponseCache::AddSimpleResponse(QuicStringPiece host,
+                                              QuicStringPiece path,
                                               int response_code,
-                                              StringPiece body) {
+                                              QuicStringPiece body) {
   SpdyHeaderBlock response_headers;
   response_headers[":status"] = QuicTextUtils::Uint64ToString(response_code);
   response_headers["content-length"] =
@@ -188,10 +188,10 @@ void QuicHttpResponseCache::AddSimpleResponse(StringPiece host,
 }
 
 void QuicHttpResponseCache::AddSimpleResponseWithServerPushResources(
-    StringPiece host,
-    StringPiece path,
+    QuicStringPiece host,
+    QuicStringPiece path,
     int response_code,
-    StringPiece body,
+    QuicStringPiece body,
     std::list<ServerPushInfo> push_resources) {
   AddSimpleResponse(host, path, response_code, body);
   MaybeAddServerPushResources(host, path, push_resources);
@@ -202,26 +202,26 @@ void QuicHttpResponseCache::AddDefaultResponse(Response* response) {
   default_response_.reset(response);
 }
 
-void QuicHttpResponseCache::AddResponse(StringPiece host,
-                                        StringPiece path,
+void QuicHttpResponseCache::AddResponse(QuicStringPiece host,
+                                        QuicStringPiece path,
                                         SpdyHeaderBlock response_headers,
-                                        StringPiece response_body) {
+                                        QuicStringPiece response_body) {
   AddResponseImpl(host, path, REGULAR_RESPONSE, std::move(response_headers),
                   response_body, SpdyHeaderBlock());
 }
 
-void QuicHttpResponseCache::AddResponse(StringPiece host,
-                                        StringPiece path,
+void QuicHttpResponseCache::AddResponse(QuicStringPiece host,
+                                        QuicStringPiece path,
                                         SpdyHeaderBlock response_headers,
-                                        StringPiece response_body,
+                                        QuicStringPiece response_body,
                                         SpdyHeaderBlock response_trailers) {
   AddResponseImpl(host, path, REGULAR_RESPONSE, std::move(response_headers),
                   response_body, std::move(response_trailers));
 }
 
 void QuicHttpResponseCache::AddSpecialResponse(
-    StringPiece host,
-    StringPiece path,
+    QuicStringPiece host,
+    QuicStringPiece path,
     SpecialResponseType response_type) {
   AddResponseImpl(host, path, response_type, SpdyHeaderBlock(), "",
                   SpdyHeaderBlock());
@@ -251,7 +251,7 @@ void QuicHttpResponseCache::InitializeFromDirectory(
     std::unique_ptr<ResourceFile> resource_file(new ResourceFile(file_iter));
 
     // Tease apart filename into host and path.
-    StringPiece base(resource_file->file_name());
+    QuicStringPiece base(resource_file->file_name());
     base.remove_prefix(cache_directory.length());
     if (base[0] == '/') {
       base.remove_prefix(1);
@@ -305,11 +305,11 @@ QuicHttpResponseCache::~QuicHttpResponseCache() {
   }
 }
 
-void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
-                                            StringPiece path,
+void QuicHttpResponseCache::AddResponseImpl(QuicStringPiece host,
+                                            QuicStringPiece path,
                                             SpecialResponseType response_type,
                                             SpdyHeaderBlock response_headers,
-                                            StringPiece response_body,
+                                            QuicStringPiece response_body,
                                             SpdyHeaderBlock response_trailers) {
   QuicWriterMutexLock lock(&response_mutex_);
 
@@ -328,13 +328,14 @@ void QuicHttpResponseCache::AddResponseImpl(StringPiece host,
   responses_[key] = std::move(new_response);
 }
 
-string QuicHttpResponseCache::GetKey(StringPiece host, StringPiece path) const {
+string QuicHttpResponseCache::GetKey(QuicStringPiece host,
+                                     QuicStringPiece path) const {
   return host.as_string() + path.as_string();
 }
 
 void QuicHttpResponseCache::MaybeAddServerPushResources(
-    StringPiece request_host,
-    StringPiece request_path,
+    QuicStringPiece request_host,
+    QuicStringPiece request_path,
     std::list<ServerPushInfo> push_resources) {
   string request_url = GetKey(request_host, request_path);
 
@@ -364,7 +365,7 @@ void QuicHttpResponseCache::MaybeAddServerPushResources(
     }
     if (!found_existing_response) {
       // Add a server push response to responses map, if it is not in the map.
-      StringPiece body = push_resource.body;
+      QuicStringPiece body = push_resource.body;
       QUIC_DVLOG(1) << "Add response for push resource: host " << host
                     << " path " << path;
       AddResponse(host, path, push_resource.headers.Clone(), body);

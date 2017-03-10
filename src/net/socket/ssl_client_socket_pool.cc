@@ -346,6 +346,17 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
     return ERR_ALPN_NEGOTIATION_FAILED;
   }
 
+  const std::string& host = params_->host_and_port().host();
+  bool is_google =
+      host == "google.com" ||
+      (host.size() > 11 && host.rfind(".google.com") == host.size() - 11);
+
+  // These are hosts that we intend to use in the initial TLS 1.3 deployment.
+  // TLS connections to them, whether or not this browser is in the experiment
+  // group, form the basis of our comparisons.
+  bool tls13_supported =
+      (host == "drive.google.com" || host == "mail.google.com");
+
   if (result == OK ||
       ssl_socket_->IgnoreCertError(result, params_->load_flags())) {
     DCHECK(!connect_timing_.ssl_start.is_null());
@@ -396,10 +407,6 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                                  100);
     }
 
-    const std::string& host = params_->host_and_port().host();
-    bool is_google =
-        host == "google.com" ||
-        (host.size() > 11 && host.rfind(".google.com") == host.size() - 11);
     if (is_google) {
       UMA_HISTOGRAM_CUSTOM_TIMES("Net.SSL_Connection_Latency_Google2",
                                  connect_duration,
@@ -422,9 +429,26 @@ int SSLConnectJob::DoSSLConnectComplete(int result) {
                                    100);
       }
     }
+
+    if (tls13_supported) {
+      UMA_HISTOGRAM_CUSTOM_TIMES("Net.SSL_Connection_Latency_TLS13Experiment",
+                                 connect_duration,
+                                 base::TimeDelta::FromMilliseconds(1),
+                                 base::TimeDelta::FromMinutes(1), 100);
+    }
   }
 
   UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_Connection_Error", std::abs(result));
+
+  if (is_google) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_Connection_Error_Google",
+                                std::abs(result));
+  }
+
+  if (tls13_supported) {
+    UMA_HISTOGRAM_SPARSE_SLOWLY("Net.SSL_Connection_Error_TLS13Experiment",
+                                std::abs(result));
+  }
 
   if (result == OK || IsCertificateError(result)) {
     SetSocket(std::move(ssl_socket_));

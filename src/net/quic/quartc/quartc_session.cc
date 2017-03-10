@@ -5,6 +5,7 @@
 #include "net/quic/quartc/quartc_session.h"
 
 #include "base/rand_util.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace {
 
@@ -32,7 +33,7 @@ class DummyProofSource : public net::ProofSource {
                 const std::string& hostname,
                 const std::string& server_config,
                 net::QuicVersion quic_version,
-                base::StringPiece chlo_hash,
+                net::QuicStringPiece chlo_hash,
                 const net::QuicTagVector& connection_options,
                 std::unique_ptr<Callback> callback) override {
     net::QuicReferenceCountedPointer<net::ProofSource::Chain> chain;
@@ -60,7 +61,7 @@ class InsecureProofVerifier : public net::ProofVerifier {
       const uint16_t port,
       const std::string& server_config,
       net::QuicVersion quic_version,
-      base::StringPiece chlo_hash,
+      net::QuicStringPiece chlo_hash,
       const std::vector<std::string>& certs,
       const std::string& cert_sct,
       const std::string& signature,

@@ -9,9 +9,9 @@
 #include <string>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -23,7 +23,7 @@ class QUIC_EXPORT_PRIVATE ChannelIDKey {
 
   // Sign signs |signed_data| using the ChannelID private key and puts the
   // signature into |out_signature|. It returns true on success.
-  virtual bool Sign(base::StringPiece signed_data,
+  virtual bool Sign(QuicStringPiece signed_data,
                     std::string* out_signature) const = 0;
 
   // SerializeKey returns the serialized ChannelID public key.
@@ -77,17 +77,17 @@ class QUIC_EXPORT_PRIVATE ChannelIDVerifier {
 
   // Verify returns true iff |signature| is a valid signature of |signed_data|
   // by |key|.
-  static bool Verify(base::StringPiece key,
-                     base::StringPiece signed_data,
-                     base::StringPiece signature);
+  static bool Verify(QuicStringPiece key,
+                     QuicStringPiece signed_data,
+                     QuicStringPiece signature);
 
   // FOR TESTING ONLY: VerifyRaw returns true iff |signature| is a valid
   // signature of |signed_data| by |key|. |is_channel_id_signature| indicates
   // whether |signature| is a ChannelID signature (with kContextStr prepended
   // to the data to be signed).
-  static bool VerifyRaw(base::StringPiece key,
-                        base::StringPiece signed_data,
-                        base::StringPiece signature,
+  static bool VerifyRaw(QuicStringPiece key,
+                        QuicStringPiece signed_data,
+                        QuicStringPiece signature,
                         bool is_channel_id_signature);
 
  private:

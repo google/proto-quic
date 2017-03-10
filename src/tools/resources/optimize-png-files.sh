@@ -415,6 +415,8 @@ Options:
   -r<revision> If this is specified, the script processes only png files
                changed since this revision. The <dir> options will be used
                to narrow down the files under specific directories.
+  -c<commit>   Same as -r but referencing a git commit. Only files changed
+               between this commit and HEAD will be processed.
   -v  Shows optimization process for each file.
   -h  Print this help text."
   exit 1
@@ -446,9 +448,12 @@ fi
 
 OPTIMIZE_LEVEL=1
 # Parse options
-while getopts o:r:h:v opts
+while getopts o:c:r:h:v opts
 do
   case $opts in
+    c)
+      COMMIT=$OPTARG
+      ;;
     r)
       COMMIT=$(git svn find-rev r$OPTARG | tail -1) || exit
       if [ -z "$COMMIT" ] ; then
@@ -541,7 +546,7 @@ if [ $PROCESSED_FILE != 0 ]; then
   let diff=$TOTAL_OLD_BYTES-$TOTAL_NEW_BYTES
   let percent=$diff*100/$TOTAL_OLD_BYTES
   echo "Result: $TOTAL_OLD_BYTES => $TOTAL_NEW_BYTES bytes" \
-       "($diff bytes: $percent%)"
+       "($diff bytes: $percent\%)"
 fi
 if [ $CORRUPTED_FILE != 0 ]; then
   echo "Warning: corrupted files found: $CORRUPTED_FILE"

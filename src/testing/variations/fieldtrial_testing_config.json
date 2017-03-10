@@ -34,6 +34,21 @@
             ]
         }
     ],
+    "AndroidHistoryManager": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "AndroidHistoryManager"
+                    ]
+                }
+            ]
+        }
+    ],
     "AndroidSpellChecker": [
         {
             "platforms": [
@@ -702,6 +717,24 @@
             ]
         }
     ],
+    "EnableMediaRemoting": [
+        {
+            "platforms": [
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "MediaRemoting"
+                    ]
+                }
+            ]
+        }
+    ],
     "EnableMediaRouter": [
         {
             "platforms": [
@@ -848,7 +881,7 @@
                         "cpu_budget": "0.01",
                         "initial_budget": "1.0",
                         "max_budget": "3.0",
-                        "max_delay": "30.0"
+                        "max_delay": "-1"
                     },
                     "enable_features": [
                         "ExpensiveBackgroundTimerThrottling"
@@ -1093,8 +1126,8 @@
             ],
             "experiments": [
                 {
-                    "name": "Enabled",
-                    "enable_features": [
+                    "name": "Control",
+                    "disable_features": [
                         "LazyParseCSS"
                     ]
                 }
@@ -1234,6 +1267,25 @@
             ]
         }
     ],
+    "MidiManagerDynamicInstantiation": [
+        {
+            "platforms": [
+                "android",
+                "chromeos",
+                "linux",
+                "mac",
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "enable_features": [
+                        "MidiManagerDynamicInstantiation"
+                    ]
+                }
+            ]
+        }
+    ],
     "ModerateBindingOnBackgroundTabCreation": [
         {
             "platforms": [
@@ -1258,6 +1310,24 @@
             "experiments": [
                 {
                     "name": "Enabled"
+                }
+            ]
+        }
+    ],
+    "NTPPersonalizedSectionRanking": [
+        {
+            "platforms": [
+                "android"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled-ClickBasedRanker",
+                    "params": {
+                        "category_ranker": "click_based"
+                    },
+                    "enable_features": [
+                        "ContentSuggestionsCategoryRanker"
+                    ]
                 }
             ]
         }
@@ -2462,6 +2532,27 @@
             ]
         }
     ],
+    "SettingsResetPrompt": [
+        {
+            "platforms": [
+                "win"
+            ],
+            "experiments": [
+                {
+                    "name": "Enabled",
+                    "params": {
+                        "delay_before_prompt_seconds": "1",
+                        "domain_hashes": "{\"c027a731da03fee479b2ba00b3afe74b3fd9190f0622755db8ffa504efbde66e\":\"3\"}",
+                        "prompt_wave": "20170101",
+                        "time_between_prompts_seconds": "3600"
+                    },
+                    "enable_features": [
+                        "SettingsResetPrompt"
+                    ]
+                }
+            ]
+        }
+    ],
     "SignInPasswordPromo": [
         {
             "platforms": [
@@ -2581,13 +2672,6 @@
                     "name": "Enabled",
                     "enable_features": [
                         "NegotiateTLS13"
-                    ]
-                },
-                {
-                    "name": "EnabledWithShortRecordHeader",
-                    "enable_features": [
-                        "NegotiateTLS13",
-                        "SSLShortRecordHeader"
                     ]
                 }
             ]

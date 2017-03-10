@@ -20,7 +20,7 @@ BASE_DIR = os.path.basename(BASE_PATH)
 
 
 def get_ubuntu_release():
-  supported_releases = ['precise', 'trusty']
+  supported_releases = ['trusty']
   release = subprocess.check_output(['lsb_release', '-cs']).strip()
   if release not in supported_releases:
     raise Exception("Supported Ubuntu versions: %s", str(supported_releases))

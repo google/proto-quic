@@ -47,7 +47,7 @@ public abstract class AnnotationProcessor<T extends Annotation> extends External
     @Override
     public Statement apply(Statement base, Description description) {
         mTestDescription = description;
-        mAnnotation = description.getAnnotation(mAnnotationClass);
+        mAnnotation = getAnnotation(description);
         if (mAnnotation == null) return base;
 
         // Return the wrapped statement to execute before() and after().
@@ -62,5 +62,13 @@ public abstract class AnnotationProcessor<T extends Annotation> extends External
     /** @return the annotation that caused the test to be processed. */
     protected T getAnnotation() {
         return mAnnotation;
+    }
+
+    private T getAnnotation(Description description) {
+        T annotation = description.getAnnotation(mAnnotationClass);
+        if (annotation != null) return annotation;
+
+        annotation = description.getTestClass().getAnnotation(mAnnotationClass);
+        return annotation;
     }
 }

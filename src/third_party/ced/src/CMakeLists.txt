@@ -69,6 +69,9 @@ set(CED_LIBRARY_SOURCES
 
 add_library(ced ${CED_LIBRARY_SOURCES})
 
+# Uncomment to put CED into WHATWG-compliant mode.
+#add_definitions(-DHTML5_MODE)
+
 set(GTEST_INCLUDE_DIR "gtest/googletest/include")
 set(GTEST_LIB_DIR "${CMAKE_SOURCE_DIR}/gtest/googlemock/gtest")
 
@@ -98,4 +101,3 @@ else()
                         ${EXTRA_TARGET_LINK_LIBRARIES}
                         )
 endif()
-

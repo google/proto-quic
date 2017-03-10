@@ -38,7 +38,6 @@
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::AnyNumber;
 using testing::AtLeast;
@@ -85,14 +84,14 @@ class TaggingEncrypter : public QuicEncrypter {
   ~TaggingEncrypter() override {}
 
   // QuicEncrypter interface.
-  bool SetKey(StringPiece key) override { return true; }
+  bool SetKey(QuicStringPiece key) override { return true; }
 
-  bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override { return true; }
 
   bool EncryptPacket(QuicVersion /*version*/,
                      QuicPacketNumber packet_number,
-                     StringPiece associated_data,
-                     StringPiece plaintext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece plaintext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
@@ -119,9 +118,9 @@ class TaggingEncrypter : public QuicEncrypter {
     return plaintext_size + kTagSize;
   }
 
-  StringPiece GetKey() const override { return StringPiece(); }
+  QuicStringPiece GetKey() const override { return QuicStringPiece(); }
 
-  StringPiece GetNoncePrefix() const override { return StringPiece(); }
+  QuicStringPiece GetNoncePrefix() const override { return QuicStringPiece(); }
 
  private:
   enum {
@@ -140,11 +139,11 @@ class TaggingDecrypter : public QuicDecrypter {
   ~TaggingDecrypter() override {}
 
   // QuicDecrypter interface
-  bool SetKey(StringPiece key) override { return true; }
+  bool SetKey(QuicStringPiece key) override { return true; }
 
-  bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override { return true; }
 
-  bool SetPreliminaryKey(StringPiece key) override {
+  bool SetPreliminaryKey(QuicStringPiece key) override {
     QUIC_BUG << "should not be called";
     return false;
   }
@@ -155,8 +154,8 @@ class TaggingDecrypter : public QuicDecrypter {
 
   bool DecryptPacket(QuicVersion /*version*/,
                      QuicPacketNumber packet_number,
-                     StringPiece associated_data,
-                     StringPiece ciphertext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece ciphertext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
@@ -171,14 +170,14 @@ class TaggingDecrypter : public QuicDecrypter {
     return true;
   }
 
-  StringPiece GetKey() const override { return StringPiece(); }
-  StringPiece GetNoncePrefix() const override { return StringPiece(); }
+  QuicStringPiece GetKey() const override { return QuicStringPiece(); }
+  QuicStringPiece GetNoncePrefix() const override { return QuicStringPiece(); }
   const char* cipher_name() const override { return "Tagging"; }
   // Use a distinct value starting with 0xFFFFFF, which is never used by TLS.
   uint32_t cipher_id() const override { return 0xFFFFFFF0; }
 
  protected:
-  virtual uint8_t GetTag(StringPiece ciphertext) {
+  virtual uint8_t GetTag(QuicStringPiece ciphertext) {
     return ciphertext.data()[ciphertext.size() - 1];
   }
 
@@ -187,7 +186,7 @@ class TaggingDecrypter : public QuicDecrypter {
     kTagSize = 12,
   };
 
-  bool CheckTag(StringPiece ciphertext, uint8_t tag) {
+  bool CheckTag(QuicStringPiece ciphertext, uint8_t tag) {
     for (size_t i = ciphertext.size() - kTagSize; i < ciphertext.size(); i++) {
       if (ciphertext.data()[i] != tag) {
         return false;
@@ -206,7 +205,7 @@ class StrictTaggingDecrypter : public TaggingDecrypter {
   ~StrictTaggingDecrypter() override {}
 
   // TaggingQuicDecrypter
-  uint8_t GetTag(StringPiece ciphertext) override { return tag_; }
+  uint8_t GetTag(QuicStringPiece ciphertext) override { return tag_; }
 
   const char* cipher_name() const override { return "StrictTagging"; }
   // Use a distinct value starting with 0xFFFFFF, which is never used by TLS.
@@ -510,7 +509,7 @@ class TestConnection : public QuicConnection {
 
   QuicConsumedData SendStreamDataWithString(
       QuicStreamId id,
-      StringPiece data,
+      QuicStringPiece data,
       QuicStreamOffset offset,
       bool fin,
       QuicReferenceCountedPointer<QuicAckListenerInterface> ack_listener) {
@@ -706,8 +705,8 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
         creator_(QuicConnectionPeer::GetPacketCreator(&connection_)),
         generator_(QuicConnectionPeer::GetPacketGenerator(&connection_)),
         manager_(QuicConnectionPeer::GetSentPacketManager(&connection_)),
-        frame1_(1, false, 0, StringPiece(data1)),
-        frame2_(1, false, 3, StringPiece(data2)),
+        frame1_(1, false, 0, QuicStringPiece(data1)),
+        frame2_(1, false, 3, QuicStringPiece(data2)),
         packet_number_length_(PACKET_6BYTE_PACKET_NUMBER),
         connection_id_length_(PACKET_8BYTE_CONNECTION_ID) {
     connection_.set_defer_send_in_response_to_packets(GetParam().ack_response ==
@@ -883,7 +882,7 @@ class QuicConnectionTest : public ::testing::TestWithParam<TestParams> {
   }
 
   QuicByteCount SendStreamDataToPeer(QuicStreamId id,
-                                     StringPiece data,
+                                     QuicStringPiece data,
                                      QuicStreamOffset offset,
                                      bool fin,
                                      QuicPacketNumber* last_packet) {
@@ -1092,7 +1091,7 @@ TEST_P(QuicConnectionTest, SelfAddressChangeAtClient) {
   EXPECT_EQ(Perspective::IS_CLIENT, connection_.perspective());
   EXPECT_TRUE(connection_.connected());
 
-  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
   EXPECT_CALL(visitor_, OnStreamFrame(_));
   ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
                                   kPeerAddress);
@@ -1115,7 +1114,7 @@ TEST_P(QuicConnectionTest, SelfAddressChangeAtServer) {
   EXPECT_EQ(Perspective::IS_SERVER, connection_.perspective());
   EXPECT_TRUE(connection_.connected());
 
-  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
   EXPECT_CALL(visitor_, OnStreamFrame(_));
   ProcessFramePacketWithAddresses(QuicFrame(&stream_frame), kSelfAddress,
                                   kPeerAddress);
@@ -1138,7 +1137,7 @@ TEST_P(QuicConnectionTest, AllowSelfAddressChangeToMappedIpv4AddressAtServer) {
   EXPECT_EQ(Perspective::IS_SERVER, connection_.perspective());
   EXPECT_TRUE(connection_.connected());
 
-  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(3);
   QuicIpAddress host;
   host.FromString("1.1.1.1");
@@ -1167,7 +1166,7 @@ TEST_P(QuicConnectionTest, ClientAddressChangeAndPacketReordered) {
   QuicConnectionPeer::SetPeerAddress(&connection_, QuicSocketAddress());
 
   QuicPacketCreatorPeer::SetPacketNumber(&peer_creator_, 5);
-  QuicStreamFrame stream_frame(1u, false, 0u, StringPiece());
+  QuicStreamFrame stream_frame(1u, false, 0u, QuicStringPiece());
   EXPECT_CALL(visitor_, OnStreamFrame(_)).Times(AnyNumber());
   const QuicSocketAddress kNewPeerAddress =
       QuicSocketAddress(QuicIpAddress::Loopback6(),
@@ -1854,7 +1853,7 @@ TEST_P(QuicConnectionTest, FramePackingSendv) {
   EXPECT_EQ(1u, writer_->stream_frames().size());
   QuicStreamFrame* frame = writer_->stream_frames()[0].get();
   EXPECT_EQ(1u, frame->stream_id);
-  EXPECT_EQ("ABCD", StringPiece(frame->data_buffer, frame->data_length));
+  EXPECT_EQ("ABCD", QuicStringPiece(frame->data_buffer, frame->data_length));
 }
 
 TEST_P(QuicConnectionTest, FramePackingSendvQueued) {

@@ -48,7 +48,7 @@ class MimeUtil : public PlatformMimeUtil {
   bool IsValidTopLevelMimeType(const std::string& type_string) const;
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<MimeUtil>;
+  friend struct base::LazyInstanceTraitsBase<MimeUtil>;
 
   MimeUtil();
 

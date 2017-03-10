@@ -504,12 +504,13 @@ int SSLServerSocketImpl::DoHandshake() {
     OpenSSLErrorInfo error_info;
     net_error = MapOpenSSLErrorWithDetails(ssl_error, err_tracer, &error_info);
 
-    // This hack is necessary because the mapping of SSL error codes to
-    // net_errors assumes (correctly for client sockets, but erroneously for
-    // server sockets) that peer cert verification failure can only occur if
-    // the cert changed during a renego. crbug.com/570351
-    if (net_error == ERR_SSL_SERVER_CERT_CHANGED)
+    // SSL_R_CERTIFICATE_VERIFY_FAILED's mapping is different between client and
+    // server.
+    if (ERR_GET_LIB(error_info.error_code) == ERR_LIB_SSL &&
+        ERR_GET_REASON(error_info.error_code) ==
+            SSL_R_CERTIFICATE_VERIFY_FAILED) {
       net_error = ERR_BAD_SSL_CLIENT_AUTH_CERT;
+    }
 
     // If not done, stay in this state
     if (net_error == ERR_IO_PENDING) {

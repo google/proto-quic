@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_handshake.h"
 #include "net/quic/core/crypto/crypto_handshake_message.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
@@ -28,6 +27,7 @@
 #include "net/quic/platform/api/quic_mutex.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -53,10 +53,10 @@ struct ClientHelloInfo {
 
   // Outputs from EvaluateClientHello.
   bool valid_source_address_token;
-  base::StringPiece sni;
-  base::StringPiece client_nonce;
-  base::StringPiece server_nonce;
-  base::StringPiece user_agent_id;
+  QuicStringPiece sni;
+  QuicStringPiece client_nonce;
+  QuicStringPiece server_nonce;
+  QuicStringPiece user_agent_id;
   SourceAddressTokens source_address_tokens;
 
   // Errors from EvaluateClientHello.
@@ -194,7 +194,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
   //     server. Not owned.
   // |proof_source|: provides certificate chains and signatures. This class
   //     takes ownership of |proof_source|.
-  QuicCryptoServerConfig(base::StringPiece source_address_token_secret,
+  QuicCryptoServerConfig(QuicStringPiece source_address_token_secret,
                          QuicRandom* server_nonce_entropy,
                          std::unique_ptr<ProofSource> proof_source);
   ~QuicCryptoServerConfig();
@@ -336,7 +336,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
   // |cached_network_params| is optional, and can be nullptr.
   void BuildServerConfigUpdateMessage(
       QuicVersion version,
-      base::StringPiece chlo_hash,
+      QuicStringPiece chlo_hash,
       const SourceAddressTokens& previous_source_address_tokens,
       const QuicSocketAddress& server_address,
       const QuicIpAddress& client_ip,
@@ -466,7 +466,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
 
   // Get a ref to the config with a given server config id.
   QuicReferenceCountedPointer<Config> GetConfigWithScid(
-      base::StringPiece requested_scid) const
+      QuicStringPiece requested_scid) const
       SHARED_LOCKS_REQUIRED(configs_lock_);
 
   // ConfigPrimaryTimeLessThan returns true if a->primary_time <
@@ -595,7 +595,7 @@ class QUIC_EXPORT_PRIVATE QuicCryptoServerConfig {
   // failure.
   HandshakeFailureReason ParseSourceAddressToken(
       const Config& config,
-      base::StringPiece token,
+      QuicStringPiece token,
       SourceAddressTokens* tokens) const;
 
   // ValidateSourceAddressTokens returns HANDSHAKE_OK if the source address

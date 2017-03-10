@@ -100,6 +100,26 @@ int TCPClientSocket::Connect(const CompletionCallback& callback) {
   return rv;
 }
 
+int TCPClientSocket::ReadCommon(IOBuffer* buf,
+                                int buf_len,
+                                const CompletionCallback& callback,
+                                bool read_if_ready) {
+  DCHECK(!callback.is_null());
+
+  // |socket_| is owned by |this| and the callback won't be run once |socket_|
+  // is gone/closed. Therefore, it is safe to use base::Unretained() here.
+  CompletionCallback read_callback = base::Bind(
+      &TCPClientSocket::DidCompleteRead, base::Unretained(this), callback);
+  int result = read_if_ready ? socket_->ReadIfReady(buf, buf_len, read_callback)
+                             : socket_->Read(buf, buf_len, read_callback);
+  if (result > 0) {
+    use_history_.set_was_used_to_convey_data();
+    total_received_bytes_ += result;
+  }
+
+  return result;
+}
+
 int TCPClientSocket::DoConnectLoop(int result) {
   DCHECK_NE(next_connect_state_, CONNECT_STATE_NONE);
 
@@ -272,19 +292,13 @@ bool TCPClientSocket::GetSSLInfo(SSLInfo* ssl_info) {
 int TCPClientSocket::Read(IOBuffer* buf,
                           int buf_len,
                           const CompletionCallback& callback) {
-  DCHECK(!callback.is_null());
+  return ReadCommon(buf, buf_len, callback, /*read_if_ready=*/false);
+}
 
-  // |socket_| is owned by this class and the callback won't be run once
-  // |socket_| is gone. Therefore, it is safe to use base::Unretained() here.
-  CompletionCallback read_callback = base::Bind(
-      &TCPClientSocket::DidCompleteRead, base::Unretained(this), callback);
-  int result = socket_->Read(buf, buf_len, read_callback);
-  if (result > 0) {
-    use_history_.set_was_used_to_convey_data();
-    total_received_bytes_ += result;
-  }
-
-  return result;
+int TCPClientSocket::ReadIfReady(IOBuffer* buf,
+                                 int buf_len,
+                                 const CompletionCallback& callback) {
+  return ReadCommon(buf, buf_len, callback, /*read_if_ready=*/true);
 }
 
 int TCPClientSocket::Write(IOBuffer* buf,

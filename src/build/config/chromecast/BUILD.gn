@@ -49,7 +49,7 @@ config("ldconfig") {
 config("executable_config") {
   configs = [ ":ldconfig" ]
 
-  if (current_cpu == "arm") {
+  if (!is_clang && current_cpu == "arm") {
     ldflags = [
       # Export stdlibc++ and libgcc symbols to force shlibs to refer to these
       # symbols from the executable.
@@ -75,7 +75,7 @@ config("executable_config") {
 
 config("shared_library_config") {
   configs = [ ":ldconfig" ]
-  if (current_cpu == "arm") {
+  if (!is_clang && current_cpu == "arm") {
     configs += [ ":static_config" ]
   }
 }

@@ -10,6 +10,7 @@
 #include "base/macros.h"
 #include "net/quic/core/quic_packets.h"
 #include "net/quic/core/quic_spdy_stream.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/spdy/spdy_framer.h"
 #include "net/tools/quic/quic_http_response_cache.h"
 #include "net/tools/quic/quic_spdy_server_stream_base.h"
@@ -64,9 +65,9 @@ class QuicSimpleServerStream : public QuicSpdyServerStreamBase {
   void SendNotFoundResponse();
 
   void SendHeadersAndBody(SpdyHeaderBlock response_headers,
-                          base::StringPiece body);
+                          QuicStringPiece body);
   void SendHeadersAndBodyAndTrailers(SpdyHeaderBlock response_headers,
-                                     base::StringPiece body,
+                                     QuicStringPiece body,
                                      SpdyHeaderBlock response_trailers);
 
   SpdyHeaderBlock* request_headers() { return &request_headers_; }

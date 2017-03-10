@@ -23,7 +23,6 @@
 #include <openssl/mem.h>
 #include <openssl/stack.h>
 #include <openssl/x509.h>
-#include <openssl/x509v3.h>
 
 #include "../crypto/internal.h"
 #include "internal.h"
@@ -330,8 +329,8 @@ int tls13_process_certificate(SSL_HANDSHAKE *hs, int allow_anonymous) {
 
   hs->new_session->peer_sha256_valid = retain_sha256;
 
-  if (!ssl_verify_cert_chain(ssl, &hs->new_session->verify_result,
-                             hs->new_session->x509_chain)) {
+  if (!ssl->ctx->x509_method->session_verify_cert_chain(hs->new_session,
+                                                        ssl)) {
     goto err;
   }
 

@@ -675,7 +675,7 @@ int QuicStreamRequest::Request(const HostPortPair& destination,
                                PrivacyMode privacy_mode,
                                int cert_verify_flags,
                                const GURL& url,
-                               base::StringPiece method,
+                               QuicStringPiece method,
                                const NetLogWithSource& net_log,
                                const CompletionCallback& callback) {
   DCHECK(callback_.is_null());
@@ -967,7 +967,7 @@ int QuicStreamFactory::Create(const QuicServerId& server_id,
                               const HostPortPair& destination,
                               int cert_verify_flags,
                               const GURL& url,
-                              base::StringPiece method,
+                              QuicStringPiece method,
                               const NetLogWithSource& net_log,
                               QuicStreamRequest* request) {
   if (clock_skew_detector_.ClockSkewDetected(base::TimeTicks::Now(),

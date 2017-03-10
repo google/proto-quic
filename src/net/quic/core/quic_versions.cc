@@ -4,14 +4,12 @@
 
 #include "net/quic/core/quic_versions.h"
 
-#include "base/strings/string_piece.h"
 #include "net/quic/core/quic_error_codes.h"
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/core/quic_tag.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {

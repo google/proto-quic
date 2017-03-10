@@ -3578,7 +3578,7 @@ TEST_F(SpdyNetworkTransactionTest, NetLog) {
   for (std::vector<std::string>::const_iterator it = expected.begin();
        it != expected.end();
        ++it) {
-    base::StringValue header(*it);
+    base::Value header(*it);
     EXPECT_NE(header_list->end(), header_list->Find(header)) <<
         "Header not found: " << *it;
   }

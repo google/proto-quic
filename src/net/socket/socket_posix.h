@@ -59,6 +59,14 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   // errno, though errno is set if read or write events happen with error.
   // TODO(byungchul): Need more robust way to pass system errno.
   int Read(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
+
+  // Reads up to |buf_len| bytes into |buf| without blocking. If read is to
+  // be retried later, |callback| will be invoked when data is ready for
+  // reading. This method doesn't hold on to |buf|.
+  // See socket.h for more information.
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback);
   int Write(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
 
   // Waits for next write event. This is called by TCPSocketPosix for TCP
@@ -95,6 +103,7 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   void ConnectCompleted();
 
   int DoRead(IOBuffer* buf, int buf_len);
+  void RetryRead(int rv);
   void ReadCompleted();
 
   int DoWrite(IOBuffer* buf, int buf_len);
@@ -109,10 +118,14 @@ class NET_EXPORT_PRIVATE SocketPosix : public base::MessageLoopForIO::Watcher {
   CompletionCallback accept_callback_;
 
   base::MessageLoopForIO::FileDescriptorWatcher read_socket_watcher_;
+
+  // Non-null when a Read() is in progress.
   scoped_refptr<IOBuffer> read_buf_;
   int read_buf_len_;
-  // External callback; called when read is complete.
   CompletionCallback read_callback_;
+
+  // Non-null when a ReadIfReady() is in progress.
+  CompletionCallback read_if_ready_callback_;
 
   base::MessageLoopForIO::FileDescriptorWatcher write_socket_watcher_;
   scoped_refptr<IOBuffer> write_buf_;

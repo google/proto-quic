@@ -80,14 +80,6 @@ class NET_EXPORT X509Certificate
     kPublicKeyTypeECDH
   };
 
-  enum SignatureHashAlgorithm {
-    kSignatureHashAlgorithmMd2,
-    kSignatureHashAlgorithmMd4,
-    kSignatureHashAlgorithmMd5,
-    kSignatureHashAlgorithmSha1,
-    kSignatureHashAlgorithmOther,
-  };
-
   enum Format {
     // The data contains a single DER-encoded certificate, or a PEM-encoded
     // DER certificate with the PEM encoding block name of "CERTIFICATE".
@@ -322,15 +314,6 @@ class NET_EXPORT X509Certificate
   static void GetPublicKeyInfo(OSCertHandle cert_handle,
                                size_t* size_bits,
                                PublicKeyType* type);
-
-  // Returns the digest algorithm used in |cert_handle|'s signature.
-  // If the digest algorithm cannot be determined, or if it is not one
-  // of the explicitly enumerated values, kSignatureHashAlgorithmOther
-  // will be returned.
-  // NOTE: No validation of the signature is performed, and thus invalid
-  // signatures may result in seemingly meaningful values.
-  static SignatureHashAlgorithm GetSignatureHashAlgorithm(
-      OSCertHandle cert_handle);
 
   // Returns the OSCertHandle of this object. Because of caching, this may
   // differ from the OSCertHandle originally supplied during initialization.

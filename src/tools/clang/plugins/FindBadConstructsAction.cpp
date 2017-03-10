@@ -58,7 +58,8 @@ bool FindBadConstructsAction::ParseArgs(const CompilerInstance& instance,
     } else if (args[i] == "check-ipc") {
       options_.check_ipc = true;
     } else if (args[i] == "check-auto-raw-pointer") {
-      options_.check_auto_raw_pointer = true;
+      // This flag is deprecated and will be removed once Chromium builds aren't
+      // using it. http://crbug.com/554600.
     } else {
       parsed = false;
       llvm::errs() << "Unknown clang plugin argument: " << args[i] << "\n";

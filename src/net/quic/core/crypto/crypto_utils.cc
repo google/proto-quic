@@ -18,7 +18,6 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -26,7 +25,7 @@ namespace net {
 // static
 void CryptoUtils::GenerateNonce(QuicWallTime now,
                                 QuicRandom* random_generator,
-                                StringPiece orbit,
+                                QuicStringPiece orbit,
                                 string* nonce) {
   // a 4-byte timestamp + 28 random bytes.
   nonce->reserve(kNonceSize);
@@ -51,10 +50,10 @@ void CryptoUtils::GenerateNonce(QuicWallTime now,
 }
 
 // static
-bool CryptoUtils::DeriveKeys(StringPiece premaster_secret,
+bool CryptoUtils::DeriveKeys(QuicStringPiece premaster_secret,
                              QuicTag aead,
-                             StringPiece client_nonce,
-                             StringPiece server_nonce,
+                             QuicStringPiece client_nonce,
+                             QuicStringPiece server_nonce,
                              const string& hkdf_input,
                              Perspective perspective,
                              Diversification diversification,
@@ -67,7 +66,7 @@ bool CryptoUtils::DeriveKeys(StringPiece premaster_secret,
   size_t subkey_secret_bytes =
       subkey_secret == nullptr ? 0 : premaster_secret.length();
 
-  StringPiece nonce = client_nonce;
+  QuicStringPiece nonce = client_nonce;
   string nonce_storage;
   if (!server_nonce.empty()) {
     nonce_storage = client_nonce.as_string() + server_nonce.as_string();
@@ -145,9 +144,9 @@ bool CryptoUtils::DeriveKeys(StringPiece premaster_secret,
 }
 
 // static
-bool CryptoUtils::ExportKeyingMaterial(StringPiece subkey_secret,
-                                       StringPiece label,
-                                       StringPiece context,
+bool CryptoUtils::ExportKeyingMaterial(QuicStringPiece subkey_secret,
+                                       QuicStringPiece label,
+                                       QuicStringPiece context,
                                        size_t result_len,
                                        string* result) {
   for (size_t i = 0; i < label.length(); i++) {
@@ -167,14 +166,14 @@ bool CryptoUtils::ExportKeyingMaterial(StringPiece subkey_secret,
   info.append(reinterpret_cast<char*>(&context_length), sizeof(context_length));
   info.append(context.data(), context.length());
 
-  crypto::HKDF hkdf(subkey_secret, StringPiece() /* no salt */, info,
+  crypto::HKDF hkdf(subkey_secret, QuicStringPiece() /* no salt */, info,
                     result_len, 0 /* no fixed IV */, 0 /* no subkey secret */);
   hkdf.client_write_key().CopyToString(result);
   return true;
 }
 
 // static
-uint64_t CryptoUtils::ComputeLeafCertHash(StringPiece cert) {
+uint64_t CryptoUtils::ComputeLeafCertHash(QuicStringPiece cert) {
   return QuicUtils::FNV1a_64_Hash(cert);
 }
 

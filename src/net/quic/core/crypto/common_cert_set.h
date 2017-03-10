@@ -8,9 +8,9 @@
 #include <cstdint>
 
 #include "base/compiler_specific.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_protocol.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -23,22 +23,22 @@ class QUIC_EXPORT_PRIVATE CommonCertSets {
   // GetInstanceQUIC returns the standard QUIC common certificate sets.
   static const CommonCertSets* GetInstanceQUIC();
 
-  // GetCommonHashes returns a StringPiece containing the hashes of common sets
-  // supported by this object. The 64-bit hashes are concatenated in the
-  // StringPiece.
-  virtual base::StringPiece GetCommonHashes() const = 0;
+  // GetCommonHashes returns a QuicStringPiece containing the hashes of common
+  // sets supported by this object. The 64-bit hashes are concatenated in the
+  // QuicStringPiece.
+  virtual QuicStringPiece GetCommonHashes() const = 0;
 
   // GetCert returns a specific certificate (at index |index|) in the common
   // set identified by |hash|. If no such certificate is known, an empty
-  // StringPiece is returned.
-  virtual base::StringPiece GetCert(uint64_t hash, uint32_t index) const = 0;
+  // QuicStringPiece is returned.
+  virtual QuicStringPiece GetCert(uint64_t hash, uint32_t index) const = 0;
 
   // MatchCert tries to find |cert| in one of the common certificate sets
   // identified by |common_set_hashes|. On success it puts the hash of the
   // set in |out_hash|, the index of |cert| in the set in |out_index| and
   // returns true. Otherwise it returns false.
-  virtual bool MatchCert(base::StringPiece cert,
-                         base::StringPiece common_set_hashes,
+  virtual bool MatchCert(QuicStringPiece cert,
+                         QuicStringPiece common_set_hashes,
                          uint64_t* out_hash,
                          uint32_t* out_index) const = 0;
 };

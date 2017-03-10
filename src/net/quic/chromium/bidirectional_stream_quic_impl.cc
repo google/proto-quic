@@ -13,6 +13,7 @@
 #include "base/timer/timer.h"
 #include "net/http/bidirectional_stream_request_info.h"
 #include "net/quic/core/quic_connection.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/socket/next_proto.h"
 #include "net/spdy/spdy_header_block.h"
 #include "net/spdy/spdy_http_utils.h"
@@ -154,7 +155,7 @@ void BidirectionalStreamQuicImpl::SendData(const scoped_refptr<IOBuffer>& data,
     SendRequestHeaders();
   }
 
-  base::StringPiece string_data(data->data(), length);
+  QuicStringPiece string_data(data->data(), length);
   int rv = stream_->WriteStreamData(
       string_data, end_stream,
       base::Bind(&BidirectionalStreamQuicImpl::OnSendDataComplete,

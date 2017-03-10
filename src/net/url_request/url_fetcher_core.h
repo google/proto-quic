@@ -346,7 +346,7 @@ class URLFetcherCore : public base::RefCountedThreadSafe<URLFetcherCore>,
   // Total expected bytes to receive (-1 if it cannot be determined).
   int64_t total_response_bytes_;
 
-  static base::LazyInstance<Registry> g_registry;
+  static base::LazyInstance<Registry>::DestructorAtExit g_registry;
 
   DISALLOW_COPY_AND_ASSIGN(URLFetcherCore);
 };

@@ -7,10 +7,13 @@ import os
 import common
 from common import TestDriver
 from common import IntegrationTest
+from common import NotAndroid
 
 
 class DataUseAscription(IntegrationTest):
 
+  # This test uses a desktop extension and cannot be run on Android.
+  @NotAndroid
   def testDataUseAscription(self):
     ext_path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
                             os.pardir, 'chrome', 'test', 'data',

@@ -84,18 +84,18 @@ void GetCiphersList(int cipher, base::ListValue* values) {
     values->AppendString("aes128gcm");
 }
 
-base::StringValue* GetTLSIntoleranceType(
+base::Value* GetTLSIntoleranceType(
     BaseTestServer::SSLOptions::TLSIntoleranceType type) {
   switch (type) {
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_ALERT:
-      return new base::StringValue("alert");
+      return new base::Value("alert");
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_CLOSE:
-      return new base::StringValue("close");
+      return new base::Value("close");
     case BaseTestServer::SSLOptions::TLS_INTOLERANCE_RESET:
-      return new base::StringValue("reset");
+      return new base::Value("reset");
     default:
       NOTREACHED();
-      return new base::StringValue("");
+      return new base::Value("");
   }
 }
 

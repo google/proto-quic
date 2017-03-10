@@ -39,8 +39,8 @@ class CompletionHandler : public base::MessageLoopForIO::IOHandler {
                      DWORD error) override;
 };
 
-static base::LazyInstance<CompletionHandler> g_completion_handler =
-    LAZY_INSTANCE_INITIALIZER;
+static base::LazyInstance<CompletionHandler>::DestructorAtExit
+    g_completion_handler = LAZY_INSTANCE_INITIALIZER;
 
 void CompletionHandler::OnIOCompleted(
     base::MessageLoopForIO::IOContext* context,

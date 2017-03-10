@@ -153,14 +153,17 @@ subtle::Atomic32 StaticMemorySingletonTraits<Type>::dead_ = 0;
 // Example usage:
 //
 // In your header:
-//   template <typename T> struct DefaultSingletonTraits;
+//   namespace base {
+//   template <typename T>
+//   struct DefaultSingletonTraits;
+//   }
 //   class FooClass {
 //    public:
 //     static FooClass* GetInstance();  <-- See comment below on this.
 //     void Bar() { ... }
 //    private:
 //     FooClass() { ... }
-//     friend struct DefaultSingletonTraits<FooClass>;
+//     friend struct base::DefaultSingletonTraits<FooClass>;
 //
 //     DISALLOW_COPY_AND_ASSIGN(FooClass);
 //   };
@@ -168,7 +171,14 @@ subtle::Atomic32 StaticMemorySingletonTraits<Type>::dead_ = 0;
 // In your source file:
 //  #include "base/memory/singleton.h"
 //  FooClass* FooClass::GetInstance() {
-//    return Singleton<FooClass>::get();
+//    return base::Singleton<FooClass>::get();
+//  }
+//
+// Or for leaky singletons:
+//  #include "base/memory/singleton.h"
+//  FooClass* FooClass::GetInstance() {
+//    return base::Singleton<
+//        FooClass, base::LeakySingletonTraits<FooClass>>::get();
 //  }
 //
 // And to call methods on FooClass:

@@ -39,6 +39,7 @@ class _CommonSystemHealthBenchmark(perf_benchmark.PerfBenchmark):
     options.config.chrome_trace_config.category_filter.AddFilterString('rail')
     options.config.enable_battor_trace = True
     options.config.enable_chrome_trace = True
+    options.config.enable_cpu_trace = True
     options.SetTimelineBasedMetrics([
         'clockSyncLatencyMetric',
         'powerMetric',

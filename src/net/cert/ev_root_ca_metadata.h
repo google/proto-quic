@@ -22,7 +22,7 @@
 
 namespace base {
 template <typename T>
-struct DefaultLazyInstanceTraits;
+struct LazyInstanceTraitsBase;
 }  // namespace base
 
 namespace net {
@@ -66,7 +66,7 @@ class NET_EXPORT_PRIVATE EVRootCAMetadata {
   bool RemoveEVCA(const SHA1HashValue& fingerprint);
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<EVRootCAMetadata>;
+  friend struct base::LazyInstanceTraitsBase<EVRootCAMetadata>;
 
   EVRootCAMetadata();
   ~EVRootCAMetadata();

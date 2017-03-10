@@ -47,7 +47,7 @@ TEST(JSONWriterTest, BasicTypes) {
   EXPECT_EQ("-0.8", output_js);
 
   // Test String values.
-  EXPECT_TRUE(JSONWriter::Write(StringValue("foo"), &output_js));
+  EXPECT_TRUE(JSONWriter::Write(Value("foo"), &output_js));
   EXPECT_EQ("\"foo\"", output_js);
 }
 

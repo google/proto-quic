@@ -18,9 +18,9 @@ namespace internal {
 // call.
 class PriorityQueue::SequenceAndSortKey {
  public:
-  SequenceAndSortKey(scoped_refptr<Sequence>&& sequence,
+  SequenceAndSortKey(scoped_refptr<Sequence> sequence,
                      const SequenceSortKey& sort_key)
-      : sequence_(sequence), sort_key_(sort_key) {
+      : sequence_(std::move(sequence)), sort_key_(sort_key) {
     DCHECK(sequence_);
   }
 

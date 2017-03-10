@@ -96,9 +96,7 @@ int MapOpenSSLErrorSSL(uint32_t error_code) {
       return ERR_SSL_UNRECOGNIZED_NAME_ALERT;
     case SSL_R_BAD_DH_P_LENGTH:
       return ERR_SSL_WEAK_SERVER_EPHEMERAL_DH_KEY;
-    case SSL_R_CERTIFICATE_VERIFY_FAILED:
-      // The only way that the certificate verify callback can fail is if
-      // the leaf certificate changed during a renegotiation.
+    case SSL_R_SERVER_CERT_CHANGED:
       return ERR_SSL_SERVER_CERT_CHANGED;
     // SSL_R_SSLV3_ALERT_HANDSHAKE_FAILURE may be returned from the server after
     // receiving ClientHello if there's no common supported cipher. Map that

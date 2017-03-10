@@ -10,6 +10,7 @@
 
 #include "base/bind.h"
 #include "base/bind_helpers.h"
+#include "base/callback_helpers.h"
 #include "base/compiler_specific.h"
 #include "base/location.h"
 #include "base/logging.h"
@@ -699,7 +700,8 @@ void SequencedSocketData::OnWriteComplete() {
 SequencedSocketData::~SequencedSocketData() {
 }
 
-MockClientSocketFactory::MockClientSocketFactory() {}
+MockClientSocketFactory::MockClientSocketFactory()
+    : enable_read_if_ready_(false) {}
 
 MockClientSocketFactory::~MockClientSocketFactory() {}
 
@@ -743,6 +745,8 @@ MockClientSocketFactory::CreateTransportClientSocket(
   SocketDataProvider* data_provider = mock_data_.GetNext();
   std::unique_ptr<MockTCPClientSocket> socket(
       new MockTCPClientSocket(addresses, net_log, data_provider));
+  if (enable_read_if_ready_)
+    socket->set_enable_read_if_ready(enable_read_if_ready_);
   return std::move(socket);
 }
 
@@ -882,7 +886,8 @@ MockTCPClientSocket::MockTCPClientSocket(const AddressList& addresses,
       peer_closed_connection_(false),
       pending_read_buf_(NULL),
       pending_read_buf_len_(0),
-      was_used_to_convey_data_(false) {
+      was_used_to_convey_data_(false),
+      enable_read_if_ready_(false) {
   DCHECK(data_);
   peer_addr_ = data->connect_data().peer_addr;
   data_->Initialize(this);
@@ -895,41 +900,29 @@ MockTCPClientSocket::~MockTCPClientSocket() {
 
 int MockTCPClientSocket::Read(IOBuffer* buf, int buf_len,
                               const CompletionCallback& callback) {
-  if (!connected_ || !data_)
-    return ERR_UNEXPECTED;
-
   // If the buffer is already in use, a read is already in progress!
   DCHECK(!pending_read_buf_);
-
-  // Store our async IO data.
-  pending_read_buf_ = buf;
-  pending_read_buf_len_ = buf_len;
-  pending_read_callback_ = callback;
-
-  if (need_read_data_) {
-    read_data_ = data_->OnRead();
-    if (read_data_.result == ERR_CONNECTION_CLOSED) {
-      // This MockRead is just a marker to instruct us to set
-      // peer_closed_connection_.
-      peer_closed_connection_ = true;
-    }
-    if (read_data_.result == ERR_TEST_PEER_CLOSE_AFTER_NEXT_MOCK_READ) {
-      // This MockRead is just a marker to instruct us to set
-      // peer_closed_connection_.  Skip it and get the next one.
-      read_data_ = data_->OnRead();
-      peer_closed_connection_ = true;
-    }
-    // ERR_IO_PENDING means that the SocketDataProvider is taking responsibility
-    // to complete the async IO manually later (via OnReadComplete).
-    if (read_data_.result == ERR_IO_PENDING) {
-      // We need to be using async IO in this case.
-      DCHECK(!callback.is_null());
-      return ERR_IO_PENDING;
-    }
-    need_read_data_ = false;
+  // Use base::Unretained() is safe because MockClientSocket::RunCallbackAsync()
+  // takes a weak ptr of the base class, MockClientSocket.
+  int rv = ReadIfReadyImpl(
+      buf, buf_len,
+      base::Bind(&MockTCPClientSocket::RetryRead, base::Unretained(this)));
+  if (rv == ERR_IO_PENDING) {
+    pending_read_buf_ = buf;
+    pending_read_buf_len_ = buf_len;
+    pending_read_callback_ = callback;
   }
+  return rv;
+}
 
-  return CompleteRead();
+int MockTCPClientSocket::ReadIfReady(IOBuffer* buf,
+                                     int buf_len,
+                                     const CompletionCallback& callback) {
+  DCHECK(!pending_read_if_ready_callback_);
+
+  if (!enable_read_if_ready_)
+    return ERR_READ_IF_READY_NOT_IMPLEMENTED;
+  return ReadIfReadyImpl(buf, buf_len, callback);
 }
 
 int MockTCPClientSocket::Write(IOBuffer* buf, int buf_len,
@@ -1048,7 +1041,7 @@ void MockTCPClientSocket::OnReadComplete(const MockRead& data) {
     return;
 
   // There must be a read pending.
-  DCHECK(pending_read_buf_.get());
+  DCHECK(pending_read_if_ready_callback_);
   // You can't complete a read with another ERR_IO_PENDING status code.
   DCHECK_NE(ERR_IO_PENDING, data.result);
   // Since we've been waiting for data, need_read_data_ should be true.
@@ -1060,10 +1053,8 @@ void MockTCPClientSocket::OnReadComplete(const MockRead& data) {
   // The caller is simulating that this IO completes right now.  Don't
   // let CompleteRead() schedule a callback.
   read_data_.mode = SYNCHRONOUS;
-
-  CompletionCallback callback = pending_read_callback_;
-  int rv = CompleteRead();
-  RunCallback(callback, rv);
+  RunCallback(base::ResetAndReturn(&pending_read_if_ready_callback_),
+              read_data_.result > 0 ? OK : read_data_.result);
 }
 
 void MockTCPClientSocket::OnWriteComplete(int rv) {
@@ -1090,23 +1081,65 @@ void MockTCPClientSocket::OnDataProviderDestroyed() {
   data_ = nullptr;
 }
 
-int MockTCPClientSocket::CompleteRead() {
+void MockTCPClientSocket::RetryRead(int rv) {
+  DCHECK(pending_read_callback_);
   DCHECK(pending_read_buf_.get());
-  DCHECK(pending_read_buf_len_ > 0);
+  DCHECK_LT(0, pending_read_buf_len_);
 
-  was_used_to_convey_data_ = true;
-
-  // Save the pending async IO data and reset our |pending_| state.
-  scoped_refptr<IOBuffer> buf = pending_read_buf_;
-  int buf_len = pending_read_buf_len_;
-  CompletionCallback callback = pending_read_callback_;
-  pending_read_buf_ = NULL;
+  if (rv == OK) {
+    rv = ReadIfReadyImpl(
+        pending_read_buf_.get(), pending_read_buf_len_,
+        base::Bind(&MockTCPClientSocket::RetryRead, base::Unretained(this)));
+    if (rv == ERR_IO_PENDING)
+      return;
+  }
+  pending_read_buf_ = nullptr;
   pending_read_buf_len_ = 0;
-  pending_read_callback_.Reset();
+  RunCallback(base::ResetAndReturn(&pending_read_callback_), rv);
+}
+
+int MockTCPClientSocket::ReadIfReadyImpl(IOBuffer* buf,
+                                         int buf_len,
+                                         const CompletionCallback& callback) {
+  if (!connected_ || !data_)
+    return ERR_UNEXPECTED;
+
+  DCHECK(!pending_read_if_ready_callback_);
+
+  if (need_read_data_) {
+    read_data_ = data_->OnRead();
+    if (read_data_.result == ERR_CONNECTION_CLOSED) {
+      // This MockRead is just a marker to instruct us to set
+      // peer_closed_connection_.
+      peer_closed_connection_ = true;
+    }
+    if (read_data_.result == ERR_TEST_PEER_CLOSE_AFTER_NEXT_MOCK_READ) {
+      // This MockRead is just a marker to instruct us to set
+      // peer_closed_connection_.  Skip it and get the next one.
+      read_data_ = data_->OnRead();
+      peer_closed_connection_ = true;
+    }
+    // ERR_IO_PENDING means that the SocketDataProvider is taking responsibility
+    // to complete the async IO manually later (via OnReadComplete).
+    if (read_data_.result == ERR_IO_PENDING) {
+      // We need to be using async IO in this case.
+      DCHECK(!callback.is_null());
+      pending_read_if_ready_callback_ = callback;
+      return ERR_IO_PENDING;
+    }
+    need_read_data_ = false;
+  }
 
   int result = read_data_.result;
-  DCHECK(result != ERR_IO_PENDING);
+  DCHECK_NE(ERR_IO_PENDING, result);
+  if (read_data_.mode == ASYNC) {
+    DCHECK(!callback.is_null());
+    read_data_.mode = SYNCHRONOUS;
+    RunCallbackAsync(callback, result);
+    return ERR_IO_PENDING;
+  }
 
+  was_used_to_convey_data_ = true;
   if (read_data_.data) {
     if (read_data_.data_len - read_offset_ > 0) {
       result = std::min(buf_len, read_data_.data_len - read_offset_);
@@ -1119,12 +1152,6 @@ int MockTCPClientSocket::CompleteRead() {
     } else {
       result = 0;  // EOF
     }
-  }
-
-  if (read_data_.mode == ASYNC) {
-    DCHECK(!callback.is_null());
-    RunCallbackAsync(callback, result);
-    return ERR_IO_PENDING;
   }
   return result;
 }
@@ -1162,6 +1189,12 @@ MockSSLClientSocket::~MockSSLClientSocket() {
 int MockSSLClientSocket::Read(IOBuffer* buf, int buf_len,
                               const CompletionCallback& callback) {
   return transport_->socket()->Read(buf, buf_len, callback);
+}
+
+int MockSSLClientSocket::ReadIfReady(IOBuffer* buf,
+                                     int buf_len,
+                                     const CompletionCallback& callback) {
+  return transport_->socket()->ReadIfReady(buf, buf_len, callback);
 }
 
 int MockSSLClientSocket::Write(IOBuffer* buf, int buf_len,

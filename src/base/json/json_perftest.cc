@@ -26,7 +26,7 @@ std::unique_ptr<DictionaryValue> GenerateDict() {
   list->Set(0, MakeUnique<Value>(2.718));
   list->Set(1, MakeUnique<Value>(false));
   list->Set(2, MakeUnique<Value>(123));
-  list->Set(3, MakeUnique<StringValue>("Bar"));
+  list->Set(3, MakeUnique<Value>("Bar"));
   root->Set("List", std::move(list));
 
   return root;

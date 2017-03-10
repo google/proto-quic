@@ -12,6 +12,9 @@
 #define PNG_INTERNAL
 #include "third_party/libpng/png.h"
 
+#ifndef PNG_FUZZ_PROGRESSIVE
+
+// Read sequentially, with png_read_row.
 struct BufState {
   const uint8_t* data;
   size_t bytes_left;
@@ -26,6 +29,9 @@ void user_read_data(png_structp png_ptr, png_bytep data, png_size_t length) {
   buf_state->bytes_left -= length;
   buf_state->data += length;
 }
+
+#endif  // PNG_FUZZ_PROGRESSIVE
+
 static const int kPngHeaderSize = 8;
 
 // Entry point for LibFuzzer.
@@ -60,6 +66,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   base::ScopedClosureRunner struct_deleter(base::Bind(
         &png_destroy_read_struct, &png_ptr, &info_ptr, nullptr));
 
+#ifdef PNG_FUZZ_PROGRESSIVE
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    return 0;
+  }
+
+  png_set_progressive_read_fn(png_ptr, nullptr, nullptr, nullptr, nullptr);
+  png_process_data(png_ptr, info_ptr, const_cast<uint8_t*>(data), size);
+#else
   // Setting up reading from buffer.
   std::unique_ptr<BufState> buf_state(new BufState());
   buf_state->data = data + kPngHeaderSize;
@@ -105,6 +119,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       png_read_row(png_ptr, static_cast<png_bytep>(row), NULL);
     }
   }
+#endif  // PNG_FUZZ_PROGRESSIVE
 
   return 0;
 }

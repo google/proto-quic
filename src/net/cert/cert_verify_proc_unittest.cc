@@ -24,8 +24,11 @@
 #include "net/cert/cert_verify_result.h"
 #include "net/cert/crl_set.h"
 #include "net/cert/crl_set_storage.h"
+#include "net/cert/internal/signature_algorithm.h"
 #include "net/cert/test_root_certs.h"
 #include "net/cert/x509_certificate.h"
+#include "net/der/input.h"
+#include "net/der/parser.h"
 #include "net/test/cert_test_util.h"
 #include "net/test/gtest_util.h"
 #include "net/test/test_certificate_data.h"
@@ -272,18 +275,11 @@ TEST_P(CertVerifyProcInternalTest, DISABLED_EVVerification) {
     return;
   }
 
-  CertificateList certs =
-      CreateCertificateListFromFile(GetTestCertsDirectory(), "comodo.chain.pem",
-                                    X509Certificate::FORMAT_PEM_CERT_SEQUENCE);
-  ASSERT_EQ(3U, certs.size());
-
-  X509Certificate::OSCertHandles intermediates;
-  intermediates.push_back(certs[1]->os_cert_handle());
-  intermediates.push_back(certs[2]->os_cert_handle());
-
-  scoped_refptr<X509Certificate> comodo_chain =
-      X509Certificate::CreateFromHandle(certs[0]->os_cert_handle(),
-                                        intermediates);
+  scoped_refptr<X509Certificate> comodo_chain = CreateCertificateChainFromFile(
+      GetTestCertsDirectory(), "comodo.chain.pem",
+      X509Certificate::FORMAT_PEM_CERT_SEQUENCE);
+  ASSERT_TRUE(comodo_chain);
+  ASSERT_EQ(2U, comodo_chain->GetIntermediateCertificates().size());
 
   scoped_refptr<CRLSet> crl_set(CRLSet::ForTesting(false, NULL, ""));
   CertVerifyResult verify_result;
@@ -383,13 +379,10 @@ TEST_P(CertVerifyProcInternalTest, RejectExpiredCert) {
   ScopedTestRoot test_root(
       ImportCertFromFile(certs_dir, "root_ca_cert.pem").get());
 
-  CertificateList certs = CreateCertificateListFromFile(
+  scoped_refptr<X509Certificate> cert = CreateCertificateChainFromFile(
       certs_dir, "expired_cert.pem", X509Certificate::FORMAT_AUTO);
-  ASSERT_EQ(1U, certs.size());
-
-  X509Certificate::OSCertHandles intermediates;
-  scoped_refptr<X509Certificate> cert = X509Certificate::CreateFromHandle(
-      certs[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(cert);
+  ASSERT_EQ(0U, cert->GetIntermediateCertificates().size());
 
   int flags = 0;
   CertVerifyResult verify_result;
@@ -612,14 +605,11 @@ TEST_P(CertVerifyProcInternalTest, NameConstraintsOk) {
   ASSERT_EQ(1U, ca_cert_list.size());
   ScopedTestRoot test_root(ca_cert_list[0].get());
 
-  CertificateList cert_list = CreateCertificateListFromFile(
+  scoped_refptr<X509Certificate> leaf = CreateCertificateChainFromFile(
       GetTestCertsDirectory(), "name_constraint_good.pem",
       X509Certificate::FORMAT_AUTO);
-  ASSERT_EQ(1U, cert_list.size());
-
-  X509Certificate::OSCertHandles intermediates;
-  scoped_refptr<X509Certificate> leaf = X509Certificate::CreateFromHandle(
-      cert_list[0]->os_cert_handle(), intermediates);
+  ASSERT_TRUE(leaf);
+  ASSERT_EQ(0U, leaf->GetIntermediateCertificates().size());
 
   int flags = 0;
   CertVerifyResult verify_result;
@@ -632,6 +622,363 @@ TEST_P(CertVerifyProcInternalTest, NameConstraintsOk) {
                  CertificateList(), &verify_result);
   EXPECT_THAT(error, IsOk());
   EXPECT_EQ(0U, verify_result.cert_status);
+}
+
+// This fixture is for testing the verification of a certificate chain which
+// has some sort of mismatched signature algorithm (i.e.
+// Certificate.signatureAlgorithm and TBSCertificate.algorithm are different).
+class CertVerifyProcInspectSignatureAlgorithmsTest : public ::testing::Test {
+ protected:
+  // In the test setup, SHA384 is given special treatment as an unknown
+  // algorithm.
+  static constexpr DigestAlgorithm kUnknownDigestAlgorithm =
+      DigestAlgorithm::Sha384;
+
+  struct CertParams {
+    // Certificate.signatureAlgorithm
+    DigestAlgorithm cert_algorithm;
+
+    // TBSCertificate.algorithm
+    DigestAlgorithm tbs_algorithm;
+  };
+
+  // On iOS trying to import a certificate with mismatched signature will
+  // fail. Consequently the rest of the tests can't be performed.
+  WARN_UNUSED_RESULT bool SupportsImportingMismatchedAlgorithms() const {
+#if defined(OS_IOS)
+    LOG(INFO) << "Skipping test on iOS because certs with mismatched "
+                 "algorithms cannot be imported";
+    return false;
+#else
+    return true;
+#endif
+  }
+
+  // Shorthand for VerifyChain() where only the leaf's parameters need
+  // to be specified.
+  WARN_UNUSED_RESULT int VerifyLeaf(const CertParams& leaf_params) {
+    return VerifyChain({// Target
+                        leaf_params,
+                        // Root
+                        {DigestAlgorithm::Sha256, DigestAlgorithm::Sha256}});
+  }
+
+  // Shorthand for VerifyChain() where only the intermediate's parameters need
+  // to be specified.
+  WARN_UNUSED_RESULT int VerifyIntermediate(
+      const CertParams& intermediate_params) {
+    return VerifyChain({// Target
+                        {DigestAlgorithm::Sha256, DigestAlgorithm::Sha256},
+                        // Intermediate
+                        intermediate_params,
+                        // Root
+                        {DigestAlgorithm::Sha256, DigestAlgorithm::Sha256}});
+  }
+
+  // Shorthand for VerifyChain() where only the root's parameters need to be
+  // specified.
+  WARN_UNUSED_RESULT int VerifyRoot(const CertParams& root_params) {
+    return VerifyChain({// Target
+                        {DigestAlgorithm::Sha256, DigestAlgorithm::Sha256},
+                        // Intermediate
+                        {DigestAlgorithm::Sha256, DigestAlgorithm::Sha256},
+                        // Root
+                        root_params});
+  }
+
+  // Manufactures a certificate chain where each certificate has the indicated
+  // signature algorithms, and then returns the result of verifying this chain.
+  //
+  // TODO(eroman): Instead of building certificates at runtime, move their
+  //               generation to external scripts.
+  WARN_UNUSED_RESULT int VerifyChain(
+      const std::vector<CertParams>& chain_params) {
+    auto chain = CreateChain(chain_params);
+    if (!chain) {
+      ADD_FAILURE() << "Failed creating certificate chain";
+      return ERR_UNEXPECTED;
+    }
+
+    int flags = 0;
+    CertVerifyResult dummy_result;
+    CertVerifyResult verify_result;
+
+    scoped_refptr<CertVerifyProc> verify_proc =
+        new MockCertVerifyProc(dummy_result);
+
+    return verify_proc->Verify(chain.get(), "test.example.com", std::string(),
+                               flags, NULL, CertificateList(), &verify_result);
+  }
+
+ private:
+  // Overwrites the AlgorithmIdentifier pointed to by |algorithm_sequence| with
+  // |algorithm|. Note this violates the constness of StringPiece.
+  WARN_UNUSED_RESULT static bool SetAlgorithmSequence(
+      DigestAlgorithm algorithm,
+      base::StringPiece* algorithm_sequence) {
+    // This string of bytes is the full SEQUENCE for an AlgorithmIdentifier.
+    std::vector<uint8_t> replacement_sequence;
+    switch (algorithm) {
+      case DigestAlgorithm::Sha1:
+        // sha1WithRSAEncryption
+        replacement_sequence = {0x30, 0x0D, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+                                0xf7, 0x0d, 0x01, 0x01, 0x05, 0x05, 0x00};
+        break;
+      case DigestAlgorithm::Sha256:
+        // sha256WithRSAEncryption
+        replacement_sequence = {0x30, 0x0D, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+                                0xf7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00};
+        break;
+      case kUnknownDigestAlgorithm:
+        // This shouldn't be anything meaningful (modified numbers at random).
+        replacement_sequence = {0x30, 0x0D, 0x06, 0x09, 0x8a, 0x87, 0x18, 0x46,
+                                0xd7, 0x0d, 0x01, 0x01, 0x0b, 0x05, 0x00};
+        break;
+      default:
+        ADD_FAILURE() << "Unsupported digest algorithm";
+        return false;
+    }
+
+    // For this simple replacement to work (without modifying any
+    // other sequence lengths) the original algorithm and replacement
+    // algorithm must have the same encoded length.
+    if (algorithm_sequence->size() != replacement_sequence.size()) {
+      ADD_FAILURE() << "AlgorithmIdentifier must have length "
+                    << replacement_sequence.size();
+      return false;
+    }
+
+    memcpy(const_cast<char*>(algorithm_sequence->data()),
+           replacement_sequence.data(), replacement_sequence.size());
+    return true;
+  }
+
+  // Locate the serial number bytes.
+  WARN_UNUSED_RESULT static bool ExtractSerialNumberFromDERCert(
+      base::StringPiece der_cert,
+      base::StringPiece* serial_value) {
+    der::Parser parser((der::Input(der_cert)));
+    der::Parser certificate;
+    if (!parser.ReadSequence(&certificate))
+      return false;
+
+    der::Parser tbs_certificate;
+    if (!certificate.ReadSequence(&tbs_certificate))
+      return false;
+
+    bool unused;
+    if (!tbs_certificate.SkipOptionalTag(
+            der::kTagConstructed | der::kTagContextSpecific | 0, &unused)) {
+      return false;
+    }
+
+    // serialNumber
+    der::Input serial_value_der;
+    if (!tbs_certificate.ReadTag(der::kInteger, &serial_value_der))
+      return false;
+
+    *serial_value = serial_value_der.AsStringPiece();
+    return true;
+  }
+
+  // Creates a certificate (based on some base certificate file) using the
+  // specified signature algorithms.
+  static scoped_refptr<X509Certificate> CreateCertificate(
+      const CertParams& params) {
+    // Dosn't really matter which base certificate is used, so long as it is
+    // valid and uses a signature AlgorithmIdentifier with the same encoded
+    // length as sha1WithRSASignature.
+    const char* kLeafFilename = "name_constraint_good.pem";
+
+    auto cert = CreateCertificateChainFromFile(
+        GetTestCertsDirectory(), kLeafFilename, X509Certificate::FORMAT_AUTO);
+    if (!cert) {
+      ADD_FAILURE() << "Failed to load certificate: " << kLeafFilename;
+      return nullptr;
+    }
+
+    // Start with the DER bytes of a valid certificate. This will be the basis
+    // for building a modified certificate.
+    std::string cert_der;
+    if (!X509Certificate::GetDEREncoded(cert->os_cert_handle(), &cert_der)) {
+      ADD_FAILURE() << "Failed getting DER bytes";
+      return nullptr;
+    }
+
+    // Parse the certificate and identify the locations of interest within
+    // |cert_der|.
+    base::StringPiece cert_algorithm_sequence;
+    base::StringPiece tbs_algorithm_sequence;
+    if (!asn1::ExtractSignatureAlgorithmsFromDERCert(
+            cert_der, &cert_algorithm_sequence, &tbs_algorithm_sequence)) {
+      ADD_FAILURE() << "Failed parsing certificate algorithms";
+      return nullptr;
+    }
+
+    base::StringPiece serial_value;
+    if (!ExtractSerialNumberFromDERCert(cert_der, &serial_value)) {
+      ADD_FAILURE() << "Failed parsing certificate serial number";
+      return nullptr;
+    }
+
+    // Give each certificate a unique serial number based on its content (which
+    // in turn is a function of |params|, otherwise importing it may fail.
+
+    // Upper bound for last entry in DigestAlgorithm
+    const int kNumDigestAlgorithms = 15;
+    *const_cast<char*>(serial_value.data()) +=
+        static_cast<int>(params.tbs_algorithm) * kNumDigestAlgorithms +
+        static_cast<int>(params.cert_algorithm);
+
+    // Change the signature AlgorithmIdentifiers.
+    if (!SetAlgorithmSequence(params.cert_algorithm,
+                              &cert_algorithm_sequence) ||
+        !SetAlgorithmSequence(params.tbs_algorithm, &tbs_algorithm_sequence)) {
+      return nullptr;
+    }
+
+    // NOTE: The signature is NOT recomputed over TBSCertificate -- for these
+    // tests it isn't needed.
+    return X509Certificate::CreateFromBytes(cert_der.data(), cert_der.size());
+  }
+
+  static scoped_refptr<X509Certificate> CreateChain(
+      const std::vector<CertParams>& params) {
+    // Manufacture a chain with the given combinations of signature algorithms.
+    // This chain isn't actually a valid chain, but it is good enough for
+    // testing the base CertVerifyProc.
+    CertificateList certs;
+    for (const auto& cert_params : params) {
+      certs.push_back(CreateCertificate(cert_params));
+      if (!certs.back())
+        return nullptr;
+    }
+
+    X509Certificate::OSCertHandles intermediates;
+    for (size_t i = 1; i < certs.size(); ++i)
+      intermediates.push_back(certs[i]->os_cert_handle());
+
+    return X509Certificate::CreateFromHandle(certs[0]->os_cert_handle(),
+                                             intermediates);
+  }
+};
+
+// This is a control test to make sure that the test helper
+// VerifyLeaf() works as expected. There is no actual mismatch in the
+// algorithms used here.
+//
+//  Certificate.signatureAlgorithm:  sha1WithRSASignature
+//  TBSCertificate.algorithm:        sha1WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafSha1Sha1) {
+  int rv = VerifyLeaf({DigestAlgorithm::Sha1, DigestAlgorithm::Sha1});
+  ASSERT_THAT(rv, IsError(ERR_CERT_WEAK_SIGNATURE_ALGORITHM));
+}
+
+// This is a control test to make sure that the test helper
+// VerifyLeaf() works as expected. There is no actual mismatch in the
+// algorithms used here.
+//
+//  Certificate.signatureAlgorithm:  sha256WithRSASignature
+//  TBSCertificate.algorithm:        sha256WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafSha256Sha256) {
+  int rv = VerifyLeaf({DigestAlgorithm::Sha256, DigestAlgorithm::Sha256});
+  ASSERT_THAT(rv, IsOk());
+}
+
+// Mismatched signature algorithms in the leaf certificate.
+//
+//  Certificate.signatureAlgorithm:  sha1WithRSASignature
+//  TBSCertificate.algorithm:        sha256WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafSha1Sha256) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyLeaf({DigestAlgorithm::Sha1, DigestAlgorithm::Sha256});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Mismatched signature algorithms in the leaf certificate.
+//
+//  Certificate.signatureAlgorithm:  sha256WithRSAEncryption
+//  TBSCertificate.algorithm:        sha1WithRSASignature
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafSha256Sha1) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyLeaf({DigestAlgorithm::Sha256, DigestAlgorithm::Sha1});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Unrecognized signature algorithm in the leaf certificate.
+//
+//  Certificate.signatureAlgorithm:  sha256WithRSAEncryption
+//  TBSCertificate.algorithm:        ?
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafSha256Unknown) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyLeaf({DigestAlgorithm::Sha256, kUnknownDigestAlgorithm});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Unrecognized signature algorithm in the leaf certificate.
+//
+//  Certificate.signatureAlgorithm:  ?
+//  TBSCertificate.algorithm:        sha256WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, LeafUnknownSha256) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyLeaf({kUnknownDigestAlgorithm, DigestAlgorithm::Sha256});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Mismatched signature algorithms in the intermediate certificate.
+//
+//  Certificate.signatureAlgorithm:  sha1WithRSASignature
+//  TBSCertificate.algorithm:        sha256WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, IntermediateSha1Sha256) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyIntermediate({DigestAlgorithm::Sha1, DigestAlgorithm::Sha256});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Mismatched signature algorithms in the intermediate certificate.
+//
+//  Certificate.signatureAlgorithm:  sha256WithRSAEncryption
+//  TBSCertificate.algorithm:        sha1WithRSASignature
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, IntermediateSha256Sha1) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyIntermediate({DigestAlgorithm::Sha256, DigestAlgorithm::Sha1});
+  ASSERT_THAT(rv, IsError(ERR_CERT_INVALID));
+}
+
+// Mismatched signature algorithms in the root certificate.
+//
+//  Certificate.signatureAlgorithm:  sha256WithRSAEncryption
+//  TBSCertificate.algorithm:        sha1WithRSASignature
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, RootSha256Sha1) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyRoot({DigestAlgorithm::Sha256, DigestAlgorithm::Sha1});
+  ASSERT_THAT(rv, IsOk());
+}
+
+// Unrecognized signature algorithm in the root certificate.
+//
+//  Certificate.signatureAlgorithm:  ?
+//  TBSCertificate.algorithm:        sha256WithRSAEncryption
+TEST_F(CertVerifyProcInspectSignatureAlgorithmsTest, RootUnknownSha256) {
+  if (!SupportsImportingMismatchedAlgorithms())
+    return;
+
+  int rv = VerifyRoot({kUnknownDigestAlgorithm, DigestAlgorithm::Sha256});
+  ASSERT_THAT(rv, IsOk());
 }
 
 TEST_P(CertVerifyProcInternalTest, NameConstraintsFailure) {

@@ -845,7 +845,8 @@ void NetworkQualityEstimator::OnConnectionTypeChanged(
   rtt_observations_.Clear();
 
 #if defined(OS_ANDROID)
-  if (NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type)) {
+  if (weight_multiplier_per_dbm_ < 1.0 &&
+      NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type)) {
     UMA_HISTOGRAM_BOOLEAN(
         "NQE.CellularSignalStrengthAvailable",
         min_signal_strength_since_connection_change_ != INT32_MAX &&
@@ -906,7 +907,8 @@ void NetworkQualityEstimator::MaybeQueryExternalEstimateProvider() const {
 
 void NetworkQualityEstimator::UpdateSignalStrength() {
 #if defined(OS_ANDROID)
-  if (!NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type) ||
+  if (weight_multiplier_per_dbm_ >= 1.0 ||
+      !NetworkChangeNotifier::IsConnectionCellular(current_network_id_.type) ||
       !android::cellular_signal_strength::GetSignalStrengthDbm(
           &signal_strength_dbm_)) {
     signal_strength_dbm_ = INT32_MIN;
@@ -1470,8 +1472,10 @@ bool NetworkQualityEstimator::ReadCachedNetworkQualityEstimate() {
 
   const bool cached_estimate_available = network_quality_store_->GetById(
       current_network_id_, &cached_network_quality);
-  UMA_HISTOGRAM_BOOLEAN("NQE.CachedNetworkQualityAvailable",
-                        cached_estimate_available);
+  if (network_quality_store_->EligibleForCaching(current_network_id_)) {
+    UMA_HISTOGRAM_BOOLEAN("NQE.CachedNetworkQualityAvailable",
+                          cached_estimate_available);
+  }
 
   if (!cached_estimate_available)
     return false;

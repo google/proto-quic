@@ -14,6 +14,7 @@
 #include "net/quic/core/crypto/quic_decrypter.h"
 #include "net/quic/core/quic_types.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -28,19 +29,19 @@ class QUIC_EXPORT_PRIVATE NullDecrypter : public QuicDecrypter {
   ~NullDecrypter() override {}
 
   // QuicDecrypter implementation
-  bool SetKey(base::StringPiece key) override;
-  bool SetNoncePrefix(base::StringPiece nonce_prefix) override;
-  bool SetPreliminaryKey(base::StringPiece key) override;
+  bool SetKey(QuicStringPiece key) override;
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override;
+  bool SetPreliminaryKey(QuicStringPiece key) override;
   bool SetDiversificationNonce(const DiversificationNonce& nonce) override;
   bool DecryptPacket(QuicVersion version,
                      QuicPacketNumber packet_number,
-                     base::StringPiece associated_data,
-                     base::StringPiece ciphertext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece ciphertext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override;
-  base::StringPiece GetKey() const override;
-  base::StringPiece GetNoncePrefix() const override;
+  QuicStringPiece GetKey() const override;
+  QuicStringPiece GetNoncePrefix() const override;
 
   const char* cipher_name() const override;
   uint32_t cipher_id() const override;
@@ -48,8 +49,8 @@ class QUIC_EXPORT_PRIVATE NullDecrypter : public QuicDecrypter {
  private:
   bool ReadHash(QuicDataReader* reader, uint128* hash);
   uint128 ComputeHash(QuicVersion version,
-                      base::StringPiece data1,
-                      base::StringPiece data2) const;
+                      QuicStringPiece data1,
+                      QuicStringPiece data2) const;
 
   Perspective perspective_;
 

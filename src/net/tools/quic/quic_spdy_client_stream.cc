@@ -13,7 +13,6 @@
 #include "net/spdy/spdy_protocol.h"
 #include "net/tools/quic/quic_client_session.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -138,7 +137,7 @@ void QuicSpdyClientStream::OnDataAvailable() {
 }
 
 size_t QuicSpdyClientStream::SendRequest(SpdyHeaderBlock headers,
-                                         StringPiece body,
+                                         QuicStringPiece body,
                                          bool fin) {
   QuicConnection::ScopedPacketBundler bundler(
       session_->connection(), QuicConnection::SEND_ACK_IF_QUEUED);

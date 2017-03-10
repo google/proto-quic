@@ -29,7 +29,7 @@ void F() {
   list.Append(new base::Value(true));
   list.Append(new base::Value(static_cast<unsigned char>(1.0)));
   list.Append(new base::Value(double{3}));
-  list.Append(new base::StringValue("abc"));
+  list.Append(new base::Value("abc"));
 
   list.Append(ReturnsUniquePtr().release());
   Thing thing;

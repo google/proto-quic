@@ -8,12 +8,12 @@
 #include <cstdint>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/strike_register.h"
 #include "net/quic/core/crypto/strike_register_client.h"
 #include "net/quic/core/quic_time.h"
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_mutex.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -28,8 +28,8 @@ class QUIC_EXPORT_PRIVATE LocalStrikeRegisterClient
                             const uint8_t orbit[8],
                             StrikeRegister::StartupType startup);
 
-  bool IsKnownOrbit(base::StringPiece orbit) const override;
-  void VerifyNonceIsValidAndUnique(base::StringPiece nonce,
+  bool IsKnownOrbit(QuicStringPiece orbit) const override;
+  void VerifyNonceIsValidAndUnique(QuicStringPiece nonce,
                                    QuicWallTime now,
                                    ResultCallback* cb) override;
 

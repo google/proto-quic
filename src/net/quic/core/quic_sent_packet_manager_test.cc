@@ -8,6 +8,7 @@
 
 #include "net/quic/core/quic_flags.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_config_peer.h"
 #include "net/quic/test_tools/quic_sent_packet_manager_peer.h"
 #include "net/quic/test_tools/quic_test_utils.h"
@@ -194,8 +195,8 @@ class QuicSentPacketManagerTest : public ::testing::Test {
     SerializedPacket packet(packet_number, PACKET_6BYTE_PACKET_NUMBER, nullptr,
                             kDefaultLength, false, false);
     if (retransmittable) {
-      packet.retransmittable_frames.push_back(
-          QuicFrame(new QuicStreamFrame(kStreamId, false, 0, StringPiece())));
+      packet.retransmittable_frames.push_back(QuicFrame(
+          new QuicStreamFrame(kStreamId, false, 0, QuicStringPiece())));
     }
     return packet;
   }
@@ -218,7 +219,7 @@ class QuicSentPacketManagerTest : public ::testing::Test {
         .WillOnce(Return(true));
     SerializedPacket packet(CreateDataPacket(packet_number));
     packet.retransmittable_frames.push_back(
-        QuicFrame(new QuicStreamFrame(1, false, 0, StringPiece())));
+        QuicFrame(new QuicStreamFrame(1, false, 0, QuicStringPiece())));
     packet.has_crypto_handshake = IS_HANDSHAKE;
     manager_.OnPacketSent(&packet, 0, clock_.Now(), NOT_RETRANSMISSION,
                           HAS_RETRANSMITTABLE_DATA);

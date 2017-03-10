@@ -62,7 +62,8 @@ struct CGroups {
   }
 };
 
-base::LazyInstance<CGroups> g_cgroups = LAZY_INSTANCE_INITIALIZER;
+base::LazyInstance<CGroups>::DestructorAtExit g_cgroups =
+    LAZY_INSTANCE_INITIALIZER;
 #else
 const int kBackgroundPriority = 5;
 #endif  // defined(OS_CHROMEOS)
@@ -90,8 +91,8 @@ bool Process::CanBackgroundProcesses() {
     return true;
 #endif  // defined(OS_CHROMEOS)
 
-  static LazyInstance<CheckForNicePermission> check_for_nice_permission =
-      LAZY_INSTANCE_INITIALIZER;
+  static LazyInstance<CheckForNicePermission>::DestructorAtExit
+      check_for_nice_permission = LAZY_INSTANCE_INITIALIZER;
   return check_for_nice_permission.Get().can_reraise_priority;
 }
 

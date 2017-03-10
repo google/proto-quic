@@ -63,7 +63,7 @@ class InotifyReader {
   void OnInotifyEvent(const inotify_event* event);
 
  private:
-  friend struct DefaultLazyInstanceTraits<InotifyReader>;
+  friend struct LazyInstanceTraitsBase<InotifyReader>;
 
   typedef std::set<FilePathWatcherImpl*> WatcherSet;
 

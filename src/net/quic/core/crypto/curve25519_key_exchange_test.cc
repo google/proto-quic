@@ -9,7 +9,6 @@
 #include "net/quic/core/crypto/quic_random.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -29,8 +28,8 @@ TEST(Curve25519KeyExchange, SharedKey) {
     std::unique_ptr<Curve25519KeyExchange> bob(
         Curve25519KeyExchange::New(bob_key));
 
-    const StringPiece alice_public(alice->public_value());
-    const StringPiece bob_public(bob->public_value());
+    const QuicStringPiece alice_public(alice->public_value());
+    const QuicStringPiece bob_public(bob->public_value());
 
     string alice_shared, bob_shared;
     ASSERT_TRUE(alice->CalculateSharedKey(bob_public, &alice_shared));

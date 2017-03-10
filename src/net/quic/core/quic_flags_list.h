@@ -103,11 +103,6 @@ QUIC_FLAG(
 // public flag.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_remove_v33_hacks2, false)
 
-// If true, limits QUIC uncompressed headers to 16K.
-QUIC_FLAG(bool,
-          FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers,
-          false)
-
 // Enable QUIC force HOL blocking experiment.
 QUIC_FLAG(bool, FLAGS_quic_reloadable_flag_quic_enable_force_hol_blocking, true)
 

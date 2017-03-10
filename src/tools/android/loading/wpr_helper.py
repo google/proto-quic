@@ -17,6 +17,7 @@ _SRC_PATH = os.path.abspath(os.path.join(
 
 sys.path.append(os.path.join(_SRC_PATH, 'third_party', 'catapult', 'devil'))
 from devil.android import device_utils
+from devil.android import flag_changer
 from devil.android.constants import chrome
 from devil.android.perf import cache_control
 from devil.android.sdk import intent
@@ -42,7 +43,7 @@ def RunChrome(device, cold, chrome_args, package_info):
 
   cmdline_file = package_info.cmdline_file
   package = package_info.package
-  with device_setup.FlagReplacer(device, cmdline_file, chrome_args):
+  with flag_changer.CustomCommandLineFlags(device, cmdline_file, chrome_args):
     device.ForceStop(package)
 
     if cold:

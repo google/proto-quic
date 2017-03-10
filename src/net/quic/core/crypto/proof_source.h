@@ -14,6 +14,7 @@
 #include "net/quic/platform/api/quic_export.h"
 #include "net/quic/platform/api/quic_reference_counted.h"
 #include "net/quic/platform/api/quic_socket_address.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -97,7 +98,7 @@ class QUIC_EXPORT_PRIVATE ProofSource {
                         const std::string& hostname,
                         const std::string& server_config,
                         QuicVersion quic_version,
-                        base::StringPiece chlo_hash,
+                        QuicStringPiece chlo_hash,
                         const QuicTagVector& connection_options,
                         std::unique_ptr<Callback> callback) = 0;
 };

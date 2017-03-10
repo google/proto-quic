@@ -17,6 +17,7 @@
 #include "net/quic/platform/api/quic_logging.h"
 #include "net/quic/platform/api/quic_ptr_util.h"
 #include "net/quic/platform/api/quic_str_cat.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_connection_peer.h"
 #include "net/quic/test_tools/quic_spdy_session_peer.h"
 #include "net/quic/test_tools/quic_stream_peer.h"
@@ -28,7 +29,6 @@
 #include "net/test/gtest_util.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::_;
 using testing::AtLeast;
@@ -101,7 +101,7 @@ class MockVisitor : public SpdyFramerVisitorInterface {
   MOCK_METHOD2(OnContinuation, void(SpdyStreamId stream_id, bool end));
   MOCK_METHOD3(OnAltSvc,
                void(SpdyStreamId stream_id,
-                    StringPiece origin,
+                    QuicStringPiece origin,
                     const SpdyAltSvcWireFormat::AlternativeServiceVector&
                         altsvc_vector));
   MOCK_METHOD4(OnPriority,
@@ -282,7 +282,7 @@ class QuicHeadersStreamTest : public ::testing::TestWithParam<TestParamsTuple> {
     return true;
   }
 
-  void SaveHeaderDataStringPiece(StringPiece data) {
+  void SaveHeaderDataStringPiece(QuicStringPiece data) {
     saved_header_data_.append(data.data(), data.length());
   }
 

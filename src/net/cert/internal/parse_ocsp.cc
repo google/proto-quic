@@ -458,6 +458,11 @@ bool CheckCertID(const der::Input& id_tlv,
 
   HashValueTag type = HASH_VALUE_SHA1;
   switch (id.hash_algorithm) {
+    case DigestAlgorithm::Md2:
+    case DigestAlgorithm::Md4:
+    case DigestAlgorithm::Md5:
+      // Unsupported.
+      return false;
     case DigestAlgorithm::Sha1:
       type = HASH_VALUE_SHA1;
       break;

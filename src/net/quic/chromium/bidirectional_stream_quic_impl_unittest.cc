@@ -34,6 +34,7 @@
 #include "net/quic/core/crypto/quic_encrypter.h"
 #include "net/quic/core/quic_connection.h"
 #include "net/quic/core/spdy_utils.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 #include "net/quic/test_tools/crypto_test_utils.h"
 #include "net/quic/test_tools/mock_clock.h"
@@ -467,7 +468,7 @@ class BidirectionalStreamQuicImplTest
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data,
+      QuicStringPiece data,
       QuicTestPacketMaker* maker) {
     std::unique_ptr<QuicReceivedPacket> packet(maker->MakeDataPacket(
         packet_number, stream_id_, should_include_version, fin, offset, data));
@@ -481,7 +482,7 @@ class BidirectionalStreamQuicImplTest
       bool should_include_version,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data) {
+      QuicStringPiece data) {
     return ConstructDataPacket(packet_number, should_include_version, fin,
                                offset, data, &server_maker_);
   }
@@ -624,7 +625,7 @@ class BidirectionalStreamQuicImplTest
       QuicPacketNumber least_unacked,
       bool fin,
       QuicStreamOffset offset,
-      base::StringPiece data,
+      QuicStringPiece data,
       QuicTestPacketMaker* maker) {
     std::unique_ptr<QuicReceivedPacket> packet(maker->MakeAckAndDataPacket(
         packet_number, should_include_version, stream_id_, largest_received,

@@ -24,7 +24,6 @@
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
-using base::StringPiece;
 using std::string;
 using testing::Return;
 using testing::Truly;
@@ -101,12 +100,12 @@ const size_t kPublicResetPacketMessageTagOffset =
 class TestEncrypter : public QuicEncrypter {
  public:
   ~TestEncrypter() override {}
-  bool SetKey(StringPiece key) override { return true; }
-  bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
+  bool SetKey(QuicStringPiece key) override { return true; }
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override { return true; }
   bool EncryptPacket(QuicVersion version,
                      QuicPacketNumber packet_number,
-                     StringPiece associated_data,
-                     StringPiece plaintext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece plaintext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
@@ -126,8 +125,8 @@ class TestEncrypter : public QuicEncrypter {
   size_t GetCiphertextSize(size_t plaintext_size) const override {
     return plaintext_size;
   }
-  StringPiece GetKey() const override { return StringPiece(); }
-  StringPiece GetNoncePrefix() const override { return StringPiece(); }
+  QuicStringPiece GetKey() const override { return QuicStringPiece(); }
+  QuicStringPiece GetNoncePrefix() const override { return QuicStringPiece(); }
 
   QuicVersion version_;
   Perspective perspective_;
@@ -139,9 +138,9 @@ class TestEncrypter : public QuicEncrypter {
 class TestDecrypter : public QuicDecrypter {
  public:
   ~TestDecrypter() override {}
-  bool SetKey(StringPiece key) override { return true; }
-  bool SetNoncePrefix(StringPiece nonce_prefix) override { return true; }
-  bool SetPreliminaryKey(StringPiece key) override {
+  bool SetKey(QuicStringPiece key) override { return true; }
+  bool SetNoncePrefix(QuicStringPiece nonce_prefix) override { return true; }
+  bool SetPreliminaryKey(QuicStringPiece key) override {
     QUIC_BUG << "should not be called";
     return false;
   }
@@ -150,8 +149,8 @@ class TestDecrypter : public QuicDecrypter {
   }
   bool DecryptPacket(QuicVersion version,
                      QuicPacketNumber packet_number,
-                     StringPiece associated_data,
-                     StringPiece ciphertext,
+                     QuicStringPiece associated_data,
+                     QuicStringPiece ciphertext,
                      char* output,
                      size_t* output_length,
                      size_t max_output_length) override {
@@ -163,8 +162,8 @@ class TestDecrypter : public QuicDecrypter {
     *output_length = ciphertext.length();
     return true;
   }
-  StringPiece GetKey() const override { return StringPiece(); }
-  StringPiece GetNoncePrefix() const override { return StringPiece(); }
+  QuicStringPiece GetKey() const override { return QuicStringPiece(); }
+  QuicStringPiece GetNoncePrefix() const override { return QuicStringPiece(); }
   const char* cipher_name() const override { return "Test"; }
   // Use a distinct value starting with 0xFFFFFF, which is never used by TLS.
   uint32_t cipher_id() const override { return 0xFFFFFFF2; }
@@ -394,7 +393,7 @@ class QuicFramerTest : public ::testing::TestWithParam<QuicVersion> {
                       << " actual: " << decrypter_->associated_data_;
       return false;
     }
-    StringPiece ciphertext(
+    QuicStringPiece ciphertext(
         encrypted.AsStringPiece().substr(GetStartOfEncryptedData(
             framer_.version(), PACKET_8BYTE_CONNECTION_ID, includes_version,
             includes_diversification_nonce, PACKET_6BYTE_PACKET_NUMBER)));
@@ -2429,7 +2428,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacket) {
   header.packet_number = kPacketNumber;
 
   QuicStreamFrame stream_frame(kStreamId, true, kStreamOffset,
-                               StringPiece("hello world!"));
+                               QuicStringPiece("hello world!"));
 
   QuicFrames frames = {QuicFrame(&stream_frame)};
 
@@ -2474,7 +2473,7 @@ TEST_P(QuicFramerTest, BuildStreamFramePacketWithVersionFlag) {
   header.packet_number = kPacketNumber;
 
   QuicStreamFrame stream_frame(kStreamId, true, kStreamOffset,
-                               StringPiece("hello world!"));
+                               QuicStringPiece("hello world!"));
   QuicFrames frames = {QuicFrame(&stream_frame)};
 
   // clang-format off
@@ -3642,7 +3641,7 @@ void QuicFramerFuzzFunc(unsigned char* data, size_t size) {
   const char* const packet_bytes = reinterpret_cast<const char*>(data);
 
   // Test the CryptoFramer.
-  StringPiece crypto_input(packet_bytes, size);
+  QuicStringPiece crypto_input(packet_bytes, size);
   std::unique_ptr<CryptoHandshakeMessage> handshake_message(
       CryptoFramer::ParseMessage(crypto_input));
 

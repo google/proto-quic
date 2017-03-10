@@ -27,7 +27,7 @@ def text(name, data):
   Returns:
     Link to view uploaded text in logdog viewer.
   """
-  logging.info('Writing text to logdog stream, %s', name)
+  logging.debug('Writing text to logdog stream, %s', name)
   with get_logdog_client().text(name) as stream:
     stream.write(data)
     return stream.get_viewer_url()
@@ -43,7 +43,7 @@ def open_text(name):
   Returns:
     A file like object. close() file when done.
   """
-  logging.info('Opening text logdog stream, %s', name)
+  logging.debug('Opening text logdog stream, %s', name)
   return get_logdog_client().open_text(name)
 
 
@@ -58,7 +58,7 @@ def binary(name, binary_path):
   Returns:
     Link to view uploaded binary in logdog viewer.
   """
-  logging.info('Writing binary to logdog stream, %s', name)
+  logging.debug('Writing binary to logdog stream, %s', name)
   with get_logdog_client().binary(name) as stream:
     with open(binary_path, 'r') as f:
       stream.write(f.read())
@@ -82,3 +82,4 @@ def get_viewer_url(name):
 def get_logdog_client():
   logging.debug('Getting logdog client.')
   return bootstrap.ButlerBootstrap.probe().stream_client()
+

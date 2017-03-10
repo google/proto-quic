@@ -12,10 +12,10 @@
 #include <vector>
 
 #include "base/macros.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/crypto_framer.h"
 #include "net/quic/core/quic_framer.h"
 #include "net/quic/core/quic_packets.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/test_tools/quic_test_utils.h"
 #include "third_party/boringssl/src/include/openssl/evp.h"
 
@@ -46,7 +46,7 @@ class TestChannelIDKey : public ChannelIDKey {
 
   // ChannelIDKey implementation.
 
-  bool Sign(base::StringPiece signed_data,
+  bool Sign(QuicStringPiece signed_data,
             std::string* out_signature) const override;
 
   std::string SerializeKey() const override;
@@ -185,7 +185,7 @@ ProofVerifyContext* ProofVerifyContextForTesting();
 
 // MockCommonCertSets returns a CommonCertSets that contains a single set with
 // hash |hash|, consisting of the certificate |cert| at index |index|.
-CommonCertSets* MockCommonCertSets(base::StringPiece cert,
+CommonCertSets* MockCommonCertSets(QuicStringPiece cert,
                                    uint64_t hash,
                                    uint32_t index);
 

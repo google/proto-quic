@@ -13,6 +13,7 @@
 #include "net/quic/core/quic_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 using std::string;
 
@@ -305,7 +306,7 @@ QuicErrorCode QuicFixedSocketAddress::ProcessPeerHello(
     const CryptoHandshakeMessage& peer_hello,
     HelloType hello_type,
     string* error_details) {
-  base::StringPiece address;
+  QuicStringPiece address;
   if (!peer_hello.GetStringPiece(tag_, &address)) {
     if (presence_ == PRESENCE_REQUIRED) {
       *error_details = "Missing " + QuicTagToString(tag_);

@@ -172,7 +172,7 @@ void UseLocalCacheOfNSSDatabaseIfNFS(const base::FilePath& database_dir) {
 // singleton.
 class NSPRInitSingleton {
  private:
-  friend struct base::DefaultLazyInstanceTraits<NSPRInitSingleton>;
+  friend struct base::LazyInstanceTraitsBase<NSPRInitSingleton>;
 
   NSPRInitSingleton() {
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
@@ -657,7 +657,7 @@ class NSSInitSingleton {
   }
 
  private:
-  friend struct base::DefaultLazyInstanceTraits<NSSInitSingleton>;
+  friend struct base::LazyInstanceTraitsBase<NSSInitSingleton>;
 
   NSSInitSingleton()
       : tpm_token_enabled_for_nss_(false),

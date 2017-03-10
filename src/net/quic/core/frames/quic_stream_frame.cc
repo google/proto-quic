@@ -6,8 +6,6 @@
 
 #include "net/quic/platform/api/quic_logging.h"
 
-using base::StringPiece;
-
 namespace net {
 
 void StreamBufferDeleter::operator()(char* buffer) const {
@@ -28,7 +26,7 @@ QuicStreamFrame::QuicStreamFrame()
 QuicStreamFrame::QuicStreamFrame(QuicStreamId stream_id,
                                  bool fin,
                                  QuicStreamOffset offset,
-                                 StringPiece data)
+                                 QuicStringPiece data)
     : QuicStreamFrame(stream_id,
                       fin,
                       offset,

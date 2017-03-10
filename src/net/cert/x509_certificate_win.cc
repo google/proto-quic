@@ -421,33 +421,6 @@ void X509Certificate::GetPublicKeyInfo(OSCertHandle cert_handle,
   }
 }
 
-X509Certificate::SignatureHashAlgorithm
-X509Certificate::GetSignatureHashAlgorithm(OSCertHandle cert_handle) {
-  const char* algorithm = cert_handle->pCertInfo->SignatureAlgorithm.pszObjId;
-  if (strcmp(algorithm, szOID_RSA_MD5RSA) == 0) {
-    // md5WithRSAEncryption: 1.2.840.113549.1.1.4
-    return kSignatureHashAlgorithmMd5;
-  }
-  if (strcmp(algorithm, szOID_RSA_MD2RSA) == 0) {
-    // md2WithRSAEncryption: 1.2.840.113549.1.1.2
-    return kSignatureHashAlgorithmMd2;
-  }
-  if (strcmp(algorithm, szOID_RSA_MD4RSA) == 0) {
-    // md4WithRSAEncryption: 1.2.840.113549.1.1.3
-    return kSignatureHashAlgorithmMd4;
-  }
-  if (strcmp(algorithm, szOID_RSA_SHA1RSA) == 0 ||
-      strcmp(algorithm, szOID_X957_SHA1DSA) == 0 ||
-      strcmp(algorithm, szOID_ECDSA_SHA1) == 0) {
-    // sha1WithRSAEncryption: 1.2.840.113549.1.1.5
-    // id-dsa-with-sha1: 1.2.840.10040.4.3
-    // ecdsa-with-SHA1: 1.2.840.10045.4.1
-    return kSignatureHashAlgorithmSha1;
-  }
-
-  return kSignatureHashAlgorithmOther;
-}
-
 bool X509Certificate::IsIssuedByEncoded(
     const std::vector<std::string>& valid_issuers) {
 

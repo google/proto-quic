@@ -2,14 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/linux/gtk/gtk.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/goma.gni")
 
 declare_args() {
-  # The default number of jobs to use when building instrumented libraries.
-  instrumented_libraries_jobs = 8
-
   # The platform on which the instrumented libraries are being built.
   instrumented_libraries_platform = "trusty"
 }
@@ -93,15 +89,8 @@ if (prebuilt_instrumented_libraries_available) {
 }
 
 if (use_locally_built_instrumented_libraries) {
-  if (instrumented_libraries_platform == "precise") {
-    is_precise = true
-    is_trusty = false
-  } else if (instrumented_libraries_platform == "trusty") {
-    is_precise = false
-    is_trusty = true
-  } else {
-    assert(false, "Unsupported platform " + instrumented_libraries_platform)
-  }
+  assert(instrumented_libraries_platform == "trusty",
+         "Currently, the only supported platform is Trusty.")
   group("locally_built") {
     visibility = [ ":deps" ]
     deps = [
@@ -109,8 +98,11 @@ if (use_locally_built_instrumented_libraries) {
       ":brltty",
       ":dee",
       ":freetype",
+      ":harfbuzz",
       ":libappindicator1",
       ":libasound2",
+      ":libatk-bridge2.0-0",
+      ":libatspi2.0-0",
       ":libcairo2",
       ":libcap2",
       ":libcredentialkit_pkcs11",
@@ -123,14 +115,19 @@ if (use_locally_built_instrumented_libraries) {
       ":libfontconfig1",
       ":libgconf-2-4",
       ":libgcrypt11",
+      ":libgdk-pixbuf2.0-0",
       ":libglib2.0-0",
       ":libgnome-keyring0",
       ":libgpg-error0",
+      ":libgtk-3-0",
+      ":libgtk2.0-0",
       ":libnspr4",
       ":libp11-kit0",
       ":libpci3",
       ":libpcre3",
       ":libpixman-1-0",
+      ":libsecret",
+      ":libtasn1-6",
       ":libunity9",
       ":libva1",
       ":libx11-6",
@@ -154,22 +151,6 @@ if (use_locally_built_instrumented_libraries) {
       ":udev",
       ":zlib1g",
     ]
-    if (!use_gtk3) {
-      deps += [
-        ":libgdk-pixbuf2.0-0",
-        ":libgtk2.0-0",
-      ]
-    }
-    if (is_precise) {
-      deps += [ ":libtasn1-3" ]
-    }
-    if (is_trusty) {
-      deps += [
-        ":harfbuzz",
-        ":libsecret",
-        ":libtasn1-6",
-      ]
-    }
     if (is_msan) {
       deps += [ ":libcups2" ]
     }
@@ -203,10 +184,6 @@ if (use_locally_built_instrumented_libraries) {
       if (use_goma) {
         cc = "${goma_dir}/gomacc ${cc}"
         cxx = "${goma_dir}/gomacc ${cxx}"
-      }
-      jobs = instrumented_libraries_jobs
-      if (defined(invoker.jobs)) {
-        jobs = invoker.jobs
       }
       package_cflags = [
         "-O2",
@@ -246,7 +223,6 @@ if (use_locally_built_instrumented_libraries) {
         "--cc=${cc}",
         "--cxx=${cxx}",
         "--intermediate-dir=${intermediate_dir}",
-        "--jobs=${jobs}",
         "--libdir=lib",
         "--package=${target_name}",
         "--product-dir=${product_dir}",
@@ -355,13 +331,23 @@ if (use_locally_built_instrumented_libraries) {
       # See above.
       "--disable-introspection",
     ]
-    jobs = 1
     pre_build = "scripts/pre-build/autogen.sh"
   }
 
   instrumented_library("libasound2") {
     extra_configure_flags = [ "--disable-static" ]
     pre_build = "scripts/pre-build/libasound2.sh"
+  }
+
+  instrumented_library("libatk-bridge2.0-0") {
+    extra_configure_flags = [ "--disable-static" ]
+  }
+
+  instrumented_library("libatspi2.0-0") {
+    extra_configure_flags = [
+      "--disable-static",
+      "--disable-introspection",
+    ]
   }
 
   instrumented_library("libcairo2") {
@@ -382,7 +368,6 @@ if (use_locally_built_instrumented_libraries) {
 
   instrumented_library("libcups2") {
     patch = "patches/libcups2.diff"
-    jobs = 1
     extra_configure_flags = [
       "--disable-static",
 
@@ -580,6 +565,19 @@ if (use_locally_built_instrumented_libraries) {
     pre_build = "scripts/pre-build/libgtk2.0-0.sh"
   }
 
+  instrumented_library("libgtk-3-0") {
+    package_cflags = [ "-Wno-return-type" ]
+    extra_configure_flags = [
+      "--disable-static",
+      "--disable-introspection",
+
+      # From debian/rules.
+      "--enable-test-print-backend",
+      "--enable-x11-backend",
+    ]
+    pre_build = "scripts/pre-build/libgtk-3-0.sh"
+  }
+
   instrumented_library("libnspr4") {
     extra_configure_flags = [
       "--enable-64bit",
@@ -601,7 +599,6 @@ if (use_locally_built_instrumented_libraries) {
   instrumented_library("libpci3") {
     extra_configure_flags = [ "--disable-static" ]
     build_method = "custom_libpci3"
-    jobs = 1
   }
 
   instrumented_library("libpcre3") {
@@ -693,9 +690,6 @@ if (use_locally_built_instrumented_libraries) {
       "--disable-static",
     ]
     pre_build = "scripts/pre-build/autoreconf.sh"
-    if (is_precise) {
-      patch = "patches/libxcb1.precise.diff"
-    }
   }
 
   instrumented_library("libxcomposite1") {
@@ -785,13 +779,7 @@ if (use_locally_built_instrumented_libraries) {
 
   instrumented_library("pulseaudio") {
     # New location of libpulsecommon.
-    if (is_precise) {
-      patch = "patches/pulseaudio.precise.diff"
-      jobs = 1
-    }
-    if (is_trusty) {
-      package_ldflags = [ "-Wl,-R,XORIGIN/pulseaudio/." ]
-    }
+    package_ldflags = [ "-Wl,-R,XORIGIN/pulseaudio/." ]
     extra_configure_flags = [
       "--disable-static",
 

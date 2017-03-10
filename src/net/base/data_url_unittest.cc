@@ -49,7 +49,7 @@ TEST(DataURLTest, Parse) {
     { "data:TeXt/HtMl,<b>x</b>",
       true,
       "text/html",
-      "US-ASCII",
+      "",
       "<b>x</b>" },
 
     { "data:,foo",
@@ -102,13 +102,13 @@ TEST(DataURLTest, Parse) {
           "%3C%2Fb%3E%3C%2Fbody%3E%3C%2Fhtml%3E",
       true,
       "text/html",
-      "US-ASCII",
+      "",
       "<html><body><b>hello world</b></body></html>" },
 
     { "data:text/html,<html><body><b>hello world</b></body></html>",
       true,
       "text/html",
-      "US-ASCII",
+      "",
       "<html><body><b>hello world</b></body></html>" },
 
     // the comma cannot be url-escaped!
@@ -130,7 +130,7 @@ TEST(DataURLTest, Parse) {
     { "data:image/fractal,a b c d e f g",
       true,
       "image/fractal",
-      "US-ASCII",
+      "",
       "abcdefg" },
 
     // Spaces should also be removed from anything base-64 encoded
@@ -154,7 +154,7 @@ TEST(DataURLTest, Parse) {
           "%20",
       true,
       "text/javascript",
-      "US-ASCII",
+      "",
       "d4 = 'four';" },
 
     // Only unescaped whitespace should be stripped in non-base64.
@@ -162,10 +162,17 @@ TEST(DataURLTest, Parse) {
     { "data:img/png,A  B  %20  %0A  C",
       true,
       "img/png",
-      "US-ASCII",
+      "",
       "AB \nC" },
 
     { "data:text/plain;charset=utf-8;base64,SGVsbMO2",
+      true,
+      "text/plain",
+      "utf-8",
+      "Hell\xC3\xB6" },
+
+    // no mimetype
+    { "data:;charset=utf-8;base64,SGVsbMO2",
       true,
       "text/plain",
       "utf-8",

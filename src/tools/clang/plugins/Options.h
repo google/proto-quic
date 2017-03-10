@@ -15,9 +15,6 @@ struct Options {
   // paths. See https://crbug.com/583454 for details.
   bool no_realpath = false;
   bool check_ipc = false;
-  // Enforce that auto doesn't deduce to a raw pointer. See
-  // https://crbug.com/554600 for details.
-  bool check_auto_raw_pointer = false;
 };
 
 }  // namespace chrome_checker

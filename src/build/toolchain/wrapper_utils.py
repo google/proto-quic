@@ -4,14 +4,29 @@
 
 """Helper functions for gcc_toolchain.gni wrappers."""
 
+import gzip
 import os
 import re
 import subprocess
 import shlex
+import shutil
 import sys
+import threading
 
 _BAT_PREFIX = 'cmd /c call '
 _WHITELIST_RE = re.compile('whitelisted_resource_(?P<resource_id>[0-9]+)')
+
+
+def _GzipThenDelete(src_path, dest_path):
+  # Results for Android map file with GCC on a z620:
+  # Uncompressed: 207MB
+  # gzip -9: 16.4MB, takes 8.7 seconds.
+  # gzip -1: 21.8MB, takes 2.0 seconds.
+  # Piping directly from the linker via -print-map (or via -Map with a fifo)
+  # adds a whopping 30-45 seconds!
+  with open(src_path, 'rb') as f_in, gzip.GzipFile(dest_path, 'wb', 1) as f_out:
+    shutil.copyfileobj(f_in, f_out)
+  os.unlink(src_path)
 
 
 def CommandToRun(command):
@@ -34,6 +49,37 @@ def CommandToRun(command):
   if command[0].startswith(_BAT_PREFIX):
     command = command[0].split(None, 3) + command[1:]
   return command
+
+
+def RunLinkWithOptionalMapFile(command, env=None, map_file=None):
+  """Runs the given command, adding in -Wl,-Map when |map_file| is given.
+
+  Also takes care of gzipping when |map_file| ends with .gz.
+
+  Args:
+    command: List of arguments comprising the command.
+    env: Environment variables.
+    map_file: Path to output map_file.
+
+  Returns:
+    The exit code of running |command|.
+  """
+  tmp_map_path = None
+  if map_file and map_file.endswith('.gz'):
+    tmp_map_path = map_file + '.tmp'
+    command.append('-Wl,-Map,' + tmp_map_path)
+  elif map_file:
+    command.append('-Wl,-Map,' + map_file)
+
+  result = subprocess.call(command, env=env)
+
+  if tmp_map_path and result == 0:
+    threading.Thread(
+        target=lambda: _GzipThenDelete(tmp_map_path, map_file)).start()
+  elif tmp_map_path and os.path.exists(tmp_map_path):
+    os.unlink(tmp_map_path)
+
+  return result
 
 
 def ResolveRspLinks(inputs):

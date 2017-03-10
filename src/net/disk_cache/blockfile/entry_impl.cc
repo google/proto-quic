@@ -41,17 +41,16 @@ class SyncCallback: public disk_cache::FileIOCallback {
  public:
   // |end_event_type| is the event type to log on completion.  Logs nothing on
   // discard, or when the NetLog is not set to log all events.
-  SyncCallback(disk_cache::EntryImpl* entry,
+  SyncCallback(scoped_refptr<disk_cache::EntryImpl> entry,
                net::IOBuffer* buffer,
                const net::CompletionCallback& callback,
                net::NetLogEventType end_event_type)
-      : entry_(entry),
+      : entry_(std::move(entry)),
         callback_(callback),
         buf_(buffer),
         start_(TimeTicks::Now()),
         end_event_type_(end_event_type) {
-    entry->AddRef();
-    entry->IncrementIoCount();
+    entry_->IncrementIoCount();
   }
   ~SyncCallback() override {}
 
@@ -59,7 +58,7 @@ class SyncCallback: public disk_cache::FileIOCallback {
   void Discard();
 
  private:
-  disk_cache::EntryImpl* entry_;
+  scoped_refptr<disk_cache::EntryImpl> entry_;
   net::CompletionCallback callback_;
   scoped_refptr<net::IOBuffer> buf_;
   TimeTicks start_;
@@ -80,7 +79,6 @@ void SyncCallback::OnFileIOComplete(int bytes_copied) {
     buf_ = NULL;  // Release the buffer before invoking the callback.
     callback_.Run(bytes_copied);
   }
-  entry_->Release();
   delete this;
 }
 
@@ -1049,7 +1047,7 @@ int EntryImpl::InternalReadData(int index, int offset,
 
   SyncCallback* io_callback = NULL;
   if (!callback.is_null()) {
-    io_callback = new SyncCallback(this, buf, callback,
+    io_callback = new SyncCallback(make_scoped_refptr(this), buf, callback,
                                    net::NetLogEventType::ENTRY_READ_DATA);
   }
 

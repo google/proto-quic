@@ -1587,6 +1587,13 @@ component("base") {
     sources += [ "power_monitor/power_monitor_device_source_posix.cc" ]
   }
 
+  if (is_posix && !is_mac && !is_nacl) {
+    sources += [
+      "memory/shared_memory_tracker.cc",
+      "memory/shared_memory_tracker.h",
+    ]
+  }
+
   if (!use_glib) {
     sources -= [
       "message_loop/message_pump_glib.cc",
@@ -2531,6 +2538,7 @@ if (is_android) {
       ":base_java",
       ":base_java_test_support",
       "//third_party/android_support_test_runner:runner_java",
+      "//third_party/junit:junit",
     ]
     java_files = [
       "android/javatests/src/org/chromium/base/AdvancedMockContextTest.java",

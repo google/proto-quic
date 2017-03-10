@@ -59,6 +59,9 @@ class NET_EXPORT TCPSocketPosix {
   // Multiple outstanding requests are not supported.
   // Full duplex mode (reading and writing at the same time) is supported.
   int Read(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
+  int ReadIfReady(IOBuffer* buf,
+                  int buf_len,
+                  const CompletionCallback& callback);
   int Write(IOBuffer* buf, int buf_len, const CompletionCallback& callback);
 
   int GetLocalAddress(IPEndPoint* address) const;
@@ -197,7 +200,9 @@ class NET_EXPORT TCPSocketPosix {
   void ReadCompleted(const scoped_refptr<IOBuffer>& buf,
                      const CompletionCallback& callback,
                      int rv);
+  void ReadIfReadyCompleted(const CompletionCallback& callback, int rv);
   int HandleReadCompleted(IOBuffer* buf, int rv);
+  void HandleReadCompletedHelper(int rv);
 
   void WriteCompleted(const scoped_refptr<IOBuffer>& buf,
                       const CompletionCallback& callback,

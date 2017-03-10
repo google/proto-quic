@@ -255,9 +255,24 @@ class BASE_EXPORT SharedMemory {
     return ShareToProcessCommon(process, new_handle, true, SHARE_CURRENT_MODE);
   }
 
+#if defined(OS_POSIX) && (!defined(OS_MACOSX) || defined(OS_IOS)) && \
+    !defined(OS_NACL)
+  using UniqueId = std::pair<dev_t, ino_t>;
+
+  struct UniqueIdHash {
+    size_t operator()(const UniqueId& id) const {
+      return HashInts(id.first, id.second);
+    }
+  };
+
+  // Returns a unique ID for this shared memory's handle. Note this function may
+  // access file system and be slow.
+  bool GetUniqueId(UniqueId* id) const;
+#endif
+
  private:
 #if defined(OS_POSIX) && !defined(OS_NACL) && !defined(OS_ANDROID) && \
-    !(defined(OS_MACOSX) && !defined(OS_IOS))
+    (!defined(OS_MACOSX) || defined(OS_IOS))
   bool FilePathForMemoryName(const std::string& mem_name, FilePath* path);
 #endif
 
@@ -301,6 +316,7 @@ class BASE_EXPORT SharedMemory {
 
   DISALLOW_COPY_AND_ASSIGN(SharedMemory);
 };
+
 }  // namespace base
 
 #endif  // BASE_MEMORY_SHARED_MEMORY_H_

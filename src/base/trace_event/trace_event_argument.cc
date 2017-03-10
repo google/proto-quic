@@ -268,7 +268,7 @@ void TracedValue::SetBaseValueWithCopiedName(base::StringPiece name,
     } break;
 
     case base::Value::Type::STRING: {
-      const StringValue* string_value;
+      const Value* string_value;
       value.GetAsString(&string_value);
       SetStringWithCopiedName(name, string_value->GetString());
     } break;
@@ -322,7 +322,7 @@ void TracedValue::AppendBaseValue(const base::Value& value) {
     } break;
 
     case base::Value::Type::STRING: {
-      const StringValue* string_value;
+      const Value* string_value;
       value.GetAsString(&string_value);
       AppendString(string_value->GetString());
     } break;

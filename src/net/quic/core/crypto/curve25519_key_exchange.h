@@ -9,9 +9,9 @@
 #include <string>
 
 #include "base/compiler_specific.h"
-#include "base/strings/string_piece.h"
 #include "net/quic/core/crypto/key_exchange.h"
 #include "net/quic/platform/api/quic_export.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 
 namespace net {
 
@@ -25,7 +25,7 @@ class QUIC_EXPORT_PRIVATE Curve25519KeyExchange : public KeyExchange {
 
   // New creates a new object from a private key. If the private key is
   // invalid, nullptr is returned.
-  static Curve25519KeyExchange* New(base::StringPiece private_key);
+  static Curve25519KeyExchange* New(QuicStringPiece private_key);
 
   // NewPrivateKey returns a private key, generated from |rand|, suitable for
   // passing to |New|.
@@ -33,9 +33,9 @@ class QUIC_EXPORT_PRIVATE Curve25519KeyExchange : public KeyExchange {
 
   // KeyExchange interface.
   KeyExchange* NewKeyPair(QuicRandom* rand) const override;
-  bool CalculateSharedKey(base::StringPiece peer_public_value,
+  bool CalculateSharedKey(QuicStringPiece peer_public_value,
                           std::string* shared_key) const override;
-  base::StringPiece public_value() const override;
+  QuicStringPiece public_value() const override;
   QuicTag tag() const override;
 
  private:

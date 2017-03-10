@@ -12,10 +12,10 @@
 #include "net/quic/core/spdy_utils.h"
 #include "net/quic/platform/api/quic_bug_tracker.h"
 #include "net/quic/platform/api/quic_logging.h"
+#include "net/quic/platform/api/quic_string_piece.h"
 #include "net/quic/platform/api/quic_text_utils.h"
 
 using base::IntToString;
-using base::StringPiece;
 using std::string;
 
 namespace net {
@@ -167,8 +167,7 @@ void QuicSpdyStream::OnStreamHeaderList(bool fin,
   // be reset.
   // TODO(rch): Use an explicit "headers too large" signal. An empty header list
   // might be acceptable if it corresponds to a trailing header frame.
-  if (FLAGS_quic_reloadable_flag_quic_limit_uncompressed_headers &&
-      header_list.empty()) {
+  if (header_list.empty()) {
     OnHeadersTooLarge();
     if (IsDoneReading()) {
       return;
@@ -192,7 +191,7 @@ void QuicSpdyStream::OnInitialHeadersComplete(
   headers_decompressed_ = true;
   header_list_ = header_list;
   if (fin) {
-    OnStreamFrame(QuicStreamFrame(id(), fin, 0, StringPiece()));
+    OnStreamFrame(QuicStreamFrame(id(), fin, 0, QuicStringPiece()));
   }
   if (FinishedReadingHeaders()) {
     sequencer()->SetUnblocked();
@@ -241,7 +240,8 @@ void QuicSpdyStream::OnTrailingHeadersComplete(
     return;
   }
   trailers_decompressed_ = true;
-  OnStreamFrame(QuicStreamFrame(id(), fin, final_byte_offset, StringPiece()));
+  OnStreamFrame(
+      QuicStreamFrame(id(), fin, final_byte_offset, QuicStringPiece()));
 }
 
 void QuicSpdyStream::OnStreamReset(const QuicRstStreamFrame& frame) {
@@ -287,7 +287,7 @@ bool QuicSpdyStream::ParseHeaderStatusCode(const SpdyHeaderBlock& header,
   if (it == header.end()) {
     return false;
   }
-  const StringPiece status(it->second);
+  const QuicStringPiece status(it->second);
   if (status.size() != 3) {
     return false;
   }

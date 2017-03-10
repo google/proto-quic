@@ -237,7 +237,7 @@
       <Item Name="Double">double_value_</Item>
     </Expand>
   </Type>
-  <Type Name="base::StringValue">
+  <Type Name="base::Value">
     <DisplayString>String ({value_})</DisplayString>
     <Expand>
       <ExpandedItem>(base::Value*)this,nd</ExpandedItem>
